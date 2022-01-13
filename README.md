@@ -2,6 +2,14 @@
 
 ### 一、项目介绍
 
+- 后台管理：http://localhost:8080/backend/index.html
+
+  ![](docs/imgs/后端管理.jpg)
+
+- 前端页面：http://localhost:8080/front/index.html
+
+  ![](docs/imgs/前端页面.jpg)
+
 ![image-20210726000655646](docs/imgs/image-20210726000655646.png)
 
 本项目（瑞吉外卖）是专门为餐饮企业（餐厅、饭店）定制的一款软件产品，包括 系统管理后台 和 移动端应用
