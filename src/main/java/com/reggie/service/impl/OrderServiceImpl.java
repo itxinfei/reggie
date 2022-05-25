@@ -5,10 +5,10 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
-import com.itheima.reggie.entity.*;
+import com.reggie.entity.*;
 import com.reggie.entity.*;
 import com.reggie.mapper.OrderMapper;
-import com.itheima.reggie.service.*;
+import com.reggie.service.*;
 import com.reggie.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +39,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
     /**
      * 用户下单
+     *
      * @param orders
      */
     @Transactional
@@ -48,10 +49,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         //查询当前用户的购物车数据
         LambdaQueryWrapper<ShoppingCart> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ShoppingCart::getUserId,userId);
+        wrapper.eq(ShoppingCart::getUserId, userId);
         List<ShoppingCart> shoppingCarts = shoppingCartService.list(wrapper);
 
-        if(shoppingCarts == null || shoppingCarts.size() == 0){
+        if (shoppingCarts == null || shoppingCarts.size() == 0) {
             throw new CustomException("购物车为空，不能下单");
         }
 
@@ -61,7 +62,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         //查询地址数据
         Long addressBookId = orders.getAddressBookId();
         AddressBook addressBook = addressBookService.getById(addressBookId);
-        if(addressBook == null){
+        if (addressBook == null) {
             throw new CustomException("用户地址信息有误，不能下单");
         }
 
