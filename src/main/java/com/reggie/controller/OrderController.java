@@ -34,7 +34,7 @@ public class OrderController {
     }
 
     @GetMapping("/page")
-    public R<Page> page(int page, int pageSize, String number, String beginTime, String endTime) {
+    public R<Page<Orders>> page(int page, int pageSize, String number, String beginTime, String endTime) {
         Page pageInfo = orderService.orderPage(page, pageSize, number, beginTime, endTime);
         return R.success(pageInfo);
     }

@@ -15,7 +15,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -56,7 +56,7 @@ public class DishController {
      * @return
      */
     @GetMapping("/page")
-    public R<Page> page(int page,int pageSize,String name){
+    public R<Page<DishDto>> page(int page,int pageSize,String name){
 
         //构造分页构造器对象
         Page<Dish> pageInfo = new Page<>(page,pageSize);
@@ -76,24 +76,21 @@ public class DishController {
         BeanUtils.copyProperties(pageInfo,dishDtoPage,"records");
 
         List<Dish> records = pageInfo.getRecords();
+        if (!records.isEmpty()) {
+            List<Long> categoryIds = records.stream().map(Dish::getCategoryId).filter(Objects::nonNull).collect(Collectors.toList());
+            Map<Long, String> categoryMap = categoryIds.isEmpty() ? Collections.emptyMap() :
+                categoryService.listByIds(categoryIds).stream()
+                    .collect(Collectors.toMap(Category::getId, Category::getName));
 
-        List<DishDto> list = records.stream().map((item) -> {
-            DishDto dishDto = new DishDto();
+            List<DishDto> list = records.stream().map((item) -> {
+                DishDto dishDto = new DishDto();
+                BeanUtils.copyProperties(item, dishDto);
+                dishDto.setCategoryName(categoryMap.get(item.getCategoryId()));
+                return dishDto;
+            }).collect(Collectors.toList());
 
-            BeanUtils.copyProperties(item,dishDto);
-
-            Long categoryId = item.getCategoryId();//分类id
-            //根据id查询分类对象
-            Category category = categoryService.getById(categoryId);
-
-            if(category != null){
-                String categoryName = category.getName();
-                dishDto.setCategoryName(categoryName);
-            }
-            return dishDto;
-        }).collect(Collectors.toList());
-
-        dishDtoPage.setRecords(list);
+            dishDtoPage.setRecords(list);
+        }
 
         return R.success(dishDtoPage);
     }
@@ -170,28 +167,31 @@ public class DishController {
         queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
 
         List<Dish> list = dishService.list(queryWrapper);
+        if (list.isEmpty()) {
+            return R.success(new ArrayList<>());
+        }
+
+        //批量查询分类名称
+        List<Long> categoryIds = list.stream().map(Dish::getCategoryId).filter(Objects::nonNull).collect(Collectors.toList());
+        Map<Long, String> categoryMap = categoryIds.isEmpty() ? Collections.emptyMap() :
+            categoryService.listByIds(categoryIds).stream()
+                .collect(Collectors.toMap(Category::getId, Category::getName));
+        //批量查询口味
+        List<Long> dishIds = list.stream().map(Dish::getId).collect(Collectors.toList());
+        LambdaQueryWrapper<DishFlavor> flavorWrapper = new LambdaQueryWrapper<>();
+        flavorWrapper.in(DishFlavor::getDishId, dishIds);
+        List<DishFlavor> allFlavors = dishFlavorService.list(flavorWrapper);
+        Map<Long, List<DishFlavor>> flavorMap = allFlavors.stream()
+            .collect(Collectors.groupingBy(DishFlavor::getDishId));
 
         List<DishDto> dishDtoList = list.stream().map((item) -> {
             DishDto dishDto = new DishDto();
 
             BeanUtils.copyProperties(item,dishDto);
 
-            Long categoryId = item.getCategoryId();//分类id
-            //根据id查询分类对象
-            Category category = categoryService.getById(categoryId);
+            dishDto.setCategoryName(categoryMap.get(item.getCategoryId()));
+            dishDto.setFlavors(flavorMap.get(item.getId()));
 
-            if(category != null){
-                String categoryName = category.getName();
-                dishDto.setCategoryName(categoryName);
-            }
-
-            //当前菜品的id
-            Long dishId = item.getId();
-            LambdaQueryWrapper<DishFlavor> lambdaQueryWrapper = new LambdaQueryWrapper<>();
-            lambdaQueryWrapper.eq(DishFlavor::getDishId,dishId);
-            //SQL:select * from dish_flavor where dish_id = ?
-            List<DishFlavor> dishFlavorList = dishFlavorService.list(lambdaQueryWrapper);
-            dishDto.setFlavors(dishFlavorList);
             return dishDto;
         }).collect(Collectors.toList());
 

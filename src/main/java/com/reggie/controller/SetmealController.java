@@ -15,7 +15,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -58,7 +58,7 @@ public class SetmealController {
      * @return
      */
     @GetMapping("/page")
-    public R<Page> page(int page,int pageSize,String name){
+    public R<Page<SetmealDto>> page(int page,int pageSize,String name){
         //分页构造器对象
         Page<Setmeal> pageInfo = new Page<>(page,pageSize);
         Page<SetmealDto> dtoPage = new Page<>();
@@ -71,23 +71,22 @@ public class SetmealController {
 
         setmealService.page(pageInfo,queryWrapper);
 
-        //对象拷贝
-        BeanUtils.copyProperties(pageInfo,dtoPage,"records");
+        BeanUtils.copyProperties(pageInfo, dtoPage, "records");
         List<Setmeal> records = pageInfo.getRecords();
+        if (records.isEmpty()) {
+            return R.success(dtoPage);
+        }
+
+        //批量查询分类名称
+        List<Long> categoryIds = records.stream().map(Setmeal::getCategoryId).collect(Collectors.toList());
+        List<Category> categories = categoryService.listByIds(categoryIds);
+        Map<Long, String> categoryMap = categories.stream()
+            .collect(Collectors.toMap(Category::getId, Category::getName));
 
         List<SetmealDto> list = records.stream().map((item) -> {
             SetmealDto setmealDto = new SetmealDto();
-            //对象拷贝
-            BeanUtils.copyProperties(item,setmealDto);
-            //分类id
-            Long categoryId = item.getCategoryId();
-            //根据分类id查询分类对象
-            Category category = categoryService.getById(categoryId);
-            if(category != null){
-                //分类名称
-                String categoryName = category.getName();
-                setmealDto.setCategoryName(categoryName);
-            }
+            BeanUtils.copyProperties(item, setmealDto);
+            setmealDto.setCategoryName(categoryMap.get(item.getCategoryId()));
             return setmealDto;
         }).collect(Collectors.toList());
 

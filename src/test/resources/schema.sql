@@ -1,6 +1,24 @@
 DROP TABLE IF EXISTS tenant;
 DROP TABLE IF EXISTS dish;
 DROP TABLE IF EXISTS category;
+DROP TABLE IF EXISTS employee;
+
+CREATE TABLE employee (
+  id bigint(20) NOT NULL,
+  username varchar(64) DEFAULT NULL,
+  name varchar(64) DEFAULT NULL,
+  password varchar(64) DEFAULT NULL,
+  phone varchar(16) DEFAULT NULL,
+  sex varchar(8) DEFAULT NULL,
+  id_number varchar(32) DEFAULT NULL,
+  status int(11) DEFAULT '1',
+  tenant_id bigint(20) DEFAULT NULL,
+  create_time datetime DEFAULT NULL,
+  update_time datetime DEFAULT NULL,
+  create_user bigint(20) DEFAULT NULL,
+  update_user bigint(20) DEFAULT NULL,
+  PRIMARY KEY (id)
+);
 
 CREATE TABLE tenant (
   id bigint(20) NOT NULL,
@@ -131,21 +149,6 @@ CREATE TABLE address_book (
 DROP TABLE IF EXISTS shopping_cart;
 CREATE TABLE shopping_cart (
   id bigint(20) NOT NULL,
-  name varchar(64) DEFAULT NULL,
-  image varchar(255) DEFAULT NULL,
-  user_id bigint(20) DEFAULT NULL,
-  dish_id bigint(20) DEFAULT NULL,
-  setmeal_id bigint(20) DEFAULT NULL,
-  dish_flavor varchar(64) DEFAULT NULL,
-  number int(11) DEFAULT '1',
-  amount decimal(10,2) DEFAULT NULL,
-  create_time datetime DEFAULT NULL,
-  PRIMARY KEY (id)
-);
-
-DROP TABLE IF EXISTS shopping_cart;
-CREATE TABLE shopping_cart (
-  id bigint(20) NOT NULL,
   name varchar(50) DEFAULT NULL,
   user_id bigint(20) DEFAULT NULL,
   dish_id bigint(20) DEFAULT NULL,
@@ -155,6 +158,21 @@ CREATE TABLE shopping_cart (
   amount decimal(10,2) DEFAULT NULL,
   image varchar(200) DEFAULT NULL,
   create_time datetime DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+DROP TABLE IF EXISTS dish_flavor;
+CREATE TABLE dish_flavor (
+  id bigint(20) NOT NULL,
+  tenant_id bigint(20) DEFAULT NULL,
+  dish_id bigint(20) DEFAULT NULL,
+  name varchar(64) DEFAULT NULL,
+  value varchar(500) DEFAULT NULL,
+  create_time datetime DEFAULT NULL,
+  update_time datetime DEFAULT NULL,
+  create_user bigint(20) DEFAULT NULL,
+  update_user bigint(20) DEFAULT NULL,
+  is_deleted int(11) DEFAULT '0',
   PRIMARY KEY (id)
 );
 

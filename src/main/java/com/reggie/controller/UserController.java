@@ -66,6 +66,9 @@ public class UserController {
         //获取验证码
         String code = map.get("code").toString();
 
+        //获取租户ID（前端可能不传，容错为null）
+        Long tenantId = map.get("tenantId") != null ? Long.valueOf(map.get("tenantId").toString()) : null;
+
         //从Session中获取保存的验证码
         Object codeInSession = session.getAttribute(phone);
 
@@ -82,9 +85,15 @@ public class UserController {
                 user = new User();
                 user.setPhone(phone);
                 user.setStatus(1);
+                if (tenantId != null) {
+                    user.setTenantId(tenantId);
+                }
                 userService.save(user);
             }
             session.setAttribute("user",user.getId());
+            if (tenantId != null) {
+                session.setAttribute("tenantId", tenantId);
+            }
             return R.success(user);
         }
         return R.error("登录失败");

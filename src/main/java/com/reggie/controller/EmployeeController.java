@@ -68,8 +68,8 @@ public class EmployeeController {
      */
     @PostMapping("/logout")
     public R<String> logout(HttpServletRequest request){
-        //清理Session中保存的当前登录员工的id
         request.getSession().removeAttribute("employee");
+        request.getSession().removeAttribute("tenantId");
         return R.success("退出成功");
     }
 
@@ -109,14 +109,14 @@ public class EmployeeController {
      * @return
      */
     @GetMapping("/page")
-    public R<Page> page(int page,int pageSize,String name){
+    public R<Page<Employee>> page(int page,int pageSize,String name){
         log.info("page = {},pageSize = {},name = {}" ,page,pageSize,name);
 
         //构造分页构造器
         Page pageInfo = new Page(page,pageSize);
 
         //构造条件构造器
-        LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper();
+        LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper<>();
         //添加过滤条件
         queryWrapper.like(name != null && !name.isEmpty(),Employee::getName,name);
         //添加排序条件

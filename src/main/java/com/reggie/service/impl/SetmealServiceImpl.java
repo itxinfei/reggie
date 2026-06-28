@@ -83,9 +83,9 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
     public void removeWithDish(List<Long> ids) {
         //select count(*) from setmeal where id in (1,2,3) and status = 1
         //查询套餐状态，确定是否可用删除
-        LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper();
-        queryWrapper.in(Setmeal::getId,ids);
-        queryWrapper.eq(Setmeal::getStatus,1);
+        LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(Setmeal::getId, ids);
+        queryWrapper.eq(Setmeal::getStatus, 1);
 
         int count = this.count(queryWrapper);
         if(count > 0){
