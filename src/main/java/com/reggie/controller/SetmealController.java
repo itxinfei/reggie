@@ -106,6 +106,12 @@ public class SetmealController {
         return R.success("修改套餐成功");
     }
 
+    @PostMapping("/status/{status}")
+    public R<String> updateStatus(@PathVariable Integer status, @RequestParam List<Long> ids) {
+        setmealService.updateStatus(status, ids);
+        return R.success("操作成功");
+    }
+
     /**
      * 删除套餐
      * @param ids

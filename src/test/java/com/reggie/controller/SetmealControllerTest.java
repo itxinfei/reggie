@@ -95,4 +95,26 @@ public class SetmealControllerTest {
 
         org.junit.jupiter.api.Assertions.assertEquals("修改后的套餐", setmealService.getById(1L).getName());
     }
+
+    @Test
+    void testUpdateStatus() throws Exception {
+        Setmeal setmeal = new Setmeal();
+        setmeal.setId(2L);
+        setmeal.setName("状态测试套餐");
+        setmeal.setCategoryId(1L);
+        setmeal.setPrice(new BigDecimal("30.00"));
+        setmeal.setCode("S002");
+        setmeal.setStatus(1);
+        setmealService.save(setmeal);
+
+        mockMvc.perform(post("/setmeal/status/0")
+                .param("ids", "2")
+                .sessionAttr("employee", 1L)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value("操作成功"));
+
+        org.junit.jupiter.api.Assertions.assertEquals(0, setmealService.getById(2L).getStatus());
+    }
 }
