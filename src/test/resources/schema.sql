@@ -86,6 +86,30 @@ CREATE TABLE orders (
   PRIMARY KEY (id)
 );
 
+DROP TABLE IF EXISTS address_book;
+CREATE TABLE address_book (
+  id bigint(20) NOT NULL,
+  user_id bigint(20) DEFAULT NULL,
+  consignee varchar(32) DEFAULT NULL,
+  sex varchar(8) DEFAULT NULL,
+  phone varchar(16) DEFAULT NULL,
+  province_code varchar(16) DEFAULT NULL,
+  province_name varchar(32) DEFAULT NULL,
+  city_code varchar(16) DEFAULT NULL,
+  city_name varchar(32) DEFAULT NULL,
+  district_code varchar(16) DEFAULT NULL,
+  district_name varchar(32) DEFAULT NULL,
+  detail varchar(255) DEFAULT NULL,
+  label varchar(32) DEFAULT NULL,
+  is_default int(11) DEFAULT '0',
+  create_time datetime DEFAULT NULL,
+  update_time datetime DEFAULT NULL,
+  create_user bigint(20) DEFAULT NULL,
+  update_user bigint(20) DEFAULT NULL,
+  is_deleted int(11) DEFAULT '0',
+  PRIMARY KEY (id)
+);
+
 DROP TABLE IF EXISTS order_detail;
 CREATE TABLE order_detail (
   id bigint(20) NOT NULL,

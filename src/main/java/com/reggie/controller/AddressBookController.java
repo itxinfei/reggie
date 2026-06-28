@@ -34,6 +34,31 @@ public class AddressBookController {
         return R.success(addressBook);
     }
 
+    @PutMapping
+    public R<AddressBook> update(@RequestBody AddressBook addressBook) {
+        addressBookService.updateById(addressBook);
+        return R.success(addressBook);
+    }
+
+    @DeleteMapping
+    public R<String> delete(@RequestParam List<Long> ids) {
+        addressBookService.removeByIds(ids);
+        return R.success("删除成功");
+    }
+
+    @GetMapping("/lastUpdate")
+    public R<AddressBook> lastUpdate() {
+        LambdaQueryWrapper<AddressBook> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AddressBook::getUserId, BaseContext.getCurrentId());
+        queryWrapper.orderByDesc(AddressBook::getUpdateTime);
+        queryWrapper.last("LIMIT 1");
+        AddressBook addressBook = addressBookService.getOne(queryWrapper);
+        if (addressBook != null) {
+            return R.success(addressBook);
+        }
+        return R.error("没有找到该对象");
+    }
+
     /**
      * 设置默认地址
      */
