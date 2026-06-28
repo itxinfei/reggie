@@ -2,15 +2,15 @@ package com.reggie.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.entity.*;
-import com.reggie.entity.*;
 import com.reggie.mapper.OrderMapper;
 import com.reggie.service.*;
-import com.reggie.service.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -107,5 +107,34 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         //清空购物车数据
         shoppingCartService.remove(wrapper);
+    }
+
+    @Override
+    public Page orderPage(int page, int pageSize, String number, String beginTime, String endTime) {
+        Page<Orders> pageInfo = new Page<>(page, pageSize);
+        LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
+
+        queryWrapper.like(StringUtils.isNotBlank(number), Orders::getNumber, number);
+
+        if (StringUtils.isNotBlank(beginTime)) {
+            queryWrapper.ge(Orders::getOrderTime, beginTime);
+        }
+        if (StringUtils.isNotBlank(endTime)) {
+            queryWrapper.le(Orders::getOrderTime, endTime);
+        }
+
+        queryWrapper.orderByDesc(Orders::getOrderTime);
+        this.page(pageInfo, queryWrapper);
+        return pageInfo;
+    }
+
+    @Override
+    @Transactional
+    public void updateStatus(Integer status, Long id) {
+        Orders orders = this.getById(id);
+        if (orders != null) {
+            orders.setStatus(status);
+            this.updateById(orders);
+        }
     }
 }

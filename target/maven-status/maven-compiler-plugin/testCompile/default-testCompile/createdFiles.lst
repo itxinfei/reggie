@@ -1,2 +1,3 @@
 com\reggie\controller\DishControllerTest.class
+com\reggie\controller\OrderControllerTest.class
 com\reggie\controller\SetmealControllerTest.class
