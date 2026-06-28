@@ -158,6 +158,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     @Override
+    public List<Orders> userList() {
+        LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Orders::getUserId, BaseContext.getCurrentId());
+        queryWrapper.orderByDesc(Orders::getOrderTime);
+        return this.list(queryWrapper);
+    }
+
+    @Override
     public void again(Long orderId) {
         LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(OrderDetail::getOrderId, orderId);

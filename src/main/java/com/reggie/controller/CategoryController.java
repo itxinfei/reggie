@@ -87,6 +87,12 @@ public class CategoryController {
      * @param category
      * @return
      */
+    @GetMapping("/{id}")
+    public R<Category> get(@PathVariable Long id) {
+        Category category = categoryService.getById(id);
+        return R.success(category);
+    }
+
     @GetMapping("/list")
     public R<List<Category>> list(Category category){
         //条件构造器

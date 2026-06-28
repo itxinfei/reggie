@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.entity.Orders;
 
+import java.util.List;
+
 public interface OrderService extends IService<Orders> {
 
     /**
@@ -17,6 +19,8 @@ public interface OrderService extends IService<Orders> {
     public void updateStatus(Integer status, Long id);
 
     Page userPage(int page, int pageSize);
+
+    List<Orders> userList();
 
     void again(Long orderId);
 }

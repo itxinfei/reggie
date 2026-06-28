@@ -5,6 +5,8 @@ import com.reggie.common.R;
 import com.reggie.entity.Orders;
 import com.reggie.service.OrderService;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,6 +37,12 @@ public class OrderController {
     public R<Page> page(int page, int pageSize, String number, String beginTime, String endTime) {
         Page pageInfo = orderService.orderPage(page, pageSize, number, beginTime, endTime);
         return R.success(pageInfo);
+    }
+
+    @GetMapping("/list")
+    public R<List<Orders>> list() {
+        List<Orders> list = orderService.userList();
+        return R.success(list);
     }
 
     @GetMapping("/userPage")
