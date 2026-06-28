@@ -14,6 +14,7 @@ com\reggie\service\impl\OrderServiceImpl.class
 com\reggie\entity\Category.class
 com\reggie\dto\OrderDto.class
 com\reggie\service\impl\TenantServiceImpl.class
+com\reggie\controller\TenantController.class
 com\reggie\mapper\ShoppingCartMapper.class
 com\reggie\entity\SetmealDish.class
 com\reggie\ReggieApplication.class
