@@ -6,6 +6,7 @@ import com.reggie.common.R;
 import com.reggie.dto.SetmealDto;
 import com.reggie.entity.Category;
 import com.reggie.entity.Setmeal;
+import com.reggie.entity.SetmealDish;
 import com.reggie.service.CategoryService;
 import com.reggie.service.SetmealDishService;
 import com.reggie.service.SetmealService;
@@ -110,6 +111,14 @@ public class SetmealController {
     public R<String> updateStatus(@PathVariable Integer status, @RequestParam List<Long> ids) {
         setmealService.updateStatus(status, ids);
         return R.success("操作成功");
+    }
+
+    @GetMapping("/dish/{id}")
+    public R<List<SetmealDish>> dish(@PathVariable Long id) {
+        LambdaQueryWrapper<SetmealDish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SetmealDish::getSetmealId, id);
+        List<SetmealDish> list = setmealDishService.list(queryWrapper);
+        return R.success(list);
     }
 
     /**

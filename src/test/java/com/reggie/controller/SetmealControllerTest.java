@@ -117,4 +117,24 @@ public class SetmealControllerTest {
 
         org.junit.jupiter.api.Assertions.assertEquals(0, setmealService.getById(2L).getStatus());
     }
+
+    @Test
+    void testDishList() throws Exception {
+        createTestSetmeal();
+
+        SetmealDish dish = new SetmealDish();
+        dish.setId(1L);
+        dish.setSetmealId(1L);
+        dish.setDishId(1L);
+        dish.setName("套餐内菜品");
+        dish.setPrice(new BigDecimal("20.00"));
+        dish.setCopies(2);
+        setmealDishService.save(dish);
+
+        mockMvc.perform(get("/setmeal/dish/1")
+                .sessionAttr("user", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data[0].name").value("套餐内菜品"));
+    }
 }
