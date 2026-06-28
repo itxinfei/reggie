@@ -1,24 +1,27 @@
 package com.reggie.common;
 
-/**
- * 基于ThreadLocal封装工具类，用户保存和获取当前登录用户id
- */
 public class BaseContext {
     private static ThreadLocal<Long> threadLocal = new ThreadLocal<>();
+    private static ThreadLocal<Long> tenantThreadLocal = new ThreadLocal<>();
 
-    /**
-     * 设置值
-     * @param id
-     */
     public static void setCurrentId(Long id){
         threadLocal.set(id);
     }
 
-    /**
-     * 获取值
-     * @return
-     */
     public static Long getCurrentId(){
         return threadLocal.get();
+    }
+
+    public static void setCurrentTenantId(Long tenantId) {
+        tenantThreadLocal.set(tenantId);
+    }
+
+    public static Long getCurrentTenantId() {
+        return tenantThreadLocal.get();
+    }
+
+    public static void remove() {
+        threadLocal.remove();
+        tenantThreadLocal.remove();
     }
 }

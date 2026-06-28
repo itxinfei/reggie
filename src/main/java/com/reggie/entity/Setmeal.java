@@ -19,6 +19,8 @@ public class Setmeal implements Serializable {
 
     private Long id;
 
+    @TableField(fill = FieldFill.INSERT)
+    private Long tenantId;
 
     //分类id
     private Long categoryId;

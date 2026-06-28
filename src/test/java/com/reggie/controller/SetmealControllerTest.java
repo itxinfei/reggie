@@ -1,6 +1,7 @@
 package com.reggie.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.BaseContext;
 import com.reggie.dto.SetmealDto;
 import com.reggie.entity.Setmeal;
 import com.reggie.entity.SetmealDish;
@@ -42,6 +43,8 @@ public class SetmealControllerTest {
     private ObjectMapper objectMapper = new ObjectMapper();
 
     private Setmeal createTestSetmeal() {
+        BaseContext.setCurrentTenantId(1L);
+
         Setmeal setmeal = new Setmeal();
         setmeal.setId(1L);
         setmeal.setName("测试套餐");
@@ -58,7 +61,8 @@ public class SetmealControllerTest {
         createTestSetmeal();
 
         mockMvc.perform(get("/setmeal/1")
-                .sessionAttr("employee", 1L))
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.name").value("测试套餐"));
@@ -87,6 +91,7 @@ public class SetmealControllerTest {
 
         mockMvc.perform(put("/setmeal")
                 .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
@@ -110,6 +115,7 @@ public class SetmealControllerTest {
         mockMvc.perform(post("/setmeal/status/0")
                 .param("ids", "2")
                 .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))

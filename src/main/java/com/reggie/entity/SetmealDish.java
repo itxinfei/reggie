@@ -17,6 +17,8 @@ public class SetmealDish implements Serializable {
 
     private Long id;
 
+    @TableField(fill = FieldFill.INSERT)
+    private Long tenantId;
 
     //套餐id
     private Long setmealId;

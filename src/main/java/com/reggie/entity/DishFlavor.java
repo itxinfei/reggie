@@ -18,6 +18,8 @@ public class DishFlavor implements Serializable {
 
     private Long id;
 
+    @TableField(fill = FieldFill.INSERT)
+    private Long tenantId;
 
     //菜品id
     private Long dishId;

@@ -2,6 +2,7 @@ package com.reggie.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.entity.Employee;
 import com.reggie.service.EmployeeService;
@@ -53,8 +54,10 @@ public class EmployeeController {
             return R.error("账号已禁用");
         }
 
-        //6、登录成功，将员工id存入Session并返回登录成功结果
+        //6、登录成功，将员工id和租户id存入Session并返回登录成功结果
+        BaseContext.setCurrentTenantId(employee.getTenantId());
         request.getSession().setAttribute("employee",emp.getId());
+        request.getSession().setAttribute("tenantId", employee.getTenantId());
         return R.success(emp);
     }
 
@@ -91,6 +94,8 @@ public class EmployeeController {
         //employee.setCreateUser(empId);
         //employee.setUpdateUser(empId);
 
+        employee.setTenantId(BaseContext.getCurrentTenantId());
+
         employeeService.save(employee);
 
         return R.success("新增员工成功");
@@ -116,6 +121,12 @@ public class EmployeeController {
         queryWrapper.like(name != null && !name.isEmpty(),Employee::getName,name);
         //添加排序条件
         queryWrapper.orderByDesc(Employee::getUpdateTime);
+
+        //手动添加租户过滤（employee表在忽略列表中）
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null) {
+            queryWrapper.eq(Employee::getTenantId, currentTenantId);
+        }
 
         //执行查询
         employeeService.page(pageInfo,queryWrapper);

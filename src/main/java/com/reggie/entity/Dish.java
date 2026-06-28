@@ -19,6 +19,8 @@ public class Dish implements Serializable {
 
     private Long id;
 
+    @TableField(fill = FieldFill.INSERT)
+    private Long tenantId;
 
     //菜品名称
     private String name;

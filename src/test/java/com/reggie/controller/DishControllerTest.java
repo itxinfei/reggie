@@ -1,5 +1,6 @@
 package com.reggie.controller;
 
+import com.reggie.common.BaseContext;
 import com.reggie.entity.Dish;
 import com.reggie.service.DishService;
 import org.junit.jupiter.api.Assertions;
@@ -33,6 +34,8 @@ public class DishControllerTest {
 
     @BeforeEach
     void setUp() {
+        BaseContext.setCurrentTenantId(1L);
+
         Dish dish = new Dish();
         dish.setId(1L);
         dish.setName("测试菜品");
@@ -50,6 +53,7 @@ public class DishControllerTest {
         mockMvc.perform(post("/dish/status/0")
                 .param("ids", "1")
                 .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -75,6 +79,7 @@ public class DishControllerTest {
         mockMvc.perform(post("/dish/status/0")
                 .param("ids", "1,2")
                 .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));

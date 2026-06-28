@@ -1,8 +1,23 @@
+DROP TABLE IF EXISTS tenant;
 DROP TABLE IF EXISTS dish;
 DROP TABLE IF EXISTS category;
 
+CREATE TABLE tenant (
+  id bigint(20) NOT NULL,
+  name varchar(64) DEFAULT NULL,
+  phone varchar(16) DEFAULT NULL,
+  address varchar(255) DEFAULT NULL,
+  status int(11) DEFAULT '1',
+  create_time datetime DEFAULT NULL,
+  update_time datetime DEFAULT NULL,
+  create_user bigint(20) DEFAULT NULL,
+  update_user bigint(20) DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
 CREATE TABLE dish (
   id bigint NOT NULL,
+  tenant_id bigint(20) DEFAULT NULL,
   name varchar(64) DEFAULT NULL,
   category_id bigint DEFAULT NULL,
   price decimal(10,2) DEFAULT NULL,
@@ -21,6 +36,7 @@ CREATE TABLE dish (
 
 CREATE TABLE category (
   id bigint NOT NULL,
+  tenant_id bigint(20) DEFAULT NULL,
   type int DEFAULT NULL,
   name varchar(64) DEFAULT NULL,
   sort int DEFAULT '0',
@@ -35,6 +51,7 @@ CREATE TABLE category (
 DROP TABLE IF EXISTS setmeal;
 CREATE TABLE setmeal (
   id bigint(20) NOT NULL,
+  tenant_id bigint(20) DEFAULT NULL,
   category_id bigint(20) DEFAULT NULL,
   name varchar(64) DEFAULT NULL,
   price decimal(10,2) DEFAULT NULL,
@@ -53,6 +70,7 @@ CREATE TABLE setmeal (
 DROP TABLE IF EXISTS setmeal_dish;
 CREATE TABLE setmeal_dish (
   id bigint(20) NOT NULL,
+  tenant_id bigint(20) DEFAULT NULL,
   setmeal_id bigint(20) DEFAULT NULL,
   dish_id bigint(20) DEFAULT NULL,
   name varchar(64) DEFAULT NULL,
