@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.reggie.controller.DishControllerTest
 -------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.841 s - in com.reggie.controller.DishControllerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.866 s - in com.reggie.controller.DishControllerTest

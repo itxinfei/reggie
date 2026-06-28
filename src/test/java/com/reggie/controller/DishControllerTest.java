@@ -2,6 +2,7 @@ package com.reggie.controller;
 
 import com.reggie.entity.Dish;
 import com.reggie.service.DishService;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,7 +56,7 @@ public class DishControllerTest {
                 .andExpect(jsonPath("$.data").value("操作成功"));
 
         Dish updated = dishService.getById(1L);
-        assert updated.getStatus() == 0;
+        Assertions.assertEquals(0, updated.getStatus());
     }
 
     @Test
@@ -78,7 +79,7 @@ public class DishControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        assert dishService.getById(1L).getStatus() == 0;
-        assert dishService.getById(2L).getStatus() == 0;
+        Assertions.assertEquals(0, dishService.getById(1L).getStatus());
+        Assertions.assertEquals(0, dishService.getById(2L).getStatus());
     }
 }
