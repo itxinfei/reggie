@@ -6,7 +6,6 @@ import com.reggie.entity.User;
 import com.reggie.service.UserService;
 import com.reggie.utils.ValidateCodeUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,7 +33,7 @@ public class UserController {
         //获取手机号
         String phone = user.getPhone();
 
-        if(StringUtils.isNotEmpty(phone)){
+        if(phone != null && !phone.isEmpty()){
             //生成随机的4位验证码
             String code = ValidateCodeUtils.generateValidateCode(4).toString();
             log.info("code={}",code);

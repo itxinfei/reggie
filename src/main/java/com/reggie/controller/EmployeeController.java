@@ -6,7 +6,6 @@ import com.reggie.common.R;
 import com.reggie.entity.Employee;
 import com.reggie.service.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
@@ -114,7 +113,7 @@ public class EmployeeController {
         //构造条件构造器
         LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper();
         //添加过滤条件
-        queryWrapper.like(StringUtils.isNotEmpty(name),Employee::getName,name);
+        queryWrapper.like(name != null && !name.isEmpty(),Employee::getName,name);
         //添加排序条件
         queryWrapper.orderByDesc(Employee::getUpdateTime);
 

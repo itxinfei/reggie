@@ -1,6 +1,8 @@
 package com.reggie.common;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
+
 import java.util.HashMap;
 import java.util.Map;
 

@@ -3,7 +3,6 @@ package com.reggie.controller;
 import com.reggie.common.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.system.ApplicationHome;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -43,24 +42,13 @@ public class CommonController {
         //使用UUID重新生成文件名，防止文件名称重复造成文件覆盖
         String fileName = UUID.randomUUID().toString() + suffix;//dfsdfdfd.jpg
 
-        //创建一个目录对象
-        System.out.println("文件目录：" + basePath);
-        //获取根目录
-        ApplicationHome h = new ApplicationHome(getClass());
-        File dir = h.getSource();
-        System.out.println("获取根目录" + dir.getParentFile().toString());
-        //File dir = new File(basePath);
-        //判断当前目录是否存在
+        File dir = new File(basePath);
         if (!dir.exists()) {
-            //目录不存在，需要创建
             dir.mkdirs();
         }
 
         try {
-            //将临时文件转存到指定位置
-            //file.transferTo(new File(basePath + fileName));
-            //项目运行的根目录
-            file.transferTo(new File(dir.getParentFile().toString() + fileName));
+            file.transferTo(new File(basePath + fileName));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -75,14 +63,8 @@ public class CommonController {
      */
     @GetMapping("/download")
     public void download(String name, HttpServletResponse response) {
-        //获取根目录
-        ApplicationHome h = new ApplicationHome(getClass());
-        File dir = h.getSource();
-        System.out.println("获取根目录" + dir.getParentFile().toString());
         try {
-            //输入流，通过输入流读取文件内容
-            //FileInputStream fileInputStream = new FileInputStream(new File(basePath + name));
-            FileInputStream fileInputStream = new FileInputStream(new File(dir.getParentFile().toString() + name));
+            FileInputStream fileInputStream = new FileInputStream(new File(basePath + name));
 
             //输出流，通过输出流将文件写回浏览器
             ServletOutputStream outputStream = response.getOutputStream();
