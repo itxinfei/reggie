@@ -125,6 +125,12 @@ public class DishController {
         return R.success("修改菜品成功");
     }
 
+    @PostMapping("/status/{status}")
+    public R<String> updateStatus(@PathVariable Integer status, @RequestParam List<Long> ids) {
+        dishService.updateStatus(status, ids);
+        return R.success("操作成功");
+    }
+
     /**
      * 根据条件查询对应的菜品数据
      * @param dish
