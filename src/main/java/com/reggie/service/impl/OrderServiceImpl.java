@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.dto.OrderDto;
 import com.reggie.entity.*;
 import com.reggie.mapper.OrderMapper;
 import com.reggie.service.*;
@@ -126,6 +127,58 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         queryWrapper.orderByDesc(Orders::getOrderTime);
         this.page(pageInfo, queryWrapper);
         return pageInfo;
+    }
+
+    @Override
+    public Page userPage(int page, int pageSize) {
+        Page<Orders> pageInfo = new Page<>(page, pageSize);
+        LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Orders::getUserId, BaseContext.getCurrentId());
+        queryWrapper.orderByDesc(Orders::getOrderTime);
+        this.page(pageInfo, queryWrapper);
+
+        List<Long> orderIds = pageInfo.getRecords().stream().map(Orders::getId).collect(Collectors.toList());
+        if (!orderIds.isEmpty()) {
+            LambdaQueryWrapper<OrderDetail> detailWrapper = new LambdaQueryWrapper<>();
+            detailWrapper.in(OrderDetail::getOrderId, orderIds);
+            List<OrderDetail> details = orderDetailService.list(detailWrapper);
+            List<OrderDto> orderDtoList = pageInfo.getRecords().stream().map(order -> {
+                OrderDto dto = new OrderDto();
+                org.springframework.beans.BeanUtils.copyProperties(order, dto);
+                dto.setOrderDetails(details.stream()
+                    .filter(d -> d.getOrderId().equals(order.getId()))
+                    .collect(Collectors.toList()));
+                return dto;
+            }).collect(Collectors.toList());
+            Page<OrderDto> dtoPage = new Page<>(page, pageSize, pageInfo.getTotal());
+            dtoPage.setRecords(orderDtoList);
+            return dtoPage;
+        }
+        return pageInfo;
+    }
+
+    @Override
+    public void again(Long orderId) {
+        LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderDetail::getOrderId, orderId);
+        List<OrderDetail> details = orderDetailService.list(wrapper);
+
+        Long userId = BaseContext.getCurrentId();
+        List<ShoppingCart> cartItems = details.stream().map(d -> {
+            ShoppingCart cart = new ShoppingCart();
+            cart.setName(d.getName());
+            cart.setImage(d.getImage());
+            cart.setUserId(userId);
+            cart.setDishId(d.getDishId());
+            cart.setSetmealId(d.getSetmealId());
+            cart.setDishFlavor(d.getDishFlavor());
+            cart.setNumber(d.getNumber());
+            cart.setAmount(d.getAmount());
+            cart.setCreateTime(LocalDateTime.now());
+            return cart;
+        }).collect(Collectors.toList());
+
+        shoppingCartService.saveBatch(cartItems);
     }
 
     @Override

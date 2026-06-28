@@ -88,6 +88,20 @@ public class ShoppingCartController {
     }
 
     /**
+     * 减商品
+     * @param shoppingCart
+     * @return
+     */
+    @PostMapping("/sub")
+    public R<ShoppingCart> sub(@RequestBody ShoppingCart shoppingCart) {
+        ShoppingCart result = shoppingCartService.sub(shoppingCart);
+        if (result == null) {
+            return R.success(null);
+        }
+        return R.success(result);
+    }
+
+    /**
      * 清空购物车
      * @return
      */

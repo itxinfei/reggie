@@ -110,6 +110,36 @@ CREATE TABLE address_book (
   PRIMARY KEY (id)
 );
 
+DROP TABLE IF EXISTS shopping_cart;
+CREATE TABLE shopping_cart (
+  id bigint(20) NOT NULL,
+  name varchar(64) DEFAULT NULL,
+  image varchar(255) DEFAULT NULL,
+  user_id bigint(20) DEFAULT NULL,
+  dish_id bigint(20) DEFAULT NULL,
+  setmeal_id bigint(20) DEFAULT NULL,
+  dish_flavor varchar(64) DEFAULT NULL,
+  number int(11) DEFAULT '1',
+  amount decimal(10,2) DEFAULT NULL,
+  create_time datetime DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+DROP TABLE IF EXISTS shopping_cart;
+CREATE TABLE shopping_cart (
+  id bigint(20) NOT NULL,
+  name varchar(50) DEFAULT NULL,
+  user_id bigint(20) DEFAULT NULL,
+  dish_id bigint(20) DEFAULT NULL,
+  setmeal_id bigint(20) DEFAULT NULL,
+  dish_flavor varchar(50) DEFAULT NULL,
+  number int(11) DEFAULT '1',
+  amount decimal(10,2) DEFAULT NULL,
+  image varchar(200) DEFAULT NULL,
+  create_time datetime DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
 DROP TABLE IF EXISTS order_detail;
 CREATE TABLE order_detail (
   id bigint(20) NOT NULL,

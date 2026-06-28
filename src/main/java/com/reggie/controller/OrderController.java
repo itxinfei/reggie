@@ -37,6 +37,18 @@ public class OrderController {
         return R.success(pageInfo);
     }
 
+    @GetMapping("/userPage")
+    public R<Page> userPage(int page, int pageSize) {
+        Page pageInfo = orderService.userPage(page, pageSize);
+        return R.success(pageInfo);
+    }
+
+    @PostMapping("/again")
+    public R<String> again(@RequestBody Orders orders) {
+        orderService.again(orders.getId());
+        return R.success("添加购物车成功");
+    }
+
     @PutMapping
     public R<String> updateStatus(@RequestBody Orders orders) {
         orderService.updateStatus(orders.getStatus(), orders.getId());

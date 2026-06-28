@@ -17,6 +17,7 @@ com\reggie\service\DishService.class
 com\reggie\mapper\EmployeeMapper.class
 com\reggie\service\impl\OrderServiceImpl.class
 com\reggie\entity\Category.class
+com\reggie\dto\OrderDto.class
 com\reggie\mapper\CategoryMapper.class
 com\reggie\mapper\SetmealDishMapper.class
 com\reggie\controller\OrderDetailController.class

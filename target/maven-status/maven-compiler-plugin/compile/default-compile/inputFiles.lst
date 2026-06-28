@@ -9,6 +9,7 @@ D:\MyCode\reggie\src\main\java\com\reggie\mapper\EmployeeMapper.java
 D:\MyCode\reggie\src\main\java\com\reggie\service\ShoppingCartService.java
 D:\MyCode\reggie\src\main\java\com\reggie\common\GlobalExceptionHandler.java
 D:\MyCode\reggie\src\main\java\com\reggie\config\MybatisPlusConfig.java
+D:\MyCode\reggie\src\main\java\com\reggie\dto\OrderDto.java
 D:\MyCode\reggie\src\main\java\com\reggie\service\impl\OrderDetailServiceImpl.java
 D:\MyCode\reggie\src\main\java\com\reggie\utils\SMSUtils.java
 D:\MyCode\reggie\src\main\java\com\reggie\common\MyMetaObjecthandler.java

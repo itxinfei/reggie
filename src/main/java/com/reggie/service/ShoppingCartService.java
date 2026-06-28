@@ -5,4 +5,5 @@ import com.reggie.entity.ShoppingCart;
 
 public interface ShoppingCartService extends IService<ShoppingCart> {
 
+    ShoppingCart sub(ShoppingCart shoppingCart);
 }
