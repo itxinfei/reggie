@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.reggie.common.SecurityConstants;
 import lombok.Data;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -17,8 +20,12 @@ public class Employee implements Serializable {
 
     private Long id;
 
+    @NotBlank(message = "用户名不能为空")
+    @Size(min = 4, max = 20, message = "用户名长度4-20位")
     private String username;
 
+    @NotBlank(message = "姓名不能为空")
+    @Size(max = 30, message = "姓名不能超过30位")
     private String name;
 
     private String password;
@@ -28,6 +35,7 @@ public class Employee implements Serializable {
      */
     private String passwordType = SecurityConstants.PASSWORD_TYPE_MD5; // 默认MD5，兼容老数据
 
+    @Pattern(regexp = SecurityConstants.PHONE_PATTERN, message = "手机号格式不正确")
     private String phone;
 
     private String sex;

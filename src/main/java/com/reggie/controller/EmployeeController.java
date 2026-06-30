@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
 
 @Slf4j
 @RestController
@@ -92,7 +93,7 @@ public class EmployeeController {
      * @return
      */
     @PostMapping
-    public R<String> save(HttpServletRequest request,@RequestBody Employee employee){
+    public R<String> save(HttpServletRequest request,@Valid @RequestBody Employee employee){
         log.info("新增员工，员工信息：{}",employee.toString());
 
         // 设置初始密码（使用BCrypt加密）
