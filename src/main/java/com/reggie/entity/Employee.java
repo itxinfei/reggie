@@ -2,6 +2,7 @@ package com.reggie.entity;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.reggie.common.SecurityConstants;
 import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -21,6 +22,11 @@ public class Employee implements Serializable {
     private String name;
 
     private String password;
+
+    /**
+     * 密码加密类型：MD5、BCRYPT
+     */
+    private String passwordType = SecurityConstants.PASSWORD_TYPE_MD5; // 默认MD5，兼容老数据
 
     private String phone;
 
