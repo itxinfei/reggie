@@ -48,7 +48,7 @@ public class DishController {
     @Operation(summary = "新增菜品", description = "保存菜品基本信息及口味")
     @Parameter(name = "dishDto", description = "菜品DTO", required = true)
     public R<String> save(@RequestBody DishDto dishDto){
-        log.info(dishDto.toString());
+        log.info("新增菜品：name={}, categoryId={}", dishDto.getName(), dishDto.getCategoryId());
 
         dishService.saveWithFlavor(dishDto);
 
@@ -130,7 +130,7 @@ public class DishController {
     @Operation(summary = "修改菜品", description = "更新菜品基本信息及口味")
     @Parameter(name = "dishDto", description = "菜品DTO", required = true)
     public R<String> update(@RequestBody DishDto dishDto){
-        log.info(dishDto.toString());
+        log.info("修改菜品：id={}, name={}", dishDto.getId(), dishDto.getName());
 
         dishService.updateWithFlavor(dishDto);
 
