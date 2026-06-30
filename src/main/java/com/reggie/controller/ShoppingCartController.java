@@ -36,7 +36,11 @@ public class ShoppingCartController {
     @Operation(summary = "添加到购物车", description = "添加商品到购物车")
     @Parameter(name = "shoppingCart", description = "购物车信息", required = true)
     public R<ShoppingCart> add(@RequestBody ShoppingCart shoppingCart){
-        log.info("购物车数据:{}",shoppingCart);
+        log.info("购物车数据：userId={}, dishId={}, dishName={}, number={}",
+            shoppingCart.getUserId(),
+            shoppingCart.getDishId() != null ? shoppingCart.getDishId() : shoppingCart.getSetmealId(),
+            shoppingCart.getName(),
+            shoppingCart.getNumber());
 
         //设置用户id，指定当前是哪个用户的购物车数据
         Long currentId = BaseContext.getCurrentId();
