@@ -8,6 +8,7 @@ import com.reggie.common.PasswordUtils;
 import com.reggie.common.R;
 import com.reggie.common.SecurityConstants;
 import com.reggie.entity.Employee;
+import com.reggie.enums.UserStatus;
 import com.reggie.service.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,7 +66,7 @@ public class EmployeeController {
         }
 
         //5、查看员工状态，如果为已禁用状态，则返回员工已禁用结果
-        if (emp.getStatus() == 0) {
+        if (emp.getStatus() != null && emp.getStatus() == UserStatus.DISABLED.getValue()) {
             return R.error("账号已禁用");
         }
 

@@ -7,6 +7,7 @@ import com.reggie.dto.DishDto;
 import com.reggie.entity.Category;
 import com.reggie.entity.Dish;
 import com.reggie.entity.DishFlavor;
+import com.reggie.enums.DishStatus;
 import com.reggie.service.CategoryService;
 import com.reggie.service.DishFlavorService;
 import com.reggie.service.DishService;
@@ -145,7 +146,7 @@ public class DishController {
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(dish.getCategoryId() != null ,Dish::getCategoryId,dish.getCategoryId());
         //添加条件，查询状态为1（起售状态）的菜品
-        queryWrapper.eq(Dish::getStatus,1);
+        queryWrapper.eq(Dish::getStatus, DishStatus.ENABLED.getValue());
 
         //添加排序条件
         queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
@@ -161,7 +162,7 @@ public class DishController {
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(dish.getCategoryId() != null ,Dish::getCategoryId,dish.getCategoryId());
         //添加条件，查询状态为1（起售状态）的菜品
-        queryWrapper.eq(Dish::getStatus,1);
+        queryWrapper.eq(Dish::getStatus, DishStatus.ENABLED.getValue());
 
         //添加排序条件
         queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);

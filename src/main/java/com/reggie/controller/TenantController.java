@@ -5,6 +5,7 @@ import com.reggie.common.R;
 import com.reggie.common.SecurityConstants;
 import com.reggie.entity.Employee;
 import com.reggie.entity.Tenant;
+import com.reggie.enums.UserStatus;
 import com.reggie.service.EmployeeService;
 import com.reggie.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,7 @@ public class TenantController {
         employee.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
         employee.setName(tenant.getName());
         employee.setPhone(tenant.getPhone());
-        employee.setStatus(1);
+        employee.setStatus(UserStatus.ENABLED.getValue());
         employee.setTenantId(tenant.getId());
         employeeService.save(employee);
 

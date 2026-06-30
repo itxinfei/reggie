@@ -7,6 +7,7 @@ import com.reggie.common.CustomException;
 import com.reggie.dto.SetmealDto;
 import com.reggie.entity.Setmeal;
 import com.reggie.entity.SetmealDish;
+import com.reggie.enums.DishStatus;
 import com.reggie.mapper.SetmealMapper;
 import com.reggie.service.SetmealDishService;
 import com.reggie.service.SetmealService;
@@ -85,7 +86,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
         //查询套餐状态，确定是否可用删除
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.in(Setmeal::getId, ids);
-        queryWrapper.eq(Setmeal::getStatus, 1);
+        queryWrapper.eq(Setmeal::getStatus, DishStatus.ENABLED.getValue());
 
         int count = this.count(queryWrapper);
         if(count > 0){

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.R;
 import com.reggie.common.LogMaskUtils;
 import com.reggie.entity.User;
+import com.reggie.enums.UserStatus;
 import com.reggie.service.UserService;
 import com.reggie.utils.ValidateCodeUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -84,7 +85,7 @@ public class UserController {
                 //判断当前手机号对应的用户是否为新用户，如果是新用户就自动完成注册
                 user = new User();
                 user.setPhone(phone);
-                user.setStatus(1);
+                user.setStatus(UserStatus.ENABLED.getValue());
                 if (tenantId != null) {
                     user.setTenantId(tenantId);
                 }
