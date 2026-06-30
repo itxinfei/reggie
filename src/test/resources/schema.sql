@@ -8,6 +8,7 @@ CREATE TABLE employee (
   username varchar(64) DEFAULT NULL,
   name varchar(64) DEFAULT NULL,
   password varchar(64) DEFAULT NULL,
+  password_type varchar(32) DEFAULT 'MD5',
   phone varchar(16) DEFAULT NULL,
   sex varchar(8) DEFAULT NULL,
   id_number varchar(32) DEFAULT NULL,
@@ -189,3 +190,31 @@ CREATE TABLE order_detail (
   amount decimal(10,2) DEFAULT NULL,
   PRIMARY KEY (id)
 );
+
+-- ========================================
+-- 数据库索引（优化专项 Task 5）
+-- ========================================
+
+-- 员工表：tenant_id 索引
+CREATE INDEX idx_employee_tenant ON employee(tenant_id);
+
+-- 菜品表：tenant_id + category_id 联合索引
+CREATE INDEX idx_dish_tenant_category ON dish(tenant_id, category_id);
+
+-- 套餐表：tenant_id + category_id 联合索引
+CREATE INDEX idx_setmeal_tenant_category ON setmeal(tenant_id, category_id);
+
+-- 订单表：user_id + order_time 联合索引
+CREATE INDEX idx_order_user ON orders(user_id, order_time);
+
+-- 地址表：user_id 索引
+CREATE INDEX idx_address_user ON address_book(user_id);
+
+-- 购物车表：user_id 索引
+CREATE INDEX idx_cart_user ON shopping_cart(user_id);
+
+-- 菜品口味表：tenant_id + dish_id 联合索引
+CREATE INDEX idx_dish_flavor_tenant_dish ON dish_flavor(tenant_id, dish_id);
+
+-- 订单明细表：order_id 索引
+CREATE INDEX idx_order_detail_order ON order_detail(order_id);
