@@ -34,7 +34,7 @@ public class CategoryController {
     @Operation(summary = "新增分类", description = "创建新的菜品或套餐分类")
     @Parameter(name = "category", description = "分类信息", required = true)
     public R<String> save(@RequestBody Category category){
-        log.info("category:{}",category);
+        log.info("category: id={}, name={}, type={}", category.getId(), category.getName(), category.getType());
         categoryService.save(category);
         return R.success("新增分类成功");
     }
@@ -88,7 +88,7 @@ public class CategoryController {
     @Operation(summary = "修改分类", description = "根据ID更新分类信息")
     @Parameter(name = "category", description = "分类信息", required = true)
     public R<String> update(@RequestBody Category category){
-        log.info("修改分类信息：{}",category);
+        log.info("修改分类信息：id={}, name={}", category.getId(), category.getName());
 
         categoryService.updateById(category);
 
