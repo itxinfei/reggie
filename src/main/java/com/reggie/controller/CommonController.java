@@ -74,7 +74,7 @@ public class CommonController {
         try {
             file.transferTo(new File(basePath + fileName));
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("文件上传失败", e);
         }
         return R.success(fileName);
     }
@@ -108,7 +108,7 @@ public class CommonController {
             outputStream.close();
             fileInputStream.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("文件下载失败", e);
         }
 
     }
