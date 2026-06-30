@@ -99,6 +99,13 @@
             <artifactId>commons-lang3</artifactId>
         </dependency>
 
+        <!-- Spring Security Crypto for BCrypt password encoding -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+            <version>5.4.6</version>
+        </dependency>
+
     </dependencies>
 
     <build>
