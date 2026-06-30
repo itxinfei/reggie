@@ -32,7 +32,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
      * 新增菜品，同时保存对应的口味数据
      * @param dishDto
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = "dishes", allEntries = true)
     public void saveWithFlavor(DishDto dishDto) {
         //保存菜品的基本信息到菜品表dish
@@ -88,7 +88,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = "dishes", allEntries = true)
     public void updateWithFlavor(DishDto dishDto) {
         //更新dish表基本信息
@@ -112,7 +112,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Integer status, List<Long> ids) {
         LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.in(ids != null, Dish::getId, ids);

@@ -33,7 +33,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
      * 新增套餐，同时需要保存套餐和菜品的关联关系
      * @param setmealDto
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void saveWithDish(SetmealDto setmealDto) {
         //保存套餐的基本信息，操作setmeal，执行insert操作
         this.save(setmealDto);
@@ -67,7 +67,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = "setmeal", key = "#setmealDto.id")
     public void updateWithDish(SetmealDto setmealDto) {
         this.updateById(setmealDto);
@@ -84,7 +84,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
         setmealDishService.saveBatch(dishes);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void removeWithDish(List<Long> ids) {
         //select count(*) from setmeal where id in (1,2,3) and status = 1
         //查询套餐状态，确定是否可用删除
@@ -109,7 +109,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Integer status, List<Long> ids) {
         LambdaUpdateWrapper<Setmeal> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.in(Setmeal::getId, ids);

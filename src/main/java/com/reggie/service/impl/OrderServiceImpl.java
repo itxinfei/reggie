@@ -18,7 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -43,7 +45,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      *
      * @param orders
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void submit(Orders orders) {
         //获得当前用户id
         Long userId = BaseContext.getCurrentId();
@@ -142,12 +144,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             LambdaQueryWrapper<OrderDetail> detailWrapper = new LambdaQueryWrapper<>();
             detailWrapper.in(OrderDetail::getOrderId, orderIds);
             List<OrderDetail> details = orderDetailService.list(detailWrapper);
+            // Pre-group details by orderId to avoid O(n²) filtering
+            Map<Long, List<OrderDetail>> detailsMap = details.stream()
+                .collect(Collectors.groupingBy(OrderDetail::getOrderId));
+
             List<OrderDto> orderDtoList = pageInfo.getRecords().stream().map(order -> {
                 OrderDto dto = new OrderDto();
                 org.springframework.beans.BeanUtils.copyProperties(order, dto);
-                dto.setOrderDetails(details.stream()
-                    .filter(d -> d.getOrderId().equals(order.getId()))
-                    .collect(Collectors.toList()));
+                dto.setOrderDetails(detailsMap.getOrDefault(order.getId(), Collections.emptyList()));
                 return dto;
             }).collect(Collectors.toList());
             Page<OrderDto> dtoPage = new Page<>(page, pageSize, pageInfo.getTotal());
@@ -190,7 +194,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Integer status, Long id) {
         Orders orders = this.getById(id);
         if (orders != null) {
