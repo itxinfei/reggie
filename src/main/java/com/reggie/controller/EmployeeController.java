@@ -3,12 +3,13 @@ package com.reggie.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.PasswordUtils;
 import com.reggie.common.R;
+import com.reggie.common.SecurityConstants;
 import com.reggie.entity.Employee;
 import com.reggie.service.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -30,33 +31,45 @@ public class EmployeeController {
     @PostMapping("/login")
     public R<Employee> login(HttpServletRequest request,@RequestBody Employee employee){
 
-        //1、将页面提交的密码password进行md5加密处理
-        String password = employee.getPassword();
-        password = DigestUtils.md5DigestAsHex(password.getBytes());
-
-        //2、根据页面提交的用户名username查询数据库
+        //1、根据页面提交的用户名username查询数据库
         LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Employee::getUsername,employee.getUsername());
+        queryWrapper.eq(Employee::getUsername, employee.getUsername());
         Employee emp = employeeService.getOne(queryWrapper);
 
-        //3、如果没有查询到则返回登录失败结果
-        if(emp == null){
-            return R.error("登录失败");
+        //2、如果没有查询到则返回登录失败结果
+        if (emp == null) {
+            return R.error("用户名或密码错误");
         }
 
-        //4、密码比对，如果不一致则返回登录失败结果
-        if(!emp.getPassword().equals(password)){
-            return R.error("登录失败");
+        //3、密码校验（支持MD5和BCrypt）
+        String rawPassword = employee.getPassword();
+        String encodedPassword = emp.getPassword();
+        String passwordType = emp.getPasswordType() != null ? emp.getPasswordType() : SecurityConstants.PASSWORD_TYPE_MD5;
+
+        boolean passwordMatches = PasswordUtils.matches(rawPassword, encodedPassword, passwordType);
+
+        if (!passwordMatches) {
+            return R.error("用户名或密码错误");
+        }
+
+        //4、密码类型升级（如果是MD5且校验通过，自动升级为BCrypt）
+        if (SecurityConstants.PASSWORD_TYPE_MD5.equals(passwordType)) {
+            String newEncoded = PasswordUtils.upgradeIfNeeded(rawPassword, encodedPassword, passwordType);
+            if (newEncoded != null) {
+                emp.setPassword(newEncoded);
+                emp.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
+                employeeService.updateById(emp);
+            }
         }
 
         //5、查看员工状态，如果为已禁用状态，则返回员工已禁用结果
-        if(emp.getStatus() == 0){
+        if (emp.getStatus() == 0) {
             return R.error("账号已禁用");
         }
 
         //6、登录成功，将员工id和租户id存入Session并返回登录成功结果
         BaseContext.setCurrentTenantId(employee.getTenantId());
-        request.getSession().setAttribute("employee",emp.getId());
+        request.getSession().setAttribute("employee", emp.getId());
         request.getSession().setAttribute("tenantId", employee.getTenantId());
         return R.success(emp);
     }
@@ -82,8 +95,9 @@ public class EmployeeController {
     public R<String> save(HttpServletRequest request,@RequestBody Employee employee){
         log.info("新增员工，员工信息：{}",employee.toString());
 
-        //设置初始密码123456，需要进行md5加密处理
-        employee.setPassword(DigestUtils.md5DigestAsHex("123456".getBytes()));
+        // 设置初始密码（使用BCrypt加密）
+        employee.setPassword(PasswordUtils.encodePassword(SecurityConstants.DEFAULT_PASSWORD));
+        employee.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
 
         //employee.setCreateTime(LocalDateTime.now());
         //employee.setUpdateTime(LocalDateTime.now());
