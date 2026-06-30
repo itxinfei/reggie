@@ -49,7 +49,11 @@ public class SetmealController {
     @Operation(summary = "新增套餐", description = "创建新的套餐及关联菜品")
     @Parameter(name = "setmealDto", description = "套餐DTO", required = true)
     public R<String> save(@RequestBody SetmealDto setmealDto){
-        log.info("套餐信息：{}",setmealDto);
+        log.info("套餐信息：id={}, name={}, categoryId={}, price={}",
+            setmealDto.getId(),
+            setmealDto.getName(),
+            setmealDto.getCategoryId(),
+            setmealDto.getPrice());
 
         setmealService.saveWithDish(setmealDto);
 
