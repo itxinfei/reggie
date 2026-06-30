@@ -5,6 +5,9 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.entity.ShoppingCart;
 import com.reggie.service.ShoppingCartService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +21,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/shoppingCart")
+@Tag(name = "购物车管理", description = "购物车CRUD接口")
 public class ShoppingCartController {
 
     @Autowired
@@ -29,6 +33,8 @@ public class ShoppingCartController {
      * @return
      */
     @PostMapping("/add")
+    @Operation(summary = "添加到购物车", description = "添加商品到购物车")
+    @Parameter(name = "shoppingCart", description = "购物车信息", required = true)
     public R<ShoppingCart> add(@RequestBody ShoppingCart shoppingCart){
         log.info("购物车数据:{}",shoppingCart);
 
@@ -75,6 +81,7 @@ public class ShoppingCartController {
      * @return
      */
     @GetMapping("/list")
+    @Operation(summary = "查询购物车", description = "查看当前用户的购物车列表")
     public R<List<ShoppingCart>> list(){
         log.info("查看购物车...");
 
@@ -93,6 +100,8 @@ public class ShoppingCartController {
      * @return
      */
     @PostMapping("/sub")
+    @Operation(summary = "减少购物车商品", description = "减少购物车中商品的数量")
+    @Parameter(name = "shoppingCart", description = "购物车信息", required = true)
     public R<ShoppingCart> sub(@RequestBody ShoppingCart shoppingCart) {
         ShoppingCart result = shoppingCartService.sub(shoppingCart);
         if (result == null) {
@@ -106,6 +115,7 @@ public class ShoppingCartController {
      * @return
      */
     @DeleteMapping("/clean")
+    @Operation(summary = "清空购物车", description = "清空当前用户的购物车")
     public R<String> clean(){
         //SQL:delete from shopping_cart where user_id = ?
 

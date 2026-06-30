@@ -1,6 +1,9 @@
 package com.reggie.controller;
 
 import com.reggie.common.R;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +23,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/common")
 @Slf4j
+@Tag(name = "公共接口", description = "文件上传下载等公共接口")
 public class CommonController {
 
     @Value("${reggie.path}")
@@ -32,6 +36,8 @@ public class CommonController {
      * @return 文件上传的目录改为项目运行的根目录
      */
     @PostMapping("/upload")
+    @Operation(summary = "文件上传", description = "上传图片文件")
+    @Parameter(name = "file", description = "上传的文件", required = true)
     public R<String> upload(MultipartFile file) {
         // 1. 校验文件是否为空
         if (file.isEmpty()) {
@@ -80,6 +86,8 @@ public class CommonController {
      * @param response
      */
     @GetMapping("/download")
+    @Operation(summary = "文件下载", description = "下载图片文件")
+    @Parameter(name = "name", description = "文件名", required = true)
     public void download(String name, HttpServletResponse response) {
         try {
             FileInputStream fileInputStream = new FileInputStream(new File(basePath + name));

@@ -8,6 +8,9 @@ import com.reggie.entity.Tenant;
 import com.reggie.enums.UserStatus;
 import com.reggie.service.EmployeeService;
 import com.reggie.service.TenantService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +20,7 @@ import javax.servlet.http.HttpSession;
 @Slf4j
 @RestController
 @RequestMapping("/tenant")
+@Tag(name = "租户管理", description = "租户注册接口")
 public class TenantController {
 
     @Autowired
@@ -26,6 +30,10 @@ public class TenantController {
     private EmployeeService employeeService;
 
     @PostMapping("/register")
+    @Operation(summary = "租户注册", description = "注册新租户并创建管理员账号")
+    @Parameter(name = "tenant", description = "租户信息", required = true)
+    @Parameter(name = "username", description = "管理员用户名", required = true)
+    @Parameter(name = "password", description = "管理员密码", required = true)
     public R<String> register(@RequestBody Tenant tenant, String username, String password, HttpSession session) {
         tenantService.save(tenant);
 
