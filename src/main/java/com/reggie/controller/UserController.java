@@ -7,6 +7,9 @@ import com.reggie.entity.User;
 import com.reggie.enums.UserStatus;
 import com.reggie.service.UserService;
 import com.reggie.utils.ValidateCodeUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +23,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/user")
 @Slf4j
+@Tag(name = "用户管理", description = "移动端用户及验证码接口")
 public class UserController {
 
     @Autowired
@@ -31,6 +35,8 @@ public class UserController {
      * @return
      */
     @PostMapping("/sendMsg")
+    @Operation(summary = "发送短信验证码", description = "向指定手机号发送验证码")
+    @Parameter(name = "user", description = "用户手机号信息", required = true)
     public R<String> sendMsg(@RequestBody User user, HttpSession session){
         //获取手机号
         String phone = user.getPhone();
@@ -59,6 +65,8 @@ public class UserController {
      * @return
      */
     @PostMapping("/login")
+    @Operation(summary = "用户登录", description = "手机号验证码登录")
+    @Parameter(name = "map", description = "登录参数（手机号、验证码）", required = true)
     public R<User> login(@RequestBody Map map, HttpSession session){
         //获取手机号
         String phone = (String) map.get("phone");
@@ -101,6 +109,7 @@ public class UserController {
     }
 
     @PostMapping("/loginout")
+    @Operation(summary = "用户退出", description = "退出当前登录账号")
     public R<String> loginout(HttpSession session) {
         session.removeAttribute("user");
         return R.success("退出成功");

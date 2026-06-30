@@ -10,6 +10,9 @@ import com.reggie.common.SecurityConstants;
 import com.reggie.entity.Employee;
 import com.reggie.enums.UserStatus;
 import com.reggie.service.EmployeeService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +23,7 @@ import javax.validation.Valid;
 @Slf4j
 @RestController
 @RequestMapping("/employee")
+@Tag(name = "员工管理", description = "员工CRUD及登录接口")
 public class EmployeeController {
 
     @Autowired
@@ -32,6 +36,8 @@ public class EmployeeController {
      * @return
      */
     @PostMapping("/login")
+    @Operation(summary = "员工登录", description = "员工账号密码登录")
+    @Parameter(name = "employee", description = "员工登录信息", required = true)
     public R<Employee> login(HttpServletRequest request,@RequestBody Employee employee){
 
         //1、根据页面提交的用户名username查询数据库
@@ -83,6 +89,7 @@ public class EmployeeController {
      * @return
      */
     @PostMapping("/logout")
+    @Operation(summary = "员工退出", description = "退出当前登录账号")
     public R<String> logout(HttpServletRequest request){
         request.getSession().removeAttribute("employee");
         request.getSession().removeAttribute("tenantId");
@@ -95,6 +102,8 @@ public class EmployeeController {
      * @return
      */
     @PostMapping
+    @Operation(summary = "新增员工", description = "创建新的员工账号")
+    @Parameter(name = "employee", description = "员工信息", required = true)
     public R<String> save(HttpServletRequest request,@Valid @RequestBody Employee employee){
         log.info("新增员工，员工信息：手机号={}，身份证号={}",
             LogMaskUtils.maskPhone(employee.getPhone()),
@@ -128,6 +137,10 @@ public class EmployeeController {
      * @return
      */
     @GetMapping("/page")
+    @Operation(summary = "员工分页查询", description = "分页查询员工列表")
+    @Parameter(name = "page", description = "页码", required = true)
+    @Parameter(name = "pageSize", description = "每页数量", required = true)
+    @Parameter(name = "name", description = "员工姓名（可选）")
     public R<Page<Employee>> page(int page,int pageSize,String name){
         log.info("page = {},pageSize = {},name = {}" ,page,pageSize,name);
 
@@ -159,6 +172,8 @@ public class EmployeeController {
      * @return
      */
     @PutMapping
+    @Operation(summary = "修改员工信息", description = "根据ID更新员工信息")
+    @Parameter(name = "employee", description = "员工信息", required = true)
     public R<String> update(HttpServletRequest request,@RequestBody Employee employee){
         log.info("修改员工信息，手机号={}，身份证号={}",
             LogMaskUtils.maskPhone(employee.getPhone()),
@@ -180,6 +195,8 @@ public class EmployeeController {
      * @return
      */
     @GetMapping("/{id}")
+    @Operation(summary = "查询员工信息", description = "根据ID查询员工详情")
+    @Parameter(name = "id", description = "员工ID", required = true)
     public R<Employee> getById(@PathVariable Long id){
         log.info("根据id查询员工信息...");
         Employee employee = employeeService.getById(id);

@@ -112,6 +112,13 @@
             <version>5.4.6</version>
         </dependency>
 
+        <!-- Swagger/OpenAPI 3 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-ui</artifactId>
+            <version>1.6.9</version>
+        </dependency>
+
     </dependencies>
 
     <build>

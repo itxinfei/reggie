@@ -10,6 +10,9 @@ import com.reggie.entity.SetmealDish;
 import com.reggie.service.CategoryService;
 import com.reggie.service.SetmealDishService;
 import com.reggie.service.SetmealService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/setmeal")
 @Slf4j
+@Tag(name = "套餐管理", description = "套餐CRUD及菜品关联接口")
 public class SetmealController {
 
     @Autowired
@@ -42,6 +46,8 @@ public class SetmealController {
      * @return
      */
     @PostMapping
+    @Operation(summary = "新增套餐", description = "创建新的套餐及关联菜品")
+    @Parameter(name = "setmealDto", description = "套餐DTO", required = true)
     public R<String> save(@RequestBody SetmealDto setmealDto){
         log.info("套餐信息：{}",setmealDto);
 
@@ -58,6 +64,10 @@ public class SetmealController {
      * @return
      */
     @GetMapping("/page")
+    @Operation(summary = "套餐分页查询", description = "分页查询套餐列表")
+    @Parameter(name = "page", description = "页码", required = true)
+    @Parameter(name = "pageSize", description = "每页数量", required = true)
+    @Parameter(name = "name", description = "套餐名称（可选）")
     public R<Page<SetmealDto>> page(int page,int pageSize,String name){
         //分页构造器对象
         Page<Setmeal> pageInfo = new Page<>(page,pageSize);
@@ -95,24 +105,33 @@ public class SetmealController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "查询套餐详情", description = "根据ID查询套餐及关联菜品")
+    @Parameter(name = "id", description = "套餐ID", required = true)
     public R<SetmealDto> get(@PathVariable Long id) {
         SetmealDto setmealDto = setmealService.getByIdWithDish(id);
         return R.success(setmealDto);
     }
 
     @PutMapping
+    @Operation(summary = "修改套餐", description = "更新套餐基本信息及关联菜品")
+    @Parameter(name = "setmealDto", description = "套餐DTO", required = true)
     public R<String> update(@RequestBody SetmealDto setmealDto) {
         setmealService.updateWithDish(setmealDto);
         return R.success("修改套餐成功");
     }
 
     @PostMapping("/status/{status}")
+    @Operation(summary = "更新套餐状态", description = "批量更新套餐售卖状态")
+    @Parameter(name = "status", description = "状态值", required = true)
+    @Parameter(name = "ids", description = "套餐ID列表", required = true)
     public R<String> updateStatus(@PathVariable Integer status, @RequestParam List<Long> ids) {
         setmealService.updateStatus(status, ids);
         return R.success("操作成功");
     }
 
     @GetMapping("/dish/{id}")
+    @Operation(summary = "查询套餐菜品", description = "查询套餐包含的菜品列表")
+    @Parameter(name = "id", description = "套餐ID", required = true)
     public R<List<SetmealDish>> dish(@PathVariable Long id) {
         LambdaQueryWrapper<SetmealDish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(SetmealDish::getSetmealId, id);
@@ -126,6 +145,8 @@ public class SetmealController {
      * @return
      */
     @DeleteMapping
+    @Operation(summary = "删除套餐", description = "批量删除套餐")
+    @Parameter(name = "ids", description = "套餐ID列表", required = true)
     public R<String> delete(@RequestParam List<Long> ids){
         log.info("ids:{}",ids);
 
@@ -140,6 +161,8 @@ public class SetmealController {
      * @return
      */
     @GetMapping("/list")
+    @Operation(summary = "查询套餐列表", description = "根据条件查询套餐数据")
+    @Parameter(name = "setmeal", description = "套餐查询条件")
     public R<List<Setmeal>> list(Setmeal setmeal){
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(setmeal.getCategoryId() != null,Setmeal::getCategoryId,setmeal.getCategoryId());

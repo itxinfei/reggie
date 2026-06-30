@@ -11,6 +11,9 @@ import com.reggie.enums.DishStatus;
 import com.reggie.service.CategoryService;
 import com.reggie.service.DishFlavorService;
 import com.reggie.service.DishService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/dish")
 @Slf4j
+@Tag(name = "菜品管理", description = "菜品CRUD及口味管理接口")
 public class DishController {
     @Autowired
     private DishService dishService;
@@ -41,6 +45,8 @@ public class DishController {
      * @return
      */
     @PostMapping
+    @Operation(summary = "新增菜品", description = "保存菜品基本信息及口味")
+    @Parameter(name = "dishDto", description = "菜品DTO", required = true)
     public R<String> save(@RequestBody DishDto dishDto){
         log.info(dishDto.toString());
 
@@ -57,6 +63,10 @@ public class DishController {
      * @return
      */
     @GetMapping("/page")
+    @Operation(summary = "菜品分页查询", description = "分页查询菜品列表")
+    @Parameter(name = "page", description = "页码", required = true)
+    @Parameter(name = "pageSize", description = "每页数量", required = true)
+    @Parameter(name = "name", description = "菜品名称（可选）")
     public R<Page<DishDto>> page(int page,int pageSize,String name){
 
         //构造分页构造器对象
@@ -102,6 +112,8 @@ public class DishController {
      * @return
      */
     @GetMapping("/{id}")
+    @Operation(summary = "查询菜品详情", description = "根据ID查询菜品及口味信息")
+    @Parameter(name = "id", description = "菜品ID", required = true)
     public R<DishDto> get(@PathVariable Long id){
 
         DishDto dishDto = dishService.getByIdWithFlavor(id);
@@ -115,6 +127,8 @@ public class DishController {
      * @return
      */
     @PutMapping
+    @Operation(summary = "修改菜品", description = "更新菜品基本信息及口味")
+    @Parameter(name = "dishDto", description = "菜品DTO", required = true)
     public R<String> update(@RequestBody DishDto dishDto){
         log.info(dishDto.toString());
 
@@ -124,12 +138,17 @@ public class DishController {
     }
 
     @DeleteMapping
+    @Operation(summary = "删除菜品", description = "批量删除菜品")
+    @Parameter(name = "ids", description = "菜品ID列表", required = true)
     public R<String> delete(@RequestParam List<Long> ids) {
         dishService.removeByIds(ids);
         return R.success("删除成功");
     }
 
     @PostMapping("/status/{status}")
+    @Operation(summary = "更新菜品状态", description = "批量更新菜品售卖状态")
+    @Parameter(name = "status", description = "状态值", required = true)
+    @Parameter(name = "ids", description = "菜品ID列表", required = true)
     public R<String> updateStatus(@PathVariable Integer status, @RequestParam List<Long> ids) {
         dishService.updateStatus(status, ids);
         return R.success("操作成功");
@@ -157,6 +176,8 @@ public class DishController {
     }*/
 
     @GetMapping("/list")
+    @Operation(summary = "查询菜品列表", description = "根据条件查询在售菜品数据")
+    @Parameter(name = "dish", description = "菜品查询条件")
     public R<List<DishDto>> list(Dish dish){
         //构造查询条件
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
