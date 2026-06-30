@@ -1,13 +1,14 @@
 package com.reggie.controller;
 
+import com.reggie.common.PasswordUtils;
 import com.reggie.common.R;
+import com.reggie.common.SecurityConstants;
 import com.reggie.entity.Employee;
 import com.reggie.entity.Tenant;
 import com.reggie.service.EmployeeService;
 import com.reggie.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
@@ -29,7 +30,9 @@ public class TenantController {
 
         Employee employee = new Employee();
         employee.setUsername(username);
-        employee.setPassword(DigestUtils.md5DigestAsHex(password.getBytes()));
+        // 使用BCrypt加密密码
+        employee.setPassword(PasswordUtils.encodePassword(password));
+        employee.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
         employee.setName(tenant.getName());
         employee.setPhone(tenant.getPhone());
         employee.setStatus(1);
