@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.UUID;
 
 /**
@@ -32,11 +33,28 @@ public class CommonController {
      */
     @PostMapping("/upload")
     public R<String> upload(MultipartFile file) {
+        // 1. 校验文件是否为空
+        if (file.isEmpty()) {
+            return R.error("上传文件不能为空");
+        }
+
+        // 2. 校验文件类型（仅允许图片格式）
+        String originalFilename = file.getOriginalFilename();
+        String extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
+        if (!Arrays.asList("jpg", "jpeg", "png", "gif").contains(extension)) {
+            return R.error("文件类型不支持，仅支持jpg、jpeg、png、gif格式");
+        }
+
+        // 3. 校验文件大小（5MB）
+        if (file.getSize() > 5 * 1024 * 1024) {
+            return R.error("文件大小不能超过5MB");
+        }
+
         //file是一个临时文件，需要转存到指定位置，否则本次请求完成后临时文件会删除
         log.info(file.toString());
 
         //原始文件名
-        String originalFilename = file.getOriginalFilename();//abc.jpg
+        //String originalFilename = file.getOriginalFilename();//abc.jpg
         String suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
 
         //使用UUID重新生成文件名，防止文件名称重复造成文件覆盖
