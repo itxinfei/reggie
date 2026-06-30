@@ -13,6 +13,8 @@ import com.reggie.service.DishService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
      * @param dishDto
      */
     @Transactional
+    @CacheEvict(value = "dishes", allEntries = true)
     public void saveWithFlavor(DishDto dishDto) {
         //保存菜品的基本信息到菜品表dish
         this.save(dishDto);
@@ -70,8 +73,23 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
         return dishDto;
     }
 
+    /**
+     * 根据分类id查询菜品列表
+     * @param categoryId
+     * @return
+     */
+    @Cacheable(value = "dishes", key = "#categoryId")
+    public List<Dish> listByCategoryId(Long categoryId) {
+        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(categoryId != null, Dish::getCategoryId, categoryId);
+        queryWrapper.eq(Dish::getStatus, DishStatus.ENABLED.getValue());
+        queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
+        return this.list(queryWrapper);
+    }
+
     @Override
     @Transactional
+    @CacheEvict(value = "dishes", allEntries = true)
     public void updateWithFlavor(DishDto dishDto) {
         //更新dish表基本信息
         this.updateById(dishDto);

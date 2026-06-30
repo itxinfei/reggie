@@ -14,6 +14,8 @@ import com.reggie.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +53,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
      * @param ids
      */
     @Override
+    @Cacheable(value = "setmeal", key = "#id")
     public SetmealDto getByIdWithDish(Long id) {
         Setmeal setmeal = this.getById(id);
         SetmealDto setmealDto = new SetmealDto();
@@ -65,6 +68,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
 
     @Override
     @Transactional
+    @CacheEvict(value = "setmeal", key = "#setmealDto.id")
     public void updateWithDish(SetmealDto setmealDto) {
         this.updateById(setmealDto);
 

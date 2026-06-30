@@ -11,7 +11,11 @@ import com.reggie.service.CategoryService;
 import com.reggie.service.DishService;
 import com.reggie.service.SetmealService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class CategoryServiceImpl extends ServiceImpl<CategoryMapper,Category> implements CategoryService{
@@ -23,10 +27,24 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper,Category> im
     private SetmealService setmealService;
 
     /**
+     * 根据类型查询分类列表
+     * @param categoryType
+     * @return
+     */
+    @Cacheable(value = "categories", key = "#categoryType")
+    public List<Category> list(Integer categoryType) {
+        LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(categoryType != null, Category::getType, categoryType);
+        queryWrapper.orderByAsc(Category::getSort).orderByDesc(Category::getUpdateTime);
+        return this.list(queryWrapper);
+    }
+
+    /**
      * 根据id删除分类，删除之前需要进行判断
      * @param id
      */
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public void remove(Long id) {
         LambdaQueryWrapper<Dish> dishLambdaQueryWrapper = new LambdaQueryWrapper<>();
         //添加查询条件，根据分类id进行查询
@@ -51,5 +69,17 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper,Category> im
 
         //正常删除分类
         super.removeById(id);
+    }
+
+    @Override
+    @CacheEvict(value = "categories", allEntries = true)
+    public boolean save(Category entity) {
+        return super.save(entity);
+    }
+
+    @Override
+    @CacheEvict(value = "categories", allEntries = true)
+    public boolean updateById(Category entity) {
+        return super.updateById(entity);
     }
 }

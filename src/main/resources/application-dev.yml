@@ -8,6 +8,11 @@ spring:
       username: root
       password: root # 开发环境明文，但禁止提交到git
       driver-class-name: com.mysql.cj.jdbc.Driver
+  # Redis 开发环境配置
+  redis:
+    host: localhost
+    port: 6379
+    database: 0
 
 mybatis-plus:
   configuration:

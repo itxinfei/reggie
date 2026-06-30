@@ -18,4 +18,7 @@ public interface DishService extends IService<Dish> {
     public void updateWithFlavor(DishDto dishDto);
 
     public void updateStatus(Integer status, List<Long> ids);
+
+    //根据分类id查询菜品列表
+    public List<Dish> listByCategoryId(Long categoryId);
 }
