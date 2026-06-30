@@ -3,6 +3,7 @@ package com.reggie.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.reggie.common.BaseContext;
+import com.reggie.common.LogMaskUtils;
 import com.reggie.common.R;
 import com.reggie.entity.AddressBook;
 import com.reggie.service.AddressBookService;
@@ -29,7 +30,9 @@ public class AddressBookController {
     @PostMapping
     public R<AddressBook> save(@RequestBody AddressBook addressBook) {
         addressBook.setUserId(BaseContext.getCurrentId());
-        log.info("addressBook:{}", addressBook);
+        log.info("新增地址，手机号：{}，地址：{}",
+            LogMaskUtils.maskPhone(addressBook.getPhone()),
+            LogMaskUtils.maskAddress(addressBook.getDetail()));
         addressBookService.save(addressBook);
         return R.success(addressBook);
     }
@@ -64,7 +67,9 @@ public class AddressBookController {
      */
     @PutMapping("default")
     public R<AddressBook> setDefault(@RequestBody AddressBook addressBook) {
-        log.info("addressBook:{}", addressBook);
+        log.info("设置默认地址，手机号：{}，地址：{}",
+            LogMaskUtils.maskPhone(addressBook.getPhone()),
+            LogMaskUtils.maskAddress(addressBook.getDetail()));
         LambdaUpdateWrapper<AddressBook> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(AddressBook::getUserId, BaseContext.getCurrentId());
         wrapper.set(AddressBook::getIsDefault, 0);
@@ -115,7 +120,9 @@ public class AddressBookController {
     @GetMapping("/list")
     public R<List<AddressBook>> list(AddressBook addressBook) {
         addressBook.setUserId(BaseContext.getCurrentId());
-        log.info("addressBook:{}", addressBook);
+        log.info("查询地址列表，手机号：{}，地址：{}",
+            LogMaskUtils.maskPhone(addressBook.getPhone()),
+            LogMaskUtils.maskAddress(addressBook.getDetail()));
 
         //条件构造器
         LambdaQueryWrapper<AddressBook> queryWrapper = new LambdaQueryWrapper<>();

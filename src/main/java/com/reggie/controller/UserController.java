@@ -2,6 +2,7 @@ package com.reggie.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.R;
+import com.reggie.common.LogMaskUtils;
 import com.reggie.entity.User;
 import com.reggie.service.UserService;
 import com.reggie.utils.ValidateCodeUtils;
@@ -58,10 +59,9 @@ public class UserController {
      */
     @PostMapping("/login")
     public R<User> login(@RequestBody Map map, HttpSession session){
-        log.info(map.toString());
-
         //获取手机号
-        String phone = map.get("phone").toString();
+        String phone = (String) map.get("phone");
+        log.info("用户登录，手机号={}", LogMaskUtils.maskPhone(phone));
 
         //获取验证码
         String code = map.get("code").toString();

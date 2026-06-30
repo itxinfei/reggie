@@ -1,6 +1,7 @@
 package com.reggie.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.LogMaskUtils;
 import com.reggie.common.R;
 import com.reggie.entity.Orders;
 import com.reggie.service.OrderService;
@@ -28,7 +29,9 @@ public class OrderController {
      */
     @PostMapping("/submit")
     public R<String> submit(@RequestBody Orders orders){
-        log.info("订单数据：{}",orders);
+        log.info("订单数据：手机号={}，地址={}",
+            LogMaskUtils.maskPhone(orders.getPhone()),
+            LogMaskUtils.maskAddress(orders.getAddress()));
         orderService.submit(orders);
         return R.success("下单成功");
     }

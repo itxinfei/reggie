@@ -3,6 +3,7 @@ package com.reggie.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.LogMaskUtils;
 import com.reggie.common.PasswordUtils;
 import com.reggie.common.R;
 import com.reggie.common.SecurityConstants;
@@ -94,7 +95,9 @@ public class EmployeeController {
      */
     @PostMapping
     public R<String> save(HttpServletRequest request,@Valid @RequestBody Employee employee){
-        log.info("新增员工，员工信息：{}",employee.toString());
+        log.info("新增员工，员工信息：手机号={}，身份证号={}",
+            LogMaskUtils.maskPhone(employee.getPhone()),
+            LogMaskUtils.maskIdCard(employee.getIdNumber()));
 
         // 设置初始密码（使用BCrypt加密）
         employee.setPassword(PasswordUtils.encodePassword(SecurityConstants.DEFAULT_PASSWORD));
@@ -156,7 +159,9 @@ public class EmployeeController {
      */
     @PutMapping
     public R<String> update(HttpServletRequest request,@RequestBody Employee employee){
-        log.info(employee.toString());
+        log.info("修改员工信息，手机号={}，身份证号={}",
+            LogMaskUtils.maskPhone(employee.getPhone()),
+            LogMaskUtils.maskIdCard(employee.getIdNumber()));
 
         long id = Thread.currentThread().getId();
         log.info("线程id为：{}",id);
