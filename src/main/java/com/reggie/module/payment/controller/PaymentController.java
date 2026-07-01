@@ -6,6 +6,8 @@ import com.reggie.common.R;
 import com.reggie.module.payment.channel.*;
 import com.reggie.module.payment.model.PaymentOrder;
 import com.reggie.module.payment.model.RefundRecord;
+import static com.reggie.module.payment.model.PaymentOrder.STATUS_REFUND;
+import static com.reggie.module.payment.model.PaymentOrder.STATUS_SUCCESS;
 import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.payment.service.RefundRecordService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -93,10 +95,10 @@ public class PaymentController {
             record.setRefundNo(generateRefundNo());
             record.setAmount(amount);
             record.setReason(reason);
-            record.setStatus("SUCCESS");
+            record.setStatus(STATUS_SUCCESS);
             refundRecordService.save(record);
 
-            paymentOrder.setStatus("REFUND");
+            paymentOrder.setStatus(STATUS_REFUND);
             paymentOrderService.updateById(paymentOrder);
 
             return R.success("退款成功");

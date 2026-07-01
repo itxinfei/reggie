@@ -145,7 +145,7 @@ public class EmployeeController {
         log.info("page = {},pageSize = {},name = {}" ,page,pageSize,name);
 
         //构造分页构造器
-        Page pageInfo = new Page(page,pageSize);
+        Page<Employee> pageInfo = new Page<>(page, pageSize);
 
         //构造条件构造器
         LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper<>();

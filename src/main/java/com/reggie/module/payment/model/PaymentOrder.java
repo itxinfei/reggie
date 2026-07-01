@@ -9,6 +9,11 @@ import java.time.LocalDateTime;
 public class PaymentOrder implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    public static final String STATUS_PENDING = "PENDING";
+    public static final String STATUS_SUCCESS = "SUCCESS";
+    public static final String STATUS_REFUND = "REFUND";
+    public static final String STATUS_FAIL = "FAIL";
+
     private Long id;
     private Long orderId;
     private Long tenantId;

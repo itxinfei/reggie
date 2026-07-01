@@ -18,6 +18,13 @@ public class Orders implements Serializable {
     //订单号
     private String number;
 
+    public static final int STATUS_PENDING_PAY = 1;
+    public static final int STATUS_ORDERED = 2;
+    public static final int STATUS_DELIVERING = 3;
+    public static final int STATUS_COMPLETED = 4;
+    public static final int STATUS_CANCELLED = 5;
+    public static final int STATUS_REFUNDED = 6;
+
     //订单状态 1待付款，2待派送，3已派送，4已完成，5已取消
     private Integer status;
 

@@ -9,6 +9,9 @@ import java.time.LocalDateTime;
 public class Material implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    public static final int STATUS_NORMAL = 1;
+    public static final int STATUS_DISABLED = 0;
+
     private Long id;
     private Long tenantId;
     private Long categoryId;

@@ -27,6 +27,9 @@ import java.util.stream.Collectors;
 @Service
 public class ReportServiceImpl implements ReportService {
 
+    private static final int SLOT_COUNT = 5;
+    private static final String[] SLOT_NAMES = {"早市(6-10)", "午市(10-14)", "下午茶(14-17)", "晚市(17-21)", "夜市(21-6)"};
+
     @Autowired
     private OrderService orderService;
 
@@ -52,8 +55,8 @@ public class ReportServiceImpl implements ReportService {
         for (Orders o : orders) {
             totalOrders++;
             totalAmount = totalAmount.add(o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO);
-            if (o.getStatus() != null && o.getStatus() == 4) completedOrders++;
-            if (o.getStatus() != null && o.getStatus() == 5) cancelledOrders++;
+            if (o.getStatus() != null && o.getStatus() == Orders.STATUS_COMPLETED) completedOrders++;
+            if (o.getStatus() != null && o.getStatus() == Orders.STATUS_CANCELLED) cancelledOrders++;
         }
 
         result.put("totalOrders", totalOrders);
@@ -102,16 +105,16 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public List<Map<String, Object>> getTimeSlotAnalysis(String startDate, String endDate) {
         List<Map<String, Object>> slots = new ArrayList<>();
-        String[] slotNames = {"早市(6-10)", "午市(10-14)", "下午茶(14-17)", "晚市(17-21)", "夜市(21-6)"};
+
 
         LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
         qw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
                 LocalDate.parse(endDate).atTime(LocalTime.MAX));
         List<Orders> orders = orderService.list(qw);
 
-        int[] counts = new int[5];
-        BigDecimal[] amounts = new BigDecimal[5];
-        for (int i = 0; i < 5; i++) amounts[i] = BigDecimal.ZERO;
+        int[] counts = new int[SLOT_COUNT];
+        BigDecimal[] amounts = new BigDecimal[SLOT_COUNT];
+        for (int i = 0; i < SLOT_COUNT; i++) amounts[i] = BigDecimal.ZERO;
 
         for (Orders o : orders) {
             if (o.getOrderTime() == null) continue;
@@ -126,9 +129,9 @@ public class ReportServiceImpl implements ReportService {
             amounts[idx] = amounts[idx].add(o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO);
         }
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < SLOT_COUNT; i++) {
             Map<String, Object> slot = new HashMap<>();
-            slot.put("name", slotNames[i]);
+            slot.put("name", SLOT_NAMES[i]);
             slot.put("count", counts[i]);
             slot.put("amount", amounts[i]);
             slots.add(slot);

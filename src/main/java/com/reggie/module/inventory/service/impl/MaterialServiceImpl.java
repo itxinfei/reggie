@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.module.inventory.mapper.MaterialMapper;
 import com.reggie.module.inventory.model.Material;
 import com.reggie.module.inventory.service.MaterialService;
+import static com.reggie.module.inventory.model.Material.STATUS_NORMAL;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -23,7 +24,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
     @Override
     public List<Material> checkWarning() {
         LambdaQueryWrapper<Material> qw = new LambdaQueryWrapper<>();
-        qw.eq(Material::getStatus, 1);
+        qw.eq(Material::getStatus, STATUS_NORMAL);
         qw.apply("stock_qty < min_stock");
         return list(qw);
     }

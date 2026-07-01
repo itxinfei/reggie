@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -25,6 +26,10 @@ import java.util.UUID;
 @Slf4j
 @Tag(name = "公共接口", description = "文件上传下载等公共接口")
 public class CommonController {
+
+    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif");
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+    private static final int BUFFER_SIZE = 1024;
 
     @Value("${reggie.path}")
     private String basePath;
@@ -47,12 +52,12 @@ public class CommonController {
         // 2. 校验文件类型（仅允许图片格式）
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
-        if (!Arrays.asList("jpg", "jpeg", "png", "gif").contains(extension)) {
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
             return R.error("文件类型不支持，仅支持jpg、jpeg、png、gif格式");
         }
 
         // 3. 校验文件大小（5MB）
-        if (file.getSize() > 5 * 1024 * 1024) {
+        if (file.getSize() > MAX_FILE_SIZE) {
             return R.error("文件大小不能超过5MB");
         }
 
@@ -98,7 +103,7 @@ public class CommonController {
             response.setContentType("image/jpeg");
 
             int len = 0;
-            byte[] bytes = new byte[1024];
+            byte[] bytes = new byte[BUFFER_SIZE];
             while ((len = fileInputStream.read(bytes)) != -1) {
                 outputStream.write(bytes, 0, len);
                 outputStream.flush();
