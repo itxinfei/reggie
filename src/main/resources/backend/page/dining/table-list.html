@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+</head>
+<body>
+  <div class="dashboard-container" id="table-app">
+    <div class="container">
+      <div class="tableBar">
+        <el-input v-model="input" placeholder="请输入桌台名称" style="width: 200px" clearable @keyup.enter.native="handleQuery">
+          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="init"></i>
+        </el-input>
+        <el-select v-model="areaId" placeholder="请选择区域" clearable style="width: 180px; margin-left: 10px;" @change="init">
+          <el-option v-for="item in areaList" :key="item.id" :label="item.name" :value="item.id"></el-option>
+        </el-select>
+        <div class="tableLab">
+          <el-button type="primary" @click="addHandle">+ 新增桌台</el-button>
+        </div>
+      </div>
+      <el-table :data="tableData" stripe class="tableBox">
+        <el-table-column type="index" label="序号" width="50"></el-table-column>
+        <el-table-column prop="name" label="桌台名称"></el-table-column>
+        <el-table-column prop="areaName" label="所属区域"></el-table-column>
+        <el-table-column prop="seatCount" label="座位数"></el-table-column>
+        <el-table-column label="状态">
+          <template slot-scope="scope">
+            <el-tag :type="scope.row.status === 'FREE' ? 'success' : scope.row.status === 'OCCUPIED' ? 'danger' : 'warning'"
+              style="cursor: pointer" @click="statusHandle(scope.row)">
+              {{ scope.row.status === 'FREE' ? '空闲' : scope.row.status === 'OCCUPIED' ? '占用' : '预留' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="最低消费">
+          <template slot-scope="scope">
+            <span>￥{{ scope.row.minAmount }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="sort" label="排序"></el-table-column>
+        <el-table-column label="操作" width="280" align="center">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" class="blueBug" @click="editHandle(scope.row)">修改</el-button>
+            <el-button type="text" size="small" class="blueBug" @click="qrcodeHandle(scope.row.id)">生成二维码</el-button>
+            <el-button type="text" size="small" class="delBut non" @click="deleteHandle(scope.row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-pagination
+        class="pageList"
+        :page-sizes="[10, 20, 30, 40]"
+        :page-size="pageSize"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="counts"
+        @size-change="handleSizeChange"
+        :current-page.sync="page"
+        @current-change="handleCurrentChange"
+      ></el-pagination>
+    </div>
+    <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="30%" :before-close="handleClose">
+      <el-form ref="form" :model="form" label-width="100px">
+        <el-form-item label="桌台名称：">
+          <el-input v-model="form.name" placeholder="请输入桌台名称" maxlength="14" />
+        </el-form-item>
+        <el-form-item label="所属区域：">
+          <el-select v-model="form.areaId" placeholder="请选择区域" style="width: 100%">
+            <el-option v-for="item in areaList" :key="item.id" :label="item.name" :value="item.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="座位数：">
+          <el-input v-model="form.seatCount" type="number" placeholder="请输入座位数" />
+        </el-form-item>
+        <el-form-item label="最低消费：">
+          <el-input v-model="form.minAmount" type="number" placeholder="请输入最低消费" />
+        </el-form-item>
+        <el-form-item label="状态：">
+          <el-select v-model="form.status" placeholder="请选择状态" style="width: 100%">
+            <el-option label="空闲" value="FREE"></el-option>
+            <el-option label="占用" value="OCCUPIED"></el-option>
+            <el-option label="预留" value="RESERVED"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="排序：">
+          <el-input v-model="form.sort" type="number" placeholder="请输入排序" />
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button size="medium" @click="handleClose">取 消</el-button>
+        <el-button type="primary" size="medium" @click="submitForm">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../api/dining.js"></script>
+  <script>
+    new Vue({
+      el: '#table-app',
+      data() {
+        return {
+          input: '',
+          areaId: '',
+          areaList: [],
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          dialog: {
+            title: '',
+            visible: false
+          },
+          form: {
+            id: '',
+            name: '',
+            areaId: '',
+            seatCount: '',
+            minAmount: '',
+            status: 'FREE',
+            sort: ''
+          },
+          action: ''
+        }
+      },
+      created() {
+        this.init()
+        this.loadAreaList()
+      },
+      methods: {
+        async init() {
+          const params = {
+            page: this.page,
+            pageSize: this.pageSize,
+            name: this.input || undefined,
+            areaId: this.areaId || undefined
+          }
+          await tablePage(params).then(res => {
+            if (String(res.code) === '1') {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total
+            } else {
+              this.$message.error(res.msg || '操作失败')
+            }
+          }).catch(err => {
+            this.$message.error('请求出错了：' + err)
+          })
+        },
+        async loadAreaList() {
+          await areaList().then(res => {
+            if (res.code === 1) {
+              this.areaList = res.data || []
+            }
+          }).catch(err => {
+            this.$message.error('请求出错了：' + err)
+          })
+        },
+        handleQuery() {
+          this.page = 1
+          this.init()
+        },
+        addHandle() {
+          this.action = 'add'
+          this.dialog.title = '新增桌台'
+          this.form.id = ''
+          this.form.name = ''
+          this.form.areaId = ''
+          this.form.seatCount = ''
+          this.form.minAmount = ''
+          this.form.status = 'FREE'
+          this.form.sort = ''
+          this.dialog.visible = true
+        },
+        editHandle(row) {
+          this.action = 'edit'
+          this.dialog.title = '修改桌台'
+          this.form.id = row.id
+          this.form.name = row.name
+          this.form.areaId = row.areaId
+          this.form.seatCount = row.seatCount
+          this.form.minAmount = row.minAmount
+          this.form.status = row.status
+          this.form.sort = row.sort
+          this.dialog.visible = true
+        },
+        handleClose() {
+          this.dialog.visible = false
+        },
+        submitForm() {
+          if (!this.form.name) {
+            this.$message.error('请输入桌台名称')
+            return
+          }
+          if (!this.form.areaId) {
+            this.$message.error('请选择所属区域')
+            return
+          }
+          if (this.action === 'add') {
+            addTable({
+              name: this.form.name,
+              areaId: this.form.areaId,
+              seatCount: this.form.seatCount,
+              minAmount: this.form.minAmount,
+              status: this.form.status,
+              sort: this.form.sort
+            }).then(res => {
+              if (res.code === 1) {
+                this.$message.success('桌台添加成功！')
+                this.dialog.visible = false
+                this.handleQuery()
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            }).catch(err => {
+              this.$message.error('请求出错了：' + err)
+            })
+          } else {
+            updateTable({
+              id: this.form.id,
+              name: this.form.name,
+              areaId: this.form.areaId,
+              seatCount: this.form.seatCount,
+              minAmount: this.form.minAmount,
+              status: this.form.status,
+              sort: this.form.sort
+            }).then(res => {
+              if (res.code === 1) {
+                this.$message.success('桌台修改成功！')
+                this.dialog.visible = false
+                this.handleQuery()
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            }).catch(err => {
+              this.$message.error('请求出错了：' + err)
+            })
+          }
+        },
+        statusHandle(row) {
+          const nextStatus = row.status === 'FREE' ? 'OCCUPIED' : row.status === 'OCCUPIED' ? 'RESERVED' : 'FREE'
+          const statusMap = { FREE: '空闲', OCCUPIED: '占用', RESERVED: '预留' }
+          this.$confirm('确认将桌台状态更改为「' + statusMap[nextStatus] + '」?', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            updateTableStatus({ id: row.id, status: nextStatus }).then(res => {
+              if (res.code === 1) {
+                this.$message.success('状态更改成功！')
+                this.init()
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            }).catch(err => {
+              this.$message.error('请求出错了：' + err)
+            })
+          })
+        },
+        qrcodeHandle(id) {
+          tableQrcode(id).then(res => {
+            if (res.code === 1 && res.data) {
+              const a = document.createElement('a')
+              a.href = res.data
+              a.download = 'qrcode.png'
+              a.click()
+              this.$message.success('二维码已生成')
+            } else {
+              this.$message.error(res.msg || '操作失败')
+            }
+          }).catch(err => {
+            this.$message.error('请求出错了：' + err)
+          })
+        },
+        deleteHandle(id) {
+          this.$confirm('确认删除该桌台, 是否继续?', '确定删除', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消'
+          }).then(() => {
+            deleteTable(id).then(res => {
+              if (res.code === 1) {
+                this.$message.success('删除成功！')
+                this.handleQuery()
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            }).catch(err => {
+              this.$message.error('请求出错了：' + err)
+            })
+          })
+        },
+        handleSizeChange(val) {
+          this.pageSize = val
+          this.init()
+        },
+        handleCurrentChange(val) {
+          this.page = val
+          this.init()
+        }
+      }
+    })
+  </script>
+</body>
+</html>
