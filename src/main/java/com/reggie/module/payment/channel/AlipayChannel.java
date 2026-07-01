@@ -9,14 +9,19 @@ import java.util.UUID;
 @Component
 public class AlipayChannel implements PaymentChannel {
 
+    private static final String TRADE_NO_PREFIX = "ALIPAY_";
+    private static final String REFUND_PREFIX = "ALIPAY_REFUND_";
+    private static final String PAY_URL_PREFIX = "https://pay.alipay.com/pay/";
+    private static final String QR_CODE_URL_PREFIX = "https://qr.alipay.com/";
+
     @Override
     public PayResponse createOrder(PayRequest request) {
         log.info("Alipay createOrder: tradeNo={}, amount={}, subject={}", request.getTradeNo(), request.getAmount(), request.getSubject());
         PayResponse response = new PayResponse();
         response.setSuccess(true);
-        response.setChannelTradeNo("ALIPAY_" + UUID.randomUUID().toString().replace("-", ""));
-        response.setPayUrl("https://pay.alipay.com/pay/" + response.getChannelTradeNo());
-        response.setQrCodeUrl("https://qr.alipay.com/" + response.getChannelTradeNo());
+        response.setChannelTradeNo(TRADE_NO_PREFIX + UUID.randomUUID().toString().replace("-", ""));
+        response.setPayUrl(PAY_URL_PREFIX + response.getChannelTradeNo());
+        response.setQrCodeUrl(QR_CODE_URL_PREFIX + response.getChannelTradeNo());
         return response;
     }
 
@@ -25,7 +30,7 @@ public class AlipayChannel implements PaymentChannel {
         log.info("Alipay queryOrder: tradeNo={}", tradeNo);
         PayResponse response = new PayResponse();
         response.setSuccess(true);
-        response.setChannelTradeNo("ALIPAY_" + tradeNo);
+        response.setChannelTradeNo(TRADE_NO_PREFIX + tradeNo);
         return response;
     }
 
@@ -34,7 +39,7 @@ public class AlipayChannel implements PaymentChannel {
         log.info("Alipay refund: channelTradeNo={}, amount={}, reason={}", request.getChannelTradeNo(), request.getAmount(), request.getReason());
         RefundResponse response = new RefundResponse();
         response.setSuccess(true);
-        response.setRefundChannelTradeNo("ALIPAY_REFUND_" + UUID.randomUUID().toString().replace("-", ""));
+        response.setRefundChannelTradeNo(REFUND_PREFIX + UUID.randomUUID().toString().replace("-", ""));
         return response;
     }
 
