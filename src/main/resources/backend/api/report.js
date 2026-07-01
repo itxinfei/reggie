@@ -1,0 +1,5 @@
+const reportDaily = (params) => $axios({ url: '/api/report/daily', method: 'get', params })
+const reportDishRanking = (params) => $axios({ url: '/api/report/dish-ranking', method: 'get', params })
+const reportTimeSlot = (params) => $axios({ url: '/api/report/time-slot', method: 'get', params })
+const reportPayment = (params) => $axios({ url: '/api/report/payment', method: 'get', params })
+const reportExport = (params) => $axios({ url: '/api/report/export', method: 'get', params, responseType: 'blob' })
