@@ -47,16 +47,26 @@ public class DeliveryController {
     public R<String> acceptOrder(@RequestBody Map<String, String> params) {
         String platform = params.get("platform");
         String platformOrderId = params.get("platformOrderId");
-        if (platform == null || platformOrderId == null) {
+
+        // 如果都没有提供，尝试通过orderId查询
+        if (platform == null && platformOrderId == null) {
             String orderId = params.get("orderId");
-            if (orderId != null) {
-                DeliveryOrder order = deliveryService.getById(orderId);
-                if (order != null) {
-                    platform = order.getPlatform();
-                    platformOrderId = order.getPlatformOrderId();
-                }
+            if (orderId == null) {
+                return R.error("接单失败");
             }
+            DeliveryOrder order = deliveryService.getById(orderId);
+            if (order == null) {
+                return R.error("接单失败");
+            }
+            platform = order.getPlatform();
+            platformOrderId = order.getPlatformOrderId();
         }
+
+        // 校验必要参数
+        if (platform == null || platformOrderId == null) {
+            return R.error("接单失败");
+        }
+
         boolean result = deliveryService.acceptOrder(platform, platformOrderId);
         return result ? R.success("接单成功") : R.error("接单失败");
     }
