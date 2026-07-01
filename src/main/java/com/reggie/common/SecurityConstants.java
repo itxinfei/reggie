@@ -3,7 +3,11 @@ package com.reggie.common;
 /**
  * 安全相关常量
  */
-public class SecurityConstants {
+public final class SecurityConstants {
+
+    private SecurityConstants() {
+        throw new AssertionError();
+    }
 
     /**
      * 密码最小长度

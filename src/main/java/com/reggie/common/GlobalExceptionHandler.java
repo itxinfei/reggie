@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(SQLIntegrityConstraintViolationException.class)
     public R<String> exceptionHandler(SQLIntegrityConstraintViolationException ex){
-        log.error(ex.getMessage());
+        log.error("SQL integrity violation", ex);
 
         if(ex.getMessage().contains("Duplicate entry")){
             String[] split = ex.getMessage().split(" ");
@@ -37,24 +37,16 @@ public class GlobalExceptionHandler {
         return R.error("未知错误");
     }
 
-    /**
-     * 异常处理方法
-     * @return
-     */
     @ExceptionHandler(CustomException.class)
     public R<String> exceptionHandler(CustomException ex){
-        log.error(ex.getMessage());
-
+        log.error("Business exception: {}", ex.getMessage());
         return R.error(ex.getMessage());
     }
 
-    /**
-     * 处理参数校验异常（@Valid / @Validated）
-     */
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseBody
     public R<String> handleConstraintViolationException(ConstraintViolationException ex) {
-        log.error("参数校验失败：{}", ex.getMessage());
+        log.error("参数校验失败", ex);
         String message = ex.getConstraintViolations()
                            .stream()
                            .map(ConstraintViolation::getMessage)
@@ -62,19 +54,23 @@ public class GlobalExceptionHandler {
         return R.error("参数校验失败：" + message);
     }
 
-    /**
-     * 处理请求体校验异常（@Valid @RequestBody）
-     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseBody
     public R<String> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
-        log.error("请求参数校验失败：{}", ex.getMessage());
+        log.error("请求参数校验失败", ex);
         String message = ex.getBindingResult()
                            .getFieldErrors()
                            .stream()
                            .map(error -> error.getField() + ": " + error.getDefaultMessage())
                            .collect(Collectors.joining(", "));
         return R.error("参数校验失败：" + message);
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseBody
+    public R<String> handleException(Exception ex) {
+        log.error("系统异常", ex);
+        return R.error("系统繁忙，请稍后重试");
     }
 
 }

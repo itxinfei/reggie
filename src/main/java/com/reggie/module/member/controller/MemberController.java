@@ -6,10 +6,10 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.module.member.model.Member;
 import com.reggie.module.member.service.MemberService;
+import com.reggie.module.member.service.RechargeRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -21,8 +21,13 @@ import java.util.Map;
 @Tag(name = "会员管理")
 public class MemberController {
 
-    @Autowired
-    private MemberService memberService;
+    private final MemberService memberService;
+    private final RechargeRecordService rechargeRecordService;
+
+    public MemberController(MemberService memberService, RechargeRecordService rechargeRecordService) {
+        this.memberService = memberService;
+        this.rechargeRecordService = rechargeRecordService;
+    }
 
     @GetMapping("/page")
     @Operation(summary = "分页查询")
@@ -66,9 +71,6 @@ public class MemberController {
         }
         return R.error("没有查询到对应会员");
     }
-
-    @Autowired
-    private com.reggie.module.member.service.RechargeRecordService rechargeRecordService;
 
     @PostMapping("/recharge")
     @Operation(summary = "会员充值")

@@ -14,11 +14,11 @@ public interface OrderService extends IService<Orders> {
      */
     public void submit(Orders orders);
 
-    public Page orderPage(int page, int pageSize, String number, String beginTime, String endTime);
+    Page<Orders> orderPage(int page, int pageSize, String number, String beginTime, String endTime);
 
-    public void updateStatus(Integer status, Long id);
+    void updateStatus(Integer status, Long id);
 
-    Page userPage(int page, int pageSize);
+    Page<?> userPage(int page, int pageSize);
 
     List<Orders> userList();
 

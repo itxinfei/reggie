@@ -7,7 +7,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.dto.OrderDto;
-import com.reggie.entity.*;
+import com.reggie.entity.AddressBook;
+import com.reggie.entity.OrderDetail;
+import com.reggie.entity.Orders;
+import com.reggie.entity.ShoppingCart;
+import com.reggie.entity.User;
 import com.reggie.mapper.OrderMapper;
 import com.reggie.service.*;
 import lombok.extern.slf4j.Slf4j;
@@ -113,7 +117,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     @Override
-    public Page orderPage(int page, int pageSize, String number, String beginTime, String endTime) {
+    public Page<Orders> orderPage(int page, int pageSize, String number, String beginTime, String endTime) {
         Page<Orders> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
 
@@ -132,7 +136,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     @Override
-    public Page userPage(int page, int pageSize) {
+    public Page<?> userPage(int page, int pageSize) {
         Page<Orders> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Orders::getUserId, BaseContext.getCurrentId());

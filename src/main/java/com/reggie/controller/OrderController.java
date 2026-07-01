@@ -50,7 +50,7 @@ public class OrderController {
     @Parameter(name = "beginTime", description = "开始时间（可选）")
     @Parameter(name = "endTime", description = "结束时间（可选）")
     public R<Page<Orders>> page(int page, int pageSize, String number, String beginTime, String endTime) {
-        Page pageInfo = orderService.orderPage(page, pageSize, number, beginTime, endTime);
+        Page<Orders> pageInfo = orderService.orderPage(page, pageSize, number, beginTime, endTime);
         return R.success(pageInfo);
     }
 
@@ -65,9 +65,8 @@ public class OrderController {
     @Operation(summary = "用户订单分页查询", description = "分页查询当前用户的订单")
     @Parameter(name = "page", description = "页码", required = true)
     @Parameter(name = "pageSize", description = "每页数量", required = true)
-    public R<Page> userPage(int page, int pageSize) {
-        Page pageInfo = orderService.userPage(page, pageSize);
-        return R.success(pageInfo);
+    public R<?> userPage(int page, int pageSize) {
+        return R.success(orderService.userPage(page, pageSize));
     }
 
     @PostMapping("/again")

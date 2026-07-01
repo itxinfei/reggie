@@ -1,27 +1,27 @@
 package com.reggie.common;
 
 public class BaseContext {
-    private static ThreadLocal<Long> threadLocal = new ThreadLocal<>();
-    private static ThreadLocal<Long> tenantThreadLocal = new ThreadLocal<>();
+    private static final ThreadLocal<Long> THREAD_LOCAL = new ThreadLocal<>();
+    private static final ThreadLocal<Long> TENANT_THREAD_LOCAL = new ThreadLocal<>();
 
     public static void setCurrentId(Long id){
-        threadLocal.set(id);
+        THREAD_LOCAL.set(id);
     }
 
     public static Long getCurrentId(){
-        return threadLocal.get();
+        return THREAD_LOCAL.get();
     }
 
     public static void setCurrentTenantId(Long tenantId) {
-        tenantThreadLocal.set(tenantId);
+        TENANT_THREAD_LOCAL.set(tenantId);
     }
 
     public static Long getCurrentTenantId() {
-        return tenantThreadLocal.get();
+        return TENANT_THREAD_LOCAL.get();
     }
 
     public static void remove() {
-        threadLocal.remove();
-        tenantThreadLocal.remove();
+        THREAD_LOCAL.remove();
+        TENANT_THREAD_LOCAL.remove();
     }
 }

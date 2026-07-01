@@ -12,7 +12,11 @@ import lombok.extern.slf4j.Slf4j;
  * 短信发送工具类
  */
 @Slf4j
-public class SMSUtils {
+public final class SMSUtils {
+
+    private SMSUtils() {
+        throw new AssertionError();
+    }
 
 	/**
 	 * 发送短信
@@ -35,7 +39,7 @@ public class SMSUtils {
 			SendSmsResponse response = client.getAcsResponse(request);
 			log.info("短信发送成功");
 		}catch (ClientException e) {
-			log.error("短信发送失败：{}", e.getMessage());
+			log.error("短信发送失败", e);
 		}
 	}
 
