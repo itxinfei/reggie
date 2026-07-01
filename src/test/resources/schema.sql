@@ -120,6 +120,8 @@ CREATE TABLE orders (
   address varchar(255) DEFAULT NULL,
   user_name varchar(64) DEFAULT NULL,
   consignee varchar(32) DEFAULT NULL,
+  table_id bigint DEFAULT NULL,
+  dining_type varchar(20) DEFAULT NULL,
   PRIMARY KEY (id)
 );
 
