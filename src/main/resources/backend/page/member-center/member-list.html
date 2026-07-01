@@ -159,6 +159,8 @@
               if (String(res.code) === '1') {
                 this.tableData = res.data.records || []
                 this.counts = res.data.total
+              } else {
+                this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
               this.$message.error('请求出错了：' + err)
@@ -168,6 +170,8 @@
             levelPage({ page: 1, pageSize: 100 }).then(res => {
               if (String(res.code) === '1') {
                 this.levelOptions = res.data.records || []
+              } else {
+                this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
               this.$message.error('请求出错了：' + err)
@@ -182,6 +186,8 @@
               if (String(res.code) === '1') {
                 this.detail = res.data
                 this.detailDialogVisible = true
+              } else {
+                this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
               this.$message.error('请求出错了：' + err)
