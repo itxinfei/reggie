@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+</head>
+<body>
+  <div class="dashboard-container" id="purchase-app">
+    <div class="container">
+      <div class="tableBar">
+        <el-select v-model="input.supplierId" placeholder="供应商" style="width: 150px" clearable @change="handleQuery">
+          <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
+        </el-select>
+        <el-select v-model="input.status" placeholder="状态" style="width: 130px; margin-left: 10px" clearable @change="handleQuery">
+          <el-option label="待收货" value="0"></el-option>
+          <el-option label="已收货" value="1"></el-option>
+          <el-option label="已取消" value="2"></el-option>
+        </el-select>
+        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
+        <el-button type="primary" @click="addHandle">+ 新增采购单</el-button>
+      </div>
+      <el-table :data="tableData" stripe class="tableBox" row-key="id">
+        <el-table-column type="expand">
+          <template slot-scope="props">
+            <el-table :data="props.row.details" stripe class="tableBox" v-if="props.row.details">
+              <el-table-column prop="materialName" label="食材名称" /></el-table-column>
+              <el-table-column prop="quantity" label="数量" /></el-table-column>
+              <el-table-column label="单价">
+                <template slot-scope="scope">￥{{ scope.row.unitPrice }}</template>
+              </el-table-column>
+              <el-table-column label="小计">
+                <template slot-scope="scope">￥{{ scope.row.subtotal }}</template>
+              </el-table-column>
+            </el-table>
+            <span v-else>暂无明细数据</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="id" label="采购单号" width="100" /></el-table-column>
+        <el-table-column label="供应商">
+          <template slot-scope="scope">{{ scope.row.supplierName }}</template>
+        </el-table-column>
+        <el-table-column label="总金额">
+          <template slot-scope="scope">￥{{ scope.row.totalAmount }}</template>
+        </el-table-column>
+        <el-table-column label="状态">
+          <template slot-scope="scope">
+            <el-tag :type="scope.row.status == '0' ? 'warning' : scope.row.status == '1' ? 'success' : 'info'">
+              {{ scope.row.status == '0' ? '待收货' : scope.row.status == '1' ? '已收货' : '已取消' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createdTime" label="创建时间" width="160" /></el-table-column>
+        <el-table-column label="操作" width="160" align="center">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" class="blueBug" @click="receiveHandle(scope.row.id)" v-if="scope.row.status == '0'">收货</el-button>
+            <el-button type="text" size="small" class="delBut non" @click="cancelHandle(scope.row.id)" v-if="scope.row.status == '0'">取消</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
+    </div>
+    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="50%" :before-close="handleClose">
+      <el-form class="demo-form-inline" label-width="120px">
+        <el-form-item label="供应商：">
+          <el-select v-model="formData.supplierId" placeholder="请选择" style="width: 100%">
+            <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="采购明细：">
+          <div v-for="(item, index) in formData.details" :key="index" style="display: flex; margin-bottom: 8px; gap: 8px; align-items: center;">
+            <el-select v-model="item.materialId" placeholder="食材" style="width: 160px" filterable>
+              <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id"></el-option>
+            </el-select>
+            <el-input v-model="item.quantity" placeholder="数量" type="number" style="width: 100px" />
+            <el-input v-model="item.unitPrice" placeholder="单价" type="number" style="width: 100px" />
+            <el-button type="danger" size="mini" @click="removeDetail(index)">删除</el-button>
+          </div>
+          <el-button type="primary" size="mini" @click="addDetail">+ 添加明细</el-button>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button size="medium" @click="formData.dialogVisible = false">取 消</el-button>
+        <el-button type="primary" size="medium" @click="submitForm()">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+    <script src="../../plugins/vue/vue.js"></script>
+    <script src="../../plugins/element-ui/index.js"></script>
+    <script src="../../plugins/axios/axios.min.js"></script>
+    <script src="../../js/request.js"></script>
+    <script src="../../api/inventory.js"></script>
+    <script>
+      new Vue({
+        el: '#purchase-app',
+        data() {
+          return {
+            action: '',
+            counts: 0,
+            page: 1,
+            pageSize: 10,
+            tableData: [],
+            input: {
+              supplierId: '',
+              status: ''
+            },
+            supplierOptions: [],
+            materialOptions: [],
+            formData: {
+              title: '新增采购单',
+              dialogVisible: false,
+              supplierId: '',
+              details: []
+            }
+          }
+        },
+        created() {
+          this.init()
+        },
+        methods: {
+          async init() {
+            const params = { page: this.page, pageSize: this.pageSize }
+            if (this.input.supplierId) params.supplierId = this.input.supplierId
+            if (this.input.status !== '') params.status = this.input.status
+            await purchasePage(params).then(res => {
+              if (String(res.code) === '1') {
+                this.tableData = res.data.records
+                this.counts = Number(res.data.total)
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            }).catch(err => {
+              this.$message.error('请求出错了：' + err)
+            })
+          },
+          loadSupplierOptions() {
+            supplierList().then(res => {
+              if (res.code === 1) this.supplierOptions = res.data
+            })
+          },
+          loadMaterialOptions() {
+            materialList().then(res => {
+              if (res.code === 1) this.materialOptions = res.data
+            })
+          },
+          loadDetails(row) {
+            if (!row.id) return
+            purchaseDetailList(row.id).then(res => {
+              if (res.code === 1) {
+                this.$set(row, 'details', res.data)
+              }
+            }).catch(err => {
+              this.$message.error('请求出错了：' + err)
+            })
+          },
+          handleQuery() {
+            this.page = 1
+            this.init()
+          },
+          addHandle() {
+            this.action = 'add'
+            this.formData.title = '新增采购单'
+            this.formData.supplierId = ''
+            this.formData.details = [{ materialId: '', quantity: '', unitPrice: '' }]
+            this.formData.dialogVisible = true
+            this.loadSupplierOptions()
+            this.loadMaterialOptions()
+          },
+          handleClose() {
+            this.formData.dialogVisible = false
+          },
+          addDetail() {
+            this.formData.details.push({ materialId: '', quantity: '', unitPrice: '' })
+          },
+          removeDetail(index) {
+            this.formData.details.splice(index, 1)
+          },
+          receiveHandle(id) {
+            this.$confirm('确认收货该采购单?', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }).then(() => {
+              receivePurchase(id).then(res => {
+                if (res.code === 1) {
+                  this.$message.success('收货成功！')
+                  this.handleQuery()
+                } else {
+                  this.$message.error(res.msg || '操作失败')
+                }
+              }).catch(err => {
+                this.$message.error('请求出错了：' + err)
+              })
+            })
+          },
+          cancelHandle(id) {
+            this.$confirm('确认取消该采购单?', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }).then(() => {
+              cancelPurchase(id).then(res => {
+                if (res.code === 1) {
+                  this.$message.success('取消成功！')
+                  this.handleQuery()
+                } else {
+                  this.$message.error(res.msg || '操作失败')
+                }
+              }).catch(err => {
+                this.$message.error('请求出错了：' + err)
+              })
+            })
+          },
+          submitForm() {
+            const fd = this.formData
+            if (!fd.supplierId) {
+              this.$message.error('请选择供应商')
+              return
+            }
+            if (!fd.details.length || !fd.details[0].materialId) {
+              this.$message.error('请添加至少一条采购明细')
+              return
+            }
+            addPurchase({ supplierId: fd.supplierId }).then(res => {
+              if (res.code === 1) {
+                const orderId = res.data
+                const detailPromises = fd.details.map(d => {
+                  return addPurchaseDetail({ orderId: orderId, materialId: d.materialId, quantity: d.quantity, unitPrice: d.unitPrice })
+                })
+                Promise.all(detailPromises).then(() => {
+                  this.$message.success('采购单创建成功！')
+                  this.formData.dialogVisible = false
+                  this.handleQuery()
+                }).catch(err => {
+                  this.$message.error('添加明细出错了：' + err)
+                })
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            }).catch(err => {
+              this.$message.error('请求出错了：' + err)
+            })
+          },
+          handleSizeChange(val) {
+            this.pageSize = val
+            this.init()
+          },
+          handleCurrentChange(val) {
+            this.page = val
+            this.init()
+          }
+        }
+      })
+    </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+</head>
+<body>
+  <div class="dashboard-container" id="stock-record-app">
+    <div class="container">
+      <div class="tableBar">
+        <el-select v-model="input.materialId" placeholder="食材" style="width: 150px" clearable filterable @change="handleQuery">
+          <el-option v-for="item in materialOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
+        </el-select>
+        <el-select v-model="input.type" placeholder="类型" style="width: 120px; margin-left: 10px" clearable @change="handleQuery">
+          <el-option label="入库" value="IN"></el-option>
+          <el-option label="出库" value="OUT"></el-option>
+          <el-option label="盘点" value="CHECK"></el-option>
+        </el-select>
+        <el-date-picker v-model="input.dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" style="margin-left: 10px" value-format="yyyy-MM-dd" @change="handleQuery"></el-date-picker>
+        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
+      </div>
+      <el-table :data="tableData" stripe class="tableBox">
+        <el-table-column label="食材名称">
+          <template slot-scope="scope">{{ scope.row.materialName }}</template>
+        </el-table-column>
+        <el-table-column label="类型">
+          <template slot-scope="scope">
+            <el-tag :type="scope.row.type == 'IN' ? 'primary' : scope.row.type == 'OUT' ? 'danger' : 'info'">
+              {{ scope.row.type == 'IN' ? '入库' : scope.row.type == 'OUT' ? '出库' : '盘点' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="quantity" label="数量" /></el-table-column>
+        <el-table-column label="单价">
+          <template slot-scope="scope">￥{{ scope.row.unitPrice }}</template>
+        </el-table-column>
+        <el-table-column label="总金额">
+          <template slot-scope="scope">￥{{ scope.row.totalAmount }}</template>
+        </el-table-column>
+        <el-table-column prop="remark" label="备注" /></el-table-column>
+        <el-table-column prop="createdTime" label="操作时间" width="160" /></el-table-column>
+      </el-table>
+      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
+    </div>
+  </div>
+    <script src="../../plugins/vue/vue.js"></script>
+    <script src="../../plugins/element-ui/index.js"></script>
+    <script src="../../plugins/axios/axios.min.js"></script>
+    <script src="../../js/request.js"></script>
+    <script src="../../api/inventory.js"></script>
+    <script>
+      new Vue({
+        el: '#stock-record-app',
+        data() {
+          return {
+            counts: 0,
+            page: 1,
+            pageSize: 10,
+            tableData: [],
+            materialOptions: [],
+            input: {
+              materialId: '',
+              type: '',
+              dateRange: ''
+            }
+          }
+        },
+        created() {
+          this.init()
+          this.loadMaterialOptions()
+        },
+        methods: {
+          async init() {
+            const params = { page: this.page, pageSize: this.pageSize }
+            if (this.input.materialId) params.materialId = this.input.materialId
+            if (this.input.type) params.type = this.input.type
+            if (this.input.dateRange) {
+              params.startDate = this.input.dateRange[0]
+              params.endDate = this.input.dateRange[1]
+            }
+            await stockRecordPage(params).then(res => {
+              if (String(res.code) === '1') {
+                this.tableData = res.data.records
+                this.counts = Number(res.data.total)
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            }).catch(err => {
+              this.$message.error('请求出错了：' + err)
+            })
+          },
+          loadMaterialOptions() {
+            materialList().then(res => {
+              if (res.code === 1) this.materialOptions = res.data
+            })
+          },
+          handleQuery() {
+            this.page = 1
+            this.init()
+          },
+          handleSizeChange(val) {
+            this.pageSize = val
+            this.init()
+          },
+          handleCurrentChange(val) {
+            this.page = val
+            this.init()
+          }
+        }
+      })
+    </script>
+</body>
+</html>

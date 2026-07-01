@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+</head>
+<body>
+  <div class="dashboard-container" id="stock-check-app">
+    <div class="container">
+      <div class="tableBar">
+        <el-select v-model="input.status" placeholder="状态" style="width: 130px" clearable @change="handleQuery">
+          <el-option label="进行中" value="0"></el-option>
+          <el-option label="已完成" value="1"></el-option>
+        </el-select>
+        <el-date-picker v-model="input.dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" style="margin-left: 10px" value-format="yyyy-MM-dd" @change="handleQuery"></el-date-picker>
+        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
+        <el-button type="primary" @click="addHandle">+ 新增盘点</el-button>
+      </div>
+      <el-table :data="tableData" stripe class="tableBox" row-key="id">
+        <el-table-column type="expand">
+          <template slot-scope="props">
+            <el-table :data="props.row.details" stripe class="tableBox" v-if="props.row.details">
+              <el-table-column label="食材名称">
+                <template slot-scope="scope">{{ scope.row.materialName }}</template>
+              </el-table-column>
+              <el-table-column prop="bookQty" label="账面数量" /></el-table-column>
+              <el-table-column prop="actualQty" label="实际数量" /></el-table-column>
+              <el-table-column label="差异">
+                <template slot-scope="scope">
+                  <span :style="scope.row.diff < 0 ? 'color: red' : scope.row.diff > 0 ? 'color: green' : ''">{{ scope.row.diff }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+            <span v-else>暂无明细数据</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="id" label="盘点单号" width="100" /></el-table-column>
+        <el-table-column prop="itemCount" label="盘点项数" width="100" /></el-table-column>
+        <el-table-column label="盈亏金额">
+          <template slot-scope="scope">
+            <span :style="scope.row.profitLoss < 0 ? 'color: red' : ''">{{ scope.row.profitLoss }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态">
+          <template slot-scope="scope">
+            <el-tag :type="scope.row.status == '0' ? 'warning' : 'success'">
+              {{ scope.row.status == '0' ? '进行中' : '已完成' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createdTime" label="创建时间" width="160" /></el-table-column>
+        <el-table-column label="操作" width="120" align="center">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" class="blueBug" @click="completeHandle(scope.row.id)" v-if="scope.row.status == '0'">完成盘点</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
+    </div>
+    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="40%" :before-close="handleClose">
+      <el-form class="demo-form-inline" label-width="120px">
+        <el-form-item label="盘点明细：">
+          <div v-for="(item, index) in formData.details" :key="index" style="display: flex; margin-bottom: 8px; gap: 8px; align-items: center;">
+            <el-select v-model="item.materialId" placeholder="食材" style="width: 200px" filterable>
+              <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id"></el-option>
+            </el-select>
+            <el-input v-model="item.actualQty" placeholder="实际数量" type="number" style="width: 120px" />
+            <el-button type="danger" size="mini" @click="removeDetail(index)">删除</el-button>
+          </div>
+          <el-button type="primary" size="mini" @click="addDetail">+ 添加盘点项</el-button>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button size="medium" @click="formData.dialogVisible = false">取 消</el-button>
+        <el-button type="primary" size="medium" @click="submitForm()">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+    <script src="../../plugins/vue/vue.js"></script>
+    <script src="../../plugins/element-ui/index.js"></script>
+    <script src="../../plugins/axios/axios.min.js"></script>
+    <script src="../../js/request.js"></script>
+    <script src="../../api/inventory.js"></script>
+    <script>
+      new Vue({
+        el: '#stock-check-app',
+        data() {
+          return {
+            action: '',
+            counts: 0,
+            page: 1,
+            pageSize: 10,
+            tableData: [],
+            input: {
+              status: '',
+              dateRange: ''
+            },
+            materialOptions: [],
+            formData: {
+              title: '新增盘点',
+              dialogVisible: false,
+              details: []
+            }
+          }
+        },
+        created() {
+          this.init()
+        },
+        methods: {
+          async init() {
+            const params = { page: this.page, pageSize: this.pageSize }
+            if (this.input.status !== '') params.status = this.input.status
+            if (this.input.dateRange) {
+              params.startDate = this.input.dateRange[0]
+              params.endDate = this.input.dateRange[1]
+            }
+            await stockCheckPage(params).then(res => {
+              if (String(res.code) === '1') {
+                this.tableData = res.data.records
+                this.counts = Number(res.data.total)
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            }).catch(err => {
+              this.$message.error('请求出错了：' + err)
+            })
+          },
+          loadMaterialOptions() {
+            materialList().then(res => {
+              if (res.code === 1) this.materialOptions = res.data
+            })
+          },
+          handleQuery() {
+            this.page = 1
+            this.init()
+          },
+          addHandle() {
+            this.action = 'add'
+            this.formData.title = '新增盘点'
+            this.formData.details = [{ materialId: '', actualQty: '' }]
+            this.formData.dialogVisible = true
+            this.loadMaterialOptions()
+          },
+          handleClose() {
+            this.formData.dialogVisible = false
+          },
+          addDetail() {
+            this.formData.details.push({ materialId: '', actualQty: '' })
+          },
+          removeDetail(index) {
+            this.formData.details.splice(index, 1)
+          },
+          completeHandle(id) {
+            this.$confirm('确认完成该盘点单?', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }).then(() => {
+              completeStockCheck(id).then(res => {
+                if (res.code === 1) {
+                  this.$message.success('盘点完成！')
+                  this.handleQuery()
+                } else {
+                  this.$message.error(res.msg || '操作失败')
+                }
+              }).catch(err => {
+                this.$message.error('请求出错了：' + err)
+              })
+            })
+          },
+          submitForm() {
+            const fd = this.formData
+            if (!fd.details.length || !fd.details[0].materialId) {
+              this.$message.error('请添加至少一条盘点项')
+              return
+            }
+            addStockCheck({ details: fd.details }).then(res => {
+              if (res.code === 1) {
+                this.$message.success('盘点创建成功！')
+                this.formData.dialogVisible = false
+                this.handleQuery()
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            }).catch(err => {
+              this.$message.error('请求出错了：' + err)
+            })
+          },
+          handleSizeChange(val) {
+            this.pageSize = val
+            this.init()
+          },
+          handleCurrentChange(val) {
+            this.page = val
+            this.init()
+          }
+        }
+      })
+    </script>
+</body>
+</html>
