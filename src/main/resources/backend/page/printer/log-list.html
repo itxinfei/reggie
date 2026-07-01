@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>打印日志</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+</head>
+<body>
+  <div class="dashboard-container" id="printer-log-app">
+    <div class="container">
+      <div class="tableBar">
+        <el-input v-model="query.orderId" placeholder="订单号" style="width: 200px" clearable>
+          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor:pointer" @click="search"></i>
+        </el-input>
+        <el-button type="primary" class="search-btn" @click="search">查询</el-button>
+        <el-button @click="reset">重置</el-button>
+      </div>
+      <el-table :data="tableData" stripe class="tableBox">
+        <el-table-column prop="orderId" label="订单号"></el-table-column>
+        <el-table-column prop="printType" label="打印类型"></el-table-column>
+        <el-table-column prop="printerId" label="打印机"></el-table-column>
+        <el-table-column label="状态">
+          <template slot-scope="scope">
+            <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'">
+              {{ scope.row.status === 1 ? '成功' : '失败' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="errorMsg" label="错误信息" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="createdTime" label="打印时间" width="180"></el-table-column>
+      </el-table>
+      <el-pagination
+        class="pageList"
+        :page-sizes="[10, 20, 30]"
+        :page-size="query.pageSize"
+        :current-page.sync="query.page"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="counts"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      ></el-pagination>
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../api/printer.js"></script>
+  <script>
+    new Vue({
+      el: '#printer-log-app',
+      data() {
+        return {
+          query: {
+            page: 1,
+            pageSize: 10,
+            orderId: ''
+          },
+          counts: 0,
+          tableData: []
+        }
+      },
+      created() {
+        this.init()
+      },
+      methods: {
+        async init() {
+          const params = {
+            page: this.query.page,
+            pageSize: this.query.pageSize,
+            orderId: this.query.orderId || undefined
+          }
+          await printerLogPage(params).then(res => {
+            if (String(res.code) === '1') {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total
+            } else {
+              this.$message.error(res.msg || '操作失败')
+            }
+          }).catch(err => {
+            this.$message.error('请求出错了：' + err)
+          })
+        },
+        search() {
+          this.query.page = 1
+          this.init()
+        },
+        reset() {
+          this.query.orderId = ''
+          this.search()
+        },
+        handleSizeChange(val) {
+          this.query.pageSize = val
+          this.init()
+        },
+        handleCurrentChange(val) {
+          this.query.page = val
+          this.init()
+        }
+      }
+    })
+  </script>
+</body>
+</html>
