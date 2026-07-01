@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
 import com.reggie.module.inventory.model.PurchaseOrder;
+import com.reggie.module.inventory.model.PurchaseOrderDetail;
 import com.reggie.module.inventory.service.PurchaseOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -56,6 +58,13 @@ public class PurchaseOrderController {
             return R.error("采购单不存在");
         }
         return R.success(po);
+    }
+
+    @GetMapping("/detail/{id}")
+    @Operation(summary = "查询采购单明细")
+    public R<List<PurchaseOrderDetail>> getDetail(@PathVariable Long id) {
+        List<PurchaseOrderDetail> details = purchaseOrderService.getDetailsByOrderId(id);
+        return R.success(details);
     }
 
     @PostMapping("/addDetail")

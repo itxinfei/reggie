@@ -115,6 +115,12 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
     }
 
     @Override
+    public List<PurchaseOrderDetail> getDetailsByOrderId(Long orderId) {
+        return detailService.list(
+            new LambdaQueryWrapper<PurchaseOrderDetail>().eq(PurchaseOrderDetail::getPurchaseOrderId, orderId));
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Long orderId) {
         PurchaseOrder po = getById(orderId);

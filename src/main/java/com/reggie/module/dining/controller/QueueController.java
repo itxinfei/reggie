@@ -43,7 +43,7 @@ public class QueueController {
     public R<QueueRecord> takeNumber(@RequestBody Map<String, Object> params) {
         Integer seatCount = Integer.valueOf(params.get("seatCount").toString());
         String phone = (String) params.get("phone");
-        log.info("取号: seatCount={}, phone={}", seatCount, phone);
+        log.info("取号: seatCount={}, phone={}", seatCount, phone.replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2"));
         QueueRecord record = queueService.takeNumber(seatCount, phone);
         return R.success(record);
     }

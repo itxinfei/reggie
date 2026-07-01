@@ -50,7 +50,7 @@ public class ReservationController {
         Integer seatCount = params.get("seatCount") != null ? Integer.valueOf(params.get("seatCount").toString()) : null;
         Long tableId = params.get("tableId") != null ? Long.valueOf(params.get("tableId").toString()) : null;
         String remark = (String) params.get("remark");
-        log.info("新增预订: customerName={}, phone={}", customerName, phone);
+        log.info("新增预订: customerName={}, phone={}", customerName, phone.replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2"));
         Reservation r = reservationService.createReservation(customerName, phone, reservedTime, seatCount, tableId, remark);
         return R.success(r);
     }

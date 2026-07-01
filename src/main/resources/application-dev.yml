@@ -6,7 +6,7 @@ spring:
     druid:
       url: jdbc:mysql://localhost:3306/reggie?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
       username: root
-      password: root # 开发环境明文，但禁止提交到git
+      password: ${DB_PASSWORD:root}
       driver-class-name: com.mysql.cj.jdbc.Driver
   # Redis 开发环境配置
   redis:
