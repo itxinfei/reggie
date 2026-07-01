@@ -35,6 +35,17 @@ public class AddressBookControllerTest {
     }
 
     @Test
+    void testSave() throws Exception {
+        mockMvc.perform(post("/addressBook")
+                .sessionAttr("user", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"consignee\":\"新地址联系人\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceName\":\"广东省\",\"cityName\":\"深圳市\",\"districtName\":\"南山区\",\"detail\":\"科技园路1号\",\"label\":\"公司\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.consignee").value("新地址联系人"));
+    }
+
+    @Test
     void testUpdateAddress() throws Exception {
         AddressBook address = new AddressBook();
         address.setId(1L);
@@ -89,5 +100,112 @@ public class AddressBookControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.consignee").value("赵六"));
+    }
+
+    @Test
+    void testSetDefault() throws Exception {
+        AddressBook addr1 = new AddressBook();
+        addr1.setId(10L);
+        addr1.setUserId(1L);
+        addr1.setConsignee("地址一");
+        addr1.setPhone("13800138000");
+        addr1.setDetail("地址一详情");
+        addr1.setIsDefault(1);
+        addressBookService.save(addr1);
+
+        AddressBook addr2 = new AddressBook();
+        addr2.setId(11L);
+        addr2.setUserId(1L);
+        addr2.setConsignee("地址二");
+        addr2.setPhone("13900139000");
+        addr2.setDetail("地址二详情");
+        addr2.setIsDefault(0);
+        addressBookService.save(addr2);
+
+        mockMvc.perform(put("/addressBook/default")
+                .sessionAttr("user", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":11}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        org.junit.jupiter.api.Assertions.assertEquals(0, addressBookService.getById(10L).getIsDefault());
+        org.junit.jupiter.api.Assertions.assertEquals(1, addressBookService.getById(11L).getIsDefault());
+    }
+
+    @Test
+    void testGetById() throws Exception {
+        AddressBook address = new AddressBook();
+        address.setId(4L);
+        address.setUserId(1L);
+        address.setConsignee("查询联系人");
+        address.setPhone("13500135000");
+        address.setDetail("查询地址");
+        addressBookService.save(address);
+
+        mockMvc.perform(get("/addressBook/4")
+                .sessionAttr("user", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.consignee").value("查询联系人"));
+    }
+
+    @Test
+    void testGetByIdNotFound() throws Exception {
+        mockMvc.perform(get("/addressBook/999")
+                .sessionAttr("user", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test
+    void testGetDefault() throws Exception {
+        AddressBook address = new AddressBook();
+        address.setId(5L);
+        address.setUserId(1L);
+        address.setConsignee("默认地址");
+        address.setPhone("13800138000");
+        address.setDetail("默认地址详情");
+        address.setIsDefault(1);
+        addressBookService.save(address);
+
+        mockMvc.perform(get("/addressBook/default")
+                .sessionAttr("user", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.consignee").value("默认地址"));
+    }
+
+    @Test
+    void testGetDefaultNotFound() throws Exception {
+        mockMvc.perform(get("/addressBook/default")
+                .sessionAttr("user", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test
+    void testList() throws Exception {
+        AddressBook addr1 = new AddressBook();
+        addr1.setId(6L);
+        addr1.setUserId(1L);
+        addr1.setConsignee("地址一");
+        addr1.setPhone("13800138000");
+        addr1.setDetail("地址一详情");
+        addressBookService.save(addr1);
+
+        AddressBook addr2 = new AddressBook();
+        addr2.setId(7L);
+        addr2.setUserId(1L);
+        addr2.setConsignee("地址二");
+        addr2.setPhone("13900139000");
+        addr2.setDetail("地址二详情");
+        addressBookService.save(addr2);
+
+        mockMvc.perform(get("/addressBook/list")
+                .sessionAttr("user", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.length()").value(2));
     }
 }

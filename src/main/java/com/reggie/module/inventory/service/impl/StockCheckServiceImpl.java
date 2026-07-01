@@ -10,6 +10,8 @@ import com.reggie.module.inventory.model.Material;
 import com.reggie.module.inventory.model.StockCheck;
 import com.reggie.module.inventory.model.StockCheckDetail;
 import com.reggie.module.inventory.model.StockRecord;
+import com.reggie.enums.StockCheckStatus;
+import com.reggie.enums.StockRecordType;
 import com.reggie.module.inventory.service.MaterialService;
 import com.reggie.module.inventory.service.StockCheckService;
 import com.reggie.module.inventory.service.StockRecordService;
@@ -49,7 +51,7 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         StockCheck sc = new StockCheck();
         sc.setTenantId(BaseContext.getCurrentTenantId());
         sc.setCheckNo("CK" + datePrefix + String.format("%03d", seq));
-        sc.setStatus("DRAFT");
+        sc.setStatus(StockCheckStatus.DRAFT.getValue());
         sc.setOperator(operator);
         sc.setRemark(remark);
         save(sc);
@@ -63,7 +65,7 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         if (sc == null) {
             throw new CustomException("盘点单不存在");
         }
-        if (!"DRAFT".equals(sc.getStatus()) && !"IN_PROGRESS".equals(sc.getStatus())) {
+        if (!StockCheckStatus.DRAFT.getValue().equals(sc.getStatus()) && !StockCheckStatus.IN_PROGRESS.getValue().equals(sc.getStatus())) {
             throw new CustomException("盘点单状态不允许完成");
         }
 
@@ -97,7 +99,7 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
             StockRecord record = new StockRecord();
             record.setTenantId(BaseContext.getCurrentTenantId());
             record.setMaterialId(materialId);
-            record.setType("CHECK");
+            record.setType(StockRecordType.CHECK.getValue());
             record.setQty(diff);
             record.setUnitPrice(material.getUnitPrice());
             record.setBizId(checkId);
@@ -106,7 +108,7 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
             stockRecordService.save(record);
         }
 
-        sc.setStatus("DONE");
+        sc.setStatus(StockCheckStatus.DONE.getValue());
         sc.setTotalDiffAmount(totalDiff.setScale(2, RoundingMode.HALF_UP));
         updateById(sc);
     }

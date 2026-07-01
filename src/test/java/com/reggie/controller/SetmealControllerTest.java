@@ -3,8 +3,10 @@ package com.reggie.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.BaseContext;
 import com.reggie.dto.SetmealDto;
+import com.reggie.entity.Category;
 import com.reggie.entity.Setmeal;
 import com.reggie.entity.SetmealDish;
+import com.reggie.service.CategoryService;
 import com.reggie.service.SetmealDishService;
 import com.reggie.service.SetmealService;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,10 +42,21 @@ public class SetmealControllerTest {
     @Autowired
     private SetmealDishService setmealDishService;
 
+    @Autowired
+    private CategoryService categoryService;
+
     private ObjectMapper objectMapper = new ObjectMapper();
 
-    private Setmeal createTestSetmeal() {
+    @BeforeEach
+    void setUp() {
         BaseContext.setCurrentTenantId(1L);
+
+        Category category = new Category();
+        category.setId(1L);
+        category.setName("测试分类");
+        category.setType(2);
+        category.setSort(1);
+        categoryService.save(category);
 
         Setmeal setmeal = new Setmeal();
         setmeal.setId(1L);
@@ -53,13 +66,63 @@ public class SetmealControllerTest {
         setmeal.setCode("S001");
         setmeal.setStatus(1);
         setmealService.save(setmeal);
-        return setmeal;
+    }
+
+    @Test
+    void testSave() throws Exception {
+        SetmealDto dto = new SetmealDto();
+        dto.setName("新套餐");
+        dto.setCategoryId(1L);
+        dto.setPrice(new BigDecimal("80.00"));
+        dto.setCode("S002");
+        dto.setStatus(1);
+
+        List<SetmealDish> dishes = new ArrayList<>();
+        SetmealDish dish = new SetmealDish();
+        dish.setDishId(1L);
+        dish.setName("菜品A");
+        dish.setPrice(new BigDecimal("30.00"));
+        dish.setCopies(2);
+        dishes.add(dish);
+        dto.setSetmealDishes(dishes);
+
+        mockMvc.perform(post("/setmeal")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value("新增套餐成功"));
+    }
+
+    @Test
+    void testPage() throws Exception {
+        mockMvc.perform(get("/setmeal/page")
+                .param("page", "1")
+                .param("pageSize", "10")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.records[0].name").value("测试套餐"));
+    }
+
+    @Test
+    void testPageByName() throws Exception {
+        mockMvc.perform(get("/setmeal/page")
+                .param("page", "1")
+                .param("pageSize", "10")
+                .param("name", "测试")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.total").value(1));
     }
 
     @Test
     void testGetSetmealById() throws Exception {
-        createTestSetmeal();
-
         mockMvc.perform(get("/setmeal/1")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L))
@@ -70,8 +133,6 @@ public class SetmealControllerTest {
 
     @Test
     void testUpdateSetmeal() throws Exception {
-        createTestSetmeal();
-
         SetmealDto dto = new SetmealDto();
         dto.setId(1L);
         dto.setName("修改后的套餐");
@@ -126,8 +187,6 @@ public class SetmealControllerTest {
 
     @Test
     void testDishList() throws Exception {
-        createTestSetmeal();
-
         SetmealDish dish = new SetmealDish();
         dish.setId(1L);
         dish.setSetmealId(1L);
@@ -138,9 +197,44 @@ public class SetmealControllerTest {
         setmealDishService.save(dish);
 
         mockMvc.perform(get("/setmeal/dish/1")
-                .sessionAttr("user", 1L))
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data[0].name").value("套餐内菜品"));
+    }
+
+    @Test
+    void testDelete() throws Exception {
+        Setmeal setmeal2 = new Setmeal();
+        setmeal2.setId(3L);
+        setmeal2.setName("待删除套餐");
+        setmeal2.setCategoryId(1L);
+        setmeal2.setPrice(new BigDecimal("40.00"));
+        setmeal2.setCode("S003");
+        setmeal2.setStatus(0);
+        setmealService.save(setmeal2);
+
+        mockMvc.perform(delete("/setmeal")
+                .param("ids", "3")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value("套餐数据删除成功"));
+
+        org.junit.jupiter.api.Assertions.assertNull(setmealService.getById(3L));
+    }
+
+    @Test
+    void testList() throws Exception {
+        mockMvc.perform(get("/setmeal/list")
+                .param("categoryId", "1")
+                .param("status", "1")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data[0].name").value("测试套餐"));
     }
 }

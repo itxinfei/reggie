@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.module.dining.mapper.QueueMapper;
 import com.reggie.module.dining.model.QueueRecord;
+import com.reggie.enums.QueueRecordStatus;
 import com.reggie.module.dining.service.QueueService;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
@@ -33,7 +34,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
         record.setQueueNo(datePrefix + String.format("%04d", seq));
         record.setPhone(phone);
         record.setSeatCount(seatCount);
-        record.setStatus("WAITING");
+        record.setStatus(QueueRecordStatus.WAITING.getValue());
         save(record);
         return record;
     }
@@ -41,13 +42,13 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
     @Override
     public QueueRecord callNext(Integer seatCount) {
         LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
-        qw.eq(QueueRecord::getStatus, "WAITING");
+        qw.eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue());
         if (seatCount != null) qw.eq(QueueRecord::getSeatCount, seatCount);
         qw.orderByAsc(QueueRecord::getCreatedTime);
         qw.last("LIMIT 1");
         QueueRecord record = getOne(qw);
         if (record != null) {
-            record.setStatus("CALLED");
+            record.setStatus(QueueRecordStatus.CALLED.getValue());
             updateById(record);
         }
         return record;
@@ -57,7 +58,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
     public void cancelQueue(Long id) {
         QueueRecord record = getById(id);
         if (record != null) {
-            record.setStatus("CANCELLED");
+            record.setStatus(QueueRecordStatus.CANCELLED.getValue());
             updateById(record);
         }
     }

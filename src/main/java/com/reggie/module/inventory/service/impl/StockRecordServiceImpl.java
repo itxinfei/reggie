@@ -8,6 +8,7 @@ import com.reggie.common.CustomException;
 import com.reggie.module.inventory.mapper.StockRecordMapper;
 import com.reggie.module.inventory.model.Material;
 import com.reggie.module.inventory.model.StockRecord;
+import com.reggie.enums.StockRecordType;
 import com.reggie.module.inventory.service.MaterialService;
 import com.reggie.module.inventory.service.StockRecordService;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +38,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         StockRecord record = new StockRecord();
         record.setTenantId(BaseContext.getCurrentTenantId());
         record.setMaterialId(materialId);
-        record.setType("IN");
+        record.setType(StockRecordType.IN.getValue());
         record.setQty(qty);
         record.setUnitPrice(unitPrice);
         record.setTotalAmount(unitPrice != null ? unitPrice.multiply(qty).setScale(2, RoundingMode.HALF_UP) : null);
@@ -63,7 +64,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         StockRecord record = new StockRecord();
         record.setTenantId(BaseContext.getCurrentTenantId());
         record.setMaterialId(materialId);
-        record.setType("OUT");
+        record.setType(StockRecordType.OUT.getValue());
         record.setQty(qty);
         record.setBizId(bizId);
         record.setRemark(remark);

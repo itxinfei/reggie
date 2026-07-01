@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.module.dining.mapper.ReservationMapper;
 import com.reggie.module.dining.model.Reservation;
+import com.reggie.enums.ReservationStatus;
+import com.reggie.enums.DiningTableStatus;
 import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.module.dining.service.ReservationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +29,7 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         r.setSeatCount(seatCount);
         r.setTableId(tableId);
         r.setRemark(remark);
-        r.setStatus("PENDING");
+        r.setStatus(ReservationStatus.PENDING.getValue());
         save(r);
         return r;
     }
@@ -36,7 +38,7 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
     public void confirmReservation(Long id) {
         Reservation r = getById(id);
         if (r != null) {
-            r.setStatus("CONFIRMED");
+            r.setStatus(ReservationStatus.CONFIRMED.getValue());
             updateById(r);
         }
     }
@@ -45,7 +47,7 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
     public void cancelReservation(Long id) {
         Reservation r = getById(id);
         if (r != null) {
-            r.setStatus("CANCELLED");
+            r.setStatus(ReservationStatus.CANCELLED.getValue());
             updateById(r);
         }
     }
@@ -55,10 +57,10 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
     public void arrive(Long id) {
         Reservation r = getById(id);
         if (r != null) {
-            r.setStatus("ARRIVED");
+            r.setStatus(ReservationStatus.ARRIVED.getValue());
             updateById(r);
             if (r.getTableId() != null) {
-                diningTableService.changeStatus(r.getTableId(), "OCCUPIED");
+                diningTableService.changeStatus(r.getTableId(), DiningTableStatus.OCCUPIED.getValue());
             }
         }
     }

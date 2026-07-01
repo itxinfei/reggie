@@ -56,6 +56,9 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
     @Cacheable(value = "setmeal", key = "#id")
     public SetmealDto getByIdWithDish(Long id) {
         Setmeal setmeal = this.getById(id);
+        if (setmeal == null) {
+            throw new CustomException("套餐不存在");
+        }
         SetmealDto setmealDto = new SetmealDto();
         BeanUtils.copyProperties(setmeal, setmealDto);
 

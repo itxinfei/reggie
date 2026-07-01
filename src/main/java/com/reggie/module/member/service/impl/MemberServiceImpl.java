@@ -7,6 +7,7 @@ import com.reggie.module.member.mapper.MemberMapper;
 import com.reggie.module.member.model.Member;
 import com.reggie.module.member.model.MemberLevel;
 import com.reggie.module.member.model.PointsRecord;
+import com.reggie.enums.PointsRecordType;
 import com.reggie.module.member.service.MemberLevelService;
 import com.reggie.module.member.service.MemberService;
 import com.reggie.module.member.service.PointsRecordService;
@@ -68,7 +69,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
         PointsRecord record = new PointsRecord();
         record.setMemberId(memberId);
-        record.setType("IN");
+        record.setType(PointsRecordType.IN.getValue());
         record.setPoints(points);
         record.setBizType(bizType);
         record.setBizId(bizId);

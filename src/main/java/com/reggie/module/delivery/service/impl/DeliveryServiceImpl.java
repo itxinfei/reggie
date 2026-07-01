@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.module.delivery.mapper.DeliveryOrderMapper;
 import com.reggie.module.delivery.model.DeliveryOrder;
+import com.reggie.enums.DeliveryOrderStatus;
 import com.reggie.module.delivery.platform.DeliveryPlatform;
 import com.reggie.module.delivery.platform.DeliveryPlatformFactory;
 import com.reggie.module.delivery.service.DeliveryService;
@@ -66,7 +67,7 @@ public class DeliveryServiceImpl implements DeliveryService {
             qw.eq(DeliveryOrder::getPlatformOrderId, platformOrderId);
             DeliveryOrder order = deliveryOrderMapper.selectOne(qw);
             if (order != null) {
-                order.setStatus("ACCEPTED");
+                order.setStatus(DeliveryOrderStatus.ACCEPTED.getValue());
                 deliveryOrderMapper.updateById(order);
             }
         }

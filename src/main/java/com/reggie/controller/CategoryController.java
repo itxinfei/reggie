@@ -112,6 +112,9 @@ public class CategoryController {
     @Parameter(name = "id", description = "分类ID", required = true)
     public R<Category> get(@PathVariable Long id) {
         Category category = categoryService.getById(id);
+        if (category == null) {
+            return R.error("分类不存在");
+        }
         return R.success(category);
     }
 

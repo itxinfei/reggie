@@ -8,6 +8,7 @@ import com.reggie.module.inventory.mapper.PurchaseOrderMapper;
 import com.reggie.module.inventory.model.Material;
 import com.reggie.module.inventory.model.PurchaseOrder;
 import com.reggie.module.inventory.model.PurchaseOrderDetail;
+import com.reggie.enums.PurchaseOrderStatus;
 import com.reggie.module.inventory.service.MaterialService;
 import com.reggie.module.inventory.service.PurchaseOrderDetailService;
 import com.reggie.module.inventory.service.PurchaseOrderService;
@@ -48,7 +49,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         po.setTenantId(BaseContext.getCurrentTenantId());
         po.setOrderNo("PO" + datePrefix + String.format("%03d", seq));
         po.setSupplierId(supplierId);
-        po.setStatus("DRAFT");
+        po.setStatus(PurchaseOrderStatus.DRAFT.getValue());
         po.setOperator(operator);
         po.setRemark(remark);
         save(po);
@@ -62,7 +63,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         if (po == null) {
             throw new CustomException("采购单不存在");
         }
-        if (!"DRAFT".equals(po.getStatus())) {
+        if (!PurchaseOrderStatus.DRAFT.getValue().equals(po.getStatus())) {
             throw new CustomException("采购单不是草稿状态，无法添加明细");
         }
         Material material = materialService.getById(materialId);
@@ -87,7 +88,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         if (po == null) {
             throw new CustomException("采购单不存在");
         }
-        if (!"ORDERED".equals(po.getStatus()) && !"PARTIAL".equals(po.getStatus())) {
+        if (!PurchaseOrderStatus.ORDERED.getValue().equals(po.getStatus()) && !PurchaseOrderStatus.PARTIAL.getValue().equals(po.getStatus())) {
             throw new CustomException("采购单状态不允许收货");
         }
 
@@ -106,7 +107,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
             }
         }
 
-        po.setStatus(allReceived ? "RECEIVED" : "PARTIAL");
+        po.setStatus(allReceived ? PurchaseOrderStatus.RECEIVED.getValue() : PurchaseOrderStatus.PARTIAL.getValue());
         po.setTotalAmount(details.stream()
             .map(d -> d.getAmount() != null ? d.getAmount() : BigDecimal.ZERO)
             .reduce(BigDecimal.ZERO, BigDecimal::add)
@@ -127,10 +128,10 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         if (po == null) {
             throw new CustomException("采购单不存在");
         }
-        if ("RECEIVED".equals(po.getStatus()) || "CANCELLED".equals(po.getStatus())) {
+        if (PurchaseOrderStatus.RECEIVED.getValue().equals(po.getStatus()) || PurchaseOrderStatus.CANCELLED.getValue().equals(po.getStatus())) {
             throw new CustomException("采购单状态不允许取消");
         }
-        po.setStatus("CANCELLED");
+        po.setStatus(PurchaseOrderStatus.CANCELLED.getValue());
         updateById(po);
     }
 }

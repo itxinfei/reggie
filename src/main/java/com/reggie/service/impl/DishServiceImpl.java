@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.dto.DishDto;
 import com.reggie.entity.Dish;
+import com.reggie.common.CustomException;
 import com.reggie.entity.DishFlavor;
 import com.reggie.enums.DishStatus;
 import com.reggie.mapper.DishMapper;
@@ -60,6 +61,9 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
     public DishDto getByIdWithFlavor(Long id) {
         //查询菜品基本信息，从dish表查询
         Dish dish = this.getById(id);
+        if (dish == null) {
+            throw new CustomException("菜品不存在");
+        }
 
         DishDto dishDto = new DishDto();
         BeanUtils.copyProperties(dish,dishDto);
@@ -95,7 +99,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
         this.updateById(dishDto);
 
         //清理当前菜品对应口味数据---dish_flavor表的delete操作
-        LambdaQueryWrapper<DishFlavor> queryWrapper = new LambdaQueryWrapper();
+        LambdaQueryWrapper<DishFlavor> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(DishFlavor::getDishId,dishDto.getId());
 
         dishFlavorService.remove(queryWrapper);

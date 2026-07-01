@@ -69,7 +69,7 @@ public class UserController {
     @PostMapping("/login")
     @Operation(summary = "用户登录", description = "手机号验证码登录")
     @Parameter(name = "map", description = "登录参数（手机号、验证码）", required = true)
-    public R<User> login(@RequestBody Map map, HttpSession session){
+    public R<User> login(@RequestBody Map<String, Object> map, HttpSession session){
         //获取手机号
         String phone = (String) map.get("phone");
         log.info("用户登录，手机号={}", LogMaskUtils.maskPhone(phone));
