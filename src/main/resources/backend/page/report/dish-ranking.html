@@ -68,6 +68,13 @@
           resizeHandler: null
         }
       },
+      created() {
+        const now = new Date()
+        const first = new Date(now.getFullYear(), now.getMonth(), 1)
+        const last = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+        this.dateRange = [fmt(first), fmt(last)]
+      },
       mounted() {
         this.$nextTick(() => {
           this.chart = echarts.init(document.getElementById('rankingChart'))
@@ -142,8 +149,20 @@
             params.startDate = this.dateRange[0]
             params.endDate = this.dateRange[1]
           }
-          reportExport(params).then(res => {
-            const blob = new Blob([res], { type: 'text/csv;charset=utf-8;' })
+          reportExport(params).then(blob => {
+            if (blob.type && blob.type.indexOf('json') > -1) {
+              const reader = new FileReader()
+              reader.onload = (e) => {
+                try {
+                  const err = JSON.parse(e.target.result)
+                  this.$message.error(err.msg || '导出失败')
+                } catch (e2) {
+                  this.$message.error('导出失败')
+                }
+              }
+              reader.readAsText(blob)
+              return
+            }
             const link = document.createElement('a')
             link.href = URL.createObjectURL(blob)
             link.download = '菜品排名.csv'

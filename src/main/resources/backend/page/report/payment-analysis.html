@@ -76,6 +76,13 @@
           resizeHandler: null
         }
       },
+      created() {
+        const now = new Date()
+        const first = new Date(now.getFullYear(), now.getMonth(), 1)
+        const last = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+        this.dateRange = [fmt(first), fmt(last)]
+      },
       mounted() {
         this.$nextTick(() => {
           this.chart = echarts.init(document.getElementById('paymentChart'))
