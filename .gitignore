@@ -7,5 +7,7 @@ target/
 .env
 .env.local
 
-# 文档目录（讲义、PPT、产品原型等非必要文档）
-docs/
+# 内部文档（团队协作、内部报告等，不需要对外展示）
+AGENTS.md
+FINAL-REPORT.md
+FINAL-SUMMARY.md
