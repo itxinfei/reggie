@@ -18,7 +18,8 @@ import java.util.Set;
 public class MybatisPlusConfig {
 
     private static final Set<String> IGNORE_TABLES = new HashSet<>(Arrays.asList(
-        "tenant", "employee", "user", "address_book", "orders", "order_detail", "shopping_cart"
+        "tenant", "employee", "user", "address_book", "orders", "order_detail", "shopping_cart",
+        "purchase_order_detail"
     ));
 
     @Bean

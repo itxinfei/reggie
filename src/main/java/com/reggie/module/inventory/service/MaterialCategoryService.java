@@ -1,0 +1,7 @@
+package com.reggie.module.inventory.service;
+
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.reggie.module.inventory.model.MaterialCategory;
+
+public interface MaterialCategoryService extends IService<MaterialCategory> {
+}

@@ -1,0 +1,79 @@
+package com.reggie.module.inventory.controller;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.R;
+import com.reggie.module.inventory.model.PurchaseOrder;
+import com.reggie.module.inventory.service.PurchaseOrderService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import java.math.BigDecimal;
+import java.util.Map;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/inventory/purchase-order")
+@Tag(name = "采购单管理")
+public class PurchaseOrderController {
+
+    @Autowired
+    private PurchaseOrderService purchaseOrderService;
+
+    @GetMapping("/page")
+    @Operation(summary = "分页查询")
+    public R<Page<PurchaseOrder>> page(int page, int pageSize) {
+        Page<PurchaseOrder> pageInfo = new Page<>(page, pageSize);
+        LambdaQueryWrapper<PurchaseOrder> qw = new LambdaQueryWrapper<>();
+        qw.orderByDesc(PurchaseOrder::getCreatedTime);
+        purchaseOrderService.page(pageInfo, qw);
+        return R.success(pageInfo);
+    }
+
+    @PostMapping
+    @Operation(summary = "创建采购单")
+    public R<PurchaseOrder> create(@RequestBody Map<String, Object> params) {
+        Long supplierId = Long.valueOf(params.get("supplierId").toString());
+        String operator = (String) params.get("operator");
+        String remark = (String) params.get("remark");
+        PurchaseOrder po = purchaseOrderService.createOrder(supplierId, operator, remark);
+        return R.success(po);
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "查询采购单")
+    public R<PurchaseOrder> get(@PathVariable Long id) {
+        PurchaseOrder po = purchaseOrderService.getById(id);
+        if (po == null) {
+            return R.error("采购单不存在");
+        }
+        return R.success(po);
+    }
+
+    @PostMapping("/addDetail")
+    @Operation(summary = "添加明细")
+    public R<String> addDetail(@RequestBody Map<String, Object> params) {
+        Long orderId = Long.valueOf(params.get("orderId").toString());
+        Long materialId = Long.valueOf(params.get("materialId").toString());
+        BigDecimal qty = new BigDecimal(params.get("qty").toString());
+        BigDecimal unitPrice = new BigDecimal(params.get("unitPrice").toString());
+        purchaseOrderService.addDetail(orderId, materialId, qty, unitPrice);
+        return R.success("添加明细成功");
+    }
+
+    @PutMapping("/receive/{id}")
+    @Operation(summary = "收货")
+    public R<String> receive(@PathVariable Long id) {
+        purchaseOrderService.receiveOrder(id);
+        return R.success("收货成功");
+    }
+
+    @PutMapping("/cancel/{id}")
+    @Operation(summary = "取消")
+    public R<String> cancel(@PathVariable Long id) {
+        purchaseOrderService.cancelOrder(id);
+        return R.success("取消成功");
+    }
+}

@@ -1,0 +1,50 @@
+package com.reggie.module.inventory.controller;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.R;
+import com.reggie.module.inventory.model.StockCheck;
+import com.reggie.module.inventory.service.StockCheckService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.Map;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/inventory/stock-check")
+@Tag(name = "盘点管理")
+public class StockCheckController {
+
+    @Autowired
+    private StockCheckService stockCheckService;
+
+    @GetMapping("/page")
+    @Operation(summary = "分页查询")
+    public R<Page<StockCheck>> page(int page, int pageSize) {
+        Page<StockCheck> pageInfo = new Page<>(page, pageSize);
+        LambdaQueryWrapper<StockCheck> qw = new LambdaQueryWrapper<>();
+        qw.orderByDesc(StockCheck::getCreatedTime);
+        stockCheckService.page(pageInfo, qw);
+        return R.success(pageInfo);
+    }
+
+    @PostMapping
+    @Operation(summary = "创建盘点单")
+    public R<StockCheck> create(@RequestBody Map<String, Object> params) {
+        String operator = (String) params.get("operator");
+        String remark = (String) params.get("remark");
+        StockCheck sc = stockCheckService.createCheck(operator, remark);
+        return R.success(sc);
+    }
+
+    @PutMapping("/complete/{id}")
+    @Operation(summary = "完成盘点")
+    public R<String> complete(@PathVariable Long id, @RequestBody List<Map<String, Object>> items) {
+        stockCheckService.completeCheck(id, items);
+        return R.success("盘点完成");
+    }
+}
