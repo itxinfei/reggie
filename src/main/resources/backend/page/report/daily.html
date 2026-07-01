@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>营业日报</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+  .card-container {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .card-container .el-card {
+    flex: 1;
+  }
+  .card-container .el-card__body {
+    text-align: center;
+  }
+  .card-container .card-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #409EFF;
+    margin-top: 10px;
+  }
+  .card-container .card-label {
+    font-size: 14px;
+    color: #666;
+  }
+  #trendChart {
+    width: 100%;
+    height: 400px;
+  }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container" id="report-daily-app" v-loading="loading">
+    <div class="container">
+      <div class="tableBar">
+        <el-date-picker v-model="queryDate"
+          clearable
+          value-format="yyyy-MM-dd"
+          type="date"
+          placeholder="选择日期"
+          style="width: 200px"
+        ></el-date-picker>
+        <el-button type="primary" class="search-btn" @click="loadData">查询</el-button>
+      </div>
+      <div class="card-container">
+        <el-card shadow="hover">
+          <div class="card-label">营业额</div>
+          <div class="card-value">￥{{ dailyData.turnover || 0 }}</div>
+        </el-card>
+        <el-card shadow="hover">
+          <div class="card-label">订单数</div>
+          <div class="card-value">{{ dailyData.orderCount || 0 }}</div>
+        </el-card>
+        <el-card shadow="hover">
+          <div class="card-label">客单价</div>
+          <div class="card-value">￥{{ dailyData.avgPerCustomer || 0 }}</div>
+        </el-card>
+        <el-card shadow="hover">
+          <div class="card-label">翻台率</div>
+          <div class="card-value">{{ dailyData.turnoverRate || 0 }}%</div>
+        </el-card>
+      </div>
+      <el-card shadow="never">
+        <div slot="header">近7天趋势</div>
+        <div id="trendChart"></div>
+      </el-card>
+    </div>
+  </div>
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../api/report.js"></script>
+  <script>
+    new Vue({
+      el: '#report-daily-app',
+      data() {
+        return {
+          loading: false,
+          queryDate: '',
+          dailyData: {},
+          trendDates: [],
+          trendAmounts: [],
+          chart: null,
+          resizeHandler: null
+        }
+      },
+      created() {
+        const now = new Date()
+        const y = now.getFullYear()
+        const m = String(now.getMonth() + 1).padStart(2, '0')
+        const d = String(now.getDate()).padStart(2, '0')
+        this.queryDate = y + '-' + m + '-' + d
+      },
+      mounted() {
+        this.$nextTick(() => {
+          this.chart = echarts.init(document.getElementById('trendChart'))
+          this.resizeHandler = () => { if (this.chart) this.chart.resize() }
+          window.addEventListener('resize', this.resizeHandler)
+          this.loadData()
+        })
+      },
+      beforeDestroy() {
+        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler)
+        if (this.chart) this.chart.dispose()
+      },
+      methods: {
+        async loadData() {
+          if (!this.queryDate) {
+            this.$message.warning('请选择日期')
+            return
+          }
+          this.loading = true
+          try {
+            const res = await reportDaily({ date: this.queryDate })
+            if (String(res.code) === '1') {
+              this.dailyData = res.data || {}
+              this.trendDates = res.data.trendDates || []
+              this.trendAmounts = res.data.trendAmounts || []
+              this.renderChart()
+            } else {
+              this.$message.error(res.msg || '加载失败')
+            }
+          } catch (err) {
+            this.$message.error('请求出错了：' + err)
+          } finally {
+            this.loading = false
+          }
+        },
+        renderChart() {
+          if (!this.chart) return
+          const option = {
+            tooltip: { trigger: 'axis' },
+            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+            xAxis: {
+              type: 'category',
+              data: this.trendDates,
+              axisLabel: { rotate: 30 }
+            },
+            yAxis: {
+              type: 'value',
+              name: '金额（元）'
+            },
+            series: [{
+              type: 'line',
+              data: this.trendAmounts,
+              smooth: true,
+              lineStyle: { width: 3, color: '#409EFF' },
+              areaStyle: {
+                color: {
+                  type: 'linear',
+                  x: 0, y: 0, x2: 0, y2: 1,
+                  colorStops: [
+                    { offset: 0, color: 'rgba(64,158,255,0.3)' },
+                    { offset: 1, color: 'rgba(64,158,255,0.05)' }
+                  ]
+                }
+              },
+              itemStyle: { color: '#409EFF' }
+            }]
+          }
+          this.chart.setOption(option, true)
+        }
+      }
+    })
+  </script>
+</body>
+</html>
