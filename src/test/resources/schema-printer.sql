@@ -18,3 +18,17 @@ CREATE TABLE printer_config (
     updated_time datetime DEFAULT NULL,
     PRIMARY KEY (id)
 );
+
+DROP TABLE IF EXISTS printer_log;
+CREATE TABLE printer_log (
+    id bigint NOT NULL,
+    tenant_id bigint DEFAULT '0',
+    order_id bigint DEFAULT NULL,
+    print_type varchar(20) NOT NULL,
+    printer_id bigint DEFAULT NULL,
+    content clob DEFAULT NULL,
+    status int DEFAULT '0',
+    error_msg varchar(255) DEFAULT NULL,
+    created_time datetime DEFAULT NULL,
+    PRIMARY KEY (id)
+);
