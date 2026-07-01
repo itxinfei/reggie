@@ -37,7 +37,7 @@ CREATE TABLE `dining_table` (
 CREATE TABLE `dining_queue` (
     `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
     `tenant_id` bigint(20) NOT NULL COMMENT '租户id',
-    `queue_no` varchar(10) COLLATE utf8_bin NOT NULL COMMENT '排队号 A001',
+    `queue_no` varchar(20) COLLATE utf8_bin NOT NULL COMMENT '排队号 yyyyMMdd+4位序号',
     `phone` varchar(20) COLLATE utf8_bin DEFAULT NULL COMMENT '手机号',
     `seat_count` int(11) DEFAULT NULL COMMENT '人数',
     `status` varchar(20) COLLATE utf8_bin NOT NULL DEFAULT 'WAITING' COMMENT '状态 WAITING/CALLED/CANCELLED/SERVED',

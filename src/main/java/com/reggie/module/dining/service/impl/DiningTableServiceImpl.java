@@ -1,0 +1,31 @@
+package com.reggie.module.dining.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.module.dining.mapper.DiningTableMapper;
+import com.reggie.module.dining.model.DiningTable;
+import com.reggie.module.dining.service.DiningTableService;
+import org.springframework.stereotype.Service;
+
+@Service
+public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, DiningTable> implements DiningTableService {
+
+    @Override
+    public void changeStatus(Long tableId, String status) {
+        DiningTable table = getById(tableId);
+        if (table != null) {
+            table.setStatus(status);
+            updateById(table);
+        }
+    }
+
+    @Override
+    public Page<DiningTable> pageWithArea(int page, int pageSize) {
+        LambdaQueryWrapper<DiningTable> qw = new LambdaQueryWrapper<>();
+        qw.orderByAsc(DiningTable::getSort);
+        Page<DiningTable> pageInfo = new Page<>(page, pageSize);
+        page(pageInfo, qw);
+        return pageInfo;
+    }
+}
