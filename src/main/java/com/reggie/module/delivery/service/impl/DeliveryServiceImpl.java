@@ -1,8 +1,14 @@
 package com.reggie.module.delivery.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
+import com.reggie.module.delivery.mapper.DeliveryOrderMapper;
+import com.reggie.module.delivery.model.DeliveryOrder;
 import com.reggie.module.delivery.platform.DeliveryPlatform;
 import com.reggie.module.delivery.platform.DeliveryPlatformFactory;
 import com.reggie.module.delivery.service.DeliveryService;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,11 +25,52 @@ public class DeliveryServiceImpl implements DeliveryService {
     @Autowired
     private DeliveryPlatformFactory factory;
 
+    @Autowired
+    private DeliveryOrderMapper deliveryOrderMapper;
+
+    @Override
+    public DeliveryOrder getById(String id) {
+        return deliveryOrderMapper.selectById(id);
+    }
+
+    @Override
+    public Page<DeliveryOrder> pageOrders(int page, int pageSize, String platform, String status, String startDate, String endDate) {
+        Page<DeliveryOrder> pageInfo = new Page<>(page, pageSize);
+        LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
+        qw.eq(DeliveryOrder::getTenantId, BaseContext.getCurrentTenantId());
+        if (StringUtils.isNotBlank(platform)) {
+            qw.eq(DeliveryOrder::getPlatform, platform);
+        }
+        if (StringUtils.isNotBlank(status)) {
+            qw.eq(DeliveryOrder::getStatus, status);
+        }
+        if (StringUtils.isNotBlank(startDate)) {
+            qw.ge(DeliveryOrder::getOrderTime, startDate);
+        }
+        if (StringUtils.isNotBlank(endDate)) {
+            qw.le(DeliveryOrder::getOrderTime, endDate + " 23:59:59");
+        }
+        qw.orderByDesc(DeliveryOrder::getOrderTime);
+        deliveryOrderMapper.selectPage(pageInfo, qw);
+        return pageInfo;
+    }
+
     @Override
     public boolean acceptOrder(String platform, String platformOrderId) {
         DeliveryPlatform dp = factory.getPlatform(platform);
         if (dp == null) return false;
-        return dp.acceptOrder(platformOrderId);
+        boolean success = dp.acceptOrder(platformOrderId);
+        if (success) {
+            LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
+            qw.eq(DeliveryOrder::getPlatform, platform);
+            qw.eq(DeliveryOrder::getPlatformOrderId, platformOrderId);
+            DeliveryOrder order = deliveryOrderMapper.selectOne(qw);
+            if (order != null) {
+                order.setStatus("ACCEPTED");
+                deliveryOrderMapper.updateById(order);
+            }
+        }
+        return success;
     }
 
     @Override

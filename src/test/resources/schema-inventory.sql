@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS stock_check_detail;
 DROP TABLE IF EXISTS stock_record;
 DROP TABLE IF EXISTS stock_check;
 DROP TABLE IF EXISTS purchase_order_detail;
@@ -71,6 +72,18 @@ CREATE TABLE stock_check (
     remark varchar(255) DEFAULT NULL,
     created_time datetime DEFAULT CURRENT_TIMESTAMP,
     updated_time datetime DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE stock_check_detail (
+    id bigint NOT NULL AUTO_INCREMENT,
+    tenant_id bigint NOT NULL,
+    check_id bigint NOT NULL,
+    material_id bigint NOT NULL,
+    book_qty decimal(10,2) NOT NULL,
+    actual_qty decimal(10,2) NOT NULL,
+    diff_qty decimal(10,2) NOT NULL,
+    remark varchar(255) DEFAULT NULL,
     PRIMARY KEY (id)
 );
 

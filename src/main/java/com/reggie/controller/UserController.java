@@ -26,6 +26,8 @@ import java.util.Map;
 @Tag(name = "用户管理", description = "移动端用户及验证码接口")
 public class UserController {
 
+    private static final int SMS_CODE_LENGTH = 4;
+
     @Autowired
     private UserService userService;
 

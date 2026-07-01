@@ -1,21 +1,18 @@
-DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS delivery_order;
 
-CREATE TABLE orders (
-    id bigint NOT NULL,
-    number varchar(50) DEFAULT NULL,
-    status int DEFAULT '2',
-    user_id bigint DEFAULT NULL,
-    address_book_id bigint DEFAULT NULL,
-    order_time datetime DEFAULT NULL,
-    checkout_time datetime DEFAULT NULL,
-    pay_method int DEFAULT '1',
+CREATE TABLE delivery_order (
+    id bigint NOT NULL AUTO_INCREMENT,
+    tenant_id bigint NOT NULL,
+    platform_order_id varchar(128) NOT NULL,
+    platform varchar(20) NOT NULL,
+    dish_summary varchar(500) DEFAULT NULL,
     amount decimal(10,2) DEFAULT NULL,
-    remark varchar(255) DEFAULT NULL,
-    phone varchar(32) DEFAULT NULL,
+    user_name varchar(50) DEFAULT NULL,
+    phone varchar(20) DEFAULT NULL,
     address varchar(255) DEFAULT NULL,
-    user_name varchar(64) DEFAULT NULL,
-    consignee varchar(32) DEFAULT NULL,
-    table_id bigint DEFAULT NULL,
-    dining_type varchar(20) DEFAULT NULL,
+    status varchar(20) NOT NULL DEFAULT 'PENDING',
+    order_time datetime DEFAULT NULL,
+    created_time datetime DEFAULT CURRENT_TIMESTAMP,
+    updated_time datetime DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
 );

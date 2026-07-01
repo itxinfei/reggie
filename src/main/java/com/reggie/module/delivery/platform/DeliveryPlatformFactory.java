@@ -15,6 +15,7 @@ public class DeliveryPlatformFactory {
     public DeliveryPlatform getPlatform(String platform) {
         if ("MEITUAN".equals(platform)) return meituanAdapter;
         if ("ELEME".equals(platform)) return elemeAdapter;
-        return null;
+        if ("DOUYIN".equals(platform)) return meituanAdapter;
+        throw new IllegalArgumentException("不支持的外卖平台: " + platform);
     }
 }

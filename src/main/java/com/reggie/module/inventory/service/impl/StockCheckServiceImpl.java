@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.module.inventory.mapper.StockCheckDetailMapper;
 import com.reggie.module.inventory.mapper.StockCheckMapper;
 import com.reggie.module.inventory.model.Material;
 import com.reggie.module.inventory.model.StockCheck;
+import com.reggie.module.inventory.model.StockCheckDetail;
 import com.reggie.module.inventory.model.StockRecord;
 import com.reggie.module.inventory.service.MaterialService;
 import com.reggie.module.inventory.service.StockCheckService;
@@ -31,6 +33,9 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
 
     @Autowired
     private StockRecordService stockRecordService;
+
+    @Autowired
+    private StockCheckDetailMapper stockCheckDetailMapper;
 
     @Override
     public StockCheck createCheck(String operator, String remark) {
@@ -72,11 +77,22 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
                 throw new CustomException("食材不存在: " + materialId);
             }
 
-            BigDecimal diff = actualQty.subtract(material.getStockQty());
+            BigDecimal bookQty = material.getStockQty();
+            BigDecimal diff = actualQty.subtract(bookQty);
             totalDiff = totalDiff.add(diff.multiply(material.getUnitPrice() != null ? material.getUnitPrice() : BigDecimal.ZERO));
 
             material.setStockQty(actualQty);
             materialService.updateById(material);
+
+            StockCheckDetail detail = new StockCheckDetail();
+            detail.setCheckId(checkId);
+            detail.setMaterialId(materialId);
+            detail.setBookQty(bookQty);
+            detail.setActualQty(actualQty);
+            detail.setDiffQty(diff);
+            String remark = item.get("remark") != null ? item.get("remark").toString() : null;
+            detail.setRemark(remark);
+            stockCheckDetailMapper.insert(detail);
 
             StockRecord record = new StockRecord();
             record.setTenantId(BaseContext.getCurrentTenantId());

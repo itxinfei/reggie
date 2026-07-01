@@ -424,7 +424,34 @@ CREATE TABLE `dining_reservation` (
 
 
 -- ============================================================
--- 第五部分：进销存/供应链模块表
+-- 第五部分：外卖平台模块表
+-- ============================================================
+
+DROP TABLE IF EXISTS `delivery_order`;
+CREATE TABLE `delivery_order` (
+    `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint(20) NOT NULL COMMENT '租户id',
+    `platform_order_id` varchar(128) COLLATE utf8_bin NOT NULL COMMENT '平台订单号',
+    `platform` varchar(20) COLLATE utf8_bin NOT NULL COMMENT '平台 MEITUAN/ELEME/DOUYIN',
+    `dish_summary` varchar(500) COLLATE utf8_bin DEFAULT NULL COMMENT '菜品摘要',
+    `amount` decimal(10,2) DEFAULT NULL COMMENT '订单金额',
+    `user_name` varchar(50) COLLATE utf8_bin DEFAULT NULL COMMENT '用户姓名',
+    `phone` varchar(20) COLLATE utf8_bin DEFAULT NULL COMMENT '联系电话',
+    `address` varchar(255) COLLATE utf8_bin DEFAULT NULL COMMENT '配送地址',
+    `status` varchar(20) COLLATE utf8_bin NOT NULL DEFAULT 'PENDING' COMMENT '状态 PENDING/ACCEPTED/COMPLETED/CANCELLED',
+    `order_time` datetime DEFAULT NULL COMMENT '下单时间',
+    `created_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_tenant` (`tenant_id`),
+    KEY `idx_platform` (`platform`),
+    KEY `idx_status` (`status`),
+    KEY `idx_order_time` (`order_time`),
+    UNIQUE KEY `uk_platform_order` (`platform`, `platform_order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='外卖平台订单';
+
+-- ============================================================
+-- 第六部分：进销存/供应链模块表
 -- ============================================================
 
 DROP TABLE IF EXISTS `stock_check_detail`;
@@ -515,6 +542,7 @@ CREATE TABLE `stock_check` (
 
 CREATE TABLE `stock_check_detail` (
     `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint(20) NOT NULL COMMENT '租户id',
     `check_id` bigint(20) NOT NULL COMMENT '盘点单id',
     `material_id` bigint(20) NOT NULL COMMENT '食材id',
     `book_qty` decimal(10,2) NOT NULL COMMENT '账面数量',

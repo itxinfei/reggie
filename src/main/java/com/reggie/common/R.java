@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 通用返回结果，服务端响应的数据最终都会封装成此对象
@@ -22,6 +23,13 @@ public class R<T> {
     private Map<String, Object> map = new HashMap<>(); //动态数据
 
     private Long timestamp; //时间戳（新增）
+
+    private String requestId; //请求ID
+
+    public R() {
+        this.requestId = UUID.randomUUID().toString().replace("-", "");
+        this.timestamp = System.currentTimeMillis();
+    }
 
     public static <T> R<T> success(T object) {
         R<T> r = new R<>();

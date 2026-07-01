@@ -5,11 +5,17 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.module.dining.mapper.DiningTableMapper;
 import com.reggie.module.dining.model.DiningTable;
+import com.reggie.module.dining.model.TableArea;
 import com.reggie.module.dining.service.DiningTableService;
+import com.reggie.module.dining.service.TableAreaService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, DiningTable> implements DiningTableService {
+
+    @Autowired
+    private TableAreaService tableAreaService;
 
     @Override
     public void changeStatus(Long tableId, String status) {
@@ -26,6 +32,14 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
         qw.orderByAsc(DiningTable::getSort);
         Page<DiningTable> pageInfo = new Page<>(page, pageSize);
         page(pageInfo, qw);
+        for (DiningTable table : pageInfo.getRecords()) {
+            if (table.getAreaId() != null) {
+                TableArea area = tableAreaService.getById(table.getAreaId());
+                if (area != null) {
+                    table.setAreaName(area.getName());
+                }
+            }
+        }
         return pageInfo;
     }
 }
