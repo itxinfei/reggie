@@ -16,7 +16,7 @@
         min-width: 1366px;
       }
       .app-main{
-        height: calc(100% - 64px);
+        height: calc(100% - 56px);
       }
       .app-main .divTmp{
         width: 100%;
@@ -32,7 +32,7 @@
         <div class="sidebar-container">
           <div class="logo">
             <!-- <img src="images/logo.png" width="122.5" alt="" /> -->
-            <img src="images/login/login-logo.png" alt="" style="width: 117px; height: 32px" />
+            <img src="images/login/login-logo.png" alt="" style="width: 117px; height: 28px" />
           </div>
 
           <el-scrollbar wrap-class="scrollbar-wrapper">
@@ -68,6 +68,9 @@
               </div>
             </el-menu>
           </el-scrollbar>
+          <div class="sidebar-footer">
+            <span>瑞吉外卖管理端 v1.0</span>
+          </div>
         </div>
         <div class="main-container">
           <!-- <navbar /> -->
@@ -151,6 +154,48 @@
                     name: '订单明细',
                     url: 'page/order/list.html',
                     icon: 'icon-order'
+                  },
+                  {
+                    id: '7',
+                    name: '打印管理',
+                    url: 'page/printer/config-list.html',
+                    icon: 'icon-order'
+                  },
+                  {
+                    id: '8',
+                    name: '支付管理',
+                    url: 'page/payment/order-list.html',
+                    icon: 'icon-lock'
+                  },
+                  {
+                    id: '9',
+                    name: '外卖平台',
+                    url: 'page/delivery/order-list.html',
+                    icon: 'icon-order'
+                  },
+                  {
+                    id: '10',
+                    name: '堂食管理',
+                    url: 'page/dining/table-list.html',
+                    icon: 'icon-food'
+                  },
+                  {
+                    id: '11',
+                    name: '进销存管理',
+                    url: 'page/inventory/material-list.html',
+                    icon: 'icon-category'
+                  },
+                  {
+                    id: '12',
+                    name: '会员营销',
+                    url: 'page/member-center/member-list.html',
+                    icon: 'icon-member'
+                  },
+                  {
+                    id: '13',
+                    name: '经营报表',
+                    url: 'page/report/daily.html',
+                    icon: 'icon-combo'
                   }
               //   ],
               // },

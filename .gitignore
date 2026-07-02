@@ -3,11 +3,32 @@ target/
 
 # 日志文件
 logs/
+*.log
 
 # IDE
 *.iml
 .idea/
+.vscode/
+.settings/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# AI 工具相关（不需要上传到版本库）
+.superpowers/
+.claude/
 
 # 环境配置文件（包含敏感信息）
 .env
 .env.local
+.env.*.local
+
+# 临时文件
+*.tmp
+*.temp
+*~
+
+# 操作系统文件
+*.swp
+*.swo

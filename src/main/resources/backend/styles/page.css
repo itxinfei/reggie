@@ -1,16 +1,16 @@
 .dashboard-container {
-  padding: 20px;
+  padding: 16px;
 }
 .dashboard-container .container {
   background: #fff;
   position: relative;
   z-index: 1;
-  padding: 30px 28px;
+  padding: 20px 24px;
   border-radius: 4px;
 }
 .dashboard-container .container .tableBar {
   display: flex;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   justify-content: space-between;
 }
 .dashboard-container .container .tableBox {
@@ -26,7 +26,7 @@
 
 .dashboard-container .container .pageList {
   text-align: center;
-  margin-top: 30px;
+  margin-top: 16px;
 }
 
 .dashboard-container .container .tableLab .span-btn {
@@ -78,18 +78,18 @@
 }
 
 .addBrand-container {
-  margin: 30px;
+  margin: 16px;
 }
 .addBrand-container .container {
   position: relative;
   z-index: 1;
   background: #fff;
-  padding: 30px;
+  padding: 20px 24px;
   border-radius: 4px;
   min-height: 500px;
 }
 .addBrand-container .container .subBox {
-  padding-top: 30px;
+  padding-top: 20px;
   text-align: center;
   border-top: solid 1px #f3f4f7;
 }

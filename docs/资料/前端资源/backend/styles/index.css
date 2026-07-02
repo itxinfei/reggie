@@ -23,11 +23,13 @@
   width: calc(100% - 190px);
 }
 .sidebar-container {
+  position: relative;
   transition: width 0.28s;
   width: 190px !important;
   height: 100%;
   z-index: 1001;
   overflow: hidden;
+  background-color: #343744;
 }
 .hideSidebar .main-container {
   margin-left: 54px;
@@ -58,7 +60,7 @@
 }
 
 .navbar {
-  height: 64px;
+  height: 56px;
   overflow: hidden;
   position: relative;
   background: #fff;
@@ -82,9 +84,9 @@
 .navbar .right-menu {
   float: right;
   display: flex;
-  margin-right: 34px;
+  margin-right: 24px;
   height: 100%;
-  line-height: 64px;
+  line-height: 56px;
   color: #333333;
   font-size: 14px;
 }
@@ -98,7 +100,7 @@
 }
 
 .navbar .right-menu img {
-  margin-top: 20px;
+  margin-top: 15px;
   margin-left: 10px;
   width: 25px;
   height: 25px;
@@ -149,11 +151,11 @@
   /* position: absolute; */
   /* background: #fff; */
   color: #333333;
-  height: 64px;
+  height: 56px;
   font-size: 16px;
   width: 300px;
   padding-left: 22px;
-  line-height: 64px;
+  line-height: 56px;
   font-weight: 700;
   /* top: 0px;
   left: 0px; */
@@ -172,7 +174,7 @@
 }
 .navbar .head-lable .goBack img {
   position: relative;
-  top: 24px;
+  top: 19px;
   margin-right: 5px;
   width: 18px;
   height: 18px;
@@ -192,10 +194,7 @@
 .logo {
   text-align: center;
   background-color: rgb(52, 55, 68);
-  /* height: 100px;
-  line-height: 100px;
-  padding: 12px 5px; */
-  padding: 46px 37px 67px 36px;
+  padding: 16px 20px 12px 20px;
 }
 
 .img {
@@ -230,12 +229,12 @@
 
 .el-menu .el-menu-item {
   color: #aeb5c4;
-  height: 42px;
-  line-height: 42px;
+  height: 38px;
+  line-height: 38px;
 }
 .el-menu .el-menu-item {
   padding: 0 0 0 32px !important;
-  margin: 0 34px 20px 0;
+  margin: 0 34px 4px 0;
   border-radius: 0 21px 21px 0 !important;
 }
 .el-menu .el-menu-item:hover {
@@ -296,7 +295,7 @@
   color: #fff;
 }
 .el-submenu__title {
-  font-size: 16px !important;
+  font-size: 15px !important;
   position: relative;
   z-index: 9;
 }
@@ -330,4 +329,17 @@
 
 .hide {
   display: hide;
+}
+
+.sidebar-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  line-height: 36px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 12px;
+  background-color: #2b2d3a;
 }
