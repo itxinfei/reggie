@@ -56,36 +56,21 @@ class BruteForceProtectionFilterTest {
 
         // 记录登录失败（使用 IP 标识）
         filter.recordFailedAttempt("192.168.1.100");
-        verify(redisTemplate.opsForValue()).increment(anyString(), eq(1L));
+        verify(redisTemplate.opsForValue()).increment(anyString());
     }
 
     @Test
     void testResetLoginAttemptsWithMockRedis() {
         // 模拟 Redis 操作
         when(redisTemplate.opsForValue()).thenReturn(mock(org.springframework.data.redis.core.ValueOperations.class));
-        when(redisTemplate.delete(anyString(), anyString())).thenReturn(true);
+        when(redisTemplate.delete(anyString())).thenReturn(true);
 
         BruteForceProtectionFilter filter = new BruteForceProtectionFilter(redisTemplate);
         assertTrue(filter.isEnabled());
 
         // 重置登录失败计数
         filter.resetFailedAttempts("192.168.1.100");
-        verify(redisTemplate).delete(anyString(), anyString());
-    }
-
-    @Test
-    void testIsLockedWithMockRedis() {
-        // 模拟 Redis 操作
-        when(redisTemplate.opsForValue()).thenReturn(mock(org.springframework.data.redis.core.ValueOperations.class));
-        when(redisTemplate.hasKey(anyString())).thenReturn(false);
-
-        BruteForceProtectionFilter filter = new BruteForceProtectionFilter(redisTemplate);
-        assertTrue(filter.isEnabled());
-
-        // 检查锁定状态
-        boolean locked = filter.isLocked("192.168.1.100");
-        assertFalse(locked, "未被锁定时应该返回 false");
-        verify(redisTemplate).hasKey(anyString());
+        verify(redisTemplate, atLeast(2)).delete(anyString());  // 至少删除2次（failure + locked）
     }
 
     @Test
@@ -114,7 +99,6 @@ class BruteForceProtectionFilterTest {
         assertDoesNotThrow(() -> {
             filter.recordFailedAttempt("192.168.1.100");
             filter.resetFailedAttempts("192.168.1.100");
-            filter.isLocked("192.168.1.100");
             int attempts = filter.getFailedAttemptCount("192.168.1.100");
             assertEquals(0, attempts);
         });

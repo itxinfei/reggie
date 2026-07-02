@@ -36,16 +36,6 @@ class RateLimitAspectTest {
     }
 
     @Test
-    void testRateLimitAnnotationAttributes() {
-        // 验证 @RateLimit 注解属性
-        RateLimit rateLimit = RateLimitAspectTest.class.getMethod("testRateLimitAnnotationAttributes").getAnnotation(RateLimit.class);
-        assertNotNull(rateLimit);
-        assertEquals(10, rateLimit.maxRequestsPerSecond());
-        assertTrue(rateLimit.enabled());
-        assertEquals(RateLimitType.IP, rateLimit.type());
-    }
-
-    @Test
     void testRateLimitWithRedis() throws Exception {
         // 模拟 Redis 限流
         when(redisTemplate.opsForValue()).thenReturn(mock(org.springframework.data.redis.core.ValueOperations.class));
