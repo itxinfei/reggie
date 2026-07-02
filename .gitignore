@@ -1,23 +1,8 @@
-target/
-.superpowers/
-*.iml
-.idea/
-
-# AI 生成的开发文档（不需要对外展示）
-docs/code-review/
-docs/optimization/
-docs/security/
-docs/superpowers/
-
-# 开发文档
-docs/production-gap-analysis.md
-docs/work-progress-*.md
-
-# Superpowers 临时文件
-.superpowers/
-
 # 构建输出
 target/
+
+# 日志文件
+logs/
 
 # IDE
 *.iml
