@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Loki 日志存储
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: reggie-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/loki.yml
+    networks:
+      - monitoring
+    restart: unless-stopped
+    profiles:
+      - logs
+
+  # Promtail 日志采集
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: reggie-promtail
+    volumes:
+      - ./loki/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/log/containers:/var/log/containers:ro
+      - ./logs:/app/logs:ro
+    command: -config.file=/etc/promtail/promtail-config.yml
+    networks:
+      - monitoring
+    restart: unless-stopped
+    depends_on:
+      - loki
+    profiles:
+      - logs
+
+volumes:
+  loki-data:
+    driver: local

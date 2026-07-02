@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Prometheus
+  # Prometheus 指标采集
   prometheus:
     image: prom/prometheus:v2.45.0
     container_name: reggie-prometheus
@@ -19,7 +19,7 @@ services:
       - monitoring
     restart: unless-stopped
 
-  # Grafana
+  # Grafana 可视化平台
   grafana:
     image: grafana/grafana:10.0.0
     container_name: reggie-grafana
@@ -38,7 +38,7 @@ services:
     depends_on:
       - prometheus
 
-  # Alertmanager (可选)
+  # Alertmanager 告警管理（可选）
   alertmanager:
     image: prom/alertmanager:v0.25.0
     container_name: reggie-alertmanager
@@ -50,10 +50,106 @@ services:
       - monitoring
     restart: unless-stopped
 
+  # ========== 日志收集（可选）==========
+  # 方式一：Loki（推荐，轻量级）
+  # 使用命令: docker-compose --profile logs up -d
+  #
+  # loki:
+  #   image: grafana/loki:2.9.0
+  #   container_name: reggie-loki
+  #   ports:
+  #     - "3100:3100"
+  #   volumes:
+  #     - ./loki/loki.yml:/etc/loki/loki.yml:ro
+  #     - loki-data:/loki
+  #   command: -config.file=/etc/loki/loki.yml
+  #   networks:
+  #     - monitoring
+  #   restart: unless-stopped
+  #   profiles:
+  #     - logs
+  #
+  # promtail:
+  #   image: grafana/promtail:2.9.0
+  #   container_name: reggie-promtail
+  #   volumes:
+  #     - ./loki/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+  #     - ./logs:/app/logs:ro
+  #   command: -config.file=/etc/promtail/promtail-config.yml
+  #   networks:
+  #     - monitoring
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - loki
+  #   profiles:
+  #     - logs
+
+  # 方式二：ELK Stack（企业级）
+  # 使用命令: docker-compose --profile elk up -d
+  #
+  # elasticsearch:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+  #   container_name: reggie-elasticsearch
+  #   environment:
+  #     - discovery.type=single-node
+  #     - xpack.security.enabled=false
+  #     - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   volumes:
+  #     - elasticsearch-data:/usr/share/elasticsearch/data
+  #   ports:
+  #     - "9200:9200"
+  #   networks:
+  #     - monitoring
+  #   restart: unless-stopped
+  #   profiles:
+  #     - elk
+  #
+  # logstash:
+  #   image: docker.elastic.co/logstash/logstash:8.11.0
+  #   container_name: reggie-logstash
+  #   volumes:
+  #     - ./elk/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+  #   ports:
+  #     - "5044:5044"
+  #   networks:
+  #     - monitoring
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - elasticsearch
+  #   profiles:
+  #     - elk
+  #
+  # kibana:
+  #   image: docker.elastic.co/kibana/kibana:8.11.0
+  #   container_name: reggie-kibana
+  #   ports:
+  #     - "5601:5601"
+  #   environment:
+  #     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+  #   volumes:
+  #     - kibana-data:/usr/share/kibana/data
+  #   networks:
+  #     - monitoring
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - elasticsearch
+  #   profiles:
+  #     - elk
+
 volumes:
   prometheus-data:
     driver: local
   grafana-data:
+    driver: local
+  loki-data:
+    driver: local
+  elasticsearch-data:
+    driver: local
+  kibana-data:
     driver: local
 
 networks:

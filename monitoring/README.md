@@ -4,35 +4,53 @@
 
 ## 快速开始
 
-### 1. 启动监控栈
-
-确保 Docker 和 Docker Compose 已安装，然后运行：
+### 1. 启动监控栈（指标采集）
 
 ```bash
 cd monitoring
 docker-compose up -d
 ```
 
-### 2. 访问监控界面
+### 2. 启动日志收集（可选）
+
+**方式一：Loki（推荐，轻量级）**
+
+```bash
+docker-compose --profile logs up -d
+```
+
+**方式二：ELK Stack（企业级）**
+
+```bash
+docker-compose --profile elk up -d
+```
+
+### 3. 访问监控界面
 
 - **Grafana**: http://localhost:3000 (默认账号: `admin`, 密码: `admin`)
 - **Prometheus**: http://localhost:9090
 - **Alertmanager**: http://localhost:9093
 
-### 3. 导入仪表板
+**日志收集（可选）**:
+- **Loki**: http://localhost:3100
+- **ELK/Kibana**: http://localhost:5601
+
+### 4. 导入仪表板
 
 1. 登录 Grafana
 2. 进入 **Dashboards** → **Import**
 3. 选择 `grafana-dashboards/reggie-takeout-dashboard.json` 文件
 4. 点击 **Import**
 
-### 4. 配置数据源
+### 5. 配置数据源
 
 如果数据源未自动配置：
 1. 进入 **Connections** → **Data sources**
 2. 点击 **Add data source**
-3. 选择 **Prometheus**
-4. 设置 URL 为 `http://prometheus:9090`
+3. 选择 **Prometheus** 或 **Loki**
+4. 设置 URL:
+   - Prometheus: `http://prometheus:9090`
+   - Loki: `http://loki:3100`
 5. 点击 **Save & Test**
 
 ## 目录结构
