@@ -1,3 +1,5 @@
+<div align="center">
+
 # 🍜 瑞吉外卖 (Reggie Takeout)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -6,8 +8,6 @@
 [![MyBatis Plus](https://img.shields.io/badge/MyBatis%20Plus-3.4.2-blue.svg)](https://baomidou.com/)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/itxinfei/reggie)
 [![Issues](https://img.shields.io/badge/issues-welcome-yellow.svg)](https://gitee.com/itxinfei/reggie/issues)
-
-<div align="center">
 
 **🎓 教学级外卖管理系统 | 完整的外卖业务解决方案**
 
