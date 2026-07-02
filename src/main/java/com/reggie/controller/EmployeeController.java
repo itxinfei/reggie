@@ -90,6 +90,8 @@ public class EmployeeController {
             if (newEncoded != null) {
                 emp.setPassword(newEncoded);
                 emp.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
+                // 设置当前用户ID，用于MyBatis-Plus自动填充updateUser字段
+                BaseContext.setCurrentId(emp.getId());
                 employeeService.updateById(emp);
             }
         }
