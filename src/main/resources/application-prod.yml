@@ -8,6 +8,17 @@ spring:
       username: ${DB_USERNAME}
       password: ${DB_PASSWORD}
       driver-class-name: com.mysql.cj.jdbc.Driver
+  redis:
+    # 生产环境 Redis 配置（用于限流、暴力破解防护）
+    # host: ${REDIS_HOST:localhost}
+    # port: ${REDIS_PORT:6379}
+    # password: ${REDIS_PASSWORD:}
+    # lettuce:
+    #   pool:
+    #     max-active: 16
+    #     max-idle: 8
+    #     min-idle: 2
+    # 如果不需要监控和安全功能，可以不配置 Redis（会自动降级）
 
 mybatis-plus:
   configuration:

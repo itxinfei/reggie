@@ -137,16 +137,26 @@ public class CsrfFilter implements Filter {
             log.debug("生成新的 CSRF Token");
         }
 
-        // 设置响应头
-        response.setHeader(CSRF_TOKEN_HEADER, token);
-
         // 设置 Cookie（供前端读取）
-        javax.servlet.http.Cookie cookie = new javax.servlet.http.Cookie("XSRF-TOKEN", token);
-        cookie.setPath("/");
-        cookie.setHttpOnly(false);
-        cookie.setSecure(request.isSecure());
-        cookie.setMaxAge((int) (TOKEN_MAX_AGE / 1000));
-        response.addCookie(cookie);
+        // 注意：SameSite 需要手动设置响应头，因为 javax.servlet.http.Cookie 不支持此属性
+        try {
+            String cookieValue = String.format(
+                "XSRF-TOKEN=%s; Path=/; Max-Age=%d; HttpOnly=false; Secure=%s; SameSite=Strict",
+                java.net.URLEncoder.encode(token, "UTF-8"),
+                (int) (TOKEN_MAX_AGE / 1000),
+                request.isSecure()
+            );
+            response.addHeader("Set-Cookie", cookieValue);
+        } catch (Exception e) {
+            log.warn("设置CSRF Cookie失败，降级使用普通Cookie", e);
+            // 降级：使用普通 Cookie（可能缺少 SameSite 属性）
+            javax.servlet.http.Cookie cookie = new javax.servlet.http.Cookie("XSRF-TOKEN", token);
+            cookie.setPath("/");
+            cookie.setHttpOnly(false);
+            cookie.setSecure(request.isSecure());
+            cookie.setMaxAge((int) (TOKEN_MAX_AGE / 1000));
+            response.addCookie(cookie);
+        }
     }
 
     /**
