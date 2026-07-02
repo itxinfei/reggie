@@ -15,6 +15,7 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.util.AntPathMatcher;
 
 /**
  * CSRF 防护过滤器
@@ -53,16 +54,21 @@ public class CsrfFilter implements Filter {
      * 排除路径（不需要 CSRF 防护）
      */
     private static final String[] EXCLUDED_PATHS = {
-        "/actuator/",
-        "/backend/",
-        "/front/",
+        "/actuator/**",
+        "/backend/**",
+        "/front/**",
         "/common/upload",
         "/common/download",
-        "/csrf/",
+        "/csrf/**",
         "/user/sendMsg",
         "/user/login",
         "/employee/login"
     };
+
+    /**
+     * Ant 路径匹配器
+     */
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
@@ -182,7 +188,8 @@ public class CsrfFilter implements Filter {
      */
     private boolean isExcludedPath(String uri) {
         for (String excludedPath : EXCLUDED_PATHS) {
-            if (uri.startsWith(excludedPath)) {
+            // 使用 AntPathMatcher 进行精确的模式匹配
+            if (PATH_MATCHER.match(excludedPath, uri)) {
                 return true;
             }
         }

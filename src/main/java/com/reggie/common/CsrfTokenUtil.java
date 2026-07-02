@@ -4,6 +4,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * CSRF Token 生成器
@@ -11,6 +12,7 @@ import java.util.Base64;
  *
  * @author itxinfei
  */
+@Slf4j
 public class CsrfTokenUtil {
 
     /**
@@ -64,13 +66,14 @@ public class CsrfTokenUtil {
     public static long extractTimestamp(String token) {
         try {
             byte[] decoded = Base64.getUrlDecoder().decode(token);
-            if (decoded.length > 8) {
-                byte[] timestampBytes = new byte[decoded.length - 8];
-                System.arraycopy(decoded, 8, timestampBytes, 0, timestampBytes.length);
-                return Long.parseLong(new String(timestampBytes));
+            // Token 格式：32字节随机数 + 时间戳字节
+            if (decoded.length > 32) {
+                byte[] timestampBytes = new byte[decoded.length - 32];
+                System.arraycopy(decoded, 32, timestampBytes, 0, timestampBytes.length);
+                return Long.parseLong(new String(timestampBytes, java.nio.charset.StandardCharsets.UTF_8));
             }
         } catch (Exception e) {
-            // ignore
+            log.warn("提取Token时间戳失败", e);
         }
         return 0;
     }

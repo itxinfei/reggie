@@ -44,7 +44,7 @@ public class RateLimitAspect {
     @Around("@annotation(rateLimit)")
     public Object around(ProceedingJoinPoint point, RateLimit rateLimit) throws Throwable {
         // 如果限流未启用或Redis不可用，直接放行
-        if (!enabled || !rateLimit.enabled() || redisTemplate == null) {
+        if (!enabled || !rateLimit.enabled()) {
             return point.proceed();
         }
 

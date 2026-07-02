@@ -11,8 +11,8 @@ spring:
       url: ${DB_URL:jdbc:mysql://localhost:3306/reggie?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true}
       username: ${DB_USERNAME:root}
       # jasypt加密配置，生产环境必须使用加密密码
-      password: ${DB_PASSWORD:root}
-      # 开发环境可使用环境变量：export DB_PASSWORD=root
+      # password: ${DB_PASSWORD:root}  # 已移除默认值，必须通过环境变量或配置中心设置
+      password: ${DB_PASSWORD:}
   # Redis 缓存配置
   cache:
     type: redis

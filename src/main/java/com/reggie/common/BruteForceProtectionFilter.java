@@ -172,6 +172,27 @@ public class BruteForceProtectionFilter implements Filter {
     }
 
     /**
+     * 获取登录失败次数（基于标识符）
+     *
+     * @param identifier 用户标识
+     * @return 失败次数，Redis 不可用时返回 0
+     */
+    public int getFailedAttemptCount(String identifier) {
+        if (!enabled || identifier == null || identifier.trim().isEmpty() || redisTemplate == null) {
+            return 0;
+        }
+
+        try {
+            String failureKey = LOGIN_FAILURE_KEY_PREFIX + identifier;
+            Object count = redisTemplate.opsForValue().get(failureKey);
+            return count != null ? Integer.parseInt(count.toString()) : 0;
+        } catch (Exception e) {
+            log.error("获取登录失败次数异常：{}", e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * 检查是否被锁定
      */
     private boolean isLocked(String identifier) {
@@ -193,7 +214,13 @@ public class BruteForceProtectionFilter implements Filter {
         if (!enabled || session == null) {
             return;
         }
-        recordLoginFailure((HttpServletRequest) null);
+        // 从 session 中提取用户标识
+        Object userId = session.getAttribute("user");
+        Object username = session.getAttribute("username");
+        String identifier = userId != null ? userId.toString() : (username != null ? username.toString() : null);
+        if (identifier != null) {
+            recordFailedAttempt(identifier);
+        }
     }
 
     /**
@@ -205,7 +232,13 @@ public class BruteForceProtectionFilter implements Filter {
         if (!enabled || session == null) {
             return;
         }
-        resetLoginAttempts((HttpServletRequest) null);
+        // 从 session 中提取用户标识
+        Object userId = session.getAttribute("user");
+        Object username = session.getAttribute("username");
+        String identifier = userId != null ? userId.toString() : (username != null ? username.toString() : null);
+        if (identifier != null) {
+            resetFailedAttempts(identifier);
+        }
     }
 
     /**
@@ -218,7 +251,14 @@ public class BruteForceProtectionFilter implements Filter {
         if (!enabled || session == null) {
             return 0;
         }
-        return getFailedAttempts((HttpServletRequest) null);
+        // 从 session 中提取用户标识
+        Object userId = session.getAttribute("user");
+        Object username = session.getAttribute("username");
+        String identifier = userId != null ? userId.toString() : (username != null ? username.toString() : null);
+        if (identifier == null) {
+            return 0;
+        }
+        return getFailedAttemptCount(identifier);
     }
 
     /**

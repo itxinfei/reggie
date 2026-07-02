@@ -22,14 +22,461 @@ CSRF（Cross-Site Request Forgery，跨站请求伪造）是一种常见的 Web 
 CSRF 防护的核心思想是：**每个请求必须携带一个随机生成的 Token，服务器验证 Token 的有效性**。
 
 1. 服务器生成 CSRF Token
-2. Token 存储到 Cookie 中
+2. Token 存储到 Session、Cookie 和响应头中
 3. 前端从 Cookie 读取 Token
 4. 请求时携带 Token（请求头或参数）
 5. 服务器验证 Token
 
+**本项目的轻量级实现特点**：
+- ✅ 不依赖 Spring Security
+- ✅ 自动为 GET 请求生成/刷新 Token
+- ✅ POST/PUT/DELETE 请求自动验证 Token
+- ✅ 测试环境自动禁用，不影响测试
+- ✅ Redis 可选的优雅降级
+
 ---
 
 ## 配置说明
+
+### 后端配置
+
+CSRF 防护已自动配置，无需手动启用。以下是核心组件说明：
+
+#### 1. CsrfTokenUtil - Token 生成工具
+
+**位置：** `src/main/java/com/reggie/common/CsrfTokenUtil.java`
+
+**功能**：
+- `generateToken()` - 生成安全的随机 Token（32字节随机数 + 时间戳）
+- `validateToken()` - 验证 Token 是否匹配
+- `extractTimestamp()` - 提取 Token 时间戳
+- `isTokenNotExpired()` - 检查 Token 是否过期（默认1小时）
+
+**Token 格式**：
+```
+Base64(32字节随机数 + 时间戳毫秒值)
+```
+
+#### 2. CsrfFilter - CSRF 过滤器
+
+**位置：** `src/main/java/com/reggie/filter/CsrfFilter.java`
+
+**拦截策略**：
+- **GET 请求**：自动生成或刷新 CSRF Token，存入 Session、响应头和 Cookie
+- **POST/PUT/DELETE 请求**：验证 CSRF Token
+- **排除路径**：无需验证的路径
+
+**排除路径配置**：
+```java
+private static final String[] EXCLUDED_PATHS = {
+    "/actuator/**",      // 监控端点
+    "/backend/**",       // 后台管理界面
+    "/front/**",         // 前端页面
+    "/common/upload",    // 文件上传
+    "/common/download",  // 文件下载
+    "/csrf/**",          // CSRF 相关接口
+    "/user/sendMsg",     // 发送短信验证码
+    "/user/login",       // 用户登录
+    "/employee/login"    // 员工登录
+};
+```
+
+**Token 存储**：
+- **Session**：`HttpSession.CSRF_TOKEN_SESSION_ATTR`
+- **Cookie**：`XSRF-TOKEN`（非 HttpOnly，前端可读取）
+- **响应头**：`X-CSRF-TOKEN`
+
+#### 3. FilterConfig - 过滤器注册
+
+**位置：** `src/main/java/com/reggie/config/FilterConfig.java`
+
+**注册配置**：
+```java
+@Bean
+@Profile("!test")  // 非测试环境启用
+public FilterRegistrationBean<CsrfFilter> csrfFilterRegistration() {
+    FilterRegistrationBean<CsrfFilter> registration = new FilterRegistrationBean<>();
+    registration.setFilter(new CsrfFilter());
+    registration.addUrlPatterns("/*");
+    registration.setName("csrfFilter");
+    registration.setOrder(2); // 顺序：1=LoginCheckFilter, 2=CsrfFilter
+    return registration;
+}
+```
+
+**测试环境处理**：
+- 使用 `@Profile("!test")` 注解，测试环境自动禁用 CSRF 过滤器
+- 避免 CSRF 干扰单元测试和集成测试
+
+#### 4. SessionTimeoutConfig - Session 超时配置
+
+**位置：** `src/main/java/com/reggie/config/SessionTimeoutConfig.java`
+
+**配置**：
+```java
+// Session 超时时间（30分钟）
+servletContext.setSessionTimeout(SecurityConstants.SESSION_TIMEOUT / 60);
+
+// 禁用 URL 重写，防止 Session ID 泄露
+servletContext.setSessionTrackingModes(
+    Collections.singleton(SessionTrackingMode.COOKIE)
+);
+```
+
+---
+
+## 前端集成
+
+### 1. 自动读取 CSRF Token
+
+**方式一：从 Cookie 读取（推荐）**
+
+```javascript
+// 获取 Cookie 中的 CSRF Token
+function getCsrfToken() {
+    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+```
+
+**方式二：从响应头读取**
+
+```javascript
+// 在 AJAX 请求拦截器中从响应头获取
+axios.interceptors.response.use(response => {
+    const csrfToken = response.headers['x-csrf-token'];
+    if (csrfToken) {
+        // 保存 Token 到 Cookie 或 LocalStorage
+        document.cookie = `XSRF-TOKEN=${encodeURIComponent(csrfToken)}; path=/`;
+    }
+    return response;
+});
+```
+
+### 2. 发送请求时携带 Token
+
+**方式一：请求头（推荐）**
+
+```javascript
+// Axios 拦截器自动添加 CSRF Token
+axios.interceptors.request.use(config => {
+    const token = getCsrfToken();
+    if (token) {
+        config.headers['X-CSRF-TOKEN'] = token;
+    }
+    return config;
+});
+```
+
+**方式二：请求参数**
+
+```javascript
+// 在 POST/PUT/DELETE 请求中添加 _csrf 参数
+const params = {
+    username: 'admin',
+    password: '123456',
+    _csrf: getCsrfToken()  // 添加 CSRF Token
+};
+```
+
+### 3. 完整示例（Vue + Axios）
+
+```javascript
+// main.js
+import axios from 'axios';
+
+// 请求拦截器
+axios.interceptors.request.use(config => {
+    // 添加 CSRF Token
+    const csrfToken = getCsrfToken();
+    if (csrfToken && ['post', 'put', 'delete'].includes(config.method)) {
+        config.headers['X-CSRF-TOKEN'] = csrfToken;
+    }
+    return config;
+});
+
+// 响应拦截器：更新 CSRF Token
+axios.interceptors.response.use(
+    response => {
+        const newToken = response.headers['x-csrf-token'];
+        if (newToken) {
+            document.cookie = `XSRF-TOKEN=${encodeURIComponent(newToken)}; path=/; ${location.protocol === 'https:' ? 'Secure; ' : ''}SameSite=Strict`;
+        }
+        return response;
+    },
+    error => {
+        if (error.response?.status === 403) {
+            console.error('CSRF Token 验证失败');
+            // 刷新页面重新获取 Token
+            window.location.reload();
+        }
+        return Promise.reject(error);
+    }
+);
+```
+
+### 4. Angular/React 配置
+
+**Angular**（自动支持）：
+
+Angular 的 `HttpClient` 默认支持 CSRF，会自动读取 `XSRF-TOKEN` Cookie 并添加到 `X-XSRF-TOKEN` 请求头。
+
+**React（Axios）**：
+
+```javascript
+// 参考上面的 Vue + Axios 示例
+```
+
+---
+
+## API 调用
+
+### 1. 登录接口（排除 CSRF）
+
+**无需携带 CSRF Token**：
+
+```bash
+POST /user/login
+Content-Type: application/json
+
+{
+    "phone": "13800138000",
+    "code": "123456"
+}
+```
+
+### 2. 员工登录接口（排除 CSRF）
+
+**无需携带 CSRF Token**：
+
+```bash
+POST /employee/login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "123456"
+}
+```
+
+### 3. 其他接口（需要 CSRF）
+
+**必须携带 CSRF Token**：
+
+```bash
+PUT /employee
+Content-Type: application/json
+X-CSRF-TOKEN: <从Cookie获取的Token>
+
+{
+    "id": 1,
+    "name": "修改后管理员",
+    "phone": "13600136000"
+}
+```
+
+### 4. CSRF Token 刷新
+
+**方式一：GET 请求自动刷新**
+
+```javascript
+// 任意 GET 请求都会刷新 Token
+GET /employee/page?page=1&pageSize=10
+// 响应头 X-CSRF-TOKEN 包含新的 Token
+```
+
+**方式二：主动刷新**
+
+```javascript
+// 在 Filter 中配置的 /csrf/refresh 路径
+GET /csrf/refresh
+// 返回新的 Token
+```
+
+---
+
+## 测试验证
+
+### 1. 单元测试
+
+CSRF 过滤器在测试环境（`@Profile("test")`）下自动禁用，无需特殊处理。
+
+### 2. 集成测试
+
+**验证 CSRF 生效**：
+
+```bash
+# 1. 先发送 GET 请求获取 CSRF Token
+curl -c cookies.txt http://localhost:8080/employee/page?page=1
+
+# 2. 从 Cookie 中提取 Token
+TOKEN=$(grep XSRF-TOKEN cookies.txt | awk '{print $NF}')
+
+# 3. 发送 POST 请求并携带 Token
+curl -b cookies.txt -c cookies.txt \
+  -H "X-CSRF-TOKEN: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","name":"测试"}' \
+  http://localhost:8080/employee
+
+# 预期：成功（HTTP 200）
+```
+
+**验证 CSRF 拦截**：
+
+```bash
+# 不携带 Token 发送 POST 请求
+curl -c cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","name":"测试"}' \
+  http://localhost:8080/employee
+
+# 预期：失败（HTTP 403 Forbidden）
+```
+
+### 3. 浏览器测试
+
+1. 打开浏览器开发者工具（F12）
+2. 进入 **Application** → **Cookies**
+3. 查找 `XSRF-TOKEN` Cookie
+4. 发送任意 POST 请求，观察是否携带 `X-CSRF-TOKEN` 请求头
+
+---
+
+## 常见问题
+
+### 1. POST 请求返回 403 Forbidden
+
+**原因**：未携带 CSRF Token 或 Token 无效
+
+**解决**：
+- 检查 Cookie 中是否有 `XSRF-TOKEN`
+- 检查请求头是否包含 `X-CSRF-TOKEN`
+- 确认 Token 未过期（默认1小时）
+
+### 2. 测试时 CSRF 影响测试用例
+
+**原因**：测试环境未正确禁用 CSRF
+
+**解决**：
+- 确认测试类标注了 `@ActiveProfiles("test")`
+- 检查 `application-test.yml` 中 `spring.profiles.active=test`
+
+### 3. Token 过期问题
+
+**原因**：Token 默认1小时过期
+
+**解决**：
+- 在 GET 请求中自动刷新 Token
+- 或调用 `/csrf/refresh` 接口主动刷新
+
+### 4. Cookie 未设置 SameSite 属性
+
+**原因**：跨域请求时 Cookie 可能被拒绝
+
+**解决**：
+- 前端在读取 Cookie 时添加 `SameSite=Strict` 属性
+- 或使用请求头方式传递 Token
+
+### 5. 静态资源路径被误拦截
+
+**原因**：路径匹配规则过于宽泛
+
+**解决**：
+- 检查 `EXCLUDED_PATHS` 配置
+- 确保使用 Ant 路径模式（如 `/front/**`）
+
+---
+
+## 安全建议
+
+### 1. Token 生命周期
+
+- **默认1小时**：平衡安全和用户体验
+- **敏感操作**：每次操作后刷新 Token
+- **登出时**：清除 Session 中的 Token
+
+### 2. Cookie 安全配置
+
+```javascript
+// 生产环境建议
+document.cookie = `XSRF-TOKEN=${token}; path=/; Secure; SameSite=Strict`;
+```
+
+- `Secure`：仅通过 HTTPS 传输
+- `SameSite=Strict`：防止跨站请求携带 Cookie
+- `HttpOnly=false`：允许前端读取（必须在客户端读取）
+
+### 3. 自定义排除路径
+
+如需排除更多路径，修改 `CsrfFilter.EXCLUDED_PATHS`：
+
+```java
+private static final String[] EXCLUDED_PATHS = {
+    "/actuator/**",
+    "/backend/**",
+    "/front/**",
+    "/common/upload",
+    "/common/download",
+    "/csrf/**",
+    "/user/sendMsg",
+    "/user/login",
+    "/employee/login",
+    "/your/custom/path/**"  // 添加自定义路径
+};
+```
+
+---
+
+## 技术细节
+
+### Token 生成算法
+
+```java
+// 1. 生成 32 字节随机数（256位）
+SecureRandom random = new SecureRandom();
+byte[] randomBytes = new byte[32];
+random.nextBytes(randomBytes);
+
+// 2. 添加时间戳（毫秒）
+long timestamp = System.currentTimeMillis();
+byte[] timestampBytes = Long.toString(timestamp).getBytes(StandardCharsets.UTF_8);
+
+// 3. 合并
+byte[] combined = new byte[randomBytes.length + timestampBytes.length];
+System.arraycopy(randomBytes, 0, combined, 0, randomBytes.length);
+System.arraycopy(timestampBytes, 0, combined, randomBytes.length, timestampBytes.length);
+
+// 4. Base64 URL 安全编码
+String token = Base64.getUrlEncoder().withoutPadding().encodeToString(combined);
+```
+
+### 过滤器执行流程
+
+```
+Request → CsrfFilter
+            ├─ 测试环境？ → 跳过
+            ├─ GET 请求？ → 生成/刷新 Token → 继续
+            ├─ 排除路径？ → 跳过
+            └─ POST/PUT/DELETE → 验证 Token
+                                ├─ 验证通过 → 继续
+                                └─ 验证失败 → 403 Forbidden
+```
+
+### 性能影响
+
+- **内存**：每个 Session 存储一个 Token（约 50 字节）
+- **CPU**：Token 生成使用 `SecureRandom`（启动时一次性初始化）
+- **网络**：每次 GET 请求响应头添加 Token（约 50 字节）
+- **Redis**：未使用，纯内存操作
+
+---
+
+## 参考资源
+
+- [OWASP CSRF 防护](https://owasp.org/www-community/attacks/csrf)
+- [Spring Security CSRF 文档](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html)
+- [RFC 7616: HTTP Origin](https://tools.ietf.org/html/rfc7616)
 
 ### 后端配置
 
