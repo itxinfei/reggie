@@ -1,0 +1,207 @@
+package com.reggie.common;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
+
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * 暴力破解防护过滤器
+ * 检测登录失败次数，超过阈值锁定账号/IP
+ *
+ * 注意：需要 Redis 支持，如果 Redis 不可用则自动降级（不启用防护）
+ *
+ * @author itxinfei
+ */
+@Slf4j
+@Component
+public class BruteForceProtectionFilter implements Filter {
+
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final boolean enabled;
+
+    /**
+     * 最大允许失败次数
+     */
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+
+    /**
+     * 锁定时间（秒）
+     */
+    private static final int LOCKOUT_DURATION = 300; // 5分钟
+
+    /**
+     * 登录失败计数 key 前缀
+     */
+    private static final String LOGIN_FAILURE_KEY_PREFIX = "login:failure:";
+
+    /**
+     * 登录锁定 key 前缀
+     */
+    private static final String LOGIN_LOCKED_KEY_PREFIX = "login:locked:";
+
+    /**
+     * 构造方法
+     * RedisTemplate 为可选依赖，如果不可用则降级
+     */
+    public BruteForceProtectionFilter(@Autowired(required = false) RedisTemplate<String, Object> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+        this.enabled = redisTemplate != null;
+        if (enabled) {
+            log.info("暴力破解防护已启用（Redis模式）");
+        } else {
+            log.warn("⚠️ 暴力破解防护未启用（Redis不可用），自动降级");
+        }
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        log.info("暴力破解防护过滤器初始化完成");
+    }
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+
+        // 如果未启用或Redis不可用，直接放行
+        if (!enabled || redisTemplate == null) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        HttpServletRequest httpRequest = (HttpServletRequest) request;
+        HttpServletResponse httpResponse = (HttpServletResponse) response;
+
+        // 只处理登录接口
+        if (isLoginRequest(httpRequest)) {
+            String identifier = getIdentifier(httpRequest);
+
+            // 检查是否已被锁定
+            if (isLocked(identifier)) {
+                log.warn("⚠️ 账号已被锁定 - 标识：{}", identifier);
+                httpResponse.setStatus(429); // 429 Too Many Requests
+                httpResponse.setContentType("application/json;charset=UTF-8");
+                httpResponse.getWriter().write("{\"code\": 429, \"msg\": \"登录失败次数过多，请5分钟后重试\"}");
+                return;
+            }
+
+            // 继续过滤器链
+            chain.doFilter(request, response);
+
+            // 检查响应状态，如果是 401 则记录失败
+            if (httpResponse.getStatus() == HttpServletResponse.SC_UNAUTHORIZED) {
+                recordFailedAttempt(identifier);
+            }
+        } else {
+            chain.doFilter(request, response);
+        }
+    }
+
+    @Override
+    public void destroy() {
+        log.info("暴力破解防护过滤器销毁");
+    }
+
+    /**
+     * 记录登录失败
+     *
+     * @param identifier 标识（用户名/IP）
+     */
+    public void recordFailedAttempt(String identifier) {
+        if (identifier == null || identifier.trim().isEmpty()) {
+            return;
+        }
+
+        String failureKey = LOGIN_FAILURE_KEY_PREFIX + identifier;
+        String lockedKey = LOGIN_LOCKED_KEY_PREFIX + identifier;
+
+        try {
+            // 增加失败计数
+            Long failures = redisTemplate.opsForValue().increment(failureKey);
+
+            if (failures != null && failures == 1) {
+                // 首次失败，设置过期时间（15分钟）
+                redisTemplate.expire(failureKey, 900, TimeUnit.SECONDS);
+            }
+
+            log.info("登录失败 - 标识：{}, 失败次数：{}/{}", identifier, failures, MAX_FAILED_ATTEMPTS);
+
+            // 检查是否需要锁定
+            if (failures != null && failures >= MAX_FAILED_ATTEMPTS) {
+                redisTemplate.opsForValue().set(lockedKey, "locked", LOCKOUT_DURATION, TimeUnit.SECONDS);
+                redisTemplate.delete(failureKey);
+                log.warn("⚠️ 账号已被锁定 {} 秒 - 标识：{}, 失败次数：{}",
+                    LOCKOUT_DURATION, identifier, failures);
+            }
+        } catch (Exception e) {
+            log.error("记录登录失败异常：{}", e.getMessage());
+        }
+    }
+
+    /**
+     * 重置登录失败计数
+     *
+     * @param identifier 标识（用户名/IP）
+     */
+    public void resetFailedAttempts(String identifier) {
+        if (identifier == null || identifier.trim().isEmpty()) {
+            return;
+        }
+
+        try {
+            String failureKey = LOGIN_FAILURE_KEY_PREFIX + identifier;
+            String lockedKey = LOGIN_LOCKED_KEY_PREFIX + identifier;
+            redisTemplate.delete(failureKey);
+            redisTemplate.delete(lockedKey);
+            log.info("登录失败计数已重置 - 标识：{}", identifier);
+        } catch (Exception e) {
+            log.error("重置登录失败计数异常：{}", e.getMessage());
+        }
+    }
+
+    /**
+     * 检查是否被锁定
+     */
+    private boolean isLocked(String identifier) {
+        try {
+            String lockedKey = LOGIN_LOCKED_KEY_PREFIX + identifier;
+            return redisTemplate.hasKey(lockedKey);
+        } catch (Exception e) {
+            log.error("检查账号锁定状态异常：{}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 判断是否为登录请求
+     */
+    private boolean isLoginRequest(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri.contains("/employee/login") || uri.contains("/user/login");
+    }
+
+    /**
+     * 获取标识（用户名/IP）
+     */
+    private String getIdentifier(HttpServletRequest request) {
+        // 优先使用用户名
+        String username = request.getParameter("username");
+        if (username != null && !username.trim().isEmpty()) {
+            return username;
+        }
+
+        // 否则使用 IP
+        return request.getRemoteAddr();
+    }
+}

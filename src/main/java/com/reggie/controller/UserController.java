@@ -3,6 +3,8 @@ package com.reggie.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.R;
 import com.reggie.common.LogMaskUtils;
+import com.reggie.common.RateLimit;
+import com.reggie.common.RateLimitType;
 import com.reggie.entity.User;
 import com.reggie.enums.UserStatus;
 import com.reggie.service.UserService;
@@ -39,6 +41,7 @@ public class UserController {
     @PostMapping("/sendMsg")
     @Operation(summary = "发送短信验证码", description = "向指定手机号发送验证码")
     @Parameter(name = "user", description = "用户手机号信息", required = true)
+    @RateLimit(maxRequestsPerSecond = 2, type = RateLimitType.IP)
     public R<String> sendMsg(@RequestBody User user, HttpSession session){
         //获取手机号
         String phone = user.getPhone();
@@ -69,6 +72,7 @@ public class UserController {
     @PostMapping("/login")
     @Operation(summary = "用户登录", description = "手机号验证码登录")
     @Parameter(name = "map", description = "登录参数（手机号、验证码）", required = true)
+    @RateLimit(maxRequestsPerSecond = 10, type = RateLimitType.IP)
     public R<User> login(@RequestBody Map<String, Object> map, HttpSession session){
         //获取手机号
         String phone = (String) map.get("phone");

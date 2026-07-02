@@ -6,6 +6,8 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.LogMaskUtils;
 import com.reggie.common.PasswordUtils;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.RateLimitType;
 import com.reggie.common.SecurityConstants;
 import com.reggie.entity.Employee;
 import com.reggie.enums.UserStatus;
@@ -44,6 +46,7 @@ public class EmployeeController {
     @PostMapping("/login")
     @Operation(summary = "员工登录", description = "员工账号密码登录")
     @Parameter(name = "employee", description = "员工登录信息", required = true)
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.IP)
     public R<Employee> login(HttpServletRequest request,@RequestBody Employee employee){
 
         //1、根据页面提交的用户名username查询数据库
