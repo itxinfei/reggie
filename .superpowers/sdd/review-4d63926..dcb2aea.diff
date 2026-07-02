@@ -1,0 +1,944 @@
+﻿dcb2aea feat(frontend): add dining management pages (area, table, queue, reservation)
+ src/main/resources/backend/page/dining/area-list.html        | 200 +++++++++++++++++++++++++++++++++
+ src/main/resources/backend/page/dining/queue-list.html       | 203 ++++++++++++++++++++++++++++++++++
+ src/main/resources/backend/page/dining/reservation-list.html | 204 ++++++++++++++++++++++++++++++++++
+ src/main/resources/backend/page/dining/table-list.html       | 307 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 914 insertions(+)
+diff --git a/src/main/resources/backend/page/dining/area-list.html b/src/main/resources/backend/page/dining/area-list.html
+new file mode 100644
+index 0000000..95e73e6
+--- /dev/null
++++ b/src/main/resources/backend/page/dining/area-list.html
+@@ -0,0 +1,200 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta http-equiv="X-UA-Compatible" content="IE=edge">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>Document</title>
++  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
++  <link rel="stylesheet" href="../../styles/common.css" />
++  <link rel="stylesheet" href="../../styles/page.css" />
++</head>
++<body>
++  <div class="dashboard-container" id="area-app">
++    <div class="container">
++      <div class="tableBar">
++        <el-input v-model="input" placeholder="璇疯緭鍏ュ尯鍩熷悕绉? style="width: 250px" clearable @keyup.enter.native="handleQuery">
++          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="init"></i>
++        </el-input>
++        <div class="tableLab">
++          <el-button type="primary" @click="addHandle">+ 鏂板鍖哄煙</el-button>
++        </div>
++      </div>
++      <el-table :data="tableData" stripe class="tableBox">
++        <el-table-column type="index" label="搴忓彿" width="50"></el-table-column>
++        <el-table-column prop="name" label="鍖哄煙鍚嶇О"></el-table-column>
++        <el-table-column prop="sort" label="鎺掑簭"></el-table-column>
++        <el-table-column label="鎿嶄綔" width="160" align="center">
++          <template slot-scope="scope">
++            <el-button type="text" size="small" class="blueBug" @click="editHandle(scope.row)">淇敼</el-button>
++            <el-button type="text" size="small" class="delBut non" @click="deleteHandle(scope.row.id)">鍒犻櫎</el-button>
++          </template>
++        </el-table-column>
++      </el-table>
++      <el-pagination
++        class="pageList"
++        :page-sizes="[10, 20, 30, 40]"
++        :page-size="pageSize"
++        layout="total, sizes, prev, pager, next, jumper"
++        :total="counts"
++        @size-change="handleSizeChange"
++        :current-page.sync="page"
++        @current-change="handleCurrentChange"
++      ></el-pagination>
++    </div>
++    <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="30%" :before-close="handleClose">
++      <el-form ref="form" :model="form" label-width="100px">
++        <el-form-item label="鍖哄煙鍚嶇О锛?>
++          <el-input v-model="form.name" placeholder="璇疯緭鍏ュ尯鍩熷悕绉? maxlength="14" />
++        </el-form-item>
++        <el-form-item label="鎺掑簭锛?>
++          <el-input v-model="form.sort" type="number" placeholder="璇疯緭鍏ユ帓搴? />
++        </el-form-item>
++      </el-form>
++      <span slot="footer" class="dialog-footer">
++        <el-button size="medium" @click="handleClose">鍙?娑?/el-button>
++        <el-button type="primary" size="medium" @click="submitForm">纭?瀹?/el-button>
++      </span>
++    </el-dialog>
++  </div>
++  <script src="../../plugins/vue/vue.js"></script>
++  <script src="../../plugins/element-ui/index.js"></script>
++  <script src="../../plugins/axios/axios.min.js"></script>
++  <script src="../../js/request.js"></script>
++  <script src="../../api/dining.js"></script>
++  <script>
++    new Vue({
++      el: '#area-app',
++      data() {
++        return {
++          input: '',
++          counts: 0,
++          page: 1,
++          pageSize: 10,
++          tableData: [],
++          dialog: {
++            title: '',
++            visible: false
++          },
++          form: {
++            id: '',
++            name: '',
++            sort: ''
++          },
++          action: ''
++        }
++      },
++      created() {
++        this.init()
++      },
++      methods: {
++        async init() {
++          const params = {
++            page: this.page,
++            pageSize: this.pageSize,
++            name: this.input || undefined
++          }
++          await areaPage(params).then(res => {
++            if (String(res.code) === '1') {
++              this.tableData = res.data.records || []
++              this.counts = res.data.total
++            } else {
++              this.$message.error(res.msg || '鎿嶄綔澶辫触')
++            }
++          }).catch(err => {
++            this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++          })
++        },
++        handleQuery() {
++          this.page = 1
++          this.init()
++        },
++        addHandle() {
++          this.action = 'add'
++          this.dialog.title = '鏂板鍖哄煙'
++          this.form.id = ''
++          this.form.name = ''
++          this.form.sort = ''
++          this.dialog.visible = true
++        },
++        editHandle(row) {
++          this.action = 'edit'
++          this.dialog.title = '淇敼鍖哄煙'
++          this.form.id = row.id
++          this.form.name = row.name
++          this.form.sort = row.sort
++          this.dialog.visible = true
++        },
++        handleClose() {
++          this.dialog.visible = false
++        },
++        submitForm() {
++          if (!this.form.name && this.form.name !== 0) {
++            this.$message.error('璇疯緭鍏ュ尯鍩熷悕绉?)
++            return
++          }
++          if (!this.form.sort && this.form.sort !== 0) {
++            this.$message.error('璇疯緭鍏ユ帓搴?)
++            return
++          }
++          const reg = /^\d+$/
++          if (!reg.test(String(this.form.sort))) {
++            this.$message.error('鎺掑簭鍙兘杈撳叆鏁板瓧绫诲瀷')
++            return
++          }
++          if (this.action === 'add') {
++            addArea({ name: this.form.name, sort: this.form.sort }).then(res => {
++              if (res.code === 1) {
++                this.$message.success('鍖哄煙娣诲姞鎴愬姛锛?)
++                this.dialog.visible = false
++                this.handleQuery()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          } else {
++            updateArea({ id: this.form.id, name: this.form.name, sort: this.form.sort }).then(res => {
++              if (res.code === 1) {
++                this.$message.success('鍖哄煙淇敼鎴愬姛锛?)
++                this.dialog.visible = false
++                this.handleQuery()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          }
++        },
++        deleteHandle(id) {
++          this.$confirm('纭鍒犻櫎璇ュ尯鍩? 鏄惁缁х画?', '纭畾鍒犻櫎', {
++            confirmButtonText: '纭畾',
++            cancelButtonText: '鍙栨秷'
++          }).then(() => {
++            deleteArea(id).then(res => {
++              if (res.code === 1) {
++                this.$message.success('鍒犻櫎鎴愬姛锛?)
++                this.handleQuery()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          })
++        },
++        handleSizeChange(val) {
++          this.pageSize = val
++          this.init()
++        },
++        handleCurrentChange(val) {
++          this.page = val
++          this.init()
++        }
++      }
++    })
++  </script>
++</body>
++</html>
+diff --git a/src/main/resources/backend/page/dining/queue-list.html b/src/main/resources/backend/page/dining/queue-list.html
+new file mode 100644
+index 0000000..58608c1
+--- /dev/null
++++ b/src/main/resources/backend/page/dining/queue-list.html
+@@ -0,0 +1,203 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta http-equiv="X-UA-Compatible" content="IE=edge">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>Document</title>
++  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
++  <link rel="stylesheet" href="../../styles/common.css" />
++  <link rel="stylesheet" href="../../styles/page.css" />
++</head>
++<body>
++  <div class="dashboard-container" id="queue-app">
++    <div class="container">
++      <div class="tableBar">
++        <el-input v-model="input" placeholder="璇疯緭鍏ユ墜鏈哄彿" style="width: 200px" clearable @keyup.enter.native="handleQuery">
++          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="init"></i>
++        </el-input>
++        <el-select v-model="status" placeholder="璇烽€夋嫨鐘舵€? clearable style="width: 150px; margin-left: 10px;" @change="init">
++          <el-option label="绛夊緟涓? value="WAITING"></el-option>
++          <el-option label="宸插彨鍙? value="CALLED"></el-option>
++          <el-option label="宸插叆搴? value="SEATED"></el-option>
++          <el-option label="宸插彇娑? value="CANCELLED"></el-option>
++        </el-select>
++        <div class="tableLab">
++          <el-button type="primary" @click="takeHandle">+ 鍙栧彿</el-button>
++        </div>
++      </div>
++      <el-table :data="tableData" stripe class="tableBox">
++        <el-table-column type="index" label="搴忓彿" width="50"></el-table-column>
++        <el-table-column prop="queueNo" label="鎺掗槦鍙?></el-table-column>
++        <el-table-column prop="phone" label="鎵嬫満鍙?></el-table-column>
++        <el-table-column prop="seatCount" label="灏遍浜烘暟"></el-table-column>
++        <el-table-column label="鐘舵€?>
++          <template slot-scope="scope">
++            <el-tag :type="scope.row.status === 'WAITING' ? 'warning' : scope.row.status === 'CALLED' ? 'primary' : scope.row.status === 'SEATED' ? 'success' : 'info'">
++              {{ scope.row.status === 'WAITING' ? '绛夊緟涓? : scope.row.status === 'CALLED' ? '宸插彨鍙? : scope.row.status === 'SEATED' ? '宸插叆搴? : '宸插彇娑? }}
++            </el-tag>
++          </template>
++        </el-table-column>
++        <el-table-column prop="createdTime" label="鍙栧彿鏃堕棿"></el-table-column>
++        <el-table-column label="鎿嶄綔" width="200" align="center">
++          <template slot-scope="scope">
++            <el-button type="text" size="small" class="blueBug" @click="callHandle(scope.row.id)" v-if="scope.row.status === 'WAITING'">鍙彿</el-button>
++            <el-button type="text" size="small" class="delBut non" @click="cancelHandle(scope.row.id)" v-if="scope.row.status !== 'SEATED' && scope.row.status !== 'CANCELLED'">鍙栨秷</el-button>
++          </template>
++        </el-table-column>
++      </el-table>
++      <el-pagination
++        class="pageList"
++        :page-sizes="[10, 20, 30, 40]"
++        :page-size="pageSize"
++        layout="total, sizes, prev, pager, next, jumper"
++        :total="counts"
++        @size-change="handleSizeChange"
++        :current-page.sync="page"
++        @current-change="handleCurrentChange"
++      ></el-pagination>
++    </div>
++    <el-dialog title="鍙栧彿" :visible.sync="dialog.visible" width="30%" :before-close="handleClose">
++      <el-form ref="form" :model="form" label-width="100px">
++        <el-form-item label="鎵嬫満鍙凤細">
++          <el-input v-model="form.phone" placeholder="璇疯緭鍏ユ墜鏈哄彿" maxlength="11" />
++        </el-form-item>
++        <el-form-item label="灏遍浜烘暟锛?>
++          <el-input v-model="form.seatCount" type="number" placeholder="璇疯緭鍏ュ氨椁愪汉鏁? />
++        </el-form-item>
++      </el-form>
++      <span slot="footer" class="dialog-footer">
++        <el-button size="medium" @click="handleClose">鍙?娑?/el-button>
++        <el-button type="primary" size="medium" @click="submitTake">纭?瀹?/el-button>
++      </span>
++    </el-dialog>
++  </div>
++  <script src="../../plugins/vue/vue.js"></script>
++  <script src="../../plugins/element-ui/index.js"></script>
++  <script src="../../plugins/axios/axios.min.js"></script>
++  <script src="../../js/request.js"></script>
++  <script src="../../api/dining.js"></script>
++  <script>
++    new Vue({
++      el: '#queue-app',
++      data() {
++        return {
++          input: '',
++          status: '',
++          counts: 0,
++          page: 1,
++          pageSize: 10,
++          tableData: [],
++          dialog: {
++            visible: false
++          },
++          form: {
++            phone: '',
++            seatCount: ''
++          }
++        }
++      },
++      created() {
++        this.init()
++      },
++      methods: {
++        async init() {
++          const params = {
++            page: this.page,
++            pageSize: this.pageSize,
++            phone: this.input || undefined,
++            status: this.status || undefined
++          }
++          await queuePage(params).then(res => {
++            if (String(res.code) === '1') {
++              this.tableData = res.data.records || []
++              this.counts = res.data.total
++            } else {
++              this.$message.error(res.msg || '鎿嶄綔澶辫触')
++            }
++          }).catch(err => {
++            this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++          })
++        },
++        handleQuery() {
++          this.page = 1
++          this.init()
++        },
++        takeHandle() {
++          this.form.phone = ''
++          this.form.seatCount = ''
++          this.dialog.visible = true
++        },
++        handleClose() {
++          this.dialog.visible = false
++        },
++        submitTake() {
++          if (!this.form.phone) {
++            this.$message.error('璇疯緭鍏ユ墜鏈哄彿')
++            return
++          }
++          if (!this.form.seatCount) {
++            this.$message.error('璇疯緭鍏ュ氨椁愪汉鏁?)
++            return
++          }
++          queueTake({ phone: this.form.phone, seatCount: this.form.seatCount }).then(res => {
++            if (res.code === 1) {
++              this.$message.success('鍙栧彿鎴愬姛锛佹帓闃熷彿锛? + (res.data ? res.data.queueNo : ''))
++              this.dialog.visible = false
++              this.handleQuery()
++            } else {
++              this.$message.error(res.msg || '鎿嶄綔澶辫触')
++            }
++          }).catch(err => {
++            this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++          })
++        },
++        callHandle(id) {
++          this.$confirm('纭鍙彿璇ユ帓闃熻褰?', '鎻愮ず', {
++            confirmButtonText: '纭畾',
++            cancelButtonText: '鍙栨秷',
++            type: 'warning'
++          }).then(() => {
++            queueCall().then(res => {
++              if (res.code === 1) {
++                this.$message.success('鍙彿鎴愬姛锛?)
++                this.init()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          })
++        },
++        cancelHandle(id) {
++          this.$confirm('纭鍙栨秷璇ユ帓闃?', '鎻愮ず', {
++            confirmButtonText: '纭畾',
++            cancelButtonText: '鍙栨秷',
++            type: 'warning'
++          }).then(() => {
++            queueCancel(id).then(res => {
++              if (res.code === 1) {
++                this.$message.success('宸插彇娑堬紒')
++                this.init()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          })
++        },
++        handleSizeChange(val) {
++          this.pageSize = val
++          this.init()
++        },
++        handleCurrentChange(val) {
++          this.page = val
++          this.init()
++        }
++      }
++    })
++  </script>
++</body>
++</html>
+diff --git a/src/main/resources/backend/page/dining/reservation-list.html b/src/main/resources/backend/page/dining/reservation-list.html
+new file mode 100644
+index 0000000..5640c58
+--- /dev/null
++++ b/src/main/resources/backend/page/dining/reservation-list.html
+@@ -0,0 +1,204 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta http-equiv="X-UA-Compatible" content="IE=edge">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>Document</title>
++  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
++  <link rel="stylesheet" href="../../styles/common.css" />
++  <link rel="stylesheet" href="../../styles/page.css" />
++</head>
++<body>
++  <div class="dashboard-container" id="reservation-app">
++    <div class="container">
++      <div class="tableBar">
++        <el-input v-model="input" placeholder="璇疯緭鍏ュ鎴峰鍚? style="width: 200px" clearable @keyup.enter.native="handleQuery">
++          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="init"></i>
++        </el-input>
++        <el-input v-model="phone" placeholder="璇疯緭鍏ユ墜鏈哄彿" style="width: 200px; margin-left: 10px;" clearable @keyup.enter.native="handleQuery">
++          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="init"></i>
++        </el-input>
++        <el-select v-model="status" placeholder="璇烽€夋嫨鐘舵€? clearable style="width: 150px; margin-left: 10px;" @change="init">
++          <el-option label="寰呯‘璁? value="PENDING"></el-option>
++          <el-option label="宸茬‘璁? value="CONFIRMED"></el-option>
++          <el-option label="宸插埌搴? value="ARRIVED"></el-option>
++          <el-option label="宸插彇娑? value="CANCELLED"></el-option>
++        </el-select>
++        <el-date-picker v-model="reserveTime"
++          clearable
++          value-format="yyyy-MM-dd HH:mm:ss"
++          type="datetimerange"
++          placeholder="閫夋嫨棰勮鏃堕棿"
++          range-separator="鑷?
++          start-placeholder="寮€濮嬫椂闂?
++          end-placeholder="缁撴潫鏃堕棿"
++          :default-time="['00:00:00', '23:59:59']"
++          style="width: 380px; margin-left: 10px;"
++        ></el-date-picker>
++        <el-button type="primary" style="margin-left: 10px;" @click="handleQuery">鏌ヨ</el-button>
++      </div>
++      <el-table :data="tableData" stripe class="tableBox">
++        <el-table-column type="index" label="搴忓彿" width="50"></el-table-column>
++        <el-table-column prop="customerName" label="瀹㈡埛濮撳悕"></el-table-column>
++        <el-table-column prop="phone" label="鎵嬫満鍙?></el-table-column>
++        <el-table-column prop="tableName" label="妗屽彴"></el-table-column>
++        <el-table-column prop="reservedTime" label="棰勮鏃堕棿" min-width="100"></el-table-column>
++        <el-table-column prop="seatCount" label="灏遍浜烘暟"></el-table-column>
++        <el-table-column label="鐘舵€?>
++          <template slot-scope="scope">
++            <el-tag :type="scope.row.status === 'PENDING' ? 'warning' : scope.row.status === 'CONFIRMED' ? 'success' : scope.row.status === 'ARRIVED' ? 'primary' : 'info'">
++              {{ scope.row.status === 'PENDING' ? '寰呯‘璁? : scope.row.status === 'CONFIRMED' ? '宸茬‘璁? : scope.row.status === 'ARRIVED' ? '宸插埌搴? : '宸插彇娑? }}
++            </el-tag>
++          </template>
++        </el-table-column>
++        <el-table-column prop="remark" label="澶囨敞" show-overflow-tooltip></el-table-column>
++        <el-table-column label="鎿嶄綔" width="280" align="center">
++          <template slot-scope="scope">
++            <el-button type="text" size="small" class="blueBug" @click="confirmHandle(scope.row.id)" v-if="scope.row.status === 'PENDING'">纭</el-button>
++            <el-button type="text" size="small" class="blueBug" @click="arriveHandle(scope.row.id)" v-if="scope.row.status === 'CONFIRMED'">鍒板簵</el-button>
++            <el-button type="text" size="small" class="delBut non" @click="cancelHandle(scope.row.id)" v-if="scope.row.status !== 'ARRIVED' && scope.row.status !== 'CANCELLED'">鍙栨秷</el-button>
++          </template>
++        </el-table-column>
++      </el-table>
++      <el-pagination
++        class="pageList"
++        :page-sizes="[10, 20, 30, 40]"
++        :page-size="pageSize"
++        layout="total, sizes, prev, pager, next, jumper"
++        :total="counts"
++        @size-change="handleSizeChange"
++        :current-page.sync="page"
++        @current-change="handleCurrentChange"
++      ></el-pagination>
++    </div>
++  </div>
++  <script src="../../plugins/vue/vue.js"></script>
++  <script src="../../plugins/element-ui/index.js"></script>
++  <script src="../../plugins/axios/axios.min.js"></script>
++  <script src="../../js/request.js"></script>
++  <script src="../../api/dining.js"></script>
++  <script>
++    new Vue({
++      el: '#reservation-app',
++      data() {
++        return {
++          input: '',
++          phone: '',
++          status: '',
++          reserveTime: '',
++          beginTime: '',
++          endTime: '',
++          counts: 0,
++          page: 1,
++          pageSize: 10,
++          tableData: []
++        }
++      },
++      watch: {
++        reserveTime(val) {
++          if (val && val.length >= 2) {
++            this.beginTime = val[0]
++            this.endTime = val[1]
++          } else {
++            this.beginTime = ''
++            this.endTime = ''
++          }
++        }
++      },
++      created() {
++        this.init()
++      },
++      methods: {
++        async init() {
++          const params = {
++            page: this.page,
++            pageSize: this.pageSize,
++            customerName: this.input || undefined,
++            phone: this.phone || undefined,
++            status: this.status || undefined,
++            beginTime: this.beginTime || undefined,
++            endTime: this.endTime || undefined
++          }
++          await reservationPage(params).then(res => {
++            if (String(res.code) === '1') {
++              this.tableData = res.data.records || []
++              this.counts = res.data.total
++            } else {
++              this.$message.error(res.msg || '鎿嶄綔澶辫触')
++            }
++          }).catch(err => {
++            this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++          })
++        },
++        handleQuery() {
++          this.page = 1
++          this.init()
++        },
++        confirmHandle(id) {
++          this.$confirm('纭璇ラ璁?', '鎻愮ず', {
++            confirmButtonText: '纭畾',
++            cancelButtonText: '鍙栨秷',
++            type: 'warning'
++          }).then(() => {
++            confirmReservation(id).then(res => {
++              if (res.code === 1) {
++                this.$message.success('宸茬‘璁わ紒')
++                this.init()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          })
++        },
++        arriveHandle(id) {
++          this.$confirm('纭璇ュ鎴峰凡鍒板簵?', '鎻愮ず', {
++            confirmButtonText: '纭畾',
++            cancelButtonText: '鍙栨秷',
++            type: 'warning'
++          }).then(() => {
++            arriveReservation(id).then(res => {
++              if (res.code === 1) {
++                this.$message.success('宸插埌搴楋紒')
++                this.init()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          })
++        },
++        cancelHandle(id) {
++          this.$confirm('纭鍙栨秷璇ラ璁?', '鎻愮ず', {
++            confirmButtonText: '纭畾',
++            cancelButtonText: '鍙栨秷',
++            type: 'warning'
++          }).then(() => {
++            cancelReservation(id).then(res => {
++              if (res.code === 1) {
++                this.$message.success('宸插彇娑堬紒')
++                this.init()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          })
++        },
++        handleSizeChange(val) {
++          this.pageSize = val
++          this.init()
++        },
++        handleCurrentChange(val) {
++          this.page = val
++          this.init()
++        }
++      }
++    })
++  </script>
++</body>
++</html>
+diff --git a/src/main/resources/backend/page/dining/table-list.html b/src/main/resources/backend/page/dining/table-list.html
+new file mode 100644
+index 0000000..34fe527
+--- /dev/null
++++ b/src/main/resources/backend/page/dining/table-list.html
+@@ -0,0 +1,307 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta http-equiv="X-UA-Compatible" content="IE=edge">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>Document</title>
++  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
++  <link rel="stylesheet" href="../../styles/common.css" />
++  <link rel="stylesheet" href="../../styles/page.css" />
++</head>
++<body>
++  <div class="dashboard-container" id="table-app">
++    <div class="container">
++      <div class="tableBar">
++        <el-input v-model="input" placeholder="璇疯緭鍏ユ鍙板悕绉? style="width: 200px" clearable @keyup.enter.native="handleQuery">
++          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="init"></i>
++        </el-input>
++        <el-select v-model="areaId" placeholder="璇烽€夋嫨鍖哄煙" clearable style="width: 180px; margin-left: 10px;" @change="init">
++          <el-option v-for="item in areaList" :key="item.id" :label="item.name" :value="item.id"></el-option>
++        </el-select>
++        <div class="tableLab">
++          <el-button type="primary" @click="addHandle">+ 鏂板妗屽彴</el-button>
++        </div>
++      </div>
++      <el-table :data="tableData" stripe class="tableBox">
++        <el-table-column type="index" label="搴忓彿" width="50"></el-table-column>
++        <el-table-column prop="name" label="妗屽彴鍚嶇О"></el-table-column>
++        <el-table-column prop="areaName" label="鎵€灞炲尯鍩?></el-table-column>
++        <el-table-column prop="seatCount" label="搴т綅鏁?></el-table-column>
++        <el-table-column label="鐘舵€?>
++          <template slot-scope="scope">
++            <el-tag :type="scope.row.status === 'FREE' ? 'success' : scope.row.status === 'OCCUPIED' ? 'danger' : 'warning'"
++              style="cursor: pointer" @click="statusHandle(scope.row)">
++              {{ scope.row.status === 'FREE' ? '绌洪棽' : scope.row.status === 'OCCUPIED' ? '鍗犵敤' : '棰勭暀' }}
++            </el-tag>
++          </template>
++        </el-table-column>
++        <el-table-column label="鏈€浣庢秷璐?>
++          <template slot-scope="scope">
++            <span>锟{ scope.row.minAmount }}</span>
++          </template>
++        </el-table-column>
++        <el-table-column prop="sort" label="鎺掑簭"></el-table-column>
++        <el-table-column label="鎿嶄綔" width="280" align="center">
++          <template slot-scope="scope">
++            <el-button type="text" size="small" class="blueBug" @click="editHandle(scope.row)">淇敼</el-button>
++            <el-button type="text" size="small" class="blueBug" @click="qrcodeHandle(scope.row.id)">鐢熸垚浜岀淮鐮?/el-button>
++            <el-button type="text" size="small" class="delBut non" @click="deleteHandle(scope.row.id)">鍒犻櫎</el-button>
++          </template>
++        </el-table-column>
++      </el-table>
++      <el-pagination
++        class="pageList"
++        :page-sizes="[10, 20, 30, 40]"
++        :page-size="pageSize"
++        layout="total, sizes, prev, pager, next, jumper"
++        :total="counts"
++        @size-change="handleSizeChange"
++        :current-page.sync="page"
++        @current-change="handleCurrentChange"
++      ></el-pagination>
++    </div>
++    <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="30%" :before-close="handleClose">
++      <el-form ref="form" :model="form" label-width="100px">
++        <el-form-item label="妗屽彴鍚嶇О锛?>
++          <el-input v-model="form.name" placeholder="璇疯緭鍏ユ鍙板悕绉? maxlength="14" />
++        </el-form-item>
++        <el-form-item label="鎵€灞炲尯鍩燂細">
++          <el-select v-model="form.areaId" placeholder="璇烽€夋嫨鍖哄煙" style="width: 100%">
++            <el-option v-for="item in areaList" :key="item.id" :label="item.name" :value="item.id"></el-option>
++          </el-select>
++        </el-form-item>
++        <el-form-item label="搴т綅鏁帮細">
++          <el-input v-model="form.seatCount" type="number" placeholder="璇疯緭鍏ュ骇浣嶆暟" />
++        </el-form-item>
++        <el-form-item label="鏈€浣庢秷璐癸細">
++          <el-input v-model="form.minAmount" type="number" placeholder="璇疯緭鍏ユ渶浣庢秷璐? />
++        </el-form-item>
++        <el-form-item label="鐘舵€侊細">
++          <el-select v-model="form.status" placeholder="璇烽€夋嫨鐘舵€? style="width: 100%">
++            <el-option label="绌洪棽" value="FREE"></el-option>
++            <el-option label="鍗犵敤" value="OCCUPIED"></el-option>
++            <el-option label="棰勭暀" value="RESERVED"></el-option>
++          </el-select>
++        </el-form-item>
++        <el-form-item label="鎺掑簭锛?>
++          <el-input v-model="form.sort" type="number" placeholder="璇疯緭鍏ユ帓搴? />
++        </el-form-item>
++      </el-form>
++      <span slot="footer" class="dialog-footer">
++        <el-button size="medium" @click="handleClose">鍙?娑?/el-button>
++        <el-button type="primary" size="medium" @click="submitForm">纭?瀹?/el-button>
++      </span>
++    </el-dialog>
++  </div>
++  <script src="../../plugins/vue/vue.js"></script>
++  <script src="../../plugins/element-ui/index.js"></script>
++  <script src="../../plugins/axios/axios.min.js"></script>
++  <script src="../../js/request.js"></script>
++  <script src="../../api/dining.js"></script>
++  <script>
++    new Vue({
++      el: '#table-app',
++      data() {
++        return {
++          input: '',
++          areaId: '',
++          areaList: [],
++          counts: 0,
++          page: 1,
++          pageSize: 10,
++          tableData: [],
++          dialog: {
++            title: '',
++            visible: false
++          },
++          form: {
++            id: '',
++            name: '',
++            areaId: '',
++            seatCount: '',
++            minAmount: '',
++            status: 'FREE',
++            sort: ''
++          },
++          action: ''
++        }
++      },
++      created() {
++        this.init()
++        this.loadAreaList()
++      },
++      methods: {
++        async init() {
++          const params = {
++            page: this.page,
++            pageSize: this.pageSize,
++            name: this.input || undefined,
++            areaId: this.areaId || undefined
++          }
++          await tablePage(params).then(res => {
++            if (String(res.code) === '1') {
++              this.tableData = res.data.records || []
++              this.counts = res.data.total
++            } else {
++              this.$message.error(res.msg || '鎿嶄綔澶辫触')
++            }
++          }).catch(err => {
++            this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++          })
++        },
++        async loadAreaList() {
++          await areaList().then(res => {
++            if (res.code === 1) {
++              this.areaList = res.data || []
++            }
++          }).catch(err => {
++            this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++          })
++        },
++        handleQuery() {
++          this.page = 1
++          this.init()
++        },
++        addHandle() {
++          this.action = 'add'
++          this.dialog.title = '鏂板妗屽彴'
++          this.form.id = ''
++          this.form.name = ''
++          this.form.areaId = ''
++          this.form.seatCount = ''
++          this.form.minAmount = ''
++          this.form.status = 'FREE'
++          this.form.sort = ''
++          this.dialog.visible = true
++        },
++        editHandle(row) {
++          this.action = 'edit'
++          this.dialog.title = '淇敼妗屽彴'
++          this.form.id = row.id
++          this.form.name = row.name
++          this.form.areaId = row.areaId
++          this.form.seatCount = row.seatCount
++          this.form.minAmount = row.minAmount
++          this.form.status = row.status
++          this.form.sort = row.sort
++          this.dialog.visible = true
++        },
++        handleClose() {
++          this.dialog.visible = false
++        },
++        submitForm() {
++          if (!this.form.name) {
++            this.$message.error('璇疯緭鍏ユ鍙板悕绉?)
++            return
++          }
++          if (!this.form.areaId) {
++            this.$message.error('璇烽€夋嫨鎵€灞炲尯鍩?)
++            return
++          }
++          if (this.action === 'add') {
++            addTable({
++              name: this.form.name,
++              areaId: this.form.areaId,
++              seatCount: this.form.seatCount,
++              minAmount: this.form.minAmount,
++              status: this.form.status,
++              sort: this.form.sort
++            }).then(res => {
++              if (res.code === 1) {
++                this.$message.success('妗屽彴娣诲姞鎴愬姛锛?)
++                this.dialog.visible = false
++                this.handleQuery()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          } else {
++            updateTable({
++              id: this.form.id,
++              name: this.form.name,
++              areaId: this.form.areaId,
++              seatCount: this.form.seatCount,
++              minAmount: this.form.minAmount,
++              status: this.form.status,
++              sort: this.form.sort
++            }).then(res => {
++              if (res.code === 1) {
++                this.$message.success('妗屽彴淇敼鎴愬姛锛?)
++                this.dialog.visible = false
++                this.handleQuery()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          }
++        },
++        statusHandle(row) {
++          const nextStatus = row.status === 'FREE' ? 'OCCUPIED' : row.status === 'OCCUPIED' ? 'RESERVED' : 'FREE'
++          const statusMap = { FREE: '绌洪棽', OCCUPIED: '鍗犵敤', RESERVED: '棰勭暀' }
++          this.$confirm('纭灏嗘鍙扮姸鎬佹洿鏀逛负銆? + statusMap[nextStatus] + '銆?', '鎻愮ず', {
++            confirmButtonText: '纭畾',
++            cancelButtonText: '鍙栨秷',
++            type: 'warning'
++          }).then(() => {
++            updateTableStatus({ id: row.id, status: nextStatus }).then(res => {
++              if (res.code === 1) {
++                this.$message.success('鐘舵€佹洿鏀规垚鍔燂紒')
++                this.init()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          })
++        },
++        qrcodeHandle(id) {
++          tableQrcode(id).then(res => {
++            if (res.code === 1 && res.data) {
++              const a = document.createElement('a')
++              a.href = res.data
++              a.download = 'qrcode.png'
++              a.click()
++              this.$message.success('浜岀淮鐮佸凡鐢熸垚')
++            } else {
++              this.$message.error(res.msg || '鎿嶄綔澶辫触')
++            }
++          }).catch(err => {
++            this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++          })
++        },
++        deleteHandle(id) {
++          this.$confirm('纭鍒犻櫎璇ユ鍙? 鏄惁缁х画?', '纭畾鍒犻櫎', {
++            confirmButtonText: '纭畾',
++            cancelButtonText: '鍙栨秷'
++          }).then(() => {
++            deleteTable(id).then(res => {
++              if (res.code === 1) {
++                this.$message.success('鍒犻櫎鎴愬姛锛?)
++                this.handleQuery()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          })
++        },
++        handleSizeChange(val) {
++          this.pageSize = val
++          this.init()
++        },
++        handleCurrentChange(val) {
++          this.page = val
++          this.init()
++        }
++      }
++    })
++  </script>
++</body>
++</html>

@@ -2,9 +2,11 @@ package com.reggie.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.R;
+import com.reggie.common.BruteForceProtectionFilter;
 import com.reggie.common.LogMaskUtils;
 import com.reggie.common.RateLimit;
 import com.reggie.common.RateLimitType;
+import com.reggie.common.SecurityConstants;
 import com.reggie.entity.User;
 import com.reggie.enums.UserStatus;
 import com.reggie.service.UserService;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.util.Map;
 
@@ -32,6 +35,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired(required = false)
+    private BruteForceProtectionFilter bruteForceProtectionFilter;
 
     /**
      * 发送手机短信验证码
@@ -78,6 +84,12 @@ public class UserController {
         String phone = (String) map.get("phone");
         log.info("用户登录，手机号={}", LogMaskUtils.maskPhone(phone));
 
+        // 检查账号是否被锁定
+        if (bruteForceProtectionFilter != null && bruteForceProtectionFilter.isAccountLocked(session)) {
+            log.warn("用户账号已被锁定 - 手机号：{}", LogMaskUtils.maskPhone(phone));
+            return R.error("登录失败次数过多，请5分钟后重试");
+        }
+
         //获取验证码
         String code = map.get("code").toString();
 
@@ -105,12 +117,27 @@ public class UserController {
                 }
                 userService.save(user);
             }
+
+            // 登录成功，重置失败计数
+            if (bruteForceProtectionFilter != null) {
+                bruteForceProtectionFilter.resetLoginAttempts(session);
+            }
+
             session.setAttribute("user",user.getId());
             if (tenantId != null) {
                 session.setAttribute("tenantId", tenantId);
             }
             return R.success(user);
         }
+
+        // 登录失败，记录失败次数
+        if (bruteForceProtectionFilter != null) {
+            bruteForceProtectionFilter.recordLoginFailure(session);
+            int attempts = bruteForceProtectionFilter.getFailedAttempts(session);
+            log.warn("用户登录失败 - 手机号：{}, 失败次数：{}/{}",
+                LogMaskUtils.maskPhone(phone), attempts, SecurityConstants.MAX_LOGIN_FAIL_COUNT);
+        }
+
         return R.error("登录失败");
     }
 

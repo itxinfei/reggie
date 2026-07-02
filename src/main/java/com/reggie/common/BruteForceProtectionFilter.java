@@ -13,6 +13,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
@@ -184,6 +185,131 @@ public class BruteForceProtectionFilter implements Filter {
     }
 
     /**
+     * 记录登录失败（供 Controller 调用，基于 HttpSession）
+     *
+     * @param session HTTP 会话
+     */
+    public void recordLoginFailure(HttpSession session) {
+        if (!enabled || session == null) {
+            return;
+        }
+        recordLoginFailure((HttpServletRequest) null);
+    }
+
+    /**
+     * 重置登录失败计数（供 Controller 调用，登录成功后调用）
+     *
+     * @param session HTTP 会话
+     */
+    public void resetLoginAttempts(HttpSession session) {
+        if (!enabled || session == null) {
+            return;
+        }
+        resetLoginAttempts((HttpServletRequest) null);
+    }
+
+    /**
+     * 获取登录失败次数（供 Controller 查询剩余重试次数，基于 HttpSession）
+     *
+     * @param session HTTP 会话
+     * @return 失败次数，Redis 不可用时返回 0
+     */
+    public int getFailedAttempts(HttpSession session) {
+        if (!enabled || session == null) {
+            return 0;
+        }
+        return getFailedAttempts((HttpServletRequest) null);
+    }
+
+    /**
+     * 检查是否被锁定（供 Controller 查询，基于 HttpSession）
+     *
+     * @param session HTTP 会话
+     * @return true=已锁定，false=未锁定
+     */
+    public boolean isAccountLocked(HttpSession session) {
+        if (!enabled || session == null) {
+            return false;
+        }
+        // 尝试从 session 中获取用户标识
+        Object userId = session.getAttribute("user");
+        Object username = session.getAttribute("username");
+
+        if (userId != null) {
+            return isLocked(userId.toString());
+        }
+        if (username != null) {
+            return isLocked(username.toString());
+        }
+        return false;
+    }
+
+    /**
+     * 记录登录失败（供 Controller 调用）
+     *
+     * @param request HTTP 请求
+     */
+    public void recordLoginFailure(HttpServletRequest request) {
+        if (!enabled) {
+            return;
+        }
+
+        String identifier = getIdentifier(request);
+        recordFailedAttempt(identifier);
+    }
+
+    /**
+     * 重置登录失败计数（供 Controller 调用，登录成功后调用）
+     *
+     * @param request HTTP 请求
+     */
+    public void resetLoginAttempts(HttpServletRequest request) {
+        if (!enabled) {
+            return;
+        }
+
+        String identifier = getIdentifier(request);
+        resetFailedAttempts(identifier);
+    }
+
+    /**
+     * 获取登录失败次数（供 Controller 查询剩余重试次数）
+     *
+     * @param request HTTP 请求
+     * @return 失败次数，Redis 不可用时返回 0
+     */
+    public int getFailedAttempts(HttpServletRequest request) {
+        if (!enabled || request == null || redisTemplate == null) {
+            return 0;
+        }
+
+        try {
+            String identifier = getIdentifier(request);
+            String failureKey = LOGIN_FAILURE_KEY_PREFIX + identifier;
+            Object count = redisTemplate.opsForValue().get(failureKey);
+            return count != null ? Integer.parseInt(count.toString()) : 0;
+        } catch (Exception e) {
+            log.error("获取登录失败次数异常：{}", e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * 检查是否被锁定（供 Controller 查询）
+     *
+     * @param request HTTP 请求
+     * @return true=已锁定，false=未锁定
+     */
+    public boolean isAccountLocked(HttpServletRequest request) {
+        if (!enabled || request == null) {
+            return false;
+        }
+
+        String identifier = getIdentifier(request);
+        return isLocked(identifier);
+    }
+
+    /**
      * 判断是否为登录请求
      */
     private boolean isLoginRequest(HttpServletRequest request) {
@@ -199,6 +325,12 @@ public class BruteForceProtectionFilter implements Filter {
         String username = request.getParameter("username");
         if (username != null && !username.trim().isEmpty()) {
             return username;
+        }
+
+        // 移动端登录获取 phone 参数
+        String phone = request.getParameter("phone");
+        if (phone != null && !phone.trim().isEmpty()) {
+            return phone;
         }
 
         // 否则使用 IP

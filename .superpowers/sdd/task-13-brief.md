@@ -1,3 +1,18 @@
+# Task 13: 创建 LogMaskUtils
+
+**Files:**
+- Create: `src/main/java/com/reggie/common/LogMaskUtils.java`
+- Test: `src/test/java/com/reggie/common/LogMaskUtilsTest.java`
+
+## 任务描述
+
+创建日志脱敏工具类，用于在日志中脱敏手机号、身份证、地址等敏感信息。
+
+## 具体要求
+
+### LogMaskUtils.java
+
+```java
 package com.reggie.common;
 
 /**
@@ -25,23 +40,6 @@ public class LogMaskUtils {
             return phone.substring(0, 3) + "****" + phone.substring(7);
         }
         return maskGeneric(phone, 3, 4);
-    }
-
-    /**
-     * 用户名脱敏
-     * 示例：admin -> a*** 或 张三 -> 张*
-     */
-    public static String maskUsername(String username) {
-        if (username == null || username.isEmpty()) {
-            return username;
-        }
-        if (username.length() <= 2) {
-            return maskGeneric(username, 1, 0);
-        }
-        if (username.length() <= 4) {
-            return maskGeneric(username, 1, 1);
-        }
-        return maskGeneric(username, 1, 2);
     }
 
     /**
@@ -86,10 +84,47 @@ public class LogMaskUtils {
     }
 
     private static String mask(int length) {
-        StringBuilder sb = new StringBuilder(length);
-        for (int i = 0; i < length; i++) {
-            sb.append('*');
-        }
-        return sb.toString();
+        return "*".repeat(length);
     }
 }
+```
+
+### LogMaskUtilsTest.java
+
+```java
+package com.reggie.common;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+class LogMaskUtilsTest {
+
+    @Test
+    void testMaskPhone() {
+        assertEquals("138****1234", LogMaskUtils.maskPhone("13812341234"));
+        assertNull(LogMaskUtils.maskPhone(null));
+        assertEquals("", LogMaskUtils.maskPhone(""));
+    }
+
+    @Test
+    void testMaskIdCard() {
+        assertEquals("110***********1234", LogMaskUtils.maskIdCard("110101199001011234"));
+        assertNull(LogMaskUtils.maskIdCard(null));
+    }
+
+    @Test
+    void testMaskAddress() {
+        String addr = "北京市朝阳区建国路88号SOHO现代城";
+        String masked = LogMaskUtils.maskAddress(addr);
+        assertTrue(masked.contains("***"));
+        assertTrue(masked.startsWith("北京"));
+    }
+}
+```
+
+## 验收标准
+
+- [ ] LogMaskUtils.java 创建成功
+- [ ] 包含 maskPhone、maskIdCard、maskAddress 三个方法
+- [ ] LogMaskUtilsTest.java 所有测试通过（Tests run: 3, Failures: 0）
+

@@ -1,0 +1,1332 @@
+﻿7cf1ff5 feat(frontend): add inventory management pages
+ src/main/resources/backend/page/inventory/category-list.html | 182 ++++++++++++++++++++++++++++++
+ src/main/resources/backend/page/inventory/material-list.html | 310 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/main/resources/backend/page/inventory/purchase-list.html | 260 ++++++++++++++++++++++++++++++++++++++++++
+ src/main/resources/backend/page/inventory/stock-check.html   | 206 ++++++++++++++++++++++++++++++++++
+ src/main/resources/backend/page/inventory/stock-record.html  | 118 ++++++++++++++++++++
+ src/main/resources/backend/page/inventory/supplier-list.html | 212 +++++++++++++++++++++++++++++++++++
+ 6 files changed, 1288 insertions(+)
+diff --git a/src/main/resources/backend/page/inventory/category-list.html b/src/main/resources/backend/page/inventory/category-list.html
+new file mode 100644
+index 0000000..4223ace
+--- /dev/null
++++ b/src/main/resources/backend/page/inventory/category-list.html
+@@ -0,0 +1,182 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta http-equiv="X-UA-Compatible" content="IE=edge">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>Document</title>
++  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
++  <link rel="stylesheet" href="../../styles/common.css" />
++  <link rel="stylesheet" href="../../styles/page.css" />
++</head>
++<body>
++  <div class="dashboard-container" id="category-app">
++    <div class="container">
++      <div class="tableBar" style="display: inline-block">
++        <el-button type="primary" class="continue" @click="addHandle">
++          + 鏂板椋熸潗鍒嗙被
++        </el-button>
++      </div>
++      <el-table :data="tableData" stripe class="tableBox">
++        <el-table-column prop="name" label="鍒嗙被鍚嶇О" /></el-table-column>
++        <el-table-column prop="sort" label="鎺掑簭" /></el-table-column>
++        <el-table-column label="鎿嶄綔" width="160" align="center">
++          <template slot-scope="scope">
++            <el-button type="text" size="small" class="blueBug" @click="editHandle(scope.row)">淇敼</el-button>
++            <el-button type="text" size="small" class="delBut non" @click="deleteHandle(scope.row.id)">鍒犻櫎</el-button>
++          </template>
++        </el-table-column>
++      </el-table>
++      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
++    </div>
++    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="30%" :before-close="handleClose">
++      <el-form class="demo-form-inline" label-width="100px">
++        <el-form-item label="鍒嗙被鍚嶇О锛?>
++          <el-input v-model="formData.name" placeholder="璇疯緭鍏ュ垎绫诲悕绉? maxlength="14" />
++        </el-form-item>
++        <el-form-item label="鎺掑簭锛?>
++          <el-input v-model="formData.sort" type="number" placeholder="璇疯緭鍏ユ帓搴? />
++        </el-form-item>
++      </el-form>
++      <span slot="footer" class="dialog-footer">
++        <el-button size="medium" @click="formData.dialogVisible = false">鍙?娑?/el-button>
++        <el-button type="primary" size="medium" @click="submitForm()">纭?瀹?/el-button>
++      </span>
++    </el-dialog>
++  </div>
++    <script src="../../plugins/vue/vue.js"></script>
++    <script src="../../plugins/element-ui/index.js"></script>
++    <script src="../../plugins/axios/axios.min.js"></script>
++    <script src="../../js/request.js"></script>
++    <script src="../../api/inventory.js"></script>
++    <script>
++      new Vue({
++        el: '#category-app',
++        data() {
++          return {
++            action: '',
++            counts: 0,
++            page: 1,
++            pageSize: 10,
++            tableData: [],
++            formData: {
++              title: '鏂板椋熸潗鍒嗙被',
++              dialogVisible: false,
++              id: '',
++              name: '',
++              sort: ''
++            }
++          }
++        },
++        created() {
++          this.init()
++        },
++        methods: {
++          async init() {
++            const params = { page: this.page, pageSize: this.pageSize }
++            await matCategoryPage(params).then(res => {
++              if (String(res.code) === '1') {
++                this.tableData = res.data.records
++                this.counts = Number(res.data.total)
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          },
++          handleQuery() {
++            this.page = 1
++            this.init()
++          },
++          addHandle() {
++            this.action = 'add'
++            this.formData.title = '鏂板椋熸潗鍒嗙被'
++            this.formData.name = ''
++            this.formData.sort = ''
++            this.formData.id = ''
++            this.formData.dialogVisible = true
++          },
++          editHandle(row) {
++            this.action = 'edit'
++            this.formData.title = '淇敼椋熸潗鍒嗙被'
++            this.formData.name = row.name
++            this.formData.sort = row.sort
++            this.formData.id = row.id
++            this.formData.dialogVisible = true
++          },
++          handleClose() {
++            this.formData.dialogVisible = false
++          },
++          deleteHandle(id) {
++            this.$confirm('姝ゆ搷浣滃皢姘镐箙鍒犻櫎璇ュ垎绫? 鏄惁缁х画?', '鎻愮ず', {
++              confirmButtonText: '纭畾',
++              cancelButtonText: '鍙栨秷',
++              type: 'warning'
++            }).then(() => {
++              deleteMatCategory(id).then(res => {
++                if (res.code === 1) {
++                  this.$message.success('鍒犻櫎鎴愬姛锛?)
++                  this.handleQuery()
++                } else {
++                  this.$message.error(res.msg || '鎿嶄綔澶辫触')
++                }
++              }).catch(err => {
++                this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++              })
++            })
++          },
++          submitForm() {
++            const fd = this.formData
++            if (!fd.name && fd.name !== 0) {
++              this.$message.error('璇疯緭鍏ュ垎绫诲悕绉?)
++              return
++            }
++            if (fd.sort === '' && fd.sort !== 0) {
++              this.$message.error('璇疯緭鍏ユ帓搴?)
++              return
++            }
++            const reg = /^\d+$/
++            if (!reg.test(String(fd.sort))) {
++              this.$message.error('鎺掑簭鍙兘杈撳叆鏁板瓧绫诲瀷')
++              return
++            }
++            if (this.action === 'add') {
++              addMatCategory({ name: fd.name, sort: fd.sort }).then(res => {
++                if (res.code === 1) {
++                  this.$message.success('鍒嗙被娣诲姞鎴愬姛锛?)
++                  this.formData.dialogVisible = false
++                  this.handleQuery()
++                } else {
++                  this.$message.error(res.msg || '鎿嶄綔澶辫触')
++                }
++              }).catch(err => {
++                this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++              })
++            } else {
++              updateMatCategory({ id: fd.id, name: fd.name, sort: fd.sort }).then(res => {
++                if (res.code === 1) {
++                  this.$message.success('鍒嗙被淇敼鎴愬姛锛?)
++                  this.formData.dialogVisible = false
++                  this.handleQuery()
++                } else {
++                  this.$message.error(res.msg || '鎿嶄綔澶辫触')
++                }
++              }).catch(err => {
++                this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++              })
++            }
++          },
++          handleSizeChange(val) {
++            this.pageSize = val
++            this.init()
++          },
++          handleCurrentChange(val) {
++            this.page = val
++            this.init()
++          }
++        }
++      })
++    </script>
++</body>
++</html>
+diff --git a/src/main/resources/backend/page/inventory/material-list.html b/src/main/resources/backend/page/inventory/material-list.html
+new file mode 100644
+index 0000000..2083157
+--- /dev/null
++++ b/src/main/resources/backend/page/inventory/material-list.html
+@@ -0,0 +1,310 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta http-equiv="X-UA-Compatible" content="IE=edge">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>Document</title>
++  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
++  <link rel="stylesheet" href="../../styles/common.css" />
++  <link rel="stylesheet" href="../../styles/page.css" />
++</head>
++<body>
++  <div class="dashboard-container" id="material-app">
++    <div class="container">
++      <div class="tableBar">
++        <el-input v-model="input.name" placeholder="椋熸潗鍚嶇О" style="width: 180px" clearable @keyup.enter.native="handleQuery">
++          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
++        </el-input>
++        <el-select v-model="input.categoryId" placeholder="椋熸潗鍒嗙被" style="width: 150px; margin-left: 10px" clearable @change="handleQuery">
++          <el-option v-for="item in categoryOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
++        </el-select>
++        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">鏌ヨ</el-button>
++        <el-button type="primary" @click="addHandle">+ 鏂板椋熸潗</el-button>
++        <el-button type="warning" @click="warningHandle">搴撳瓨棰勮</el-button>
++      </div>
++      <el-table :data="tableData" stripe class="tableBox">
++        <el-table-column prop="name" label="椋熸潗鍚嶇О" /></el-table-column>
++        <el-table-column label="椋熸潗鍒嗙被">
++          <template slot-scope="scope">{{ scope.row.categoryName }}</template>
++        </el-table-column>
++        <el-table-column prop="unit" label="鍗曚綅" width="80" /></el-table-column>
++        <el-table-column label="搴撳瓨鏁伴噺">
++          <template slot-scope="scope">
++            <span :style="scope.row.stockQty <= scope.row.minStock ? 'color: red; font-weight: bold' : ''">{{ scope.row.stockQty }}</span>
++          </template>
++        </el-table-column>
++        <el-table-column prop="minStock" label="鏈€浣庡簱瀛? width="100" /></el-table-column>
++        <el-table-column label="鍗曚环">
++          <template slot-scope="scope">锟{ scope.row.unitPrice }}</template>
++        </el-table-column>
++        <el-table-column label="渚涘簲鍟?>
++          <template slot-scope="scope">{{ scope.row.supplierName }}</template>
++        </el-table-column>
++        <el-table-column prop="barcode" label="鏉＄爜" width="120" /></el-table-column>
++        <el-table-column label="鐘舵€?>
++          <template slot-scope="scope">
++            <span>{{ scope.row.status == '1' ? '鍚敤' : '绂佺敤' }}</span>
++          </template>
++        </el-table-column>
++        <el-table-column label="鎿嶄綔" width="160" align="center">
++          <template slot-scope="scope">
++            <el-button type="text" size="small" class="blueBug" @click="editHandle(scope.row)">淇敼</el-button>
++            <el-button type="text" size="small" class="delBut non" @click="deleteHandle(scope.row.id)">鍒犻櫎</el-button>
++          </template>
++        </el-table-column>
++      </el-table>
++      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
++    </div>
++    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="40%" :before-close="handleClose">
++      <el-form class="demo-form-inline" label-width="120px">
++        <el-form-item label="椋熸潗鍚嶇О锛?>
++          <el-input v-model="formData.name" placeholder="璇疯緭鍏ラ鏉愬悕绉? />
++        </el-form-item>
++        <el-form-item label="椋熸潗鍒嗙被锛?>
++          <el-select v-model="formData.categoryId" placeholder="璇烽€夋嫨" style="width: 100%">
++            <el-option v-for="item in categoryOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
++          </el-select>
++        </el-form-item>
++        <el-form-item label="鍗曚綅锛?>
++          <el-input v-model="formData.unit" placeholder="濡傦細鏂ゃ€佷釜銆佺" />
++        </el-form-item>
++        <el-form-item label="搴撳瓨鏁伴噺锛?>
++          <el-input v-model="formData.stockQty" type="number" placeholder="璇疯緭鍏ュ簱瀛樻暟閲? />
++        </el-form-item>
++        <el-form-item label="鏈€浣庡簱瀛橈細">
++          <el-input v-model="formData.minStock" type="number" placeholder="璇疯緭鍏ユ渶浣庡簱瀛橀璀﹀€? />
++        </el-form-item>
++        <el-form-item label="鍗曚环锛?>
++          <el-input v-model="formData.unitPrice" type="number" placeholder="璇疯緭鍏ュ崟浠? />
++        </el-form-item>
++        <el-form-item label="渚涘簲鍟嗭細">
++          <el-select v-model="formData.supplierId" placeholder="璇烽€夋嫨" style="width: 100%" clearable>
++            <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
++          </el-select>
++        </el-form-item>
++        <el-form-item label="鏉＄爜锛?>
++          <el-input v-model="formData.barcode" placeholder="璇疯緭鍏ユ潯鐮? />
++        </el-form-item>
++        <el-form-item label="鐘舵€侊細">
++          <el-radio-group v-model="formData.status">
++            <el-radio :label="'1'">鍚敤</el-radio>
++            <el-radio :label="'0'">绂佺敤</el-radio>
++          </el-radio-group>
++        </el-form-item>
++      </el-form>
++      <span slot="footer" class="dialog-footer">
++        <el-button size="medium" @click="formData.dialogVisible = false">鍙?娑?/el-button>
++        <el-button type="primary" size="medium" @click="submitForm()">纭?瀹?/el-button>
++      </span>
++    </el-dialog>
++    <el-dialog title="搴撳瓨棰勮" :visible.sync="warningDialogVisible" width="50%">
++      <el-table :data="warningData" stripe class="tableBox">
++        <el-table-column prop="name" label="椋熸潗鍚嶇О" /></el-table-column>
++        <el-table-column label="椋熸潗鍒嗙被">
++          <template slot-scope="scope">{{ scope.row.categoryName }}</template>
++        </el-table-column>
++        <el-table-column prop="unit" label="鍗曚綅" width="80" /></el-table-column>
++        <el-table-column label="搴撳瓨鏁伴噺">
++          <template slot-scope="scope">
++            <span style="color: red; font-weight: bold">{{ scope.row.stockQty }}</span>
++          </template>
++        </el-table-column>
++        <el-table-column prop="minStock" label="鏈€浣庡簱瀛? width="100" /></el-table-column>
++      </el-table>
++      <span slot="footer" class="dialog-footer">
++        <el-button size="medium" @click="warningDialogVisible = false">鍏?闂?/el-button>
++      </span>
++    </el-dialog>
++  </div>
++    <script src="../../plugins/vue/vue.js"></script>
++    <script src="../../plugins/element-ui/index.js"></script>
++    <script src="../../plugins/axios/axios.min.js"></script>
++    <script src="../../js/request.js"></script>
++    <script src="../../api/inventory.js"></script>
++    <script>
++      new Vue({
++        el: '#material-app',
++        data() {
++          return {
++            action: '',
++            counts: 0,
++            page: 1,
++            pageSize: 10,
++            tableData: [],
++            input: {
++              name: '',
++              categoryId: ''
++            },
++            categoryOptions: [],
++            supplierOptions: [],
++            formData: {
++              title: '鏂板椋熸潗',
++              dialogVisible: false,
++              id: '',
++              name: '',
++              categoryId: '',
++              unit: '',
++              stockQty: '',
++              minStock: '',
++              unitPrice: '',
++              supplierId: '',
++              barcode: '',
++              status: '1'
++            },
++            warningDialogVisible: false,
++            warningData: []
++          }
++        },
++        created() {
++          this.init()
++          this.loadOptions()
++        },
++        methods: {
++          async init() {
++            const params = { page: this.page, pageSize: this.pageSize }
++            if (this.input.name) params.name = this.input.name
++            if (this.input.categoryId) params.categoryId = this.input.categoryId
++            await materialPage(params).then(res => {
++              if (String(res.code) === '1') {
++                this.tableData = res.data.records
++                this.counts = Number(res.data.total)
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          },
++          loadOptions() {
++            matCategoryList().then(res => {
++              if (res.code === 1) this.categoryOptions = res.data
++            })
++            supplierList().then(res => {
++              if (res.code === 1) this.supplierOptions = res.data
++            })
++          },
++          handleQuery() {
++            this.page = 1
++            this.init()
++          },
++          addHandle() {
++            this.action = 'add'
++            this.formData.title = '鏂板椋熸潗'
++            this.formData.id = ''
++            this.formData.name = ''
++            this.formData.categoryId = ''
++            this.formData.unit = ''
++            this.formData.stockQty = ''
++            this.formData.minStock = ''
++            this.formData.unitPrice = ''
++            this.formData.supplierId = ''
++            this.formData.barcode = ''
++            this.formData.status = '1'
++            this.formData.dialogVisible = true
++          },
++          editHandle(row) {
++            this.action = 'edit'
++            this.formData.title = '淇敼椋熸潗'
++            this.formData.id = row.id
++            this.formData.name = row.name
++            this.formData.categoryId = row.categoryId
++            this.formData.unit = row.unit
++            this.formData.stockQty = row.stockQty
++            this.formData.minStock = row.minStock
++            this.formData.unitPrice = row.unitPrice
++            this.formData.supplierId = row.supplierId
++            this.formData.barcode = row.barcode
++            this.formData.status = String(row.status)
++            this.formData.dialogVisible = true
++          },
++          handleClose() {
++            this.formData.dialogVisible = false
++          },
++          deleteHandle(id) {
++            this.$confirm('姝ゆ搷浣滃皢姘镐箙鍒犻櫎璇ラ鏉? 鏄惁缁х画?', '鎻愮ず', {
++              confirmButtonText: '纭畾',
++              cancelButtonText: '鍙栨秷',
++              type: 'warning'
++            }).then(() => {
++              deleteMaterial(id).then(res => {
++                if (res.code === 1) {
++                  this.$message.success('鍒犻櫎鎴愬姛锛?)
++                  this.handleQuery()
++                } else {
++                  this.$message.error(res.msg || '鎿嶄綔澶辫触')
++                }
++              }).catch(err => {
++                this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++              })
++            })
++          },
++          warningHandle() {
++            materialWarning().then(res => {
++              if (res.code === 1) {
++                this.warningData = res.data
++                this.warningDialogVisible = true
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          },
++          submitForm() {
++            const fd = this.formData
++            if (!fd.name) {
++              this.$message.error('璇疯緭鍏ラ鏉愬悕绉?)
++              return
++            }
++            const params = {
++              name: fd.name,
++              categoryId: fd.categoryId,
++              unit: fd.unit,
++              stockQty: fd.stockQty,
++              minStock: fd.minStock,
++              unitPrice: fd.unitPrice,
++              supplierId: fd.supplierId || undefined,
++              barcode: fd.barcode,
++              status: fd.status
++            }
++            if (this.action === 'add') {
++              addMaterial(params).then(res => {
++                if (res.code === 1) {
++                  this.$message.success('娣诲姞鎴愬姛锛?)
++                  this.formData.dialogVisible = false
++                  this.handleQuery()
++                } else {
++                  this.$message.error(res.msg || '鎿嶄綔澶辫触')
++                }
++              }).catch(err => {
++                this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++              })
++            } else {
++              params.id = fd.id
++              updateMaterial(params).then(res => {
++                if (res.code === 1) {
++                  this.$message.success('淇敼鎴愬姛锛?)
++                  this.formData.dialogVisible = false
++                  this.handleQuery()
++                } else {
++                  this.$message.error(res.msg || '鎿嶄綔澶辫触')
++                }
++              }).catch(err => {
++                this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++              })
++            }
++          },
++          handleSizeChange(val) {
++            this.pageSize = val
++            this.init()
++          },
++          handleCurrentChange(val) {
++            this.page = val
++            this.init()
++          }
++        }
++      })
++    </script>
++</body>
++</html>
+diff --git a/src/main/resources/backend/page/inventory/purchase-list.html b/src/main/resources/backend/page/inventory/purchase-list.html
+new file mode 100644
+index 0000000..a4571ac
+--- /dev/null
++++ b/src/main/resources/backend/page/inventory/purchase-list.html
+@@ -0,0 +1,260 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta http-equiv="X-UA-Compatible" content="IE=edge">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>Document</title>
++  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
++  <link rel="stylesheet" href="../../styles/common.css" />
++  <link rel="stylesheet" href="../../styles/page.css" />
++</head>
++<body>
++  <div class="dashboard-container" id="purchase-app">
++    <div class="container">
++      <div class="tableBar">
++        <el-select v-model="input.supplierId" placeholder="渚涘簲鍟? style="width: 150px" clearable @change="handleQuery">
++          <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
++        </el-select>
++        <el-select v-model="input.status" placeholder="鐘舵€? style="width: 130px; margin-left: 10px" clearable @change="handleQuery">
++          <el-option label="寰呮敹璐? value="0"></el-option>
++          <el-option label="宸叉敹璐? value="1"></el-option>
++          <el-option label="宸插彇娑? value="2"></el-option>
++        </el-select>
++        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">鏌ヨ</el-button>
++        <el-button type="primary" @click="addHandle">+ 鏂板閲囪喘鍗?/el-button>
++      </div>
++      <el-table :data="tableData" stripe class="tableBox" row-key="id">
++        <el-table-column type="expand">
++          <template slot-scope="props">
++            <el-table :data="props.row.details" stripe class="tableBox" v-if="props.row.details">
++              <el-table-column prop="materialName" label="椋熸潗鍚嶇О" /></el-table-column>
++              <el-table-column prop="quantity" label="鏁伴噺" /></el-table-column>
++              <el-table-column label="鍗曚环">
++                <template slot-scope="scope">锟{ scope.row.unitPrice }}</template>
++              </el-table-column>
++              <el-table-column label="灏忚">
++                <template slot-scope="scope">锟{ scope.row.subtotal }}</template>
++              </el-table-column>
++            </el-table>
++            <span v-else>鏆傛棤鏄庣粏鏁版嵁</span>
++          </template>
++        </el-table-column>
++        <el-table-column prop="id" label="閲囪喘鍗曞彿" width="100" /></el-table-column>
++        <el-table-column label="渚涘簲鍟?>
++          <template slot-scope="scope">{{ scope.row.supplierName }}</template>
++        </el-table-column>
++        <el-table-column label="鎬婚噾棰?>
++          <template slot-scope="scope">锟{ scope.row.totalAmount }}</template>
++        </el-table-column>
++        <el-table-column label="鐘舵€?>
++          <template slot-scope="scope">
++            <el-tag :type="scope.row.status == '0' ? 'warning' : scope.row.status == '1' ? 'success' : 'info'">
++              {{ scope.row.status == '0' ? '寰呮敹璐? : scope.row.status == '1' ? '宸叉敹璐? : '宸插彇娑? }}
++            </el-tag>
++          </template>
++        </el-table-column>
++        <el-table-column prop="createdTime" label="鍒涘缓鏃堕棿" width="160" /></el-table-column>
++        <el-table-column label="鎿嶄綔" width="160" align="center">
++          <template slot-scope="scope">
++            <el-button type="text" size="small" class="blueBug" @click="receiveHandle(scope.row.id)" v-if="scope.row.status == '0'">鏀惰揣</el-button>
++            <el-button type="text" size="small" class="delBut non" @click="cancelHandle(scope.row.id)" v-if="scope.row.status == '0'">鍙栨秷</el-button>
++          </template>
++        </el-table-column>
++      </el-table>
++      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
++    </div>
++    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="50%" :before-close="handleClose">
++      <el-form class="demo-form-inline" label-width="120px">
++        <el-form-item label="渚涘簲鍟嗭細">
++          <el-select v-model="formData.supplierId" placeholder="璇烽€夋嫨" style="width: 100%">
++            <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
++          </el-select>
++        </el-form-item>
++        <el-form-item label="閲囪喘鏄庣粏锛?>
++          <div v-for="(item, index) in formData.details" :key="index" style="display: flex; margin-bottom: 8px; gap: 8px; align-items: center;">
++            <el-select v-model="item.materialId" placeholder="椋熸潗" style="width: 160px" filterable>
++              <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id"></el-option>
++            </el-select>
++            <el-input v-model="item.quantity" placeholder="鏁伴噺" type="number" style="width: 100px" />
++            <el-input v-model="item.unitPrice" placeholder="鍗曚环" type="number" style="width: 100px" />
++            <el-button type="danger" size="mini" @click="removeDetail(index)">鍒犻櫎</el-button>
++          </div>
++          <el-button type="primary" size="mini" @click="addDetail">+ 娣诲姞鏄庣粏</el-button>
++        </el-form-item>
++      </el-form>
++      <span slot="footer" class="dialog-footer">
++        <el-button size="medium" @click="formData.dialogVisible = false">鍙?娑?/el-button>
++        <el-button type="primary" size="medium" @click="submitForm()">纭?瀹?/el-button>
++      </span>
++    </el-dialog>
++  </div>
++    <script src="../../plugins/vue/vue.js"></script>
++    <script src="../../plugins/element-ui/index.js"></script>
++    <script src="../../plugins/axios/axios.min.js"></script>
++    <script src="../../js/request.js"></script>
++    <script src="../../api/inventory.js"></script>
++    <script>
++      new Vue({
++        el: '#purchase-app',
++        data() {
++          return {
++            action: '',
++            counts: 0,
++            page: 1,
++            pageSize: 10,
++            tableData: [],
++            input: {
++              supplierId: '',
++              status: ''
++            },
++            supplierOptions: [],
++            materialOptions: [],
++            formData: {
++              title: '鏂板閲囪喘鍗?,
++              dialogVisible: false,
++              supplierId: '',
++              details: []
++            }
++          }
++        },
++        created() {
++          this.init()
++        },
++        methods: {
++          async init() {
++            const params = { page: this.page, pageSize: this.pageSize }
++            if (this.input.supplierId) params.supplierId = this.input.supplierId
++            if (this.input.status !== '') params.status = this.input.status
++            await purchasePage(params).then(res => {
++              if (String(res.code) === '1') {
++                this.tableData = res.data.records
++                this.counts = Number(res.data.total)
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          },
++          loadSupplierOptions() {
++            supplierList().then(res => {
++              if (res.code === 1) this.supplierOptions = res.data
++            })
++          },
++          loadMaterialOptions() {
++            materialList().then(res => {
++              if (res.code === 1) this.materialOptions = res.data
++            })
++          },
++          loadDetails(row) {
++            if (!row.id) return
++            purchaseDetailList(row.id).then(res => {
++              if (res.code === 1) {
++                this.$set(row, 'details', res.data)
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          },
++          handleQuery() {
++            this.page = 1
++            this.init()
++          },
++          addHandle() {
++            this.action = 'add'
++            this.formData.title = '鏂板閲囪喘鍗?
++            this.formData.supplierId = ''
++            this.formData.details = [{ materialId: '', quantity: '', unitPrice: '' }]
++            this.formData.dialogVisible = true
++            this.loadSupplierOptions()
++            this.loadMaterialOptions()
++          },
++          handleClose() {
++            this.formData.dialogVisible = false
++          },
++          addDetail() {
++            this.formData.details.push({ materialId: '', quantity: '', unitPrice: '' })
++          },
++          removeDetail(index) {
++            this.formData.details.splice(index, 1)
++          },
++          receiveHandle(id) {
++            this.$confirm('纭鏀惰揣璇ラ噰璐崟?', '鎻愮ず', {
++              confirmButtonText: '纭畾',
++              cancelButtonText: '鍙栨秷',
++              type: 'warning'
++            }).then(() => {
++              receivePurchase(id).then(res => {
++                if (res.code === 1) {
++                  this.$message.success('鏀惰揣鎴愬姛锛?)
++                  this.handleQuery()
++                } else {
++                  this.$message.error(res.msg || '鎿嶄綔澶辫触')
++                }
++              }).catch(err => {
++                this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++              })
++            })
++          },
++          cancelHandle(id) {
++            this.$confirm('纭鍙栨秷璇ラ噰璐崟?', '鎻愮ず', {
++              confirmButtonText: '纭畾',
++              cancelButtonText: '鍙栨秷',
++              type: 'warning'
++            }).then(() => {
++              cancelPurchase(id).then(res => {
++                if (res.code === 1) {
++                  this.$message.success('鍙栨秷鎴愬姛锛?)
++                  this.handleQuery()
++                } else {
++                  this.$message.error(res.msg || '鎿嶄綔澶辫触')
++                }
++              }).catch(err => {
++                this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++              })
++            })
++          },
++          submitForm() {
++            const fd = this.formData
++            if (!fd.supplierId) {
++              this.$message.error('璇烽€夋嫨渚涘簲鍟?)
++              return
++            }
++            if (!fd.details.length || !fd.details[0].materialId) {
++              this.$message.error('璇锋坊鍔犺嚦灏戜竴鏉￠噰璐槑缁?)
++              return
++            }
++            addPurchase({ supplierId: fd.supplierId }).then(res => {
++              if (res.code === 1) {
++                const orderId = res.data
++                const detailPromises = fd.details.map(d => {
++                  return addPurchaseDetail({ orderId: orderId, materialId: d.materialId, quantity: d.quantity, unitPrice: d.unitPrice })
++                })
++                Promise.all(detailPromises).then(() => {
++                  this.$message.success('閲囪喘鍗曞垱寤烘垚鍔燂紒')
++                  this.formData.dialogVisible = false
++                  this.handleQuery()
++                }).catch(err => {
++                  this.$message.error('娣诲姞鏄庣粏鍑洪敊浜嗭細' + err)
++                })
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          },
++          handleSizeChange(val) {
++            this.pageSize = val
++            this.init()
++          },
++          handleCurrentChange(val) {
++            this.page = val
++            this.init()
++          }
++        }
++      })
++    </script>
++</body>
++</html>
+diff --git a/src/main/resources/backend/page/inventory/stock-check.html b/src/main/resources/backend/page/inventory/stock-check.html
+new file mode 100644
+index 0000000..1a28d4e
+--- /dev/null
++++ b/src/main/resources/backend/page/inventory/stock-check.html
+@@ -0,0 +1,206 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta http-equiv="X-UA-Compatible" content="IE=edge">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>Document</title>
++  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
++  <link rel="stylesheet" href="../../styles/common.css" />
++  <link rel="stylesheet" href="../../styles/page.css" />
++</head>
++<body>
++  <div class="dashboard-container" id="stock-check-app">
++    <div class="container">
++      <div class="tableBar">
++        <el-select v-model="input.status" placeholder="鐘舵€? style="width: 130px" clearable @change="handleQuery">
++          <el-option label="杩涜涓? value="0"></el-option>
++          <el-option label="宸插畬鎴? value="1"></el-option>
++        </el-select>
++        <el-date-picker v-model="input.dateRange" type="daterange" range-separator="鑷? start-placeholder="寮€濮嬫棩鏈? end-placeholder="缁撴潫鏃ユ湡" style="margin-left: 10px" value-format="yyyy-MM-dd" @change="handleQuery"></el-date-picker>
++        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">鏌ヨ</el-button>
++        <el-button type="primary" @click="addHandle">+ 鏂板鐩樼偣</el-button>
++      </div>
++      <el-table :data="tableData" stripe class="tableBox" row-key="id">
++        <el-table-column type="expand">
++          <template slot-scope="props">
++            <el-table :data="props.row.details" stripe class="tableBox" v-if="props.row.details">
++              <el-table-column label="椋熸潗鍚嶇О">
++                <template slot-scope="scope">{{ scope.row.materialName }}</template>
++              </el-table-column>
++              <el-table-column prop="bookQty" label="璐﹂潰鏁伴噺" /></el-table-column>
++              <el-table-column prop="actualQty" label="瀹為檯鏁伴噺" /></el-table-column>
++              <el-table-column label="宸紓">
++                <template slot-scope="scope">
++                  <span :style="scope.row.diff < 0 ? 'color: red' : scope.row.diff > 0 ? 'color: green' : ''">{{ scope.row.diff }}</span>
++                </template>
++              </el-table-column>
++            </el-table>
++            <span v-else>鏆傛棤鏄庣粏鏁版嵁</span>
++          </template>
++        </el-table-column>
++        <el-table-column prop="id" label="鐩樼偣鍗曞彿" width="100" /></el-table-column>
++        <el-table-column prop="itemCount" label="鐩樼偣椤规暟" width="100" /></el-table-column>
++        <el-table-column label="鐩堜簭閲戦">
++          <template slot-scope="scope">
++            <span :style="scope.row.profitLoss < 0 ? 'color: red' : ''">{{ scope.row.profitLoss }}</span>
++          </template>
++        </el-table-column>
++        <el-table-column label="鐘舵€?>
++          <template slot-scope="scope">
++            <el-tag :type="scope.row.status == '0' ? 'warning' : 'success'">
++              {{ scope.row.status == '0' ? '杩涜涓? : '宸插畬鎴? }}
++            </el-tag>
++          </template>
++        </el-table-column>
++        <el-table-column prop="createdTime" label="鍒涘缓鏃堕棿" width="160" /></el-table-column>
++        <el-table-column label="鎿嶄綔" width="120" align="center">
++          <template slot-scope="scope">
++            <el-button type="text" size="small" class="blueBug" @click="completeHandle(scope.row.id)" v-if="scope.row.status == '0'">瀹屾垚鐩樼偣</el-button>
++          </template>
++        </el-table-column>
++      </el-table>
++      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
++    </div>
++    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="40%" :before-close="handleClose">
++      <el-form class="demo-form-inline" label-width="120px">
++        <el-form-item label="鐩樼偣鏄庣粏锛?>
++          <div v-for="(item, index) in formData.details" :key="index" style="display: flex; margin-bottom: 8px; gap: 8px; align-items: center;">
++            <el-select v-model="item.materialId" placeholder="椋熸潗" style="width: 200px" filterable>
++              <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id"></el-option>
++            </el-select>
++            <el-input v-model="item.actualQty" placeholder="瀹為檯鏁伴噺" type="number" style="width: 120px" />
++            <el-button type="danger" size="mini" @click="removeDetail(index)">鍒犻櫎</el-button>
++          </div>
++          <el-button type="primary" size="mini" @click="addDetail">+ 娣诲姞鐩樼偣椤?/el-button>
++        </el-form-item>
++      </el-form>
++      <span slot="footer" class="dialog-footer">
++        <el-button size="medium" @click="formData.dialogVisible = false">鍙?娑?/el-button>
++        <el-button type="primary" size="medium" @click="submitForm()">纭?瀹?/el-button>
++      </span>
++    </el-dialog>
++  </div>
++    <script src="../../plugins/vue/vue.js"></script>
++    <script src="../../plugins/element-ui/index.js"></script>
++    <script src="../../plugins/axios/axios.min.js"></script>
++    <script src="../../js/request.js"></script>
++    <script src="../../api/inventory.js"></script>
++    <script>
++      new Vue({
++        el: '#stock-check-app',
++        data() {
++          return {
++            action: '',
++            counts: 0,
++            page: 1,
++            pageSize: 10,
++            tableData: [],
++            input: {
++              status: '',
++              dateRange: ''
++            },
++            materialOptions: [],
++            formData: {
++              title: '鏂板鐩樼偣',
++              dialogVisible: false,
++              details: []
++            }
++          }
++        },
++        created() {
++          this.init()
++        },
++        methods: {
++          async init() {
++            const params = { page: this.page, pageSize: this.pageSize }
++            if (this.input.status !== '') params.status = this.input.status
++            if (this.input.dateRange) {
++              params.startDate = this.input.dateRange[0]
++              params.endDate = this.input.dateRange[1]
++            }
++            await stockCheckPage(params).then(res => {
++              if (String(res.code) === '1') {
++                this.tableData = res.data.records
++                this.counts = Number(res.data.total)
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          },
++          loadMaterialOptions() {
++            materialList().then(res => {
++              if (res.code === 1) this.materialOptions = res.data
++            })
++          },
++          handleQuery() {
++            this.page = 1
++            this.init()
++          },
++          addHandle() {
++            this.action = 'add'
++            this.formData.title = '鏂板鐩樼偣'
++            this.formData.details = [{ materialId: '', actualQty: '' }]
++            this.formData.dialogVisible = true
++            this.loadMaterialOptions()
++          },
++          handleClose() {
++            this.formData.dialogVisible = false
++          },
++          addDetail() {
++            this.formData.details.push({ materialId: '', actualQty: '' })
++          },
++          removeDetail(index) {
++            this.formData.details.splice(index, 1)
++          },
++          completeHandle(id) {
++            this.$confirm('纭瀹屾垚璇ョ洏鐐瑰崟?', '鎻愮ず', {
++              confirmButtonText: '纭畾',
++              cancelButtonText: '鍙栨秷',
++              type: 'warning'
++            }).then(() => {
++              completeStockCheck(id).then(res => {
++                if (res.code === 1) {
++                  this.$message.success('鐩樼偣瀹屾垚锛?)
++                  this.handleQuery()
++                } else {
++                  this.$message.error(res.msg || '鎿嶄綔澶辫触')
++                }
++              }).catch(err => {
++                this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++              })
++            })
++          },
++          submitForm() {
++            const fd = this.formData
++            if (!fd.details.length || !fd.details[0].materialId) {
++              this.$message.error('璇锋坊鍔犺嚦灏戜竴鏉＄洏鐐归」')
++              return
++            }
++            addStockCheck({ details: fd.details }).then(res => {
++              if (res.code === 1) {
++                this.$message.success('鐩樼偣鍒涘缓鎴愬姛锛?)
++                this.formData.dialogVisible = false
++                this.handleQuery()
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          },
++          handleSizeChange(val) {
++            this.pageSize = val
++            this.init()
++          },
++          handleCurrentChange(val) {
++            this.page = val
++            this.init()
++          }
++        }
++      })
++    </script>
++</body>
++</html>
+diff --git a/src/main/resources/backend/page/inventory/stock-record.html b/src/main/resources/backend/page/inventory/stock-record.html
+new file mode 100644
+index 0000000..de13e30
+--- /dev/null
++++ b/src/main/resources/backend/page/inventory/stock-record.html
+@@ -0,0 +1,118 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta http-equiv="X-UA-Compatible" content="IE=edge">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>Document</title>
++  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
++  <link rel="stylesheet" href="../../styles/common.css" />
++  <link rel="stylesheet" href="../../styles/page.css" />
++</head>
++<body>
++  <div class="dashboard-container" id="stock-record-app">
++    <div class="container">
++      <div class="tableBar">
++        <el-select v-model="input.materialId" placeholder="椋熸潗" style="width: 150px" clearable filterable @change="handleQuery">
++          <el-option v-for="item in materialOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
++        </el-select>
++        <el-select v-model="input.type" placeholder="绫诲瀷" style="width: 120px; margin-left: 10px" clearable @change="handleQuery">
++          <el-option label="鍏ュ簱" value="IN"></el-option>
++          <el-option label="鍑哄簱" value="OUT"></el-option>
++          <el-option label="鐩樼偣" value="CHECK"></el-option>
++        </el-select>
++        <el-date-picker v-model="input.dateRange" type="daterange" range-separator="鑷? start-placeholder="寮€濮嬫棩鏈? end-placeholder="缁撴潫鏃ユ湡" style="margin-left: 10px" value-format="yyyy-MM-dd" @change="handleQuery"></el-date-picker>
++        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">鏌ヨ</el-button>
++      </div>
++      <el-table :data="tableData" stripe class="tableBox">
++        <el-table-column label="椋熸潗鍚嶇О">
++          <template slot-scope="scope">{{ scope.row.materialName }}</template>
++        </el-table-column>
++        <el-table-column label="绫诲瀷">
++          <template slot-scope="scope">
++            <el-tag :type="scope.row.type == 'IN' ? 'primary' : scope.row.type == 'OUT' ? 'danger' : 'info'">
++              {{ scope.row.type == 'IN' ? '鍏ュ簱' : scope.row.type == 'OUT' ? '鍑哄簱' : '鐩樼偣' }}
++            </el-tag>
++          </template>
++        </el-table-column>
++        <el-table-column prop="quantity" label="鏁伴噺" /></el-table-column>
++        <el-table-column label="鍗曚环">
++          <template slot-scope="scope">锟{ scope.row.unitPrice }}</template>
++        </el-table-column>
++        <el-table-column label="鎬婚噾棰?>
++          <template slot-scope="scope">锟{ scope.row.totalAmount }}</template>
++        </el-table-column>
++        <el-table-column prop="remark" label="澶囨敞" /></el-table-column>
++        <el-table-column prop="createdTime" label="鎿嶄綔鏃堕棿" width="160" /></el-table-column>
++      </el-table>
++      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
++    </div>
++  </div>
++    <script src="../../plugins/vue/vue.js"></script>
++    <script src="../../plugins/element-ui/index.js"></script>
++    <script src="../../plugins/axios/axios.min.js"></script>
++    <script src="../../js/request.js"></script>
++    <script src="../../api/inventory.js"></script>
++    <script>
++      new Vue({
++        el: '#stock-record-app',
++        data() {
++          return {
++            counts: 0,
++            page: 1,
++            pageSize: 10,
++            tableData: [],
++            materialOptions: [],
++            input: {
++              materialId: '',
++              type: '',
++              dateRange: ''
++            }
++          }
++        },
++        created() {
++          this.init()
++          this.loadMaterialOptions()
++        },
++        methods: {
++          async init() {
++            const params = { page: this.page, pageSize: this.pageSize }
++            if (this.input.materialId) params.materialId = this.input.materialId
++            if (this.input.type) params.type = this.input.type
++            if (this.input.dateRange) {
++              params.startDate = this.input.dateRange[0]
++              params.endDate = this.input.dateRange[1]
++            }
++            await stockRecordPage(params).then(res => {
++              if (String(res.code) === '1') {
++                this.tableData = res.data.records
++                this.counts = Number(res.data.total)
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          },
++          loadMaterialOptions() {
++            materialList().then(res => {
++              if (res.code === 1) this.materialOptions = res.data
++            })
++          },
++          handleQuery() {
++            this.page = 1
++            this.init()
++          },
++          handleSizeChange(val) {
++            this.pageSize = val
++            this.init()
++          },
++          handleCurrentChange(val) {
++            this.page = val
++            this.init()
++          }
++        }
++      })
++    </script>
++</body>
++</html>
+diff --git a/src/main/resources/backend/page/inventory/supplier-list.html b/src/main/resources/backend/page/inventory/supplier-list.html
+new file mode 100644
+index 0000000..792eb3a
+--- /dev/null
++++ b/src/main/resources/backend/page/inventory/supplier-list.html
+@@ -0,0 +1,212 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta http-equiv="X-UA-Compatible" content="IE=edge">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>Document</title>
++  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
++  <link rel="stylesheet" href="../../styles/common.css" />
++  <link rel="stylesheet" href="../../styles/page.css" />
++</head>
++<body>
++  <div class="dashboard-container" id="supplier-app">
++    <div class="container">
++      <div class="tableBar">
++        <el-input v-model="input.name" placeholder="渚涘簲鍟嗗悕绉? style="width: 180px" clearable @keyup.enter.native="handleQuery">
++          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
++        </el-input>
++        <el-input v-model="input.contact" placeholder="鑱旂郴浜? style="width: 150px; margin-left: 10px" clearable @keyup.enter.native="handleQuery">
++          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
++        </el-input>
++        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">鏌ヨ</el-button>
++        <el-button type="primary" @click="addHandle">+ 鏂板渚涘簲鍟?/el-button>
++      </div>
++      <el-table :data="tableData" stripe class="tableBox">
++        <el-table-column prop="name" label="渚涘簲鍟嗗悕绉? /></el-table-column>
++        <el-table-column prop="contact" label="鑱旂郴浜? /></el-table-column>
++        <el-table-column prop="phone" label="鑱旂郴鐢佃瘽" /></el-table-column>
++        <el-table-column prop="address" label="鍦板潃" /></el-table-column>
++        <el-table-column label="鐘舵€?>
++          <template slot-scope="scope">
++            <span>{{ scope.row.status == '1' ? '鍚敤' : '绂佺敤' }}</span>
++          </template>
++        </el-table-column>
++        <el-table-column label="鎿嶄綔" width="160" align="center">
++          <template slot-scope="scope">
++            <el-button type="text" size="small" class="blueBug" @click="editHandle(scope.row)">淇敼</el-button>
++            <el-button type="text" size="small" class="delBut non" @click="deleteHandle(scope.row.id)">鍒犻櫎</el-button>
++          </template>
++        </el-table-column>
++      </el-table>
++      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
++    </div>
++    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="40%" :before-close="handleClose">
++      <el-form class="demo-form-inline" label-width="120px">
++        <el-form-item label="渚涘簲鍟嗗悕绉帮細">
++          <el-input v-model="formData.name" placeholder="璇疯緭鍏ヤ緵搴斿晢鍚嶇О" />
++        </el-form-item>
++        <el-form-item label="鑱旂郴浜猴細">
++          <el-input v-model="formData.contact" placeholder="璇疯緭鍏ヨ仈绯讳汉" />
++        </el-form-item>
++        <el-form-item label="鑱旂郴鐢佃瘽锛?>
++          <el-input v-model="formData.phone" placeholder="璇疯緭鍏ヨ仈绯荤數璇? />
++        </el-form-item>
++        <el-form-item label="鍦板潃锛?>
++          <el-input v-model="formData.address" placeholder="璇疯緭鍏ュ湴鍧€" />
++        </el-form-item>
++        <el-form-item label="鐘舵€侊細">
++          <el-radio-group v-model="formData.status">
++            <el-radio :label="'1'">鍚敤</el-radio>
++            <el-radio :label="'0'">绂佺敤</el-radio>
++          </el-radio-group>
++        </el-form-item>
++      </el-form>
++      <span slot="footer" class="dialog-footer">
++        <el-button size="medium" @click="formData.dialogVisible = false">鍙?娑?/el-button>
++        <el-button type="primary" size="medium" @click="submitForm()">纭?瀹?/el-button>
++      </span>
++    </el-dialog>
++  </div>
++    <script src="../../plugins/vue/vue.js"></script>
++    <script src="../../plugins/element-ui/index.js"></script>
++    <script src="../../plugins/axios/axios.min.js"></script>
++    <script src="../../js/request.js"></script>
++    <script src="../../api/inventory.js"></script>
++    <script>
++      new Vue({
++        el: '#supplier-app',
++        data() {
++          return {
++            action: '',
++            counts: 0,
++            page: 1,
++            pageSize: 10,
++            tableData: [],
++            input: {
++              name: '',
++              contact: ''
++            },
++            formData: {
++              title: '鏂板渚涘簲鍟?,
++              dialogVisible: false,
++              id: '',
++              name: '',
++              contact: '',
++              phone: '',
++              address: '',
++              status: '1'
++            }
++          }
++        },
++        created() {
++          this.init()
++        },
++        methods: {
++          async init() {
++            const params = { page: this.page, pageSize: this.pageSize }
++            if (this.input.name) params.name = this.input.name
++            if (this.input.contact) params.contact = this.input.contact
++            await supplierPage(params).then(res => {
++              if (String(res.code) === '1') {
++                this.tableData = res.data.records
++                this.counts = Number(res.data.total)
++              } else {
++                this.$message.error(res.msg || '鎿嶄綔澶辫触')
++              }
++            }).catch(err => {
++              this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++            })
++          },
++          handleQuery() {
++            this.page = 1
++            this.init()
++          },
++          addHandle() {
++            this.action = 'add'
++            this.formData.title = '鏂板渚涘簲鍟?
++            this.formData.id = ''
++            this.formData.name = ''
++            this.formData.contact = ''
++            this.formData.phone = ''
++            this.formData.address = ''
++            this.formData.status = '1'
++            this.formData.dialogVisible = true
++          },
++          editHandle(row) {
++            this.action = 'edit'
++            this.formData.title = '淇敼渚涘簲鍟?
++            this.formData.id = row.id
++            this.formData.name = row.name
++            this.formData.contact = row.contact
++            this.formData.phone = row.phone
++            this.formData.address = row.address
++            this.formData.status = String(row.status)
++            this.formData.dialogVisible = true
++          },
++          handleClose() {
++            this.formData.dialogVisible = false
++          },
++          deleteHandle(id) {
++            this.$confirm('姝ゆ搷浣滃皢姘镐箙鍒犻櫎璇ヤ緵搴斿晢, 鏄惁缁х画?', '鎻愮ず', {
++              confirmButtonText: '纭畾',
++              cancelButtonText: '鍙栨秷',
++              type: 'warning'
++            }).then(() => {
++              deleteSupplier(id).then(res => {
++                if (res.code === 1) {
++                  this.$message.success('鍒犻櫎鎴愬姛锛?)
++                  this.handleQuery()
++                } else {
++                  this.$message.error(res.msg || '鎿嶄綔澶辫触')
++                }
++              }).catch(err => {
++                this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++              })
++            })
++          },
++          submitForm() {
++            const fd = this.formData
++            if (!fd.name) {
++              this.$message.error('璇疯緭鍏ヤ緵搴斿晢鍚嶇О')
++              return
++            }
++            if (this.action === 'add') {
++              addSupplier({ name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status }).then(res => {
++                if (res.code === 1) {
++                  this.$message.success('娣诲姞鎴愬姛锛?)
++                  this.formData.dialogVisible = false
++                  this.handleQuery()
++                } else {
++                  this.$message.error(res.msg || '鎿嶄綔澶辫触')
++                }
++              }).catch(err => {
++                this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++              })
++            } else {
++              updateSupplier({ id: fd.id, name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status }).then(res => {
++                if (res.code === 1) {
++                  this.$message.success('淇敼鎴愬姛锛?)
++                  this.formData.dialogVisible = false
++                  this.handleQuery()
++                } else {
++                  this.$message.error(res.msg || '鎿嶄綔澶辫触')
++                }
++              }).catch(err => {
++                this.$message.error('璇锋眰鍑洪敊浜嗭細' + err)
++              })
++            }
++          },
++          handleSizeChange(val) {
++            this.pageSize = val
++            this.init()
++          },
++          handleCurrentChange(val) {
++            this.page = val
++            this.init()
++          }
++        }
++      })
++    </script>
++</body>
++</html>

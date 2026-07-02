@@ -3,6 +3,7 @@ package com.reggie.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.BruteForceProtectionFilter;
 import com.reggie.common.LogMaskUtils;
 import com.reggie.common.PasswordUtils;
 import com.reggie.common.R;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 
 @Slf4j
@@ -37,6 +39,9 @@ public class EmployeeController {
     @Autowired
     private EmployeeService employeeService;
 
+    @Autowired(required = false)
+    private BruteForceProtectionFilter bruteForceProtectionFilter;
+
     /**
      * 员工登录
      * @param request
@@ -47,7 +52,14 @@ public class EmployeeController {
     @Operation(summary = "员工登录", description = "员工账号密码登录")
     @Parameter(name = "employee", description = "员工登录信息", required = true)
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.IP)
-    public R<Employee> login(HttpServletRequest request,@RequestBody Employee employee){
+    public R<Employee> login(HttpServletRequest request, @RequestBody Employee employee) {
+
+        // 检查账号是否被锁定
+        if (bruteForceProtectionFilter != null && bruteForceProtectionFilter.isAccountLocked(request)) {
+            int remainingTime = bruteForceProtectionFilter.getFailedAttempts(request);
+            log.warn("账号已被锁定 - 用户名：{}, 剩余锁定次数：{}", employee.getUsername(), remainingTime);
+            return R.error("登录失败次数过多，请5分钟后重试");
+        }
 
         //1、根据页面提交的用户名username查询数据库
         LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper<>();
@@ -56,6 +68,7 @@ public class EmployeeController {
 
         //2、如果没有查询到则返回登录失败结果
         if (emp == null) {
+            recordLoginFailure(request, employee.getUsername());
             return R.error("用户名或密码错误");
         }
 
@@ -67,6 +80,7 @@ public class EmployeeController {
         boolean passwordMatches = PasswordUtils.matches(rawPassword, encodedPassword, passwordType);
 
         if (!passwordMatches) {
+            recordLoginFailure(request, employee.getUsername());
             return R.error("用户名或密码错误");
         }
 
@@ -85,11 +99,35 @@ public class EmployeeController {
             return R.error("账号已禁用");
         }
 
-        //6、登录成功，将员工id和租户id存入Session并返回登录成功结果
+        //6、登录成功，重置失败计数
+        if (bruteForceProtectionFilter != null) {
+            bruteForceProtectionFilter.resetLoginAttempts(request);
+        }
+
+        //7、登录成功，将员工id和租户id存入Session并返回登录成功结果
         BaseContext.setCurrentTenantId(employee.getTenantId());
         request.getSession().setAttribute("employee", emp.getId());
         request.getSession().setAttribute("tenantId", employee.getTenantId());
         return R.success(emp);
+    }
+
+    /**
+     * 记录登录失败
+     */
+    private void recordLoginFailure(HttpServletRequest request, String username) {
+        if (bruteForceProtectionFilter != null) {
+            // 如果有用户名，记录用户名；否则记录 IP
+            if (username != null && !username.trim().isEmpty()) {
+                bruteForceProtectionFilter.recordFailedAttempt(username);
+            } else {
+                bruteForceProtectionFilter.recordLoginFailure(request);
+            }
+
+            // 记录失败日志（脱敏）
+            int attempts = bruteForceProtectionFilter.getFailedAttempts(request);
+            log.warn("员工登录失败 - 用户名：{}, 失败次数：{}/{}",
+                LogMaskUtils.maskUsername(username), attempts, SecurityConstants.MAX_LOGIN_FAIL_COUNT);
+        }
     }
 
     /**
