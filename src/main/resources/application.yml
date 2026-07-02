@@ -4,60 +4,17 @@ server:
 spring:
   application:
     name: reggie_take_out
-  datasource:
-    druid:
-      driver-class-name: com.mysql.cj.jdbc.Driver
-      # 使用占位符，从环境变量或jasypt加密配置读取
-      url: ${DB_URL:jdbc:mysql://localhost:3306/reggie?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true}
-      username: ${DB_USERNAME:root}
-      # jasypt加密配置，生产环境必须使用加密密码
-      # password: ${DB_PASSWORD:root}  # 已移除默认值，必须通过环境变量或配置中心设置
-      password: ${DB_PASSWORD:}
-  # Redis 缓存配置
-  cache:
-    type: redis
-    redis:
-      time-to-live: 3600000  # 1小时
-      cache-null-values: false
   profiles:
-    active: ${SPRINT_PROFILES_ACTIVE:dev}
+    active: dev  # 默认开发环境
 
-# Actuator 监控配置
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus,env
-        base-path: /actuator
-  endpoint:
-    health:
-      show-details: when-authorized
-      show-components: always
-  metrics:
-    export:
-      prometheus:
-        enabled: true
-    tags:
-      application: ${spring.application.name}
-    distribution:
-      percentiles-histogram:
-        http.server.requests: true
-        http.client.requests: true
-
+# MyBatis Plus 配置
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
-    # 开发环境开启SQL日志，生产环境关闭
-    log-impl: ${MYBATIS_LOG:org.apache.ibatis.logging.stdout.StdOutImpl}
   global-config:
     db-config:
       id-type: ASSIGN_ID
 
+# 项目配置
 reggie:
   path: ./uploads
-
-# jasypt配置
-jasypt:
-  encryptor:
-    password: ${JASYPT_PASSWORD:dev-key}
-    algorithm: PBEWithMD5AndDES
