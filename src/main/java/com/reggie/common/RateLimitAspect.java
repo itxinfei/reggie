@@ -39,6 +39,15 @@ public class RateLimitAspect {
     }
 
     /**
+     * 检查限流是否启用
+     *
+     * @return true=启用，false=禁用
+     */
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    /**
      * 环绕通知：处理限流逻辑
      */
     @Around("@annotation(rateLimit)")

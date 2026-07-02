@@ -53,6 +53,15 @@ public class BruteForceProtectionFilter implements Filter {
     private static final String LOGIN_LOCKED_KEY_PREFIX = "login:locked:";
 
     /**
+     * 检查暴力破解防护是否启用
+     *
+     * @return true=启用，false=禁用
+     */
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    /**
      * 构造方法
      * RedisTemplate 为可选依赖，如果不可用则降级
      */
