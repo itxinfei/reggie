@@ -19,15 +19,21 @@ Thumbs.db
 .superpowers/
 .claude/
 
-# 环境配置文件（包含敏感信息）
+# 环境配置文件（包含敏感信息，禁止上传到仓库）
 .env
 .env.local
 .env.*.local
 .env.*
+*.env
+# 所有Spring Boot配置文件
 application.yml
 application*.yml
 application*.yaml
 application*.properties
+# 配置文件备份
+*.yml.bak
+*.yaml.bak
+*.properties.bak
 
 # 临时文件
 *.tmp
