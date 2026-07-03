@@ -39,7 +39,7 @@ public class AddressBookControllerTest {
         mockMvc.perform(post("/addressBook")
                 .sessionAttr("user", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"consignee\":\"新地址联系人\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceName\":\"广东省\",\"cityName\":\"深圳市\",\"districtName\":\"南山区\",\"detail\":\"科技园路1号\",\"label\":\"公司\"}"))
+                .content("{\"userId\":1,\"consignee\":\"新地址联系人\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"detail\":\"科技园路1号\",\"label\":\"公司\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.consignee").value("新地址联系人"));
@@ -52,6 +52,12 @@ public class AddressBookControllerTest {
         address.setUserId(1L);
         address.setConsignee("张三");
         address.setPhone("13800138000");
+        address.setProvinceCode("440000");
+        address.setProvinceName("广东省");
+        address.setCityCode("440300");
+        address.setCityName("深圳市");
+        address.setDistrictCode("440305");
+        address.setDistrictName("南山区");
         address.setDetail("测试地址");
         address.setLabel("家");
         addressBookService.save(address);
@@ -59,7 +65,7 @@ public class AddressBookControllerTest {
         mockMvc.perform(put("/addressBook")
                 .sessionAttr("user", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":1,\"consignee\":\"李四\",\"phone\":\"13900139000\",\"detail\":\"新地址\",\"label\":\"公司\"}"))
+                .content("{\"id\":1,\"userId\":1,\"consignee\":\"李四\",\"phone\":\"13900139000\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"detail\":\"新地址\",\"label\":\"公司\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 

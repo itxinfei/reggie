@@ -7,6 +7,7 @@ import com.reggie.common.LogMaskUtils;
 import com.reggie.common.RateLimit;
 import com.reggie.common.RateLimitType;
 import com.reggie.common.SecurityConstants;
+import com.reggie.dto.auth.UserSendMsgDTO;
 import com.reggie.entity.User;
 import com.reggie.enums.UserStatus;
 import com.reggie.service.UserService;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import javax.validation.Valid;
 import java.util.Map;
 
 @RestController
@@ -41,16 +43,16 @@ public class UserController {
 
     /**
      * 发送手机短信验证码
-     * @param user
+     * @param dto
      * @return
      */
     @PostMapping("/sendMsg")
     @Operation(summary = "发送短信验证码", description = "向指定手机号发送验证码")
-    @Parameter(name = "user", description = "用户手机号信息", required = true)
+    @Parameter(name = "dto", description = "用户手机号信息", required = true)
     @RateLimit(maxRequestsPerSecond = 2, type = RateLimitType.IP)
-    public R<String> sendMsg(@RequestBody User user, HttpSession session){
+    public R<String> sendMsg(@Valid @RequestBody UserSendMsgDTO dto, HttpSession session){
         //获取手机号
-        String phone = user.getPhone();
+        String phone = dto.getPhone();
 
         if(phone != null && !phone.isEmpty()){
             //生成随机的4位验证码

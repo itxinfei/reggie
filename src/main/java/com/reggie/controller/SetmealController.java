@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -57,7 +59,7 @@ public class SetmealController {
     @PostMapping
     @Operation(summary = "新增套餐", description = "创建新的套餐及关联菜品")
     @Parameter(name = "setmealDto", description = "套餐DTO", required = true)
-    public R<String> save(@RequestBody SetmealDto setmealDto){
+    public R<String> save(@Valid @RequestBody SetmealDto setmealDto){
         log.info("套餐信息：id={}, name={}, categoryId={}, price={}",
             setmealDto.getId(),
             setmealDto.getName(),
@@ -128,7 +130,7 @@ public class SetmealController {
     @PutMapping
     @Operation(summary = "修改套餐", description = "更新套餐基本信息及关联菜品")
     @Parameter(name = "setmealDto", description = "套餐DTO", required = true)
-    public R<String> update(@RequestBody SetmealDto setmealDto) {
+    public R<String> update(@Valid @RequestBody SetmealDto setmealDto) {
         setmealService.updateWithDish(setmealDto);
         return R.success("修改套餐成功");
     }

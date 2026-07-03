@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
 import com.reggie.dto.DishDto;
+import com.reggie.dto.dish.DishSaveDTO;
 import com.reggie.entity.Category;
 import com.reggie.entity.Dish;
 import com.reggie.entity.DishFlavor;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -53,16 +55,37 @@ public class DishController {
 
     /**
      * 新增菜品
-     * @param dishDto
+     * @param dishSaveDTO
      * @return
      */
     @PostMapping
     @Operation(summary = "新增菜品", description = "保存菜品基本信息及口味")
-    @Parameter(name = "dishDto", description = "菜品DTO", required = true)
-    public R<String> save(@RequestBody DishDto dishDto){
-        log.info("新增菜品：name={}, categoryId={}", dishDto.getName(), dishDto.getCategoryId());
+    @Parameter(name = "dishSaveDTO", description = "菜品DTO", required = true)
+    public R<String> save(@Valid @RequestBody DishSaveDTO dishSaveDTO){
+        log.info("新增菜品：name={}, categoryId={}", dishSaveDTO.getName(), dishSaveDTO.getCategoryId());
 
-        dishService.saveWithFlavor(dishDto);
+        // 转换为Dish实体
+        Dish dish = new Dish();
+        dish.setName(dishSaveDTO.getName());
+        dish.setCategoryId(dishSaveDTO.getCategoryId());
+        dish.setPrice(dishSaveDTO.getPrice());
+        dish.setCode(dishSaveDTO.getCode());
+        dish.setImage(dishSaveDTO.getImage());
+        dish.setDescription(dishSaveDTO.getDescription());
+        dish.setStatus(dishSaveDTO.getStatus());
+
+        dishService.save(dish);
+
+        // 保存菜品口味
+        if (dishSaveDTO.getFlavors() != null && !dishSaveDTO.getFlavors().isEmpty()) {
+            List<DishFlavor> flavors = dishSaveDTO.getFlavors().stream()
+                .map(flavor -> {
+                    flavor.setDishId(dish.getId());
+                    return flavor;
+                })
+                .collect(Collectors.toList());
+            dishFlavorService.saveBatch(flavors);
+        }
 
         return R.success("新增菜品成功");
     }
@@ -141,7 +164,7 @@ public class DishController {
     @PutMapping
     @Operation(summary = "修改菜品", description = "更新菜品基本信息及口味")
     @Parameter(name = "dishDto", description = "菜品DTO", required = true)
-    public R<String> update(@RequestBody DishDto dishDto){
+    public R<String> update(@Valid @RequestBody DishDto dishDto){
         log.info("修改菜品：id={}, name={}", dishDto.getId(), dishDto.getName());
 
         dishService.updateWithFlavor(dishDto);

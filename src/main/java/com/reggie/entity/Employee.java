@@ -20,10 +20,10 @@ public class Employee implements Serializable {
 
     private Long id;
 
-    @NotBlank(message = "用户名不能为空")
     @Size(min = 4, max = 20, message = "用户名长度4-20位")
     private String username;
 
+    // 新增/修改时需要验证姓名，登录时不验证
     @NotBlank(message = "姓名不能为空")
     @Size(max = 30, message = "姓名不能超过30位")
     private String name;

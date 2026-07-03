@@ -10,6 +10,7 @@ import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.RateLimitType;
 import com.reggie.common.SecurityConstants;
+import com.reggie.dto.auth.EmployeeLoginDTO;
 import com.reggie.entity.Employee;
 import com.reggie.enums.UserStatus;
 import com.reggie.service.EmployeeService;
@@ -45,42 +46,42 @@ public class EmployeeController {
     /**
      * 员工登录
      * @param request
-     * @param employee
+     * @param loginDTO
      * @return
      */
     @PostMapping("/login")
     @Operation(summary = "员工登录", description = "员工账号密码登录")
-    @Parameter(name = "employee", description = "员工登录信息", required = true)
+    @Parameter(name = "loginDTO", description = "员工登录信息", required = true)
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.IP)
-    public R<Employee> login(HttpServletRequest request, @RequestBody Employee employee) {
+    public R<Employee> login(HttpServletRequest request, @Valid @RequestBody EmployeeLoginDTO loginDTO) {
 
         // 检查账号是否被锁定
         if (bruteForceProtectionFilter != null && bruteForceProtectionFilter.isAccountLocked(request)) {
             int remainingTime = bruteForceProtectionFilter.getFailedAttempts(request);
-            log.warn("账号已被锁定 - 用户名：{}, 剩余锁定次数：{}", employee.getUsername(), remainingTime);
+            log.warn("账号已被锁定 - 用户名：{}, 剩余锁定次数：{}", loginDTO.getUsername(), remainingTime);
             return R.error("登录失败次数过多，请5分钟后重试");
         }
 
         //1、根据页面提交的用户名username查询数据库
         LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Employee::getUsername, employee.getUsername());
+        queryWrapper.eq(Employee::getUsername, loginDTO.getUsername());
         Employee emp = employeeService.getOne(queryWrapper);
 
         //2、如果没有查询到则返回登录失败结果
         if (emp == null) {
-            recordLoginFailure(request, employee.getUsername());
+            recordLoginFailure(request, loginDTO.getUsername());
             return R.error("用户名或密码错误");
         }
 
         //3、密码校验（支持MD5和BCrypt）
-        String rawPassword = employee.getPassword();
+        String rawPassword = loginDTO.getPassword();
         String encodedPassword = emp.getPassword();
         String passwordType = emp.getPasswordType() != null ? emp.getPasswordType() : SecurityConstants.PASSWORD_TYPE_MD5;
 
         boolean passwordMatches = PasswordUtils.matches(rawPassword, encodedPassword, passwordType);
 
         if (!passwordMatches) {
-            recordLoginFailure(request, employee.getUsername());
+            recordLoginFailure(request, loginDTO.getUsername());
             return R.error("用户名或密码错误");
         }
 
@@ -107,9 +108,8 @@ public class EmployeeController {
         }
 
         //7、登录成功，将员工id和租户id存入Session并返回登录成功结果
-        BaseContext.setCurrentTenantId(employee.getTenantId());
         request.getSession().setAttribute("employee", emp.getId());
-        request.getSession().setAttribute("tenantId", employee.getTenantId());
+        request.getSession().setAttribute("tenantId", emp.getTenantId());
         return R.success(emp);
     }
 

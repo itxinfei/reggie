@@ -30,9 +30,9 @@
       <div class="app-wrapper openSidebar clearfix">
         <!-- sidebar -->
         <div class="sidebar-container">
-          <div class="logo">
+          <div class="logo" @click="goHome()">
             <!-- <img src="images/logo.png" width="122.5" alt="" /> -->
-            <img src="images/login/login-logo.png" alt="" style="width: 117px; height: 28px" />
+            <img src="images/login/login-logo.png" alt="" style="width: 117px; height: 28px; cursor: pointer" />
           </div>
 
           <el-scrollbar wrap-class="scrollbar-wrapper">
@@ -168,7 +168,7 @@
                     id: '9',
                     name: '外卖平台',
                     url: 'page/delivery/order-list.html',
-                    icon: 'icon-order'
+                    icon: 'icon-user'
                   },
                   {
                     id: '10',
@@ -227,6 +227,12 @@
                 window.location.href = '/backend/page/login/login.html'
               }
             })
+          },
+          goHome() {
+            const homeMenu = this.menuList.find(item => item.id === '2')
+            if (homeMenu) {
+              this.menuHandle(homeMenu, false)
+            }
           },
           goBack() {
             // window.location.href = 'javascript:history.go(-1)'

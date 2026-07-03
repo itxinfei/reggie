@@ -21,7 +21,7 @@ public class User implements Serializable {
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    //姓名
+    //姓名 - 新增/修改时需要验证，发送短信时不需要
     @NotBlank(message = "姓名不能为空")
     @Size(max = 30, message = "姓名不能超过30位")
     private String name;

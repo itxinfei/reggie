@@ -69,9 +69,9 @@ public class BruteForceProtectionFilter implements Filter {
         this.redisTemplate = redisTemplate;
         this.enabled = redisTemplate != null;
         if (enabled) {
-            log.info("暴力破解防护已启用（Redis模式）");
+            log.info("✅ 暴力破解防护已启用（Redis模式）");
         } else {
-            log.warn("⚠️ 暴力破解防护未启用（Redis不可用），自动降级");
+            log.info("ℹ️ 暴力破解防护未启用（Redis不可用），已降级");
         }
     }
 

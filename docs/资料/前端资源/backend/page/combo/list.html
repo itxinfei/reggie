@@ -9,6 +9,52 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <style>
+    #combo-app .dialog-form .setmealFood .el-form-item__label::before,
+    #combo-app .dialog-form .uploadImg .el-form-item__label::before {
+      content: '*'; color: #F56C6C; margin-right: 4px;
+    }
+    #combo-app .dialog-form .el-form--inline .el-form-item__content { width: 293px; }
+    #combo-app .dialog-form .el-input { width: 293px; }
+    #combo-app .dialog-form .address .el-form-item__content { width: 100% !important; }
+    #combo-app .dialog-form .avatar-uploader .el-upload {
+      border: 1px dashed #d9d9d9; border-radius: 6px; cursor: pointer; position: relative; overflow: hidden;
+    }
+    #combo-app .dialog-form .avatar-uploader .el-upload:hover { border-color: #409eff; }
+    #combo-app .dialog-form .avatar-uploader-icon { font-size: 28px; color: #8c939d; width: 120px; height: 100px; line-height: 100px; text-align: center; }
+    #combo-app .dialog-form .avatar { width: 120px; height: 100px; display: block; }
+    #combo-app .addDish { width: 100%; }
+    #combo-app .addDish .addBut {
+      background: #ffc200; display: inline-block; padding: 0 20px; border-radius: 4px;
+      line-height: 40px; cursor: pointer; color: #333; font-weight: 500;
+    }
+    #combo-app .addDish .content { background: #fafafb; padding: 20px; border: 1px solid #ccc; border-radius: 3px; }
+    #combo-app .addDishList .el-dialog__body { padding: 0; border-bottom: 1px solid #ccc; }
+    #combo-app .addDishList .el-dialog__footer { padding-top: 27px; }
+    #combo-app .addDishList .seachDish { position: absolute; top: 10px; right: 20px; }
+    #combo-app .addDishCon { padding: 0 20px; display: flex; line-height: 40px; }
+    #combo-app .addDishCon .leftCont { display: flex; border-right: 2px solid #E4E7ED; width: 60%; padding: 15px; }
+    #combo-app .addDishCon .leftCont .tabBut { width: 110px; }
+    #combo-app .addDishCon .leftCont .tabBut span { display: block; text-align: center; border-right: 2px solid #f4f4f4; cursor: pointer; }
+    #combo-app .addDishCon .leftCont .act { border-color: #FFC200 !important; color: #FFC200 !important; }
+    #combo-app .addDishCon .leftCont .tabList { flex: 1; padding: 15px; }
+    #combo-app .addDishCon .leftCont .tabList .table { border: 1px solid #f4f4f4; border-bottom: 1px solid #f4f4f4; }
+    #combo-app .addDishCon .leftCont .tabList .table .items { border-bottom: 1px solid #f4f4f4; padding: 0 10px; display: flex; }
+    #combo-app .addDishCon .leftCont .tabList .table .items .el-checkbox,
+    #combo-app .addDishCon .leftCont .tabList .table .items .el-checkbox__label { width: 100%; }
+    #combo-app .addDishCon .leftCont .tabList .table .items .item { display: flex; padding-right: 20px; }
+    #combo-app .addDishCon .leftCont .tabList .table .items .item span { display: inline-block; text-align: center; flex: 1; }
+    #combo-app .addDishCon .ritCont { width: 40%; padding: 0 15px; }
+    #combo-app .addDishCon .ritCont .item {
+      box-shadow: 0 1px 4px 3px rgba(0,0,0,0.03); display: flex; text-align: center;
+      padding: 0 10px; margin-bottom: 20px; border-radius: 6px; color: #818693;
+    }
+    #combo-app .addDishCon .ritCont .item span:first-child { text-align: left; color: #20232A; }
+    #combo-app .addDishCon .ritCont .item .price { display: inline-block; flex: 1; }
+    #combo-app .addDishCon .ritCont .item .del { cursor: pointer; }
+    #combo-app .addDishCon .ritCont .item .del img { position: relative; top: 5px; width: 20px; }
+    #combo-app .addDishCon .el-checkbox__label { width: 100%; }
+  </style>
 </head>
 <body>
    <div class="dashboard-container" id="combo-app">
@@ -32,8 +78,8 @@
           <span class="span-btn delBut non" @click="deleteHandle('批量')">批量删除</span>
           <span class="span-btn blueBug non" @click="statusHandle('1')">批量启售</span>
           <span
-            style="border:none;"
-            class="span-btn delBut non"
+            style="border:none; color: #E6A23C;"
+            class="span-btn non"
             @click="statusHandle('0')"
           >批量停售</span>
           <el-button
@@ -133,6 +179,120 @@
         @current-change="handleCurrentChange"
       ></el-pagination>
     </div>
+    <!-- 添加/编辑套餐弹窗 -->
+    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="700px" top="10vh" :before-close="handleDialogClose">
+      <div class="dialog-form">
+        <el-form ref="dialogForm" :model="formData" :rules="formRules" :inline="true" label-width="120px">
+          <div>
+            <el-form-item label="套餐名称:" prop="name">
+              <el-input v-model="formData.name" placeholder="请填写套餐名称" maxlength="20"></el-input>
+            </el-form-item>
+            <el-form-item label="套餐分类:" prop="categoryId">
+              <el-select v-model="formData.categoryId" placeholder="请选择套餐分类" @change="$forceUpdate()">
+                <el-option v-for="(item, index) in setMealList" :key="index" :label="item.name" :value="item.id"></el-option>
+              </el-select>
+            </el-form-item>
+          </div>
+          <div>
+            <el-form-item label="套餐价格:" prop="price">
+              <el-input v-model="formData.price" placeholder="请设置套餐价格"></el-input>
+            </el-form-item>
+          </div>
+          <div>
+            <el-form-item label="套餐菜品:" class="setmealFood">
+              <el-form-item>
+                <div class="addDish">
+                  <span v-if="dishTable.length == 0" class="addBut" @click="openAddDish">+ 添加菜品</span>
+                  <div v-if="dishTable.length != 0" class="content">
+                    <div class="addBut" style="margin-bottom: 20px" @click="openAddDish">+ 添加菜品</div>
+                    <div class="table">
+                      <el-table :data="dishTable" style="width: 100%">
+                        <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
+                        <el-table-column prop="price" label="原价" width="180">
+                          <template slot-scope="scope">{{ Number(scope.row.price) / 100 }}</template>
+                        </el-table-column>
+                        <el-table-column prop="address" label="份数" align="center">
+                          <template slot-scope="scope">
+                            <el-input-number v-model="scope.row.copies" size="small" :min="1" :max="99"></el-input-number>
+                          </template>
+                        </el-table-column>
+                        <el-table-column prop="address" label="操作" width="100px" align="center">
+                          <template slot-scope="scope">
+                            <el-button type="text" size="small" @click="delDishHandle(scope.$index)">删除</el-button>
+                          </template>
+                        </el-table-column>
+                      </el-table>
+                    </div>
+                  </div>
+                </div>
+              </el-form-item>
+            </el-form-item>
+          </div>
+          <div>
+            <el-form-item label="套餐图片:" class="uploadImg">
+              <el-upload class="avatar-uploader" action="/common/upload" :show-file-list="false" :on-success="handleAvatarSuccess" :on-change="onChange" ref="upload">
+                <img v-if="imageUrl" :src="imageUrl" class="avatar"></img>
+                <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+              </el-upload>
+            </el-form-item>
+          </div>
+          <div class="address">
+            <el-form-item label="套餐描述:">
+              <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="套餐描述，最长200字" maxlength="200"></el-input>
+            </el-form-item>
+          </div>
+        </el-form>
+      </div>
+      <span slot="footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handleDialogSubmit">确 定</el-button>
+      </span>
+    </el-dialog>
+    <!-- 选择菜品弹窗 -->
+    <el-dialog title="添加菜品" class="addDishList" :visible.sync="dishDialogVisible" width="60%" top="12vh" append-to-body :before-close="closeDishDialog">
+      <el-input v-model="searchValue" class="seachDish" placeholder="请输入菜品名称进行搜索" style="width: 250px" size="small" clearable>
+        <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer"></i>
+      </el-input>
+      <div class="addDishCon">
+        <div class="leftCont">
+          <div v-show="searchValue.trim() == ''" class="tabBut">
+            <span v-for="(item, index) in dishType" :key="index" :class="{act: index == keyInd}" @click="checkTypeHandle(index, item.id)">{{ item.name }}</span>
+          </div>
+          <div class="tabList">
+            <div class="table">
+              <div v-if="dishAddList.length == 0" style="padding-left:10px">暂无菜品!</div>
+              <el-checkbox-group v-if="dishAddList.length > 0" v-model="checkedList" @change="checkedListHandle">
+                <div v-for="(item, index) in dishAddList" :key="index" class="items">
+                  <el-checkbox :key="index" :label="item">
+                    <div class="item">
+                      <span style="flex: 3;text-align: left">{{ item.dishName }}</span>
+                      <span>{{ item.status == 0 ? '停售' : '在售' }}</span>
+                      <span>{{ Number(item.price)/100 }}</span>
+                    </div>
+                  </el-checkbox>
+                </div>
+              </el-checkbox-group>
+            </div>
+          </div>
+        </div>
+        <div class="ritCont">
+          <div class="tit">已选菜品({{ checkedList.length }})</div>
+          <div class="items">
+            <div v-for="(item, ind) in checkedList" :key="ind" class="item">
+              <span>{{ item.dishName }}</span>
+              <span class="price">￥{{ Number(item.price)/100 }}</span>
+              <span class="del" @click="delCheck(ind)">
+                <img src="../../images/icons/btn_clean@2x.png" alt="">
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="closeDishDialog">取 消</el-button>
+        <el-button type="primary" @click="confirmAddDish">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
     <!-- 开发环境版本，包含了有帮助的命令行警告 -->
     <script src="../../plugins/vue/vue.js"></script>
@@ -141,7 +301,10 @@
     <!-- 引入axios -->
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
+    <script src="../../js/validate.js"></script>
+    <script src="../../js/index.js"></script>
     <script src="../../api/combo.js"></script>
+    <script src="../../api/food.js"></script>
     <script>
       new Vue({
         el: '#combo-app',
@@ -153,12 +316,56 @@
              pageSize: 10,
              tableData : [],
              dishState : '',
-             checkList: []
+             checkList: [],
+             dialogVisible: false,
+             dialogTitle: '',
+             editId: '',
+             imageUrl: '',
+             setMealList: [],
+             dishTable: [],
+             dishDialogVisible: false,
+             dishType: [],
+             dishAddList: [],
+             checkedList: [],
+             searchValue: '',
+             keyInd: 0,
+             formData: {
+               name: '', categoryId: '', price: '', image: '',
+               description: '', idType: '', status: true
+             }
           }
         },
-        computed: {},
+        computed: {
+          formRules() {
+            return {
+              name: { required: true, message: '请输入套餐名称', trigger: 'blur' },
+              categoryId: { required: true, message: '请选择套餐分类', trigger: 'change' },
+              price: {
+                required: true,
+                validator: (rules, value, callback) => {
+                  if (!value) { callback(new Error('请填写套餐价格')) }
+                  else {
+                    const reg = /^\d+(\.\d{0,2})?$/
+                    if (reg.test(value)) {
+                      if (value < 10000) callback()
+                      else callback(new Error('套餐价格小于10000'))
+                    } else { callback(new Error('套餐价格格式只能为数字,且最多保留两位小数')) }
+                  }
+                },
+                trigger: 'blur'
+              }
+            }
+          }
+        },
+        watch: {
+          searchValue(value) {
+            if (value.trim()) { this.getDishForName(this.searchValue) }
+          }
+        },
         created() {
           this.init()
+          this.getDishTypeList()
+          this.getDishType()
         },
         mounted() {
         },
@@ -187,20 +394,115 @@
           },
           // 添加
           addSetMeal (st) {
-            if (st === 'add'){
-              window.parent.menuHandle({
-                id: '5',
-                url: '/backend/page/combo/add.html',
-                name: '添加套餐'
-              },true)
+            this.editId = st === 'add' ? '' : st
+            this.dialogTitle = st === 'add' ? '添加套餐' : '修改套餐'
+            if (st === 'add') {
+              this.imageUrl = ''
+              this.dishTable = []
+              this.formData = { name: '', categoryId: '', price: '', image: '', description: '', idType: '', status: true }
             } else {
-              window.parent.menuHandle({
-                id: '5',
-                url: '/backend/page/combo/add.html?id='+st,
-                name: '修改套餐'
-              },true)
+              querySetmealById(st).then(res => {
+                if (String(res.code) === '1') {
+                  this.formData = { ...res.data }
+                  this.formData.status = res.data.status === '1'
+                  this.formData.price = res.data.price / 100
+                  this.imageUrl = `/common/download?name=${res.data.image}`
+                  this.dishTable = res.data.setmealDishes
+                  this.formData.categoryId = res.data.categoryId
+                  this.formData.idType = res.data.categoryId
+                } else { this.$message.error(res.msg || '操作失败') }
+              })
+            }
+            this.dialogVisible = true
+            this.$nextTick(() => {
+              if (this.$refs.dialogForm) this.$refs.dialogForm.clearValidate()
+            })
+          },
+          handleDialogSubmit () {
+            this.$refs.dialogForm.validate(valid => {
+              if (valid) {
+                if (this.dishTable.length < 1) { return this.$message.error('请选择菜品！') }
+                if (!this.imageUrl) { return this.$message.error('请上传套餐图片') }
+                let params = { ...this.formData }
+                params.price *= 100
+                params.setmealDishes = this.dishTable.map(obj => ({ copies: obj.copies, dishId: obj.dishId, name: obj.name, price: obj.price }))
+                params.status = 1
+                params.categoryId = this.formData.idType || this.formData.categoryId
+                if (this.editId) {
+                  delete params.updateTime
+                  editSetmeal(params).then(res => {
+                    if (res.code === 1) { this.$message.success('套餐修改成功！'); this.dialogVisible = false; this.handleQuery() }
+                    else { this.$message.error(res.msg || '操作失败') }
+                  }).catch(err => { this.$message.error('请求出错了：' + err) })
+                } else {
+                  delete params.id
+                  addSetmeal(params).then(res => {
+                    if (res.code === 1) { this.$message.success('套餐添加成功！'); this.dialogVisible = false; this.handleQuery() }
+                    else { this.$message.error(res.msg || '操作失败') }
+                  }).catch(err => { this.$message.error('请求出错了：' + err) })
+                }
+              }
+            })
+          },
+          handleDialogClose () { this.dialogVisible = false },
+          handleAvatarSuccess (response) {
+            if (response.code === 0 && response.msg === '未登录') { window.top.location.href = '/backend/page/login/login.html' }
+            else { this.imageUrl = `/common/download?name=${response.data}`; this.formData.image = response.data }
+          },
+          onChange (file) {
+            if (file) {
+              const suffix = file.name.split('.')[1]
+              const size = file.size / 1024 / 1024 < 2
+              if (['png','jpeg','jpg'].indexOf(suffix) < 0) { this.$message.error('上传图片只支持 png、jpeg、jpg 格式！'); this.$refs.upload.clearFiles(); return false }
+              if (!size) { this.$message.error('上传文件大小不能超过 2MB!'); return false }
+              return file
             }
           },
+          getDishTypeList () {
+            getCategoryList({ type: 2 }).then(res => {
+              if (res.code === 1) { this.setMealList = res.data.map(obj => ({ ...obj, idType: obj.id })) }
+              else { this.$message.error(res.msg || '操作失败') }
+            })
+          },
+          getDishType () {
+            getCategoryList({'type': 1}).then(res => {
+              if (res.code === 1) { this.dishType = res.data; this.getDishList(res.data[0].id) }
+              else { this.$message.error(res.msg) }
+            })
+          },
+          getDishList (id) {
+            queryDishList({categoryId: id}).then(res => {
+              if (res.code === 1) {
+                let newArr = res.data
+                newArr.forEach(n => { n.dishId = n.id; n.copies = 1; n.dishName = n.name })
+                this.dishAddList = newArr
+              } else { this.$message.error(res.msg) }
+            })
+          },
+          getDishForName (name) {
+            queryDishList({name}).then(res => {
+              if (res.code === 1) {
+                let newArr = res.data
+                newArr.forEach(n => { n.dishId = n.id; n.copies = 1; n.dishName = n.name })
+                this.dishAddList = newArr
+              } else { this.$message.error(res.msg) }
+            })
+          },
+          openAddDish () {
+            this.searchValue = ''; this.dishDialogVisible = true; this.keyInd = 0
+            this.getDishList(this.dishType[0].id)
+          },
+          closeDishDialog () { this.dishDialogVisible = false },
+          confirmAddDish () {
+            this.dishTable = JSON.parse(JSON.stringify(this.checkedList))
+            this.dishTable.forEach(n => { n.copies = 1 })
+            this.dishDialogVisible = false; this.checkedList = []
+          },
+          delDishHandle (index) { this.dishTable.splice(index, 1); this.checkedList.splice(index, 1) },
+          searchHandle () { this.searchValue = this.searchValue },
+          checkTypeHandle (ind, id) { this.keyInd = ind; this.getDishList(id) },
+          checkedListHandle (value) { this.checkedList = value },
+          delCheck (ind) { this.checkedList.splice(ind, 1) },
 
           // 删除
           deleteHandle (type, id) {

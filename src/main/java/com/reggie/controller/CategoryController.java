@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.Valid;
 import java.util.List;
 
 /**
@@ -40,7 +42,7 @@ public class CategoryController {
     @PostMapping
     @Operation(summary = "新增分类", description = "创建新的菜品或套餐分类")
     @Parameter(name = "category", description = "分类信息", required = true)
-    public R<String> save(@RequestBody Category category){
+    public R<String> save(@Valid @RequestBody Category category){
         log.info("category: id={}, name={}, type={}", category.getId(), category.getName(), category.getType());
         categoryService.save(category);
         return R.success("新增分类成功");
@@ -94,7 +96,7 @@ public class CategoryController {
     @PutMapping
     @Operation(summary = "修改分类", description = "根据ID更新分类信息")
     @Parameter(name = "category", description = "分类信息", required = true)
-    public R<String> update(@RequestBody Category category){
+    public R<String> update(@Valid @RequestBody Category category){
         log.info("修改分类信息：id={}, name={}", category.getId(), category.getName());
 
         categoryService.updateById(category);

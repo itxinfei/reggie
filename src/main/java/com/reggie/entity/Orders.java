@@ -1,6 +1,7 @@
 package com.reggie.entity;
 
 import lombok.Data;
+import javax.validation.constraints.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -26,13 +27,16 @@ public class Orders implements Serializable {
     public static final int STATUS_REFUNDED = 6;
 
     //订单状态 1待付款，2待派送，3已派送，4已完成，5已取消
+    @NotNull(message = "订单状态不能为空")
     private Integer status;
 
 
     //下单用户id
+    @NotNull(message = "用户ID不能为空")
     private Long userId;
 
     //地址id
+    @NotNull(message = "地址ID不能为空")
     private Long addressBookId;
 
 
@@ -49,26 +53,38 @@ public class Orders implements Serializable {
 
 
     //实收金额
+    @NotNull(message = "订单金额不能为空")
+    @DecimalMin(value = "0.0", inclusive = false, message = "订单金额必须大于0")
     private BigDecimal amount;
 
     //备注
+    @Size(max = 200, message = "备注不能超过200个字符")
     private String remark;
 
     //用户名
+    @NotBlank(message = "用户名不能为空")
+    @Size(max = 30, message = "用户名不能超过30个字符")
     private String userName;
 
     //手机号
+    @NotBlank(message = "手机号不能为空")
+    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
 
     //地址
+    @NotBlank(message = "收货地址不能为空")
+    @Size(max = 200, message = "收货地址不能超过200个字符")
     private String address;
 
     //收货人
+    @NotBlank(message = "收货人不能为空")
+    @Size(max = 30, message = "收货人姓名不能超过30个字符")
     private String consignee;
 
     //桌号
     private Long tableId;
 
     //就餐方式
+    @Size(max = 20, message = "就餐方式不能超过20个字符")
     private String diningType;
 }

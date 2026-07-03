@@ -32,9 +32,9 @@ public class RateLimitAspect {
         this.redisTemplate = redisTemplate;
         this.enabled = redisTemplate != null;
         if (enabled) {
-            log.info("API限流已启用（Redis模式）");
+            log.info("✅ API限流已启用（Redis模式）");
         } else {
-            log.warn("⚠️ API限流未启用（Redis不可用），自动降级");
+            log.info("ℹ️ API限流未启用（Redis不可用），已降级");
         }
     }
 

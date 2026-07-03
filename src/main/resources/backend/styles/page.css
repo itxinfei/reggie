@@ -6,7 +6,8 @@
   position: relative;
   z-index: 1;
   padding: 20px 24px;
-  border-radius: 4px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 .dashboard-container .container .tableBar {
   display: flex;
@@ -15,8 +16,8 @@
 }
 .dashboard-container .container .tableBox {
   width: 100%;
-  border: solid 2px #f3f4f7;
-  border-radius: 2px;
+  border: solid 1px #ebeef5;
+  border-radius: 4px;
 }
 
 .dashboard-container .container .tableBox .el-image img {
@@ -29,6 +30,10 @@
   margin-top: 16px;
 }
 
+.dashboard-container .container .tableLab {
+  display: flex;
+  align-items: center;
+}
 .dashboard-container .container .tableLab .span-btn {
   cursor: pointer;
   display: inline-block;
@@ -36,6 +41,10 @@
   padding: 0 20px;
   color: #818693;
   border-right: solid 1px #d8dde3;
+  transition: color 0.2s;
+}
+.dashboard-container .container .tableLab .span-btn:hover {
+  color: #409eff;
 }
 
 .dashboard-container .container .tableLab .el-button {
@@ -85,7 +94,8 @@
   z-index: 1;
   background: #fff;
   padding: 20px 24px;
-  border-radius: 4px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   min-height: 500px;
 }
 .addBrand-container .container .subBox {
@@ -188,4 +198,31 @@
 .el-table--border td:first-child .cell,
 .el-table--border th:first-child .cell {
   padding-left: 12px;
+}
+
+/* ========== 全局弹窗样式优化 ========== */
+.el-dialog {
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+}
+.el-dialog__header {
+  padding: 16px 20px 12px !important;
+  border-bottom: 1px solid #f0f0f0;
+}
+.el-dialog__title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #1f2329 !important;
+}
+.el-dialog__headerbtn .el-dialog__close {
+  font-size: 16px !important;
+}
+.el-dialog__body {
+  padding: 20px 20px 10px !important;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+.el-dialog__footer {
+  padding: 12px 20px 16px !important;
+  border-top: 1px solid #f0f0f0;
 }

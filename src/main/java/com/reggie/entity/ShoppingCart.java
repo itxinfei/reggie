@@ -1,6 +1,10 @@
 package com.reggie.entity;
 
 import lombok.Data;
+import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -16,9 +20,10 @@ public class ShoppingCart implements Serializable {
     private Long id;
 
     //名称
+    @NotBlank(message = "商品名称不能为空")
     private String name;
-
     //用户id
+    @NotNull(message = "用户ID不能为空")
     private Long userId;
 
     //菜品id
@@ -31,9 +36,13 @@ public class ShoppingCart implements Serializable {
     private String dishFlavor;
 
     //数量
+    @NotNull(message = "商品数量不能为空")
+    @Min(value = 1, message = "商品数量必须大于0")
     private Integer number;
 
     //金额
+    @NotNull(message = "商品金额不能为空")
+    @DecimalMin(value = "0.0", inclusive = false, message = "商品金额必须大于0")
     private BigDecimal amount;
 
     //图片
