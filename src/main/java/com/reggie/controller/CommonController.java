@@ -99,13 +99,47 @@ public class CommonController {
     @Operation(summary = "文件下载", description = "下载图片文件")
     @Parameter(name = "name", description = "文件名", required = true)
     public void download(String name, HttpServletResponse response) {
+        // 解决中文文件名乱码问题
+        // 这里可以添加文件名编码处理（如果需要）
+
+        // 拼接文件完整路径
+        String filePath = basePath + name;
+        File file = new File(filePath);
+
         try {
-            FileInputStream fileInputStream = new FileInputStream(new File(basePath + name));
+            // 如果文件不存在，返回默认占位图片
+            if (!file.exists()) {
+                log.warn("文件不存在，返回占位图: {}", filePath);
+                // 尝试返回默认占位图
+                file = new File(basePath + "images/dishes/placeholder.jpg");
+                if (!file.exists()) {
+                    log.error("占位图也不存在: {}", file.getAbsolutePath());
+                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    return;
+                }
+            }
+
+            FileInputStream fileInputStream = new FileInputStream(file);
 
             //输出流，通过输出流将文件写回浏览器
             ServletOutputStream outputStream = response.getOutputStream();
 
-            response.setContentType("image/jpeg");
+            // 根据文件扩展名设置Content-Type
+            String extension = name.substring(name.lastIndexOf(".") + 1).toLowerCase();
+            switch (extension) {
+                case "jpg":
+                case "jpeg":
+                    response.setContentType("image/jpeg");
+                    break;
+                case "png":
+                    response.setContentType("image/png");
+                    break;
+                case "gif":
+                    response.setContentType("image/gif");
+                    break;
+                default:
+                    response.setContentType("application/octet-stream");
+            }
 
             int len = 0;
             byte[] bytes = new byte[BUFFER_SIZE];
@@ -118,7 +152,13 @@ public class CommonController {
             outputStream.close();
             fileInputStream.close();
         } catch (Exception e) {
-            log.error("文件下载失败", e);
+            log.error("文件下载失败: {}", filePath, e);
+            // 设置404响应而不是抛出异常
+            try {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "文件不存在");
+            } catch (IOException ex) {
+                log.error("发送错误响应失败", ex);
+            }
         }
 
     }
