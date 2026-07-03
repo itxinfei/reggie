@@ -17,12 +17,6 @@
     #combo-app .dialog-form .el-form--inline .el-form-item__content { width: 293px; }
     #combo-app .dialog-form .el-input { width: 293px; }
     #combo-app .dialog-form .address .el-form-item__content { width: 100% !important; }
-    #combo-app .dialog-form .avatar-uploader .el-upload {
-      border: 1px dashed #d9d9d9; border-radius: 6px; cursor: pointer; position: relative; overflow: hidden;
-    }
-    #combo-app .dialog-form .avatar-uploader .el-upload:hover { border-color: #409eff; }
-    #combo-app .dialog-form .avatar-uploader-icon { font-size: 28px; color: #8c939d; width: 120px; height: 100px; line-height: 100px; text-align: center; }
-    #combo-app .dialog-form .avatar { width: 120px; height: 100px; display: block; }
     #combo-app .addDish { width: 100%; }
     #combo-app .addDish .addBut {
       background: #ffc200; display: inline-block; padding: 0 20px; border-radius: 4px;
@@ -63,25 +57,21 @@
         <el-input
           v-model="input"
           placeholder="请输入套餐名称"
-          style="width: 250px"
+          class="search-input"
           clearable
           @keyup.enter.native="handleQuery"
         >
           <i
             slot="prefix"
             class="el-input__icon el-icon-search"
-            style="cursor: pointer"
+            class="search-icon"
             @click="init"
           ></i>
         </el-input>
         <div class="tableLab">
-          <span class="span-btn delBut non" @click="deleteHandle('批量')">批量删除</span>
-          <span class="span-btn blueBug non" @click="statusHandle('1')">批量启售</span>
-          <span
-            style="border:none; color: #E6A23C;"
-            class="span-btn non"
-            @click="statusHandle('0')"
-          >批量停售</span>
+          <el-button type="danger" :disabled="checkList.length === 0" @click="deleteHandle('批量')">批量删除</el-button>
+          <el-button type="success" :disabled="checkList.length === 0" @click="statusHandle('1')">批量启售</el-button>
+          <el-button type="warning" :disabled="checkList.length === 0" @click="statusHandle('0')">批量停售</el-button>
           <el-button
             type="primary"
             @click="addSetMeal('add')"
@@ -104,12 +94,17 @@
           prop="name"
           label="套餐名称"
         ></el-table-column>
-        <el-table-column prop="image" label="图片"  align="center">
+        <el-table-column prop="image" label="图片" align="center">
           <template slot-scope="{ row }">
-            <el-image style="width: auto; height: 40px; border:none;cursor: pointer;" :src="getImage(row.image)" :preview-src-list="[ `/common/download?name=${row.image}` ]" >
+            <el-image
+              class="table-image"
+              :src="getImage(row.image)"
+              :preview-src-list="[getImage(row.image)]"
+              :alt="row.name"
+            >
               <div slot="error" class="image-slot">
-                <img src="./../../images/noImg.png"  style="width: auto; height: 40px; border:none;" >
-              </div> 
+                <img src="./../../images/noImg.png" class="table-image" alt="暂无图片">
+              </div>
             </el-image>
           </template>
         </el-table-column>
@@ -122,12 +117,14 @@
           label="套餐价"
         >
           <template slot-scope="scope">
-            <span>￥{{ scope.row.price/100 }}</span>
+            <span class="price-tag">￥{{ scope.row.price/100 }}</span>
           </template>
         </el-table-column>
         <el-table-column label="售卖状态">
           <template slot-scope="scope">
-            <span>{{ scope.row.status == '0' ? '停售' : '启售' }}</span>
+            <span :class="scope.row.status == '0' ? 'status-inactive' : 'status-active'">
+              {{ scope.row.status == '0' ? '停售' : '启售' }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column
@@ -204,9 +201,9 @@
                 <div class="addDish">
                   <span v-if="dishTable.length == 0" class="addBut" @click="openAddDish">+ 添加菜品</span>
                   <div v-if="dishTable.length != 0" class="content">
-                    <div class="addBut" style="margin-bottom: 20px" @click="openAddDish">+ 添加菜品</div>
+                    <div class="addBut addBut-mb" @click="openAddDish">+ 添加菜品</div>
                     <div class="table">
-                      <el-table :data="dishTable" style="width: 100%">
+                      <el-table :data="dishTable">
                         <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
                         <el-table-column prop="price" label="原价" width="180">
                           <template slot-scope="scope">{{ Number(scope.row.price) / 100 }}</template>
@@ -250,8 +247,8 @@
     </el-dialog>
     <!-- 选择菜品弹窗 -->
     <el-dialog title="添加菜品" class="addDishList" :visible.sync="dishDialogVisible" width="60%" top="12vh" append-to-body :before-close="closeDishDialog">
-      <el-input v-model="searchValue" class="seachDish" placeholder="请输入菜品名称进行搜索" style="width: 250px" size="small" clearable>
-        <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer"></i>
+      <el-input v-model="searchValue" class="seachDish search-input" placeholder="请输入菜品名称进行搜索" size="small" clearable>
+        <i slot="prefix" class="el-input__icon el-icon-search search-icon"></i>
       </el-input>
       <div class="addDishCon">
         <div class="leftCont">
@@ -260,12 +257,12 @@
           </div>
           <div class="tabList">
             <div class="table">
-              <div v-if="dishAddList.length == 0" style="padding-left:10px">暂无菜品!</div>
+              <div v-if="dishAddList.length == 0" class="empty-tip">暂无菜品!</div>
               <el-checkbox-group v-if="dishAddList.length > 0" v-model="checkedList" @change="checkedListHandle">
                 <div v-for="(item, index) in dishAddList" :key="index" class="items">
                   <el-checkbox :key="index" :label="item">
                     <div class="item">
-                      <span style="flex: 3;text-align: left">{{ item.dishName }}</span>
+                      <span class="item-name">{{ item.dishName }}</span>
                       <span>{{ item.status == 0 ? '停售' : '在售' }}</span>
                       <span>{{ Number(item.price)/100 }}</span>
                     </div>

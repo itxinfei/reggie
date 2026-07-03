@@ -74,17 +74,19 @@ public class CommonController {
         //使用UUID重新生成文件名，防止文件名称重复造成文件覆盖
         String fileName = UUID.randomUUID().toString() + suffix;//dfsdfdfd.jpg
 
-        File dir = new File(basePath);
+        // 保存到 images/dishes/ 子目录，与数据库中的路径格式一致
+        String subDir = "images/dishes/";
+        File dir = new File(basePath + subDir);
         if (!dir.exists()) {
             dir.mkdirs();
         }
 
         try {
-            file.transferTo(new File(basePath + fileName));
+            file.transferTo(new File(basePath + subDir + fileName));
         } catch (IOException e) {
             log.error("文件上传失败", e);
         }
-        return R.success(fileName);
+        return R.success(subDir + fileName);
     }
 
     /**

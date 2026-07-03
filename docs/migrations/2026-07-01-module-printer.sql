@@ -9,8 +9,8 @@ CREATE TABLE `printer_config` (
     `tenant_id` bigint(20) NOT NULL COMMENT '租户id',
     `store_id` bigint(20) DEFAULT NULL COMMENT '门店id',
     `name` varchar(50) COLLATE utf8_bin NOT NULL COMMENT '打印机名称',
-    `type` varchar(20) COLLATE utf8_bin NOT NULL COMMENT '连接类型 USB/TCP/CLOUD/BLUETOOTH',
-    `brand` varchar(20) COLLATE utf8_bin DEFAULT NULL COMMENT '品牌 佳博/芯烨/商米',
+    `type` varchar(20) COLLATE utf8_bin NOT NULL COMMENT '连接类型 USB/TCP/CLOUD/BLUETOOTH/WINDOWS',
+    `brand` varchar(20) COLLATE utf8_bin DEFAULT NULL COMMENT '品牌 佳博/芯烨/商米/WINDOWS/SYSTEM',
     `device_id` varchar(100) COLLATE utf8_bin DEFAULT NULL COMMENT '设备标识 MAC/SN',
     `ip_address` varchar(15) COLLATE utf8_bin DEFAULT NULL COMMENT 'IP地址',
     `port` int(11) DEFAULT NULL COMMENT '端口',
@@ -20,6 +20,7 @@ CREATE TABLE `printer_config` (
     `sort` int(11) DEFAULT '0' COMMENT '排序',
     `created_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `system_printer_name` varchar(200) COLLATE utf8_bin DEFAULT NULL COMMENT 'Windows系统打印机名称',
     PRIMARY KEY (`id`),
     KEY `idx_tenant` (`tenant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='打印机配置';

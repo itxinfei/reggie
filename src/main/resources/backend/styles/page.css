@@ -28,6 +28,10 @@
   width: 250px;
 }
 
+.search-input .search-icon {
+  cursor: pointer;
+}
+
 /* 表格图片 */
 .dashboard-container .container .tableBox .table-image {
   width: auto;
@@ -68,9 +72,11 @@
 }
 
 /* 禁用状态 */
-.el-button.is-disabled {
+.el-button.is-disabled,
+.span-btn.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  pointer-events: none;
 }
 .dashboard-container .container .tableBox {
   width: 100%;
@@ -105,15 +111,36 @@
   color: #409eff;
 }
 
-.dashboard-container .container .tableLab .el-button {
-  margin-left: 10px;
-}
-
 .el-table-column--selection .cell {
   padding-left: 10px;
 }
 
-/* 添加 */
+/* Dialog 表单中的头像上传 */
+.dialog-form .avatar-uploader .el-upload {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.dialog-form .avatar-uploader .el-upload:hover {
+  border-color: #409eff;
+}
+.dialog-form .avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 120px;
+  height: 100px;
+  line-height: 100px;
+  text-align: center;
+}
+.dialog-form .avatar {
+  width: 120px;
+  height: 100px;
+  display: block;
+}
+
+/* 添加页面中的头像上传（添加页面尺寸较大） */
 .addBrand-container .avatar-uploader .el-upload {
   border: 1px dashed #d9d9d9;
   border-radius: 6px;
@@ -175,6 +202,10 @@
   border-radius: 4px;
   color: #333333;
   font-weight: 500;
+}
+
+.addBut-mb {
+  margin-bottom: 20px;
 }
 .flavorBox .flavor {
   border: solid 1px #dfe2e8;
@@ -238,6 +269,36 @@
   cursor: pointer;
 }
 
+/* 口味选择下拉框 */
+.selectInput {
+  position: relative;
+  width: 100%;
+  min-width: 100px;
+}
+.selectInput .flavorSelect {
+  position: absolute;
+  width: 100%;
+  padding: 0 10px;
+  border-radius: 3px;
+  border: solid 1px #FF903D;
+  line-height: 30px;
+  text-align: center;
+  background: #fff;
+  top: 50px;
+  z-index: 99;
+}
+.selectInput .flavorSelect .items {
+  cursor: pointer;
+  display: inline-block;
+  width: 100%;
+  line-height: 35px;
+  border-bottom: solid 1px #f4f4f4;
+  color: #666;
+}
+.selectInput .flavorSelect .none {
+  font-size: 14px;
+}
+
 .addBrand-container .address .el-form-item__content {
   width: 777px !important;
 }
@@ -296,4 +357,16 @@
 .el-dialog__footer {
   padding: 12px 20px 16px !important;
   border-top: 1px solid #f0f0f0;
+}
+
+/* 空状态提示 */
+.empty-tip {
+  padding-left: 10px;
+  color: #909399;
+}
+
+/* 菜品名称项 */
+.item-name {
+  flex: 3;
+  text-align: left;
 }

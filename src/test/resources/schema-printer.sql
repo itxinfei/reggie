@@ -16,6 +16,7 @@ CREATE TABLE printer_config (
     sort int DEFAULT '0',
     created_time datetime DEFAULT NULL,
     updated_time datetime DEFAULT NULL,
+    system_printer_name varchar(200) DEFAULT NULL,
     PRIMARY KEY (id)
 );
 

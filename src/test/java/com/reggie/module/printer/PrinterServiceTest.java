@@ -3,10 +3,12 @@ package com.reggie.module.printer;
 import com.reggie.common.BaseContext;
 import com.reggie.entity.OrderDetail;
 import com.reggie.entity.Orders;
+import com.reggie.module.printer.adapter.WindowsSystemPrinterAdapter;
 import com.reggie.module.printer.core.PrinterTemplate;
 import com.reggie.module.printer.model.PrintJob;
 import com.reggie.module.printer.model.PrintLine;
 import com.reggie.module.printer.model.PrinterConfig;
+import com.reggie.module.printer.model.PrinterStatus;
 import com.reggie.module.printer.service.PrinterConfigService;
 import com.reggie.module.printer.service.PrinterService;
 import com.reggie.service.OrderDetailService;
@@ -19,6 +21,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
+import javax.print.PrintService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -46,6 +49,9 @@ public class PrinterServiceTest {
 
     @Autowired
     private OrderDetailService orderDetailService;
+
+    @Autowired
+    private WindowsSystemPrinterAdapter windowsSystemPrinterAdapter;
 
     private Orders testOrder;
     private List<OrderDetail> testDetails;
@@ -162,5 +168,51 @@ public class PrinterServiceTest {
         printerConfigService.save(printer);
 
         printerService.printOrder(100L, "BILL");
+    }
+
+    @Test
+    void testListSystemPrinters() {
+        List<PrintService> printers = windowsSystemPrinterAdapter.listSystemPrinters();
+        assertNotNull(printers);
+    }
+
+    @Test
+    void testWindowsAdapterQueryStatusWithNullName() {
+        PrinterConfig config = new PrinterConfig();
+        config.setDeviceId(null);
+
+        PrinterStatus status = windowsSystemPrinterAdapter.queryStatus(config);
+        assertNotNull(status);
+        assertFalse(status.isOnline());
+        assertEquals("打印机名称为空", status.getDetail());
+    }
+
+    @Test
+    void testWindowsAdapterTestConnectionWithNullName() {
+        PrinterConfig config = new PrinterConfig();
+        config.setDeviceId(null);
+
+        boolean result = windowsSystemPrinterAdapter.testConnection(config);
+        assertFalse(result);
+    }
+
+    @Test
+    void testWindowsAdapterQueryStatusWithNonExistentPrinter() {
+        PrinterConfig config = new PrinterConfig();
+        config.setDeviceId("不存在的打印机12345");
+
+        PrinterStatus status = windowsSystemPrinterAdapter.queryStatus(config);
+        assertNotNull(status);
+        assertFalse(status.isOnline());
+        assertEquals("打印机不存在", status.getDetail());
+    }
+
+    @Test
+    void testWindowsAdapterTestConnectionWithNonExistentPrinter() {
+        PrinterConfig config = new PrinterConfig();
+        config.setDeviceId("不存在的打印机12345");
+
+        boolean result = windowsSystemPrinterAdapter.testConnection(config);
+        assertFalse(result);
     }
 }

@@ -21,49 +21,6 @@
     #food-app .dialog-form .el-input { width: 293px; }
     #food-app .dialog-form .address .el-form-item__content { width: 100% !important; }
     #food-app .dialog-form .flavorBox { width: 100%; }
-    #food-app .dialog-form .flavorBox .addBut {
-      background: #ffc200; display: inline-block; padding: 0 20px;
-      border-radius: 4px; line-height: 40px; cursor: pointer;
-      color: #333; font-weight: 500;
-    }
-    #food-app .dialog-form .flavorBox .flavor {
-      border: 1px solid #dfe2e8; border-radius: 3px; padding: 15px; background: #fafafb;
-    }
-    #food-app .dialog-form .flavorBox .flavor .title { color: #606168; }
-    #food-app .dialog-form .flavorBox .flavor .cont .items { display: flex; margin: 10px 0; }
-    #food-app .dialog-form .flavorBox .flavor .cont .items .itTit { width: 150px; margin-right: 15px; }
-    #food-app .dialog-form .flavorBox .flavor .cont .items .itTit input { width: 100%; line-height: 40px; border-radius: 3px; padding: 0 10px; }
-    #food-app .dialog-form .flavorBox .flavor .cont .items .labItems {
-      flex: 1; display: flex; flex-wrap: wrap; border-radius: 3px;
-      min-height: 39px; border: 1px solid #d8dde3; background: #fff; padding: 0 5px;
-    }
-    #food-app .dialog-form .flavorBox .flavor .cont .items .labItems span {
-      display: inline-block; color: #f19c59; margin: 5px; line-height: 26px;
-      height: 26px; padding: 0 10px; background: #fdf4eb; border-radius: 3px; border: 1px solid #fae2cd;
-    }
-    #food-app .dialog-form .flavorBox .flavor .cont .items .labItems span i { cursor: pointer; font-style: normal; }
-    #food-app .dialog-form .flavorBox .flavor .cont .items .labItems .inputBox {
-      display: inline-block; width: 100%; height: 36px; line-height: 36px; overflow: hidden;
-    }
-    #food-app .dialog-form .flavorBox .flavor .cont .items .delFlavor {
-      display: inline-block; padding: 0 10px; color: #f19c59; cursor: pointer;
-    }
-    #food-app .selectInput { position: relative; width: 100%; min-width: 100px; }
-    #food-app .selectInput .flavorSelect {
-      position: absolute; width: 100%; padding: 0 10px; border-radius: 3px;
-      border: 1px solid #FF903D; line-height: 30px; text-align: center;
-      background: #fff; top: 50px; z-index: 99;
-    }
-    #food-app .selectInput .flavorSelect .items {
-      cursor: pointer; display: inline-block; width: 100%;
-      line-height: 35px; border-bottom: 1px solid #f4f4f4; color: #666;
-    }
-    #food-app .dialog-form .avatar-uploader .el-upload {
-      border: 1px dashed #d9d9d9; border-radius: 6px; cursor: pointer; position: relative; overflow: hidden;
-    }
-    #food-app .dialog-form .avatar-uploader .el-upload:hover { border-color: #409eff; }
-    #food-app .dialog-form .avatar-uploader-icon { font-size: 28px; color: #8c939d; width: 120px; height: 100px; line-height: 100px; text-align: center; }
-    #food-app .dialog-form .avatar { width: 120px; height: 100px; display: block; }
   </style>
 </head>
 <body>
@@ -79,15 +36,14 @@
         >
           <i
             slot="prefix"
-            class="el-input__icon el-icon-search"
-            style="cursor: pointer"
+            class="el-input__icon el-icon-search search-icon"
             @click="init"
           ></i>
         </el-input>
         <div class="tableLab">
-          <el-button type="danger" size="small" :disabled="checkList.length === 0" class="batch-btn" @click="deleteHandle('批量', null)">批量删除</el-button>
-          <el-button type="success" size="small" :disabled="checkList.length === 0" class="batch-btn" @click="statusHandle('1')">批量启售</el-button>
-          <el-button type="warning" size="small" :disabled="checkList.length === 0" class="batch-btn" @click="statusHandle('0')">批量停售</el-button>
+          <el-button type="danger" :disabled="checkList.length === 0" @click="deleteHandle('批量', null)">批量删除</el-button>
+          <el-button type="success" :disabled="checkList.length === 0" @click="statusHandle('1')">批量启售</el-button>
+          <el-button type="warning" :disabled="checkList.length === 0" @click="statusHandle('0')">批量停售</el-button>
           <el-button
             type="primary"
             @click="addFoodtype('add')"
@@ -221,7 +177,7 @@
                       <div class="itTit">
                         <div class="selectInput">
                           <div>
-                            <el-input v-model="item.name" type="text" style="width: 100%" placeholder="请输入口味" @focus="selectFlavor(true,index)" @blur="outSelect(false,index)" @input="inputHandle(index)"></el-input>
+                            <el-input v-model="item.name" type="text" placeholder="请输入口味" @focus="selectFlavor(true,index)" @blur="outSelect(false,index)" @input="inputHandle(index)"></el-input>
                           </div>
                           <div v-show="item.showOption" class="flavorSelect">
                             <span v-for="(it, ind) in dishFlavorsData" :key="ind" class="items" @click="checkOption(it,ind,index)">{{ it.name }}</span>
@@ -229,7 +185,7 @@
                           </div>
                         </div>
                       </div>
-                      <div class="labItems" style="display: flex">
+                      <div class="labItems">
                         <span v-for="(it, ind) in item.value" :key="ind">{{ it }} <i @click="delFlavorLabel(index, ind)">X</i></span>
                         <div class="inputBox" :style="inputStyle" contenteditable="true" @focus="flavorPosition(index)" @keydown.enter="(val)=>keyDownHandle(val,index)"></div>
                       </div>

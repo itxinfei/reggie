@@ -23,4 +23,5 @@ public class PrinterConfig implements Serializable {
     private Integer sort;
     private LocalDateTime createdTime;
     private LocalDateTime updatedTime;
+    private String systemPrinterName;
 }

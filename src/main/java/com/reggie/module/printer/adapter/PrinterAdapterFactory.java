@@ -12,17 +12,28 @@ public class PrinterAdapterFactory {
     @Autowired
     private XprinterAdapter xprinterAdapter;
 
+    @Autowired
+    private WindowsSystemPrinterAdapter windowsSystemPrinterAdapter;
+
     public PrinterAdapter getAdapter(String brand) {
         if (brand == null) {
-            return gprinterAdapter;
+            return windowsSystemPrinterAdapter;
         }
         switch (brand.toUpperCase()) {
             case "GPRINTER":
                 return gprinterAdapter;
             case "XPRINTER":
                 return xprinterAdapter;
+            case "WINDOWS":
+                return windowsSystemPrinterAdapter;
+            case "SYSTEM":
+                return windowsSystemPrinterAdapter;
             default:
-                return gprinterAdapter;
+                return windowsSystemPrinterAdapter;
         }
+    }
+
+    public WindowsSystemPrinterAdapter getWindowsAdapter() {
+        return windowsSystemPrinterAdapter;
     }
 }
