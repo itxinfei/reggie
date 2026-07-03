@@ -23,6 +23,11 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+.env.*
+application.yml
+application*.yml
+application*.yaml
+application*.properties
 
 # 临时文件
 *.tmp
