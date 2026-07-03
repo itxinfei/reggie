@@ -1,3 +1,6 @@
+-- 禁用外键检查，确保可以删除所有表
+SET FOREIGN_KEY_CHECKS = 0;
+
 DROP TABLE IF EXISTS coupon_user;
 DROP TABLE IF EXISTS coupon_template;
 DROP TABLE IF EXISTS recharge_record;
@@ -553,3 +556,6 @@ CREATE INDEX idx_address_user ON address_book(user_id);
 CREATE INDEX idx_cart_user ON shopping_cart(user_id);
 CREATE INDEX idx_dish_flavor_tenant_dish ON dish_flavor(tenant_id, dish_id);
 CREATE INDEX idx_order_detail_order ON order_detail(order_id);
+
+-- 重新启用外键检查
+SET FOREIGN_KEY_CHECKS = 1;
