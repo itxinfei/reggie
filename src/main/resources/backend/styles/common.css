@@ -2889,6 +2889,13 @@ input[type="number"] {
   padding-left: 14px;
   padding-right: 14px;
 }
+/* 表格选择列 checkbox：彻底禁用动画，防止选中时漂移 */
+.el-table-column--selection .cell .el-checkbox__inner {
+  transition: none !important;
+}
+.el-table-column--selection .cell .el-checkbox__inner::after {
+  transition: none !important;
+}
 .el-table-filter {
   border: 1px solid #ebeef5;
   border-radius: 2px;
@@ -12524,6 +12531,7 @@ input[type="number"] {
 .el-checkbox__input.is-checked .el-checkbox__inner::after {
   -webkit-transform: rotate(45deg) scaleY(1);
   transform: rotate(45deg) scaleY(1);
+  transition: transform 0s;
 }
 .el-checkbox__input.is-checked + .el-checkbox__label {
   color: #ffc200;
@@ -12546,6 +12554,14 @@ input[type="number"] {
 .el-checkbox__input.is-indeterminate .el-checkbox__inner::after {
   display: none;
 }
+/* ============================================
+   Checkbox 修复：消除选中时的动画漂移
+   原因：cubic-bezier(0.71, -0.46, 0.29, 1.46)
+   弹性曲线的负控制点产生 overshoot，导致视觉
+   抖动；同时 transform 延迟 0.05s 与颜色动画不
+   同步，加剧漂移感。
+   修复：使用线性过渡，统一时序
+   ============================================ */
 .el-checkbox__inner {
   display: inline-block;
   position: relative;
@@ -12557,10 +12573,16 @@ input[type="number"] {
   height: 14px;
   background-color: #fff;
   z-index: 1;
-  -webkit-transition: border-color 0.25s cubic-bezier(0.71, -0.46, 0.29, 1.46),
-    background-color 0.25s cubic-bezier(0.71, -0.46, 0.29, 1.46);
-  transition: border-color 0.25s cubic-bezier(0.71, -0.46, 0.29, 1.46),
-    background-color 0.25s cubic-bezier(0.71, -0.46, 0.29, 1.46);
+  -webkit-transition: border-color 0s, background-color 0s;
+  transition: border-color 0s, background-color 0s;
+}
+.el-checkbox__input.is-checked .el-checkbox__inner::after {
+  transform: rotate(45deg) scaleY(1);
+  transition: transform 0s;
+}
+.el-checkbox__inner::after {
+  transform: rotate(45deg) scaleY(0);
+  transition: transform 0s;
 }
 .el-checkbox__inner:hover {
   border-color: #ffc200;
@@ -12579,13 +12601,12 @@ input[type="number"] {
   -webkit-transform: rotate(45deg) scaleY(0);
   transform: rotate(45deg) scaleY(0);
   width: 3px;
-  -webkit-transition: -webkit-transform 0.15s ease-in 0.05s;
-  transition: -webkit-transform 0.15s ease-in 0.05s;
-  transition: transform 0.15s ease-in 0.05s;
-  transition: transform 0.15s ease-in 0.05s,
-    -webkit-transform 0.15s ease-in 0.05s;
   -webkit-transform-origin: center;
   transform-origin: center;
+  -webkit-transition: -webkit-transform 0s;
+  transition: -webkit-transform 0s;
+  transition: transform 0s;
+  transition: transform 0s, -webkit-transform 0s;
 }
 .el-checkbox__original {
   opacity: 0;
