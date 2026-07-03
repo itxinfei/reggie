@@ -245,8 +245,10 @@ CREATE TABLE printer_config (
   status int DEFAULT '1',
   sort int DEFAULT '0',
   created_time datetime DEFAULT CURRENT_TIMESTAMP,
-  updated_time datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
+  updated_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  system_printer_name varchar(200) DEFAULT NULL,
+  PRIMARY KEY (id),
+  KEY idx_tenant (tenant_id)
 );
 
 CREATE TABLE printer_log (
@@ -258,7 +260,9 @@ CREATE TABLE printer_log (
   status int DEFAULT '0',
   error_msg varchar(255) DEFAULT NULL,
   created_time datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  KEY idx_order (order_id),
+  KEY idx_printer (printer_id)
 );
 
 CREATE TABLE payment_order (
