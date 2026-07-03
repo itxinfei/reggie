@@ -2,12 +2,25 @@
 
 body {
   height: 100%;
-  /* min-width: 1176px; */
+  min-width: 1200px;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica Neue,
     Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
   margin: 0;
+}
+
+/* 响应式支持 */
+@media screen and (max-width: 1366px) {
+  body {
+    min-width: 1200px;
+  }
+}
+
+@media screen and (max-width: 1280px) {
+  body {
+    min-width: 1024px;
+  }
 }
 
 html {

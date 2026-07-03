@@ -73,7 +73,7 @@
         <el-input
           v-model="input"
           placeholder="请输入菜品名称"
-          style="width: 250px"
+          class="search-input"
           clearable
           @keyup.enter.native="handleQuery"
         >
@@ -85,9 +85,9 @@
           ></i>
         </el-input>
         <div class="tableLab">
-          <span class="span-btn delBut non" @click="deleteHandle('批量', null)">批量删除</span>
-          <span class="span-btn blueBug non" @click="statusHandle('1')">批量启售</span>
-          <span style="border:none; color: #E6A23C;" class="span-btn non" @click="statusHandle('0')">批量停售</span>
+          <el-button type="danger" size="small" :disabled="checkList.length === 0" class="batch-btn" @click="deleteHandle('批量', null)">批量删除</el-button>
+          <el-button type="success" size="small" :disabled="checkList.length === 0" class="batch-btn" @click="statusHandle('1')">批量启售</el-button>
+          <el-button type="warning" size="small" :disabled="checkList.length === 0" class="batch-btn" @click="statusHandle('0')">批量停售</el-button>
           <el-button
             type="primary"
             @click="addFoodtype('add')"
@@ -112,13 +112,16 @@
         ></el-table-column>
         <el-table-column prop="image" label="图片" align="center">
           <template slot-scope="{ row }">
-            <el-image style="width: auto; height: 40px; border:none;cursor: pointer;" 
-            :src="getImage(row.image)" 
-            :preview-src-list="[ `/common/download?name=${row.image}` ]" >
-            <div slot="error" class="image-slot">
-              <img src="./../../images/noImg.png"  style="width: auto; height: 40px; border:none;" >
-            </div>  
-          </el-image>
+            <el-image
+              class="table-image"
+              :src="getImage(row.image)"
+              :preview-src-list="[getImage(row.image)]"
+              :alt="row.name"
+            >
+              <div slot="error" class="image-slot">
+                <img src="./../../images/noImg.png" class="table-image" alt="暂无图片">
+              </div>
+            </el-image>
           </template>
         </el-table-column>
         <el-table-column
@@ -127,12 +130,14 @@
         ></el-table-column>
         <el-table-column label="售价">
           <template slot-scope="scope">
-            <span style="margin-right: 10px;">￥{{ scope.row.price/100 }}</span>
+            <span class="price-tag">￥{{ scope.row.price/100 }}</span>
           </template>
         </el-table-column>
         <el-table-column label="售卖状态">
           <template slot-scope="scope">
-            <span style="margin-right: 10px;">{{ scope.row.status == '0' ? '停售' : '启售' }}</span>
+            <span :class="scope.row.status == '0' ? 'status-inactive' : 'status-active'">
+              {{ scope.row.status == '0' ? '停售' : '启售' }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column
@@ -276,6 +281,7 @@
              counts: 0,
              page: 1,
              pageSize: 10,
+             loading: false,
              tableData : [],
              dishState : '',
              checkList: [],
@@ -327,6 +333,7 @@
         },
         methods: {
           async init () {
+            this.loading = true;
             const params = {
               page: this.page,
               pageSize: this.pageSize,
@@ -339,6 +346,8 @@
               }
             }).catch(err => {
               this.$message.error('请求出错了：' + err)
+            }).finally(() => {
+              this.loading = false;
             })
           },
           getImage (image) {
