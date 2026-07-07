@@ -25,44 +25,40 @@
         ref="ruleForm"
         :model="ruleForm"
         :rules="rules"
-        :inline="true"
+        :inline="false"
         label-width="180px"
         class="demo-ruleForm"
       >
-        <div>
-          <el-form-item
-            label="菜品名称:"
-            prop="name"
+        <el-form-item
+          label="菜品名称:"
+          prop="name"
+        >
+          <el-input
+            v-model="ruleForm.name"
+            placeholder="请填写菜品名称"
+            maxlength="20"
+          />
+        </el-form-item>
+        <el-form-item
+          label="菜品分类:"
+          prop="categoryId"
+        >
+          <el-select
+            v-model="ruleForm.categoryId"
+            placeholder="请选择菜品分类"
           >
-            <el-input
-              v-model="ruleForm.name"
-              placeholder="请填写菜品名称"
-              maxlength="20"
-            />
-          </el-form-item>
-          <el-form-item
-            label="菜品分类:"
-            prop="categoryId"
-          >
-            <el-select
-              v-model="ruleForm.categoryId"
-              placeholder="请选择菜品分类"
-            >
-              <el-option v-for="(item,index) in dishList" :key="index" :label="item.name" :value="item.id" />
-            </el-select>
-          </el-form-item>
-        </div>
-        <div>
-          <el-form-item
-            label="菜品价格:"
-            prop="price"
-          >
-            <el-input
-              v-model="ruleForm.price"
-              placeholder="请设置菜品价格"
-            />
-          </el-form-item>
-        </div>
+            <el-option v-for="(item,index) in dishList" :key="index" :label="item.name" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item
+          label="菜品价格:"
+          prop="price"
+        >
+          <el-input
+            v-model="ruleForm.price"
+            placeholder="请设置菜品价格"
+          />
+        </el-form-item>
         <el-form-item label="口味做法配置:">
           <el-form-item>
             <div class="flavorBox">
@@ -147,14 +143,11 @@
             </div>
           </el-form-item>
         </el-form-item>
-        <div>
-        </div>
-        <div>
-          <el-form-item
-            label="菜品图片:"
-            prop="region"
-            class="uploadImg"
-          >
+        <el-form-item
+          label="菜品图片:"
+          prop="region"
+          class="uploadImg"
+        >
             <el-upload
               class="avatar-uploader"
               action="/common/upload"
@@ -174,7 +167,6 @@
               ></i>
             </el-upload>
           </el-form-item>
-        </div>
         <div class="address">
           <el-form-item
             label="菜品描述:"

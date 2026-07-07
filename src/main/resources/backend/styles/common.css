@@ -1346,7 +1346,7 @@ input[type="number"] {
 }
 .el-dialog {
   position: relative;
-  margin: 0 auto 50px;
+  margin: 100px auto 0;
   border-radius: 2px;
   -webkit-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -1417,6 +1417,12 @@ input[type="number"] {
 .el-dialog--center .el-dialog__footer {
   text-align: inherit;
 }
+
+/* 统一弹窗内表单 label 宽度 */
+.el-dialog .el-form:not(.demo-form-inline) {
+  label-width: 120px;
+}
+
 .dialog-fade-enter-active {
   -webkit-animation: dialog-fade-in 0.3s;
   animation: dialog-fade-in 0.3s;
@@ -2889,12 +2895,17 @@ input[type="number"] {
   padding-left: 14px;
   padding-right: 14px;
 }
-/* 表格选择列 checkbox：彻底禁用动画，防止选中时漂移 */
-.el-table-column--selection .cell .el-checkbox__inner {
-  transition: none !important;
-}
+/* 表格选择列 checkbox：禁用动画 + 锁定 transform，彻底消除选中时布局偏移 */
+.el-table-column--selection .cell .el-checkbox,
+.el-table-column--selection .cell .el-checkbox__inner,
 .el-table-column--selection .cell .el-checkbox__inner::after {
   transition: none !important;
+  transform: none !important;
+}
+/* 恢复 block 显示，消除 inline-block 在 table cell 中受 baseline 对齐影响的位移 */
+.el-table-column--selection .cell .el-checkbox {
+  display: block !important;
+  vertical-align: middle !important;
 }
 .el-table-filter {
   border: 1px solid #ebeef5;
@@ -12528,11 +12539,6 @@ input[type="number"] {
   color: #bac0cd;
   cursor: not-allowed;
 }
-.el-checkbox__input.is-checked .el-checkbox__inner::after {
-  -webkit-transform: rotate(45deg) scaleY(1);
-  transform: rotate(45deg) scaleY(1);
-  transition: transform 0s;
-}
 .el-checkbox__input.is-checked + .el-checkbox__label {
   color: #ffc200;
 }
@@ -12573,19 +12579,12 @@ input[type="number"] {
   height: 14px;
   background-color: #fff;
   z-index: 1;
-  -webkit-transition: border-color 0s, background-color 0s;
-  transition: border-color 0s, background-color 0s;
+  transition: none;
+  transform: none !important;
 }
 .el-checkbox__input.is-checked .el-checkbox__inner::after {
-  transform: rotate(45deg) scaleY(1);
-  transition: transform 0s;
-}
-.el-checkbox__inner::after {
-  transform: rotate(45deg) scaleY(0);
-  transition: transform 0s;
-}
-.el-checkbox__inner:hover {
-  border-color: #ffc200;
+  transition: none !important;
+  transform: none !important;
 }
 .el-checkbox__inner::after {
   -webkit-box-sizing: content-box;
@@ -12598,15 +12597,13 @@ input[type="number"] {
   left: 4px;
   position: absolute;
   top: 1px;
-  -webkit-transform: rotate(45deg) scaleY(0);
-  transform: rotate(45deg) scaleY(0);
   width: 3px;
-  -webkit-transform-origin: center;
-  transform-origin: center;
-  -webkit-transition: -webkit-transform 0s;
-  transition: -webkit-transform 0s;
-  transition: transform 0s;
-  transition: transform 0s, -webkit-transform 0s;
+  transition: none !important;
+  transform: none !important;
+  transform-origin: unset !important;
+}
+.el-checkbox__inner:hover {
+  border-color: #ffc200;
 }
 .el-checkbox__original {
   opacity: 0;

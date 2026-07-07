@@ -39,7 +39,7 @@
         <div slot="header">菜品销量 Top 10</div>
         <div id="rankingChart"></div>
       </el-card>
-      <el-table :data="tableData" stripe class="tableBox">
+      <el-table :data="tableData" stripe border class="tableBox">
         <el-table-column type="index" label="排名" width="80"></el-table-column>
         <el-table-column prop="name" label="菜品名称"></el-table-column>
         <el-table-column prop="salesCount" label="销量"></el-table-column>

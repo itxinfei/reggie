@@ -21,7 +21,7 @@
         <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
         <el-button type="primary" @click="addHandle">+ 新增盘点</el-button>
       </div>
-      <el-table :data="tableData" stripe class="tableBox" row-key="id" @expand-change="loadDetails">
+      <el-table :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
         <el-table-column type="expand">
           <template slot-scope="props">
             <el-table :data="props.row.details" stripe class="tableBox" v-if="props.row.details">

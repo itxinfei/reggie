@@ -12,12 +12,12 @@
 <body>
   <div class="dashboard-container" id="category-app">
     <div class="container">
-      <div class="tableBar" style="display: inline-block">
+      <div class="tableBar">
         <el-button type="primary" class="continue" @click="addHandle">
           + 新增食材分类
         </el-button>
       </div>
-      <el-table :data="tableData" stripe class="tableBox">
+      <el-table :data="tableData" stripe border class="tableBox">
         <el-table-column prop="name" label="分类名称" /></el-table-column>
         <el-table-column prop="sort" label="排序" /></el-table-column>
         <el-table-column label="操作" width="160" align="center">

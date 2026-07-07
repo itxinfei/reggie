@@ -14,20 +14,19 @@
   <div class="dashboard-container" id="category-app">
     <div class="container">
       <div class="tableBar">
-        <div></div>
-        <div class="tableLab">
-          <el-button
-            type="primary"
-            @click="addClass('class')"
-          >
-            + 新增菜品分类
-          </el-button>
-          <el-button
-            @click="addClass('meal')"
-          >
-            + 新增套餐分类
-          </el-button>
-        </div>
+        <el-button
+          type="primary"
+          class="continue"
+          @click="addClass('class')"
+        >
+          + 新增菜品分类
+        </el-button>
+        <el-button
+          type="primary"
+          @click="addClass('meal')"
+        >
+          + 新增套餐分类
+        </el-button>
       </div>
       <el-table
         :data="tableData"
@@ -161,7 +160,7 @@
               'dialogVisible': false,
               'categoryId': '',
               'name': '',
-              'sort': ''
+              sort: ''
             }
           }
         },

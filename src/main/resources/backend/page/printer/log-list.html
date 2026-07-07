@@ -19,7 +19,7 @@
         <el-button type="primary" class="search-btn" @click="search">查询</el-button>
         <el-button @click="reset">重置</el-button>
       </div>
-      <el-table :data="tableData" stripe class="tableBox">
+      <el-table :data="tableData" stripe border class="tableBox">
         <el-table-column prop="orderId" label="订单号"></el-table-column>
         <el-table-column prop="printType" label="打印类型"></el-table-column>
         <el-table-column prop="printerId" label="打印机"></el-table-column>

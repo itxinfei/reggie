@@ -153,11 +153,10 @@
         display: inline-block;
         vertical-align: middle;
       }
-      .addDishCon .el-checkbox__inner {
-        transition: none !important;
-      }
+      .addDishCon .el-checkbox__inner,
       .addDishCon .el-checkbox__inner::after {
         transition: none !important;
+        transform: none !important;
       }
       #combo-add-app .setmealFood .el-form-item__label::before{
           content: '*';
@@ -179,25 +178,21 @@
           ref="ruleForm"
           :model="ruleForm"
           :rules="rules"
-          :inline="true"
+          :inline="false"
           label-width="180px"
           class="demo-ruleForm"
         >
-          <div>
-            <el-form-item label="套餐名称:" prop="name" >
-              <el-input v-model="ruleForm.name" placeholder="请填写套餐名称" maxlength="20"/>
-            </el-form-item>
-            <el-form-item label="套餐分类:" prop="idType">
-              <el-select v-model="ruleForm.idType" placeholder="请选择套餐分类" @change="$forceUpdate()">
-                <el-option v-for="(item, index) in setMealList" :key="index" :label="item.name" :value="item.id" />
-              </el-select>
-            </el-form-item>
-          </div>
-          <div>
-            <el-form-item label="套餐价格:" prop="price">
-              <el-input v-model="ruleForm.price" placeholder="请设置套餐价格" />
-            </el-form-item>
-          </div>
+          <el-form-item label="套餐名称:" prop="name" >
+            <el-input v-model="ruleForm.name" placeholder="请填写套餐名称" maxlength="20"/>
+          </el-form-item>
+          <el-form-item label="套餐分类:" prop="idType">
+            <el-select v-model="ruleForm.idType" placeholder="请选择套餐分类" @change="$forceUpdate()">
+              <el-option v-for="(item, index) in setMealList" :key="index" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="套餐价格:" prop="price">
+            <el-input v-model="ruleForm.price" placeholder="请设置套餐价格" />
+          </el-form-item>
           <div>
             <el-form-item label="套餐菜品:" class="setmealFood">
               <el-form-item>
@@ -233,9 +228,7 @@
                 </div>
               </el-form-item>
             </el-form-item>
-          </div>
-          <div>
-            <el-form-item label="套餐图片:" class="uploadImg">
+          <el-form-item label="套餐图片:" class="uploadImg">
               <el-upload
                 class="avatar-uploader"
                 action="/common/upload"
@@ -248,7 +241,6 @@
                 <i v-else class="el-icon-plus avatar-uploader-icon"></i>
               </el-upload>
             </el-form-item>
-          </div>
           <div class="address">
             <el-form-item label="套餐描述:">
               <el-input v-model="ruleForm.description" type="textarea" :rows="3" placeholder="套餐描述，最长200字" maxlength="200"/>
