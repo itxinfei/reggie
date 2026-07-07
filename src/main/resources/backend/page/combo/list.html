@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>套餐管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
@@ -25,27 +25,20 @@
             slot="prefix"
             class="el-input__icon el-icon-search"
             style="cursor: pointer"
-            @click="init"
+            @click="handleQuery"
           ></i>
         </el-input>
         <div class="tableLab">
-          <el-button type="text" class="delBut non" @click="deleteHandle('批量')">批量删除</el-button>
-          <el-button type="text" class="blueBug non" @click="statusHandle('1')">批量启售</el-button>
-          <el-button
-            type="text"
-            class="delBut non"
-            style="border:none;"
-            @click="statusHandle('0')"
-          >批量停售</el-button>
-          <el-button
-            type="primary"
-            @click="addSetMeal('add')"
-          >
+          <el-button type="primary" size="small" @click="deleteHandle('批量')">批量删除</el-button>
+          <el-button type="primary" size="small" @click="statusHandle('1')">批量启售</el-button>
+          <el-button type="primary" size="small" @click="statusHandle('0')">批量停售</el-button>
+          <el-button type="primary" size="small" @click="addSetMeal('add')">
             + 新建套餐
           </el-button>
         </div>
       </div>
       <el-table
+        v-loading="loading"
         :data="tableData"
         stripe
         border
@@ -63,11 +56,13 @@
         ></el-table-column>
         <el-table-column prop="image" label="图片"  align="center">
           <template slot-scope="{ row }">
-            <el-image style="width: auto; height: 40px; border:none;cursor: pointer;" :src="getImage(row.image)" :preview-src-list="[ `/common/download?name=${row.image}` ]" >
-              <div slot="error" class="image-slot">
-                <img src="./../../images/noImg.png"  style="width: auto; height: 40px; border:none;" >
-              </div> 
-            </el-image>
+            <el-image style="width: auto; height: 40px; border:none;cursor: pointer; border-radius: 4px;"
+            :src="getImage(row.image)"
+            :preview-src-list="[ `/common/download?name=${row.image}` ]" >
+            <div slot="error" class="image-slot">
+              <img src="./../../images/noImg.png"  style="width: auto; height: 40px; border:none; border-radius: 4px;" >
+            </div>
+          </el-image>
           </template>
         </el-table-column>
         <el-table-column
@@ -96,8 +91,7 @@
         </el-table-column>
         <el-table-column
           label="操作"
-          width="160"
-          align="center"
+          align="left"
         >
           <template slot-scope="scope">
             <el-button
@@ -157,6 +151,7 @@
              page: 1,
              pageSize: 10,
              tableData : [],
+             loading: false,
              dishState : '',
              checkList: []
           }
@@ -169,6 +164,7 @@
         },
         methods: {
           async init () {
+            this.loading = true
             const params = {
               page: this.page,
               pageSize: this.pageSize,
@@ -180,7 +176,9 @@
                 this.counts = res.data.total
               }
             }).catch(err => {
-              this.$message.error('请求出错了：' + err)
+              this.$message.error('请求失败：' + err)
+            }).finally(() => {
+              this.loading = false
             })
           },
           getImage (image) {
@@ -226,7 +224,7 @@
                   this.$message.error(res.msg || '操作失败')
                 }
               }).catch(err => {
-                this.$message.error('请求出错了：' + err)
+                this.$message.error('请求失败：' + err)
               })
             })
           },
@@ -259,7 +257,7 @@
                   this.$message.error(res.msg || '操作失败')
                 }
               }).catch(err => {
-                  this.$message.error('请求出错了：' + err)
+                  this.$message.error('请求失败：' + err)
               })
             })
           },
@@ -285,3 +283,4 @@
     </script>
 </body>
 </html>
+

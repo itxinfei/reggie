@@ -10,14 +10,13 @@
 }
 .dashboard-container .container .tableBar {
   display: flex;
-  align-items: center;
   margin-bottom: 20px;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
 }
 .dashboard-container .container .tableBox {
   width: 100%;
+  border: solid 2px #f3f4f7;
+  border-radius: 2px;
 }
 
 .dashboard-container .container .tableBox .el-image img {
@@ -27,7 +26,7 @@
 
 .dashboard-container .container .pageList {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 30px;
 }
 
 .dashboard-container .container .tableLab .span-btn {
@@ -43,37 +42,8 @@
   margin-left: 10px;
 }
 
-/* tableLab 中的文本按钮样式（用于批量操作） */
-.dashboard-container .container .tableLab .el-button--text {
-  padding: 0 20px;
-  font-size: 14px;
-  color: #818693;
-  position: relative;
-}
-
-.dashboard-container .container .tableLab .el-button--text::after {
-  content: "";
-  position: absolute;
-  right: -6px;
-  height: 14px;
-  width: 0px;
-  border-right: solid 1px #ebeef5;
-}
-
-.dashboard-container .container .tableLab .el-button--text.delBut {
-  color: #f56c6c;
-}
-
-.dashboard-container .container .tableLab .el-button--text.blueBug {
-  color: #419eff;
-}
-
-.dashboard-container .container .tableLab .el-button--text.non::after {
-  display: none;
-}
-
 .el-table-column--selection .cell {
-  padding: 0;
+  padding-left: 10px;
 }
 
 /* 添加 */
@@ -99,7 +69,6 @@
   width: 160px;
   height: 160px;
   display: block;
-  border-radius: 4px;
 }
 .addBrand-container .el-form--inline .el-form-item__content {
   width: 293px;
@@ -219,83 +188,4 @@
 .el-table--border td:first-child .cell,
 .el-table--border th:first-child .cell {
   padding-left: 12px;
-}
-
-/* 统一 thead 居中 */
-.el-table th {
-  text-align: center !important;
-}
-
-/* 统一表格视觉样式 */
-.tableBox .el-table {
-  font-size: 13px;
-}
-
-.tableBox .el-table th {
-  background-color: #f5f7fa !important;
-  color: #333333 !important;
-  font-weight: 600 !important;
-  font-size: 14px !important;
-}
-
-/* 统一表格内容垂直居中 */
-.tableBox .el-table td {
-  vertical-align: middle;
-}
-
-/* 增强斑马纹对比度 */
-.tableBox .el-table--striped .el-table__body tr.el-table__row--striped td {
-  background-color: #fafafa !important;
-}
-
-/* 表格操作按钮间距 */
-.tableBox .el-button {
-  margin: 0 5px;
-}
-
-/* 图片圆角样式 */
-.tableBox .el-image {
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-/* 搜索图标垂直居中 */
-.tableBar .el-input .el-input__icon {
-  line-height: 40px;
-}
-
-/* 文本按钮悬停效果 */
-.dashboard-container .container .tableLab .el-button--text:hover {
-  opacity: 0.8;
-  transition: opacity 0.3s;
-}
-
-/* 表格行悬停过渡 */
-.el-table__body tr {
-  transition: background-color 0.2s ease;
-}
-
-/* 按钮过渡效果 */
-.el-button {
-  transition: all 0.3s ease;
-}
-
-/* 空状态提示样式 */
-.empty-tip {
-  text-align: center;
-  padding: 40px;
-  color: #909399;
-  font-size: 14px;
-}
-
-/* 统一表单标签样式 */
-.addBrand-container .el-form-item {
-  margin-bottom: 22px;
-}
-
-/* 表格边框增强 */
-.tableBox {
-  border: 1px solid #ebeef5;
-  border-radius: 4px;
-  overflow: hidden;
 }

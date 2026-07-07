@@ -19,7 +19,7 @@ public class MybatisPlusConfig {
 
     private static final Set<String> IGNORE_TABLES = new HashSet<>(Arrays.asList(
         "tenant", "employee", "user", "address_book", "orders", "order_detail", "shopping_cart",
-        "purchase_order_detail"
+        "purchase_order_detail", "recharge_record", "points_record", "coupon_user", "printer_log"
     ));
 
     @Bean

@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>预约管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
@@ -14,12 +14,12 @@
     <div class="container">
       <div class="tableBar">
         <el-input v-model="input" placeholder="请输入客户姓名" style="width: 200px" clearable @keyup.enter.native="handleQuery">
-          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="init"></i>
+          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
         </el-input>
         <el-input v-model="phone" placeholder="请输入手机号" style="width: 200px; margin-left: 10px;" clearable @keyup.enter.native="handleQuery">
-          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="init"></i>
+          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
         </el-input>
-        <el-select v-model="status" placeholder="请选择状态" clearable style="width: 150px; margin-left: 10px;" @change="init">
+        <el-select v-model="status" placeholder="请选择状态" clearable style="width: 150px; margin-left: 10px;" @change="handleQuery">
           <el-option label="待确认" value="PENDING"></el-option>
           <el-option label="已确认" value="CONFIRMED"></el-option>
           <el-option label="已到店" value="ARRIVED"></el-option>
@@ -128,7 +128,7 @@
               this.$message.error(res.msg || '操作失败')
             }
           }).catch(err => {
-            this.$message.error('请求出错了：' + err)
+            this.$message.error('请求失败：' + err)
           })
         },
         handleQuery() {
@@ -149,7 +149,7 @@
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求出错了：' + err)
+              this.$message.error('请求失败：' + err)
             })
           })
         },
@@ -167,7 +167,7 @@
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求出错了：' + err)
+              this.$message.error('请求失败：' + err)
             })
           })
         },
@@ -185,7 +185,7 @@
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求出错了：' + err)
+              this.$message.error('请求失败：' + err)
             })
           })
         },
@@ -202,3 +202,4 @@
   </script>
 </body>
 </html>
+

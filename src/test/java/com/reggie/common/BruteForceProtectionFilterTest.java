@@ -17,6 +17,7 @@ import static org.mockito.Mockito.*;
  *
  * @author itxinfei
  */
+@SuppressWarnings("unchecked")
 @SpringBootTest
 @ActiveProfiles("test")
 class BruteForceProtectionFilterTest {

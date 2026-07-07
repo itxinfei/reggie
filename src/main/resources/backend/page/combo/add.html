@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>套餐管理 - 瑞吉外卖管理端</title>
     <!-- 引入样式 -->
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
     <link rel="stylesheet" href="../../styles/common.css" />
@@ -237,7 +237,7 @@
                 :on-change="onChange"
                 ref="upload"
               >
-                <img v-if="imageUrl" :src="imageUrl" class="avatar"></img>
+                <img v-if="imageUrl" :src="imageUrl" class="avatar" style="border-radius: 4px;"></img>
                 <i v-else class="el-icon-plus avatar-uploader-icon"></i>
               </el-upload>
             </el-form-item>
@@ -248,8 +248,8 @@
           </div>
           <div class="subBox address">
             <el-form-item>
-              <el-button @click="goBack()"> 取消 </el-button>
-              <el-button type="primary" @click="submitForm('ruleForm', false)"> 保存 </el-button>
+              <el-button @click="goBack()" style="margin-right: 10px;"> 取消 </el-button>
+              <el-button type="primary" @click="submitForm('ruleForm', false)" style="margin-right: 10px;"> 保存 </el-button>
               <el-button
                 v-if="actionType == 'add'"
                 type="primary"
@@ -579,7 +579,7 @@
                       }
                     })
                     .catch((err) => {
-                      this.$message.error('请求出错了：' + err)
+                      this.$message.error('请求失败：' + err)
                     })
                 } else {
                   delete prams.updateTime
@@ -593,7 +593,7 @@
                       }
                     })
                     .catch((err) => {
-                      this.$message.error('请求出错了：' + err)
+                      this.$message.error('请求失败：' + err)
                     })
                 }
               } else {
@@ -713,3 +713,4 @@
     </script>
   </body>
 </html>
+

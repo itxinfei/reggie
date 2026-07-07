@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -16,7 +16,7 @@
         min-width: 1366px;
       }
       .app-main{
-        height: calc(100% - 56px);
+        height: calc(100% - 64px);
       }
       .app-main .divTmp{
         width: 100%;
@@ -30,9 +30,9 @@
       <div class="app-wrapper openSidebar clearfix">
         <!-- sidebar -->
         <div class="sidebar-container">
-          <div class="logo" @click="goHome()">
+          <div class="logo">
             <!-- <img src="images/logo.png" width="122.5" alt="" /> -->
-            <img src="images/login/login-logo.png" alt="" style="width: 156px; height: 36px; cursor: pointer" />
+            <img src="images/login/login-logo.png" alt="" style="width: 117px; height: 32px" />
           </div>
 
           <el-scrollbar wrap-class="scrollbar-wrapper">
@@ -56,7 +56,7 @@
                     :key="sub.id"
                     @click="menuHandle(sub,false)"
                     >
-                    <i :class="[iconfont, sub.icon]"></i>
+                    <i :class="iconfont" :class="sub.icon"></i>
                     <span slot="title">{{sub.name}}</span>
                     </el-menu-item
                   >
@@ -151,48 +151,6 @@
                     name: '订单明细',
                     url: 'page/order/list.html',
                     icon: 'icon-order'
-                  },
-                  {
-                    id: '7',
-                    name: '打印管理',
-                    url: 'page/printer/config-list.html',
-                    icon: 'icon-order'
-                  },
-                  {
-                    id: '8',
-                    name: '支付管理',
-                    url: 'page/payment/order-list.html',
-                    icon: 'icon-lock'
-                  },
-                  {
-                    id: '9',
-                    name: '外卖平台',
-                    url: 'page/delivery/order-list.html',
-                    icon: 'icon-user'
-                  },
-                  {
-                    id: '10',
-                    name: '堂食管理',
-                    url: 'page/dining/table-list.html',
-                    icon: 'icon-food'
-                  },
-                  {
-                    id: '11',
-                    name: '进销存管理',
-                    url: 'page/inventory/material-list.html',
-                    icon: 'icon-category'
-                  },
-                  {
-                    id: '12',
-                    name: '会员营销',
-                    url: 'page/member-center/member-list.html',
-                    icon: 'icon-member'
-                  },
-                  {
-                    id: '13',
-                    name: '经营报表',
-                    url: 'page/report/daily.html',
-                    icon: 'icon-combo'
                   }
               //   ],
               // },
@@ -227,12 +185,6 @@
                 window.location.href = '/backend/page/login/login.html'
               }
             })
-          },
-          goHome() {
-            const homeMenu = this.menuList.find(item => item.id === '2')
-            if (homeMenu) {
-              this.menuHandle(homeMenu, false)
-            }
           },
           goBack() {
             // window.location.href = 'javascript:history.go(-1)'

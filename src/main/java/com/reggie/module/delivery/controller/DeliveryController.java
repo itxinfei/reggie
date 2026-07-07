@@ -75,6 +75,7 @@ public class DeliveryController {
     @Operation(summary = "同步菜品")
     public R<String> syncMenu(@RequestBody Map<String, Object> params) {
         String platform = (String) params.get("platform");
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> dishes = (List<Map<String, Object>>) params.get("dishes");
         boolean result = deliveryService.syncMenu(platform, dishes);
         return result ? R.success("菜单同步成功") : R.error("菜单同步失败");
@@ -84,10 +85,16 @@ public class DeliveryController {
     @Operation(summary = "同步库存")
     public R<String> syncStock(@RequestBody Map<String, Object> params) {
         String platform = (String) params.get("platform");
+        @SuppressWarnings("unchecked")
         Map<String, Object> stockRaw = (Map<String, Object>) params.get("stock");
         Map<Long, Integer> stock = new HashMap<>();
         for (Map.Entry<String, Object> e : stockRaw.entrySet()) {
-            stock.put(Long.valueOf(e.getKey()), Integer.valueOf(e.getValue().toString()));
+            try {
+                stock.put(Long.valueOf(e.getKey()), Integer.valueOf(e.getValue().toString()));
+            } catch (NumberFormatException ex) {
+                log.warn("库存数据格式错误: key={}, value={}", e.getKey(), e.getValue());
+                return R.error("库存数据格式错误");
+            }
         }
         boolean result = deliveryService.syncStock(platform, stock);
         return result ? R.success("库存同步成功") : R.error("库存同步失败");

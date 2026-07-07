@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
@@ -34,8 +35,40 @@ public class CommonController {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
     private static final int BUFFER_SIZE = 1024;
 
-    @Value("${reggie.path}")
+    @Value("${reggie.path:}")
+    private String configPath;
+
     private String basePath;
+
+    /**
+     * 初始化上传目录：jar包所在目录下的 uploads 文件夹
+     */
+    @PostConstruct
+    public void init() {
+        if (configPath != null && !configPath.isEmpty()) {
+            // 使用配置文件指定的路径
+            basePath = configPath;
+        } else {
+            // 优先使用项目根目录（兼容开发和部署环境）
+            String userDir = System.getProperty("user.dir");
+
+            // 检查是否在 target/classes 目录下运行（IDE 开发模式）
+            if (userDir.contains("target") && userDir.endsWith("classes")) {
+                // 回退到项目根目录
+                userDir = new File(userDir).getParentFile().getParent();
+            }
+
+            basePath = new File(userDir, "uploads").getAbsolutePath() + File.separator;
+        }
+
+        // 确保目录存在
+        File dir = new File(basePath);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        log.info("📁 文件上传目录: {}", basePath);
+    }
 
     /**
      * 文件上传
@@ -65,17 +98,19 @@ public class CommonController {
         }
 
         //file是一个临时文件，需要转存到指定位置，否则本次请求完成后临时文件会删除
-        log.info("文件上传：originalFilename={}, size={}", originalFilename, file.getSize());
+        log.info("📤 文件上传: originalFilename={}, size={} bytes", originalFilename, file.getSize());
+        log.info("📍 上传基础路径: {}", basePath);
+        log.info("🔄 保存子目录: {}", subDir);
+        log.info("📍 完整保存路径: {}", basePath + subDir + fileName);
 
         //原始文件名
-        //String originalFilename = file.getOriginalFilename();//abc.jpg
         String suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
 
         //使用UUID重新生成文件名，防止文件名称重复造成文件覆盖
-        String fileName = UUID.randomUUID().toString() + suffix;//dfsdfdfd.jpg
+        String fileName = UUID.randomUUID().toString() + suffix;
 
         // 保存到 images/dishes/ 子目录，与数据库中的路径格式一致
-        String subDir = "images/dishes/";
+        String subDir = "images" + File.separator + "dishes" + File.separator;
         File dir = new File(basePath + subDir);
         if (!dir.exists()) {
             dir.mkdirs();
@@ -99,24 +134,26 @@ public class CommonController {
     @Operation(summary = "文件下载", description = "下载图片文件")
     @Parameter(name = "name", description = "文件名", required = true)
     public void download(String name, HttpServletResponse response) {
-        // 解决中文文件名乱码问题
-        // 这里可以添加文件名编码处理（如果需要）
-
-        // 拼接文件完整路径
-        String filePath = basePath + name;
-        File file = new File(filePath);
-
         try {
-            // 如果文件不存在，返回默认占位图片
+            // 将前端传来的路径分隔符统一转换为系统分隔符
+            String normalizedPath = name.replace("/", File.separator).replace("\\", File.separator);
+
+            // 拼接文件完整路径
+            String filePath = basePath + normalizedPath;
+            File file = new File(filePath);
+
+            // 打印详细的路径信息用于调试
+            log.info("📥 文件下载请求: name={}", name);
+            log.info("📂 基础路径(basePath): {}", basePath);
+            log.info("🔄 规范化路径: {}", normalizedPath);
+            log.info("📍 完整文件路径: {}", filePath);
+            log.info("✅ 文件是否存在: {}", file.exists());
+
+            // 如果文件不存在，返回 SVG 占位图（不依赖外部文件）
             if (!file.exists()) {
-                log.warn("文件不存在，返回占位图: {}", filePath);
-                // 尝试返回默认占位图
-                file = new File(basePath + "images/dishes/placeholder.jpg");
-                if (!file.exists()) {
-                    log.error("占位图也不存在: {}", file.getAbsolutePath());
-                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                    return;
-                }
+                log.warn("❌ 文件不存在，返回占位图: {}", filePath);
+                sendPlaceholderImage(response);
+                return;
             }
 
             FileInputStream fileInputStream = new FileInputStream(file);
@@ -153,13 +190,25 @@ public class CommonController {
             fileInputStream.close();
         } catch (Exception e) {
             log.error("文件下载失败: {}", filePath, e);
-            // 设置404响应而不是抛出异常
             try {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "文件不存在");
             } catch (IOException ex) {
                 log.error("发送错误响应失败", ex);
             }
         }
+    }
 
+    /**
+     * 返回 SVG 占位图（图片不存在时显示）
+     */
+    private void sendPlaceholderImage(HttpServletResponse response) throws IOException {
+        String svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\" viewBox=\"0 0 200 200\">" +
+                "<rect width=\"200\" height=\"200\" fill=\"#f0f0f0\"/>" +
+                "<text x=\"100\" y=\"90\" font-family=\"Arial\" font-size=\"14\" fill=\"#999\" text-anchor=\"middle\">No Image</text>" +
+                "<text x=\"100\" y=\"115\" font-family=\"Arial\" font-size=\"12\" fill=\"#bbb\" text-anchor=\"middle\">&#x1F5BC;</text>" +
+                "</svg>";
+        response.setContentType("image/svg+xml");
+        response.getWriter().write(svg);
+        response.getWriter().flush();
     }
 }

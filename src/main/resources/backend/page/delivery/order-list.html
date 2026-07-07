@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>外卖平台订单</title>
+  <title>外卖平台订单 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
@@ -145,7 +145,7 @@
               this.$message.error(res.msg || '操作失败')
             }
           }).catch(err => {
-            this.$message.error('请求出错了：' + err)
+            this.$message.error('请求失败：' + err)
           })
         },
         handleQuery() {
@@ -167,7 +167,7 @@
               this.$message.error(res.msg || '操作失败')
             }
           }).catch(err => {
-            this.$message.error('请求出错了：' + err)
+            this.$message.error('请求失败：' + err)
           })
         },
         async syncStock() {
@@ -178,7 +178,7 @@
               this.$message.error(res.msg || '操作失败')
             }
           }).catch(err => {
-            this.$message.error('请求出错了：' + err)
+            this.$message.error('请求失败：' + err)
           })
         },
         async acceptOrder(row) {
@@ -195,7 +195,7 @@
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求出错了：' + err)
+              this.$message.error('请求失败：' + err)
             })
           })
         },
@@ -212,3 +212,4 @@
   </script>
 </body>
 </html>
+

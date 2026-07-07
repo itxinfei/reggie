@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>区域管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
@@ -14,7 +14,7 @@
     <div class="container">
       <div class="tableBar">
         <el-input v-model="input" placeholder="请输入区域名称" style="width: 250px" clearable @keyup.enter.native="handleQuery">
-          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="init"></i>
+          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
         </el-input>
         <div class="tableLab">
           <el-button type="primary" @click="addHandle">+ 新增区域</el-button>
@@ -102,7 +102,7 @@
               this.$message.error(res.msg || '操作失败')
             }
           }).catch(err => {
-            this.$message.error('请求出错了：' + err)
+            this.$message.error('请求失败：' + err)
           })
         },
         handleQuery() {
@@ -152,7 +152,7 @@
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求出错了：' + err)
+              this.$message.error('请求失败：' + err)
             })
           } else {
             updateArea({ id: this.form.id, name: this.form.name, sort: this.form.sort }).then(res => {
@@ -164,7 +164,7 @@
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求出错了：' + err)
+              this.$message.error('请求失败：' + err)
             })
           }
         },
@@ -181,7 +181,7 @@
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求出错了：' + err)
+              this.$message.error('请求失败：' + err)
             })
           })
         },
@@ -198,3 +198,4 @@
   </script>
 </body>
 </html>
+

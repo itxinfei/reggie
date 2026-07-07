@@ -318,17 +318,17 @@ INSERT INTO points_record (id, member_id, type, points, biz_type, biz_id, remark
 -- ========================================
 -- 13. 充值记录表 (recharge_record) - 10条
 -- ========================================
-INSERT INTO recharge_record (id, member_id, amount, gift_amount, payment_method, created_time) VALUES
-(1, 1, 500.00, 50.00, '微信支付', DATE_SUB(NOW(), INTERVAL 20 DAY)),
-(2, 3, 1000.00, 150.00, '支付宝', DATE_SUB(NOW(), INTERVAL 18 DAY)),
-(3, 5, 2000.00, 300.00, '微信支付', DATE_SUB(NOW(), INTERVAL 15 DAY)),
-(4, 9, 800.00, 80.00, '银行卡', DATE_SUB(NOW(), INTERVAL 12 DAY)),
-(5, 2, 300.00, 30.00, '微信支付', DATE_SUB(NOW(), INTERVAL 10 DAY)),
-(6, 6, 600.00, 60.00, '支付宝', DATE_SUB(NOW(), INTERVAL 8 DAY)),
-(7, 10, 400.00, 40.00, '微信支付', DATE_SUB(NOW(), INTERVAL 6 DAY)),
-(8, 15, 1200.00, 180.00, '银行卡', DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(9, 13, 500.00, 50.00, '支付宝', DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(10, 7, 350.00, 35.00, '微信支付', DATE_SUB(NOW(), INTERVAL 1 DAY));
+INSERT INTO recharge_record (id, tenant_id, member_id, amount, gift_amount, payment_method, created_time) VALUES
+(1, 1, 1, 500.00, 50.00, '微信支付', DATE_SUB(NOW(), INTERVAL 20 DAY)),
+(2, 1, 3, 1000.00, 150.00, '支付宝', DATE_SUB(NOW(), INTERVAL 18 DAY)),
+(3, 1, 5, 2000.00, 300.00, '微信支付', DATE_SUB(NOW(), INTERVAL 15 DAY)),
+(4, 1, 9, 800.00, 80.00, '银行卡', DATE_SUB(NOW(), INTERVAL 12 DAY)),
+(5, 1, 2, 300.00, 30.00, '微信支付', DATE_SUB(NOW(), INTERVAL 10 DAY)),
+(6, 1, 6, 600.00, 60.00, '支付宝', DATE_SUB(NOW(), INTERVAL 8 DAY)),
+(7, 1, 10, 400.00, 40.00, '微信支付', DATE_SUB(NOW(), INTERVAL 6 DAY)),
+(8, 1, 15, 1200.00, 180.00, '银行卡', DATE_SUB(NOW(), INTERVAL 4 DAY)),
+(9, 1, 13, 500.00, 50.00, '支付宝', DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(10, 1, 7, 350.00, 35.00, '微信支付', DATE_SUB(NOW(), INTERVAL 1 DAY));
 
 -- ========================================
 -- 14. 优惠券模板表 (coupon_template) - 10条

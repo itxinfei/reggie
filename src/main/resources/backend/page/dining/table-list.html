@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>桌台管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
@@ -14,9 +14,9 @@
     <div class="container">
       <div class="tableBar">
         <el-input v-model="input" placeholder="请输入桌台名称" style="width: 200px" clearable @keyup.enter.native="handleQuery">
-          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="init"></i>
+          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
         </el-input>
-        <el-select v-model="areaId" placeholder="请选择区域" clearable style="width: 180px; margin-left: 10px;" @change="init">
+        <el-select v-model="areaId" placeholder="请选择区域" clearable style="width: 180px; margin-left: 10px;" @change="handleQuery">
           <el-option v-for="item in areaList" :key="item.id" :label="item.name" :value="item.id"></el-option>
         </el-select>
         <div class="tableLab">
@@ -147,7 +147,7 @@
               this.$message.error(res.msg || '操作失败')
             }
           }).catch(err => {
-            this.$message.error('请求出错了：' + err)
+            this.$message.error('请求失败：' + err)
           })
         },
         async loadAreaList() {
@@ -156,7 +156,7 @@
               this.areaList = res.data || []
             }
           }).catch(err => {
-            this.$message.error('请求出错了：' + err)
+            this.$message.error('请求失败：' + err)
           })
         },
         handleQuery() {
@@ -216,7 +216,7 @@
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求出错了：' + err)
+              this.$message.error('请求失败：' + err)
             })
           } else {
             updateTable({
@@ -236,7 +236,7 @@
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求出错了：' + err)
+              this.$message.error('请求失败：' + err)
             })
           }
         },
@@ -256,7 +256,7 @@
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求出错了：' + err)
+              this.$message.error('请求失败：' + err)
             })
           })
         },
@@ -272,7 +272,7 @@
               this.$message.error(res.msg || '操作失败')
             }
           }).catch(err => {
-            this.$message.error('请求出错了：' + err)
+            this.$message.error('请求失败：' + err)
           })
         },
         deleteHandle(id) {
@@ -288,7 +288,7 @@
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求出错了：' + err)
+              this.$message.error('请求失败：' + err)
             })
           })
         },
@@ -305,3 +305,4 @@
   </script>
 </body>
 </html>
+

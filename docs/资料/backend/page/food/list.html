@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
-<html lang="zh-CN">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>菜品管理 - 瑞吉外卖管理端</title>
+  <title>Document</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
@@ -25,30 +25,30 @@
             slot="prefix"
             class="el-input__icon el-icon-search"
             style="cursor: pointer"
-            @click="handleQuery"
+            @click="init"
           ></i>
         </el-input>
         <div class="tableLab">
-          <el-button type="primary" size="small" @click="deleteHandle('批量', null)">批量删除</el-button>
-          <el-button type="primary" size="small" @click="statusHandle('1')">批量启售</el-button>
-          <el-button type="primary" size="small" @click="statusHandle('0')">批量停售</el-button>
-          <el-button type="primary" size="small" @click="addFoodtype('add')">
+          <span class="span-btn delBut non" @click="deleteHandle('批量', null)">批量删除</span>
+          <span class="span-btn blueBug non" @click="statusHandle('1')">批量启售</span>
+          <span style="border:none;" class="span-btn delBut non" @click="statusHandle('0')">批量停售</span>
+          <el-button
+            type="primary"
+            @click="addFoodtype('add')"
+          >
             + 新建菜品
           </el-button>
         </div>
       </div>
       <el-table
-        v-loading="loading"
         :data="tableData"
         stripe
-        border
         class="tableBox"
         @selection-change="handleSelectionChange"
       >
         <el-table-column
           type="selection"
-          align="center"
-          width="50"
+          width="25"
         ></el-table-column>
         <el-table-column
           prop="name"
@@ -56,12 +56,12 @@
         ></el-table-column>
         <el-table-column prop="image" label="图片" align="center">
           <template slot-scope="{ row }">
-            <el-image style="width: auto; height: 40px; border:none;cursor: pointer; border-radius: 4px;"
-            :src="getImage(row.image)"
+            <el-image style="width: auto; height: 40px; border:none;cursor: pointer;" 
+            :src="getImage(row.image)" 
             :preview-src-list="[ `/common/download?name=${row.image}` ]" >
             <div slot="error" class="image-slot">
-              <img src="./../../images/noImg.png"  style="width: auto; height: 40px; border:none; border-radius: 4px;" >
-            </div>
+              <img src="./../../images/noImg.png"  style="width: auto; height: 40px; border:none;" >
+            </div>  
           </el-image>
           </template>
         </el-table-column>
@@ -76,9 +76,7 @@
         </el-table-column>
         <el-table-column label="售卖状态">
           <template slot-scope="scope">
-            <el-tag :type="scope.row.status == '0' ? 'info' : 'success'" size="small">
-              {{ scope.row.status == '0' ? '停售' : '启售' }}
-            </el-tag>
+            <span style="margin-right: 10px;">{{ scope.row.status == '0' ? '停售' : '启售' }}</span>
           </template>
         </el-table-column>
         <el-table-column
@@ -88,7 +86,8 @@
         </el-table-column>
         <el-table-column
           label="操作"
-          align="left"
+          width="160"
+          align="center"
         >
           <template slot-scope="scope">
             <el-button
@@ -148,7 +147,6 @@
              page: 1,
              pageSize: 10,
              tableData : [],
-             loading: false,
              dishState : '',
              checkList: []
           }
@@ -161,7 +159,6 @@
         },
         methods: {
           async init () {
-            this.loading = true
             const params = {
               page: this.page,
               pageSize: this.pageSize,
@@ -173,9 +170,7 @@
                 this.counts = res.data.total
               }
             }).catch(err => {
-              this.$message.error('请求失败：' + err)
-            }).finally(() => {
-              this.loading = false
+              this.$message.error('请求出错了：' + err)
             })
           },
           getImage (image) {
@@ -221,7 +216,7 @@
                   this.$message.error(res.msg || '操作失败')
                 }
               }).catch(err => {
-                this.$message.error('请求失败：' + err)
+                this.$message.error('请求出错了：' + err)
               })
             })
           },
@@ -255,7 +250,7 @@
                   this.$message.error(res.msg || '操作失败')
                 }
               }).catch(err => {
-                  this.$message.error('请求失败：' + err)
+                  this.$message.error('请求出错了：' + err)
               })
             })
           },
@@ -281,4 +276,3 @@
     </script>
 </body>
 </html>
-

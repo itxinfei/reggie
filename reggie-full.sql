@@ -638,13 +638,15 @@ CREATE TABLE `points_record` (
 
 CREATE TABLE `recharge_record` (
     `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint(20) NOT NULL COMMENT '租户id',
     `member_id` bigint(20) NOT NULL COMMENT '会员id',
     `amount` decimal(10,2) NOT NULL COMMENT '充值金额',
     `gift_amount` decimal(10,2) DEFAULT '0.00' COMMENT '赠送金额',
     `payment_method` varchar(20) COLLATE utf8_bin DEFAULT NULL COMMENT '支付方式',
     `created_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
-    KEY `idx_member` (`member_id`)
+    KEY `idx_member` (`member_id`),
+    KEY `idx_tenant` (`tenant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='充值记录';
 
 CREATE TABLE `coupon_template` (

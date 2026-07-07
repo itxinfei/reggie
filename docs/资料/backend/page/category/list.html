@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
-<html lang="zh-CN">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>分类管理 - 瑞吉外卖管理端</title>
+  <title>Document</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
@@ -13,7 +13,10 @@
 <body>
   <div class="dashboard-container" id="category-app">
     <div class="container">
-      <div class="tableBar">
+      <div
+        class="tableBar"
+        style="display: inline-block"
+      >
         <el-button
           type="primary"
           class="continue"
@@ -29,10 +32,8 @@
         </el-button>
       </div>
       <el-table
-        v-loading="loading"
         :data="tableData"
         stripe
-        border
         class="tableBox"
       >
         <el-table-column
@@ -61,7 +62,8 @@
         /></el-table-column>
         <el-table-column
           label="操作"
-          align="left"
+          width="160"
+          align="center"
         >
           <template slot-scope="scope">
             <el-button
@@ -155,7 +157,6 @@
             page: 1,
             pageSize: 10,
             tableData: [],
-            loading: false,
             type :'',
             classData: {
               'title': '添加菜品分类',
@@ -174,7 +175,6 @@
         },
         methods: {
           async init () {
-            this.loading = true
             await getCategoryPage({'page': this.page, 'pageSize': this.pageSize}).then(res => {
               if (String(res.code) === '1') {
                 this.tableData = res.data.records
@@ -183,9 +183,7 @@
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求失败：' + err)
-            }).finally(() => {
-              this.loading = false
+              this.$message.error('请求出错了：' + err)
             })
           },
           handleQuery() {
@@ -233,7 +231,7 @@
                   this.$message.error(res.msg || '操作失败')
                 }
               }).catch(err => {
-                this.$message.error('请求失败：' + err)
+                this.$message.error('请求出错了：' + err)
               })
             })
           },
@@ -260,7 +258,7 @@
                         this.$message.error(res.msg || '操作失败')
                       }
                     }).catch(err => {
-                      this.$message.error('请求失败：' + err)
+                      this.$message.error('请求出错了：' + err)
                     })
                   } else {
                     this.$message.error('排序只能输入数字类型')
@@ -281,7 +279,7 @@
                     this.$message.error(res.msg || '操作失败')
                   }
                 }).catch(err => {
-                  this.$message.error('请求失败：' + err)
+                  this.$message.error('请求出错了：' + err)
                 })
               } else {
                 this.$message.error('排序只能输入数字类型')
@@ -303,4 +301,3 @@
     </script>
 </body>
 </html>
-

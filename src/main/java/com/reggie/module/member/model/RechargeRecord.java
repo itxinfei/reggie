@@ -10,6 +10,7 @@ public class RechargeRecord implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private Long id;
+    private Long tenantId;
     private Long memberId;
     private BigDecimal amount;
     private BigDecimal giftAmount;

@@ -510,12 +510,14 @@ CREATE TABLE points_record (
 
 CREATE TABLE recharge_record (
   id bigint NOT NULL AUTO_INCREMENT,
+  tenant_id bigint NOT NULL,
   member_id bigint NOT NULL,
   amount decimal(10,2) NOT NULL,
   gift_amount decimal(10,2) DEFAULT '0.00',
   payment_method varchar(20) DEFAULT NULL,
   created_time datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  KEY idx_tenant (tenant_id)
 );
 
 CREATE TABLE coupon_template (
