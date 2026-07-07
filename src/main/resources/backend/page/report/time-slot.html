@@ -100,7 +100,7 @@
           }
           this.loading = true
           try {
-            const res = await reportTimeSlot({ date: this.queryDate })
+            const res = await reportTimeSlot({ startDate: this.queryDate, endDate: this.queryDate })
             if (String(res.code) === '1') {
               this.tableData = res.data || []
               this.renderChart()

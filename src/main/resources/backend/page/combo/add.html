@@ -462,14 +462,20 @@
           async init() {
             querySetmealById(this.id).then((res) => {
               if (String(res.code) === '1') {
-                this.ruleForm = res.data
-                this.ruleForm.status = res.data.status === '1'
-                this.ruleForm.price = res.data.price / 100
-                this.imageUrl = `/common/download?name=${res.data.image}`
-                this.checkList = res.data.setmealDishes
-                this.dishTable = res.data.setmealDishes
-                this.ruleForm.idType = res.data.categoryId
-                // this.ruleForm.password = ''
+                const data = res.data
+                this.ruleForm = {
+                  id: data.id,
+                  name: data.name,
+                  categoryId: data.categoryId,
+                  idType: data.categoryId,
+                  price: data.price / 100,
+                  image: data.image,
+                  description: data.description || '',
+                  status: data.status === '1'
+                }
+                this.imageUrl = `/common/download?name=${data.image}`
+                this.checkList = data.setmealDishes || []
+                this.dishTable = data.setmealDishes || []
               } else {
                 this.$message.error(res.msg || '操作失败')
               }
@@ -537,7 +543,7 @@
                   name: obj.name,
                   price: obj.price,
                 }))
-                prams.status = this.ruleForm ? 1 : 0
+                prams.status = this.ruleForm.status ? 1 : 0
                 prams.categoryId = this.ruleForm.idType
                 if(prams.setmealDishes.length < 1){
                   this.$message.error('请选择菜品！')

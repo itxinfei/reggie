@@ -144,10 +144,15 @@
             queryEmployeeById(this.id).then(res => {
               console.log(res)
               if (String(res.code) === '1') {
-                console.log(res.data)
-                this.ruleForm = res.data
-                this.ruleForm.sex = res.data.sex === '0' ? '女' : '男'
-                // this.ruleForm.password = ''
+                const data = res.data
+                this.ruleForm = {
+                  id: data.id,
+                  name: data.name,
+                  phone: data.phone,
+                  sex: data.sex === '0' ? '女' : '男',
+                  idNumber: data.idNumber,
+                  username: data.username
+                }
               } else {
                 this.$message.error(res.msg || '操作失败')
               }

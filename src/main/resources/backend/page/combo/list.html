@@ -619,7 +619,7 @@
               const size = file.size / 1024 / 1024 < 2
               if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) {
                 this.$message.error('上传图片只支持 png、jpeg、jpg 格式！')
-                this.$refs.upload.clearFiles()
+                this.$refs.comboUpload.clearFiles()
                 return false
               }
               if (!size) {

@@ -246,6 +246,10 @@
           },
           // 取消，派送，完成
           cancelOrDeliveryOrComplete (status, id) {
+            const params = {
+              status,
+              id
+            }
             this.$confirm('确认更改该订单状态?', '提示', {
                 'confirmButtonText': '确定',
                 'cancelButtonText': '取消',
@@ -262,10 +266,6 @@
                   this.$message.error('请求失败：' + err)
                 })
             })
-            const params = {
-              status,
-              id
-            }
           },
           handleClose () {
             this.dialogVisible = false

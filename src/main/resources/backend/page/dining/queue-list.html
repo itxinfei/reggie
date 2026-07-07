@@ -158,7 +158,7 @@
             cancelButtonText: '取消',
             type: 'warning'
           }).then(() => {
-            queueCall().then(res => {
+            queueCall({ id: id }).then(res => {
               if (res.code === 1) {
                 this.$message.success('叫号成功！')
                 this.init()
