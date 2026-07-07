@@ -6,6 +6,7 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.service.DiningTableService;
+import com.reggie.util.QRCodeUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -89,9 +90,17 @@ public class DiningTableController {
         if (table == null) {
             return R.error("桌台不存在");
         }
-        String placeholderUrl = "https://qr.dining.example.com/table/" + id;
-        table.setQrCodeUrl(placeholderUrl);
-        diningTableService.updateById(table);
-        return R.success(placeholderUrl);
+
+        try {
+            // 生成二维码（Base64格式）
+            QRCodeUtil qrCodeUtil = ApplicationContextProvider.getBean(QRCodeUtil.class);
+            String qrCodeBase64 = qrCodeUtil.generateTableQRCode(id, table.getName());
+
+            // 返回Base64图片数据
+            return R.success("data:image/png;base64," + qrCodeBase64);
+        } catch (Exception e) {
+            log.error("生成二维码失败: tableId={}", id, e);
+            return R.error("生成二维码失败: " + e.getMessage());
+        }
     }
 }
