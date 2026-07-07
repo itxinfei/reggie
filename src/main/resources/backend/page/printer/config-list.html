@@ -64,7 +64,7 @@
       ></el-pagination>
     </div>
 
-    <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="500px" :before-close="cancel">
+    <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="700px" :before-close="cancel">
       <el-form ref="form" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入名称"></el-input>
