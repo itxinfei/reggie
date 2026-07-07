@@ -43,6 +43,35 @@
   margin-left: 10px;
 }
 
+/* tableLab 中的文本按钮样式（用于批量操作） */
+.dashboard-container .container .tableLab .el-button--text {
+  padding: 0 20px;
+  font-size: 14px;
+  color: #818693;
+  position: relative;
+}
+
+.dashboard-container .container .tableLab .el-button--text::after {
+  content: "";
+  position: absolute;
+  right: -6px;
+  height: 14px;
+  width: 0px;
+  border-right: solid 1px #ebeef5;
+}
+
+.dashboard-container .container .tableLab .el-button--text.delBut {
+  color: #f56c6c;
+}
+
+.dashboard-container .container .tableLab .el-button--text.blueBug {
+  color: #419eff;
+}
+
+.dashboard-container .container .tableLab .el-button--text.non::after {
+  display: none;
+}
+
 .el-table-column--selection .cell {
   padding: 0;
 }
