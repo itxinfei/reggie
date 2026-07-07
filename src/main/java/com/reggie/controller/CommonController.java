@@ -98,10 +98,7 @@ public class CommonController {
         }
 
         //file是一个临时文件，需要转存到指定位置，否则本次请求完成后临时文件会删除
-        log.info("📤 文件上传: originalFilename={}, size={} bytes", originalFilename, file.getSize());
-        log.info("📍 上传基础路径: {}", basePath);
-        log.info("🔄 保存子目录: {}", subDir);
-        log.info("📍 完整保存路径: {}", basePath + subDir + fileName);
+        log.info("文件上传：originalFilename={}, size={}", originalFilename, file.getSize());
 
         //原始文件名
         String suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
@@ -111,6 +108,12 @@ public class CommonController {
 
         // 保存到 images/dishes/ 子目录，与数据库中的路径格式一致
         String subDir = "images" + File.separator + "dishes" + File.separator;
+
+        // 打印调试信息
+        log.info("📤 文件上传: originalFilename={}, size={} bytes", originalFilename, file.getSize());
+        log.info("📍 上传基础路径: {}", basePath);
+        log.info("🔄 保存子目录: {}", subDir);
+        log.info("📍 完整保存路径: {}", basePath + subDir + fileName);
         File dir = new File(basePath + subDir);
         if (!dir.exists()) {
             dir.mkdirs();
@@ -134,12 +137,13 @@ public class CommonController {
     @Operation(summary = "文件下载", description = "下载图片文件")
     @Parameter(name = "name", description = "文件名", required = true)
     public void download(String name, HttpServletResponse response) {
+        String filePath = null; // 在 try 块外部初始化，以便 catch 块可以访问
         try {
             // 将前端传来的路径分隔符统一转换为系统分隔符
             String normalizedPath = name.replace("/", File.separator).replace("\\", File.separator);
 
             // 拼接文件完整路径
-            String filePath = basePath + normalizedPath;
+            filePath = basePath + normalizedPath;
             File file = new File(filePath);
 
             // 打印详细的路径信息用于调试
