@@ -129,6 +129,55 @@
         @current-change="handleCurrentChange"
       ></el-pagination>
     </div>
+
+    <!-- 新增/修改菜品弹窗 -->
+    <el-dialog
+      :title="dishDialog.title"
+      :visible.sync="dishDialog.visible"
+      width="800px"
+      :before-close="handleDialogClose"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="dishForm"
+        :model="dishForm"
+        :rules="dishRules"
+        label-width="120px"
+      >
+        <el-form-item label="菜品名称:" prop="name">
+          <el-input v-model="dishForm.name" placeholder="请填写菜品名称" maxlength="20" style="width: 293px;" />
+        </el-form-item>
+        <el-form-item label="菜品分类:" prop="categoryId">
+          <el-select v-model="dishForm.categoryId" placeholder="请选择菜品分类" style="width: 293px;">
+            <el-option v-for="item in dishList" :key="item.id" :label="item.name" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="菜品价格:" prop="price">
+          <el-input v-model="dishForm.price" placeholder="请设置菜品价格" style="width: 293px;" />
+        </el-form-item>
+        <el-form-item label="菜品图片:" prop="image" class="uploadImg">
+          <el-upload
+            class="avatar-uploader"
+            action="/common/upload"
+            :show-file-list="false"
+            :on-success="handleAvatarSuccess"
+            :on-change="onChange"
+            ref="upload"
+          >
+            <img v-if="dishForm.imageUrl" :src="dishForm.imageUrl" class="avatar" style="border-radius: 4px;"></img>
+            <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+          </el-upload>
+        </el-form-item>
+        <el-form-item label="菜品描述:">
+          <el-input v-model="dishForm.description" type="textarea" :rows="3" placeholder="菜品描述，最长200字" maxlength="200" style="width: 293px;" />
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button size="medium" @click="handleDialogClose">取 消</el-button>
+        <el-button type="primary" size="medium" @click="submitDishForm()">确 定</el-button>
+        <el-button v-if="dishDialog.actionType == 'add'" type="primary" size="medium" class="continue" @click="submitDishForm('continue')">保存并继续添加</el-button>
+      </div>
+    </el-dialog>
   </div>
     <!-- 开发环境版本，包含了有帮助的命令行警告 -->
     <script src="../../plugins/vue/vue.js"></script>
@@ -150,10 +199,63 @@
              tableData : [],
              loading: false,
              dishState : '',
-             checkList: []
+             checkList: [],
+             // 菜品弹窗相关
+             dishDialog: {
+               title: '添加菜品',
+               visible: false,
+               actionType: 'add',
+               loading: false
+             },
+             dishForm: {
+               name: '',
+               categoryId: '',
+               price: '',
+               image: '',
+               imageUrl: '',
+               description: ''
+             },
+             dishList: [],
+             dishFlavors: [],
+             dishFlavorsData: [],
+             inputStyle: {'flex': 1},
+             index: 0
           }
         },
-        computed: {},
+        computed: {
+          dishRules() {
+            return {
+              name: [
+                {required: true, message: '请填写菜品名称', trigger: 'blur'}
+              ],
+              categoryId: [
+                {required: true, message: '请选择菜品分类', trigger: 'change'}
+              ],
+              price: [
+                {
+                  required: true,
+                  validator: (rule, value, callback) => {
+                    if (!value) {
+                      callback(new Error('请填写菜品价格'))
+                    } else {
+                      const reg = /^\d+(\.\d{0,2})?$/
+                      if (reg.test(value)) {
+                        if(value < 10000) {
+                          callback()
+                        } else {
+                          callback(new Error('菜品价格小于10000'))
+                        }
+                      } else {
+                        callback(new Error('菜品价格格式只能为数字,且最多保留两位小数'))
+                      }
+                    }
+                  },
+                  trigger: 'blur'
+                }
+              ]
+            }
+          }
+        },
         created() {
           this.init()
         },
@@ -185,20 +287,143 @@
             this.page = 1;
             this.init();
           },
-          // 添加
+          // 打开菜品弹窗
           addFoodtype (st) {
-            if (st === 'add'){
-              window.parent.menuHandle({
-                id: '4',
-                url: '/backend/page/food/add.html',
-                name: '添加菜品'
-              },true)
+            this.resetDishForm()
+            if (st === 'add') {
+              this.dishDialog.title = '添加菜品'
+              this.dishDialog.actionType = 'add'
+              this.dishDialog.visible = true
+              this.getDishList()
             } else {
-              window.parent.menuHandle({
-                id: '4',
-                url: '/backend/page/food/add.html?id='+st,
-                name: '修改菜品'
-              },true)
+              this.dishDialog.title = '修改菜品'
+              this.dishDialog.actionType = 'edit'
+              this.dishDialog.visible = true
+              this.getDishList()
+              this.initDishForm(st)
+            }
+          },
+          // 初始化表单（修改时）
+          async initDishForm(id) {
+            try {
+              const res = await queryDishById(id)
+              if (String(res.code) === '1') {
+                const data = res.data
+                this.dishForm = {
+                  id: data.id,
+                  name: data.name,
+                  categoryId: data.categoryId,
+                  price: String(data.price / 100),
+                  image: data.image,
+                  imageUrl: `/common/download?name=${data.image}`,
+                  description: data.description || ''
+                }
+                this.dishFlavors = data.flavors && data.flavors.map(obj => ({
+                  ...obj,
+                  value: JSON.parse(obj.value),
+                  showOption: false
+                }))
+              } else {
+                this.$message.error(res.msg || '获取菜品信息失败')
+              }
+            } catch (err) {
+              this.$message.error('请求失败：' + err)
+            }
+          },
+          // 重置表单
+          resetDishForm() {
+            this.dishForm = {
+              name: '',
+              categoryId: '',
+              price: '',
+              image: '',
+              imageUrl: '',
+              description: ''
+            }
+            this.dishFlavors = []
+            if (this.$refs.dishForm) {
+              this.$refs.dishForm.resetFields()
+            }
+          },
+          // 关闭弹窗
+          handleDialogClose() {
+            this.dishDialog.visible = false
+            this.resetDishForm()
+          },
+          // 提交菜品表单
+          submitDishForm(st) {
+            this.$refs.dishForm.validate((valid) => {
+              if (valid) {
+                let params = { ...this.dishForm }
+                params.price = params.price * 100
+                params.categoryId = params.categoryId
+                params.flavors = this.dishFlavors.map(obj => ({
+                  ...obj,
+                  value: JSON.stringify(obj.value)
+                }))
+                params.status = 1
+
+                if (!params.image) {
+                  this.$message.error('请上传菜品图片')
+                  return
+                }
+
+                if (this.dishDialog.actionType === 'add') {
+                  addDish(params).then(res => {
+                    if (res.code === 1) {
+                      this.$message.success('菜品添加成功！')
+                      this.dishDialog.visible = false
+                      this.handleQuery()
+                      if (st === 'continue') {
+                        this.resetDishForm()
+                        this.dishDialog.visible = true
+                      }
+                    } else {
+                      this.$message.error(res.msg || '操作失败')
+                    }
+                  }).catch(err => {
+                    this.$message.error('请求失败：' + err)
+                  })
+                } else {
+                  editDish(params).then(res => {
+                    if (res.code === 1) {
+                      this.$message.success('菜品修改成功！')
+                      this.dishDialog.visible = false
+                      this.handleQuery()
+                    } else {
+                      this.$message.error(res.msg || '操作失败')
+                    }
+                  }).catch(err => {
+                    this.$message.error('请求失败：' + err)
+                  })
+                }
+              }
+            })
+          },
+          // 图片上传成功
+          handleAvatarSuccess(response) {
+            if (response.code === 0 && response.msg === '未登录') {
+              window.top.location.href = '/backend/page/login/login.html'
+            } else {
+              this.dishForm.imageUrl = `/common/download?name=${response.data}`
+              this.dishForm.image = response.data
+            }
+          },
+          // 图片上传校验
+          onChange(file) {
+            if (file) {
+              const suffix = file.name.split('.')[1]
+              const size = file.size / 1024 / 1024 < 2
+              if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) {
+                this.$message.error('上传图片只支持 png、jpeg、jpg 格式！')
+                this.$refs.upload.clearFiles()
+                return false
+              }
+              if (!size) {
+                this.$message.error('上传文件大小不能超过 2MB!')
+                return false
+              }
+              return file
             }
           },
 
