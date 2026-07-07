@@ -18,6 +18,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -181,9 +182,9 @@ public class QRCodeUtil {
             g.setFont(new Font("Arial", Font.BOLD, logoSize / 3));
             FontMetrics fm = g.getFontMetrics();
             String text = "瑞吉";
-            int x = (logoSize - fm.stringWidth(text)) / 2;
-            int y = (logoSize - fm.getHeight()) / 2 + fm.getAscent();
-            g.drawString(text, x, y);
+            int logoX = (logoSize - fm.stringWidth(text)) / 2;
+            int logoY = (logoSize - fm.getHeight()) / 2 + fm.getAscent();
+            g.drawString(text, logoX, logoY);
             g.dispose();
 
             // 将Logo绘制到二维码中心

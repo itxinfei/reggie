@@ -31,6 +31,9 @@ public class DiningTableController {
     @Autowired
     private DiningTableService diningTableService;
 
+    @Autowired
+    private QRCodeUtil qrCodeUtil;
+
     @GetMapping("/page")
     @Operation(summary = "分页查询")
     public R<Page<DiningTable>> page(int page, int pageSize) {
@@ -93,7 +96,6 @@ public class DiningTableController {
 
         try {
             // 生成二维码（Base64格式）
-            QRCodeUtil qrCodeUtil = ApplicationContextProvider.getBean(QRCodeUtil.class);
             String qrCodeBase64 = qrCodeUtil.generateTableQRCode(id, table.getName());
 
             // 返回Base64图片数据
