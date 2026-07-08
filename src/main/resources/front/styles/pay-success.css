@@ -63,7 +63,7 @@
 }
 
 #pay_success .divContent .divDesc,
-.divDesc1 {
+#pay_success .divContent .divDesc1 {
   height: 22rem;
   opacity: 1;
   font-size: 16rem;

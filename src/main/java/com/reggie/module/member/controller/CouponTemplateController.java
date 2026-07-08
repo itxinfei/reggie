@@ -7,6 +7,7 @@ import com.reggie.common.R;
 import com.reggie.module.member.model.CouponTemplate;
 import com.reggie.module.member.service.CouponTemplateService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +32,10 @@ public class CouponTemplateController {
     private CouponTemplateService couponTemplateService;
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询")
+    @Operation(summary = "分页查询", description = "分页查询优惠券模板列表，支持按名称搜索，自动过滤当前租户数据")
+    @Parameter(name = "page", description = "页码", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
+    @Parameter(name = "name", description = "优惠券名称（可选，模糊查询）")
     public R<Page<CouponTemplate>> page(int page, int pageSize, String name) {
         Page<CouponTemplate> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<CouponTemplate> qw = new LambdaQueryWrapper<>();
@@ -46,7 +50,7 @@ public class CouponTemplateController {
     }
 
     @PostMapping
-    @Operation(summary = "新增优惠券")
+    @Operation(summary = "新增优惠券", description = "创建新的优惠券模板")
     public R<String> save(@RequestBody CouponTemplate couponTemplate) {
         log.info("新增优惠券模板: {}", couponTemplate.getName());
         couponTemplate.setCreatedTime(LocalDateTime.now());
@@ -56,7 +60,7 @@ public class CouponTemplateController {
     }
 
     @PutMapping
-    @Operation(summary = "修改优惠券")
+    @Operation(summary = "修改优惠券", description = "更新优惠券模板信息")
     public R<String> update(@RequestBody CouponTemplate couponTemplate) {
         log.info("修改优惠券模板: {}", couponTemplate.getId());
         couponTemplate.setUpdatedTime(LocalDateTime.now());
@@ -65,7 +69,8 @@ public class CouponTemplateController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除优惠券")
+    @Operation(summary = "删除优惠券", description = "根据ID删除优惠券模板")
+    @Parameter(name = "id", description = "优惠券模板ID", required = true)
     public R<String> delete(@PathVariable Long id) {
         log.info("删除优惠券模板: {}", id);
         couponTemplateService.removeById(id);
@@ -73,7 +78,8 @@ public class CouponTemplateController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "查询优惠券")
+    @Operation(summary = "查询优惠券", description = "根据ID查询优惠券模板详情")
+    @Parameter(name = "id", description = "优惠券模板ID", required = true)
     public R<CouponTemplate> getById(@PathVariable Long id) {
         CouponTemplate template = couponTemplateService.getById(id);
         if (template != null) {
@@ -83,7 +89,7 @@ public class CouponTemplateController {
     }
 
     @PostMapping("/claim")
-    @Operation(summary = "领取优惠券")
+    @Operation(summary = "领取优惠券", description = "会员领取优惠券模板")
     public R<String> claim(@RequestBody Map<String, Object> params) {
         Long memberId = Long.valueOf(params.get("memberId").toString());
         Long templateId = Long.valueOf(params.get("templateId").toString());
@@ -94,3 +100,4 @@ public class CouponTemplateController {
         return R.error("领取失败，优惠券不可用或已领完");
     }
 }
+

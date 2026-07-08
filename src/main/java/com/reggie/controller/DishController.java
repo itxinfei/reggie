@@ -55,12 +55,12 @@ public class DishController {
 
     /**
      * 新增菜品
-     * @param dishSaveDTO
-     * @return
+     * @param dishSaveDTO 菜品信息（包含基本信息及口味）
+     * @return 操作结果
      */
     @PostMapping
-    @Operation(summary = "新增菜品", description = "保存菜品基本信息及口味")
-    @Parameter(name = "dishSaveDTO", description = "菜品DTO", required = true)
+    @Operation(summary = "新增菜品", description = "保存菜品基本信息及口味信息，支持多规格口味配置")
+    @Parameter(name = "dishSaveDTO", description = "菜品信息DTO（名称、分类、价格、编码、图片、描述、状态、口味列表）", required = true)
     public R<String> save(@Valid @RequestBody DishSaveDTO dishSaveDTO){
         log.info("新增菜品：name={}, categoryId={}", dishSaveDTO.getName(), dishSaveDTO.getCategoryId());
 
@@ -74,34 +74,27 @@ public class DishController {
         dish.setDescription(dishSaveDTO.getDescription());
         dish.setStatus(dishSaveDTO.getStatus());
 
-        dishService.save(dish);
+        // 提取口味列表（可能为空）
+        List<DishFlavor> flavors = dishSaveDTO.getFlavors();
 
-        // 保存菜品口味
-        if (dishSaveDTO.getFlavors() != null && !dishSaveDTO.getFlavors().isEmpty()) {
-            List<DishFlavor> flavors = dishSaveDTO.getFlavors().stream()
-                .map(flavor -> {
-                    flavor.setDishId(dish.getId());
-                    return flavor;
-                })
-                .collect(Collectors.toList());
-            dishFlavorService.saveBatch(flavors);
-        }
+        // 调用事务保护的服务方法保存菜品及口味
+        dishService.saveDish(dish, flavors);
 
         return R.success("新增菜品成功");
     }
 
     /**
      * 菜品信息分页查询
-     * @param page
-     * @param pageSize
-     * @param name
-     * @return
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param name 菜品名称（可选，模糊查询）
+     * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "菜品分页查询", description = "分页查询菜品列表")
-    @Parameter(name = "page", description = "页码", required = true)
-    @Parameter(name = "pageSize", description = "每页数量", required = true)
-    @Parameter(name = "name", description = "菜品名称（可选）")
+    @Operation(summary = "菜品分页查询", description = "分页查询菜品列表，支持按名称模糊搜索，自动关联分类名称")
+    @Parameter(name = "page", description = "页码，从1开始", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
+    @Parameter(name = "name", description = "菜品名称（可选，模糊查询）")
     public R<Page<DishDto>> page(int page,int pageSize,String name){
 
         //构造分页构造器对象
@@ -143,11 +136,11 @@ public class DishController {
 
     /**
      * 根据id查询菜品信息和对应的口味信息
-     * @param id
-     * @return
+     * @param id 菜品ID
+     * @return 菜品详情及口味信息
      */
     @GetMapping("/{id}")
-    @Operation(summary = "查询菜品详情", description = "根据ID查询菜品及口味信息")
+    @Operation(summary = "查询菜品详情", description = "根据ID查询菜品基本信息及关联口味信息")
     @Parameter(name = "id", description = "菜品ID", required = true)
     public R<DishDto> get(@PathVariable Long id){
 
@@ -158,12 +151,12 @@ public class DishController {
 
     /**
      * 修改菜品
-     * @param dishDto
-     * @return
+     * @param dishDto 菜品信息
+     * @return 操作结果
      */
     @PutMapping
-    @Operation(summary = "修改菜品", description = "更新菜品基本信息及口味")
-    @Parameter(name = "dishDto", description = "菜品DTO", required = true)
+    @Operation(summary = "修改菜品", description = "更新菜品基本信息及口味信息")
+    @Parameter(name = "dishDto", description = "菜品DTO（包含ID、基本信息及口味列表）", required = true)
     public R<String> update(@Valid @RequestBody DishDto dishDto){
         log.info("修改菜品：id={}, name={}", dishDto.getId(), dishDto.getName());
 
@@ -173,46 +166,32 @@ public class DishController {
     }
 
     @DeleteMapping
-    @Operation(summary = "删除菜品", description = "批量删除菜品")
+    @Operation(summary = "删除菜品", description = "批量删除菜品及关联口味数据")
     @Parameter(name = "ids", description = "菜品ID列表", required = true)
     public R<String> delete(@RequestParam List<Long> ids) {
+        // 先删除关联的口味数据
+        for (Long dishId : ids) {
+            LambdaQueryWrapper<DishFlavor> flavorWrapper = new LambdaQueryWrapper<>();
+            flavorWrapper.eq(DishFlavor::getDishId, dishId);
+            dishFlavorService.remove(flavorWrapper);
+        }
+        // 再删除菜品
         dishService.removeByIds(ids);
         return R.success("删除成功");
     }
 
     @PostMapping("/status/{status}")
-    @Operation(summary = "更新菜品状态", description = "批量更新菜品售卖状态")
-    @Parameter(name = "status", description = "状态值", required = true)
+    @Operation(summary = "更新菜品状态", description = "批量更新菜品售卖状态（起售/停售）")
+    @Parameter(name = "status", description = "状态值：1-起售，0-停售", required = true)
     @Parameter(name = "ids", description = "菜品ID列表", required = true)
     public R<String> updateStatus(@PathVariable Integer status, @RequestParam List<Long> ids) {
         dishService.updateStatus(status, ids);
         return R.success("操作成功");
     }
 
-    /**
-     * 根据条件查询对应的菜品数据
-     * @param dish
-     * @return
-     */
-    /*@GetMapping("/list")
-    public R<List<Dish>> list(Dish dish){
-        //构造查询条件
-        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(dish.getCategoryId() != null ,Dish::getCategoryId,dish.getCategoryId());
-        //添加条件，查询状态为1（起售状态）的菜品
-        queryWrapper.eq(Dish::getStatus, DishStatus.ENABLED.getValue());
-
-        //添加排序条件
-        queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
-
-        List<Dish> list = dishService.list(queryWrapper);
-
-        return R.success(list);
-    }*/
-
     @GetMapping("/list")
-    @Operation(summary = "查询菜品列表", description = "根据条件查询在售菜品数据")
-    @Parameter(name = "dish", description = "菜品查询条件")
+    @Operation(summary = "查询菜品列表", description = "根据条件查询在售菜品数据，自动过滤停售菜品")
+    @Parameter(name = "dish", description = "菜品查询条件（categoryId分类ID）")
     public R<List<DishDto>> list(Dish dish){
         //构造查询条件
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();

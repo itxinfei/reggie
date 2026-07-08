@@ -9,10 +9,100 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <style>
+    /* ========== 数据统计卡片 ========== */
+    .stats-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+      border: 1px solid #f0f2f5;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gradient);
+    }
+
+    .stat-card .stat-icon {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 42px;
+      opacity: 0.08;
+    }
+
+    .stat-card .stat-label {
+      font-size: 13px;
+      color: #909399;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .stat-card .stat-value {
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1.2;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
+    .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
+    .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
+    .stat-card.danger  { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
+    .stat-card.info    { --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%); }
+
+    @media (max-width: 768px) {
+      .stats-cards { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
   <div class="dashboard-container" id="category-app">
     <div class="container">
+      <!-- ========== 数据统计卡片 ========== -->
+      <div class="stats-cards">
+        <div class="stat-card primary">
+          <div class="stat-icon">📂</div>
+          <div class="stat-label">分类总数</div>
+          <div class="stat-value">{{ stats.totalCategories || 0 }}</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">🍽️</div>
+          <div class="stat-label">菜品分类</div>
+          <div class="stat-value">{{ stats.foodCategories || 0 }}</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-icon">🍱</div>
+          <div class="stat-label">套餐分类</div>
+          <div class="stat-value">{{ stats.comboCategories || 0 }}</div>
+        </div>
+      </div>
+
       <div class="tableBar">
         <el-button
           type="primary"
@@ -38,7 +128,7 @@
         <el-table-column
           prop="name"
           label="分类名称"
-        /></el-table-column>
+        ></el-table-column>
         <el-table-column
           prop="type"
           label="分类类型"
@@ -58,10 +148,11 @@
         <el-table-column
           prop="sort"
           label="排序"
-        /></el-table-column>
+        ></el-table-column>
         <el-table-column
           label="操作"
-          align="left"
+          align="center"
+          width="120"
         >
           <template slot-scope="scope">
             <el-button
@@ -69,17 +160,13 @@
               size="small"
               class="blueBug"
               @click="editHandle(scope.row)"
-            >
-              修改
-            </el-button>
+            >修改</el-button>
             <el-button
               type="text"
               size="small"
               class="delBut non"
               @click="deleteHandle(scope.row.id)"
-            >
-              删除
-            </el-button>
+            >删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -89,6 +176,7 @@
         :page-size="pageSize"
         layout="total, sizes, prev, pager, next, jumper"
         :total="counts"
+        :current-page.sync="page"
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
       ></el-pagination>
@@ -157,6 +245,12 @@
             tableData: [],
             loading: false,
             type :'',
+            // 数据统计
+            stats: {
+              totalCategories: 0,
+              foodCategories: 0,
+              comboCategories: 0
+            },
             classData: {
               'title': '添加菜品分类',
               'dialogVisible': false,
@@ -175,18 +269,49 @@
         methods: {
           async init () {
             this.loading = true
-            await getCategoryPage({'page': this.page, 'pageSize': this.pageSize}).then(res => {
+            // 并行加载分类列表和统计数据
+            const [categoryRes, statsRes] = await Promise.all([
+              getCategoryPage({'page': this.page, 'pageSize': this.pageSize}),
+              this.loadCategoryStats()
+            ])
+
+            // 处理分类列表数据
+            if (String(categoryRes.code) === '1') {
+              this.tableData = categoryRes.data.records
+              this.counts = Number(categoryRes.data.total)
+            } else {
+              this.$message.error(categoryRes.msg || '操作失败')
+            }
+
+            // 处理统计数据
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
+            }
+
+            this.loading = false
+          },
+          // 加载分类统计数据
+          async loadCategoryStats() {
+            try {
+              const res = await getCategoryPage({'page': 1, 'pageSize': 1000})
               if (String(res.code) === '1') {
-                this.tableData = res.data.records
-                this.counts = Number(res.data.total)
-              } else {
-                this.$message.error(res.msg || '操作失败')
+                const records = res.data.records || []
+                const total = res.data.total || 0
+                const foodCount = records.filter(item => item.type === '1').length
+                const comboCount = records.filter(item => item.type === '2').length
+                return {
+                  code: 1,
+                  data: {
+                    totalCategories: total,
+                    foodCategories: foodCount,
+                    comboCategories: comboCount
+                  }
+                }
               }
-            }).catch(err => {
-              this.$message.error('请求失败：' + err)
-            }).finally(() => {
-              this.loading = false
-            })
+            } catch (err) {
+              console.warn('加载分类统计数据失败:', err)
+            }
+            return { code: 0 }
           },
           handleQuery() {
             this.page = 1;
@@ -194,7 +319,7 @@
           },
            // 添加
           addClass(st) {
-            if (st == 'class') {
+            if (st === 'class') {
               this.classData.title = '新增菜品分类'
               this.type = '1'
             } else {
@@ -246,7 +371,6 @@
                   const reg = /^\d+$/
                   if (reg.test(classData.sort)) {
                     addCategory({'name': classData.name,'type':this.type, sort: classData.sort}).then(res => {
-                      console.log(res)
                       if (res.code === 1) {
                         this.$message.success('分类添加成功！')
                         if (!st) {

@@ -7,6 +7,7 @@ import com.reggie.common.R;
 import com.reggie.module.dining.model.TableArea;
 import com.reggie.module.dining.service.TableAreaService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,9 @@ public class TableAreaController {
     private TableAreaService tableAreaService;
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询")
+    @Operation(summary = "分页查询", description = "分页查询桌台区域列表")
+    @Parameter(name = "page", description = "页码", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     public R<Page<TableArea>> page(int page, int pageSize) {
         Page<TableArea> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<TableArea> qw = new LambdaQueryWrapper<>();
@@ -40,7 +43,7 @@ public class TableAreaController {
     }
 
     @PostMapping
-    @Operation(summary = "新增区域")
+    @Operation(summary = "新增区域", description = "创建新的桌台区域")
     public R<TableArea> save(@RequestBody TableArea area) {
         log.info("新增区域: {}", area.getName());
         area.setTenantId(BaseContext.getCurrentTenantId());
@@ -49,7 +52,7 @@ public class TableAreaController {
     }
 
     @PutMapping
-    @Operation(summary = "修改区域")
+    @Operation(summary = "修改区域", description = "更新桌台区域信息")
     public R<String> update(@RequestBody TableArea area) {
         log.info("修改区域: {}", area.getId());
         tableAreaService.updateById(area);
@@ -57,7 +60,8 @@ public class TableAreaController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除区域")
+    @Operation(summary = "删除区域", description = "根据ID删除桌台区域")
+    @Parameter(name = "id", description = "区域ID", required = true)
     public R<String> delete(@PathVariable Long id) {
         log.info("删除区域: {}", id);
         tableAreaService.removeById(id);
@@ -65,7 +69,7 @@ public class TableAreaController {
     }
 
     @GetMapping("/list")
-    @Operation(summary = "查询所有区域")
+    @Operation(summary = "查询所有区域", description = "查询所有桌台区域列表")
     public R<List<TableArea>> list() {
         LambdaQueryWrapper<TableArea> qw = new LambdaQueryWrapper<>();
         qw.orderByAsc(TableArea::getSort);
@@ -74,7 +78,8 @@ public class TableAreaController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "根据id查询区域")
+    @Operation(summary = "根据id查询区域", description = "根据ID查询桌台区域详情")
+    @Parameter(name = "id", description = "区域ID", required = true)
     public R<TableArea> getById(@PathVariable Long id) {
         TableArea area = tableAreaService.getById(id);
         if (area != null) {
@@ -83,3 +88,4 @@ public class TableAreaController {
         return R.error("没有查询到对应区域");
     }
 }
+

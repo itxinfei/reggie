@@ -18,7 +18,11 @@ public class PrinterConfig implements Serializable {
     private String ipAddress;
     private Integer port;
     private String paperSize;
-    private String printType;
+    /**
+     * 打印类型（支持多类型绑定，逗号分隔：BILL,KITCHEN,DELIVERY）
+     * BILL - 收银小票，KITCHEN - 厨房制作单，DELIVERY - 配送单
+     */
+    private String printTypes;
     private Integer status;
     private Integer sort;
     private LocalDateTime createdTime;

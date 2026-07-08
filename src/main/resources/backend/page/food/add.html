@@ -106,7 +106,7 @@
                             @click="checkOption(it,ind,index)"
                           >{{ it.name }}</span>
                           <span
-                            v-if="dishFlavorsData == []"
+                            v-if="dishFlavorsData.length === 0"
                             class="none"
                           >无数据</span>
                         </div>
@@ -296,13 +296,11 @@
         methods: {
           async init () {
             queryDishById(this.id).then(res => {
-              console.log(res)
               if (String(res.code) === '1') {
                 this.ruleForm = { ...res.data }
                 this.ruleForm.price = String(res.data.price/100)
-                this.ruleForm.status = res.data.status == '1'
+                this.ruleForm.status = String(res.data.status) === '1'
                 this.dishFlavors = res.data.flavors && res.data.flavors.map(obj => ({ ...obj, value: JSON.parse(obj.value),showOption: false }))
-                console.log('this.dishFlavors',this.dishFlavors)
                 // this.ruleForm.id = res.data.data.categoryId
                 // this.imageUrl = res.data.data.image
                 this.imageUrl = `/common/download?name=${res.data.image}`
@@ -332,17 +330,15 @@
           },
 
           // 添加口味标签
-          keyDownHandle (val,index) {
-            console.log('keyDownHandle----val',val)
-            console.log('keyDownHandle----index',index)
-            console.log('keyDownHandle----this.dishFlavors',this.dishFlavors)
-            if (event) {
-              event.cancelBubble = true
-              event.preventDefault()
-              event.stopPropagation()
+          keyDownHandle (val, index) {
+            const evt = val.originalEvent || event
+            if (evt) {
+              evt.cancelBubble = true
+              evt.preventDefault()
+              evt.stopPropagation()
             }
 
-            if (val.target.innerText.trim() != '') {
+            if (val.target.innerText.trim() !== '') {
               this.dishFlavors[index].value.push(val.target.innerText)
               val.target.innerText = ''
             }
@@ -371,9 +367,6 @@
           },
 
           selectFlavor(st,index){
-            console.log('st',st)
-            console.log('index',index)
-            console.log('this.dishFlavors',this.dishFlavors)
             const obj = JSON.parse(JSON.stringify(this.dishFlavors[index]))
             obj.showOption = st
             this.dishFlavors.splice(index,1,obj)
@@ -418,7 +411,7 @@
                   this.$message.error('请上传菜品图片')
                   return 
                 }
-                if (this.actionType == 'add') {
+                if (this.actionType === 'add') {
                   delete params.id
                   addDish(params).then(res => {
                     if (res.code === 1) {

@@ -67,7 +67,7 @@ public class CommonController {
             dir.mkdirs();
         }
 
-        log.info("📁 文件上传目录: {}", basePath);
+        log.info("文件上传目录: {}", basePath);
     }
 
     /**
@@ -77,7 +77,7 @@ public class CommonController {
      * @return 文件上传的目录改为项目运行的根目录
      */
     @PostMapping("/upload")
-    @Operation(summary = "文件上传", description = "上传图片文件")
+    @Operation(summary = "文件上传", description = "上传图片文件（支持jpg、jpeg、png、gif，最大5MB）")
     @Parameter(name = "file", description = "上传的文件", required = true)
     public R<String> upload(MultipartFile file) {
         // 1. 校验文件是否为空
@@ -87,6 +87,9 @@ public class CommonController {
 
         // 2. 校验文件类型（仅允许图片格式）
         String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || !originalFilename.contains(".")) {
+            return R.error("文件名不合法");
+        }
         String extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
             return R.error("文件类型不支持，仅支持jpg、jpeg、png、gif格式");
@@ -110,10 +113,7 @@ public class CommonController {
         String subDir = "images" + File.separator + "dishes" + File.separator;
 
         // 打印调试信息
-        log.info("📤 文件上传: originalFilename={}, size={} bytes", originalFilename, file.getSize());
-        log.info("📍 上传基础路径: {}", basePath);
-        log.info("🔄 保存子目录: {}", subDir);
-        log.info("📍 完整保存路径: {}", basePath + subDir + fileName);
+        log.info("文件上传: originalFilename={}, size={} bytes, path={}", originalFilename, file.getSize(), basePath + subDir + fileName);
         File dir = new File(basePath + subDir);
         if (!dir.exists()) {
             dir.mkdirs();
@@ -123,6 +123,7 @@ public class CommonController {
             file.transferTo(new File(basePath + subDir + fileName));
         } catch (IOException e) {
             log.error("文件上传失败", e);
+            return R.error("文件上传失败");
         }
         return R.success(subDir + fileName);
     }
@@ -137,33 +138,30 @@ public class CommonController {
     @Operation(summary = "文件下载", description = "下载图片文件")
     @Parameter(name = "name", description = "文件名", required = true)
     public void download(String name, HttpServletResponse response) {
-        String filePath = null; // 在 try 块外部初始化，以便 catch 块可以访问
+        String filePath = null;
         try {
-            // 将前端传来的路径分隔符统一转换为系统分隔符
+            // 路径规范化：防止 .. 路径穿越攻击
             String normalizedPath = name.replace("/", File.separator).replace("\\", File.separator);
+            File baseDir = new File(basePath).getCanonicalFile();
+            File targetFile = new File(baseDir, normalizedPath).getCanonicalFile();
 
-            // 拼接文件完整路径
-            filePath = basePath + normalizedPath;
-            File file = new File(filePath);
-
-            // 打印详细的路径信息用于调试
-            log.info("📥 文件下载请求: name={}", name);
-            log.info("📂 基础路径(basePath): {}", basePath);
-            log.info("🔄 规范化路径: {}", normalizedPath);
-            log.info("📍 完整文件路径: {}", filePath);
-            log.info("✅ 文件是否存在: {}", file.exists());
-
-            // 如果文件不存在，返回 SVG 占位图（不依赖外部文件）
-            if (!file.exists()) {
-                log.warn("❌ 文件不存在，返回占位图: {}", filePath);
-                sendPlaceholderImage(response);
+            // 校验目标路径是否在允许的基础路径内
+            if (!targetFile.getPath().startsWith(baseDir.getPath())) {
+                log.warn("路径穿越攻击被拦截: name={}, resolved={}", name, targetFile.getPath());
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "非法路径访问");
                 return;
             }
 
-            FileInputStream fileInputStream = new FileInputStream(file);
+            filePath = targetFile.getAbsolutePath();
 
-            //输出流，通过输出流将文件写回浏览器
-            ServletOutputStream outputStream = response.getOutputStream();
+            log.info("文件下载请求: name={}, path={}, exists={}", name, filePath, targetFile.exists());
+
+            // 如果文件不存在，返回 SVG 占位图（不依赖外部文件）
+            if (!targetFile.exists()) {
+                log.warn("文件不存在，返回占位图: {}", filePath);
+                sendPlaceholderImage(response);
+                return;
+            }
 
             // 根据文件扩展名设置Content-Type
             String extension = name.substring(name.lastIndexOf(".") + 1).toLowerCase();
@@ -182,16 +180,15 @@ public class CommonController {
                     response.setContentType("application/octet-stream");
             }
 
-            int len = 0;
-            byte[] bytes = new byte[BUFFER_SIZE];
-            while ((len = fileInputStream.read(bytes)) != -1) {
-                outputStream.write(bytes, 0, len);
-                outputStream.flush();
+            try (FileInputStream fileInputStream = new FileInputStream(targetFile);
+                 ServletOutputStream outputStream = response.getOutputStream()) {
+                int len;
+                byte[] bytes = new byte[BUFFER_SIZE];
+                while ((len = fileInputStream.read(bytes)) != -1) {
+                    outputStream.write(bytes, 0, len);
+                    outputStream.flush();
+                }
             }
-
-            //关闭资源
-            outputStream.close();
-            fileInputStream.close();
         } catch (Exception e) {
             log.error("文件下载失败: {}", filePath, e);
             try {

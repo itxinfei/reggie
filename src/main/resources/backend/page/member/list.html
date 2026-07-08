@@ -14,11 +14,99 @@
       border: 0 !important;
 
     }
+
+    /* ========== 数据统计卡片 ========== */
+    .stats-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+      border: 1px solid #f0f2f5;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gradient);
+    }
+
+    .stat-card .stat-icon {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 42px;
+      opacity: 0.08;
+    }
+
+    .stat-card .stat-label {
+      font-size: 13px;
+      color: #909399;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .stat-card .stat-value {
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1.2;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
+    .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
+    .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
+    .stat-card.danger  { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
+
+    @media (max-width: 768px) {
+      .stats-cards { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
   <div class="dashboard-container" id="member-app">
     <div class="container">
+      <!-- ========== 数据统计卡片 ========== -->
+      <div class="stats-cards">
+        <div class="stat-card primary">
+          <div class="stat-icon">👥</div>
+          <div class="stat-label">员工总数</div>
+          <div class="stat-value">{{ stats.totalEmployees || 0 }}</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">✅</div>
+          <div class="stat-label">在职员工</div>
+          <div class="stat-value">{{ stats.activeEmployees || 0 }}</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">🚫</div>
+          <div class="stat-label">已禁用</div>
+          <div class="stat-value">{{ stats.disabledEmployees || 0 }}</div>
+        </div>
+      </div>
+
       <div class="tableBar">
         <el-input
           v-model="input"
@@ -42,6 +130,7 @@
         </el-button>
       </div>
       <el-table
+        v-loading="loading"
         :data="tableData"
         stripe
         border
@@ -78,18 +167,14 @@
               class="blueBug"
               @click="addMemberHandle(scope.row.id)"
               :class="{notAdmin:user !== 'admin'}"
-            >
-              编辑
-            </el-button>
+            >编辑</el-button>
             <el-button
               type="text"
               size="small"
               class="delBut non"
               @click="statusHandle(scope.row)"
               v-if="user === 'admin'"
-            >
-              {{ scope.row.status == '1' ? '禁用' : '启用' }}
-            </el-button>
+            >{{ scope.row.status == '1' ? '禁用' : '启用' }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -167,6 +252,12 @@
              id : '',
              status : '',
              user : '',
+             // 数据统计
+             stats: {
+               totalEmployees: 0,
+               activeEmployees: 0,
+               disabledEmployees: 0
+             },
              // 员工弹窗相关
              memberDialog: {
                title: '添加员工',
@@ -203,7 +294,14 @@
         },
         created() {
           this.init()
-          this.user = JSON.parse(localStorage.getItem('userInfo')).username
+          try {
+            const userInfo = localStorage.getItem('userInfo')
+            if (userInfo) {
+              this.user = JSON.parse(userInfo).username
+            }
+          } catch (e) {
+            console.warn('解析用户信息失败:', e)
+          }
         },
         mounted() {
         },
@@ -214,14 +312,46 @@
               pageSize: this.pageSize,
               name: this.input ? this.input : undefined
             }
-            await getMemberList(params).then(res => {
+
+            // 并行加载员工列表和统计数据
+            const [memberRes, statsRes] = await Promise.all([
+              getMemberList(params),
+              this.loadMemberStats()
+            ])
+
+            // 处理员工列表数据
+            if (String(memberRes.code) === '1') {
+              this.tableData = memberRes.data.records || []
+              this.counts = memberRes.data.total
+            }
+
+            // 处理统计数据
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
+            }
+          },
+          // 加载员工统计数据
+          async loadMemberStats() {
+            try {
+              const res = await getMemberList({ page: 1, pageSize: 1000 })
               if (String(res.code) === '1') {
-                this.tableData = res.data.records || []
-                this.counts = res.data.total
+                const records = res.data.records || []
+                const total = res.data.total || 0
+                const activeCount = records.filter(item => item.status === '1').length
+                const disabledCount = records.filter(item => item.status === '0').length
+                return {
+                  code: 1,
+                  data: {
+                    totalEmployees: total,
+                    activeEmployees: activeCount,
+                    disabledEmployees: disabledCount
+                  }
+                }
               }
-            }).catch(err => {
-              this.$message.error('请求失败：' + err)
-            })
+            } catch (err) {
+              console.warn('加载员工统计数据失败:', err)
+            }
+            return { code: 0 }
           },
           handleQuery() {
             this.page = 1;
@@ -330,7 +460,7 @@
               'cancelButtonText': '取消',
               'type': 'warning'
               }).then(() => {
-              enableOrDisableEmployee({ 'id': this.id, 'status': !this.status ? 1 : 0 }).then(res => {
+              enableOrDisableEmployee({ 'id': this.id, 'status': this.status === '1' ? 0 : 1 }).then(res => {
                 if (String(res.code) === '1') {
                   this.$message.success('账号状态更改成功！')
                   this.handleQuery()

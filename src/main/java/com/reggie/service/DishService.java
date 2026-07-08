@@ -19,6 +19,9 @@ public interface DishService extends IService<Dish> {
 
     public void updateStatus(Integer status, List<Long> ids);
 
+    // 保存菜品及口味（事务保护）
+    public void saveDish(Dish dish, List<com.reggie.entity.DishFlavor> flavors);
+
     //根据分类id查询菜品列表
     public List<Dish> listByCategoryId(Long categoryId);
 }

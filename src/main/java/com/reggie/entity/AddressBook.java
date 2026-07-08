@@ -1,7 +1,10 @@
 package com.reggie.entity;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -18,8 +21,11 @@ public class AddressBook implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
+    @TableField(fill = FieldFill.INSERT)
+    private Long tenantId;
 
     //用户id
     @NotNull(message = "用户ID不能为空")
@@ -80,10 +86,12 @@ public class AddressBook implements Serializable {
 
 
     //标签
-    @Size(max = 20, message = "标签不能超过20个字符")
+    @Size(max = 100, message = "标签不能超过100个字符")
     private String label;
 
     //是否默认 0 否 1是
+    public static final int NOT_DEFAULT = 0;
+    public static final int IS_DEFAULT = 1;
     private Integer isDefault;
 
     //创建时间
@@ -107,5 +115,6 @@ public class AddressBook implements Serializable {
 
 
     //是否删除
+    @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
 }

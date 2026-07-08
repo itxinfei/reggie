@@ -18,6 +18,12 @@ CREATE TABLE orders (
     consignee varchar(32) DEFAULT NULL,
     table_id bigint DEFAULT NULL,
     dining_type varchar(20) DEFAULT NULL,
+    create_time datetime DEFAULT NULL,
+    update_time datetime DEFAULT NULL,
+    create_user bigint DEFAULT NULL,
+    update_user bigint DEFAULT NULL,
+    is_deleted int NOT NULL DEFAULT 0,
+    tenant_id bigint DEFAULT NULL,
     PRIMARY KEY (id)
 );
 

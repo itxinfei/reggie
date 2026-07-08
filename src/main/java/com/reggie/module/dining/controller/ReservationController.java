@@ -6,6 +6,7 @@ import com.reggie.common.R;
 import com.reggie.module.dining.model.Reservation;
 import com.reggie.module.dining.service.ReservationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +32,9 @@ public class ReservationController {
     private ReservationService reservationService;
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询")
+    @Operation(summary = "分页查询", description = "分页查询预订记录列表")
+    @Parameter(name = "page", description = "页码", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     public R<Page<Reservation>> page(int page, int pageSize) {
         Page<Reservation> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<Reservation> qw = new LambdaQueryWrapper<>();
@@ -41,7 +44,7 @@ public class ReservationController {
     }
 
     @PostMapping
-    @Operation(summary = "新增预订")
+    @Operation(summary = "新增预订", description = "创建新的预订记录，支持指定桌台和人数")
     public R<Reservation> create(@RequestBody Map<String, Object> params) {
         String customerName = (String) params.get("customerName");
         String phone = (String) params.get("phone");
@@ -56,7 +59,8 @@ public class ReservationController {
     }
 
     @PutMapping("/confirm/{id}")
-    @Operation(summary = "确认预订")
+    @Operation(summary = "确认预订", description = "确认预订信息，标记为已确认状态")
+    @Parameter(name = "id", description = "预订ID", required = true)
     public R<String> confirm(@PathVariable Long id) {
         log.info("确认预订: {}", id);
         reservationService.confirmReservation(id);
@@ -64,7 +68,8 @@ public class ReservationController {
     }
 
     @PutMapping("/cancel/{id}")
-    @Operation(summary = "取消预订")
+    @Operation(summary = "取消预订", description = "取消指定预订记录")
+    @Parameter(name = "id", description = "预订ID", required = true)
     public R<String> cancel(@PathVariable Long id) {
         log.info("取消预订: {}", id);
         reservationService.cancelReservation(id);
@@ -72,10 +77,12 @@ public class ReservationController {
     }
 
     @PutMapping("/arrive/{id}")
-    @Operation(summary = "到店")
+    @Operation(summary = "到店", description = "标记顾客已到店")
+    @Parameter(name = "id", description = "预订ID", required = true)
     public R<String> arrive(@PathVariable Long id) {
         log.info("到店: {}", id);
         reservationService.arrive(id);
         return R.success("到店成功");
     }
 }
+

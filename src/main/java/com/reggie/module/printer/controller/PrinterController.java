@@ -5,6 +5,7 @@ import com.reggie.module.printer.adapter.PrinterAdapterFactory;
 import com.reggie.module.printer.model.PrinterStatus;
 import com.reggie.module.printer.service.PrinterService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +35,9 @@ public class PrinterController {
     private PrinterAdapterFactory adapterFactory;
 
     @PostMapping("/print/{orderId}")
-    @Operation(summary = "打印订单")
+    @Operation(summary = "打印订单", description = "根据订单ID打印订单小票，支持多种打印类型（BILL-小票、KITCHEN-厨房单）")
+    @Parameter(name = "orderId", description = "订单ID", required = true)
+    @Parameter(name = "type", description = "打印类型：BILL-小票（默认）、KITCHEN-厨房单", required = false)
     public R<String> print(@PathVariable Long orderId, @RequestParam(defaultValue = "BILL") String type) {
         log.info("打印订单: orderId={}, type={}", orderId, type);
         printerService.printOrder(orderId, type);
@@ -42,7 +45,8 @@ public class PrinterController {
     }
 
     @PostMapping("/test/{id}")
-    @Operation(summary = "测试打印机连接")
+    @Operation(summary = "测试打印机连接", description = "测试指定打印机是否连接正常")
+    @Parameter(name = "id", description = "打印机ID", required = true)
     public R<String> test(@PathVariable Long id) {
         log.info("测试打印机连接: id={}", id);
         boolean ok = printerService.testPrinter(id);
@@ -50,7 +54,8 @@ public class PrinterController {
     }
 
     @GetMapping("/status/{id}")
-    @Operation(summary = "查询打印机状态")
+    @Operation(summary = "查询打印机状态", description = "查询指定打印机的当前状态（在线/离线/缺纸等）")
+    @Parameter(name = "id", description = "打印机ID", required = true)
     public R<PrinterStatus> status(@PathVariable Long id) {
         log.info("查询打印机状态: id={}", id);
         PrinterStatus status = printerService.getPrinterStatus(id);
@@ -58,7 +63,7 @@ public class PrinterController {
     }
 
     @GetMapping("/system/list")
-    @Operation(summary = "获取系统已安装打印机列表")
+    @Operation(summary = "获取系统已安装打印机列表", description = "获取服务器系统已安装的打印机列表，用于系统打印机绑定")
     public R<List<Map<String, String>>> listSystemPrinters() {
         log.info("获取系统打印机列表");
         List<PrintService> services = adapterFactory.getWindowsAdapter().listSystemPrinters();

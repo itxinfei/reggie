@@ -18,6 +18,7 @@ import com.reggie.service.OrderDetailService;
 import com.reggie.service.OrderService;
 import com.reggie.service.ShoppingCartService;
 import com.reggie.service.UserService;
+import com.reggie.module.printer.service.PrinterService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +30,6 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
@@ -49,10 +49,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     private OrderDetailService orderDetailService;
 
     /**
+     * 打印服务（可选注入，无打印机配置时降级跳过）
+     */
+    @Autowired(required = false)
+    private PrinterService printerService;
+
+    /**
      * 用户下单
      *
      * @param orders
      */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void submit(Orders orders) {
         //获得当前用户id
@@ -85,7 +92,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         long orderId = IdWorker.getId();//订单号
 
-        AtomicInteger amount = new AtomicInteger(0);
+        BigDecimal totalAmount = BigDecimal.ZERO;
 
         List<OrderDetail> orderDetails = shoppingCarts.stream().map((item) -> {
             OrderDetail orderDetail = new OrderDetail();
@@ -97,16 +104,22 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             orderDetail.setName(item.getName());
             orderDetail.setImage(item.getImage());
             orderDetail.setAmount(item.getAmount());
-            amount.addAndGet(item.getAmount().multiply(new BigDecimal(item.getNumber())).intValue());
             return orderDetail;
         }).collect(Collectors.toList());
+
+        // 使用 BigDecimal 精确计算总金额，避免 intValue() 精度丢失
+        for (ShoppingCart item : shoppingCarts) {
+            BigDecimal itemAmount = item.getAmount() != null ? item.getAmount() : BigDecimal.ZERO;
+            BigDecimal itemNumber = new BigDecimal(item.getNumber() != null ? item.getNumber() : 0);
+            totalAmount = totalAmount.add(itemAmount.multiply(itemNumber));
+        }
 
 
         orders.setId(orderId);
         orders.setOrderTime(LocalDateTime.now());
         orders.setCheckoutTime(LocalDateTime.now());
         orders.setStatus(Orders.STATUS_ORDERED);
-        orders.setAmount(new BigDecimal(amount.get()));//总金额
+        orders.setAmount(totalAmount.setScale(2, java.math.RoundingMode.HALF_UP));//总金额（精确计算）
         orders.setUserId(userId);
         orders.setNumber(String.valueOf(orderId));
         orders.setUserName(user.getName());
@@ -124,6 +137,18 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         //清空购物车数据
         shoppingCartService.remove(wrapper);
+
+        // 自动触发打印（异步，不影响下单主流程）
+        if (printerService != null) {
+            final long finalOrderId = orderId;
+            try {
+                printerService.printOrder(finalOrderId, "BILL");
+                printerService.printOrder(finalOrderId, "KITCHEN");
+            } catch (Exception e) {
+                // 打印失败不影响下单结果
+                log.warn("[打印] 自动打印触发失败，订单ID={}, 原因={}", finalOrderId, e.getMessage());
+            }
+        }
     }
 
     @Override
@@ -160,7 +185,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             List<OrderDetail> details = orderDetailService.list(detailWrapper);
             // Pre-group details by orderId to avoid O(n²) filtering
             Map<Long, List<OrderDetail>> detailsMap = details.stream()
-                .collect(Collectors.groupingBy(OrderDetail::getOrderId));
+                    .collect(Collectors.groupingBy(OrderDetail::getOrderId));
 
             List<OrderDto> orderDtoList = pageInfo.getRecords().stream().map(order -> {
                 OrderDto dto = new OrderDto();

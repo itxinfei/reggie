@@ -1,6 +1,7 @@
 package com.reggie.module.report.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.reggie.common.BaseContext;
 import com.reggie.entity.OrderDetail;
 import com.reggie.entity.Orders;
 import com.reggie.service.OrderDetailService;
@@ -37,163 +38,206 @@ public class ReportServiceImpl implements ReportService {
     private OrderDetailService orderDetailService;
 
     @Override
-    public Map<String, Object> getDailyReport(String date) {
+    public Map<String, Object> getDailyReport(String date, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
         LocalDate reportDate = LocalDate.parse(date);
         LocalDateTime start = reportDate.atStartOfDay();
         LocalDateTime end = reportDate.atTime(LocalTime.MAX);
 
-        LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
-        orderQw.between(Orders::getOrderTime, start, end);
-        List<Orders> orders = orderService.list(orderQw);
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        try {
+            BaseContext.setCurrentTenantId(tenantId);
 
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        int totalOrders = 0;
-        int completedOrders = 0;
-        int cancelledOrders = 0;
+            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+            orderQw.between(Orders::getOrderTime, start, end);
+            List<Orders> orders = orderService.list(orderQw);
 
-        for (Orders o : orders) {
-            totalOrders++;
-            totalAmount = totalAmount.add(o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO);
-            if (o.getStatus() != null && o.getStatus() == Orders.STATUS_COMPLETED) completedOrders++;
-            if (o.getStatus() != null && o.getStatus() == Orders.STATUS_CANCELLED) cancelledOrders++;
+            int totalOrders = 0;
+            int completedOrders = 0;
+            int cancelledOrders = 0;
+            // 营业额只统计已完成订单，避免将未支付/已取消订单计入
+            BigDecimal totalAmount = BigDecimal.ZERO;
+
+            for (Orders o : orders) {
+                totalOrders++;
+                if (o.getStatus() != null && o.getStatus() == Orders.STATUS_COMPLETED) {
+                    completedOrders++;
+                    totalAmount = totalAmount.add(o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO);
+                }
+                if (o.getStatus() != null && o.getStatus() == Orders.STATUS_CANCELLED) cancelledOrders++;
+            }
+
+            BigDecimal avgAmount = completedOrders > 0
+                    ? totalAmount.divide(BigDecimal.valueOf(completedOrders), 2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+
+            result.put("totalOrders", totalOrders);
+            result.put("totalAmount", totalAmount);
+            result.put("completedOrders", completedOrders);
+            result.put("cancelledOrders", cancelledOrders);
+            result.put("avgAmount", avgAmount);
+            return result;
+        } finally {
+            BaseContext.setCurrentTenantId(originalTenantId);
         }
-
-        result.put("totalOrders", totalOrders);
-        result.put("totalAmount", totalAmount);
-        result.put("completedOrders", completedOrders);
-        result.put("cancelledOrders", cancelledOrders);
-        result.put("avgAmount", totalOrders > 0 ? totalAmount.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
-        return result;
     }
 
     @Override
-    public List<Map<String, Object>> getDishRanking(String startDate, String endDate, int limit) {
+    public List<Map<String, Object>> getDishRanking(String startDate, String endDate, int limit, Long tenantId) {
         List<Map<String, Object>> ranking = new ArrayList<>();
-        LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
-        orderQw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
-                LocalDate.parse(endDate).atTime(LocalTime.MAX));
-        orderQw.select(Orders::getId);
-        List<Orders> orders = orderService.list(orderQw);
-        if (orders.isEmpty()) return ranking;
 
-        List<Long> orderIds = orders.stream().map(Orders::getId).collect(Collectors.toList());
-        LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
-        detailQw.in(OrderDetail::getOrderId, orderIds);
-        List<OrderDetail> details = orderDetailService.list(detailQw);
+        // 租户隔离
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        try {
+            BaseContext.setCurrentTenantId(tenantId);
 
-        Map<String, Integer> dishCount = new LinkedHashMap<>();
-        for (OrderDetail d : details) {
-            if (d.getName() != null) {
-                dishCount.merge(d.getName(), d.getNumber() != null ? d.getNumber() : 0, Integer::sum);
+            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+            orderQw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
+                    LocalDate.parse(endDate).atTime(LocalTime.MAX));
+            orderQw.select(Orders::getId);
+            List<Orders> orders = orderService.list(orderQw);
+            if (orders.isEmpty()) return ranking;
+
+            List<Long> orderIds = orders.stream().map(Orders::getId).collect(Collectors.toList());
+            LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
+            detailQw.in(OrderDetail::getOrderId, orderIds);
+            List<OrderDetail> details = orderDetailService.list(detailQw);
+
+            Map<String, Integer> dishCount = new LinkedHashMap<>();
+            for (OrderDetail d : details) {
+                if (d.getName() != null) {
+                    dishCount.merge(d.getName(), d.getNumber() != null ? d.getNumber() : 0, Integer::sum);
+                }
             }
-        }
 
-        dishCount.entrySet().stream()
-                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-                .limit(limit)
-                .forEach(e -> {
-                    Map<String, Object> item = new HashMap<>();
-                    item.put("name", e.getKey());
-                    item.put("count", e.getValue());
-                    ranking.add(item);
-                });
+            dishCount.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                    .limit(limit)
+                    .forEach(e -> {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("name", e.getKey());
+                        item.put("count", e.getValue());
+                        ranking.add(item);
+                    });
+        } finally {
+            BaseContext.setCurrentTenantId(originalTenantId);
+        }
 
         return ranking;
     }
 
     @Override
-    public List<Map<String, Object>> getTimeSlotAnalysis(String startDate, String endDate) {
+    public List<Map<String, Object>> getTimeSlotAnalysis(String startDate, String endDate, Long tenantId) {
         List<Map<String, Object>> slots = new ArrayList<>();
 
+        // 租户隔离
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        try {
+            BaseContext.setCurrentTenantId(tenantId);
 
-        LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
-        qw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
-                LocalDate.parse(endDate).atTime(LocalTime.MAX));
-        List<Orders> orders = orderService.list(qw);
+            LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
+            qw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
+                    LocalDate.parse(endDate).atTime(LocalTime.MAX));
+            List<Orders> orders = orderService.list(qw);
 
-        int[] counts = new int[SLOT_COUNT];
-        BigDecimal[] amounts = new BigDecimal[SLOT_COUNT];
-        for (int i = 0; i < SLOT_COUNT; i++) amounts[i] = BigDecimal.ZERO;
+            int[] counts = new int[SLOT_COUNT];
+            BigDecimal[] amounts = new BigDecimal[SLOT_COUNT];
+            for (int i = 0; i < SLOT_COUNT; i++) amounts[i] = BigDecimal.ZERO;
 
-        for (Orders o : orders) {
-            if (o.getOrderTime() == null) continue;
-            int hour = o.getOrderTime().getHour();
-            int idx;
-            if (hour >= 6 && hour < 10) idx = 0;
-            else if (hour >= 10 && hour < 14) idx = 1;
-            else if (hour >= 14 && hour < 17) idx = 2;
-            else if (hour >= 17 && hour < 21) idx = 3;
-            else idx = 4;
-            counts[idx]++;
-            amounts[idx] = amounts[idx].add(o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO);
-        }
+            for (Orders o : orders) {
+                if (o.getOrderTime() == null) continue;
+                int hour = o.getOrderTime().getHour();
+                int idx;
+                if (hour >= 6 && hour < 10) idx = 0;
+                else if (hour >= 10 && hour < 14) idx = 1;
+                else if (hour >= 14 && hour < 17) idx = 2;
+                else if (hour >= 17 && hour < 21) idx = 3;
+                else idx = 4;
+                counts[idx]++;
+                amounts[idx] = amounts[idx].add(o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO);
+            }
 
-        for (int i = 0; i < SLOT_COUNT; i++) {
-            Map<String, Object> slot = new HashMap<>();
-            slot.put("name", SLOT_NAMES[i]);
-            slot.put("count", counts[i]);
-            slot.put("amount", amounts[i]);
-            slots.add(slot);
+            for (int i = 0; i < SLOT_COUNT; i++) {
+                Map<String, Object> slot = new HashMap<>();
+                slot.put("name", SLOT_NAMES[i]);
+                slot.put("count", counts[i]);
+                slot.put("amount", amounts[i]);
+                slots.add(slot);
+            }
+        } finally {
+            BaseContext.setCurrentTenantId(originalTenantId);
         }
         return slots;
     }
 
     @Override
-    public Map<String, Object> getPaymentAnalysis(String startDate, String endDate) {
-        LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
-        qw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
-                LocalDate.parse(endDate).atTime(LocalTime.MAX));
-        List<Orders> orders = orderService.list(qw);
+    public Map<String, Object> getPaymentAnalysis(String startDate, String endDate, Long tenantId) {
+        // 租户隔离
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        try {
+            BaseContext.setCurrentTenantId(tenantId);
 
-        int wechatCount = 0, alipayCount = 0, balanceCount = 0, otherCount = 0;
-        BigDecimal wechatAmount = BigDecimal.ZERO, alipayAmount = BigDecimal.ZERO;
+            LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
+            qw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
+                    LocalDate.parse(endDate).atTime(LocalTime.MAX));
+            List<Orders> orders = orderService.list(qw);
 
-        for (Orders o : orders) {
-            BigDecimal amt = o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO;
-            if (o.getPayMethod() != null) {
-                switch (o.getPayMethod()) {
-                    case 1: wechatCount++; wechatAmount = wechatAmount.add(amt); break;
-                    case 2: alipayCount++; alipayAmount = alipayAmount.add(amt); break;
-                    case 3: balanceCount++; break;
-                    default: otherCount++; break;
+            int wechatCount = 0, alipayCount = 0, balanceCount = 0, otherCount = 0;
+            BigDecimal wechatAmount = BigDecimal.ZERO, alipayAmount = BigDecimal.ZERO;
+
+            for (Orders o : orders) {
+                BigDecimal amt = o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO;
+                if (o.getPayMethod() != null) {
+                    switch (o.getPayMethod()) {
+                        case 1: wechatCount++; wechatAmount = wechatAmount.add(amt); break;
+                        case 2: alipayCount++; alipayAmount = alipayAmount.add(amt); break;
+                        case 3: balanceCount++; break;
+                        default: otherCount++; break;
+                    }
                 }
             }
-        }
 
-        Map<String, Object> result = new HashMap<>();
-        Map<String, Object> wechat = new HashMap<>();
-        wechat.put("count", wechatCount);
-        wechat.put("amount", wechatAmount);
-        result.put("wechat", wechat);
-        Map<String, Object> alipay = new HashMap<>();
-        alipay.put("count", alipayCount);
-        alipay.put("amount", alipayAmount);
-        result.put("alipay", alipay);
-        Map<String, Object> balance = new HashMap<>();
-        balance.put("count", balanceCount);
-        result.put("balance", balance);
-        Map<String, Object> other = new HashMap<>();
-        other.put("count", otherCount);
-        result.put("other", other);
-        return result;
+            Map<String, Object> result = new HashMap<>();
+            Map<String, Object> wechat = new HashMap<>();
+            wechat.put("count", wechatCount);
+            wechat.put("amount", wechatAmount);
+            result.put("wechat", wechat);
+            Map<String, Object> alipay = new HashMap<>();
+            alipay.put("count", alipayCount);
+            alipay.put("amount", alipayAmount);
+            result.put("alipay", alipay);
+            Map<String, Object> balance = new HashMap<>();
+            balance.put("count", balanceCount);
+            result.put("balance", balance);
+            Map<String, Object> other = new HashMap<>();
+            other.put("count", otherCount);
+            result.put("other", other);
+            return result;
+        } finally {
+            BaseContext.setCurrentTenantId(originalTenantId);
+        }
     }
 
     @Override
-    public byte[] exportDailyReport(String startDate, String endDate) {
+    public byte[] exportDailyReport(String startDate, String endDate, Long tenantId) {
         StringBuilder csv = new StringBuilder();
         csv.append("日期,订单数,总金额,已完成,已取消\n");
 
         LocalDate start = LocalDate.parse(startDate);
         LocalDate end = LocalDate.parse(endDate);
 
-        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
-            Map<String, Object> report = getDailyReport(date.toString());
-            csv.append(date).append(",")
-                    .append(report.get("totalOrders")).append(",")
-                    .append(report.get("totalAmount")).append(",")
-                    .append(report.get("completedOrders")).append(",")
-                    .append(report.get("cancelledOrders")).append("\n");
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        try {
+            for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+                Map<String, Object> report = getDailyReport(date.toString(), tenantId);
+                csv.append(date).append(",")
+                        .append(report.get("totalOrders")).append(",")
+                        .append(report.get("totalAmount")).append(",")
+                        .append(report.get("completedOrders")).append(",")
+                        .append(report.get("cancelledOrders")).append("\n");
+            }
+        } finally {
+            BaseContext.setCurrentTenantId(originalTenantId);
         }
 
         return csv.toString().getBytes(StandardCharsets.UTF_8);

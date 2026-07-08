@@ -10,52 +10,53 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
-  .chart-container {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 20px;
-  }
-  .chart-container .chart-box {
-    flex: 1;
-    height: 400px;
-  }
+  .search-btn { margin-left: 10px; }
+  .charts-row { display: flex; gap: 16px; margin-bottom: 20px; }
+  .charts-row .chart-box { flex: 1; height: 380px; }
   </style>
 </head>
 <body>
   <div class="dashboard-container" id="report-timeslot-app" v-loading="loading">
     <div class="container">
       <div class="tableBar">
-        <el-date-picker v-model="queryDate"
+        <el-date-picker v-model="dateRange"
           clearable
           value-format="yyyy-MM-dd"
-          type="date"
-          placeholder="选择日期"
-          style="width: 200px"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          style="width: 380px"
         ></el-date-picker>
         <el-button type="primary" class="search-btn" @click="loadData">查询</el-button>
       </div>
-      <el-card shadow="never" style="margin-bottom: 20px;">
-        <div slot="header">时段订单分布</div>
-        <div class="chart-container">
+
+      <el-card shadow="never" style="margin-bottom:20px;">
+        <div slot="header">时段订单与营业额分布</div>
+        <div class="charts-row">
+          <div class="chart-box" id="barChart"></div>
           <div class="chart-box" id="pieChart"></div>
         </div>
       </el-card>
+
+      <!-- 后端字段：name, count, amount（非 timeSlot/orderCount/percentage） -->
       <el-table :data="tableData" stripe border class="tableBox">
-        <el-table-column prop="timeSlot" label="时段"></el-table-column>
-        <el-table-column prop="orderCount" label="订单数"></el-table-column>
-        <el-table-column label="占比">
+        <el-table-column prop="name" label="时段" align="center"></el-table-column>
+        <el-table-column prop="count" label="订单数" align="center"></el-table-column>
+        <el-table-column label="占比" align="center">
           <template slot-scope="{ row }">
-            <span>{{ row.percentage }}%</span>
+            <span>{{ calcPercent(row.count) }}%</span>
           </template>
         </el-table-column>
-        <el-table-column label="金额">
+        <el-table-column label="营业额（元）" align="center">
           <template slot-scope="{ row }">
-            <span>￥{{ row.amount }}</span>
+            <span>￥{{ formatMoney(row.amount) }}</span>
           </template>
         </el-table-column>
       </el-table>
     </div>
   </div>
+
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
@@ -67,43 +68,60 @@
       data() {
         return {
           loading: false,
-          queryDate: '',
+          dateRange: [],
           tableData: [],
-          chart: null,
+          barChart: null,
+          pieChart: null,
           resizeHandler: null
+        }
+      },
+      computed: {
+        totalCount() {
+          return this.tableData.reduce((s, r) => s + (r.count || 0), 0)
         }
       },
       created() {
         const now = new Date()
-        const y = now.getFullYear()
-        const m = String(now.getMonth() + 1).padStart(2, '0')
-        const d = String(now.getDate()).padStart(2, '0')
-        this.queryDate = y + '-' + m + '-' + d
+        const first = new Date(now.getFullYear(), now.getMonth(), 1)
+        const last  = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        const fmt = d => d.getFullYear() + '-'
+          + String(d.getMonth() + 1).padStart(2, '0') + '-'
+          + String(d.getDate()).padStart(2, '0')
+        this.dateRange = [fmt(first), fmt(last)]
       },
       mounted() {
         this.$nextTick(() => {
-          this.chart = echarts.init(document.getElementById('pieChart'))
-          this.resizeHandler = () => { if (this.chart) this.chart.resize() }
+          this.barChart = echarts.init(document.getElementById('barChart'))
+          this.pieChart = echarts.init(document.getElementById('pieChart'))
+          this.resizeHandler = () => {
+            if (this.barChart) this.barChart.resize()
+            if (this.pieChart) this.pieChart.resize()
+          }
           window.addEventListener('resize', this.resizeHandler)
           this.loadData()
         })
       },
       beforeDestroy() {
         if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler)
-        if (this.chart) this.chart.dispose()
+        if (this.barChart) this.barChart.dispose()
+        if (this.pieChart) this.pieChart.dispose()
       },
       methods: {
         async loadData() {
-          if (!this.queryDate) {
-            this.$message.warning('请选择日期')
+          if (!this.dateRange || this.dateRange.length < 2) {
+            this.$message.warning('请选择日期范围')
             return
           }
           this.loading = true
           try {
-            const res = await reportTimeSlot({ startDate: this.queryDate, endDate: this.queryDate })
+            const res = await reportTimeSlot({
+              startDate: this.dateRange[0],
+              endDate:   this.dateRange[1]
+            })
             if (String(res.code) === '1') {
+              // 后端字段：name, count, amount
               this.tableData = res.data || []
-              this.renderChart()
+              this.renderCharts()
             } else {
               this.$message.error(res.msg || '加载失败')
             }
@@ -113,50 +131,86 @@
             this.loading = false
           }
         },
-        renderChart() {
-          if (!this.chart) return
-          const slotColors = {
-            '早餐': '#F56C6C',
-            '午餐': '#409EFF',
-            '晚餐': '#67C23A',
-            '夜宵': '#E6A23C'
-          }
-          const pieData = this.tableData.map(item => ({
-            name: item.timeSlot,
-            value: item.orderCount
-          }))
-          const colors = pieData.map(item => slotColors[item.name] || '#909399')
-          const option = {
-            tooltip: {
-              trigger: 'item',
-              formatter: '{b}: {c} ({d}%)'
+        calcPercent(count) {
+          if (!this.totalCount) return '0.0'
+          return (count / this.totalCount * 100).toFixed(1)
+        },
+        formatMoney(val) {
+          return Number(val || 0).toFixed(2)
+        },
+        renderCharts() {
+          this.renderBar()
+          this.renderPie()
+        },
+        renderBar() {
+          if (!this.barChart) return
+          const COLORS = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de']
+          const names   = this.tableData.map(r => r.name)
+          const counts  = this.tableData.map(r => r.count)
+          const amounts = this.tableData.map(r => Number(r.amount || 0).toFixed(2))
+          this.barChart.setOption({
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+              formatter(params) {
+                let html = '<b>' + params[0].axisValue + '</b><br/>'
+                params.forEach(p => {
+                  const v = p.seriesName === '营业额' ? '¥' + p.value : p.value + ' 单'
+                  html += p.marker + ' ' + p.seriesName + '：<b>' + v + '</b><br/>'
+                })
+                return html
+              }
             },
+            legend: { data: ['订单数', '营业额'], bottom: 4 },
+            grid: { left: 50, right: 60, top: 20, bottom: 48 },
+            xAxis: { type: 'category', data: names, axisTick: { show: false },
+              axisLabel: { color: '#606266', interval: 0 } },
+            yAxis: [
+              { type: 'value', name: '订单数', splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
+              { type: 'value', name: '营业额', axisLabel: { formatter: '¥{value}' }, splitLine: { show: false } }
+            ],
+            series: [
+              { name: '订单数', type: 'bar', data: counts, barWidth: 30,
+                itemStyle: { borderRadius: [6, 6, 0, 0],
+                  color(p) { return COLORS[p.dataIndex % COLORS.length] } },
+                label: { show: true, position: 'top', fontSize: 12 }
+              },
+              { name: '营业额', type: 'line', yAxisIndex: 1, data: amounts,
+                smooth: true, symbol: 'emptyCircle', symbolSize: 8,
+                lineStyle: { color: '#fac858', width: 2.5 },
+                itemStyle: { color: '#fac858', borderColor: '#fff', borderWidth: 2 }
+              }
+            ]
+          }, true)
+        },
+        renderPie() {
+          if (!this.pieChart) return
+          const COLORS = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de']
+          const pieData = this.tableData.map((r, i) => ({
+            name: r.name,
+            value: r.count,
+            itemStyle: { color: COLORS[i % COLORS.length] }
+          }))
+          const isEmpty = pieData.every(d => !d.value)
+          this.pieChart.setOption({
+            tooltip: { trigger: 'item',
+              formatter: p => `<b>${p.name}</b><br/>${p.marker} 订单：<b>${p.value} 单</b>（${p.percent}%）` },
+            legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10,
+              textStyle: { color: '#606266', fontSize: 12 } },
             series: [{
               type: 'pie',
-              radius: ['35%', '60%'],
-              center: ['50%', '50%'],
-              avoidLabelOverlap: true,
-              itemStyle: {
-                borderRadius: 6,
-                borderColor: '#fff',
-                borderWidth: 2
-              },
-              label: {
-                show: true,
-                formatter: '{b}\n{d}%'
-              },
-              emphasis: {
-                label: { show: true, fontSize: 16, fontWeight: 'bold' }
-              },
-              data: pieData,
-              color: colors
+              radius: isEmpty ? ['0%','55%'] : ['45%','68%'],
+              center: ['50%', '46%'],
+              avoidLabelOverlap: false,
+              itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 3 },
+              label: { show: !isEmpty, position: 'outside',
+                formatter: '{b}\n{d}%', fontSize: 13, lineHeight: 18 },
+              labelLine: { show: !isEmpty },
+              emphasis: { scaleSize: 10, label: { fontSize: 15, fontWeight: 'bold' } },
+              data: isEmpty ? [{ name: '暂无数据', value: 1, itemStyle: { color: '#e4e7ed' } }] : pieData
             }]
-          }
-          this.chart.setOption(option, true)
+          }, true)
         }
       }
     })
   </script>
 </body>
 </html>
-

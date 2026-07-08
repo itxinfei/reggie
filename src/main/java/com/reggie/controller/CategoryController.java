@@ -36,12 +36,12 @@ public class CategoryController {
 
     /**
      * 新增分类
-     * @param category
-     * @return
+     * @param category 分类信息
+     * @return 操作结果
      */
     @PostMapping
     @Operation(summary = "新增分类", description = "创建新的菜品或套餐分类")
-    @Parameter(name = "category", description = "分类信息", required = true)
+    @Parameter(name = "category", description = "分类信息（名称、类型、排序等）", required = true)
     public R<String> save(@Valid @RequestBody Category category){
         log.info("category: id={}, name={}, type={}", category.getId(), category.getName(), category.getType());
         categoryService.save(category);
@@ -50,14 +50,14 @@ public class CategoryController {
 
     /**
      * 分页查询
-     * @param page
-     * @param pageSize
-     * @return
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "分类分页查询", description = "分页查询分类列表")
-    @Parameter(name = "page", description = "页码", required = true)
-    @Parameter(name = "pageSize", description = "每页数量", required = true)
+    @Operation(summary = "分类分页查询", description = "分页查询分类列表，按排序字段升序排列")
+    @Parameter(name = "page", description = "页码", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     public R<Page<Category>> page(int page,int pageSize){
         //分页构造器
         Page<Category> pageInfo = new Page<>(page,pageSize);
@@ -73,8 +73,8 @@ public class CategoryController {
 
     /**
      * 根据id删除分类
-     * @param id
-     * @return
+     * @param id 分类ID
+     * @return 操作结果
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除分类", description = "根据ID删除分类")
@@ -82,7 +82,6 @@ public class CategoryController {
     public R<String> delete(@PathVariable Long id){
         log.info("删除分类，id为：{}",id);
 
-        //categoryService.removeById(id);
         categoryService.remove(id);
 
         return R.success("分类信息删除成功");
@@ -90,12 +89,12 @@ public class CategoryController {
 
     /**
      * 根据id修改分类信息
-     * @param category
-     * @return
+     * @param category 分类信息
+     * @return 操作结果
      */
     @PutMapping
     @Operation(summary = "修改分类", description = "根据ID更新分类信息")
-    @Parameter(name = "category", description = "分类信息", required = true)
+    @Parameter(name = "category", description = "分类信息（包含ID）", required = true)
     public R<String> update(@Valid @RequestBody Category category){
         log.info("修改分类信息：id={}, name={}", category.getId(), category.getName());
 
@@ -106,8 +105,8 @@ public class CategoryController {
 
     /**
      * 根据条件查询分类数据
-     * @param category
-     * @return
+     * @param id 分类ID
+     * @return 分类详情
      */
     @GetMapping("/{id}")
     @Operation(summary = "查询分类详情", description = "根据ID查询分类信息")
@@ -121,8 +120,8 @@ public class CategoryController {
     }
 
     @GetMapping("/list")
-    @Operation(summary = "查询分类列表", description = "根据条件查询分类数据")
-    @Parameter(name = "category", description = "分类查询条件")
+    @Operation(summary = "查询分类列表", description = "根据条件查询分类数据，支持按类型筛选，按排序字段升序排列")
+    @Parameter(name = "category", description = "分类查询条件（type类型：1-菜品分类、2-套餐分类）")
     public R<List<Category>> list(Category category){
         //条件构造器
         LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();

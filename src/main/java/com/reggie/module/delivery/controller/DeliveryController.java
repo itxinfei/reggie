@@ -30,7 +30,7 @@ public class DeliveryController {
     private DeliveryService deliveryService;
 
     @GetMapping("/orders")
-    @Operation(summary = "分页查询外卖订单")
+    @Operation(summary = "分页查询外卖订单", description = "分页查询外卖平台订单，支持按平台、状态、时间范围筛选")
     public R<Page<DeliveryOrder>> pageOrders(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize,
@@ -43,7 +43,7 @@ public class DeliveryController {
     }
 
     @PostMapping("/accept")
-    @Operation(summary = "接单")
+    @Operation(summary = "接单", description = "确认接单外卖订单")
     public R<String> acceptOrder(@RequestBody Map<String, String> params) {
         String platform = params.get("platform");
         String platformOrderId = params.get("platformOrderId");
@@ -72,7 +72,7 @@ public class DeliveryController {
     }
 
     @PostMapping("/sync/menu")
-    @Operation(summary = "同步菜品")
+    @Operation(summary = "同步菜品", description = "同步菜单到外卖平台")
     public R<String> syncMenu(@RequestBody Map<String, Object> params) {
         String platform = (String) params.get("platform");
         @SuppressWarnings("unchecked")

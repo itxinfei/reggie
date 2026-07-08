@@ -201,7 +201,7 @@
                   <div v-if="dishTable.length != 0" class="content">
                     <div class="addBut addBut-mb" @click="openAddDish">+ 添加菜品</div>
                     <div class="table">
-                      <el-table :data="dishTable" border>
+                      <el-table :data="dishTable" border class="tableBox">
                         <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
                         <el-table-column prop="price" label="原价" width="180">
                           <template slot-scope="scope"> {{ Number(scope.row.price) / 100 }} </template>
@@ -378,21 +378,21 @@
             seachKey: '',
             dishList: [],
             imageUrl: '',
-            actionType: '',
             dishTable: [],
             dialogVisible: false,
             checkList: [],
-            ruleForm: {
-              name: '',
-              categoryId: '',
-              price: '',
-              code: '',
-              image: '',
-              description: '',
-              dishList: [],
-              status: true,
-              idType: '',
-            },
+              ruleForm: {
+                name: '',
+                categoryId: '',
+                price: '',
+                code: '',
+                image: '',
+                description: '',
+                dishList: [],
+                status: true,
+                idType: '',
+                id: ''
+              },
             dishType: [],
             dishAddList: [],
             dishListCache: [],
@@ -535,17 +535,17 @@
           submitForm(formName, st) {
             this.$refs[formName].validate((valid) => {
               if (valid) {
-                let prams = { ...this.ruleForm }
-                prams.price *= 100
-                prams.setmealDishes = this.dishTable.map((obj) => ({
+                let params = { ...this.ruleForm }
+                params.price *= 100
+                params.setmealDishes = this.dishTable.map((obj) => ({
                   copies: obj.copies,
                   dishId: obj.dishId,
                   name: obj.name,
                   price: obj.price,
                 }))
-                prams.status = this.ruleForm.status ? 1 : 0
-                prams.categoryId = this.ruleForm.idType
-                if(prams.setmealDishes.length < 1){
+                params.status = this.ruleForm.status ? 1 : 0
+                params.categoryId = this.ruleForm.idType
+                if(params.setmealDishes.length < 1){
                   this.$message.error('请选择菜品！')
                   return 
                 }
@@ -553,10 +553,10 @@
                   this.$message.error('请上传套餐图片')
                   return 
                 }
-                // delete prams.dishList
-                if (this.actionType == 'add') {
-                  delete prams.id
-                  addSetmeal(prams)
+                // delete params.dishList
+                if (this.actionType === 'add') {
+                  delete params.id
+                  addSetmeal(params)
                     .then((res) => {
                       if (res.code === 1) {
                         this.$message.success('套餐添加成功！')
@@ -588,8 +588,8 @@
                       this.$message.error('请求失败：' + err)
                     })
                 } else {
-                  delete prams.updateTime
-                  editSetmeal(prams)
+                  delete params.updateTime
+                  editSetmeal(params)
                     .then((res) => {
                       if (res.code === 1) {
                         this.$message.success('套餐修改成功！')
@@ -659,7 +659,7 @@
           getDishList (id) {
             queryDishList({categoryId: id}).then(res => {
               if (res.code === 1) {
-                if (res.data.length == 0) {
+                if (res.data.length === 0) {
                   this.dishAddList = []
                   return
                 }

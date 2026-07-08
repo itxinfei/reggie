@@ -42,10 +42,11 @@ public class AddressBookController {
      * 新增
      */
     @PostMapping
-    @Operation(summary = "新增地址", description = "添加新的收货地址")
-    @Parameter(name = "addressBook", description = "地址信息", required = true)
+    @Operation(summary = "新增地址", description = "添加新的收货地址，自动关联当前用户")
+    @Parameter(name = "addressBook", description = "地址信息（收货人、手机号、详细地址等）", required = true)
     public R<AddressBook> save(@Valid @RequestBody AddressBook addressBook) {
         addressBook.setUserId(BaseContext.getCurrentId());
+        addressBook.setTenantId(BaseContext.getCurrentTenantId());
         log.info("新增地址，手机号：{}，地址：{}",
             LogMaskUtils.maskPhone(addressBook.getPhone()),
             LogMaskUtils.maskAddress(addressBook.getDetail()));
@@ -54,17 +55,30 @@ public class AddressBookController {
     }
 
     @PutMapping
-    @Operation(summary = "修改地址", description = "更新地址信息")
-    @Parameter(name = "addressBook", description = "地址信息", required = true)
+    @Operation(summary = "修改地址", description = "更新地址信息，自动校验租户权限")
     public R<AddressBook> update(@Valid @RequestBody AddressBook addressBook) {
+        // 租户校验：确保只能修改本租户的地址
+        AddressBook existing = addressBookService.getById(addressBook.getId());
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (existing == null || !currentTenantId.equals(existing.getTenantId())) {
+            return R.error("没有查询到对应地址信息");
+        }
         addressBookService.updateById(addressBook);
         return R.success(addressBook);
     }
 
     @DeleteMapping
-    @Operation(summary = "删除地址", description = "批量删除地址")
+    @Operation(summary = "删除地址", description = "批量删除地址，自动校验租户权限")
     @Parameter(name = "ids", description = "地址ID列表", required = true)
     public R<String> delete(@RequestParam List<Long> ids) {
+        // 租户校验：确保只能删除本租户的地址
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        for (Long id : ids) {
+            AddressBook addressBook = addressBookService.getById(id);
+            if (addressBook == null || !currentTenantId.equals(addressBook.getTenantId())) {
+                return R.error("地址ID " + id + " 不属于当前租户");
+            }
+        }
         addressBookService.removeByIds(ids);
         return R.success("删除成功");
     }
@@ -74,6 +88,7 @@ public class AddressBookController {
     public R<AddressBook> lastUpdate() {
         LambdaQueryWrapper<AddressBook> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(AddressBook::getUserId, BaseContext.getCurrentId());
+        queryWrapper.eq(AddressBook::getTenantId, BaseContext.getCurrentTenantId());
         queryWrapper.orderByDesc(AddressBook::getUpdateTime);
         queryWrapper.last("LIMIT 1");
         AddressBook addressBook = addressBookService.getOne(queryWrapper);
@@ -93,13 +108,20 @@ public class AddressBookController {
         log.info("设置默认地址，手机号：{}，地址：{}",
             LogMaskUtils.maskPhone(addressBook.getPhone()),
             LogMaskUtils.maskAddress(addressBook.getDetail()));
+        // 租户校验
+        AddressBook existing = addressBookService.getById(addressBook.getId());
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (existing == null || !currentTenantId.equals(existing.getTenantId())) {
+            return R.error("没有查询到对应地址信息");
+        }
         LambdaUpdateWrapper<AddressBook> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(AddressBook::getUserId, BaseContext.getCurrentId());
-        wrapper.set(AddressBook::getIsDefault, 0);
-        //SQL:update address_book set is_default = 0 where user_id = ?
+        wrapper.eq(AddressBook::getTenantId, BaseContext.getCurrentTenantId());
+        wrapper.set(AddressBook::getIsDefault, AddressBook.NOT_DEFAULT);
+        //SQL:update address_book set is_default = 0 where user_id = ? and tenant_id = ?
         addressBookService.update(wrapper);
 
-        addressBook.setIsDefault(1);
+        addressBook.setIsDefault(AddressBook.IS_DEFAULT);
         //SQL:update address_book set is_default = 1 where id = ?
         addressBookService.updateById(addressBook);
         return R.success(addressBook);
@@ -113,6 +135,11 @@ public class AddressBookController {
     @Parameter(name = "id", description = "地址ID", required = true)
     public R<AddressBook> get(@PathVariable Long id) {
         AddressBook addressBook = addressBookService.getById(id);
+        // 租户校验：确保只能查询本租户的地址
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (addressBook != null && (currentTenantId == null || !currentTenantId.equals(addressBook.getTenantId()))) {
+            return R.error("没有查询到对应地址信息");
+        }
         if (addressBook != null) {
             return R.success(addressBook);
         } else {
@@ -133,7 +160,7 @@ public class AddressBookController {
         //SQL:select * from address_book where user_id = ? and is_default = 1
         AddressBook addressBook = addressBookService.getOne(queryWrapper);
 
-        if (null == addressBook) {
+        if (addressBook == null) {
             return R.error("没有找到该对象");
         } else {
             return R.success(addressBook);

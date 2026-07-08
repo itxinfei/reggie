@@ -66,11 +66,11 @@ public class ApiPerformanceMonitorAspect {
 
         if (executionTime > SLOW_THRESHOLD_MS) {
             // 慢接口告警
-            log.warn("⚠️ 慢接口告警 - 执行时间：{} ms, URI：{}, 方法：{}",
+            log.warn("慢接口告警 - 执行时间：{} ms, URI：{}, 方法：{}",
                 executionTime, requestUri, methodSignature);
         } else {
             // 正常性能日志（DEBUG 级别）
-            log.debug("✅ 接口性能正常 - 执行时间：{} ms, URI：{}, 方法：{}",
+            log.debug("接口性能正常 - 执行时间：{} ms, URI：{}, 方法：{}",
                 executionTime, requestUri, methodSignature);
         }
     }

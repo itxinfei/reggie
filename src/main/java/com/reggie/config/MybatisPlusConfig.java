@@ -17,9 +17,15 @@ import java.util.Set;
 @Configuration
 public class MybatisPlusConfig {
 
+    /**
+     * 不需要租户隔离的表：
+     * - tenant: 租户表本身不需要 tenant_id
+     * - employee: 在 EmployeeController 中手动添加了租户过滤
+     * - shopping_cart: 暂无 tenant_id 列，通过 userId 关联隔离
+     * - order_detail: 暂无 tenant_id 列，通过 orderId 关联隔离
+     */
     private static final Set<String> IGNORE_TABLES = new HashSet<>(Arrays.asList(
-        "tenant", "employee", "user", "address_book", "orders", "order_detail", "shopping_cart",
-        "purchase_order_detail", "recharge_record", "points_record", "coupon_user", "printer_log"
+        "tenant", "employee", "shopping_cart", "order_detail"
     ));
 
     @Bean
@@ -30,7 +36,8 @@ public class MybatisPlusConfig {
             public Expression getTenantId() {
                 Long tenantId = BaseContext.getCurrentTenantId();
                 if (tenantId == null) {
-                    return new LongValue(0);
+                    // 返回null表示不追加租户过滤条件（超级管理员/无租户上下文场景）
+                    return null;
                 }
                 return new LongValue(tenantId);
             }

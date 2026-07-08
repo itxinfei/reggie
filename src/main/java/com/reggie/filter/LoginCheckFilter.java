@@ -25,6 +25,9 @@ public class LoginCheckFilter implements Filter{
     //路径匹配器，支持通配符
     public static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
+    // 修改点：ObjectMapper 静态化，避免每次请求重复创建
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
@@ -88,7 +91,8 @@ public class LoginCheckFilter implements Filter{
 
             log.info("用户未登录");
             //5、如果未登录则返回未登录结果，通过输出流方式向客户端页面响应数据
-            response.getWriter().write(new ObjectMapper().writeValueAsString(R.error("NOTLOGIN")));
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write(OBJECT_MAPPER.writeValueAsString(R.error("NOTLOGIN")));
         } finally {
             BaseContext.remove();
         }

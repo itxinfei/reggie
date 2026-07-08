@@ -17,7 +17,7 @@ public class LogMaskUtils {
         if (phone.contains("-")) {
             String[] parts = phone.split("-");
             if (parts.length == 3) {
-                return String.format("%s-%s-%s", parts[0], maskMiddle(parts[1], 2, 2), maskEnd(parts[2], 4));
+                return String.format("%s-%s-%s", parts[0], maskGeneric(parts[1], 2, 2), maskEnd(parts[2], 4));
             }
         }
         // 普通手机号 "13812341234"
@@ -75,10 +75,6 @@ public class LogMaskUtils {
         }
         int maskLength = str.length() - keepPrefix - keepSuffix;
         return str.substring(0, keepPrefix) + mask(maskLength) + str.substring(str.length() - keepSuffix);
-    }
-
-    private static String maskMiddle(String str, int keepPrefix, int keepSuffix) {
-        return maskGeneric(str, keepPrefix, keepSuffix);
     }
 
     private static String maskEnd(String str, int keepPrefix) {

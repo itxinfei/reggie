@@ -5,6 +5,7 @@ import com.reggie.common.R;
 import com.reggie.module.inventory.model.PurchaseOrderDetail;
 import com.reggie.module.inventory.service.PurchaseOrderDetailService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,10 +25,12 @@ public class PurchaseOrderDetailController {
     private PurchaseOrderDetailService purchaseOrderDetailService;
 
     @GetMapping("/list/{orderId}")
-    @Operation(summary = "根据采购单id查询明细")
+    @Operation(summary = "根据采购单id查询明细", description = "查询指定采购单的所有明细项")
+    @Parameter(name = "orderId", description = "采购单ID", required = true)
     public R<List<PurchaseOrderDetail>> listByOrderId(@PathVariable Long orderId) {
         LambdaQueryWrapper<PurchaseOrderDetail> qw = new LambdaQueryWrapper<>();
         qw.eq(PurchaseOrderDetail::getPurchaseOrderId, orderId);
         return R.success(purchaseOrderDetailService.list(qw));
     }
 }
+

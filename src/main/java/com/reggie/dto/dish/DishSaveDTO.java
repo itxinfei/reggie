@@ -20,7 +20,7 @@ public class DishSaveDTO {
 
     @Schema(description = "菜品名称", required = true)
     @NotBlank(message = "菜品名称不能为空")
-    @Size(max = 50, message = "菜品名称不能超过50个字符")
+    @Size(max = 64, message = "菜品名称不能超过64个字符")
     private String name;
 
     @Schema(description = "分类ID", required = true)
@@ -33,7 +33,7 @@ public class DishSaveDTO {
     private BigDecimal price;
 
     @Schema(description = "商品码", example = "D001")
-    @Size(max = 20, message = "商品码不能超过20个字符")
+    @Size(max = 64, message = "商品码不能超过64个字符")
     private String code;
 
     @Schema(description = "图片路径", required = true)
@@ -41,7 +41,7 @@ public class DishSaveDTO {
     private String image;
 
     @Schema(description = "描述信息", example = "美味可口")
-    @Size(max = 200, message = "描述信息不能超过200个字符")
+    @Size(max = 400, message = "描述信息不能超过400个字符")
     private String description;
 
     @Schema(description = "状态 0:停售 1:起售", required = true)

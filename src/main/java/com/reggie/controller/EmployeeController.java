@@ -12,6 +12,7 @@ import com.reggie.common.RateLimitType;
 import com.reggie.common.SecurityConstants;
 import com.reggie.dto.auth.EmployeeLoginDTO;
 import com.reggie.entity.Employee;
+import com.reggie.enums.EmployeeRole;
 import com.reggie.enums.UserStatus;
 import com.reggie.service.EmployeeService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,8 +29,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -45,20 +46,22 @@ public class EmployeeController {
 
     /**
      * 员工登录
-     * @param request
-     * @param loginDTO
-     * @return
+     * @param request HTTP请求对象
+     * @param loginDTO 登录信息
+     * @return 登录结果
      */
     @PostMapping("/login")
-    @Operation(summary = "员工登录", description = "员工账号密码登录")
-    @Parameter(name = "loginDTO", description = "员工登录信息", required = true)
+    @Operation(summary = "员工登录", description = "员工账号密码登录，支持验证码和防暴力破解保护")
+    @Parameter(name = "loginDTO", description = "员工登录信息（用户名、密码）", required = true)
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.IP)
-    public R<Employee> login(HttpServletRequest request, @Valid @RequestBody EmployeeLoginDTO loginDTO) {
+    public R<Map<String, Object>> login(HttpServletRequest request, @Valid @RequestBody EmployeeLoginDTO loginDTO) {
 
-        // 检查账号是否被锁定
-        if (bruteForceProtectionFilter != null && bruteForceProtectionFilter.isAccountLocked(request)) {
-            int remainingTime = bruteForceProtectionFilter.getFailedAttempts(request);
-            log.warn("账号已被锁定 - 用户名：{}, 剩余锁定次数：{}", loginDTO.getUsername(), remainingTime);
+        // 检查账号是否被锁定（同时检查IP和用户名维度）
+        if (bruteForceProtectionFilter != null
+            && (bruteForceProtectionFilter.isAccountLocked(request)
+                || bruteForceProtectionFilter.isAccountLocked(loginDTO.getUsername()))) {
+            log.warn("账号已被锁定 - 用户名：{}",
+                LogMaskUtils.maskUsername(loginDTO.getUsername()));
             return R.error("登录失败次数过多，请5分钟后重试");
         }
 
@@ -98,7 +101,7 @@ public class EmployeeController {
         }
 
         //5、查看员工状态，如果为已禁用状态，则返回员工已禁用结果
-        if (emp.getStatus() != null && emp.getStatus() == UserStatus.DISABLED.getValue()) {
+        if (emp.getStatus() != null && UserStatus.DISABLED.getValue() == emp.getStatus().intValue()) {
             return R.error("账号已禁用");
         }
 
@@ -107,10 +110,39 @@ public class EmployeeController {
             bruteForceProtectionFilter.resetLoginAttempts(request);
         }
 
-        //7、登录成功，将员工id和租户id存入Session并返回登录成功结果
-        request.getSession().setAttribute("employee", emp.getId());
-        request.getSession().setAttribute("tenantId", emp.getTenantId());
-        return R.success(emp);
+        //7、登录成功，将员工id和租户id存入Session
+        // 注意：重新从数据库查询最新信息，确保租户上下文准确
+        Employee freshEmp = employeeService.getById(emp.getId());
+        if (freshEmp != null) {
+            request.getSession().setAttribute("employee", freshEmp.getId());
+            request.getSession().setAttribute("tenantId", freshEmp.getTenantId());
+        } else {
+            // 如果查询失败，使用原信息（降级处理）
+            request.getSession().setAttribute("employee", emp.getId());
+            request.getSession().setAttribute("tenantId", emp.getTenantId());
+            log.warn("员工登录后无法刷新数据，使用内存中的租户信息可能已过期 - empId: {}", emp.getId());
+        }
+
+        // 返回脱敏后的登录信息（不包含密码等敏感字段）
+        java.util.HashMap<String, Object> result = new java.util.HashMap<>();
+        result.put("id", emp.getId());
+        result.put("username", emp.getUsername());
+        result.put("name", emp.getName());
+        result.put("phone", emp.getPhone() != null ? maskPhone(emp.getPhone()) : null);
+        result.put("status", emp.getStatus());
+        result.put("role", emp.getRole());
+        result.put("tenantId", emp.getTenantId());
+        result.put("createTime", emp.getCreateTime());
+        result.put("updateTime", emp.getUpdateTime());
+
+        return R.success(result);
+    }
+
+    private String maskPhone(String phone) {
+        if (phone == null || phone.length() < 7) {
+            return phone;
+        }
+        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
     }
 
     /**
@@ -134,26 +166,33 @@ public class EmployeeController {
 
     /**
      * 员工退出
-     * @param request
-     * @return
+     * @param request HTTP请求对象
+     * @return 退出结果
      */
     @PostMapping("/logout")
-    @Operation(summary = "员工退出", description = "退出当前登录账号")
+    @Operation(summary = "员工退出", description = "退出当前登录账号，清除Session和租户上下文")
     public R<String> logout(HttpServletRequest request){
         request.getSession().removeAttribute("employee");
         request.getSession().removeAttribute("tenantId");
+        BaseContext.remove(); // 清理 ThreadLocal，防止租户信息泄露
         return R.success("退出成功");
     }
 
     /**
      * 新增员工
-     * @param employee
-     * @return
+     * @param request HTTP请求对象
+     * @param employee 员工信息
+     * @return 操作结果
      */
     @PostMapping
-    @Operation(summary = "新增员工", description = "创建新的员工账号")
-    @Parameter(name = "employee", description = "员工信息", required = true)
+    @Operation(summary = "新增员工", description = "创建新的员工账号，仅管理员可操作，初始密码统一设置")
+    @Parameter(name = "employee", description = "员工信息（用户名、姓名、手机号、角色等）", required = true)
     public R<String> save(HttpServletRequest request,@Valid @RequestBody Employee employee){
+        // 权限校验：仅管理员可新增员工
+        if (!isAdmin(request)) {
+            return R.error("权限不足，仅管理员可新增员工");
+        }
+
         log.info("新增员工，员工信息：手机号={}，身份证号={}",
             LogMaskUtils.maskPhone(employee.getPhone()),
             LogMaskUtils.maskIdCard(employee.getIdNumber()));
@@ -161,15 +200,6 @@ public class EmployeeController {
         // 设置初始密码（使用BCrypt加密）
         employee.setPassword(PasswordUtils.encodePassword(SecurityConstants.DEFAULT_PASSWORD));
         employee.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
-
-        //employee.setCreateTime(LocalDateTime.now());
-        //employee.setUpdateTime(LocalDateTime.now());
-
-        //获得当前登录用户的id
-        //Long empId = (Long) request.getSession().getAttribute("employee");
-
-        //employee.setCreateUser(empId);
-        //employee.setUpdateUser(empId);
 
         employee.setTenantId(BaseContext.getCurrentTenantId());
 
@@ -180,16 +210,16 @@ public class EmployeeController {
 
     /**
      * 员工信息分页查询
-     * @param page
-     * @param pageSize
-     * @param name
-     * @return
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param name 员工姓名（可选，模糊查询）
+     * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "员工分页查询", description = "分页查询员工列表")
-    @Parameter(name = "page", description = "页码", required = true)
-    @Parameter(name = "pageSize", description = "每页数量", required = true)
-    @Parameter(name = "name", description = "员工姓名（可选）")
+    @Operation(summary = "员工分页查询", description = "分页查询员工列表，支持按姓名模糊搜索，自动过滤当前租户数据")
+    @Parameter(name = "page", description = "页码，从1开始", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
+    @Parameter(name = "name", description = "员工姓名（可选，模糊查询）")
     public R<Page<Employee>> page(int page,int pageSize,String name){
         log.info("page = {},pageSize = {},name = {}" ,page,pageSize,name);
 
@@ -217,22 +247,23 @@ public class EmployeeController {
 
     /**
      * 根据id修改员工信息
-     * @param employee
-     * @return
+     * @param request HTTP请求对象
+     * @param employee 员工信息
+     * @return 操作结果
      */
     @PutMapping
-    @Operation(summary = "修改员工信息", description = "根据ID更新员工信息")
-    @Parameter(name = "employee", description = "员工信息", required = true)
+    @Operation(summary = "修改员工信息", description = "根据ID更新员工信息，仅管理员可操作")
+    @Parameter(name = "employee", description = "员工信息（包含ID）", required = true)
     public R<String> update(HttpServletRequest request,@RequestBody Employee employee){
+        // 权限校验：仅管理员可修改员工信息
+        if (!isAdmin(request)) {
+            return R.error("权限不足，仅管理员可修改员工信息");
+        }
+
         log.info("修改员工信息，手机号={}，身份证号={}",
             LogMaskUtils.maskPhone(employee.getPhone()),
             LogMaskUtils.maskIdCard(employee.getIdNumber()));
 
-        long id = Thread.currentThread().getId();
-        log.info("线程id为：{}",id);
-        //Long empId = (Long)request.getSession().getAttribute("employee");
-        //employee.setUpdateTime(LocalDateTime.now());
-        //employee.setUpdateUser(empId);
         employeeService.updateById(employee);
 
         return R.success("员工信息修改成功");
@@ -240,11 +271,11 @@ public class EmployeeController {
 
     /**
      * 根据id查询员工信息
-     * @param id
-     * @return
+     * @param id 员工ID
+     * @return 员工详情
      */
     @GetMapping("/{id}")
-    @Operation(summary = "查询员工信息", description = "根据ID查询员工详情")
+    @Operation(summary = "查询员工信息", description = "根据ID查询员工详情，返回脱敏后的信息")
     @Parameter(name = "id", description = "员工ID", required = true)
     public R<Employee> getById(@PathVariable Long id){
         log.info("根据id查询员工信息...");
@@ -253,5 +284,25 @@ public class EmployeeController {
             return R.success(employee);
         }
         return R.error("没有查询到对应员工信息");
+    }
+
+    /**
+     * 检查当前登录用户是否为管理员
+     */
+    private boolean isAdmin(HttpServletRequest request) {
+        Object empIdObj = request.getSession().getAttribute("employee");
+        if (empIdObj == null) {
+            return false;
+        }
+        Long empId = (Long) empIdObj;
+        Employee currentEmp = employeeService.getById(empId);
+
+        // 更新 Session 中的租户信息（确保租户上下文最新）
+        if (currentEmp != null) {
+            request.getSession().setAttribute("tenantId", currentEmp.getTenantId());
+            return EmployeeRole.isAdmin(currentEmp.getRole());
+        }
+
+        return false;
     }
 }

@@ -51,12 +51,13 @@ public class PrinterServiceImpl implements PrinterService {
             throw new CustomException("订单不存在");
         }
 
+        // 查询所有启用的打印机，支持 printTypes 包含当前 printType
         LambdaQueryWrapper<PrinterConfig> qw = new LambdaQueryWrapper<>();
-        qw.eq(PrinterConfig::getPrintType, printType);
         qw.eq(PrinterConfig::getStatus, 1);
+        qw.apply("FIND_IN_SET({0}, print_types)", printType);
         List<PrinterConfig> printers = printerConfigService.list(qw);
         if (printers.isEmpty()) {
-            log.warn("No enabled printer found for type: {}", printType);
+            log.warn("未找到已启用的打印机，类型: {}", printType);
             return;
         }
 
@@ -75,7 +76,7 @@ public class PrinterServiceImpl implements PrinterService {
             plog.setContent(job.getLines().toString());
             plog.setCreatedTime(LocalDateTime.now());
             if (!success) {
-                plog.setErrorMsg("Print failed");
+                plog.setErrorMsg("打印失败");
             }
             printerLogService.save(plog);
         }

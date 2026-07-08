@@ -18,7 +18,7 @@
         <link rel="stylesheet" href="./../styles/add-order.css" />
     </head>
     <body>
-        <div id="add_order" class="app">
+        <div id="add_order" class="app" v-loading="loading">
             <div class="divHead">
                 <div class="divTitle">
                     <i class="el-icon-arrow-left" @click="goBack"></i>菩提阁
@@ -42,7 +42,7 @@
                     <div class="divSplit"></div>
                     <div class="itemList">
                         <div class="item" v-for="(item,index) in cartData" :key="index">
-                            <el-image :src="imgPathConvert(item.image)">
+                            <el-image :src="imgPath(item.image)">
                                 <div slot="error" class="image-slot">
                                     <img src="./../images/noImg.png"/>
                                 </div>
@@ -73,7 +73,7 @@
             </div>
             <div class="divCart">
                 <div :class="{imgCartActive: cartData && cartData.length > 0, imgCart:!cartData || cartData.length<1}"></div>
-                <div :class="{divGoodsNum:1===1, moreGoods:cartData && cartData.length > 99}" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
+                <div :class="{divGoodsNum:true, moreGoods:cartData && cartData.length > 99}" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
                 <div class="divNum">
                     <span>￥</span>
                     <span>{{goodsPrice}}</span>
@@ -109,7 +109,8 @@
                         },
                         finishTime:'',//送达时间
                         cartData:[],
-                        note:''//备注信息
+                        note:'',//备注信息
+                        loading:false // 修改点：支付提交loading状态
                     }
                 },
                 computed:{
@@ -151,25 +152,12 @@
                         const res = await  getDefaultAddressApi()
                         if(res.code === 1){
                            this.address = res.data
-                           this.getFinishTime()
+                           this.finishTime = getFinishTime()
                         }else{
                             window.requestAnimationFrame(()=>{
                                 window.location.href = '/front/page/address-edit.html'
                             })
                         }
-                    },
-                    //获取送达时间
-                    getFinishTime(){
-                        let now = new Date()
-                        let hour = now.getHours() +1
-                        let minute = now.getMinutes()
-                        if(hour.toString().length <2){
-                            hour = '0' + hour
-                        }
-                        if(minute.toString().length <2){
-                            minute = '0' + minute
-                        }
-                        this.finishTime = hour + ':' + minute
                     },
                     toAddressPage(){
                         window.requestAnimationFrame(()=>{
@@ -186,12 +174,24 @@
                         }
                     },
                     async goToPaySuccess(){
+                        // 修改点：前置校验 — 购物车为空、地址无效、防重复提交
+                        if(!this.cartData || this.cartData.length === 0){
+                            this.$notify({ type:'warning', message:'购物车为空，请先添加商品'});
+                            return
+                        }
+                        if(!this.address.id){
+                            this.$notify({ type:'warning', message:'请先添加收货地址'});
+                            return
+                        }
+                        if(this.loading) return;// 防止重复提交
+                        this.loading = true
                         const params = {
                             remark:this.note,
                             payMethod:1,
                             addressBookId:this.address.id
                         }
                         const res = await addOrderApi(params)
+                        this.loading = false
                         if(res.code === 1){
                             window.requestAnimationFrame(()=>{
                                 window.location.replace('/front/page/pay-success.html')
@@ -199,10 +199,6 @@
                         }else{
                             this.$notify({ type:'warning', message:res.msg});
                         }
-                    },
-                    //网络图片路径转换
-                    imgPathConvert(path){
-                        return imgPath(path)
                     },
                 }
             })

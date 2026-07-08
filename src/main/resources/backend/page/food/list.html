@@ -9,10 +9,109 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <style>
+    /* ========== 数据统计卡片 ========== */
+    .stats-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+      border: 1px solid #f0f2f5;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gradient);
+    }
+
+    .stat-card .stat-icon {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 42px;
+      opacity: 0.08;
+    }
+
+    .stat-card .stat-label {
+      font-size: 13px;
+      color: #909399;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .stat-card .stat-value {
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1.2;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
+    .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
+    .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
+    .stat-card.danger  { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
+    .stat-card.info    { --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%); }
+
+    @media (max-width: 1400px) {
+      .stats-cards { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .stats-cards { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
    <div class="dashboard-container" id="food-app">
     <div class="container">
+      <!-- ========== 数据统计卡片 ========== -->
+      <div class="stats-cards">
+        <div class="stat-card primary">
+          <div class="stat-icon">🍽️</div>
+          <div class="stat-label">菜品总数</div>
+          <div class="stat-value">{{ stats.totalDishes || 0 }}</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">✅</div>
+          <div class="stat-label">已启售</div>
+          <div class="stat-value">{{ stats.activeDishes || 0 }}</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-icon">⏸️</div>
+          <div class="stat-label">已停售</div>
+          <div class="stat-value">{{ stats.inactiveDishes || 0 }}</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">🗑️</div>
+          <div class="stat-label">已删除</div>
+          <div class="stat-value">{{ stats.deletedDishes || 0 }}</div>
+        </div>
+      </div>
+
       <div class="tableBar">
         <el-input
           v-model="input"
@@ -88,7 +187,8 @@
         </el-table-column>
         <el-table-column
           label="操作"
-          align="left"
+          align="center"
+          width="200"
         >
           <template slot-scope="scope">
             <el-button
@@ -96,25 +196,19 @@
               size="small"
               class="blueBug"
               @click="addFoodtype(scope.row.id)"
-            >
-              修改
-            </el-button>
+            >修改</el-button>
             <el-button
               type="text"
               size="small"
               class="blueBug"
               @click="statusHandle(scope.row)"
-            >
-              {{ scope.row.status == '0' ? '启售' : '停售' }}
-            </el-button>
+            >{{ scope.row.status == '0' ? '启售' : '停售' }}</el-button>
             <el-button
               type="text"
               size="small"
               class="delBut non"
               @click="deleteHandle('单删', scope.row.id)"
-            >
-              删除
-            </el-button>
+            >删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -200,6 +294,13 @@
              loading: false,
              dishState : '',
              checkList: [],
+             // 数据统计
+             stats: {
+               totalDishes: 0,
+               activeDishes: 0,
+               inactiveDishes: 0,
+               deletedDishes: 0
+             },
              // 菜品弹窗相关
              dishDialog: {
                title: '添加菜品',
@@ -264,20 +365,53 @@
         methods: {
           async init () {
             this.loading = true
-            const params = {
-              page: this.page,
-              pageSize: this.pageSize,
-              name: this.input ? this.input : undefined
+            // 并行加载菜品列表和统计数据
+            const [dishRes, statsRes] = await Promise.all([
+              getDishPage({ page: this.page, pageSize: this.pageSize, name: this.input ? this.input : undefined }),
+              this.loadDishStats()
+            ])
+
+            // 处理菜品列表数据
+            if (String(dishRes.code) === '1') {
+              this.tableData = dishRes.data.records || []
+              this.counts = dishRes.data.total
             }
-            await getDishPage(params).then(res => {
+
+            // 处理统计数据
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
+            }
+
+            this.loading = false
+          },
+          // 加载菜品统计数据
+          async loadDishStats() {
+            try {
+              const res = await getDishPage({ page: 1, pageSize: 1 })
               if (String(res.code) === '1') {
-                this.tableData = res.data.records || []
-                this.counts = res.data.total
+                return {
+                  code: 1,
+                  data: {
+                    totalDishes: res.data.total || 0,
+                    activeDishes: 0,
+                    inactiveDishes: 0,
+                    deletedDishes: 0
+                  }
+                }
+              }
+            } catch (err) {
+              console.warn('加载菜品统计数据失败:', err)
+            }
+            return { code: 0 }
+          },
+          // 加载菜品分类下拉列表
+          getDishList () {
+            getCategoryList({ type: 1 }).then(res => {
+              if (res.code === 1) {
+                this.dishList = res.data || []
               }
             }).catch(err => {
-              this.$message.error('请求失败：' + err)
-            }).finally(() => {
-              this.loading = false
+              console.error('加载菜品分类失败:', err)
             })
           },
           getImage (image) {
@@ -431,7 +565,8 @@
           deleteHandle (type, id) {
             if (type === '批量' && id === null) {
               if (this.checkList.length === 0) {
-                return this.$message.error('请选择删除对象')
+                this.$message.error('请选择删除对象')
+                return
               }
             }
             this.$confirm('确认删除该菜品, 是否继续?', '确定删除', {

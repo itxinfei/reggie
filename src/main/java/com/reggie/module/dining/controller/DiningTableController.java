@@ -8,6 +8,7 @@ import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.util.QRCodeUtil;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,14 +36,16 @@ public class DiningTableController {
     private QRCodeUtil qrCodeUtil;
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询")
+    @Operation(summary = "分页查询", description = "分页查询桌台列表，自动关联区域信息")
+    @Parameter(name = "page", description = "页码", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     public R<Page<DiningTable>> page(int page, int pageSize) {
         Page<DiningTable> pageInfo = diningTableService.pageWithArea(page, pageSize);
         return R.success(pageInfo);
     }
 
     @PostMapping
-    @Operation(summary = "新增桌台")
+    @Operation(summary = "新增桌台", description = "创建新的桌台并关联区域")
     public R<DiningTable> save(@RequestBody DiningTable table) {
         log.info("新增桌台: {}", table.getName());
         table.setTenantId(BaseContext.getCurrentTenantId());
@@ -51,7 +54,7 @@ public class DiningTableController {
     }
 
     @PutMapping
-    @Operation(summary = "修改桌台")
+    @Operation(summary = "修改桌台", description = "更新桌台基本信息")
     public R<String> update(@RequestBody DiningTable table) {
         log.info("修改桌台: {}", table.getId());
         diningTableService.updateById(table);
@@ -59,7 +62,8 @@ public class DiningTableController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除桌台")
+    @Operation(summary = "删除桌台", description = "根据ID删除桌台")
+    @Parameter(name = "id", description = "桌台ID", required = true)
     public R<String> delete(@PathVariable Long id) {
         log.info("删除桌台: {}", id);
         diningTableService.removeById(id);
@@ -67,7 +71,8 @@ public class DiningTableController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "根据id查询桌台")
+    @Operation(summary = "根据id查询桌台", description = "根据ID查询桌台详情")
+    @Parameter(name = "id", description = "桌台ID", required = true)
     public R<DiningTable> getById(@PathVariable Long id) {
         DiningTable table = diningTableService.getById(id);
         if (table != null) {
@@ -77,7 +82,7 @@ public class DiningTableController {
     }
 
     @PutMapping("/status")
-    @Operation(summary = "修改桌台状态")
+    @Operation(summary = "修改桌台状态", description = "更新桌台使用状态（空闲/使用中/已预订等）")
     public R<String> changeStatus(@RequestBody Map<String, Object> params) {
         Long id = Long.valueOf(params.get("id").toString());
         String status = (String) params.get("status");
@@ -87,7 +92,8 @@ public class DiningTableController {
     }
 
     @GetMapping("/qrcode/{id}")
-    @Operation(summary = "生成桌台二维码")
+    @Operation(summary = "生成桌台二维码", description = "生成桌台扫码点餐二维码（Base64格式）")
+    @Parameter(name = "id", description = "桌台ID", required = true)
     public R<String> qrcode(@PathVariable Long id) {
         DiningTable table = diningTableService.getById(id);
         if (table == null) {
@@ -106,3 +112,4 @@ public class DiningTableController {
         }
     }
 }
+

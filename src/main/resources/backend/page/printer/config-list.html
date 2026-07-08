@@ -8,10 +8,99 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <style>
+    /* ========== 数据统计卡片 ========== */
+    .stats-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+      border: 1px solid #f0f2f5;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gradient);
+    }
+
+    .stat-card .stat-icon {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 42px;
+      opacity: 0.08;
+    }
+
+    .stat-card .stat-label {
+      font-size: 13px;
+      color: #909399;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .stat-card .stat-value {
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1.2;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
+    .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
+    .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
+    .stat-card.danger  { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
+
+    @media (max-width: 768px) {
+      .stats-cards { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
   <div class="dashboard-container" id="printer-config-app">
     <div class="container">
+      <!-- ========== 数据统计卡片 ========== -->
+      <div class="stats-cards">
+        <div class="stat-card primary">
+          <div class="stat-icon">🖨️</div>
+          <div class="stat-label">打印机总数</div>
+          <div class="stat-value">{{ stats.totalPrinters || 0 }}</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">✅</div>
+          <div class="stat-label">已启用</div>
+          <div class="stat-value">{{ stats.activePrinters || 0 }}</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">⏸️</div>
+          <div class="stat-label">已停用</div>
+          <div class="stat-value">{{ stats.inactivePrinters || 0 }}</div>
+        </div>
+      </div>
+
       <div class="tableBar">
         <el-input v-model="query.name" placeholder="名称" style="width: 160px" clearable></el-input>
         <el-input v-model="query.brand" placeholder="品牌" style="width: 160px;margin-left:10px" clearable></el-input>
@@ -29,14 +118,19 @@
         <el-button @click="reset">重置</el-button>
         <el-button type="primary" @click="showAdd">+ 新增打印机</el-button>
       </div>
-      <el-table :data="tableData" stripe border class="tableBox">
+      <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
         <el-table-column prop="name" label="名称"></el-table-column>
         <el-table-column prop="brand" label="品牌"></el-table-column>
         <el-table-column prop="type" label="连接类型"></el-table-column>
         <el-table-column prop="ipAddress" label="IP地址"></el-table-column>
         <el-table-column prop="port" label="端口"></el-table-column>
         <el-table-column prop="paperSize" label="纸张大小"></el-table-column>
-        <el-table-column prop="printType" label="打印类型"></el-table-column>
+        <el-table-column label="打印类型">
+          <template slot-scope="scope">
+            <el-tag v-for="(t, i) in getPrintTypeTags(scope.row.printTypes)" :key="i"
+              size="mini" :type="t.type" style="margin-right:4px;">{{ t.label }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="状态">
           <template slot-scope="scope">
             <el-tag :type="scope.row.status === 1 ? 'success' : 'info'">
@@ -65,45 +159,67 @@
     </div>
 
     <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="700px" :before-close="cancel">
-      <el-form ref="form" :model="form" :rules="rules" label-width="100px">
+      <el-form ref="form" :model="form" :rules="rules" label-width="120px">
         <el-form-item label="名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入名称"></el-input>
+          <el-input v-model="form.name" placeholder="请输入打印机名称，如：前台收银机"></el-input>
         </el-form-item>
         <el-form-item label="连接类型" prop="type">
-          <el-select v-model="form.type" placeholder="请选择连接类型" style="width:100%">
-            <el-option label="USB" value="USB"></el-option>
-            <el-option label="TCP" value="TCP"></el-option>
-            <el-option label="CLOUD" value="CLOUD"></el-option>
-            <el-option label="BLUETOOTH" value="BLUETOOTH"></el-option>
+          <el-select v-model="form.type" placeholder="请选择连接类型" style="width:100%" @change="onTypeChange">
+            <el-option label="USB（系统打印机）" value="USB"></el-option>
+            <el-option label="TCP（网络打印机）" value="TCP"></el-option>
+            <el-option label="CLOUD（云打印）" value="CLOUD"></el-option>
+            <el-option label="BLUETOOTH（蓝牙）" value="BLUETOOTH"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="品牌" prop="brand">
-          <el-input v-model="form.brand" placeholder="请输入品牌"></el-input>
+
+        <!-- USB / 系统打印机：从系统已安装列表选择 -->
+        <el-form-item v-if="form.type === 'USB'" label="系统打印机" prop="systemPrinterName">
+          <div style="display:flex;gap:8px;">
+            <el-select v-model="form.systemPrinterName" placeholder="请选择系统已安装的打印机"
+              style="flex:1" filterable :loading="loadingPrinters" no-data-text="未找到打印机，请先在系统安装驱动">
+              <el-option v-for="p in systemPrinters" :key="p.name" :label="p.name" :value="p.name">
+                <span>{{ p.name }}</span>
+              </el-option>
+            </el-select>
+            <el-button @click="fetchSystemPrinters" :loading="loadingPrinters" icon="el-icon-refresh">刷新</el-button>
+          </div>
+          <div style="color:#909399;font-size:12px;margin-top:4px;">
+            打印机需先在 Windows「设备和打印机」中安装驱动并能正常打印测试页
+          </div>
+        </el-form-item>
+
+        <!-- TCP：填 IP + 端口 -->
+        <template v-if="form.type === 'TCP'">
+          <el-form-item label="IP 地址" prop="ipAddress">
+            <el-input v-model="form.ipAddress" placeholder="如：192.168.1.100"></el-input>
+          </el-form-item>
+          <el-form-item label="端口" prop="port">
+            <el-input v-model.number="form.port" placeholder="如：9100（大多数热敏打印机默认端口）" type="number"></el-input>
+          </el-form-item>
+        </template>
+
+        <el-form-item label="品牌型号">
+          <el-input v-model="form.brand" placeholder="如：佳博 GP-80250IIN、芯烨 XP-N160II"></el-input>
         </el-form-item>
         <el-form-item label="设备ID">
-          <el-input v-model="form.deviceId" placeholder="请输入设备ID"></el-input>
-        </el-form-item>
-        <el-form-item label="IP地址">
-          <el-input v-model="form.ipAddress" placeholder="请输入IP地址"></el-input>
-        </el-form-item>
-        <el-form-item label="端口">
-          <el-input v-model.number="form.port" placeholder="请输入端口" type="number"></el-input>
+          <el-input v-model="form.deviceId" placeholder="可选，用于标识设备"></el-input>
         </el-form-item>
         <el-form-item label="纸张大小" prop="paperSize">
-          <el-select v-model="form.paperSize" placeholder="请选择纸张大小" style="width:100%">
-            <el-option label="58mm" value="58mm"></el-option>
-            <el-option label="80mm" value="80mm"></el-option>
-          </el-select>
+          <el-radio-group v-model="form.paperSize">
+            <el-radio label="58mm">58mm（小票机常见）</el-radio>
+            <el-radio label="80mm">80mm（收银机常见）</el-radio>
+          </el-radio-group>
         </el-form-item>
         <el-form-item label="打印类型">
           <el-checkbox-group v-model="form.printTypeList">
-            <el-checkbox label="receipt">小票</el-checkbox>
-            <el-checkbox label="order">订单</el-checkbox>
-            <el-checkbox label="kitchen">厨房</el-checkbox>
+            <el-checkbox label="BILL">小票（收银）</el-checkbox>
+            <el-checkbox label="KITCHEN">厨房单</el-checkbox>
+            <el-checkbox label="DELIVERY">配送单</el-checkbox>
           </el-checkbox-group>
+          <div style="color:#909399;font-size:12px;margin-top:4px;">勾选后该打印机会接收对应类型的打印任务</div>
         </el-form-item>
         <el-form-item label="排序">
-          <el-input v-model.number="form.sort" placeholder="请输入排序" type="number"></el-input>
+          <el-input-number v-model="form.sort" :min="0" :max="999" controls-position="right"></el-input-number>
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
@@ -129,6 +245,7 @@
       el: '#printer-config-app',
       data() {
         return {
+          loading: false,
           query: {
             page: 1,
             pageSize: 10,
@@ -139,28 +256,38 @@
           },
           counts: 0,
           tableData: [],
+          // 数据统计
+          stats: {
+            totalPrinters: 0,
+            activePrinters: 0,
+            inactivePrinters: 0
+          },
           dialog: {
             title: '',
             visible: false,
             action: ''
           },
+          systemPrinters: [],
+          loadingPrinters: false,
           form: {
             name: '',
-            type: '',
+            type: 'USB',
             brand: '',
             deviceId: '',
             ipAddress: '',
-            port: '',
-            paperSize: '',
+            port: 9100,
+            paperSize: '80mm',
+            systemPrinterName: '',
             printTypeList: [],
-            sort: '',
+            sort: 0,
             status: 1
           },
           rules: {
             name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
             type: [{ required: true, message: '请选择连接类型', trigger: 'change' }],
-            brand: [{ required: true, message: '请输入品牌', trigger: 'blur' }],
-            paperSize: [{ required: true, message: '请选择纸张大小', trigger: 'change' }]
+            paperSize: [{ required: true, message: '请选择纸张大小', trigger: 'change' }],
+            systemPrinterName: [{ required: false }],
+            ipAddress: [{ required: false }]
           }
         }
       },
@@ -177,16 +304,48 @@
             type: this.query.type || undefined,
             status: this.query.status !== '' ? this.query.status : undefined
           }
-          await printerConfigPage(params).then(res => {
+
+          // 并行加载打印机列表和统计数据
+          const [printerRes, statsRes] = await Promise.all([
+            printerConfigPage(params),
+            this.loadPrinterStats()
+          ])
+
+          // 处理打印机列表数据
+          if (String(printerRes.code) === '1') {
+            this.tableData = printerRes.data.records || []
+            this.counts = printerRes.data.total
+          } else {
+            this.$message.error(printerRes.msg || '操作失败')
+          }
+
+          // 处理统计数据
+          if (statsRes && String(statsRes.code) === '1') {
+            this.stats = statsRes.data || this.stats
+          }
+        },
+        // 加载打印机统计数据
+        async loadPrinterStats() {
+          try {
+            const res = await printerConfigPage({ page: 1, pageSize: 1000 })
             if (String(res.code) === '1') {
-              this.tableData = res.data.records || []
-              this.counts = res.data.total
-            } else {
-              this.$message.error(res.msg || '操作失败')
+              const records = res.data.records || []
+              const total = res.data.total || 0
+              const activeCount = records.filter(item => item.status === 1).length
+              const inactiveCount = records.filter(item => item.status === 0).length
+              return {
+                code: 1,
+                data: {
+                  totalPrinters: total,
+                  activePrinters: activeCount,
+                  inactivePrinters: inactiveCount
+                }
+              }
             }
-          }).catch(err => {
-            this.$message.error('请求失败：' + err)
-          })
+          } catch (err) {
+            console.warn('加载打印机统计数据失败:', err)
+          }
+          return { code: 0 }
         },
         search() {
           this.query.page = 1
@@ -204,17 +363,11 @@
           this.dialog.title = '新增打印机'
           this.dialog.visible = true
           this.form = {
-            name: '',
-            type: '',
-            brand: '',
-            deviceId: '',
-            ipAddress: '',
-            port: '',
-            paperSize: '',
-            printTypeList: [],
-            sort: '',
-            status: 1
+            name: '', type: 'USB', brand: '', deviceId: '',
+            ipAddress: '', port: 9100, paperSize: '80mm',
+            systemPrinterName: '', printTypeList: [], sort: 0, status: 1
           }
+          this.fetchSystemPrinters()
         },
         showEdit(row) {
           this.dialog.action = 'edit'
@@ -223,16 +376,32 @@
           this.form = {
             id: row.id,
             name: row.name,
-            type: row.type,
+            type: row.type || 'USB',
             brand: row.brand,
             deviceId: row.deviceId,
             ipAddress: row.ipAddress,
-            port: row.port,
-            paperSize: row.paperSize,
-            printTypeList: row.printType ? row.printType.split(',') : [],
-            sort: row.sort,
+            port: row.port || 9100,
+            paperSize: row.paperSize || '80mm',
+            systemPrinterName: row.systemPrinterName || '',
+            printTypeList: row.printTypes ? row.printTypes.split(',') : [],
+            sort: row.sort || 0,
             status: row.status
           }
+          if (this.form.type === 'USB') this.fetchSystemPrinters()
+        },
+        fetchSystemPrinters() {
+          this.loadingPrinters = true
+          listSystemPrinters().then(res => {
+            if (res.code === 1) {
+              this.systemPrinters = res.data || []
+              if (!this.systemPrinters.length) {
+                this.$message.warning('未检测到已安装的打印机，请先在 Windows「设备和打印机」安装驱动')
+              }
+            }
+          }).catch(() => {}).finally(() => { this.loadingPrinters = false })
+        },
+        onTypeChange(val) {
+          if (val === 'USB') this.fetchSystemPrinters()
         },
         submit() {
           this.$refs.form.validate(valid => {
@@ -242,10 +411,11 @@
               type: this.form.type,
               brand: this.form.brand,
               deviceId: this.form.deviceId,
+              systemPrinterName: this.form.systemPrinterName || '',
               ipAddress: this.form.ipAddress,
               port: this.form.port,
               paperSize: this.form.paperSize,
-              printType: this.form.printTypeList.join(','),
+              printTypes: this.form.printTypeList.join(','), // 后端字段: printTypes
               sort: this.form.sort,
               status: this.form.status
             }
@@ -317,6 +487,15 @@
         handleCurrentChange(val) {
           this.query.page = val
           this.init()
+        },
+        getPrintTypeTags(printTypes) {
+          if (!printTypes) return []
+          const MAP = {
+            'BILL': { label: '小票', type: 'success' },
+            'KITCHEN': { label: '厨房', type: 'warning' },
+            'DELIVERY': { label: '配送', type: 'primary' }
+          }
+          return printTypes.split(',').map(t => MAP[t.trim()] || { label: t, type: 'info' })
         }
       }
     })

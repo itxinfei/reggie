@@ -6,6 +6,7 @@ import com.reggie.common.R;
 import com.reggie.module.dining.model.QueueRecord;
 import com.reggie.module.dining.service.QueueService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +30,9 @@ public class QueueController {
     private QueueService queueService;
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询")
+    @Operation(summary = "分页查询", description = "分页查询排队记录列表")
+    @Parameter(name = "page", description = "页码", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     public R<Page<QueueRecord>> page(int page, int pageSize) {
         Page<QueueRecord> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
@@ -39,7 +42,7 @@ public class QueueController {
     }
 
     @PostMapping("/take")
-    @Operation(summary = "取号")
+    @Operation(summary = "取号", description = "顾客取号排队，支持指定座位数和手机号")
     public R<QueueRecord> takeNumber(@RequestBody Map<String, Object> params) {
         Integer seatCount = Integer.valueOf(params.get("seatCount").toString());
         String phone = (String) params.get("phone");
@@ -49,7 +52,7 @@ public class QueueController {
     }
 
     @PutMapping("/call")
-    @Operation(summary = "叫号")
+    @Operation(summary = "叫号", description = "呼叫下一位顾客，支持按座位数筛选")
     public R<QueueRecord> callNext(@RequestBody(required = false) Map<String, Object> params) {
         Integer seatCount = params != null && params.get("seatCount") != null
                 ? Integer.valueOf(params.get("seatCount").toString()) : null;
@@ -59,10 +62,12 @@ public class QueueController {
     }
 
     @PutMapping("/cancel/{id}")
-    @Operation(summary = "取消排队")
+    @Operation(summary = "取消排队", description = "取消指定排队记录")
+    @Parameter(name = "id", description = "排队记录ID", required = true)
     public R<String> cancel(@PathVariable Long id) {
         log.info("取消排队: {}", id);
         queueService.cancelQueue(id);
         return R.success("取消排队成功");
     }
 }
+

@@ -1,6 +1,7 @@
 package com.reggie.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
 import com.reggie.common.LogMaskUtils;
 import com.reggie.common.R;
 import com.reggie.entity.Orders;
@@ -12,15 +13,12 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import javax.validation.Valid;
 
 /**
  * 订单
@@ -46,6 +44,8 @@ public class OrderController {
         log.info("订单数据：手机号={}，地址={}",
             LogMaskUtils.maskPhone(orders.getPhone()),
             LogMaskUtils.maskAddress(orders.getAddress()));
+        // 设置租户ID
+        orders.setTenantId(BaseContext.getCurrentTenantId());
         orderService.submit(orders);
         return R.success("下单成功");
     }
@@ -58,6 +58,7 @@ public class OrderController {
     @Parameter(name = "beginTime", description = "开始时间（可选）")
     @Parameter(name = "endTime", description = "结束时间（可选）")
     public R<Page<Orders>> page(int page, int pageSize, String number, String beginTime, String endTime) {
+        // 租户ID已由 LoginCheckFilter 设置到 BaseContext
         Page<Orders> pageInfo = orderService.orderPage(page, pageSize, number, beginTime, endTime);
         return R.success(pageInfo);
     }
@@ -65,6 +66,7 @@ public class OrderController {
     @GetMapping("/list")
     @Operation(summary = "查询订单列表", description = "查询用户的所有订单")
     public R<List<Orders>> list() {
+        // 租户ID已由 LoginCheckFilter 设置到 BaseContext
         List<Orders> list = orderService.userList();
         return R.success(list);
     }
@@ -74,6 +76,7 @@ public class OrderController {
     @Parameter(name = "page", description = "页码", required = true)
     @Parameter(name = "pageSize", description = "每页数量", required = true)
     public R<?> userPage(int page, int pageSize) {
+        // 租户ID已由 LoginCheckFilter 设置到 BaseContext
         return R.success(orderService.userPage(page, pageSize));
     }
 
@@ -81,6 +84,11 @@ public class OrderController {
     @Operation(summary = "再来一单", description = "将订单商品重新添加到购物车")
     @Parameter(name = "orders", description = "订单信息", required = true)
     public R<String> again(@RequestBody Orders orders) {
+        // 租户校验：确保只能操作本租户的订单
+        Orders existing = orderService.getById(orders.getId());
+        if (existing == null || !BaseContext.getCurrentTenantId().equals(existing.getTenantId())) {
+            return R.error("订单不存在或不属于当前租户");
+        }
         orderService.again(orders.getId());
         return R.success("添加购物车成功");
     }
@@ -89,6 +97,11 @@ public class OrderController {
     @Operation(summary = "更新订单状态", description = "更新订单状态")
     @Parameter(name = "orders", description = "订单状态信息", required = true)
     public R<String> updateStatus(@RequestBody Orders orders) {
+        // 租户校验：确保只能操作本租户的订单
+        Orders existing = orderService.getById(orders.getId());
+        if (existing == null || !BaseContext.getCurrentTenantId().equals(existing.getTenantId())) {
+            return R.error("订单不存在或不属于当前租户");
+        }
         orderService.updateStatus(orders.getStatus(), orders.getId());
         return R.success("操作成功");
     }

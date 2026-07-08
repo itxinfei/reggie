@@ -12,9 +12,14 @@
   display: flex;
   align-items: center;
   margin-bottom: 20px;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 10px;
+}
+.dashboard-container .container .tableBar > .tableLab,
+.dashboard-container .container .tableBar > .action-group {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .dashboard-container .container .tableBox {
   width: 100%;
@@ -73,7 +78,8 @@
 }
 
 .el-table-column--selection .cell {
-  padding: 0;
+  padding: 0 !important;
+  text-align: center !important;
 }
 
 /* 添加 */
@@ -214,10 +220,9 @@
   font-size: 13px !important;
 }
 
+/* 非 selection 的第一列保留左缩进，selection 列由上方规则重置为 0 */
 .el-table .cell,
-.el-table th div,
-.el-table--border td:first-child .cell,
-.el-table--border th:first-child .cell {
+.el-table th div {
   padding-left: 12px;
 }
 
@@ -291,6 +296,12 @@
 /* 禁用分隔线 */
 .tableBox .el-button--text.non::after {
   display: none;
+}
+
+/* 操作列按钮强制一行显示：只作用于含操作按钮的 cell，不影响其他长文本列 */
+.el-table td.is-center .cell {
+  white-space: nowrap;
+  overflow: visible;
 }
 
 /* 图片圆角样式 */

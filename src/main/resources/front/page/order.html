@@ -68,6 +68,7 @@
         <!-- 引入axios -->
         <script src="../../backend/plugins/axios/axios.min.js"></script>
         <script src="./../js/request.js"></script>
+        <script src="./../js/common.js"></script>
         <script src="./../api/order.js"></script>
         <script>
         new Vue({
@@ -80,7 +81,8 @@
                     },
                     orderList:[],
                     loading:false,
-                    finished:false
+                    finished:false,
+                    submitting:false // 修改点：再来一单防重复提交
                 }
             },
             computed:{},
@@ -90,11 +92,11 @@
             mounted(){},
             methods:{
                 goBack(){
-                    const url = document.referrer
-                    //表示是从订单页面跳转过来的
-                    if(url.includes('success')){
+                    // 修改点：用sessionStorage标志替代不可靠的document.referrer判断
+                    if(sessionStorage.getItem('orderFromPaySuccess')){
+                        sessionStorage.removeItem('orderFromPaySuccess')
                         window.requestAnimationFrame(()=>{
-                                window.location.href= '/front/index.html'
+                            window.location.href = '/front/index.html'
                         })   
                     }else{
                         history.go(-1)
@@ -110,7 +112,10 @@
                     }
                     const res = await orderPagingApi(this.paging)
                     if(res.code === 1){
-                        this.orderList.push(...res.data.records)
+                        // 第一页时重置列表，防止重复累加
+                        if(this.paging.page === 1){
+                            this.orderList = []
+                        }
                         let records = res.data.records
                         if(records && Array.isArray(records)){
                             records.forEach(item=>{
@@ -120,6 +125,7 @@
                                 })
                                 item.sumNum = number
                             })
+                            this.orderList.push(...records)
                         }
                         this.loading = false;
                         if(this.paging.page >= res.data.pages){
@@ -130,38 +136,26 @@
                         this.$notify({ type:'warning', message:res.msg});
                     }
                 },
+                getStatus(status){
+                    return getStatus(status)
+                },
                 async addOrderAgain(order){
-                    const res = await orderAgainApi({id:order.id})
-                    if(res.code === 1){
-                        window.requestAnimationFrame(()=>{
-                            window.location.href= '/front/index.html'
-                        })
-                    }else{
-                        this.$notify({ type:'warning', message:res.msg});
+                    // 修改点：防重复点击
+                    if(this.submitting) return;
+                    this.submitting = true
+                    try {
+                        const res = await orderAgainApi({id:order.id})
+                        if(res.code === 1){
+                            window.requestAnimationFrame(()=>{
+                                window.location.href = '/front/index.html'
+                            })
+                        }else{
+                            this.$notify({ type:'warning', message:res.msg});
+                        }
+                    } finally {
+                        this.submitting = false
                     }
                 },
-                getStatus(status){
-                    let str = ''
-                    switch(status){
-                        case 1:
-                            str =  '待付款'
-                        break;
-                        case 2:
-                            str =  '正在派送'
-                        break;
-                        case 3:
-                            str =  '已派送'
-                        break;
-                        case 4:
-                            str =  '已完成'
-                        break;
-                        case 5:
-                            str =  '已取消'
-                        break;
-
-                    }
-                    return str
-                }
             }
         })
         </script>

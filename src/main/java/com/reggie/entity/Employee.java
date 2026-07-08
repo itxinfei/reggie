@@ -1,7 +1,9 @@
 package com.reggie.entity;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.reggie.common.SecurityConstants;
 import lombok.Data;
 import javax.validation.constraints.NotBlank;
@@ -18,6 +20,7 @@ public class Employee implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     @Size(min = 4, max = 20, message = "用户名长度4-20位")
@@ -25,17 +28,20 @@ public class Employee implements Serializable {
 
     // 新增/修改时需要验证姓名，登录时不验证
     @NotBlank(message = "姓名不能为空")
-    @Size(max = 30, message = "姓名不能超过30位")
+    @Size(max = 50, message = "姓名不能超过50位")
     private String name;
 
     private String password;
 
     /**
-     * 密码加密类型：MD5、BCRYPT
+     * 密码加密类型：BCRYPT
+     * 注意：新注册员工默认使用 BCrypt
+     * 老数据（MD5）在登录时会自动检测并升级为 BCrypt（见 EmployeeController.login() 第91-101行）
      */
-    private String passwordType = SecurityConstants.PASSWORD_TYPE_MD5; // 默认MD5，兼容老数据
+    private String passwordType = SecurityConstants.PASSWORD_TYPE_BCRYPT;
 
     @Pattern(regexp = SecurityConstants.PHONE_PATTERN, message = "手机号格式不正确")
+    @Size(max = 11, message = "手机号不能超过11个字符")
     private String phone;
 
     private String sex;
@@ -43,6 +49,11 @@ public class Employee implements Serializable {
     private String idNumber;//身份证号码
 
     private Integer status;
+
+    /**
+     * 角色：1=超级管理员，2=普通员工
+     */
+    private Integer role = 2; // 默认普通员工
 
     private Long tenantId;
 

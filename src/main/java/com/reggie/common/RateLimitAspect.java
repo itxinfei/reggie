@@ -32,9 +32,9 @@ public class RateLimitAspect {
         this.redisTemplate = redisTemplate;
         this.enabled = redisTemplate != null;
         if (enabled) {
-            log.info("✅ API限流已启用（Redis模式）");
+            log.info("API限流已启用（Redis模式）");
         } else {
-            log.info("ℹ️ API限流未启用（Redis不可用），已降级");
+            log.info("API限流未启用（Redis不可用），已降级");
         }
     }
 
@@ -71,7 +71,7 @@ public class RateLimitAspect {
 
             // 判断是否超过限流阈值
             if (count != null && count > rateLimit.maxRequestsPerSecond()) {
-                log.warn("⚠️ 接口限流触发 - 请求数：{}/{}，Key：{}",
+                log.warn("接口限流触发 - 请求数：{}/{}，Key：{}",
                     count, rateLimit.maxRequestsPerSecond(), limitKey);
                 throw new RuntimeException("请求过于频繁，请稍后重试");
             }
@@ -111,6 +111,9 @@ public class RateLimitAspect {
                 break;
             case GLOBAL:
                 keyBuilder.append("global");
+                break;
+            default:
+                keyBuilder.append("unknown");
                 break;
         }
 

@@ -4,59 +4,60 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
+import javax.validation.constraints.*;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
-菜品口味
+ * Dish flavor
  */
 @Data
 public class DishFlavor implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
+    // Name
+    @NotBlank(message = "Flavor name cannot be empty")
+    @Size(max = 64, message = "Flavor name cannot exceed 64 characters")
+    private String name;
+
+    // Flavor value
+    @NotBlank(message = "Flavor value cannot be empty")
+    @Size(max = 64, message = "Flavor value cannot exceed 64 characters")
+    private String value;
+
+    // Dish ID
+    @NotNull(message = "Dish ID cannot be empty")
+    private Long dishId;
+
+    // Tenant ID
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    //菜品id
-    @NotNull(message = "菜品ID不能为空")
-    private Long dishId;
-
-
-    //口味名称
-    @NotBlank(message = "口味名称不能为空")
-    @Size(max = 20, message = "口味名称不能超过20个字符")
-    private String name;
-
-
-    //口味数据list
-    @NotBlank(message = "口味数据不能为空")
-    private String value;
-
-
+    // Create time
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-
+    // Update time
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-
+    // Create user
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
-
+    // Update user
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 
-
-    //是否删除
+    // Is deleted
+    @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
 
 }

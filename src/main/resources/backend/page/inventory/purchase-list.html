@@ -24,7 +24,7 @@
         <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
         <el-button type="primary" @click="addHandle">+ 新增采购单</el-button>
       </div>
-      <el-table :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
+      <el-table v-loading="loading" :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
         <el-table-column type="expand">
           <template slot-scope="props">
             <el-table :data="props.row.details" stripe class="tableBox" v-if="props.row.details">
@@ -62,7 +62,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
+      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" :current-page.sync="page" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
     </div>
     <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="50%" :before-close="handleClose">
       <el-form class="demo-form-inline" label-width="120px">
@@ -99,6 +99,7 @@
         el: '#purchase-app',
         data() {
           return {
+            loading: false,
             action: '',
             counts: 0,
             page: 1,

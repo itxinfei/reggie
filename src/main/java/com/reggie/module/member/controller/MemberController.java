@@ -8,6 +8,7 @@ import com.reggie.module.member.model.Member;
 import com.reggie.module.member.service.MemberService;
 import com.reggie.module.member.service.RechargeRecordService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,7 +37,11 @@ public class MemberController {
     }
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询")
+    @Operation(summary = "分页查询", description = "分页查询会员列表，支持按姓名、手机号搜索，自动过滤当前租户数据")
+    @Parameter(name = "page", description = "页码", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
+    @Parameter(name = "name", description = "会员姓名（可选，模糊查询）")
+    @Parameter(name = "phone", description = "手机号（可选，模糊查询）")
     public R<Page<Member>> page(int page, int pageSize, String name, String phone) {
         Page<Member> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<Member> qw = new LambdaQueryWrapper<>();
@@ -52,7 +57,7 @@ public class MemberController {
     }
 
     @PostMapping
-    @Operation(summary = "新增会员")
+    @Operation(summary = "新增会员", description = "根据手机号注册新会员，自动生成会员卡号")
     public R<Member> save(@RequestBody Member member) {
         log.info("新增会员: {}", member.getPhone());
         Member result = memberService.registerByPhone(member.getPhone(), member.getName());
@@ -60,7 +65,7 @@ public class MemberController {
     }
 
     @PutMapping
-    @Operation(summary = "修改会员")
+    @Operation(summary = "修改会员", description = "更新会员基本信息")
     public R<String> update(@RequestBody Member member) {
         log.info("修改会员: {}", member.getId());
         member.setUpdatedTime(LocalDateTime.now());
@@ -69,7 +74,8 @@ public class MemberController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "查询会员")
+    @Operation(summary = "查询会员", description = "根据ID查询会员详情")
+    @Parameter(name = "id", description = "会员ID", required = true)
     public R<Member> getById(@PathVariable Long id) {
         Member member = memberService.getById(id);
         if (member != null) {
@@ -79,7 +85,7 @@ public class MemberController {
     }
 
     @PostMapping("/recharge")
-    @Operation(summary = "会员充值")
+    @Operation(summary = "会员充值", description = "为会员账户充值，支持赠送金额")
     public R<String> recharge(@RequestBody Map<String, Object> params) {
         Long memberId = Long.valueOf(params.get("memberId").toString());
         BigDecimal amount = new BigDecimal(params.get("amount").toString());
@@ -91,7 +97,7 @@ public class MemberController {
     }
 
     @PostMapping("/deduct-balance")
-    @Operation(summary = "扣减余额")
+    @Operation(summary = "扣减余额", description = "扣减会员账户余额（用于订单抵扣等）")
     public R<String> deductBalance(@RequestBody Map<String, Object> params) {
         Long memberId = Long.valueOf(params.get("memberId").toString());
         BigDecimal amount = new BigDecimal(params.get("amount").toString());
@@ -102,3 +108,4 @@ public class MemberController {
         return R.error("余额不足或会员不存在");
     }
 }
+

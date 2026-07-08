@@ -40,7 +40,7 @@ public class BruteForceProtectionFilter implements Filter {
     /**
      * 锁定时间（秒）
      */
-    private static final int LOCKOUT_DURATION = 300; // 5分钟
+    private static final int LOCKOUT_DURATION = 900; // 15分钟，与SecurityConstants.LOGIN_LOCK_DURATION保持一致
 
     /**
      * 登录失败计数 key 前缀
@@ -69,9 +69,9 @@ public class BruteForceProtectionFilter implements Filter {
         this.redisTemplate = redisTemplate;
         this.enabled = redisTemplate != null;
         if (enabled) {
-            log.info("✅ 暴力破解防护已启用（Redis模式）");
+            log.info("暴力破解防护已启用（Redis模式）");
         } else {
-            log.info("ℹ️ 暴力破解防护未启用（Redis不可用），已降级");
+            log.info("暴力破解防护未启用（Redis不可用），已降级");
         }
     }
 
@@ -99,20 +99,19 @@ public class BruteForceProtectionFilter implements Filter {
 
             // 检查是否已被锁定
             if (isLocked(identifier)) {
-                log.warn("⚠️ 账号已被锁定 - 标识：{}", identifier);
+                log.warn("账号已被锁定 - 标识：{}", identifier);
                 httpResponse.setStatus(429); // 429 Too Many Requests
                 httpResponse.setContentType("application/json;charset=UTF-8");
-                httpResponse.getWriter().write("{\"code\": 429, \"msg\": \"登录失败次数过多，请5分钟后重试\"}");
+                httpResponse.getWriter().write("{\"code\": 429, \"msg\": \"登录失败次数过多，请15分钟后重试\"}");
                 return;
             }
 
             // 继续过滤器链
             chain.doFilter(request, response);
 
-            // 检查响应状态，如果是 401 则记录失败
-            if (httpResponse.getStatus() == HttpServletResponse.SC_UNAUTHORIZED) {
-                recordFailedAttempt(identifier);
-            }
+            // 注意：不在此处检查响应状态码来记录失败
+            // 原因：登录接口返回的是 JSON 响应体（HTTP 200），而非 HTTP 401
+            // 登录失败由 Controller 层主动调用 recordLoginFailure() 记录
         } else {
             chain.doFilter(request, response);
         }
@@ -151,7 +150,7 @@ public class BruteForceProtectionFilter implements Filter {
             if (failures != null && failures >= MAX_FAILED_ATTEMPTS) {
                 redisTemplate.opsForValue().set(lockedKey, "locked", LOCKOUT_DURATION, TimeUnit.SECONDS);
                 redisTemplate.delete(failureKey);
-                log.warn("⚠️ 账号已被锁定 {} 秒 - 标识：{}, 失败次数：{}",
+                log.warn("账号已被锁定 {} 秒 - 标识：{}, 失败次数：{}",
                     LOCKOUT_DURATION, identifier, failures);
             }
         } catch (Exception e) {
@@ -291,6 +290,19 @@ public class BruteForceProtectionFilter implements Filter {
             return isLocked(username.toString());
         }
         return false;
+    }
+
+    /**
+     * 检查是否被锁定（供 Controller 查询，基于直接标识符）
+     *
+     * @param identifier 用户标识（用户名/手机号）
+     * @return true=已锁定，false=未锁定
+     */
+    public boolean isAccountLocked(String identifier) {
+        if (!enabled || identifier == null || identifier.trim().isEmpty()) {
+            return false;
+        }
+        return isLocked(identifier);
     }
 
     /**

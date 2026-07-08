@@ -97,7 +97,8 @@ public class ReportServiceTest {
 
     @Test
     void testDailyReport() {
-        Map<String, Object> report = reportService.getDailyReport("2026-07-01");
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> report = reportService.getDailyReport("2026-07-01", tenantId);
 
         assertEquals(3, report.get("totalOrders"));
         assertEquals(new BigDecimal("350.00"), report.get("totalAmount"));
@@ -115,7 +116,8 @@ public class ReportServiceTest {
 
     @Test
     void testDishRanking() {
-        List<Map<String, Object>> ranking = reportService.getDishRanking("2026-07-01", "2026-07-01", 10);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        List<Map<String, Object>> ranking = reportService.getDishRanking("2026-07-01", "2026-07-01", 10, tenantId);
 
         assertEquals(2, ranking.size());
         assertEquals("鱼香肉丝", ranking.get(0).get("name"));
@@ -126,7 +128,8 @@ public class ReportServiceTest {
 
     @Test
     void testTimeSlotAnalysis() {
-        List<Map<String, Object>> slots = reportService.getTimeSlotAnalysis("2026-07-01", "2026-07-01");
+        Long tenantId = BaseContext.getCurrentTenantId();
+        List<Map<String, Object>> slots = reportService.getTimeSlotAnalysis("2026-07-01", "2026-07-01", tenantId);
 
         assertEquals(5, slots.size());
         assertEquals("早市(6-10)", slots.get(0).get("name"));
@@ -149,7 +152,8 @@ public class ReportServiceTest {
 
     @Test
     void testPaymentAnalysis() {
-        Map<String, Object> payment = reportService.getPaymentAnalysis("2026-07-01", "2026-07-01");
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> payment = reportService.getPaymentAnalysis("2026-07-01", "2026-07-01", tenantId);
 
         @SuppressWarnings("unchecked")
         Map<String, Object> wechat = (Map<String, Object>) payment.get("wechat");
@@ -168,7 +172,8 @@ public class ReportServiceTest {
 
     @Test
     void testExportReport() {
-        byte[] data = reportService.exportDailyReport("2026-07-01", "2026-07-01");
+        Long tenantId = BaseContext.getCurrentTenantId();
+        byte[] data = reportService.exportDailyReport("2026-07-01", "2026-07-01", tenantId);
         String csv = new String(data, StandardCharsets.UTF_8);
 
         assertTrue(csv.startsWith("日期,订单数,总金额,已完成,已取消"));

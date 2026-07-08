@@ -1,19 +1,15 @@
 package com.reggie.controller;
 
-import com.reggie.common.PasswordUtils;
 import com.reggie.common.R;
 import com.reggie.common.SecurityConstants;
-import com.reggie.entity.Employee;
+import com.reggie.common.CustomException;
 import com.reggie.entity.Tenant;
-import com.reggie.enums.UserStatus;
-import com.reggie.service.EmployeeService;
 import com.reggie.service.TenantService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,31 +27,38 @@ public class TenantController {
     @Autowired
     private TenantService tenantService;
 
-    @Autowired
-    private EmployeeService employeeService;
-
     @PostMapping("/register")
     @Operation(summary = "租户注册", description = "注册新租户并创建管理员账号")
     @Parameter(name = "tenant", description = "租户信息", required = true)
     @Parameter(name = "username", description = "管理员用户名", required = true)
     @Parameter(name = "password", description = "管理员密码", required = true)
-    public R<String> register(@Valid @RequestBody Tenant tenant, String username, String password, HttpSession session) {
-        tenantService.save(tenant);
+    @Parameter(name = "phone", description = "手机号", required = true)
+    @Parameter(name = "verifyCode", description = "短信验证码", required = true)
+    public R<String> register(@Valid @RequestBody Tenant tenant,
+                              String username,
+                              String password,
+                              String phone,
+                              String verifyCode,
+                              HttpSession session) {
+        // 校验手机号格式
+        if (phone == null || !phone.matches(SecurityConstants.PHONE_PATTERN)) {
+            return R.error("手机号格式不正确");
+        }
 
-        Employee employee = new Employee();
-        employee.setUsername(username);
-        // 使用BCrypt加密密码
-        employee.setPassword(PasswordUtils.encodePassword(password));
-        employee.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
-        employee.setName(tenant.getName());
-        employee.setPhone(tenant.getPhone());
-        employee.setStatus(UserStatus.ENABLED.getValue());
-        employee.setTenantId(tenant.getId());
-        employeeService.save(employee);
+        // 校验验证码
+        if (verifyCode == null || verifyCode.isEmpty()) {
+            return R.error("验证码不能为空");
+        }
 
-        session.setAttribute("employee", employee.getId());
-        session.setAttribute("tenantId", tenant.getId());
-
-        return R.success("注册成功");
+        try {
+            tenantService.registerWithAdmin(tenant, username, password, phone, verifyCode, session);
+            return R.success("注册成功");
+        } catch (CustomException e) {
+            log.warn("租户注册失败：{}", e.getMessage());
+            return R.error(e.getMessage());
+        } catch (Exception e) {
+            log.error("租户注册异常", e);
+            return R.error("注册失败，请稍后重试");
+        }
     }
 }

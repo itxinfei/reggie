@@ -47,9 +47,6 @@ public class MyMetaObjecthandler implements MetaObjectHandler {
         log.info("公共字段自动填充[update]...");
         log.info(metaObject.toString());
 
-        long id = Thread.currentThread().getId();
-        log.info("线程id为：{}",id);
-
         metaObject.setValue("updateTime",LocalDateTime.now());
         metaObject.setValue("updateUser",BaseContext.getCurrentId());
     }

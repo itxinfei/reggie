@@ -39,6 +39,7 @@
         <!-- 引入axios -->
         <script src="../../backend/plugins/axios/axios.min.js"></script>
         <script src="./../js/request.js"></script>
+        <script src="./../js/common.js"></script>
         <script>
         new Vue({
             el:"#pay_success",
@@ -49,7 +50,7 @@
             },
             computed:{},
             created(){
-                this.getFinishTime()
+                this.finishTime = getFinishTime()
             },
             mounted(){},
             methods:{
@@ -59,6 +60,8 @@
                     })   
                 },
                 toOrderPage(){
+                    // 修改点：设置标志位供order.html的goBack使用，替代不可靠的document.referrer
+                    sessionStorage.setItem('orderFromPaySuccess', '1')
                     window.requestAnimationFrame(()=>{
                         window.location.replace('/front/page/order.html')
                     })  
@@ -67,19 +70,6 @@
                     window.requestAnimationFrame(()=>{
                         window.location.replace('/front/index.html')
                     })  
-                },
-                //获取送达时间
-                getFinishTime(){
-                    let now = new Date()
-                    let hour = now.getHours() +1
-                    let minute = now.getMinutes()
-                    if(hour.toString().length <2){
-                        hour = '0' + hour
-                    }
-                    if(minute.toString().length <2){
-                        minute = '0' + minute
-                    }
-                    this.finishTime = hour + ':' + minute
                 },
                 
             }

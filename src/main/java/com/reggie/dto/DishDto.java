@@ -3,10 +3,12 @@ package com.reggie.dto;
 import com.reggie.entity.Dish;
 import com.reggie.entity.DishFlavor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import java.util.ArrayList;
 import java.util.List;
 
 @Data
+@EqualsAndHashCode(callSuper = false)
 public class DishDto extends Dish {
 
     //菜品对应的口味数据

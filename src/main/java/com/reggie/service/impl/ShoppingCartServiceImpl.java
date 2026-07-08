@@ -17,8 +17,11 @@ public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, Sho
         wrapper.eq(ShoppingCart::getUserId, BaseContext.getCurrentId());
         if (shoppingCart.getDishId() != null) {
             wrapper.eq(ShoppingCart::getDishId, shoppingCart.getDishId());
-        } else {
+        } else if (shoppingCart.getSetmealId() != null) {
             wrapper.eq(ShoppingCart::getSetmealId, shoppingCart.getSetmealId());
+        } else {
+            // 既没有菜品ID也没有套餐ID，无法确定要减的商品
+            return null;
         }
 
         ShoppingCart cartItem = this.getOne(wrapper);

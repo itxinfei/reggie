@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="./../styles/user.css" />
 </head>
 <body>
-    <div id="user" class="app">
+    <div id="user" class="app" v-loading="loading">
         <div class="divHead">
             <div class="divTitle">
                 <i class="el-icon-arrow-left" @click="goBack"></i>个人中心
@@ -79,19 +79,22 @@
     <script src="./../js/base.js"></script>
     <!-- 引入axios -->
     <script src="../../backend/plugins/axios/axios.min.js"></script>
-    <script src="./../js/request.js"></script>
-    <script src="./../api/order.js"></script>
+        <script src="./../js/request.js"></script>
+        <script src="./../js/common.js"></script>
+        <script src="./../api/order.js"></script>
     <script src="./../api/login.js"></script>
     <script>
         new Vue({
             el:"#user",
             data(){
                 return {
+                    userPhone: '',
                     form:{
                         phone:'',
                         code:''
                     },
                     msgFlag:false,
+                    loading:false,   // 修改点：全局loading状态
                     order:[{
                         orderTime:'',//下单时间
                         status:undefined,//订单状态 1已结账，2未结账，3已退单，4已完成，5已取消
@@ -106,13 +109,16 @@
             },
             computed:{},
             created(){
-                this.userPhone =sessionStorage.getItem("userPhone")
+                this.userPhone = sessionStorage.getItem("userPhone") || ''
                 this.initData()
             },
             mounted(){},
             methods:{
                 goBack(){
                     history.go(-1)
+                },
+                getStatus(status){
+                    return getStatus(status)
                 },
                 toAddressPage(){
                     window.requestAnimationFrame(()=>{
@@ -135,7 +141,7 @@
                     const res = await orderPagingApi(params)
                     if(res.code === 1){
                         this.order = res.data.records
-                        if(this.order && this.order[0].orderDetails){
+                        if(this.order && this.order.length > 0 && this.order[0].orderDetails){
                             let number = 0
                             this.order[0].orderDetails.forEach(item=>{
                                 number += item.number
@@ -146,47 +152,40 @@
                         this.$notify({ type:'warning', message:res.msg});
                     }
                 },
-                getStatus(status){
-                    let str = ''
-                    switch(status){
-                        case 1:
-                            str =  '待付款'
-                        break;
-                        case 2:
-                            str =  '正在派送'
-                        break;
-                        case 3:
-                            str =  '已派送'
-                        break;
-                        case 4:
-                            str =  '已完成'
-                        break;
-                        case 5:
-                            str =  '已取消'
-                        break;
-
-                    }
-                    return str
-                },
                 async addOrderAgain(){
-                    const res = await orderAgainApi({id:this.order[0].id})
-                    if(res.code === 1){
-                        window.requestAnimationFrame(()=>{
-                            window.location.href = '/front/index.html'
-                        }) 
-                    }else{
-                        this.$notify({ type:'warning', message:res.msg});
+                    // 修改点：防重复点击
+                    if(this.loading) return;
+                    this.loading = true
+                    try {
+                        const res = await orderAgainApi({id:this.order[0].id})
+                        if(res.code === 1){
+                            window.requestAnimationFrame(()=>{
+                                window.location.href = '/front/index.html'
+                            }) 
+                        }else{
+                            this.$notify({ type:'warning', message:res.msg});
+                        }
+                    } finally {
+                        this.loading = false
                     }
                 },
                 async toPageLogin(){
-                    const res = await loginoutApi()
-                    if(res.code === 1){
-                        window.requestAnimationFrame(()=>{
-                            window.location.href = '/front/page/login.html'
-                        }) 
-                    }else{
-                        this.$notify({ type:'warning', message:res.msg});
-                    }                
+                    // 修改点：防重复点击
+                    if(this.loading) return;
+                    this.loading = true
+                    try {
+                        const res = await loginoutApi()
+                        if(res.code === 1){
+                            sessionStorage.removeItem("userPhone")
+                            window.requestAnimationFrame(()=>{
+                                window.location.href = '/front/page/login.html'
+                            }) 
+                        }else{
+                            this.$notify({ type:'warning', message:res.msg});
+                        }
+                    } finally {
+                        this.loading = false
+                    }
                 }
             }
         })

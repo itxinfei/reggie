@@ -16,6 +16,7 @@ import static com.reggie.module.payment.model.PaymentOrder.STATUS_SUCCESS;
 import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.payment.service.RefundRecordService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +48,7 @@ public class PaymentController {
     private PaymentChannelFactory paymentChannelFactory;
 
     @PostMapping("/pay")
-    @Operation(summary = "创建支付")
+    @Operation(summary = "创建支付", description = "创建支付订单并调用支付渠道生成支付链接/二维码")
     public R<PayResponse> pay(@RequestBody Map<String, Object> params) {
         Long orderId = Long.valueOf(params.get("orderId").toString());
         String channel = (String) params.get("channel");
@@ -66,7 +67,8 @@ public class PaymentController {
     }
 
     @PostMapping("/notify/{channel}")
-    @Operation(summary = "支付回调")
+    @Operation(summary = "支付回调", description = "接收支付渠道的异步通知，更新订单支付状态")
+    @Parameter(name = "channel", description = "支付渠道：WECHAT-微信、ALIPAY-支付宝", required = true)
     public R<String> notify(@PathVariable String channel, @RequestBody Map<String, String> params) {
         PaymentChannel paymentChannel = paymentChannelFactory.getChannel(channel);
         PayResponse response = paymentChannel.handleNotify(params);
@@ -81,7 +83,7 @@ public class PaymentController {
     }
 
     @PostMapping("/refund")
-    @Operation(summary = "退款")
+    @Operation(summary = "退款", description = "申请退款并调用支付渠道处理退款")
     public R<String> refund(@RequestBody Map<String, Object> params) {
         Long paymentOrderId = Long.valueOf(params.get("paymentOrderId").toString());
         BigDecimal amount = new BigDecimal(params.get("amount").toString());
@@ -117,7 +119,8 @@ public class PaymentController {
     }
 
     @GetMapping("/query/{tradeNo}")
-    @Operation(summary = "查询支付状态")
+    @Operation(summary = "查询支付状态", description = "根据交易号查询支付订单状态")
+    @Parameter(name = "tradeNo", description = "交易号", required = true)
     public R<PaymentOrder> query(@PathVariable String tradeNo) {
         PaymentOrder po = paymentOrderService.lambdaQuery()
             .eq(PaymentOrder::getTradeNo, tradeNo).one();
@@ -128,7 +131,7 @@ public class PaymentController {
     }
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询")
+    @Operation(summary = "分页查询", description = "分页查询支付订单列表，支持按订单ID筛选")
     public R<Page<PaymentOrder>> page(int page, int pageSize, Long orderId) {
         Page<PaymentOrder> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<PaymentOrder> qw = new LambdaQueryWrapper<>();
@@ -143,3 +146,4 @@ public class PaymentController {
             + String.format("%04d", (int)(Math.random() * 10000));
     }
 }
+

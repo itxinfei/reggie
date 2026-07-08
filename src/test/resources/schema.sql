@@ -517,7 +517,7 @@ CREATE TABLE recharge_record (
   payment_method varchar(20) DEFAULT NULL,
   created_time datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  KEY idx_tenant (tenant_id)
+  KEY idx_recharge_tenant (tenant_id)
 );
 
 CREATE TABLE coupon_template (

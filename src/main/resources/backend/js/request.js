@@ -5,70 +5,39 @@
     // axios中请求配置有baseURL选项，表示请求URL公共部分
     baseURL: '/',
     // 超时
-    timeout: 1000000
+    timeout: 30000
   })
   // request拦截器
+  // 修改点：移除手动GET参数拼接代码，axios原生支持params序列化，无需手动处理
   service.interceptors.request.use(config => {
-    // 是否需要设置 token
-    // const isToken = (config.headers || {}).isToken === false
-    // if (getToken() && !isToken) {
-    //   config.headers['Authorization'] = 'Bearer ' + getToken() // 让每个请求携带自定义token 请根据实际情况自行修改
-    // }
-    // get请求映射params参数
-    if (config.method === 'get' && config.params) {
-      let url = config.url + '?';
-      for (const propName of Object.keys(config.params)) {
-        const value = config.params[propName];
-        var part = encodeURIComponent(propName) + "=";
-        if (value !== null && typeof(value) !== "undefined") {
-          if (typeof value === 'object') {
-            for (const key of Object.keys(value)) {
-              let params = propName + '[' + key + ']';
-              var subPart = encodeURIComponent(params) + "=";
-              url += subPart + encodeURIComponent(value[key]) + "&";
-            }
-          } else {
-            url += part + encodeURIComponent(value) + "&";
-          }
-        }
-      }
-      url = url.slice(0, -1);
-      config.params = {};
-      config.url = url;
-    }
     return config
   }, error => {
-      console.log(error)
-      Promise.reject(error)
+      return Promise.reject(error)
   })
 
   // 响应拦截器
   service.interceptors.response.use(res => {
-      console.log('---响应拦截器---',res)
-      // 未设置状态码则默认成功状态
-      const code = res.data.code;
-      // 获取错误信息
-      const msg = res.data.msg
-      console.log('---code---',code)
-      if (res.data.code === 0 && res.data.msg === 'NOTLOGIN') {// 返回登录页面
-        console.log('---/backend/page/login/login.html---',code)
+      // 修改点：统一code判断，code===0为业务失败，code===1为成功
+      const code = res.data ? res.data.code : undefined;
+      // NOTLOGIN状态码处理：返回登录页面
+      if (code === 0 && res.data.msg === 'NOTLOGIN') {
         localStorage.removeItem('userInfo')
+        // 修改点：后端页面在iframe中加载，须用window.top导航顶层窗口到登录页
         window.top.location.href = '/backend/page/login/login.html'
       } else {
         return res.data
       }
     },
     error => {
-      console.log('err' + error)
       let { message } = error;
-      if (message == "Network Error") {
+      if (message === "Network Error") {
         message = "后端接口连接异常";
       }
       else if (message.includes("timeout")) {
         message = "系统接口请求超时";
       }
       else if (message.includes("Request failed with status code")) {
-        message = "系统接口" + message.substr(message.length - 3) + "异常";
+        message = "系统接口" + message.substring(message.length - 3) + "异常";
       }
       window.ELEMENT.Message({
         message: message,
@@ -78,5 +47,5 @@
       return Promise.reject(error)
     }
   )
-  win.$axios = service
+  win.$axios = service
 })(window);

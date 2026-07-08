@@ -38,9 +38,12 @@
   margin-bottom: 30px;
 }
 .login-form .el-form-item.is-error .el-input__inner {
-  border: 0 !important;
-  border-bottom: 1px solid #fd7065 !important;
+  border: 1px solid #fd7065 !important;
   background: #fff !important;
+}
+.login-form .el-form-item.is-error .el-input__inner:focus {
+  border-color: #fd7065 !important;
+  box-shadow: 0 0 0 2px rgba(253, 112, 101, 0.15) !important;
 }
 .login-form .input-icon {
   height: 32px;
@@ -48,29 +51,33 @@
   margin-left: -2px;
 }
 .login-form .el-input__inner {
-  border: 0;
-  border-bottom: 1px solid #e9e9e8;
-  border-radius: 0;
+  border: 1px solid #e9e9e8;
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 400;
   color: #333333;
-  height: 32px;
-  line-height: 32px;
+  height: 38px;
+  line-height: 38px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.login-form .el-input__inner:focus {
+  border-color: #ffc200;
+  box-shadow: 0 0 0 2px rgba(255, 194, 0, 0.2);
 }
 .login-form .el-input__prefix {
-  left: 0;
+  left: 8px;
 }
 .login-form .el-input--prefix .el-input__inner {
-  padding-left: 26px;
+  padding-left: 32px;
 }
 .login-form .el-input__inner::placeholder {
   color: #aeb5c4;
 }
 .login-form .el-form-item--medium .el-form-item__content {
-  line-height: 32px;
+  line-height: 38px;
 }
 .login-form .el-input--medium .el-input__icon {
-  line-height: 32px;
+  line-height: 38px;
 }
 .login-btn {
   border-radius: 17px;

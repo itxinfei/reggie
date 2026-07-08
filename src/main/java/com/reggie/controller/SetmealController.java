@@ -53,12 +53,12 @@ public class SetmealController {
 
     /**
      * 新增套餐
-     * @param setmealDto
-     * @return
+     * @param setmealDto 套餐信息（包含基本信息及菜品列表）
+     * @return 操作结果
      */
     @PostMapping
-    @Operation(summary = "新增套餐", description = "创建新的套餐及关联菜品")
-    @Parameter(name = "setmealDto", description = "套餐DTO", required = true)
+    @Operation(summary = "新增套餐", description = "创建新的套餐及关联菜品，支持多菜品组合")
+    @Parameter(name = "setmealDto", description = "套餐信息DTO（名称、分类、价格、描述、状态、菜品列表）", required = true)
     public R<String> save(@Valid @RequestBody SetmealDto setmealDto){
         log.info("套餐信息：id={}, name={}, categoryId={}, price={}",
             setmealDto.getId(),
@@ -73,16 +73,16 @@ public class SetmealController {
 
     /**
      * 套餐分页查询
-     * @param page
-     * @param pageSize
-     * @param name
-     * @return
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param name 套餐名称（可选，模糊查询）
+     * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "套餐分页查询", description = "分页查询套餐列表")
-    @Parameter(name = "page", description = "页码", required = true)
-    @Parameter(name = "pageSize", description = "每页数量", required = true)
-    @Parameter(name = "name", description = "套餐名称（可选）")
+    @Operation(summary = "套餐分页查询", description = "分页查询套餐列表，支持按名称模糊搜索，自动关联分类名称")
+    @Parameter(name = "page", description = "页码，从1开始", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
+    @Parameter(name = "name", description = "套餐名称（可选，模糊查询）")
     public R<Page<SetmealDto>> page(int page,int pageSize,String name){
         //分页构造器对象
         Page<Setmeal> pageInfo = new Page<>(page,pageSize);
@@ -120,7 +120,7 @@ public class SetmealController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "查询套餐详情", description = "根据ID查询套餐及关联菜品")
+    @Operation(summary = "查询套餐详情", description = "根据ID查询套餐基本信息及关联菜品列表")
     @Parameter(name = "id", description = "套餐ID", required = true)
     public R<SetmealDto> get(@PathVariable Long id) {
         SetmealDto setmealDto = setmealService.getByIdWithDish(id);
@@ -129,15 +129,15 @@ public class SetmealController {
 
     @PutMapping
     @Operation(summary = "修改套餐", description = "更新套餐基本信息及关联菜品")
-    @Parameter(name = "setmealDto", description = "套餐DTO", required = true)
+    @Parameter(name = "setmealDto", description = "套餐DTO（包含ID、基本信息及菜品列表）", required = true)
     public R<String> update(@Valid @RequestBody SetmealDto setmealDto) {
         setmealService.updateWithDish(setmealDto);
         return R.success("修改套餐成功");
     }
 
     @PostMapping("/status/{status}")
-    @Operation(summary = "更新套餐状态", description = "批量更新套餐售卖状态")
-    @Parameter(name = "status", description = "状态值", required = true)
+    @Operation(summary = "更新套餐状态", description = "批量更新套餐售卖状态（起售/停售）")
+    @Parameter(name = "status", description = "状态值：1-起售，0-停售", required = true)
     @Parameter(name = "ids", description = "套餐ID列表", required = true)
     public R<String> updateStatus(@PathVariable Integer status, @RequestParam List<Long> ids) {
         setmealService.updateStatus(status, ids);
@@ -156,11 +156,11 @@ public class SetmealController {
 
     /**
      * 删除套餐
-     * @param ids
-     * @return
+     * @param ids 套餐ID列表
+     * @return 操作结果
      */
     @DeleteMapping
-    @Operation(summary = "删除套餐", description = "批量删除套餐")
+    @Operation(summary = "删除套餐", description = "批量删除套餐及关联菜品数据")
     @Parameter(name = "ids", description = "套餐ID列表", required = true)
     public R<String> delete(@RequestParam List<Long> ids){
         log.info("ids:{}",ids);
@@ -172,12 +172,12 @@ public class SetmealController {
 
     /**
      * 根据条件查询套餐数据
-     * @param setmeal
-     * @return
+     * @param setmeal 查询条件
+     * @return 套餐列表
      */
     @GetMapping("/list")
-    @Operation(summary = "查询套餐列表", description = "根据条件查询套餐数据")
-    @Parameter(name = "setmeal", description = "套餐查询条件")
+    @Operation(summary = "查询套餐列表", description = "根据条件查询套餐数据，支持分类ID和状态筛选")
+    @Parameter(name = "setmeal", description = "套餐查询条件（categoryId分类ID、status状态）")
     public R<List<Setmeal>> list(Setmeal setmeal){
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(setmeal.getCategoryId() != null,Setmeal::getCategoryId,setmeal.getCategoryId());

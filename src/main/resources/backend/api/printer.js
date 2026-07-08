@@ -8,3 +8,4 @@ const printerTest = (id) => $axios({ url: `/printer/test/${id}`, method: 'post' 
 const printerStatus = (id) => $axios({ url: `/printer/status/${id}`, method: 'get' })
 const printerPrint = (orderId, type) => $axios({ url: `/printer/print/${orderId}`, method: 'post', params: { type } })
 const printerLogPage = (params) => $axios({ url: '/printer/log/page', method: 'get', params })
+const listSystemPrinters = () => $axios({ url: '/printer/system/list', method: 'get' })

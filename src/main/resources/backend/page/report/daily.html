@@ -10,30 +10,99 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
+  .search-btn { margin-left: 10px; }
   .card-container {
     display: flex;
-    gap: 20px;
+    gap: 16px;
     margin-bottom: 20px;
   }
-  .card-container .el-card {
-    flex: 1;
-  }
-  .card-container .el-card__body {
-    text-align: center;
-  }
-  .card-container .card-value {
-    font-size: 28px;
+  .card-container .el-card { flex: 1; }
+  .card-container .el-card__body { text-align: center; padding: 20px; }
+  .card-value {
+    font-size: 30px;
     font-weight: 700;
-    color: #409EFF;
-    margin-top: 10px;
+    margin-top: 8px;
+    line-height: 1.2;
   }
-  .card-container .card-label {
-    font-size: 14px;
-    color: #666;
+  .card-value.blue  { color: #409EFF; }
+  .card-value.green { color: #67C23A; }
+  .card-value.orange{ color: #E6A23C; }
+  .card-value.red   { color: #F56C6C; }
+  .card-label { font-size: 13px; color: #909399; }
+  .card-sub   { font-size: 12px; color: #c0c4cc; margin-top: 4px; }
+  #trendChart { width: 100%; height: 380px; }
+
+  /* ========== 现代化统计卡片 ========== */
+  .stats-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
   }
-  #trendChart {
-    width: 100%;
-    height: 400px;
+
+  .stat-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid #f0f2f5;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient);
+  }
+
+  .stat-card .stat-icon {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 42px;
+    opacity: 0.08;
+  }
+
+  .stat-card .stat-label {
+    font-size: 13px;
+    color: #909399;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  .stat-card .stat-value {
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.2;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
+  .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
+  .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
+  .stat-card.danger  { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
+
+  @media (max-width: 1400px) {
+    .stats-cards { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 768px) {
+    .stats-cards { grid-template-columns: 1fr; }
   }
   </style>
 </head>
@@ -49,31 +118,50 @@
           style="width: 200px"
         ></el-date-picker>
         <el-button type="primary" class="search-btn" @click="loadData">查询</el-button>
+        <div class="tableLab">
+          <el-button type="primary" @click="handleExport">导出本月日报</el-button>
+        </div>
       </div>
+
+      <!-- KPI 卡片：字段对齐后端返回的 totalOrders/totalAmount/avgAmount/completedOrders/cancelledOrders -->
       <div class="card-container">
         <el-card shadow="hover">
-          <div class="card-label">营业额</div>
-          <div class="card-value">￥{{ dailyData.turnover || 0 }}</div>
+          <div class="card-label">订单总数</div>
+          <div class="card-value blue">{{ dailyData.totalOrders || 0 }}</div>
+          <div class="card-sub">全部状态订单</div>
         </el-card>
         <el-card shadow="hover">
-          <div class="card-label">订单数</div>
-          <div class="card-value">{{ dailyData.orderCount || 0 }}</div>
+          <div class="card-label">营业额（元）</div>
+          <div class="card-value green">￥{{ formatMoney(dailyData.totalAmount) }}</div>
+          <div class="card-sub">已完成订单金额</div>
         </el-card>
         <el-card shadow="hover">
-          <div class="card-label">客单价</div>
-          <div class="card-value">￥{{ dailyData.avgPerCustomer || 0 }}</div>
+          <div class="card-label">客单价（元）</div>
+          <div class="card-value orange">￥{{ formatMoney(dailyData.avgAmount) }}</div>
+          <div class="card-sub">人均消费</div>
         </el-card>
         <el-card shadow="hover">
-          <div class="card-label">翻台率</div>
-          <div class="card-value">{{ dailyData.turnoverRate || 0 }}%</div>
+          <div class="card-label">完成 / 取消</div>
+          <div class="card-value green" style="font-size:22px;">
+            {{ dailyData.completedOrders || 0 }}
+            <span style="color:#c0c4cc;font-weight:400;"> / </span>
+            <span style="color:#F56C6C;">{{ dailyData.cancelledOrders || 0 }}</span>
+          </div>
+          <div class="card-sub">完成率 {{ completionRate }}%</div>
         </el-card>
       </div>
+
+      <!-- 近7天趋势图（单独调用 trend 接口） -->
       <el-card shadow="never">
-        <div slot="header">近7天趋势</div>
+        <div slot="header" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>近7天营收趋势</span>
+          <span style="font-size:12px;color:#c0c4cc;">自动展示，与上方日期无关</span>
+        </div>
         <div id="trendChart"></div>
       </el-card>
     </div>
   </div>
+
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
@@ -87,18 +175,23 @@
           loading: false,
           queryDate: '',
           dailyData: {},
-          trendDates: [],
-          trendAmounts: [],
           chart: null,
           resizeHandler: null
         }
       },
+      computed: {
+        completionRate() {
+          const total = this.dailyData.totalOrders || 0
+          const completed = this.dailyData.completedOrders || 0
+          if (!total) return '0.0'
+          return (completed / total * 100).toFixed(1)
+        }
+      },
       created() {
         const now = new Date()
-        const y = now.getFullYear()
-        const m = String(now.getMonth() + 1).padStart(2, '0')
-        const d = String(now.getDate()).padStart(2, '0')
-        this.queryDate = y + '-' + m + '-' + d
+        this.queryDate = now.getFullYear() + '-'
+          + String(now.getMonth() + 1).padStart(2, '0') + '-'
+          + String(now.getDate()).padStart(2, '0')
       },
       mounted() {
         this.$nextTick(() => {
@@ -120,14 +213,19 @@
           }
           this.loading = true
           try {
-            const res = await reportDaily({ date: this.queryDate })
-            if (String(res.code) === '1') {
-              this.dailyData = res.data || {}
-              this.trendDates = res.data.trendDates || []
-              this.trendAmounts = res.data.trendAmounts || []
-              this.renderChart()
+            // 并行请求：日报数据 + 近7天趋势
+            const [dailyRes, trendRes] = await Promise.all([
+              reportDaily({ date: this.queryDate }),
+              $axios.get('/api/dashboard/trend')
+            ])
+            if (String(dailyRes.code) === '1') {
+              // 后端字段：totalOrders, totalAmount, completedOrders, cancelledOrders, avgAmount
+              this.dailyData = dailyRes.data || {}
             } else {
-              this.$message.error(res.msg || '加载失败')
+              this.$message.error(dailyRes.msg || '日报加载失败')
+            }
+            if (String(trendRes.code) === '1') {
+              this.renderChart(trendRes.data || [])
             }
           } catch (err) {
             this.$message.error('请求失败：' + err)
@@ -135,43 +233,87 @@
             this.loading = false
           }
         },
-        renderChart() {
+        renderChart(trendData) {
           if (!this.chart) return
-          const option = {
-            tooltip: { trigger: 'axis' },
-            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+          const dates   = trendData.map(t => t.date)
+          const orders  = trendData.map(t => t.orderCount || 0)
+          const amounts = trendData.map(t => Number(t.revenue) || 0)
+          this.chart.setOption({
+            tooltip: {
+              trigger: 'axis',
+              axisPointer: { type: 'cross' },
+              formatter(params) {
+                let html = '<b>' + params[0].axisValue + '</b><br/>'
+                params.forEach(p => {
+                  const val = p.seriesName === '营业额'
+                    ? '¥' + Number(p.value).toFixed(2)
+                    : p.value + ' 单'
+                  html += p.marker + ' ' + p.seriesName + '：<b>' + val + '</b><br/>'
+                })
+                return html
+              }
+            },
+            legend: { data: ['订单数', '营业额'], bottom: 4 },
+            grid: { left: 55, right: 55, top: 20, bottom: 48 },
             xAxis: {
               type: 'category',
-              data: this.trendDates,
-              axisLabel: { rotate: 30 }
+              data: dates.length ? dates : ['暂无数据'],
+              axisTick: { show: false },
+              axisLabel: { color: '#909399' }
             },
-            yAxis: {
-              type: 'value',
-              name: '金额（元）'
-            },
-            series: [{
-              type: 'line',
-              data: this.trendAmounts,
-              smooth: true,
-              lineStyle: { width: 3, color: '#409EFF' },
-              areaStyle: {
-                color: {
-                  type: 'linear',
-                  x: 0, y: 0, x2: 0, y2: 1,
-                  colorStops: [
-                    { offset: 0, color: 'rgba(64,158,255,0.3)' },
-                    { offset: 1, color: 'rgba(64,158,255,0.05)' }
-                  ]
-                }
+            yAxis: [
+              { type: 'value', name: '订单量', splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
+              { type: 'value', name: '营业额', axisLabel: { formatter: '¥{value}' }, splitLine: { show: false } }
+            ],
+            series: [
+              {
+                name: '订单数', type: 'bar', data: orders,
+                barWidth: 26,
+                itemStyle: { borderRadius: [6, 6, 0, 0], color: '#5470c6' },
+                label: { show: true, position: 'top', color: '#5470c6', fontSize: 11 }
               },
-              itemStyle: { color: '#409EFF' }
-            }]
-          }
-          this.chart.setOption(option, true)
+              {
+                name: '营业额', type: 'line', yAxisIndex: 1, data: amounts,
+                smooth: true, symbol: 'emptyCircle', symbolSize: 8,
+                lineStyle: { color: '#91cc75', width: 3 },
+                itemStyle: { color: '#91cc75', borderColor: '#fff', borderWidth: 2 },
+                areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                  colorStops: [{ offset: 0, color: 'rgba(145,204,117,0.3)' }, { offset: 1, color: 'rgba(145,204,117,0.02)' }]
+                }},
+                label: { show: true, position: 'top', color: '#67a94e', fontSize: 11,
+                  formatter: p => '¥' + Number(p.value).toFixed(0) }
+              }
+            ]
+          }, true)
+        },
+        formatMoney(val) {
+          if (val == null) return '0.00'
+          return Number(val).toFixed(2)
+        },
+        handleExport() {
+          const now = new Date()
+          const y = now.getFullYear()
+          const m = String(now.getMonth() + 1).padStart(2, '0')
+          const startDate = y + '-' + m + '-01'
+          const lastDay = new Date(y, now.getMonth() + 1, 0).getDate()
+          const endDate = y + '-' + m + '-' + String(lastDay).padStart(2, '0')
+          reportExport({ startDate, endDate }).then(blob => {
+            if (blob && blob.type && blob.type.indexOf('json') > -1) {
+              this.$message.error('导出失败')
+              return
+            }
+            const link = document.createElement('a')
+            link.href = URL.createObjectURL(blob)
+            link.download = '营业日报_' + y + m + '.csv'
+            link.click()
+            URL.revokeObjectURL(link.href)
+            this.$message.success('导出成功')
+          }).catch(err => {
+            this.$message.error('导出失败：' + err)
+          })
         }
       }
     })
   </script>
 </body>
 </html>
-

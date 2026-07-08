@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数据概览 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+    /* ========== 现代化数据概览设计 ========== */
+
+    /* 基础重置 */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    /* 主容器 */
+    .overview-container {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .overview-container .container {
+      flex: 1;
+      background: transparent;
+      padding: 24px 32px 32px;
+      min-width: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ========== Redis 状态条 - 玻璃态设计 ========== */
+    .redis-status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+      backdrop-filter: blur(10px);
+      color: #fff;
+      padding: 14px 24px;
+      border-radius: 16px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .redis-status-bar .redis-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .redis-status-bar .redis-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+      animation: pulse 2s infinite;
+    }
+    .redis-status-bar .redis-dot.on {
+      background: #67c23a;
+      box-shadow: 0 0 12px #67c23a;
+    }
+    .redis-status-bar .redis-dot.off {
+      background: #f56c6c;
+      box-shadow: 0 0 12px #f56c6c;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.1); }
+    }
+    .redis-flow-tag {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      opacity: 0.95;
+      flex-shrink: 0;
+    }
+    .redis-flow-tag span {
+      background: rgba(255,255,255,0.15);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .redis-flow-tag span:hover {
+      background: rgba(255,255,255,0.25);
+      transform: translateY(-1px);
+    }
+
+    /* ========== KPI 卡片 - 4列整行显示 ========== */
+    .kpi-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      min-height: 140px;
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    }
+
+    /* 顶部渐变装饰条 */
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--gradient);
+      opacity: 0.8;
+    }
+
+    /* 背景渐变装饰 */
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -30%;
+      width: 200px;
+      height: 200px;
+      background: var(--gradient);
+      border-radius: 50%;
+      opacity: 0.05;
+      transition: all 0.5s;
+    }
+
+    .kpi-card:hover::after {
+      transform: scale(1.2);
+      opacity: 0.08;
+    }
+
+    /* 卡片图标 */
+    .kpi-card .kpi-icon-wrapper {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: var(--icon-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      transition: all 0.3s;
+    }
+
+    .kpi-card:hover .kpi-icon-wrapper {
+      transform: rotate(5deg) scale(1.1);
+    }
+
+    /* 标签 */
+    .kpi-card .kpi-label {
+      font-size: 14px;
+      color: #909399;
+      margin-bottom: 8px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+
+    /* 数值 */
+    .kpi-card .kpi-value {
+      font-size: 36px;
+      font-weight: 700;
+      line-height: 1.1;
+      word-break: break-all;
+      margin-bottom: 8px;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* 副信息 */
+    .kpi-card .kpi-sub {
+      font-size: 12px;
+      color: #909399;
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* 趋势指示器 */
+    .kpi-trend {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .kpi-trend.up {
+      background: #f0f9eb;
+      color: #67c23a;
+    }
+    .kpi-trend.down {
+      background: #fef0f0;
+      color: #f56c6c;
+    }
+    .kpi-trend.neutral {
+      background: #f4f4f5;
+      color: #909399;
+    }
+
+    /* 缓存标签 */
+    .cache-tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .cache-tag.redis { background: #f0f9eb; color: #67c23a; }
+    .cache-tag.mysql { background: #fdf6ec; color: #e6a23c; }
+
+    /* 主题配色 */
+    .kpi-card.primary {
+      --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+      --icon-bg: linear-gradient(135deg, rgba(64, 158, 255, 0.1) 0%, rgba(102, 177, 255, 0.15) 100%);
+    }
+    .kpi-card.success {
+      --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+      --icon-bg: linear-gradient(135deg, rgba(103, 194, 58, 0.1) 0%, rgba(133, 206, 97, 0.15) 100%);
+    }
+    .kpi-card.warning {
+      --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
+      --icon-bg: linear-gradient(135deg, rgba(230, 162, 60, 0.1) 0%, rgba(235, 181, 99, 0.15) 100%);
+    }
+    .kpi-card.danger {
+      --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
+      --icon-bg: linear-gradient(135deg, rgba(245, 108, 108, 0.1) 0%, rgba(247, 137, 137, 0.15) 100%);
+    }
+    .kpi-card.info {
+      --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
+      --icon-bg: linear-gradient(135deg, rgba(144, 147, 153, 0.1) 0%, rgba(166, 169, 173, 0.15) 100%);
+    }
+
+    /* ========== 图表区域 ========== */
+    .charts-row {
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .chart-panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      transition: all 0.3s;
+    }
+
+    .chart-panel:hover {
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .chart-panel .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #303133;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #f0f2f5;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chart-box {
+      width: 100%;
+      min-height: 400px;
+      flex: 1;
+    }
+
+    /* ========== 底部面板 ========== */
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .bottom-panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      min-width: 0;
+      transition: all 0.3s;
+    }
+
+    .bottom-panel:hover {
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .bottom-panel .panel-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #303133;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #f0f2f5;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ========== 热销排名列表 ========== */
+    .hot-dish-list .hot-dish-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid #f5f5f5;
+      transition: all 0.2s;
+    }
+    .hot-dish-list .hot-dish-item:hover {
+      background: #fafbfc;
+      margin: 0 -12px;
+      padding-left: 12px;
+      padding-right: 12px;
+      border-radius: 8px;
+    }
+    .hot-dish-list .hot-dish-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .hot-dish-rank {
+      width: 28px;
+      height: 28px;
+      line-height: 28px;
+      text-align: center;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-right: 14px;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .hot-dish-rank.top-1 { background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%); color: #fff; }
+    .hot-dish-rank.top-2 { background: linear-gradient(135deg, #ff7a45 0%, #ffa940 100%); color: #fff; }
+    .hot-dish-rank.top-3 { background: linear-gradient(135deg, #ffa940 0%, #ffc069 100%); color: #fff; }
+    .hot-dish-rank.normal { background: #f0f0f0; color: #666; }
+
+    .hot-dish-list .hot-dish-item:hover .hot-dish-rank {
+      transform: scale(1.1);
+    }
+
+    .hot-dish-name {
+      flex: 1;
+      font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 60px;
+      color: #303133;
+      font-weight: 500;
+    }
+
+    .hot-dish-count {
+      font-size: 14px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-left: 12px;
+      flex-shrink: 0;
+    }
+
+    .hot-dish-bar {
+      width: 100px;
+      height: 8px;
+      background: #f0f2f5;
+      border-radius: 4px;
+      margin-left: 16px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .hot-dish-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #409eff 0%, #66b1ff 100%);
+      border-radius: 4px;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========== 系统健康状态 ========== */
+    .health-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .health-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: #fafbfc;
+      border-radius: 10px;
+      overflow: hidden;
+      transition: all 0.2s;
+      border: 1px solid #f0f2f5;
+    }
+    .health-item:hover {
+      background: #f5f7fa;
+      transform: translateX(4px);
+    }
+    .health-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+    .health-dot.ok { background: #67c23a; box-shadow: 0 0 8px rgba(103, 194, 58, 0.4); }
+    .health-dot.err { background: #f56c6c; box-shadow: 0 0 8px rgba(245, 108, 108, 0.4); }
+
+    .health-label {
+      font-size: 13px;
+      color: #606266;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+    .health-value {
+      font-size: 12px;
+      color: #909399;
+      flex-shrink: 0;
+      margin-left: 8px;
+      font-weight: 600;
+    }
+
+    /* ========== 响应式设计 ========== */
+    @media (max-width: 1600px) {
+      .container {
+        padding: 20px 28px 28px !important;
+      }
+      .kpi-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .container {
+        padding: 16px 20px 20px !important;
+      }
+      .kpi-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+      }
+      .kpi-card {
+        padding: 20px;
+        min-height: 120px;
+      }
+      .kpi-card .kpi-value {
+        font-size: 32px;
+      }
+      .charts-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .bottom-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .redis-flow-tag {
+        display: none;
+      }
+      .health-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 12px 16px 16px !important;
+      }
+      .kpi-cards {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .kpi-card {
+        padding: 18px;
+        min-height: 110px;
+      }
+      .kpi-card .kpi-value {
+        font-size: 28px;
+      }
+      .kpi-card .kpi-label {
+        font-size: 13px;
+      }
+      .chart-box {
+        min-height: 300px;
+      }
+      .chart-panel, .bottom-panel {
+        padding: 18px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .kpi-card {
+        padding: 16px;
+        min-height: 100px;
+      }
+      .kpi-card .kpi-label {
+        font-size: 12px;
+      }
+      .kpi-card .kpi-value {
+        font-size: 26px;
+      }
+      .kpi-card .kpi-sub {
+        font-size: 11px;
+      }
+      .health-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="overview-container" id="dashboard-app" v-loading="loading">
+    <div class="container">
+
+      <!-- ========== Redis 缓存状态条 ========== -->
+      <div class="redis-status-bar">
+        <div class="redis-indicator">
+          <span :class="['redis-dot', health.redisAvailable ? 'on' : 'off']"></span>
+          <strong>Redis缓存：{{ health.redisAvailable ? '已启用 · 加速' : '未启用 · 降级直查MySQL' }}</strong>
+          <span style="opacity:0.8;margin-left:8px;">{{ health.redisInfo }}</span>
+        </div>
+        <div class="redis-flow-tag">
+          <span>📊 Overview</span> →
+          <span>📈 Trend</span> →
+          <span>🔄 Status</span> →
+          <span>🔥 Hot</span>
+        </div>
+      </div>
+
+      <!-- ========== KPI 指标卡片 ========== -->
+      <div class="kpi-cards">
+        <div class="kpi-card primary">
+          <div class="kpi-icon-wrapper">📋</div>
+          <div class="kpi-label">今日订单数</div>
+          <div class="kpi-value">{{ overview.totalOrders || 0 }}</div>
+          <div class="kpi-sub">
+            完成率 {{ overview.completionRate || 0 }}%
+            <span :class="['cache-tag', overview.cacheSource === 'Redis' ? 'redis' : 'mysql']">{{ overview.cacheSource || 'MySQL' }}</span>
+          </div>
+        </div>
+        <div class="kpi-card success">
+          <div class="kpi-icon-wrapper">💰</div>
+          <div class="kpi-label">今日营业额 (元)</div>
+          <div class="kpi-value">{{ formatMoney(overview.totalRevenue) }}</div>
+          <div class="kpi-sub">客单价 ¥{{ overview.avgAmount || '0.00' }}</div>
+        </div>
+        <div class="kpi-card warning">
+          <div class="kpi-icon-wrapper">⏳</div>
+          <div class="kpi-label">待处理订单</div>
+          <div class="kpi-value">{{ overview.pendingOrders || 0 }}</div>
+          <div class="kpi-sub">
+            已完成 {{ overview.completedOrders || 0 }} | 已取消 {{ overview.cancelledOrders || 0 }}
+          </div>
+        </div>
+        <div class="kpi-card info">
+          <div class="kpi-icon-wrapper">👥</div>
+          <div class="kpi-label">注册用户 / 在职员工</div>
+          <div class="kpi-value">{{ overview.totalUsers || 0 }} <span style="font-size:18px;color:#c0c4cc;">/</span> {{ overview.activeEmployees || 0 }}</div>
+          <div class="kpi-sub">
+            Redis: {{ health.redisAvailable ? '✅' : '❌' }} | DB: {{ health.dbAvailable ? '✅' : '❌' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== 图表区域: 趋势图 + 订单状态饼图 ========== -->
+      <div class="charts-row">
+        <div class="chart-panel">
+          <div class="chart-title">📈 近7日订单与营收趋势</div>
+          <div class="chart-box" id="trendChart"></div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-title">🍩 今日订单状态分布</div>
+          <div class="chart-box" id="statusChart"></div>
+        </div>
+      </div>
+
+      <!-- ========== 底部: 热销菜品 + 系统健康 ========== -->
+      <div class="bottom-row">
+        <div class="bottom-panel">
+          <div class="panel-title">🔥 今日热销菜品 Top {{ hotDishes.length }}</div>
+          <div class="hot-dish-list" v-if="hotDishes.length > 0">
+            <div class="hot-dish-item" v-for="(item, index) in hotDishes" :key="index">
+              <span :class="['hot-dish-rank', index < 3 ? 'top-' + (index + 1) : 'normal']">{{ index + 1 }}</span>
+              <span class="hot-dish-name">{{ item.name }}</span>
+              <span class="hot-dish-count">{{ item.count }} 份</span>
+              <div class="hot-dish-bar">
+                <div class="hot-dish-bar-fill" :style="{ width: hotDishBarWidth(index) }"></div>
+              </div>
+            </div>
+          </div>
+          <div v-else style="text-align:center;padding:40px;color:#c0c4cc;">今日暂无订单</div>
+        </div>
+
+        <div class="bottom-panel">
+          <div class="panel-title">🖥️ 系统运行状态</div>
+          <div class="health-grid">
+            <div class="health-item">
+              <span :class="['health-dot', health.redisAvailable ? 'ok' : 'err']"></span>
+              <span class="health-label">Redis 缓存</span>
+              <span class="health-value">{{ health.redisInfo }}</span>
+            </div>
+            <div class="health-item">
+              <span :class="['health-dot', health.dbAvailable ? 'ok' : 'err']"></span>
+              <span class="health-label">数据库连接</span>
+              <span class="health-value">{{ health.dbInfo }}</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot ok"></span>
+              <span class="health-label">Java 版本</span>
+              <span class="health-value">{{ health.javaVersion }}</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot ok"></span>
+              <span class="health-label">操作系统</span>
+              <span class="health-value">{{ health.osName }}</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot ok"></span>
+              <span class="health-label">CPU 核心</span>
+              <span class="health-value">{{ health.availableProcessors }} 核</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot ok"></span>
+              <span class="health-label">JVM 内存</span>
+              <span class="health-value">{{ health.freeMemoryMB }} / {{ health.totalMemoryMB }} MB</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- JS依赖 -->
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+
+  <script>
+    new Vue({
+      el: '#dashboard-app',
+      data() {
+        return {
+          loading: false,
+          overview: {},
+          trend: [],
+          orderStatus: {},
+          hotDishes: [],
+          health: {
+            redisAvailable: false,
+            redisInfo: '未连接',
+            dbAvailable: false,
+            dbInfo: '未知',
+            javaVersion: '',
+            osName: '',
+            availableProcessors: 0,
+            freeMemoryMB: 0,
+            totalMemoryMB: 0
+          },
+          trendChart: null,
+          statusChart: null,
+          refreshTimer: null,
+          // 修改点：记录resize处理函数引用，用于正确解绑
+          _resizeHandler: null
+        }
+      },
+      created() {
+        this.loadAllData();
+        // 每60秒自动刷新
+        this.refreshTimer = setInterval(() => {
+          this.loadAllData();
+        }, 60000);
+      },
+      mounted() {
+        // 修改点：监听窗口resize，自适应调整ECharts大小（iframe内必须）
+        this._resizeHandler = () => {
+          this.resizeCharts();
+        };
+        window.addEventListener('resize', this._resizeHandler);
+      },
+      beforeDestroy() {
+        if (this.refreshTimer) {
+          clearInterval(this.refreshTimer);
+        }
+        // 修改点：解绑resize事件
+        if (this._resizeHandler) {
+          window.removeEventListener('resize', this._resizeHandler);
+        }
+        if (this.trendChart) {
+          this.trendChart.dispose();
+        }
+        if (this.statusChart) {
+          this.statusChart.dispose();
+        }
+      },
+      methods: {
+        // 一次性加载所有数据
+        async loadAllData() {
+          this.loading = true;
+          try {
+            const res = await $axios.get('/api/dashboard/all', {
+              params: { hotDishLimit: 10 }
+            });
+            if (String(res.code) === '1') {
+              const data = res.data;
+              this.overview = data.overview || {};
+              this.trend = data.trend || [];
+              this.orderStatus = data.orderStatus || {};
+              this.hotDishes = data.hotDishes || [];
+              this.health = data.health || {};
+              this.serverTime = data.serverTime;
+
+              // 更新图表
+              this.$nextTick(() => {
+                this.renderTrendChart();
+                this.renderStatusChart();
+              });
+            } else {
+              this.$message.error(res.msg || '数据加载失败');
+            }
+          } catch (err) {
+            this.$message.error('请求失败：' + (err.message || err));
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        // 检查ECharts是否已加载（CDN可能延迟）
+        echartsReady() {
+          return typeof echarts !== 'undefined';
+        },
+
+        // 渲染趋势图（柱状 + 折线混合，双Y轴）
+        renderTrendChart() {
+          if (!this.echartsReady()) return;
+          const dom = document.getElementById('trendChart');
+          if (!dom) return;
+          if (!this.trendChart) {
+            this.trendChart = echarts.init(dom);
+          }
+          const dates = this.trend.map(t => t.date);
+          const orders = this.trend.map(t => t.orderCount || 0);
+          const revenues = this.trend.map(t => Number(t.revenue) || 0);
+
+          const emptyData = dates.length === 0;
+          const xData = emptyData ? ['暂无数据'] : dates;
+          const barData = emptyData ? [0] : orders;
+          const lineData = emptyData ? [0] : revenues;
+
+          this.trendChart.setOption({
+            color: ['#5470c6', '#91cc75'],
+            tooltip: {
+              trigger: 'axis',
+              axisPointer: { type: 'cross', crossStyle: { color: '#999' } },
+              backgroundColor: 'rgba(255,255,255,0.96)',
+              borderColor: '#e4e7ed',
+              borderWidth: 1,
+              textStyle: { color: '#303133', fontSize: 13 },
+              formatter: function(params) {
+                let html = '<strong>' + params[0].axisValue + '</strong><br/>';
+                params.forEach(function(p) {
+                  const val = p.seriesName === '营业额'
+                    ? '¥' + Number(p.value).toFixed(2)
+                    : p.value + ' 单';
+                  html += p.marker + ' ' + p.seriesName + '：<b>' + val + '</b><br/>';
+                });
+                return html;
+              }
+            },
+            legend: {
+              data: ['订单数', '营业额'],
+              bottom: 8,
+              itemWidth: 14,
+              itemHeight: 14,
+              textStyle: { color: '#606266', fontSize: 13 }
+            },
+            grid: {
+              left: 55,
+              right: 55,
+              top: 30,
+              bottom: 50
+            },
+            xAxis: {
+              type: 'category',
+              data: xData,
+              axisLine: { lineStyle: { color: '#e4e7ed' } },
+              axisTick: { show: false },
+              axisLabel: { color: '#909399', fontSize: 12 }
+            },
+            yAxis: [
+              {
+                type: 'value',
+                name: '订单量(单)',
+                nameTextStyle: { color: '#909399', fontSize: 12, padding: [0, 40, 0, 0] },
+                axisLabel: { color: '#909399', fontSize: 12 },
+                splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } },
+                axisLine: { show: false },
+                axisTick: { show: false }
+              },
+              {
+                type: 'value',
+                name: '营业额(元)',
+                nameTextStyle: { color: '#909399', fontSize: 12, padding: [0, 0, 0, 40] },
+                axisLabel: { color: '#909399', fontSize: 12, formatter: '¥{value}' },
+                splitLine: { show: false },
+                axisLine: { show: false },
+                axisTick: { show: false }
+              }
+            ],
+            series: [
+              {
+                name: '订单数',
+                type: 'bar',
+                data: barData,
+                barWidth: 28,
+                barGap: '20%',
+                itemStyle: {
+                  borderRadius: [8, 8, 0, 0],
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: '#6c9df8' },
+                    { offset: 0.5, color: '#5470c6' },
+                    { offset: 1, color: '#3b5fc0' }
+                  ])
+                },
+                label: {
+                  show: !emptyData,
+                  position: 'top',
+                  color: '#5470c6',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  formatter: '{c}'
+                },
+                emphasis: {
+                  itemStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                      { offset: 0, color: '#8ab4f8' },
+                      { offset: 1, color: '#5470c6' }
+                    ])
+                  }
+                }
+              },
+              {
+                name: '营业额',
+                type: 'line',
+                yAxisIndex: 1,
+                data: lineData,
+                smooth: true,
+                symbol: 'emptyCircle',
+                symbolSize: 10,
+                lineStyle: { color: '#91cc75', width: 3 },
+                itemStyle: {
+                  color: '#91cc75',
+                  borderColor: '#fff',
+                  borderWidth: 2
+                },
+                areaStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: 'rgba(145,204,117,0.3)' },
+                    { offset: 1, color: 'rgba(145,204,117,0.02)' }
+                  ])
+                },
+                label: {
+                  show: !emptyData,
+                  position: 'top',
+                  color: '#91cc75',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  formatter: function(p) { return '¥' + Number(p.value).toFixed(0); }
+                }
+              }
+            ]
+          });
+          this.$nextTick(() => {
+            if (this.trendChart) this.trendChart.resize();
+          });
+        },
+
+        // 渲染订单状态环形图
+        renderStatusChart() {
+          if (!this.echartsReady()) return;
+          const dom = document.getElementById('statusChart');
+          if (!dom) return;
+          if (!this.statusChart) {
+            this.statusChart = echarts.init(dom);
+          }
+          const statusData = [];
+          const colorPalette = [
+            '#f56c6c', '#e6a23c', '#409eff', '#67c23a', '#c0c4cc',
+            '#fc8452', '#9a60b4', '#3ba272', '#ea7ccc', '#36a3f5'
+          ];
+
+          Object.keys(this.orderStatus).forEach(key => {
+            if (key !== 'cacheSource' && key !== 'redisEnabled') {
+              var v = this.orderStatus[key];
+              if (v > 0) {
+                statusData.push({ name: key, value: v });
+              }
+            }
+          });
+
+          var isEmpty = statusData.length === 0;
+          if (isEmpty) {
+            statusData.push({ name: '暂无数据', value: 1, itemStyle: { color: '#e4e7ed' } });
+          }
+
+          this.statusChart.setOption({
+            color: colorPalette,
+            tooltip: {
+              trigger: 'item',
+              backgroundColor: 'rgba(255,255,255,0.96)',
+              borderColor: '#e4e7ed',
+              borderWidth: 1,
+              textStyle: { color: '#303133', fontSize: 13 },
+              formatter: function(p) {
+                return '<b>' + p.name + '</b><br/>' + p.marker
+                  + ' 订单数：<b>' + p.value + '</b> 单'
+                  + (isEmpty ? '' : '（<b>' + p.percent + '%</b>）');
+              }
+            },
+            legend: {
+              bottom: 0,
+              left: 'center',
+              itemWidth: 10,
+              itemHeight: 10,
+              itemGap: 20,
+              textStyle: { color: '#606266', fontSize: 12, padding: [2, 0, 0, 0] }
+            },
+            series: [{
+              type: 'pie',
+              radius: isEmpty ? ['0%', '60%'] : ['50%', '72%'],
+              center: ['50%', '46%'],
+              avoidLabelOverlap: false,
+              itemStyle: {
+                borderRadius: 6,
+                borderColor: '#fff',
+                borderWidth: 3
+              },
+              label: {
+                show: !isEmpty,
+                position: 'outside',
+                formatter: '{b}\n{d}%',
+                color: '#606266',
+                fontSize: 13,
+                lineHeight: 18
+              },
+              labelLine: {
+                show: !isEmpty,
+                length: 25,
+                length2: 20,
+                lineStyle: { color: '#c0c4cc' }
+              },
+              emphasis: {
+                scaleSize: 12,
+                label: { fontSize: 16, fontWeight: 'bold' },
+                labelLine: { lineStyle: { width: 2 } }
+              },
+              data: statusData
+            }]
+          });
+          this.$nextTick(() => {
+            if (this.statusChart) this.statusChart.resize();
+          });
+        },
+
+        // 修改点：统一resize图表，供window.resize事件调用
+        resizeCharts() {
+          if (this.trendChart) {
+            this.trendChart.resize();
+          }
+          if (this.statusChart) {
+            this.statusChart.resize();
+          }
+        },
+
+        // 热销菜品进度条宽度
+        hotDishBarWidth(index) {
+          if (!this.hotDishes.length) return '0%';
+          const maxCount = this.hotDishes[0].count || 1;
+          const count = this.hotDishes[index].count || 0;
+          return Math.max((count / maxCount * 100), 8) + '%';
+        },
+
+        // 格式化金额
+        formatMoney(val) {
+          if (val === null || val === undefined) return '0.00';
+          return Number(val).toFixed(2);
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -33,6 +32,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
      * 新增菜品，同时保存对应的口味数据
      * @param dishDto
      */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = "dishes", allEntries = true)
     public void saveWithFlavor(DishDto dishDto) {
@@ -43,14 +43,11 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
 
         //菜品口味
         List<DishFlavor> flavors = dishDto.getFlavors();
-        flavors = flavors.stream().map((item) -> {
-            item.setDishId(dishId);
-            return item;
-        }).collect(Collectors.toList());
-
-        //保存菜品口味数据到菜品口味表dish_flavor
-        dishFlavorService.saveBatch(flavors);
-
+        if (flavors != null && !flavors.isEmpty()) {
+            flavors.forEach(item -> item.setDishId(dishId));
+            //保存菜品口味数据到菜品口味表dish_flavor
+            dishFlavorService.saveBatch(flavors);
+        }
     }
 
     /**
@@ -58,6 +55,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
      * @param id
      * @return
      */
+    @Override
     public DishDto getByIdWithFlavor(Long id) {
         //查询菜品基本信息，从dish表查询
         Dish dish = this.getById(id);
@@ -82,6 +80,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
      * @param categoryId
      * @return
      */
+    @Override
     @Cacheable(value = "dishes", key = "#categoryId")
     public List<Dish> listByCategoryId(Long categoryId) {
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
@@ -89,6 +88,20 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
         queryWrapper.eq(Dish::getStatus, DishStatus.ENABLED.getValue());
         queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
         return this.list(queryWrapper);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "dishes", allEntries = true)
+    public void saveDish(Dish dish, List<DishFlavor> flavors) {
+        // 保存菜品基本信息
+        this.save(dish);
+
+        // 保存菜品口味（事务保护）
+        if (flavors != null && !flavors.isEmpty()) {
+            flavors.forEach(flavor -> flavor.setDishId(dish.getId()));
+            dishFlavorService.saveBatch(flavors);
+        }
     }
 
     @Override
@@ -107,12 +120,10 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
         //添加当前提交过来的口味数据---dish_flavor表的insert操作
         List<DishFlavor> flavors = dishDto.getFlavors();
 
-        flavors = flavors.stream().map((item) -> {
-            item.setDishId(dishDto.getId());
-            return item;
-        }).collect(Collectors.toList());
-
-        dishFlavorService.saveBatch(flavors);
+        if (flavors != null && !flavors.isEmpty()) {
+            flavors.forEach(item -> item.setDishId(dishDto.getId()));
+            dishFlavorService.saveBatch(flavors);
+        }
     }
 
     @Override

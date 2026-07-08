@@ -5,6 +5,7 @@ import com.reggie.common.R;
 import com.reggie.module.inventory.model.StockRecord;
 import com.reggie.module.inventory.service.StockRecordService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +27,10 @@ public class StockRecordController {
     private StockRecordService stockRecordService;
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询")
+    @Operation(summary = "分页查询", description = "分页查询出入库记录，支持按食材ID筛选")
+    @Parameter(name = "page", description = "页码", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
+    @Parameter(name = "materialId", description = "食材ID（可选）")
     public R<Page<StockRecord>> page(int page, int pageSize, Long materialId) {
         if (materialId != null) {
             return R.success(stockRecordService.pageByMaterial(materialId, page, pageSize));
@@ -37,7 +41,7 @@ public class StockRecordController {
     }
 
     @PostMapping("/stockIn")
-    @Operation(summary = "入库")
+    @Operation(summary = "入库", description = "食材入库操作，增加库存数量")
     public R<String> stockIn(@RequestBody Map<String, Object> params) {
         Long materialId = Long.valueOf(params.get("materialId").toString());
         BigDecimal qty = new BigDecimal(params.get("qty").toString());
@@ -50,7 +54,7 @@ public class StockRecordController {
     }
 
     @PostMapping("/stockOut")
-    @Operation(summary = "出库")
+    @Operation(summary = "出库", description = "食材出库操作，减少库存数量")
     public R<String> stockOut(@RequestBody Map<String, Object> params) {
         Long materialId = Long.valueOf(params.get("materialId").toString());
         BigDecimal qty = new BigDecimal(params.get("qty").toString());
@@ -61,3 +65,4 @@ public class StockRecordController {
         return R.success("出库成功");
     }
 }
+

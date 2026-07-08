@@ -10,9 +10,86 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
-  #rankingChart {
-    width: 100%;
-    height: 400px;
+  .search-btn { margin-left: 10px; }
+  #rankingChart { width: 100%; height: 420px; }
+  .rank-badge {
+    display: inline-block;
+    width: 22px; height: 22px;
+    line-height: 22px; text-align: center;
+    border-radius: 4px;
+    font-size: 12px; font-weight: 700;
+  }
+  .rank-badge.r1 { background: #ff4d4f; color: #fff; }
+  .rank-badge.r2 { background: #ff7a45; color: #fff; }
+  .rank-badge.r3 { background: #ffa940; color: #fff; }
+  .rank-badge.rn { background: #f0f0f0; color: #666; }
+
+  /* ========== 数据统计卡片 ========== */
+  .stats-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid #f0f2f5;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient);
+  }
+
+  .stat-card .stat-icon {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 42px;
+    opacity: 0.08;
+  }
+
+  .stat-card .stat-label {
+    font-size: 13px;
+    color: #909399;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  .stat-card .stat-value {
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.2;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
+  .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
+  .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
+
+  @media (max-width: 768px) {
+    .stats-cards { grid-template-columns: 1fr; }
   }
   </style>
 </head>
@@ -24,33 +101,70 @@
           clearable
           value-format="yyyy-MM-dd"
           type="daterange"
-          placeholder="选择日期范围"
           range-separator="至"
           start-placeholder="开始日期"
           end-placeholder="结束日期"
-          style="width: 400px"
+          style="width: 380px"
         ></el-date-picker>
+        <el-input-number v-model="limit" :min="5" :max="50" :step="5"
+          size="small" style="width:120px;margin-left:10px;" controls-position="right">
+        </el-input-number>
+        <span style="margin-left:6px;color:#909399;font-size:13px;">条</span>
         <el-button type="primary" class="search-btn" @click="loadData">查询</el-button>
         <div class="tableLab">
           <el-button type="primary" @click="handleExport">导出</el-button>
         </div>
       </div>
+
+      <!-- ========== 数据统计卡片 ========== -->
+      <div class="stats-cards">
+        <div class="stat-card primary">
+          <div class="stat-icon">🍽️</div>
+          <div class="stat-label">菜品总数</div>
+          <div class="stat-value">{{ stats.totalDishes || 0 }}</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-label">上榜菜品</div>
+          <div class="stat-value">{{ stats.topDishes || 0 }}</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-icon">📊</div>
+          <div class="stat-label">总销量（份）</div>
+          <div class="stat-value">{{ stats.totalSales || 0 }}</div>
+        </div>
+      </div>
+
       <el-card shadow="never" style="margin-bottom: 20px;">
-        <div slot="header">菜品销量 Top 10</div>
+        <div slot="header">菜品销量排行（Top {{ tableData.length }}）</div>
         <div id="rankingChart"></div>
       </el-card>
+
+      <!-- 后端返回字段：name, count（无 salesCount / amount） -->
       <el-table :data="tableData" stripe border class="tableBox">
-        <el-table-column type="index" label="排名" width="80"></el-table-column>
+        <el-table-column label="排名" width="70" align="center">
+          <template slot-scope="{ $index }">
+            <span :class="['rank-badge', $index === 0 ? 'r1' : $index === 1 ? 'r2' : $index === 2 ? 'r3' : 'rn']">
+              {{ $index + 1 }}
+            </span>
+          </template>
+        </el-table-column>
         <el-table-column prop="name" label="菜品名称"></el-table-column>
-        <el-table-column prop="salesCount" label="销量"></el-table-column>
-        <el-table-column label="金额">
+        <el-table-column prop="count" label="销量（份）" align="center"></el-table-column>
+        <el-table-column label="占比" align="center">
           <template slot-scope="{ row }">
-            <span>￥{{ row.amount }}</span>
+            <el-progress
+              :percentage="calcPercent(row.count)"
+              :show-text="true"
+              :stroke-width="10"
+              :format="p => p + '%'"
+            ></el-progress>
           </template>
         </el-table-column>
       </el-table>
     </div>
   </div>
+
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
@@ -62,8 +176,15 @@
       data() {
         return {
           loading: false,
-          dateRange: '',
+          dateRange: [],
+          limit: 10,
           tableData: [],
+          // 数据统计
+          stats: {
+            totalDishes: 0,
+            topDishes: 0,
+            totalSales: 0
+          },
           chart: null,
           resizeHandler: null
         }
@@ -71,8 +192,10 @@
       created() {
         const now = new Date()
         const first = new Date(now.getFullYear(), now.getMonth(), 1)
-        const last = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-        const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+        const last  = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        const fmt = d => d.getFullYear() + '-'
+          + String(d.getMonth() + 1).padStart(2, '0') + '-'
+          + String(d.getDate()).padStart(2, '0')
         this.dateRange = [fmt(first), fmt(last)]
       },
       mounted() {
@@ -91,17 +214,30 @@
         async loadData() {
           this.loading = true
           try {
-            const params = {}
+            const params = { limit: this.limit }
             if (this.dateRange && this.dateRange.length >= 2) {
               params.startDate = this.dateRange[0]
-              params.endDate = this.dateRange[1]
+              params.endDate   = this.dateRange[1]
             }
-            const res = await reportDishRanking(params)
-            if (String(res.code) === '1') {
-              this.tableData = res.data || []
+
+            // 并行加载排行数据和统计数据
+            const [rankRes, statsRes] = await Promise.all([
+              reportDishRanking(params),
+              this.loadDishRankingStats()
+            ])
+
+            // 处理排行数据
+            if (String(rankRes.code) === '1') {
+              // 后端字段：name, count
+              this.tableData = rankRes.data || []
               this.renderChart()
             } else {
-              this.$message.error(res.msg || '加载失败')
+              this.$message.error(rankRes.msg || '加载失败')
+            }
+
+            // 处理统计数据
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
             }
           } catch (err) {
             this.$message.error('请求失败：' + err)
@@ -109,73 +245,87 @@
             this.loading = false
           }
         },
+        // 加载菜品排行统计数据
+        async loadDishRankingStats() {
+          try {
+            const res = await reportDishRanking({ limit: 1000 })
+            if (String(res.code) === '1') {
+              const data = res.data || []
+              const totalSales = data.reduce((sum, item) => sum + (item.count || 0), 0)
+              return {
+                code: 1,
+                data: {
+                  totalDishes: data.length,
+                  topDishes: data.length,
+                  totalSales: totalSales
+                }
+              }
+            }
+          } catch (err) {
+            console.warn('加载菜品排行统计数据失败:', err)
+          }
+          return { code: 0 }
+        },
+        },
+        calcPercent(count) {
+          if (!this.tableData.length) return 0
+          const max = this.tableData[0].count || 1
+          return Math.round(count / max * 100)
+        },
         renderChart() {
           if (!this.chart) return
-          const names = this.tableData.map(item => item.name)
-          const values = this.tableData.map(item => item.salesCount)
-          const option = {
-            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-            xAxis: {
-              type: 'value',
-              name: '销量'
-            },
-            yAxis: {
-              type: 'category',
-              data: names.reverse(),
-              axisLabel: { interval: 0 }
-            },
+          // 水平条形图，倒序展示（最高在上）
+          const names  = this.tableData.map(item => item.name).reverse()
+          const counts = this.tableData.map(item => item.count).reverse()
+          const maxVal = counts.length ? Math.max(...counts) : 1
+          this.chart.setOption({
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+              formatter: p => `<b>${p[0].name}</b><br/>${p[0].marker} 销量：<b>${p[0].value} 份</b>` },
+            grid: { left: 130, right: 60, top: 16, bottom: 30 },
+            xAxis: { type: 'value', name: '销量（份）',
+              splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
+            yAxis: { type: 'category', data: names,
+              axisLabel: { color: '#606266', interval: 0, width: 110,
+                overflow: 'truncate', fontSize: 13 } },
             series: [{
-              type: 'bar',
-              data: values.reverse(),
-              barMaxWidth: 40,
+              type: 'bar', data: counts, barMaxWidth: 32,
               itemStyle: {
-                color: {
-                  type: 'linear',
-                  x: 0, y: 0, x2: 1, y2: 0,
-                  colorStops: [
-                    { offset: 0, color: '#409EFF' },
-                    { offset: 1, color: '#66B1FF' }
-                  ]
+                borderRadius: [0, 6, 6, 0],
+                color(params) {
+                  const ratio = params.value / maxVal
+                  if (ratio > 0.8) return '#ff4d4f'
+                  if (ratio > 0.5) return '#5470c6'
+                  return '#91cc75'
                 }
-              }
+              },
+              label: { show: true, position: 'right', color: '#606266', fontSize: 12,
+                formatter: p => p.value + ' 份' }
             }]
-          }
-          this.chart.setOption(option, true)
+          }, true)
         },
         handleExport() {
-          const params = { type: 'dish' }
-          if (this.dateRange && this.dateRange.length >= 2) {
-            params.startDate = this.dateRange[0]
-            params.endDate = this.dateRange[1]
+          if (!this.dateRange || this.dateRange.length < 2) {
+            this.$message.warning('请先选择日期范围')
+            return
           }
-          reportExport(params).then(blob => {
-            if (blob.type && blob.type.indexOf('json') > -1) {
-              const reader = new FileReader()
-              reader.onload = (e) => {
-                try {
-                  const err = JSON.parse(e.target.result)
-                  this.$message.error(err.msg || '导出失败')
-                } catch (e2) {
-                  this.$message.error('导出失败')
-                }
+          // 导出日报CSV（后端 export 接口当前导出日报数据）
+          reportExport({ startDate: this.dateRange[0], endDate: this.dateRange[1] })
+            .then(blob => {
+              if (blob && blob.type && blob.type.indexOf('json') > -1) {
+                this.$message.error('导出失败')
+                return
               }
-              reader.readAsText(blob)
-              return
-            }
-            const link = document.createElement('a')
-            link.href = URL.createObjectURL(blob)
-            link.download = '菜品排名.csv'
-            link.click()
-            URL.revokeObjectURL(link.href)
-            this.$message.success('导出成功')
-          }).catch(err => {
-            this.$message.error('导出失败：' + err)
-          })
+              const link = document.createElement('a')
+              link.href = URL.createObjectURL(blob)
+              link.download = '菜品排名_' + this.dateRange[0] + '_' + this.dateRange[1] + '.csv'
+              link.click()
+              URL.revokeObjectURL(link.href)
+              this.$message.success('导出成功')
+            })
+            .catch(err => this.$message.error('导出失败：' + err))
         }
       }
     })
   </script>
 </body>
 </html>
-

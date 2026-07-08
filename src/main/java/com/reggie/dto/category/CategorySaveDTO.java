@@ -5,6 +5,7 @@ import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 
 /**
  * 分类新增DTO
@@ -19,6 +20,7 @@ public class CategorySaveDTO {
 
     @Schema(description = "分类名称", required = true)
     @NotBlank(message = "分类名称不能为空")
+    @Size(max = 64, message = "分类名称不能超过64个字符")
     private String name;
 
     @Schema(description = "排序序号", required = true)

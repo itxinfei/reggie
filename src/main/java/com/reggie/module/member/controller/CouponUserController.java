@@ -6,6 +6,7 @@ import com.reggie.common.R;
 import com.reggie.module.member.model.CouponUser;
 import com.reggie.module.member.service.CouponUserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +26,10 @@ public class CouponUserController {
     private CouponUserService couponUserService;
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询")
+    @Operation(summary = "分页查询", description = "分页查询用户优惠券列表，支持按会员ID筛选")
+    @Parameter(name = "page", description = "页码", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
+    @Parameter(name = "memberId", description = "会员ID（可选）")
     public R<Page<CouponUser>> page(int page, int pageSize, Long memberId) {
         Page<CouponUser> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<CouponUser> qw = new LambdaQueryWrapper<>();
@@ -36,7 +40,8 @@ public class CouponUserController {
     }
 
     @GetMapping("/my/{memberId}")
-    @Operation(summary = "我的优惠券")
+    @Operation(summary = "我的优惠券", description = "查询指定会员的所有优惠券")
+    @Parameter(name = "memberId", description = "会员ID", required = true)
     public R<List<CouponUser>> myCoupons(@PathVariable Long memberId) {
         LambdaQueryWrapper<CouponUser> qw = new LambdaQueryWrapper<>();
         qw.eq(CouponUser::getMemberId, memberId);
@@ -45,3 +50,4 @@ public class CouponUserController {
         return R.success(list);
     }
 }
+

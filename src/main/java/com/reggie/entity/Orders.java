@@ -1,5 +1,10 @@
 package com.reggie.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 import javax.validation.constraints.*;
 import java.io.Serializable;
@@ -14,6 +19,7 @@ public class Orders implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     //订单号
@@ -87,4 +93,34 @@ public class Orders implements Serializable {
     //就餐方式
     @Size(max = 20, message = "就餐方式不能超过20个字符")
     private String diningType;
+
+
+    //创建时间
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
+
+
+    //更新时间
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
+
+
+    //创建人
+    @TableField(fill = FieldFill.INSERT)
+    private Long createUser;
+
+
+    //修改人
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateUser;
+
+
+    //是否删除
+    @TableLogic(value = "0", delval = "1")
+    @TableField("is_deleted")
+    private Integer isDeleted;
+
+    //租户id
+    @TableField(fill = FieldFill.INSERT)
+    private Long tenantId;
 }
