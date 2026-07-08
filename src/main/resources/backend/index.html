@@ -114,7 +114,7 @@
         el: '#app',
         data() {
           return {
-            defAct: '2',
+            defAct: '1',
             menuActived: '2',
             userInfo: {},
             menuList: [
@@ -122,6 +122,12 @@
               //   id: '1',
               //   name: '门店管理',
               //   children: [
+                  {
+                    id: '1',
+                    name: '数据概览',
+                    url: 'page/dashboard/overview.html',
+                    icon: 'icon-combo'
+                  },
                   {
                     id: '2',
                     name: '员工管理',
@@ -197,8 +203,8 @@
               //   ],
               // },
             ],
-            iframeUrl: 'page/member/list.html',
-            headTitle: '员工管理',
+            iframeUrl: 'page/dashboard/overview.html',
+            headTitle: '数据概览',
             goBackFlag: false,
             loading: true,
             timer: null
@@ -229,7 +235,7 @@
             })
           },
           goHome() {
-            const homeMenu = this.menuList.find(item => item.id === '2')
+            const homeMenu = this.menuList.find(item => item.id === '1')
             if (homeMenu) {
               this.menuHandle(homeMenu, false)
             }

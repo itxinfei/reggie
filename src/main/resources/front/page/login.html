@@ -1,42 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
-        <title>菩提阁</title>
+        <title>瑞吉外卖</title>
         <link rel="icon" href="./../images/favico.ico">
-        <!--不同屏幕尺寸根字体设置-->
         <script src="./../js/base.js"></script>
-        <!--element-ui的样式-->
         <link rel="stylesheet" href="../../backend/plugins/element-ui/index.css" />
-        <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
-        <!-- 引入样式  -->
+        <link rel="stylesheet" href="../../backend/styles/icon/iconfont.css" />
         <link rel="stylesheet" href="../styles/index.css" />
-        <!--本页面内容的样式-->
         <link rel="stylesheet" href="./../styles/login.css" />
-      </head>
+    </head>
     <body>
         <div id="login" v-loading="loading">
-            <div class="divHead">登录</div>
-            <div class="divContainer">
-                <el-input placeholder=" 请输入手机号码" v-model="form.phone"  maxlength='20'/></el-input>
-                <div class="divSplit"></div>
-                <el-input placeholder=" 请输入验证码" v-model="form.code"  maxlength='20'/></el-input>
-                <span @click='getCode'>获取验证码</span>
+            <!-- 品牌区 -->
+            <div class="brandArea">
+                <div class="brandIcon">
+                    <svg viewBox="0 0 56 56" width="56" height="56">
+                        <rect x="4" y="14" width="34" height="26" rx="6" fill="#FFC200"/>
+                        <path d="M8 14 L21 6 L34 14" fill="none" stroke="#FFC200" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="21" y1="20" x2="21" y2="34" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+                        <!-- 速度线 -->
+                        <line x1="40" y1="19" x2="50" y2="19" stroke="#FFC200" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+                        <line x1="40" y1="27" x2="54" y2="27" stroke="#FFC200" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+                        <line x1="40" y1="35" x2="48" y2="35" stroke="#FFC200" stroke-width="2" stroke-linecap="round" opacity="0.2"/>
+                    </svg>
+                </div>
+                <div class="brandName">瑞吉外卖</div>
+                <div class="brandSlogan">美味生活，即刻送达</div>
             </div>
+
+            <!-- 表单卡片 -->
+            <div class="divContainer">
+                <div class="inputItem">
+                    <el-input placeholder="请输入手机号码" v-model="form.phone" maxlength="11">
+                        <i slot="prefix" class="inputIcon iconfont icon-user"></i>
+                    </el-input>
+                </div>
+                <div class="divSplit"></div>
+                <div class="inputItem codeItem">
+                    <el-input placeholder="请输入验证码" v-model="form.code" maxlength="6">
+                        <i slot="prefix" class="inputIcon iconfont icon-lock"></i>
+                    </el-input>
+                    <span class="codeBtn"
+                          @click='getCode'
+                          :class="{codeDisabled: countdown > 0}">
+                        {{ countdown > 0 ? countdown + 's后重发' : '获取验证码' }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- 错误提示 -->
             <div class="divMsg" v-if="msgFlag">手机号输入不正确，请重新输入</div>
-            <el-button type="primary" :class="{btnSubmit:1===1,btnNoPhone:!form.phone,btnPhone:form.phone}" @click="btnLogin">登录</el-button>
+
+            <!-- 登录按钮 -->
+            <el-button
+                :class="['btnLogin', form.phone ? 'btnActive' : 'btnDisabled']"
+                @click="btnLogin"
+                :disabled="!form.phone">
+                登录
+            </el-button>
+
+            <!-- 底部协议 -->
+            <div class="footerTip">登录即表示同意 <span>《用户协议》</span>和<span>《隐私政策》</span></div>
         </div>
-        <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+
         <script src="../../backend/plugins/vue/vue.js"></script>
-        <!-- 引入组件库 -->
         <script src="../../backend/plugins/element-ui/index.js"></script>
-        <!-- 引入vant样式 -->
-        <script src="./../js/vant.min.js"></script>  
-        <!-- 引入axios -->
+        <script src="./../js/vant.min.js"></script>
         <script src="../../backend/plugins/axios/axios.min.js"></script>
         <script src="./../js/request.js"></script>
         <script src="./../api/login.js"></script>
@@ -51,19 +84,35 @@
                         code:''
                     },
                     msgFlag:false,
-                    loading:false
+                    loading:false,
+                    countdown:0,
+                    countdownTimer:null
                 }
             },
             computed:{},
             created(){},
             mounted(){},
+            beforeDestroy(){
+                if(this.countdownTimer){
+                    clearInterval(this.countdownTimer);
+                    this.countdownTimer = null;
+                }
+            },
             methods:{
                 getCode(){
                     this.form.code = ''
-                    const regex = /^(13[0-9]{9})|(15[0-9]{9})|(17[0-9]{9})|(18[0-9]{9})|(19[0-9]{9})$/;
+                    const regex = /^1[3456789]\d{9}$/;
                     if (regex.test(this.form.phone)) {
                         this.msgFlag = false
-                        //this.form.code = (Math.random()*1000000).toFixed(0)
+                        if (this.countdown > 0) return;
+                        this.countdown = 60;
+                        this.countdownTimer = setInterval(() => {
+                            this.countdown--;
+                            if (this.countdown <= 0) {
+                                clearInterval(this.countdownTimer);
+                                this.countdownTimer = null;
+                            }
+                        }, 1000);
                         sendMsgApi({phone:this.form.phone})
                     }else{
                         this.msgFlag = true
@@ -71,6 +120,7 @@
                 },
                 async btnLogin(){
                     if(this.form.phone && this.form.code){
+                        if(this.loading) return;
                         this.loading = true
                         const res = await loginApi(this.form)
                         this.loading = false
@@ -78,7 +128,7 @@
                             sessionStorage.setItem("userPhone",this.form.phone)
                             window.requestAnimationFrame(()=>{
                                 window.location.href= '/front/index.html'
-                            })                           
+                            })
                         }else{
                             this.$notify({ type:'warning', message:res.msg});
                         }
