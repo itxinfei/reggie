@@ -26,20 +26,7 @@
       <div class="login-form">
         <el-form ref="loginForm" :model="loginForm" :rules="loginRules" >
           <div class="login-form-title">
-            <svg viewBox="0 0 160 50" style="width: 160px; height: 50px;">
-              <!-- 图标：外卖盒 -->
-              <g transform="translate(0, 5)">
-                <rect x="0" y="6" width="22" height="16" rx="3" fill="#FFC200"/>
-                <path d="M3 6 L11 0 L19 6" fill="none" stroke="#FFC200" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="11" y1="10" x2="11" y2="18" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-                <!-- 速度线 -->
-                <line x1="24" y1="9" x2="30" y2="9" stroke="#FFC200" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
-                <line x1="24" y1="14" x2="32" y2="14" stroke="#FFC200" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-              </g>
-              <!-- 文字 -->
-              <text x="36" y="32" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="20" font-weight="700" fill="#333333">瑞吉外卖</text>
-              <text x="37" y="46" font-family="Arial, sans-serif" font-size="11" font-weight="400" fill="#999999" letter-spacing="3">REGGIE TAKEOUT</text>
-            </svg>
+            <img src="../../images/login/logo.png" style="width:160px;height:50px;" alt="瑞吉外卖" />
           </div>
           <el-form-item prop="username">
             <el-input v-model="loginForm.username" type="text" auto-complete="off" placeholder="账号" maxlength="20"
