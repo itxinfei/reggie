@@ -305,44 +305,6 @@ reggie/
 │   │   ├── java/com/reggie/
 │   │   │   ├── common/          # 公共组件（统一响应、异常处理、上下文、安全防护）
 │   │   │   ├── config/          # 配置类（多租户拦截器、WebMvc、Redis 配置）
-│   │   │   ├── controller/      # REST Controller（12 个）
-│   │   │   ├── dto/             # 数据传输对象（DishDto、SetmealDto、OrderDto）
-│   │   │   ├── entity/          # 实体类（12 个）
-│   │   │   ├── enums/           # 枚举类（13 个状态枚举）
-│   │   │   ├── filter/          # 过滤器（LoginCheckFilter 认证）
-│   │   │   ├── mapper/          # MyBatis Plus Mapper 接口（12 个）
-│   │   │   ├── module/          # 扩展模块（7 个）
-│   │   │   │   ├── dining/      # 堂食模块（桌台、区域、预订、排队）
-│   │   │   │   ├── inventory/   # 进销存模块（原料、供应商、采购、盘点）
-│   │   │   │   ├── member/      # 会员模块（等级、积分、优惠券、充值）
-│   │   │   │   ├── payment/     # 支付模块（支付单、退款）
-│   │   │   │   ├── delivery/    # 外卖配送模块
-│   │   │   │   ├── printer/     # 小票打印模块（多品牌适配）
-│   │   │   │   └── report/      # 经营报表模块
-│   │   │   ├── service/         # 业务接口 + 实现类（14 个接口）
-│   │   │   └── utils/           # 工具类（SMS、验证码、二维码生成）
-│   │   └── resources/
-│   │       ├── backend/         # 管理后台静态资源（ElementUI）
-│   │       ├── front/           # 移动端静态资源（Vant UI）
-│   │       └── application.yml  # 主配置文件
-│   └── test/
-│       └── java/                # 单元测试（6 个测试类，17 个用例）
-├── docs/                        # 教学资料
-│   ├── PPT/                     # 教学 PPT（7 天）
-│   ├── 讲义/                    # 课程讲义（6 天）
-│   ├── 资料/                    # 产品原型、功能清单、图片资源
-│   └── imgs/                    # 项目截图
-├── reggie.sql                   # 数据库初始化脚本（35 张表）
-├── reggie-full.sql              # 数据库初始化脚本（完整版）
-├── pom.xml                      # Maven 配置
-└── README.md                    # 项目说明文档
-```
-reggie/
-├── src/
-│   ├── main/
-│   │   ├── java/com/reggie/
-│   │   │   ├── common/          # 公共组件（统一响应、异常处理、上下文）
-│   │   │   ├── config/          # 配置类（多租户拦截器、WebMvc 配置）
 │   │   │   ├── controller/      # 核心 REST Controller（员工、分类、菜品、套餐、订单、购物车、地址）
 │   │   │   ├── dto/             # 数据传输对象（DishDto、SetmealDto、OrderDto）
 │   │   │   ├── entity/          # 实体类（25 张表对应实体）
@@ -365,13 +327,13 @@ reggie/
 │   │       ├── front/           # 移动端静态资源（Vant UI）
 │   │       └── application.yml  # 主配置文件
 │   └── test/
-│       └── java/                # 单元测试（40+ 测试类）
+│       └── java/                # 单元测试（40+ 测试类，233 个用例）
 ├── docs/                        # 教学资料
 │   ├── PPT/                     # 教学 PPT（7 天）
 │   ├── 讲义/                    # 课程讲义（6 天）
 │   ├── 资料/                    # 产品原型、功能清单、图片资源
 │   └── imgs/                    # 项目截图
-├── reggie.sql                   # 数据库初始化脚本（精简版）
+├── reggie.sql                   # 数据库初始化脚本（25 张表）
 ├── reggie-full.sql              # 数据库初始化脚本（完整版）
 ├── pom.xml                      # Maven 配置
 └── README.md                    # 项目说明文档
@@ -385,8 +347,8 @@ reggie/
 # 运行所有测试
 mvn test -DfailIfNoTests=false
 
-# 测试结果（40+ 测试类，233 个测试用例）
-Tests run: 233, Failures: 0, Errors: 0, Skipped: 0
+# 测试结果
+Tests run: 25+, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 **测试策略：**
@@ -394,6 +356,8 @@ Tests run: 233, Failures: 0, Errors: 0, Skipped: 0
 - ✅ H2 内存数据库，无需 Docker/MySQL
 - ✅ 覆盖核心业务：员工登录、菜品查询、订单提交、购物车等
 - ✅ 多租户数据隔离测试
+- ✅ 安全组件测试：暴力破解防护、限流、CSRF、密码加密等
+- ✅ 扩展模块测试：堂食、进销存、会员、支付、配送、打印、报表
 - ✅ 安全防护测试：CSRF、暴力破解防护、API 限流
 - ✅ 扩展模块测试：堂食、进销存、会员、支付、配送、小票打印、报表
 
