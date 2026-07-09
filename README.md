@@ -2,22 +2,24 @@
 
 # 🍜 瑞吉外卖 (Reggie Takeout)
 
-![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
-![Java](https://img.shields.io/badge/Java-1.8-orange.svg)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.4.5-green.svg)
-![MyBatis Plus](https://img.shields.io/badge/MyBatis%20Plus-3.4.2-blue.svg)
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-![Issues](https://img.shields.io/badge/issues-welcome-yellow.svg)
+<p align="center">
+  <img src="https://img.shields.io/badge/license-Apache%202.0-blue?logo=apache" alt="License"/>
+  <img src="https://img.shields.io/badge/Java-1.8-orange?logo=java" alt="Java"/>
+  <img src="https://img.shields.io/badge/Spring%20Boot-2.4.5-green?logo=spring" alt="Spring Boot"/>
+  <img src="https://img.shields.io/badge/MyBatis%20Plus-3.4.2-blue?logo=mybatis" alt="MyBatis Plus"/>
+  <img src="https://img.shields.io/badge/build-passing-brightgreen?logo=github" alt="Build"/>
+  <img src="https://img.shields.io/badge/issues-welcome-yellow?logo=gitlab" alt="Issues"/>
+</p>
 
 <p align="center">
   <a href="https://gitee.com/itxinfei">
-    <img src="https://img.shields.io/badge/心飞为你飞-gitee-green?logo=gitee" alt="Gitee">
+    <img src="https://img.shields.io/badge/Gitee-itxinfei-green?logo=gitee" alt="Gitee"/>
   </a>
   <a href="https://qm.qq.com/cgi-bin/qm/qr?k=9yLlyD1dRBL97xmBKw43zRt0-6xg8ohb&jump_from=webapi">
-    <img src="https://img.shields.io/badge/QQ群-661543188-red?logo=tencent-qq" alt="QQ群">
+    <img src="https://img.shields.io/badge/QQ群-661543188-red?logo=tencent-qq" alt="QQ群"/>
   </a>
-  <a href="http://mail.qq.com/cgi-bin/qm_share?t=qm_mailme&email=f0hLSE9OTkdHTT8ODlEcEBI">
-    <img src="https://img.shields.io/badge/mail-747011882@qq.com-red?logo=gmail" alt="邮箱">
+  <a href="mailto:747011882@qq.com">
+    <img src="https://img.shields.io/badge/邮箱-747011882@qq.com-red?logo=gmail" alt="邮箱"/>
   </a>
 </p>
 
@@ -620,7 +622,9 @@ POST /tenant/register
 
 本项目采用 [Apache 2.0](LICENSE) 许可证 - 详见 LICENSE 文件
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+<a href="https://www.apache.org/licenses/LICENSE-2.0">
+  <img src="https://img.shields.io/badge/License-Apache%202.0-blue?logo=apache" alt="License"/>
+</a>
 
 </div>
 
