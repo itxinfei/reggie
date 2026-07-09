@@ -20,16 +20,19 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -284,6 +287,76 @@ public class EmployeeController {
             return R.success(employee);
         }
         return R.error("没有查询到对应员工信息");
+    }
+
+    /**
+     * 删除员工
+     * 修改点：新增员工删除接口，补全CRUD闭环
+     * @param request HTTP请求对象
+     * @param ids 员工ID列表
+     * @return 操作结果
+     */
+    @DeleteMapping
+    @Operation(summary = "删除员工", description = "批量删除员工，仅管理员可操作，不允许删除自己")
+    @Parameter(name = "ids", description = "员工ID列表", required = true)
+    public R<String> delete(HttpServletRequest request, @RequestParam List<Long> ids) {
+        if (!isAdmin(request)) {
+            return R.error("权限不足，仅管理员可删除员工");
+        }
+        Long currentEmpId = (Long) request.getSession().getAttribute("employee");
+        if (ids.contains(currentEmpId)) {
+            return R.error("不允许删除当前登录账号");
+        }
+        log.info("删除员工：ids={}", ids);
+        employeeService.removeByIds(ids);
+        return R.success("删除成功");
+    }
+
+    /**
+     * 修改密码
+     * 修改点：新增密码修改接口，员工可修改自己的密码
+     * @param request HTTP请求对象
+     * @param params 包含 oldPassword 和 newPassword
+     * @return 操作结果
+     */
+    @PutMapping("/password")
+    @Operation(summary = "修改密码", description = "修改当前登录员工的密码，需验证旧密码")
+    public R<String> updatePassword(HttpServletRequest request, @RequestBody Map<String, String> params) {
+        String oldPassword = params.get("oldPassword");
+        String newPassword = params.get("newPassword");
+
+        if (oldPassword == null || oldPassword.isEmpty()) {
+            return R.error("旧密码不能为空");
+        }
+        if (newPassword == null || newPassword.isEmpty()) {
+            return R.error("新密码不能为空");
+        }
+        if (newPassword.length() < 6) {
+            return R.error("新密码长度不能少于6位");
+        }
+
+        Long empId = (Long) request.getSession().getAttribute("employee");
+        if (empId == null) {
+            return R.error("请先登录");
+        }
+        Employee emp = employeeService.getById(empId);
+        if (emp == null) {
+            return R.error("员工不存在");
+        }
+
+        // 校验旧密码
+        String passwordType = emp.getPasswordType() != null ? emp.getPasswordType() : SecurityConstants.PASSWORD_TYPE_MD5;
+        if (!PasswordUtils.matches(oldPassword, emp.getPassword(), passwordType)) {
+            return R.error("旧密码错误");
+        }
+
+        // 更新为新密码（BCrypt加密）
+        emp.setPassword(PasswordUtils.encodePassword(newPassword));
+        emp.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
+        employeeService.updateById(emp);
+
+        log.info("员工 {} 修改密码成功", emp.getUsername());
+        return R.success("密码修改成功");
     }
 
     /**

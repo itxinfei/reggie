@@ -24,15 +24,30 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    /**
+     * 验证码有效期（毫秒）
+     */
+    private static final long CODE_EXPIRE_MS = 5 * 60 * 1000;
+
     @PostMapping("/sendMsg")
     @Operation(summary = "发送短信验证码")
     public R<String> sendMsg(@RequestBody Map<String, Object> map, HttpSession session){
         String phone = map.get("phone") != null ? map.get("phone").toString() : null;
-        if(phone != null && !phone.isEmpty()){
-            log.info("发送验证码到手机：{}", phone);
-            return R.success("短信发送成功");
+        if(phone == null || phone.isEmpty()){
+            return R.error("手机号不能为空");
         }
-        return R.error("手机号不能为空");
+
+        // 生成4位随机验证码（1000~9999）
+        int code = (int) ((Math.random() * 9 + 1) * 1000);
+        String codeStr = String.valueOf(code);
+
+        // 存储验证码及生成时间到Session
+        session.setAttribute("smsCode_" + phone, codeStr);
+        session.setAttribute("smsCode_" + phone + "_time", System.currentTimeMillis());
+
+        // 修改点：开发环境日志输出验证码（生产环境需接入真实短信网关）
+        log.info("验证码已生成 -> 手机号：{}，验证码：{}（开发环境可见，上线后切换短信服务）", phone, codeStr);
+        return R.success("短信发送成功");
     }
 
     @PostMapping("/login")
@@ -47,6 +62,26 @@ public class UserController {
         if (code == null || code.isEmpty()) {
             return R.error("验证码不能为空");
         }
+
+        // 修改点：从Session校验验证码，修复原有空壳校验问题
+        String sessionCode = (String) session.getAttribute("smsCode_" + phone);
+        Long codeTime = (Long) session.getAttribute("smsCode_" + phone + "_time");
+
+        if (sessionCode == null || codeTime == null) {
+            return R.error("请先获取验证码");
+        }
+        if (System.currentTimeMillis() - codeTime > CODE_EXPIRE_MS) {
+            session.removeAttribute("smsCode_" + phone);
+            session.removeAttribute("smsCode_" + phone + "_time");
+            return R.error("验证码已过期，请重新获取");
+        }
+        if (!sessionCode.equals(code)) {
+            return R.error("验证码错误");
+        }
+
+        // 验证通过，清除Session中的验证码（一次性使用）
+        session.removeAttribute("smsCode_" + phone);
+        session.removeAttribute("smsCode_" + phone + "_time");
 
         log.info("用户登录，手机号={}", phone);
 
@@ -88,7 +123,7 @@ public class UserController {
         queryWrapper.like(name != null && !name.isEmpty(), User::getName, name)
                     .like(phone != null && !phone.isEmpty(), User::getPhone, phone)
                     .eq(status != null, User::getStatus, status)
-                    .orderByDesc(User::getCreatedTime);
+                    .orderByDesc(User::getId);
 
         userService.page(pageInfo, queryWrapper);
         return R.success(pageInfo);

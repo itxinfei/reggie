@@ -165,18 +165,15 @@ public class DishController {
         return R.success("修改菜品成功");
     }
 
+    /**
+     * 修改点：原Controller中for循环逐条删除无事务保护，改为调用Service层事务方法
+     */
     @DeleteMapping
-    @Operation(summary = "删除菜品", description = "批量删除菜品及关联口味数据")
+    @Operation(summary = "删除菜品", description = "批量删除菜品及关联口味数据，自动校验套餐引用")
     @Parameter(name = "ids", description = "菜品ID列表", required = true)
     public R<String> delete(@RequestParam List<Long> ids) {
-        // 先删除关联的口味数据
-        for (Long dishId : ids) {
-            LambdaQueryWrapper<DishFlavor> flavorWrapper = new LambdaQueryWrapper<>();
-            flavorWrapper.eq(DishFlavor::getDishId, dishId);
-            dishFlavorService.remove(flavorWrapper);
-        }
-        // 再删除菜品
-        dishService.removeByIds(ids);
+        // 修改点：委托Service层处理，统一事务保护+套餐引用校验
+        dishService.deleteWithFlavorCheck(ids);
         return R.success("删除成功");
     }
 

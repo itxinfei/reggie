@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
@@ -32,12 +33,27 @@ public class ReservationController {
     private ReservationService reservationService;
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询", description = "分页查询预订记录列表")
+    @Operation(summary = "分页查询", description = "分页查询预订记录列表，支持按状态、姓名、手机号、日期筛选")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
-    public R<Page<Reservation>> page(int page, int pageSize) {
+    @Parameter(name = "status", description = "状态（可选）：PENDING-待确认, CONFIRMED-已确认, ARRIVED-已到店, CANCELLED-已取消")
+    @Parameter(name = "customerName", description = "客户姓名（可选，模糊搜索）")
+    @Parameter(name = "phone", description = "手机号（可选，模糊搜索）")
+    @Parameter(name = "reservedDate", description = "预订日期（可选，格式yyyy-MM-dd）")
+    public R<Page<Reservation>> page(int page, int pageSize,
+                                     @RequestParam(required = false) String status,
+                                     @RequestParam(required = false) String customerName,
+                                     @RequestParam(required = false) String phone,
+                                     @RequestParam(required = false) String reservedDate) {
         Page<Reservation> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<Reservation> qw = new LambdaQueryWrapper<>();
+        // 修改点：新增状态、姓名、手机号、日期筛选条件
+        qw.eq(status != null && !status.isEmpty(), Reservation::getStatus, status);
+        qw.like(customerName != null && !customerName.isEmpty(), Reservation::getCustomerName, customerName);
+        qw.like(phone != null && !phone.isEmpty(), Reservation::getPhone, phone);
+        if (reservedDate != null && !reservedDate.isEmpty()) {
+            qw.apply("DATE(reserved_time) = {0}", reservedDate);
+        }
         qw.orderByDesc(Reservation::getReservedTime);
         reservationService.page(pageInfo, qw);
         return R.success(pageInfo);

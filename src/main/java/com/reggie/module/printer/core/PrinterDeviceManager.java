@@ -25,7 +25,7 @@ public class PrinterDeviceManager {
     public List<PrinterConfig> findPrinters(String printType) {
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<PrinterConfig> qw =
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
-        qw.eq(PrinterConfig::getPrintType, printType);
+        qw.like(PrinterConfig::getPrintTypes, printType);
         qw.eq(PrinterConfig::getStatus, 1);
         return printerConfigService.list(qw);
     }

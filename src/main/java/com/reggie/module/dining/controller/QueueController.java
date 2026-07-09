@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -30,12 +31,19 @@ public class QueueController {
     private QueueService queueService;
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询", description = "分页查询排队记录列表")
+    @Operation(summary = "分页查询", description = "分页查询排队记录列表，支持按状态、手机号筛选")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
-    public R<Page<QueueRecord>> page(int page, int pageSize) {
+    @Parameter(name = "status", description = "状态（可选）：WAITING-等待中, CALLED-已叫号, SEATED-已入座, CANCELLED-已取消")
+    @Parameter(name = "phone", description = "手机号（可选，模糊搜索）")
+    public R<Page<QueueRecord>> page(int page, int pageSize,
+                                     @RequestParam(required = false) String status,
+                                     @RequestParam(required = false) String phone) {
         Page<QueueRecord> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
+        // 修改点：新增状态和手机号筛选条件
+        qw.eq(status != null && !status.isEmpty(), QueueRecord::getStatus, status);
+        qw.like(phone != null && !phone.isEmpty(), QueueRecord::getPhone, phone);
         qw.orderByAsc(QueueRecord::getCreatedTime);
         queueService.page(pageInfo, qw);
         return R.success(pageInfo);

@@ -8,6 +8,7 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import com.reggie.common.CustomException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -65,7 +66,7 @@ public class QRCodeUtil {
             return bufferedImageToBase64(qrImage, "png");
         } catch (Exception e) {
             log.error("生成桌台二维码失败: tableId={}, tableName={}", tableId, tableName, e);
-            throw new RuntimeException("生成二维码失败", e);
+            throw new CustomException("生成二维码失败：" + e.getMessage());
         }
     }
 
@@ -103,7 +104,7 @@ public class QRCodeUtil {
             return "data:image/png;base64," + base64;
         } catch (IOException e) {
             log.error("保存二维码失败: tableId={}", tableId, e);
-            throw new RuntimeException("保存二维码失败", e);
+            throw new CustomException("保存二维码失败：" + e.getMessage());
         }
     }
 
@@ -145,7 +146,7 @@ public class QRCodeUtil {
             return Base64.getEncoder().encodeToString(baos.toByteArray());
         } catch (IOException e) {
             log.error("图片转Base64失败", e);
-            throw new RuntimeException("图片转Base64失败", e);
+            throw new CustomException("图片转Base64失败：" + e.getMessage());
         }
     }
 
@@ -158,7 +159,7 @@ public class QRCodeUtil {
             return ImageIO.read(new java.io.ByteArrayInputStream(bytes));
         } catch (IOException e) {
             log.error("Base64转图片失败", e);
-            throw new RuntimeException("Base64转图片失败", e);
+            throw new CustomException("Base64转图片失败：" + e.getMessage());
         }
     }
 
