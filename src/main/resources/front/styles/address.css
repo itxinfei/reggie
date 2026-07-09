@@ -1,21 +1,24 @@
+/* ---- 地址管理页面样式 ---- */
+/* 修改点：与编辑页统一视觉风格 */
+
+/* ========== 顶部标题栏 ========== */
 #address .divHead {
   width: 100%;
   height: 88rem;
-  opacity: 1;
-  background: #333333;
+  background: linear-gradient(135deg, #ffc200 0%, #ff9a00 100%);
   position: relative;
+  box-shadow: 0 2rem 8rem rgba(255, 154, 0, 0.25);
 }
 
 #address .divHead .divTitle {
   font-size: 18rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
+  font-family: PingFangSC, PingFangSC-Semibold;
+  font-weight: 600;
   text-align: center;
-  color: #ffffff;
+  color: #333333;
   line-height: 25rem;
-  letter-spacing: 0;
   position: absolute;
-  bottom: 13rem;
+  bottom: 14rem;
   width: 100%;
 }
 
@@ -24,139 +27,264 @@
   left: 16rem;
   top: 50%;
   transform: translate(0, -50%);
+  cursor: pointer;
+  font-size: 20rem;
+  transition: transform 0.2s;
 }
+#address .divHead .divTitle i:active { transform: translate(0, -50%) scale(1.2); }
 
+/* ========== 内容区域 ========== */
 #address .divContent {
-  height: calc(100vh - 157rem);
-  overflow: auto;
+  min-height: calc(100vh - 157rem);
+  padding: 4rem 0 20rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
+/* ========== 地址卡片 ========== */
 #address .divContent .divItem {
-  height: 128rem;
-  opacity: 1;
+  min-height: 128rem;
   background: #ffffff;
-  border-radius: 6rem;
+  border-radius: 12rem;
   margin-top: 10rem;
-  margin-left: 10rem;
-  margin-right: 9rem;
-  padding-left: 12rem;
+  margin-left: 12rem;
+  margin-right: 12rem;
+  padding: 14rem 48rem 14rem 16rem;
   position: relative;
+  box-shadow: 0 2rem 10rem rgba(0, 0, 0, 0.05);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border-left: 3px solid transparent;
 }
 
-#address .divContent .divItem > img {
-  width: 16rem;
-  height: 16rem;
+#address .divContent .divItem:active {
+  box-shadow: 0 4rem 16rem rgba(0, 0, 0, 0.08);
+  background: #fafafa;
+  border-left-color: #ffc200;
+}
+
+/* ---- 编辑按钮 ---- */
+#address .divContent .divItem .btnEdit {
+  width: 18rem;
+  height: 18rem;
   position: absolute;
-  top: 40rem;
+  top: 20rem;
   right: 24rem;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: all 0.25s;
 }
-
-#address .divContent .divItem .divDefault img {
-  width: 16rem;
-  height: 16rem;
+#address .divContent .divItem .btnEdit:active {
   opacity: 1;
+  transform: scale(1.15);
 }
 
+/* ---- 地址信息 ---- */
 #address .divContent .divItem .divAddress {
   font-size: 14rem;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
   text-align: left;
   color: #333333;
-  line-height: 20rem;
-  letter-spacing: 0;
-  padding-top: 21rem;
+  line-height: 22rem;
+  padding-top: 16rem;
+  /* 修改点：允许两行显示，省市区+详细地址可能较长 */
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  width: 280rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  width: calc(100% - 70rem);
+  max-width: 280rem;
+  min-height: 44rem;
 }
 
+/* ---- 标签通用样式 ---- */
 #address .divContent .divItem .divAddress span {
-  width: 34rem;
-  height: 20rem;
-  opacity: 1;
-  font-size: 12rem;
+  width: auto;
+  min-width: 36rem;
+  height: 22rem;
+  font-size: 11rem;
+  font-weight: 600;
   display: inline-block;
   text-align: center;
-  margin-right: 4rem;
-  margin-bottom: 10rem;
+  line-height: 22rem;
+  padding: 0 8rem;
+  margin-right: 6rem;
+  border-radius: 11rem;
+}
+
+/* 标签颜色 — 与编辑页统一 */
+#address .divContent .divItem .divAddress .spanCompany {
+  background: linear-gradient(135deg, #e8f4fd, #dceeff);
+  color: #2b7fc9;
+}
+#address .divContent .divItem .divAddress .spanHome {
+  background: linear-gradient(135deg, #fff7e6, #ffecc8);
+  color: #c97d1a;
+}
+#address .divContent .divItem .divAddress .spanSchool {
+  background: linear-gradient(135deg, #e6faf3, #c8f0e3);
+  color: #1a9e6f;
+}
+#address .divContent .divItem .divAddress .spanNone {
+  background: linear-gradient(135deg, #f5f5f5, #eeeeee);
+  color: #888888;
+}
+
+/* ---- 收货人信息 ---- */
+#address .divContent .divItem .divUserPhone {
+  margin-top: 6rem;
 }
 
 #address .divContent .divItem .divUserPhone span {
   height: 20rem;
-  opacity: 1;
   font-size: 14rem;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
   text-align: left;
   color: #999999;
   line-height: 20rem;
-  letter-spacing: 0;
   margin-right: 10rem;
 }
 
 #address .divContent .divItem .divUserPhone span:first-child {
   margin-right: 2rem;
+  color: #555555;
 }
 
-#address .divContent .divItem .divAddress .spanCompany {
-  background-color: #e1f1fe;
-}
-
-#address .divContent .divItem .divAddress .spanHome {
-  background: #fef8e7;
-}
-
-#address .divContent .divItem .divAddress .spanSchool {
-  background: #e7fef8;
-}
-
+/* ---- 分割线 ---- */
 #address .divContent .divItem .divSplit {
   height: 1px;
-  opacity: 1;
-  background: #efefef;
+  background: #f0f0f0;
   border: 0;
-  margin-top: 16rem;
-  margin-bottom: 10rem;
-  margin-right: 10rem;
+  margin: 10rem 0 8rem;
 }
 
+/* ---- 默认地址行 ---- */
 #address .divContent .divItem .divDefault {
-  height: 18rem;
-  opacity: 1;
-  font-size: 13rem;
+  height: 20rem;
+  font-size: 12rem;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
   text-align: left;
-  color: #333333;
-  line-height: 18rem;
-  letter-spacing: 0;
+  color: #999999;
+  line-height: 20rem;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
 }
+#address .divContent .divItem .divDefault:active { color: #333333; }
 
 #address .divContent .divItem .divDefault img {
-  height: 18rem;
-  width: 18rem;
-  margin-right: 5rem;
+  height: 20rem;
+  width: 20rem;
+  margin-right: 4rem;
   vertical-align: bottom;
 }
 
-#address .divBottom {
-  height: 36rem;
-  opacity: 1;
-  background: #ffc200;
-  border-radius: 18rem;
-  opacity: 1;
-  font-size: 15rem;
+/* ========== 空状态 ========== */
+/* 修改点：新增空状态提示样式 */
+#address .emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rem 20rem 60rem;
+}
+
+#address .emptyState .emptyIcon {
+  width: 80rem;
+  height: 80rem;
+  border-radius: 50%;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20rem;
+}
+
+#address .emptyState .emptyIcon i {
+  font-size: 36rem;
+  color: #cccccc;
+}
+
+#address .emptyState .emptyText {
+  font-size: 16rem;
   font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
+  color: #999999;
+  margin-bottom: 12rem;
+}
+
+#address .emptyState .emptyHint {
+  font-size: 14rem;
+  font-family: PingFangSC, PingFangSC-Regular;
+  color: #ffc200;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ========== 底部添加按钮 ========== */
+#address .divBottom {
+  height: 42rem;
+  background: linear-gradient(135deg, #ffc200 0%, #ffb000 100%);
+  border-radius: 21rem;
+  font-size: 15rem;
+  font-family: PingFangSC, PingFangSC-Semibold;
+  font-weight: 600;
   text-align: center;
   color: #333333;
-  line-height: 36rem;
-  letter-spacing: 0;
+  line-height: 42rem;
+  letter-spacing: 1rem;
   position: absolute;
   bottom: 23rem;
   left: 50%;
   transform: translate(-50%, 0);
-  width: 334rem;
+  width: calc(100% - 24rem);
+  max-width: 334rem;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4rem 14rem rgba(255, 194, 0, 0.35);
+  user-select: none;
+}
+
+#address .divBottom:active {
+  transform: translate(-50%, 0) scale(0.97);
+  box-shadow: 0 2rem 8rem rgba(255, 194, 0, 0.2);
+}
+
+/* ========== 响应式适配 ========== */
+/* 修改点：小屏适配 */
+@media screen and (max-width: 360px) {
+  #address .divContent .divItem {
+    margin-left: 6rem;
+    margin-right: 6rem;
+    padding-left: 10rem;
+  }
+
+  #address .divContent .divItem .divAddress {
+    width: calc(100% - 60rem);
+  }
+
+  #address .divBottom {
+    width: calc(100% - 12rem);
+  }
+}
+
+/* 修改点：桌面大屏适配 */
+@media screen and (min-width: 752px) {
+  #address .divContent {
+    max-width: 460rem;
+    margin: 0 auto;
+  }
+
+  #address .divContent .divItem {
+    max-width: 440rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #address .divBottom {
+    max-width: 420rem;
+  }
 }

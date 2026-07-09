@@ -18,7 +18,13 @@ public interface OrderService extends IService<Orders> {
 
     void updateStatus(Integer status, Long id);
 
-    Page<?> userPage(int page, int pageSize);
+    /**
+     * 用户订单分页查询
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @param status 订单状态（可选，为null则查询全部）
+     */
+    Page<?> userPage(int page, int pageSize, Integer status);
 
     List<Orders> userList();
 

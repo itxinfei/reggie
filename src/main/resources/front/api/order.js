@@ -7,14 +7,6 @@ function  addOrderApi(data){
       })
 }
 
-//查询所有订单
-function orderListApi() {
-  return $axios({
-    'url': '/order/list',
-    'method': 'get',
-  })
-}
-
 //分页查询订单
 function orderPagingApi(data) {
   return $axios({
@@ -29,6 +21,15 @@ function orderAgainApi(data) {
   return $axios({
       'url': '/order/again',
       'method': 'post',
+      data
+  })
+}
+
+// 修改点：取消订单
+function cancelOrderApi(data) {
+  return $axios({
+      'url': '/order',
+      'method': 'put',
       data
   })
 }

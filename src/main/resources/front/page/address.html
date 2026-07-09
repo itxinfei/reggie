@@ -4,8 +4,8 @@
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
-        <title>菩提阁</title>
-        <link rel="icon" href="./../images/favico.ico">
+        <title>地址管理 - 瑞吉外卖</title>
+        <link rel="icon" href="./../images/favicon.ico">
         <!--不同屏幕尺寸根字体设置-->
         <script src="./../js/base.js"></script>
         <!--element-ui的样式-->
@@ -18,29 +18,42 @@
         <link rel="stylesheet" href="./../styles/address.css" />
     </head>
     <body>
-        <div id="address" class="app">
+        <!-- 修改点：覆盖index.css的overflow:hidden，确保地址页可滚动 -->
+        <style>
+            html, body { overflow: visible !important; background: transparent !important; max-width: none !important; height: auto !important; }
+        </style>
+        <div id="address" class="app" v-loading="loading" element-loading-text="加载中...">
             <div class="divHead">
                 <div class="divTitle">
                     <i class="el-icon-arrow-left" @click="goBack"></i>地址管理
                 </div>
             </div>
             <div class="divContent">
-                <div class="divItem" v-for="(item,index) in addressList" :key="index" @click.capture="itemClick(item)">
+                <!-- 修改点：修复:key使用item.id替代index -->
+                <div class="divItem" v-for="item in addressList" :key="item.id" @click="itemClick(item)">
                     <div class="divAddress">
-                        <span :class="{spanCompany:item.label === '公司',spanHome:item.label === '家',spanSchool:item.label === '学校'}">{{item.label}}</span>
-                        {{item.detail}}
+                        <span :class="{spanCompany:item.label === '公司',spanHome:item.label === '家',spanSchool:item.label === '学校',spanNone:item.label === '无'}">{{item.label}}</span>
+                        {{ fullAddress(item) }}
                     </div>
                     <div class="divUserPhone">
                         <span>{{item.consignee}}</span>
                         <span>{{item.sex === '0' ? '女士' : '先生'}}</span>
                         <span>{{item.phone}}</span>
                     </div>
-                    <img src="./../images/edit.png" @click.stop.prevent="toAddressEditPage(item)"/>
+                    <img src="./../images/edit.png" @click.stop.prevent="toAddressEditPage(item)" class="btnEdit"/>
                     <div class="divSplit"></div>
-                    <div class="divDefault" >
+                    <div class="divDefault" @click.stop="item.isDefault !== 1 && setDefaultAddress(item)">
                         <img src="./../images/checked_true.png" v-if="item.isDefault === 1">
-                        <img src="./../images/checked_false.png" @click.stop.prevent="setDefaultAddress(item)" v-else>设为默认地址
+                        <img src="./../images/checked_false.png" v-else>设为默认地址
                     </div>
+                </div>
+                <!-- 修改点：空状态提示 -->
+                <div class="emptyState" v-if="!loading && addressList.length === 0">
+                    <div class="emptyIcon">
+                        <i class="el-icon-location-outline"></i>
+                    </div>
+                    <div class="emptyText">暂无收货地址</div>
+                    <div class="emptyHint" @click="toAddressCreatePage">点击添加新地址</div>
                 </div>
             </div>
             <div class="divBottom" @click="toAddressCreatePage">+ 添加收货地址</div>
@@ -60,15 +73,25 @@
                 el:"#address",
                 data(){
                     return {
-                        addressList:[]
+                        addressList:[],
+                        loading: false // 修改点：新增加载状态
                     }
                 },
                 computed:{},
                 created(){
                     this.initData()
                 },
-                mounted(){},
                 methods:{
+                    // 修改点：拼接完整省市区地址
+                    fullAddress(item){
+                        let parts = []
+                        if(item.provinceName) parts.push(item.provinceName)
+                        if(item.cityName) parts.push(item.cityName)
+                        if(item.districtName) parts.push(item.districtName)
+                        if(item.streetName) parts.push(item.streetName)
+                        if(item.detail) parts.push(item.detail)
+                        return parts.join(' ')
+                    },
                     goBack(){
                         history.go(-1)
                     },
@@ -83,31 +106,46 @@
                         })
                     },
                     async initData(){
-                        const res = await addressListApi()
-                        if(res.code === 1){
-                            this.addressList = res.data
-                        }else{
-                            this.$notify({ type:'warning', message:res.msg});
-                        }
-                    },
-                    async setDefaultAddress(item){
-                        if(item.id){
-                            const res = await setDefaultAddressApi({id:item.id})
+                        try {
+                            this.loading = true
+                            const res = await addressListApi()
+                            this.loading = false
                             if(res.code === 1){
-                            this.initData()
+                                this.addressList = res.data || []
                             }else{
                                 this.$notify({ type:'warning', message:res.msg});
                             }
+                        } catch(e) {
+                            this.loading = false
+                            this.$notify({ type:'warning', message:'加载地址列表失败'});
+                        }
+                    },
+                    async setDefaultAddress(item){
+                        if(!item || !item.id) return
+                        try {
+                            this.addressList.forEach(a => { a.isDefault = 0 })
+                            item.isDefault = 1
+                            const res = await setDefaultAddressApi({id:item.id})
+                            if(res.code !== 1){
+                                this.$notify({ type:'warning', message:res.msg});
+                                this.initData()
+                            }
+                        } catch(e) {
+                            this.$notify({ type:'warning', message:'设置默认地址失败'});
+                            this.initData()
                         }
                     },
                     itemClick(item){
-                        const url = document.referrer
-                        //表示是从订单页面跳转过来的
-                        if(url.includes('order')){
-                            // 修改点：await异步调用，防止设置默认地址未完成就跳转
-                            this.setDefaultAddress(item).then(() => {
+                        const fromCheckout = sessionStorage.getItem('addressFromCheckout')
+                        if(fromCheckout === '1'){
+                            // 修改点：包装为 async/await + try-catch，防止导航时未捕获异常
+                            ;(async () => {
+                                try {
+                                    await this.setDefaultAddress(item)
+                                    sessionStorage.removeItem('addressFromCheckout')
+                                } catch(e) { /* 静默处理，始终返回 */ }
                                 history.go(-1)
-                            })
+                            })()
                         }
                     }
 

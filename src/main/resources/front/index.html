@@ -20,207 +20,411 @@
   </head>
   <body>
     <div id="main" class="app">
-      <div class="divHead">
-        <!-- 修改点：根据登录状态显示不同图标和文字 -->
-        <div class="userEntry" @click="toUserPage">
-          <img src="./images/user.png"/>
-          <span v-if="userPhone" class="userPhone">{{ userPhone }}</span>
-          <span v-else class="userTips">请登录</span>
-        </div>
-      </div>
-      <div class="divTitle">
-        <div class="divStatic">
-          <img src="./images/logo.png"  class="logo"/>
-          <div class="divDesc">
-            <div class="divName">瑞吉外卖餐厅</div>
-            <div class="divSend">
-                <span><img src="./images/time.png"/> 距离1.5km</span>
-                <span><img src="./images/money.png"/> 配送费6元</span>
-                <span><img src="./images/location.png"/> 预计时长12min</span>
-            </div>
+      <!-- ====== 美团：渐变色头部区域 ====== -->
+      <div class="header-section">
+        <!-- 顶部导航：定位 | 搜索 | 用户 -->
+        <div class="top-bar">
+          <div class="location" @click="toAddressPage">
+            <i class="el-icon-location-outline"></i>
+            <span>{{ addressInfo ? (addressInfo.label || addressInfo.cityName + addressInfo.districtName) : '请选择收货地址' }}</span>
+            <i class="el-icon-arrow-down arr"></i>
           </div>
-        </div>
-        <div class="divDesc">
-          简介: 菩提阁中餐厅是菩提阁点餐的独立的品牌，定位“大众 化的美食外送餐饮”，旨为顾客打造专业美食。
-        </div>
-      </div>
-      <div class="divBody">
-        <div class="divType">
-          <ul>
-            <li v-for="(item,index) in categoryList" :key="index" @click="categoryClick(index,item.id,item.type)" :class="{active:activeType === index}">{{item.name}}</li>
-          </ul>
-        </div>
-        <div class="divMenu">
-          <div>
-            <div class="divItem" v-for="(item,index) in dishList" :key="index" @click="dishDetails(item)">
-              <el-image :src="imgPath(item.image)" >
-                <div slot="error" class="image-slot">
-                  <img src="./images/noImg.png"/>
-                </div>
-              </el-image>
-              <div>
-                <div class="divName">{{item.name}}</div>
-                <div class="divDesc">{{item.description}}</div>
-                <div class="divDesc">{{'月销' + (item.saleNum ? item.saleNum : 0)  }}</div>
-                <div class="divBottom"><span>￥</span><span>{{(item.price/100).toFixed(2)}}</span></div>
-                <div class="divNum">
-                  <div class="divSubtract" v-if="item.number > 0">
-                    <img src="./images/subtract.png" @click.prevent.stop="subtractCart(item)"/>
-                  </div>
-                  <div class="divDishNum" v-if="item.number">{{item.number}}</div>
-                  <div class="divTypes" v-if="item.flavors && item.flavors.length > 0 && !item.number " @click.prevent.stop="chooseFlavorClick(item)">选择规格</div>
-                  <div class="divAdd" v-else>
-                    <img src="./images/add.png" @click.prevent.stop="addCart(item)"/>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div class="search-box" @click="onSearchClick">
+            <i class="el-icon-search"></i>
+            <span>搜索菜品、套餐</span>
+          </div>
+          <div class="user-btn" @click="toUserPage">
+            <img src="./images/user.png" v-if="!userPhone"/>
+            <span v-if="userPhone" class="avatar-text">{{ userPhone.slice(-4) }}</span>
           </div>
         </div>
 
-      </div>
-      <div class="divLayer">
-        <div class="divLayerLeft"></div>
-        <div class="divLayerRight"></div>
-      </div>
-      <div class="divCart" v-if="categoryList.length > 0" :style="{ zIndex: dialogFlavor.show ? 1 : 3000 }">
-          <div :class="{imgCartActive: cartData && cartData.length > 0, imgCart:!cartData || cartData.length<1}" @click="openCart"></div>
-          <div :class="{divGoodsNum:true, moreGoods:cartData && cartData.length > 99}" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
-          <div class="divNum">
-              <span>￥</span>
-              <span>{{goodsPrice}}</span>
+        <!-- 商家信息卡片 -->
+        <div class="restaurant-card">
+          <div class="rc-top">
+            <img src="./images/logo.png" class="rc-logo"/>
+            <div class="rc-info">
+              <div class="rc-name-row">
+                <span class="rc-name">{{ restaurantInfo.name || '瑞吉外卖' }}</span>
+                <span class="rc-brand" v-if="restaurantInfo.brand">品牌</span>
+              </div>
+              <div class="rc-meta">
+                <span class="rc-stars">★{{ restaurantInfo.stars || '4.8' }}</span>
+                <span class="rc-divider">|</span>
+                <span>月售{{ restaurantInfo.monthlySales || '999+' }}</span>
+                <span class="rc-divider">|</span>
+                <span>{{ restaurantInfo.deliveryTime || '约30分钟' }}</span>
+              </div>
+              <div class="rc-delivery">
+                <span>配送费¥{{ restaurantInfo.deliveryFee || '6' }}</span>
+                <span class="rc-divider">|</span>
+                <span>距{{ restaurantInfo.distance || '1.5km' }}</span>
+                <span class="rc-divider">|</span>
+                <span>¥{{ restaurantInfo.minOrder || '15' }}起送</span>
+              </div>
+            </div>
           </div>
-          <div class="divPrice"></div>
-          <div :class="{btnSubmitActive: cartData && cartData.length > 0, btnSubmit:!cartData || cartData.length<1}" @click="toAddOrderPage">去结算</div>
+          <!-- 美团标志性：红色优惠券栏 -->
+          <div class="coupon-bar" @click="showCouponDetail">
+            <div class="coupon-item" v-for="(c, ci) in (restaurantInfo.coupons || defaultCoupons)" :key="ci">
+              <span class="coupon-tag">{{ c.tag }}</span>
+              <span class="coupon-text">{{ c.text }}</span>
+            </div>
+            <span class="coupon-arrow">›</span>
+          </div>
         </div>
-        <van-dialog v-model="dialogFlavor.show" :show-confirm-button="false" class="dialogFlavor" ref="flavorDialog">
-          <div class="dialogTitle">{{dialogFlavor.name}}</div>
-          <div class="divContent">
-            <div v-for="flavor in dialogFlavor.flavors" :key="flavor.id">
-                <div class="divFlavorTitle">{{flavor.name}}</div>
-                <span v-for="item in JSON.parse(flavor.value)" 
-                :key="item"  
-                @click="flavorClick(flavor,item)"
-                :class="{spanActive:flavor.dishFlavor === item}"
-                >{{item}}</span>
-            </div>
+
+        <!-- 公告栏 -->
+        <div class="notice-bar" @click="showNoticeDetail">
+          <span class="notice-icon">📢</span>
+          <span class="notice-text">{{ restaurantInfo.notice || '欢迎光临！本店精选新鲜食材，用心烹饪每一道菜品' }}</span>
+          <span class="notice-arrow">›</span>
+        </div>
+      </div>
+
+      <!-- ====== 核心区域：左侧分类 + 右侧菜品 ====== -->
+      <div class="content-area">
+        <!-- 左侧分类栏 -->
+        <div class="category-sidebar" ref="categorySidebar">
+          <div
+            v-for="(item,index) in categoryList" :key="index"
+            class="cat-item"
+            :class="{active: activeType === index}"
+            @click="categoryClick(index,item.id,item.type)"
+          >
+            <span class="cat-text">{{ item.name }}</span>
+            <span class="cat-badge" v-if="item.name === '热销' || item.name === '优惠'">热</span>
           </div>
-          <div class="divBottom">
-            <div><span class="spanMoney">￥</span>{{dialogFlavor.price/100}}</div>
-            <div @click="dialogFlavorAddCart">加入购物车</div>
-          </div>
-          <div class="divFlavorClose" @click="dialogFlavor.show = false">
-            <img src="./images/close.png"/>
-          </div>
-        </van-dialog>
-        <van-popup v-model="cartDialogShow" position="bottom" :style="{ height: '50%' }" class="dialogCart">
-          <div class="divCartTitle">
-            <div class="title">购物车</div>
-            <div class="clear" @click="clearCart">
-              <i class="el-icon-delete"></i> 清空
-            </div>
-          </div>
-          <div class="divCartContent">
-            <div v-for="item in cartData" :key="item.id" class="divCartItem">
-              <el-image :src="imgPath(item.image)" >
+        </div>
+
+        <!-- 右侧菜品列表 -->
+        <div class="dish-panel" ref="dishPanel">
+          <div class="dish-section-title" v-if="activeCategoryName">{{ activeCategoryName }}</div>
+          <div
+            class="dish-item"
+            v-for="(item,index) in dishList"
+            :key="index"
+          >
+            <div class="di-image" @click="dishDetails(item)">
+              <el-image :src="imgPath(item.image)">
                 <div slot="error" class="image-slot">
                   <img src="./images/noImg.png"/>
                 </div>
               </el-image>
-              <div class="divDesc">
-                <div class="name">{{item.name}}</div>
-                <div class="price">
-                  <span class="spanMoney">￥</span>{{item.amount}}</div>
+              <div class="di-tag" v-if="item.saleNum > 100">热卖</div>
+            </div>
+            <div class="di-info" @click="dishDetails(item)">
+              <div class="di-name">{{ item.name }}</div>
+              <div class="di-desc" v-if="item.description">{{ item.description }}</div>
+              <div class="di-sales">月售{{ item.saleNum || 0 }}<span v-if="item.saleNum > 50"> · 好评率98%</span></div>
+              <div class="di-price-row">
+                <span class="di-price"><span class="di-symbol">¥</span>{{ (item.price/100).toFixed(2) }}</span>
               </div>
-              <div class="divNum">
-                <div class="divSubtract">
-                  <img src="./images/subtract.png" @click="cartNumberSubtract(item)"/>
-                </div>
-                <div class="divDishNum">{{item.number}}</div>
-                <div class="divAdd">
-                  <img src="./images/add.png" @click="cartNumAdd(item)"/>
-                </div>
-              </div>
-              <div class="divSplit"></div>
-              </div>
+            </div>
+            <div class="di-action">
+              <img src="./images/subtract.png" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"/>
+              <span class="di-num" v-if="item.number">{{ item.number }}</span>
+              <span class="di-spec" v-if="item.flavors && item.flavors.length > 0 && !item.number" @click.prevent.stop="chooseFlavorClick(item)">选规格</span>
+              <img src="./images/add.png" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"/>
+            </div>
           </div>
-        </van-popup>
-        <van-dialog v-model="detailsDialog.show" 
-                    :show-confirm-button="false" 
-                    class="detailsDialog" 
-                    ref="detailsDialog"
-                    v-if="detailsDialog.show"
-                    >
-          <div class="divContainer">
-            <el-image :src="imgPath(detailsDialog.item.image)" >
+          <div class="empty-tip" v-if="!dishList || dishList.length === 0">
+            <img src="./images/noImg.png"/>
+            <p>暂无菜品</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 底部购物车栏 ====== -->
+      <div class="cart-bar" v-if="categoryList.length > 0" :style="{ zIndex: dialogFlavor.show ? 1 : 3000 }">
+        <div class="cart-icon-wrap" @click="openCart">
+          <div :class="['cart-icon-img', cartData && cartData.length > 0 ? 'cart-icon-active' : 'cart-icon-empty']"></div>
+          <div class="cart-badge" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
+        </div>
+        <div class="cart-price" v-if="cartData && cartData.length > 0">
+          <span class="cart-symbol">¥</span>
+          <span class="cart-amount">{{ goodsPrice }}</span>
+        </div>
+        <div class="cart-empty-text" v-else>购物车空空如也</div>
+        <div class="cart-spacer"></div>
+        <div :class="['cart-submit', cartData && cartData.length > 0 ? 'cart-submit-active' : 'cart-submit-disabled']" @click="toAddOrderPage">去结算</div>
+      </div>
+
+      <!-- ====== 口味选择弹窗 ====== -->
+      <van-dialog v-model="dialogFlavor.show" :show-confirm-button="false" class="dialogFlavor" ref="flavorDialog">
+        <div class="dialogTitle">{{ dialogFlavor.name }}</div>
+        <div class="divContent">
+          <div v-for="flavor in dialogFlavor.flavors" :key="flavor.id">
+            <div class="divFlavorTitle">{{ flavor.name }}</div>
+            <span v-for="item in JSON.parse(flavor.value)"
+              :key="item"
+              @click="flavorClick(flavor,item)"
+              :class="{spanActive:flavor.dishFlavor === item}"
+            >{{ item }}</span>
+          </div>
+        </div>
+        <div class="divBottom">
+          <div><span class="spanMoney">￥</span>{{ dialogFlavor.price/100 }}</div>
+          <div @click="dialogFlavorAddCart">加入购物车</div>
+        </div>
+        <div class="divFlavorClose" @click="dialogFlavor.show = false">
+          <img src="./images/close.png"/>
+        </div>
+      </van-dialog>
+
+      <!-- ====== 购物车弹出面板 ====== -->
+      <van-popup v-model="cartDialogShow" position="bottom" :style="{ height: '50%' }" class="dialogCart">
+        <div class="divCartTitle">
+          <div class="title">购物车</div>
+          <div class="clear" @click="clearCart">
+            <i class="el-icon-delete"></i> 清空
+          </div>
+        </div>
+        <div class="divCartContent">
+          <div v-for="item in cartData" :key="item.id" class="divCartItem">
+            <el-image :src="imgPath(item.image)">
               <div slot="error" class="image-slot">
                 <img src="./images/noImg.png"/>
               </div>
             </el-image>
-            <div class="title">{{detailsDialog.item.name}}</div>
-            <div class="content">{{detailsDialog.item.description}}</div>
-          </div>
-          <div class="divNum">
-            <div class="left">
-              <span>￥</span><span>{{detailsDialog.item.price/100}}</span>
+            <div class="divDesc">
+              <div class="name">{{ item.name }}</div>
+              <div class="price">
+                <span class="spanMoney">￥</span>{{ item.amount }}
+              </div>
             </div>
-            <div class="right">
-                <div class="divSubtract" v-if="detailsDialog.item.number > 0">
-                  <img src="./images/subtract.png" @click="subtractCart(detailsDialog.item)"/>
+            <div class="divNum">
+              <div class="divSubtract">
+                <img src="./images/subtract.png" @click="cartNumberSubtract(item)"/>
+              </div>
+              <div class="divDishNum">{{ item.number }}</div>
+              <div class="divAdd">
+                <img src="./images/add.png" @click="cartNumAdd(item)"/>
+              </div>
+            </div>
+            <div class="divSplit"></div>
+          </div>
+        </div>
+      </van-popup>
+
+      <!-- ====== 菜品详情弹窗 ====== -->
+      <van-dialog v-model="detailsDialog.show"
+        :show-confirm-button="false"
+        class="detailsDialog"
+        ref="detailsDialog"
+        v-if="detailsDialog.show"
+      >
+        <div class="divContainer">
+          <el-image :src="imgPath(detailsDialog.item.image)">
+            <div slot="error" class="image-slot">
+              <img src="./images/noImg.png"/>
+            </div>
+          </el-image>
+          <div class="title">{{ detailsDialog.item.name }}</div>
+          <div class="content">{{ detailsDialog.item.description }}</div>
+        </div>
+        <div class="divNum">
+          <div class="left">
+            <span>￥</span><span>{{ detailsDialog.item.price/100 }}</span>
+          </div>
+          <div class="right">
+            <div class="divSubtract" v-if="detailsDialog.item.number > 0">
+              <img src="./images/subtract.png" @click="subtractCart(detailsDialog.item)"/>
+            </div>
+            <div class="divDishNum" v-if="detailsDialog.item.number">{{ detailsDialog.item.number }}</div>
+            <div class="divTypes" v-if="detailsDialog.item.flavors && detailsDialog.item.flavors.length > 0 && !detailsDialog.item.number" @click="chooseFlavorClick(detailsDialog.item)">选择规格</div>
+            <div class="divAdd" v-else>
+              <img src="./images/add.png" @click="addCart(detailsDialog.item)"/>
+            </div>
+          </div>
+        </div>
+        <div class="detailsDialogClose" @click="detailsDialog.show = false">
+          <img src="./images/close.png"/>
+        </div>
+      </van-dialog>
+
+      <!-- ====== 套餐详情弹窗 ====== -->
+      <van-dialog v-model="setMealDialog.show"
+        :show-confirm-button="false"
+        class="setMealDetailsDialog"
+        ref="setMealDetailsDialogd"
+        v-if="setMealDialog.show"
+      >
+        <div class="divContainer">
+          <div class="title">{{ setMealDialog.item.name }}</div>
+          <div class="item" v-for="(item,index) in setMealDialog.item.list" :key="index">
+            <el-image :src="imgPath(item.image)">
+              <div slot="error" class="image-slot">
+                <img src="./images/noImg.png"/>
+              </div>
+            </el-image>
+            <div class="divSubTitle">{{ item.name + '(' + item.copies + '份)' }}
+              <div class="divPrice">
+                <span>￥</span><span>{{ item.price/100 }}</span>
+              </div>
+            </div>
+            <div class="content">{{ item.description }}</div>
+          </div>
+        </div>
+        <div class="divNum">
+          <div class="left">
+            <span>￥</span><span>{{ setMealDialog.item.price/100 }}</span>
+          </div>
+          <div class="right">
+            <div class="divSubtract" v-if="setMealDialog.item.number > 0">
+              <img src="./images/subtract.png" @click="subtractCart(setMealDialog.item)"/>
+            </div>
+            <div class="divDishNum" v-if="setMealDialog.item.number">{{ setMealDialog.item.number }}</div>
+            <div class="divAdd" v-if="setMealDialog.item.number">
+              <img src="./images/add.png" @click="addCart(setMealDialog.item)"/>
+            </div>
+            <div class="addCart" @click="addCart(setMealDialog.item)" v-if="!setMealDialog.item.number">加入购物车</div>
+          </div>
+        </div>
+        <div class="detailsDialogClose" @click="setMealDialog.show = false">
+          <img src="./images/close.png"/>
+        </div>
+      </van-dialog>
+
+    <!-- ====== 搜索浮层 ====== -->
+    <div class="search-overlay" v-if="searchShow" @click.self="closeSearch">
+      <div class="search-header">
+        <div class="search-input-wrap">
+          <i class="el-icon-search so-icon"></i>
+          <input
+            type="text"
+            class="search-input"
+            v-model="searchKeyword"
+            ref="searchInput"
+            placeholder="搜索菜品、套餐"
+            @input="onSearchInput"
+            @keyup.enter="doSearch"
+          />
+          <i
+            class="el-icon-circle-close so-clear"
+            v-if="searchKeyword"
+            @click="clearSearch"
+          ></i>
+        </div>
+        <span class="search-cancel" @click="closeSearch">取消</span>
+      </div>
+
+      <!-- 修改点：搜索联想建议下拉 -->
+      <div class="search-suggestions" v-if="searchKeyword && searchSuggestions.length > 0 && !searchSearched">
+        <div
+          class="suggestion-item"
+          v-for="(sug, idx) in searchSuggestions"
+          :key="idx"
+          @click="selectSuggestion(sug)"
+        >
+          <i class="el-icon-search"></i>
+          <span class="suggestion-name">{{ sug.name }}</span>
+          <span class="suggestion-type">{{ sug.isMeal ? '套餐' : '菜品' }}</span>
+        </div>
+      </div>
+
+      <!-- 搜索体 -->
+      <div class="search-body">
+        <!-- 无关键词：搜索历史 -->
+        <div class="search-section" v-if="!searchKeyword">
+          <div class="search-section-title" v-if="searchHistory.length > 0">
+            <span>搜索历史</span>
+            <i class="el-icon-delete" @click="clearSearchHistory" title="清空"></i>
+          </div>
+          <div class="search-tags">
+            <span
+              class="search-tag"
+              v-for="(tag, idx) in searchHistory"
+              :key="idx"
+              @click="searchFromHistory(tag)"
+            >{{ tag }}</span>
+          </div>
+          <div class="search-empty-state" v-if="searchHistory.length === 0">
+            <p>输入菜品或套餐名称搜索</p>
+          </div>
+        </div>
+
+        <!-- 有关键词：结果 -->
+        <div class="search-section" v-if="searchKeyword && !searchLoading">
+          <div class="search-summary" v-if="searchDishList.length || searchMealList.length">
+            共找到 <b>{{ searchDishList.length + searchMealList.length }}</b> 个结果
+          </div>
+
+          <!-- 菜品结果 -->
+          <div class="search-subtitle" v-if="searchDishList.length">菜品</div>
+          <div
+            class="dish-item"
+            v-for="(item, idx) in searchDishList"
+            :key="'d' + idx"
+          >
+            <div class="di-image" @click="dishDetails(item)">
+              <el-image :src="imgPath(item.image)">
+                <div slot="error" class="image-slot">
+                  <img src="./images/noImg.png"/>
                 </div>
-                <div class="divDishNum" v-if="detailsDialog.item.number">{{detailsDialog.item.number}}</div>
-                <div class="divTypes" v-if="detailsDialog.item.flavors && detailsDialog.item.flavors.length > 0 && !detailsDialog.item.number " @click ="chooseFlavorClick(detailsDialog.item)">选择规格</div>
-                <div class="divAdd" v-else>
-                  <img src="./images/add.png" @click="addCart(detailsDialog.item)"/>
+              </el-image>
+            </div>
+            <div class="di-info" @click="dishDetails(item)">
+              <div class="di-name">{{ item.name }}</div>
+              <div class="di-desc" v-if="item.description">{{ item.description }}</div>
+              <div class="di-sales">月售{{ item.saleNum || 0 }}</div>
+              <div class="di-price-row">
+                <span class="di-price"><span class="di-symbol">¥</span>{{ (item.price/100).toFixed(2) }}</span>
+              </div>
+            </div>
+            <div class="di-action">
+              <img src="./images/subtract.png" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"/>
+              <span class="di-num" v-if="item.number">{{ item.number }}</span>
+              <span class="di-spec" v-if="item.flavors && item.flavors.length > 0 && !item.number" @click.prevent.stop="chooseFlavorClick(item)">选规格</span>
+              <img src="./images/add.png" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"/>
+            </div>
+          </div>
+
+          <!-- 套餐结果 -->
+          <div class="search-subtitle" v-if="searchMealList.length">套餐</div>
+          <div
+            class="dish-item"
+            v-for="(item, idx) in searchMealList"
+            :key="'m' + idx"
+          >
+            <div class="di-image" @click="dishDetails(item)">
+              <el-image :src="imgPath(item.image)">
+                <div slot="error" class="image-slot">
+                  <img src="./images/noImg.png"/>
                 </div>
+              </el-image>
             </div>
-          </div>
-          <div class="detailsDialogClose" @click="detailsDialog.show = false">
-            <img src="./images/close.png"/>
-          </div>
-        </van-dialog>
-        <van-dialog v-model="setMealDialog.show" 
-                    :show-confirm-button="false" 
-                    class="setMealDetailsDialog" 
-                    ref="setMealDetailsDialogd"
-                    v-if="setMealDialog.show"
-                    >
-          <div class="divContainer">
-            <div class="title">{{setMealDialog.item.name}}</div>
-              <div class="item" v-for="(item,index) in setMealDialog.item.list" :key="index">
-                <el-image :src="imgPath(item.image)">
-                  <div slot="error" class="image-slot">
-                    <img src="./images/noImg.png"/>
-                  </div>
-                </el-image>
-                <div class="divSubTitle">{{item.name + '(' + item.copies + '份)' }}
-                  <div class="divPrice">
-                    <span>￥</span><span>{{item.price/100}}</span>
-                  </div>
-                </div>                
-                <div class="content">{{item.description}}</div>
+            <div class="di-info" @click="dishDetails(item)">
+              <div class="di-name">{{ item.name }}</div>
+              <div class="di-desc" v-if="item.description">{{ item.description }}</div>
+              <div class="di-sales">月售{{ item.saleNum || 0 }}</div>
+              <div class="di-price-row">
+                <span class="di-price"><span class="di-symbol">¥</span>{{ (item.price/100).toFixed(2) }}</span>
               </div>
             </div>
-          <div class="divNum">
-              <div class="left">
-                <span>￥</span><span>{{setMealDialog.item.price/100}}</span>
-              </div>
-              <div class="right">
-                  <div class="divSubtract" v-if="setMealDialog.item.number > 0">
-                    <img src="./images/subtract.png" @click="subtractCart(setMealDialog.item)"/>
-                  </div>
-                  <div class="divDishNum" v-if="setMealDialog.item.number">{{setMealDialog.item.number}}</div>
-                  <div class="divAdd" v-if="setMealDialog.item.number">
-                    <img src="./images/add.png" @click="addCart(setMealDialog.item)"/>
-                  </div>
-                  <div class="addCart"  @click="addCart(setMealDialog.item)" v-if="!setMealDialog.item.number">加入购物车</div>
-              </div>
+            <div class="di-action">
+              <img src="./images/subtract.png" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"/>
+              <span class="di-num" v-if="item.number">{{ item.number }}</span>
+              <img src="./images/add.png" @click.prevent.stop="addCart(item)"/>
+            </div>
           </div>
-          <div class="detailsDialogClose" @click="setMealDialog.show = false">
-            <img src="./images/close.png"/>
+
+          <!-- 空结果 -->
+          <div class="search-empty-result" v-if="!searchDishList.length && !searchMealList.length && searchSearched">
+            <img src="./images/noImg.png"/>
+            <p>没有找到相关菜品或套餐</p>
+            <p class="sub">试试其他关键词吧</p>
           </div>
-        </van-dialog>
+        </div>
+
+        <!-- 加载中 -->
+        <div class="search-loading" v-if="searchLoading">
+          <van-loading size="24px" vertical>正在搜索...</van-loading>
+        </div>
+      </div>
     </div>
+  </div>
+
         <!-- 开发环境版本，包含了有帮助的命令行警告 -->
         <script src="../backend/plugins/vue/vue.js"></script>
         <!-- 引入组件库 -->
@@ -232,6 +436,7 @@
         <script src="./js/request.js"></script>
         <script src="./js/common.js"></script>
         <script src="./api/main.js"></script>
+        <script src="./api/address.js"></script>
   </body>
   <script>
       new Vue({
@@ -246,6 +451,16 @@
               cartData:[],
               // 修改点：存储当前登录用户的手机号
               userPhone: '',
+              // 修改点：默认地址信息，用于顶部定位显示
+              addressInfo: null,
+              // 修改点：商家信息（从后端动态获取）
+              restaurantInfo: {},
+              // 修改点：默认优惠券（后端未返回时使用）
+              defaultCoupons: [
+                { tag: '减', text: '满25减5' },
+                { tag: '折', text: '新客立减3元' },
+                { tag: '减', text: '满50减10' }
+              ],
               dialogFlavor:{
                 name:'',
                 flavors:[],
@@ -263,6 +478,18 @@
                 show:false,
                 item:{}
               },
+              // 修改点：搜索浮层相关数据
+              searchShow: false,
+              searchKeyword: '',
+              searchDishList: [],
+              searchMealList: [],
+              searchLoading: false,
+              searchSearched: false,
+              searchHistory: [],
+              searchTimer: null,
+              // 修改点：搜索联想建议
+              searchSuggestions: [],
+              suggestionTimer: null,
             }
           },
           computed:{
@@ -283,6 +510,13 @@
                 price += (item.number * item.amount)
               })
               return price
+            },
+            // 修改点：当前选中分类名称，用于右侧列表标题
+            activeCategoryName(){
+              if(this.activeType >= 0 && this.categoryList[this.activeType]){
+                return this.categoryList[this.activeType].name
+              }
+              return ''
             }
           },
           created(){
@@ -292,8 +526,233 @@
           mounted(){
             // 修改点：若已登录则正常加载，未登录也可浏览菜单但不能操作购物车
             this.initData()
+            // 修改点：监听右侧面板滚动，实现左右联动（美团小程序特性）
+            this.$nextTick(() => {
+              const panel = this.$refs.dishPanel
+              if(panel){
+                panel.addEventListener('scroll', this.onDishPanelScroll, { passive: true })
+              }
+            })
+          },
+          beforeDestroy(){
+            const panel = this.$refs.dishPanel
+            if(panel){
+              panel.removeEventListener('scroll', this.onDishPanelScroll)
+            }
           },
           methods:{
+            // 修改点：将common.js的全局函数imgPath注册为Vue实例方法，Vue模板中无法访问全局函数
+            imgPath(path){
+              return '/common/download?name=' + path
+            },
+            // 修改点：分类emoji图标映射，美团风格可视化
+            getCategoryIcon(name){
+              const map = {
+                '热销': '🔥', '新品': '✨', '优惠': '🎉', '特价': '💎',
+                '主食': '🍚', '盖饭': '🍛', '炒菜': '🍳', '煲仔': '🥘',
+                '凉菜': '🥗', '汤羹': '🍲', '小吃': '🍢', '卤味': '🍖',
+                '饮品': '🥤', '酒水': '🍺', '甜点': '🍰', '蛋糕': '🧁',
+                '套餐': '🎁', '面条': '🍜', '火锅': '🍲', '粉面': '🍝',
+                '烧烤': '🍖', '海鲜': '🦐', '素菜': '🥬', '煎炸': '🍗',
+                '汉堡': '🍔', '炸鸡': '🍗', '披萨': '🍕', '寿司': '🍣',
+                '早餐': '🥐', '午餐': '🍱', '晚餐': '🍽️', '夜宵': '🌙',
+                '小炒': '🥘', '干锅': '🍲', '砂锅': '🫕', '蒸菜': '🥟'
+              };
+              return map[name] || '🍽️';
+            },
+            // 修改点：搜索功能 — 打开搜索浮层
+            onSearchClick(){
+              // 初始化搜索历史（从 localStorage 读取，带7天过期机制）
+              try {
+                const raw = JSON.parse(localStorage.getItem('searchHistory') || '{"data":[],"ts":0}')
+                const now = Date.now()
+                // 超过7天自动清除历史
+                if(now - raw.ts > 7 * 24 * 60 * 60 * 1000){
+                  this.searchHistory = []
+                  localStorage.removeItem('searchHistory')
+                } else {
+                  this.searchHistory = raw.data || []
+                }
+              } catch(e) {
+                this.searchHistory = []
+              }
+              this.searchShow = true
+              this.searchKeyword = ''
+              this.searchDishList = []
+              this.searchMealList = []
+              this.searchSearched = false
+              // 聚焦输入框
+              this.$nextTick(() => {
+                const input = this.$refs.searchInput
+                if(input) input.focus()
+              })
+            },
+            // 修改点：关闭搜索浮层
+            closeSearch(){
+              this.searchShow = false
+              this.searchKeyword = ''
+              this.searchDishList = []
+              this.searchMealList = []
+              this.searchSearched = false
+              this.searchSuggestions = []
+            },
+            // 修改点：清除搜索关键词
+            clearSearch(){
+              this.searchKeyword = ''
+              this.searchDishList = []
+              this.searchMealList = []
+              this.searchSearched = false
+              this.searchSuggestions = []
+              this.$nextTick(() => {
+                const input = this.$refs.searchInput
+                if(input) input.focus()
+              })
+            },
+            // 修改点：输入防抖，自动触发搜索 & 联想建议
+            onSearchInput(){
+              if(this.searchTimer) clearTimeout(this.searchTimer)
+              if(this.suggestionTimer) clearTimeout(this.suggestionTimer)
+              const kw = (this.searchKeyword || '').trim()
+              if(!kw){
+                this.searchDishList = []
+                this.searchMealList = []
+                this.searchSearched = false
+                this.searchSuggestions = []
+                return
+              }
+              // 联想建议（100ms防抖，比搜索更快响应）
+              this.suggestionTimer = setTimeout(() => {
+                this.fetchSuggestions(kw)
+              }, 100)
+              // 搜索结果（300ms防抖）
+              this.searchTimer = setTimeout(() => {
+                this.doSearch()
+              }, 300)
+            },
+            // 修改点：获取搜索联想建议
+            async fetchSuggestions(kw){
+              try {
+                const dishRes = await searchSuggestApi({ name: kw })
+                const mealRes = await setmealListApi({ name: kw, status: 1 })
+                const suggestions = []
+                if(dishRes && dishRes.code === 1 && Array.isArray(dishRes.data)){
+                  dishRes.data.slice(0, 3).forEach(d => {
+                    suggestions.push({ name: d.name, isMeal: false, id: d.id })
+                  })
+                }
+                if(mealRes && mealRes.code === 1 && Array.isArray(mealRes.data)){
+                  mealRes.data.slice(0, 2).forEach(m => {
+                    suggestions.push({ name: m.name, isMeal: true, id: m.id })
+                  })
+                }
+                this.searchSuggestions = suggestions
+              } catch(e) {
+                this.searchSuggestions = []
+              }
+            },
+            // 修改点：选中联想建议项
+            selectSuggestion(sug){
+              this.searchKeyword = sug.name
+              this.searchSuggestions = []
+              this.doSearch()
+            },
+            // 修改点：执行搜索
+            async doSearch(){
+              const kw = (this.searchKeyword || '').trim()
+              if(!kw) return
+              this.searchLoading = true
+              this.searchSearched = true
+              try {
+                const [dishRes, mealRes] = await Promise.all([
+                  dishListApi({ name: kw }),
+                  setmealListApi({ name: kw, status: 1 })
+                ])
+                // 处理菜品结果
+                if(dishRes && dishRes.code === 1){
+                  const dishes = dishRes.data || []
+                  // 同步购物车数量
+                  dishes.forEach(d => {
+                    const cart = (this.cartData || []).find(c => c.dishId === d.id)
+                    d.number = cart ? cart.number : undefined
+                  })
+                  this.searchDishList = dishes
+                } else {
+                  this.searchDishList = []
+                }
+                // 处理套餐结果
+                if(mealRes && mealRes.code === 1){
+                  const meals = mealRes.data || []
+                  meals.forEach(m => {
+                    const cart = (this.cartData || []).find(c => c.setmealId === m.id)
+                    m.number = cart ? cart.number : undefined
+                  })
+                  this.searchMealList = meals
+                } else {
+                  this.searchMealList = []
+                }
+                // 保存搜索历史
+                this.addSearchHistory(kw)
+              } catch(e) {
+                this.searchDishList = []
+                this.searchMealList = []
+              } finally {
+                this.searchLoading = false
+              }
+            },
+            // 修改点：保存搜索历史（去重，最多10条，带过期时间戳）
+            addSearchHistory(keyword){
+              let history = [...this.searchHistory]
+              // 去重
+              const idx = history.indexOf(keyword)
+              if(idx > -1) history.splice(idx, 1)
+              history.unshift(keyword)
+              if(history.length > 10) history = history.slice(0, 10)
+              this.searchHistory = history
+              try {
+                localStorage.setItem('searchHistory', JSON.stringify({ data: history, ts: Date.now() }))
+              } catch(e) {}
+            },
+            // 修改点：点击历史标签搜索
+            searchFromHistory(tag){
+              this.searchKeyword = tag
+              this.doSearch()
+            },
+            // 修改点：清空搜索历史
+            clearSearchHistory(){
+              this.searchHistory = []
+              try {
+                localStorage.removeItem('searchHistory')
+              } catch(e) {}
+            },
+            // 修改点：点击定位跳转地址管理页
+            toAddressPage(){
+              window.requestAnimationFrame(()=>{
+                window.location.href = '/front/page/address.html'
+              })
+            },
+            // 修改点：点击优惠券栏展开优惠券详情
+            showCouponDetail(){
+              // 修改点：使用动态商家信息，无后端数据时兜底
+              const coupons = (this.restaurantInfo.coupons || this.defaultCoupons)
+                .map(c => c.text).join(' · ')
+              vant.Dialog.alert({
+                title: '优惠券',
+                message: coupons,
+                confirmButtonText: '我知道了'
+              })
+            },
+            // 修改点：点击公告栏查看公告详情
+            showNoticeDetail(){
+              vant.Dialog.alert({
+                title: '商家公告',
+                message: this.restaurantInfo.notice || '欢迎光临！本店精选新鲜食材，用心烹饪每一道菜品。',
+                confirmButtonText: '知道了'
+              })
+            },
+            // 修改点：返回上一页（顶部导航使用）
+            goBack(){
+              history.go(-1)
+            },
             //初始化数据
             initData(){
               // 修改点：未登录时不请求购物车数据，避免NOTLOGIN重定向打断浏览
@@ -301,7 +760,11 @@
               const isLogin = !!this.userPhone
               if(isLogin){
                 tasks.push(cartListApi({}))
+                // 修改点：加载默认地址用于顶部定位展示
+                tasks.push(getDefaultAddressApi().catch(() => null))
               }
+              // 修改点：加载商家信息（无需登录）
+              tasks.push(fetchRestaurantInfo().catch(() => null))
               Promise.all(tasks).then(res=>{
                 //获取分类数据
                 if(res[0].code === 1){
@@ -317,76 +780,136 @@
                 }else{
                   this.$notify({ type:'warning', message:res[0].msg});
                 }
-                //获取购物车数据（仅登录后）
+                //获取购物车数据（仅登录后，索引1）
                 if(isLogin && res[1] && res[1].code === 1){
                   this.cartData = res[1].data
                 }
+                // 修改点：设置地址信息（仅登录后，索引2）
+                if(isLogin && res[2] && res[2].code === 1){
+                  this.addressInfo = res[2].data
+                }
+                // 修改点：设置商家信息（索引3 或 索引1）
+                const restaurantRes = isLogin ? res[3] : res[1]
+                if(restaurantRes && restaurantRes.code === 1){
+                  this.restaurantInfo = restaurantRes.data || {}
+                }
+              }).catch(() => {
+                // 修改点：捕获Promise异常，避免控制台报错，未登录时会自动跳转登录页
               })
             },
             //分类点击
             categoryClick(index,id,type){
               this.activeType = index
               this.categoryId = id
+              // 修改点：切换分类时滚动右侧列表到顶部，并滚动左侧分类使选中项可见
+              this.$nextTick(() => {
+                const panel = this.$refs.dishPanel
+                if(panel) panel.scrollTop = 0
+                const sidebar = this.$refs.categorySidebar
+                if(sidebar){
+                  const activeItem = sidebar.children[index]
+                  if(activeItem){
+                    activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                  }
+                }
+              })
               if(type === 1){//菜品
                 this.getDishList()
               }else{
                 this.getSetmealData()
               }
             },
+            // 修改点：右侧面板滚动时自动高亮对应分类（美团小程序左右联动）
+            onDishPanelScroll(){
+              // 防抖处理：100ms内只执行一次高亮更新
+              if(this._scrollTimer) return
+              this._scrollTimer = setTimeout(() => {
+                this._scrollTimer = null
+                // 根据当前可视区域第一个菜品所属分类，更新左侧分类高亮
+                const panel = this.$refs.dishPanel
+                if(!panel || this.dishList.length === 0) return
+                const scrollTop = panel.scrollTop
+                const categoryHeaders = panel.querySelectorAll('.category-dish-title')
+                let activeIdx = 0
+                for(let i = 0; i < categoryHeaders.length; i++){
+                  const el = categoryHeaders[i]
+                  // 使用offsetTop并考虑面板滚动偏移
+                  if(el.offsetTop - 20 <= scrollTop){
+                    // 查找该分类标题对应的categoryId
+                    const catId = el.getAttribute('data-category-id')
+                    if(catId){
+                      const idx = this.categoryList.findIndex(c => String(c.id) === String(catId))
+                      if(idx >= 0) activeIdx = idx
+                    }
+                  }
+                }
+                if(this.activeType !== activeIdx){
+                  this.activeType = activeIdx
+                }
+              }, 100)
+            },
             //获取菜品数据
             async getDishList(){
-              if(!this.categoryId){
-                return
-              }
-              const res = await dishListApi({categoryId:this.categoryId,status:1})
-              if(res.code === 1){
-                let dishList = res.data
-                const cartData  = this.cartData
-                if(dishList.length > 0 && cartData.length > 0){
-                  dishList.forEach(dish=>{
-                    cartData.forEach(cart=>{
-                      if(dish.id === cart.dishId){
-                        dish.number = cart.number
-                      }
-                    })
-                  })
-                }
-                this.dishList = dishList
-              }else{
-                this.$notify({ type:'warning', message:res.msg});
-              }
-            },
-            //获取套餐数据setmealId
-            async getSetmealData(){
-              if(!this.categoryId){
-                return
-              }
-              const res = await setmealListApi({categoryId:this.categoryId,status:1})
-              if(res.code === 1){
+              if(!this.categoryId) return
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                const res = await dishListApi({categoryId:this.categoryId,status:1})
+                if(!res) return
+                if(res.code === 1){
                   let dishList = res.data
                   const cartData  = this.cartData
                   if(dishList.length > 0 && cartData.length > 0){
                     dishList.forEach(dish=>{
                       cartData.forEach(cart=>{
-                        if(dish.id === cart.setmealId){
+                        if(dish.id === cart.dishId){
                           dish.number = cart.number
                         }
                       })
                     })
                   }
                   this.dishList = dishList
-              }else{
-                this.$notify({ type:'warning', message:res.msg});
-              }
+                }else{
+                  this.$notify({ type:'warning', message:res.msg})
+                }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
+            },
+            //获取套餐数据setmealId
+            async getSetmealData(){
+              if(!this.categoryId) return
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                const res = await setmealListApi({categoryId:this.categoryId,status:1})
+                if(!res) return
+                if(res.code === 1){
+                    let dishList = res.data
+                    const cartData  = this.cartData
+                    if(dishList.length > 0 && cartData.length > 0){
+                      dishList.forEach(dish=>{
+                        cartData.forEach(cart=>{
+                          if(dish.id === cart.setmealId){
+                            dish.number = cart.number
+                          }
+                        })
+                      })
+                    }
+                    this.dishList = dishList
+                }else{
+                  this.$notify({ type:'warning', message:res.msg})
+                }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
             //获取购物车数据
             async getCartData(){
-              const res = await cartListApi({})
-              if(res.code === 1){
-                this.cartData = res.data
-              }else{
-                this.$notify({ type:'warning', message:res.msg});
-              }
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                const res = await cartListApi({})
+                if(!res) return
+                if(res.code === 1){
+                  this.cartData = res.data
+                }else{
+                  this.$notify({ type:'warning', message:res.msg})
+                }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
             //菜单中往购物车中添加商品
             async addCart(item){
@@ -398,53 +921,61 @@
                 })
                 return
               }
-              let params = {
-                amount: Math.round(item.price / 100 * 100) / 100, // 修改点：金额使用四舍五入避免浮点误差
-                dishFlavor: item.dishFlavor,//口味  如果没有传undefined
-                dishId: undefined,//菜品id
-                setmealId: undefined,//套餐id
-                name: item.name,
-                image: item.image
-              }
-              if(Array.isArray(item.flavors)){//表示是菜品
-                params.dishId = item.id
-              }else{//表示套餐 套餐没有口味
-                params.setmealId = item.id
-              }
-              const res = await addCartApi(params)
-              if(res.code === 1){
-                // 修改点：使用统一的同步方法
-                this.syncCartNumber(item.id, res.data.number, false)
-                if(this.setMealDialog.show){
-                  item.number = res.data.number
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                let params = {
+                  amount: Math.round(item.price / 100 * 100) / 100, // 修改点：金额使用四舍五入避免浮点误差
+                  dishFlavor: item.dishFlavor,//口味  如果没有传undefined
+                  dishId: undefined,//菜品id
+                  setmealId: undefined,//套餐id
+                  name: item.name,
+                  image: item.image
                 }
-                this.getCartData()
-              }else{
-                this.$notify({ type:'warning', message:res.msg});
-              }
+                if(Array.isArray(item.flavors)){//表示是菜品
+                  params.dishId = item.id
+                }else{//表示套餐 套餐没有口味
+                  params.setmealId = item.id
+                }
+                const res = await addCartApi(params)
+                if(!res) return
+                if(res.code === 1){
+                  // 修改点：使用统一的同步方法
+                  this.syncCartNumber(item.id, res.data.number, false)
+                  if(this.setMealDialog.show){
+                    item.number = res.data.number
+                  }
+                  this.getCartData()
+                }else{
+                  this.$notify({ type:'warning', message:res.msg})
+                }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
 
             //菜单中减少选中的商品
             async subtractCart(item){
-                let params = {
-                  dishId:item.id,
-                }
-                if(!Array.isArray(item.flavors)){
-                  params = {
-                    setmealId:item.id,
+                // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+                try {
+                  let params = {
+                    dishId:item.id,
                   }
-                }
-                const res = await updateCartApi(params)
-                if(res.code === 1){
-                  // 修改点：使用统一的同步方法
-                  this.syncCartNumber(item.id, res.data.number, true)
-                  if(this.setMealDialog.show){
-                    item.number = (res.data.number === 0 ? undefined : res.data.number)
+                  if(!Array.isArray(item.flavors)){
+                    params = {
+                      setmealId:item.id,
+                    }
                   }
-                  this.getCartData()
-                }else{
-                  this.$notify({ type:'warning', message:res.msg});
-                }
+                  const res = await updateCartApi(params)
+                  if(!res) return
+                  if(res.code === 1){
+                    // 修改点：使用统一的同步方法
+                    this.syncCartNumber(item.id, res.data.number, true)
+                    if(this.setMealDialog.show){
+                      item.number = (res.data.number === 0 ? undefined : res.data.number)
+                    }
+                    this.getCartData()
+                  }else{
+                    this.$notify({ type:'warning', message:res.msg})
+                  }
+                } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
             
             //展开购物车
@@ -455,61 +986,91 @@
             },
             //购物车中增加商品数量
             async cartNumAdd(item){
-              let params = {
-                amount: item.amount,//金额
-                dishFlavor: item.dishFlavor,//口味  如果没有传undefined
-                dishId: item.dishId,//菜品id
-                setmealId: item.setmealId,//套餐id
-                name: item.name,
-                image: item.image
-              }
-              const res = await addCartApi(params)
-              if(res.code === 1){
-                // 修改点：使用统一的同步方法
-                this.syncCartNumber(item.dishId || item.setmealId, res.data.number, false)
-                this.getCartData()
-              }else{
-                this.$notify({ type:'warning', message:res.msg});
-              }
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                let params = {
+                  amount: item.amount,//金额
+                  dishFlavor: item.dishFlavor,//口味  如果没有传undefined
+                  dishId: item.dishId,//菜品id
+                  setmealId: item.setmealId,//套餐id
+                  name: item.name,
+                  image: item.image
+                }
+                const res = await addCartApi(params)
+                if(!res) return
+                if(res.code === 1){
+                  // 修改点：使用统一的同步方法
+                  this.syncCartNumber(item.dishId || item.setmealId, res.data.number, false)
+                  this.getCartData()
+                }else{
+                  this.$notify({ type:'warning', message:res.msg})
+                }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
             //购物车中减少商品数量
             async cartNumberSubtract(item){
-              let params = {
-                  dishId:item.dishId,
-                  setmealId:item.setmealId,
-                }
-                const res = await updateCartApi(params)
-                if(res.code === 1){
-                  // 修改点：使用统一的同步方法
-                  this.syncCartNumber(item.dishId || item.setmealId, res.data.number, true)
-                  this.getCartData()
-                }else{
-                  this.$notify({ type:'warning', message:res.msg});
-                }
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                let params = {
+                    dishId:item.dishId,
+                    setmealId:item.setmealId,
+                  }
+                  const res = await updateCartApi(params)
+                  if(!res) return
+                  if(res.code === 1){
+                    // 修改点：使用统一的同步方法
+                    this.syncCartNumber(item.dishId || item.setmealId, res.data.number, true)
+                    this.getCartData()
+                  }else{
+                    this.$notify({ type:'warning', message:res.msg})
+                  }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
             
-            // 修改点：提取通用的购物车数量的菜单同步逻辑，消除4个方法中的重复代码
+            // 修改点：提取通用的购物车数量的菜单同步逻辑，同时同步搜索结果
             syncCartNumber(dishId, newNumber, clearOnZero){
               if(typeof dishId === 'undefined' || dishId === null) return;
+              // 同步菜品列表
               this.dishList.forEach(dish => {
                 if(dish.id === dishId){
                   dish.number = (newNumber === 0 && clearOnZero) ? undefined : newNumber;
+                }
+              });
+              // 同步搜索结果
+              this.searchDishList.forEach(dish => {
+                if(dish.id === dishId){
+                  dish.number = (newNumber === 0 && clearOnZero) ? undefined : newNumber;
+                }
+              });
+              this.searchMealList.forEach(meal => {
+                if(meal.id === dishId){
+                  meal.number = (newNumber === 0 && clearOnZero) ? undefined : newNumber;
                 }
               });
             },
             
             //清空购物车
             async clearCart(){
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
                 const res = await clearCartApi()
+                if(!res) return
                 if(res.code === 1){
                   for(let ele of this.dishList){
+                    ele.number = undefined
+                  }
+                  for(let ele of this.searchDishList){
+                    ele.number = undefined
+                  }
+                  for(let ele of this.searchMealList){
                     ele.number = undefined
                   }
                   this.cartData = []
                   this.cartDialogShow = false
                 }else{
-                  this.$notify({ type:'warning', message:res.msg});
+                  this.$notify({ type:'warning', message:res.msg})
                 }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
             //点击选择规格
             chooseFlavorClick(item){
@@ -584,16 +1145,19 @@
                 this.detailsDialog.item = item
                 this.detailsDialog.show = true
               }else{
-                //显示套餐的数据
-                const res = await setMealDishDetailsApi(item.id)
-                if(res.code === 1){
-                  this.setMealDialog.item = {...item,list:res.data}
-                  this.setMealDialog.show = true
-                }else{
-                  this.$notify({ type:'warning', message:res.msg});
-                }
+                // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+                try {
+                  //显示套餐的数据
+                  const res = await setMealDishDetailsApi(item.id)
+                  if(!res) return
+                  if(res.code === 1){
+                    this.setMealDialog.item = {...item,list:res.data}
+                    this.setMealDialog.show = true
+                  }else{
+                    this.$notify({ type:'warning', message:res.msg})
+                  }
+                } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
               }
-
             }
 
           }

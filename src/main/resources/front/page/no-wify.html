@@ -4,7 +4,7 @@
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
-        <title>菩提阁</title>
+        <title>网络异常 - 瑞吉外卖</title>
         <link rel="icon" href="./../images/favico.ico">
         <!--不同屏幕尺寸根字体设置-->
         <script src="./../js/base.js"></script>
@@ -19,7 +19,7 @@
         <div id="no_wifi" class="app">
             <div class="divHead">
                 <div class="divTitle">
-                    <i class="el-icon-arrow-left" @click="goBack"></i>菩提阁
+                    <i class="el-icon-arrow-left" @click="goBack"></i>网络异常
                 </div>
             </div>
             <div class="divContent">
@@ -43,16 +43,13 @@
                     }
                 },
                 computed:{},
-                created(){
-
-                },
-                mounted(){},
                 methods:{
                     goBack(){
                         history.go(-1)
                     },
+                    // 修改点：修复"点击刷新"语义 — 改为真正刷新页面而非返回上一页
                     toPagePrev(){
-                        history.go(-1)
+                        location.reload()
                     }
                 }
             })

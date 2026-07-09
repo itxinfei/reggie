@@ -80,6 +80,7 @@
     <!-- 引入axios -->
     <script src="../../backend/plugins/axios/axios.min.js"></script>
         <script src="./../js/request.js"></script>
+        <script src="./../api/main.js"></script>
         <script src="./../js/common.js"></script>
         <script src="./../api/order.js"></script>
         <script src="./../api/login.js"></script>
@@ -92,11 +93,6 @@
                     // 修改点：新增用户真实信息字段
                     userName: '',
                     userAvatar: '',
-                    form:{
-                        phone:'',
-                        code:''
-                    },
-                    msgFlag:false,
                     loading:false,
                     order:[{
                         orderTime:'',
@@ -139,7 +135,7 @@
                             this.userPhone = res.data.phone || this.userPhone
                         }
                     } catch(e) {
-                        console.warn('获取用户信息失败:', e)
+                        // 修改点：静默处理，用户信息获取失败不影响页面
                     }
                 },
                 goBack(){
@@ -178,15 +174,16 @@
                     }
                 },
                 async addOrderAgain(){
-                    // 修改点：防重复点击
                     if(this.loading) return;
                     this.loading = true
                     try {
                         const res = await orderAgainApi({id:this.order[0].id})
                         if(res.code === 1){
+                            // 修改点：先刷新购物车数据，确保首页立即显示正确数量
+                            await cartListApi({})
                             window.requestAnimationFrame(()=>{
                                 window.location.href = '/front/index.html'
-                            }) 
+                            })
                         }else{
                             this.$notify({ type:'warning', message:res.msg});
                         }
@@ -201,7 +198,9 @@
                     try {
                         const res = await loginoutApi()
                         if(res.code === 1){
+                            // 修改点：清除所有登录态信息
                             sessionStorage.removeItem("userPhone")
+                            sessionStorage.removeItem("userId")
                             window.requestAnimationFrame(()=>{
                                 window.location.href = '/front/page/login.html'
                             }) 

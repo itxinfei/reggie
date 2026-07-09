@@ -21,8 +21,18 @@
         <div id="order" class="app">
             <div class="divHead">
                 <div class="divTitle">
-                    <i class="el-icon-arrow-left" @click="goBack"></i>菩提阁
+                    <i class="el-icon-arrow-left" @click="goBack"></i>历史订单
                 </div>
+            </div>
+            <!-- 修改点：美团风格状态Tab筛选栏 -->
+            <div class="status-tabs">
+                <div
+                    v-for="tab in statusTabs"
+                    :key="tab.value"
+                    class="status-tab"
+                    :class="{active: activeStatus === tab.value}"
+                    @click="switchTab(tab.value)"
+                >{{ tab.label }}</div>
             </div>
             <div class="divBody" v-if="orderList.length > 0">
                 <van-list
@@ -46,6 +56,9 @@
                         <div class="result">
                             <span>共{{order.sumNum}} 件商品,实付</span><span class="price">￥{{order.amount}}</span>
                         </div>
+                        <div class="btn" v-if="order.status === 1">
+                            <div class="btnCancel" @click="cancelOrder(order)">取消订单</div>
+                        </div>
                         <div class="btn" v-if="order.status === 4">
                             <div class="btnAgain" @click="addOrderAgain(order)">再来一单</div>
                         </div>
@@ -68,6 +81,7 @@
         <!-- 引入axios -->
         <script src="../../backend/plugins/axios/axios.min.js"></script>
         <script src="./../js/request.js"></script>
+        <script src="./../api/main.js"></script>
         <script src="./../js/common.js"></script>
         <script src="./../api/order.js"></script>
         <script>
@@ -82,14 +96,22 @@
                     orderList:[],
                     loading:false,
                     finished:false,
-                    submitting:false // 修改点：再来一单防重复提交
+                    submitting:false, // 修改点：再来一单防重复提交
+                    // 修改点：状态筛选
+                    activeStatus: null, // null表示全部
+                    statusTabs: [
+                        { label: '全部', value: null },
+                        { label: '待付款', value: 1 },
+                        { label: '配送中', value: 2 },
+                        { label: '已完成', value: 4 },
+                        { label: '已取消', value: 5 }
+                    ]
                 }
             },
             computed:{},
             created(){
                 this.initData()
             },
-            mounted(){},
             methods:{
                 goBack(){
                     // 修改点：用sessionStorage标志替代不可靠的document.referrer判断
@@ -105,12 +127,27 @@
                 initData(){
                     this.getList()
                 },
+                // 修改点：切换Tab时重置分页并重新加载
+                switchTab(status){
+                    if(this.activeStatus === status) return;
+                    this.activeStatus = status;
+                    this.paging.page = 1;
+                    this.orderList = [];
+                    this.finished = false;
+                    this.loading = true;
+                    this.getList();
+                },
                 async getList(){
                     if(this.finished){
                         this.loading = false;
                         return
                     }
-                    const res = await orderPagingApi(this.paging)
+                    // 修改点：仅在有状态筛选时传递status参数
+                    const params = { ...this.paging }
+                    if(this.activeStatus !== null){
+                        params.status = this.activeStatus
+                    }
+                    const res = await orderPagingApi(params)
                     if(res.code === 1){
                         // 第一页时重置列表，防止重复累加
                         if(this.paging.page === 1){
@@ -140,12 +177,13 @@
                     return getStatus(status)
                 },
                 async addOrderAgain(order){
-                    // 修改点：防重复点击
                     if(this.submitting) return;
                     this.submitting = true
                     try {
                         const res = await orderAgainApi({id:order.id})
                         if(res.code === 1){
+                            // 修改点：先刷新购物车数据，确保首页立即显示正确数量
+                            await cartListApi({})
                             window.requestAnimationFrame(()=>{
                                 window.location.href = '/front/index.html'
                             })
@@ -155,6 +193,39 @@
                     } finally {
                         this.submitting = false
                     }
+                },
+                // 修改点：取消订单
+                cancelOrder(order){
+                    if(this.submitting) return;
+                    vant.Dialog.confirm({
+                        title: '取消订单',
+                        message: '确定要取消该订单吗？',
+                        confirmButtonText: '确定',
+                        cancelButtonText: '再看看'
+                    }).then(async () => {
+                        // 修改点：包裹try-catch，防止API异常导致res为undefined
+                        this.submitting = true
+                        try {
+                            const res = await cancelOrderApi({ id: order.id, status: 5 })
+                            if(res && res.code === 1){
+                                // 刷新当前列表
+                                this.paging.page = 1
+                                this.orderList = []
+                                this.finished = false
+                                this.loading = true
+                                this.getList()
+                                this.$notify({ type:'success', message:'订单已取消'});
+                            }else{
+                                this.$notify({ type:'warning', message: (res && res.msg) || '取消失败'});
+                            }
+                        } catch(e) {
+                            this.$notify({ type:'warning', message: '网络异常，请稍后重试'});
+                        } finally {
+                            this.submitting = false
+                        }
+                    }).catch(() => {
+                        // 用户点取消，什么都不做
+                    })
                 },
             }
         })

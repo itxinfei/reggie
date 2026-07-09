@@ -6,14 +6,6 @@ function addressListApi() {
     })
   }
 
-//获取最新地址
-function addressLastUpdateApi() {
-    return $axios({
-      'url': '/addressBook/lastUpdate',
-      'method': 'get',
-    })
-}
-
 //新增地址
 function  addAddressApi(data){
     return $axios({

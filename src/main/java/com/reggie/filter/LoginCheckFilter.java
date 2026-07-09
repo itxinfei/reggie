@@ -50,7 +50,12 @@ public class LoginCheckFilter implements Filter{
                 "/common/**",
                 "/user/sendMsg",
                 "/user/login",
-                "/tenant/register"
+                "/tenant/register",
+                // 修改点：放行前端浏览菜单相关API，允许未登录用户浏览菜品和分类
+                "/category/list",
+                "/dish/list",
+                "/setmeal/list",
+                "/setmeal/dish/**"
             };
 
             //2、判断本次请求是否需要处理

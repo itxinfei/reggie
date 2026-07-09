@@ -68,4 +68,23 @@ function setMealDishDetailsApi(id) {
     })
 }
 
+// 修改点：获取商家信息（评分、配送费等动态数据）
+function fetchRestaurantInfo() {
+    return $axios({
+        'url': '/restaurant/info',
+        'method': 'get',
+    })
+}
+
+// 修改点：搜索联想建议（仅返回名称列表，轻量级）
+function searchSuggestApi(data) {
+    return $axios({
+        'url': '/dish/list',
+        'method': 'get',
+        params: { ...data, pageSize: 5 }
+    })
+}
+
+
+
 

@@ -67,6 +67,10 @@ public class Orders implements Serializable {
     @Size(max = 200, message = "备注不能超过200个字符")
     private String remark;
 
+    //预计送达时间
+    @Size(max = 20, message = "送达时间格式不正确")
+    private String expectDeliveryTime;
+
     //用户名
     @NotBlank(message = "用户名不能为空")
     @Size(max = 30, message = "用户名不能超过30个字符")

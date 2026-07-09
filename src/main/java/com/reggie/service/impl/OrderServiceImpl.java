@@ -171,10 +171,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     @Override
-    public Page<?> userPage(int page, int pageSize) {
+    public Page<?> userPage(int page, int pageSize, Integer status) {
         Page<Orders> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Orders::getUserId, BaseContext.getCurrentId());
+        // 修改点：支持按订单状态筛选，不传则查全部
+        if (status != null) {
+            queryWrapper.eq(Orders::getStatus, status);
+        }
         queryWrapper.orderByDesc(Orders::getOrderTime);
         this.page(pageInfo, queryWrapper);
 

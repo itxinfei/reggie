@@ -1,156 +1,574 @@
+/* ============================================
+   地址编辑页样式 — 瑞吉外卖 v4
+   修改点：移除ElementUI依赖，全部使用原生HTML+CSS
+   支持四级联动（省/市/区/街道）
+   ============================================ */
+
+/* ---- 页面容器 ---- */
 #address_edit {
   height: 100%;
+  background: #f4f5f7;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
+#address_edit[v-cloak] { display: none; }
+
+/* ============================================
+   顶部标题栏
+   ============================================ */
 #address_edit .divHead {
   width: 100%;
   height: 88rem;
-  opacity: 1;
-  background: #333333;
+  background: linear-gradient(135deg, #ffd43b 0%, #ffa426 100%);
   position: relative;
+  flex-shrink: 0;
+  box-shadow: 0 2rem 12rem rgba(255, 164, 38, 0.3);
+  z-index: 10;
 }
-
 #address_edit .divHead .divTitle {
   font-size: 18rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  font-weight: 600;
   text-align: center;
-  color: #ffffff;
+  color: #1a1a1a;
   line-height: 25rem;
-  letter-spacing: 0;
   position: absolute;
-  bottom: 13rem;
+  bottom: 14rem;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-
-#address_edit .divHead .divTitle i {
+#address_edit .divHead .divTitle .backArrow {
   position: absolute;
   left: 16rem;
   top: 50%;
-  transform: translate(0, -50%);
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 22rem;
+  color: #1a1a1a;
+  font-style: normal;
+  font-weight: 700;
+  padding: 4rem 8rem;
+  transition: transform 0.2s;
+  user-select: none;
+}
+#address_edit .divHead .divTitle .backArrow:active { transform: translateY(-50%) scale(1.15); }
+
+/* ============================================
+   可滚动区域
+   ============================================ */
+#address_edit .divScroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16rem 12rem 20rem;
 }
 
+/* ============================================
+   表单卡片
+   ============================================ */
 #address_edit .divContent {
-  height: 100%;
-  opacity: 1;
   background: #ffffff;
-  padding-left: 9rem;
-  padding-right: 9rem;
+  border-radius: 16rem;
+  padding: 4rem 0 12rem;
+  box-shadow: 0 2rem 16rem rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.03);
 }
 
-#address_edit .divContent .divItem {
-  height: 55rem;
-  line-height: 55rem;
-  font-size: 14rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
-  text-align: left;
-  color: #333333;
-  line-height: 20rem;
-  letter-spacing: 0rem;
-  border-bottom: 1px solid #efefef;
+/* ============================================
+   表单组
+   ============================================ */
+#address_edit .divContent .formGroup {
+  padding: 8rem 20rem;
+  border-bottom: 1px solid #f2f3f5;
+  transition: background 0.2s;
+}
+#address_edit .divContent .formGroup:last-of-type { border-bottom: none; }
+#address_edit .divContent .formGroup.formGroupLabel { padding-bottom: 12rem; }
+
+/* ---- 表单标签 ---- */
+#address_edit .divContent .formGroup .formLabel {
+  font-size: 13rem;
+  font-weight: 600;
+  color: #8c8c8c;
+  margin-bottom: 8rem;
   display: flex;
   align-items: center;
+  user-select: none;
+  letter-spacing: 0.5rem;
 }
-
-#address_edit .divContent .divItem .el-input {
-  width: auto;
-}
-
-#address_edit .divContent .divItem input {
-  border: 0;
-  padding: 0;
-}
-
-#address_edit .divContent .divItem .inputUser {
-  width: 150rem;
-}
-
-#address_edit .divContent .divItem span {
-  display: block;
-}
-
-#address_edit .divContent .divItem span:first-child {
-  margin-right: 12rem;
-  white-space: nowrap;
-  width: 69rem;
-}
-
-#address_edit .divContent .divItem .spanChecked {
-  width: 50rem;
-}
-
-#address_edit .divContent .divItem span i {
+#address_edit .divContent .formGroup .formLabel .labelSvg {
   width: 16rem;
   height: 16rem;
-  background: url(./../images/checked_false.png);
+  margin-right: 6rem;
+  flex-shrink: 0;
+}
+
+/* ---- 表单行 ---- */
+#address_edit .divContent .formGroup .formRow {
+  background: #f8f9fa;
+  border-radius: 10rem;
+  border: 1.5px solid transparent;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+}
+#address_edit .divContent .formGroup .formRow:focus-within {
+  background: #ffffff;
+  border-color: #ffd43b;
+  box-shadow: 0 0 0 3px rgba(255, 212, 59, 0.15);
+}
+#address_edit .divContent .formGroup .formRow.formRowError {
+  border-color: #f56c6c;
+  background: #fff8f8;
+  animation: errorShake 0.4s ease;
+}
+#address_edit .divContent .formGroup .formRow.formRowError:focus-within {
+  border-color: #f56c6c;
+  box-shadow: 0 0 0 3px rgba(245, 108, 108, 0.12);
+}
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4rem); }
+  40% { transform: translateX(4rem); }
+  60% { transform: translateX(-3rem); }
+  80% { transform: translateX(3rem); }
+}
+
+/* ---- 原生输入框 ---- */
+#address_edit .divContent .formGroup .nativeInput {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 13rem 14rem;
+  font-size: 15px;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  color: #1a1a1a;
+  line-height: 22px;
+  box-sizing: border-box;
+}
+#address_edit .divContent .formGroup .nativeInput::placeholder { color: #bfbfbf; }
+#address_edit .divContent .formGroup .nativeInput:disabled { background: transparent; -webkit-text-fill-color: #1a1a1a; }
+
+/* ---- 原生文本域 ---- */
+#address_edit .divContent .formGroup .nativeTextarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 13rem 14rem 28rem 14rem;
+  resize: none;
+  font-size: 15px;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  color: #1a1a1a;
+  line-height: 22px;
+  box-sizing: border-box;
+}
+#address_edit .divContent .formGroup .nativeTextarea::placeholder { color: #bfbfbf; }
+
+/* 字数统计 */
+#address_edit .divContent .formGroup .charCount {
+  position: absolute;
+  right: 12rem;
+  bottom: 6rem;
+  font-size: 11rem;
+  color: #bfbfbf;
+  pointer-events: none;
+}
+
+/* ---- 字段错误提示 ---- */
+#address_edit .divContent .formGroup .fieldError {
+  color: #f56c6c;
+  font-size: 12rem;
+  margin-top: 6rem;
+  padding-left: 2rem;
+  line-height: 1.4;
+  animation: errorFadeIn 0.25s ease;
+}
+@keyframes errorFadeIn {
+  from { opacity: 0; transform: translateY(-4rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   性别选择
+   ============================================ */
+#address_edit .divContent .formGroup .sexToggle {
+  display: flex;
+  gap: 10rem;
+  margin-top: 10rem;
+}
+#address_edit .divContent .formGroup .sexBtn {
+  flex: 1;
+  height: 40rem;
+  text-align: center;
+  font-size: 14rem;
+  font-weight: 500;
+  color: #8c8c8c;
+  background: #f8f9fa;
+  border-radius: 20rem;
+  border: 1.5px solid #e8e8e8;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rem;
+}
+#address_edit .divContent .formGroup .sexBtn:active { transform: scale(0.96); }
+#address_edit .divContent .formGroup .sexBtn .sexSvg {
+  width: 16rem;
+  height: 16rem;
+}
+#address_edit .divContent .formGroup .sexBtn.sexBtnActive {
+  background: linear-gradient(135deg, #ffd43b 0%, #ffa426 100%);
+  border-color: #ffa426;
+  color: #1a1a1a;
+  font-weight: 600;
+  box-shadow: 0 3rem 10rem rgba(255, 164, 38, 0.25);
+}
+
+/* ============================================
+   省市区街道四级选择器
+   ============================================ */
+#address_edit .divContent .formGroup .regionPicker {
+  display: flex;
+  align-items: center;
+  gap: 5rem;
+  margin-top: 2rem;
+}
+#address_edit .divContent .formGroup .regionPicker.formRowError .regionSlot {
+  border-color: #f56c6c;
+}
+#address_edit .divContent .formGroup .regionSlot {
+  flex: 1;
+  min-width: 0;
+  height: 42rem;
+  line-height: 42rem;
+  text-align: center;
+  font-size: 12rem;
+  font-weight: 400;
+  color: #bfbfbf;
+  background: #f8f9fa;
+  border-radius: 8rem;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 6rem 0 8rem;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+#address_edit .divContent .formGroup .regionSlot:active { transform: scale(0.97); }
+#address_edit .divContent .formGroup .regionSlot .regionArrow {
+  position: absolute;
+  right: 4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  color: #bfbfbf;
+  font-style: normal;
+  transition: color 0.2s;
+}
+/* 已选填充 */
+#address_edit .divContent .formGroup .regionSlot.regionFilled {
+  color: #1a1a1a;
+  font-weight: 600;
+  background: linear-gradient(135deg, #fffae6, #fff3cc);
+  border-color: #ffd43b;
+  box-shadow: 0 1rem 4rem rgba(255, 164, 38, 0.1);
+}
+#address_edit .divContent .formGroup .regionSlot.regionFilled .regionArrow { color: #ffa426; }
+/* 禁用/占位 */
+#address_edit .divContent .formGroup .regionSlot.regionDisabled {
+  color: #d9d9d9;
+  cursor: not-allowed;
+  background: #f5f5f5;
+  opacity: 0.65;
+}
+/* 选中态 */
+#address_edit .divContent .formGroup .regionSlot.regionActive {
+  border-color: #ffa426;
+  box-shadow: 0 0 0 3px rgba(255, 164, 38, 0.12);
+}
+
+/* ============================================
+   标签选择
+   ============================================ */
+#address_edit .divContent .formGroup .tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rem;
+}
+#address_edit .divContent .formGroup .tagBtn {
+  min-width: 56rem;
+  height: 36rem;
+  line-height: 36rem;
+  text-align: center;
+  border-radius: 18rem;
+  font-size: 13rem;
+  font-weight: 400;
+  color: #8c8c8c;
+  background: #f8f9fa;
+  border: 1.5px solid #e8e8e8;
+  cursor: pointer;
+  user-select: none;
+  padding: 0 16rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#address_edit .divContent .formGroup .tagBtn:active { transform: scale(0.94); }
+/* 公司 - 蓝色 */
+#address_edit .divContent .formGroup .tagBtn.tagCompany {
+  background: linear-gradient(135deg, #e8f4fd, #d6ecfb);
+  border-color: #90c8f0; color: #2176b8; font-weight: 600;
+  box-shadow: 0 2rem 8rem rgba(33, 118, 184, 0.12);
+}
+/* 家 - 橙色 */
+#address_edit .divContent .formGroup .tagBtn.tagHome {
+  background: linear-gradient(135deg, #fff7e6, #ffedc8);
+  border-color: #f0c060; color: #b8730e; font-weight: 600;
+  box-shadow: 0 2rem 8rem rgba(184, 115, 14, 0.12);
+}
+/* 学校 - 绿色 */
+#address_edit .divContent .formGroup .tagBtn.tagSchool {
+  background: linear-gradient(135deg, #e6faf3, #ccf0e2);
+  border-color: #7fd4b0; color: #148f5a; font-weight: 600;
+  box-shadow: 0 2rem 8rem rgba(20, 143, 90, 0.12);
+}
+/* 无 - 灰色 */
+#address_edit .divContent .formGroup .tagBtn.tagNone {
+  background: linear-gradient(135deg, #f5f5f5, #eee);
+  border-color: #d0d0d0; color: #808080; font-weight: 600;
+}
+
+/* ============================================
+   底部操作栏
+   ============================================ */
+#address_edit .divFooter {
+  flex-shrink: 0;
+  padding: 12rem 20rem;
+  padding-bottom: max(12rem, env(safe-area-inset-bottom));
+  background: #ffffff;
+  box-shadow: 0 -2rem 12rem rgba(0, 0, 0, 0.04);
+}
+/* 保存按钮 */
+#address_edit .divFooter .btnSave {
+  height: 48rem;
+  background: linear-gradient(135deg, #ffd43b 0%, #ffa426 100%);
+  border-radius: 24rem;
+  font-size: 16rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  text-align: center;
+  line-height: 48rem;
+  letter-spacing: 2rem;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6rem 20rem rgba(255, 164, 38, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6rem;
+}
+#address_edit .divFooter .btnSave:active:not(.btnSaveDisabled) {
+  transform: scale(0.96);
+  box-shadow: 0 2rem 10rem rgba(255, 164, 38, 0.2);
+}
+#address_edit .divFooter .btnSave.btnSaveDisabled {
+  background: linear-gradient(135deg, #e0d9b0, #d5cc90);
+  box-shadow: 0 2rem 8rem rgba(180, 160, 100, 0.15);
+  cursor: not-allowed;
+  color: #999999;
+}
+/* 保存中旋转动画 */
+#address_edit .divFooter .btnSpinner {
+  width: 16rem;
+  height: 16rem;
+  border: 2px solid rgba(0,0,0,0.15);
+  border-top-color: #1a1a1a;
+  border-radius: 50%;
+  animation: btnSpin 0.6s linear infinite;
   display: inline-block;
-  background-size: cover;
-  vertical-align: sub;
 }
-
-#address_edit .divContent .divItem span .iActive {
-  background: url(./../images/checked_true.png);
-  background-size: cover;
+@keyframes btnSpin {
+  to { transform: rotate(360deg); }
 }
-
-#address_edit .divContent .divItem .spanItem {
-  width: 34rem;
-  height: 20rem;
-  opacity: 1;
-  border: 1px solid #e5e4e4;
-  border-radius: 3rem;
+/* 删除按钮 */
+#address_edit .divFooter .btnDelete {
+  height: 44rem;
+  margin-top: 10rem;
   text-align: center;
-  margin-right: 10rem;
-  border-radius: 2px;
-  font-family: PingFangSC, PingFangSC-Regular;
+  line-height: 44rem;
+  font-size: 14rem;
   font-weight: 400;
-  color: #333333;
+  color: #bfbfbf;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 22rem;
+  transition: all 0.25s;
+  background: #fafafa;
 }
-
-#address_edit .divContent .divItem .spanActiveCompany {
-  background: #e1f1fe;
+#address_edit .divFooter .btnDelete:active:not(.btnDeleteDisabled) {
+  background: #fff0f0;
+  color: #f56c6c;
 }
+#address_edit .divFooter .btnDelete.btnDeleteDisabled { opacity: 0.5; cursor: not-allowed; }
 
-#address_edit .divContent .divItem .spanActiveHome {
-  background: #fef8e7;
+/* ============================================
+   地区选择弹出层
+   ============================================ */
+#address_edit .pickerOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 3000;
+  display: flex;
+  align-items: flex-end;
 }
+/* Vue transition */
+.pickerFade-enter-active { transition: opacity 0.25s ease; }
+.pickerFade-leave-active { transition: opacity 0.2s ease; }
+.pickerFade-enter, .pickerFade-leave-to { opacity: 0; }
+.pickerSlide-enter-active { transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1); }
+.pickerSlide-leave-active { transition: transform 0.25s cubic-bezier(0.68, 0, 0.32, 1); }
+.pickerSlide-enter, .pickerSlide-leave-to { transform: translateY(100%); }
 
-#address_edit .divContent .divItem .spanActiveSchool {
-  background: #e7fef8;
+#address_edit .pickerPanel {
+  width: 100%;
+  max-height: 70vh;
+  background: #ffffff;
+  border-radius: 20rem 20rem 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-
-#address_edit .divContent .divItem .el-input__inner {
-  font-size: 13px;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 400;
-  text-align: left;
-  color: #333333;
+/* 头部 */
+#address_edit .pickerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rem 20rem;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  background: #fafafa;
 }
-
-#address_edit .divContent .divSave {
-  height: 36rem;
-  opacity: 1;
-  background: #ffc200;
-  border-radius: 18rem;
+#address_edit .pickerHeader .pickerBack {
   font-size: 15rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
+  color: #8c8c8c;
+  cursor: pointer;
+  min-width: 56rem;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  transition: color 0.2s;
+}
+#address_edit .pickerHeader .pickerBack:active { color: #ffa426; }
+#address_edit .pickerHeader .pickerTitle {
+  font-size: 17rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  flex: 1;
   text-align: center;
+}
+#address_edit .pickerHeader .pickerClose {
+  font-size: 20rem;
+  color: #bfbfbf;
+  cursor: pointer;
+  min-width: 56rem;
+  text-align: right;
+  padding: 4rem 0;
+  user-select: none;
+  transition: color 0.2s;
+}
+#address_edit .pickerHeader .pickerClose:active { color: #f56c6c; }
+
+/* 列表区 */
+#address_edit .pickerBody {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6rem 0;
+  min-height: 150rem;
+}
+/* 加载中提示 */
+#address_edit .pickerLoading {
+  text-align: center;
+  padding: 40rem 0;
+  color: #bfbfbf;
+  font-size: 15rem;
+}
+/* 列表项 */
+#address_edit .pickerItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15rem 24rem;
+  font-size: 16rem;
   color: #333333;
-  line-height: 36rem;
-  margin-top: 20rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-left: 3px solid transparent;
+  user-select: none;
+}
+#address_edit .pickerItem:active { background: #f5f5f5; }
+#address_edit .pickerItem.pickerItemActive {
+  color: #c97700;
+  font-weight: 600;
+  background: linear-gradient(90deg, #fffae6, #ffffff 60%);
+  border-left-color: #ffd43b;
+}
+#address_edit .pickerItem .pickerCheck {
+  color: #ffd43b;
+  font-size: 22rem;
+  margin-left: 12rem;
+  flex-shrink: 0;
+  font-weight: bold;
+}
+/* 空数据 */
+#address_edit .pickerEmpty {
+  text-align: center;
+  padding: 50rem 0;
+  color: #d9d9d9;
+  font-size: 15rem;
 }
 
-#address_edit .divContent .divDelete {
-  height: 36rem;
-  opacity: 1;
-  background: #f6f6f6;
-  border-radius: 18rem;
-  font-size: 15rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
-  text-align: center;
-  color: #333333;
-  line-height: 36rem;
-  margin-top: 20rem;
+/* ============================================
+   响应式 — 小屏
+   ============================================ */
+@media screen and (max-width: 360px) {
+  #address_edit .divScroll { padding: 10rem 8rem 16rem; }
+  #address_edit .divContent { border-radius: 12rem; }
+  #address_edit .divContent .formGroup { padding: 6rem 14rem; }
+  #address_edit .divContent .formGroup .formLabel { font-size: 12rem; }
+  #address_edit .divContent .formGroup .nativeInput { padding: 11rem 12rem; font-size: 14px; }
+  #address_edit .divContent .formGroup .nativeTextarea { padding: 11rem 12rem 26rem 12rem; font-size: 14px; }
+  #address_edit .divContent .formGroup .regionSlot { height: 36rem; line-height: 36rem; font-size: 11rem; }
+  #address_edit .divContent .formGroup .sexBtn { height: 36rem; line-height: 36rem; font-size: 13rem; }
+  #address_edit .divContent .formGroup .tagBtn { min-width: 48rem; height: 32rem; line-height: 32rem; font-size: 12rem; padding: 0 12rem; }
+  #address_edit .divFooter { padding: 10rem 14rem; padding-bottom: max(10rem, env(safe-area-inset-bottom)); }
+  #address_edit .divFooter .btnSave { height: 44rem; line-height: 44rem; }
+  #address_edit .pickerItem { padding: 13rem 18rem; font-size: 15rem; }
 }
+
+/* ============================================
+   响应式 — 桌面大屏
+   ============================================ */
+@media screen and (min-width: 752px) {
+  #address_edit { align-items: center; background: #f0f1f3; }
+  #address_edit .divHead { max-width: 520rem; }
+  #address_edit .divScroll { max-width: 520rem; width: 100%; padding: 20rem 0 24rem; }
+  #address_edit .divContent { border-radius: 20rem; }
+  #address_edit .divFooter { max-width: 520rem; width: 100%; margin: 0 auto; border-radius: 0 0 20rem 20rem; }
+  #address_edit .pickerPanel { max-width: 520rem; margin: 0 auto; }
+}
+
+/* ============================================
+   Vant Notify 顶部通知位移
+   ============================================ */
+#address_edit .van-notify { top: 88rem !important; }

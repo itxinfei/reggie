@@ -24,6 +24,7 @@
         localStorage.removeItem('userInfo')
         // 修改点：后端页面在iframe中加载，须用window.top导航顶层窗口到登录页
         window.top.location.href = '/backend/page/login/login.html'
+        return Promise.reject(new Error('NOTLOGIN'))  // 修改点：阻止Promise继续进入then回调
       } else {
         return res.data
       }

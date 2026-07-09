@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
@@ -28,7 +27,7 @@ public class AddressBook implements Serializable {
     private Long tenantId;
 
     //用户id
-    @NotNull(message = "用户ID不能为空")
+    // 修改点：移除@NotNull，userId由Controller通过BaseContext安全注入，不由前端传入
     private Long userId;
 
 
@@ -77,6 +76,14 @@ public class AddressBook implements Serializable {
     //区级名称
     @NotBlank(message = "区级名称不能为空")
     private String districtName;
+
+
+    // 修改点：新增四级联动 — 街道/乡镇级区划编号
+    private String streetCode;
+
+
+    // 修改点：新增四级联动 — 街道/乡镇级名称
+    private String streetName;
 
 
     //详细地址

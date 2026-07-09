@@ -21,7 +21,7 @@
         <div id="add_order" class="app" v-loading="loading">
             <div class="divHead">
                 <div class="divTitle">
-                    <i class="el-icon-arrow-left" @click="goBack"></i>菩提阁
+                    <i class="el-icon-arrow-left" @click="goBack"></i>瑞吉外卖
                 </div>
             </div>
             <div class="divContent">
@@ -35,8 +35,30 @@
                         <i class="el-icon-arrow-right"></i>
                     </div>
                     <div class="divSplit"></div>
-                    <div class="divFinishTime">预计{{finishTime}}送达</div>
+                    <!-- 修改点：送达时间可选择 -->
+                    <div class="divFinishTime" @click="showTimePicker = true">
+                        预计{{ selectedTimeLabel }}
+                        <i class="el-icon-arrow-right" style="font-size:12rem;vertical-align:middle;"></i>
+                    </div>
                 </div>
+
+                <!-- 送达时间选择弹窗 -->
+                <van-popup v-model="showTimePicker" position="bottom" :style="{ height: '40%' }" class="time-picker-popup">
+                    <div class="time-picker-title">选择送达时间</div>
+                    <div class="time-picker-list">
+                        <div
+                            v-for="(t, idx) in timeOptions"
+                            :key="idx"
+                            class="time-picker-item"
+                            :class="{active: selectedTimeIdx === idx}"
+                            @click="selectTime(idx)"
+                        >
+                            <div class="tm-label">{{ t.label }}</div>
+                            <div class="tm-time">{{ t.time }}</div>
+                            <i class="tm-check" v-if="selectedTimeIdx === idx">✓</i>
+                        </div>
+                    </div>
+                </van-popup>
                 <div class="order">
                     <div class="title">订单明细</div>
                     <div class="divSplit"></div>
@@ -70,13 +92,54 @@
                         show-word-limit
                     />
                 </div>
+
+                <!-- 支付方式 — 货到付款 -->
+                <div class="pay-method">
+                    <div class="title">支付方式</div>
+                    <div class="pay-options">
+                        <div class="pay-option pay-option-cod active">
+                            <span class="pay-icon pay-cod-icon">货</span>
+                            <span class="pay-text">货到付款</span>
+                            <i class="pay-check">✓</i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 修改点：优惠券选择 -->
+                <div class="coupon-section" v-if="couponList.length > 0">
+                    <div class="title">
+                        优惠券
+                        <span class="coupon-tip">（可享{{ discountAmount }}元优惠）</span>
+                    </div>
+                    <div class="coupon-list">
+                        <div class="coupon-card"
+                             v-for="(coupon, idx) in couponList"
+                             :key="idx"
+                             :class="{active: selectedCoupon === idx}"
+                             @click="selectCoupon(idx)">
+                            <div class="coupon-left">
+                                <span class="coupon-amount">¥{{ coupon.discount }}</span>
+                                <span class="coupon-condition">{{ coupon.condition }}</span>
+                            </div>
+                            <div class="coupon-right">
+                                <div class="coupon-name">{{ coupon.name }}</div>
+                                <div class="coupon-desc">{{ coupon.desc }}</div>
+                            </div>
+                            <i class="coupon-check" v-if="selectedCoupon === idx">✓</i>
+                        </div>
+                    </div>
+                    <div class="coupon-no-use" @click="selectedCoupon = -1" v-if="selectedCoupon >= 0">
+                        不使用优惠券
+                    </div>
+                </div>
             </div>
             <div class="divCart">
                 <div :class="{imgCartActive: cartData && cartData.length > 0, imgCart:!cartData || cartData.length<1}"></div>
                 <div :class="{divGoodsNum:true, moreGoods:cartData && cartData.length > 99}" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
                 <div class="divNum">
                     <span>￥</span>
-                    <span>{{goodsPrice}}</span>
+                    <span>{{ finalPrice }}</span>
+                    <span class="divDiscount" v-if="discountAmount > 0">已优惠¥{{ discountAmount }}</span>
                 </div>
                 <div class="divPrice"></div>
                 <div :class="{btnSubmitActive: cartData && cartData.length > 0, btnSubmit:!cartData || cartData.length<1}" @click="goToPaySuccess">去支付</div>
@@ -110,7 +173,26 @@
                         finishTime:'',//送达时间
                         cartData:[],
                         note:'',//备注信息
-                        loading:false // 修改点：支付提交loading状态
+                        loading:false,
+                        // 支付方式 — 3=货到付款
+                        payMethod: 3,
+                        // 优惠券列表及选中项
+                        couponList: [
+                            { name: '满减券', discount: 3, condition: '满25可用', desc: '新客专享' },
+                            { name: '满减券', discount: 5, condition: '满50可用', desc: '满50减5' },
+                            { name: '满减券', discount: 10, condition: '满90可用', desc: '满90减10' }
+                        ],
+                        selectedCoupon: -1, // -1表示未使用优惠券
+                        // 送达时间选择
+                        showTimePicker: false,
+                        selectedTimeIdx: 0,
+                        timeOptions: [
+                            { label: '尽快送达', time: '' },
+                            { label: '约30分钟', time: '' },
+                            { label: '约40分钟', time: '' },
+                            { label: '约50分钟', time: '' },
+                            { label: '约60分钟', time: '' }
+                        ],
                     }
                 },
                 computed:{
@@ -131,6 +213,37 @@
                         price += (item.number * item.amount)
                     })
                     return price
+                    },
+                    // 预计送达时间
+                    expectDeliveryTime(){
+                        return this.finishTime + ' ' + (this.selectedTimeIdx === 0 ? '尽快送达' : this.timeOptions[this.selectedTimeIdx].label)
+                    },
+                    // 修改点：计算优惠金额（需满足满减条件）
+                    discountAmount(){
+                        if(this.selectedCoupon >= 0 && this.selectedCoupon < this.couponList.length){
+                            const coupon = this.couponList[this.selectedCoupon]
+                            const match = coupon.condition.match(/(\d+)/)
+                            const threshold = match ? parseInt(match[1]) : 0
+                            if(this.goodsPrice >= threshold){
+                                return coupon.discount
+                            }
+                        }
+                        return 0
+                    },
+                    // 修改点：计算实付金额（优惠后），作为订单实际金额传给后端
+                    finalPrice(){
+                        return Math.max(0, this.goodsPrice - this.discountAmount)
+                    },
+                    // 修改点：送达时间显示标签
+                    selectedTimeLabel(){
+                        if(this.selectedTimeIdx === 0){
+                            return this.finishTime + ' 尽快送达'
+                        }
+                        const option = this.timeOptions[this.selectedTimeIdx]
+                        if(option && option.time){
+                            return option.time + ' ' + option.label
+                        }
+                        return this.finishTime
                     }
                 },
                 created(){
@@ -141,8 +254,11 @@
                     }
                     this.initData()
                 },
-                mounted(){},
                 methods:{
+                    // 修改点：将common.js的全局函数imgPath注册为Vue实例方法
+                    imgPath(path){
+                      return '/common/download?name=' + path
+                    },
                     goBack(){
                         history.go(-1)
                     },
@@ -158,6 +274,21 @@
                         if(res.code === 1){
                            this.address = res.data
                            this.finishTime = getFinishTime()
+                           // 修改点：动态计算各送达时间选项的预计时刻
+                           const base = new Date()
+                           const h = base.getHours()
+                           const m = base.getMinutes()
+                           const add = (mins) => {
+                               const d = new Date(base.getTime() + mins * 60000)
+                               return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0')
+                           }
+                           this.timeOptions = [
+                               { label: '尽快送达', time: add(20) },
+                               { label: '约30分钟', time: add(30) },
+                               { label: '约40分钟', time: add(40) },
+                               { label: '约50分钟', time: add(50) },
+                               { label: '约60分钟', time: add(60) }
+                           ]
                         }else{
                             window.requestAnimationFrame(()=>{
                                 window.location.href = '/front/page/address-edit.html'
@@ -165,6 +296,8 @@
                         }
                     },
                     toAddressPage(){
+                        // 修改点：设置sessionStorage标志位，替代不可靠的document.referrer
+                        sessionStorage.setItem('addressFromCheckout', '1')
                         window.requestAnimationFrame(()=>{
                             window.location.href = '/front/page/address.html'
                         })
@@ -178,8 +311,16 @@
                             this.$notify({ type:'warning', message:res.msg});
                         }
                     },
+                    // 修改点：选择优惠券
+                    selectCoupon(idx){
+                        this.selectedCoupon = this.selectedCoupon === idx ? -1 : idx
+                    },
+                    // 选择送达时间
+                    selectTime(idx){
+                        this.selectedTimeIdx = idx
+                        this.showTimePicker = false
+                    },
                     async goToPaySuccess(){
-                        // 修改点：前置校验 — 购物车为空、地址无效、防重复提交
                         if(!this.cartData || this.cartData.length === 0){
                             this.$notify({ type:'warning', message:'购物车为空，请先添加商品'});
                             return
@@ -188,12 +329,14 @@
                             this.$notify({ type:'warning', message:'请先添加收货地址'});
                             return
                         }
-                        if(this.loading) return;// 防止重复提交
+                        if(this.loading) return;
                         this.loading = true
                         const params = {
                             remark:this.note,
-                            payMethod:1,
-                            addressBookId:this.address.id
+                            payMethod:this.payMethod,
+                            addressBookId:this.address.id,
+                            amount: this.finalPrice,        // 修改点：传递优惠后的实际金额
+                            expectDeliveryTime: this.expectDeliveryTime  // 修改点：传递预计送达时间
                         }
                         const res = await addOrderApi(params)
                         this.loading = false

@@ -1,160 +1,235 @@
 /* ============================================================
- * 用户端登录页样式 - 瑞吉外卖
+ * 用户端登录页样式 v4 — 美团风格暖色调
  * 适配375px基准屏幕，1rem ≈ 1px (由base.js动态计算)
+ * 更新：2026-07-09 | 美团暖色调背景 + 协议区纯文字
  * ============================================================ */
 
-/* ---- 页面背景 ---- */
+/* ---- 页面容器 ---- */
 #login {
   min-height: 100vh;
-  background: linear-gradient(180deg, #2b2b2b 0%, #333333 42%, #f3f2f7 42%);
-  padding: 0 30rem;
-  box-sizing: border-box;
-  overflow-y: auto;
+  position: relative;
   overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 美团暖色渐变：顶部暖黄 → 浅橙 → 米白底部 */
+  background: linear-gradient(180deg, #FFF3D6 0%, #FFE8C0 18%, #FFF0DA 38%, #FFF7EE 60%, #FFFFFF 100%);
+  padding: 0 28rem;
+  padding-bottom: 60rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- 背景装饰元素（暖色调） ---- */
+
+/* 左上角大圆 — 暖橙色光晕 */
+#login::before {
+  content: '';
+  position: absolute;
+  top: -100rem;
+  left: -80rem;
+  width: 300rem;
+  height: 300rem;
+  background: radial-gradient(circle, rgba(255, 180, 40, 0.18) 0%, rgba(255, 194, 0, 0.08) 35%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 右上角小圆 — 温暖的橙光 */
+#login::after {
+  content: '';
+  position: absolute;
+  top: -30rem;
+  right: -70rem;
+  width: 200rem;
+  height: 200rem;
+  background: radial-gradient(circle, rgba(255, 160, 30, 0.12) 0%, rgba(255, 140, 20, 0.04) 40%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 新增：中部装饰圆 */
+.decorCircle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* ---- 入场动画 ---- */
 #login .brandArea,
 #login .divContainer,
 #login .btnLogin,
-#login .footerTip {
-  animation: fadeInUp 0.5s ease forwards;
+#login .agreementRow {
+  animation: fadeInUp 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
   opacity: 0;
 }
 
-#login .brandArea {
-  animation-delay: 0.05s;
-}
-#login .divContainer {
-  animation-delay: 0.15s;
-}
-#login .btnLogin {
-  animation-delay: 0.25s;
-}
-#login .footerTip {
-  animation-delay: 0.35s;
-}
+#login .brandArea         { animation-delay: 0.05s; }
+#login .divContainer      { animation-delay: 0.18s; }
+#login .btnLogin          { animation-delay: 0.30s; }
+#login .agreementRow      { animation-delay: 0.40s; }
 
 @keyframes fadeInUp {
-  0% {
-    opacity: 0;
-    transform: translateY(20rem);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  0%   { opacity: 0; transform: translateY(24rem); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 /* ---- 品牌区域 ---- */
 #login .brandArea {
   text-align: center;
-  padding-top: 70rem;
-  padding-bottom: 35rem;
+  width: calc(100% - 28rem);
+  max-width: 420rem;
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 36rem;
+  position: relative;
+  z-index: 1;
 }
 
 #login .brandIcon {
-  margin-bottom: 14rem;
+  margin-bottom: 20rem;
   display: inline-block;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 18rem;
-  padding: 12rem;
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 24rem;
+  padding: 16rem;
   line-height: 0;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 194, 0, 0.2);
+  box-shadow: 0 4rem 20rem rgba(255, 160, 0, 0.12);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.35s ease;
+}
+
+#login .brandIcon:hover {
+  transform: scale(1.06);
+  box-shadow: 0 6rem 28rem rgba(255, 160, 0, 0.2);
 }
 
 #login .brandName {
-  font-size: 28rem;
+  font-size: 30rem;
   font-weight: 700;
-  color: #ffffff;
-  font-family: PingFangSC, Microsoft YaHei, sans-serif;
-  letter-spacing: 3rem;
-  margin-bottom: 6rem;
+  color: #5D3A00;
+  font-family: PingFangSC-Semibold, Microsoft YaHei, sans-serif;
+  letter-spacing: 4rem;
+  margin-bottom: 8rem;
 }
 
 #login .brandSlogan {
   font-size: 13rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(120, 70, 0, 0.5);
   font-family: PingFangSC, Microsoft YaHei, sans-serif;
-  letter-spacing: 1rem;
+  letter-spacing: 2rem;
+  font-weight: 400;
 }
 
 /* ---- 表单卡片 ---- */
 #login .divContainer {
-  width: 100%;
+  width: calc(100% - 28rem);
+  max-width: 420rem;
+  box-sizing: border-box;
   background: #ffffff;
-  border-radius: 14rem;
-  box-shadow: 0 6rem 30rem rgba(0, 0, 0, 0.06);
-  padding: 8rem 0;
-  margin-bottom: 14rem;
-  border: 1px solid rgba(255, 194, 0, 0.3);
-  transition: box-shadow 0.3s;
+  border-radius: 18rem;
+  box-shadow:
+    0 2rem 12rem rgba(0, 0, 0, 0.04),
+    0 8rem 36rem rgba(180, 120, 0, 0.08);
+  padding: 6rem 0;
+  margin-bottom: 20rem;
+  position: relative;
+  z-index: 1;
+  transition: box-shadow 0.35s ease, transform 0.35s ease;
 }
 
 #login .divContainer:focus-within {
-  box-shadow: 0 8rem 36rem rgba(255, 194, 0, 0.12);
+  box-shadow:
+    0 2rem 14rem rgba(0, 0, 0, 0.04),
+    0 10rem 40rem rgba(255, 160, 0, 0.14);
+  transform: translateY(-1rem);
 }
 
 /* 输入项容器 */
 #login .inputItem {
-  padding: 4rem 18rem;
+  padding: 3rem 20rem;
   position: relative;
+  transition: background 0.2s;
 }
 
 #login .codeItem {
-  padding-right: 100rem;
+  padding-right: 105rem;
 }
 
 /* 分隔线 */
 #login .divSplit {
   height: 1px;
-  background: linear-gradient(90deg, transparent, #eee, transparent);
-  margin: 0 18rem;
+  background: linear-gradient(90deg, transparent, #FFF0D0 30%, #FFF0D0 70%, transparent);
+  margin: 0 20rem;
 }
 
 /* ---- 输入框重写 ---- */
 #login .divContainer .el-input__inner {
   border: 0 !important;
-  height: 52rem;
-  line-height: 52rem;
-  font-size: 15rem;
-  color: #333333;
-  padding-left: 32rem !important;
+  height: 54rem;
+  line-height: 54rem;
+  font-size: 16rem;
+  color: #3a2a10;
+  padding-left: 34rem !important;
   background: transparent;
   border-radius: 0;
-  caret-color: #ffc200;
+  caret-color: #FFC200;
+  transition: color 0.2s;
 }
 
 #login .divContainer .el-input__inner::placeholder {
-  color: #c0c4cc;
+  color: #c8b898;
   font-size: 14rem;
+  transition: color 0.25s;
 }
 
-#login .divContainer .el-input__inner:focus {
-  border: 0 !important;
-  box-shadow: none !important;
+#login .divContainer .el-input.is-focus .el-input__inner::placeholder {
+  color: #dfd0b8;
 }
 
 /* 输入框前缀图标 */
 #login .divContainer .el-input__prefix {
-  left: 18rem;
-  line-height: 52rem;
-  transition: color 0.3s;
+  left: 20rem;
+  line-height: 54rem;
+  transition: all 0.3s;
 }
 
 #login .divContainer .el-input__prefix .inputIcon {
   font-size: 18rem;
-  color: #ffc200;
-  line-height: 52rem;
-  transition: transform 0.3s;
+  color: #d8c8a8;
+  line-height: 54rem;
+  transition: color 0.3s, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 #login .divContainer .el-input.is-focus .el-input__prefix .inputIcon {
-  transform: scale(1.1);
+  color: #FFC200;
+  transform: scale(1.15);
 }
 
 #login .divContainer .el-input--prefix .el-input__inner {
-  padding-left: 36rem !important;
+  padding-left: 38rem !important;
+}
+
+/* 清除按钮 */
+#login .divContainer .el-input__suffix {
+  line-height: 54rem;
+  right: 6rem;
+}
+
+#login .divContainer .el-input__clear {
+  color: #d0c4b0;
+  transition: color 0.25s;
+}
+
+#login .divContainer .el-input__clear:hover {
+  color: #a09070;
 }
 
 /* ---- 验证码按钮 ---- */
@@ -166,30 +241,34 @@
   font-size: 12rem;
   font-family: PingFangSC, Microsoft YaHei, sans-serif;
   font-weight: 500;
-  color: #ffc200;
+  color: #FFB300;
   cursor: pointer;
   white-space: nowrap;
-  padding: 5rem 10rem;
-  border-radius: 14rem;
-  border: 1px solid #ffc200;
-  transition: all 0.25s ease;
+  padding: 7rem 14rem;
+  border-radius: 16rem;
+  border: 1px solid #FFD54F;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  background: rgba(255, 194, 0, 0.06);
 }
 
 #login .codeBtn:hover {
-  background: rgba(255, 194, 0, 0.08);
+  background: rgba(255, 194, 0, 0.14);
+  border-color: #FFC200;
+  box-shadow: 0 0 14rem rgba(255, 180, 0, 0.18);
 }
 
 #login .codeBtn:active {
-  background: rgba(255, 194, 0, 0.15);
-  transform: translateY(-50%) scale(0.95);
+  background: rgba(255, 194, 0, 0.22);
+  transform: translateY(-50%) scale(0.94);
 }
 
 #login .codeDisabled {
-  color: #c0c4cc !important;
-  border-color: #e9e9e8 !important;
+  color: #c8c0b0 !important;
+  border-color: #e8e0d0 !important;
   cursor: not-allowed !important;
-  background: transparent !important;
+  background: #faf8f0 !important;
+  box-shadow: none !important;
 }
 
 /* ---- 错误提示 ---- */
@@ -200,91 +279,418 @@
   color: #e94e3c;
   text-align: center;
   line-height: 20rem;
-  margin-bottom: 10rem;
-  animation: shake 0.4s ease;
+  margin-bottom: 6rem;
+  animation: shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  position: relative;
+  z-index: 1;
+  width: calc(100% - 28rem);
+  max-width: 420rem;
+  box-sizing: border-box;
 }
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-5rem); }
-  40% { transform: translateX(5rem); }
-  60% { transform: translateX(-3rem); }
-  80% { transform: translateX(3rem); }
+  15%      { transform: translateX(-6rem); }
+  30%      { transform: translateX(6rem); }
+  45%      { transform: translateX(-4rem); }
+  60%      { transform: translateX(4rem); }
+  75%      { transform: translateX(-2rem); }
 }
 
 /* ---- 登录按钮 ---- */
 #login .btnLogin {
-  width: 100%;
-  height: 48rem;
-  border-radius: 24rem;
+  width: calc(100% - 28rem) !important;
+  max-width: 420rem;
+  box-sizing: border-box !important;
+  height: 50rem;
+  border-radius: 25rem;
   border: 0;
-  font-size: 16rem;
-  font-family: PingFangSC, Microsoft YaHei, sans-serif;
+  font-size: 17rem;
+  font-family: PingFangSC-Semibold, Microsoft YaHei, sans-serif;
   font-weight: 600;
   text-align: center;
-  letter-spacing: 2rem;
-  transition: all 0.3s ease;
+  letter-spacing: 3rem;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   margin-bottom: 20rem;
   position: relative;
+  z-index: 1;
   overflow: hidden;
 }
 
-/* 按钮激活态 - 品牌金色 */
+/* 按钮微光扫过 */
+#login .btnActive::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  transition: left 0.5s;
+}
+
+#login .btnActive:hover::after {
+  left: 100%;
+}
+
+/* 激活态 — 美团金色渐变 */
 #login .btnActive {
-  background: linear-gradient(135deg, #ffc200 0%, #ffb300 100%);
-  color: #333333;
-  box-shadow: 0 4rem 18rem rgba(255, 194, 0, 0.35);
+  background: linear-gradient(135deg, #FFD54F 0%, #FFC200 50%, #FFB300 100%);
+  color: #4a3000;
+  box-shadow:
+    0 4rem 16rem rgba(255, 180, 0, 0.3),
+    0 1rem 3rem rgba(255, 160, 0, 0.2);
 }
 
 #login .btnActive:hover {
-  box-shadow: 0 6rem 24rem rgba(255, 194, 0, 0.45);
-  transform: translateY(-1rem);
+  box-shadow:
+    0 6rem 24rem rgba(255, 180, 0, 0.4),
+    0 2rem 6rem rgba(255, 160, 0, 0.25);
+  transform: translateY(-1.5rem);
 }
 
 #login .btnActive:active {
-  background: linear-gradient(135deg, #e6af00 0%, #ffa000 100%);
-  box-shadow: 0 2rem 8rem rgba(255, 194, 0, 0.2);
-  transform: scale(0.98);
+  background: linear-gradient(135deg, #e6b800 0%, #ffa000 100%);
+  box-shadow:
+    0 2rem 8rem rgba(255, 180, 0, 0.15),
+    0 0 1rem rgba(255, 160, 0, 0.1);
+  transform: scale(0.975);
 }
 
-/* 按钮Loading覆盖样式 */
+/* Loading态 */
 #login .btnActive.is-loading,
 #login .btnActive.is-loading:hover {
-  background: linear-gradient(135deg, #e6af00 0%, #ffa000 100%) !important;
-  color: #333333 !important;
+  background: linear-gradient(135deg, #e6b800 0%, #ffa000 100%) !important;
+  color: #4a3000 !important;
   opacity: 0.85;
+  transform: translateY(0);
 }
 
-/* 按钮禁用态 */
+/* 禁用态 */
 #login .btnDisabled {
-  background: #e8e8e8;
-  color: #b0b0b0;
+  background: #f0ece0;
+  color: #b8b0a0;
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
 }
 
-/* ---- 底部协议 ---- */
-#login .footerTip {
+#login .btnDisabled:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+/* ================================================================
+ * 协议区域 — 纯文字样式，无卡片/按钮外观
+ * ================================================================ */
+#login .agreementRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  width: calc(100% - 28rem);
+  max-width: 420rem;
+  box-sizing: border-box;
+  margin-bottom: 40rem;
+  padding: 8rem 0;
+  cursor: default;
+  /* 关键：透明背景，无边框，无阴影 — 纯文字行 */
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  transition: none;
+}
+
+#login .agreementRow:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+/* 自定义勾选框 */
+#login .agreementCheckbox {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  margin-right: 8rem;
+  flex-shrink: 0;
+}
+
+#login .checkIcon {
+  width: 18rem;
+  height: 18rem;
+  border-radius: 50%;
+  border: 1.5px solid #d8c8a8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+#login .checkIcon:hover {
+  border-color: #FFC200;
+  background: rgba(255, 244, 210, 0.7);
+}
+
+#login .checkIcon.checked {
+  background: linear-gradient(135deg, #FFC200, #FFB300);
+  border-color: #FFC200;
+  box-shadow: 0 0 10rem rgba(255, 180, 0, 0.35);
+}
+
+#login .checkIcon .el-icon-check {
+  font-size: 12rem;
+  color: #fff;
+  font-weight: bold;
+}
+
+/* 协议文字 — 浅色半透明风格 */
+#login .agreementText {
+  font-size: 12rem;
+  font-family: PingFangSC, Microsoft YaHei, sans-serif;
+  color: rgba(120, 80, 20, 0.55);
+  line-height: 20rem;
+  user-select: none;
+}
+
+#login .agreementLink {
+  color: #CC8800;
+  cursor: pointer;
+  transition: color 0.25s;
+  font-weight: 500;
+  position: relative;
+}
+
+#login .agreementLink:hover {
+  color: #A06800;
+}
+
+#login .agreementLink:active {
+  color: #804800;
+}
+
+/* 链接下划线 */
+#login .agreementLink::after {
+  content: '';
+  position: absolute;
+  bottom: -1rem;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: #CC8800;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#login .agreementLink:hover::after {
+  width: 100%;
+}
+
+/* ---- 协议弹窗样式 ---- */
+.agreementDialog {
+  border-radius: 16rem !important;
+  overflow: hidden !important;
+}
+
+.agreementDialog .el-dialog__header {
+  background: linear-gradient(135deg, #FFF8E1, #FFFDF5);
+  border-bottom: 1px solid #f5ecd8;
+  padding: 18rem 20rem 14rem;
+  text-align: center;
+}
+
+.agreementDialog .el-dialog__title {
+  font-size: 17rem;
+  font-family: PingFangSC-Semibold, Microsoft YaHei, sans-serif;
+  color: #5a3e10;
+  font-weight: 600;
+}
+
+.agreementDialog .el-dialog__body {
+  padding: 0 20rem 6rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.agreementDialog .el-dialog__body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.agreementDialog .el-dialog__body::-webkit-scrollbar-thumb {
+  background: #e0d8c0;
+  border-radius: 2px;
+}
+
+.agreementDialog .el-dialog__body::-webkit-scrollbar-thumb:hover {
+  background: #c8b898;
+}
+
+/* 协议内容文字 */
+#login .agreementContent {
+  font-family: PingFangSC, Microsoft YaHei, sans-serif;
+  color: #666;
+  line-height: 1.8;
+  font-size: 13rem;
+}
+
+#login .agreementContent h3 {
+  font-size: 17rem;
+  font-weight: 700;
+  color: #3a2a10;
+  text-align: center;
+  margin: 10rem 0 4rem;
+}
+
+#login .agreementContent .updateDate {
   text-align: center;
   font-size: 11rem;
-  font-family: PingFangSC, Microsoft YaHei, sans-serif;
-  color: #b0b0b0;
-  padding-bottom: 40rem;
-  line-height: 17rem;
+  color: #a09080;
+  margin-bottom: 2rem;
 }
 
-#login .footerTip span {
-  color: #ffc200;
-  cursor: pointer;
-  transition: opacity 0.2s;
+#login .agreementContent .policySection {
+  margin-bottom: 16rem;
 }
 
-#login .footerTip span:active {
-  opacity: 0.7;
+#login .agreementContent .policySection h4 {
+  font-size: 14rem;
+  font-weight: 600;
+  color: #5a3e10;
+  margin-bottom: 8rem;
+  padding-left: 4rem;
+  border-left: 3rem solid #FFC200;
+  line-height: 1.3;
 }
 
-/* ---- Toast / Notify位置修正 ---- */
+#login .agreementContent .policySection p {
+  font-size: 13rem;
+  color: #777;
+  margin-bottom: 6rem;
+  padding-left: 8rem;
+}
+
+/* 弹窗底部按钮 */
+.agreementDialog .dialog-footer {
+  text-align: center;
+  padding-right: 10rem;
+}
+
+.agreementDialog .dialogConfirmBtn {
+  background: linear-gradient(135deg, #FFC200, #FFB300) !important;
+  border: 0 !important;
+  border-radius: 20rem !important;
+  padding: 10rem 40rem !important;
+  font-size: 14rem !important;
+  font-family: PingFangSC, Microsoft YaHei, sans-serif !important;
+  font-weight: 600 !important;
+  color: #4a3000 !important;
+  transition: all 0.3s !important;
+  min-width: 140rem;
+}
+
+.agreementDialog .dialogConfirmBtn:hover {
+  background: linear-gradient(135deg, #e6af00, #ffa000) !important;
+  box-shadow: 0 4rem 14rem rgba(255, 180, 0, 0.4) !important;
+  transform: translateY(-1rem);
+}
+
+.agreementDialog .dialogConfirmBtn:active {
+  transform: scale(0.97) !important;
+}
+
+/* ---- Notify/Tip 位置修正 ---- */
 #login .el-notification {
   top: 40rem !important;
+}
+
+/* ============================================================
+ * 响应式适配
+ * ============================================================ */
+
+/* 小屏手机 (< 320px) */
+@media screen and (max-width: 320px) {
+  #login {
+    padding: 0 16rem;
+    padding-bottom: 40rem;
+  }
+
+  #login .brandArea {
+    padding-top: 0;
+    padding-bottom: 24rem;
+    width: calc(100% - 32rem);
+    box-sizing: border-box;
+  }
+
+  #login .brandName {
+    font-size: 24rem;
+    letter-spacing: 2rem;
+  }
+
+  #login .brandSlogan {
+    font-size: 11rem;
+  }
+
+  #login .divContainer,
+  #login .btnLogin,
+  #login .agreementRow,
+  #login .divMsg {
+    width: calc(100% - 32rem) !important;
+    box-sizing: border-box !important;
+  }
+
+  #login .btnLogin {
+    height: 44rem;
+  }
+
+  #login .divContainer .el-input__inner {
+    font-size: 14rem;
+  }
+}
+
+/* 桌面端 (> 750px) */
+@media screen and (min-width: 751px) {
+  #login {
+    padding: 0;
+    padding-bottom: 60rem;
+  }
+
+  #login .brandArea {
+    padding-top: 0;
+    padding-bottom: 50rem;
+    width: 420rem;
+    max-width: 420rem;
+    box-sizing: border-box;
+  }
+
+  #login .divContainer,
+  #login .btnLogin,
+  #login .agreementRow,
+  #login .divMsg {
+    width: 420rem !important;
+    max-width: 420rem;
+    box-sizing: border-box !important;
+  }
+
+  .agreementDialog {
+    max-width: 520rem !important;
+  }
+}
+
+/* 高分辨率大屏 */
+@media screen and (min-width: 1200px) {
+  #login {
+    background: linear-gradient(180deg, #FFF3D6 0%, #FFE8C0 16%, #FFF2DF 34%, #FFF9F2 56%, #FFFFFF 100%);
+    justify-content: center;
+  }
+
+  #login .brandArea {
+    padding-top: 0;
+    padding-bottom: 60rem;
+  }
+
+  #login .brandIcon:hover {
+    transform: scale(1.08);
+  }
 }

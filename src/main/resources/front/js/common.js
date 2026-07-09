@@ -1,11 +1,9 @@
-var web_prefix = '/front'
-
 // 图片路径转换
 function imgPath(path){
     return '/common/download?name=' + path
 }
 
-// 将url传参转换为对象
+// 将url传参转换为对象（支持中文参数自动解码）
 function parseUrl(url) {
     // 修改点：防御性处理，URL中无?时返回空对象
     var queryIndex = url.indexOf("?");
@@ -19,7 +17,8 @@ function parseUrl(url) {
     for (var i = 0; i < len; i++) {
         item = params[i].split("=");
         if (item[0]) {
-            param[item[0]] = item[1] || '';
+            // 修改点：使用decodeURIComponent解码中文参数
+            param[item[0]] = item[1] ? decodeURIComponent(item[1]) : '';
         }
     }
 

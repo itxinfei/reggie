@@ -193,6 +193,8 @@ public class DishController {
         //构造查询条件
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(dish.getCategoryId() != null ,Dish::getCategoryId,dish.getCategoryId());
+        // 修改点：支持按菜品名称模糊搜索
+        queryWrapper.like(dish.getName() != null && !dish.getName().trim().isEmpty(), Dish::getName, dish.getName());
         //添加条件，查询状态为1（起售状态）的菜品
         queryWrapper.eq(Dish::getStatus, DishStatus.ENABLED.getValue());
 

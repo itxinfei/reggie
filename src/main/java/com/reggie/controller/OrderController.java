@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -81,8 +82,9 @@ public class OrderController {
         if (orders == null) {
             return R.error("订单不存在");
         }
-        // 租户校验
-        if (!BaseContext.getCurrentTenantId().equals(orders.getTenantId())) {
+        // 租户校验（修改点：防御NPE，currentTenantId可能为null）
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(orders.getTenantId())) {
             return R.error("订单不属于当前租户");
         }
         OrderDto orderDto = new OrderDto();
@@ -117,21 +119,24 @@ public class OrderController {
     }
 
     @GetMapping("/userPage")
-    @Operation(summary = "用户订单分页查询", description = "分页查询当前用户的订单")
+    @Operation(summary = "用户订单分页查询", description = "分页查询当前用户的订单，支持按状态筛选")
     @Parameter(name = "page", description = "页码", required = true)
     @Parameter(name = "pageSize", description = "每页数量", required = true)
-    public R<?> userPage(int page, int pageSize) {
+    @Parameter(name = "status", description = "订单状态（可选：1待付款 2派送中 3已派送 4已完成 5已取消，不传则查全部）")
+    public R<?> userPage(int page, int pageSize,
+                         @RequestParam(required = false) Integer status) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext
-        return R.success(orderService.userPage(page, pageSize));
+        return R.success(orderService.userPage(page, pageSize, status));
     }
 
     @PostMapping("/again")
     @Operation(summary = "再来一单", description = "将订单商品重新添加到购物车")
     @Parameter(name = "orders", description = "订单信息", required = true)
     public R<String> again(@RequestBody Orders orders) {
-        // 租户校验：确保只能操作本租户的订单
+        // 租户校验：确保只能操作本租户的订单（修改点：防御NPE）
         Orders existing = orderService.getById(orders.getId());
-        if (existing == null || !BaseContext.getCurrentTenantId().equals(existing.getTenantId())) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
             return R.error("订单不存在或不属于当前租户");
         }
         orderService.again(orders.getId());
@@ -142,9 +147,10 @@ public class OrderController {
     @Operation(summary = "更新订单状态", description = "更新订单状态")
     @Parameter(name = "orders", description = "订单状态信息", required = true)
     public R<String> updateStatus(@RequestBody Orders orders) {
-        // 租户校验：确保只能操作本租户的订单
+        // 租户校验：确保只能操作本租户的订单（修改点：防御NPE）
         Orders existing = orderService.getById(orders.getId());
-        if (existing == null || !BaseContext.getCurrentTenantId().equals(existing.getTenantId())) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
             return R.error("订单不存在或不属于当前租户");
         }
         orderService.updateStatus(orders.getStatus(), orders.getId());

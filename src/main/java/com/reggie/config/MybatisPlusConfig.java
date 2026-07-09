@@ -32,11 +32,14 @@ public class MybatisPlusConfig {
     public MybatisPlusInterceptor mybatisPlusInterceptor(){
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
         mybatisPlusInterceptor.addInnerInterceptor(new TenantLineInnerInterceptor(new TenantLineHandler() {
+            // 修改点：记录是否有租户上下文（null表示无租户/未登录浏览场景）
             @Override
             public Expression getTenantId() {
                 Long tenantId = BaseContext.getCurrentTenantId();
                 if (tenantId == null) {
-                    // 返回null表示不追加租户过滤条件（超级管理员/无租户上下文场景）
+                    // 修改点：MP 3.4.2的TenantLineInnerInterceptor不检查null，
+                    // 直接add到SQL中导致WHERE tenant_id = null（永远false），
+                    // 因此必须在ignoreTable中拦截所有表来跳过租户过滤。
                     return null;
                 }
                 return new LongValue(tenantId);
@@ -49,6 +52,10 @@ public class MybatisPlusConfig {
 
             @Override
             public boolean ignoreTable(String tableName) {
+                // 修改点：无租户上下文时全局跳过租户隔离，避免MP 3.4.2生成tenant_id = null
+                if (BaseContext.getCurrentTenantId() == null) {
+                    return true;
+                }
                 return IGNORE_TABLES.contains(tableName);
             }
         }));

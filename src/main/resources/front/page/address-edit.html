@@ -1,171 +1,512 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
-        <title>菩提阁</title>
-        <link rel="icon" href="./../images/favico.ico">
-        <!--不同屏幕尺寸根字体设置-->
-        <script src="./../js/base.js"></script>
-        <!--element-ui的样式-->
-        <link rel="stylesheet" href="../../backend/plugins/element-ui/index.css" />
-        <!--引入vant样式-->
-        <link rel="stylesheet" href="../styles/vant.min.css"/>
-        <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css" />
-        <!--本页面内容的样式-->
-        <link rel="stylesheet" href="./../styles/address-edit.css" />
-    </head>
-    <body>
-        <div id="address_edit" class="app">
-            <div class="divHead">
-                <div class="divTitle">
-                    <i class="el-icon-arrow-left" @click="goBack"></i>{{title}}
-                </div>
-            </div>
-            <div class="divContent">
-                <div class="divItem">
-                   <span>联系人：</span> 
-                   <el-input placeholder=" 请填写收货人的姓名" v-model="form.consignee"  maxlength='10' class="inputUser"/></el-input>
-                   <span class="spanChecked" @click="form.sex = '1'">
-                    <i :class="{iActive:form.sex === '1'}"></i>
-                    先生
-                   </span>
-                   <span class="spanChecked" @click="form.sex = '0'">
-                    <i :class="{iActive:form.sex === '0'}"></i>
-                    女士
-                </span>
-                </div>
-                <div class="divItem">
-                    <span>手机号：</span> 
-                    <el-input placeholder=" 请填写收货人手机号码" v-model="form.phone"  maxlength='20' style="width: calc(100% - 80rem);"/></el-input>
-                </div>
-                <div class="divItem">
-                    <span>收货地址：</span> 
-                    <el-input placeholder=" 请输入收货地址" v-model="form.detail"  maxlength='140'/></el-input>
-                </div>
-                <div class="divItem ">
-                    <span>标签：</span> 
-                    <span v-for="(item,index) in labelList" :key="index" @click="form.label = item;activeIndex = index" :class="{spanItem:true,spanActiveSchool:activeIndex === index}">{{item}}</span>
-                </div>
-                <div class="divSave" @click="saveAddress">保存地址</div>
-                <div class="divDelete" @click="deleteAddress" v-if="id">删除地址</div>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover">
+    <title>编辑地址 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favicon.ico">
+    <script src="./../js/base.js"></script>
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/index.css"/>
+    <link rel="stylesheet" href="./../styles/address-edit.css"/>
+</head>
+<body>
+    <style>
+        html, body { overflow: visible !important; background: transparent !important; max-width: none !important; height: auto !important; }
+    </style>
+    <div id="address_edit" class="app" v-cloak>
+        <!-- 顶部导航 -->
+        <div class="divHead">
+            <div class="divTitle">
+                <i class="backArrow" @click="goBack">&lt;</i>
+                <span>{{title}}</span>
             </div>
         </div>
-        <!-- 开发环境版本,包含了有帮助的命令行警告 -->
-        <script src="../../backend/plugins/vue/vue.js"></script>
-        <!-- 引入组件库 -->
-        <script src="../../backend/plugins/element-ui/index.js"></script>
-        <!-- 引入vant样式 -->
-        <script src="./../js/vant.min.js"></script>       
-        <script src="./../js/common.js"></script>
-        <script src="./../api/address.js"></script>
-        <!-- 引入axios -->
-        <script src="../../backend/plugins/axios/axios.min.js"></script>
-        <script src="./../js/request.js"></script>
-        <script>
-            new Vue({
-                el:"#address_edit",
-                data(){
-                    return {
-                        title:'新增收货地址',
-                        form:{
-                            consignee:'',//联系人
-                            phone:'',//手机号
-                            sex:'1',//0表示女 1 表示男
-                            detail:'',//收货地址
-                            label:'公司',//标签
-                        },
-                        labelList:[
-                            '无','公司','家','学校'
-                        ],
-                        id:undefined,
-                        activeIndex :0,
-                        saving:false // 修改点：保存地址防重复提交
-                    }
+
+        <!-- 可滚动表单区 -->
+        <div class="divScroll">
+            <div class="divContent">
+
+                <!-- ======== 联系人 ======== -->
+                <div class="formGroup">
+                    <div class="formLabel">
+                        <svg class="labelSvg" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v1.2c0 .66.54 1.2 1.2 1.2h16.8c.66 0 1.2-.54 1.2-1.2v-1.2c0-3.2-6.4-4.8-9.6-4.8z" fill="#ffa426"/></svg>联系人
+                    </div>
+                    <div class="formBody">
+                        <div class="formRow" :class="{'formRowError': errors.consignee}">
+                            <input class="nativeInput"
+                                   placeholder="请输入收货人姓名"
+                                   v-model="form.consignee"
+                                   maxlength="10"
+                                   @input="clearError('consignee')" />
+                        </div>
+                        <div class="sexToggle">
+                            <span class="sexBtn" :class="{sexBtnActive: form.sex === '1'}" @click="form.sex = '1'">
+                                <svg class="sexSvg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/></svg> 先生
+                            </span>
+                            <span class="sexBtn" :class="{sexBtnActive: form.sex === '0'}" @click="form.sex = '0'">
+                                <svg class="sexSvg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/></svg> 女士
+                            </span>
+                        </div>
+                        <div class="fieldError" v-if="errors.consignee">{{errors.consignee}}</div>
+                    </div>
+                </div>
+
+                <!-- ======== 手机号 ======== -->
+                <div class="formGroup">
+                    <div class="formLabel">
+                        <svg class="labelSvg" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="#ffa426"/></svg>手机号
+                    </div>
+                    <div class="formBody">
+                        <div class="formRow" :class="{'formRowError': errors.phone}">
+                            <input class="nativeInput"
+                                   type="tel"
+                                   placeholder="请输入11位手机号码"
+                                   v-model="form.phone"
+                                   maxlength="11"
+                                   @input="clearError('phone')" />
+                        </div>
+                        <div class="fieldError" v-if="errors.phone">{{errors.phone}}</div>
+                    </div>
+                </div>
+
+                <!-- ======== 所在地区（四级联动） ======== -->
+                <div class="formGroup">
+                    <div class="formLabel">
+                        <svg class="labelSvg" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#ffa426"/></svg>所在地区
+                    </div>
+                    <div class="formBody">
+                        <div class="regionPicker" :class="{'formRowError': errors.region}">
+                            <!-- 省份 -->
+                            <div class="regionSlot"
+                                 :class="{regionFilled: provinceText, regionActive: pickerLevel === 1 && pickerVisible}"
+                                 @click="openPicker(1)">
+                                {{ provinceText || '省份' }}
+                                <i class="regionArrow">&#9660;</i>
+                            </div>
+                            <!-- 城市 -->
+                            <div class="regionSlot"
+                                 :class="{regionFilled: cityText, regionDisabled: !provinceId, regionActive: pickerLevel === 2 && pickerVisible}"
+                                 @click="provinceId && openPicker(2)">
+                                {{ cityText || '城市' }}
+                                <i class="regionArrow" v-if="provinceId">&#9660;</i>
+                            </div>
+                            <!-- 区县 -->
+                            <div class="regionSlot"
+                                 :class="{regionFilled: districtText, regionDisabled: !cityId, regionActive: pickerLevel === 3 && pickerVisible}"
+                                 @click="cityId && openPicker(3)">
+                                {{ districtText || '区县' }}
+                                <i class="regionArrow" v-if="cityId">&#9660;</i>
+                            </div>
+                            <!-- 街道/乡镇 -->
+                            <div class="regionSlot"
+                                 :class="{regionFilled: streetText, regionDisabled: !districtId, regionActive: pickerLevel === 4 && pickerVisible}"
+                                 @click="districtId && openPicker(4)">
+                                {{ streetText || '街道' }}
+                                <i class="regionArrow" v-if="districtId">&#9660;</i>
+                            </div>
+                        </div>
+                        <div class="fieldError" v-if="errors.region">{{errors.region}}</div>
+                    </div>
+                </div>
+
+                <!-- ======== 门牌号 ======== -->
+                <div class="formGroup">
+                    <div class="formLabel">
+                        <svg class="labelSvg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#ffa426"/></svg>门牌号
+                    </div>
+                    <div class="formBody">
+                        <div class="formRow" :class="{'formRowError': errors.detail}">
+                            <textarea class="nativeTextarea"
+                                      placeholder="街道、小区、楼栋、门牌号等详细信息"
+                                      v-model="form.detail"
+                                      maxlength="140"
+                                      rows="2"
+                                      @input="clearError('detail')"></textarea>
+                            <span class="charCount">{{form.detail.length}}/140</span>
+                        </div>
+                        <div class="fieldError" v-if="errors.detail">{{errors.detail}}</div>
+                    </div>
+                </div>
+
+                <!-- ======== 标签 ======== -->
+                <div class="formGroup formGroupLabel">
+                    <div class="formLabel">
+                        <svg class="labelSvg" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z" fill="#ffa426"/></svg>标签
+                    </div>
+                    <div class="formBody">
+                        <div class="tagList">
+                            <span v-for="(item, index) in labelList" :key="item"
+                                  @click="selectLabel(index)"
+                                  :class="['tagBtn', labelClass(item)]">
+                                {{item}}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部操作栏 -->
+        <div class="divFooter">
+            <div class="btnSave" @click="saveAddress" :class="{btnSaveDisabled: saving}">
+                <span class="btnSpinner" v-if="saving"></span>
+                {{ saving ? '保存中...' : '保存地址' }}
+            </div>
+            <div class="btnDelete" @click="deleteAddress" v-if="id" :class="{btnDeleteDisabled: deleting}">
+                {{ deleting ? '删除中...' : '删除此地址' }}
+            </div>
+        </div>
+
+        <!-- 地区选择弹出层 -->
+        <transition name="pickerFade">
+            <div class="pickerOverlay" v-if="pickerVisible" @click.self="closePicker">
+                <transition name="pickerSlide">
+                    <div class="pickerPanel" v-if="pickerVisible">
+                        <div class="pickerHeader">
+                            <span class="pickerBack" v-if="pickerLevel > 1" @click="pickerGoBack">&lt; 返回</span>
+                            <span v-else class="pickerBack"></span>
+                            <span class="pickerTitle">
+                                {{ pickerLevel === 1 ? '选择省份' : pickerLevel === 2 ? '选择城市' : pickerLevel === 3 ? '选择区/县' : '选择街道/乡镇' }}
+                            </span>
+                            <span class="pickerClose" @click="closePicker">&#10005;</span>
+                        </div>
+                        <div class="pickerBody">
+                            <div class="pickerLoading" v-if="pickerLoading">加载中...</div>
+                            <div class="pickerItem"
+                                 :class="{pickerItemActive: region.id === selectedRegionId}"
+                                 v-for="region in pickerList" :key="region.id"
+                                 @click="onRegionPicked(region)">
+                                <span>{{region.name}}</span>
+                                <span class="pickerCheck" v-if="region.id === selectedRegionId">&#10003;</span>
+                            </div>
+                            <div class="pickerEmpty" v-if="!pickerLoading && pickerList.length === 0">
+                                暂无数据
+                            </div>
+                        </div>
+                    </div>
+                </transition>
+            </div>
+        </transition>
+    </div>
+
+    <!-- JS 依赖：Vue必须在Vant之前加载 -->
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="./../js/vant.min.js"></script>
+    <script src="./../js/common.js"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js"></script>
+    <script src="./../api/address.js"></script>
+    <script>
+    // 地区数据API
+    function regionChildrenApi(parentId) {
+        return $axios({ url: '/region/children', method: 'get', params: { parentId: parentId || 0 } })
+    }
+    </script>
+    <script>
+    new Vue({
+        el: "#address_edit",
+        data() {
+            return {
+                title: '新增收货地址',
+                errors: { consignee: '', phone: '', detail: '', region: '' },
+                form: {
+                    consignee: '',
+                    phone: '',
+                    sex: '1',
+                    provinceCode: '', provinceName: '',
+                    cityCode: '', cityName: '',
+                    districtCode: '', districtName: '',
+                    streetCode: '', streetName: '',
+                    detail: '',
+                    label: '公司',
                 },
-                computed:{},
-                created(){
-                    this.initData()
-                },
-                mounted(){
-                },
-                methods:{
-                    goBack(){
-                        history.go(-1)
-                    },
-                    async initData(){
-                        const params = parseUrl(window.location.search)
-                        this.id = params.id
-                        if(params.id){
-                            this.title = '编辑收货地址'
-                            const res = await addressFindOneApi(params.id)
-                            if(res.code === 1){
-                                this.form = res.data
-                            }else{
-                                this.$notify({ type:'warning', message:res.msg});
-                            }
-                        }
-                    },
-                    async saveAddress(){
-                        // 修改点：防重复提交
-                        if(this.saving) return;
-                        const form = this.form
-                        if(!form.consignee){
-                            this.$notify({ type:'warning', message:'请输入联系人'});
-                            return 
-                        }
-                        if(!form.phone){
-                            this.$notify({ type:'warning', message:'请输入手机号'});
-                            return 
-                        }
-                        if(!form.detail){
-                            this.$notify({ type:'warning', message:'请输入收货地址'});
-                            return 
-                        }
-                        const reg = /^1[3456789]\d{9}$/
-                        if(!reg.test(form.phone)){
-                            this.$notify({ type:'warning', message:'手机号码不合法'});
-                            return  
-                        }
-                        this.saving = true
-                        let res= {}
-                        if(this.id){
-                            res = await updateAddressApi(this.form)
-                        }else{
-                            res = await addAddressApi(this.form)
-                        }
-                        
-                        if(res.code === 1){
-                            window.requestAnimationFrame(()=>{
-                                window.location.replace('/front/page/address.html')
-                            })
-                        }else{
-                            this.saving = false
-                            this.$notify({ type:'warning', message:res.msg});
-                        }
-                    },
-                    deleteAddress(){
-                        this.$dialog.confirm({
-                            title: '确认删除',
-                            message: '确认要删除当前地址吗？',
-                        })
-                        .then( async () => {
-                            const res = await deleteAddressApi({ids:this.id })
-                            if(res.code === 1){
-                                window.requestAnimationFrame(()=>{
-                                    window.location.replace('/front/page/address.html')
-                                })
-                            }else{
-                                this.$notify({ type:'warning', message:res.msg});
-                            }
-                        })
-                        .catch(() => {
-                        });
-                    },
+                labelList: ['无', '公司', '家', '学校'],
+                labelColorMap: { '无': 'tagNone', '公司': 'tagCompany', '家': 'tagHome', '学校': 'tagSchool' },
+                id: undefined,
+                activeIndex: 1,
+                saving: false,
+                deleting: false,
+                // 四级联动选择器
+                provinceId: null, cityId: null, districtId: null, streetId: null,
+                provinceText: '', cityText: '', districtText: '', streetText: '',
+                // 弹出层状态
+                pickerVisible: false,
+                pickerLevel: 1,
+                pickerList: [],
+                pickerLoading: false,
+                selectedRegionId: null
+            }
+        },
+        created() {
+            this.initData()
+        },
+        methods: {
+            // ---- 标签样式 ----
+            labelClass(item) {
+                return this.labelList[this.activeIndex] === item ? (this.labelColorMap[item] || 'tagNone') : ''
+            },
+            selectLabel(index) {
+                this.activeIndex = index
+                this.form.label = this.labelList[index]
+            },
+            clearError(field) {
+                this.errors[field] = ''
+            },
+            goBack() { history.go(-1) },
+
+            // ---- 初始化 ----
+            async initData() {
+                var params = parseUrl(window.location.search)
+                this.id = params.id
+                if (!params.id) return
+
+                this.title = '编辑收货地址'
+                // 手动显示加载状态（用Vant Toast）
+                var toast = null
+                if (window.vant && vant.Toast) {
+                    toast = vant.Toast.loading({ message: '加载中...', duration: 0, forbidClick: true })
                 }
-            })
-            </script>
-    </body>
+                try {
+                    var res = await addressFindOneApi(params.id)
+                    if (res.code === 1) {
+                        var d = res.data
+                        this.form = {
+                            consignee: d.consignee || '',
+                            phone: d.phone || '',
+                            sex: String(d.sex || '1'),
+                            provinceCode: d.provinceCode || '', provinceName: d.provinceName || '',
+                            cityCode: d.cityCode || '', cityName: d.cityName || '',
+                            districtCode: d.districtCode || '', districtName: d.districtName || '',
+                            streetCode: d.streetCode || '', streetName: d.streetName || '',
+                            detail: d.detail || '',
+                            label: d.label || '公司',
+                        }
+                        this.provinceText = d.provinceName || ''
+                        this.cityText = d.cityName || ''
+                        this.districtText = d.districtName || ''
+                        this.streetText = d.streetName || ''
+                        var idx = this.labelList.indexOf(d.label)
+                        this.activeIndex = idx >= 0 ? idx : 1
+                        this.provinceId = null
+                        this.cityId = null
+                        this.districtId = null
+                        this.streetId = null
+                    } else {
+                        vant.Toast.fail && vant.Toast.fail(res.msg || '加载失败')
+                    }
+                } finally {
+                    if (toast) toast.clear()
+                }
+            },
+
+            // ---- 打开选择器 ----
+            async openPicker(level) {
+                if (level === 2 && !this.provinceId) return
+                if (level === 3 && !this.cityId) return
+                if (level === 4 && !this.districtId) return
+
+                this.pickerLevel = level
+                // 高亮已选
+                if (level === 1) this.selectedRegionId = this.provinceId
+                else if (level === 2) this.selectedRegionId = this.cityId
+                else if (level === 3) this.selectedRegionId = this.districtId
+                else this.selectedRegionId = this.streetId
+
+                var parentId = 0
+                if (level === 2) parentId = this.provinceId
+                else if (level === 3) parentId = this.cityId
+                else if (level === 4) parentId = this.districtId
+
+                this.pickerLoading = true
+                this.pickerVisible = true
+                try {
+                    var res = await regionChildrenApi(parentId)
+                    if (res.code === 1) {
+                        this.pickerList = res.data || []
+                    } else {
+                        vant.Toast.fail && vant.Toast.fail('加载地区数据失败')
+                    }
+                } catch (e) {
+                    vant.Toast.fail && vant.Toast.fail('网络异常，请重试')
+                } finally {
+                    this.pickerLoading = false
+                }
+            },
+
+            // ---- 返回上一级 ----
+            async pickerGoBack() {
+                if (this.pickerLevel === 2) await this.switchLevel(1, 0)
+                else if (this.pickerLevel === 3) await this.switchLevel(2, this.provinceId)
+                else if (this.pickerLevel === 4) await this.switchLevel(3, this.cityId)
+            },
+
+            // ---- 切换层级 ----
+            async switchLevel(level, parentId) {
+                this.pickerLevel = level
+                if (level === 1) this.selectedRegionId = this.provinceId
+                else if (level === 2) this.selectedRegionId = this.cityId
+                else if (level === 3) this.selectedRegionId = this.districtId
+                else this.selectedRegionId = this.streetId
+
+                this.pickerLoading = true
+                try {
+                    var res = await regionChildrenApi(parentId)
+                    if (res.code === 1) {
+                        this.pickerList = res.data || []
+                    }
+                } finally {
+                    this.pickerLoading = false
+                }
+            },
+
+            // ---- 选择地区 ----
+            async onRegionPicked(region) {
+                this.selectedRegionId = region.id
+
+                if (this.pickerLevel === 1) {
+                    // 选省份
+                    this.provinceId = region.id; this.provinceText = region.name
+                    this.form.provinceCode = region.code || ''; this.form.provinceName = region.name
+                    this.cityId = null; this.cityText = ''; this.districtId = null; this.districtText = ''
+                    this.streetId = null; this.streetText = ''
+                    this.form.cityCode = ''; this.form.cityName = ''
+                    this.form.districtCode = ''; this.form.districtName = ''
+                    this.form.streetCode = ''; this.form.streetName = ''
+                    this.clearError('region')
+                    await this.switchLevel(2, region.id)
+
+                } else if (this.pickerLevel === 2) {
+                    // 选城市
+                    this.cityId = region.id; this.cityText = region.name
+                    this.form.cityCode = region.code || ''; this.form.cityName = region.name
+                    this.districtId = null; this.districtText = ''
+                    this.streetId = null; this.streetText = ''
+                    this.form.districtCode = ''; this.form.districtName = ''
+                    this.form.streetCode = ''; this.form.streetName = ''
+                    await this.switchLevel(3, region.id)
+
+                } else if (this.pickerLevel === 3) {
+                    // 选区/县
+                    this.districtId = region.id; this.districtText = region.name
+                    this.form.districtCode = region.code || ''; this.form.districtName = region.name
+                    this.streetId = null; this.streetText = ''
+                    this.form.streetCode = ''; this.form.streetName = ''
+                    await this.switchLevel(4, region.id)
+
+                } else if (this.pickerLevel === 4) {
+                    // 选街道/乡镇
+                    this.streetId = region.id; this.streetText = region.name
+                    this.form.streetCode = region.code || ''; this.form.streetName = region.name
+                    this.clearError('region')
+                    this.pickerVisible = false
+                }
+            },
+
+            closePicker() {
+                this.pickerVisible = false
+            },
+
+            // ---- 表单校验 ----
+            validateForm() {
+                this.errors = { consignee: '', phone: '', detail: '', region: '' }
+                var f = this.form
+                var ok = true
+
+                if (!f.consignee || !f.consignee.trim()) {
+                    this.errors.consignee = '请输入联系人姓名'
+                    ok = false
+                }
+                if (!f.phone || !f.phone.trim()) {
+                    this.errors.phone = '请输入手机号码'
+                    ok = false
+                } else if (!/^1[3-9]\d{9}$/.test(f.phone)) {
+                    this.errors.phone = '手机号格式不正确'
+                    ok = false
+                }
+                if (!this.streetId) {
+                    this.errors.region = '请选择完整的省/市/区/街道'
+                    ok = false
+                }
+                if (!f.detail || !f.detail.trim()) {
+                    this.errors.detail = '请输入门牌号及详细地址'
+                    ok = false
+                }
+                return ok
+            },
+
+            // ---- 保存地址 ----
+            async saveAddress() {
+                if (this.saving) return
+                if (!this.validateForm()) {
+                    var that = this
+                    this.$nextTick(function () {
+                        var el = that.$el.querySelector('.formRowError')
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    })
+                    return
+                }
+
+                this.saving = true
+                try {
+                    var res
+                    if (this.id) {
+                        res = await updateAddressApi(Object.assign({}, this.form, { id: this.id }))
+                    } else {
+                        res = await addAddressApi(this.form)
+                    }
+                    if (res.code === 1) {
+                        vant.Toast.success && vant.Toast.success('保存成功')
+                        setTimeout(function () {
+                            window.location.replace('/front/page/address.html')
+                        }, 500)
+                    } else {
+                        this.saving = false
+                        vant.Toast.fail && vant.Toast.fail(res.msg || '保存失败')
+                    }
+                } catch (e) {
+                    this.saving = false
+                    vant.Toast.fail && vant.Toast.fail('网络异常，请重试')
+                }
+            },
+
+            // ---- 删除地址 ----
+            deleteAddress() {
+                if (this.deleting) return
+                var that = this
+                if (vant && vant.Dialog && vant.Dialog.confirm) {
+                    vant.Dialog.confirm({
+                        title: '删除地址',
+                        message: '确认删除该收货地址吗？删除后不可恢复。',
+                        confirmButtonText: '确认删除',
+                    }).then(function () {
+                        that.doDelete()
+                    }).catch(function () {})
+                } else if (confirm('确认删除该地址？')) {
+                    this.doDelete()
+                }
+            },
+
+            async doDelete() {
+                this.deleting = true
+                try {
+                    var res = await deleteAddressApi({ ids: this.id })
+                    if (res.code === 1) {
+                        vant.Toast.success && vant.Toast.success('已删除')
+                        setTimeout(function () {
+                            window.location.replace('/front/page/address.html')
+                        }, 500)
+                    } else {
+                        this.deleting = false
+                        vant.Toast.fail && vant.Toast.fail(res.msg || '删除失败')
+                    }
+                } catch (e) {
+                    this.deleting = false
+                    vant.Toast.fail && vant.Toast.fail('网络异常，请重试')
+                }
+            }
+        }
+    })
+    </script>
+</body>
 </html>
