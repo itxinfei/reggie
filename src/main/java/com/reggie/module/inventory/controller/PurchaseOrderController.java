@@ -3,6 +3,8 @@ package com.reggie.module.inventory.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.dto.AddPurchaseDetailDTO;
+import com.reggie.dto.CreatePurchaseOrderDTO;
 import com.reggie.module.inventory.model.PurchaseOrder;
 import com.reggie.module.inventory.model.PurchaseOrderDetail;
 import com.reggie.module.inventory.service.PurchaseOrderService;
@@ -11,6 +13,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,7 +24,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -53,11 +55,8 @@ public class PurchaseOrderController {
 
     @PostMapping
     @Operation(summary = "创建采购单", description = "创建新的采购单并关联供应商")
-    public R<PurchaseOrder> create(@RequestBody Map<String, Object> params) {
-        Long supplierId = Long.valueOf(params.get("supplierId").toString());
-        String operator = (String) params.get("operator");
-        String remark = (String) params.get("remark");
-        PurchaseOrder po = purchaseOrderService.createOrder(supplierId, operator, remark);
+    public R<PurchaseOrder> create(@Validated @RequestBody CreatePurchaseOrderDTO dto) {
+        PurchaseOrder po = purchaseOrderService.createOrder(dto.getSupplierId(), dto.getOperator(), dto.getRemark());
         return R.success(po);
     }
 
@@ -82,12 +81,8 @@ public class PurchaseOrderController {
 
     @PostMapping("/addDetail")
     @Operation(summary = "添加明细", description = "为采购单添加食材明细项")
-    public R<String> addDetail(@RequestBody Map<String, Object> params) {
-        Long orderId = Long.valueOf(params.get("orderId").toString());
-        Long materialId = Long.valueOf(params.get("materialId").toString());
-        BigDecimal qty = new BigDecimal(params.get("qty").toString());
-        BigDecimal unitPrice = new BigDecimal(params.get("unitPrice").toString());
-        purchaseOrderService.addDetail(orderId, materialId, qty, unitPrice);
+    public R<String> addDetail(@Validated @RequestBody AddPurchaseDetailDTO dto) {
+        purchaseOrderService.addDetail(dto.getOrderId(), dto.getMaterialId(), dto.getQty(), dto.getUnitPrice());
         return R.success("添加明细成功");
     }
 

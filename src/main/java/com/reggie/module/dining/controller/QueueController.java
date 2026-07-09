@@ -3,6 +3,8 @@ package com.reggie.module.dining.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.dto.CallNextDTO;
+import com.reggie.dto.TakeNumberDTO;
 import com.reggie.module.dining.model.QueueRecord;
 import com.reggie.module.dining.service.QueueService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,6 +12,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
+import javax.validation.Valid;
 
 @Slf4j
 @RestController
@@ -51,19 +54,17 @@ public class QueueController {
 
     @PostMapping("/take")
     @Operation(summary = "取号", description = "顾客取号排队，支持指定座位数和手机号")
-    public R<QueueRecord> takeNumber(@RequestBody Map<String, Object> params) {
-        Integer seatCount = Integer.valueOf(params.get("seatCount").toString());
-        String phone = (String) params.get("phone");
-        log.info("取号: seatCount={}, phone={}", seatCount, phone.replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2"));
-        QueueRecord record = queueService.takeNumber(seatCount, phone);
+    public R<QueueRecord> takeNumber(@Valid @RequestBody TakeNumberDTO dto) {
+        log.info("取号: seatCount={}, phone={}", dto.getSeatCount(),
+            dto.getPhone().replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2"));
+        QueueRecord record = queueService.takeNumber(dto.getSeatCount(), dto.getPhone());
         return R.success(record);
     }
 
     @PutMapping("/call")
     @Operation(summary = "叫号", description = "呼叫下一位顾客，支持按座位数筛选")
-    public R<QueueRecord> callNext(@RequestBody(required = false) Map<String, Object> params) {
-        Integer seatCount = params != null && params.get("seatCount") != null
-                ? Integer.valueOf(params.get("seatCount").toString()) : null;
+    public R<QueueRecord> callNext(@Validated(org.springframework.validation.Validator.class) @RequestBody(required = false) CallNextDTO dto) {
+        Integer seatCount = dto != null ? dto.getSeatCount() : null;
         log.info("叫号: seatCount={}", seatCount);
         QueueRecord record = queueService.callNext(seatCount);
         return record != null ? R.success(record) : R.error("没有等待中的顾客");

@@ -22,4 +22,6 @@ public class DeliveryOrder implements Serializable {
     private LocalDateTime orderTime;
     private LocalDateTime createdTime;
     private LocalDateTime updatedTime;
+    private Long createdUser;
+    private Long updatedUser;
 }

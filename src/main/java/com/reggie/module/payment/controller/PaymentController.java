@@ -3,6 +3,8 @@ package com.reggie.module.payment.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.dto.PayRequestDTO;
+import com.reggie.dto.RefundRequestDTO;
 import com.reggie.module.payment.channel.PaymentChannel;
 import com.reggie.module.payment.channel.PaymentChannelFactory;
 import com.reggie.module.payment.channel.PayRequest;
@@ -20,6 +22,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,18 +52,14 @@ public class PaymentController {
 
     @PostMapping("/pay")
     @Operation(summary = "创建支付", description = "创建支付订单并调用支付渠道生成支付链接/二维码")
-    public R<PayResponse> pay(@RequestBody Map<String, Object> params) {
-        Long orderId = Long.valueOf(params.get("orderId").toString());
-        String channel = (String) params.get("channel");
-        BigDecimal amount = new BigDecimal(params.get("amount").toString());
+    public R<PayResponse> pay(@Validated @RequestBody PayRequestDTO dto) {
+        PaymentOrder paymentOrder = paymentOrderService.createPaymentOrder(dto.getOrderId(), dto.getChannel(), dto.getAmount());
 
-        PaymentOrder paymentOrder = paymentOrderService.createPaymentOrder(orderId, channel, amount);
-
-        PaymentChannel paymentChannel = paymentChannelFactory.getChannel(channel);
+        PaymentChannel paymentChannel = paymentChannelFactory.getChannel(dto.getChannel());
         PayRequest request = new PayRequest();
         request.setTradeNo(paymentOrder.getTradeNo());
-        request.setAmount(amount);
-        request.setSubject("瑞吉外卖-订单" + orderId);
+        request.setAmount(dto.getAmount());
+        request.setSubject("瑞吉外卖-订单" + dto.getOrderId());
         PayResponse response = paymentChannel.createOrder(request);
 
         return R.success(response);
@@ -84,12 +83,8 @@ public class PaymentController {
 
     @PostMapping("/refund")
     @Operation(summary = "退款", description = "申请退款并调用支付渠道处理退款")
-    public R<String> refund(@RequestBody Map<String, Object> params) {
-        Long paymentOrderId = Long.valueOf(params.get("paymentOrderId").toString());
-        BigDecimal amount = new BigDecimal(params.get("amount").toString());
-        String reason = (String) params.get("reason");
-
-        PaymentOrder paymentOrder = paymentOrderService.getById(paymentOrderId);
+    public R<String> refund(@Validated @RequestBody RefundRequestDTO dto) {
+        PaymentOrder paymentOrder = paymentOrderService.getById(dto.getPaymentOrderId());
         if (paymentOrder == null) {
             return R.error("支付订单不存在");
         }
@@ -97,16 +92,16 @@ public class PaymentController {
         PaymentChannel paymentChannel = paymentChannelFactory.getChannel(paymentOrder.getChannel());
         RefundRequest refundRequest = new RefundRequest();
         refundRequest.setChannelTradeNo(paymentOrder.getChannelTradeNo());
-        refundRequest.setAmount(amount);
-        refundRequest.setReason(reason);
+        refundRequest.setAmount(dto.getAmount());
+        refundRequest.setReason(dto.getReason());
         RefundResponse refundResponse = paymentChannel.refund(refundRequest);
 
         if (refundResponse.isSuccess()) {
             RefundRecord record = new RefundRecord();
-            record.setPaymentOrderId(paymentOrderId);
+            record.setPaymentOrderId(dto.getPaymentOrderId());
             record.setRefundNo(generateRefundNo());
-            record.setAmount(amount);
-            record.setReason(reason);
+            record.setAmount(dto.getAmount());
+            record.setReason(dto.getReason());
             record.setStatus(STATUS_SUCCESS);
             refundRecordService.save(record);
 

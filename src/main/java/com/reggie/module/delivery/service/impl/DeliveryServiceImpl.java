@@ -49,7 +49,8 @@ public class DeliveryServiceImpl implements DeliveryService {
             qw.ge(DeliveryOrder::getOrderTime, startDate);
         }
         if (StringUtils.isNotBlank(endDate)) {
-            qw.le(DeliveryOrder::getOrderTime, endDate + " 23:59:59");
+            LocalDateTime endDateTime = LocalDate.parse(endDate).atTime(LocalTime.MAX);
+            qw.le(DeliveryOrder::getOrderTime, endDateTime);
         }
         qw.orderByDesc(DeliveryOrder::getOrderTime);
         deliveryOrderMapper.selectPage(pageInfo, qw);
@@ -60,16 +61,23 @@ public class DeliveryServiceImpl implements DeliveryService {
     public boolean acceptOrder(String platform, String platformOrderId) {
         DeliveryPlatform dp = factory.getPlatform(platform);
         if (dp == null) return false;
+
+        // 先查询订单信息（自动携带 tenantId 过滤条件）
+        LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
+        qw.eq(DeliveryOrder::getPlatform, platform);
+        qw.eq(DeliveryOrder::getPlatformOrderId, platformOrderId);
+        DeliveryOrder order = deliveryOrderMapper.selectOne(qw);
+
+        if (order == null) {
+            log.warn("订单不存在: platform={}, platformOrderId={}", platform, platformOrderId);
+            return false;
+        }
+
         boolean success = dp.acceptOrder(platformOrderId);
         if (success) {
-            LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
-            qw.eq(DeliveryOrder::getPlatform, platform);
-            qw.eq(DeliveryOrder::getPlatformOrderId, platformOrderId);
-            DeliveryOrder order = deliveryOrderMapper.selectOne(qw);
-            if (order != null) {
-                order.setStatus(DeliveryOrderStatus.ACCEPTED.getValue());
-                deliveryOrderMapper.updateById(order);
-            }
+            order.setStatus(DeliveryOrderStatus.ACCEPTED.getValue());
+            order.setUpdatedTime(LocalDateTime.now());
+            deliveryOrderMapper.updateById(order);
         }
         return success;
     }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.dto.ChangeTableStatusDTO;
 import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.util.QRCodeUtil;
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
+import javax.validation.Valid;
 
 @Slf4j
 @RestController
@@ -83,11 +85,9 @@ public class DiningTableController {
 
     @PutMapping("/status")
     @Operation(summary = "修改桌台状态", description = "更新桌台使用状态（空闲/使用中/已预订等）")
-    public R<String> changeStatus(@RequestBody Map<String, Object> params) {
-        Long id = Long.valueOf(params.get("id").toString());
-        String status = (String) params.get("status");
-        log.info("修改桌台状态: id={}, status={}", id, status);
-        diningTableService.changeStatus(id, status);
+    public R<String> changeStatus(@Valid @RequestBody ChangeTableStatusDTO dto) {
+        log.info("修改桌台状态: id={}, status={}", dto.getId(), dto.getStatus());
+        diningTableService.changeStatus(dto.getId(), dto.getStatus());
         return R.success("修改状态成功");
     }
 

@@ -3,6 +3,8 @@ package com.reggie.module.inventory.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.dto.CompleteStockCheckDTO;
+import com.reggie.dto.CreateStockCheckDTO;
 import com.reggie.module.inventory.model.StockCheck;
 import com.reggie.module.inventory.service.StockCheckService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,6 +12,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,8 +20,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.validation.Valid;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -43,18 +47,16 @@ public class StockCheckController {
 
     @PostMapping
     @Operation(summary = "创建盘点单", description = "创建新的库存盘点单")
-    public R<StockCheck> create(@RequestBody Map<String, Object> params) {
-        String operator = (String) params.get("operator");
-        String remark = (String) params.get("remark");
-        StockCheck sc = stockCheckService.createCheck(operator, remark);
+    public R<StockCheck> create(@Validated @RequestBody CreateStockCheckDTO dto) {
+        StockCheck sc = stockCheckService.createCheck(dto.getOperator(), dto.getRemark());
         return R.success(sc);
     }
 
     @PutMapping("/complete/{id}")
     @Operation(summary = "完成盘点", description = "提交盘点结果并更新库存")
     @Parameter(name = "id", description = "盘点单ID", required = true)
-    public R<String> complete(@PathVariable Long id, @RequestBody List<Map<String, Object>> items) {
-        stockCheckService.completeCheck(id, items);
+    public R<String> complete(@PathVariable Long id, @Valid @RequestBody CompleteStockCheckDTO dto) {
+        stockCheckService.completeCheck(id, dto.getItems());
         return R.success("盘点完成");
     }
 }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.dto.ClaimCouponDTO;
 import com.reggie.module.member.model.CouponTemplate;
 import com.reggie.module.member.service.CouponTemplateService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,8 +21,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.validation.Valid;
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -90,10 +93,8 @@ public class CouponTemplateController {
 
     @PostMapping("/claim")
     @Operation(summary = "领取优惠券", description = "会员领取优惠券模板")
-    public R<String> claim(@RequestBody Map<String, Object> params) {
-        Long memberId = Long.valueOf(params.get("memberId").toString());
-        Long templateId = Long.valueOf(params.get("templateId").toString());
-        boolean ok = couponTemplateService.claimCoupon(memberId, templateId);
+    public R<String> claim(@Valid @RequestBody ClaimCouponDTO dto) {
+        boolean ok = couponTemplateService.claimCoupon(dto.getMemberId(), dto.getTemplateId());
         if (ok) {
             return R.success("领取成功");
         }

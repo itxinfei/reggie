@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.dto.DeductBalanceDTO;
+import com.reggie.dto.RechargeDTO;
 import com.reggie.module.member.model.Member;
 import com.reggie.module.member.service.MemberService;
 import com.reggie.module.member.service.RechargeRecordService;
@@ -11,6 +13,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,9 +22,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -86,22 +91,16 @@ public class MemberController {
 
     @PostMapping("/recharge")
     @Operation(summary = "会员充值", description = "为会员账户充值，支持赠送金额")
-    public R<String> recharge(@RequestBody Map<String, Object> params) {
-        Long memberId = Long.valueOf(params.get("memberId").toString());
-        BigDecimal amount = new BigDecimal(params.get("amount").toString());
-        BigDecimal giftAmount = params.get("giftAmount") != null ? new BigDecimal(params.get("giftAmount").toString()) : BigDecimal.ZERO;
-        String paymentMethod = (String) params.get("paymentMethod");
-        rechargeRecordService.recharge(memberId, amount, giftAmount, paymentMethod);
-        log.info("会员充值: memberId={}, amount={}", memberId, amount);
+    public R<String> recharge(@Validated @RequestBody RechargeDTO dto) {
+        rechargeRecordService.recharge(dto.getMemberId(), dto.getAmount(), dto.getGiftAmount(), dto.getPaymentMethod());
+        log.info("会员充值: memberId={}, amount={}", dto.getMemberId(), dto.getAmount());
         return R.success("充值成功");
     }
 
     @PostMapping("/deduct-balance")
     @Operation(summary = "扣减余额", description = "扣减会员账户余额（用于订单抵扣等）")
-    public R<String> deductBalance(@RequestBody Map<String, Object> params) {
-        Long memberId = Long.valueOf(params.get("memberId").toString());
-        BigDecimal amount = new BigDecimal(params.get("amount").toString());
-        boolean ok = memberService.deductBalance(memberId, amount);
+    public R<String> deductBalance(@Validated @RequestBody DeductBalanceDTO dto) {
+        boolean ok = memberService.deductBalance(dto.getMemberId(), dto.getAmount());
         if (ok) {
             return R.success("扣减成功");
         }

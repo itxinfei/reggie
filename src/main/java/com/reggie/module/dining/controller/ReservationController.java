@@ -3,6 +3,7 @@ package com.reggie.module.dining.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.dto.CreateReservationDTO;
 import com.reggie.module.dining.model.Reservation;
 import com.reggie.module.dining.service.ReservationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,9 +21,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.Valid;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -31,6 +33,8 @@ public class ReservationController {
 
     @Autowired
     private ReservationService reservationService;
+
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询预订记录列表，支持按状态、姓名、手机号、日期筛选")
@@ -61,16 +65,12 @@ public class ReservationController {
 
     @PostMapping
     @Operation(summary = "新增预订", description = "创建新的预订记录，支持指定桌台和人数")
-    public R<Reservation> create(@RequestBody Map<String, Object> params) {
-        String customerName = (String) params.get("customerName");
-        String phone = (String) params.get("phone");
-        String reservedTimeStr = (String) params.get("reservedTime");
-        LocalDateTime reservedTime = LocalDateTime.parse(reservedTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        Integer seatCount = params.get("seatCount") != null ? Integer.valueOf(params.get("seatCount").toString()) : null;
-        Long tableId = params.get("tableId") != null ? Long.valueOf(params.get("tableId").toString()) : null;
-        String remark = (String) params.get("remark");
-        log.info("新增预订: customerName={}, phone={}", customerName, phone.replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2"));
-        Reservation r = reservationService.createReservation(customerName, phone, reservedTime, seatCount, tableId, remark);
+    public R<Reservation> create(@Valid @RequestBody CreateReservationDTO dto) {
+        log.info("新增预订: customerName={}, phone={}", dto.getCustomerName(),
+            dto.getPhone().replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2"));
+        Reservation r = reservationService.createReservation(
+            dto.getCustomerName(), dto.getPhone(), dto.getReservedTime(),
+            dto.getSeatCount(), dto.getTableId(), dto.getRemark());
         return R.success(r);
     }
 
