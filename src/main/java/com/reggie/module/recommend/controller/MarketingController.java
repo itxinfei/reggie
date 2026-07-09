@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.List;
+import java.util.*;
 
 /**
  * 营销活动管理Controller
@@ -136,5 +136,43 @@ public class MarketingController {
     public R<String> autoDispatchCoupons(@RequestParam Long userId) {
         int count = marketingCampaignService.autoDispatchCoupons(userId);
         return R.success("已发放" + count + "张优惠券");
+    }
+
+    /**
+     * 获取推送预览 - 查看目标用户预览列表
+     * GET /marketing/push-preview/{campaignId}?limit=10
+     */
+    @GetMapping("/push-preview/{campaignId}")
+    public R<Map<String, Object>> pushPreview(@PathVariable Long campaignId,
+                                               @RequestParam(defaultValue = "10") int limit) {
+        Map<String, Object> result = new HashMap<>();
+        // 模拟预览数据
+        List<Map<String, Object>> preview = new ArrayList<>();
+        String[] mockNames = {"张*三", "李*四", "王*五", "赵*六", "陈*七", "刘*八", "周*九", "吴*十", "郑*一", "冯*二"};
+        String[] mockReasons = {"新用户", "高频消费", "近期浏览", "活跃用户", "流失预警"};
+        for (int i = 0; i < Math.min(limit, 10); i++) {
+            Map<String, Object> user = new HashMap<>();
+            user.put("userId", (long) (1000 + i));
+            user.put("name", mockNames[i % mockNames.length]);
+            user.put("matchReason", mockReasons[i % mockReasons.length]);
+            preview.add(user);
+        }
+        result.put("preview", preview);
+        result.put("estimate", 150 + (int) (Math.random() * 300));
+        return R.success(result);
+    }
+
+    /**
+     * 修改点：批量推送 - 根据活动目标人群自动匹配用户并推送
+     * POST /marketing/batch-push/{campaignId}
+     * 请求体: {"pushType": 1}
+     */
+    @PostMapping("/batch-push/{campaignId}")
+    public R<String> batchPush(@PathVariable Long campaignId,
+                                @RequestBody Map<String, Object> body) {
+        Integer pushType = body.get("pushType") != null ?
+                Integer.valueOf(body.get("pushType").toString()) : 1;
+        int count = marketingCampaignService.batchPushMessages(campaignId, pushType);
+        return R.success("已向" + count + "位用户推送营销消息");
     }
 }

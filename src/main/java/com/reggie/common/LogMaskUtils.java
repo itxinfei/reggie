@@ -67,6 +67,64 @@ public class LogMaskUtils {
     }
 
     /**
+     * JSON字符串脱敏：自动识别手机号/身份证号/地址等字段并脱敏
+     * 用于操作日志等需要记录完整请求参数的场景
+     */
+    public static String maskSensitiveInfo(String json) {
+        if (json == null || json.isEmpty()) {
+            return json;
+        }
+
+        String result = json;
+        // 脱敏手机号
+        result = result.replaceAll("(\\\\d{3})\\\\d{4}(\\\\d{4})", "$1****$2");
+        // 脱敏身份证号（18位）
+        result = result.replaceAll("(\\\\d{6})\\\\d{8}(\\\\d{4})", "$1********$2");
+        // 脱敏地址（较长字符串的后半部分）
+        result = maskLongStrings(result);
+
+        return result;
+    }
+
+    /**
+     * 脱敏JSON中的长字符串字段
+     */
+    private static String maskLongStrings(String json) {
+        if (json == null || json.isEmpty()) {
+            return json;
+        }
+        StringBuilder sb = new StringBuilder();
+        boolean inString = false;
+        StringBuilder currentString = new StringBuilder();
+
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (c == '"' && (i == 0 || json.charAt(i - 1) != '\\')) {
+                if (inString) {
+                    // 字符串结束
+                    if (currentString.length() > 15) {
+                        sb.append("\"").append(currentString.substring(0, 6)).append("***")
+                          .append(currentString.substring(currentString.length() - 3)).append("\"");
+                    } else {
+                        sb.append("\"").append(currentString).append("\"");
+                    }
+                    currentString.setLength(0);
+                    inString = false;
+                } else {
+                    // 字符串开始
+                    inString = true;
+                }
+            } else if (inString) {
+                currentString.append(c);
+            } else {
+                sb.append(c);
+            }
+        }
+
+        return sb.toString();
+    }
+
+    /**
      * 通用脱敏（保留前n后m）
      */
     private static String maskGeneric(String str, int keepPrefix, int keepSuffix) {

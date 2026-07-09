@@ -110,6 +110,9 @@
           size="small" style="width:120px;margin-left:10px;" controls-position="right">
         </el-input-number>
         <span style="margin-left:6px;color:#909399;font-size:13px;">条</span>
+        <el-select v-model="categoryFilter" placeholder="菜品分类" size="small" style="width:150px;margin-left:10px;" clearable @change="loadData">
+          <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
+        </el-select>
         <el-button type="primary" class="search-btn" @click="loadData">查询</el-button>
         <div class="tableLab">
           <el-button type="primary" @click="handleExport">导出</el-button>
@@ -138,6 +141,12 @@
       <el-card shadow="never" style="margin-bottom: 20px;">
         <div slot="header">菜品销量排行（Top {{ tableData.length }}）</div>
         <div id="rankingChart"></div>
+      </el-card>
+
+      <!-- Top3 菜品趋势对比 -->
+      <el-card shadow="never" style="margin-bottom: 20px;" v-show="tableData.length > 0">
+        <div slot="header">Top 3 菜品销量趋势对比</div>
+        <div id="trendLineChart" style="width:100%;height:320px;"></div>
       </el-card>
 
       <!-- 后端返回字段：name, count（无 salesCount / amount） -->
@@ -178,6 +187,8 @@
           loading: false,
           dateRange: [],
           limit: 10,
+          categoryFilter: null,
+          categories: [],
           tableData: [],
           // 数据统计
           stats: {
@@ -186,6 +197,7 @@
             totalSales: 0
           },
           chart: null,
+          trendChart: null,
           resizeHandler: null
         }
       },
@@ -197,11 +209,18 @@
           + String(d.getMonth() + 1).padStart(2, '0') + '-'
           + String(d.getDate()).padStart(2, '0')
         this.dateRange = [fmt(first), fmt(last)]
+        this.loadCategories()
       },
       mounted() {
         this.$nextTick(() => {
-          this.chart = echarts.init(document.getElementById('rankingChart'))
-          this.resizeHandler = () => { if (this.chart) this.chart.resize() }
+          var rankingEl = document.getElementById('rankingChart')
+          var trendEl = document.getElementById('trendLineChart')
+          if (rankingEl) this.chart = echarts.init(rankingEl)
+          if (trendEl) this.trendChart = echarts.init(trendEl)
+          this.resizeHandler = () => {
+            if (this.chart) this.chart.resize()
+            if (this.trendChart) this.trendChart.resize()
+          }
           window.addEventListener('resize', this.resizeHandler)
           this.loadData()
         })
@@ -209,8 +228,15 @@
       beforeDestroy() {
         if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler)
         if (this.chart) this.chart.dispose()
+        if (this.trendChart) this.trendChart.dispose()
       },
       methods: {
+        // 加载菜品分类列表
+        loadCategories() {
+          $axios.get('/category/list').then(res => {
+            if (res.code === 1 && res.data) this.categories = res.data || [];
+          }).catch(() => {});
+        },
         async loadData() {
           this.loading = true
           try {
@@ -231,6 +257,8 @@
               // 后端字段：name, count
               this.tableData = rankRes.data || []
               this.renderChart()
+              // 加载Top3趋势
+              this.loadTopTrend()
             } else {
               this.$message.error(rankRes.msg || '加载失败')
             }
@@ -266,6 +294,38 @@
           }
           return { code: 0 }
         },
+        // 加载Top3趋势对比数据
+        loadTopTrend() {
+          if (!this.tableData || this.tableData.length === 0 || !this.trendChart) return
+          var top3Names = this.tableData.slice(0, 3).map(function(d) { return d.name })
+          if (top3Names.length === 0) return
+          // 获取最近7天各日期的趋势
+          $axios.get('/api/report/dish-trend', {
+            params: { names: top3Names.join(','), days: 7 }
+          }).then(res => {
+            if (res.code === 1 && res.data) this.renderTrendChart(res.data)
+          }).catch(() => {})
+        },
+        renderTrendChart(data) {
+          if (!this.trendChart) return
+          var colors = ['#ff4d4f', '#5470c6', '#91cc75']
+          var dates = data.dates || []
+          var series = (data.series || []).map(function(s, i) {
+            return {
+              name: s.name, type: 'line', data: s.data || [],
+              smooth: true, symbol: 'circle', symbolSize: 6,
+              lineStyle: { color: colors[i] || '#909399', width: 2.5 },
+              itemStyle: { color: colors[i] || '#909399' }
+            }
+          })
+          this.trendChart.setOption({
+            tooltip: { trigger: 'axis' },
+            legend: { data: (data.series || []).map(function(s) { return s.name }), bottom: 0 },
+            grid: { left: 50, right: 30, top: 10, bottom: 40 },
+            xAxis: { type: 'category', data: dates, boundaryGap: false },
+            yAxis: { type: 'value', name: '销量(份)' },
+            series: series
+          }, true)
         },
         calcPercent(count) {
           if (!this.tableData.length) return 0

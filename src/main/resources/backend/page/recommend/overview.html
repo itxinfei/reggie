@@ -4,86 +4,185 @@
     <meta charset="UTF-8"/>
     <title>智能推荐概览</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
         .page-header { margin-bottom: 20px; }
         .page-header h2 { font-size: 20px; color: #303133; }
         .page-header p { font-size: 13px; color: #909399; margin-top: 4px; }
+        .page-header .header-actions { float: right; margin-top: -24px; display: flex; gap: 8px; }
+
+        /* 统计卡片 */
         .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-        .stat-card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
-        .stat-card .label { font-size: 13px; color: #909399; margin-bottom: 8px; }
-        .stat-card .value { font-size: 28px; font-weight: 600; color: #303133; }
-        .stat-card .sub { font-size: 12px; color: #c0c4cc; margin-top: 4px; }
-        .hot-section { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
-        .section-title { font-size: 16px; font-weight: 600; color: #303133; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #ebeef5; }
+        .stat-card { background: #fff; border-radius: 10px; padding: 22px 24px; box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+            position: relative; overflow: hidden; transition: all 0.3s; cursor: default; }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .stat-card.blue::before { background: linear-gradient(90deg, #409eff, #66b1ff); }
+        .stat-card.green::before { background: linear-gradient(90deg, #67c23a, #85ce61); }
+        .stat-card.orange::before { background: linear-gradient(90deg, #e6a23c, #ebb563); }
+        .stat-card.purple::before { background: linear-gradient(90deg, #9c27b0, #ce93d8); }
+        .stat-card .label { font-size: 13px; color: #909399; margin-bottom: 8px; font-weight: 500; }
+        .stat-card .value { font-size: 30px; font-weight: 700; color: #303133; }
+        .stat-card .sub { font-size: 12px; color: #c0c4cc; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+        .trend-up { color: #67c23a; font-size: 12px; font-weight: 600; }
+        .trend-down { color: #f56c6c; font-size: 12px; font-weight: 600; }
+        .trend-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center;
+            justify-content: center; position: absolute; right: 20px; top: 22px; font-size: 20px; }
+        .trend-icon.blue { background: rgba(64,158,255,0.1); color: #409eff; }
+        .trend-icon.green { background: rgba(103,194,58,0.1); color: #67c23a; }
+        .trend-icon.orange { background: rgba(230,162,60,0.1); color: #e6a23c; }
+        .trend-icon.purple { background: rgba(156,39,176,0.1); color: #9c27b0; }
+
+        /* 图表行 */
+        .charts-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+        .chart-panel { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+        .panel-title { font-size: 15px; font-weight: 600; color: #303133; margin-bottom: 16px;
+            padding-bottom: 12px; border-bottom: 1px solid #ebeef5; display: flex; align-items: center; gap: 8px; }
+        .panel-title .el-icon { color: #409eff; }
+        .chart-box { width: 100%; height: 300px; }
+
+        /* 热门排行 */
+        .hot-section { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
         .dish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
         .dish-card { border: 1px solid #ebeef5; border-radius: 8px; overflow: hidden; cursor: pointer; transition: all 0.2s; }
         .dish-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }
         .dish-img { width: 100%; height: 120px; object-fit: cover; background: #f5f7fa; }
         .dish-body { padding: 10px 12px; }
         .dish-name { font-size: 14px; font-weight: 500; color: #303133; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .dish-price { font-size: 16px; font-weight: 600; color: #e6420e; margin-top: 4px; }
+        .dish-price { font-size: 15px; font-weight: 600; color: #e6420e; margin-top: 4px; }
         .dish-desc { font-size: 12px; color: #909399; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dish-sales { font-size: 11px; color: #67c23a; margin-top: 4px; }
+        .rank-badge { position: absolute; top: 0; left: 0; padding: 2px 8px; font-size: 11px; font-weight: 700;
+            border-radius: 0 0 6px 0; z-index: 1; }
+        .rank-badge.r1 { background: #ff4d4f; color: #fff; }
+        .rank-badge.r2 { background: #ff7a45; color: #fff; }
+        .rank-badge.r3 { background: #ffa940; color: #fff; }
+
         .loading-wrap { text-align: center; padding: 60px 0; }
+        .loading-wrap p { color: #909399; margin-top: 12px; }
+
+        /* 推荐算法标签 */
+        .algo-tags { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .algo-tag { padding: 4px 12px; border-radius: 20px; font-size: 12px; border: 1px solid #e4e7ed;
+            cursor: pointer; transition: all 0.2s; color: #606266; }
+        .algo-tag.active { background: #409eff; color: #fff; border-color: #409eff; }
+        .algo-tag:hover:not(.active) { border-color: #409eff; color: #409eff; }
+
+        @media (max-width: 1200px) {
+            .stat-cards { grid-template-columns: repeat(2, 1fr); }
+            .charts-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .stat-cards { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 <div id="app">
     <div class="page-header">
         <h2>智能推荐概览</h2>
-        <p>基于用户历史订单和浏览行为的个性化推荐算法引擎</p>
+        <p>基于协同过滤、内容推荐和热门融合的混合推荐算法引擎，实时分析用户偏好</p>
+        <div class="header-actions">
+            <el-button type="primary" size="small" icon="el-icon-refresh" @click="refreshAll" :loading="loadingAll">刷新数据</el-button>
+        </div>
     </div>
 
     <!-- 算法状态卡片 -->
     <div class="stat-cards">
-        <div class="stat-card">
-            <div class="label">混合推荐覆盖率</div>
-            <div class="value">{{ stats.hybridRate }}%</div>
-            <div class="sub">协同过滤 + 内容推荐 + 热门融合</div>
+        <div class="stat-card blue">
+            <div class="trend-icon blue">🎯</div>
+            <div class="label">推荐覆盖率</div>
+            <div class="value">{{ stats.hybridRate || '--' }}<span style="font-size:14px;" v-if="stats.hybridRate">%</span></div>
+            <div class="sub">CF + Content + HotRank 混合</div>
         </div>
-        <div class="stat-card">
-            <div class="label">推荐点击率</div>
-            <div class="value">{{ stats.clickRate }}%</div>
-            <div class="sub">近7天推荐结果点击/展示比</div>
+        <div class="stat-card green">
+            <div class="trend-icon green">👆</div>
+            <div class="label">推荐点击率 (CTR)</div>
+            <div class="value">{{ stats.clickRate || '--' }}<span style="font-size:14px;" v-if="stats.clickRate">%</span></div>
+            <div class="sub">近7天 <span class="trend-up" v-if="stats.ctrTrend > 0">↑ {{ stats.ctrTrend }}%</span></div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card orange">
+            <div class="trend-icon orange">🔄</div>
             <div class="label">推荐转化率</div>
-            <div class="value">{{ stats.conversionRate }}%</div>
-            <div class="sub">推荐菜品加购/点击比</div>
+            <div class="value">{{ stats.conversionRate || '--' }}<span style="font-size:14px;" v-if="stats.conversionRate">%</span></div>
+            <div class="sub">加购/点击比 <span class="trend-up" v-if="stats.cvrTrend > 0">↑ {{ stats.cvrTrend }}%</span></div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card purple">
+            <div class="trend-icon purple">💰</div>
             <div class="label">推荐贡献GMV</div>
-            <div class="value">¥{{ stats.recommendGMV }}</div>
-            <div class="sub">通过推荐入口产生的订单金额</div>
+            <div class="value">¥{{ formatValue(stats.recommendGMV) }}</div>
+            <div class="sub">推荐入口产生的订单金额</div>
+        </div>
+    </div>
+
+    <!-- 图表行 -->
+    <div class="charts-row">
+        <!-- 推荐反馈分布 -->
+        <div class="chart-panel">
+            <div class="panel-title">
+                <i class="el-icon-data-analysis"></i> 推荐反馈分布（近7天）
+            </div>
+            <div class="chart-box" id="feedbackChart"></div>
+        </div>
+        <!-- 用户偏好分布 -->
+        <div class="chart-panel">
+            <div class="panel-title">
+                <i class="el-icon-pie-chart"></i> 用户口味偏好分布
+            </div>
+            <div class="chart-box" id="preferenceChart"></div>
+        </div>
+    </div>
+
+    <div class="charts-row">
+        <!-- 推荐算法效果对比 -->
+        <div class="chart-panel">
+            <div class="panel-title">
+                <i class="el-icon-s-data"></i> 推荐算法效果对比
+            </div>
+            <div class="chart-box" id="algoChart"></div>
+        </div>
+        <!-- 浏览行为趋势 -->
+        <div class="chart-panel">
+            <div class="panel-title">
+                <i class="el-icon-data-line"></i> 用户浏览行为趋势（近7天）
+            </div>
+            <div class="chart-box" id="browseChart"></div>
         </div>
     </div>
 
     <!-- 热门排行 -->
     <div class="hot-section">
-        <div class="section-title">
-            今日热门菜品排行
-            <el-button type="primary" size="mini" @click="refreshHotRank" style="float:right; margin-top:-3px;" :loading="loading">刷新排行</el-button>
+        <div class="panel-title">
+            <i class="el-icon-star-on" style="color:#e6a23c;"></i> 今日热门菜品排行
+            <el-button type="primary" size="mini" @click="refreshHotRank" style="margin-left:auto;" :loading="loadingHot">刷新排行</el-button>
         </div>
-        <div v-if="!loading" class="dish-grid">
-            <div class="dish-card" v-for="(dish, idx) in hotDishes" :key="dish.id">
+        <div class="algo-tags">
+            <span class="algo-tag" :class="{active: algoType === 'all'}" @click="loadHotByAlgo('all')">全部算法</span>
+            <span class="algo-tag" :class="{active: algoType === 'cf'}" @click="loadHotByAlgo('cf')">协同过滤</span>
+            <span class="algo-tag" :class="{active: algoType === 'content'}" @click="loadHotByAlgo('content')">内容推荐</span>
+            <span class="algo-tag" :class="{active: algoType === 'hot'}" @click="loadHotByAlgo('hot')">热门排行</span>
+        </div>
+        <div v-if="!loadingHot" class="dish-grid">
+            <div class="dish-card" v-for="(dish, idx) in hotDishes" :key="dish.id" style="position:relative;">
+                <span v-if="idx < 3" :class="['rank-badge', 'r' + (idx + 1)]">TOP{{ idx + 1 }}</span>
                 <img :src="dish.image ? getImageUrl(dish.image) : '../images/noImg.png'" class="dish-img" />
                 <div class="dish-body">
-                    <div class="dish-name">
-                        <el-tag size="mini" type="danger" v-if="idx < 3">TOP{{idx+1}}</el-tag>
-                        {{ dish.name }}
-                    </div>
+                    <div class="dish-name">{{ dish.name }}</div>
                     <div class="dish-price">¥{{ formatPrice(dish.price) }}</div>
                     <div class="dish-desc">{{ dish.description || '暂无描述' }}</div>
+                    <div class="dish-sales" v-if="dish.salesCount">📈 销量 {{ dish.salesCount }} 份</div>
                 </div>
             </div>
         </div>
         <div v-else class="loading-wrap">
             <i class="el-icon-loading" style="font-size:32px; color:#909399;"></i>
-            <p style="color:#909399; margin-top:12px;">加载热门数据中...</p>
+            <p>加载热门数据中...</p>
         </div>
-        <div v-if="!loading && hotDishes.length === 0" class="loading-wrap">
-            <p style="color:#909399;">暂无数据，请先确保有订单数据</p>
+        <div v-if="!loadingHot && hotDishes.length === 0" class="loading-wrap">
+            <i class="el-icon-document" style="font-size:32px; color:#c0c4cc;"></i>
+            <p>暂无数据，请先确保有订单和浏览数据</p>
         </div>
     </div>
 </div>
@@ -97,30 +196,239 @@
 new Vue({
     el: '#app',
     data: {
-        loading: false,
+        loadingAll: false,
+        loadingHot: false,
+        algoType: 'all',
         hotDishes: [],
         stats: {
-            hybridRate: 85,
-            clickRate: 42,
-            conversionRate: 18,
-            recommendGMV: 12800
-        }
+            hybridRate: null, clickRate: null, conversionRate: null,
+            recommendGMV: null, ctrTrend: null, cvrTrend: null
+        },
+        feedbackChart: null,
+        preferenceChart: null,
+        algoChart: null,
+        browseChart: null
     },
-    created() {
-        this.loadHotRank();
+    mounted() {
+        this.$nextTick(() => {
+            this.feedbackChart = echarts.init(document.getElementById('feedbackChart'));
+            this.preferenceChart = echarts.init(document.getElementById('preferenceChart'));
+            this.algoChart = echarts.init(document.getElementById('algoChart'));
+            this.browseChart = echarts.init(document.getElementById('browseChart'));
+            window.addEventListener('resize', this.handleResize);
+            this.loadAll();
+        });
+    },
+    beforeDestroy() {
+        window.removeEventListener('resize', this.handleResize);
+        [this.feedbackChart, this.preferenceChart, this.algoChart, this.browseChart].forEach(c => {
+            if (c) c.dispose();
+        });
     },
     methods: {
-        loadHotRank() {
-            this.loading = true;
+        handleResize() {
+            [this.feedbackChart, this.preferenceChart, this.algoChart, this.browseChart].forEach(c => {
+                if (c) c.resize();
+            });
+        },
+        loadAll() {
+            this.loadingAll = true;
+            this.loadStats();
+            this.loadFeedback();
+            this.loadPreferences();
+            this.loadAlgoCompare();
+            this.loadBrowseTrend();
+            this.loadHotRank();
+            Promise.all([]).finally(() => { this.loadingAll = false; });
+        },
+        refreshAll() { this.loadAll(); },
+
+        // 加载推荐统计
+        loadStats() {
+            recommendBackendApi.getStats().then(res => {
+                if (res.code === 1 && res.data) {
+                    this.stats = Object.assign(this.stats, res.data);
+                }
+            }).catch(() => {});
+        },
+
+        // 加载反馈分布
+        loadFeedback() {
+            $axios.get('/recommend/feedback/stats', { params: { days: 7 } }).then(res => {
+                if (res.code === 1 && res.data) {
+                    this.renderFeedbackChart(res.data);
+                } else {
+                    this.renderFeedbackEmpty();
+                }
+            }).catch(() => this.renderFeedbackEmpty());
+        },
+
+        renderFeedbackChart(data) {
+            if (!this.feedbackChart) return;
+            var names = ['点击', '收藏', '加购', '下单', '不感兴趣'];
+            var values = [data.click || 0, data.favorite || 0, data.cart || 0, data.order || 0, data.unlike || 0];
+            var colors = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#c0c4cc'];
+            this.feedbackChart.setOption({
+                tooltip: { trigger: 'axis' },
+                grid: { left: 50, right: 20, top: 10, bottom: 40 },
+                xAxis: { type: 'category', data: names, axisLabel: { fontSize: 12 } },
+                yAxis: { type: 'value', name: '次数' },
+                series: [{
+                    type: 'bar', data: values.map((v, i) => ({ value: v, itemStyle: { color: colors[i],
+                        borderRadius: [6, 6, 0, 0] } })), barWidth: 30,
+                    label: { show: true, position: 'top', fontSize: 12, fontWeight: 600 }
+                }]
+            }, true);
+        },
+
+        renderFeedbackEmpty() {
+            if (!this.feedbackChart) return;
+            this.feedbackChart.setOption({
+                title: { text: '暂无反馈数据', left: 'center', top: 'center',
+                    textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+            }, true);
+        },
+
+        // 加载偏好分布
+        loadPreferences() {
+            $axios.get('/recommend/preference/distribution').then(res => {
+                if (res.code === 1 && res.data && res.data.length > 0) {
+                    this.renderPreferenceChart(res.data);
+                } else {
+                    this.renderPreferenceEmpty();
+                }
+            }).catch(() => this.renderPreferenceEmpty());
+        },
+
+        renderPreferenceChart(data) {
+            if (!this.preferenceChart) return;
+            var names = data.map(function(d) { return d.name; });
+            var values = data.map(function(d) { return d.value; });
+            this.preferenceChart.setOption({
+                tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+                series: [{
+                    type: 'pie', radius: ['50%', '75%'], center: ['50%', '50%'],
+                    itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+                    label: { fontSize: 12, formatter: '{b}\n{d}%' },
+                    emphasis: { scaleSize: 8, label: { fontSize: 14, fontWeight: 'bold' } },
+                    data: names.map(function(n, i) { return { name: n, value: values[i] }; })
+                }]
+            }, true);
+        },
+
+        renderPreferenceEmpty() {
+            if (!this.preferenceChart) return;
+            this.preferenceChart.setOption({
+                title: { text: '暂无偏好数据，需用户产生浏览/下单行为', left: 'center', top: 'center',
+                    textStyle: { color: '#c0c4cc', fontSize: 13, fontWeight: 'normal' } }
+            }, true);
+        },
+
+        // 算法效果对比
+        loadAlgoCompare() {
+            $axios.get('/recommend/algo/compare').then(res => {
+                if (res.code === 1 && res.data) {
+                    this.renderAlgoChart(res.data);
+                } else {
+                    this.renderAlgoEmpty();
+                }
+            }).catch(() => this.renderAlgoEmpty());
+        },
+
+        renderAlgoChart(data) {
+            if (!this.algoChart) return;
+            var algos = data.algos || ['协同过滤', '内容推荐', '热门排行', '混合推荐'];
+            var ctRates = data.ctRates || [0, 0, 0, 0];
+            var cvRates = data.cvRates || [0, 0, 0, 0];
+            this.algoChart.setOption({
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                legend: { data: ['点击率%', '转化率%'], bottom: 0 },
+                grid: { left: 50, right: 20, top: 10, bottom: 40 },
+                xAxis: { type: 'category', data: algos, axisLabel: { fontSize: 12 } },
+                yAxis: { type: 'value', name: '%', max: 100 },
+                series: [
+                    { name: '点击率%', type: 'bar', data: ctRates, barWidth: 20,
+                        itemStyle: { color: '#5470c6', borderRadius: [6, 6, 0, 0] },
+                        label: { show: true, position: 'top', fontSize: 11, formatter: '{c}%' } },
+                    { name: '转化率%', type: 'bar', data: cvRates, barWidth: 20,
+                        itemStyle: { color: '#91cc75', borderRadius: [6, 6, 0, 0] },
+                        label: { show: true, position: 'top', fontSize: 11, formatter: '{c}%' } }
+                ]
+            }, true);
+        },
+
+        renderAlgoEmpty() {
+            if (!this.algoChart) return;
+            this.algoChart.setOption({
+                title: { text: '暂无推荐算法数据', left: 'center', top: 'center',
+                    textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+            }, true);
+        },
+
+        // 浏览趋势
+        loadBrowseTrend() {
+            $axios.get('/recommend/browse/trend', { params: { days: 7 } }).then(res => {
+                if (res.code === 1 && res.data) {
+                    this.renderBrowseChart(res.data);
+                } else {
+                    this.renderBrowseEmpty();
+                }
+            }).catch(() => this.renderBrowseEmpty());
+        },
+
+        renderBrowseChart(data) {
+            if (!this.browseChart) return;
+            var dates = data.dates || [];
+            var browseCount = data.browseCount || [];
+            var cartCount = data.cartCount || [];
+            this.browseChart.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    borderColor: '#e4e7ed',
+                    textStyle: { color: '#303133', fontSize: 12 }
+                },
+                legend: { data: ['浏览次数', '加购次数'], bottom: 0 },
+                grid: { left: 50, right: 50, top: 10, bottom: 40 },
+                xAxis: { type: 'category', data: dates, boundaryGap: false, axisLabel: { fontSize: 12 } },
+                yAxis: { type: 'value', name: '次数' },
+                series: [
+                    { name: '浏览次数', type: 'line', data: browseCount, smooth: true,
+                        symbol: 'circle', symbolSize: 6,
+                        lineStyle: { color: '#5470c6', width: 3 },
+                        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(84,112,198,0.25)' },
+                            { offset: 1, color: 'rgba(84,112,198,0.02)' }]) } },
+                    { name: '加购次数', type: 'line', data: cartCount, smooth: true,
+                        symbol: 'circle', symbolSize: 6,
+                        lineStyle: { color: '#91cc75', width: 3 },
+                        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(145,204,117,0.25)' },
+                            { offset: 1, color: 'rgba(145,204,117,0.02)' }]) } }
+                ]
+            }, true);
+        },
+
+        renderBrowseEmpty() {
+            if (!this.browseChart) return;
+            this.browseChart.setOption({
+                title: { text: '暂无浏览数据', left: 'center', top: 'center',
+                    textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+            }, true);
+        },
+
+        // 热门排行
+        loadHotRank() { this.loadHotByAlgo('all'); },
+        loadHotByAlgo(type) {
+            this.algoType = type;
+            this.loadingHot = true;
             recommendBackendApi.getHotRecommend(12).then(res => {
                 if (res.code === 1) {
                     this.hotDishes = res.data || [];
                 }
             }).catch(err => {
                 console.error('加载热门排行失败:', err);
-            }).finally(() => {
-                this.loading = false;
-            });
+            }).finally(() => { this.loadingHot = false; });
         },
         refreshHotRank() {
             this.loadHotRank();
@@ -131,8 +439,14 @@ new Vue({
             return image.startsWith('http') ? image : '/common/download?name=' + image;
         },
         formatPrice(price) {
-            if (!price) return '0.00';
-            return typeof price === 'number' ? (price / 100).toFixed(2) : price;
+            if (!price && price !== 0) return '0.00';
+            if (typeof price !== 'number') return String(price);
+            return (price / 100).toFixed(2);
+        },
+        formatValue(val) {
+            if (val === null || val === undefined) return '--';
+            if (typeof val === 'number') return (val / 100).toFixed(2);
+            return String(val);
         }
     }
 });

@@ -452,6 +452,7 @@ CREATE TABLE `orders`  (
   `consignee` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL,
   `table_id` bigint NULL DEFAULT NULL COMMENT '堂食桌台id',
   `dining_type` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT 'DELIVERY' COMMENT '用餐类型 DELIVERY/DINE_IN/TAKEOUT',
+  `idempotency_key` varchar(64) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '幂等令牌（防止重复下单）',
   `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户id',
   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT NULL COMMENT '更新时间',
@@ -942,6 +943,38 @@ CREATE TABLE `coupon_user`  (
 -- ----------------------------
 -- Records of coupon_user
 -- ----------------------------
+
+-- ----------------------------
+-- Table structure for operation_log
+-- ----------------------------
+DROP TABLE IF EXISTS `operation_log`;
+CREATE TABLE `operation_log`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `operator_id` bigint NULL DEFAULT NULL COMMENT '操作人ID',
+  `operator_name` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '操作人姓名',
+  `operator_ip` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '操作人IP',
+  `module` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '操作模块',
+  `operation_type` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '操作类型 INSERT/UPDATE/DELETE/OTHER',
+  `table_name` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '业务表名',
+  `biz_id` bigint NULL DEFAULT NULL COMMENT '业务记录ID',
+  `description` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '操作描述',
+  `old_value` text CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL COMMENT '变更前的值(JSON)',
+  `new_value` text CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL COMMENT '变更后的值(JSON)',
+  `request_url` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '请求URL',
+  `request_method` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '请求方法',
+  `request_params` text CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL COMMENT '请求参数(JSON)',
+  `duration` bigint NULL DEFAULT NULL COMMENT '执行时长(ms)',
+  `is_success` int NULL DEFAULT 1 COMMENT '是否成功 0失败 1成功',
+  `error_msg` varchar(500) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '错误信息',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户id',
+  `is_deleted` int NOT NULL DEFAULT 0 COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
+  INDEX `idx_operator`(`operator_id` ASC) USING BTREE,
+  INDEX `idx_biz`(`table_name` ASC, `biz_id` ASC) USING BTREE,
+  INDEX `idx_create_time`(`create_time` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_bin COMMENT = '操作审计日志' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for region

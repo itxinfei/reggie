@@ -39,6 +39,12 @@
         </div>
       </el-card>
 
+      <!-- 工作日 × 时段热力图 -->
+      <el-card shadow="never" style="margin-bottom:20px;">
+        <div slot="header">工作日 × 时段 客流量热力图</div>
+        <div id="heatmapChart" style="width:100%;height:350px;"></div>
+      </el-card>
+
       <!-- 后端字段：name, count, amount（非 timeSlot/orderCount/percentage） -->
       <el-table :data="tableData" stripe border class="tableBox">
         <el-table-column prop="name" label="时段" align="center"></el-table-column>
@@ -72,6 +78,7 @@
           tableData: [],
           barChart: null,
           pieChart: null,
+          heatmapChart: null,
           resizeHandler: null
         }
       },
@@ -93,9 +100,11 @@
         this.$nextTick(() => {
           this.barChart = echarts.init(document.getElementById('barChart'))
           this.pieChart = echarts.init(document.getElementById('pieChart'))
+          this.heatmapChart = echarts.init(document.getElementById('heatmapChart'))
           this.resizeHandler = () => {
             if (this.barChart) this.barChart.resize()
             if (this.pieChart) this.pieChart.resize()
+            if (this.heatmapChart) this.heatmapChart.resize()
           }
           window.addEventListener('resize', this.resizeHandler)
           this.loadData()
@@ -105,6 +114,7 @@
         if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler)
         if (this.barChart) this.barChart.dispose()
         if (this.pieChart) this.pieChart.dispose()
+        if (this.heatmapChart) this.heatmapChart.dispose()
       },
       methods: {
         async loadData() {
@@ -122,6 +132,7 @@
               // 后端字段：name, count, amount
               this.tableData = res.data || []
               this.renderCharts()
+              this.loadHeatmap()
             } else {
               this.$message.error(res.msg || '加载失败')
             }
@@ -130,6 +141,34 @@
           } finally {
             this.loading = false
           }
+        },
+        // 加载工作日×时段热力图数据
+        loadHeatmap() {
+          if (!this.heatmapChart) return
+          var self = this
+          $axios.get('/api/report/time-slot/heatmap', {
+            params: { startDate: self.dateRange[0], endDate: self.dateRange[1] }
+          }).then(function(res) {
+            if (res.code === 1 && res.data) self.renderHeatmap(res.data)
+          }).catch(function() {})
+        },
+        renderHeatmap(data) {
+          if (!this.heatmapChart) return
+          var days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+          var slots = ['早市', '午市', '下午茶', '晚市', '夜市']
+          var heatData = (data.data || []).map(function(d) {
+            return [d.slotIdx || 0, d.dayIdx || 0, d.value || 0]
+          })
+          this.heatmapChart.setOption({
+            tooltip: { formatter: function(p) { return days[p.value[1]] + ' ' + slots[p.value[0]] + ': ' + p.value[2] + ' 单' } },
+            grid: { left: 80, right: 20, top: 10, bottom: 40 },
+            xAxis: { type: 'category', data: slots, splitArea: { show: true } },
+            yAxis: { type: 'category', data: days, splitArea: { show: true } },
+            visualMap: { min: 0, max: data.maxVal || 100, calculable: true, orient: 'horizontal',
+              left: 'center', bottom: 0, inRange: { color: ['#f0f5ff', '#409eff', '#003a8c'] } },
+            series: [{ type: 'heatmap', data: heatData, label: { show: true, fontSize: 12 },
+              emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' } } }]
+          }, true)
         },
         calcPercent(count) {
           if (!this.totalCount) return '0.0'

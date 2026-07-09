@@ -80,5 +80,19 @@ var recommendBackendApi = {
      */
     getHotRecommend: function(limit) {
         return $axios.get('/recommend/hot', { params: { limit: limit || 10 } });
+    },
+
+    /**
+     * 修改点：获取推荐引擎真实统计数据
+     */
+    getStats: function() {
+        return $axios.get('/recommend/stats');
+    },
+
+    /**
+     * 修改点：批量推送营销消息
+     */
+    batchPush: function(campaignId, data) {
+        return $axios.post('/marketing/batch-push/' + campaignId, data);
     }
 };

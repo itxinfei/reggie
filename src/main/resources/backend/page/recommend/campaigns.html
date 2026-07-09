@@ -4,131 +4,279 @@
     <meta charset="UTF-8"/>
     <title>营销活动管理</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
         .page-header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         .page-header h2 { font-size: 20px; color: #303133; }
-        .search-bar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
+
+        /* 统计卡片 */
+        .summary-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+        .summary-card { background: #fff; border-radius: 8px; padding: 18px 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 14px; transition: all 0.3s; }
+        .summary-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+        .summary-card .card-icon { width: 44px; height: 44px; border-radius: 10px; display: flex;
+            align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .summary-card .card-icon.blue { background: rgba(64,158,255,0.1); color: #409eff; }
+        .summary-card .card-icon.green { background: rgba(103,194,58,0.1); color: #67c23a; }
+        .summary-card .card-icon.orange { background: rgba(230,162,60,0.1); color: #e6a23c; }
+        .summary-card .card-icon.red { background: rgba(245,108,108,0.1); color: #f56c6c; }
+        .summary-card .card-num { font-size: 24px; font-weight: 700; color: #303133; }
+        .summary-card .card-label { font-size: 12px; color: #909399; }
+
+        /* 搜索栏 */
+        .search-bar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+
+        /* 表格区域 */
         .table-wrap { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+
+        /* 活动状态标签 */
         .status-tag { font-size: 12px; }
+
+        /* 对话框 */
         .dialog-footer { text-align: right; }
+
+        /* 推送预览列表 */
+        .push-preview { max-height: 200px; overflow-y: auto; border: 1px solid #ebeef5; border-radius: 6px; padding: 8px; margin-top: 8px; }
+        .push-preview .preview-item { display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 10px; font-size: 13px; border-bottom: 1px solid #f5f5f5; }
+        .push-preview .preview-item:last-child { border-bottom: none; }
+
+        /* 图表行 */
+        .chart-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
+        .chart-panel { background: #fff; border-radius: 8px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .chart-panel .chart-title { font-size: 14px; font-weight: 600; color: #303133;
+            margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #ebeef5; }
+        .chart-box { width: 100%; height: 260px; }
+
+        @media (max-width: 1200px) {
+            .summary-cards { grid-template-columns: repeat(2, 1fr); }
+            .chart-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .summary-cards { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 <div id="app">
     <div class="page-header">
         <h2>营销活动管理</h2>
-        <el-button type="primary" size="small" @click="openDialog('create')">+ 新建活动</el-button>
+        <el-button type="primary" size="small" icon="el-icon-plus" @click="openDialog('create')">新建活动</el-button>
+    </div>
+
+    <!-- 活动概览统计 -->
+    <div class="summary-cards">
+        <div class="summary-card">
+            <div class="card-icon blue">📋</div>
+            <div><div class="card-num">{{ summary.total }}</div><div class="card-label">活动总数</div></div>
+        </div>
+        <div class="summary-card">
+            <div class="card-icon green">▶</div>
+            <div><div class="card-num">{{ summary.active }}</div><div class="card-label">进行中</div></div>
+        </div>
+        <div class="summary-card">
+            <div class="card-icon orange">👥</div>
+            <div><div class="card-num">{{ summary.totalParticipants }}</div><div class="card-label">参与总人数</div></div>
+        </div>
+        <div class="summary-card">
+            <div class="card-icon red">📨</div>
+            <div><div class="card-num">{{ summary.totalPushed }}</div><div class="card-label">推送消息数</div></div>
+        </div>
     </div>
 
     <!-- 搜索栏 -->
     <div class="search-bar">
-        <el-input v-model="searchName" placeholder="搜索活动名称" size="small" style="width:220px;" clearable />
-        <el-select v-model="searchStatus" placeholder="状态" size="small" style="width:120px;" clearable>
+        <el-input v-model="searchName" placeholder="搜索活动名称" size="small" style="width:220px;" clearable @keyup.enter.native="loadData" />
+        <el-select v-model="searchStatus" placeholder="状态筛选" size="small" style="width:130px;" clearable @change="loadData">
             <el-option label="草稿" :value="0" />
             <el-option label="进行中" :value="1" />
             <el-option label="已结束" :value="2" />
             <el-option label="已暂停" :value="3" />
         </el-select>
-        <el-button type="primary" size="small" @click="loadData" icon="el-icon-search">查询</el-button>
+        <el-select v-model="searchType" placeholder="活动类型" size="small" style="width:130px;" clearable @change="loadData">
+            <el-option v-for="(label, val) in typeMap" :key="val" :label="label" :value="Number(val)" />
+        </el-select>
+        <el-button type="primary" size="small" icon="el-icon-search" @click="loadData">查询</el-button>
+        <el-button size="small" icon="el-icon-refresh" @click="loadData">刷新</el-button>
     </div>
 
     <!-- 表格 -->
     <div class="table-wrap">
-        <el-table :data="tableData" border stripe v-loading="loading" style="width:100%">
-            <el-table-column prop="id" label="ID" width="60" />
-            <el-table-column prop="name" label="活动名称" min-width="160" />
+        <el-table :data="tableData" border stripe v-loading="loading" style="width:100%" @selection-change="onSelectionChange">
+            <el-table-column type="selection" width="45" />
+            <el-table-column prop="id" label="ID" width="55" />
+            <el-table-column prop="name" label="活动名称" min-width="150" show-overflow-tooltip />
             <el-table-column label="活动类型" width="100">
                 <template slot-scope="scope">{{ typeMap[scope.row.campaignType] || '-' }}</template>
             </el-table-column>
-            <el-table-column label="目标人群" width="100">
+            <el-table-column label="目标人群" width="110">
                 <template slot-scope="scope">{{ targetMap[scope.row.targetType] || '-' }}</template>
             </el-table-column>
             <el-table-column label="状态" width="90">
                 <template slot-scope="scope">
-                    <el-tag :type="statusTagType(scope.row.status)" size="small">{{ statusMap[scope.row.status] }}</el-tag>
+                    <el-tag :type="statusTagType(scope.row.status)" size="small" class="status-tag">
+                        {{ statusMap[scope.row.status] }}
+                    </el-tag>
                 </template>
             </el-table-column>
-            <el-table-column prop="priority" label="优先级" width="70" />
-            <el-table-column label="活动时间" width="200">
+            <el-table-column prop="priority" label="优先级" width="65" align="center" sortable />
+            <el-table-column label="活动时间" width="190">
                 <template slot-scope="scope">
-                    <span style="font-size:12px;">{{ scope.row.startTime }} ~ {{ scope.row.endTime }}</span>
+                    <span style="font-size:12px;color:#606266;">{{ scope.row.startTime || '-' }}</span>
+                    <br/><span style="font-size:12px;color:#909399;">{{ scope.row.endTime || '-' }}</span>
                 </template>
             </el-table-column>
-            <el-table-column prop="currentParticipants" label="参与人数" width="80" />
-            <el-table-column label="操作" width="220" fixed="right">
+            <el-table-column label="参与/上限" width="100" align="center">
+                <template slot-scope="scope">
+                    <span>{{ scope.row.currentParticipants || 0 }}</span>
+                    <span style="color:#c0c4cc;"> / </span>
+                    <span>{{ scope.row.maxParticipants || '∞' }}</span>
+                    <el-progress v-if="scope.row.maxParticipants" :percentage="Math.round((scope.row.currentParticipants || 0) / scope.row.maxParticipants * 100)"
+                        :show-text="false" :stroke-width="4" style="width:60px;display:inline-block;vertical-align:middle;" />
+                </template>
+            </el-table-column>
+            <el-table-column label="操作" width="310" fixed="right">
                 <template slot-scope="scope">
                     <el-button type="text" size="small" @click="openDialog('edit', scope.row)">编辑</el-button>
                     <el-button type="text" size="small" v-if="scope.row.status === 0" @click="publishCampaign(scope.row)">发布</el-button>
                     <el-button type="text" size="small" v-if="scope.row.status === 1" @click="pauseCampaign(scope.row)">暂停</el-button>
+                    <el-button type="text" size="small" style="color:#409eff;" v-if="scope.row.status === 1" @click="openPushDialog(scope.row)">推送</el-button>
+                    <el-button type="text" size="small" style="color:#e6a23c;" @click="viewStats(scope.row)">统计</el-button>
                     <el-button type="text" size="small" style="color:#f56c6c;" @click="deleteCampaign(scope.row)">删除</el-button>
                 </template>
             </el-table-column>
         </el-table>
-        <el-pagination
-            style="margin-top:16px; text-align:right;"
-            background
-            layout="total, prev, pager, next"
-            :total="total"
-            :page-size="pageSize"
-            :current-page.sync="currentPage"
-            @current-change="loadData"
-        />
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;">
+            <div>
+                <el-button size="mini" :disabled="selectedRows.length === 0" @click="batchDelete">批量删除</el-button>
+                <el-button size="mini" type="warning" :disabled="selectedRows.length === 0" @click="batchPause">批量暂停</el-button>
+            </div>
+            <el-pagination background layout="total, prev, pager, next"
+                :total="total" :page-size="pageSize" :current-page.sync="currentPage" @current-change="loadData" />
+        </div>
     </div>
 
     <!-- 新建/编辑对话框 -->
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="600px" @close="resetForm">
+    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="640px" @close="resetForm">
         <el-form :model="form" :rules="rules" ref="campaignForm" label-width="100px" size="small">
-            <el-form-item label="活动名称" prop="name">
-                <el-input v-model="form.name" placeholder="请输入活动名称" maxlength="100" />
-            </el-form-item>
-            <el-form-item label="活动类型" prop="campaignType">
-                <el-select v-model="form.campaignType" placeholder="请选择">
-                    <el-option label="满减" :value="1" />
-                    <el-option label="折扣" :value="2" />
-                    <el-option label="赠品" :value="3" />
-                    <el-option label="首单优惠" :value="4" />
-                    <el-option label="会员专享" :value="5" />
-                    <el-option label="限时秒杀" :value="6" />
-                </el-select>
-            </el-form-item>
-            <el-form-item label="目标人群" prop="targetType">
-                <el-select v-model="form.targetType" placeholder="请选择">
-                    <el-option label="全部用户" :value="1" />
-                    <el-option label="新用户" :value="2" />
-                    <el-option label="高频用户" :value="3" />
-                    <el-option label="流失预警用户" :value="4" />
-                    <el-option label="指定等级" :value="5" />
-                </el-select>
-            </el-form-item>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="活动名称" prop="name">
+                        <el-input v-model="form.name" placeholder="请输入活动名称" maxlength="100" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="优先级" prop="priority">
+                        <el-input-number v-model="form.priority" :min="0" :max="100" style="width:100%;" />
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="活动类型" prop="campaignType">
+                        <el-select v-model="form.campaignType" placeholder="请选择" style="width:100%;">
+                            <el-option v-for="(label, val) in typeMap" :key="val" :label="label" :value="Number(val)" />
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="目标人群" prop="targetType">
+                        <el-select v-model="form.targetType" placeholder="请选择" style="width:100%;">
+                            <el-option v-for="(label, val) in targetMap" :key="val" :label="label" :value="Number(val)" />
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+            </el-row>
             <el-form-item label="活动描述" prop="description">
-                <el-input v-model="form.description" type="textarea" :rows="3" placeholder="活动描述说明" maxlength="500" />
+                <el-input v-model="form.description" type="textarea" :rows="2" placeholder="活动描述说明" maxlength="500" show-word-limit />
             </el-form-item>
             <el-form-item label="活动规则" prop="ruleJson">
-                <el-input v-model="form.ruleJson" type="textarea" :rows="3" placeholder='JSON格式，如：{"minAmount":50,"discount":0.8}' />
-            </el-form-item>
-            <el-form-item label="优先级" prop="priority">
-                <el-input-number v-model="form.priority" :min="0" :max="100" />
+                <el-input v-model="form.ruleJson" type="textarea" :rows="3"
+                    placeholder='JSON格式，如：{"minAmount":50,"discount":0.8}' />
+                <span style="font-size:11px;color:#c0c4cc;">满减示例: {"minAmount":80,"reduceAmount":10} | 折扣示例: {"discountRate":0.85} | 秒杀示例: {"flashPrice":9.9,"flashStock":100}</span>
             </el-form-item>
             <el-form-item label="活动时间" required>
-                <el-date-picker
-                    v-model="dateRange"
-                    type="datetimerange"
-                    range-separator="至"
-                    start-placeholder="开始时间"
-                    end-placeholder="结束时间"
-                    value-format="yyyy-MM-dd HH:mm:ss"
-                    style="width:100%"
-                />
+                <el-date-picker v-model="dateRange" type="datetimerange"
+                    range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间"
+                    value-format="yyyy-MM-dd HH:mm:ss" style="width:100%" />
             </el-form-item>
-            <el-form-item label="参与上限">
-                <el-input-number v-model="form.maxParticipants" :min="0" placeholder="0=不限" />
-            </el-form-item>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="参与上限">
+                        <el-input-number v-model="form.maxParticipants" :min="0" placeholder="0=不限" style="width:100%;" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="关联优惠券">
+                        <el-select v-model="form.couponTemplateId" placeholder="可选优惠券模板" clearable filterable style="width:100%;">
+                            <el-option v-for="ct in couponTemplates" :key="ct.id" :label="ct.name" :value="ct.id" />
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+            </el-row>
         </el-form>
         <div class="dialog-footer">
             <el-button size="small" @click="dialogVisible = false">取消</el-button>
             <el-button type="primary" size="small" @click="submitForm" :loading="submitting">保存</el-button>
+        </div>
+    </el-dialog>
+
+    <!-- 推送消息对话框 -->
+    <el-dialog title="推送营销消息" :visible.sync="pushDialogVisible" width="520px">
+        <el-form label-width="100px" size="small">
+            <el-form-item label="活动名称">
+                <el-tag type="primary">{{ pushTargetCampaign ? pushTargetCampaign.name : '' }}</el-tag>
+            </el-form-item>
+            <el-form-item label="目标人群">
+                <el-tag type="warning">{{ targetMap[pushTargetCampaign ? pushTargetCampaign.targetType : 1] }}</el-tag>
+            </el-form-item>
+            <el-form-item label="推送方式">
+                <el-radio-group v-model="pushForm.pushType" @change="onPushTypeChange">
+                    <el-radio :label="1">弹窗通知</el-radio>
+                    <el-radio :label="2">站内消息</el-radio>
+                    <el-radio :label="3">短信推送</el-radio>
+                    <el-radio :label="4">优惠券发放</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="预计触达">
+                <el-tag type="info" size="small">{{ pushEstimate }} 位用户</el-tag>
+                <span style="font-size:12px;color:#909399;margin-left:8px;">系统将自动匹配符合条件的目标用户</span>
+            </el-form-item>
+            <el-form-item label="推送预览" v-if="pushPreview.length > 0">
+                <div class="push-preview">
+                    <div class="preview-item" v-for="(u, i) in pushPreview" :key="i">
+                        <span>{{ u.name || ('用户' + u.userId) }}</span>
+                        <el-tag size="mini" type="info">{{ u.matchReason || '' }}</el-tag>
+                    </div>
+                </div>
+            </el-form-item>
+        </el-form>
+        <div class="dialog-footer">
+            <el-button size="small" @click="pushDialogVisible = false">取消</el-button>
+            <el-button type="primary" size="small" @click="doPush" :loading="pushing">
+                {{ pushForm.pushType === 3 ? '确认发送短信' : '确认推送' }}
+            </el-button>
+        </div>
+    </el-dialog>
+
+    <!-- 活动统计对话框 -->
+    <el-dialog title="活动效果统计" :visible.sync="statsDialogVisible" width="680px">
+        <div v-if="statsCampaign" style="padding: 0 10px;">
+            <el-descriptions :column="2" border size="small">
+                <el-descriptions-item label="活动名称">{{ statsCampaign.name }}</el-descriptions-item>
+                <el-descriptions-item label="活动类型">{{ typeMap[statsCampaign.campaignType] }}</el-descriptions-item>
+                <el-descriptions-item label="参与人数">{{ statsCampaign.currentParticipants || 0 }} / {{ statsCampaign.maxParticipants || '不限' }}</el-descriptions-item>
+                <el-descriptions-item label="活动状态">
+                    <el-tag :type="statusTagType(statsCampaign.status)" size="mini">{{ statusMap[statsCampaign.status] }}</el-tag>
+                </el-descriptions-item>
+            </el-descriptions>
+            <div class="chart-box" id="campaignStatsChart" style="height:280px;margin-top:16px;"></div>
+        </div>
+        <div class="dialog-footer" style="margin-top:16px;">
+            <el-button size="small" @click="statsDialogVisible = false">关闭</el-button>
         </div>
     </el-dialog>
 </div>
@@ -142,22 +290,20 @@
 new Vue({
     el: '#app',
     data: {
-        loading: false,
-        submitting: false,
-        tableData: [],
-        total: 0,
-        currentPage: 1,
-        pageSize: 10,
-        searchName: '',
-        searchStatus: null,
-        dialogVisible: false,
-        dialogTitle: '新建营销活动',
-        dialogMode: 'create',
-        editId: null,
-        dateRange: [],
+        loading: false, submitting: false, pushing: false,
+        tableData: [], total: 0, currentPage: 1, pageSize: 10,
+        searchName: '', searchStatus: null, searchType: null,
+        selectedRows: [],
+        summary: { total: 0, active: 0, totalParticipants: 0, totalPushed: 0 },
+        dialogVisible: false, dialogTitle: '新建营销活动', dialogMode: 'create', editId: null, dateRange: [],
+        pushDialogVisible: false, pushTargetCampaign: null,
+        pushForm: { pushType: 1 }, pushPreview: [], pushEstimate: 0,
+        couponTemplates: [],
+        statsDialogVisible: false, statsCampaign: null, statsChart: null,
         form: {
             name: '', campaignType: 1, targetType: 1, description: '',
-            ruleJson: '', priority: 0, startTime: '', endTime: '', maxParticipants: null
+            ruleJson: '', priority: 0, startTime: '', endTime: '',
+            maxParticipants: null, couponTemplateId: null
         },
         rules: {
             name: [{ required: true, message: '请输入活动名称', trigger: 'blur' }],
@@ -168,24 +314,65 @@ new Vue({
         targetMap: { 1:'全部用户', 2:'新用户', 3:'高频用户', 4:'流失预警', 5:'指定等级' },
         statusMap: { 0:'草稿', 1:'进行中', 2:'已结束', 3:'已暂停' }
     },
-    created() { this.loadData(); },
+    created() { this.loadData(); this.loadCouponTemplates(); },
+    mounted() {
+        this.statsChart = echarts.init(document.getElementById('campaignStatsChart'));
+    },
     methods: {
+        loadCouponTemplates() {
+            $axios.get('/api/member/coupon-template/page', { params: { page: 1, pageSize: 100 } })
+                .then(res => { if (res.code === 1 && res.data) this.couponTemplates = res.data.records || []; })
+                .catch(() => {});
+        },
         loadData() {
             this.loading = true;
             recommendBackendApi.getCampaignsPage({
-                page: this.currentPage,
-                pageSize: this.pageSize,
+                page: this.currentPage, pageSize: this.pageSize,
                 name: this.searchName || undefined,
-                status: this.searchStatus !== null ? this.searchStatus : undefined
+                status: this.searchStatus !== null ? this.searchStatus : undefined,
+                campaignType: this.searchType || undefined
             }).then(res => {
                 if (res.code === 1) {
-                    const data = res.data;
+                    var data = res.data;
                     this.tableData = data.records || [];
                     this.total = data.total || 0;
+                    this.computeSummary();
                 }
             }).catch(err => {
                 this.$message.error('加载失败: ' + (err.response?.data?.msg || err.message));
             }).finally(() => { this.loading = false; });
+        },
+        computeSummary() {
+            var all = this.tableData;
+            this.summary.total = all.length;
+            this.summary.active = all.filter(function(r) { return r.status === 1; }).length;
+            this.summary.totalParticipants = all.reduce(function(s, r) { return s + (r.currentParticipants || 0); }, 0);
+            this.summary.totalPushed = all.reduce(function(s, r) { return s + (r.pushCount || 0); }, 0);
+        },
+        onSelectionChange(rows) { this.selectedRows = rows; },
+        batchDelete() {
+            var self = this;
+            if (self.selectedRows.length === 0) return;
+            self.$confirm('确认删除选中的 ' + self.selectedRows.length + ' 个活动？', '批量删除', { type: 'warning' }).then(function() {
+                var ids = self.selectedRows.map(function(r) { return r.id; });
+                var promises = ids.map(function(id) { return recommendBackendApi.deleteCampaign(id); });
+                Promise.all(promises).then(function() {
+                    self.$message.success('批量删除成功');
+                    self.loadData();
+                }).catch(function() { self.$message.error('部分删除失败'); });
+            }).catch(function() {});
+        },
+        batchPause() {
+            var self = this;
+            var toPause = self.selectedRows.filter(function(r) { return r.status === 1; });
+            if (toPause.length === 0) { self.$message.warning('请选择进行中的活动'); return; }
+            self.$confirm('确认暂停选中的 ' + toPause.length + ' 个活动？', '批量暂停', { type: 'warning' }).then(function() {
+                var promises = toPause.map(function(r) { return recommendBackendApi.pauseCampaign(r.id); });
+                Promise.all(promises).then(function() {
+                    self.$message.success('批量暂停成功');
+                    self.loadData();
+                }).catch(function() { self.$message.error('部分暂停失败'); });
+            }).catch(function() {});
         },
         openDialog(mode, row) {
             this.dialogMode = mode;
@@ -195,9 +382,10 @@ new Vue({
                 this.form = {
                     name: row.name, campaignType: row.campaignType, targetType: row.targetType,
                     description: row.description || '', ruleJson: row.ruleJson || '',
-                    priority: row.priority || 0, maxParticipants: row.maxParticipants
+                    priority: row.priority || 0, maxParticipants: row.maxParticipants,
+                    couponTemplateId: row.couponTemplateId || null
                 };
-                this.dateRange = [row.startTime, row.endTime];
+                this.dateRange = [row.startTime || null, row.endTime || null];
             } else {
                 this.editId = null;
                 this.resetForm();
@@ -207,61 +395,130 @@ new Vue({
         resetForm() {
             this.form = {
                 name: '', campaignType: 1, targetType: 1, description: '',
-                ruleJson: '', priority: 0, maxParticipants: null
+                ruleJson: '', priority: 0, maxParticipants: null, couponTemplateId: null
             };
             this.dateRange = [];
             if (this.$refs.campaignForm) this.$refs.campaignForm.resetFields();
         },
         submitForm() {
-            this.$refs.campaignForm.validate(valid => {
+            var self = this;
+            self.$refs.campaignForm.validate(function(valid) {
                 if (!valid) return;
-                if (!this.dateRange || this.dateRange.length < 2) {
-                    this.$message.warning('请选择活动时间'); return;
+                if (!self.dateRange || self.dateRange.length < 2) {
+                    self.$message.warning('请选择活动时间'); return;
                 }
-                this.form.startTime = this.dateRange[0];
-                this.form.endTime = this.dateRange[1];
-                this.submitting = true;
-                const api = this.dialogMode === 'create' ?
-                    recommendBackendApi.createCampaign(this.form) :
-                    recommendBackendApi.updateCampaign(Object.assign({ id: this.editId }, this.form));
+                self.form.startTime = self.dateRange[0];
+                self.form.endTime = self.dateRange[1];
+                self.submitting = true;
+                var api = self.dialogMode === 'create'
+                    ? recommendBackendApi.createCampaign(self.form)
+                    : recommendBackendApi.updateCampaign(Object.assign({ id: self.editId }, self.form));
 
-                api.then(res => {
+                api.then(function(res) {
                     if (res.code === 1) {
-                        this.$message.success(this.dialogMode === 'create' ? '创建成功' : '更新成功');
-                        this.dialogVisible = false;
-                        this.loadData();
+                        self.$message.success(self.dialogMode === 'create' ? '创建成功' : '更新成功');
+                        self.dialogVisible = false;
+                        self.loadData();
                     } else {
-                        this.$message.error(res.msg || '操作失败');
+                        self.$message.error(res.msg || '操作失败');
                     }
-                }).catch(err => {
-                    this.$message.error('操作失败: ' + (err.response?.data?.msg || err.message));
-                }).finally(() => { this.submitting = false; });
+                }).catch(function(err) {
+                    self.$message.error('操作失败');
+                }).finally(function() { self.submitting = false; });
             });
         },
         publishCampaign(row) {
-            this.$confirm('确认发布该活动？', '提示', { type: 'info' }).then(() => {
-                recommendBackendApi.publishCampaign(row.id).then(res => {
-                    if (res.code === 1) { this.$message.success('发布成功'); this.loadData(); }
+            var self = this;
+            self.$confirm('确认发布【' + row.name + '】？发布后将对目标用户可见。', '提示', { type: 'info' }).then(function() {
+                recommendBackendApi.publishCampaign(row.id).then(function(res) {
+                    if (res.code === 1) { self.$message.success('发布成功'); self.loadData(); }
+                    else { self.$message.error(res.msg || '发布失败'); }
                 });
-            }).catch(() => {});
+            }).catch(function() {});
         },
         pauseCampaign(row) {
-            this.$confirm('确认暂停该活动？', '提示', { type: 'warning' }).then(() => {
-                recommendBackendApi.pauseCampaign(row.id).then(res => {
-                    if (res.code === 1) { this.$message.success('已暂停'); this.loadData(); }
+            var self = this;
+            self.$confirm('确认暂停【' + row.name + '】？暂停后用户将无法参与。', '提示', { type: 'warning' }).then(function() {
+                recommendBackendApi.pauseCampaign(row.id).then(function(res) {
+                    if (res.code === 1) { self.$message.success('已暂停'); self.loadData(); }
+                    else { self.$message.error(res.msg || '暂停失败'); }
                 });
-            }).catch(() => {});
+            }).catch(function() {});
         },
         deleteCampaign(row) {
-            this.$confirm('确认删除该活动？不可恢复！', '警告', { type: 'warning' }).then(() => {
-                recommendBackendApi.deleteCampaign(row.id).then(res => {
-                    if (res.code === 1) { this.$message.success('删除成功'); this.loadData(); }
+            var self = this;
+            self.$confirm('确认删除【' + row.name + '】？不可恢复！', '警告', { type: 'warning', confirmButtonText: '确认删除' }).then(function() {
+                recommendBackendApi.deleteCampaign(row.id).then(function(res) {
+                    if (res.code === 1) { self.$message.success('删除成功'); self.loadData(); }
+                    else { self.$message.error(res.msg || '删除失败'); }
                 });
-            }).catch(() => {});
+            }).catch(function() {});
+        },
+        openPushDialog(row) {
+            this.pushTargetCampaign = row;
+            this.pushForm = { pushType: 1 };
+            this.pushPreview = [];
+            this.pushEstimate = 0;
+            this.pushDialogVisible = true;
+            this.fetchPushPreview(row.id);
+        },
+        fetchPushPreview(campaignId) {
+            var self = this;
+            $axios.get('/marketing/push-preview/' + campaignId, { params: { limit: 10 } }).then(function(res) {
+                if (res.code === 1 && res.data) {
+                    self.pushPreview = res.data.preview || [];
+                    self.pushEstimate = res.data.estimate || self.pushPreview.length;
+                }
+            }).catch(function() {
+                self.pushEstimate = 0;
+            });
+        },
+        onPushTypeChange() {
+            // 切换推送方式时可重新估算
+        },
+        doPush() {
+            if (!this.pushTargetCampaign) return;
+            this.pushing = true;
+            var campaignId = this.pushTargetCampaign.id;
+            recommendBackendApi.batchPush(campaignId, { pushType: this.pushForm.pushType }).then(res => {
+                if (res.code === 1) {
+                    this.$message.success(res.msg || '推送成功，共触达 ' + (res.data || 0) + ' 位用户');
+                    this.pushDialogVisible = false;
+                    this.loadData();
+                } else {
+                    this.$message.error(res.msg || '推送失败');
+                }
+            }).catch(err => {
+                this.$message.error('推送失败: ' + (err.response?.data?.msg || err.message));
+            }).finally(() => { this.pushing = false; });
+        },
+        viewStats(row) {
+            this.statsCampaign = row;
+            this.statsDialogVisible = true;
+            this.$nextTick(function() {
+                this.renderStatsChart(row);
+            });
+        },
+        renderStatsChart(row) {
+            if (!this.statsChart) return;
+            this.statsChart.setOption({
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['推送数', '点击数', '转化数'], bottom: 0 },
+                grid: { left: 50, right: 20, top: 10, bottom: 40 },
+                xAxis: { type: 'category', data: ['Day1', 'Day2', 'Day3', 'Day4', 'Day5', 'Day6', 'Day7'] },
+                yAxis: { type: 'value' },
+                series: [
+                    { name: '推送数', type: 'bar', data: [0,0,0,0,0,0,0],
+                        itemStyle: { color: '#5470c6', borderRadius: [4,4,0,0] } },
+                    { name: '点击数', type: 'bar', data: [0,0,0,0,0,0,0],
+                        itemStyle: { color: '#91cc75', borderRadius: [4,4,0,0] } },
+                    { name: '转化数', type: 'line', data: [0,0,0,0,0,0,0],
+                        lineStyle: { color: '#fac858', width: 2.5 }, smooth: true }
+                ]
+            }, true);
         },
         statusTagType(status) {
-            const map = { 0: 'info', 1: 'success', 2: 'warning', 3: 'danger' };
-            return map[status] || 'info';
+            return { 0: 'info', 1: 'success', 2: 'warning', 3: 'danger' }[status] || 'info';
         }
     }
 });

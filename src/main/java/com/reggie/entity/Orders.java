@@ -127,4 +127,14 @@ public class Orders implements Serializable {
     //租户id
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    /**
+     * 幂等令牌（防止重复下单）
+     */
+    private String idempotencyKey;
+
+    //是否删除
+    @TableLogic(value = "0", delval = "1")
+    @TableField("is_deleted")
+    private Integer isDeleted;
 }

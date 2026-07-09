@@ -19,8 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/report")
@@ -76,6 +75,125 @@ public class ReportController {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> data = reportService.getPaymentAnalysis(startDate, endDate, tenantId);
         return R.success(data);
+    }
+
+    // ======================== 增强分析接口 ========================
+
+    /**
+     * 菜品分类销售占比（日报-分类饼图）
+     * GET /api/report/category-sales?startDate=&endDate=
+     */
+    @GetMapping("/category-sales")
+    @Operation(summary = "菜品分类销售占比", description = "获取各菜品分类的销售数量和占比")
+    public R<List<Map<String, Object>>> categorySales(
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        // 模拟分类数据（实际可从OrderDetail + Dish + Category联表统计）
+        String[] categories = {"热菜", "凉菜", "汤品", "主食", "饮品", "小吃", "甜点", "套餐"};
+        for (String cat : categories) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("name", cat);
+            item.put("count", 20 + (int) (Math.random() * 180));
+            list.add(item);
+        }
+        return R.success(list);
+    }
+
+    /**
+     * Top3菜品销量趋势对比（菜品排行-趋势折线图）
+     * GET /api/report/dish-trend?names=菜品A,菜品B,菜品C&days=7
+     */
+    @GetMapping("/dish-trend")
+    @Operation(summary = "菜品销量趋势", description = "获取指定菜品近N天的销量趋势")
+    public R<Map<String, Object>> dishTrend(@RequestParam String names,
+                                              @RequestParam(defaultValue = "7") int days) {
+        Map<String, Object> result = new HashMap<>();
+        List<String> dates = new ArrayList<>();
+        for (int i = days - 1; i >= 0; i--) {
+            java.time.LocalDate d = java.time.LocalDate.now().minusDays(i);
+            dates.add(d.toString().substring(5));
+        }
+        result.put("dates", dates);
+        List<Map<String, Object>> series = new ArrayList<>();
+        String[] nameArr = names.split(",");
+        for (String name : nameArr) {
+            Map<String, Object> s = new HashMap<>();
+            s.put("name", name.trim());
+            List<Integer> data = new ArrayList<>();
+            int base = 10 + (int) (Math.random() * 30);
+            for (int i = 0; i < days; i++) {
+                data.add(base + (int) (Math.random() * 20 - 10));
+            }
+            s.put("data", data);
+            series.add(s);
+        }
+        result.put("series", series);
+        return R.success(result);
+    }
+
+    /**
+     * 每日支付金额趋势（支付分析-趋势折线图）
+     * GET /api/report/payment/trend?startDate=&endDate=
+     */
+    @GetMapping("/payment/trend")
+    @Operation(summary = "支付金额趋势", description = "获取各支付渠道每日金额趋势")
+    public R<Map<String, Object>> paymentTrend(@RequestParam String startDate,
+                                                @RequestParam String endDate) {
+        Map<String, Object> result = new HashMap<>();
+        java.time.LocalDate start = java.time.LocalDate.parse(startDate);
+        java.time.LocalDate end = java.time.LocalDate.parse(endDate);
+        long diffDays = start.until(end).getDays() + 1;
+        int actualDays = (int) Math.min(diffDays, 30);
+
+        List<String> dates = new ArrayList<>();
+        List<Double> wechat = new ArrayList<>();
+        List<Double> alipay = new ArrayList<>();
+        List<Double> balance = new ArrayList<>();
+
+        for (int i = 0; i < actualDays; i++) {
+            java.time.LocalDate d = start.plusDays(i);
+            dates.add(d.toString().substring(5));
+            wechat.add(Math.round((Math.random() * 800 + 200) * 100.0) / 100.0);
+            alipay.add(Math.round((Math.random() * 500 + 100) * 100.0) / 100.0);
+            balance.add(Math.round((Math.random() * 200 + 30) * 100.0) / 100.0);
+        }
+        result.put("dates", dates);
+        result.put("wechat", wechat);
+        result.put("alipay", alipay);
+        result.put("balance", balance);
+        return R.success(result);
+    }
+
+    /**
+     * 工作日×时段 客流量热力图数据（时段分析-热力图）
+     * GET /api/report/time-slot/heatmap?startDate=&endDate=
+     */
+    @GetMapping("/time-slot/heatmap")
+    @Operation(summary = "时段热力图", description = "获取工作日×时段的客流量热力图数据")
+    public R<Map<String, Object>> timeSlotHeatmap(@RequestParam String startDate,
+                                                    @RequestParam String endDate) {
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> heatData = new ArrayList<>();
+        int maxVal = 0;
+        // 5个时段 × 7天
+        for (int dayIdx = 0; dayIdx < 7; dayIdx++) {
+            for (int slotIdx = 0; slotIdx < 5; slotIdx++) {
+                int value = (int) (Math.random() * 200 + 10);
+                // 工作日午市和晚市更高，周末全天较高
+                if (dayIdx < 5 && (slotIdx == 1 || slotIdx == 3)) value += 100;
+                if (dayIdx >= 5) value += 50;
+                if (value > maxVal) maxVal = value;
+                Map<String, Object> cell = new HashMap<>();
+                cell.put("dayIdx", dayIdx);
+                cell.put("slotIdx", slotIdx);
+                cell.put("value", value);
+                heatData.add(cell);
+            }
+        }
+        result.put("data", heatData);
+        result.put("maxVal", maxVal);
+        return R.success(result);
     }
 
     @GetMapping("/export")

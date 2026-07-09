@@ -1,0 +1,181 @@
+package com.reggie.module.schedule.aspect;
+
+import com.baomidou.mybatisplus.core.toolkit.ReflectionKit;
+import com.reggie.common.BaseContext;
+import com.reggie.common.JacksonObjectMapper;
+import com.reggie.common.LogMaskUtils;
+import com.reggie.entity.OperationLog;
+import com.reggie.module.schedule.service.OperationLogService;
+import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import javax.servlet.http.HttpServletRequest;
+import java.lang.reflect.Method;
+import java.time.LocalDateTime;
+
+/**
+ * 操作日志AOP切面
+ * 自动记录Controller层的增删改操作
+ */
+@Slf4j
+@Aspect
+@Component
+public class OperationLogAspect {
+
+    @Autowired
+    private OperationLogService operationLogService;
+
+    private static final JacksonObjectMapper OBJECT_MAPPER = new JacksonObjectMapper();
+
+    // 只拦截 POST/PUT/DELETE（增删改）
+    @Around("@annotation(org.springframework.web.bind.annotation.PostMapping) " +
+            "|| @annotation(org.springframework.web.bind.annotation.PutMapping) " +
+            "|| @annotation(org.springframework.web.bind.annotation.DeleteMapping)")
+    public Object logOperation(ProceedingJoinPoint joinPoint) throws Throwable {
+        long startTime = System.currentTimeMillis();
+        boolean success = false;
+        String errorMsg = null;
+        Object result = null;
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) {
+            return joinPoint.proceed();
+        }
+        HttpServletRequest request = attributes.getRequest();
+
+        try {
+            result = joinPoint.proceed();
+            success = true;
+            return result;
+        } catch (Exception e) {
+            errorMsg = e.getMessage();
+            throw e;
+        } finally {
+            try {
+                long duration = System.currentTimeMillis() - startTime;
+                OperationLog opLog = buildOperationLog(joinPoint, request, success, errorMsg, duration);
+                if (opLog != null) {
+                    operationLogService.recordLog(opLog);
+                }
+            } catch (Exception e) {
+                log.error("记录操作日志失败", e);
+            }
+        }
+    }
+
+    private OperationLog buildOperationLog(ProceedingJoinPoint joinPoint,
+                                           HttpServletRequest request,
+                                           boolean success,
+                                           String errorMsg,
+                                           long duration) {
+        try {
+            OperationLog opLog = new OperationLog();
+            opLog.setIsSuccess(success ? 1 : 0);
+            opLog.setErrorMsg(errorMsg);
+            opLog.setDuration(duration);
+            opLog.setRequestUrl(request.getRequestURI());
+            opLog.setRequestMethod(request.getMethod());
+            opLog.setOperatorIp(getClientIp(request));
+
+            // 从Session获取操作人信息
+            Long empId = (Long) request.getSession().getAttribute("employee");
+            Long userId = (Long) request.getSession().getAttribute("user");
+            if (empId != null) {
+                opLog.setOperatorId(empId);
+                opLog.setOperatorName("员工-" + empId);
+            } else if (userId != null) {
+                opLog.setOperatorId(userId);
+                opLog.setOperatorName("用户-" + userId);
+            }
+
+            // 提取类名推断模块
+            String className = joinPoint.getTarget().getClass().getName();
+            opLog.setModule(extractModule(className));
+            opLog.setTableName(extractTableName(className));
+            opLog.setOperationType(determineOperationType(request.getMethod()));
+
+            // 记录请求参数（脱敏处理）
+            Object[] args = joinPoint.getArgs();
+            if (args != null && args.length > 0) {
+                try {
+                    String params = OBJECT_MAPPER.writeValueAsString(args[0]);
+                    opLog.setRequestParams(LogMaskUtils.maskSensitiveInfo(params));
+                } catch (Exception e) {
+                    log.warn("序列化请求参数失败", e);
+                }
+            }
+
+            // 操作描述
+            opLog.setDescription(String.format("%s %s %s",
+                opLog.getModule(), opLog.getOperationType(), request.getRequestURI()));
+
+            // 尝试获取业务ID
+            if (args != null && args.length > 0 && args[0] != null) {
+                try {
+                    Object bizId = ReflectionKit.getFieldValue(args[0], "id");
+                    if (bizId instanceof Number) {
+                        opLog.setBizId(((Number) bizId).longValue());
+                    }
+                } catch (Exception ignored) {
+                    // 无法获取ID时跳过
+                }
+            }
+
+            return opLog;
+        } catch (Exception e) {
+            log.error("构建操作日志对象失败", e);
+            return null;
+        }
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip != null && ip.length() != 0 && !"unknown".equalsIgnoreCase(ip)) {
+            return ip.split(",")[0].trim();
+        }
+        ip = request.getHeader("X-Real-IP");
+        if (ip != null && ip.length() != 0 && !"unknown".equalsIgnoreCase(ip)) {
+            return ip;
+        }
+        return request.getRemoteAddr();
+    }
+
+    /**
+     * 从类名提取模块名
+     */
+    private String extractModule(String className) {
+        String simpleName = className.substring(className.lastIndexOf('.') + 1);
+        return simpleName.replace("Controller", "")
+                         .replace("ServiceImpl", "")
+                         .replace("Service", "");
+    }
+
+    /**
+     * 从类名提取表名（近似推断）
+     */
+    private String extractTableName(String className) {
+        String simpleName = className.substring(className.lastIndexOf('.') + 1);
+        return simpleName.replace("Controller", "")
+                         .replace("ServiceImpl", "")
+                         .replace("Service", "");
+    }
+
+    /**
+     * 根据HTTP方法确定操作类型
+     */
+    private String determineOperationType(String httpMethod) {
+        switch (httpMethod.toUpperCase()) {
+            case "POST": return "INSERT";
+            case "PUT": return "UPDATE";
+            case "DELETE": return "DELETE";
+            default: return "OTHER";
+        }
+    }
+}

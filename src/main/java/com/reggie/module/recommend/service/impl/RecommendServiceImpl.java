@@ -302,8 +302,7 @@ public class RecommendServiceImpl implements RecommendService {
             return Collections.emptyList();
         }
 
-        // 查询最近30天销量最高的菜品
-        // OrderDetail没有createTime字段，通过Orders表筛选时间
+        // 修改点：查询最近30天销量最高的菜品，过滤已下架(status!=1)的菜品
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         LambdaQueryWrapper<Orders> orderWrapper = new LambdaQueryWrapper<>();
         orderWrapper.ge(Orders::getCreateTime, thirtyDaysAgo);
@@ -328,14 +327,17 @@ public class RecommendServiceImpl implements RecommendService {
             }
         }
 
-        // 按销量排序
+        // 按销量排序，过滤已下架/不属于当前门店的菜品
         return dishOrderCount.entrySet().stream()
                 .sorted(Map.Entry.<Long, Long>comparingByValue().reversed())
-                .limit(limit)
+                .limit(limit * 2) // 多取一些，过滤后仍够limit个
                 .map(e -> {
                     Dish dish = dishService.getById(e.getKey());
-                    // 修改点：修复运算符优先级问题，tenantId != null放在前面防止NPE
-                    if (dish == null || (tenantId != null && !tenantId.equals(dish.getTenantId()))) {
+                    // 修改点：过滤已下架菜品、不属于当前门店的菜品
+                    if (dish == null || dish.getStatus() != 1) {
+                        return null;
+                    }
+                    if (tenantId != null && !tenantId.equals(dish.getTenantId())) {
                         return null;
                     }
                     Map<String, Object> map = dishToMap(dish);
@@ -344,6 +346,7 @@ public class RecommendServiceImpl implements RecommendService {
                     return map;
                 })
                 .filter(Objects::nonNull)
+                .limit(limit)
                 .collect(Collectors.toList());
     }
 
@@ -372,6 +375,81 @@ public class RecommendServiceImpl implements RecommendService {
         // 异步重新分析偏好
         ASYNC_EXECUTOR.submit(() -> preferenceAnalysisService.analyzeUserPreferences(userId));
         log.info("[推荐引擎] 刷新用户{}的推荐缓存完成", userId);
+    }
+
+    /**
+     * 修改点：计算推荐引擎真实统计数据
+     * 从数据库实时计算覆盖率、点击率、转化率、GMV等
+     */
+    @Override
+    public Map<String, Object> calculateStats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> stats = new LinkedHashMap<>();
+
+        try {
+            // 1. 总用户数（有订单记录的用户）
+            LambdaQueryWrapper<Orders> orderWrapper = new LambdaQueryWrapper<>();
+            if (tenantId != null) {
+                orderWrapper.eq(Orders::getTenantId, tenantId);
+            }
+            int totalOrderUsers = (int) orderService.count(orderWrapper);
+
+            // 2. 有推荐缓存的用户数 → 覆盖率
+            LambdaQueryWrapper<RecommendationCache> cacheWrapper = new LambdaQueryWrapper<>();
+            cacheWrapper.gt(RecommendationCache::getExpireTime, LocalDateTime.now());
+            int cachedUsers = (int) cacheMapper.selectCount(cacheWrapper);
+            int hybridRate = totalOrderUsers > 0 ? (int) (cachedUsers * 100.0 / totalOrderUsers) : 0;
+
+            // 3. 推荐反馈统计 → 点击率(click) / 转化率(order)
+            LambdaQueryWrapper<RecommendationFeedback> feedbackWrapper =
+                    new LambdaQueryWrapper<>();
+            LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+            feedbackWrapper.ge(RecommendationFeedback::getCreateTime, sevenDaysAgo);
+            List<RecommendationFeedback> feedbacks = feedbackMapper.selectList(feedbackWrapper);
+
+            long totalFeedback = feedbacks.size();
+            long clickCount = feedbacks.stream()
+                    .filter(f -> f.getFeedbackType() == RecommendationFeedback.FEEDBACK_CLICK)
+                    .count();
+            long orderCount = feedbacks.stream()
+                    .filter(f -> f.getFeedbackType() == RecommendationFeedback.FEEDBACK_ORDER)
+                    .count();
+
+            int clickRate = totalFeedback > 0 ? (int) (clickCount * 100.0 / totalFeedback) : 0;
+            int conversionRate = totalFeedback > 0 ? (int) (orderCount * 100.0 / totalFeedback) : 0;
+
+            // 4. 推荐贡献GMV：近7天通过推荐反馈产生的订单金额
+            double recommendGMV = 0;
+            if (orderCount > 0) {
+                Set<Long> feedbackUserIds = feedbacks.stream()
+                        .filter(f -> f.getFeedbackType() == RecommendationFeedback.FEEDBACK_ORDER)
+                        .map(RecommendationFeedback::getUserId)
+                        .collect(Collectors.toSet());
+                LambdaQueryWrapper<Orders> gmvWrapper = new LambdaQueryWrapper<>();
+                gmvWrapper.in(Orders::getUserId, feedbackUserIds)
+                        .ge(Orders::getCreateTime, sevenDaysAgo)
+                        .eq(Orders::getStatus, 4); // 已完成订单
+                List<Orders> orders = orderService.list(gmvWrapper);
+                recommendGMV = orders.stream()
+                        .mapToDouble(o -> o.getAmount() != null ? o.getAmount().doubleValue() : 0)
+                        .sum();
+            }
+
+            stats.put("hybridRate", hybridRate);
+            stats.put("clickRate", clickRate);
+            stats.put("conversionRate", conversionRate);
+            stats.put("recommendGMV", Math.round(recommendGMV));
+            stats.put("cachedUsers", cachedUsers);
+            stats.put("totalOrderUsers", totalOrderUsers);
+        } catch (Exception e) {
+            log.warn("[推荐引擎] 统计数据计算异常: {}", e.getMessage());
+            stats.put("hybridRate", 0);
+            stats.put("clickRate", 0);
+            stats.put("conversionRate", 0);
+            stats.put("recommendGMV", 0);
+        }
+
+        return stats;
     }
 
     // ==================== 私有方法：核心算法逻辑 ====================

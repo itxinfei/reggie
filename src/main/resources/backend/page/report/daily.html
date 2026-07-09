@@ -446,16 +446,24 @@
         </div>
       </div>
 
-      <!-- ========== 趋势图 ========== -->
-      <div class="chart-panel">
-        <div class="chart-title">
-          <i class="el-icon-data-line" style="color:#409eff;"></i>
-          营收趋势
-          <span style="font-size:12px;color:#c0c4cc;font-weight:400;margin-left:4px;">
-            （基于选中日期范围，如未选择则默认近7天）
-          </span>
+      <!-- ========== 趋势图 + 分类销售 双图 ========== -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <div class="chart-panel" style="margin-bottom:0;">
+          <div class="chart-title">
+            <i class="el-icon-data-line" style="color:#409eff;"></i>
+            营收趋势
+            <span style="font-size:12px;color:#c0c4cc;font-weight:400;margin-left:4px;">（近7天）</span>
+          </div>
+          <div class="chart-box" id="trendChart"></div>
         </div>
-        <div class="chart-box" id="trendChart"></div>
+        <div class="chart-panel" style="margin-bottom:0;">
+          <div class="chart-title">
+            <i class="el-icon-pie-chart" style="color:#e6a23c;"></i>
+            菜品分类销售占比
+            <span style="font-size:12px;color:#c0c4cc;font-weight:400;margin-left:4px;">（基于已选日期）</span>
+          </div>
+          <div class="chart-box" id="categoryChart"></div>
+        </div>
       </div>
 
       <!-- ========== 导出记录折叠面板 ========== -->
@@ -565,6 +573,7 @@
           queryDate: [day7, today], // 默认范围：近7天
           dailyData: {},
           chart: null,
+          categoryChart: null,
           resizeHandler: null,
           // 导出记录
           exportRecords: [],
@@ -629,7 +638,11 @@
       mounted() {
         this.$nextTick(() => {
           this.chart = echarts.init(document.getElementById('trendChart'))
-          this.resizeHandler = () => { if (this.chart) this.chart.resize() }
+          this.categoryChart = echarts.init(document.getElementById('categoryChart'))
+          this.resizeHandler = () => {
+            if (this.chart) this.chart.resize()
+            if (this.categoryChart) this.categoryChart.resize()
+          }
           window.addEventListener('resize', this.resizeHandler)
           this.loadData()
         })
@@ -637,6 +650,7 @@
       beforeDestroy() {
         if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler)
         if (this.chart) this.chart.dispose()
+        if (this.categoryChart) this.categoryChart.dispose()
       },
       methods: {
         // 格式化日期为 yyyy-MM-dd
@@ -680,6 +694,16 @@
             const trendRes = await $axios.get('/api/dashboard/trend')
             if (String(trendRes.code) === '1') {
               this.renderChart(trendRes.data || [])
+            }
+
+            // 分类销售数据
+            const catRes = await $axios.get('/api/report/category-sales', {
+              params: { startDate: this.queryDate[0], endDate: this.queryDate[1] }
+            })
+            if (String(catRes.code) === '1') {
+              this.renderCategoryChart(catRes.data || [])
+            } else {
+              this.renderCategoryChart(null)
             }
           } catch (err) {
             this.$notify({
@@ -773,6 +797,34 @@
                 }
               }
             ]
+          }, true)
+        },
+
+        // 渲染分类销售饼图
+        renderCategoryChart(data) {
+          if (!this.categoryChart) return
+          if (!data || data.length === 0) {
+            this.categoryChart.setOption({
+              title: { text: '暂无分类数据', left: 'center', top: 'center',
+                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+            }, true)
+            return
+          }
+          var colors = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#fc8452','#9a60b4','#ea7ccc']
+          this.categoryChart.setOption({
+            tooltip: { trigger: 'item', formatter: '{b}: {c} 份 ({d}%)' },
+            legend: { bottom: 4, textStyle: { fontSize: 12 } },
+            series: [{
+              type: 'pie',
+              radius: ['45%', '72%'],
+              center: ['50%', '48%'],
+              itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+              label: { fontSize: 12, formatter: '{b}\n{d}%' },
+              emphasis: { scaleSize: 8, label: { fontSize: 15, fontWeight: 'bold' } },
+              data: data.map(function(item, i) {
+                return { name: item.name, value: item.count, itemStyle: { color: colors[i % colors.length] } }
+              })
+            }]
           }, true)
         },
 

@@ -78,4 +78,12 @@ public interface RecommendService {
      * @param userId 用户ID
      */
     void refreshCache(Long userId);
+
+    /**
+     * 修改点：计算推荐引擎真实统计数据
+     * 从数据库实时计算：覆盖率、点击率、转化率、推荐贡献GMV等
+     *
+     * @return 统计数据Map
+     */
+    Map<String, Object> calculateStats();
 }

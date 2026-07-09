@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.entity.User;
+import com.reggie.mapper.UserMapper;
 import com.reggie.module.member.mapper.CouponTemplateMapper;
 import com.reggie.module.member.mapper.CouponUserMapper;
 import com.reggie.module.member.model.CouponTemplate;
@@ -45,6 +47,8 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
     private CouponUserMapper couponUserMapper;
     @Autowired
     private PreferenceAnalysisService preferenceAnalysisService;
+    @Autowired
+    private UserMapper userMapper;
 
     @Override
     public Page<MarketingCampaign> pageCampaigns(int page, int pageSize, String name, Integer status) {
@@ -107,7 +111,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
             return false;
         }
 
-        // 创建推送消息
+        // 修改点：创建推送消息，状态直接设为SENT（推送即已发送）
         MarketingMessage message = new MarketingMessage();
         message.setCampaignId(campaignId);
         message.setUserId(userId);
@@ -115,7 +119,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         message.setTitle(campaign.getName());
         message.setContent(campaign.getDescription() != null ?
                 campaign.getDescription() : "您有一份专属优惠待领取！");
-        message.setStatus(MarketingMessage.STATUS_PENDING);
+        message.setStatus(MarketingMessage.STATUS_SENT); // 修改点：推送即已发送，用户端可立即查询
 
         messageMapper.insert(message);
 
@@ -123,7 +127,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         campaign.setCurrentParticipants(campaign.getCurrentParticipants() + 1);
         updateById(campaign);
 
-        log.info("[营销推送] 活动{}推送至用户{}", campaignId, userId);
+        log.info("[营销推送] 活动{}推送至用户{}, 状态=SENT", campaignId, userId);
         return true;
     }
 
@@ -269,6 +273,69 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         LambdaQueryWrapper<CouponUser> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CouponUser::getMemberId, userId);
         return couponUserMapper.selectCount(wrapper) <= 1;
+    }
+
+    /**
+     * 修改点：批量推送营销消息
+     * 根据活动目标人群，查询所有符合条件用户并批量创建推送消息
+     */
+    @Override
+    @Transactional
+    public int batchPushMessages(Long campaignId, Integer pushType) {
+        MarketingCampaign campaign = getById(campaignId);
+        if (campaign == null) {
+            log.warn("[批量推送] 活动不存在: {}", campaignId);
+            return 0;
+        }
+
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        // 查询当前门店所有用户
+        LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
+        userWrapper.eq(tenantId != null, User::getTenantId, tenantId)
+                   .eq(User::getStatus, 1); // 启用状态
+        List<User> allUsers = userMapper.selectList(userWrapper);
+
+        int pushed = 0;
+        for (User user : allUsers) {
+            try {
+                // 检查该用户是否匹配活动目标人群
+                boolean isNewUser = isNewUser(user.getId());
+                boolean isHighFreq = preferenceAnalysisService.isHighFrequencyUser(user.getId());
+                boolean isChurnWarning = preferenceAnalysisService.isChurnWarningUser(user.getId());
+
+                if (!isUserMatchCampaign(campaign, isNewUser, isHighFreq, isChurnWarning)) {
+                    continue;
+                }
+
+                // 检查参与上限
+                if (campaign.getMaxParticipants() != null &&
+                        campaign.getCurrentParticipants() >= campaign.getMaxParticipants()) {
+                    break;
+                }
+
+                // 创建推送消息
+                MarketingMessage message = new MarketingMessage();
+                message.setCampaignId(campaignId);
+                message.setUserId(user.getId());
+                message.setPushType(pushType != null ? pushType : MarketingMessage.PUSH_POPUP);
+                message.setTitle(campaign.getName());
+                message.setContent(campaign.getDescription() != null ?
+                        campaign.getDescription() : "您有一份专属优惠待领取！");
+                message.setStatus(MarketingMessage.STATUS_SENT); // 推送即已发送
+                messageMapper.insert(message);
+                pushed++;
+            } catch (Exception e) {
+                log.warn("[批量推送] 用户{}推送失败: {}", user.getId(), e.getMessage());
+            }
+        }
+
+        // 更新参与人数
+        campaign.setCurrentParticipants(campaign.getCurrentParticipants() + pushed);
+        updateById(campaign);
+
+        log.info("[批量推送] 活动{}批量推送完成：推送{}/{}人", campaignId, pushed, allUsers.size());
+        return pushed;
     }
 
     /**

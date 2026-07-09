@@ -63,4 +63,13 @@ public interface OrderService extends IService<Orders> {
      * @return 统计Map
      */
     Map<String, Object> getOrderStatistics();
+
+    // ==================== 幂等性保护 ====================
+
+    /**
+     * 检查幂等令牌是否已使用
+     * @param idempotencyKey 幂等令牌
+     * @return 已存在的订单（如果重复提交），null（如果首次提交）
+     */
+    Orders checkIdempotency(String idempotencyKey);
 }

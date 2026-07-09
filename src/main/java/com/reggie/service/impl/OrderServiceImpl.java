@@ -124,6 +124,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         orders.setAmount(totalAmount.setScale(2, java.math.RoundingMode.HALF_UP));//总金额（精确计算）
         orders.setUserId(userId);
         orders.setNumber(String.valueOf(orderId));
+        // 幂等性保护：如果请求未提供幂等令牌，自动生成一个
+        if (orders.getIdempotencyKey() == null || orders.getIdempotencyKey().trim().isEmpty()) {
+            orders.setIdempotencyKey(generateIdempotencyKey(userId));
+        }
         orders.setUserName(user.getName());
         orders.setConsignee(addressBook.getConsignee());
         orders.setPhone(addressBook.getPhone());
@@ -435,5 +439,30 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             case 6: return "已退款";
             default: return "其他(" + status + ")";
         }
+    }
+
+    // ==================== 幂等性保护 ====================
+
+    /**
+     * 生成幂等令牌：userId_timestamp_random6
+     */
+    private String generateIdempotencyKey(Long userId) {
+        return userId + "_" + System.currentTimeMillis() + "_"
+            + String.format("%06d", (int)(Math.random() * 1000000));
+    }
+
+    /**
+     * 检查幂等令牌是否已存在（重复提交检测）
+     */
+    @Override
+    public Orders checkIdempotency(String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.trim().isEmpty()) {
+            return null;
+        }
+        LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Orders::getIdempotencyKey, idempotencyKey)
+               .orderByDesc(Orders::getOrderTime)
+               .last("LIMIT 1");
+        return this.getOne(wrapper);
     }
 }

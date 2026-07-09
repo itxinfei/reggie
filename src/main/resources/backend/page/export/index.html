@@ -96,6 +96,7 @@
         .history-info { flex: 1; }
         .history-name { font-weight: 500; color: #303133; }
         .history-meta { font-size: 12px; color: #909399; margin-top: 2px; }
+        .history-size { font-size: 12px; color: #67c23a; margin-left: 12px; white-space: nowrap; }
         .history-status {
             padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 500;
         }
@@ -248,20 +249,26 @@
 
         <!-- 导出记录 -->
         <div class="history-section">
-            <div class="history-title">&#128197; 导出记录</div>
+            <div class="history-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>&#128197; 导出记录 <span style="font-size:12px;color:#c0c4cc;font-weight:400;">（最近 {{ history.length }} 条）</span></span>
+                <button v-if="history.length > 0" @click="clearHistory" style="padding:4px 12px;border:1px solid #f56c6c;border-radius:4px;
+                    background:#fff;color:#f56c6c;font-size:12px;cursor:pointer;">清空记录</button>
+            </div>
             <div class="history-list" v-if="history.length > 0">
                 <div class="history-item" v-for="(item, idx) in history" :key="idx">
                     <span class="history-icon">{{ item.icon }}</span>
                     <div class="history-info">
                         <div class="history-name">{{ item.name }}</div>
-                        <div class="history-meta">{{ item.time }} &middot; {{ item.size }}</div>
+                        <div class="history-meta">{{ item.time }}</div>
                     </div>
+                    <span class="history-size">{{ item.size }}</span>
                     <span class="history-status" :class="item.success ? 'success' : 'fail'">
-                        {{ item.success ? '成功' : '失败' }}
+                        {{ item.success ? '✓ 成功' : '✗ 失败' }}
                     </span>
                 </div>
             </div>
             <div class="history-list empty-history" v-else>
+                <div style="font-size:36px;margin-bottom:8px;">📥</div>
                 暂无导出记录，点击上方按钮开始导出
             </div>
         </div>
@@ -428,7 +435,7 @@
                 addHistory(name, icon, ext, success) {
                     var now = new Date();
                     var time = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0')
-                        + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+                        + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
                     this.history.unshift({
                         name: name + '.' + ext,
                         icon: icon,
@@ -436,7 +443,11 @@
                         size: ext.toUpperCase() + ' 文件',
                         success: success
                     });
-                    if (this.history.length > 20) this.history.pop();
+                    if (this.history.length > 50) this.history.pop();
+                },
+                clearHistory() {
+                    this.history = [];
+                    showToast('导出记录已清空', 'info');
                 }
             }
         });

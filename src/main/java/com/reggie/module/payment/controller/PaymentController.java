@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
 import com.reggie.dto.PayRequestDTO;
 import com.reggie.dto.RefundRequestDTO;
+import com.reggie.entity.Orders;
 import com.reggie.module.payment.channel.PaymentChannel;
 import com.reggie.module.payment.channel.PaymentChannelFactory;
 import com.reggie.module.payment.channel.PayRequest;
@@ -17,6 +18,7 @@ import static com.reggie.module.payment.model.PaymentOrder.STATUS_REFUND;
 import static com.reggie.module.payment.model.PaymentOrder.STATUS_SUCCESS;
 import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.payment.service.RefundRecordService;
+import com.reggie.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,6 +48,9 @@ public class PaymentController {
 
     @Autowired
     private RefundRecordService refundRecordService;
+
+    @Autowired
+    private OrderService orderService;
 
     @Autowired
     private PaymentChannelFactory paymentChannelFactory;
@@ -112,6 +117,14 @@ public class PaymentController {
 
             paymentOrder.setStatus(STATUS_REFUND);
             paymentOrderService.updateById(paymentOrder);
+
+            // 联动更新业务订单状态为已退款(6)
+            Orders order = orderService.getById(paymentOrder.getOrderId());
+            if (order != null) {
+                order.setStatus(Orders.STATUS_REFUNDED);
+                orderService.updateById(order);
+                log.info("退款成功联动更新订单: orderId={}, orderStatus=已退款", paymentOrder.getOrderId());
+            }
 
             return R.success("退款成功");
         }

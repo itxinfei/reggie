@@ -50,11 +50,28 @@ public class OrderController {
      */
     @PostMapping("/submit")
     @Operation(summary = "提交订单", description = "用户下单，返回订单ID、订单号和金额供前端跳转支付")
-    @Parameter(name = "orders", description = "订单信息", required = true)
+    @Parameter(name = "orders", description = "订单信息（含幂等令牌idempotencyKey）", required = true)
     public R<Map<String, Object>> submit(@RequestBody Orders orders){
         log.info("订单数据：手机号={}，地址={}",
             LogMaskUtils.maskPhone(orders.getPhone()),
             LogMaskUtils.maskAddress(orders.getAddress()));
+
+        // 幂等性校验：检查是否重复提交
+        String idempotencyKey = orders.getIdempotencyKey();
+        if (idempotencyKey != null && !idempotencyKey.trim().isEmpty()) {
+            Orders existingOrder = orderService.checkIdempotency(idempotencyKey);
+            if (existingOrder != null) {
+                log.warn("检测到重复提交订单：idempotencyKey={}, orderId={}", idempotencyKey, existingOrder.getId());
+                Map<String, Object> result = new HashMap<>();
+                result.put("id", existingOrder.getId());
+                result.put("number", existingOrder.getNumber());
+                result.put("amount", existingOrder.getAmount());
+                result.put("status", existingOrder.getStatus());
+                result.put("duplicate", true);
+                return R.success(result);
+            }
+        }
+
         // 设置租户ID
         orders.setTenantId(BaseContext.getCurrentTenantId());
         orderService.submit(orders);
@@ -65,6 +82,7 @@ public class OrderController {
         result.put("number", orders.getNumber());
         result.put("amount", orders.getAmount());
         result.put("status", orders.getStatus());
+        result.put("duplicate", false);
         return R.success(result);
     }
 

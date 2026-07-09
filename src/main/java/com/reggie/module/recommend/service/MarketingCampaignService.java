@@ -81,4 +81,14 @@ public interface MarketingCampaignService extends IService<MarketingCampaign> {
      * @return 发放的优惠券数量
      */
     int autoDispatchCoupons(Long userId);
+
+    /**
+     * 修改点：批量推送营销消息
+     * 根据活动目标人群自动匹配用户并批量创建推送消息
+     *
+     * @param campaignId 活动ID
+     * @param pushType   推送类型
+     * @return 成功推送的用户数量
+     */
+    int batchPushMessages(Long campaignId, Integer pushType);
 }
