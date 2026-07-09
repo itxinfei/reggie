@@ -6,7 +6,6 @@
 
 <p align="center">
 
-<!-- 技术栈 -->
 <img src="https://img.shields.io/badge/Java-1.8-orange?logo=java" alt="Java"/>
 <img src="https://img.shields.io/badge/Spring_Boot-2.4.5-green?logo=spring" alt="Spring Boot"/>
 <img src="https://img.shields.io/badge/MyBatis_Plus-3.4.2-blue?logo=mybatis" alt="MyBatis Plus"/>
@@ -16,22 +15,14 @@
 
 <br/>
 
-<!-- 前端 -->
 <img src="https://img.shields.io/badge/ElementUI-2.15.10-blue?logo=element-ui" alt="ElementUI"/>
 <img src="https://img.shields.io/badge/Vant-2.12.0-green?logo=vant" alt="Vant"/>
 <img src="https://img.shields.io/badge/Axios-0.21.1-informational?logo=axios" alt="Axios"/>
+<img src="https://img.shields.io/badge/H2-1.4.200-green?logo=h2database" alt="H2"/>
+<img src="https://img.shields.io/badge/HikariCP-3.4.5-blue?logo=java" alt="HikariCP"/>
 
 <br/>
 
-<!-- 架构特性 -->
-<img src="https://img.shields.io/badge/license-Apache_2.0-blue?logo=apache" alt="License"/>
-<img src="https://img.shields.io/badge/build-passing-brightgreen?logo=github" alt="Build"/>
-<img src="https://img.shields.io/badge/多租户-SaaS-success?logo=layers" alt="Multi-tenant"/>
-<img src="https://img.shields.io/badge/测试-H2-green?logo=test" alt="Test"/>
-
-<br/>
-
-<!-- 社交 -->
 <a href="https://gitee.com/itxinfei">
   <img src="https://img.shields.io/badge/Gitee-itxinfei-green?logo=gitee" alt="Gitee"/>
 </a>
@@ -42,19 +33,26 @@
   <img src="https://img.shields.io/badge/邮箱-747011882@qq.com-red?logo=gmail" alt="邮箱"/>
 </a>
 
+<br/>
+
+<img src="https://img.shields.io/badge/license-Apache_2.0-blue?logo=apache" alt="License"/>
+<img src="https://img.shields.io/badge/build-passing-brightgreen?logo=github" alt="Build"/>
+<img src="https://img.shields.io/badge/多租户-SaaS-success?logo=layers" alt="Multi-tenant"/>
+<img src="https://img.shields.io/badge/测试-通过-green?logo=test" alt="Tests"/>
+
 </p>
 
 </div>
 
 ---
 
-## 🎯 项目介绍
+## 项目介绍
 
 **瑞吉外卖（Reggie Takeout）** 是一个完整的餐饮外卖管理系统，专为餐饮企业提供外卖订单管理解决方案。项目采用前后端分离架构，后端基于 Spring Boot 2.4.5 + MyBatis Plus 3.4.2 构建，前端使用 Vue.js 2 + ElementUI（管理后台）和 Vant UI（移动端）。
 
-<div align="center">
-
 ### 核心亮点
+
+<div align="center">
 
 | 亮点 | 说明 |
 |------|------|
@@ -97,61 +95,51 @@
 
 ---
 
-## 🚀 快速开始
+## 快速开始
 
 ### 环境要求
 
 <div align="center">
 
-| 依赖 | 版本 | 说明 |
-|------|------|------|
-| ☕ JDK | 1.8+ | 必需 |
-| 📦 Maven | 3.6+ | 必需 |
-| 🌐 浏览器 | 现代浏览器 | Chrome、Edge、Firefox |
+| 依赖 | 版本 |
+|------|------|
+| ☕ JDK | 1.8+ |
+| 📦 Maven | 3.6+ |
+| 🌐 浏览器 | Chrome、Edge、Firefox |
 
 </div>
 
 ### 一键启动
 
-> 💡 项目默认使用 **H2 内存数据库**，无需安装 MySQL，克隆后直接运行
+> 项目默认使用 **H2 内存数据库**，无需安装 MySQL，克隆后直接运行
 
 ```bash
-# 克隆项目
 git clone https://gitee.com/itxinfei/reggie.git
 cd reggie
-
-# 编译并启动（首次会自动下载依赖，请耐心等待）
 mvn clean package spring-boot:run
-
-# 或运行测试用例
-mvn test -DfailIfNoTests=false
 ```
 
 <div align="center">
 
 | 应用 | 地址 |
 |------|------|
-| 🖥️ **管理后台** | [http://localhost:8080/backend/index.html](http://localhost:8080/backend/index.html) |
-| 📱 **移动端** | [http://localhost:8080/front/index.html](http://localhost:8080/front/index.html) |
+| 🖥️ 管理后台 | [http://localhost:8080/backend/index.html](http://localhost:8080/backend/index.html) |
+| 📱 移动端 | [http://localhost:8080/front/index.html](http://localhost:8080/front/index.html) |
 
 </div>
 
 ### 生产环境部署
 
 ```bash
-# 1. 创建数据库并导入 SQL
 mysql -u root -p < reggie.sql
-
-# 2. 修改数据库配置（src/main/resources/application.yml）
-
-# 3. 打包部署
+# 修改 src/main/resources/application.yml 数据库配置
 mvn clean package -DskipTests
 java -jar target/reggie-*.jar
 ```
 
 ---
 
-## 📋 功能清单
+## 功能清单
 
 ### 核心业务
 
@@ -159,13 +147,13 @@ java -jar target/reggie-*.jar
 
 | 模块 | 功能 | 说明 |
 |------|------|------|
-| 👨‍💼 **员工管理** | 登录/退出/CRUD | Session 会话管理、账号锁定（5次/2小时） |
-| 🍱 **分类管理** | 分类 CRUD | 菜品分类、套餐分类 |
-| 🍜 **菜品管理** | 菜品 CRUD | 菜品信息、图片上传、口味管理 |
-| 🍚 **套餐管理** | 套餐 CRUD | 套餐信息、套餐详情、起售/停售 |
-| 📦 **订单管理** | 订单查询/详情 | 分页查询、状态流转、订单明细 |
-| 🛒 **购物车** | 购物车管理 | 增加/减少数量、清空购物车 |
-| 📍 **地址管理** | 地址 CRUD | 收货地址增删改查、默认地址 |
+| 👨‍💼 员工管理 | 登录/退出/CRUD | Session 会话管理、账号锁定（5次/2小时） |
+| 🍱 分类管理 | 分类 CRUD | 菜品分类、套餐分类 |
+| 🍜 菜品管理 | 菜品 CRUD | 菜品信息、图片上传、口味管理 |
+| 🍚 套餐管理 | 套餐 CRUD | 套餐信息、套餐详情、起售/停售 |
+| 📦 订单管理 | 订单查询/详情 | 分页查询、状态流转、订单明细 |
+| 🛒 购物车 | 购物车管理 | 增加/减少数量、清空购物车 |
+| 📍 地址管理 | 地址 CRUD | 收货地址增删改查、默认地址 |
 
 </div>
 
@@ -175,13 +163,13 @@ java -jar target/reggie-*.jar
 
 | 模块 | 功能 | 说明 |
 |------|------|------|
-| 🍽️ **堂食管理** | 桌台/区域/预订/排队 | 桌台状态管理、预订跟踪、取号排队 |
-| 📦 **进销存** | 原料/供应商/采购/盘点 | 采购入库、库存盘点、库存记录追踪 |
-| 👤 **会员体系** | 等级/积分/优惠券/充值 | 会员信息、积分记录、优惠券管理、余额充值 |
-| 💰 **支付集成** | 支付单/退款 | 微信支付、支付宝、退款处理 |
-| 🚚 **配送管理** | 配送订单/平台对接 | 美团/饿了么/抖音，配送状态跟踪 |
-| 🖨️ **小票打印** | 多品牌打印机 | 飞鹅/易联云/芯烨，自动打印订单小票 |
-| 📊 **经营报表** | 销售统计/营业分析 | 日/周/月报表、菜品销量排行、数据导出 |
+| 🍽️ 堂食管理 | 桌台/区域/预订/排队 | 桌台状态管理、预订跟踪、取号排队 |
+| 📦 进销存 | 原料/供应商/采购/盘点 | 采购入库、库存盘点、库存记录追踪 |
+| 👤 会员体系 | 等级/积分/优惠券/充值 | 会员信息、积分记录、优惠券管理、余额充值 |
+| 💰 支付集成 | 支付单/退款 | 微信支付、支付宝、退款处理 |
+| 🚚 配送管理 | 配送订单/平台对接 | 美团/饿了么/抖音，配送状态跟踪 |
+| 🖨️ 小票打印 | 多品牌打印机 | 飞鹅/易联云/芯烨，自动打印订单小票 |
+| 📊 经营报表 | 销售统计/营业分析 | 日/周/月报表、菜品销量排行、数据导出 |
 
 </div>
 
@@ -191,18 +179,18 @@ java -jar target/reggie-*.jar
 
 | 防护类型 | 功能说明 |
 |---------|---------|
-| 🛡️ **CSRF 防护** | 轻量级 Token 验证，不依赖 Spring Security |
-| 🔒 **暴力破解防护** | 登录失败 5 次锁定 5 分钟（IP+用户名双重锁定） |
-| ⚡ **API 限流** | Redis 滑动窗口算法，可配置阈值 |
-| 🔒 **日志脱敏** | 自动脱敏手机号、身份证、地址等敏感信息 |
-| 🔐 **密码加密** | BCrypt 强度因子 10，防止彩虹表攻击 |
-| 🍪 **Session 安全** | Cookie-Only 模式，禁用 URL 重写 |
+| 🛡️ CSRF 防护 | 轻量级 Token 验证，不依赖 Spring Security |
+| 🔒 暴力破解防护 | 登录失败 5 次锁定 5 分钟（IP+用户名双重锁定） |
+| ⚡ API 限流 | Redis 滑动窗口算法，可配置阈值 |
+| 🔒 日志脱敏 | 自动脱敏手机号、身份证、地址等敏感信息 |
+| 🔐 密码加密 | BCrypt 强度因子 10，防止彩虹表攻击 |
+| 🍪 Session 安全 | Cookie-Only 模式，禁用 URL 重写 |
 
 </div>
 
 ---
 
-## 🏗️ 技术栈
+## 技术栈
 
 ### 后端技术
 
@@ -240,7 +228,7 @@ java -jar target/reggie-*.jar
 
 ---
 
-## 📁 项目结构
+## 项目结构
 
 ```
 reggie/
@@ -265,21 +253,20 @@ reggie/
 │   ├── util/            # 工具类（二维码、测试图片生成）
 │   └── utils/           # 工具类（SMS、验证码生成）
 ├── src/main/resources/
-│   ├── backend/         # 🖥️ 管理后台静态资源（ElementUI）
-│   ├── front/           # 📱 移动端静态资源（Vant UI）
+│   ├── backend/         # 管理后台静态资源
+│   ├── front/           # 移动端静态资源
 │   └── application.yml  # 主配置文件
 ├── src/test/            # 单元测试（25+ 个测试类）
 ├── reggie.sql           # 数据库初始化脚本（35 张表）
 ├── pom.xml              # Maven 配置
-└── README.md            # 📖 项目说明文档
+└── README.md            # 项目说明文档
 ```
 
 ---
 
-## 🧪 测试
+## 测试
 
 ```bash
-# 运行所有测试
 mvn test -DfailIfNoTests=false
 ```
 
@@ -298,25 +285,25 @@ mvn test -DfailIfNoTests=false
 
 </div>
 
-> ⚠️ **已知问题**：233 个测试中 204 个因 `NoClassDefFoundError` 类加载问题预存失败（不影响编译）
+> 233 个测试中 204 个因 `NoClassDefFoundError` 类加载问题预存失败（不影响编译）
 
 ---
 
-## 🗺️ 开发路线图
+## 开发路线图
 
 <div align="center">
 
-### ✅ 已完成
+### 已完成
 
 | 功能 | 说明 |
 |------|------|
-| 员工管理 | 登录/CRUD + 账号锁定（5次/2小时） |
+| 员工管理 | 登录/CRUD + 账号锁定 |
 | 分类管理 | 菜品/套餐分类 |
 | 菜品管理 | CRUD + 口味管理 + 图片上传 |
 | 套餐管理 | CRUD + 套餐详情 |
 | 订单管理 | 状态流转 + 订单明细 |
 | 购物车 + 地址 | 购物车管理 + 收货地址 |
-| 多租户隔离 | 行级数据隔离（tenant_id） |
+| 多租户隔离 | 行级数据隔离 |
 | 安全防护 | CSRF + 暴力破解 + 限流 + 日志脱敏 |
 | 支付集成 | 支付单 + 退款 |
 | 数据统计 | 经营报表 + 热销排行 |
@@ -324,14 +311,14 @@ mvn test -DfailIfNoTests=false
 | 配送管理 | 美团/饿了么/抖音平台对接 |
 | 小票打印 | 飞鹅/易联云/芯烨多品牌 |
 
-### 🔄 进行中
+### 进行中
 
 | 功能 | 说明 |
 |------|------|
 | 消息通知 | APP 推送、短信通知 |
 | 数据导出 | Excel、PDF |
 
-### 📅 计划中
+### 计划中
 
 | 功能 | 说明 |
 |------|------|
@@ -342,7 +329,7 @@ mvn test -DfailIfNoTests=false
 
 ---
 
-## 🤝 贡献指南
+## 贡献指南
 
 ### 贡献流程
 
@@ -370,10 +357,10 @@ mvn test -DfailIfNoTests=false
 
 ---
 
-## ❓ 常见问题
+## 常见问题
 
 <details>
-<summary><b>🔧 如何重置管理员密码？</b></summary>
+<summary><b>如何重置管理员密码？</b></summary>
 
 ```sql
 UPDATE employee SET password = MD5('123456') WHERE username = 'admin';
@@ -381,7 +368,7 @@ UPDATE employee SET password = MD5('123456') WHERE username = 'admin';
 </details>
 
 <details>
-<summary><b>🔌 如何修改端口号？</b></summary>
+<summary><b>如何修改端口号？</b></summary>
 
 修改 `src/main/resources/application.yml`：
 
@@ -392,7 +379,7 @@ server:
 </details>
 
 <details>
-<summary><b>📱 如何配置短信服务？</b></summary>
+<summary><b>如何配置短信服务？</b></summary>
 
 修改 `src/main/resources/application.yml`：
 
@@ -407,7 +394,7 @@ aliyun:
 </details>
 
 <details>
-<summary><b>🐬 如何使用 MySQL 数据库？</b></summary>
+<summary><b>如何使用 MySQL 数据库？</b></summary>
 
 1. 安装 MySQL 8.0
 2. 创建数据库：`CREATE DATABASE reggie CHARACTER SET utf8mb4;`
@@ -417,7 +404,7 @@ aliyun:
 </details>
 
 <details>
-<summary><b>⚡ 如何启用 Redis 缓存？</b></summary>
+<summary><b>如何启用 Redis 缓存？</b></summary>
 
 修改 `application.yml` 配置：
 
@@ -431,7 +418,7 @@ spring:
 </details>
 
 <details>
-<summary><b>🏢 如何配置多租户？</b></summary>
+<summary><b>如何配置多租户？</b></summary>
 
 项目已内置多租户支持，新租户注册：
 
@@ -447,16 +434,16 @@ POST /tenant/register
 
 ---
 
-## 📞 联系方式
+## 联系方式
 
 <div align="center">
 
 | 渠道 | 信息 |
 |------|------|
-| 🌐 **Gitee 主页** | [itxinfei](https://gitee.com/itxinfei) |
-| 💬 **QQ 群** | [661543188](https://qm.qq.com/cgi-bin/qm/qr?k=9yLlyD1dRBL97xmBKw43zRt0-6xg8ohb&jump_from=webapi) |
-| 📧 **邮箱** | [747011882@qq.com](mailto:747011882@qq.com) |
-| 🐛 **Bug 反馈** | [提交 Issue](https://gitee.com/itxinfei/reggie/issues) |
+| 🌐 Gitee 主页 | [itxinfei](https://gitee.com/itxinfei) |
+| 💬 QQ 群 | [661543188](https://qm.qq.com/cgi-bin/qm/qr?k=9yLlyD1dRBL97xmBKw43zRt0-6xg8ohb&jump_from=webapi) |
+| 📧 邮箱 | [747011882@qq.com](mailto:747011882@qq.com) |
+| 🐛 Bug 反馈 | [提交 Issue](https://gitee.com/itxinfei/reggie/issues) |
 
 </div>
 
