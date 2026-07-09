@@ -4,12 +4,26 @@
 
 ### 餐饮企业一站式外卖管理系统
 
-| | | | | |
-|:---:|:---:|:---:|:---:|:---:|
-| <img src="https://img.shields.io/badge/Java-1.8-orange?logo=java"/> | <img src="https://img.shields.io/badge/Spring_Boot-2.4.5-green?logo=spring"/> | <img src="https://img.shields.io/badge/ElementUI-2.15.10-blue?logo=element-ui"/> | <img src="https://img.shields.io/badge/HikariCP-3.4.5-blue?logo=java"/> | <img src="https://img.shields.io/badge/license-Apache_2.0-blue?logo=apache"/> |
-| <img src="https://img.shields.io/badge/Vue.js-2.6.14-green?logo=vue.js"/> | <img src="https://img.shields.io/badge/MyBatis_Plus-3.4.2-blue?logo=mybatis"/> | <img src="https://img.shields.io/badge/Vant-2.12.0-green?logo=vant"/> | <img src="https://img.shields.io/badge/H2-1.4.200-green?logo=h2database"/> | <img src="https://img.shields.io/badge/build-passing-brightgreen?logo=github"/> |
-| <img src="https://img.shields.io/badge/Redis-6.0-red?logo=redis"/> | | <img src="https://img.shields.io/badge/Axios-0.21.1-informational?logo=axios"/> | | <img src="https://img.shields.io/badge/%E5%A4%9A%E7%A7%9F%E6%88%B7-SaaS-success?logo=layers"/> |
-| <img src="https://img.shields.io/badge/MySQL-8.0-blue?logo=mysql"/> | | | | <img src="https://img.shields.io/badge/%E6%B5%8B%E8%AF%95-%E9%80%9A%E8%BF%87-green?logo=test"/> |
+<p align="center">
+
+<img src="https://img.shields.io/badge/Java-1.8-orange?logo=java" alt="Java"/>
+<img src="https://img.shields.io/badge/Spring_Boot-2.4.5-green?logo=spring" alt="Spring Boot"/>
+<img src="https://img.shields.io/badge/MyBatis_Plus-3.4.2-blue?logo=mybatis" alt="MyBatis Plus"/>
+<img src="https://img.shields.io/badge/Vue.js-2.6.14-green?logo=vue.js" alt="Vue.js"/>
+<img src="https://img.shields.io/badge/Redis-6.0-red?logo=redis" alt="Redis"/>
+<img src="https://img.shields.io/badge/MySQL-8.0-blue?logo=mysql" alt="MySQL"/>
+
+</p>
+
+<p align="center">
+
+<img src="https://img.shields.io/badge/ElementUI-2.15.10-blue?logo=element-ui" alt="ElementUI"/>
+<img src="https://img.shields.io/badge/Vant-2.12.0-green?logo=vant" alt="Vant"/>
+<img src="https://img.shields.io/badge/Axios-0.21.1-informational?logo=axios" alt="Axios"/>
+<img src="https://img.shields.io/badge/H2-1.4.200-green?logo=h2database" alt="H2"/>
+<img src="https://img.shields.io/badge/HikariCP-3.4.5-blue?logo=java" alt="HikariCP"/>
+
+</p>
 
 <p align="center">
 
@@ -22,6 +36,15 @@
 <a href="mailto:747011882@qq.com">
   <img src="https://img.shields.io/badge/%E9%82%AE%E7%AE%B1-747011882@qq.com-red?logo=gmail" alt="邮箱"/>
 </a>
+
+</p>
+
+<p align="center">
+
+<img src="https://img.shields.io/badge/license-Apache_2.0-blue?logo=apache" alt="License"/>
+<img src="https://img.shields.io/badge/build-passing-brightgreen?logo=github" alt="Build"/>
+<img src="https://img.shields.io/badge/%E5%A4%9A%E7%A7%9F%E6%88%B7-SaaS-success?logo=layers" alt="Multi-tenant"/>
+<img src="https://img.shields.io/badge/%E6%B5%8B%E8%AF%95-%E9%80%9A%E8%BF%87-green?logo=test" alt="Tests"/>
 
 </p>
 
@@ -182,11 +205,10 @@ java -jar target/reggie-*.jar
 | 语言 | ☕ Java | 1.8 |
 | 框架 | 🌱 Spring Boot | 2.4.5 |
 | Web | 🌐 Spring MVC | 5.3.6 |
-| 会话 | 🗂️ Spring Session | 2.4.5 |
-| 安全 | 🔐 Spring Security | 5.4.6 |
+| 安全 | 🔐 Spring Security Crypto | 5.4.6 |
 | ORM | 🗄️ MyBatis Plus | 3.4.2 |
 | 缓存 | 🚀 Redis | 6.0+ |
-| 连接池 | ⚡ HikariCP | 3.4.5 |
+| 连接池 | ⚡ Druid | 1.1.23 |
 | 数据库 | 🐬 MySQL Driver | 8.0.23 |
 | 测试 | 🧪 H2 Database | 1.4.200 |
 | 文档 | 📄 Springdoc | 1.6.9 |
@@ -335,8 +357,29 @@ mvn test -DfailIfNoTests=false
 <details>
 <summary><b>如何重置管理员密码？</b></summary>
 
-```sql
-UPDATE employee SET password = MD5('123456') WHERE username = 'admin';
+项目使用 BCrypt 加密密码，不能直接在 SQL 中设置明文。推荐以下方法：
+
+**方法一：通过 API 接口修改**
+```bash
+# 1. 先用旧密码登录获取 Session
+curl -c cookies.txt -X POST http://localhost:8080/employee/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"旧密码"}'
+
+# 2. 修改密码
+curl -b cookies.txt -X PUT http://localhost:8080/employee/password \
+  -H "Content-Type: application/json" \
+  -d '{"oldPassword":"旧密码","newPassword":"123456"}'
+```
+
+**方法二：使用 Java 代码生成 BCrypt 密码**
+```java
+import org.springframework.security.crypto.bcrypt.BCrypt;
+
+String rawPassword = "123456";
+String encodedPassword = BCrypt.hashpw(rawPassword, BCrypt.gensalt(10));
+System.out.println(encodedPassword);
+// 然后将输出的哈希值更新到数据库
 ```
 </details>
 
