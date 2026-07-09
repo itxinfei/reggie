@@ -1,5 +1,6 @@
 package com.reggie.common;
 
+import com.reggie.common.BaseContext;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -26,6 +27,9 @@ public class RateLimitAspect {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final boolean enabled;
+
+    /** 匿名用户标识 */
+    private static final String ANONYMOUS_USER = "anonymous";
 
     @Autowired
     public RateLimitAspect(@Autowired(required = false) RedisTemplate<String, Object> redisTemplate) {
@@ -106,8 +110,9 @@ public class RateLimitAspect {
                 keyBuilder.append(ip);
                 break;
             case USER:
-                // TODO: 从 Session/Token 中获取用户 ID
-                keyBuilder.append("anonymous");
+                // 从BaseContext获取真实用户ID
+                Long userId = BaseContext.getCurrentId();
+                keyBuilder.append(userId != null ? userId : ANONYMOUS_USER);
                 break;
             case GLOBAL:
                 keyBuilder.append("global");

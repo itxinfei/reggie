@@ -2,7 +2,7 @@ package com.reggie.utils;
 
 import com.reggie.common.CustomException;
 import lombok.extern.slf4j.Slf4j;
-import java.util.Random;
+import java.security.SecureRandom;
 
 /**
  * 随机生成验证码工具类
@@ -60,6 +60,11 @@ public final class ValidateCodeUtils {
     private static final int HEX_RADIX = 16;
 
     /**
+     * 安全随机数生成器
+     */
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    /**
      * 随机生成验证码
      * @param length 长度为4位或者6位
      * @return 验证码
@@ -67,9 +72,9 @@ public final class ValidateCodeUtils {
     public static Integer generateValidateCode(int length){
         Integer code = null;
         if(length == CODE_LENGTH_4){
-            code = new Random().nextInt(CODE_4_MAX) + CODE_4_MIN;
+            code = SECURE_RANDOM.nextInt(CODE_4_MAX) + CODE_4_MIN;
         }else if(length == CODE_LENGTH_6){
-            code = new Random().nextInt(CODE_6_MAX) + CODE_6_MIN;
+            code = SECURE_RANDOM.nextInt(CODE_6_MAX) + CODE_6_MIN;
         }else{
             log.warn("不支持的验证码长度: {}", length);
             throw new CustomException("只能生成4位或6位数字验证码");
@@ -87,7 +92,7 @@ public final class ValidateCodeUtils {
             log.warn("验证码长度不符合要求: {}", length);
             throw new CustomException("验证码长度必须在1-8之间");
         }
-        Random rdm = new Random();
+        SecureRandom rdm = new SecureRandom();
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < length; i++) {
             sb.append(Integer.toHexString(rdm.nextInt(HEX_RADIX)));
