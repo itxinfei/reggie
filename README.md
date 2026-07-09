@@ -2,32 +2,53 @@
 
 # 🍜 瑞吉外卖 (Reggie Takeout)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/license-Apache%202.0-blue?logo=apache" alt="License"/>
-  <img src="https://img.shields.io/badge/Java-1.8-orange?logo=java" alt="Java"/>
-  <img src="https://img.shields.io/badge/Spring%20Boot-2.4.5-green?logo=spring" alt="Spring Boot"/>
-  <img src="https://img.shields.io/badge/MyBatis%20Plus-3.4.2-blue?logo=mybatis" alt="MyBatis Plus"/>
-  <img src="https://img.shields.io/badge/build-passing-brightgreen?logo=github" alt="Build"/>
-  <img src="https://img.shields.io/badge/issues-welcome-yellow?logo=gitlab" alt="Issues"/>
-</p>
+### 餐饮企业一站式外卖管理系统
 
 <p align="center">
-  <a href="https://gitee.com/itxinfei">
-    <img src="https://img.shields.io/badge/Gitee-itxinfei-green?logo=gitee" alt="Gitee"/>
-  </a>
-  <a href="https://qm.qq.com/cgi-bin/qm/qr?k=9yLlyD1dRBL97xmBKw43zRt0-6xg8ohb&jump_from=webapi">
-    <img src="https://img.shields.io/badge/QQ群-661543188-red?logo=tencent-qq" alt="QQ群"/>
-  </a>
-  <a href="mailto:747011882@qq.com">
-    <img src="https://img.shields.io/badge/邮箱-747011882@qq.com-red?logo=gmail" alt="邮箱"/>
-  </a>
-</p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/架构-前后端分离-success?logo=layers" alt="架构"/>
-  <img src="https://img.shields.io/badge/数据库-MySQL%2BRedis-blue?logo=mysql" alt="数据库"/>
-  <img src="https://img.shields.io/badge/缓存-Redis-orange?logo=redis" alt="缓存"/>
-  <img src="https://img.shields.io/badge/ORM-MyBatis%20Plus-green?logo=java" alt="ORM"/>
+<!-- 技术栈 -->
+<img src="https://img.shields.io/badge/Java-1.8-orange?logo=java" alt="Java"/>
+<img src="https://img.shields.io/badge/Spring_Boot-2.4.5-green?logo=spring" alt="Spring Boot"/>
+<img src="https://img.shields.io/badge/MyBatis_Plus-3.4.2-blue?logo=mybatis" alt="MyBatis Plus"/>
+<img src="https://img.shields.io/badge/Vue.js-2.6.14-green?logo=vue.js" alt="Vue.js"/>
+<img src="https://img.shields.io/badge/Redis-6.0-red?logo=redis" alt="Redis"/>
+<img src="https://img.shields.io/badge/MySQL-8.0-blue?logo=mysql" alt="MySQL"/>
+
+<br/>
+
+<!-- 前端 -->
+<img src="https://img.shields.io/badge/ElementUI-2.15.10-blue?logo=element-ui" alt="ElementUI"/>
+<img src="https://img.shields.io/badge/Vant-2.12.0-green?logo=vant" alt="Vant"/>
+<img src="https://img.shields.io/badge/Axios-0.21.1-informational?logo=axios" alt="Axios"/>
+
+<br/>
+
+<!-- 状态 -->
+<img src="https://img.shields.io/badge/license-Apache_2.0-blue?logo=apache" alt="License"/>
+<img src="https://img.shields.io/badge/build-passing-brightgreen?logo=github" alt="Build"/>
+<img src="https://img.shields.io/badge/多租户-SaaS-success?logo=layers" alt="Multi-tenant"/>
+
+<br/>
+
+<!-- 社交 -->
+<a href="https://gitee.com/itxinfei">
+  <img src="https://img.shields.io/badge/Gitee-itxinfei-green?logo=gitee" alt="Gitee"/>
+</a>
+<a href="https://qm.qq.com/cgi-bin/qm/qr?k=9yLlyD1dRBL97xmBKw43zRt0-6xg8ohb&jump_from=webapi">
+  <img src="https://img.shields.io/badge/QQ群-661543188-red?logo=tencent-qq" alt="QQ群"/>
+</a>
+<a href="mailto:747011882@qq.com">
+  <img src="https://img.shields.io/badge/邮箱-747011882@qq.com-red?logo=gmail" alt="邮箱"/>
+</a>
+
+<br/>
+
+<!-- 架构 -->
+<img src="https://img.shields.io/badge/架构-前后端分离-success?logo=layers" alt="架构"/>
+<img src="https://img.shields.io/badge/数据库-MySQL%2BRedis-blue?logo=mysql" alt="数据库"/>
+<img src="https://img.shields.io/badge/缓存-Redis-orange?logo=redis" alt="缓存"/>
+<img src="https://img.shields.io/badge/ORM-MyBatis_Plus-green?logo=java" alt="ORM"/>
+
 </p>
 
 ## 🎓 教学级外卖管理系统
