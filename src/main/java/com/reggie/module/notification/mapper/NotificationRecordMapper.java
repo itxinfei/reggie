@@ -1,0 +1,12 @@
+package com.reggie.module.notification.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.reggie.module.notification.model.NotificationRecord;
+import org.apache.ibatis.annotations.Mapper;
+
+/**
+ * 通知发送记录Mapper
+ */
+@Mapper
+public interface NotificationRecordMapper extends BaseMapper<NotificationRecord> {
+}

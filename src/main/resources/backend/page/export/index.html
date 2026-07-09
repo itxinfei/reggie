@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据导出</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+               background: #f0f2f5; color: #333; padding: 20px; }
+        .page-header { margin-bottom: 24px; }
+        .page-header h2 { font-size: 20px; color: #1a1a1a; }
+        .page-header p { font-size: 13px; color: #999; margin-top: 4px; }
+
+        .export-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+
+        .export-card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+                       transition: box-shadow 0.2s; }
+        .export-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .card-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center;
+                     justify-content: center; font-size: 22px; margin-bottom: 12px; }
+        .icon-order { background: #e6f7ff; color: #1890ff; }
+        .icon-dish { background: #fff7e6; color: #fa8c16; }
+        .icon-emp { background: #f6ffed; color: #52c41a; }
+        .icon-report { background: #f0f5ff; color: #722ed1; }
+
+        .card-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+        .card-desc { font-size: 13px; color: #666; margin-bottom: 14px; line-height: 1.5; }
+
+        .filter-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+        .filter-row input, .filter-row select { padding: 6px 10px; border: 1px solid #d9d9d9; border-radius: 4px;
+                font-size: 13px; }
+
+        .btn-row { display: flex; gap: 8px; }
+        .btn { padding: 7px 18px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;
+               transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-excel { background: #217346; color: #fff; }
+        .btn-excel:hover { background: #2d8c56; }
+        .btn-pdf { background: #d9363e; color: #fff; }
+        .btn-pdf:hover { background: #f04848; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 4px;
+                 color: #fff; font-size: 14px; z-index: 2000; animation: slideIn 0.3s; }
+        .toast-success { background: #52c41a; }
+        .toast-error { background: #ff4d4f; }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="page-header">
+            <h2>数据导出</h2>
+            <p>支持将业务数据导出为 Excel(.xlsx) 和 PDF 格式，导出文件自动包含时间戳</p>
+        </div>
+
+        <div class="export-cards">
+            <!-- 订单导出 -->
+            <div class="export-card">
+                <div class="card-icon icon-order">📋</div>
+                <div class="card-title">订单数据导出</div>
+                <div class="card-desc">导出指定日期范围的订单记录，包含订单号、用户、金额、状态等信息</div>
+                <div class="filter-row">
+                    <input type="date" v-model="orderFilter.startDate" placeholder="开始日期" />
+                    <input type="date" v-model="orderFilter.endDate" placeholder="结束日期" />
+                </div>
+                <div class="filter-row">
+                    <select v-model="orderFilter.status">
+                        <option value="">所有状态</option>
+                        <option :value="2">待接单</option>
+                        <option :value="3">已接单</option>
+                        <option :value="4">派送中</option>
+                        <option :value="5">已完成</option>
+                        <option :value="6">已取消</option>
+                    </select>
+                </div>
+                <div class="btn-row">
+                    <button class="btn btn-excel" :disabled="orderExport.loading"
+                            @click="exportOrder('excel')">📥 导出Excel</button>
+                    <button class="btn btn-pdf" :disabled="orderExport.loading"
+                            @click="exportOrder('pdf')">📄 导出PDF</button>
+                </div>
+            </div>
+
+            <!-- 菜品导出 -->
+            <div class="export-card">
+                <div class="card-icon icon-dish">🍜</div>
+                <div class="card-title">菜品数据导出</div>
+                <div class="card-desc">导出所有在售菜品清单，包含名称、分类、价格、状态等信息</div>
+                <div class="btn-row">
+                    <button class="btn btn-excel" :disabled="dishExport.loading"
+                            @click="exportDish('excel')">📥 导出Excel</button>
+                    <button class="btn btn-pdf" :disabled="dishExport.loading"
+                            @click="exportDish('pdf')">📄 导出PDF</button>
+                </div>
+            </div>
+
+            <!-- 员工导出 -->
+            <div class="export-card">
+                <div class="card-icon icon-emp">👥</div>
+                <div class="card-title">员工数据导出</div>
+                <div class="card-desc">导出所有员工信息，包含姓名、账号、性别、状态、入职时间</div>
+                <div class="btn-row">
+                    <button class="btn btn-excel" :disabled="empExport.loading"
+                            @click="exportEmp('excel')">📥 导出Excel</button>
+                </div>
+            </div>
+
+            <!-- 经营报表导出（预留） -->
+            <div class="export-card">
+                <div class="card-icon icon-report">📊</div>
+                <div class="card-title">经营报表导出</div>
+                <div class="card-desc">导出每日经营汇总数据，包含营业额、订单量、客单价等核心指标</div>
+                <div class="filter-row">
+                    <input type="date" v-model="reportFilter.startDate" placeholder="开始日期" />
+                    <input type="date" v-model="reportFilter.endDate" placeholder="结束日期" />
+                </div>
+                <div class="btn-row">
+                    <button class="btn btn-excel" :disabled="reportExport.loading"
+                            @click="exportReport('excel')">📥 导出Excel</button>
+                    <button class="btn btn-pdf" :disabled="reportExport.loading"
+                            @click="exportReport('pdf')">📄 导出PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast" style="display:none"></div>
+
+    <script src="../../js/vue.js"></script>
+    <script src="../../js/axios.min.js"></script>
+    <script src="../../api/export.js"></script>
+    <script>
+        axios.defaults.baseURL = 'http://localhost:8080';
+
+        new Vue({
+            el: '#app',
+            data: {
+                orderFilter: { startDate: '', endDate: '', status: '' },
+                orderExport: { loading: false },
+
+                dishExport: { loading: false },
+
+                empExport: { loading: false },
+
+                reportFilter: { startDate: '', endDate: '' },
+                reportExport: { loading: false }
+            },
+            methods: {
+                // 导出订单
+                exportOrder(format) {
+                    this.orderExport.loading = true;
+                    const params = {};
+                    if (this.orderFilter.startDate) params.startDate = this.orderFilter.startDate;
+                    if (this.orderFilter.endDate) params.endDate = this.orderFilter.endDate;
+                    if (this.orderFilter.status) params.status = this.orderFilter.status;
+
+                    const apiCall = format === 'excel'
+                        ? exportApi.exportOrdersExcel(params)
+                        : exportApi.exportOrdersPdf(params);
+
+                    exportApi.downloadFile(apiCall, '订单数据.' + format);
+                    this.orderExport.loading = false;
+                    showToast('订单数据导出成功', 'success');
+                },
+
+                // 导出菜品
+                exportDish(format) {
+                    this.dishExport.loading = true;
+                    const apiCall = format === 'excel'
+                        ? exportApi.exportDishesExcel({})
+                        : exportApi.exportDishesPdf({});
+
+                    exportApi.downloadFile(apiCall, '菜品数据.' + format);
+                    this.dishExport.loading = false;
+                    showToast('菜品数据导出成功', 'success');
+                },
+
+                // 导出员工
+                exportEmp(format) {
+                    this.empExport.loading = true;
+                    exportApi.downloadFile(exportApi.exportEmployeesExcel({}), '员工数据.xlsx');
+                    this.empExport.loading = false;
+                    showToast('员工数据导出成功', 'success');
+                },
+
+                // 导出报表（调用已有的ReportController）
+                exportReport(format) {
+                    this.reportExport.loading = true;
+                    const params = {};
+                    if (this.reportFilter.startDate) params.startDate = this.reportFilter.startDate;
+                    if (this.reportFilter.endDate) params.endDate = this.reportFilter.endDate;
+                    // 暂使用现有报表接口，后续可升级为Excel/PDF格式
+                    const apiCall = axios.get('/api/report/export', {
+                        params,
+                        responseType: 'blob'
+                    });
+                    exportApi.downloadFile(apiCall, '经营报表.csv');
+                    this.reportExport.loading = false;
+                    showToast('报表导出成功', 'success');
+                }
+            }
+        });
+
+        function showToast(msg, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast toast-' + type;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2500);
+        }
+    </script>
+</body>
+</html>
