@@ -1,5 +1,5 @@
 /**
-首屏样式
+首屏样式 - 优化版
 */
 #main {
   height: 100%;
@@ -10,14 +10,51 @@
   background-repeat: no-repeat;
   height: 152rem;
   background-size: contain;
+  position: relative;
 }
 
-#main .divHead img {
+#main .divHead .userEntry {
   position: absolute;
   left: 19rem;
   top: 41rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+#main .divHead .userEntry:active {
+  transform: scale(0.95);
+}
+
+#main .divHead .userEntry img {
+  position: static;
   width: 28rem;
   height: 28rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  transition: border-color 0.3s;
+}
+
+#main .divHead .userPhone {
+  margin-left: 8rem;
+  font-size: 14rem;
+  font-family: PingFangSC, PingFangSC-Regular;
+  color: #ffffff;
+  line-height: 28rem;
+  font-weight: 500;
+}
+
+#main .divHead .userTips {
+  margin-left: 6rem;
+  font-size: 12rem;
+  font-family: PingFangSC, PingFangSC-Regular;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 28rem;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12rem;
+  padding: 0 10rem;
+  white-space: nowrap;
 }
 
 #main .divTitle {
@@ -25,14 +62,16 @@
   height: 118rem;
   opacity: 1;
   background: #ffffff;
-  border-radius: 6rem;
-  box-shadow: 0rem 2rem 5rem 0rem rgba(69, 69, 69, 0.1);
+  border-radius: 8rem;
+  box-shadow: 0 3rem 12rem 0rem rgba(69, 69, 69, 0.08);
   position: absolute;
   left: 50%;
   top: 77rem;
   transform: translate(-50%, 0);
   box-sizing: border-box;
   padding: 14rem 0 0 8rem;
+  transition: box-shadow 0.3s;
+  z-index: 100;
 }
 #main .divTitle .divStatic {
   display: flex;
@@ -103,6 +142,7 @@
 
 #main .divBody .divType {
   background: #f6f6f6;
+  position: relative;
 }
 
 #main .divBody .divType ul {
@@ -113,27 +153,43 @@
   box-sizing: border-box;
   width: 84rem;
   opacity: 1;
+  scroll-behavior: smooth;
 }
 
 #main .divBody .divType ul li {
-  padding: 16rem;
+  padding: 16rem 8rem;
   opacity: 1;
   font-size: 13rem;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
-  text-align: left;
+  text-align: center;
   color: #666666;
   line-height: 18rem;
   letter-spacing: 0rem;
   word-wrap: break-word;
   word-break: normal;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  position: relative;
 }
 
 #main .divBody .divType ul li.active {
   color: #333333;
-  font-weight: 500;
+  font-weight: 600;
   background-color: #ffffff;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: PingFangSC, PingFangSC-Semibold;
+}
+
+#main .divBody .divType ul li.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3rem;
+  height: 18rem;
+  background: #ffc200;
+  border-radius: 0 2rem 2rem 0;
 }
 
 #main .divBody .divMenu {
@@ -149,11 +205,19 @@
   height: calc(100% - 61rem);
   padding-bottom: 200rem;
   box-sizing: border-box;
+  scroll-behavior: smooth;
 }
 
 #main .divBody .divMenu .divItem {
   margin: 10rem 15rem 20rem 14rem;
   display: flex;
+  padding: 6rem;
+  border-radius: 6rem;
+  transition: background 0.15s ease;
+}
+
+#main .divBody .divMenu .divItem:active {
+  background: rgba(0, 0, 0, 0.02);
 }
 
 #main .divBody .divMenu .divItem .el-image {
@@ -255,26 +319,40 @@
   color: #333333;
   line-height: 24rem;
   letter-spacing: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#main .divBody .divMenu .divItem .divNum .divTypes:active {
+  transform: scale(0.95);
+  background: #e6af00;
 }
 
 #main .divBody .divMenu .divItem .divNum img {
   width: 36rem;
   height: 36rem;
+  transition: transform 0.15s;
+  cursor: pointer;
+}
+
+#main .divBody .divMenu .divItem .divNum img:active {
+  transform: scale(0.85);
 }
 
 #main .divCart {
   width: 345rem;
   height: 44rem;
   opacity: 1;
-  background: #000000;
+  background: #1a1a1a;
   border-radius: 25rem;
-  box-shadow: 0rem 3rem 5rem 0rem rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4rem 14rem 0rem rgba(0, 0, 0, 0.3);
   margin: 0 auto;
   bottom: 24rem;
   position: fixed;
   left: 50%;
   transform: translate(-50%, 0);
   z-index: 3000;
+  transition: box-shadow 0.3s;
 }
 
 #main .divCart .imgCartActive {
@@ -367,14 +445,14 @@
 
 #main .divLayer .divLayerLeft {
   background-color: #f6f6f6;
-  opacity: 0.5;
+  opacity: 0.6;
   width: 84rem;
   height: 100%;
 }
 
 #main .divLayer .divLayerRight {
   background-color: white;
-  opacity: 0.5;
+  opacity: 0.6;
   width: calc(100% - 84rem);
   height: 100%;
 }
@@ -382,15 +460,16 @@
 #main .dialogFlavor {
   opacity: 1;
   background: #ffffff;
-  border-radius: 10rem;
+  border-radius: 12rem;
+  overflow: hidden;
 }
 
 #main .dialogFlavor .dialogTitle {
-  margin-top: 26rem;
-  margin-bottom: 14rem;
+  margin-top: 24rem;
+  margin-bottom: 12rem;
   font-size: 18rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
+  font-family: PingFangSC, PingFangSC-Semibold;
+  font-weight: 600;
   color: #333333;
   letter-spacing: 0;
   text-align: center;
@@ -432,11 +511,18 @@
   font-weight: 400;
   text-align: center;
   color: #333333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#main .dialogFlavor .divContent span:active {
+  transform: scale(0.95);
 }
 
 #main .dialogFlavor .divContent .spanActive {
   background: #ffc200;
   font-weight: 500;
+  box-shadow: 0 2rem 6rem rgba(255, 194, 0, 0.3);
 }
 
 #main .dialogFlavor .divBottom {
@@ -467,17 +553,25 @@
   width: 100rem;
   height: 30rem;
   opacity: 1;
-  background: #ffc200;
+  background: linear-gradient(135deg, #ffc200, #ffb300);
   border-radius: 15rem;
   text-align: center;
   line-height: 30rem;
   position: absolute;
   right: 20rem;
   font-size: 14rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
+  font-family: PingFangSC, PingFangSC-Semibold;
+  font-weight: 600;
   text-align: center;
   color: #333333;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2rem 8rem rgba(255, 194, 0, 0.3);
+}
+
+#main .dialogFlavor .divBottom div:last-child:active {
+  transform: scale(0.95);
+  box-shadow: 0 1rem 4rem rgba(255, 194, 0, 0.2);
 }
 
 #main .dialogFlavor .divFlavorClose {
@@ -595,6 +689,12 @@
 #main .dialogCart .divCartContent .divCartItem .divNum img {
   width: 36rem;
   height: 36rem;
+  transition: transform 0.15s;
+  cursor: pointer;
+}
+
+#main .dialogCart .divCartContent .divCartItem .divNum img:active {
+  transform: scale(0.85);
 }
 
 #main .dialogCart .divCartContent .divCartItem .divSplit {
@@ -722,6 +822,33 @@
 #main .detailsDialog .divNum img {
   width: 36rem;
   height: 36rem;
+  transition: transform 0.15s;
+  cursor: pointer;
+}
+
+#main .detailsDialog .divNum img:active {
+  transform: scale(0.85);
+}
+
+#main .detailsDialog .divNum .divTypes {
+  width: 64rem;
+  height: 24rem;
+  opacity: 1;
+  background: #ffc200;
+  border-radius: 12rem;
+  font-size: 12rem;
+  font-family: PingFangSC, PingFangSC-Regular;
+  font-weight: 500;
+  text-align: center;
+  color: #333333;
+  line-height: 24rem;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#main .detailsDialog .divNum .divTypes:active {
+  transform: scale(0.95);
 }
 
 #main .detailsDialog .detailsDialogClose {
@@ -882,20 +1009,34 @@
 #main .setMealDetailsDialog .divNum img {
   width: 36rem;
   height: 36rem;
+  transition: transform 0.15s;
+  cursor: pointer;
+}
+
+#main .setMealDetailsDialog .divNum img:active {
+  transform: scale(0.85);
 }
 
 #main .setMealDetailsDialog .divNum .right .addCart {
   width: 100rem;
   height: 30rem;
   opacity: 1;
-  background: #ffc200;
+  background: linear-gradient(135deg, #ffc200, #ffb300);
   border-radius: 15rem;
   font-size: 14rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
+  font-family: PingFangSC, PingFangSC-Semibold;
+  font-weight: 600;
   text-align: center;
   color: #333333;
   line-height: 30rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2rem 8rem rgba(255, 194, 0, 0.25);
+}
+
+#main .setMealDetailsDialog .divNum .right .addCart:active {
+  transform: scale(0.95);
+  box-shadow: 0 1rem 4rem rgba(255, 194, 0, 0.15);
 }
 
 #main .setMealDetailsDialog .detailsDialogClose {

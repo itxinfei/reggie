@@ -23,9 +23,6 @@ public interface DishService extends IService<Dish> {
     // 保存菜品及口味（事务保护）
     public void saveDish(Dish dish, List<DishFlavor> flavors);
 
-    //根据分类id查询菜品列表
-    public List<Dish> listByCategoryId(Long categoryId);
-
     /**
      * 删除菜品及关联口味（事务保护），删除前校验套餐引用
      * 修改点：原Controller中for循环逐条删除无事务保护，改为Service层统一管理

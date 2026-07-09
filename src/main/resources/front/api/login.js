@@ -21,4 +21,11 @@ function loginoutApi() {
   })
 }
 
+// 修改点：新增获取用户信息API，用于个人中心页面
+function getUserInfoApi() {
+  return $axios({
+    'url': '/user/info',
+    'method': 'get',
+  })
+}
   

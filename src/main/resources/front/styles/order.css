@@ -6,14 +6,14 @@
   width: 100%;
   height: 88rem;
   opacity: 1;
-  background: #333333;
+  background: linear-gradient(180deg, #2b2b2b, #333333);
   position: relative;
 }
 
 #order .divHead .divTitle {
   font-size: 18rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
+  font-family: PingFangSC, PingFangSC-Semibold;
+  font-weight: 600;
   text-align: center;
   color: #ffffff;
   line-height: 25rem;
@@ -28,16 +28,23 @@
   left: 16rem;
   top: 50%;
   transform: translate(0, -50%);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+#order .divHead .divTitle i:active {
+  transform: translate(0, -50%) scale(0.85);
 }
 
 #order .divBody {
   margin: 10rem 12rem 10rem 12rem;
   background: #ffffff;
-  border-radius: 6rem;
+  border-radius: 8rem;
   padding-left: 10rem;
   padding-right: 10rem;
   height: calc(100% - 108rem);
   overflow-y: auto;
+  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
 }
 
 #order .divBody .van-list .van-cell::after {
@@ -58,6 +65,13 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 2rem dashed #efefef;
+}
+
+#order .divBody .item:first-child .timeStatus {
+  border-top: 0;
+}
+
+#order .divBody .item + .item .timeStatus {
   border-top: 1px solid #efefef;
 }
 
@@ -100,7 +114,10 @@
 }
 
 #order .divBody .item .result .price {
-  color: #343434;
+  color: #20232a;
+  font-weight: 600;
+  font-family: DIN, DIN-Medium;
+  font-size: 16rem;
 }
 
 #order .divBody .item .btn {
@@ -116,7 +133,6 @@
   opacity: 1;
   border: 1px solid #e5e4e4;
   border-radius: 19rem;
-  opacity: 1;
   font-size: 14rem;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 500;
@@ -125,6 +141,13 @@
   line-height: 36rem;
   letter-spacing: 0;
   position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#order .divBody .btn .btnAgain:active {
+  background: #f5f5f5;
+  border-color: #ffc200;
 }
 
 #order .divNoData {
@@ -139,15 +162,16 @@
 #order .divNoData .divContainer img {
   width: 240rem;
   height: 129rem;
+  opacity: 0.6;
 }
 
 #order .divNoData .divContainer div {
-  font-size: 24rem;
-  font-family: PingFangSC, PingFangSC-Medium;
-  font-weight: 500;
+  font-size: 16rem;
+  font-family: PingFangSC, PingFangSC-Regular;
+  font-weight: 400;
   text-align: center;
-  color: #333333;
+  color: #999999;
   line-height: 33rem;
   height: 33rem;
-  margin-top: 20rem;
+  margin-top: 12rem;
 }

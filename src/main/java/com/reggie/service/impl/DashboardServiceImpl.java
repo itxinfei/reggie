@@ -5,6 +5,7 @@ import com.reggie.common.BaseContext;
 import com.reggie.entity.Employee;
 import com.reggie.entity.OrderDetail;
 import com.reggie.entity.Orders;
+import com.reggie.entity.User;
 import com.reggie.service.DashboardService;
 import com.reggie.service.EmployeeService;
 import com.reggie.service.OrderDetailService;
@@ -174,9 +175,10 @@ public class DashboardServiceImpl implements DashboardService {
                     ? totalRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
 
-            // 今日新增用户（User实体暂无createTime字段，暂使用全量注册总数）
-            // TODO: User实体添加createTime字段后可改为按今日过滤
-            int totalUsers = userService.count();
+            // 修改点：User实体已添加createTime字段，按今日注册时间过滤
+            LambdaQueryWrapper<User> userQw = new LambdaQueryWrapper<>();
+            userQw.between(User::getCreateTime, todayStart, todayEnd);
+            int totalUsers = userService.count(userQw);
 
             // 有效员工数
             LambdaQueryWrapper<Employee> empQw = new LambdaQueryWrapper<>();

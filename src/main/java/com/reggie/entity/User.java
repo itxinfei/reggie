@@ -9,6 +9,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * 用户信息
@@ -25,7 +26,7 @@ public class User implements Serializable {
     private Long tenantId;
 
     //姓名 - 新增/修改时需要验证，发送短信时不需要
-    @NotBlank(message = "姓名不能为空")
+    // 修改点：移除@NotBlank，手机号登录创建的用户初始无姓名，允许为null
     @Size(max = 50, message = "姓名不能超过50位")
     private String name;
 
@@ -48,4 +49,8 @@ public class User implements Serializable {
 
     //状态 0:禁用，1:正常
     private Integer status;
+
+    // 修改点：添加createTime字段，支持今日新增用户统计
+    @TableField(value = "create_time")
+    private LocalDateTime createTime;
 }

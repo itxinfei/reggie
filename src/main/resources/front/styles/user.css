@@ -6,7 +6,7 @@
   width: 100%;
   height: 164rem;
   opacity: 1;
-  background: #ffc200;
+  background: linear-gradient(160deg, #ffc200 0%, #ffb300 60%, #ffa000 100%);
   box-sizing: border-box;
   padding-left: 12rem;
   padding-right: 12rem;
@@ -16,8 +16,8 @@
   height: 25rem;
   opacity: 1;
   font-size: 18rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
+  font-family: PingFangSC, PingFangSC-Semibold;
+  font-weight: 600;
   text-align: center;
   color: #333333;
   line-height: 25rem;
@@ -31,10 +31,17 @@
   position: absolute;
   left: 0;
   margin-top: 5rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+#user .divHead .divTitle i:active {
+  transform: scale(0.85);
 }
 
 #user .divHead .divUser {
   display: flex;
+  align-items: center;
 }
 
 #user .divHead .divUser > img {
@@ -42,6 +49,9 @@
   height: 58rem;
   border-radius: 50%;
   margin-right: 16rem;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: #f0f0f0;
+  object-fit: cover;
 }
 
 #user .divHead .divUser .desc {
@@ -53,8 +63,8 @@
 #user .divHead .divUser .desc .divName {
   opacity: 1;
   font-size: 16rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
+  font-family: PingFangSC, PingFangSC-Semibold;
+  font-weight: 600;
   text-align: left;
   color: #333333;
   margin-right: 6rem;
@@ -71,26 +81,28 @@
 }
 
 #user .divHead .divUser .desc .divPhone {
-  font-size: 14px;
+  font-size: 13px;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
   text-align: left;
-  color: #333333;
+  color: rgba(51, 51, 51, 0.75);
 }
 
 #user .divContent {
   height: calc(100% - 174rem);
   overflow-y: auto;
+  padding-bottom: 20rem;
 }
 
 #user .divLinks {
   height: 104rem;
   opacity: 1;
   background: #ffffff;
-  border-radius: 6rem;
+  border-radius: 8rem;
   padding-left: 17rem;
   padding-right: 11rem;
   margin: 10rem;
+  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
 }
 
 #user .divLinks .item {
@@ -99,6 +111,12 @@
   position: relative;
   display: flex;
   align-items: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#user .divLinks .item:active {
+  background: rgba(0, 0, 0, 0.02);
 }
 
 #user .divLinks .divSplit {
@@ -114,20 +132,28 @@
   margin-right: 5rem;
 }
 
+#user .divLinks .item span {
+  font-size: 14rem;
+  font-family: PingFangSC, PingFangSC-Regular;
+  color: #333333;
+}
+
 #user .divLinks .item i {
   position: absolute;
   right: 0;
   top: 50%;
   transform: translate(0, -50%);
+  color: #c0c4cc;
 }
 
 #user .divOrders {
   margin: 0 10rem 10rem 10rem;
   background: #ffffff;
-  border-radius: 6rem;
+  border-radius: 8rem;
   padding-left: 10rem;
   padding-right: 10rem;
   padding-bottom: 17rem;
+  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
 }
 
 #user .divOrders .title {
@@ -135,8 +161,8 @@
   line-height: 60rem;
   opacity: 1;
   font-size: 16rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
+  font-family: PingFangSC, PingFangSC-Semibold;
+  font-weight: 600;
   text-align: left;
   color: #333333;
   letter-spacing: 0;
@@ -198,7 +224,9 @@
 }
 
 #user .divOrders .result .price {
-  color: black;
+  color: #20232a;
+  font-weight: 600;
+  font-family: DIN, DIN-Medium;
 }
 
 #user .divOrders .btn {
@@ -213,7 +241,6 @@
   opacity: 1;
   border: 1px solid #e5e4e4;
   border-radius: 19rem;
-  opacity: 1;
   font-size: 14rem;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 500;
@@ -222,6 +249,13 @@
   line-height: 36rem;
   letter-spacing: 0;
   position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#user .divOrders .btn .btnAgain:active {
+  background: #f5f5f5;
+  border-color: #ffc200;
 }
 
 #user .quitLogin {
@@ -229,12 +263,19 @@
   height: 50rem;
   opacity: 1;
   background: #ffffff;
-  border-radius: 6rem;
-  opacity: 1;
+  border-radius: 8rem;
   font-size: 15rem;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 500;
   text-align: center;
-  color: #333333;
+  color: #e94e3c;
   line-height: 50rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
+}
+
+#user .quitLogin:active {
+  background: #fef0f0;
+  color: #d43c33;
 }

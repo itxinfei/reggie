@@ -826,7 +826,7 @@ INSERT INTO `tenant` VALUES (3, '香满楼餐厅', '13800138003', '广州市天�
 -- ----------------------------
 DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user`  (
-  `id` bigint NOT NULL COMMENT '主键',
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   `name` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '姓名',
   `phone` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '手机号',
   `sex` varchar(2) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '性别',
@@ -834,6 +834,7 @@ CREATE TABLE `user`  (
   `avatar` varchar(500) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '头像',
   `status` int NULL DEFAULT 0 COMMENT '状态 0:禁用 1:正常',
   `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户id',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb3 COLLATE = utf8mb3_bin COMMENT = '用户信息' ROW_FORMAT = Dynamic;
@@ -841,8 +842,104 @@ CREATE TABLE `user`  (
 -- ----------------------------
 -- Records of user
 -- ----------------------------
-INSERT INTO `user` VALUES (1, '系统管理员', '13800138001', '男', '110101199001011234', NULL, 1, 1);
-INSERT INTO `user` VALUES (2, '张小明', '13900139001', '男', '110101199001011001', 'images/avatars/user1.jpg', 1, 1);
-INSERT INTO `user` VALUES (3, '李晓红', '13900139002', '女', '110101199002021002', 'images/avatars/user2.jpg', 1, 1);
+INSERT INTO `user` VALUES (1, '系统管理员', '13800138001', '男', '110101199001011234', NULL, 1, 1, '2026-07-07 17:59:05');
+INSERT INTO `user` VALUES (2, '张小明', '13900139001', '男', '110101199001011001', 'images/avatars/user1.jpg', 1, 1, '2026-07-07 17:59:05');
+INSERT INTO `user` VALUES (3, '李晓红', '13900139002', '女', '110101199002021002', 'images/avatars/user2.jpg', 1, 1, '2026-07-07 17:59:05');
+
+-- ----------------------------
+-- Table structure for points_record
+-- ----------------------------
+DROP TABLE IF EXISTS `points_record`;
+CREATE TABLE `points_record`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户id',
+  `member_id` bigint NOT NULL COMMENT '会员id',
+  `type` varchar(10) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '类型 IN收入/OUT支出',
+  `points` int NOT NULL COMMENT '积分变更',
+  `biz_type` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '业务类型',
+  `biz_id` bigint NULL DEFAULT NULL COMMENT '业务id',
+  `remark` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '备注',
+  `created_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_member`(`member_id` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_bin COMMENT = '积分记录' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of points_record
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for recharge_record
+-- ----------------------------
+DROP TABLE IF EXISTS `recharge_record`;
+CREATE TABLE `recharge_record`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户id',
+  `member_id` bigint NOT NULL COMMENT '会员id',
+  `amount` decimal(10, 2) NOT NULL COMMENT '充值金额',
+  `gift_amount` decimal(10, 2) NULL DEFAULT 0.00 COMMENT '赠送金额',
+  `payment_method` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '支付方式',
+  `created_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_member`(`member_id` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_bin COMMENT = '充值记录' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of recharge_record
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for coupon_template
+-- ----------------------------
+DROP TABLE IF EXISTS `coupon_template`;
+CREATE TABLE `coupon_template`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL COMMENT '租户id',
+  `name` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '优惠券名称',
+  `type` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '类型 FULL_OFF满减/DISCOUNT折扣',
+  `condition_amount` decimal(10, 2) NULL DEFAULT NULL COMMENT '满减条件金额',
+  `discount_amount` decimal(10, 2) NULL DEFAULT NULL COMMENT '满减减免金额',
+  `discount_rate` decimal(3, 2) NULL DEFAULT NULL COMMENT '折扣率',
+  `total_count` int NULL DEFAULT 0 COMMENT '总数量',
+  `remain_count` int NULL DEFAULT 0 COMMENT '剩余数量',
+  `valid_days` int NULL DEFAULT NULL COMMENT '有效天数',
+  `status` int NULL DEFAULT 1 COMMENT '状态 0禁用 1启用',
+  `created_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_bin COMMENT = '优惠券模板' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of coupon_template
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for coupon_user
+-- ----------------------------
+DROP TABLE IF EXISTS `coupon_user`;
+CREATE TABLE `coupon_user`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户id',
+  `member_id` bigint NOT NULL COMMENT '会员id',
+  `template_id` bigint NOT NULL COMMENT '优惠券模板id',
+  `code` varchar(32) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '券码',
+  `status` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL DEFAULT 'UNUSED' COMMENT '状态 UNUSED/USED/EXPIRED',
+  `used_time` datetime NULL DEFAULT NULL COMMENT '使用时间',
+  `order_id` bigint NULL DEFAULT NULL COMMENT '关联订单id',
+  `expire_time` datetime NULL DEFAULT NULL COMMENT '过期时间',
+  `created_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_code`(`code` ASC) USING BTREE,
+  INDEX `idx_member`(`member_id` ASC) USING BTREE,
+  INDEX `idx_template`(`template_id` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_bin COMMENT = '用户优惠券' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of coupon_user
+-- ----------------------------
 
 SET FOREIGN_KEY_CHECKS = 1;

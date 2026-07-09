@@ -12,10 +12,7 @@ import com.reggie.service.DishService;
 import com.reggie.service.SetmealService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class CategoryServiceImpl extends ServiceImpl<CategoryMapper,Category> implements CategoryService{
@@ -25,19 +22,6 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper,Category> im
 
     @Autowired
     private SetmealService setmealService;
-
-    /**
-     * 根据类型查询分类列表
-     * @param categoryType
-     * @return
-     */
-    @Cacheable(value = "categories", key = "#categoryType")
-    public List<Category> list(Integer categoryType) {
-        LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(categoryType != null, Category::getType, categoryType);
-        queryWrapper.orderByAsc(Category::getSort).orderByDesc(Category::getUpdateTime);
-        return this.list(queryWrapper);
-    }
 
     /**
      * 根据id删除分类，删除之前需要进行判断

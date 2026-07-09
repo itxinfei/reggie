@@ -4,7 +4,7 @@
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
-        <title>菩提阁</title>
+        <title>确认订单 - 瑞吉外卖</title>
         <link rel="icon" href="./../images/favico.ico">
         <!--不同屏幕尺寸根字体设置-->
         <script src="./../js/base.js"></script>
@@ -134,6 +134,11 @@
                     }
                 },
                 created(){
+                    // 修改点：未登录重定向到登录页
+                    if(!sessionStorage.getItem("userPhone")){
+                        window.location.href = '/front/page/login.html'
+                        return
+                    }
                     this.initData()
                 },
                 mounted(){},

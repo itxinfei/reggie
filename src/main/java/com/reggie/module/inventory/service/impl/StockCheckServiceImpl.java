@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.dto.StockCheckItemDTO;
 import com.reggie.module.inventory.mapper.StockCheckDetailMapper;
 import com.reggie.module.inventory.mapper.StockCheckMapper;
 import com.reggie.module.inventory.model.Material;
@@ -24,7 +25,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -60,7 +60,8 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void completeCheck(Long checkId, List<Map<String, Object>> items) {
+    // 修改点：参数从List<Map>改为List<StockCheckItemDTO>，强类型更安全
+    public void completeCheck(Long checkId, List<StockCheckItemDTO> items) {
         StockCheck sc = getById(checkId);
         if (sc == null) {
             throw new CustomException("盘点单不存在");
@@ -70,9 +71,9 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         }
 
         BigDecimal totalDiff = BigDecimal.ZERO;
-        for (Map<String, Object> item : items) {
-            Long materialId = Long.valueOf(item.get("materialId").toString());
-            BigDecimal actualQty = new BigDecimal(item.get("actualQty").toString());
+        for (StockCheckItemDTO item : items) {
+            Long materialId = item.getMaterialId();
+            BigDecimal actualQty = item.getActualStock();
 
             Material material = materialService.getById(materialId);
             if (material == null) {
@@ -92,8 +93,7 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
             detail.setBookQty(bookQty);
             detail.setActualQty(actualQty);
             detail.setDiffQty(diff);
-            String remark = item.get("remark") != null ? item.get("remark").toString() : null;
-            detail.setRemark(remark);
+            detail.setRemark(item.getRemark());
             stockCheckDetailMapper.insert(detail);
 
             StockRecord record = new StockRecord();

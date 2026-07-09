@@ -8,7 +8,6 @@ import com.reggie.entity.Dish;
 import com.reggie.common.CustomException;
 import com.reggie.entity.DishFlavor;
 import com.reggie.entity.SetmealDish;
-import com.reggie.enums.DishStatus;
 import com.reggie.mapper.DishMapper;
 import com.reggie.service.DishFlavorService;
 import com.reggie.service.DishService;
@@ -17,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,21 +77,6 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
         dishDto.setFlavors(flavors);
 
         return dishDto;
-    }
-
-    /**
-     * 根据分类id查询菜品列表
-     * @param categoryId
-     * @return
-     */
-    @Override
-    @Cacheable(value = "dishes", key = "#categoryId")
-    public List<Dish> listByCategoryId(Long categoryId) {
-        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(categoryId != null, Dish::getCategoryId, categoryId);
-        queryWrapper.eq(Dish::getStatus, DishStatus.ENABLED.getValue());
-        queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
-        return this.list(queryWrapper);
     }
 
     @Override

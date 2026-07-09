@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
-        <title>瑞吉外卖</title>
+        <title>登录 - 瑞吉外卖</title>
         <link rel="icon" href="./../images/favico.ico">
         <script src="./../js/base.js"></script>
         <link rel="stylesheet" href="../../backend/plugins/element-ui/index.css" />
@@ -56,10 +56,12 @@
             <div class="divMsg" v-if="msgFlag">手机号输入不正确，请重新输入</div>
 
             <!-- 登录按钮 -->
+            <!-- 修改点：按钮同时校验手机号和验证码 -->
             <el-button
-                :class="['btnLogin', form.phone ? 'btnActive' : 'btnDisabled']"
+                :class="['btnLogin', form.phone && form.code ? 'btnActive' : 'btnDisabled']"
                 @click="btnLogin"
-                :disabled="!form.phone">
+                :disabled="!form.phone || !form.code"
+                :loading="loading">
                 登录
             </el-button>
 
@@ -89,9 +91,23 @@
                     countdownTimer:null
                 }
             },
-            computed:{},
+            computed:{
+                // 修改点：手机号实时脱敏显示，格式化输入
+                displayPhone(){
+                    const p = this.form.phone
+                    if(p.length <= 3) return p
+                    if(p.length <= 7) return p.slice(0,3) + ' ' + p.slice(3)
+                    return p.slice(0,3) + ' ' + p.slice(3,7) + ' ' + p.slice(7)
+                }
+            },
             created(){},
-            mounted(){},
+            mounted(){
+                // 修改点：自动聚焦手机号输入框
+                this.$nextTick(() => {
+                    const inputs = document.querySelectorAll('#login .el-input__inner')
+                    if(inputs.length > 0) inputs[0].focus()
+                })
+            },
             beforeDestroy(){
                 if(this.countdownTimer){
                     clearInterval(this.countdownTimer);
@@ -99,41 +115,64 @@
                 }
             },
             methods:{
-                getCode(){
+                // 修改点：等待API响应后再倒计时，避免请求失败仍倒计时
+                async getCode(){
                     this.form.code = ''
                     const regex = /^1[3456789]\d{9}$/;
-                    if (regex.test(this.form.phone)) {
-                        this.msgFlag = false
-                        if (this.countdown > 0) return;
-                        this.countdown = 60;
-                        this.countdownTimer = setInterval(() => {
-                            this.countdown--;
-                            if (this.countdown <= 0) {
-                                clearInterval(this.countdownTimer);
-                                this.countdownTimer = null;
-                            }
-                        }, 1000);
-                        sendMsgApi({phone:this.form.phone})
-                    }else{
+                    if (!regex.test(this.form.phone)) {
                         this.msgFlag = true
+                        return
+                    }
+                    this.msgFlag = false
+                    if (this.countdown > 0) return;
+                    try {
+                        const res = await sendMsgApi({phone: this.form.phone})
+                        if(res.code === 1){
+                            this.countdown = 60;
+                            this.countdownTimer = setInterval(() => {
+                                this.countdown--;
+                                if (this.countdown <= 0) {
+                                    clearInterval(this.countdownTimer);
+                                    this.countdownTimer = null;
+                                }
+                            }, 1000);
+                        } else {
+                            this.$notify({ type:'warning', message: res.msg || '验证码发送失败'});
+                        }
+                    } catch(e) {
+                        this.$notify({ type:'warning', message:'网络异常，请稍后再试'});
                     }
                 },
+                // 修改点：完善登录逻辑 — 错误提示、存储用户完整信息、加载态
                 async btnLogin(){
-                    if(this.form.phone && this.form.code){
-                        if(this.loading) return;
-                        this.loading = true
+                    if(!this.form.phone){
+                        this.$notify({ type:'warning', message:'请输入手机号码'});
+                        return
+                    }
+                    if(!this.form.code){
+                        this.$notify({ type:'warning', message:'请输入验证码'});
+                        return
+                    }
+                    if(this.loading) return;
+                    this.loading = true
+                    try {
                         const res = await loginApi(this.form)
-                        this.loading = false
                         if(res.code === 1){
-                            sessionStorage.setItem("userPhone",this.form.phone)
+                            // 修改点：存储用户ID和手机号，用于后续个人中心数据展示
+                            sessionStorage.setItem("userPhone", this.form.phone)
+                            if(res.data && res.data.id){
+                                sessionStorage.setItem("userId", res.data.id)
+                            }
                             window.requestAnimationFrame(()=>{
-                                window.location.href= '/front/index.html'
+                                window.location.href = '/front/index.html'
                             })
                         }else{
-                            this.$notify({ type:'warning', message:res.msg});
+                            this.$notify({ type:'warning', message:res.msg || '登录失败'});
                         }
-                    }else{
-                        this.$notify({ type:'warning', message:'请输入手机号码'});
+                    } catch(e) {
+                        this.$notify({ type:'warning', message:'网络异常，请稍后再试'});
+                    } finally {
+                        this.loading = false
                     }
                 }
             }

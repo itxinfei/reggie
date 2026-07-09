@@ -187,7 +187,7 @@
           </template>
         </el-table-column>
         <el-table-column
-          prop="createdTime"
+          prop="createTime"
           label="注册时间"
           width="160"
         ></el-table-column>
@@ -248,7 +248,7 @@
           input: {
             name: '',
             phone: '',
-            status: ''
+            status: null  // 修改点：初始值改为null，避免空字符串引发参数类型问题
           },
           counts: 0,
           page: 1,
@@ -311,9 +311,9 @@
               pageSize: this.pageSize,
               name: this.input.name || undefined,
               phone: this.input.phone || undefined,
-              status: this.input.status !== '' ? this.input.status : undefined
+              status: this.input.status != null ? this.input.status : undefined  // 修改点：适配null初始值
             }
-            const res = await $axios.get('/api/user/page', { params })
+            const res = await $axios.get('/user/page', { params })
             return res
           } catch (err) {
             this.$message.error('请求失败：' + err)
@@ -325,7 +325,7 @@
         async loadUserStats() {
           try {
             // 获取所有用户
-            const res = await $axios.get('/api/user/page', {
+            const res = await $axios.get('/user/page', {
               params: { page: 1, pageSize: 1000 }
             })
 
@@ -335,11 +335,11 @@
               const activeCount = records.filter(item => item.status === 1).length
               const disabledCount = records.filter(item => item.status === 0).length
 
-              // 计算本月新增
+              // 计算本月新增（修改点：字段名修正为createTime）
               const now = new Date()
               const thisMonth = records.filter(u => {
-                if (!u.createdTime) return false
-                const created = new Date(u.createdTime)
+                if (!u.createTime) return false
+                const created = new Date(u.createTime)
                 return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear()
               }).length
 
@@ -377,7 +377,7 @@
         // 确认状态切换
         async confirmStatus() {
           try {
-            const res = await $axios.put('/api/user/status', null, {
+            const res = await $axios.put('/user/status', null, {
               params: {
                 id: this.statusDialog.userId,
                 status: this.statusDialog.newStatus
@@ -410,7 +410,7 @@
             type: 'warning'
           }).then(async () => {
             try {
-              const res = await $axios.delete('/api/user', {
+              const res = await $axios.delete('/user', {
                 params: { id }
               })
               if (String(res.code) === '1') {

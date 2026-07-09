@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CustomException.class)
     public R<String> exceptionHandler(CustomException ex){
-        log.error("Business exception: {}", ex.getMessage());
+        log.error("Business exception: {}", ex.getMessage(), ex);
         return R.error(ex.getMessage());
     }
 

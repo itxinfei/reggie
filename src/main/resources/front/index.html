@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
-    <title>菩提阁</title>
+    <title>瑞吉外卖 - 美味生活，即刻送达</title>
     <link rel="icon" href="images/favico.ico">
     <!--不同屏幕尺寸根字体设置-->
     <script src="./js/base.js"></script>
@@ -21,13 +21,18 @@
   <body>
     <div id="main" class="app">
       <div class="divHead">
-        <img src="./images/user.png" @click="toUserPage"/>
+        <!-- 修改点：根据登录状态显示不同图标和文字 -->
+        <div class="userEntry" @click="toUserPage">
+          <img src="./images/user.png"/>
+          <span v-if="userPhone" class="userPhone">{{ userPhone }}</span>
+          <span v-else class="userTips">请登录</span>
+        </div>
       </div>
       <div class="divTitle">
         <div class="divStatic">
           <img src="./images/logo.png"  class="logo"/>
           <div class="divDesc">
-            <div class="divName">菩提阁餐厅</div>
+            <div class="divName">瑞吉外卖餐厅</div>
             <div class="divSend">
                 <span><img src="./images/time.png"/> 距离1.5km</span>
                 <span><img src="./images/money.png"/> 配送费6元</span>
@@ -62,7 +67,7 @@
                   <div class="divSubtract" v-if="item.number > 0">
                     <img src="./images/subtract.png" @click.prevent.stop="subtractCart(item)"/>
                   </div>
-                  <div class="divDishNum">{{item.number}}</div>
+                  <div class="divDishNum" v-if="item.number">{{item.number}}</div>
                   <div class="divTypes" v-if="item.flavors && item.flavors.length > 0 && !item.number " @click.prevent.stop="chooseFlavorClick(item)">选择规格</div>
                   <div class="divAdd" v-else>
                     <img src="./images/add.png" @click.prevent.stop="addCart(item)"/>
@@ -163,7 +168,7 @@
                 <div class="divSubtract" v-if="detailsDialog.item.number > 0">
                   <img src="./images/subtract.png" @click="subtractCart(detailsDialog.item)"/>
                 </div>
-                <div class="divDishNum">{{detailsDialog.item.number}}</div>
+                <div class="divDishNum" v-if="detailsDialog.item.number">{{detailsDialog.item.number}}</div>
                 <div class="divTypes" v-if="detailsDialog.item.flavors && detailsDialog.item.flavors.length > 0 && !detailsDialog.item.number " @click ="chooseFlavorClick(detailsDialog.item)">选择规格</div>
                 <div class="divAdd" v-else>
                   <img src="./images/add.png" @click="addCart(detailsDialog.item)"/>
@@ -204,7 +209,7 @@
                   <div class="divSubtract" v-if="setMealDialog.item.number > 0">
                     <img src="./images/subtract.png" @click="subtractCart(setMealDialog.item)"/>
                   </div>
-                  <div class="divDishNum">{{setMealDialog.item.number}}</div>
+                  <div class="divDishNum" v-if="setMealDialog.item.number">{{setMealDialog.item.number}}</div>
                   <div class="divAdd" v-if="setMealDialog.item.number">
                     <img src="./images/add.png" @click="addCart(setMealDialog.item)"/>
                   </div>
@@ -239,6 +244,8 @@
               categoryId:undefined,
               dishList:[],
               cartData:[],
+              // 修改点：存储当前登录用户的手机号
+              userPhone: '',
               dialogFlavor:{
                 name:'',
                 flavors:[],
@@ -279,14 +286,23 @@
             }
           },
           created(){
+            // 修改点：页面初始化时读取登录状态
+            this.userPhone = sessionStorage.getItem("userPhone") || ''
           },
           mounted(){
+            // 修改点：若已登录则正常加载，未登录也可浏览菜单但不能操作购物车
             this.initData()
           },
           methods:{
             //初始化数据
             initData(){
-              Promise.all([categoryListApi(),cartListApi({})]).then(res=>{
+              // 修改点：未登录时不请求购物车数据，避免NOTLOGIN重定向打断浏览
+              const tasks = [categoryListApi()]
+              const isLogin = !!this.userPhone
+              if(isLogin){
+                tasks.push(cartListApi({}))
+              }
+              Promise.all(tasks).then(res=>{
                 //获取分类数据
                 if(res[0].code === 1){
                   this.categoryList = res[0].data
@@ -301,11 +317,9 @@
                 }else{
                   this.$notify({ type:'warning', message:res[0].msg});
                 }
-                //获取菜品数据
-                if(res[1].code === 1){
-                this.cartData = res[1].data
-                }else{
-                  this.$notify({ type:'warning', message:res[1].msg});
+                //获取购物车数据（仅登录后）
+                if(isLogin && res[1] && res[1].code === 1){
+                  this.cartData = res[1].data
                 }
               })
             },
@@ -376,6 +390,14 @@
             },
             //菜单中往购物车中添加商品
             async addCart(item){
+              // 修改点：未登录时跳转登录页
+              if(!this.userPhone){
+                this.$notify({ type:'warning', message:'请先登录'});
+                window.requestAnimationFrame(()=>{
+                  window.location.href = '/front/page/login.html'
+                })
+                return
+              }
               let params = {
                 amount: Math.round(item.price / 100 * 100) / 100, // 修改点：金额使用四舍五入避免浮点误差
                 dishFlavor: item.dishFlavor,//口味  如果没有传undefined
@@ -535,6 +557,14 @@
             },
             //跳转到去结算界面
             toAddOrderPage(){
+              // 修改点：未登录时跳转登录页
+              if(!this.userPhone){
+                this.$notify({ type:'warning', message:'请先登录'});
+                window.requestAnimationFrame(()=>{
+                  window.location.href = '/front/page/login.html'
+                })
+                return
+              }
               if(this.cartData.length > 0){
                 window.requestAnimationFrame(()=>{
                   window.location.href ='/front/page/add-order.html'
