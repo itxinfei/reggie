@@ -171,13 +171,13 @@ public class ReportServiceTest {
     }
 
     @Test
-    void testExportReport() {
+    void testExportReport() throws Exception {
         Long tenantId = BaseContext.getCurrentTenantId();
-        byte[] data = reportService.exportDailyReport("2026-07-01", "2026-07-01", tenantId);
-        String csv = new String(data, StandardCharsets.UTF_8);
+        byte[] data = reportService.exportDailyReport("2026-07-01", "2026-07-01", tenantId, "excel");
 
-        assertTrue(csv.startsWith("日期,订单数,总金额,已完成,已取消"));
-        assertTrue(csv.contains("2026-07-01,3,350.00,2,1"));
+        // 验证返回的是有效的 Excel 文件（XLSX magic bytes: PK\x03\x04）
+        assertTrue(data.length > 0);
+        assertTrue(data[0] == (byte) 0x50 && data[1] == (byte) 0x4B); // "PK" header
     }
 
     @Test

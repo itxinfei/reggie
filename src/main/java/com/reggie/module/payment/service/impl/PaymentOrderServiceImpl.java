@@ -39,6 +39,11 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     public void handlePaymentSuccess(String tradeNo, String channelTradeNo) {
         PaymentOrder po = lambdaQuery().eq(PaymentOrder::getTradeNo, tradeNo).one();
         if (po != null) {
+            // 幂等保护：已成功的订单不再重复处理
+            if (STATUS_SUCCESS.equals(po.getStatus())) {
+                log.info("支付回调幂等：订单已处理过，跳过 tradeNo={}", tradeNo);
+                return;
+            }
             po.setStatus(STATUS_SUCCESS);
             po.setChannelTradeNo(channelTradeNo);
             po.setPaidTime(LocalDateTime.now());

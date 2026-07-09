@@ -23,6 +23,7 @@
 <img src="https://img.shields.io/badge/H2-1.4.200-green?logo=h2database" alt="H2"/>
 <img src="https://img.shields.io/badge/HikariCP-3.4.5-blue?logo=java" alt="HikariCP"/>
 <img src="https://img.shields.io/badge/license-Apache_2.0-blue?logo=apache" alt="License"/>
+<img src="https://img.shields.io/badge/AI-LLM_智能助手-purple?logo=openai" alt="AI"/>
 
 </p>
 
@@ -65,6 +66,7 @@
 | 🚀 **开箱即用** | H2 内存数据库，无需安装 MySQL，一键启动 |
 | 📦 **全业务覆盖** | 堂食 + 进销存 + 会员 + 支付 + 配送 + 打印 + 报表 |
 | 💾 **35 张数据表** | 完整数据库设计，满足企业级数据管理需求 |
+| 🤖 **AI 智能助手** | 接入大模型，智能点餐推荐 + 菜品描述生成 + 经营分析 |
 
 </div>
 
@@ -78,18 +80,19 @@
 │  (ElementUI) │      │   Boot      │      │  数据库      │
 └─────────────┘      └──────┬──────┘      └─────────────┘
                              │
-                    ┌────────┴────────┐
-                    │                 │
-               ┌────┴────┐       ┌───┴────┐
-               │  Redis  │       │  H2    │
-               │ 缓存    │       │ 测试库  │
-               └─────────┘       └────────┘
+                    ┌────────┼────────┐
+                    │        │        │
+               ┌────┴────┐   │   ┌───┴────┐
+               │  Redis  │   │   │  H2    │
+               │ 缓存    │   │   │ 测试库  │
+               └─────────┘   │   └────────┘
                              │
-                    ┌────────┴────────┐
-                    │                 │
-              ┌─────▼──────┐    ┌─────▼──────┐
-              │ 移动端(Vant)│    │  第三方服务  │
-              └────────────┘    └────────────┘
+              ┌──────────────┼──────────────┐
+              │              │              │
+        ┌─────▼──────┐ ┌────▼─────┐ ┌──────▼─────┐
+        │ 移动端(Vant)│ │ AI服务   │ │  第三方服务  │
+        │ +AI点餐助手 │ │ (LLM)   │ │ (支付/短信) │
+        └────────────┘ └──────────┘ └────────────┘
 ```
 
 </div>
@@ -171,6 +174,7 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar
 | 🚚 配送管理 | 配送订单/平台对接 | 美团/饿了么/抖音，配送状态跟踪 |
 | 🖨️ 小票打印 | 多品牌打印机 | 飞鹅/易联云/芯烨，自动打印订单小票 |
 | 📊 经营报表 | 销售统计/营业分析 | 日/周/月报表、菜品销量排行、数据导出 |
+| 🤖 AI 智能助手 | LLM 大模型驱动 | 智能点餐推荐、菜品描述生成、经营数据分析 |
 
 </div>
 
@@ -234,6 +238,7 @@ reggie/
 │   ├── filter/          # 登录拦截过滤器
 │   ├── mapper/          # MyBatis Plus Mapper（12 个）
 │   ├── module/          # 扩展模块
+│   │   ├── ai/          # 🤖 AI智能助手（点餐推荐、描述生成、经营分析）
 │   │   ├── dining/      # 🍽️ 堂食（桌台、区域、预订、排队）
 │   │   ├── inventory/   # 📦 进销存（原料、供应商、采购、盘点）
 │   │   ├── member/      # 👤 会员（等级、积分、优惠券、充值）
@@ -300,6 +305,7 @@ mvn test -DfailIfNoTests=false
 | 营销功能 | 会员 + 优惠券 + 积分 + 充值 |
 | 配送管理 | 美团/饿了么/抖音平台对接 |
 | 小票打印 | 飞鹅/易联云/芯烨多品牌 |
+| **AI 智能助手** | **智能点餐推荐 + 菜品描述生成 + 经营分析** |
 
 ### 进行中
 
@@ -312,7 +318,7 @@ mvn test -DfailIfNoTests=false
 
 | 功能 | 说明 |
 |------|------|
-| 智能推荐 | 菜品推荐、个性化营销 |
+| AI 销量预测 | 基于历史数据预测菜品销量，辅助采购 |
 | 多门店管理 | 门店数据隔离、统一管理 |
 
 </div>
@@ -452,6 +458,40 @@ POST /tenant/register
   "contactPhone": "13800138000"
 }
 ```
+</details>
+
+<details>
+<summary><b>如何配置 AI 智能助手？</b></summary>
+
+AI 助手默认使用 **Mock 模拟模式**，无需任何配置即可体验基础功能。
+
+**接入真实 AI 服务（推荐 DeepSeek）：**
+
+1. 注册并获取 API Key：[DeepSeek 开放平台](https://platform.deepseek.com/)
+2. 修改 `src/main/resources/application.yml`：
+
+```yaml
+reggie:
+  ai:
+    enabled: true
+    provider: deepseek
+    api-key: sk-your-api-key-here    # 填入你的API Key
+    base-url: https://api.deepseek.com/v1
+    model: deepseek-chat
+```
+
+**支持的其他 AI 服务：**
+
+| 服务 | base-url | model 示例 |
+|------|----------|-----------|
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
+| OpenAI | `https://api.openai.com/v1` | `gpt-3.5-turbo` |
+| Ollama(本地) | `http://localhost:11434/v1` | `qwen2.5:7b` |
+
+**AI 功能入口：**
+- 📱 用户端：首页顶部 🤖 图标 → AI 智能点餐助手
+- 🖥️ 管理端：左侧菜单 → AI 助手
 </details>
 
 ---

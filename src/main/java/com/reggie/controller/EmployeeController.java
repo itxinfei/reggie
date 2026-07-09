@@ -273,6 +273,27 @@ public class EmployeeController {
     }
 
     /**
+     * 修改员工状态（启用/禁用）
+     */
+    @PutMapping("/status")
+    @Operation(summary = "修改员工状态", description = "仅更新员工启用/禁用状态，不影响其他字段")
+    public R<String> updateStatus(HttpServletRequest request, @RequestBody Map<String, Object> params) {
+        if (!isAdmin(request)) {
+            return R.error("权限不足");
+        }
+        Long id = params.get("id") != null ? Long.valueOf(params.get("id").toString()) : null;
+        Integer status = params.get("status") != null ? Integer.valueOf(params.get("status").toString()) : null;
+        if (id == null || status == null) {
+            return R.error("参数错误");
+        }
+        Employee emp = new Employee();
+        emp.setId(id);
+        emp.setStatus(status);
+        employeeService.updateById(emp);
+        return R.success("状态更新成功");
+    }
+
+    /**
      * 根据id查询员工信息
      * @param id 员工ID
      * @return 员工详情

@@ -57,6 +57,24 @@ public interface MarketingCampaignService extends IService<MarketingCampaign> {
     void markMessageRead(Long messageId);
 
     /**
+     * 修改点：获取用户所有消息列表（分页，包含已读和未读）
+     *
+     * @param userId   用户ID
+     * @param page     页码
+     * @param pageSize 每页数量
+     * @return 分页消息列表
+     */
+    Page<Map<String, Object>> getMessages(Long userId, int page, int pageSize);
+
+    /**
+     * 修改点：获取用户未读消息数量（用于首页角标）
+     *
+     * @param userId 用户ID
+     * @return 未读消息数量
+     */
+    int getUnreadCount(Long userId);
+
+    /**
      * 检测并自动为符合条件的用户发券
      *
      * @param userId 用户ID

@@ -175,8 +175,8 @@ new Vue({
         loadStores() {
             this.loading = true;
             storeApi.listStores().then(res => {
-                if (res.data && res.data.code === 1) {
-                    this.stores = res.data.data || [];
+                if (res.code === 1) {
+                    this.stores = res.data || [];
                 }
             }).catch(err => {
                 this.$message.error('加载失败');
@@ -199,7 +199,7 @@ new Vue({
                 if (!valid) return;
                 this.submitting = true;
                 storeApi.createStore(this.createForm).then(res => {
-                    if (res.data && res.data.code === 1) {
+                    if (res.code === 1) {
                         this.$message.success('门店创建成功');
                         this.createDialogVisible = false;
                         this.loadStores();
@@ -213,14 +213,14 @@ new Vue({
         },
         toggleStatus(store) {
             storeApi.updateStatus(store.tenantId, store.status).then(res => {
-                if (res.data && res.data.code === 1) {
+                if (res.code === 1) {
                     this.$message.success('状态已更新');
                 }
             }).catch(() => { this.loadStores(); });
         },
         switchToStore(store) {
             storeApi.switchStore(store.tenantId).then(res => {
-                if (res.data && res.data.code === 1) {
+                if (res.code === 1) {
                     this.$message.success('已切换到门店：' + store.storeName);
                     this.loadStores();
                 }
@@ -251,8 +251,8 @@ new Vue({
             if (!apiCall) return;
             this.syncing[type] = true;
             apiCall.then(res => {
-                if (res.data && res.data.code === 1) {
-                    this.syncResult = res.data.data;
+                if (res.code === 1) {
+                    this.syncResult = res.data;
                     this.$message.success('同步完成');
                 }
             }).catch(err => {

@@ -178,8 +178,8 @@ new Vue({
                 name: this.searchName || undefined,
                 status: this.searchStatus !== null ? this.searchStatus : undefined
             }).then(res => {
-                if (res.data && res.data.code === 1) {
-                    const data = res.data.data;
+                if (res.code === 1) {
+                    const data = res.data;
                     this.tableData = data.records || [];
                     this.total = data.total || 0;
                 }
@@ -226,12 +226,12 @@ new Vue({
                     recommendBackendApi.updateCampaign(Object.assign({ id: this.editId }, this.form));
 
                 api.then(res => {
-                    if (res.data && res.data.code === 1) {
+                    if (res.code === 1) {
                         this.$message.success(this.dialogMode === 'create' ? '创建成功' : '更新成功');
                         this.dialogVisible = false;
                         this.loadData();
                     } else {
-                        this.$message.error(res.data?.msg || '操作失败');
+                        this.$message.error(res.msg || '操作失败');
                     }
                 }).catch(err => {
                     this.$message.error('操作失败: ' + (err.response?.data?.msg || err.message));
@@ -241,21 +241,21 @@ new Vue({
         publishCampaign(row) {
             this.$confirm('确认发布该活动？', '提示', { type: 'info' }).then(() => {
                 recommendBackendApi.publishCampaign(row.id).then(res => {
-                    if (res.data && res.data.code === 1) { this.$message.success('发布成功'); this.loadData(); }
+                    if (res.code === 1) { this.$message.success('发布成功'); this.loadData(); }
                 });
             }).catch(() => {});
         },
         pauseCampaign(row) {
             this.$confirm('确认暂停该活动？', '提示', { type: 'warning' }).then(() => {
                 recommendBackendApi.pauseCampaign(row.id).then(res => {
-                    if (res.data && res.data.code === 1) { this.$message.success('已暂停'); this.loadData(); }
+                    if (res.code === 1) { this.$message.success('已暂停'); this.loadData(); }
                 });
             }).catch(() => {});
         },
         deleteCampaign(row) {
             this.$confirm('确认删除该活动？不可恢复！', '警告', { type: 'warning' }).then(() => {
                 recommendBackendApi.deleteCampaign(row.id).then(res => {
-                    if (res.data && res.data.code === 1) { this.$message.success('删除成功'); this.loadData(); }
+                    if (res.code === 1) { this.$message.success('删除成功'); this.loadData(); }
                 });
             }).catch(() => {});
         },

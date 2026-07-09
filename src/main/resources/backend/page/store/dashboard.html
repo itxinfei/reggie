@@ -115,8 +115,8 @@ new Vue({
         loadDashboard() {
             this.loading = true;
             storeApi.getDashboardOverview().then(res => {
-                if (res.data && res.data.code === 1) {
-                    this.dashboard = res.data.data;
+                if (res.code === 1) {
+                    this.dashboard = res.data;
                 }
             }).catch(err => {
                 this.$message.error('加载数据失败');

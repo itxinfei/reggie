@@ -32,7 +32,7 @@ public class Orders implements Serializable {
     public static final int STATUS_CANCELLED = 5;
     public static final int STATUS_REFUNDED = 6;
 
-    //订单状态 1待付款，2待派送，3已派送，4已完成，5已取消
+    //订单状态 1待付款，2待接单，3已接单，4派送中，5已完成，6已取消
     @NotNull(message = "订单状态不能为空")
     private Integer status;
 

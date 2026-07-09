@@ -26,10 +26,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -218,22 +220,61 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         wrapper.eq(OrderDetail::getOrderId, orderId);
         List<OrderDetail> details = orderDetailService.list(wrapper);
 
-        Long userId = BaseContext.getCurrentId();
-        List<ShoppingCart> cartItems = details.stream().map(d -> {
-            ShoppingCart cart = new ShoppingCart();
-            cart.setName(d.getName());
-            cart.setImage(d.getImage());
-            cart.setUserId(userId);
-            cart.setDishId(d.getDishId());
-            cart.setSetmealId(d.getSetmealId());
-            cart.setDishFlavor(d.getDishFlavor());
-            cart.setNumber(d.getNumber());
-            cart.setAmount(d.getAmount());
-            cart.setCreateTime(LocalDateTime.now());
-            return cart;
-        }).collect(Collectors.toList());
+        if (details.isEmpty()) {
+            return;
+        }
 
-        shoppingCartService.saveBatch(cartItems);
+        Long userId = BaseContext.getCurrentId();
+
+        // 修改点：先查询用户购物车中已存在的商品，避免重复添加
+        LambdaQueryWrapper<ShoppingCart> cartQuery = new LambdaQueryWrapper<>();
+        cartQuery.eq(ShoppingCart::getUserId, userId);
+        List<ShoppingCart> existingCarts = shoppingCartService.list(cartQuery);
+
+        // 构建 Map 方便查找：key = "dishId:xxx" 或 "setmealId:xxx"
+        java.util.Map<String, ShoppingCart> existingMap = new java.util.HashMap<>();
+        for (ShoppingCart cart : existingCarts) {
+            String key = cart.getDishId() != null
+                ? "dishId:" + cart.getDishId()
+                : "setmealId:" + cart.getSetmealId();
+            existingMap.put(key, cart);
+        }
+
+        java.util.List<ShoppingCart> toAdd = new java.util.ArrayList<>();
+        java.util.List<ShoppingCart> toUpdate = new java.util.ArrayList<>();
+
+        for (OrderDetail d : details) {
+            String key = d.getDishId() != null
+                ? "dishId:" + d.getDishId()
+                : "setmealId:" + d.getSetmealId();
+
+            ShoppingCart existing = existingMap.get(key);
+            if (existing != null) {
+                // 已存在，累加数量
+                existing.setNumber(existing.getNumber() + (d.getNumber() != null ? d.getNumber() : 0));
+                toUpdate.add(existing);
+            } else {
+                // 不存在，新增
+                ShoppingCart cart = new ShoppingCart();
+                cart.setName(d.getName());
+                cart.setImage(d.getImage());
+                cart.setUserId(userId);
+                cart.setDishId(d.getDishId());
+                cart.setSetmealId(d.getSetmealId());
+                cart.setDishFlavor(d.getDishFlavor());
+                cart.setNumber(d.getNumber());
+                cart.setAmount(d.getAmount());
+                cart.setCreateTime(LocalDateTime.now());
+                toAdd.add(cart);
+            }
+        }
+
+        if (!toUpdate.isEmpty()) {
+            shoppingCartService.updateBatchById(toUpdate);
+        }
+        if (!toAdd.isEmpty()) {
+            shoppingCartService.saveBatch(toAdd);
+        }
     }
 
     @Override
@@ -243,6 +284,156 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         if (orders != null) {
             orders.setStatus(status);
             this.updateById(orders);
+        }
+    }
+
+    // ==================== 后台订单管理 ====================
+
+    /**
+     * 接单：待接单(2) → 配送中(3)
+     */
+    @Override
+    public void confirmOrder(Long id) {
+        Orders order = this.getById(id);
+        if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+        if (!Objects.equals(order.getStatus(), Orders.STATUS_ORDERED)) {
+            throw new CustomException("订单状态不正确，当前状态：" + getStatusName(order.getStatus()) + "，无法接单");
+        }
+        order.setStatus(Orders.STATUS_DELIVERING);
+        this.updateById(order);
+        log.info("订单已接单: id={}, number={}", id, order.getNumber());
+    }
+
+    /**
+     * 拒单：待接单(2) → 已取消(5)
+     */
+    @Override
+    public void rejectOrder(Long id) {
+        Orders order = this.getById(id);
+        if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+        if (!Objects.equals(order.getStatus(), Orders.STATUS_ORDERED)) {
+            throw new CustomException("订单状态不正确，当前状态：" + getStatusName(order.getStatus()) + "，无法拒单");
+        }
+        order.setStatus(Orders.STATUS_CANCELLED);
+        this.updateById(order);
+        log.warn("订单已拒单: id={}, number={}", id, order.getNumber());
+    }
+
+    /**
+     * 完成订单：配送中(3) → 已完成(4)
+     */
+    @Override
+    public void completeOrder(Long id) {
+        Orders order = this.getById(id);
+        if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+        if (!Objects.equals(order.getStatus(), Orders.STATUS_DELIVERING)) {
+            throw new CustomException("订单状态不正确，当前状态：" + getStatusName(order.getStatus()) + "，无法完成");
+        }
+        order.setStatus(Orders.STATUS_COMPLETED);
+        order.setCheckoutTime(LocalDateTime.now());
+        this.updateById(order);
+        log.info("订单已完成: id={}, number={}", id, order.getNumber());
+    }
+
+    /**
+     * 取消订单：任意非完成/取消状态 → 已取消(5)
+     * @param id 订单ID
+     * @param reason 取消原因
+     */
+    @Override
+    public void cancelOrder(Long id, String reason) {
+        Orders order = this.getById(id);
+        if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+        if (Objects.equals(order.getStatus(), Orders.STATUS_COMPLETED)) {
+            throw new CustomException("订单已完成，无法取消");
+        }
+        if (Objects.equals(order.getStatus(), Orders.STATUS_CANCELLED)) {
+            throw new CustomException("订单已取消，无需重复操作");
+        }
+        order.setStatus(Orders.STATUS_CANCELLED);
+        if (reason != null && !reason.trim().isEmpty()) {
+            order.setRemark(reason);
+        }
+        this.updateById(order);
+        log.warn("订单已取消: id={}, number={}, reason={}", id, order.getNumber(), reason);
+    }
+
+    /**
+     * 订单统计：今日各状态订单数量汇总
+     */
+    @Override
+    public Map<String, Object> getOrderStatistics() {
+        Map<String, Object> stats = new java.util.LinkedHashMap<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        // 今日开始时间
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+
+        // 全部订单数
+        LambdaQueryWrapper<Orders> allWrapper = new LambdaQueryWrapper<>();
+        allWrapper.eq(Orders::getTenantId, tenantId);
+        stats.put("totalOrders", this.count(allWrapper));
+
+        // 待接单
+        LambdaQueryWrapper<Orders> pendingWrapper = new LambdaQueryWrapper<>();
+        pendingWrapper.eq(Orders::getTenantId, tenantId)
+                      .eq(Orders::getStatus, Orders.STATUS_ORDERED);
+        stats.put("pendingOrders", this.count(pendingWrapper));
+
+        // 配送中
+        LambdaQueryWrapper<Orders> deliveringWrapper = new LambdaQueryWrapper<>();
+        deliveringWrapper.eq(Orders::getTenantId, tenantId)
+                         .eq(Orders::getStatus, Orders.STATUS_DELIVERING);
+        stats.put("deliveringOrders", this.count(deliveringWrapper));
+
+        // 今日已完成
+        LambdaQueryWrapper<Orders> completedWrapper = new LambdaQueryWrapper<>();
+        completedWrapper.eq(Orders::getTenantId, tenantId)
+                        .eq(Orders::getStatus, Orders.STATUS_COMPLETED)
+                        .ge(Orders::getOrderTime, todayStart);
+        stats.put("completedToday", this.count(completedWrapper));
+
+        // 已取消
+        LambdaQueryWrapper<Orders> cancelledWrapper = new LambdaQueryWrapper<>();
+        cancelledWrapper.eq(Orders::getTenantId, tenantId)
+                        .eq(Orders::getStatus, Orders.STATUS_CANCELLED);
+        stats.put("cancelledOrders", this.count(cancelledWrapper));
+
+        // 今日营业额（已完成订单）
+        LambdaQueryWrapper<Orders> revenueWrapper = new LambdaQueryWrapper<>();
+        revenueWrapper.eq(Orders::getTenantId, tenantId)
+                      .eq(Orders::getStatus, Orders.STATUS_COMPLETED)
+                      .ge(Orders::getOrderTime, todayStart);
+        List<Orders> completedOrders = this.list(revenueWrapper);
+        java.math.BigDecimal totalRevenue = completedOrders.stream()
+            .map(o -> o.getAmount() != null ? o.getAmount() : java.math.BigDecimal.ZERO)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        stats.put("todayRevenue", totalRevenue);
+
+        return stats;
+    }
+
+    /**
+     * 订单状态中文名称
+     */
+    private String getStatusName(Integer status) {
+        if (status == null) return "未知";
+        switch (status) {
+            case 1: return "待付款";
+            case 2: return "待接单";
+            case 3: return "配送中";
+            case 4: return "已完成";
+            case 5: return "已取消";
+            case 6: return "已退款";
+            default: return "其他(" + status + ")";
         }
     }
 }

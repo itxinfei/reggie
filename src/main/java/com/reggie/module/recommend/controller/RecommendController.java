@@ -211,6 +211,38 @@ public class RecommendController {
     }
 
     /**
+     * 修改点：获取用户所有消息列表（分页）
+     * GET /recommend/messages?page=1&pageSize=20
+     */
+    @GetMapping("/messages")
+    public R<com.baomidou.mybatisplus.extension.plugins.pagination.Page<Map<String, Object>>> getUserMessages(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize,
+            HttpSession session) {
+        Long userId = getUserId(session);
+        if (userId == null) {
+            return R.error("请先登录");
+        }
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Map<String, Object>> result =
+                marketingCampaignService.getMessages(userId, page, pageSize);
+        return R.success(result);
+    }
+
+    /**
+     * 修改点：获取未读消息数量（用于首页铃铛角标）
+     * GET /recommend/messages/unread-count
+     */
+    @GetMapping("/messages/unread-count")
+    public R<Integer> unreadCount(HttpSession session) {
+        Long userId = getUserId(session);
+        if (userId == null) {
+            return R.success(0);
+        }
+        int count = marketingCampaignService.getUnreadCount(userId);
+        return R.success(count);
+    }
+
+    /**
      * 触发偏好分析（用户订单完成后异步调用）
      * POST /recommend/analyze-preference
      */
@@ -225,10 +257,14 @@ public class RecommendController {
 
     /**
      * 从Session获取当前登录用户ID
+     * 修改点：session中存储的是Long(user.getId())而非User对象，修复instanceof检查错误
      */
     private Long getUserId(HttpSession session) {
         if (session == null) return null;
         Object userObj = session.getAttribute("user");
+        if (userObj instanceof Long) {
+            return (Long) userObj;
+        }
         if (userObj instanceof User) {
             return ((User) userObj).getId();
         }

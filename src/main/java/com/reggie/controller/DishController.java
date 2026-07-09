@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -170,19 +171,26 @@ public class DishController {
      */
     @DeleteMapping
     @Operation(summary = "删除菜品", description = "批量删除菜品及关联口味数据，自动校验套餐引用")
-    @Parameter(name = "ids", description = "菜品ID列表", required = true)
-    public R<String> delete(@RequestParam List<Long> ids) {
-        // 修改点：委托Service层处理，统一事务保护+套餐引用校验
-        dishService.deleteWithFlavorCheck(ids);
+    @Parameter(name = "ids", description = "菜品ID列表，逗号分隔（如 1,2,3）", required = true)
+    public R<String> delete(@RequestParam String ids) {
+        List<Long> idList = parseIds(ids);
+        if (idList.isEmpty()) {
+            return R.error("请选择要删除的菜品");
+        }
+        dishService.deleteWithFlavorCheck(idList);
         return R.success("删除成功");
     }
 
     @PostMapping("/status/{status}")
     @Operation(summary = "更新菜品状态", description = "批量更新菜品售卖状态（起售/停售）")
     @Parameter(name = "status", description = "状态值：1-起售，0-停售", required = true)
-    @Parameter(name = "ids", description = "菜品ID列表", required = true)
-    public R<String> updateStatus(@PathVariable Integer status, @RequestParam List<Long> ids) {
-        dishService.updateStatus(status, ids);
+    @Parameter(name = "ids", description = "菜品ID列表，逗号分隔（如 1,2,3）", required = true)
+    public R<String> updateStatus(@PathVariable Integer status, @RequestParam String ids) {
+        List<Long> idList = parseIds(ids);
+        if (idList.isEmpty()) {
+            return R.error("请选择要操作的菜品");
+        }
+        dishService.updateStatus(status, idList);
         return R.success("操作成功");
     }
 
@@ -231,6 +239,21 @@ public class DishController {
         }).collect(Collectors.toList());
 
         return R.success(dishDtoList);
+    }
+
+    /**
+     * 解析逗号分隔的ID字符串为Long列表
+     * 兼容前端传递的格式：单个ID("1")、逗号分隔("1,2,3")、数组("1&ids=2")
+     */
+    private List<Long> parseIds(String ids) {
+        if (ids == null || ids.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(ids.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .collect(Collectors.toList());
     }
 
 }

@@ -1,6 +1,7 @@
 package com.reggie.module.inventory;
 
 import com.reggie.common.BaseContext;
+import com.reggie.dto.StockCheckItemDTO;
 import com.reggie.module.inventory.model.*;
 import com.reggie.module.inventory.service.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -225,11 +226,13 @@ public class InventoryServiceTest {
         assertNotNull(sc.getId());
         assertTrue(sc.getCheckNo().startsWith("CK"));
 
-        List<Map<String, Object>> items = new ArrayList<>();
-        Map<String, Object> item = new HashMap<>();
-        item.put("materialId", material.getId());
-        item.put("actualQty", new BigDecimal("8"));
-        items.add(item);
+        // 构建盘点明细DTO
+        StockCheckItemDTO item = new StockCheckItemDTO();
+        item.setMaterialId(material.getId());
+        item.setSystemStock(new BigDecimal("10"));   // 系统库存
+        item.setActualStock(new BigDecimal("8"));    // 实际盘点数量
+        item.setRemark("测试损耗");
+        List<StockCheckItemDTO> items = Collections.singletonList(item);
         stockCheckService.completeCheck(sc.getId(), items);
 
         StockCheck completed = stockCheckService.getById(sc.getId());

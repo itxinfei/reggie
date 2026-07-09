@@ -123,20 +123,6 @@
   border: 1.5px solid rgba(255,255,255,0.8);
 }
 
-.top-bar .avatar-text {
-  width: 28rem;
-  height: 28rem;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.95);
-  color: #FF9000;
-  font-size: 11rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1.5px solid rgba(255,255,255,0.8);
-}
-
 /* ---- 商家信息卡片 ---- */
 .restaurant-card {
   background: #fff;

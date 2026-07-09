@@ -2,12 +2,14 @@ package com.reggie.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.dto.SendMsgDTO;
 import com.reggie.dto.UserLoginDTO;
 import com.reggie.entity.User;
 import com.reggie.service.UserService;
 import com.reggie.utils.SMSUtils;
+import com.reggie.common.BruteForceProtectionFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +30,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired(required = false)
+    private BruteForceProtectionFilter bruteForceProtectionFilter;
 
     /**
      * 当前激活的Spring Profile（dev / prod），用于区分开发/生产环境
@@ -63,6 +68,7 @@ public class UserController {
     /** 手机号正则 */
     private static final String PHONE_REGEX = "^1[3-9]\\d{9}$";
 
+    @com.reggie.common.RateLimit(maxRequestsPerSecond = 3)
     @PostMapping("/sendMsg")
     @Operation(summary = "发送短信验证码")
     public R<String> sendMsg(@Valid @RequestBody SendMsgDTO dto, HttpSession session){
@@ -134,20 +140,26 @@ public class UserController {
         Long codeTime = (Long) session.getAttribute("smsCode_" + phone + "_time");
 
         if (sessionCode == null || codeTime == null) {
+            recordLoginFailure(session, phone);
             return R.error("请先获取验证码");
         }
         if (System.currentTimeMillis() - codeTime > CODE_EXPIRE_MS) {
             session.removeAttribute("smsCode_" + phone);
             session.removeAttribute("smsCode_" + phone + "_time");
+            recordLoginFailure(session, phone);
             return R.error("验证码已过期，请重新获取");
         }
         if (!sessionCode.equals(code)) {
+            recordLoginFailure(session, phone);
             return R.error("验证码错误");
         }
 
         // 验证通过，清除Session中的验证码（一次性使用）
         session.removeAttribute("smsCode_" + phone);
         session.removeAttribute("smsCode_" + phone + "_time");
+
+        // 登录成功，重置失败计数
+        resetLoginAttempts(session, phone);
 
         log.info("用户登录，手机号={}", phone);
 
@@ -164,7 +176,33 @@ public class UserController {
         }
 
         session.setAttribute("user", user.getId());
+        // 修改点：设置租户ID到Session，确保多门店数据隔离生效
+        if (user.getTenantId() != null) {
+            session.setAttribute("tenantId", user.getTenantId());
+        }
         return R.success(user);
+    }
+
+    /**
+     * 记录登录失败（调用暴力破解防护）
+     * @param session HTTP会话
+     * @param phone 手机号
+     */
+    private void recordLoginFailure(HttpSession session, String phone) {
+        if (bruteForceProtectionFilter != null) {
+            bruteForceProtectionFilter.recordFailedAttempt(phone);
+        }
+    }
+
+    /**
+     * 重置登录失败计数（调用暴力破解防护）
+     * @param session HTTP会话
+     * @param phone 手机号
+     */
+    private void resetLoginAttempts(HttpSession session, String phone) {
+        if (bruteForceProtectionFilter != null) {
+            bruteForceProtectionFilter.resetFailedAttempts(phone);
+        }
     }
 
     @PostMapping("/loginout")
@@ -208,6 +246,12 @@ public class UserController {
                     .eq(status != null, User::getStatus, status)
                     .orderByDesc(User::getId);
 
+        // 多租户隔离：仅查询当前租户的用户
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(User::getTenantId, tenantId);
+        }
+
         userService.page(pageInfo, queryWrapper);
         return R.success(pageInfo);
     }
@@ -225,6 +269,12 @@ public class UserController {
             return R.error("用户不存在");
         }
 
+        // 多租户校验：确保只能操作当前租户的用户
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(user.getTenantId())) {
+            return R.error("无权操作其他租户的用户");
+        }
+
         user.setStatus(status);
         boolean success = userService.updateById(user);
 
@@ -235,8 +285,20 @@ public class UserController {
     @Operation(summary = "删除用户")
     public R<String> delete(@Parameter(name = "id", description = "用户ID", required = true) Long id) {
         log.info("删除用户：id={}", id);
+
+        User user = userService.getById(id);
+        if (user == null) {
+            return R.error("删除失败，用户不存在");
+        }
+
+        // 多租户校验：确保只能删除当前租户的用户
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(user.getTenantId())) {
+            return R.error("无权删除其他租户的用户");
+        }
+
         boolean success = userService.removeById(id);
-        return success ? R.success("删除成功") : R.error("删除失败，用户不存在");
+        return success ? R.success("删除成功") : R.error("删除失败");
     }
 
 }

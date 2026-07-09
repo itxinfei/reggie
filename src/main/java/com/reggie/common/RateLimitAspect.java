@@ -52,6 +52,13 @@ public class RateLimitAspect {
     }
 
     /**
+     * 限流异常，用于区分 Redis 连接异常
+     */
+    public static class RateLimitExceededException extends RuntimeException {
+        public RateLimitExceededException(String message) { super(message); }
+    }
+
+    /**
      * 环绕通知：处理限流逻辑
      */
     @Around("@annotation(rateLimit)")
@@ -77,17 +84,17 @@ public class RateLimitAspect {
             if (count != null && count > rateLimit.maxRequestsPerSecond()) {
                 log.warn("接口限流触发 - 请求数：{}/{}，Key：{}",
                     count, rateLimit.maxRequestsPerSecond(), limitKey);
-                throw new RuntimeException("请求过于频繁，请稍后重试");
+                throw new RateLimitExceededException("请求过于频繁，请稍后重试");
             }
 
             // 放行
             return point.proceed();
-        } catch (RuntimeException e) {
-            // 限流异常直接抛出
+        } catch (RateLimitExceededException e) {
+            // 限流异常直接抛出，不允许放行
             throw e;
         } catch (Exception e) {
-            // Redis 异常降级
-            log.error("限流检查异常：{}", e.getMessage());
+            // Redis 异常降级：记录日志后放行，避免因限流组件故障影响业务
+            log.error("限流检查异常（Redis连接问题），已降级放行：{}", e.getMessage());
             return point.proceed();
         }
     }

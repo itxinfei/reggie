@@ -334,8 +334,8 @@ public class RecommendServiceImpl implements RecommendService {
                 .limit(limit)
                 .map(e -> {
                     Dish dish = dishService.getById(e.getKey());
-                    if (dish == null || dish.getTenantId() == null || 
-                        !dish.getTenantId().equals(tenantId) && tenantId != null) {
+                    // 修改点：修复运算符优先级问题，tenantId != null放在前面防止NPE
+                    if (dish == null || (tenantId != null && !tenantId.equals(dish.getTenantId()))) {
                         return null;
                     }
                     Map<String, Object> map = dishToMap(dish);

@@ -223,9 +223,11 @@ public class BruteForceProtectionFilter implements Filter {
             return;
         }
         // 从 session 中提取用户标识
+        // LoginCheckFilter 存储格式: "employee"=员工ID, "user"=用户ID
+        Object empId = session.getAttribute("employee");
         Object userId = session.getAttribute("user");
-        Object username = session.getAttribute("username");
-        String identifier = userId != null ? userId.toString() : (username != null ? username.toString() : null);
+        String identifier = empId != null ? empId.toString()
+                             : (userId != null ? userId.toString() : null);
         if (identifier != null) {
             recordFailedAttempt(identifier);
         }
@@ -240,10 +242,10 @@ public class BruteForceProtectionFilter implements Filter {
         if (!enabled || session == null) {
             return;
         }
-        // 从 session 中提取用户标识
+        Object empId = session.getAttribute("employee");
         Object userId = session.getAttribute("user");
-        Object username = session.getAttribute("username");
-        String identifier = userId != null ? userId.toString() : (username != null ? username.toString() : null);
+        String identifier = empId != null ? empId.toString()
+                             : (userId != null ? userId.toString() : null);
         if (identifier != null) {
             resetFailedAttempts(identifier);
         }
@@ -259,10 +261,10 @@ public class BruteForceProtectionFilter implements Filter {
         if (!enabled || session == null) {
             return 0;
         }
-        // 从 session 中提取用户标识
+        Object empId = session.getAttribute("employee");
         Object userId = session.getAttribute("user");
-        Object username = session.getAttribute("username");
-        String identifier = userId != null ? userId.toString() : (username != null ? username.toString() : null);
+        String identifier = empId != null ? empId.toString()
+                             : (userId != null ? userId.toString() : null);
         if (identifier == null) {
             return 0;
         }
@@ -279,15 +281,14 @@ public class BruteForceProtectionFilter implements Filter {
         if (!enabled || session == null) {
             return false;
         }
-        // 尝试从 session 中获取用户标识
+        Object empId = session.getAttribute("employee");
         Object userId = session.getAttribute("user");
-        Object username = session.getAttribute("username");
 
+        if (empId != null) {
+            return isLocked(empId.toString());
+        }
         if (userId != null) {
             return isLocked(userId.toString());
-        }
-        if (username != null) {
-            return isLocked(username.toString());
         }
         return false;
     }
@@ -375,7 +376,7 @@ public class BruteForceProtectionFilter implements Filter {
      */
     private boolean isLoginRequest(HttpServletRequest request) {
         String uri = request.getRequestURI();
-        return uri.contains("/employee/login") || uri.contains("/user/login");
+        return "/employee/login".equals(uri) || "/user/login".equals(uri);
     }
 
     /**

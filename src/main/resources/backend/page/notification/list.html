@@ -4,52 +4,141 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>消息通知管理</title>
+    <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-               background: #f0f2f5; color: #333; padding: 20px; }
+               background: #f0f2f5; color: #333; }
 
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .page-header h2 { font-size: 20px; color: #1a1a1a; }
+        .app-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
+        /* 页头统计 */
+        .stat-cards { display: flex; gap: 16px; margin-bottom: 16px; }
+        .stat-card { flex: 1; background: #fff; border-radius: 8px; padding: 16px 20px;
+                     box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 12px; }
+        .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex;
+                     align-items: center; justify-content: center; font-size: 24px; }
+        .stat-icon.sms { background: #e6f7ff; color: #1890ff; }
+        .stat-icon.push { background: #f0f5ff; color: #722ed1; }
+        .stat-icon.success { background: #f6ffed; color: #52c41a; }
+        .stat-icon.fail { background: #fff2f0; color: #ff4d4f; }
+        .stat-value { font-size: 24px; font-weight: 700; color: #1a1a1a; }
+        .stat-label { font-size: 13px; color: #999; margin-top: 2px; }
+
+        /* Tab */
         .tabs { display: flex; gap: 0; background: #fff; border-radius: 8px 8px 0 0; overflow: hidden;
                 border-bottom: 1px solid #e8e8e8; }
         .tab-btn { padding: 12px 24px; cursor: pointer; border: none; background: #fff; font-size: 14px;
-                   color: #666; border-bottom: 2px solid transparent; transition: all 0.2s; }
+                   color: #666; border-bottom: 2px solid transparent; transition: all 0.2s; position: relative; }
         .tab-btn.active { color: #1890ff; border-bottom-color: #1890ff; font-weight: 600; }
         .tab-btn:hover { color: #1890ff; }
         .tab-content { display: none; background: #fff; border-radius: 0 0 8px 8px; padding: 20px;
                        box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
         .tab-content.active { display: block; }
 
-        .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
-        .toolbar select, .toolbar input { padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px;
-                font-size: 13px; }
+        /* 用户选择区 */
+        .user-select-panel { display: flex; gap: 16px; min-height: 400px; }
+        .user-select-left { flex: 1; border: 1px solid #e8e8e8; border-radius: 6px; overflow: hidden;
+                            display: flex; flex-direction: column; }
+        .user-select-right { width: 380px; border: 1px solid #e8e8e8; border-radius: 6px;
+                             display: flex; flex-direction: column; }
+
+        .panel-header { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; background: #fafafa;
+                        font-size: 13px; font-weight: 600; color: #555; display: flex;
+                        justify-content: space-between; align-items: center; }
+        .panel-body { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+        /* 搜索栏 */
+        .search-bar { padding: 8px 12px; display: flex; gap: 8px; border-bottom: 1px solid #f0f0f0; }
+        .search-bar input, .search-bar select { padding: 5px 10px; border: 1px solid #d9d9d9;
+                border-radius: 4px; font-size: 13px; }
+        .search-bar input { width: 140px; }
+        .search-bar select { width: 100px; }
+
+        /* 用户列表 */
+        .user-list-table { width: 100%; border-collapse: collapse; }
+        .user-list-table th { background: #fafafa; padding: 8px 10px; text-align: left; font-size: 12px;
+                               font-weight: 600; color: #666; border-bottom: 1px solid #e8e8e8;
+                               position: sticky; top: 0; z-index: 1; }
+        .user-list-table td { padding: 7px 10px; font-size: 13px; border-bottom: 1px solid #f5f5f5; }
+        .user-list-table tr:hover td { background: #f5f9ff; }
+        .user-list-table tr.selected td { background: #e6f7ff; }
+        .user-list-table input[type="checkbox"] { cursor: pointer; }
+
+        .user-pagination { padding: 8px 12px; border-top: 1px solid #f0f0f0; display: flex;
+                           justify-content: center; align-items: center; gap: 6px; font-size: 12px; }
+        .user-pagination button { padding: 3px 10px; border: 1px solid #d9d9d9; background: #fff;
+                                   border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .user-pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* 已选用户列表 */
+        .selected-users { flex: 1; overflow-y: auto; padding: 4px 0; }
+        .selected-user-item { display: flex; align-items: center; justify-content: space-between;
+                padding: 6px 12px; font-size: 13px; border-bottom: 1px solid #f5f5f5; }
+        .selected-user-item .remove-btn { color: #ff4d4f; cursor: pointer; font-size: 14px;
+                                           background: none; border: none; padding: 2px 6px; }
+        .selected-user-item .remove-btn:hover { background: #fff2f0; border-radius: 3px; }
+
+        /* 消息编辑区 */
+        .msg-compose { padding: 12px; border-top: 1px solid #e8e8e8; }
+        .msg-compose textarea, .msg-compose input { width: 100%; padding: 7px 10px;
+                border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; resize: vertical; }
+        .msg-compose textarea { min-height: 60px; }
+        .msg-compose .field-label { font-size: 12px; color: #999; margin-bottom: 3px; display: block; }
+
+        /* 按钮 */
         .btn { padding: 7px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;
                transition: all 0.2s; }
         .btn-primary { background: #1890ff; color: #fff; }
         .btn-primary:hover { background: #40a9ff; }
+        .btn-primary:disabled { background: #91d5ff; cursor: not-allowed; }
         .btn-success { background: #52c41a; color: #fff; }
         .btn-success:hover { background: #73d13d; }
+        .btn-success:disabled { background: #b7eb8f; cursor: not-allowed; }
+        .btn-purple { background: #722ed1; color: #fff; }
+        .btn-purple:hover { background: #9254de; }
+        .btn-purple:disabled { background: #d3adf7; cursor: not-allowed; }
         .btn-danger { background: #ff4d4f; color: #fff; }
         .btn-danger:hover { background: #ff7875; }
         .btn-default { background: #fff; border: 1px solid #d9d9d9; color: #333; }
         .btn-default:hover { border-color: #1890ff; color: #1890ff; }
         .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .btn-group { display: flex; gap: 8px; margin-top: 10px; }
 
+        /* 发送结果弹窗 */
+        .send-result { margin-top: 12px; padding: 12px 16px; border-radius: 6px; font-size: 13px; }
+        .send-result.success { background: #f6ffed; border: 1px solid #b7eb8f; color: #389e0d; }
+        .send-result.partial { background: #fffbe6; border: 1px solid #ffe58f; color: #d48806; }
+        .send-result.error { background: #fff2f0; border: 1px solid #ffccc7; color: #cf1322; }
+        .send-result .close-result { float: right; cursor: pointer; color: #999; font-size: 16px;
+                                       background: none; border: none; line-height: 1; }
+
+        /* 记录列表 */
         table { width: 100%; border-collapse: collapse; }
         th { background: #fafafa; padding: 10px 12px; text-align: left; font-size: 13px; font-weight: 600;
              color: #555; border-bottom: 2px solid #e8e8e8; white-space: nowrap; }
         td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
         tr:hover td { background: #f5f9ff; }
+
         .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
         .status-on { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
         .status-off { background: #fff2f0; color: #ff4d4f; border: 1px solid #ffccc7; }
-        .status-sending { color: #1890ff; }
-        .status-success { color: #52c41a; }
-        .status-fail { color: #ff4d4f; }
-        .status-partial { color: #faad14; }
 
+        .channel-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .channel-sms { background: #e6f7ff; color: #1890ff; }
+        .channel-push { background: #f0f5ff; color: #722ed1; }
+        .channel-both { background: #fff7e6; color: #fa8c16; }
+
+        .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 8px;
+                      margin-top: 16px; font-size: 13px; }
+        .pagination button { padding: 4px 12px; border: 1px solid #d9d9d9; background: #fff;
+                            border-radius: 4px; cursor: pointer; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination span { color: #666; }
+
+        .empty-state { text-align: center; padding: 40px; color: #999; }
+
+        /* 弹窗 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
                 background: rgba(0,0,0,0.45); z-index: 1000; justify-content: center; align-items: center; }
         .modal-overlay.show { display: flex; }
@@ -72,212 +161,404 @@
         .form-row { display: flex; gap: 12px; }
         .form-row .form-group { flex: 1; }
 
-        .channel-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-        .channel-sms { background: #e6f7ff; color: #1890ff; }
-        .channel-push { background: #f0f5ff; color: #722ed1; }
-        .channel-both { background: #fff7e6; color: #fa8c16; }
+        .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+        .toolbar select, .toolbar input { padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px;
+                font-size: 13px; }
 
-        .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 8px;
-                      margin-top: 16px; font-size: 13px; }
-        .pagination button { padding: 4px 12px; border: 1px solid #d9d9d9; background: #fff;
-                            border-radius: 4px; cursor: pointer; }
-        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .pagination span { color: #666; }
-
-        .empty-state { text-align: center; padding: 40px; color: #999; }
+        .mock-banner { background: #fffbe6; border: 1px solid #ffe58f; border-radius: 6px; padding: 8px 14px;
+                       margin-bottom: 16px; font-size: 13px; color: #ad6800; display: flex; align-items: center; gap: 6px; }
     </style>
 </head>
 <body>
     <div id="app">
-        <!-- 页头 -->
-        <div class="page-header">
-            <h2>消息通知管理</h2>
-        </div>
-
-        <!-- Tab切换 -->
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('template')">通知模板</button>
-            <button class="tab-btn" onclick="switchTab('send')">发送消息</button>
-            <button class="tab-btn" onclick="switchTab('record')">发送记录</button>
-        </div>
-
-        <!-- ==================== 模板管理 ==================== -->
-        <div class="tab-content active" id="tab-template">
-            <div class="toolbar">
-                <select v-model="templateForm.bizType" @change="loadTemplates(1)">
-                    <option value="">所有业务类型</option>
-                    <option value="ORDER_NOTICE">订单通知</option>
-                    <option value="PROMOTION">营销推送</option>
-                    <option value="VERIFY_CODE">验证码</option>
-                    <option value="SYSTEM">系统通知</option>
-                    <option value="JOB_NOTICE">工作通知</option>
-                </select>
-                <button class="btn btn-primary" @click="openTemplateModal()">+ 新增模板</button>
-            </div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>模板名称</th>
-                        <th>业务类型</th>
-                        <th>渠道</th>
-                        <th>外部编码</th>
-                        <th>状态</th>
-                        <th>更新时间</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="t in templates" :key="t.id">
-                        <td><strong>{{ t.templateName }}</strong></td>
-                        <td>{{ bizTypeName(t.bizType) }}</td>
-                        <td>
-                            <span class="channel-tag" :class="{'channel-sms': t.channel===1,
-                                'channel-push': t.channel===2, 'channel-both': t.channel===3}">
-                                {{ channelName(t.channel) }}
-                            </span>
-                        </td>
-                        <td>{{ t.templateCode || '-' }}</td>
-                        <td>
-                            <span class="status-badge" :class="t.status===1?'status-on':'status-off'">
-                                {{ t.status === 1 ? '启用' : '停用' }}
-                            </span>
-                        </td>
-                        <td>{{ formatDate(t.updateTime) }}</td>
-                        <td>
-                            <button class="btn btn-sm btn-default" @click="openTemplateModal(t)">编辑</button>
-                            <button class="btn btn-sm btn-default"
-                                    @click="toggleTemplate(t)">{{ t.status===1?'停用':'启用' }}</button>
-                            <button class="btn btn-sm btn-danger" @click="deleteTemplate(t.id)">删除</button>
-                        </td>
-                    </tr>
-                    <tr v-if="templates.length===0">
-                        <td colspan="7" class="empty-state">暂无通知模板</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <!-- 模板分页 -->
-            <div class="pagination" v-if="templateTotal > 0">
-                <button :disabled="templatePage <= 1" @click="loadTemplates(templatePage - 1)">上一页</button>
-                <span>第 {{ templatePage }} / {{ Math.ceil(templateTotal / templateSize) }} 页，共 {{ templateTotal }} 条</span>
-                <button :disabled="templatePage >= Math.ceil(templateTotal / templateSize)"
-                        @click="loadTemplates(templatePage + 1)">下一页</button>
-            </div>
-        </div>
-
-        <!-- ==================== 发送消息 ==================== -->
-        <div class="tab-content" id="tab-send">
-            <div style="max-width:700px;">
-                <div class="form-group">
-                    <label>发送方式</label>
-                    <select v-model="sendForm.channel" style="width:100%">
-                        <option :value="1">短信通知</option>
-                        <option :value="2">APP推送</option>
-                        <option :value="3">短信 + APP推送</option>
-                    </select>
+        <div class="app-container">
+            <!-- 统计卡片 -->
+            <div class="stat-cards">
+                <div class="stat-card">
+                    <div class="stat-icon sms">📱</div>
+                    <div>
+                        <div class="stat-value">{{ stats.todaySms }}</div>
+                        <div class="stat-label">今日短信发送</div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>业务类型</label>
-                    <select v-model="sendForm.bizType" style="width:100%">
+                <div class="stat-card">
+                    <div class="stat-icon push">🔔</div>
+                    <div>
+                        <div class="stat-value">{{ stats.todayPush }}</div>
+                        <div class="stat-label">今日APP推送</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon success">✅</div>
+                    <div>
+                        <div class="stat-value">{{ stats.todaySuccess }}</div>
+                        <div class="stat-label">发送成功</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon fail">❌</div>
+                    <div>
+                        <div class="stat-value">{{ stats.todayFail }}</div>
+                        <div class="stat-label">发送失败</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mock模式提示 -->
+            <div class="mock-banner" v-if="isMockMode">
+                ⚠️ 当前为开发Mock模式，短信/推送仅打印日志，不会真实发送。生产环境请配置阿里云短信参数。
+            </div>
+
+            <!-- Tab切换 -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('sms')">📱 发送短信</button>
+                <button class="tab-btn" onclick="switchTab('push')">🔔 APP推送</button>
+                <button class="tab-btn" onclick="switchTab('record')">📋 发送记录</button>
+                <button class="tab-btn" onclick="switchTab('template')">📝 通知模板</button>
+            </div>
+
+            <!-- ========== Tab 1: 发送短信 ========== -->
+            <div class="tab-content active" id="tab-sms">
+                <div class="user-select-panel">
+                    <!-- 左侧：用户列表 -->
+                    <div class="user-select-left">
+                        <div class="panel-header">
+                            <span>选择接收用户</span>
+                            <span style="font-weight:400;color:#999;">共 {{ userTotal }} 个用户</span>
+                        </div>
+                        <div class="search-bar">
+                            <input type="text" v-model="userSearch.name" placeholder="姓名搜索"
+                                   @keyup.enter="searchUsers()" />
+                            <input type="text" v-model="userSearch.phone" placeholder="手机号搜索"
+                                   @keyup.enter="searchUsers()" />
+                            <button class="btn btn-primary btn-sm" @click="searchUsers()">搜索</button>
+                            <button class="btn btn-default btn-sm" @click="selectAllPage()">本页全选</button>
+                            <button class="btn btn-default btn-sm" @click="deselectAll()">清空选择</button>
+                        </div>
+                        <div class="panel-body">
+                            <table class="user-list-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:36px;text-align:center;">
+                                            <input type="checkbox" :checked="isAllPageSelected"
+                                                   @change="toggleAllPage($event)" />
+                                        </th>
+                                        <th>姓名</th>
+                                        <th>手机号</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="u in users" :key="u.id"
+                                        :class="{selected: selectedIds.has(u.id)}"
+                                        @click="toggleUser(u)">
+                                        <td style="text-align:center;">
+                                            <input type="checkbox" :checked="selectedIds.has(u.id)"
+                                                   @click.stop="toggleUser(u)" />
+                                        </td>
+                                        <td>{{ u.name || '未设置' }}</td>
+                                        <td>{{ u.phone }}</td>
+                                        <td>
+                                            <span class="status-badge"
+                                                  :class="u.status === 1 ? 'status-on' : 'status-off'">
+                                                {{ u.status === 1 ? '正常' : '禁用' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="users.length === 0">
+                                        <td colspan="4" class="empty-state">暂无用户数据</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="user-pagination" v-if="userTotal > 0">
+                            <button :disabled="userPage <= 1" @click="loadUsers(userPage - 1)">上一页</button>
+                            <span>第 {{ userPage }}/{{ Math.ceil(userTotal / userSize) }} 页</span>
+                            <button :disabled="userPage >= Math.ceil(userTotal / userSize)"
+                                    @click="loadUsers(userPage + 1)">下一页</button>
+                        </div>
+                    </div>
+
+                    <!-- 右侧：已选用户 + 消息编辑 -->
+                    <div class="user-select-right">
+                        <div class="panel-header">
+                            <span>已选用户 ({{ selectedUsers.length }})</span>
+                            <button class="btn btn-sm btn-default" @click="deselectAll()"
+                                    v-if="selectedUsers.length > 0">全部移除</button>
+                        </div>
+                        <div class="selected-users">
+                            <div class="selected-user-item" v-for="su in selectedUsers" :key="su.id">
+                                <span>{{ su.name || '未设置' }} <span style="color:#999;">{{ su.phone }}</span></span>
+                                <button class="remove-btn" @click="removeSelected(su.id)">✕</button>
+                            </div>
+                            <div class="empty-state" v-if="selectedUsers.length === 0" style="padding:30px;">
+                                请在左侧选择用户
+                            </div>
+                        </div>
+                        <!-- 消息编辑 -->
+                        <div class="msg-compose">
+                            <label class="field-label">消息内容（短信最多70字）</label>
+                            <textarea v-model="smsForm.content" rows="4"
+                                      placeholder="请输入短信内容...&#10;示例：尊敬的顾客，您的外卖订单已开始配送，预计30分钟内送达。"
+                                      maxlength="200"></textarea>
+                            <div class="hint" style="text-align:right;">
+                                {{ smsForm.content.length }}/200 字符
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-success"
+                                        :disabled="smsForm.sending || selectedUsers.length === 0 || !smsForm.content"
+                                        @click="doSendSms()">
+                                    📱 {{ smsForm.sending ? '发送中...' : '发送短信 (' + selectedUsers.length + '人)' }}
+                                </button>
+                            </div>
+                            <div class="send-result"
+                                 :class="smsForm.sending ? '' : (smsForm.result && smsForm.result.status === 2 ? 'success' : (smsForm.result && smsForm.result.status === 4 ? 'partial' : 'error'))"
+                                 v-if="smsForm.result && !smsForm.sending">
+                                <button class="close-result" @click="smsForm.result = null">&times;</button>
+                                <strong>发送完成！</strong>
+                                成功: {{ smsForm.result.successCount }} | 失败: {{ smsForm.result.failCount }}
+                                <div v-if="smsForm.result.failReason" style="color:#cf1322;margin-top:4px;font-size:12px;">
+                                    {{ smsForm.result.failReason }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== Tab 2: APP推送 ========== -->
+            <div class="tab-content" id="tab-push">
+                <div class="user-select-panel">
+                    <div class="user-select-left">
+                        <div class="panel-header">
+                            <span>选择推送用户</span>
+                            <span style="font-weight:400;color:#999;">共 {{ pushUserTotal }} 个用户</span>
+                        </div>
+                        <div class="search-bar">
+                            <input type="text" v-model="pushUserSearch.name" placeholder="姓名搜索"
+                                   @keyup.enter="searchPushUsers()" />
+                            <input type="text" v-model="pushUserSearch.phone" placeholder="手机号搜索"
+                                   @keyup.enter="searchPushUsers()" />
+                            <button class="btn btn-primary btn-sm" @click="searchPushUsers()">搜索</button>
+                            <button class="btn btn-default btn-sm" @click="selectAllPushPage()">本页全选</button>
+                            <button class="btn btn-default btn-sm" @click="deselectAllPush()">清空选择</button>
+                        </div>
+                        <div class="panel-body">
+                            <table class="user-list-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:36px;text-align:center;">
+                                            <input type="checkbox" :checked="isAllPushPageSelected"
+                                                   @change="toggleAllPushPage($event)" />
+                                        </th>
+                                        <th>姓名</th>
+                                        <th>手机号</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="u in pushUsers" :key="u.id"
+                                        :class="{selected: pushSelectedIds.has(u.id)}"
+                                        @click="togglePushUser(u)">
+                                        <td style="text-align:center;">
+                                            <input type="checkbox" :checked="pushSelectedIds.has(u.id)"
+                                                   @click.stop="togglePushUser(u)" />
+                                        </td>
+                                        <td>{{ u.name || '未设置' }}</td>
+                                        <td>{{ u.phone }}</td>
+                                        <td>
+                                            <span class="status-badge"
+                                                  :class="u.status === 1 ? 'status-on' : 'status-off'">
+                                                {{ u.status === 1 ? '正常' : '禁用' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="pushUsers.length === 0">
+                                        <td colspan="4" class="empty-state">暂无用户数据</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="user-pagination" v-if="pushUserTotal > 0">
+                            <button :disabled="pushUserPage <= 1" @click="loadPushUsers(pushUserPage - 1)">上一页</button>
+                            <span>第 {{ pushUserPage }}/{{ Math.ceil(pushUserTotal / pushUserSize) }} 页</span>
+                            <button :disabled="pushUserPage >= Math.ceil(pushUserTotal / pushUserSize)"
+                                    @click="loadPushUsers(pushUserPage + 1)">下一页</button>
+                        </div>
+                    </div>
+
+                    <div class="user-select-right">
+                        <div class="panel-header">
+                            <span>已选用户 ({{ pushSelectedUsers.length }})</span>
+                            <button class="btn btn-sm btn-default" @click="deselectAllPush()"
+                                    v-if="pushSelectedUsers.length > 0">全部移除</button>
+                        </div>
+                        <div class="selected-users">
+                            <div class="selected-user-item" v-for="su in pushSelectedUsers" :key="su.id">
+                                <span>{{ su.name || '未设置' }} <span style="color:#999;">ID: {{ su.id }}</span></span>
+                                <button class="remove-btn" @click="removePushSelected(su.id)">✕</button>
+                            </div>
+                            <div class="empty-state" v-if="pushSelectedUsers.length === 0" style="padding:30px;">
+                                请在左侧选择用户
+                            </div>
+                        </div>
+                        <div class="msg-compose">
+                            <label class="field-label">推送标题</label>
+                            <input type="text" v-model="pushForm.title" placeholder="如：新菜品上线通知" maxlength="30" />
+                            <label class="field-label" style="margin-top:8px;">推送内容</label>
+                            <textarea v-model="pushForm.content" rows="4"
+                                      placeholder="请输入推送内容..." maxlength="500"></textarea>
+                            <div class="hint" style="text-align:right;">
+                                {{ pushForm.content.length }}/500 字符
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-purple"
+                                        :disabled="pushForm.sending || pushSelectedUsers.length === 0 || !pushForm.title || !pushForm.content"
+                                        @click="doSendPush()">
+                                    🔔 {{ pushForm.sending ? '推送中...' : '发送APP推送 (' + pushSelectedUsers.length + '人)' }}
+                                </button>
+                            </div>
+                            <div class="send-result"
+                                 :class="pushForm.result && pushForm.result.status === 2 ? 'success' : (pushForm.result && pushForm.result.status === 4 ? 'partial' : 'error')"
+                                 v-if="pushForm.result && !pushForm.sending">
+                                <button class="close-result" @click="pushForm.result = null">&times;</button>
+                                <strong>推送完成！</strong>
+                                成功: {{ pushForm.result.successCount }} | 失败: {{ pushForm.result.failCount }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== Tab 3: 发送记录 ========== -->
+            <div class="tab-content" id="tab-record">
+                <div class="toolbar">
+                    <select v-model="recordForm.status" @change="loadRecords(1)">
+                        <option value="">所有状态</option>
+                        <option :value="0">待发送</option>
+                        <option :value="2">发送成功</option>
+                        <option :value="3">发送失败</option>
+                        <option :value="4">部分成功</option>
+                    </select>
+                    <select v-model="recordForm.channel" @change="loadRecords(1)">
+                        <option value="">所有渠道</option>
+                        <option :value="1">短信</option>
+                        <option :value="2">APP推送</option>
+                        <option :value="3">短信+推送</option>
+                    </select>
+                    <button class="btn btn-default btn-sm" @click="loadRecords(1)">刷新</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>渠道</th>
+                            <th>内容预览</th>
+                            <th>目标数</th>
+                            <th>成功</th>
+                            <th>失败</th>
+                            <th>状态</th>
+                            <th>发送时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="r in records" :key="r.id">
+                            <td>{{ r.id }}</td>
+                            <td>
+                                <span class="channel-tag" :class="{'channel-sms': r.channel===1,
+                                    'channel-push': r.channel===2, 'channel-both': r.channel===3}">
+                                    {{ channelName(r.channel) }}
+                                </span>
+                            </td>
+                            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                {{ r.content || '-' }}
+                            </td>
+                            <td>{{ r.targetCount }}</td>
+                            <td style="color:#52c41a">{{ r.successCount }}</td>
+                            <td style="color:#ff4d4f">{{ r.failCount }}</td>
+                            <td>
+                                <span :class="{ 'status-sending': r.status===0||r.status===1,
+                                    'status-success': r.status===2, 'status-fail': r.status===3,
+                                    'status-partial': r.status===4 }"
+                                      style="font-size:12px;font-weight:600;">
+                                    {{ recordStatusName(r.status) }}
+                                </span>
+                            </td>
+                            <td>{{ formatDate(r.createTime) }}</td>
+                        </tr>
+                        <tr v-if="records.length===0">
+                            <td colspan="8" class="empty-state">暂无发送记录</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="pagination" v-if="recordTotal > 0">
+                    <button :disabled="recordPage <= 1" @click="loadRecords(recordPage - 1)">上一页</button>
+                    <span>第 {{ recordPage }}/{{ Math.ceil(recordTotal / recordSize) }} 页，共 {{ recordTotal }} 条</span>
+                    <button :disabled="recordPage >= Math.ceil(recordTotal / recordSize)"
+                            @click="loadRecords(recordPage + 1)">下一页</button>
+                </div>
+            </div>
+
+            <!-- ========== Tab 4: 通知模板 ========== -->
+            <div class="tab-content" id="tab-template">
+                <div class="toolbar">
+                    <select v-model="templateFilter.bizType" @change="loadTemplates(1)">
+                        <option value="">所有业务类型</option>
                         <option value="ORDER_NOTICE">订单通知</option>
                         <option value="PROMOTION">营销推送</option>
                         <option value="VERIFY_CODE">验证码</option>
                         <option value="SYSTEM">系统通知</option>
+                        <option value="JOB_NOTICE">工作通知</option>
                     </select>
+                    <button class="btn btn-primary" @click="openTemplateModal()">+ 新增模板</button>
                 </div>
-                <div class="form-group">
-                    <label>目标用户（手机号或用户ID，一行一个）</label>
-                    <textarea v-model="sendForm.targetsText" rows="4" placeholder="13800138000&#10;13900139000"></textarea>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>模板名称</th>
+                            <th>业务类型</th>
+                            <th>渠道</th>
+                            <th>外部编码</th>
+                            <th>状态</th>
+                            <th>更新时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="t in templates" :key="t.id">
+                            <td><strong>{{ t.templateName }}</strong></td>
+                            <td>{{ bizTypeName(t.bizType) }}</td>
+                            <td>
+                                <span class="channel-tag" :class="{'channel-sms': t.channel===1,
+                                    'channel-push': t.channel===2, 'channel-both': t.channel===3}">
+                                    {{ channelName(t.channel) }}
+                                </span>
+                            </td>
+                            <td>{{ t.templateCode || '-' }}</td>
+                            <td>
+                                <span class="status-badge" :class="t.status===1?'status-on':'status-off'">
+                                    {{ t.status === 1 ? '启用' : '停用' }}
+                                </span>
+                            </td>
+                            <td>{{ formatDate(t.updateTime) }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-default" @click="openTemplateModal(t)">编辑</button>
+                                <button class="btn btn-sm btn-default"
+                                        @click="toggleTemplate(t)">{{ t.status===1?'停用':'启用' }}</button>
+                                <button class="btn btn-sm btn-danger" @click="deleteTemplate(t.id)">删除</button>
+                            </td>
+                        </tr>
+                        <tr v-if="templates.length===0">
+                            <td colspan="7" class="empty-state">暂无通知模板</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="pagination" v-if="templateTotal > 0">
+                    <button :disabled="templatePage <= 1" @click="loadTemplates(templatePage - 1)">上一页</button>
+                    <span>第 {{ templatePage }}/{{ Math.ceil(templateTotal / templateSize) }} 页，共 {{ templateTotal }} 条</span>
+                    <button :disabled="templatePage >= Math.ceil(templateTotal / templateSize)"
+                            @click="loadTemplates(templatePage + 1)">下一页</button>
                 </div>
-                <div class="form-group">
-                    <label>模板参数（JSON格式）</label>
-                    <textarea v-model="sendForm.paramsJson" rows="3"
-                              placeholder='{"userName": "张三", "orderNo": "NO20230101"}'></textarea>
-                    <div class="hint">根据所选模板的占位符填写对应参数</div>
-                </div>
-                <div class="form-group">
-                    <label>定时发送（可选，留空为立即发送）</label>
-                    <input type="datetime-local" v-model="sendForm.sendTime" />
-                </div>
-                <button class="btn btn-success" @click="doSend" :disabled="sendForm.sending">
-                    {{ sendForm.sending ? '发送中...' : '发送通知' }}
-                </button>
-                <button class="btn btn-default" style="margin-left:8px" @click="doSendAllUsers">推送给全部用户</button>
-            </div>
-
-            <!-- 发送结果 -->
-            <div v-if="sendForm.result" style="margin-top:16px; padding:12px; background:#f6ffed;
-                        border:1px solid #b7eb8f; border-radius:4px; max-width:700px;">
-                <div><strong>发送结果：</strong></div>
-                <div>成功: {{ sendForm.result.successCount }} 条 | 失败: {{ sendForm.result.failCount }} 条</div>
-                <div v-if="sendForm.result.failReason" style="color:#ff4d4f; margin-top:4px;">
-                    原因: {{ sendForm.result.failReason }}
-                </div>
-            </div>
-        </div>
-
-        <!-- ==================== 发送记录 ==================== -->
-        <div class="tab-content" id="tab-record">
-            <div class="toolbar">
-                <select v-model="recordForm.bizType" @change="loadRecords(1)">
-                    <option value="">所有类型</option>
-                    <option value="ORDER_NOTICE">订单通知</option>
-                    <option value="PROMOTION">营销推送</option>
-                    <option value="VERIFY_CODE">验证码</option>
-                    <option value="SYSTEM">系统通知</option>
-                </select>
-                <select v-model="recordForm.status" @change="loadRecords(1)">
-                    <option value="">所有状态</option>
-                    <option :value="0">待发送</option>
-                    <option :value="2">发送成功</option>
-                    <option :value="3">发送失败</option>
-                    <option :value="4">部分成功</option>
-                </select>
-            </div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>业务类型</th>
-                        <th>渠道</th>
-                        <th>目标数</th>
-                        <th>成功</th>
-                        <th>失败</th>
-                        <th>状态</th>
-                        <th>发送时间</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="r in records" :key="r.id">
-                        <td>{{ r.id }}</td>
-                        <td>{{ bizTypeName(r.bizType) }}</td>
-                        <td>{{ channelName(r.channel) }}</td>
-                        <td>{{ r.targetCount }}</td>
-                        <td style="color:#52c41a">{{ r.successCount }}</td>
-                        <td style="color:#ff4d4f">{{ r.failCount }}</td>
-                        <td>
-                            <span :class="{'status-sending': r.status===0||r.status===1,
-                                'status-success': r.status===2, 'status-fail': r.status===3,
-                                'status-partial': r.status===4}">
-                                {{ recordStatusName(r.status) }}
-                            </span>
-                        </td>
-                        <td>{{ formatDate(r.createTime) }}</td>
-                    </tr>
-                    <tr v-if="records.length===0">
-                        <td colspan="8" class="empty-state">暂无发送记录</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <!-- 记录分页 -->
-            <div class="pagination" v-if="recordTotal > 0">
-                <button :disabled="recordPage <= 1" @click="loadRecords(recordPage - 1)">上一页</button>
-                <span>第 {{ recordPage }} / {{ Math.ceil(recordTotal / recordSize) }} 页，共 {{ recordTotal }} 条</span>
-                <button :disabled="recordPage >= Math.ceil(recordTotal / recordSize)"
-                        @click="loadRecords(recordPage + 1)">下一页</button>
             </div>
         </div>
 
@@ -349,68 +630,364 @@
         </div>
     </div>
 
-    <script src="../../js/vue.js"></script>
-    <script src="../../js/axios.min.js"></script>
+    <script src="../../plugins/vue/vue.js"></script>
+    <script src="../../plugins/axios/axios.min.js"></script>
+    <script src="../../js/request.js"></script>
     <script src="../../api/notification.js"></script>
     <script>
-        axios.defaults.baseURL = 'http://localhost:8080';
-
-        new Vue({
+        // 修改点：全新消息通知管理 - 支持用户选择器、短信发送、APP推送
+        var app = new Vue({
             el: '#app',
             data: {
-                // 模板管理
-                templates: [],
-                templatePage: 1,
-                templateSize: 10,
-                templateTotal: 0,
-                templateForm: { bizType: '' },
+                // 统计
+                stats: { todaySms: 0, todayPush: 0, todaySuccess: 0, todayFail: 0 },
+                isMockMode: true,
 
-                // 发送消息
-                sendForm: {
-                    channel: 1,
-                    bizType: 'ORDER_NOTICE',
-                    targetsText: '',
-                    paramsJson: '{}',
-                    sendTime: '',
-                    sending: false,
-                    result: null
-                },
+                // ---- 短信发送 Tab ----
+                users: [],
+                userPage: 1,
+                userSize: 10,
+                userTotal: 0,
+                userSearch: { name: '', phone: '' },
+                selectedIds: new Set(),
+                smsForm: { content: '', sending: false, result: null },
 
-                // 发送记录
+                // ---- APP推送 Tab ----
+                pushUsers: [],
+                pushUserPage: 1,
+                pushUserSize: 10,
+                pushUserTotal: 0,
+                pushUserSearch: { name: '', phone: '' },
+                pushSelectedIds: new Set(),
+                pushForm: { title: '', content: '', sending: false, result: null },
+
+                // ---- 发送记录 Tab ----
                 records: [],
                 recordPage: 1,
                 recordSize: 10,
                 recordTotal: 0,
-                recordForm: { bizType: '', status: '' },
+                recordForm: { status: '', channel: '' },
 
-                // 模板弹窗
+                // ---- 模板 Tab ----
+                templates: [],
+                templatePage: 1,
+                templateSize: 10,
+                templateTotal: 0,
+                templateFilter: { bizType: '' },
                 templateModal: {
-                    show: false,
-                    isEdit: false,
+                    show: false, isEdit: false,
                     form: { channel: 1, bizType: 'ORDER_NOTICE', status: 1 }
                 }
             },
 
-            mounted() {
-                this.loadTemplates(1);
+            computed: {
+                selectedUsers: function() {
+                    var self = this;
+                    return self.users.filter(function(u) { return self.selectedIds.has(u.id); });
+                },
+                isAllPageSelected: function() {
+                    if (this.users.length === 0) return false;
+                    var self = this;
+                    return this.users.every(function(u) { return self.selectedIds.has(u.id); });
+                },
+                pushSelectedUsers: function() {
+                    var self = this;
+                    return self.pushUsers.filter(function(u) { return self.pushSelectedIds.has(u.id); });
+                },
+                isAllPushPageSelected: function() {
+                    if (this.pushUsers.length === 0) return false;
+                    var self = this;
+                    return this.pushUsers.every(function(u) { return self.pushSelectedIds.has(u.id); });
+                }
+            },
+
+            mounted: function() {
+                this.loadUsers(1);
+                this.checkMockMode();
             },
 
             methods: {
-                // ==================== 模板CRUD ====================
-                loadTemplates(page) {
-                    this.templatePage = page;
-                    const params = { page, pageSize: this.templateSize };
-                    if (this.templateForm.bizType) params.bizType = this.templateForm.bizType;
-                    notificationApi.getTemplatePage(params).then(res => {
-                        if (res.data && res.data.code === 1) {
-                            const d = res.data.data;
-                            this.templates = d.records || [];
-                            this.templateTotal = d.total || 0;
+                // ==================== 用户查询 ====================
+                loadUsers: function(page) {
+                    var self = this;
+                    self.userPage = page;
+                    var params = { page: page, pageSize: self.userSize };
+                    if (self.userSearch.name) params.name = self.userSearch.name;
+                    if (self.userSearch.phone) params.phone = self.userSearch.phone;
+
+                    $axios.get('/user/page', { params: params }).then(function(res) {
+                        if (res && res.code === 1 && res.data) {
+                            self.users = res.data.records || [];
+                            self.userTotal = res.data.total || 0;
                         }
+                    }).catch(function(err) {
+                        console.error('加载用户失败:', err);
                     });
                 },
 
-                openTemplateModal(template) {
+                searchUsers: function() {
+                    this.loadUsers(1);
+                },
+
+                // 用户选择
+                toggleUser: function(user) {
+                    if (this.selectedIds.has(user.id)) {
+                        this.selectedIds.delete(user.id);
+                    } else {
+                        this.selectedIds.add(user.id);
+                    }
+                    // 触发Vue响应式更新
+                    this.selectedIds = new Set(this.selectedIds);
+                },
+
+                selectAllPage: function() {
+                    var self = this;
+                    self.users.forEach(function(u) { self.selectedIds.add(u.id); });
+                    self.selectedIds = new Set(self.selectedIds);
+                },
+
+                deselectAll: function() {
+                    this.selectedIds = new Set();
+                },
+
+                toggleAllPage: function(ev) {
+                    if (ev.target.checked) {
+                        this.selectAllPage();
+                    } else {
+                        this.deselectAll();
+                    }
+                },
+
+                removeSelected: function(id) {
+                    this.selectedIds.delete(id);
+                    this.selectedIds = new Set(this.selectedIds);
+                },
+
+                // ==================== APP推送用户查询 ====================
+                loadPushUsers: function(page) {
+                    var self = this;
+                    self.pushUserPage = page;
+                    var params = { page: page, pageSize: self.pushUserSize };
+                    if (self.pushUserSearch.name) params.name = self.pushUserSearch.name;
+                    if (self.pushUserSearch.phone) params.phone = self.pushUserSearch.phone;
+
+                    $axios.get('/user/page', { params: params }).then(function(res) {
+                        if (res && res.code === 1 && res.data) {
+                            self.pushUsers = res.data.records || [];
+                            self.pushUserTotal = res.data.total || 0;
+                        }
+                    }).catch(function(err) {
+                        console.error('加载推送用户失败:', err);
+                    });
+                },
+
+                searchPushUsers: function() {
+                    this.loadPushUsers(1);
+                },
+
+                togglePushUser: function(user) {
+                    if (this.pushSelectedIds.has(user.id)) {
+                        this.pushSelectedIds.delete(user.id);
+                    } else {
+                        this.pushSelectedIds.add(user.id);
+                    }
+                    this.pushSelectedIds = new Set(this.pushSelectedIds);
+                },
+
+                selectAllPushPage: function() {
+                    var self = this;
+                    self.pushUsers.forEach(function(u) { self.pushSelectedIds.add(u.id); });
+                    self.pushSelectedIds = new Set(self.pushSelectedIds);
+                },
+
+                deselectAllPush: function() {
+                    this.pushSelectedIds = new Set();
+                },
+
+                toggleAllPushPage: function(ev) {
+                    if (ev.target.checked) this.selectAllPushPage();
+                    else this.deselectAllPush();
+                },
+
+                removePushSelected: function(id) {
+                    this.pushSelectedIds.delete(id);
+                    this.pushSelectedIds = new Set(this.pushSelectedIds);
+                },
+
+                // ==================== 发送短信 ====================
+                doSendSms: function() {
+                    var self = this;
+                    var phones = self.selectedUsers.map(function(u) { return u.phone; }).filter(function(p) { return p; });
+
+                    if (phones.length === 0) {
+                        alert('所选用户没有手机号，无法发送短信');
+                        return;
+                    }
+                    if (!self.smsForm.content.trim()) {
+                        alert('请输入短信内容');
+                        return;
+                    }
+
+                    self.smsForm.sending = true;
+                    self.smsForm.result = null;
+
+                    // 构造模板参数，用户名为占位符值
+                    var params = {};
+                    if (self.smsForm.content.indexOf('${') < 0) {
+                        // 无占位符，直接作为模板内容发送
+                        params = { content: self.smsForm.content };
+                    }
+
+                    var data = {
+                        bizType: 'SYSTEM',
+                        channel: 1,
+                        targets: phones,
+                        params: params
+                    };
+
+                    // 先用模板渲染方式：直接将输入内容作为模板
+                    // 修改点：新增简单短信发送，无需依赖阿里云模板
+                    var sendData = {
+                        channel: 1,
+                        targets: phones,
+                        content: self.smsForm.content
+                    };
+
+                    notificationApi.sendSimpleMessage(sendData).then(function(res) {
+                        if (res && res.code === 1 && res.data) {
+                            self.smsForm.result = res.data;
+                            // 刷新统计
+                            self.loadStats();
+                        } else {
+                            self.smsForm.result = { status: 3, successCount: 0, failCount: phones.length,
+                                failReason: res ? res.msg : '发送失败' };
+                        }
+                    }).catch(function(err) {
+                        console.error('短信发送异常:', err);
+                        self.smsForm.result = { status: 3, successCount: 0, failCount: phones.length,
+                            failReason: '网络异常，请重试' };
+                    }).finally(function() {
+                        self.smsForm.sending = false;
+                    });
+                },
+
+                // ==================== 发送APP推送 ====================
+                doSendPush: function() {
+                    var self = this;
+                    if (self.pushSelectedUsers.length === 0) {
+                        alert('请选择推送用户');
+                        return;
+                    }
+                    if (!self.pushForm.title.trim()) {
+                        alert('请输入推送标题');
+                        return;
+                    }
+                    if (!self.pushForm.content.trim()) {
+                        alert('请输入推送内容');
+                        return;
+                    }
+
+                    self.pushForm.sending = true;
+                    self.pushForm.result = null;
+
+                    var userIds = self.pushSelectedUsers.map(function(u) { return u.id; });
+
+                    // 修改点：修正推送数据格式，title和content提到顶层（后端sendSimpleMessage直接读取）
+                    var data = {
+                        channel: 2,
+                        targets: userIds.map(String),
+                        title: self.pushForm.title,
+                        content: self.pushForm.content
+                    };
+
+                    notificationApi.sendSimpleMessage(data).then(function(res) {
+                        if (res && res.code === 1 && res.data) {
+                            self.pushForm.result = res.data;
+                            self.loadStats();
+                        } else {
+                            self.pushForm.result = { status: 3, successCount: 0, failCount: userIds.length,
+                                failReason: res ? res.msg : '推送失败' };
+                        }
+                    }).catch(function(err) {
+                        console.error('推送异常:', err);
+                        self.pushForm.result = { status: 3, successCount: 0, failCount: userIds.length,
+                            failReason: '网络异常，请重试' };
+                    }).finally(function() {
+                        self.pushForm.sending = false;
+                    });
+                },
+
+                // ==================== 发送记录 ====================
+                loadRecords: function(page) {
+                    var self = this;
+                    self.recordPage = page;
+                    var params = { page: page, pageSize: self.recordSize };
+                    if (self.recordForm.status !== '') params.status = self.recordForm.status;
+                    if (self.recordForm.channel) params.channel = self.recordForm.channel;
+
+                    notificationApi.getRecordPage(params).then(function(res) {
+                        if (res && res.code === 1 && res.data) {
+                            self.records = res.data.records || [];
+                            self.recordTotal = res.data.total || 0;
+                        }
+                    }).catch(function(err) {
+                        console.error('加载记录失败:', err);
+                    });
+                },
+
+                // ==================== 统计 ====================
+                loadStats: function() {
+                    var self = this;
+                    // 加载今日记录来计算统计
+                    notificationApi.getRecordPage({ page: 1, pageSize: 1000 }).then(function(res) {
+                        if (res && res.code === 1 && res.data) {
+                            var records = res.data.records || [];
+                            var today = new Date().toDateString();
+                            var smsCount = 0, pushCount = 0, successCount = 0, failCount = 0;
+
+                            records.forEach(function(r) {
+                                var d = new Date(r.createTime);
+                                if (d.toDateString() === today) {
+                                    if (r.channel === 1) smsCount += r.targetCount || 0;
+                                    if (r.channel === 2) pushCount += r.targetCount || 0;
+                                    successCount += r.successCount || 0;
+                                    failCount += r.failCount || 0;
+                                }
+                            });
+                            self.stats = { todaySms: smsCount, todayPush: pushCount,
+                                todaySuccess: successCount, todayFail: failCount };
+                        }
+                    }).catch(function() {});
+                },
+
+                checkMockMode: function() {
+                    // 通过是否成功调用健康检查来判断
+                    var self = this;
+                    notificationApi.getHealth().then(function(res) {
+                        self.isMockMode = !!(res && res.data && res.data.mockMode);
+                    }).catch(function() {
+                        self.isMockMode = true;
+                    });
+                },
+
+                // ==================== 模板管理 ====================
+                loadTemplates: function(page) {
+                    var self = this;
+                    self.templatePage = page;
+                    var params = { page: page, pageSize: self.templateSize };
+                    if (self.templateFilter.bizType) params.bizType = self.templateFilter.bizType;
+
+                    notificationApi.getTemplatePage(params).then(function(res) {
+                        if (res && res.code === 1 && res.data) {
+                            self.templates = res.data.records || [];
+                            self.templateTotal = res.data.total || 0;
+                        }
+                    }).catch(function(err) {
+                        console.error('加载模板失败:', err);
+                    });
+                },
+
+                openTemplateModal: function(template) {
                     this.templateModal.isEdit = !!template;
                     if (template) {
                         this.templateModal.form = JSON.parse(JSON.stringify(template));
@@ -420,130 +997,77 @@
                     this.templateModal.show = true;
                 },
 
-                closeTemplateModal() {
+                closeTemplateModal: function() {
                     this.templateModal.show = false;
                 },
 
-                saveTemplate() {
-                    const form = this.templateModal.form;
+                saveTemplate: function() {
+                    var self = this;
+                    var form = self.templateModal.form;
                     if (!form.templateName || !form.content) {
                         alert('模板名称和内容不能为空');
                         return;
                     }
-                    const apiCall = this.templateModal.isEdit
+                    var apiCall = self.templateModal.isEdit
                         ? notificationApi.updateTemplate(form)
                         : notificationApi.addTemplate(form);
-                    apiCall.then(res => {
-                        if (res.data && res.data.code === 1) {
-                            this.closeTemplateModal();
-                            this.loadTemplates(this.templatePage);
+                    apiCall.then(function(res) {
+                        if (res && res.code === 1) {
+                            self.closeTemplateModal();
+                            self.loadTemplates(self.templatePage);
                         } else {
-                            alert(res.data.msg || '保存失败');
+                            alert(res ? res.msg : '保存失败');
                         }
+                    }).catch(function(err) {
+                        console.error('保存模板异常:', err);
+                        alert('保存失败，请检查网络连接');
                     });
                 },
 
-                toggleTemplate(t) {
-                    const newStatus = t.status === 1 ? 0 : 1;
-                    notificationApi.toggleTemplate(t.id, newStatus).then(res => {
-                        if (res.data && res.data.code === 1) {
+                toggleTemplate: function(t) {
+                    var newStatus = t.status === 1 ? 0 : 1;
+                    notificationApi.toggleTemplate(t.id, newStatus).then(function(res) {
+                        if (res && res.code === 1) {
                             t.status = newStatus;
                         }
+                    }).catch(function(err) {
+                        console.error('切换模板状态异常:', err);
                     });
                 },
 
-                deleteTemplate(id) {
+                deleteTemplate: function(id) {
                     if (!confirm('确定删除该模板吗？')) return;
-                    notificationApi.deleteTemplate(id).then(res => {
-                        if (res.data && res.data.code === 1) {
-                            this.loadTemplates(this.templatePage);
+                    var self = this;
+                    notificationApi.deleteTemplate(id).then(function(res) {
+                        if (res && res.code === 1) {
+                            self.loadTemplates(self.templatePage);
                         }
-                    });
-                },
-
-                // ==================== 发送消息 ====================
-                doSend() {
-                    const targets = this.sendForm.targetsText.split('\n').map(s => s.trim()).filter(s => s);
-                    if (targets.length === 0) {
-                        alert('请输入目标用户');
-                        return;
-                    }
-
-                    let params = {};
-                    try {
-                        params = JSON.parse(this.sendForm.paramsJson);
-                    } catch (e) {
-                        alert('模板参数JSON格式不正确');
-                        return;
-                    }
-
-                    this.sendForm.sending = true;
-                    this.sendForm.result = null;
-
-                    const data = {
-                        bizType: this.sendForm.bizType,
-                        channel: this.sendForm.channel,
-                        targets: targets,
-                        params: params,
-                        sendTime: this.sendForm.sendTime || null
-                    };
-
-                    notificationApi.sendNotification(data).then(res => {
-                        if (res.data && res.data.code === 1) {
-                            this.sendForm.result = res.data.data;
-                        } else {
-                            alert('发送失败: ' + (res.data.msg || ''));
-                        }
-                    }).finally(() => {
-                        this.sendForm.sending = false;
-                    });
-                },
-
-                doSendAllUsers() {
-                    // 简化实现：推送给全部用户（实际应调用会员查询接口获取用户列表）
-                    if (!confirm('确定向所有用户推送此消息吗？')) return;
-                    this.sendForm.targetsText = 'all_users';
-                    this.doSend();
-                },
-
-                // ==================== 记录查询 ====================
-                loadRecords(page) {
-                    this.recordPage = page;
-                    const params = { page, pageSize: this.recordSize };
-                    if (this.recordForm.bizType) params.bizType = this.recordForm.bizType;
-                    if (this.recordForm.status !== '') params.status = this.recordForm.status;
-                    notificationApi.getRecordPage(params).then(res => {
-                        if (res.data && res.data.code === 1) {
-                            const d = res.data.data;
-                            this.records = d.records || [];
-                            this.recordTotal = d.total || 0;
-                        }
+                    }).catch(function(err) {
+                        console.error('删除模板异常:', err);
                     });
                 },
 
                 // ==================== 工具方法 ====================
-                bizTypeName(type) {
-                    const map = {
-                        'ORDER_NOTICE': '订单通知', 'PROMOTION': '营销推送',
-                        'VERIFY_CODE': '验证码', 'SYSTEM': '系统通知', 'JOB_NOTICE': '工作通知'
-                    };
+                bizTypeName: function(type) {
+                    var map = { 'ORDER_NOTICE': '订单通知', 'PROMOTION': '营销推送',
+                        'VERIFY_CODE': '验证码', 'SYSTEM': '系统通知', 'JOB_NOTICE': '工作通知' };
                     return map[type] || type;
                 },
 
-                channelName(ch) {
-                    const map = { 1: '短信', 2: 'APP推送', 3: '短信+推送' };
+                channelName: function(ch) {
+                    var map = { 1: '短信', 2: 'APP推送', 3: '短信+推送' };
                     return map[ch] || '未知';
                 },
 
-                recordStatusName(st) {
-                    const map = { 0: '待发送', 1: '发送中', 2: '成功', 3: '失败', 4: '部分成功' };
+                recordStatusName: function(st) {
+                    var map = { 0: '待发送', 1: '发送中', 2: '成功', 3: '失败', 4: '部分成功' };
                     return map[st] || '未知';
                 },
 
-                formatDate(dateStr) {
+                formatDate: function(dateStr) {
                     if (!dateStr) return '-';
-                    const d = new Date(dateStr);
-                    const pad = n => String(n).padStart(2, '0');
+                    var d = new Date(dateStr);
+                    var pad = function(n) { return String(n).padStart(2, '0'); };
                     return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
                         ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
                 }
@@ -552,16 +1076,17 @@
 
         // Tab切换
         function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+            document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+            var btn = document.querySelector('.tab-btn[onclick="switchTab(\'' + tab + '\')"]');
+            if (btn) btn.classList.add('active');
             document.getElementById('tab-' + tab).classList.add('active');
-            // 切换时加载对应数据
-            if (tab === 'record') {
-                app.loadRecords(1);
-            }
+
+            if (tab === 'sms') { app.loadUsers(app.userPage); app.loadStats(); }
+            else if (tab === 'push') { app.loadPushUsers(app.pushUserPage); }
+            else if (tab === 'record') { app.loadRecords(1); app.loadStats(); }
+            else if (tab === 'template') { app.loadTemplates(app.templatePage); }
         }
-        const app = document.querySelector('#app').__vue__;
     </script>
 </body>
 </html>

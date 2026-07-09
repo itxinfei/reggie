@@ -113,8 +113,8 @@ new Vue({
         loadHotRank() {
             this.loading = true;
             recommendBackendApi.getHotRecommend(12).then(res => {
-                if (res.data && res.data.code === 1) {
-                    this.hotDishes = res.data.data || [];
+                if (res.code === 1) {
+                    this.hotDishes = res.data || [];
                 }
             }).catch(err => {
                 console.error('加载热门排行失败:', err);

@@ -5,6 +5,14 @@
  * ============================================================ */
 
 /* ---- 页面容器 ---- */
+
+/* 登录页全局覆盖 — 避免使用内联样式 */
+body.login-page {
+  overflow: visible;
+  background: transparent;
+  max-width: none;
+  height: auto;
+}
 #login {
   min-height: 100vh;
   position: relative;

@@ -243,6 +243,7 @@ public final class ExportUtil {
 
     /**
      * 生成PDF
+     * 修改点：PDF中文字体多级fallback，解决Linux/Docker环境无STSong-Light字体的问题
      */
     private static byte[] generatePdf(String title, LinkedHashMap<String, String> columns,
                                       List<Map<String, Object>> dataList,
@@ -252,8 +253,8 @@ public final class ExportUtil {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             PdfWriter.getInstance(document, bos);
 
-            // 设置中文字体
-            BaseFont baseFont = BaseFont.createFont("STSong-Light", "UniGB-UCS2-H", BaseFont.NOT_EMBEDDED);
+            // 修改点：尝试加载中文字体，多级fallback
+            BaseFont baseFont = loadChineseBaseFont();
             com.itextpdf.text.Font titleFont = new com.itextpdf.text.Font(baseFont, 18, com.itextpdf.text.Font.BOLD);
             com.itextpdf.text.Font headerFont = new com.itextpdf.text.Font(baseFont, 10, com.itextpdf.text.Font.BOLD);
             com.itextpdf.text.Font dataFont = new com.itextpdf.text.Font(baseFont, 9, com.itextpdf.text.Font.NORMAL);
@@ -387,5 +388,41 @@ public final class ExportUtil {
             return ((LocalDateTime) value).format(DATE_FMT);
         }
         return value.toString();
+    }
+
+    /**
+     * 加载PDF中文字体，多级fallback
+     * 修改点：依次尝试常见中文字体，解决非中文环境无指定字体的问题
+     *
+     * 尝试顺序: STSong-Light → SimSun → SimHei → STSong → 系统默认Helvetica
+     */
+    private static BaseFont loadChineseBaseFont() {
+        // 候选字体列表: (字体名, 编码)
+        String[][] fontCandidates = {
+                {"STSong-Light", "UniGB-UCS2-H"},
+                {"SimSun", "UniGB-UCS2-H"},
+                {"SimHei", "UniGB-UCS2-H"},
+                {"STSong", "UniGB-UCS2-H"},
+                {"SimSun", "GBK"},
+        };
+
+        for (String[] candidate : fontCandidates) {
+            try {
+                BaseFont font = BaseFont.createFont(candidate[0], candidate[1], BaseFont.NOT_EMBEDDED);
+                log.info("PDF中文字体加载成功: {}-{}", candidate[0], candidate[1]);
+                return font;
+            } catch (Exception ignored) {
+                // 尝试下一个候选字体
+            }
+        }
+
+        // 最终fallback：使用Helvetica（不支持中文，但至少不会崩溃）
+        try {
+            log.warn("未找到任何中文字体，PDF中文内容可能无法正常显示");
+            return BaseFont.createFont("Helvetica", BaseFont.WINANSI, BaseFont.NOT_EMBEDDED);
+        } catch (Exception e) {
+            log.error("无法加载任何PDF字体", e);
+            throw new RuntimeException("PDF字体加载失败，请确认系统已安装中文字体", e);
+        }
     }
 }

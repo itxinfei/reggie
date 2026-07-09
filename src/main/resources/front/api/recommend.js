@@ -10,7 +10,7 @@ var recommendApi = {
      * @param {number} limit - 推荐数量
      */
     getDishRecommend: function(limit) {
-        return axios.get('/recommend/dishes', { params: { limit: limit || 10 } });
+        return $axios.get('/recommend/dishes', { params: { limit: limit || 10 } });
     },
 
     /**
@@ -18,7 +18,7 @@ var recommendApi = {
      * @param {number} limit - 数量
      */
     getHotRank: function(limit) {
-        return axios.get('/recommend/hot', { params: { limit: limit || 10 } });
+        return $axios.get('/recommend/hot', { params: { limit: limit || 10 } });
     },
 
     /**
@@ -26,7 +26,7 @@ var recommendApi = {
      * @param {number} limit - 数量
      */
     getNewArrivals: function(limit) {
-        return axios.get('/recommend/new-arrivals', { params: { limit: limit || 6 } });
+        return $axios.get('/recommend/new-arrivals', { params: { limit: limit || 6 } });
     },
 
     /**
@@ -34,7 +34,7 @@ var recommendApi = {
      * @param {number} limit - 数量
      */
     getSetmealRecommend: function(limit) {
-        return axios.get('/recommend/setmeals', { params: { limit: limit || 6 } });
+        return $axios.get('/recommend/setmeals', { params: { limit: limit || 6 } });
     },
 
     // ==================== 浏览记录 ====================
@@ -44,7 +44,7 @@ var recommendApi = {
      * @param {Object} data - {targetType, targetId, targetName, duration, actionType}
      */
     recordBrowse: function(data) {
-        return axios.post('/recommend/browse', data);
+        return $axios.post('/recommend/browse', data);
     },
 
     /**
@@ -52,7 +52,7 @@ var recommendApi = {
      * @param {number} limit - 条数
      */
     getBrowseHistory: function(limit) {
-        return axios.get('/recommend/browse-history', { params: { limit: limit || 20 } });
+        return $axios.get('/recommend/browse-history', { params: { limit: limit || 20 } });
     },
 
     // ==================== 推荐反馈 ====================
@@ -62,14 +62,14 @@ var recommendApi = {
      * @param {Object} data - {dishId, feedbackType, recommendCacheId}
      */
     recordFeedback: function(data) {
-        return axios.post('/recommend/feedback', data);
+        return $axios.post('/recommend/feedback', data);
     },
 
     /**
      * 刷新推荐缓存
      */
     refreshCache: function() {
-        return axios.post('/recommend/refresh-cache');
+        return $axios.post('/recommend/refresh-cache');
     },
 
     // ==================== 营销活动 ====================
@@ -78,14 +78,14 @@ var recommendApi = {
      * 获取匹配用户的活动
      */
     getMatchedCampaigns: function() {
-        return axios.get('/recommend/campaigns');
+        return $axios.get('/recommend/campaigns');
     },
 
     /**
      * 获取未读营销消息
      */
     getUnreadMessages: function() {
-        return axios.get('/recommend/messages/unread');
+        return $axios.get('/recommend/messages/unread');
     },
 
     /**
@@ -93,6 +93,26 @@ var recommendApi = {
      * @param {number} id - 消息ID
      */
     markMessageRead: function(id) {
-        return axios.put('/recommend/messages/' + id + '/read');
+        return $axios.put('/recommend/messages/' + id + '/read');
+    },
+
+    // 修改点：新增消息列表和未读数查询API
+
+    /**
+     * 获取用户所有消息列表（分页）
+     * @param {number} page - 页码
+     * @param {number} pageSize - 每页数量
+     */
+    getUserMessages: function(page, pageSize) {
+        return $axios.get('/recommend/messages', {
+            params: { page: page || 1, pageSize: pageSize || 20 }
+        });
+    },
+
+    /**
+     * 获取未读消息数量（用于角标）
+     */
+    getUnreadCount: function() {
+        return $axios.get('/recommend/messages/unread-count');
     }
 };

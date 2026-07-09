@@ -89,6 +89,11 @@ public class PaymentController {
             return R.error("支付订单不存在");
         }
 
+        // 金额校验：退款金额不能大于支付订单金额
+        if (dto.getAmount() != null && dto.getAmount().compareTo(paymentOrder.getAmount()) > 0) {
+            return R.error("退款金额不能大于支付金额（支付金额：" + paymentOrder.getAmount() + "元）");
+        }
+
         PaymentChannel paymentChannel = paymentChannelFactory.getChannel(paymentOrder.getChannel());
         RefundRequest refundRequest = new RefundRequest();
         refundRequest.setChannelTradeNo(paymentOrder.getChannelTradeNo());

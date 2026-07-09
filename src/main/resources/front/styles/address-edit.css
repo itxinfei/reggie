@@ -4,6 +4,14 @@
    支持四级联动（省/市/区/街道）
    ============================================ */
 
+/* 页面全局覆盖 — 避免使用内联样式 */
+body.scrollable-page {
+  overflow: visible;
+  background: transparent;
+  max-width: none;
+  height: auto;
+}
+
 /* ---- 页面容器 ---- */
 #address_edit {
   height: 100%;

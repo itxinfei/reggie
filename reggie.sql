@@ -141,7 +141,7 @@ DROP TABLE IF EXISTS `dining_queue`;
 CREATE TABLE `dining_queue`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   `tenant_id` bigint NOT NULL COMMENT '租户id',
-  `queue_no` varchar(10) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '排队号 A001',
+  `queue_no` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '排队号 yyyyMMddXXXX 格式，如202607090001',
   `phone` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '手机号',
   `seat_count` int NULL DEFAULT NULL COMMENT '人数',
   `status` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL DEFAULT 'WAITING' COMMENT '状态 WAITING/CALLED/CANCELLED/SERVED',
@@ -237,9 +237,9 @@ CREATE TABLE `dish`  (
 -- ----------------------------
 -- Records of dish
 -- ----------------------------
-INSERT INTO `dish` VALUES (1, '红烧肉', 1, 5800.00, 'DISH001', 'images/dishes/hongshaorou.jpg', '经典家常菜', 1, 1, 1, '2026-07-07 17:59:44', '2026-07-07 17:59:44', 1, 1, 0);
-INSERT INTO `dish` VALUES (2, '宫保鸡丁', 1, 4800.00, 'DISH002', 'images/dishes/gongbaojiding.jpg', '川菜经典', 1, 2, 1, '2026-07-07 17:59:44', '2026-07-07 17:59:44', 1, 1, 0);
-INSERT INTO `dish` VALUES (3, '鱼香肉丝', 1, 4600.00, 'DISH003', 'images/dishes/yuxiangrous.jpg', '酸甜可口', 1, 3, 1, '2026-07-07 17:59:44', '2026-07-07 17:59:44', 1, 1, 0);
+INSERT INTO `dish` VALUES (1, '红烧肉', 1, 58.00, 'DISH001', 'images/dishes/hongshaorou.jpg', '经典家常菜', 1, 1, 1, '2026-07-07 17:59:44', '2026-07-07 17:59:44', 1, 1, 0);
+INSERT INTO `dish` VALUES (2, '宫保鸡丁', 1, 48.00, 'DISH002', 'images/dishes/gongbaojiding.jpg', '川菜经典', 1, 2, 1, '2026-07-07 17:59:44', '2026-07-07 17:59:44', 1, 1, 0);
+INSERT INTO `dish` VALUES (3, '鱼香肉丝', 1, 46.00, 'DISH003', 'images/dishes/yuxiangrous.jpg', '酸甜可口', 1, 3, 1, '2026-07-07 17:59:44', '2026-07-07 17:59:44', 1, 1, 0);
 
 -- ----------------------------
 -- Table structure for dish_flavor
@@ -645,8 +645,8 @@ CREATE TABLE `setmeal`  (
 -- ----------------------------
 -- Records of setmeal
 -- ----------------------------
-INSERT INTO `setmeal` VALUES (1, 11, '单人工作餐', 2800.00, 1, 'SET001', '适合一人用餐', 'images/setmeal/single.jpg', 1, '2026-07-07 17:59:50', '2026-07-07 17:59:50', 1, 1, 0);
-INSERT INTO `setmeal` VALUES (2, 12, '双人浪漫套餐', 8800.00, 1, 'SET002', '适合情侣', 'images/setmeal/couple.jpg', 1, '2026-07-07 17:59:50', '2026-07-07 17:59:50', 1, 1, 0);
+INSERT INTO `setmeal` VALUES (1, 11, '单人工作餐', 28.00, 1, 'SET001', '适合一人用餐', 'images/setmeal/single.jpg', 1, '2026-07-07 17:59:50', '2026-07-07 17:59:50', 1, 1, 0);
+INSERT INTO `setmeal` VALUES (2, 12, '双人浪漫套餐', 88.00, 1, 'SET002', '适合情侣', 'images/setmeal/couple.jpg', 1, '2026-07-07 17:59:50', '2026-07-07 17:59:50', 1, 1, 0);
 
 -- ----------------------------
 -- Table structure for setmeal_dish
@@ -700,7 +700,7 @@ CREATE TABLE `shopping_cart`  (
 -- ----------------------------
 -- Records of shopping_cart
 -- ----------------------------
-INSERT INTO `shopping_cart` VALUES (1, '红烧肉', 'images/dishes/hongshaorou.jpg', 1, 1, NULL, '微辣', 2, 116.00, '2026-07-07 18:08:50', 1);
+INSERT INTO `shopping_cart` VALUES (1, '红烧肉', 'images/dishes/hongshaorou.jpg', 1, 1, NULL, '微辣', 2, 58.00, '2026-07-07 18:08:50', 1);
 INSERT INTO `shopping_cart` VALUES (2, '珍珠奶茶', 'images/drinks/zhenzhunaicha.jpg', 1, 13, NULL, '少糖', 1, 18.00, '2026-07-07 18:08:50', 1);
 
 -- ----------------------------

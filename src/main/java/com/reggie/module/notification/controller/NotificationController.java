@@ -114,7 +114,9 @@ public class NotificationController {
     /**
      * 发送通知（通用接口）
      * 请求体: { "bizType": "ORDER_NOTICE", "channel": 1, "targets": ["13800138000"],
-     *          "params": { "userName": "张三", "orderNo": "NO123" } }
+     *          "params": { "userName": "张三", "orderNo": "NO123" },
+     *          "sendTime": "2026-07-10T09:00:00" }
+     * 修改点：支持sendTime定时发送；修复channel=3(SMS+推送)同时发送两种渠道
      */
     @PostMapping("/send")
     public R<NotificationRecord> sendNotification(@RequestBody Map<String, Object> body) {
@@ -124,9 +126,36 @@ public class NotificationController {
         List<String> targets = (List<String>) body.get("targets");
         @SuppressWarnings("unchecked")
         Map<String, String> params = (Map<String, String>) body.get("params");
+        String sendTimeStr = (String) body.get("sendTime");
 
         if (bizType == null || targets == null || targets.isEmpty()) {
             return R.error("业务类型和目标用户不能为空");
+        }
+
+        // 修改点：解析定时发送时间
+        java.time.LocalDateTime sendTime = null;
+        if (sendTimeStr != null && !sendTimeStr.isEmpty()) {
+            try {
+                sendTime = java.time.LocalDateTime.parse(sendTimeStr);
+            } catch (Exception e) {
+                log.warn("sendTime解析失败: {}", sendTimeStr, e);
+            }
+        }
+
+        // 修改点：定时发送→查找模板后走batchSend；立即发送→走sendByBizType
+        if (sendTime != null && sendTime.isAfter(java.time.LocalDateTime.now())) {
+            // 查找匹配的启用模板获取templateId
+            LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(NotificationTemplate::getBizType, bizType)
+                   .eq(NotificationTemplate::getStatus, 1)
+                   .last("LIMIT 1");
+            NotificationTemplate template = templateMapper.selectOne(wrapper);
+            if (template == null) {
+                return R.error("未找到业务类型[" + bizType + "]的启用模板");
+            }
+            NotificationRecord record = notificationService.batchSend(
+                    template.getId(), targets, channel, 1, params, sendTime);
+            return R.success(record);
         }
 
         NotificationRecord record = notificationService.sendByBizType(bizType, targets, channel, params);
@@ -158,6 +187,29 @@ public class NotificationController {
         NotificationRecord record = notificationService.batchSend(
                 templateId, targets, channel, targetType, params, sendTime);
         return R.success(record);
+    }
+
+    /**
+     * 修改点：向全部用户发送通知
+     * 自动查询所有状态正常用户，按渠道发送并同步写入消息中心
+     * 请求体: { "bizType": "PROMOTION", "channel": 1, "params": { "userName": "用户" } }
+     */
+    @PostMapping("/send-all")
+    public R<NotificationRecord> sendToAllUsers(@RequestBody Map<String, Object> body) {
+        String bizType = (String) body.get("bizType");
+        Integer channel = (Integer) body.getOrDefault("channel", 1);
+        @SuppressWarnings("unchecked")
+        Map<String, String> params = (Map<String, String>) body.get("params");
+
+        if (bizType == null) {
+            return R.error("业务类型不能为空");
+        }
+
+        NotificationRecord record = notificationService.sendToAllUsers(bizType, channel, params);
+        if (record != null) {
+            return R.success(record);
+        }
+        return R.error("全量推送失败，请检查模板配置和用户数据");
     }
 
     // ==================== 发送记录 ====================
@@ -229,5 +281,44 @@ public class NotificationController {
         map.put("code", code);
         map.put("name", name);
         return map;
+    }
+
+    // ==================== 修改点：简易消息发送 ====================
+
+    /**
+     * 简易消息发送（无需模板，直接输入内容发送）
+     * 请求体: { "channel": 1, "targets": ["13800138000"], "content": "消息内容", "title": "标题(推送用)" }
+     */
+    @PostMapping("/send-simple")
+    public R<NotificationRecord> sendSimpleMessage(@RequestBody Map<String, Object> body) {
+        Integer channel = (Integer) body.getOrDefault("channel", 1);
+        @SuppressWarnings("unchecked")
+        List<String> targets = (List<String>) body.get("targets");
+        String content = (String) body.get("content");
+        String title = (String) body.get("title");
+
+        if (targets == null || targets.isEmpty()) {
+            return R.error("目标用户不能为空");
+        }
+        if (content == null || content.trim().isEmpty()) {
+            return R.error("消息内容不能为空");
+        }
+
+        NotificationRecord record = notificationService.sendSimpleMessage(channel, targets, title, content);
+        if (record != null) {
+            return R.success(record);
+        }
+        return R.error("消息发送失败");
+    }
+
+    /**
+     * 通知服务健康检查
+     */
+    @GetMapping("/health")
+    public R<Map<String, Object>> health() {
+        Map<String, Object> info = new HashMap<>();
+        info.put("available", true);
+        info.put("mockMode", notificationService.isMockMode());
+        return R.success(info);
     }
 }

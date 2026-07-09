@@ -60,6 +60,9 @@ public class TenantServiceImpl extends ServiceImpl<TenantMapper, Tenant> impleme
         employee.setStatus(UserStatus.ENABLED.getValue());
         employee.setRole(1); // 租户管理员默认超级管理员角色
         employee.setTenantId(tenant.getId());
+        // 修改点：设置sex和idNumber默认值，避免NOT NULL约束异常
+        employee.setSex("1");
+        employee.setIdNumber("");
 
         employeeService.save(employee);
 

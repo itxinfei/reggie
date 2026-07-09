@@ -44,9 +44,11 @@ public class Employee implements Serializable {
     @Size(max = 11, message = "手机号不能超过11个字符")
     private String phone;
 
-    private String sex;
+    // 修改点：设置默认值，避免org.springframework.dao.DataIntegrityViolationException: Field 'sex' doesn't have a default value
+    private String sex = "1"; // 默认男
 
-    private String idNumber;//身份证号码
+    // 修改点：设置默认值，避免NOT NULL约束异常
+    private String idNumber = ""; // 身份证号码
 
     private Integer status;
 

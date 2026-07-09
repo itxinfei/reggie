@@ -159,6 +159,48 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         }
     }
 
+    /**
+     * 修改点：获取用户所有消息列表（分页），包含已读和未读消息
+     */
+    @Override
+    public Page<Map<String, Object>> getMessages(Long userId, int page, int pageSize) {
+        if (userId == null) return new Page<>();
+
+        LambdaQueryWrapper<MarketingMessage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(MarketingMessage::getUserId, userId)
+               .in(MarketingMessage::getStatus, MarketingMessage.STATUS_SENT,
+                       MarketingMessage.STATUS_READ, MarketingMessage.STATUS_USED)
+               .orderByDesc(MarketingMessage::getCreateTime);
+
+        Page<MarketingMessage> msgPage = messageMapper.selectPage(new Page<>(page, pageSize), wrapper);
+
+        Page<Map<String, Object>> resultPage = new Page<>(page, pageSize, msgPage.getTotal());
+        resultPage.setRecords(msgPage.getRecords().stream().map(m -> {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("id", m.getId());
+            map.put("title", m.getTitle());
+            map.put("content", m.getContent());
+            map.put("pushType", m.getPushType());
+            map.put("status", m.getStatus());
+            map.put("readTime", m.getReadTime());
+            map.put("createTime", m.getCreateTime());
+            return map;
+        }).collect(Collectors.toList()));
+        return resultPage;
+    }
+
+    /**
+     * 修改点：获取用户未读消息数量，用于首页消息铃铛角标
+     */
+    @Override
+    public int getUnreadCount(Long userId) {
+        if (userId == null) return 0;
+        LambdaQueryWrapper<MarketingMessage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(MarketingMessage::getUserId, userId)
+               .eq(MarketingMessage::getStatus, MarketingMessage.STATUS_SENT);
+        return (int) messageMapper.selectCount(wrapper);
+    }
+
     @Override
     @Transactional
     public int autoDispatchCoupons(Long userId) {

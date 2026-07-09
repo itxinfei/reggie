@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>AI 经营分析助手</title>
+    <link rel="stylesheet" href="../../plugins/element-ui/index.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+        .ai-container {
+            max-width: 900px;
+            margin: 20px auto;
+            height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .ai-header {
+            background: linear-gradient(135deg, #1890ff 0%, #36cfc9 100%);
+            color: #fff;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .ai-header .logo { font-size: 28px; }
+        .ai-header h2 { font-size: 20px; font-weight: 600; margin: 0; }
+        .ai-header .subtitle { font-size: 13px; opacity: 0.85; margin-left: auto; }
+
+        .chat-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .chat-msg {
+            display: flex;
+            gap: 12px;
+            max-width: 80%;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .chat-msg.assistant { align-self: flex-start; }
+        .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+        .chat-avatar {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .chat-msg.assistant .chat-avatar { background: #e6f7ff; }
+        .chat-msg.user .chat-avatar { background: #1890ff; color: #fff; }
+
+        .chat-bubble {
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        .chat-msg.assistant .chat-bubble {
+            background: #f5f5f5;
+            border-top-left-radius: 4px;
+        }
+        .chat-msg.user .chat-bubble {
+            background: #1890ff;
+            color: #fff;
+            border-top-right-radius: 4px;
+        }
+
+        .chat-bubble pre {
+            background: #fafafa;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin: 8px 0;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+
+        .quick-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 12px 24px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .quick-card {
+            padding: 8px 16px;
+            background: #fafafa;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #666;
+        }
+        .quick-card:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+            background: #e6f7ff;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 12px;
+            padding: 16px 24px;
+            border-top: 1px solid #f0f0f0;
+            align-items: center;
+        }
+        .input-area input {
+            flex: 1;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-area input:focus { border-color: #1890ff; box-shadow: 0 0 0 2px rgba(24,144,255,0.1); }
+        .input-area .send-btn {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #1890ff, #36cfc9);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .input-area .send-btn:hover { opacity: 0.9; }
+        .input-area .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+            padding: 4px 0;
+        }
+        .typing-dots span {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #bbb;
+            animation: dotBounce 1.4s infinite;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dotBounce {
+            0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+            30% { opacity: 1; transform: translateY(-4px); }
+        }
+
+        .scene-selector {
+            display: flex;
+            gap: 8px;
+            padding: 8px 24px;
+            background: #fafafa;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .scene-tag {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid #e8e8e8;
+            background: #fff;
+            transition: all 0.2s;
+        }
+        .scene-tag.active {
+            background: #1890ff;
+            color: #fff;
+            border-color: #1890ff;
+        }
+    </style>
+</head>
+<body>
+    <div id="ai-app" class="ai-container">
+        <div class="ai-header">
+            <span class="logo">🤖</span>
+            <h2>AI 经营分析助手</h2>
+            <span class="subtitle">Powered by AI</span>
+        </div>
+
+        <!-- 场景切换 -->
+        <div class="scene-selector">
+            <span v-for="scene in scenes"
+                  :class="['scene-tag', { active: currentScene === scene.value }]"
+                  @click="switchScene(scene.value)">
+                {{ scene.label }}
+            </span>
+        </div>
+
+        <!-- 快捷卡片 -->
+        <div class="quick-cards">
+            <span class="quick-card" v-for="tip in currentQuickTips" :key="tip" @click="sendQuick(tip)">
+                {{ tip }}
+            </span>
+        </div>
+
+        <!-- 聊天区 -->
+        <div class="chat-body" ref="chatBody">
+            <div class="chat-msg assistant">
+                <div class="chat-avatar">🤖</div>
+                <div class="chat-bubble">
+                    <div style="font-weight:600;margin-bottom:6px;">👋 你好！我是AI经营分析助手</div>
+                    我可以帮你：<br>
+                    📊 分析经营数据，发现趋势<br>
+                    📝 生成菜品描述，提升吸引力<br>
+                    🎯 优化营销策略，提高转化<br><br>
+                    选择一个场景，开始对话吧！
+                </div>
+            </div>
+
+            <template v-for="(msg, idx) in messages">
+                <div :class="'chat-msg ' + msg.role" :key="idx">
+                    <div class="chat-avatar">{{ msg.role === 'assistant' ? '🤖' : '👤' }}</div>
+                    <div class="chat-bubble" v-html="formatContent(msg.content)"></div>
+                </div>
+            </template>
+
+            <div class="chat-msg assistant" v-if="loading">
+                <div class="chat-avatar">🤖</div>
+                <div class="chat-bubble">
+                    <div class="typing-dots"><span></span><span></span><span></span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <input
+                type="text"
+                v-model="inputText"
+                :placeholder="inputPlaceholder"
+                @keyup.enter="sendMessage"
+                :disabled="loading"
+            >
+            <button class="send-btn" @click="sendMessage" :disabled="!inputText.trim() || loading">
+                发送
+            </button>
+        </div>
+    </div>
+
+    <script src="../../plugins/vue.min.js"></script>
+    <script src="../../js/request.js"></script>
+    <script src="../api/ai.js"></script>
+    <script>
+        new Vue({
+            el: '#ai-app',
+            data: {
+                inputText: '',
+                loading: false,
+                messages: [],
+                currentScene: 'business_analysis',
+                scenes: [
+                    { label: '📊 经营分析', value: 'business_analysis' },
+                    { label: '📝 菜品描述', value: 'dish_desc' },
+                    { label: '📢 营销文案', value: 'marketing' }
+                ],
+                quickTipsMap: {
+                    business_analysis: [
+                        '今天营业额怎么样？',
+                        '本月热销菜品有哪些？',
+                        '分析一下客流趋势',
+                        '哪个时段订单最多？'
+                    ],
+                    dish_desc: [
+                        '帮我写红烧肉的描述',
+                        '生成麻辣香锅文案',
+                        '写一段清蒸鲈鱼的介绍'
+                    ],
+                    marketing: [
+                        '写一个满减活动文案',
+                        '新店开业促销文案',
+                        '会员日专属优惠文案'
+                    ]
+                }
+            },
+            computed: {
+                currentQuickTips: function() {
+                    return this.quickTipsMap[this.currentScene] || [];
+                },
+                inputPlaceholder: function() {
+                    var map = {
+                        business_analysis: '输入经营相关问题...',
+                        dish_desc: '输入菜名，生成美食描述...',
+                        marketing: '输入营销需求...'
+                    };
+                    return map[this.currentScene] || '输入消息...';
+                }
+            },
+            methods: {
+                sendMessage: function() {
+                    var text = this.inputText.trim();
+                    if (!text || this.loading) return;
+
+                    this.messages.push({ role: 'user', content: text });
+                    this.inputText = '';
+                    this.loading = true;
+                    this.scrollToBottom();
+
+                    var self = this;
+                    aiBackendApi.chat(text, this.currentScene).then(function(res) {
+                        var data = res.data || res;
+                        self.messages.push({
+                            role: 'assistant',
+                            content: data.content || '抱歉，AI服务暂时不可用。'
+                        });
+                    }).catch(function() {
+                        self.messages.push({
+                            role: 'assistant',
+                            content: '抱歉，请求失败，请检查AI服务配置。'
+                        });
+                    }).finally(function() {
+                        self.loading = false;
+                        self.$nextTick(function() { self.scrollToBottom(); });
+                    });
+                },
+
+                sendQuick: function(tip) {
+                    this.inputText = tip;
+                    this.sendMessage();
+                },
+
+                switchScene: function(scene) {
+                    this.currentScene = scene;
+                    this.messages.push({
+                        role: 'assistant',
+                        content: '已切换到「' + this.getSceneLabel(scene) + '」模式，请开始提问。'
+                    });
+                    this.scrollToBottom();
+                },
+
+                getSceneLabel: function(scene) {
+                    var found = this.scenes.filter(function(s) { return s.value === scene; });
+                    return found.length > 0 ? found[0].label : scene;
+                },
+
+                formatContent: function(content) {
+                    if (!content) return '';
+                    return content.replace(/\n/g, '<br>')
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                },
+
+                scrollToBottom: function() {
+                    var self = this;
+                    this.$nextTick(function() {
+                        var el = self.$refs.chatBody;
+                        if (el) el.scrollTop = el.scrollHeight;
+                    });
+                }
+            },
+            mounted: function() {
+                this.scrollToBottom();
+            }
+        });
+    </script>
+</body>
+</html>

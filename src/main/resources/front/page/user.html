@@ -37,6 +37,13 @@
                     <i class="el-icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
+                <!-- 修改点：消息中心入口 -->
+                <div class="item" @click="toMessagePage">
+                    <img src="./../images/orders.png"/>
+                    <span>消息中心</span>
+                    <i class="el-icon-arrow-right"></i>
+                </div>
+                <div class="divSplit"></div>
                 <div class="item" @click="toOrderPage">
                     <img src="./../images/orders.png"/>
                     <span>历史订单</span>
@@ -125,7 +132,7 @@
                         this.loading = false
                     }
                 },
-                // 修改点：从后端获取真实用户信息
+                // 修改点：从后端获取真实用户信息，并同步到sessionStorage确保其他页面一致
                 async fetchUserInfo(){
                     try {
                         const res = await getUserInfoApi()
@@ -133,6 +140,10 @@
                             this.userName = res.data.name || ''
                             this.userAvatar = res.data.avatar || ''
                             this.userPhone = res.data.phone || this.userPhone
+                            // 修改点：同步最新数据到sessionStorage，确保首页头像/用户名一致
+                            sessionStorage.setItem("userName", this.userName)
+                            sessionStorage.setItem("userAvatar", this.userAvatar)
+                            sessionStorage.setItem("userPhone", this.userPhone)
                         }
                     } catch(e) {
                         // 修改点：静默处理，用户信息获取失败不影响页面
@@ -153,6 +164,12 @@
                     window.requestAnimationFrame(()=>{
                         window.location.href = '/front/page/order.html'
                     }) 
+                },
+                // 修改点：跳转消息中心
+                toMessagePage(){
+                    window.requestAnimationFrame(()=>{
+                        window.location.href = '/front/page/message.html'
+                    })
                 },
                 async getLatestOrder(){
                     const params = {
@@ -198,9 +215,11 @@
                     try {
                         const res = await loginoutApi()
                         if(res.code === 1){
-                            // 修改点：清除所有登录态信息
+                            // 修改点：清除所有登录态信息（userPhone/userId/userName/userAvatar）防止数据泄露
                             sessionStorage.removeItem("userPhone")
                             sessionStorage.removeItem("userId")
+                            sessionStorage.removeItem("userName")
+                            sessionStorage.removeItem("userAvatar")
                             window.requestAnimationFrame(()=>{
                                 window.location.href = '/front/page/login.html'
                             }) 

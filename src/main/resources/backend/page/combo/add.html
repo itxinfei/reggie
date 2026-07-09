@@ -471,7 +471,7 @@
                   price: data.price / 100,
                   image: data.image,
                   description: data.description || '',
-                  status: data.status === '1'
+                  status: data.status == 1 || data.status === '1'
                 }
                 this.imageUrl = `/common/download?name=${data.image}`
                 this.checkList = data.setmealDishes || []

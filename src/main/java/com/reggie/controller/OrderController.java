@@ -156,4 +156,61 @@ public class OrderController {
         orderService.updateStatus(orders.getStatus(), orders.getId());
         return R.success("操作成功");
     }
+
+    // ==================== 后台订单管理 ====================
+
+    /**
+     * 接单：待接单(2) → 配送中(3)
+     */
+    @PutMapping("/confirm")
+    @Operation(summary = "接单", description = "后台确认接单，订单状态从待接单变为配送中")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<String> confirm(@RequestParam Long id) {
+        orderService.confirmOrder(id);
+        return R.success("接单成功");
+    }
+
+    /**
+     * 拒单：待接单(2) → 已取消(5)
+     */
+    @PutMapping("/reject")
+    @Operation(summary = "拒单", description = "后台拒单，订单状态变为已取消")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<String> reject(@RequestParam Long id) {
+        orderService.rejectOrder(id);
+        return R.success("已拒单");
+    }
+
+    /**
+     * 完成订单：配送中(3) → 已完成(4)
+     */
+    @PutMapping("/complete")
+    @Operation(summary = "完成订单", description = "标记订单为已完成")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<String> complete(@RequestParam Long id) {
+        orderService.completeOrder(id);
+        return R.success("订单已完成");
+    }
+
+    /**
+     * 取消订单：非完成/取消状态 → 已取消(5)
+     */
+    @PutMapping("/cancel")
+    @Operation(summary = "取消订单", description = "取消订单，需填写取消原因")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    @Parameter(name = "reason", description = "取消原因", required = false)
+    public R<String> cancel(@RequestParam Long id, @RequestParam(required = false) String reason) {
+        orderService.cancelOrder(id, reason);
+        return R.success("订单已取消");
+    }
+
+    /**
+     * 订单统计：今日各状态订单数量、营业额
+     */
+    @GetMapping("/statistics")
+    @Operation(summary = "订单统计", description = "获取当前租户的订单统计数据，包含各状态数量和今日营业额")
+    public R<Map<String, Object>> statistics() {
+        Map<String, Object> stats = orderService.getOrderStatistics();
+        return R.success(stats);
+    }
 }

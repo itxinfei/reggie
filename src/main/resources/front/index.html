@@ -33,9 +33,21 @@
             <i class="el-icon-search"></i>
             <span>搜索菜品、套餐</span>
           </div>
+          <!-- 修改点：消息铃铛入口 + 未读角标 -->
+          <div class="msg-bell" @click="toMessagePage" style="position:relative;margin-right:12px;cursor:pointer;">
+            <i class="el-icon-bell" style="font-size:20px;color:#666;"></i>
+            <span v-if="unreadMsgCount > 0" style="position:absolute;top:-6px;right:-8px;
+                  background:#ff4d4f;color:#fff;font-size:10px;min-width:16px;height:16px;
+                  line-height:16px;text-align:center;border-radius:8px;padding:0 4px;">
+              {{ unreadMsgCount > 99 ? '99+' : unreadMsgCount }}
+            </span>
+          </div>
+          <!-- 修改点：AI点餐助手入口 -->
+          <div class="ai-entry" @click="toAIAssistant" style="position:relative;margin-right:12px;cursor:pointer;">
+            <span style="font-size:20px;">🤖</span>
+          </div>
           <div class="user-btn" @click="toUserPage">
-            <img src="./images/user.png" v-if="!userPhone"/>
-            <span v-if="userPhone" class="avatar-text">{{ userPhone.slice(-4) }}</span>
+            <img :src="userAvatar || './images/headPage.png'" />
           </div>
         </div>
 
@@ -232,7 +244,6 @@
         :show-confirm-button="false"
         class="detailsDialog"
         ref="detailsDialog"
-        v-if="detailsDialog.show"
       >
         <div class="divContainer">
           <el-image :src="imgPath(detailsDialog.item.image)">
@@ -268,7 +279,6 @@
         :show-confirm-button="false"
         class="setMealDetailsDialog"
         ref="setMealDetailsDialogd"
-        v-if="setMealDialog.show"
       >
         <div class="divContainer">
           <div class="title">{{ setMealDialog.item.name }}</div>
@@ -458,6 +468,8 @@
         <script src="./api/main.js"></script>
         <script src="./api/address.js"></script>
         <script src="./api/recommend.js"></script>
+        <!-- 修改点：引入AI助手API -->
+        <script src="./api/ai.js"></script>
   </body>
   <script>
       new Vue({
@@ -470,8 +482,10 @@
               categoryId:undefined,
               dishList:[],
               cartData:[],
-              // 修改点：存储当前登录用户的手机号
+              // 修改点：存储当前登录用户信息
               userPhone: '',
+              userName: '',
+              userAvatar: '',
               // 修改点：默认地址信息，用于顶部定位显示
               addressInfo: null,
               // 修改点：商家信息（从后端动态获取）
@@ -513,6 +527,8 @@
               // 修改点：搜索联想建议
               searchSuggestions: [],
               suggestionTimer: null,
+              // 修改点：未读消息数量（消息铃铛角标）
+              unreadMsgCount: 0,
             }
           },
           computed:{
@@ -545,8 +561,12 @@
           created(){
             // 修改点：页面初始化时读取登录状态
             this.userPhone = sessionStorage.getItem("userPhone") || ''
+            this.userName = sessionStorage.getItem("userName") || ''
+            this.userAvatar = sessionStorage.getItem("userAvatar") || ''
             // 修改点：加载个性化推荐
             this.loadRecommendations()
+            // 修改点：加载未读消息数量（消息铃铛角标）
+            this.fetchUnreadCount()
           },
           mounted(){
             // 修改点：若已登录则正常加载，未登录也可浏览菜单但不能操作购物车
@@ -573,10 +593,32 @@
             // 修改点：加载智能推荐菜品
             loadRecommendations(){
               recommendApi.getDishRecommend(10).then(res => {
-                if(res.data && res.data.code === 1){
-                  this.recommendDishes = res.data.data || []
+                // 修改点：axios响应拦截器已返回res.data（即{code,data,msg}），此处res.data直接是菜品数组
+                if(res && res.code === 1){
+                  this.recommendDishes = res.data || []
                 }
               }).catch(() => {})
+            },
+            // 修改点：获取未读消息数量，更新铃铛角标
+            fetchUnreadCount(){
+              var self = this;
+              recommendApi.getUnreadCount().then(function(res) {
+                if(res && res.code === 1 && typeof res.data === 'number'){
+                  self.unreadMsgCount = res.data;
+                }
+              }).catch(function() {});
+            },
+            // 修改点：跳转到消息中心页面
+            toMessagePage(){
+              window.requestAnimationFrame(()=>{
+                window.location.href = '/front/page/message.html'
+              })
+            },
+            // 修改点：跳转到AI智能点餐助手
+            toAIAssistant(){
+              window.requestAnimationFrame(()=>{
+                window.location.href = '/front/page/ai-assistant.html'
+              })
             },
             // 修改点：点击推荐菜品，打开详情
             recommendDishClick(dish){

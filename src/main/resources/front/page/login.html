@@ -13,11 +13,7 @@
         <link rel="stylesheet" href="../styles/index.css" />
         <link rel="stylesheet" href="./../styles/login.css" />
     </head>
-    <body>
-        <!-- 覆盖index.css，确保登录页背景正确且可滚动 -->
-        <style>
-            html, body { overflow: visible !important; background: transparent !important; max-width: none !important; height: auto !important; }
-        </style>
+    <body class="login-page">
         <div id="login" v-loading="loading">
             <!-- 品牌区 - 美团风格：食物主题插画 -->
             <div class="brandArea">
@@ -224,8 +220,7 @@
         <script src="../../backend/plugins/axios/axios.min.js"></script>
         <script src="./../js/request.js"></script>
         <script src="./../api/login.js"></script>
-    </body>
-    <script>
+        <script>
         new Vue({
             el:"#login",
             data(){
@@ -315,10 +310,13 @@
                     try {
                         const res = await loginApi(this.form)
                         if(res.code === 1){
-                            // 修改点：存储用户ID和手机号，用于后续个人中心数据展示
+                            // 修改点：存储用户信息，用于首页和个人中心数据展示
+                            // 无条件覆盖全部字段，防止旧数据残留
                             sessionStorage.setItem("userPhone", this.form.phone)
-                            if(res.data && res.data.id){
-                                sessionStorage.setItem("userId", res.data.id)
+                            if(res.data){
+                                sessionStorage.setItem("userId", res.data.id || '')
+                                sessionStorage.setItem("userAvatar", res.data.avatar || '')
+                                sessionStorage.setItem("userName", res.data.name || '')
                             }
                             window.requestAnimationFrame(()=>{
                                 window.location.href = '/front/index.html'
@@ -345,4 +343,5 @@
             }
         })
     </script>
+</body>
 </html>

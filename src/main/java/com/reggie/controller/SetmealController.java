@@ -28,6 +28,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -138,9 +140,13 @@ public class SetmealController {
     @PostMapping("/status/{status}")
     @Operation(summary = "更新套餐状态", description = "批量更新套餐售卖状态（起售/停售）")
     @Parameter(name = "status", description = "状态值：1-起售，0-停售", required = true)
-    @Parameter(name = "ids", description = "套餐ID列表", required = true)
-    public R<String> updateStatus(@PathVariable Integer status, @RequestParam List<Long> ids) {
-        setmealService.updateStatus(status, ids);
+    @Parameter(name = "ids", description = "套餐ID列表，逗号分隔（如 1,2,3）", required = true)
+    public R<String> updateStatus(@PathVariable Integer status, @RequestParam String ids) {
+        List<Long> idList = parseIds(ids);
+        if (idList.isEmpty()) {
+            return R.error("请选择要操作的套餐");
+        }
+        setmealService.updateStatus(status, idList);
         return R.success("操作成功");
     }
 
@@ -156,17 +162,19 @@ public class SetmealController {
 
     /**
      * 删除套餐
-     * @param ids 套餐ID列表
+     * @param ids 套餐ID列表（逗号分隔字符串）
      * @return 操作结果
      */
     @DeleteMapping
     @Operation(summary = "删除套餐", description = "批量删除套餐及关联菜品数据")
-    @Parameter(name = "ids", description = "套餐ID列表", required = true)
-    public R<String> delete(@RequestParam List<Long> ids){
-        log.info("ids:{}",ids);
-
-        setmealService.removeWithDish(ids);
-
+    @Parameter(name = "ids", description = "套餐ID列表，逗号分隔（如 1,2,3）", required = true)
+    public R<String> delete(@RequestParam String ids){
+        log.info("ids:{}", ids);
+        List<Long> idList = parseIds(ids);
+        if (idList.isEmpty()) {
+            return R.error("请选择要删除的套餐");
+        }
+        setmealService.removeWithDish(idList);
         return R.success("套餐数据删除成功");
     }
 
@@ -190,4 +198,20 @@ public class SetmealController {
 
         return R.success(list);
     }
+
+    /**
+     * 解析逗号分隔的ID字符串为Long列表
+     * 兼容前端传递的格式：单个ID("1")、逗号分隔("1,2,3")
+     */
+    private List<Long> parseIds(String ids) {
+        if (ids == null || ids.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(ids.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .collect(Collectors.toList());
+    }
+
 }

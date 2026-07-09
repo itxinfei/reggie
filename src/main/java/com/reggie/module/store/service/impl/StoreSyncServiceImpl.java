@@ -1,6 +1,7 @@
 package com.reggie.module.store.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.entity.*;
 import com.reggie.module.store.mapper.*;
 import com.reggie.module.store.model.*;
@@ -36,6 +37,8 @@ public class StoreSyncServiceImpl implements StoreSyncService {
     private SetmealService setmealService;
     @Autowired
     private DishFlavorService dishFlavorService;
+    @Autowired
+    private SetmealDishService setmealDishService;
 
     @Override
     @Transactional
@@ -185,6 +188,23 @@ public class StoreSyncServiceImpl implements StoreSyncService {
                     newSm.setImage(sm.getImage());
                     newSm.setTenantId(targetTenantId);
                     setmealService.save(newSm);
+
+                    // 修改点：同步套餐内的菜品关联(SetmealDish)，避免同步后套餐为空壳
+                    LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
+                    sdWrapper.eq(SetmealDish::getSetmealId, sm.getId());
+                    List<SetmealDish> sdList = setmealDishService.list(sdWrapper);
+                    for (SetmealDish sd : sdList) {
+                        SetmealDish newSd = new SetmealDish();
+                        newSd.setSetmealId(newSm.getId());
+                        newSd.setDishId(sd.getDishId());
+                        newSd.setName(sd.getName());
+                        newSd.setPrice(sd.getPrice());
+                        newSd.setCopies(sd.getCopies());
+                        newSd.setSort(sd.getSort());
+                        newSd.setTenantId(targetTenantId);
+                        setmealDishService.save(newSd);
+                    }
+
                     synced++;
                 } catch (Exception e) {
                     failed++;
@@ -219,12 +239,14 @@ public class StoreSyncServiceImpl implements StoreSyncService {
 
     @Override
     public List<Map<String, Object>> getSyncLogs(Long sourceTenantId, int page, int pageSize) {
+        // 修改点：使用MyBatis Plus分页，之前selectList返回全部数据忽略分页参数
+        Page<StoreSyncLog> pageObj = new Page<>(page, pageSize);
         LambdaQueryWrapper<StoreSyncLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StoreSyncLog::getSourceTenantId, sourceTenantId)
                .orderByDesc(StoreSyncLog::getStartTime);
 
-        List<StoreSyncLog> logs = syncLogMapper.selectList(wrapper);
-        return logs.stream().map(l -> {
+        Page<StoreSyncLog> result = syncLogMapper.selectPage(pageObj, wrapper);
+        return result.getRecords().stream().map(l -> {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("id", l.getId());
             map.put("sourceTenantId", l.getSourceTenantId());

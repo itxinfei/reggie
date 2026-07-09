@@ -65,10 +65,14 @@ public class DeliveryServiceImpl implements DeliveryService {
         DeliveryPlatform dp = factory.getPlatform(platform);
         if (dp == null) return false;
 
-        // 先查询订单信息（自动携带 tenantId 过滤条件）
+        Long tenantId = BaseContext.getCurrentTenantId();
+        // 先查询订单信息（携带 tenantId 过滤条件，防止跨租户接单）
         LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
         qw.eq(DeliveryOrder::getPlatform, platform);
         qw.eq(DeliveryOrder::getPlatformOrderId, platformOrderId);
+        if (tenantId != null) {
+            qw.eq(DeliveryOrder::getTenantId, tenantId);
+        }
         DeliveryOrder order = deliveryOrderMapper.selectOne(qw);
 
         if (order == null) {

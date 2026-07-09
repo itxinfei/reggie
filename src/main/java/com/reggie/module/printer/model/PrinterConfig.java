@@ -28,4 +28,8 @@ public class PrinterConfig implements Serializable {
     private LocalDateTime createdTime;
     private LocalDateTime updatedTime;
     private String systemPrinterName;
+
+    // 兼容别名：测试代码和部分API使用 printType（单数），此处做映射
+    public void setPrintType(String printType) { this.printTypes = printType; }
+    public String getPrintType() { return this.printTypes; }
 }

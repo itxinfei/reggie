@@ -2,6 +2,7 @@ package com.reggie.module.store.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
+import com.reggie.common.PasswordUtils;
 import com.reggie.entity.*;
 import com.reggie.module.store.mapper.*;
 import com.reggie.module.store.model.*;
@@ -15,8 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -56,13 +55,20 @@ public class StoreServiceImpl implements StoreService {
         storeInfo.setParentTenantId(BaseContext.getCurrentTenantId()); // 总部ID
         storeInfoMapper.insert(storeInfo);
 
-        // 3. 创建门店管理员账号
+        // 3. 创建门店管理员账号（加密密码）
         Employee employee = new Employee();
         employee.setName(username);
         employee.setUsername(username);
-        employee.setPassword(password);
+        // 修改点：密码必须BCrypt加密，与EmployeeController.save()保持一致
+        employee.setPassword(PasswordUtils.encodePassword(password));
         employee.setStatus(1);
         employee.setTenantId(tenant.getId());
+        // 修复：门店联系人手机号作为管理员手机号，避免employee.phone为NULL导致插入失败
+        employee.setPhone(storeInfo.getContactPhone() != null
+                ? storeInfo.getContactPhone() : tenant.getPhone());
+        // 修改点：设置sex和idNumber默认值，避免NOT NULL约束异常
+        employee.setSex("1");
+        employee.setIdNumber("");
         employeeService.save(employee);
 
         // 4. 分配店长权限
@@ -81,24 +87,9 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public List<Map<String, Object>> listAllStores() {
-        Long currentTenantId = BaseContext.getCurrentTenantId();
-        List<StoreInfo> stores;
-
-        if (currentTenantId == null) {
-            // 无租户上下文：返回所有门店
-            stores = storeInfoMapper.selectList(null);
-        } else {
-            // 有租户上下文：返回当前门店及其分店
-            StoreInfo current = storeInfoMapper.findByTenantId(currentTenantId);
-            if (current != null && current.getStoreType() == StoreInfo.TYPE_HEADQUARTER) {
-                // 当前为总店，返回旗下所有门店
-                stores = new ArrayList<>();
-                stores.add(current);
-                stores.addAll(storeInfoMapper.findByParentTenantId(currentTenantId));
-            } else {
-                stores = Collections.singletonList(current);
-            }
-        }
+        // 修改点：门店管理页面应始终展示所有门店，方便管理员切换和查看
+        // 不再根据当前tenantId做过滤，避免切换到分店后看不到其他门店列表
+        List<StoreInfo> stores = storeInfoMapper.selectList(null);
 
         return stores.stream().map(si -> {
             Map<String, Object> map = new LinkedHashMap<>();
@@ -190,9 +181,10 @@ public class StoreServiceImpl implements StoreService {
         summary.put("cancelledOrders", cancelled);
         summary.put("todayAmount", totalAmount);
 
-        // 今日新增用户
+        // 今日新增用户（按租户隔离）
         LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
-        userWrapper.ge(User::getCreateTime, today.atStartOfDay())
+        userWrapper.eq(User::getTenantId, tenantId)
+                .ge(User::getCreateTime, today.atStartOfDay())
                 .lt(User::getCreateTime, today.plusDays(1).atStartOfDay());
         summary.put("newUsers", userService.count(userWrapper));
 
@@ -223,7 +215,6 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public Map<String, Object> getAggregatedDashboard() {
-        Long currentTenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> dashboard = new LinkedHashMap<>();
 
         // 获取所有门店

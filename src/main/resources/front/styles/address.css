@@ -1,6 +1,14 @@
 /* ---- 地址管理页面样式 ---- */
 /* 修改点：与编辑页统一视觉风格 */
 
+/* 登录页全局覆盖 — 避免使用内联样式 */
+body.scrollable-page {
+  overflow: visible;
+  background: transparent;
+  max-width: none;
+  height: auto;
+}
+
 /* ========== 顶部标题栏 ========== */
 #address .divHead {
   width: 100%;

@@ -147,142 +147,62 @@
         data() {
           return {
             defAct: '1',
-            menuActived: '2',
+            menuActived: '1',
             userInfo: {},
             sidebarCollapsed: false,
             sidebarOpen: false,
             menuList: [
-              // {
-              //   id: '1',
-              //   name: '门店管理',
-              //   children: [
-                  {
-                    id: '1',
-                    name: '数据概览',
-                    url: 'page/dashboard/overview.html',
-                    icon: 'icon-combo'
-                  },
-                  {
-                    id: '2',
-                    name: '员工管理',
-                    url: 'page/member/list.html',
-                    icon: 'icon-member'
-                  },
-                  {
-                    id: '3',
-                    name: '分类管理',
-                    url: 'page/category/list.html',
-                    icon: 'icon-category'
-                  },
-                  {
-                    id: '4',
-                    name: '菜品管理',
-                    url: 'page/food/list.html',
-                    icon: 'icon-food'
-                  },
-                  {
-                    id: '5',
-                    name: '套餐管理',
-                    url: 'page/combo/list.html',
-                    icon: 'icon-combo'
-                  },
-                  {
-                    id: '6',
-                    name: '订单明细',
-                    url: 'page/order/list.html',
-                    icon: 'icon-order'
-                  },
-                  {
-                    id: '7',
-                    name: '打印管理',
-                    url: 'page/printer/config-list.html',
-                    icon: 'icon-order'
-                  },
-                  {
-                    id: '8',
-                    name: '支付管理',
-                    url: 'page/payment/order-list.html',
-                    icon: 'icon-lock'
-                  },
-                  {
-                    id: '9',
-                    name: '外卖平台',
-                    url: 'page/delivery/order-list.html',
-                    icon: 'icon-user'
-                  },
-                  {
-                    id: '10',
-                    name: '堂食管理',
-                    url: 'page/dining/table-list.html',
-                    icon: 'icon-food'
-                  },
-                  {
-                    id: '11',
-                    name: '进销存管理',
-                    url: 'page/inventory/material-list.html',
-                    icon: 'icon-category'
-                  },
-                  {
-                    id: '12',
-                    name: '会员营销',
-                    url: 'page/member-center/member-list.html',
-                    icon: 'icon-member'
-                  },
-                  {
-                    id: '13',
-                    name: '经营报表',
-                    url: 'page/report/daily.html',
-                    icon: 'icon-combo'
-                  },
-                  // 修改点：新增用户管理菜单，管理C端用户
-                  {
-                    id: '14',
-                    name: '用户管理',
-                    url: 'page/user/list.html',
-                    icon: 'icon-user'
-                  },
-                  // 修改点：新增智能推荐和营销管理
-                  {
-                    id: '15',
-                    name: '智能推荐',
-                    url: 'page/recommend/overview.html',
-                    icon: 'icon-combo'
-                  },
-                  {
-                    id: '16',
-                    name: '营销活动',
-                    url: 'page/recommend/campaigns.html',
-                    icon: 'icon-category'
-                  },
-                  // 修改点：新增多门店管理
-                  {
-                    id: '17',
-                    name: '门店管理',
-                    url: 'page/store/list.html',
-                    icon: 'icon-food'
-                  },
-                  {
-                    id: '18',
-                    name: '总部控制台',
-                    url: 'page/store/dashboard.html',
-                    icon: 'icon-lock'
-                  },
-                  // 修改点：新增消息通知模块
-                  {
-                    id: '19',
-                    name: '消息通知',
-                    url: 'page/notification/list.html',
-                    icon: 'icon-order'
-                  },
-                  // 修改点：新增数据导出模块
-                  {
-                    id: '20',
-                    name: '数据导出',
-                    url: 'page/export/index.html',
-                    icon: 'icon-combo'
-                  }
-              //   ],
-              // },
+              { id: '1', name: '数据概览', url: 'page/dashboard/overview.html', icon: 'icon-category' },
+              { id: '2', name: '商品管理', icon: 'icon-category', children: [
+                { id: '2-1', name: '分类管理', url: 'page/category/list.html', icon: 'icon-category' },
+                { id: '2-2', name: '菜品管理', url: 'page/food/list.html', icon: 'icon-food' },
+                { id: '2-3', name: '套餐管理', url: 'page/combo/list.html', icon: 'icon-combo' },
+              ]},
+              { id: '3', name: '订单管理', icon: 'icon-order', children: [
+                { id: '3-1', name: '订单明细', url: 'page/order/list.html', icon: 'icon-order' },
+                { id: '3-2', name: '支付管理', url: 'page/payment/order-list.html', icon: 'icon-lock' },
+                { id: '3-3', name: '打印配置', url: 'page/printer/config-list.html', icon: 'icon-category' },
+                { id: '3-4', name: '打印日志', url: 'page/printer/log-list.html', icon: 'icon-combo' },
+              ]},
+              { id: '4', name: '配送与堂食', icon: 'icon-order', children: [
+                { id: '4-1', name: '外卖配送', url: 'page/delivery/order-list.html', icon: 'icon-user' },
+                { id: '4-2', name: '桌台管理', url: 'page/dining/table-list.html', icon: 'icon-food' },
+                { id: '4-3', name: '区域管理', url: 'page/dining/area-list.html', icon: 'icon-category' },
+                { id: '4-4', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'icon-member' },
+                { id: '4-5', name: '预订管理', url: 'page/dining/reservation-list.html', icon: 'icon-order' },
+              ]},
+              { id: '5', name: '进销存', icon: 'icon-category', children: [
+                { id: '5-1', name: '原料管理', url: 'page/inventory/material-list.html', icon: 'icon-category' },
+                { id: '5-2', name: '库存盘点', url: 'page/inventory/stock-check.html', icon: 'icon-lock' },
+                { id: '5-3', name: '库存流水', url: 'page/inventory/stock-record.html', icon: 'icon-order' },
+                { id: '5-4', name: '采购管理', url: 'page/inventory/purchase-list.html', icon: 'icon-combo' },
+                { id: '5-5', name: '供应商管理', url: 'page/inventory/supplier-list.html', icon: 'icon-user' },
+              ]},
+              { id: '6', name: '会员与用户', icon: 'icon-member', children: [
+                { id: '6-1', name: '会员等级', url: 'page/member-center/level-list.html', icon: 'icon-member' },
+                { id: '6-2', name: '积分管理', url: 'page/member-center/points-list.html', icon: 'icon-category' },
+                { id: '6-3', name: '优惠券', url: 'page/member-center/coupon-list.html', icon: 'icon-order' },
+                { id: '6-4', name: '充值记录', url: 'page/member-center/recharge-list.html', icon: 'icon-lock' },
+                { id: '6-5', name: 'C端用户', url: 'page/user/list.html', icon: 'icon-user' },
+              ]},
+              { id: '7', name: '数据分析', icon: 'icon-category', children: [
+                { id: '7-1', name: '经营报表', url: 'page/report/daily.html', icon: 'icon-order' },
+                { id: '7-2', name: '菜品排行', url: 'page/report/dish-ranking.html', icon: 'icon-food' },
+                { id: '7-3', name: '支付分析', url: 'page/report/payment-analysis.html', icon: 'icon-lock' },
+                { id: '7-4', name: '时段分析', url: 'page/report/time-slot.html', icon: 'icon-category' },
+              ]},
+              { id: '8', name: '营销中心', icon: 'icon-category', children: [
+                { id: '8-1', name: '智能推荐', url: 'page/recommend/overview.html', icon: 'icon-food' },
+                { id: '8-2', name: '营销活动', url: 'page/recommend/campaigns.html', icon: 'icon-category' },
+              ]},
+              { id: '9', name: '门店管理', icon: 'icon-food', children: [
+                { id: '9-1', name: '门店列表', url: 'page/store/list.html', icon: 'icon-food' },
+                { id: '9-2', name: '总部控制台', url: 'page/store/dashboard.html', icon: 'icon-lock' },
+              ]},
+              { id: '10', name: '消息通知', url: 'page/notification/list.html', icon: 'icon-order' },
+              { id: '11', name: '数据导出', url: 'page/export/index.html', icon: 'icon-category' },
+              { id: '12', name: '员工管理', url: 'page/member/list.html', icon: 'icon-member' },
+              { id: '13', name: 'AI助手', url: 'page/ai/assistant.html', icon: 'icon-order' },
             ],
             iframeUrl: 'page/dashboard/overview.html',
             headTitle: '数据概览',

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -10,173 +10,609 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
-  .search-btn { margin-left: 10px; }
-  .card-container {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 20px;
-  }
-  .card-container .el-card { flex: 1; }
-  .card-container .el-card__body { text-align: center; padding: 20px; }
-  .card-value {
-    font-size: 30px;
-    font-weight: 700;
-    margin-top: 8px;
-    line-height: 1.2;
-  }
-  .card-value.blue  { color: #409EFF; }
-  .card-value.green { color: #67C23A; }
-  .card-value.orange{ color: #E6A23C; }
-  .card-value.red   { color: #F56C6C; }
-  .card-label { font-size: 13px; color: #909399; }
-  .card-sub   { font-size: 12px; color: #c0c4cc; margin-top: 4px; }
-  #trendChart { width: 100%; height: 380px; }
+    /* ========== 基础重置 ========== */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
 
-  /* ========== 现代化统计卡片 ========== */
-  .stats-cards {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 20px;
-  }
+    /* ========== 主容器 ========== */
+    .daily-container {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .daily-container .container {
+      flex: 1;
+      background: transparent;
+      padding: 24px 32px 32px;
+      min-width: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
 
-  .stat-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 20px 24px;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-    border: 1px solid #f0f2f5;
-  }
+    /* ========== 工具栏 ========== */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: #fff;
+      padding: 16px 24px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      transition: all 0.3s;
+    }
+    .toolbar:hover {
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    }
+    .toolbar .toolbar-label {
+      font-size: 14px;
+      color: #606266;
+      font-weight: 500;
+      margin-right: 4px;
+      flex-shrink: 0;
+    }
+    .toolbar .toolbar-spacer {
+      flex: 1;
+      min-width: 0;
+    }
 
-  .stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  }
+    /* ========== KPI 卡片 ========== */
+    .kpi-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 22px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 130px;
+    }
+    .kpi-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10);
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: var(--gradient);
+      opacity: 0.85;
+    }
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      top: -40%; right: -25%;
+      width: 160px; height: 160px;
+      background: var(--gradient);
+      border-radius: 50%;
+      opacity: 0.05;
+      transition: all 0.5s;
+    }
+    .kpi-card:hover::after {
+      transform: scale(1.15);
+      opacity: 0.08;
+    }
+    .kpi-card .kpi-icon-wrapper {
+      position: absolute;
+      right: 18px; top: 20px;
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: var(--icon-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      transition: all 0.3s;
+    }
+    .kpi-card:hover .kpi-icon-wrapper {
+      transform: rotate(5deg) scale(1.1);
+    }
+    .kpi-card .kpi-label {
+      font-size: 13px;
+      color: #909399;
+      margin-bottom: 6px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+    .kpi-card .kpi-value {
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1.2;
+      word-break: break-all;
+      margin-bottom: 4px;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .kpi-card .kpi-sub {
+      font-size: 12px;
+      color: #909399;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .kpi-card.primary {
+      --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+      --icon-bg: linear-gradient(135deg, rgba(64, 158, 255, 0.10) 0%, rgba(102, 177, 255, 0.14) 100%);
+    }
+    .kpi-card.success {
+      --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+      --icon-bg: linear-gradient(135deg, rgba(103, 194, 58, 0.10) 0%, rgba(133, 206, 97, 0.14) 100%);
+    }
+    .kpi-card.warning {
+      --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
+      --icon-bg: linear-gradient(135deg, rgba(230, 162, 60, 0.10) 0%, rgba(235, 181, 99, 0.14) 100%);
+    }
+    .kpi-card.danger {
+      --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
+      --icon-bg: linear-gradient(135deg, rgba(245, 108, 108, 0.10) 0%, rgba(247, 137, 137, 0.14) 100%);
+    }
+    .kpi-card.info {
+      --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
+      --icon-bg: linear-gradient(135deg, rgba(144, 147, 153, 0.10) 0%, rgba(166, 169, 173, 0.14) 100%);
+    }
 
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--gradient);
-  }
+    /* ========== 图表面板 ========== */
+    .chart-panel {
+      background: #fff;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      transition: all 0.3s;
+      margin-bottom: 20px;
+    }
+    .chart-panel:hover {
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      transform: translateY(-2px);
+    }
+    .chart-panel .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #303133;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 2px solid #f0f2f5;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chart-box {
+      width: 100%;
+      height: 380px;
+    }
 
-  .stat-card .stat-icon {
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 42px;
-    opacity: 0.08;
-  }
+    /* ========== 导出记录折叠面板 ========== */
+    .export-records-panel {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      margin-bottom: 20px;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+    .export-records-panel:hover {
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    }
+    .export-records-panel .panel-header {
+      display: flex;
+      align-items: center;
+      padding: 18px 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+      user-select: none;
+    }
+    .export-records-panel .panel-header:hover {
+      background: #fafbfc;
+    }
+    .export-records-panel .panel-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #303133;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .export-records-panel .record-count-badge {
+      background: #409eff;
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .export-records-panel .expand-icon {
+      transition: transform 0.3s;
+      color: #c0c4cc;
+      font-size: 14px;
+    }
+    .export-records-panel .expand-icon.is-expanded {
+      transform: rotate(180deg);
+    }
+    .export-records-panel .panel-body {
+      padding: 0 24px 20px;
+      transition: all 0.3s;
+    }
 
-  .stat-card .stat-label {
-    font-size: 13px;
-    color: #909399;
-    margin-bottom: 8px;
-    font-weight: 500;
-  }
+    /* ========== 导出记录表格 ========== */
+    .record-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .record-table thead th {
+      background: #fafbfc;
+      color: #909399;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 2px solid #f0f2f5;
+    }
+    .record-table tbody td {
+      padding: 14px 16px;
+      border-bottom: 1px solid #f5f5f5;
+      color: #606266;
+      vertical-align: middle;
+    }
+    .record-table tbody tr {
+      transition: all 0.2s;
+    }
+    .record-table tbody tr:hover {
+      background: #fafbfc;
+    }
+    .record-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .format-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .format-tag.excel {
+      background: #ecf5ff;
+      color: #409eff;
+    }
+    .format-tag.pdf {
+      background: #fef0f0;
+      color: #f56c6c;
+    }
+    .status-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-tag.success {
+      background: #f0f9eb;
+      color: #67c23a;
+    }
+    .status-tag.failed {
+      background: #fef0f0;
+      color: #f56c6c;
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .status-dot.success { background: #67c23a; }
+    .status-dot.failed { background: #f56c6c; }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #c0c4cc;
+    }
+    .empty-state .empty-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+    .empty-state .empty-text {
+      font-size: 14px;
+    }
 
-  .stat-card .stat-value {
-    font-size: 30px;
-    font-weight: 700;
-    line-height: 1.2;
-    background: var(--gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
-  .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
-  .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
-  .stat-card.danger  { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
-
-  @media (max-width: 1400px) {
-    .stats-cards { grid-template-columns: repeat(2, 1fr); }
-  }
-
-  @media (max-width: 768px) {
-    .stats-cards { grid-template-columns: 1fr; }
-  }
+    /* ========== 响应式 ========== */
+    @media (max-width: 1400px) {
+      .kpi-cards { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 1200px) {
+      .container { padding: 20px 28px 28px !important; }
+      .toolbar { padding: 14px 20px; }
+    }
+    @media (max-width: 768px) {
+      .container { padding: 12px 16px 16px !important; }
+      .kpi-cards { grid-template-columns: 1fr; gap: 12px; }
+      .kpi-card { padding: 18px; min-height: 110px; }
+      .kpi-card .kpi-value { font-size: 26px; }
+      .chart-box { height: 300px; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .toolbar .toolbar-spacer { display: none; }
+    }
+    @media (max-width: 480px) {
+      .kpi-card { padding: 16px; min-height: 100px; }
+      .kpi-card .kpi-value { font-size: 24px; }
+    }
   </style>
 </head>
 <body>
-  <div class="dashboard-container" id="report-daily-app" v-loading="loading">
+  <div class="daily-container" id="report-daily-app">
     <div class="container">
-      <div class="tableBar">
-        <el-date-picker v-model="queryDate"
-          clearable
+
+      <!-- ========== 工具栏：日期选择 + 导出按钮 ========== -->
+      <div class="toolbar">
+        <span class="toolbar-label">
+          <i class="el-icon-date" style="margin-right:4px;"></i>日期范围
+        </span>
+
+        <el-date-picker
+          v-model="queryDate"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
           value-format="yyyy-MM-dd"
-          type="date"
-          placeholder="选择日期"
-          style="width: 200px"
+          :shortcuts="dateShortcuts"
+          style="width: 340px;"
+          @change="onDateChange"
         ></el-date-picker>
-        <el-button type="primary" class="search-btn" @click="loadData">查询</el-button>
-        <div class="tableLab">
-          <el-button type="primary" @click="handleExport">导出本月日报</el-button>
-        </div>
+
+        <el-button type="primary" icon="el-icon-search" @click="loadData">查询</el-button>
+
+        <span class="toolbar-spacer"></span>
+
+        <!-- 导出按钮组 -->
+        <el-button-group>
+          <el-button
+            type="success"
+            icon="el-icon-download"
+            @click="handleExport('excel')"
+            :loading="exporting"
+            :disabled="exporting"
+          >导出 Excel</el-button>
+          <el-button
+            type="warning"
+            icon="el-icon-document"
+            @click="handleExport('pdf')"
+            :loading="exporting"
+            :disabled="exporting"
+          >导出 PDF</el-button>
+        </el-button-group>
       </div>
 
-      <!-- KPI 卡片：字段对齐后端返回的 totalOrders/totalAmount/avgAmount/completedOrders/cancelledOrders -->
-      <div class="card-container">
-        <el-card shadow="hover">
-          <div class="card-label">订单总数</div>
-          <div class="card-value blue">{{ dailyData.totalOrders || 0 }}</div>
-          <div class="card-sub">全部状态订单</div>
-        </el-card>
-        <el-card shadow="hover">
-          <div class="card-label">营业额（元）</div>
-          <div class="card-value green">￥{{ formatMoney(dailyData.totalAmount) }}</div>
-          <div class="card-sub">已完成订单金额</div>
-        </el-card>
-        <el-card shadow="hover">
-          <div class="card-label">客单价（元）</div>
-          <div class="card-value orange">￥{{ formatMoney(dailyData.avgAmount) }}</div>
-          <div class="card-sub">人均消费</div>
-        </el-card>
-        <el-card shadow="hover">
-          <div class="card-label">完成 / 取消</div>
-          <div class="card-value green" style="font-size:22px;">
+      <!-- ========== KPI 卡片 ========== -->
+      <div class="kpi-cards">
+        <div class="kpi-card primary">
+          <div class="kpi-icon-wrapper">📋</div>
+          <div class="kpi-label">订单总数</div>
+          <div class="kpi-value">{{ dailyData.totalOrders || 0 }}</div>
+          <div class="kpi-sub">全部状态订单</div>
+        </div>
+        <div class="kpi-card success">
+          <div class="kpi-icon-wrapper">💰</div>
+          <div class="kpi-label">营业额（元）</div>
+          <div class="kpi-value">¥{{ formatMoney(dailyData.totalAmount) }}</div>
+          <div class="kpi-sub">已完成订单金额</div>
+        </div>
+        <div class="kpi-card warning">
+          <div class="kpi-icon-wrapper">🏷️</div>
+          <div class="kpi-label">客单价（元）</div>
+          <div class="kpi-value">¥{{ formatMoney(dailyData.avgAmount) }}</div>
+          <div class="kpi-sub">人均消费</div>
+        </div>
+        <div class="kpi-card danger">
+          <div class="kpi-icon-wrapper">📊</div>
+          <div class="kpi-label">完成 / 取消</div>
+          <div class="kpi-value" style="font-size:24px;">
             {{ dailyData.completedOrders || 0 }}
             <span style="color:#c0c4cc;font-weight:400;"> / </span>
             <span style="color:#F56C6C;">{{ dailyData.cancelledOrders || 0 }}</span>
           </div>
-          <div class="card-sub">完成率 {{ completionRate }}%</div>
-        </el-card>
+          <div class="kpi-sub">完成率 {{ completionRate }}%</div>
+        </div>
       </div>
 
-      <!-- 近7天趋势图（单独调用 trend 接口） -->
-      <el-card shadow="never">
-        <div slot="header" style="display:flex;align-items:center;justify-content:space-between;">
-          <span>近7天营收趋势</span>
-          <span style="font-size:12px;color:#c0c4cc;">自动展示，与上方日期无关</span>
+      <!-- ========== 趋势图 ========== -->
+      <div class="chart-panel">
+        <div class="chart-title">
+          <i class="el-icon-data-line" style="color:#409eff;"></i>
+          营收趋势
+          <span style="font-size:12px;color:#c0c4cc;font-weight:400;margin-left:4px;">
+            （基于选中日期范围，如未选择则默认近7天）
+          </span>
         </div>
-        <div id="trendChart"></div>
-      </el-card>
+        <div class="chart-box" id="trendChart"></div>
+      </div>
+
+      <!-- ========== 导出记录折叠面板 ========== -->
+      <div class="export-records-panel">
+        <div class="panel-header" @click="toggleRecords">
+          <div class="panel-title">
+            <i class="el-icon-s-order" style="color:#67c23a;"></i>
+            导出记录
+            <span class="record-count-badge" v-if="exportRecords.length > 0">{{ exportRecords.length }}</span>
+          </div>
+          <i
+            :class="['el-icon-arrow-down expand-icon', { 'is-expanded': recordsExpanded }]"
+          ></i>
+        </div>
+        <div class="panel-body" v-show="recordsExpanded">
+          <div v-if="exportRecords.length === 0" class="empty-state">
+            <div class="empty-icon">📭</div>
+            <div class="empty-text">暂无导出记录</div>
+          </div>
+          <div v-else style="overflow-x:auto;">
+            <table class="record-table">
+              <thead>
+                <tr>
+                  <th>序号</th>
+                  <th>导出时间</th>
+                  <th>日期范围</th>
+                  <th>格式</th>
+                  <th>文件大小</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(record, index) in exportRecords" :key="record.id">
+                  <td>{{ index + 1 }}</td>
+                  <td>{{ record.exportTime }}</td>
+                  <td>{{ record.dateRange }}</td>
+                  <td>
+                    <span :class="['format-tag', record.format]">
+                      {{ record.format.toUpperCase() }}
+                    </span>
+                  </td>
+                  <td>{{ record.fileSize }}</td>
+                  <td>
+                    <span :class="['status-tag', record.status]">
+                      <span :class="['status-dot', record.status]"></span>
+                      {{ record.status === 'success' ? '成功' : '失败' }}
+                    </span>
+                  </td>
+                  <td>
+                    <template v-if="record.status === 'success'">
+                      <el-button
+                        type="text"
+                        size="mini"
+                        icon="el-icon-download"
+                        @click="reDownload(record)"
+                      >重新下载</el-button>
+                      <el-button
+                        type="text"
+                        size="mini"
+                        icon="el-icon-delete"
+                        style="color:#f56c6c;"
+                        @click="deleteRecord(index)"
+                      >删除</el-button>
+                    </template>
+                    <span v-else style="color:#c0c4cc;font-size:12px;">--</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
+
+    <!-- ========== 全屏导出 Loading 遮罩 ========== -->
+    <div v-loading="exporting" element-loading-text="正在导出..." element-loading-background="rgba(0,0,0,0.5)"></div>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../api/export.js"></script>
   <script src="../../api/report.js"></script>
   <script>
     new Vue({
       el: '#report-daily-app',
       data() {
+        // 日期快捷选项：今天、近7天、近30天、本月、上月
+        const today = new Date();
+        const todayStr = this.formatDateStr(today);
+        const day7 = new Date(today);
+        day7.setDate(day7.getDate() - 6);
+        const day30 = new Date(today);
+        day30.setDate(day30.getDate() - 29);
+        // 本月第一天
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        // 上月
+        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+
         return {
           loading: false,
-          queryDate: '',
+          exporting: false,
+          queryDate: [day7, today], // 默认范围：近7天
           dailyData: {},
           chart: null,
-          resizeHandler: null
+          resizeHandler: null,
+          // 导出记录
+          exportRecords: [],
+          recordsExpanded: false,
+          // 成功导出的 Blob 缓存（用于重新下载）
+          _blobCache: {},
+          dateShortcuts: [
+            {
+              text: '今天',
+              onClick(picker) {
+                const d = new Date();
+                picker.$emit('pick', [d, d]);
+              }
+            },
+            {
+              text: '近7天',
+              onClick(picker) {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(start.getDate() - 6);
+                picker.$emit('pick', [start, end]);
+              }
+            },
+            {
+              text: '近30天',
+              onClick(picker) {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(start.getDate() - 29);
+                picker.$emit('pick', [start, end]);
+              }
+            },
+            {
+              text: '本月',
+              onClick(picker) {
+                const start = new Date(today.getFullYear(), today.getMonth(), 1);
+                picker.$emit('pick', [start, today]);
+              }
+            },
+            {
+              text: '上月',
+              onClick(picker) {
+                const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                const end = new Date(today.getFullYear(), today.getMonth(), 0);
+                picker.$emit('pick', [start, end]);
+              }
+            }
+          ]
         }
       },
       computed: {
@@ -188,10 +624,7 @@
         }
       },
       created() {
-        const now = new Date()
-        this.queryDate = now.getFullYear() + '-'
-          + String(now.getMonth() + 1).padStart(2, '0') + '-'
-          + String(now.getDate()).padStart(2, '0')
+        // queryDate 默认值已通过 data() 中闭包设置
       },
       mounted() {
         this.$nextTick(() => {
@@ -206,42 +639,74 @@
         if (this.chart) this.chart.dispose()
       },
       methods: {
+        // 格式化日期为 yyyy-MM-dd
+        formatDateStr(date) {
+          const y = date.getFullYear()
+          const m = String(date.getMonth() + 1).padStart(2, '0')
+          const d = String(date.getDate()).padStart(2, '0')
+          return y + '-' + m + '-' + d
+        },
+
+        // 日期变更时自动查询
+        onDateChange(val) {
+          if (val && val.length === 2) {
+            this.loadData()
+          }
+        },
+
+        // 加载日报数据 + 趋势图
         async loadData() {
-          if (!this.queryDate) {
-            this.$message.warning('请选择日期')
+          if (!this.queryDate || this.queryDate.length < 2) {
+            this.$message.warning('请选择日期范围')
             return
           }
+          const [startDate, endDate] = this.queryDate
           this.loading = true
           try {
-            // 并行请求：日报数据 + 近7天趋势
-            const [dailyRes, trendRes] = await Promise.all([
-              reportDaily({ date: this.queryDate }),
-              $axios.get('/api/dashboard/trend')
-            ])
+            // 日报数据（使用开始日期作为日报日期参数）
+            const dailyRes = await reportDaily({ date: startDate })
             if (String(dailyRes.code) === '1') {
-              // 后端字段：totalOrders, totalAmount, completedOrders, cancelledOrders, avgAmount
               this.dailyData = dailyRes.data || {}
             } else {
-              this.$message.error(dailyRes.msg || '日报加载失败')
+              this.$notify({
+                title: '日报加载失败',
+                message: dailyRes.msg || '无法获取日报数据，请重试',
+                type: 'error',
+                duration: 5000
+              })
             }
+
+            // 趋势数据
+            const trendRes = await $axios.get('/api/dashboard/trend')
             if (String(trendRes.code) === '1') {
               this.renderChart(trendRes.data || [])
             }
           } catch (err) {
-            this.$message.error('请求失败：' + err)
+            this.$notify({
+              title: '请求失败',
+              message: err.message || String(err),
+              type: 'error',
+              duration: 6000
+            })
           } finally {
             this.loading = false
           }
         },
+
         renderChart(trendData) {
           if (!this.chart) return
           const dates   = trendData.map(t => t.date)
           const orders  = trendData.map(t => t.orderCount || 0)
           const amounts = trendData.map(t => Number(t.revenue) || 0)
+          const hasData = dates.length > 0
           this.chart.setOption({
             tooltip: {
               trigger: 'axis',
-              axisPointer: { type: 'cross' },
+              axisPointer: { type: 'cross', crossStyle: { color: '#999' } },
+              backgroundColor: 'rgba(255,255,255,0.96)',
+              borderColor: '#e4e7ed',
+              borderWidth: 1,
+              textStyle: { color: '#303133', fontSize: 13 },
               formatter(params) {
                 let html = '<b>' + params[0].axisValue + '</b><br/>'
                 params.forEach(p => {
@@ -253,63 +718,238 @@
                 return html
               }
             },
-            legend: { data: ['订单数', '营业额'], bottom: 4 },
+            legend: { data: ['订单数', '营业额'], bottom: 8, textStyle: { color: '#606266', fontSize: 13 } },
             grid: { left: 55, right: 55, top: 20, bottom: 48 },
             xAxis: {
               type: 'category',
-              data: dates.length ? dates : ['暂无数据'],
+              data: hasData ? dates : ['暂无数据'],
+              axisLine: { lineStyle: { color: '#e4e7ed' } },
               axisTick: { show: false },
-              axisLabel: { color: '#909399' }
+              axisLabel: { color: '#909399', fontSize: 12 }
             },
             yAxis: [
-              { type: 'value', name: '订单量', splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
-              { type: 'value', name: '营业额', axisLabel: { formatter: '¥{value}' }, splitLine: { show: false } }
+              {
+                type: 'value', name: '订单量(单)',
+                nameTextStyle: { color: '#909399', fontSize: 12 },
+                axisLabel: { color: '#909399', fontSize: 12 },
+                splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } },
+                axisLine: { show: false }, axisTick: { show: false }
+              },
+              {
+                type: 'value', name: '营业额(元)',
+                nameTextStyle: { color: '#909399', fontSize: 12 },
+                axisLabel: { color: '#909399', fontSize: 12, formatter: '¥{value}' },
+                splitLine: { show: false },
+                axisLine: { show: false }, axisTick: { show: false }
+              }
             ],
             series: [
               {
-                name: '订单数', type: 'bar', data: orders,
-                barWidth: 26,
-                itemStyle: { borderRadius: [6, 6, 0, 0], color: '#5470c6' },
-                label: { show: true, position: 'top', color: '#5470c6', fontSize: 11 }
+                name: '订单数', type: 'bar', data: hasData ? orders : [0],
+                barWidth: 26, barGap: '20%',
+                itemStyle: {
+                  borderRadius: [6, 6, 0, 0],
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: '#6c9df8' },
+                    { offset: 1, color: '#5470c6' }
+                  ])
+                },
+                label: { show: hasData, position: 'top', color: '#5470c6', fontSize: 12, fontWeight: 600, formatter: '{c}' }
               },
               {
-                name: '营业额', type: 'line', yAxisIndex: 1, data: amounts,
+                name: '营业额', type: 'line', yAxisIndex: 1, data: hasData ? amounts : [0],
                 smooth: true, symbol: 'emptyCircle', symbolSize: 8,
                 lineStyle: { color: '#91cc75', width: 3 },
                 itemStyle: { color: '#91cc75', borderColor: '#fff', borderWidth: 2 },
-                areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-                  colorStops: [{ offset: 0, color: 'rgba(145,204,117,0.3)' }, { offset: 1, color: 'rgba(145,204,117,0.02)' }]
-                }},
-                label: { show: true, position: 'top', color: '#67a94e', fontSize: 11,
-                  formatter: p => '¥' + Number(p.value).toFixed(0) }
+                areaStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: 'rgba(145,204,117,0.28)' },
+                    { offset: 1, color: 'rgba(145,204,117,0.02)' }
+                  ])
+                },
+                label: {
+                  show: hasData, position: 'top', color: '#67a94e', fontSize: 12, fontWeight: 700,
+                  formatter: p => '¥' + Number(p.value).toFixed(0)
+                }
               }
             ]
           }, true)
         },
+
+        // 格式化金额
         formatMoney(val) {
-          if (val == null) return '0.00'
+          if (val === null || val === undefined) return '0.00'
           return Number(val).toFixed(2)
         },
-        handleExport() {
+
+        // 格式化文件大小
+        formatFileSize(bytes) {
+          if (bytes === 0) return '0 B'
+          const k = 1024
+          const sizes = ['B', 'KB', 'MB', 'GB']
+          const i = Math.floor(Math.log(bytes) / Math.log(k))
+          const idx = Math.min(i, sizes.length - 1)
+          return (bytes / Math.pow(k, idx)).toFixed(idx > 0 ? 2 : 0) + ' ' + sizes[idx]
+        },
+
+        // 生成唯一 ID
+        genId() {
+          return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
+        },
+
+        // 获取当前时间字符串
+        getNowStr() {
           const now = new Date()
-          const y = now.getFullYear()
-          const m = String(now.getMonth() + 1).padStart(2, '0')
-          const startDate = y + '-' + m + '-01'
-          const lastDay = new Date(y, now.getMonth() + 1, 0).getDate()
-          const endDate = y + '-' + m + '-' + String(lastDay).padStart(2, '0')
-          reportExport({ startDate, endDate }).then(blob => {
-            if (blob && blob.type && blob.type.indexOf('json') > -1) {
-              this.$message.error('导出失败')
-              return
+          const pad = n => String(n).padStart(2, '0')
+          return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
+            + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds())
+        },
+
+        // 切换导出记录折叠
+        toggleRecords() {
+          this.recordsExpanded = !this.recordsExpanded
+        },
+
+        // 导出处理
+        async handleExport(format) {
+          if (!this.queryDate || this.queryDate.length < 2) {
+            this.$message.warning('请先选择日期范围')
+            return
+          }
+          const [startDate, endDate] = this.queryDate
+          const now = this.getNowStr()
+          const dateRangeLabel = startDate + ' ~ ' + endDate
+          const fileName = '营业日报_' + startDate.replace(/-/g, '') + '_' + endDate.replace(/-/g, '') + '.' + format
+
+          this.exporting = true
+          try {
+            let blob
+            if (format === 'excel') {
+              blob = await exportApi.exportReportExcel({ startDate, endDate })
+            } else {
+              blob = await exportApi.exportReportPdf({ startDate, endDate })
             }
-            const link = document.createElement('a')
-            link.href = URL.createObjectURL(blob)
-            link.download = '营业日报_' + y + m + '.csv'
-            link.click()
-            URL.revokeObjectURL(link.href)
-            this.$message.success('导出成功')
-          }).catch(err => {
-            this.$message.error('导出失败：' + err)
+
+            // 使用 downloadFile 下载
+            await exportApi.downloadFile(
+              Promise.resolve({ data: blob }),
+              fileName
+            )
+
+            // 计算文件大小
+            const fileSize = blob ? blob.size : 0
+            const sizeStr = this.formatFileSize(fileSize)
+
+            // 记录导出历史
+            const record = {
+              id: this.genId(),
+              exportTime: now,
+              dateRange: dateRangeLabel,
+              format: format,
+              fileSize: sizeStr,
+              fileSizeBytes: fileSize,
+              status: 'success',
+              blob: blob,
+              fileName: fileName
+            }
+            this.exportRecords.unshift(record)
+            this._blobCache[record.id] = blob
+
+            // 展开导出记录面板
+            this.recordsExpanded = true
+
+            // 右上角富文本通知
+            this.$notify({
+              title: '导出成功',
+              dangerouslyUseHTMLString: true,
+              message: '<div style="line-height:1.8;">'
+                + '<div><i class="el-icon-document" style="margin-right:6px;color:#409eff;"></i>文件：' + fileName + '</div>'
+                + '<div><i class="el-icon-coin" style="margin-right:6px;color:#67c23a;"></i>大小：' + sizeStr + '</div>'
+                + '<div><i class="el-icon-time" style="margin-right:6px;color:#e6a23c;"></i>时间：' + now + '</div>'
+                + '</div>',
+              type: 'success',
+              duration: 5000,
+              position: 'top-right'
+            })
+          } catch (err) {
+            // 导出失败记录
+            const record = {
+              id: this.genId(),
+              exportTime: now,
+              dateRange: this.queryDate ? (this.queryDate[0] + ' ~ ' + this.queryDate[1]) : '--',
+              format: format,
+              fileSize: '--',
+              fileSizeBytes: 0,
+              status: 'failed',
+              blob: null,
+              fileName: fileName,
+              errorMsg: err.message || String(err)
+            }
+            this.exportRecords.unshift(record)
+            this.recordsExpanded = true
+
+            // 右上角错误通知
+            this.$notify({
+              title: '导出失败',
+              dangerouslyUseHTMLString: true,
+              message: '<div style="line-height:1.8;">'
+                + '<div><i class="el-icon-warning-outline" style="margin-right:6px;color:#f56c6c;"></i>格式：' + format.toUpperCase() + '</div>'
+                + '<div><i class="el-icon-info" style="margin-right:6px;color:#909399;"></i>原因：' + (err.message || String(err)) + '</div>'
+                + '<div style="color:#c0c4cc;font-size:12px;">时间：' + now + '</div>'
+                + '</div>',
+              type: 'error',
+              duration: 8000,
+              position: 'top-right'
+            })
+          } finally {
+            this.exporting = false
+          }
+        },
+
+        // 重新下载
+        reDownload(record) {
+          if (!record.blob) {
+            this.$message.warning('文件数据已过期，请重新导出')
+            return
+          }
+          try {
+            const url = window.URL.createObjectURL(record.blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = record.fileName
+            a.style.display = 'none'
+            document.body.appendChild(a)
+            a.click()
+            setTimeout(() => {
+              document.body.removeChild(a)
+              window.URL.revokeObjectURL(url)
+            }, 200)
+            this.$message.success('正在下载：' + record.fileName)
+          } catch (err) {
+            this.$message.error('下载失败：' + err.message)
+          }
+        },
+
+        // 删除导出记录
+        deleteRecord(index) {
+          this.$confirm('确认删除该条导出记录？', '提示', {
+            confirmButtonText: '删除',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            const record = this.exportRecords[index]
+            if (record && record.id && this._blobCache[record.id]) {
+              // 释放 Blob URL
+              try {
+                // Blob 本身不需要 revokeObjectURL（URL.createObjectURL 返回的才需要）
+                // 重新下载时才会创建新 URL，这里清理缓存即可
+                delete this._blobCache[record.id]
+              } catch (e) { /* ignore */ }
+            }
+            this.exportRecords.splice(index, 1)
+            this.$message.success('记录已删除')
+          }).catch(() => {
+            // 用户取消，不做处理
           })
         }
       }

@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
@@ -85,10 +86,15 @@ public class StoreController {
     /**
      * 切换门店
      * POST /store/switch/{tenantId}
+     * 修改点：更新HttpSession中的tenantId，确保后续请求使用正确的租户上下文
      */
     @PostMapping("/switch/{tenantId}")
-    public R<Map<String, Object>> switchStore(@PathVariable Long tenantId) {
+    public R<Map<String, Object>> switchStore(@PathVariable Long tenantId,
+                                               HttpSession session) {
+        // 修改点：持久化门店切换 - 同时更新ThreadLocal和Session
         Map<String, Object> storeInfo = storeService.switchStore(tenantId);
+        session.setAttribute("tenantId", tenantId);
+        log.info("[门店切换] Session tenantId已更新为: {}", tenantId);
         return R.success(storeInfo);
     }
 
