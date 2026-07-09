@@ -4,41 +4,24 @@
 
 ### 餐饮企业一站式外卖管理系统
 
+| | | | | |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="https://img.shields.io/badge/Java-1.8-orange?logo=java"/> | <img src="https://img.shields.io/badge/Spring_Boot-2.4.5-green?logo=spring"/> | <img src="https://img.shields.io/badge/ElementUI-2.15.10-blue?logo=element-ui"/> | <img src="https://img.shields.io/badge/HikariCP-3.4.5-blue?logo=java"/> | <img src="https://img.shields.io/badge/license-Apache_2.0-blue?logo=apache"/> |
+| <img src="https://img.shields.io/badge/Vue.js-2.6.14-green?logo=vue.js"/> | <img src="https://img.shields.io/badge/MyBatis_Plus-3.4.2-blue?logo=mybatis"/> | <img src="https://img.shields.io/badge/Vant-2.12.0-green?logo=vant"/> | <img src="https://img.shields.io/badge/H2-1.4.200-green?logo=h2database"/> | <img src="https://img.shields.io/badge/build-passing-brightgreen?logo=github"/> |
+| <img src="https://img.shields.io/badge/Redis-6.0-red?logo=redis"/> | | <img src="https://img.shields.io/badge/Axios-0.21.1-informational?logo=axios"/> | | <img src="https://img.shields.io/badge/%E5%A4%9A%E7%A7%9F%E6%88%B7-SaaS-success?logo=layers"/> |
+| <img src="https://img.shields.io/badge/MySQL-8.0-blue?logo=mysql"/> | | | | <img src="https://img.shields.io/badge/%E6%B5%8B%E8%AF%95-%E9%80%9A%E8%BF%87-green?logo=test"/> |
+
 <p align="center">
-
-<img src="https://img.shields.io/badge/Java-1.8-orange?logo=java" alt="Java"/>
-<img src="https://img.shields.io/badge/Spring_Boot-2.4.5-green?logo=spring" alt="Spring Boot"/>
-<img src="https://img.shields.io/badge/MyBatis_Plus-3.4.2-blue?logo=mybatis" alt="MyBatis Plus"/>
-<img src="https://img.shields.io/badge/Vue.js-2.6.14-green?logo=vue.js" alt="Vue.js"/>
-<img src="https://img.shields.io/badge/Redis-6.0-red?logo=redis" alt="Redis"/>
-<img src="https://img.shields.io/badge/MySQL-8.0-blue?logo=mysql" alt="MySQL"/>
-
-<br/>
-
-<img src="https://img.shields.io/badge/ElementUI-2.15.10-blue?logo=element-ui" alt="ElementUI"/>
-<img src="https://img.shields.io/badge/Vant-2.12.0-green?logo=vant" alt="Vant"/>
-<img src="https://img.shields.io/badge/Axios-0.21.1-informational?logo=axios" alt="Axios"/>
-<img src="https://img.shields.io/badge/H2-1.4.200-green?logo=h2database" alt="H2"/>
-<img src="https://img.shields.io/badge/HikariCP-3.4.5-blue?logo=java" alt="HikariCP"/>
-
-<br/>
 
 <a href="https://gitee.com/itxinfei">
   <img src="https://img.shields.io/badge/Gitee-itxinfei-green?logo=gitee" alt="Gitee"/>
 </a>
 <a href="https://qm.qq.com/cgi-bin/qm/qr?k=9yLlyD1dRBL97xmBKw43zRt0-6xg8ohb&jump_from=webapi">
-  <img src="https://img.shields.io/badge/QQ群-661543188-red?logo=tencent-qq" alt="QQ群"/>
+  <img src="https://img.shields.io/badge/QQ%E7%BE%A4-661543188-red?logo=tencent-qq" alt="QQ群"/>
 </a>
 <a href="mailto:747011882@qq.com">
-  <img src="https://img.shields.io/badge/邮箱-747011882@qq.com-red?logo=gmail" alt="邮箱"/>
+  <img src="https://img.shields.io/badge/%E9%82%AE%E7%AE%B1-747011882@qq.com-red?logo=gmail" alt="邮箱"/>
 </a>
-
-<br/>
-
-<img src="https://img.shields.io/badge/license-Apache_2.0-blue?logo=apache" alt="License"/>
-<img src="https://img.shields.io/badge/build-passing-brightgreen?logo=github" alt="Build"/>
-<img src="https://img.shields.io/badge/多租户-SaaS-success?logo=layers" alt="Multi-tenant"/>
-<img src="https://img.shields.io/badge/测试-通过-green?logo=test" alt="Tests"/>
 
 </p>
 
@@ -192,37 +175,29 @@ java -jar target/reggie-*.jar
 
 ## 技术栈
 
-### 后端技术
-
 <div align="center">
 
-| 技术 | 版本 | 说明 |
+| 分类 | 技术 | 版本 |
 |------|------|------|
-| ☕ Java | 1.8 | 编程语言 |
-| 🌱 Spring Boot | 2.4.5 | 应用框架 |
-| 🌐 Spring MVC | 5.3.6 | Web 框架 |
-| 🗂️ Spring Session | 2.4.5 | 会话管理 |
-| 🔐 Spring Security | 5.4.6 | 密码加密（BCrypt） |
-| 🗄️ MyBatis Plus | 3.4.2 | ORM 框架 |
-| 🚀 Redis | 6.0+ | 缓存、分布式锁、限流 |
-| ⚡ HikariCP | 3.4.5 | 数据库连接池 |
-| 🧪 H2 Database | 1.4.200 | 内存数据库（测试） |
-| 📄 Springdoc | 1.6.9 | OpenAPI 3 文档 |
-| 📷 ZXing | 3.5.1 | 二维码生成 |
-| 🔒 Jasypt | 3.0.3 | 配置文件加密 |
+| 语言 | ☕ Java | 1.8 |
+| 框架 | 🌱 Spring Boot | 2.4.5 |
+| Web | 🌐 Spring MVC | 5.3.6 |
+| 会话 | 🗂️ Spring Session | 2.4.5 |
+| 安全 | 🔐 Spring Security | 5.4.6 |
+| ORM | 🗄️ MyBatis Plus | 3.4.2 |
+| 缓存 | 🚀 Redis | 6.0+ |
+| 连接池 | ⚡ HikariCP | 3.4.5 |
+| 数据库 | 🐬 MySQL Driver | 8.0.23 |
+| 测试 | 🧪 H2 Database | 1.4.200 |
+| 文档 | 📄 Springdoc | 1.6.9 |
+| 工具 | 📷 ZXing / 🔒 Jasypt | 3.5.1 / 3.0.3 |
 
-</div>
-
-### 前端技术
-
-<div align="center">
-
-| 技术 | 版本 | 说明 |
-|------|------|------|
-| 💚 Vue.js | 2.6.14 | 前端框架 |
-| 🎨 ElementUI | 2.15.10 | UI 组件库（管理后台） |
-| 📱 Vant UI | 2.12.0 | UI 组件库（移动端） |
-| 🌐 Axios | 0.21.1 | HTTP 客户端 |
+| 前端 | 版本 |
+|------|------|
+| 💚 Vue.js | 2.6.14 |
+| 🎨 ElementUI | 2.15.10 |
+| 📱 Vant UI | 2.12.0 |
+| 🌐 Axios | 0.21.1 |
 
 </div>
 
@@ -269,8 +244,6 @@ reggie/
 ```bash
 mvn test -DfailIfNoTests=false
 ```
-
-### 测试覆盖
 
 <div align="center">
 
