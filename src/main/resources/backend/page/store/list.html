@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <title>门店管理</title>
+    <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
+        .page-header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .page-header h2 { font-size: 20px; color: #303133; }
+        .store-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+        .store-card { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); border-left: 4px solid #409eff; transition: all 0.2s; cursor: pointer; }
+        .store-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); transform: translateY(-2px); }
+        .store-card.disabled { border-left-color: #909399; opacity: 0.7; }
+        .store-card .store-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .store-card .store-name { font-size: 16px; font-weight: 600; color: #303133; }
+        .store-card .store-code { font-size: 12px; color: #909399; }
+        .store-card .store-meta { display: flex; gap: 24px; margin-bottom: 12px; font-size: 13px; color: #606266; }
+        .store-card .store-meta i { margin-right: 4px; color: #409eff; }
+        .store-card .store-stats { display: flex; gap: 16px; padding-top: 12px; border-top: 1px solid #ebeef5; }
+        .store-card .stat-item { flex: 1; text-align: center; }
+        .store-card .stat-value { font-size: 20px; font-weight: 600; color: #303133; }
+        .store-card .stat-label { font-size: 12px; color: #909399; margin-top: 2px; }
+        .store-card .store-actions { margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end; }
+        .empty-wrap { text-align: center; padding: 80px 0; color: #909399; }
+        .dialog-footer { text-align: right; }
+        .sync-section { margin-top: 16px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="page-header">
+        <h2>门店管理</h2>
+        <el-button type="primary" size="small" @click="openCreateDialog" icon="el-icon-plus">+ 新建门店</el-button>
+    </div>
+
+    <div v-loading="loading">
+        <div v-if="stores.length > 0" class="store-cards">
+            <div v-for="store in stores" :key="store.tenantId"
+                 :class="['store-card', store.status === 0 ? 'disabled' : '']">
+                <div class="store-header">
+                    <div>
+                        <div class="store-name">
+                            <el-tag :type="storeTypeTag(store.storeType)" size="mini">{{ storeTypeName(store.storeType) }}</el-tag>
+                            {{ store.storeName }}
+                        </div>
+                        <div class="store-code">编码：{{ store.storeCode }}</div>
+                    </div>
+                    <el-switch
+                        v-model="store.status"
+                        :active-value="1"
+                        :inactive-value="0"
+                        active-text="启用"
+                        inactive-text="停用"
+                        @change="toggleStatus(store)"
+                    />
+                </div>
+                <div class="store-meta">
+                    <span><i class="el-icon-phone-outline"></i>{{ store.contactPhone || '-' }}</span>
+                    <span><i class="el-icon-truck"></i>外卖: {{ store.isDeliveryEnabled ? '开' : '关' }}</span>
+                    <span><i class="el-icon-s-home"></i>堂食: {{ store.isDineInEnabled ? '开' : '关' }}</span>
+                </div>
+                <div class="store-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ store.todayOrders }}</div>
+                        <div class="stat-label">今日订单</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">¥{{ formatAmount(store.todayAmount) }}</div>
+                        <div class="stat-label">今日营收</div>
+                    </div>
+                </div>
+                <div class="store-actions">
+                    <el-button type="text" size="small" icon="el-icon-switch-button" @click="switchToStore(store)">切换</el-button>
+                    <el-button type="text" size="small" icon="el-icon-refresh" @click="openSyncDialog(store)">同步</el-button>
+                </div>
+            </div>
+        </div>
+        <div v-else class="empty-wrap">
+            <i class="el-icon-s-shop" style="font-size:48px;"></i>
+            <p style="margin-top:12px;">暂无门店数据</p>
+            <el-button type="primary" size="small" style="margin-top:12px;" @click="openCreateDialog">创建第一家门店</el-button>
+        </div>
+    </div>
+
+    <!-- 新建门店对话框 -->
+    <el-dialog title="新建门店" :visible.sync="createDialogVisible" width="550px" @close="resetCreateForm">
+        <el-form :model="createForm" ref="createFormRef" label-width="100px" size="small">
+            <el-form-item label="门店名称" prop="storeName" :rules="[{required:true,message:'必填'}]">
+                <el-input v-model="createForm.storeName" placeholder="如：瑞吉外卖-朝阳店" maxlength="100" />
+            </el-form-item>
+            <el-form-item label="门店编码" prop="storeCode" :rules="[{required:true,message:'必填'}]">
+                <el-input v-model="createForm.storeCode" placeholder="如：BJ001" maxlength="32" />
+            </el-form-item>
+            <el-form-item label="门店类型">
+                <el-select v-model="createForm.storeType" style="width:100%">
+                    <el-option label="直营总店" :value="1" />
+                    <el-option label="直营分店" :value="2" />
+                    <el-option label="加盟店" :value="3" />
+                </el-select>
+            </el-form-item>
+            <el-form-item label="联系人">
+                <el-input v-model="createForm.contactPerson" placeholder="门店联系人" maxlength="64" />
+            </el-form-item>
+            <el-form-item label="联系电话">
+                <el-input v-model="createForm.contactPhone" placeholder="联系电话" maxlength="20" />
+            </el-form-item>
+            <el-form-item label="地址">
+                <el-input v-model="createForm.address" placeholder="门店地址" maxlength="200" />
+            </el-form-item>
+            <el-form-item label="营业时间">
+                <el-input v-model="createForm.businessHours" placeholder="如：09:00-22:00" maxlength="100" />
+            </el-form-item>
+            <el-form-item label="管理员账号" prop="adminUsername" :rules="[{required:true,message:'必填'}]">
+                <el-input v-model="createForm.adminUsername" placeholder="门店管理员登录账号" />
+            </el-form-item>
+            <el-form-item label="管理员密码" prop="adminPassword" :rules="[{required:true,message:'必填'}]">
+                <el-input v-model="createForm.adminPassword" type="password" placeholder="初始密码" />
+            </el-form-item>
+        </el-form>
+        <div class="dialog-footer">
+            <el-button size="small" @click="createDialogVisible = false">取消</el-button>
+            <el-button type="primary" size="small" @click="submitCreateForm" :loading="submitting">确认创建</el-button>
+        </div>
+    </el-dialog>
+
+    <!-- 数据同步对话框 -->
+    <el-dialog title="数据同步" :visible.sync="syncDialogVisible" width="500px">
+        <p style="margin-bottom:12px; color:#606266;">将总部数据同步到 <b>{{ syncTargetName }}</b></p>
+        <div class="sync-section">
+            <el-button size="small" type="primary" @click="syncType('dishes')" :loading="syncing.dishes">
+                <i class="el-icon-sell"></i> 同步菜品
+            </el-button>
+            <el-button size="small" type="success" @click="syncType('categories')" :loading="syncing.categories" style="margin-left:8px;">
+                <i class="el-icon-menu"></i> 同步分类
+            </el-button>
+            <el-button size="small" type="warning" @click="syncType('setmeals')" :loading="syncing.setmeals" style="margin-left:8px;">
+                <i class="el-icon-s-grid"></i> 同步套餐
+            </el-button>
+        </div>
+        <div v-if="syncResult" style="margin-top:16px; padding:12px; background:#f0f9eb; border-radius:6px; font-size:13px;">
+            <p>成功: {{ syncResult.synced }} 条 | 失败: {{ syncResult.failed }} 条</p>
+            <p v-if="syncResult.errors && syncResult.errors.length > 0" style="color:#f56c6c; margin-top:4px;" v-for="(err, i) in syncResult.errors" :key="i">{{ err }}</p>
+        </div>
+    </el-dialog>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js"></script>
+<script src="../../api/store.js"></script>
+<script>
+new Vue({
+    el: '#app',
+    data: {
+        loading: false,
+        submitting: false,
+        stores: [],
+        createDialogVisible: false,
+        createForm: {
+            storeName: '', storeCode: '', storeType: 2, contactPerson: '',
+            contactPhone: '', address: '', businessHours: '09:00-22:00',
+            adminUsername: '', adminPassword: ''
+        },
+        syncDialogVisible: false,
+        syncTargetId: null,
+        syncTargetName: '',
+        syncing: { dishes: false, categories: false, setmeals: false },
+        syncResult: null
+    },
+    created() { this.loadStores(); },
+    methods: {
+        loadStores() {
+            this.loading = true;
+            storeApi.listStores().then(res => {
+                if (res.data && res.data.code === 1) {
+                    this.stores = res.data.data || [];
+                }
+            }).catch(err => {
+                this.$message.error('加载失败');
+            }).finally(() => { this.loading = false; });
+        },
+        openCreateDialog() {
+            this.resetCreateForm();
+            this.createDialogVisible = true;
+        },
+        resetCreateForm() {
+            this.createForm = {
+                storeName: '', storeCode: '', storeType: 2, contactPerson: '',
+                contactPhone: '', address: '', businessHours: '09:00-22:00',
+                adminUsername: '', adminPassword: ''
+            };
+            if (this.$refs.createFormRef) this.$refs.createFormRef.resetFields();
+        },
+        submitCreateForm() {
+            this.$refs.createFormRef.validate(valid => {
+                if (!valid) return;
+                this.submitting = true;
+                storeApi.createStore(this.createForm).then(res => {
+                    if (res.data && res.data.code === 1) {
+                        this.$message.success('门店创建成功');
+                        this.createDialogVisible = false;
+                        this.loadStores();
+                    } else {
+                        this.$message.error(res.data?.msg || '创建失败');
+                    }
+                }).catch(err => {
+                    this.$message.error('创建失败: ' + (err.response?.data?.msg || err.message));
+                }).finally(() => { this.submitting = false; });
+            });
+        },
+        toggleStatus(store) {
+            storeApi.updateStatus(store.tenantId, store.status).then(res => {
+                if (res.data && res.data.code === 1) {
+                    this.$message.success('状态已更新');
+                }
+            }).catch(() => { this.loadStores(); });
+        },
+        switchToStore(store) {
+            storeApi.switchStore(store.tenantId).then(res => {
+                if (res.data && res.data.code === 1) {
+                    this.$message.success('已切换到门店：' + store.storeName);
+                    this.loadStores();
+                }
+            });
+        },
+        openSyncDialog(store) {
+            this.syncTargetId = store.tenantId;
+            this.syncTargetName = store.storeName;
+            this.syncResult = null;
+            this.syncDialogVisible = true;
+        },
+        syncType(type) {
+            let apiCall;
+            const sourceTenantId = this.stores[0]?.tenantId; // 第一个门店作为总部
+
+            switch(type) {
+                case 'dishes':
+                    apiCall = storeApi.syncDishes({ sourceTenantId, targetTenantId: this.syncTargetId, dishIds: null, operatorId: 1 });
+                    break;
+                case 'categories':
+                    apiCall = storeApi.syncCategories({ sourceTenantId, targetTenantId: this.syncTargetId, operatorId: 1 });
+                    break;
+                case 'setmeals':
+                    apiCall = storeApi.syncSetmeals({ sourceTenantId, targetTenantId: this.syncTargetId, setmealIds: null, operatorId: 1 });
+                    break;
+            }
+
+            if (!apiCall) return;
+            this.syncing[type] = true;
+            apiCall.then(res => {
+                if (res.data && res.data.code === 1) {
+                    this.syncResult = res.data.data;
+                    this.$message.success('同步完成');
+                }
+            }).catch(err => {
+                this.$message.error('同步失败');
+            }).finally(() => { this.syncing[type] = false; });
+        },
+        storeTypeTag(type) { return type === 1 ? 'danger' : type === 2 ? 'success' : 'warning'; },
+        storeTypeName(type) {
+            const map = { 1: '总店', 2: '直营', 3: '加盟' };
+            return map[type] || '';
+        },
+        formatAmount(amount) {
+            if (!amount) return '0.00';
+            return typeof amount === 'number' ? amount.toFixed(2) : amount;
+        }
+    }
+});
+</script>
+</body>
+</html>

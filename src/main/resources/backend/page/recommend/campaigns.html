@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <title>营销活动管理</title>
+    <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
+        .page-header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .page-header h2 { font-size: 20px; color: #303133; }
+        .search-bar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
+        .table-wrap { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .status-tag { font-size: 12px; }
+        .dialog-footer { text-align: right; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="page-header">
+        <h2>营销活动管理</h2>
+        <el-button type="primary" size="small" @click="openDialog('create')">+ 新建活动</el-button>
+    </div>
+
+    <!-- 搜索栏 -->
+    <div class="search-bar">
+        <el-input v-model="searchName" placeholder="搜索活动名称" size="small" style="width:220px;" clearable />
+        <el-select v-model="searchStatus" placeholder="状态" size="small" style="width:120px;" clearable>
+            <el-option label="草稿" :value="0" />
+            <el-option label="进行中" :value="1" />
+            <el-option label="已结束" :value="2" />
+            <el-option label="已暂停" :value="3" />
+        </el-select>
+        <el-button type="primary" size="small" @click="loadData" icon="el-icon-search">查询</el-button>
+    </div>
+
+    <!-- 表格 -->
+    <div class="table-wrap">
+        <el-table :data="tableData" border stripe v-loading="loading" style="width:100%">
+            <el-table-column prop="id" label="ID" width="60" />
+            <el-table-column prop="name" label="活动名称" min-width="160" />
+            <el-table-column label="活动类型" width="100">
+                <template slot-scope="scope">{{ typeMap[scope.row.campaignType] || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="目标人群" width="100">
+                <template slot-scope="scope">{{ targetMap[scope.row.targetType] || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="状态" width="90">
+                <template slot-scope="scope">
+                    <el-tag :type="statusTagType(scope.row.status)" size="small">{{ statusMap[scope.row.status] }}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="priority" label="优先级" width="70" />
+            <el-table-column label="活动时间" width="200">
+                <template slot-scope="scope">
+                    <span style="font-size:12px;">{{ scope.row.startTime }} ~ {{ scope.row.endTime }}</span>
+                </template>
+            </el-table-column>
+            <el-table-column prop="currentParticipants" label="参与人数" width="80" />
+            <el-table-column label="操作" width="220" fixed="right">
+                <template slot-scope="scope">
+                    <el-button type="text" size="small" @click="openDialog('edit', scope.row)">编辑</el-button>
+                    <el-button type="text" size="small" v-if="scope.row.status === 0" @click="publishCampaign(scope.row)">发布</el-button>
+                    <el-button type="text" size="small" v-if="scope.row.status === 1" @click="pauseCampaign(scope.row)">暂停</el-button>
+                    <el-button type="text" size="small" style="color:#f56c6c;" @click="deleteCampaign(scope.row)">删除</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        <el-pagination
+            style="margin-top:16px; text-align:right;"
+            background
+            layout="total, prev, pager, next"
+            :total="total"
+            :page-size="pageSize"
+            :current-page.sync="currentPage"
+            @current-change="loadData"
+        />
+    </div>
+
+    <!-- 新建/编辑对话框 -->
+    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="600px" @close="resetForm">
+        <el-form :model="form" :rules="rules" ref="campaignForm" label-width="100px" size="small">
+            <el-form-item label="活动名称" prop="name">
+                <el-input v-model="form.name" placeholder="请输入活动名称" maxlength="100" />
+            </el-form-item>
+            <el-form-item label="活动类型" prop="campaignType">
+                <el-select v-model="form.campaignType" placeholder="请选择">
+                    <el-option label="满减" :value="1" />
+                    <el-option label="折扣" :value="2" />
+                    <el-option label="赠品" :value="3" />
+                    <el-option label="首单优惠" :value="4" />
+                    <el-option label="会员专享" :value="5" />
+                    <el-option label="限时秒杀" :value="6" />
+                </el-select>
+            </el-form-item>
+            <el-form-item label="目标人群" prop="targetType">
+                <el-select v-model="form.targetType" placeholder="请选择">
+                    <el-option label="全部用户" :value="1" />
+                    <el-option label="新用户" :value="2" />
+                    <el-option label="高频用户" :value="3" />
+                    <el-option label="流失预警用户" :value="4" />
+                    <el-option label="指定等级" :value="5" />
+                </el-select>
+            </el-form-item>
+            <el-form-item label="活动描述" prop="description">
+                <el-input v-model="form.description" type="textarea" :rows="3" placeholder="活动描述说明" maxlength="500" />
+            </el-form-item>
+            <el-form-item label="活动规则" prop="ruleJson">
+                <el-input v-model="form.ruleJson" type="textarea" :rows="3" placeholder='JSON格式，如：{"minAmount":50,"discount":0.8}' />
+            </el-form-item>
+            <el-form-item label="优先级" prop="priority">
+                <el-input-number v-model="form.priority" :min="0" :max="100" />
+            </el-form-item>
+            <el-form-item label="活动时间" required>
+                <el-date-picker
+                    v-model="dateRange"
+                    type="datetimerange"
+                    range-separator="至"
+                    start-placeholder="开始时间"
+                    end-placeholder="结束时间"
+                    value-format="yyyy-MM-dd HH:mm:ss"
+                    style="width:100%"
+                />
+            </el-form-item>
+            <el-form-item label="参与上限">
+                <el-input-number v-model="form.maxParticipants" :min="0" placeholder="0=不限" />
+            </el-form-item>
+        </el-form>
+        <div class="dialog-footer">
+            <el-button size="small" @click="dialogVisible = false">取消</el-button>
+            <el-button type="primary" size="small" @click="submitForm" :loading="submitting">保存</el-button>
+        </div>
+    </el-dialog>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js"></script>
+<script src="../../api/recommend.js"></script>
+<script>
+new Vue({
+    el: '#app',
+    data: {
+        loading: false,
+        submitting: false,
+        tableData: [],
+        total: 0,
+        currentPage: 1,
+        pageSize: 10,
+        searchName: '',
+        searchStatus: null,
+        dialogVisible: false,
+        dialogTitle: '新建营销活动',
+        dialogMode: 'create',
+        editId: null,
+        dateRange: [],
+        form: {
+            name: '', campaignType: 1, targetType: 1, description: '',
+            ruleJson: '', priority: 0, startTime: '', endTime: '', maxParticipants: null
+        },
+        rules: {
+            name: [{ required: true, message: '请输入活动名称', trigger: 'blur' }],
+            campaignType: [{ required: true, message: '请选择活动类型', trigger: 'change' }],
+            targetType: [{ required: true, message: '请选择目标人群', trigger: 'change' }]
+        },
+        typeMap: { 1:'满减', 2:'折扣', 3:'赠品', 4:'首单优惠', 5:'会员专享', 6:'限时秒杀' },
+        targetMap: { 1:'全部用户', 2:'新用户', 3:'高频用户', 4:'流失预警', 5:'指定等级' },
+        statusMap: { 0:'草稿', 1:'进行中', 2:'已结束', 3:'已暂停' }
+    },
+    created() { this.loadData(); },
+    methods: {
+        loadData() {
+            this.loading = true;
+            recommendBackendApi.getCampaignsPage({
+                page: this.currentPage,
+                pageSize: this.pageSize,
+                name: this.searchName || undefined,
+                status: this.searchStatus !== null ? this.searchStatus : undefined
+            }).then(res => {
+                if (res.data && res.data.code === 1) {
+                    const data = res.data.data;
+                    this.tableData = data.records || [];
+                    this.total = data.total || 0;
+                }
+            }).catch(err => {
+                this.$message.error('加载失败: ' + (err.response?.data?.msg || err.message));
+            }).finally(() => { this.loading = false; });
+        },
+        openDialog(mode, row) {
+            this.dialogMode = mode;
+            this.dialogTitle = mode === 'create' ? '新建营销活动' : '编辑营销活动';
+            if (mode === 'edit' && row) {
+                this.editId = row.id;
+                this.form = {
+                    name: row.name, campaignType: row.campaignType, targetType: row.targetType,
+                    description: row.description || '', ruleJson: row.ruleJson || '',
+                    priority: row.priority || 0, maxParticipants: row.maxParticipants
+                };
+                this.dateRange = [row.startTime, row.endTime];
+            } else {
+                this.editId = null;
+                this.resetForm();
+            }
+            this.dialogVisible = true;
+        },
+        resetForm() {
+            this.form = {
+                name: '', campaignType: 1, targetType: 1, description: '',
+                ruleJson: '', priority: 0, maxParticipants: null
+            };
+            this.dateRange = [];
+            if (this.$refs.campaignForm) this.$refs.campaignForm.resetFields();
+        },
+        submitForm() {
+            this.$refs.campaignForm.validate(valid => {
+                if (!valid) return;
+                if (!this.dateRange || this.dateRange.length < 2) {
+                    this.$message.warning('请选择活动时间'); return;
+                }
+                this.form.startTime = this.dateRange[0];
+                this.form.endTime = this.dateRange[1];
+                this.submitting = true;
+                const api = this.dialogMode === 'create' ?
+                    recommendBackendApi.createCampaign(this.form) :
+                    recommendBackendApi.updateCampaign(Object.assign({ id: this.editId }, this.form));
+
+                api.then(res => {
+                    if (res.data && res.data.code === 1) {
+                        this.$message.success(this.dialogMode === 'create' ? '创建成功' : '更新成功');
+                        this.dialogVisible = false;
+                        this.loadData();
+                    } else {
+                        this.$message.error(res.data?.msg || '操作失败');
+                    }
+                }).catch(err => {
+                    this.$message.error('操作失败: ' + (err.response?.data?.msg || err.message));
+                }).finally(() => { this.submitting = false; });
+            });
+        },
+        publishCampaign(row) {
+            this.$confirm('确认发布该活动？', '提示', { type: 'info' }).then(() => {
+                recommendBackendApi.publishCampaign(row.id).then(res => {
+                    if (res.data && res.data.code === 1) { this.$message.success('发布成功'); this.loadData(); }
+                });
+            }).catch(() => {});
+        },
+        pauseCampaign(row) {
+            this.$confirm('确认暂停该活动？', '提示', { type: 'warning' }).then(() => {
+                recommendBackendApi.pauseCampaign(row.id).then(res => {
+                    if (res.data && res.data.code === 1) { this.$message.success('已暂停'); this.loadData(); }
+                });
+            }).catch(() => {});
+        },
+        deleteCampaign(row) {
+            this.$confirm('确认删除该活动？不可恢复！', '警告', { type: 'warning' }).then(() => {
+                recommendBackendApi.deleteCampaign(row.id).then(res => {
+                    if (res.data && res.data.code === 1) { this.$message.success('删除成功'); this.loadData(); }
+                });
+            }).catch(() => {});
+        },
+        statusTagType(status) {
+            const map = { 0: 'info', 1: 'success', 2: 'warning', 3: 'danger' };
+            return map[status] || 'info';
+        }
+    }
+});
+</script>
+</body>
+</html>

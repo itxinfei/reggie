@@ -45681,3 +45681,268 @@ INSERT INTO region (id, name, code, parent_id, level, sort, create_time, update_
 
 
 SET FOREIGN_KEY_CHECKS = 1;
+-- ============================================
+-- 智能推荐模块 - 数据库迁移脚本
+-- 模块：用户偏好分析、浏览记录、推荐缓存、营销活动
+-- 日期：2026-07-09
+-- ============================================
+
+-- --------------------------------------------
+-- 1. 用户偏好标签表
+-- 基于用户历史订单分析得出的口味/品类偏好
+-- --------------------------------------------
+DROP TABLE IF EXISTS `user_preference_tag`;
+CREATE TABLE `user_preference_tag` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id` bigint NOT NULL COMMENT '用户ID',
+    `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户ID',
+    `tag_type` tinyint NOT NULL COMMENT '标签类型 1:口味偏好 2:品类偏好 3:价格偏好 4:时段偏好',
+    `tag_name` varchar(64) NOT NULL COMMENT '标签名称，如：辣味、川菜、20-30元、午餐时段',
+    `tag_value` decimal(5,2) NOT NULL DEFAULT 1.00 COMMENT '偏好权重 0.00~1.00，越高越偏好',
+    `source` varchar(20) NOT NULL DEFAULT 'ORDER' COMMENT '数据来源 ORDER:订单分析 BROWSE:浏览分析 MANUAL:手动标注',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    `update_time` datetime NOT NULL COMMENT '更新时间',
+    `create_user` bigint NOT NULL COMMENT '创建人',
+    `update_user` bigint NOT NULL COMMENT '修改人',
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `idx_user_tag`(`user_id` ASC, `tag_type` ASC) USING BTREE,
+    INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户偏好标签' ROW_FORMAT = Dynamic;
+
+-- --------------------------------------------
+-- 2. 用户浏览记录表
+-- 记录用户在前端浏览菜品的详细行为
+-- --------------------------------------------
+DROP TABLE IF EXISTS `user_browse_history`;
+CREATE TABLE `user_browse_history` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id` bigint NOT NULL COMMENT '用户ID',
+    `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户ID',
+    `target_type` tinyint NOT NULL COMMENT '浏览对象类型 1:菜品 2:套餐',
+    `target_id` bigint NOT NULL COMMENT '浏览对象ID',
+    `target_name` varchar(128) DEFAULT NULL COMMENT '浏览对象名称',
+    `duration_seconds` int NOT NULL DEFAULT 0 COMMENT '浏览停留时长(秒)',
+    `action_type` tinyint NOT NULL DEFAULT 1 COMMENT '行为类型 1:浏览 2:收藏 3:加购 4:分享',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `idx_user_time`(`user_id` ASC, `create_time` DESC) USING BTREE,
+    INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
+    INDEX `idx_target`(`target_type` ASC, `target_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户浏览记录' ROW_FORMAT = Dynamic;
+
+-- --------------------------------------------
+-- 3. 推荐结果缓存表
+-- 缓存用户个性化推荐结果，避免实时计算开销
+-- --------------------------------------------
+DROP TABLE IF EXISTS `recommendation_cache`;
+CREATE TABLE `recommendation_cache` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id` bigint NOT NULL COMMENT '用户ID',
+    `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户ID',
+    `recommend_type` tinyint NOT NULL COMMENT '推荐类型 1:菜品推荐 2:套餐推荐 3:新品尝鲜',
+    `dish_ids` text NOT NULL COMMENT '推荐菜品/套餐ID列表，JSON数组格式',
+    `algorithm` varchar(32) NOT NULL COMMENT '算法名称，如：CF/ContentBased/Hybrid/HotRank',
+    `score` decimal(3,2) NOT NULL DEFAULT 0.00 COMMENT '推荐置信度 0.00~1.00',
+    `expire_time` datetime NOT NULL COMMENT '缓存过期时间',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    `update_time` datetime NOT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `idx_user_recommend`(`user_id` ASC, `recommend_type` ASC) USING BTREE,
+    INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
+    INDEX `idx_expire`(`expire_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '推荐结果缓存' ROW_FORMAT = Dynamic;
+
+-- --------------------------------------------
+-- 4. 营销活动表
+-- 定义各种促销活动、满减、折扣、限时优惠等
+-- --------------------------------------------
+DROP TABLE IF EXISTS `marketing_campaign`;
+CREATE TABLE `marketing_campaign` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint NOT NULL COMMENT '租户ID',
+    `name` varchar(100) NOT NULL COMMENT '活动名称',
+    `description` varchar(500) DEFAULT NULL COMMENT '活动描述',
+    `campaign_type` tinyint NOT NULL COMMENT '活动类型 1:满减 2:折扣 3:赠品 4:首单优惠 5:会员专享 6:限时秒杀',
+    `target_type` tinyint NOT NULL DEFAULT 1 COMMENT '目标类型 1:全部用户 2:新用户 3:高频用户 4:流失预警用户 5:指定等级',
+    `target_value` varchar(500) DEFAULT NULL COMMENT '目标值(等级ID列表/用户ID列表，JSON)',
+    `rule_json` text COMMENT '活动规则 JSON，如满减条件、折扣率等',
+    `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态 0:草稿 1:进行中 2:已结束 3:已暂停',
+    `priority` int NOT NULL DEFAULT 0 COMMENT '优先级，数值越大优先级越高',
+    `start_time` datetime NOT NULL COMMENT '活动开始时间',
+    `end_time` datetime NOT NULL COMMENT '活动结束时间',
+    `max_participants` int DEFAULT NULL COMMENT '最大参与人数，NULL表示不限',
+    `current_participants` int NOT NULL DEFAULT 0 COMMENT '当前参与人数',
+    `coupon_template_id` bigint DEFAULT NULL COMMENT '关联优惠券模板ID',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    `update_time` datetime NOT NULL COMMENT '更新时间',
+    `create_user` bigint NOT NULL COMMENT '创建人',
+    `update_user` bigint NOT NULL COMMENT '修改人',
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `idx_tenant_status`(`tenant_id` ASC, `status` ASC) USING BTREE,
+    INDEX `idx_time`(`start_time` ASC, `end_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '营销活动' ROW_FORMAT = Dynamic;
+
+-- --------------------------------------------
+-- 5. 营销消息推送记录表
+-- 记录每次营销消息的推送详情
+-- --------------------------------------------
+DROP TABLE IF EXISTS `marketing_message`;
+CREATE TABLE `marketing_message` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint NOT NULL COMMENT '租户ID',
+    `campaign_id` bigint NOT NULL COMMENT '关联营销活动ID',
+    `user_id` bigint NOT NULL COMMENT '推送用户ID',
+    `push_type` tinyint NOT NULL COMMENT '推送类型 1:首页弹窗 2:消息通知 3:短信 4:优惠券自动发放',
+    `title` varchar(200) NOT NULL COMMENT '推送标题',
+    `content` varchar(1000) NOT NULL COMMENT '推送内容',
+    `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态 0:待推送 1:已推送 2:已读 3:已使用',
+    `read_time` datetime DEFAULT NULL COMMENT '阅读时间',
+    `use_time` datetime DEFAULT NULL COMMENT '使用时间',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `idx_user`(`user_id` ASC) USING BTREE,
+    INDEX `idx_campaign`(`campaign_id` ASC) USING BTREE,
+    INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '营销消息推送记录' ROW_FORMAT = Dynamic;
+
+-- --------------------------------------------
+-- 6. 推荐反馈表
+-- 记录用户对推荐结果的反馈，用于优化算法
+-- --------------------------------------------
+DROP TABLE IF EXISTS `recommendation_feedback`;
+CREATE TABLE `recommendation_feedback` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id` bigint NOT NULL COMMENT '用户ID',
+    `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户ID',
+    `recommend_cache_id` bigint DEFAULT NULL COMMENT '关联推荐缓存ID',
+    `dish_id` bigint NOT NULL COMMENT '菜品/套餐ID',
+    `feedback_type` tinyint NOT NULL COMMENT '反馈类型 1:点击 2:收藏 3:加购 4:下单 5:不感兴趣',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `idx_user`(`user_id` ASC) USING BTREE,
+    INDEX `idx_dish`(`dish_id` ASC) USING BTREE,
+    INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '推荐反馈' ROW_FORMAT = Dynamic;
+-- ============================================
+-- 多门店管理模块 - 数据库迁移脚本
+-- 模块：门店配置、数据同步、跨店管理
+-- 日期：2026-07-09
+-- ============================================
+
+-- --------------------------------------------
+-- 1. 门店扩展信息表 (增强现有tenant表)
+-- 在tenant表基础上补充门店运营信息
+-- --------------------------------------------
+DROP TABLE IF EXISTS `store_info`;
+CREATE TABLE `store_info` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint NOT NULL COMMENT '所属租户/门店ID',
+    `store_code` varchar(32) NOT NULL COMMENT '门店编码，如：BJ001、SH001',
+    `store_type` tinyint NOT NULL DEFAULT 1 COMMENT '门店类型 1:直营总店 2:直营分店 3:加盟店',
+    `parent_tenant_id` bigint DEFAULT NULL COMMENT '上级总店tenantId，NULL表示总店自身',
+    `business_hours` varchar(100) DEFAULT NULL COMMENT '营业时间，如：09:00-22:00',
+    `delivery_radius` int NOT NULL DEFAULT 3000 COMMENT '配送半径(米)',
+    `min_delivery_amount` decimal(10,2) NOT NULL DEFAULT 20.00 COMMENT '最低起送金额',
+    `delivery_fee` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '配送费',
+    `is_delivery_enabled` tinyint NOT NULL DEFAULT 1 COMMENT '是否支持外卖 0:否 1:是',
+    `is_dine_in_enabled` tinyint NOT NULL DEFAULT 1 COMMENT '是否支持堂食 0:否 1:是',
+    `contact_person` varchar(64) DEFAULT NULL COMMENT '门店联系人',
+    `contact_phone` varchar(20) DEFAULT NULL COMMENT '门店联系电话',
+    `longitude` decimal(10,7) DEFAULT NULL COMMENT '经度',
+    `latitude` decimal(10,7) DEFAULT NULL COMMENT '纬度',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    `update_time` datetime NOT NULL COMMENT '更新时间',
+    `create_user` bigint NOT NULL COMMENT '创建人',
+    `update_user` bigint NOT NULL COMMENT '修改人',
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE INDEX `uk_tenant`(`tenant_id` ASC) USING BTREE,
+    INDEX `idx_parent`(`parent_tenant_id` ASC) USING BTREE,
+    INDEX `idx_code`(`store_code` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '门店扩展信息' ROW_FORMAT = Dynamic;
+
+-- --------------------------------------------
+-- 2. 门店配置表
+-- 门店级别的功能开关和运营参数
+-- --------------------------------------------
+DROP TABLE IF EXISTS `store_config`;
+CREATE TABLE `store_config` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint NOT NULL COMMENT '租户/门店ID',
+    `config_key` varchar(64) NOT NULL COMMENT '配置键',
+    `config_value` varchar(2000) NOT NULL COMMENT '配置值',
+    `config_type` tinyint NOT NULL DEFAULT 1 COMMENT '配置类型 1:功能开关 2:运营参数 3:显示设置 4:其他',
+    `description` varchar(200) DEFAULT NULL COMMENT '配置说明',
+    `created_by` bigint NOT NULL COMMENT '配置创建人(总部管理员)',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    `update_time` datetime NOT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE INDEX `uk_tenant_key`(`tenant_id` ASC, `config_key` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '门店配置' ROW_FORMAT = Dynamic;
+
+-- --------------------------------------------
+-- 3. 门店同步日志表
+-- 记录总部向分店同步数据的操作日志
+-- --------------------------------------------
+DROP TABLE IF EXISTS `store_sync_log`;
+CREATE TABLE `store_sync_log` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `source_tenant_id` bigint NOT NULL COMMENT '来源门店ID(通常是总部)',
+    `target_tenant_id` bigint NOT NULL COMMENT '目标门店ID',
+    `sync_type` tinyint NOT NULL COMMENT '同步类型 1:菜品同步 2:分类同步 3:套餐同步 4:配置同步 5:优惠券同步',
+    `sync_mode` tinyint NOT NULL DEFAULT 1 COMMENT '同步模式 1:全量同步 2:增量同步 3:选择性同步',
+    `sync_status` tinyint NOT NULL DEFAULT 0 COMMENT '同步状态 0:进行中 1:成功 2:失败 3:部分成功',
+    `sync_count` int NOT NULL DEFAULT 0 COMMENT '同步数量',
+    `fail_count` int NOT NULL DEFAULT 0 COMMENT '失败数量',
+    `error_detail` text COMMENT '错误详情',
+    `operator_id` bigint NOT NULL COMMENT '操作人ID',
+    `start_time` datetime NOT NULL COMMENT '开始时间',
+    `end_time` datetime DEFAULT NULL COMMENT '结束时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `idx_source`(`source_tenant_id` ASC) USING BTREE,
+    INDEX `idx_target`(`target_tenant_id` ASC) USING BTREE,
+    INDEX `idx_status`(`sync_status` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '门店同步日志' ROW_FORMAT = Dynamic;
+
+-- --------------------------------------------
+-- 4. 门店员工权限关联表
+-- 总部管理员管理各门店员工的权限分配
+-- --------------------------------------------
+DROP TABLE IF EXISTS `store_employee_permission`;
+CREATE TABLE `store_employee_permission` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `employee_id` bigint NOT NULL COMMENT '员工ID',
+    `tenant_id` bigint NOT NULL COMMENT '门店ID',
+    `role_type` tinyint NOT NULL COMMENT '角色类型 1:店长 2:厨师 3:服务员 4:收银员 5:配送员',
+    `permissions` text COMMENT '权限列表 JSON数组，如：["dish:view","dish:edit","order:view"]',
+    `is_active` tinyint NOT NULL DEFAULT 1 COMMENT '是否生效 0:否 1:是',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    `update_time` datetime NOT NULL COMMENT '更新时间',
+    `create_user` bigint NOT NULL COMMENT '创建人',
+    `update_user` bigint NOT NULL COMMENT '修改人',
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE INDEX `uk_emp_tenant`(`employee_id` ASC, `tenant_id` ASC) USING BTREE,
+    INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '门店员工权限关联' ROW_FORMAT = Dynamic;
+
+-- --------------------------------------------
+-- 5. 门店经营汇总表（每日汇总快照）
+-- 总部控制台聚合查询用
+-- --------------------------------------------
+DROP TABLE IF EXISTS `store_daily_summary`;
+CREATE TABLE `store_daily_summary` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint NOT NULL COMMENT '门店ID',
+    `summary_date` date NOT NULL COMMENT '统计日期',
+    `total_orders` int NOT NULL DEFAULT 0 COMMENT '订单总数',
+    `completed_orders` int NOT NULL DEFAULT 0 COMMENT '已完成订单数',
+    `cancelled_orders` int NOT NULL DEFAULT 0 COMMENT '取消订单数',
+    `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '订单总额',
+    `actual_amount` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '实收金额',
+    `new_users` int NOT NULL DEFAULT 0 COMMENT '新增用户数',
+    `avg_order_amount` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '平均订单金额',
+    `top_dish_json` varchar(1000) DEFAULT NULL COMMENT '热销菜品TOP10 JSON',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE INDEX `uk_tenant_date`(`tenant_id` ASC, `summary_date` ASC) USING BTREE,
+    INDEX `idx_date`(`summary_date` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '门店每日经营汇总' ROW_FORMAT = Dynamic;

@@ -82,6 +82,26 @@
         </div>
       </div>
 
+      <!-- ====== 智能推荐：为你推荐 ====== -->
+      <div class="recommend-section" v-if="recommendDishes && recommendDishes.length > 0">
+        <div class="recommend-header">
+          <span class="recommend-title">🔥 为你推荐</span>
+          <span class="recommend-sub">基于你的口味偏好</span>
+        </div>
+        <div class="recommend-scroll">
+          <div class="recommend-item" v-for="(dish, idx) in recommendDishes.slice(0, 8)" :key="'r'+idx"
+               @click="recommendDishClick(dish)">
+            <div class="ri-image">
+              <img :src="imgPath(dish.image)" @error="e => e.target.src='./images/noImg.png'" />
+            </div>
+            <div class="ri-info">
+              <div class="ri-name">{{ dish.name }}</div>
+              <div class="ri-price">¥{{ (dish.price || 0) / 100 }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ====== 核心区域：左侧分类 + 右侧菜品 ====== -->
       <div class="content-area">
         <!-- 左侧分类栏 -->
@@ -437,6 +457,7 @@
         <script src="./js/common.js"></script>
         <script src="./api/main.js"></script>
         <script src="./api/address.js"></script>
+        <script src="./api/recommend.js"></script>
   </body>
   <script>
       new Vue({
@@ -478,6 +499,8 @@
                 show:false,
                 item:{}
               },
+              // 修改点：智能推荐数据
+              recommendDishes:[],
               // 修改点：搜索浮层相关数据
               searchShow: false,
               searchKeyword: '',
@@ -522,6 +545,8 @@
           created(){
             // 修改点：页面初始化时读取登录状态
             this.userPhone = sessionStorage.getItem("userPhone") || ''
+            // 修改点：加载个性化推荐
+            this.loadRecommendations()
           },
           mounted(){
             // 修改点：若已登录则正常加载，未登录也可浏览菜单但不能操作购物车
@@ -544,6 +569,19 @@
             // 修改点：将common.js的全局函数imgPath注册为Vue实例方法，Vue模板中无法访问全局函数
             imgPath(path){
               return '/common/download?name=' + path
+            },
+            // 修改点：加载智能推荐菜品
+            loadRecommendations(){
+              recommendApi.getDishRecommend(10).then(res => {
+                if(res.data && res.data.code === 1){
+                  this.recommendDishes = res.data.data || []
+                }
+              }).catch(() => {})
+            },
+            // 修改点：点击推荐菜品，打开详情
+            recommendDishClick(dish){
+              this.detailsDialog.show = true
+              this.detailsDialog.item = dish
             },
             // 修改点：分类emoji图标映射，美团风格可视化
             getCategoryIcon(name){

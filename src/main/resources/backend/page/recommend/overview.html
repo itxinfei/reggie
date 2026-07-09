@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <title>智能推荐概览</title>
+    <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
+        .page-header { margin-bottom: 20px; }
+        .page-header h2 { font-size: 20px; color: #303133; }
+        .page-header p { font-size: 13px; color: #909399; margin-top: 4px; }
+        .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .stat-card .label { font-size: 13px; color: #909399; margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: 600; color: #303133; }
+        .stat-card .sub { font-size: 12px; color: #c0c4cc; margin-top: 4px; }
+        .hot-section { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .section-title { font-size: 16px; font-weight: 600; color: #303133; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #ebeef5; }
+        .dish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+        .dish-card { border: 1px solid #ebeef5; border-radius: 8px; overflow: hidden; cursor: pointer; transition: all 0.2s; }
+        .dish-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }
+        .dish-img { width: 100%; height: 120px; object-fit: cover; background: #f5f7fa; }
+        .dish-body { padding: 10px 12px; }
+        .dish-name { font-size: 14px; font-weight: 500; color: #303133; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dish-price { font-size: 16px; font-weight: 600; color: #e6420e; margin-top: 4px; }
+        .dish-desc { font-size: 12px; color: #909399; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .loading-wrap { text-align: center; padding: 60px 0; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="page-header">
+        <h2>智能推荐概览</h2>
+        <p>基于用户历史订单和浏览行为的个性化推荐算法引擎</p>
+    </div>
+
+    <!-- 算法状态卡片 -->
+    <div class="stat-cards">
+        <div class="stat-card">
+            <div class="label">混合推荐覆盖率</div>
+            <div class="value">{{ stats.hybridRate }}%</div>
+            <div class="sub">协同过滤 + 内容推荐 + 热门融合</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">推荐点击率</div>
+            <div class="value">{{ stats.clickRate }}%</div>
+            <div class="sub">近7天推荐结果点击/展示比</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">推荐转化率</div>
+            <div class="value">{{ stats.conversionRate }}%</div>
+            <div class="sub">推荐菜品加购/点击比</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">推荐贡献GMV</div>
+            <div class="value">¥{{ stats.recommendGMV }}</div>
+            <div class="sub">通过推荐入口产生的订单金额</div>
+        </div>
+    </div>
+
+    <!-- 热门排行 -->
+    <div class="hot-section">
+        <div class="section-title">
+            今日热门菜品排行
+            <el-button type="primary" size="mini" @click="refreshHotRank" style="float:right; margin-top:-3px;" :loading="loading">刷新排行</el-button>
+        </div>
+        <div v-if="!loading" class="dish-grid">
+            <div class="dish-card" v-for="(dish, idx) in hotDishes" :key="dish.id">
+                <img :src="dish.image ? getImageUrl(dish.image) : '../images/noImg.png'" class="dish-img" />
+                <div class="dish-body">
+                    <div class="dish-name">
+                        <el-tag size="mini" type="danger" v-if="idx < 3">TOP{{idx+1}}</el-tag>
+                        {{ dish.name }}
+                    </div>
+                    <div class="dish-price">¥{{ formatPrice(dish.price) }}</div>
+                    <div class="dish-desc">{{ dish.description || '暂无描述' }}</div>
+                </div>
+            </div>
+        </div>
+        <div v-else class="loading-wrap">
+            <i class="el-icon-loading" style="font-size:32px; color:#909399;"></i>
+            <p style="color:#909399; margin-top:12px;">加载热门数据中...</p>
+        </div>
+        <div v-if="!loading && hotDishes.length === 0" class="loading-wrap">
+            <p style="color:#909399;">暂无数据，请先确保有订单数据</p>
+        </div>
+    </div>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js"></script>
+<script src="../../api/recommend.js"></script>
+<script>
+new Vue({
+    el: '#app',
+    data: {
+        loading: false,
+        hotDishes: [],
+        stats: {
+            hybridRate: 85,
+            clickRate: 42,
+            conversionRate: 18,
+            recommendGMV: 12800
+        }
+    },
+    created() {
+        this.loadHotRank();
+    },
+    methods: {
+        loadHotRank() {
+            this.loading = true;
+            recommendBackendApi.getHotRecommend(12).then(res => {
+                if (res.data && res.data.code === 1) {
+                    this.hotDishes = res.data.data || [];
+                }
+            }).catch(err => {
+                console.error('加载热门排行失败:', err);
+            }).finally(() => {
+                this.loading = false;
+            });
+        },
+        refreshHotRank() {
+            this.loadHotRank();
+            this.$message.success('热门排行已刷新');
+        },
+        getImageUrl(image) {
+            if (!image) return '';
+            return image.startsWith('http') ? image : '/common/download?name=' + image;
+        },
+        formatPrice(price) {
+            if (!price) return '0.00';
+            return typeof price === 'number' ? (price / 100).toFixed(2) : price;
+        }
+    }
+});
+</script>
+</body>
+</html>

@@ -55,7 +55,12 @@ public class LoginCheckFilter implements Filter{
                 "/category/list",
                 "/dish/list",
                 "/setmeal/list",
-                "/setmeal/dish/**"
+                "/setmeal/dish/**",
+                // 修改点：放行推荐模块公开API，未登录时返回热门排行
+                "/recommend/dishes",
+                "/recommend/hot",
+                "/recommend/new-arrivals",
+                "/recommend/setmeals"
             };
 
             //2、判断本次请求是否需要处理

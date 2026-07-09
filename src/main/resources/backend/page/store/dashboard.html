@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <title>总部控制台</title>
+    <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
+        .page-header { margin-bottom: 20px; }
+        .page-header h2 { font-size: 22px; color: #303133; }
+        .page-header p { font-size: 13px; color: #909399; margin-top: 4px; }
+        /* 核心指标卡片 */
+        .kpi-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .kpi-card { background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center; }
+        .kpi-card .kpi-icon { font-size: 28px; margin-bottom: 8px; }
+        .kpi-card .kpi-value { font-size: 32px; font-weight: 700; color: #303133; }
+        .kpi-card .kpi-label { font-size: 13px; color: #909399; margin-top: 4px; }
+        .kpi-card .kpi-change { font-size: 12px; margin-top: 4px; }
+        /* 门店排行 */
+        .section { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .section + .section { margin-top: 20px; }
+        .section-title { font-size: 16px; font-weight: 600; color: #303133; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #ebeef5; }
+        .rank-list { list-style: none; }
+        .rank-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f5f7fa; }
+        .rank-item:last-child { border-bottom: none; }
+        .rank-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; margin-right: 12px; }
+        .rank-num.top1 { background: linear-gradient(135deg, #f56c6c, #e6420e); color: #fff; }
+        .rank-num.top2 { background: linear-gradient(135deg, #e6a23c, #d48728); color: #fff; }
+        .rank-num.top3 { background: linear-gradient(135deg, #67c23a, #5aaf1a); color: #fff; }
+        .rank-num.normal { background: #f5f7fa; color: #909399; }
+        .rank-info { flex: 1; }
+        .rank-name { font-size: 14px; font-weight: 500; color: #303133; }
+        .rank-code { font-size: 12px; color: #c0c4cc; }
+        .rank-stats { text-align: right; }
+        .rank-orders { font-size: 18px; font-weight: 600; color: #303133; }
+        .rank-amount { font-size: 16px; font-weight: 600; color: #e6420e; }
+        .rank-sub { font-size: 12px; color: #909399; }
+        .empty-wrap { text-align: center; padding: 80px 0; color: #909399; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="page-header">
+        <h2>总部控制台</h2>
+        <p>跨门店经营数据汇总 - 实时监控各门店运营状况</p>
+    </div>
+
+    <!-- 核心KPI -->
+    <div class="kpi-cards" v-if="dashboard">
+        <div class="kpi-card">
+            <div class="kpi-icon">🏪</div>
+            <div class="kpi-value">{{ dashboard.totalStores || 0 }}</div>
+            <div class="kpi-label">门店总数</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">📦</div>
+            <div class="kpi-value">{{ dashboard.todayTotalOrders || 0 }}</div>
+            <div class="kpi-label">今日总订单</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-value">¥{{ formatAmount(dashboard.todayTotalAmount) }}</div>
+            <div class="kpi-label">今日总营收</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">👤</div>
+            <div class="kpi-value">{{ dashboard.todayNewUsers || 0 }}</div>
+            <div class="kpi-label">今日新增用户</div>
+            <div class="kpi-change" style="color:#67c23a;">平均客单价 ¥{{ dashboard.avgOrderAmount ? formatAmount(dashboard.avgOrderAmount) : '0.00' }}</div>
+        </div>
+    </div>
+
+    <!-- 门店排行 -->
+    <div class="section">
+        <div class="section-title">门店实时排行（按今日订单量）</div>
+        <div v-if="dashboard && dashboard.storeRanking && dashboard.storeRanking.length > 0">
+            <ul class="rank-list">
+                <li class="rank-item" v-for="(store, idx) in dashboard.storeRanking" :key="store.tenantId">
+                    <div :class="['rank-num', idx === 0 ? 'top1' : idx === 1 ? 'top2' : idx === 2 ? 'top3' : 'normal']">
+                        {{ idx + 1 }}
+                    </div>
+                    <div class="rank-info">
+                        <div class="rank-name">{{ store.storeName }}</div>
+                        <div class="rank-code">{{ store.storeCode }}</div>
+                    </div>
+                    <div class="rank-stats">
+                        <div class="rank-orders">{{ store.todayOrders || 0 }}单</div>
+                        <div class="rank-amount">¥{{ formatAmount(store.todayAmount) }}</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div v-else class="empty-wrap">
+            <p>暂无门店数据，请先创建门店</p>
+            <el-button type="primary" size="small" style="margin-top:12px;" @click="goToStoreList">前往门店管理</el-button>
+        </div>
+    </div>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js"></script>
+<script src="../../api/store.js"></script>
+<script>
+new Vue({
+    el: '#app',
+    data: {
+        loading: false,
+        dashboard: null
+    },
+    created() { this.loadDashboard(); },
+    methods: {
+        loadDashboard() {
+            this.loading = true;
+            storeApi.getDashboardOverview().then(res => {
+                if (res.data && res.data.code === 1) {
+                    this.dashboard = res.data.data;
+                }
+            }).catch(err => {
+                this.$message.error('加载数据失败');
+            }).finally(() => { this.loading = false; });
+        },
+        goToStoreList() {
+            // 通知父框架跳转到门店管理页
+            if (window.parent) {
+                // 触发父页面的菜单切换
+            }
+        },
+        formatAmount(amount) {
+            if (!amount) return '0.00';
+            return typeof amount === 'number' ? amount.toFixed(2) : amount;
+        }
+    },
+    filters: {
+        formatAmount(val) {
+            if (!val) return '0.00';
+            return typeof val === 'number' ? val.toFixed(2) : val;
+        }
+    }
+});
+</script>
+</body>
+</html>

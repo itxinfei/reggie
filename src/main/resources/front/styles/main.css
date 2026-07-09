@@ -1485,3 +1485,74 @@
   padding: 1rem 6rem;
   border-radius: 3rem;
 }
+
+/* ================================================================
+   智能推荐区域
+   ================================================================ */
+.recommend-section {
+  background: #fff;
+  margin: 0 12rem 0;
+  padding: 12rem 0 8rem;
+  border-bottom: 6rem solid #f5f5f5;
+}
+.recommend-header {
+  display: flex;
+  align-items: center;
+  padding: 0 12rem;
+  margin-bottom: 10rem;
+}
+.recommend-title {
+  font-size: 15rem;
+  font-weight: 700;
+  color: #333;
+}
+.recommend-sub {
+  font-size: 11rem;
+  color: #999;
+  margin-left: 8rem;
+}
+.recommend-scroll {
+  display: flex;
+  overflow-x: auto;
+  padding: 0 12rem;
+  gap: 10rem;
+  -webkit-overflow-scrolling: touch;
+}
+.recommend-scroll::-webkit-scrollbar {
+  display: none;
+}
+.recommend-item {
+  flex-shrink: 0;
+  width: 100rem;
+  cursor: pointer;
+  text-align: center;
+}
+.ri-image {
+  width: 80rem;
+  height: 80rem;
+  margin: 0 auto;
+  border-radius: 8rem;
+  overflow: hidden;
+  background: #f8f8f8;
+}
+.ri-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ri-info {
+  margin-top: 6rem;
+}
+.ri-name {
+  font-size: 12rem;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ri-price {
+  font-size: 14rem;
+  font-weight: 700;
+  color: #ff4d29;
+  margin-top: 2rem;
+}

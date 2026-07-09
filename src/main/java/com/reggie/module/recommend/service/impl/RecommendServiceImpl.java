@@ -1,0 +1,701 @@
+package com.reggie.module.recommend.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.BaseContext;
+import com.reggie.entity.*;
+import com.reggie.module.recommend.mapper.*;
+import com.reggie.module.recommend.model.*;
+import com.reggie.module.recommend.service.BrowseHistoryService;
+import com.reggie.module.recommend.service.MarketingCampaignService;
+import com.reggie.module.recommend.service.RecommendService;
+import com.reggie.service.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.annotation.PostConstruct;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
+
+/**
+ * 智能推荐引擎实现
+ *
+ * 核心算法：
+ * 1. Hybrid混合推荐（协同过滤 + 内容推荐 + 热门排行加权融合）
+ * 2. 协同过滤：找到相似订单行为的用户，推荐他们的热购菜品
+ * 3. 内容推荐：根据用户偏好标签（口味/品类/价格）匹配菜品
+ * 4. 热门排行：基于门店近期销量排序
+ * 5. 冷启动：新用户使用热门排行，有数据后逐步切换到个性化推荐
+ *
+ * @author Reggie Team
+ */
+@Slf4j
+@Service
+public class RecommendServiceImpl implements RecommendService {
+
+    /** 推荐缓存过期时间(小时) */
+    private static final int CACHE_EXPIRE_HOURS = 6;
+    /** 协同过滤最小用户数 */
+    private static final int CF_MIN_USERS = 5;
+    /** 推荐结果多样性因子（越高越多随机性） */
+    private static final double DIVERSITY_FACTOR = 0.2;
+    /** 异步任务线程池 */
+    private static final ExecutorService ASYNC_EXECUTOR = Executors.newFixedThreadPool(4);
+
+    @Autowired
+    private UserPreferenceMapper userPreferenceMapper;
+    @Autowired
+    private BrowseHistoryMapper browseHistoryMapper;
+    @Autowired
+    private RecommendationCacheMapper cacheMapper;
+    @Autowired
+    private RecommendationFeedbackMapper feedbackMapper;
+    @Autowired
+    private PreferenceAnalysisServiceImpl preferenceAnalysisService;
+
+    // 核心业务依赖：
+    @Autowired
+    private OrderService orderService;
+    @Autowired
+    private OrderDetailService orderDetailService;
+    @Autowired
+    private DishService dishService;
+    @Autowired
+    private SetmealService setmealService;
+    @Autowired
+    private CategoryService categoryService;
+
+    @Autowired
+    private BrowseHistoryService browseHistoryService;
+    @Autowired
+    private MarketingCampaignService marketingCampaignService;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * 应用启动时清理过期缓存
+     */
+    @PostConstruct
+    public void init() {
+        int deleted = cacheMapper.deleteExpired();
+        log.info("[推荐引擎] 初始化完成，清理过期缓存 {} 条", deleted);
+    }
+
+    // ==================== 公开推荐接口 ====================
+
+    @Override
+    public List<Map<String, Object>> recommendDishes(Long userId, int limit) {
+        if (userId == null || limit <= 0) {
+            return Collections.emptyList();
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        // 1. 尝试从缓存获取
+        RecommendationCache cache = cacheMapper.findValidCache(userId, RecommendationCache.TYPE_DISH);
+        if (cache != null) {
+            List<Long> cachedIds = parseDishIds(cache.getDishIds());
+            if (!cachedIds.isEmpty()) {
+                log.debug("[推荐引擎] 命中缓存 userId={}, algorithm={}", userId, cache.getAlgorithm());
+                return buildDishResultList(cachedIds, limit);
+            }
+        }
+
+        // 2. 执行推荐算法
+        List<Map<String, Object>> result;
+        String algorithm;
+
+        int preferenceCount = userPreferenceMapper.countByUserId(userId);
+        if (preferenceCount > 0) {
+            // 有偏好数据：使用混合推荐
+            result = hybridRecommend(userId, tenantId, limit);
+            algorithm = RecommendationCache.ALGO_HYBRID;
+        } else {
+            // 冷启动：使用热门排行
+            result = hotRankRecommend(tenantId, limit);
+            algorithm = RecommendationCache.ALGO_HOT;
+        }
+
+        // 3. 异步缓存推荐结果
+        final String finalAlgorithm = algorithm;
+        final List<Map<String, Object>> finalResult = result;
+        ASYNC_EXECUTOR.submit(() -> saveToCache(userId, RecommendationCache.TYPE_DISH, finalResult, finalAlgorithm));
+
+        return result;
+    }
+
+    @Override
+    public List<Map<String, Object>> recommendSetmeals(Long userId, int limit) {
+        if (userId == null || limit <= 0) {
+            return Collections.emptyList();
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        // 检查缓存
+        RecommendationCache cache = cacheMapper.findValidCache(userId, RecommendationCache.TYPE_SETMEAL);
+        if (cache != null) {
+            List<Long> cachedIds = parseDishIds(cache.getDishIds());
+            if (!cachedIds.isEmpty()) {
+                return buildSetmealResultList(cachedIds, limit);
+            }
+        }
+
+        // 套餐推荐逻辑：根据用户浏览/购买最多的菜品分类推荐同类别套餐
+        List<Map<String, Object>> topCategories = browseHistoryMapper.findTopViewedDishes(userId, 3);
+        List<Long> setmealIds;
+        if (!topCategories.isEmpty()) {
+            // 基于用户偏好推荐套餐
+            setmealIds = new ArrayList<>();
+            for (Map<String, Object> cat : topCategories) {
+                List<Long> ids = findSetmealsByCategory((Long) cat.get("target_id"), limit / topCategories.size());
+                setmealIds.addAll(ids);
+            }
+        } else {
+            // 基于热门套餐推荐
+            setmealIds = findHotSetmeals(tenantId, limit);
+        }
+        return buildSetmealResultList(setmealIds, limit);
+    }
+
+    @Override
+    public List<Map<String, Object>> recommendNewArrivals(Long userId, int limit) {
+        if (userId == null || limit <= 0) {
+            return Collections.emptyList();
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        // 查询最近30天上架的菜品
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        LambdaQueryWrapper<Dish> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(tenantId != null, Dish::getTenantId, tenantId)
+               .eq(Dish::getStatus, 1)
+               .ge(Dish::getCreateTime, thirtyDaysAgo)
+               .orderByDesc(Dish::getCreateTime)
+               .last("LIMIT " + limit * 2);
+
+        List<Dish> newDishes = dishService.list(wrapper);
+
+        // 过滤掉用户已经浏览过的
+        List<BrowseHistory> recentHistory = browseHistoryMapper.findRecentByUserId(userId, 100);
+        Set<Long> viewedIds = recentHistory.stream()
+                .filter(h -> h.getTargetType() == BrowseHistory.TARGET_TYPE_DISH)
+                .map(BrowseHistory::getTargetId)
+                .collect(Collectors.toSet());
+
+        return newDishes.stream()
+                .filter(d -> !viewedIds.contains(d.getId()))
+                .limit(limit)
+                .map(this::dishToMap)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Map<String, Object>> collaborativeFiltering(Long userId, int limit) {
+        if (userId == null || limit <= 0) {
+            return Collections.emptyList();
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        // 1. 获取当前用户订购过的菜品ID集合
+        Set<Long> userDishIds = getUserPurchasedDishIds(userId);
+        if (userDishIds.isEmpty()) {
+            return hotRankRecommend(tenantId, limit);
+        }
+
+        // 2. 找到购买过相同菜品的相似用户（协作用户）
+        List<Long> similarUsers = findSimilarUsers(userId, userDishIds, CF_MIN_USERS);
+        if (similarUsers.isEmpty()) {
+            return hotRankRecommend(tenantId, limit);
+        }
+
+        // 3. 统计协作用户的高频菜品（当前用户未购买的）
+        Map<Long, Long> dishScore = new HashMap<>();
+        for (Long simUserId : similarUsers) {
+            Set<Long> simDishIds = getUserPurchasedDishIds(simUserId);
+            for (Long dishId : simDishIds) {
+                if (!userDishIds.contains(dishId)) {
+                    dishScore.merge(dishId, 1L, Long::sum);
+                }
+            }
+        }
+
+        // 4. 按评分排序并返回TOP N
+        return dishScore.entrySet().stream()
+                .sorted(Map.Entry.<Long, Long>comparingByValue().reversed())
+                .limit(limit)
+                .map(e -> {
+                    Dish dish = dishService.getById(e.getKey());
+                    if (dish == null) return null;
+                    Map<String, Object> map = dishToMap(dish);
+                    map.put("cfScore", e.getValue());
+                    return map;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Map<String, Object>> contentBasedRecommend(Long userId, int limit) {
+        if (userId == null || limit <= 0) {
+            return Collections.emptyList();
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        // 1. 获取用户偏好标签
+        List<UserPreferenceTag> tags = userPreferenceMapper.findByUserId(userId);
+        if (tags.isEmpty()) {
+            return hotRankRecommend(tenantId, limit);
+        }
+
+        // 2. 提取口味偏好和品类偏好
+        List<String> tastePrefs = tags.stream()
+                .filter(t -> t.getTagType() == UserPreferenceTag.TAG_TYPE_TASTE)
+                .map(UserPreferenceTag::getTagName)
+                .collect(Collectors.toList());
+
+        List<String> categoryPrefs = tags.stream()
+                .filter(t -> t.getTagType() == UserPreferenceTag.TAG_TYPE_CATEGORY)
+                .map(UserPreferenceTag::getTagName)
+                .collect(Collectors.toList());
+
+        // 3. 获取用户已购买过的菜品ID（排除）
+        Set<Long> purchasedIds = getUserPurchasedDishIds(userId);
+
+        // 4. 查询候选菜品
+        LambdaQueryWrapper<Dish> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(tenantId != null, Dish::getTenantId, tenantId)
+               .eq(Dish::getStatus, 1);
+        List<Dish> candidateDishes = dishService.list(wrapper);
+
+        // 5. 基于内容匹配评分
+        Map<Dish, Double> scoredDishes = new HashMap<>();
+        for (Dish dish : candidateDishes) {
+            if (purchasedIds.contains(dish.getId())) {
+                continue;
+            }
+            double score = calculateContentScore(dish, tastePrefs, categoryPrefs, tags);
+            if (score > 0) {
+                scoredDishes.put(dish, score);
+            }
+        }
+
+        // 6. 按评分排序，加入多样性因子
+        return scoredDishes.entrySet().stream()
+                .sorted(Map.Entry.<Dish, Double>comparingByValue().reversed())
+                .limit(limit)
+                .map(e -> {
+                    Map<String, Object> map = dishToMap(e.getKey());
+                    map.put("contentScore", e.getValue());
+                    return map;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Map<String, Object>> hotRankRecommend(Long tenantId, int limit) {
+        if (limit <= 0) {
+            return Collections.emptyList();
+        }
+
+        // 查询最近30天销量最高的菜品
+        // OrderDetail没有createTime字段，通过Orders表筛选时间
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        LambdaQueryWrapper<Orders> orderWrapper = new LambdaQueryWrapper<>();
+        orderWrapper.ge(Orders::getCreateTime, thirtyDaysAgo);
+        if (tenantId != null) {
+            orderWrapper.eq(Orders::getTenantId, tenantId);
+        }
+        List<Orders> recentOrders = orderService.list(orderWrapper);
+
+        // 收集所有OrderDetail
+        Map<Long, Long> dishOrderCount = new HashMap<>();
+        Set<Long> processedOrderIds = new HashSet<>();
+        for (Orders order : recentOrders) {
+            if (processedOrderIds.contains(order.getId())) continue;
+            processedOrderIds.add(order.getId());
+            LambdaQueryWrapper<OrderDetail> detailWrapper = new LambdaQueryWrapper<>();
+            detailWrapper.eq(OrderDetail::getOrderId, order.getId());
+            List<OrderDetail> details = orderDetailService.list(detailWrapper);
+            for (OrderDetail detail : details) {
+                if (detail.getDishId() != null) {
+                    dishOrderCount.merge(detail.getDishId(), 1L, Long::sum);
+                }
+            }
+        }
+
+        // 按销量排序
+        return dishOrderCount.entrySet().stream()
+                .sorted(Map.Entry.<Long, Long>comparingByValue().reversed())
+                .limit(limit)
+                .map(e -> {
+                    Dish dish = dishService.getById(e.getKey());
+                    if (dish == null || dish.getTenantId() == null || 
+                        !dish.getTenantId().equals(tenantId) && tenantId != null) {
+                        return null;
+                    }
+                    Map<String, Object> map = dishToMap(dish);
+                    map.put("orderCount", e.getValue());
+                    map.put("hotScore", e.getValue());
+                    return map;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void recordFeedback(RecommendationFeedback feedback) {
+        if (feedback == null || feedback.getUserId() == null) {
+            return;
+        }
+        feedbackMapper.insert(feedback);
+        log.debug("[推荐引擎] 记录反馈 userId={}, dishId={}, type={}",
+                feedback.getUserId(), feedback.getDishId(), feedback.getFeedbackType());
+
+        // 正向反馈时更新偏好权重
+        if (feedback.getFeedbackType() == RecommendationFeedback.FEEDBACK_ORDER ||
+            feedback.getFeedbackType() == RecommendationFeedback.FEEDBACK_ADD_CART) {
+            ASYNC_EXECUTOR.submit(() -> preferenceAnalysisService.analyzeUserPreferences(feedback.getUserId()));
+        }
+    }
+
+    @Override
+    public void refreshCache(Long userId) {
+        // 删除用户所有缓存，触发下次请求时重新计算
+        LambdaQueryWrapper<RecommendationCache> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(RecommendationCache::getUserId, userId);
+        cacheMapper.delete(wrapper);
+        // 异步重新分析偏好
+        ASYNC_EXECUTOR.submit(() -> preferenceAnalysisService.analyzeUserPreferences(userId));
+        log.info("[推荐引擎] 刷新用户{}的推荐缓存完成", userId);
+    }
+
+    // ==================== 私有方法：核心算法逻辑 ====================
+
+    /**
+     * 混合推荐：协同过滤 + 内容推荐 + 热门排行加权融合
+     * 权重分配：CF:50%, Content:30%, Hot:20%
+     */
+    private List<Map<String, Object>> hybridRecommend(Long userId, Long tenantId, int limit) {
+        // 并发执行三种推荐算法
+        Future<List<Map<String, Object>>> cfFuture = ASYNC_EXECUTOR.submit(
+                () -> collaborativeFiltering(userId, limit * 2));
+        Future<List<Map<String, Object>>> contentFuture = ASYNC_EXECUTOR.submit(
+                () -> contentBasedRecommend(userId, limit * 2));
+        Future<List<Map<String, Object>>> hotFuture = ASYNC_EXECUTOR.submit(
+                () -> hotRankRecommend(tenantId, limit));
+
+        try {
+            List<Map<String, Object>> cfResult = cfFuture.get(3, TimeUnit.SECONDS);
+            List<Map<String, Object>> contentResult = contentFuture.get(3, TimeUnit.SECONDS);
+            List<Map<String, Object>> hotResult = hotFuture.get(3, TimeUnit.SECONDS);
+
+            // 加权融合
+            Map<Long, Double> fusionScore = new HashMap<>();
+            Map<Long, Map<String, Object>> dishInfoMap = new LinkedHashMap<>();
+
+            // CF推荐 权重0.5
+            mergeRecommendResult(cfResult, fusionScore, dishInfoMap, 0.5, "CF");
+            // 内容推荐 权重0.3
+            mergeRecommendResult(contentResult, fusionScore, dishInfoMap, 0.3, "Content");
+            // 热门排行 权重0.2 + 多样性因子
+            mergeRecommendResult(hotResult, fusionScore, dishInfoMap, 0.2 + DIVERSITY_FACTOR, "Hot");
+
+            // 按融合分数排序
+            return fusionScore.entrySet().stream()
+                    .sorted(Map.Entry.<Long, Double>comparingByValue().reversed())
+                    .limit(limit)
+                    .map(e -> {
+                        Map<String, Object> dish = dishInfoMap.get(e.getKey());
+                        if (dish != null) {
+                            dish.put("fusionScore", Math.round(e.getValue() * 100.0) / 100.0);
+                        }
+                        return dish;
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            log.warn("[推荐引擎] 混合推荐异常，回退热门排行: {}", e.getMessage());
+            return hotRankRecommend(tenantId, limit);
+        }
+    }
+
+    /**
+     * 合并推荐结果到融合评分表
+     */
+    private void mergeRecommendResult(List<Map<String, Object>> results,
+                                       Map<Long, Double> fusionScore,
+                                       Map<Long, Map<String, Object>> dishInfoMap,
+                                       double weight, String source) {
+        int rank = 0;
+        for (Map<String, Object> item : results) {
+            Long dishId = (Long) item.get("id");
+            if (dishId == null) continue;
+            rank++;
+            // 排名越靠前分数越高，加入位置衰减
+            double positionalScore = weight * (1.0 / Math.sqrt(rank + 1));
+            fusionScore.merge(dishId, positionalScore, Double::sum);
+            dishInfoMap.putIfAbsent(dishId, item);
+            @SuppressWarnings("unchecked")
+            Set<String> sources = (Set<String>) item.computeIfAbsent("recommendSources",
+                    k -> new LinkedHashSet<String>());
+            sources.add(source);
+        }
+    }
+
+    /**
+     * 计算内容匹配评分
+     */
+    private double calculateContentScore(Dish dish, List<String> tastePrefs,
+                                          List<String> categoryPrefs,
+                                          List<UserPreferenceTag> allTags) {
+        double score = 0.0;
+
+        // 品类匹配
+        if (dish.getCategoryId() != null) {
+            Category category = categoryService.getById(dish.getCategoryId());
+            // 修改点：根据分类名匹配
+            if (category != null && categoryPrefs.contains(category.getName())) {
+                score += 0.5;
+            }
+        }
+
+        // 口味匹配（通过菜品描述/名称模糊匹配）
+        if (dish.getName() != null && dish.getDescription() != null) {
+            String text = dish.getName() + " " + dish.getDescription();
+            for (String taste : tastePrefs) {
+                if (text.contains(taste)) {
+                    score += 0.3;
+                }
+            }
+        }
+
+        // 价格匹配
+        for (UserPreferenceTag tag : allTags) {
+            if (tag.getTagType() == UserPreferenceTag.TAG_TYPE_PRICE) {
+                boolean priceMatch = isPriceInRange(dish.getPrice(), tag.getTagName());
+                if (priceMatch) {
+                    score += 0.2 * tag.getTagValue().doubleValue();
+                }
+            }
+        }
+
+        return Math.min(score, 1.0);
+    }
+
+    /**
+     * 判断菜品价格是否在偏好区间内
+     */
+    private boolean isPriceInRange(BigDecimal price, String rangeTag) {
+        if (price == null || rangeTag == null) return false;
+        double p = price.doubleValue();
+        switch (rangeTag) {
+            case "经济型": return p < 20;
+            case "实惠型": return p >= 20 && p < 40;
+            case "中档": return p >= 40 && p < 80;
+            case "高端": return p >= 80;
+            default: return false;
+        }
+    }
+
+    /**
+     * 查找相似用户（购买过相同菜品的其他用户）
+     */
+    private List<Long> findSimilarUsers(Long userId, Set<Long> userDishIds, int minUsers) {
+        // 通过order_detail查找购买了相同菜品的其他用户
+        Map<Long, Integer> userSimilarity = new HashMap<>();
+
+        for (Long dishId : userDishIds) {
+            LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(OrderDetail::getDishId, dishId);
+            List<OrderDetail> details = orderDetailService.list(wrapper);
+
+            for (OrderDetail detail : details) {
+                // 通过orderId找到userId
+                Orders order = orderService.getById(detail.getOrderId());
+                if (order != null && !order.getUserId().equals(userId)) {
+                    userSimilarity.merge(order.getUserId(), 1, Integer::sum);
+                }
+            }
+        }
+
+        // 返回相似度最高的用户
+        return userSimilarity.entrySet().stream()
+                .filter(e -> e.getValue() >= 3) // 至少3个共同菜品
+                .sorted(Map.Entry.<Long, Integer>comparingByValue().reversed())
+                .limit(minUsers * 2)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取用户购买过的菜品ID集合
+     */
+    private Set<Long> getUserPurchasedDishIds(Long userId) {
+        LambdaQueryWrapper<Orders> orderWrapper = new LambdaQueryWrapper<>();
+        orderWrapper.eq(Orders::getUserId, userId);
+        List<Orders> userOrders = orderService.list(orderWrapper);
+
+        Set<Long> dishIds = new HashSet<>();
+        for (Orders order : userOrders) {
+            LambdaQueryWrapper<OrderDetail> detailWrapper = new LambdaQueryWrapper<>();
+            detailWrapper.eq(OrderDetail::getOrderId, order.getId());
+            List<OrderDetail> details = orderDetailService.list(detailWrapper);
+            for (OrderDetail detail : details) {
+                if (detail.getDishId() != null) {
+                    dishIds.add(detail.getDishId());
+                }
+            }
+        }
+        return dishIds;
+    }
+
+    // ==================== 缓存与辅助方法 ====================
+
+    /**
+     * 保存推荐结果到缓存
+     */
+    @Transactional
+    void saveToCache(Long userId, Integer type, List<Map<String, Object>> result, String algorithm) {
+        try {
+            // 删除旧缓存
+            LambdaQueryWrapper<RecommendationCache> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(RecommendationCache::getUserId, userId)
+                   .eq(RecommendationCache::getRecommendType, type);
+            cacheMapper.delete(wrapper);
+
+            // 计算置信度
+            double score = computeConfidence(result, algorithm);
+
+            // 构建缓存记录
+            RecommendationCache cache = new RecommendationCache();
+            cache.setUserId(userId);
+            cache.setRecommendType(type);
+            cache.setAlgorithm(algorithm);
+            cache.setScore(BigDecimal.valueOf(score));
+            cache.setExpireTime(LocalDateTime.now().plusHours(CACHE_EXPIRE_HOURS));
+
+            // 序列化菜品ID列表
+            List<Long> dishIdList = result.stream()
+                    .map(m -> (Long) m.get("id"))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            cache.setDishIds(objectMapper.writeValueAsString(dishIdList));
+
+            cacheMapper.insert(cache);
+        } catch (Exception e) {
+            log.warn("[推荐引擎] 缓存保存失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 计算推荐置信度
+     */
+    private double computeConfidence(List<Map<String, Object>> result, String algorithm) {
+        if (result == null || result.isEmpty()) return 0.0;
+        switch (algorithm) {
+            case RecommendationCache.ALGO_HYBRID: return 0.85;
+            case RecommendationCache.ALGO_CF: return 0.70;
+            case RecommendationCache.ALGO_CONTENT: return 0.65;
+            case RecommendationCache.ALGO_HOT: return 0.40;
+            default: return 0.50;
+        }
+    }
+
+    /**
+     * 解析缓存的菜品ID JSON
+     */
+    private List<Long> parseDishIds(String json) {
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<Long>>() {});
+        } catch (Exception e) {
+            log.warn("[推荐引擎] JSON解析失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 构建菜品结果列表
+     */
+    private List<Map<String, Object>> buildDishResultList(List<Long> dishIds, int limit) {
+        return dishIds.stream()
+                .limit(limit)
+                .map(id -> {
+                    Dish dish = dishService.getById(id);
+                    return dish != null ? dishToMap(dish) : null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 构建套餐结果列表
+     */
+    private List<Map<String, Object>> buildSetmealResultList(List<Long> ids, int limit) {
+        return ids.stream()
+                .limit(limit)
+                .map(id -> {
+                    Setmeal setmeal = setmealService.getById(id);
+                    if (setmeal == null) return null;
+                    Map<String, Object> map = new LinkedHashMap<>();
+                    map.put("id", setmeal.getId());
+                    map.put("name", setmeal.getName());
+                    map.put("image", setmeal.getImage());
+                    map.put("price", setmeal.getPrice());
+                    map.put("description", setmeal.getDescription());
+                    map.put("type", "setmeal");
+                    return map;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 菜品实体转Map
+     */
+    private Map<String, Object> dishToMap(Dish dish) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", dish.getId());
+        map.put("name", dish.getName());
+        map.put("image", dish.getImage());
+        map.put("price", dish.getPrice());
+        map.put("description", dish.getDescription());
+        map.put("categoryId", dish.getCategoryId());
+        map.put("status", dish.getStatus());
+        return map;
+    }
+
+    /**
+     * 根据分类ID查找套餐
+     */
+    private List<Long> findSetmealsByCategory(Long targetId, int limit) {
+        if (targetId == null) return Collections.emptyList();
+        LambdaQueryWrapper<Setmeal> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Setmeal::getCategoryId, targetId)
+               .eq(Setmeal::getStatus, 1)
+               .orderByDesc(Setmeal::getUpdateTime)
+               .last("LIMIT " + limit);
+        return setmealService.list(wrapper).stream()
+                .map(Setmeal::getId)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 查找热门套餐
+     */
+    private List<Long> findHotSetmeals(Long tenantId, int limit) {
+        LambdaQueryWrapper<Setmeal> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(tenantId != null, Setmeal::getTenantId, tenantId)
+               .eq(Setmeal::getStatus, 1)
+               .orderByDesc(Setmeal::getUpdateTime)
+               .last("LIMIT " + limit);
+        return setmealService.list(wrapper).stream()
+                .map(Setmeal::getId)
+                .collect(Collectors.toList());
+    }
+}
