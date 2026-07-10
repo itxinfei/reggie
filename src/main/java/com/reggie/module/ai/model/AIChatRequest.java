@@ -31,4 +31,10 @@ public class AIChatRequest {
 
     /** 历史对话消息 */
     private List<AIMessage> history;
+
+    /** 会话ID */
+    private String conversationId;
+
+    /** 用户ID（用于个性化推荐和画像注入） */
+    private Long userId;
 }

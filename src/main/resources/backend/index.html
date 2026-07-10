@@ -64,7 +64,7 @@
                     :key="sub.id"
                     @click="menuHandle(sub,false)"
                     >
-                    <i :class="[iconfont, sub.icon]"></i>
+                    <i :class="['iconfont', sub.icon]"></i>
                     <span slot="title">{{sub.name}}</span>
                     </el-menu-item
                   >
@@ -202,7 +202,10 @@
               { id: '10', name: '消息通知', url: 'page/notification/list.html', icon: 'icon-order' },
               { id: '11', name: '数据导出', url: 'page/export/index.html', icon: 'icon-category' },
               { id: '12', name: '员工管理', url: 'page/member/list.html', icon: 'icon-member' },
-              { id: '13', name: 'AI助手', url: 'page/ai/assistant.html', icon: 'icon-order' },
+              { id: '13', name: 'AI助手', icon: 'icon-order', children: [
+                { id: '13-1', name: 'AI对话', url: 'page/ai/assistant.html', icon: 'icon-order' },
+                { id: '13-2', name: '模型配置', url: 'page/ai/provider-config.html', icon: 'icon-category' },
+              ]},
             ],
             iframeUrl: 'page/dashboard/overview.html',
             headTitle: '数据概览',

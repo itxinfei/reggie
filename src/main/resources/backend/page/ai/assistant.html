@@ -2,14 +2,17 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 经营分析助手</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css">
+    <link rel="stylesheet" href="../../styles/common.css">
+    <link rel="stylesheet" href="../../styles/page.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
         .ai-container {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 20px auto;
             height: calc(100vh - 40px);
             display: flex;
@@ -20,6 +23,7 @@
             overflow: hidden;
         }
 
+        /* 顶部栏 */
         .ai-header {
             background: linear-gradient(135deg, #1890ff 0%, #36cfc9 100%);
             color: #fff;
@@ -32,19 +36,39 @@
         .ai-header h2 { font-size: 20px; font-weight: 600; margin: 0; }
         .ai-header .subtitle { font-size: 13px; opacity: 0.85; margin-left: auto; }
 
-        .chat-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+        /* 场景切换 */
+        .scene-selector {
+            display: flex; gap: 8px; padding: 10px 24px;
+            background: #fafafa; border-bottom: 1px solid #f0f0f0;
+            flex-wrap: wrap;
         }
+        .scene-tag {
+            padding: 5px 14px; border-radius: 12px; font-size: 13px;
+            cursor: pointer; border: 1px solid #d9d9d9; background: #fff;
+            transition: all 0.2s; color: #666;
+        }
+        .scene-tag:hover { border-color: #1890ff; color: #1890ff; }
+        .scene-tag.active { background: #1890ff; color: #fff; border-color: #1890ff; }
 
+        /* 快捷卡片 */
+        .quick-cards {
+            display: flex; flex-wrap: wrap; gap: 10px;
+            padding: 12px 24px; border-bottom: 1px solid #f0f0f0;
+        }
+        .quick-card {
+            padding: 8px 16px; background: #fafafa; border: 1px solid #e8e8e8;
+            border-radius: 8px; font-size: 13px; cursor: pointer;
+            transition: all 0.2s; color: #666;
+        }
+        .quick-card:hover { border-color: #1890ff; color: #1890ff; background: #e6f7ff; }
+
+        /* 聊天区 */
+        .chat-body {
+            flex: 1; overflow-y: auto; padding: 20px 24px;
+            display: flex; flex-direction: column; gap: 16px;
+        }
         .chat-msg {
-            display: flex;
-            gap: 12px;
-            max-width: 80%;
+            display: flex; gap: 12px; max-width: 85%;
             animation: slideIn 0.3s ease;
         }
         @keyframes slideIn {
@@ -55,104 +79,96 @@
         .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
 
         .chat-avatar {
-            width: 40px; height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            flex-shrink: 0;
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; flex-shrink: 0;
         }
         .chat-msg.assistant .chat-avatar { background: #e6f7ff; }
         .chat-msg.user .chat-avatar { background: #1890ff; color: #fff; }
 
         .chat-bubble {
-            padding: 12px 18px;
-            border-radius: 12px;
-            font-size: 14px;
-            line-height: 1.8;
+            padding: 12px 18px; border-radius: 12px; font-size: 14px;
+            line-height: 1.8; word-break: break-word;
         }
         .chat-msg.assistant .chat-bubble {
-            background: #f5f5f5;
-            border-top-left-radius: 4px;
+            background: #f5f5f5; border-top-left-radius: 4px;
         }
         .chat-msg.user .chat-bubble {
-            background: #1890ff;
-            color: #fff;
-            border-top-right-radius: 4px;
+            background: #1890ff; color: #fff; border-top-right-radius: 4px;
         }
 
-        .chat-bubble pre {
-            background: #fafafa;
-            border-radius: 6px;
-            padding: 8px 12px;
-            margin: 8px 0;
-            font-size: 13px;
-            overflow-x: auto;
+        /* 安全富文本 */
+        .chat-bubble .msg-bold { font-weight: 600; }
+        .chat-bubble .msg-list { margin: 6px 0; padding-left: 20px; }
+        .chat-bubble .msg-list li { margin: 3px 0; }
+        .chat-bubble .msg-highlight {
+            background: #e6f7ff; color: #1890ff; padding: 2px 6px;
+            border-radius: 4px; font-weight: 500;
         }
 
-        .quick-cards {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 12px 24px;
-            border-top: 1px solid #f0f0f0;
+        /* 统计卡片（AI回复中嵌入） */
+        .ai-stats-row {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+            margin: 12px 0;
         }
-        .quick-card {
-            padding: 8px 16px;
-            background: #fafafa;
-            border: 1px solid #e8e8e8;
-            border-radius: 8px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: #666;
+        .ai-stat-item {
+            background: #fafafa; border-radius: 8px; padding: 12px;
+            text-align: center; border: 1px solid #f0f0f0;
         }
-        .quick-card:hover {
-            border-color: #1890ff;
-            color: #1890ff;
-            background: #e6f7ff;
-        }
+        .ai-stat-item .stat-val { font-size: 20px; font-weight: 700; color: #1890ff; }
+        .ai-stat-item .stat-label { font-size: 12px; color: #999; margin-top: 4px; }
 
+        /* 操作按钮组 */
+        .action-btns {
+            display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
+        }
+        .action-btn {
+            padding: 6px 14px; border-radius: 6px; font-size: 13px;
+            border: 1px solid #d9d9d9; background: #fff; color: #666;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .action-btn:hover { border-color: #1890ff; color: #1890ff; }
+        .action-btn.primary { background: #1890ff; color: #fff; border-color: #1890ff; }
+
+        /* 反馈栏 */
+        .feedback-bar {
+            display: flex; gap: 8px; margin-top: 8px; padding-left: 4px;
+        }
+        .feedback-btn {
+            padding: 3px 10px; border-radius: 12px; font-size: 12px;
+            border: 1px solid #d9d9d9; background: #fff; color: #666;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .feedback-btn.active-good { border-color: #67c23a; color: #67c23a; background: #f0f9eb; }
+        .feedback-btn.active-bad { border-color: #f56c6c; color: #f56c6c; background: #fef0f0; }
+
+        /* 输入区 */
         .input-area {
-            display: flex;
-            gap: 12px;
-            padding: 16px 24px;
-            border-top: 1px solid #f0f0f0;
+            display: flex; gap: 12px; padding: 16px 24px;
+            border-top: 1px solid #f0f0f0; background: #fff;
             align-items: center;
         }
         .input-area input {
-            flex: 1;
-            border: 1px solid #d9d9d9;
-            border-radius: 8px;
-            padding: 10px 16px;
-            font-size: 14px;
-            outline: none;
+            flex: 1; border: 1px solid #d9d9d9; border-radius: 8px;
+            padding: 10px 16px; font-size: 14px; outline: none;
             transition: border-color 0.2s;
         }
         .input-area input:focus { border-color: #1890ff; box-shadow: 0 0 0 2px rgba(24,144,255,0.1); }
-        .input-area .send-btn {
-            padding: 10px 24px;
-            background: linear-gradient(135deg, #1890ff, #36cfc9);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            font-weight: 500;
+        .input-area input:disabled { background: #f5f5f5; }
+        .send-btn {
+            padding: 10px 28px; background: #1890ff; color: #fff;
+            border: none; border-radius: 8px; font-size: 14px;
+            cursor: pointer; font-weight: 500; transition: all 0.2s;
         }
-        .input-area .send-btn:hover { opacity: 0.9; }
-        .input-area .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .send-btn:hover { background: #40a9ff; }
+        .send-btn:disabled { background: #d9d9d9; cursor: not-allowed; }
 
+        /* 加载动画 */
         .typing-dots {
-            display: flex;
-            gap: 4px;
-            padding: 4px 0;
+            display: flex; gap: 4px; padding: 4px 0;
         }
         .typing-dots span {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: #bbb;
+            width: 6px; height: 6px; border-radius: 50%; background: #bbb;
             animation: dotBounce 1.4s infinite;
         }
         .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
@@ -162,31 +178,24 @@
             30% { opacity: 1; transform: translateY(-4px); }
         }
 
-        .scene-selector {
-            display: flex;
-            gap: 8px;
-            padding: 8px 24px;
-            background: #fafafa;
-            border-bottom: 1px solid #f0f0f0;
+        /* 流式光标 */
+        .streaming-cursor::after {
+            content: '▋'; color: #1890ff; animation: blink 0.8s infinite;
+            margin-left: 2px;
         }
-        .scene-tag {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            cursor: pointer;
-            border: 1px solid #e8e8e8;
-            background: #fff;
-            transition: all 0.2s;
-        }
-        .scene-tag.active {
-            background: #1890ff;
-            color: #fff;
-            border-color: #1890ff;
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .ai-container { max-width: 100%; margin: 0; height: 100vh; border-radius: 0; }
+            .chat-msg { max-width: 92%; }
+            .ai-stats-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <div id="ai-app" class="ai-container">
+        <!-- 顶部栏 -->
         <div class="ai-header">
             <span class="logo">🤖</span>
             <h2>AI 经营分析助手</h2>
@@ -203,7 +212,7 @@
         </div>
 
         <!-- 快捷卡片 -->
-        <div class="quick-cards">
+        <div class="quick-cards" v-if="messages.length <= 1">
             <span class="quick-card" v-for="tip in currentQuickTips" :key="tip" @click="sendQuick(tip)">
                 {{ tip }}
             </span>
@@ -211,33 +220,72 @@
 
         <!-- 聊天区 -->
         <div class="chat-body" ref="chatBody">
-            <div class="chat-msg assistant">
+            <!-- 欢迎消息 -->
+            <div class="chat-msg assistant" v-if="messages.length === 0">
                 <div class="chat-avatar">🤖</div>
                 <div class="chat-bubble">
                     <div style="font-weight:600;margin-bottom:6px;">👋 你好！我是AI经营分析助手</div>
                     我可以帮你：<br>
-                    📊 分析经营数据，发现趋势<br>
-                    📝 生成菜品描述，提升吸引力<br>
-                    🎯 优化营销策略，提高转化<br><br>
+                    📊 <b>分析经营数据</b>，发现趋势和问题<br>
+                    📝 <b>生成菜品描述</b>，提升菜品吸引力<br>
+                    🎯 <b>优化营销策略</b>，提高转化率<br><br>
                     选择一个场景，开始对话吧！
                 </div>
             </div>
 
+            <!-- 对话消息 -->
             <template v-for="(msg, idx) in messages">
-                <div :class="'chat-msg ' + msg.role" :key="idx">
+                <div :class="'chat-msg ' + msg.role" :key="msg.id || idx">
                     <div class="chat-avatar">{{ msg.role === 'assistant' ? '🤖' : '👤' }}</div>
-                    <div class="chat-bubble" v-html="formatContent(msg.content)"></div>
+                    <div style="flex:1;min-width:0;">
+                        <!-- 安全渲染AI回复 -->
+                        <div class="chat-bubble" :class="{'streaming-cursor': msg.streaming}">
+                            <template v-if="msg.role === 'assistant'">
+                                <span v-for="(part, pIdx) in msg.renderedParts" :key="pIdx">
+                                    <span v-if="part.type === 'text'">{{ part.text }}</span>
+                                    <span v-else-if="part.type === 'bold'" class="msg-bold">{{ part.text }}</span>
+                                    <span v-else-if="part.type === 'list'">
+                                        <ul class="msg-list">
+                                            <li v-for="(item, i) in part.items" :key="i">{{ item }}</li>
+                                        </ul>
+                                    </span>
+                                    <span v-else-if="part.type === 'highlight'" class="msg-highlight">{{ part.text }}</span>
+                                </span>
+                            </template>
+                            <template v-else>
+                                {{ msg.content }}
+                            </template>
+                        </div>
+                        <!-- 操作按钮 -->
+                        <div class="action-btns" v-if="msg.role === 'assistant' && msg.actions && !msg.streaming">
+                            <button class="action-btn" v-for="action in msg.actions" :key="action.label"
+                                    @click="handleAction(action)">
+                                {{ action.icon }} {{ action.label }}
+                            </button>
+                        </div>
+                        <!-- 反馈按钮 -->
+                        <div class="feedback-bar" v-if="msg.role === 'assistant' && msg.showFeedback && !msg.streaming">
+                            <button :class="['feedback-btn', msg.feedback === 'good' ? 'active-good' : '']"
+                                    @click="sendFeedback(msg, 'good')">👍 有用</button>
+                            <button :class="['feedback-btn', msg.feedback === 'bad' ? 'active-bad' : '']"
+                                    @click="sendFeedback(msg, 'bad')">👎 没用</button>
+                        </div>
+                    </div>
                 </div>
             </template>
 
+            <!-- 加载中 -->
             <div class="chat-msg assistant" v-if="loading">
                 <div class="chat-avatar">🤖</div>
                 <div class="chat-bubble">
-                    <div class="typing-dots"><span></span><span></span><span></span></div>
+                    <div class="typing-dots">
+                        <span></span><span></span><span></span>
+                    </div>
                 </div>
             </div>
         </div>
 
+        <!-- 输入区 -->
         <div class="input-area">
             <input
                 type="text"
@@ -252,10 +300,60 @@
         </div>
     </div>
 
-    <script src="../../plugins/vue.min.js"></script>
+    <script src="../../plugins/vue/vue.js"></script>
+    <script src="../../plugins/element-ui/index.js"></script>
+    <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
-    <script src="../api/ai.js"></script>
+    <script src="../../api/ai.js"></script>
     <script>
+    (function() {
+        'use strict';
+
+        /** 安全的内容格式化 */
+        function safeFormatContent(content) {
+            if (!content) return [];
+            if (typeof content !== 'string') return [{ type: 'text', text: String(content) }];
+            var parts = [];
+            var lines = content.split('\n');
+            for (var li = 0; li < lines.length; li++) {
+                var line = lines[li];
+                if (li > 0) parts.push({ type: 'text', text: '\n' });
+                var boldRegex = /\*\*(.*?)\*\*/g;
+                var lastIndex = 0, match;
+                while ((match = boldRegex.exec(line)) !== null) {
+                    if (match.index > lastIndex) {
+                        parts.push({ type: 'text', text: line.substring(lastIndex, match.index) });
+                    }
+                    parts.push({ type: 'bold', text: match[1] });
+                    lastIndex = match.index + match[0].length;
+                }
+                if (lastIndex < line.length) {
+                    parts.push({ type: 'text', text: line.substring(lastIndex) });
+                }
+                if ((line.trim().startsWith('- ') || line.trim().startsWith('· ')) && parts.length > 0) {
+                    var listItems = [];
+                    listItems.push(line.trim().replace(/^[-·]\s*/, ''));
+                    for (var ni = li + 1; ni < lines.length; ni++) {
+                        var nextLine = lines[ni].trim();
+                        if (nextLine.startsWith('- ') || nextLine.startsWith('· ')) {
+                            listItems.push(nextLine.replace(/^[-·]\s*/, ''));
+                        } else { break; }
+                    }
+                    parts.push({ type: 'list', items: listItems });
+                    li += listItems.length - 1;
+                    continue;
+                }
+            }
+            if (parts.length === 0) return [{ type: 'text', text: content }];
+            var merged = [];
+            for (var i = 0; i < parts.length; i++) {
+                if (i > 0 && parts[i].type === 'text' && merged[merged.length - 1].type === 'text') {
+                    merged[merged.length - 1].text += parts[i].text;
+                } else { merged.push(parts[i]); }
+            }
+            return merged;
+        }
+
         new Vue({
             el: '#ai-app',
             data: {
@@ -285,8 +383,10 @@
                         '新店开业促销文案',
                         '会员日专属优惠文案'
                     ]
-                }
+                },
+                currentRequestId: 0
             },
+
             computed: {
                 currentQuickTips: function() {
                     return this.quickTipsMap[this.currentScene] || [];
@@ -300,32 +400,67 @@
                     return map[this.currentScene] || '输入消息...';
                 }
             },
+
+            mounted: function() {
+                this.scrollToBottom();
+            },
+
             methods: {
                 sendMessage: function() {
                     var text = this.inputText.trim();
                     if (!text || this.loading) return;
 
-                    this.messages.push({ role: 'user', content: text });
+                    this.currentRequestId++;
+                    var requestId = this.currentRequestId;
+
+                    var userMsg = {
+                        id: Date.now(), role: 'user', content: text, timestamp: Date.now()
+                    };
+                    var assistantMsg = {
+                        id: Date.now() + 1, role: 'assistant', content: '',
+                        renderedParts: [], streaming: true, showFeedback: false,
+                        feedback: null, error: false, retryData: null,
+                        timestamp: Date.now()
+                    };
+
+                    this.messages.push(userMsg);
+                    this.messages.push(assistantMsg);
                     this.inputText = '';
                     this.loading = true;
                     this.scrollToBottom();
 
                     var self = this;
                     aiBackendApi.chat(text, this.currentScene).then(function(res) {
+                        if (requestId !== self.currentRequestId) return;
                         var data = res.data || res;
-                        self.messages.push({
-                            role: 'assistant',
-                            content: data.content || '抱歉，AI服务暂时不可用。'
-                        });
+                        assistantMsg.content = data.content || '抱歉，我没理解您的意思，换个说法试试？';
+                        assistantMsg.streaming = false;
+                        assistantMsg.showFeedback = true;
+                        assistantMsg.renderedParts = safeFormatContent(assistantMsg.content);
                     }).catch(function() {
-                        self.messages.push({
-                            role: 'assistant',
-                            content: '抱歉，请求失败，请检查AI服务配置。'
-                        });
+                        if (requestId !== self.currentRequestId) return;
+                        assistantMsg.content = '抱歉，请求失败，请重试。';
+                        assistantMsg.streaming = false;
+                        assistantMsg.error = true;
+                        assistantMsg.retryData = { message: text, scene: self.currentScene };
+                        assistantMsg.renderedParts = [{ type: 'text', text: assistantMsg.content }];
                     }).finally(function() {
-                        self.loading = false;
-                        self.$nextTick(function() { self.scrollToBottom(); });
+                        if (requestId === self.currentRequestId) {
+                            self.loading = false;
+                        }
                     });
+                },
+
+                retryMessage: function(msg) {
+                    if (msg.retryData) {
+                        var idx = this.messages.indexOf(msg);
+                        if (idx > 0) {
+                            this.messages.splice(idx - 1, 2);
+                        }
+                        this.inputText = msg.retryData.message;
+                        this.currentScene = msg.retryData.scene || this.currentScene;
+                        this.sendMessage();
+                    }
                 },
 
                 sendQuick: function(tip) {
@@ -336,8 +471,9 @@
                 switchScene: function(scene) {
                     this.currentScene = scene;
                     this.messages.push({
-                        role: 'assistant',
-                        content: '已切换到「' + this.getSceneLabel(scene) + '」模式，请开始提问。'
+                        id: Date.now(), role: 'assistant', content: '已切换到「' + this.getSceneLabel(scene) + '」模式，请开始提问。',
+                        renderedParts: [{ type: 'text', text: '已切换到「' + this.getSceneLabel(scene) + '」模式，请开始提问。' }],
+                        streaming: false, showFeedback: false, timestamp: Date.now()
                     });
                     this.scrollToBottom();
                 },
@@ -347,10 +483,23 @@
                     return found.length > 0 ? found[0].label : scene;
                 },
 
-                formatContent: function(content) {
-                    if (!content) return '';
-                    return content.replace(/\n/g, '<br>')
-                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                handleAction: function(action) {
+                    if (action.handler === 'navigate') {
+                        window.location.href = action.url;
+                    } else if (action.handler === 'export') {
+                        window.location.href = action.url;
+                    }
+                },
+
+                sendFeedback: function(msg, type) {
+                    msg.feedback = type;
+                    try {
+                        if (aiBackendApi.recordFeedback) {
+                            aiBackendApi.recordFeedback({
+                                messageId: msg.id, feedbackType: type, scene: this.currentScene
+                            }).catch(function() {});
+                        }
+                    } catch (e) { }
                 },
 
                 scrollToBottom: function() {
@@ -360,11 +509,9 @@
                         if (el) el.scrollTop = el.scrollHeight;
                     });
                 }
-            },
-            mounted: function() {
-                this.scrollToBottom();
             }
         });
+    })();
     </script>
 </body>
 </html>

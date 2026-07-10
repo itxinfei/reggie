@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * AI聊天响应DTO
@@ -30,4 +31,7 @@ public class AIChatResponse {
 
     /** Token使用量 */
     private Integer tokensUsed;
+
+    /** 附加数据 */
+    private Map<String, Object> data;
 }

@@ -17,6 +17,7 @@
             display: flex;
             flex-direction: column;
             background: #fff;
+            position: relative;
         }
 
         /* 顶部栏 */
@@ -28,58 +29,85 @@
             align-items: center;
             justify-content: space-between;
             box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+            flex-shrink: 0;
         }
         .ai-header .title { font-size: 18px; font-weight: 600; }
         .ai-header .close-btn { font-size: 24px; cursor: pointer; padding: 4px; }
+        .ai-header .header-actions { display: flex; gap: 12px; align-items: center; }
+        .ai-header .header-btn {
+            font-size: 18px; cursor: pointer; padding: 4px; opacity: 0.9;
+            transition: opacity 0.2s;
+        }
+        .ai-header .header-btn:hover { opacity: 1; }
         .ai-header .status-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: #4caf50;
-            display: inline-block;
-            margin-right: 6px;
-            animation: pulse 2s infinite;
+            width: 8px; height: 8px; border-radius: 50%; background: #4caf50;
+            display: inline-block; margin-right: 6px; animation: pulse 2s infinite;
         }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        /* 对话管理侧边栏 */
+        .sidebar-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4); z-index: 999;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
         }
+        .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
+        .conversation-sidebar {
+            position: fixed; top: 0; left: 0; bottom: 0; width: 280px;
+            background: #fff; z-index: 1000; transform: translateX(-100%);
+            transition: transform 0.3s ease; display: flex; flex-direction: column;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.15);
+        }
+        .conversation-sidebar.active { transform: translateX(0); }
+        .sidebar-header {
+            padding: 16px; border-bottom: 1px solid #eee;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .sidebar-header h3 { font-size: 16px; color: #333; }
+        .sidebar-header .new-chat-btn {
+            padding: 6px 14px; background: #FF6B35; color: #fff; border: none;
+            border-radius: 16px; font-size: 13px; cursor: pointer;
+        }
+        .sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
+        .sidebar-item {
+            padding: 12px 14px; border-radius: 8px; cursor: pointer;
+            margin-bottom: 4px; transition: all 0.2s; position: relative;
+        }
+        .sidebar-item:hover { background: #f5f5f5; }
+        .sidebar-item.active { background: #FFF0E6; }
+        .sidebar-item .conv-title {
+            font-size: 14px; color: #333; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; padding-right: 30px;
+        }
+        .sidebar-item .conv-time {
+            font-size: 11px; color: #999; margin-top: 4px;
+        }
+        .sidebar-item .conv-delete {
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            font-size: 16px; color: #999; cursor: pointer; padding: 4px;
+        }
+        .sidebar-item .conv-delete:hover { color: #f56c6c; }
 
         /* 快捷提示 */
         .quick-tips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            padding: 12px 16px;
-            background: #fafafa;
-            border-bottom: 1px solid #eee;
+            display: flex; flex-wrap: wrap; gap: 8px;
+            padding: 12px 16px; background: #fafafa;
+            border-bottom: 1px solid #eee; flex-shrink: 0;
         }
         .quick-tip {
-            font-size: 12px;
-            padding: 6px 14px;
-            border-radius: 16px;
-            background: #fff;
-            border: 1px solid #FF6B35;
-            color: #FF6B35;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s;
+            font-size: 12px; padding: 6px 14px; border-radius: 16px;
+            background: #fff; border: 1px solid #FF6B35; color: #FF6B35;
+            cursor: pointer; white-space: nowrap; transition: all 0.2s;
         }
         .quick-tip:active { background: #FF6B35; color: #fff; }
 
         /* 聊天区域 */
         .chat-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; gap: 12px;
         }
-
         .chat-msg {
-            display: flex;
-            gap: 8px;
-            max-width: 85%;
+            display: flex; gap: 8px; max-width: 85%;
             animation: slideUp 0.3s ease;
         }
         @keyframes slideUp {
@@ -88,89 +116,82 @@
         }
         .chat-msg.assistant { align-self: flex-start; }
         .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
-
         .chat-avatar {
-            width: 36px; height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0;
         }
         .chat-msg.assistant .chat-avatar { background: #FFF0E6; }
         .chat-msg.user .chat-avatar { background: #FF6B35; color: #fff; }
-
         .chat-bubble {
-            padding: 10px 14px;
-            border-radius: 16px;
-            font-size: 14px;
-            line-height: 1.6;
-            word-break: break-word;
+            padding: 10px 14px; border-radius: 16px; font-size: 14px;
+            line-height: 1.7; word-break: break-word;
         }
         .chat-msg.assistant .chat-bubble {
-            background: #f5f5f5;
-            border-top-left-radius: 4px;
+            background: #f5f5f5; border-top-left-radius: 4px;
         }
         .chat-msg.user .chat-bubble {
-            background: #FF6B35;
-            color: #fff;
-            border-top-right-radius: 4px;
+            background: #FF6B35; color: #fff; border-top-right-radius: 4px;
+        }
+
+        /* 安全的富文本渲染 - 仅支持有限的格式化 */
+        .chat-bubble .msg-bold { font-weight: 600; }
+        .chat-bubble .msg-list {
+            margin: 6px 0; padding-left: 20px;
+        }
+        .chat-bubble .msg-list li { margin: 3px 0; }
+        .chat-bubble .msg-line { display: block; margin: 4px 0; }
+        .chat-bubble .msg-highlight {
+            background: #FFF0E6; color: #FF6B35; padding: 2px 6px;
+            border-radius: 4px; font-weight: 500;
         }
 
         /* 推荐菜品卡片 */
         .dish-recommendations {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 8px;
+            display: flex; flex-direction: column; gap: 8px; margin-top: 10px;
         }
         .dish-card {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px;
-            background: #fff;
-            border-radius: 10px;
-            border: 1px solid #eee;
-            cursor: pointer;
-            transition: box-shadow 0.2s;
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px; background: #fff; border-radius: 10px;
+            border: 1px solid #eee; cursor: pointer; transition: box-shadow 0.2s;
         }
         .dish-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .dish-card img {
-            width: 60px; height: 60px;
-            border-radius: 8px;
-            object-fit: cover;
-            background: #f0f0f0;
+            width: 56px; height: 56px; border-radius: 8px;
+            object-fit: cover; background: #f0f0f0; flex-shrink: 0;
         }
-        .dish-card .dish-info { flex: 1; }
-        .dish-card .dish-name { font-size: 14px; font-weight: 500; color: #333; }
+        .dish-card .dish-info { flex: 1; min-width: 0; }
+        .dish-card .dish-name {
+            font-size: 13px; font-weight: 500; color: #333;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
         .dish-card .dish-reason { font-size: 11px; color: #999; margin-top: 2px; }
         .dish-card .dish-price { font-size: 14px; color: #FF6B35; font-weight: 600; margin-top: 4px; }
         .dish-card .add-btn {
-            width: 28px; height: 28px;
-            border-radius: 50%;
-            background: #FF6B35;
-            color: #fff;
-            border: none;
-            font-size: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
+            width: 28px; height: 28px; border-radius: 50%; background: #FF6B35;
+            color: #fff; border: none; font-size: 16px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
+
+        /* 反馈按钮 */
+        .feedback-bar {
+            display: flex; gap: 8px; margin-top: 8px; padding-left: 4px;
+        }
+        .feedback-btn {
+            padding: 3px 10px; border-radius: 12px; font-size: 11px;
+            border: 1px solid #ddd; background: #fff; color: #666;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 3px;
+        }
+        .feedback-btn:hover { border-color: #FF6B35; color: #FF6B35; }
+        .feedback-btn.active-good { border-color: #67c23a; color: #67c23a; background: #f0f9eb; }
+        .feedback-btn.active-bad { border-color: #f56c6c; color: #f56c6c; background: #fef0f0; }
 
         /* 加载动画 */
         .typing-indicator {
-            display: flex;
-            gap: 4px;
-            padding: 8px 0;
+            display: flex; gap: 4px; padding: 8px 0;
         }
         .typing-indicator span {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: #ccc;
+            width: 6px; height: 6px; border-radius: 50%; background: #ccc;
             animation: typing 1.4s infinite;
         }
         .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
@@ -180,71 +201,119 @@
             30% { opacity: 1; transform: scale(1); }
         }
 
+        /* 错误重试 */
+        .retry-bar {
+            display: flex; align-items: center; gap: 8px; margin-top: 6px;
+        }
+        .retry-btn {
+            padding: 4px 12px; border-radius: 12px; font-size: 12px;
+            border: 1px solid #FF6B35; color: #FF6B35; background: #fff;
+            cursor: pointer;
+        }
+        .retry-btn:hover { background: #FFF0E6; }
+
         /* 输入区 */
         .input-area {
-            display: flex;
-            gap: 10px;
-            padding: 12px 16px;
-            border-top: 1px solid #eee;
-            background: #fff;
-            align-items: center;
+            display: flex; gap: 10px; padding: 12px 16px;
+            border-top: 1px solid #eee; background: #fff;
+            align-items: center; flex-shrink: 0;
         }
         .input-area input {
-            flex: 1;
-            border: 1px solid #e0e0e0;
-            border-radius: 24px;
-            padding: 10px 16px;
-            font-size: 14px;
-            outline: none;
+            flex: 1; border: 1px solid #e0e0e0; border-radius: 24px;
+            padding: 10px 16px; font-size: 14px; outline: none;
             transition: border-color 0.2s;
         }
         .input-area input:focus { border-color: #FF6B35; }
-        .input-area .send-btn {
-            width: 40px; height: 40px;
-            border-radius: 50%;
+        .input-area input:disabled { background: #f5f5f5; }
+        .voice-btn {
+            width: 40px; height: 40px; border-radius: 50%; border: 1px solid #e0e0e0;
+            background: #fff; font-size: 18px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .voice-btn:active { background: #f5f5f5; }
+        .voice-btn.recording {
+            background: #f56c6c; color: #fff; border-color: #f56c6c;
+            animation: pulse 1s infinite;
+        }
+        .send-btn {
+            width: 40px; height: 40px; border-radius: 50%;
             background: linear-gradient(135deg, #FF6B35, #f7931e);
-            color: #fff;
-            border: none;
-            font-size: 18px;
-            cursor: pointer;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            color: #fff; border: none; font-size: 18px; cursor: pointer;
+            flex-shrink: 0; display: flex; align-items: center; justify-content: center;
         }
-        .input-area .send-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
+        .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* 流式光标 */
+        .streaming-cursor::after {
+            content: '▋'; color: #FF6B35; animation: blink 0.8s infinite;
+            margin-left: 2px;
         }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* 空状态 */
+        .empty-sidebar {
+            text-align: center; padding: 40px 20px; color: #c0c4cc;
+        }
+        .empty-sidebar .empty-icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-sidebar p { font-size: 13px; }
     </style>
 </head>
 <body>
     <div id="ai-app" class="ai-container">
-        <!-- 顶部 -->
+        <!-- 顶部栏 -->
         <div class="ai-header">
-            <div>
+            <div style="display:flex;align-items:center;gap:8px;">
                 <span class="status-dot"></span>
                 <span class="title">AI 智能点餐助手</span>
             </div>
-            <span class="close-btn" @click="close">✕</span>
+            <div class="header-actions">
+                <span class="header-btn" @click="toggleSidebar" title="对话历史">☰</span>
+                <span class="header-btn" @click="close" title="关闭">✕</span>
+            </div>
+        </div>
+
+        <!-- 对话管理侧边栏 -->
+        <div class="sidebar-overlay" :class="{active: sidebarOpen}" @click="toggleSidebar"></div>
+        <div class="conversation-sidebar" :class="{active: sidebarOpen}">
+            <div class="sidebar-header">
+                <h3>💬 对话历史</h3>
+                <button class="new-chat-btn" @click="newConversation">+ 新对话</button>
+            </div>
+            <div class="sidebar-list">
+                <div v-if="conversations.length === 0" class="empty-sidebar">
+                    <div class="empty-icon">💬</div>
+                    <p>暂无对话记录</p>
+                </div>
+                <div v-for="conv in conversations" :key="conv.id"
+                     :class="['sidebar-item', {active: currentConversationId === conv.id}]"
+                     @click="switchConversation(conv.id)">
+                    <div class="conv-title">{{ conv.title || '新对话' }}</div>
+                    <div class="conv-time">{{ conv.timeText }}</div>
+                    <span class="conv-delete" @click.stop="deleteConversation(conv.id)" title="删除">🗑️</span>
+                </div>
+            </div>
         </div>
 
         <!-- 快捷提示 -->
-        <div class="quick-tips">
-            <span class="quick-tip" v-for="tip in quickTips" :key="tip" @click="sendQuickTip(tip)">
-                {{ tip }}
+        <div class="quick-tips" v-if="messages.length <= 1">
+            <!-- 用户画像标签（基于历史偏好） -->
+            <span class="quick-tip" v-for="tag in userProfileTags" :key="tag"
+                  style="background:#FFF0E6;border-color:#FF6B35;color:#FF6B35;"
+                  @click="sendQuickTip(tag)">
+                {{ tag }}
             </span>
         </div>
 
         <!-- 聊天区域 -->
         <div class="chat-area" ref="chatArea">
             <!-- 欢迎消息 -->
-            <div class="chat-msg assistant">
+            <div class="chat-msg assistant" v-if="messages.length === 0">
                 <div class="chat-avatar">🤖</div>
                 <div class="chat-bubble">
-                    你好！我是小吉 🤗<br>
+                    你好！我是小吉，你的智能点餐助手 🤗<br><br>
                     告诉我你想吃什么，我来帮你推荐最合适的菜品！<br><br>
-                    你可以试试说：<br>
+                    💡 <b>试试这样说：</b><br>
                     · "我想吃辣的，2个人"<br>
                     · "有没有清淡一点的菜"<br>
                     · "帮我推荐100以内的套餐"
@@ -253,21 +322,49 @@
 
             <!-- 对话消息 -->
             <template v-for="(msg, idx) in messages">
-                <div :class="'chat-msg ' + msg.role" :key="idx">
+                <div :class="'chat-msg ' + msg.role" :key="msg.id || idx">
                     <div class="chat-avatar">{{ msg.role === 'assistant' ? '🤖' : '👤' }}</div>
-                    <div>
-                        <div class="chat-bubble" v-html="formatContent(msg.content)"></div>
-                        <!-- 推荐菜品 -->
+                    <div style="flex:1;min-width:0;">
+                        <div class="chat-bubble" :class="{'streaming-cursor': msg.streaming}">
+                            <!-- 安全渲染：仅支持有限格式，杜绝 XSS -->
+                            <template v-if="msg.role === 'assistant'">
+                                <span v-for="(part, pIdx) in msg.renderedParts" :key="pIdx">
+                                    <span v-if="part.type === 'text'" class="msg-line">{{ part.text }}</span>
+                                    <span v-else-if="part.type === 'bold'" class="msg-bold">{{ part.text }}</span>
+                                    <span v-else-if="part.type === 'list'" class="msg-list">
+                                        <ul style="margin:4px 0;padding-left:18px;">
+                                            <li v-for="(item, i) in part.items" :key="i">{{ item }}</li>
+                                        </ul>
+                                    </span>
+                                    <span v-else-if="part.type === 'highlight'" class="msg-highlight">{{ part.text }}</span>
+                                </span>
+                            </template>
+                            <template v-else>
+                                {{ msg.content }}
+                            </template>
+                        </div>
+                        <!-- 推荐菜品卡片 -->
                         <div class="dish-recommendations" v-if="msg.dishes && msg.dishes.length > 0">
                             <div class="dish-card" v-for="dish in msg.dishes" :key="dish.dishId" @click="addToCart(dish)">
-                                <img :src="dish.image || '../../images/default-dish.png'" :alt="dish.name" @error="imgError">
+                                <img :src="dish.image || '../../images/noImg.png'" :alt="dish.name" @error="imgError">
                                 <div class="dish-info">
                                     <div class="dish-name">{{ dish.name }}</div>
                                     <div class="dish-reason" v-if="dish.reason">{{ dish.reason }}</div>
-                                    <div class="dish-price">¥{{ dish.price }}</div>
+                                    <div class="dish-price">¥{{ (dish.price ? (dish.price / 100).toFixed(2) : '0.00') }}</div>
                                 </div>
                                 <button class="add-btn" @click.stop="addToCart(dish)">+</button>
                             </div>
+                        </div>
+                        <!-- 反馈按钮 -->
+                        <div class="feedback-bar" v-if="msg.role === 'assistant' && msg.showFeedback && !msg.streaming">
+                            <button :class="['feedback-btn', msg.feedback === 'good' ? 'active-good' : '']"
+                                    @click="sendFeedback(msg, 'good')">👍 有用</button>
+                            <button :class="['feedback-btn', msg.feedback === 'bad' ? 'active-bad' : '']"
+                                    @click="sendFeedback(msg, 'bad')">👎 没用</button>
+                        </div>
+                        <!-- 错误重试 -->
+                        <div class="retry-bar" v-if="msg.role === 'assistant' && msg.error">
+                            <button class="retry-btn" @click="retryMessage(msg)">🔄 重新生成</button>
                         </div>
                     </div>
                 </div>
@@ -286,10 +383,13 @@
 
         <!-- 输入区 -->
         <div class="input-area">
+            <button class="voice-btn" :class="{'recording': isRecording}" @click="toggleVoice" title="语音输入">
+                🎤
+            </button>
             <input
                 type="text"
                 v-model="inputText"
-                placeholder="告诉小吉你想吃什么..."
+                :placeholder="inputPlaceholder"
                 @keyup.enter="sendMessage"
                 :disabled="loading"
             >
@@ -304,6 +404,99 @@
     <script src="../../js/request.js"></script>
     <script src="../api/ai.js"></script>
     <script>
+    (function() {
+        'use strict';
+
+        // ==================== 工具函数 ====================
+
+        /** 安全的内容格式化 - 仅支持白名单标签，杜绝 XSS */
+        function safeFormatContent(content) {
+            if (!content) return [];
+            if (typeof content !== 'string') return [{ type: 'text', text: String(content) }];
+
+            var parts = [];
+            var remaining = content;
+
+            // 按行分割处理
+            var lines = remaining.split('\n');
+            for (var li = 0; li < lines.length; li++) {
+                var line = lines[li];
+
+                if (li > 0) {
+                    parts.push({ type: 'text', text: '\n' });
+                }
+
+                // 处理加粗文本 **text**
+                var boldRegex = /\*\*(.*?)\*\*/g;
+                var lastIndex = 0;
+                var match;
+
+                while ((match = boldRegex.exec(line)) !== null) {
+                    // 加粗前的普通文本
+                    if (match.index > lastIndex) {
+                        parts.push({ type: 'text', text: line.substring(lastIndex, match.index) });
+                    }
+                    parts.push({ type: 'bold', text: match[1] });
+                    lastIndex = match.index + match[0].length;
+                }
+                // 剩余文本
+                if (lastIndex < line.length) {
+                    parts.push({ type: 'text', text: line.substring(lastIndex) });
+                }
+
+                // 处理列表项 - 行首为 "- " 或 "· "
+                if ((line.trim().startsWith('- ') || line.trim().startsWith('· ')) && parts.length > 0) {
+                    // 收集连续列表项
+                    var listItems = [];
+                    listItems.push(line.trim().replace(/^[-·]\s*/, ''));
+                    // 查找后续连续列表项
+                    for (var ni = li + 1; ni < lines.length; ni++) {
+                        var nextLine = lines[ni].trim();
+                        if (nextLine.startsWith('- ') || nextLine.startsWith('· ')) {
+                            listItems.push(nextLine.replace(/^[-·]\s*/, ''));
+                        } else {
+                            break;
+                        }
+                    }
+                    parts.push({ type: 'list', items: listItems });
+                    li += listItems.length - 1;
+                    continue;
+                }
+            }
+
+            // 如果没有特殊格式，直接返回纯文本
+            if (parts.length === 0) {
+                return [{ type: 'text', text: content }];
+            }
+
+            // 合并相邻的 text 类型
+            var merged = [];
+            for (var i = 0; i < parts.length; i++) {
+                if (i > 0 && parts[i].type === 'text' && merged[merged.length - 1].type === 'text') {
+                    merged[merged.length - 1].text += parts[i].text;
+                } else {
+                    merged.push(parts[i]);
+                }
+            }
+
+            return merged;
+        }
+
+        /** 格式化时间 */
+        function formatTime(timestamp) {
+            var now = new Date();
+            var date = new Date(timestamp);
+            var diff = now - date;
+            if (diff < 60000) return '刚刚';
+            if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+            if (diff < 172800000) return '昨天';
+            var month = (date.getMonth() + 1);
+            var day = date.getDate();
+            return month + '月' + day + '日';
+        }
+
+        // ==================== Vue 应用 ====================
         new Vue({
             el: '#ai-app',
             data: {
@@ -317,82 +510,433 @@
                     '有什么招牌菜',
                     '适合小孩吃的',
                     '帮我搭配一个套餐'
-                ]
+                ],
+                // 对话管理
+                sidebarOpen: false,
+                conversations: [],
+                currentConversationId: null,
+                // 请求控制
+                currentRequestId: 0,
+                // 语音
+                isRecording: false,
+                recognition: null,
+                // 用户上下文
+                userInfo: null,
+                cartData: [],
+                // 用户画像标签（基于历史偏好动态生成）
+                userProfileTags: [],
+                // 输入占位
+                inputPlaceholder: '告诉小吉你想吃什么...'
             },
+
+            created: function() {
+                this.loadUserInfo();
+                this.loadConversations();
+                this.loadUserProfileTags();
+                // 如果没有对话，创建新对话
+                if (this.conversations.length === 0) {
+                    this.newConversation(true);
+                } else {
+                    // 加载最近的对话
+                    this.switchConversation(this.conversations[0].id);
+                }
+            },
+
+            mounted: function() {
+                this.initVoice();
+                this.scrollToBottom();
+            },
+
             methods: {
+                // ==================== 对话管理 ====================
+
+                /** 创建新对话 */
+                newConversation: function(silent) {
+                    var conv = {
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                        title: '',
+                        messages: [],
+                        createdAt: Date.now(),
+                        updatedAt: Date.now()
+                    };
+                    this.conversations.unshift(conv);
+                    this.currentConversationId = conv.id;
+                    this.messages = [];
+                    if (!silent) {
+                        this.saveConversations();
+                        this.toggleSidebar(false);
+                    }
+                },
+
+                /** 切换对话 */
+                switchConversation: function(id) {
+                    if (this.loading) return;
+                    var conv = this.conversations.find(function(c) { return c.id === id; });
+                    if (!conv) return;
+                    this.currentConversationId = id;
+                    this.messages = conv.messages || [];
+                    this.toggleSidebar(false);
+                    this.$nextTick(function() { this.scrollToBottom(); }.bind(this));
+                },
+
+                /** 删除对话 */
+                deleteConversation: function(id) {
+                    var self = this;
+                    vant.Dialog.confirm({
+                        title: '删除对话',
+                        message: '确定要删除这个对话吗？此操作不可恢复。'
+                    }).then(function() {
+                        self.conversations = self.conversations.filter(function(c) { return c.id !== id; });
+                        if (self.currentConversationId === id) {
+                            if (self.conversations.length > 0) {
+                                self.switchConversation(self.conversations[0].id);
+                            } else {
+                                self.newConversation(true);
+                            }
+                        }
+                        self.saveConversations();
+                    }).catch(function() {});
+                },
+
+                /** 切换侧边栏 */
+                toggleSidebar: function(force) {
+                    if (typeof force === 'boolean') {
+                        this.sidebarOpen = force;
+                    } else {
+                        this.sidebarOpen = !this.sidebarOpen;
+                    }
+                },
+
+                /** 保存对话到 localStorage */
+                saveConversations: function() {
+                    try {
+                        // 将当前消息同步到对话
+                        var currentConv = this.getCurrentConversation();
+                        if (currentConv) {
+                            currentConv.messages = this.messages.slice(0, 100); // 限制100条
+                            currentConv.updatedAt = Date.now();
+                            if (this.messages.length > 0) {
+                                var firstUserMsg = this.messages.find(function(m) { return m.role === 'user'; });
+                                if (firstUserMsg) {
+                                    currentConv.title = firstUserMsg.content.substring(0, 30);
+                                }
+                            }
+                        }
+                        localStorage.setItem('ai_conversations', JSON.stringify(this.conversations.slice(0, 50)));
+                    } catch (e) {
+                        console.warn('保存对话失败:', e);
+                    }
+                },
+
+                /** 从 localStorage 加载对话 */
+                loadConversations: function() {
+                    try {
+                        var raw = localStorage.getItem('ai_conversations');
+                        if (raw) {
+                            var data = JSON.parse(raw);
+                            if (Array.isArray(data)) {
+                                this.conversations = data.slice(0, 50);
+                            }
+                        }
+                    } catch (e) {
+                        this.conversations = [];
+                    }
+                },
+
+                /** 获取当前对话对象 */
+                getCurrentConversation: function() {
+                    return this.conversations.find(function(c) { return c.id === this.currentConversationId; }.bind(this));
+                },
+
+                // ==================== 用户上下文 ====================
+
+                /** 加载用户信息 */
+                loadUserInfo: function() {
+                    try {
+                        var userInfo = sessionStorage.getItem('userInfo') || localStorage.getItem('userInfo');
+                        if (userInfo) {
+                            this.userInfo = JSON.parse(userInfo);
+                        }
+                    } catch (e) { }
+                },
+
+                /** 加载用户画像标签（基于历史偏好） */
+                loadUserProfileTags: function() {
+                    var self = this;
+                    try {
+                        // 优先从 localStorage 读取缓存的画像
+                        var cached = localStorage.getItem('ai_profile_tags');
+                        if (cached) {
+                            try {
+                                self.userProfileTags = JSON.parse(cached);
+                            } catch(e) {}
+                        }
+
+                        // 异步从后端获取最新画像摘要
+                        if (typeof aiApi !== 'undefined' && aiApi.getProfileSummary) {
+                            aiApi.getProfileSummary().then(function(res) {
+                                if (res && res.code === 1 && res.data && res.data.tags) {
+                                    self.userProfileTags = res.data.tags.slice(0, 5);
+                                    try {
+                                        localStorage.setItem('ai_profile_tags', JSON.stringify(self.userProfileTags));
+                                    } catch(e) {}
+                                }
+                            }).catch(function() {});
+                        }
+                    } catch (e) { }
+                },
+
+                /** 加载购物车数据（用于上下文） */
+                loadCartContext: function() {
+                    var self = this;
+                    try {
+                        var cartData = sessionStorage.getItem('cartData');
+                        if (cartData) {
+                            self.cartData = JSON.parse(cartData);
+                        }
+                    } catch (e) { }
+                },
+
+                /** 构建上下文信息 */
+                buildContext: function() {
+                    var context = {};
+                    if (this.userInfo) {
+                        context.user = {
+                            name: this.userInfo.name || '',
+                            phone: this.maskPhone(this.userInfo.phone || '')
+                        };
+                    }
+                    if (this.cartData && this.cartData.length > 0) {
+                        context.cart = {
+                            itemCount: this.cartData.length,
+                            totalAmount: this.cartData.reduce(function(sum, item) {
+                                return sum + (item.number || 0);
+                            }, 0),
+                            items: this.cartData.slice(0, 5).map(function(item) {
+                                return { name: item.name, quantity: item.number };
+                            })
+                        };
+                    }
+                    return context;
+                },
+
+                /** 手机号脱敏 */
+                maskPhone: function(phone) {
+                    if (!phone || phone.length !== 11) return phone || '';
+                    return phone.substring(0, 3) + '****' + phone.substring(7);
+                },
+
+                // ==================== 消息发送 ====================
+
                 sendMessage: function() {
                     var text = this.inputText.trim();
                     if (!text || this.loading) return;
 
-                    // 添加用户消息
-                    this.messages.push({ role: 'user', content: text });
+                    // 加载购物车上下文
+                    this.loadCartContext();
+
+                    // 取消之前的请求
+                    this.currentRequestId++;
+
+                    var requestId = this.currentRequestId;
+                    var userMsg = {
+                        id: Date.now(),
+                        role: 'user',
+                        content: text,
+                        timestamp: Date.now()
+                    };
+
+                    // 创建助手消息占位
+                    var assistantMsg = {
+                        id: Date.now() + 1,
+                        role: 'assistant',
+                        content: '',
+                        renderedParts: [],
+                        streaming: true,
+                        showFeedback: false,
+                        feedback: null,
+                        error: false,
+                        retryData: null,
+                        timestamp: Date.now()
+                    };
+
+                    this.messages.push(userMsg);
+                    this.messages.push(assistantMsg);
                     this.inputText = '';
                     this.loading = true;
                     this.scrollToBottom();
 
                     var self = this;
-                    aiApi.orderAssistant(text, null).then(function(res) {
+                    var context = this.buildContext();
+
+                    // 获取当前对话ID和用户ID
+                    var conversationId = self.currentConversationId;
+                    var userId = self.getUserId();
+
+                    aiApi.orderAssistant(text, userId, conversationId).then(function(res) {
+                        // 检查是否是最新请求
+                        if (requestId !== self.currentRequestId) return;
+
                         var data = res.data || res;
-                        var assistantMsg = {
-                            role: 'assistant',
-                            content: data.content || '抱歉，我没理解您的意思，换个说法试试？',
-                            dishes: data.dishes || []
-                        };
-                        self.messages.push(assistantMsg);
-                    }).catch(function() {
-                        self.messages.push({
-                            role: 'assistant',
-                            content: '抱歉，AI服务暂时不可用，请稍后再试。'
-                        });
+                        assistantMsg.content = data.content || '抱歉，我没理解您的意思，换个说法试试？';
+                        assistantMsg.streaming = false;
+                        assistantMsg.showFeedback = true;
+                        assistantMsg.renderedParts = safeFormatContent(assistantMsg.content);
+                        assistantMsg.dishes = data.dishes || [];
+                        self.scrollToBottom();
+                        self.saveConversations();
+                    }).catch(function(err) {
+                        if (requestId !== self.currentRequestId) return;
+                        assistantMsg.content = '抱歉，请求失败，请重试。';
+                        assistantMsg.streaming = false;
+                        assistantMsg.error = true;
+                        assistantMsg.retryData = { message: text, requestId: requestId };
+                        assistantMsg.renderedParts = [{ type: 'text', text: assistantMsg.content }];
+                        self.scrollToBottom();
                     }).finally(function() {
-                        self.loading = false;
-                        self.$nextTick(function() { self.scrollToBottom(); });
+                        if (requestId === self.currentRequestId) {
+                            self.loading = false;
+                        }
                     });
                 },
 
+                /** 重新生成 */
+                retryMessage: function(msg) {
+                    if (msg.retryData) {
+                        // 移除错误消息和之前的用户消息
+                        var idx = this.messages.indexOf(msg);
+                        if (idx > 0) {
+                            this.messages.splice(idx - 1, 2);
+                        }
+                        // 重新发送
+                        this.inputText = msg.retryData.message;
+                        this.sendMessage();
+                    }
+                },
+
+                /** 发送快捷提示 */
                 sendQuickTip: function(tip) {
                     this.inputText = tip;
                     this.sendMessage();
                 },
 
+                // ==================== 推荐菜品操作 ====================
+
                 addToCart: function(dish) {
-                    // 调用已有的购物车添加逻辑
                     if (window.addDishToCart) {
-                        window.addDishToCart(dish);
-                    }
-                    alert('已添加「' + dish.name + '」到购物车');
-                },
-
-                formatContent: function(content) {
-                    if (!content) return '';
-                    return content.replace(/\n/g, '<br>');
-                },
-
-                scrollToBottom: function() {
-                    var el = this.$refs.chatArea;
-                    if (el) {
-                        this.$nextTick(function() {
-                            el.scrollTop = el.scrollHeight;
+                        window.addDishToCart({
+                            id: dish.dishId,
+                            name: dish.name,
+                            price: dish.price || 0,
+                            image: dish.image || '',
+                            flavors: []
                         });
+                    } else {
+                        vant.Notify({ type: 'success', message: '已添加「' + dish.name + '」到购物车' });
                     }
+                },
+
+                // ==================== 反馈 ====================
+
+                sendFeedback: function(msg, type) {
+                    msg.feedback = type;
+                    // 向后端发送反馈（静默处理，不阻塞UI）
+                    var self = this;
+                    try {
+                        aiApi.recordFeedback && aiApi.recordFeedback({
+                            dishId: msg.dishes && msg.dishes.length > 0 ? msg.dishes[0].dishId : null,
+                            feedbackType: type,
+                            messageId: msg.id
+                        }).catch(function() {});
+                    } catch (e) { }
+                    this.saveConversations();
+                },
+
+                // ==================== 语音输入 ====================
+
+                initVoice: function() {
+                    var self = this;
+                    try {
+                        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                        if (!SpeechRecognition) return;
+
+                        this.recognition = new SpeechRecognition();
+                        this.recognition.lang = 'zh-CN';
+                        this.recognition.interimResults = false;
+                        this.recognition.maxAlternatives = 1;
+
+                        this.recognition.onresult = function(event) {
+                            var transcript = event.results[0][0].transcript;
+                            self.inputText = transcript;
+                            self.isRecording = false;
+                        };
+
+                        this.recognition.onerror = function(event) {
+                            console.warn('语音识别错误:', event.error);
+                            self.isRecording = false;
+                            if (event.error === 'not-allowed') {
+                                vant.Notify({ type: 'warning', message: '请允许麦克风权限' });
+                            }
+                        };
+
+                        this.recognition.onend = function() {
+                            self.isRecording = false;
+                        };
+                    } catch (e) {
+                        console.warn('语音初始化失败:', e);
+                    }
+                },
+
+                toggleVoice: function() {
+                    if (!this.recognition) {
+                        vant.Notify({ type: 'warning', message: '您的浏览器不支持语音输入' });
+                        return;
+                    }
+                    if (this.isRecording) {
+                        this.recognition.stop();
+                        this.isRecording = false;
+                    } else {
+                        this.recognition.start();
+                        this.isRecording = true;
+                        vant.Notify({ type: 'success', message: '请说话...', duration: 2000 });
+                    }
+                },
+
+                // ==================== 工具方法 ====================
+
+                /** 获取用户ID */
+                getUserId: function() {
+                    if (this.userInfo && this.userInfo.id) return this.userInfo.id;
+                    var userId = sessionStorage.getItem('userId');
+                    return userId ? parseInt(userId) : null;
+                },
+
+                /** 滚动到底部 */
+                scrollToBottom: function() {
+                    var self = this;
+                    this.$nextTick(function() {
+                        var el = self.$refs.chatArea;
+                        if (el) {
+                            el.scrollTop = el.scrollHeight;
+                        }
+                    });
                 },
 
                 imgError: function(e) {
-                    e.target.src = '../../images/default-dish.png';
+                    e.target.src = '../../images/noImg.png';
                 },
 
                 close: function() {
+                    this.saveConversations();
                     if (window.history.length > 1) {
                         window.history.back();
                     } else {
                         window.location.href = '../index.html';
                     }
                 }
-            },
-            mounted: function() {
-                this.scrollToBottom();
             }
         });
+    })();
     </script>
 </body>
 </html>

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI模型配置 - 瑞吉外卖管理端</title>
+    <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/common.css" />
+    <link rel="stylesheet" href="../../styles/page.css" />
+    <style>
+        .provider-container { padding: 20px; }
+
+        /* 激活供应商高亮卡片 */
+        .active-provider-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+            border: 2px solid #409eff;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .active-provider-card::before {
+            content: '当前激活';
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #409eff;
+            color: #fff;
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 0 10px 0 10px;
+        }
+        .active-provider-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .provider-icon-large {
+            width: 56px; height: 56px;
+            border-radius: 12px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .provider-detail .name { font-size: 18px; font-weight: 600; color: #303133; }
+        .provider-detail .model { font-size: 13px; color: #909399; margin-top: 4px; }
+        .provider-detail .url { font-size: 12px; color: #c0c4cc; margin-top: 2px; }
+
+        /* 供应商卡片网格 */
+        .provider-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+        .provider-card {
+            background: #fff;
+            border: 1px solid #ebeef5;
+            border-radius: 10px;
+            padding: 18px 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        .provider-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+        .provider-card.active-card {
+            border-color: #409eff;
+            background: #f0f9ff;
+        }
+        .provider-card.disabled-card {
+            opacity: 0.6;
+            filter: grayscale(30%);
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .card-icon {
+            width: 44px; height: 44px;
+            border-radius: 10px;
+            background: #f5f7fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+        .card-info { flex: 1; min-width: 0; }
+        .card-info .name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #303133;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .card-info .model-name {
+            font-size: 12px;
+            color: #909399;
+            margin-top: 2px;
+        }
+        .card-status {
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .card-status.active { background: #f0f9eb; color: #67c23a; }
+        .card-status.inactive { background: #f5f5f5; color: #909399; }
+        .card-desc {
+            font-size: 13px;
+            color: #606266;
+            line-height: 1.5;
+            margin-bottom: 12px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .card-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+            color: #909399;
+        }
+        .card-meta .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .card-actions .el-button { flex: 1; }
+
+        /* 预设供应商图标颜色 */
+        .icon-deepseek { background: #e6f7ff; }
+        .icon-qwen { background: #fff0f0; }
+        .icon-zhipu { background: #f0f9ff; }
+        .icon-ernie { background: #f0f5ff; }
+        .icon-baichuan { background: #fdf6ec; }
+        .icon-moonshot { background: #f9f0ff; }
+        .icon-minimax { background: #fff0e6; }
+        .icon-360 { background: #f5f5f5; }
+
+        /* 操作按钮区 */
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .action-bar h2 { font-size: 18px; color: #303133; }
+        .action-buttons { display: flex; gap: 10px; }
+
+        /* 测试按钮动画 */
+        .test-success { color: #67c23a; }
+        .test-fail { color: #f56c6c; }
+
+        @media (max-width: 768px) {
+            .provider-grid { grid-template-columns: 1fr; }
+            .active-provider-info { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="provider-container" id="provider-app">
+        <div class="action-bar">
+            <h2>🤖 AI 模型配置</h2>
+            <div class="action-buttons">
+                <el-button type="primary" size="small" @click="initPresets" icon="el-icon-plus">
+                    初始化预设模型
+                </el-button>
+                <el-button type="primary" size="small" @click="openAddDialog" icon="el-icon-plus">
+                    添加自定义模型
+                </el-button>
+                <el-button size="small" @click="loadData" icon="el-icon-refresh">
+                    刷新
+                </el-button>
+            </div>
+        </div>
+
+        <!-- 当前激活供应商 -->
+        <div class="active-provider-card" v-if="activeProvider">
+            <div class="active-provider-info">
+                <div class="provider-icon-large" :class="getIconClass(activeProvider.providerCode)">
+                    {{ getProviderEmoji(activeProvider.providerCode) }}
+                </div>
+                <div class="provider-detail">
+                    <div class="name">{{ activeProvider.providerName }}
+                        <el-tag size="mini" type="success" style="margin-left:8px;">当前使用</el-tag>
+                    </div>
+                    <div class="model">模型：{{ activeProvider.modelName }}</div>
+                    <div class="url">接口：{{ activeProvider.baseUrl }}</div>
+                </div>
+                <div style="margin-left:auto;">
+                    <el-button type="primary" size="small" @click="testProvider(activeProvider.id)">
+                        测试连接
+                    </el-button>
+                </div>
+            </div>
+        </div>
+        <div class="active-provider-card" v-else style="text-align:center;padding:40px;">
+            <p style="color:#909399;">暂无激活的AI供应商，请从下方选择一个供应商并点击「激活」</p>
+            <el-button type="primary" size="small" @click="initPresets" style="margin-top:12px;">
+                一键初始化预设模型
+            </el-button>
+        </div>
+
+        <!-- 供应商卡片列表 -->
+        <div class="provider-grid">
+            <div v-for="provider in providers" :key="provider.id"
+                 :class="['provider-card',
+                     provider.isActive ? 'active-card' : '',
+                     provider.enabled ? '' : 'disabled-card']">
+                <div class="card-header">
+                    <div class="card-icon" :class="getIconClass(provider.providerCode)">
+                        {{ getProviderEmoji(provider.providerCode) }}
+                    </div>
+                    <div class="card-info">
+                        <div class="name">{{ provider.providerName }}</div>
+                        <div class="model-name">{{ provider.modelName }}</div>
+                    </div>
+                    <span :class="['card-status', provider.isActive ? 'active' : 'inactive']">
+                        {{ provider.isActive ? '使用中' : (provider.enabled ? '已启用' : '已停用') }}
+                    </span>
+                </div>
+                <div class="card-desc">{{ provider.remark || '无备注' }}</div>
+                <div class="card-meta">
+                    <span class="meta-item">⏱ {{ provider.timeout || 60 }}s</span>
+                    <span class="meta-item">🔤 {{ provider.apiFormat }}</span>
+                    <span class="meta-item" v-if="provider.lastTestTime">
+                        测试：{{ provider.lastTestResult === 'success' ? '✅' : '❌' }}
+                    </span>
+                </div>
+                <div class="card-actions">
+                    <el-button v-if="!provider.isActive" type="success" size="mini" @click="activateProvider(provider.id)">
+                        激活
+                    </el-button>
+                    <el-button v-else type="info" size="mini" disabled>当前激活</el-button>
+                    <el-button size="mini" @click="testProvider(provider.id)">测试</el-button>
+                    <el-button size="mini" @click="openEditDialog(provider)">编辑</el-button>
+                    <el-button type="danger" size="mini" @click="deleteProvider(provider.id)" :disabled="provider.isActive">
+                        删除
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加/编辑弹窗 -->
+        <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="560px" :before-close="handleClose">
+            <el-form :model="form" label-width="120px" size="small">
+                <el-form-item label="供应商名称" required>
+                    <el-input v-model="form.providerName" placeholder="如：DeepSeek、通义千问" />
+                </el-form-item>
+                <el-form-item label="供应商编码" required>
+                    <el-input v-model="form.providerCode" placeholder="deepseek / qwen / zhipu / ernie / baichuan / moonshot / minimax / 360 / custom" />
+                </el-form-item>
+                <el-form-item label="API地址" required>
+                    <el-input v-model="form.baseUrl" placeholder="https://api.deepseek.com/v1" />
+                </el-form-item>
+                <el-form-item label="模型名称" required>
+                    <el-input v-model="form.modelName" placeholder="deepseek-chat / qwen-turbo / glm-4" />
+                </el-form-item>
+                <el-form-item label="API密钥" required>
+                    <el-input v-model="form.apiKey" type="textarea" :rows="2" placeholder="sk-..." show-word-limit />
+                    <span style="font-size:12px;color:#e6a23c;">密钥将加密存储，仅显示前4位和后4位</span>
+                </el-form-item>
+                <el-form-item label="API格式">
+                    <el-select v-model="form.apiFormat" style="width:100%;">
+                        <el-option label="OpenAI 兼容格式（推荐）" value="openai_compatible" />
+                        <el-option label="百度文心一言" value="baidu" />
+                        <el-option label="360智脑" value="360" />
+                        <el-option label="自定义" value="custom" />
+                    </el-select>
+                </el-form-item>
+                <el-row :gutter="16">
+                    <el-col :span="12">
+                        <el-form-item label="超时（秒）">
+                            <el-input-number v-model="form.timeout" :min="10" :max="300" />
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="最大Token">
+                            <el-input-number v-model="form.maxTokens" :min="100" :max="32768" />
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-form-item label="温度参数">
+                    <el-slider v-model="form.temperature" :min="0" :max="2" :step="0.1" />
+                </el-form-item>
+                <el-form-item label="备注">
+                    <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="模型特点说明" />
+                </el-form-item>
+            </el-form>
+            <span slot="footer">
+                <el-button @click="dialogVisible = false">取 消</el-button>
+                <el-button type="primary" @click="submitForm" :loading="submitting">确 定</el-button>
+            </span>
+        </el-dialog>
+    </div>
+
+    <script src="../../plugins/vue/vue.js"></script>
+    <script src="../../plugins/element-ui/index.js"></script>
+    <script src="../../plugins/axios/axios.min.js"></script>
+    <script src="../../js/request.js"></script>
+    <script src="../../api/ai.js"></script>
+    <script>
+    (function() {
+        'use strict';
+
+        // 供应商emoji映射
+        var PROVIDER_EMOJI = {
+            deepseek: '🤖', qwen: '🌊', zhipu: '🧠', ernie: '🟢',
+            baichuan: '🌊', moonshot: '🌙', minimax: '✨', '360': '🛡️', custom: '⚙️'
+        };
+
+        new Vue({
+            el: '#provider-app',
+            data: {
+                providers: [],
+                activeProvider: null,
+                dialogVisible: false,
+                dialogTitle: '添加供应商',
+                submitting: false,
+                form: {
+                    id: null,
+                    providerCode: '',
+                    providerName: '',
+                    baseUrl: '',
+                    modelName: '',
+                    apiKey: '',
+                    apiFormat: 'openai_compatible',
+                    timeout: 60,
+                    maxTokens: 2048,
+                    temperature: 0.7,
+                    remark: ''
+                }
+            },
+
+            created: function() {
+                this.loadData();
+            },
+
+            methods: {
+                loadData: function() {
+                    var self = this;
+                    Promise.all([
+                        $axios.get('/admin/ai/provider/list'),
+                        $axios.get('/admin/ai/provider/active')
+                    ]).then(function(results) {
+                        if (results[0].code === 1) {
+                            self.providers = results[0].data || [];
+                        }
+                        if (results[1].code === 1) {
+                            self.activeProvider = results[1].data || null;
+                        }
+                    }).catch(function(err) {
+                        self.$message.error('加载失败：' + (err.message || err));
+                    });
+                },
+
+                getProviderEmoji: function(code) {
+                    return PROVIDER_EMOJI[code] || '🤖';
+                },
+
+                getIconClass: function(code) {
+                    return 'icon-' + (code || 'custom');
+                },
+
+                activateProvider: function(id) {
+                    var self = this;
+                    this.$confirm('切换供应商后，AI将立即使用新模型。是否继续？', '切换确认', {
+                        type: 'warning'
+                    }).then(function() {
+                        $axios.post('/admin/ai/provider/activate/' + id).then(function(res) {
+                            if (res.code === 1) {
+                                self.$message.success('切换成功');
+                                self.loadData();
+                            } else {
+                                self.$message.error(res.msg || '切换失败');
+                            }
+                        }).catch(function(err) {
+                            self.$message.error('切换失败：' + (err.message || err));
+                        });
+                    }).catch(function() {});
+                },
+
+                testProvider: function(id) {
+                    var self = this;
+                    var provider = this.providers.find(function(p) { return p.id === id; });
+                    if (!provider) return;
+
+                    this.$message({ type: 'info', message: '正在测试 ' + provider.providerName + ' 连接...', duration: 0 });
+                    $axios.get('/admin/ai/provider/test/' + id).then(function(res) {
+                        if (res.code === 1) {
+                            var result = res.data.result || '';
+                            var isSuccess = result.startsWith('SUCCESS');
+                            self.$message({
+                                type: isSuccess ? 'success' : 'error',
+                                message: provider.providerName + '：' + result,
+                                duration: 5000
+                            });
+                            // 刷新数据（测试结果可能已更新）
+                            self.loadData();
+                        }
+                    }).catch(function(err) {
+                        self.$message.error('测试失败：' + (err.message || err));
+                    });
+                },
+
+                deleteProvider: function(id) {
+                    var self = this;
+                    this.$confirm('确定删除此供应商配置吗？', '删除确认', {
+                        type: 'warning'
+                    }).then(function() {
+                        $axios.delete('/admin/ai/provider/delete/' + id).then(function(res) {
+                            if (res.code === 1) {
+                                self.$message.success('删除成功');
+                                self.loadData();
+                            } else {
+                                self.$message.error(res.msg || '删除失败');
+                            }
+                        });
+                    }).catch(function() {});
+                },
+
+                openAddDialog: function() {
+                    this.form = {
+                        id: null,
+                        providerCode: '',
+                        providerName: '',
+                        baseUrl: '',
+                        modelName: '',
+                        apiKey: '',
+                        apiFormat: 'openai_compatible',
+                        timeout: 60,
+                        maxTokens: 2048,
+                        temperature: 0.7,
+                        remark: ''
+                    };
+                    this.dialogTitle = '添加供应商';
+                    this.dialogVisible = true;
+                },
+
+                openEditDialog: function(provider) {
+                    this.form = JSON.parse(JSON.stringify(provider));
+                    this.dialogTitle = '编辑供应商';
+                    this.dialogVisible = true;
+                },
+
+                submitForm: function() {
+                    if (!this.form.providerName || !this.form.baseUrl || !this.form.modelName || !this.form.apiKey) {
+                        this.$message.warning('请填写必填项');
+                        return;
+                    }
+                    var self = this;
+                    this.submitting = true;
+                    var api = this.form.id
+                        ? $axios.post('/admin/ai/provider/update', self.form)
+                        : $axios.post('/admin/ai/provider/add', self.form);
+
+                    api.then(function(res) {
+                        if (res.code === 1) {
+                            self.$message.success(self.form.id ? '更新成功' : '添加成功');
+                            self.dialogVisible = false;
+                            self.loadData();
+                        } else {
+                            self.$message.error(res.msg || '操作失败');
+                        }
+                    }).catch(function(err) {
+                        self.$message.error('操作失败：' + (err.message || err));
+                    }).finally(function() {
+                        self.submitting = false;
+                    });
+                },
+
+                initPresets: function() {
+                    var self = this;
+                    this.$confirm('将添加 DeepSeek、通义千问、智谱AI、文心一言、百川、月之暗面、MiniMax、360 等预设配置。继续？', '初始化预设', {
+                        type: 'info'
+                    }).then(function() {
+                        $axios.post('/admin/ai/provider/init-presets').then(function(res) {
+                            if (res.code === 1) {
+                                self.$message.success(res.msg || '初始化成功');
+                                self.loadData();
+                            } else {
+                                self.$message.error(res.msg || '初始化失败');
+                            }
+                        });
+                    }).catch(function() {});
+                },
+
+                handleClose: function() {
+                    this.dialogVisible = false;
+                }
+            }
+        });
+    })();
+    </script>
+</body>
+</html>

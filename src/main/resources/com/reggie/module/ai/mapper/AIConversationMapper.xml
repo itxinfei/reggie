@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.reggie.module.ai.mapper.AIConversationMapper">
+
+    <select id="selectUserConversations" resultType="com.reggie.module.ai.model.AIConversation">
+        SELECT id, conversation_id, user_id, title, scene, message_count,
+               is_deleted, create_time, update_time, tenant_id
+        FROM ai_conversation
+        WHERE user_id = #{userId}
+          AND is_deleted = #{isDeleted}
+        ORDER BY update_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+</mapper>

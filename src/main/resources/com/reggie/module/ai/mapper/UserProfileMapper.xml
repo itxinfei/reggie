@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.reggie.module.ai.mapper.UserProfileMapper">
+
+    <select id="selectByUserId" resultType="com.reggie.module.ai.model.UserProfile">
+        SELECT id, user_id, tenant_id, taste_tags, category_tags, disliked_tags, allergies,
+               price_preference, avg_order_amount, usual_diners, user_tags,
+               frequent_dish_ids, preferred_dining_type, preferred_time_slot,
+               delivery_fee_sensitive, confidence, last_analyzed_time,
+               total_conversations, total_feedbacks,
+               create_time, update_time, create_user, update_user, is_deleted
+        FROM ai_user_profile
+        WHERE user_id = #{userId}
+          AND is_deleted = 0
+        LIMIT 1
+    </select>
+
+</mapper>
