@@ -6,12 +6,14 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpSession;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
  * 验证码工具类
- * 支持 Redis（优先，集群部署）和 Session（降级，单机部署）
+ * 支持 Redis（优先，集群部署）和 本地内存（降级，单机部署）
  *
  * @author reggie
  * @since 2026-07-09
@@ -37,11 +39,34 @@ public class VerifyCodeUtils {
     private RedisTemplate<String, Object> redisTemplate;
 
     /**
+     * 本地内存降级缓存（含时间戳，模拟 TTL）
+     * Key: 验证码key, Value: [验证码, 创建时间戳]
+     */
+    private final Map<String, CodeEntry> localCache = new ConcurrentHashMap<>();
+
+    /**
+     * 本地缓存条目
+     */
+    private static class CodeEntry {
+        final String code;
+        final long createdAt;
+
+        CodeEntry(String code) {
+            this.code = code;
+            this.createdAt = System.currentTimeMillis();
+        }
+
+        boolean isExpired() {
+            return System.currentTimeMillis() - createdAt > VERIFY_CODE_EXPIRE_SECONDS * 1000L;
+        }
+    }
+
+    /**
      * 保存验证码
      *
      * @param key         唯一标识（如手机号）
      * @param verifyCode  验证码
-     * @param session     HTTP Session（降级使用）
+     * @param session     HTTP Session（保留兼容）
      */
     public void saveVerifyCode(String key, String verifyCode, HttpSession session) {
         if (key == null || verifyCode == null) {
@@ -56,14 +81,16 @@ public class VerifyCodeUtils {
                 log.debug("验证码已保存到 Redis - key: {}, expire: {}s", key, VERIFY_CODE_EXPIRE_SECONDS);
                 return;
             } catch (Exception e) {
-                log.warn("保存验证码到 Redis 失败，降级到 Session: {}", e.getMessage());
-                // Redis 保存失败，降级到 Session
+                log.warn("保存验证码到 Redis 失败，降级到本地内存: key={}, error={}", key, e.getMessage());
+                // Redis 保存失败，降级到本地内存
             }
         }
 
-        // Redis 不可用或保存失败，使用 Session（单机部署）
-        session.setAttribute(key, verifyCode);
-        log.debug("验证码已保存到 Session - key: {}", key);
+        // 降级到本地内存 + 告警（集群部署时此降级不可靠）
+        localCache.put(key, new CodeEntry(verifyCode));
+        if (redisTemplate == null) {
+            log.warn("[验证码] Redis 不可用，使用本地内存缓存(集群环境验证码不可靠！): key={}", key);
+        }
     }
 
     /**
@@ -71,7 +98,7 @@ public class VerifyCodeUtils {
      *
      * @param key         唯一标识（如手机号）
      * @param verifyCode  用户提交的验证码
-     * @param session     HTTP Session（降级使用）
+     * @param session     HTTP Session（保留兼容）
      * @return true=验证通过，false=验证失败
      */
     public boolean verifyCode(String key, String verifyCode, HttpSession session) {
@@ -91,21 +118,27 @@ public class VerifyCodeUtils {
                     return true;
                 }
             } catch (Exception e) {
-                log.warn("从 Redis 获取验证码失败，降级到 Session: {}", e.getMessage());
-                // Redis 获取失败，降级到 Session
+                log.warn("从 Redis 获取验证码失败，降级到本地内存: key={}, error={}", key, e.getMessage());
             }
         }
 
-        // Redis 不可用或未找到，降级到 Session
-        Object codeInSession = session.getAttribute(key);
-        if (codeInSession != null && Objects.equals(codeInSession.toString(), verifyCode)) {
-            // 验证通过，删除验证码（防止重复使用）
-            session.removeAttribute(key);
-            log.debug("验证码校验通过（Session）- key: {}", key);
-            return true;
+        // 降级到本地内存（带 TTL 检查）
+        CodeEntry entry = localCache.get(key);
+        if (entry != null) {
+            // 检查是否过期
+            if (entry.isExpired()) {
+                localCache.remove(key);
+                log.debug("验证码已过期（本地缓存）- key: {}", key);
+                return false;
+            }
+            if (Objects.equals(entry.code, verifyCode)) {
+                localCache.remove(key);
+                log.debug("验证码校验通过（本地缓存）- key: {}", key);
+                return true;
+            }
         }
 
-        log.debug("验证码校验失败 - key: {}, verifyCode: {}", key, verifyCode);
+        log.debug("验证码校验失败 - key: {}", key);
         return false;
     }
 
@@ -113,7 +146,7 @@ public class VerifyCodeUtils {
      * 检查验证码是否存在（未验证）
      *
      * @param key     唯一标识（如手机号）
-     * @param session HTTP Session（降级使用）
+     * @param session HTTP Session（保留兼容）
      * @return true=存在，false=不存在
      */
     public boolean hasVerifyCode(String key, HttpSession session) {
@@ -127,19 +160,27 @@ public class VerifyCodeUtils {
                 String redisKey = VERIFY_CODE_KEY_PREFIX + key;
                 return redisTemplate.hasKey(redisKey);
             } catch (Exception e) {
-                log.warn("检查 Redis 验证码失败，降级到 Session: {}", e.getMessage());
+                log.warn("检查 Redis 验证码失败，降级到本地内存: key={}, error={}", key, e.getMessage());
             }
         }
 
-        // 降级到 Session
-        return session.getAttribute(key) != null;
+        // 降级到本地内存
+        CodeEntry entry = localCache.get(key);
+        if (entry != null) {
+            if (entry.isExpired()) {
+                localCache.remove(key);
+                return false;
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
      * 清除验证码
      *
      * @param key     唯一标识（如手机号）
-     * @param session HTTP Session（降级使用）
+     * @param session HTTP Session（保留兼容）
      */
     public void clearVerifyCode(String key, HttpSession session) {
         if (key == null) {
@@ -155,7 +196,7 @@ public class VerifyCodeUtils {
             }
         }
 
-        // 清除 Session
-        session.removeAttribute(key);
+        // 清除本地缓存
+        localCache.remove(key);
     }
 }

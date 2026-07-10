@@ -260,4 +260,36 @@ public class DishEvaluationController {
         Page<DishEvaluation> evaluations = dishEvaluationService.page(pageObj, queryWrapper);
         return R.success(evaluations);
     }
+
+    /**
+     * 管理端评价分页查询（支持菜品名称、状态、评分筛选）
+     *
+     * @param dishName   菜品名称（可选，模糊查询）
+     * @param status     审核状态（可选）
+     * @param starRating 评分（可选）
+     * @param page       页码
+     * @param pageSize   每页条数
+     * @return 分页评价列表
+     */
+    @GetMapping("/page")
+    @Operation(summary = "管理端评价分页查询", description = "支持按菜品名称、审核状态、评分筛选的评价管理列表")
+    public R<Page<DishEvaluation>> adminPage(
+            @Parameter(name = "dishName", description = "菜品名称（模糊查询）") @RequestParam(required = false) String dishName,
+            @Parameter(name = "status", description = "审核状态（0待审核 1通过 2拒绝）") @RequestParam(required = false) Integer status,
+            @Parameter(name = "starRating", description = "评分（1-5）") @RequestParam(required = false) Integer starRating,
+            @Parameter(name = "page", description = "页码") @RequestParam(defaultValue = "1") Integer page,
+            @Parameter(name = "pageSize", description = "每页条数") @RequestParam(defaultValue = "10") Integer pageSize) {
+
+        log.info("[Evaluation] 管理端评价查询：dishName={}, status={}, starRating={}, page={}, pageSize={}",
+                dishName, status, starRating, page, pageSize);
+
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("租户信息缺失");
+        }
+
+        Page<DishEvaluation> result = dishEvaluationService.adminPage(
+                tenantId, dishName, status, starRating, page, pageSize);
+        return R.success(result);
+    }
 }

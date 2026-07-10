@@ -7,16 +7,21 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 /**
  * 限流切面
  * 基于 Redis 滑动窗口算法实现接口限流
+ * 使用Lua脚本保证increment+expire的原子性
  *
  * @author reggie
  * @since 2026-07-09
@@ -42,6 +47,14 @@ public class RateLimitAspect {
     private static final String ANONYMOUS_USER = "anonymous";
 
     /**
+     * Lua脚本：原子性的increment+expire操作
+     * KEYS[1] = 限流Key
+     * ARGV[1] = 过期时间（秒）
+     * 返回值 = increment后的计数值
+     */
+    private DefaultRedisScript<Long> rateLimitScript;
+
+    /**
      * 构造方法，注入RedisTemplate
      *
      * @param redisTemplate Redis操作模板，可选依赖
@@ -55,6 +68,17 @@ public class RateLimitAspect {
         } else {
             log.info("API限流未启用（Redis不可用），已降级");
         }
+    }
+
+    /**
+     * 初始化Lua脚本
+     */
+    @PostConstruct
+    public void init() {
+        rateLimitScript = new DefaultRedisScript<>();
+        rateLimitScript.setScriptSource(new ResourceScriptSource(
+                new org.springframework.core.io.ClassPathResource("scripts/rate_limit.lua")));
+        rateLimitScript.setResultType(Long.class);
     }
 
     /**
@@ -87,13 +111,10 @@ public class RateLimitAspect {
         String limitKey = buildLimitKey(point, rateLimit);
 
         try {
-            // 增加计数器
-            Long count = redisTemplate.opsForValue().increment(limitKey);
-
-            // 首次设置过期时间（1秒）
-            if (count != null && count == 1) {
-                redisTemplate.expire(limitKey, 1, TimeUnit.SECONDS);
-            }
+            // 使用Lua脚本原子性执行increment+expire
+            Long count = redisTemplate.execute(rateLimitScript,
+                    Collections.singletonList(limitKey),
+                    1); // 过期时间1秒
 
             // 判断是否超过限流阈值
             if (count != null && count > rateLimit.maxRequestsPerSecond()) {
@@ -157,18 +178,5 @@ public class RateLimitAspect {
             return request.getRemoteAddr();
         }
         return "unknown";
-    }
-
-    /**
-     * 检查 Redis 是否可用
-     */
-    private boolean isRedisAvailable() {
-        try {
-            redisTemplate.opsForValue().get("health_check");
-            return true;
-        } catch (Exception e) {
-            log.warn("Redis 连接异常：{}", e.getMessage());
-            return false;
-        }
     }
 }

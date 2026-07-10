@@ -27,7 +27,7 @@ public class MockPushProvider implements PushProvider {
      */
     @Override
     public boolean pushToDevice(UserDevice device, PushMessage message) {
-        log.info("[APP推送Mock] userId={}, platform={}, token={}, title={}, content={}, clickAction={}, extras={}",
+        log.debug("[APP推送Mock] userId={}, platform={}, token={}, title={}, content={}, clickAction={}, extras={}",
                 device.getUserId(),
                 device.getPlatform(),
                 maskToken(device.getDeviceToken()),

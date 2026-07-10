@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.reggie.common.SecurityConstants;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -17,46 +18,47 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("tenant")
+@Schema(description = "租户实体")
 public class Tenant implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    /** 租户ID */
+    @Schema(description = "租户ID", example = "1")
     private Long id;
 
-    /** 租户名称 */
+    @Schema(description = "租户名称", example = "瑞吉外卖总店", required = true)
     @NotBlank(message = "租户名称不能为空")
     @Size(max = 100, message = "租户名称不能超过100个字符")
     private String name;
 
-    /** 手机号 */
+    @Schema(description = "手机号", example = "13800138000", required = true)
     @NotBlank(message = "手机号不能为空")
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
 
-    /** 地址 */
+    @Schema(description = "地址", example = "北京市朝阳区xxx")
     @Size(max = 200, message = "地址不能超过200个字符")
     private String address;
 
-    /** 租户状态 */
+    @Schema(description = "租户状态：0=禁用，1=正常", example = "1", required = true)
     @NotNull(message = "租户状态不能为空")
     private Integer status;
 
-    /** 密码加密类型：MD5、BCRYPT */
+    @Schema(description = "密码加密类型", example = "MD5")
     private String passwordType = SecurityConstants.PASSWORD_TYPE_MD5;
 
-    /** 创建时间 */
+    @Schema(description = "创建时间")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    /** 更新时间 */
+    @Schema(description = "更新时间")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-    /** 创建人 */
+    @Schema(description = "创建人ID")
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
-    /** 修改人 */
+    @Schema(description = "修改人ID")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 }

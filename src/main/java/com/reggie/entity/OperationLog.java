@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -17,108 +18,72 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("operation_log")
+@Schema(description = "操作审计日志实体")
 public class OperationLog implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @Schema(description = "日志ID", example = "1")
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 操作人ID
-     */
+    @Schema(description = "操作人ID", example = "1")
     private Long operatorId;
 
-    /**
-     * 操作人姓名
-     */
+    @Schema(description = "操作人姓名", example = "张三")
     private String operatorName;
 
-    /**
-     * 操作人IP
-     */
+    @Schema(description = "操作人IP", example = "192.168.1.100")
     private String operatorIp;
 
-    /**
-     * 操作模块（如：菜品管理、订单管理、员工管理）
-     */
+    @Schema(description = "操作模块", example = "菜品管理")
     private String module;
 
-    /**
-     * 操作类型：INSERT/UPDATE/DELETE/OTHER
-     */
+    @Schema(description = "操作类型：INSERT/UPDATE/DELETE/OTHER", example = "UPDATE")
     private String operationType;
 
-    /**
-     * 业务表名
-     */
+    @Schema(description = "业务表名", example = "dish")
     private String tableName;
 
-    /**
-     * 业务记录ID
-     */
+    @Schema(description = "业务记录ID", example = "1")
     private Long bizId;
 
-    /**
-     * 操作描述
-     */
+    @Schema(description = "操作描述", example = "修改菜品价格")
     private String description;
 
-    /**
-     * 变更前的值（JSON格式）
-     */
+    @Schema(description = "变更前的值（JSON格式）")
     private String oldValue;
 
-    /**
-     * 变更后的值（JSON格式）
-     */
+    @Schema(description = "变更后的值（JSON格式）")
     private String newValue;
 
-    /**
-     * 请求URL
-     */
+    @Schema(description = "请求URL", example = "/dish/1")
     private String requestUrl;
 
-    /**
-     * 请求方法（GET/POST/PUT/DELETE）
-     */
+    @Schema(description = "请求方法", example = "PUT")
     private String requestMethod;
 
-    /**
-     * 请求参数（JSON格式）
-     */
+    @Schema(description = "请求参数（JSON格式）")
     private String requestParams;
 
-    /**
-     * 执行时长（毫秒）
-     */
+    @Schema(description = "执行时长（毫秒）", example = "50")
     private Long duration;
 
-    /**
-     * 是否成功：0失败 1成功
-     */
+    @Schema(description = "是否成功：0=失败，1=成功", example = "1")
     private Integer isSuccess;
 
-    /**
-     * 错误信息
-     */
+    @Schema(description = "错误信息")
     private String errorMsg;
 
-    /**
-     * 创建时间
-     */
+    @Schema(description = "创建时间")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    /**
-     * 租户ID
-     */
+    @Schema(description = "租户ID", example = "1")
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    /**
-     * 是否删除（逻辑删除）
-     */
+    @Schema(description = "是否删除：0=否，1=是")
     @TableLogic(value = "0", delval = "1")
     @TableField("is_deleted")
     private Integer isDeleted;

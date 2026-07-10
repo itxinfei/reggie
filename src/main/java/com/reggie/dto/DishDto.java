@@ -2,6 +2,7 @@ package com.reggie.dto;
 
 import com.reggie.entity.Dish;
 import com.reggie.entity.DishFlavor;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import java.util.ArrayList;
@@ -15,20 +16,15 @@ import java.util.List;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
+@Schema(description = "菜品数据传输对象（含口味信息）")
 public class DishDto extends Dish {
 
-    /**
-     * 菜品对应的口味数据
-     */
+    @Schema(description = "菜品口味列表")
     private List<DishFlavor> flavors = new ArrayList<>();
 
-    /**
-     * 分类名称
-     */
+    @Schema(description = "分类名称", example = "热销榜")
     private String categoryName;
 
-    /**
-     * 份数
-     */
+    @Schema(description = "份数（购物车使用）", example = "1")
     private Integer copies;
 }

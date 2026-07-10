@@ -4,6 +4,7 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.service.DashboardService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +38,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/dashboard")
 @Slf4j
-@Tag(name = "数据概览仪表盘")
+@Tag(name = "数据概览仪表盘", description = "后台管理首页实时统计数据接口，支持Redis缓存加速")
 public class DashboardController {
 
     @Autowired
@@ -98,6 +99,7 @@ public class DashboardController {
     @GetMapping("/hot-dishes")
     @Operation(summary = "热销菜品", description = "获取今日热销菜品排行Top N")
     public R<List<Map<String, Object>>> hotDishes(
+            @Parameter(name = "limit", description = "返回的热销菜品数量", required = true, example = "10")
             @RequestParam(defaultValue = "10") int limit) {
         Long tenantId = BaseContext.getCurrentTenantId();
         log.info("[Dashboard] 获取热销菜品 tenantId={} limit={}", tenantId, limit);
@@ -123,7 +125,9 @@ public class DashboardController {
      */
     @GetMapping("/all")
     @Operation(summary = "汇总数据", description = "一次性获取仪表盘所有数据（概览、趋势、状态分布、热销菜品、健康状态），减少前端请求次数")
-    public R<Map<String, Object>> all(@RequestParam(defaultValue = "10") int hotDishLimit) {
+    public R<Map<String, Object>> all(
+            @Parameter(name = "hotDishLimit", description = "热销菜品返回数量", required = true, example = "10")
+            @RequestParam(defaultValue = "10") int hotDishLimit) {
         Long tenantId = BaseContext.getCurrentTenantId();
         log.info("[Dashboard] 获取汇总数据 tenantId={}", tenantId);
 

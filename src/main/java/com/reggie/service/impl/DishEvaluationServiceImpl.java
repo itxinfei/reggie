@@ -122,6 +122,20 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         return pageObj;
     }
 
+    @Override
+    public Page<DishEvaluation> adminPage(Long tenantId, String dishName, Integer status,
+                                           Integer starRating, Integer page, Integer pageSize) {
+        LambdaQueryWrapper<DishEvaluation> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(DishEvaluation::getTenantId, tenantId)
+                .like(dishName != null && !dishName.isEmpty(), DishEvaluation::getDishName, dishName)
+                .eq(status != null, DishEvaluation::getStatus, status)
+                .eq(starRating != null, DishEvaluation::getStarRating, starRating)
+                .orderByDesc(DishEvaluation::getCreateTime);
+
+        Page<DishEvaluation> pageObj = new Page<>(page, pageSize);
+        return this.page(pageObj, queryWrapper);
+    }
+
     /**
      * 新增菜品评价
      *

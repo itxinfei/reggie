@@ -133,11 +133,11 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
-        <!-- Swagger/OpenAPI 3 -->
+        <!-- Swagger/OpenAPI 3（与Spring Boot 2.4.x兼容的版本） -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-ui</artifactId>
-            <version>1.6.9</version>
+            <version>1.5.13</version>
         </dependency>
 
         <!-- 二维码生成 -->

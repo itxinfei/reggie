@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import javax.validation.constraints.*;
 import java.io.Serializable;
@@ -15,14 +16,16 @@ import java.time.LocalDateTime;
  * 订单
  */
 @Data
+@Schema(description = "订单实体")
 public class Orders implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @Schema(description = "订单ID", example = "1")
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /** 订单号 */
+    @Schema(description = "订单号", example = "202607100001")
     private String number;
 
     /** 待付款 */
@@ -38,104 +41,92 @@ public class Orders implements Serializable {
     /** 已退款 */
     public static final int STATUS_REFUNDED = 6;
 
-    /** 订单状态 1待付款，2待接单/处理中，3已接单/派送中，4已完成，5已取消，6已退款 */
+    @Schema(description = "订单状态：1=待付款，2=待接单，3=派送中，4=已完成，5=已取消，6=已退款", example = "1", required = true)
     @NotNull(message = "订单状态不能为空")
     private Integer status;
 
-
-    /** 下单用户id */
+    @Schema(description = "下单用户ID", example = "1", required = true)
     @NotNull(message = "用户ID不能为空")
     private Long userId;
 
-    /** 地址id */
+    @Schema(description = "收货地址ID", example = "1", required = true)
     @NotNull(message = "地址ID不能为空")
     private Long addressBookId;
 
-
-    /** 下单时间 */
+    @Schema(description = "下单时间")
     private LocalDateTime orderTime;
 
-
-    /** 结账时间 */
+    @Schema(description = "结账时间")
     private LocalDateTime checkoutTime;
 
-
-    /** 支付方式 1微信，2支付宝 */
+    @Schema(description = "支付方式：1=微信，2=支付宝", example = "1")
     private Integer payMethod;
 
-
-    /** 实收金额 */
+    @Schema(description = "实收金额", example = "88.00", required = true)
     @NotNull(message = "订单金额不能为空")
     @DecimalMin(value = "0.0", inclusive = false, message = "订单金额必须大于0")
     private BigDecimal amount;
 
-    /** 备注 */
+    @Schema(description = "备注", example = "少放辣")
     @Size(max = 200, message = "备注不能超过200个字符")
     private String remark;
 
-    /** 预计送达时间 */
+    @Schema(description = "预计送达时间", example = "30分钟内")
     @Size(max = 20, message = "送达时间格式不正确")
     private String expectDeliveryTime;
 
-    /** 用户名 */
+    @Schema(description = "用户名", example = "张三", required = true)
     @NotBlank(message = "用户名不能为空")
     @Size(max = 30, message = "用户名不能超过30个字符")
     private String userName;
 
-    /** 手机号 */
+    @Schema(description = "手机号", example = "13800138000", required = true)
     @NotBlank(message = "手机号不能为空")
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
 
-    /** 地址 */
+    @Schema(description = "收货地址", example = "北京市朝阳区xxx", required = true)
     @NotBlank(message = "收货地址不能为空")
     @Size(max = 200, message = "收货地址不能超过200个字符")
     private String address;
 
-    /** 收货人 */
+    @Schema(description = "收货人", example = "张三", required = true)
     @NotBlank(message = "收货人不能为空")
     @Size(max = 30, message = "收货人姓名不能超过30个字符")
     private String consignee;
 
-    /** 桌号 */
+    @Schema(description = "桌号（堂食使用）", example = "1")
     private Long tableId;
 
-    /** 就餐方式 */
+    @Schema(description = "就餐方式", example = "外卖")
     @Size(max = 20, message = "就餐方式不能超过20个字符")
     private String diningType;
 
-
-    /** 创建时间 */
+    @Schema(description = "创建时间")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-
-    /** 更新时间 */
+    @Schema(description = "更新时间")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-
-    /** 创建人 */
+    @Schema(description = "创建人ID")
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
-
-    /** 修改人 */
+    @Schema(description = "修改人ID")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 
-
-    /** 是否删除 */
+    @Schema(description = "是否删除：0=否，1=是")
     @TableLogic(value = "0", delval = "1")
     @TableField("is_deleted")
     private Integer isDeleted;
 
-    /** 租户id */
+    @Schema(description = "租户ID", example = "1")
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    /**
-     * 幂等令牌（防止重复下单）
-     */
+    @Schema(description = "幂等令牌（防止重复下单）", example = "uuid-xxxx-xxxx")
     private String idempotencyKey;
 }

@@ -41,7 +41,6 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper,Category> im
      */
     @Override
     public void remove(Long id) {
-        redisCacheUtil.doubleDeleteAllEntries("categories");
         LambdaQueryWrapper<Dish> dishLambdaQueryWrapper = new LambdaQueryWrapper<>();
         //添加查询条件，根据分类id进行查询
         dishLambdaQueryWrapper.eq(Dish::getCategoryId,id);
@@ -65,6 +64,9 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper,Category> im
 
         //正常删除分类
         super.removeById(id);
+
+        // 删除成功后再清除缓存（避免异常时缓存与数据库不一致）
+        redisCacheUtil.doubleDeleteAllEntries("categories");
     }
 
     /**

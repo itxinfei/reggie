@@ -1,6 +1,7 @@
 package com.reggie.module.sys.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("permission")
+@Schema(description = "权限实体")
 public class Permission implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -22,34 +24,37 @@ public class Permission implements Serializable {
     /** 权限类型：数据 */
     public static final int TYPE_DATA = 3;
 
+    @Schema(description = "权限ID", example = "1")
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /** 权限名称 */
+    @Schema(description = "权限名称", example = "菜品管理", required = true)
     private String permissionName;
 
-    /** 权限标识（如dish:view/dish:edit） */
+    @Schema(description = "权限标识", example = "dish:view", required = true)
     private String permissionKey;
 
-    /** 权限类型 1:菜单 2:按钮 3:数据 */
+    @Schema(description = "权限类型：1=菜单，2=按钮，3=数据", example = "1")
     private Integer permissionType;
 
-    /** 父权限ID，0表示顶级 */
+    @Schema(description = "父权限ID（0表示顶级）", example = "0")
     private Long parentId;
 
-    /** 路由路径（菜单权限用） */
+    @Schema(description = "路由路径（菜单权限用）", example = "/dish")
     private String routePath;
 
-    /** 菜单图标 */
+    @Schema(description = "菜单图标", example = "el-icon-dish")
     private String icon;
 
-    /** 排序 */
+    @Schema(description = "排序（升序）", example = "1")
     private Integer sort;
 
-    /** 状态 0:禁用 1:启用 */
+    @Schema(description = "状态：0=禁用，1=启用", example = "1")
     private Integer status;
 
+    @Schema(description = "创建时间")
     private LocalDateTime createTime;
 
+    @Schema(description = "更新时间")
     private LocalDateTime updateTime;
 }

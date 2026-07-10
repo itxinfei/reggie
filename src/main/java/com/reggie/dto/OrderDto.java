@@ -2,6 +2,7 @@ package com.reggie.dto;
 
 import com.reggie.entity.OrderDetail;
 import com.reggie.entity.Orders;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import java.util.List;
@@ -14,10 +15,9 @@ import java.util.List;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
+@Schema(description = "订单数据传输对象（含订单详情）")
 public class OrderDto extends Orders {
 
-    /**
-     * 订单详情列表
-     */
+    @Schema(description = "订单详情列表")
     private List<OrderDetail> orderDetails;
 }

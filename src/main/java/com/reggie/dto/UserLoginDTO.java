@@ -12,6 +12,7 @@ import javax.validation.constraints.NotBlank;
  * @since 2026-07-09
  */
 @Data
+@Schema(description = "用户登录请求参数")
 public class UserLoginDTO {
 
     @Schema(description = "手机号", required = true, example = "13800138000")

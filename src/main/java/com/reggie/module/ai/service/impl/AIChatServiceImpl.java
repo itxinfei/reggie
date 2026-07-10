@@ -1,6 +1,8 @@
 package com.reggie.module.ai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +24,9 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * AI聊天服务实现
@@ -68,12 +73,30 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     /** 单次对话携带的最大历史消息数 */
     private static final int MAX_HISTORY_MESSAGES = 20;
 
+    /** AI异步任务线程池 */
+    @Resource
+    private Executor aiExecutor;
+
     // ==================== 流式对话 ====================
+
+    /**
+     * 解析SSE超时时间（毫秒）
+     * 优先级：供应商配置 > YAML配置 > 默认60秒，额外加30秒缓冲
+     */
+    private long resolveSseTimeout() {
+        AiProviderConfig providerConfig = aiProviderManager.getActiveConfig();
+        int timeout;
+        if (providerConfig != null && providerConfig.getTimeout() != null) {
+            timeout = providerConfig.getTimeout();
+        } else {
+            timeout = aiConfig.getTimeout();
+        }
+        return (long) timeout * 1000L + 30000L;
+    }
 
     @Override
     public SseEmitter chatStream(AIChatRequest request) {
-        AiProviderConfig providerConfig = aiProviderManager.getActiveConfig();
-        long sseTimeout = (providerConfig != null ? (long)(providerConfig.getTimeout() != null ? providerConfig.getTimeout() : 60) : (long)aiConfig.getTimeout()) * 1000L + 30000L;
+        long sseTimeout = resolveSseTimeout();
         SseEmitter emitter = new SseEmitter(sseTimeout);
         emitter.onTimeout(() -> log.warn("SSE连接超时: conversationId={}", request.getConversationId()));
         emitter.onError((e) -> log.warn("SSE连接错误: conversationId={}", request.getConversationId(), e));
@@ -81,6 +104,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
         saveUserMessage(request);
         final Long userId = request.getUserId();
+        final AiProviderConfig providerConfig = aiProviderManager.getActiveConfig();
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -93,6 +117,11 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
                 Long savedAiMsgId = null;
                 if (response != null && response.getContent() != null) {
+                    // 点餐场景：先解析推荐菜品，再清理content中的JSON
+                    if ("order_assistant".equals(request.getScene())) {
+                        response.setDishes(parseRecommendedDishes(response.getContent()));
+                        response.setContent(cleanJsonFromContent(response.getContent()));
+                    }
                     savedAiMsgId = saveAiMessage(request.getConversationId(), userId,
                             response.getContent(), response.getTokensUsed(),
                             "order_assistant".equals(request.getScene()) ? response.getDishes() : null);
@@ -121,13 +150,10 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 }
                 emitter.send(SseEmitter.event().name("done").data(doneData));
 
-                // 点餐场景：解析推荐菜品
-                if ("order_assistant".equals(request.getScene()) && response != null && response.getContent() != null) {
-                    List<AIRecommendedDish> dishes = parseRecommendedDishes(response.getContent());
-                    if (dishes != null && !dishes.isEmpty()) {
-                        String dishJson = OBJECT_MAPPER.writeValueAsString(dishes);
-                        emitter.send(SseEmitter.event().name("dishes").data(dishJson));
-                    }
+                // 点餐场景：发送推荐菜品（已在前面解析并设置到response中）
+                if ("order_assistant".equals(request.getScene()) && response != null && response.getDishes() != null && !response.getDishes().isEmpty()) {
+                    String dishJson = OBJECT_MAPPER.writeValueAsString(response.getDishes());
+                    emitter.send(SseEmitter.event().name("dishes").data(dishJson));
                 }
 
                 updateConversationTitle(request.getConversationId(), request.getMessage());
@@ -144,36 +170,14 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                     emitter.completeWithError(ex);
                 }
             }
-        });
+        }, aiExecutor);
 
         return emitter;
     }
 
     @Override
     public SseEmitter orderAssistantStream(String userMessage, Long userId, String conversationId) {
-        Map<String, Object> context = new LinkedHashMap<>();
-        try {
-            if (userId != null) {
-                String pricePref = preferenceAnalysisService.analyzePricePreference(userId);
-                String timePref = preferenceAnalysisService.analyzeTimePreference(userId);
-                boolean isHighFreq = preferenceAnalysisService.isHighFrequencyUser(userId);
-                Map<String, Object> preferences = new LinkedHashMap<>();
-                preferences.put("pricePreference", pricePref);
-                preferences.put("timePreference", timePref);
-                preferences.put("isHighFrequency", isHighFreq);
-                context.put("preferences", preferences);
-            }
-        } catch (Exception e) {
-            log.warn("获取用户偏好失败: userId={}", userId, e);
-        }
-
-        List<Dish> availableDishes = dishMapper.selectList(
-                new LambdaQueryWrapper<Dish>()
-                        .eq(Dish::getStatus, 1)
-                        .eq(Dish::getIsDeleted, 0)
-                        .orderByDesc(Dish::getSort)
-        );
-        context.put("dishes", formatDishesForPrompt(availableDishes));
+        Map<String, Object> context = buildOrderContext(userId);
 
         // 创建或获取对话
         if (conversationId == null || conversationId.isEmpty()) {
@@ -202,11 +206,12 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         if (request.getUserId() != null) {
             CompletableFuture.runAsync(() -> {
                 try {
-                    userProfileService.refreshProfile(request.getUserId());
+                    // 修改点：使用节流刷新替代每次全量刷新
+                    userProfileService.refreshIfNeeded(request.getUserId());
                 } catch (Exception e) {
                     log.warn("异步刷新用户画像失败: userId={}", request.getUserId(), e);
                 }
-            });
+            }, aiExecutor);
         }
 
         List<AIMessage> messages = buildMessages(request);
@@ -221,6 +226,8 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         if ("order_assistant".equals(request.getScene()) && response != null && response.getContent() != null) {
             List<AIRecommendedDish> dishes = parseRecommendedDishes(response.getContent());
             response.setDishes(dishes);
+            // 清理content中的JSON部分，只保留人类可读的文本
+            response.setContent(cleanJsonFromContent(response.getContent()));
         }
 
         AIChatResponse result = response != null ? response : AIChatResponse.builder()
@@ -248,36 +255,15 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         if (userId != null) {
             CompletableFuture.runAsync(() -> {
                 try {
-                    userProfileService.refreshProfile(userId);
+                    // 修改点：使用节流刷新替代每次全量刷新
+                    userProfileService.refreshIfNeeded(userId);
                 } catch (Exception e) {
                     log.warn("异步刷新用户画像失败: userId={}", userId, e);
                 }
-            });
+            }, aiExecutor);
         }
 
-        Map<String, Object> context = new LinkedHashMap<>();
-        try {
-            if (userId != null) {
-                String pricePref = preferenceAnalysisService.analyzePricePreference(userId);
-                String timePref = preferenceAnalysisService.analyzeTimePreference(userId);
-                boolean isHighFreq = preferenceAnalysisService.isHighFrequencyUser(userId);
-                Map<String, Object> preferences = new LinkedHashMap<>();
-                preferences.put("pricePreference", pricePref);
-                preferences.put("timePreference", timePref);
-                preferences.put("isHighFrequency", isHighFreq);
-                context.put("preferences", preferences);
-            }
-        } catch (Exception e) {
-            log.warn("获取用户偏好失败: userId={}", userId, e);
-        }
-
-        List<Dish> availableDishes = dishMapper.selectList(
-                new LambdaQueryWrapper<Dish>()
-                        .eq(Dish::getStatus, 1)
-                        .eq(Dish::getIsDeleted, 0)
-                        .orderByDesc(Dish::getSort)
-        );
-        context.put("dishes", formatDishesForPrompt(availableDishes));
+        Map<String, Object> context = buildOrderContext(userId);
 
         AIConversation conv = createConversation(userId, null, "order_assistant");
         AIChatRequest request = AIChatRequest.builder()
@@ -332,9 +318,10 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AIConversation::getUserId, userId)
                 .eq(AIConversation::getIsDeleted, 0)
-                .orderByDesc(AIConversation::getUpdateTime)
-                .last("LIMIT " + ((page - 1) * pageSize) + ", " + pageSize);
-        return conversationMapper.selectList(wrapper);
+                .orderByDesc(AIConversation::getUpdateTime);
+        Page<AIConversation> pageObj = new Page<>(page, pageSize);
+        conversationMapper.selectPage(pageObj, wrapper);
+        return pageObj.getRecords();
     }
 
     @Override
@@ -371,14 +358,12 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         if (conv != null) {
             conv.setIsDeleted(1);
             conversationMapper.updateById(conv);
-            LambdaQueryWrapper<AIMessageRecord> msgWrapper = new LambdaQueryWrapper<>();
-            msgWrapper.eq(AIMessageRecord::getConversationId, conversationId)
-                    .eq(AIMessageRecord::getIsDeleted, 0);
-            List<AIMessageRecord> messages = messageRecordMapper.selectList(msgWrapper);
-            for (AIMessageRecord msg : messages) {
-                msg.setIsDeleted(1);
-                messageRecordMapper.updateById(msg);
-            }
+            // 修改点：批量更新消息记录，消除N+1问题
+            LambdaUpdateWrapper<AIMessageRecord> msgUpdateWrapper = new LambdaUpdateWrapper<>();
+            msgUpdateWrapper.eq(AIMessageRecord::getConversationId, conversationId)
+                    .eq(AIMessageRecord::getIsDeleted, 0)
+                    .set(AIMessageRecord::getIsDeleted, 1);
+            messageRecordMapper.update(null, msgUpdateWrapper);
         }
     }
 
@@ -503,6 +488,37 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         return sb.toString();
     }
 
+    /**
+     * 构建智能点餐场景的上下文数据（用户偏好 + 可用菜品）
+     * 修改点：提取公共方法，消除 orderAssistant() 和 orderAssistantStream() 的重复代码
+     */
+    private Map<String, Object> buildOrderContext(Long userId) {
+        Map<String, Object> context = new LinkedHashMap<>();
+        try {
+            if (userId != null) {
+                String pricePref = preferenceAnalysisService.analyzePricePreference(userId);
+                String timePref = preferenceAnalysisService.analyzeTimePreference(userId);
+                boolean isHighFreq = preferenceAnalysisService.isHighFrequencyUser(userId);
+                Map<String, Object> preferences = new LinkedHashMap<>();
+                preferences.put("pricePreference", pricePref);
+                preferences.put("timePreference", timePref);
+                preferences.put("isHighFrequency", isHighFreq);
+                context.put("preferences", preferences);
+            }
+        } catch (Exception e) {
+            log.warn("获取用户偏好失败: userId={}", userId, e);
+        }
+
+        List<Dish> availableDishes = dishMapper.selectList(
+                new LambdaQueryWrapper<Dish>()
+                        .eq(Dish::getStatus, 1)
+                        .eq(Dish::getIsDeleted, 0)
+                        .orderByDesc(Dish::getSort)
+        );
+        context.put("dishes", formatDishesForPrompt(availableDishes));
+        return context;
+    }
+
     private List<AIRecommendedDish> parseRecommendedDishes(String aiContent) {
         List<AIRecommendedDish> result = new ArrayList<>();
         try {
@@ -510,18 +526,29 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             if (jsonStr != null) {
                 JsonNode root = OBJECT_MAPPER.readTree(jsonStr);
                 if (root.isArray()) {
+                    // 修改点：先收集所有dishId，批量查询，消除N+1问题
+                    List<Long> dishIds = new ArrayList<>();
+                    Map<Long, String> dishReasonMap = new HashMap<>();
                     for (JsonNode node : root) {
                         Long dishId = node.has("dishId") ? node.get("dishId").asLong() : null;
                         String reason = node.has("reason") ? node.get("reason").asText() : "";
                         if (dishId != null) {
-                            Dish dish = dishMapper.selectById(dishId);
+                            dishIds.add(dishId);
+                            dishReasonMap.put(dishId, reason);
+                        }
+                    }
+                    if (!dishIds.isEmpty()) {
+                        Map<Long, Dish> dishMap = dishMapper.selectBatchIds(dishIds).stream()
+                                .collect(Collectors.toMap(Dish::getId, Function.identity()));
+                        for (Long dishId : dishIds) {
+                            Dish dish = dishMap.get(dishId);
                             if (dish != null) {
                                 result.add(AIRecommendedDish.builder()
                                         .dishId(dish.getId())
                                         .name(dish.getName())
                                         .price(dish.getPrice())
                                         .image(dish.getImage())
-                                        .reason(reason)
+                                        .reason(dishReasonMap.getOrDefault(dishId, ""))
                                         .score(0.9)
                                         .build());
                             }
@@ -533,6 +560,33 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             log.debug("解析AI推荐菜品失败（Mock模式下正常）: {}", e.getMessage());
         }
         return result;
+    }
+
+    /**
+     * 从AI回复中清理JSON部分，只保留人类可读的文本内容
+     */
+    private String cleanJsonFromContent(String content) {
+        if (content == null) return null;
+        String cleaned = content;
+        // 清理JSON数组
+        int start = cleaned.indexOf('[');
+        int end = cleaned.lastIndexOf(']');
+        if (start >= 0 && end > start) {
+            String before = cleaned.substring(0, start).trim();
+            String after = cleaned.substring(end + 1).trim();
+            cleaned = (before + " " + after).trim();
+        }
+        // 清理JSON对象
+        start = cleaned.indexOf('{');
+        end = cleaned.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            String before = cleaned.substring(0, start).trim();
+            String after = cleaned.substring(end + 1).trim();
+            cleaned = (before + " " + after).trim();
+        }
+        // 清理可能残留的代码块标记
+        cleaned = cleaned.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");
+        return cleaned.trim();
     }
 
     private String extractJson(String content) {
@@ -572,9 +626,10 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         LambdaQueryWrapper<AIMessageRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AIMessageRecord::getConversationId, conversationId)
                 .eq(AIMessageRecord::getIsDeleted, 0)
-                .orderByDesc(AIMessageRecord::getCreateTime)
-                .last("LIMIT " + MAX_HISTORY_MESSAGES);
-        List<AIMessageRecord> records = messageRecordMapper.selectList(wrapper);
+                .orderByDesc(AIMessageRecord::getCreateTime);
+        Page<AIMessageRecord> pageObj = new Page<>(1, MAX_HISTORY_MESSAGES);
+        messageRecordMapper.selectPage(pageObj, wrapper);
+        List<AIMessageRecord> records = pageObj.getRecords();
         // 反转列表，使消息按时间正序排列（最早的在前）
         Collections.reverse(records);
         return records;

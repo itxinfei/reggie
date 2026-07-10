@@ -85,7 +85,7 @@ public class UserController {
      */
     @com.reggie.common.RateLimit(maxRequestsPerSecond = 3)
     @PostMapping("/sendMsg")
-    @Operation(summary = "发送短信验证码")
+    @Operation(summary = "发送短信验证码", description = "向指定手机号发送登录验证码，60秒内不可重复发送")
     public R<String> sendMsg(@Valid @RequestBody SendMsgDTO dto, HttpSession session){
         String phone = dto.getPhone();
 
@@ -140,7 +140,7 @@ public class UserController {
      * @return 用户信息
      */
     @PostMapping("/login")
-    @Operation(summary = "用户登录")
+    @Operation(summary = "用户登录", description = "手机号+验证码登录，新用户自动注册，支持防暴力破解保护")
     public R<User> login(@Valid @RequestBody UserLoginDTO dto, HttpSession session){
         String phone = dto.getPhone();
         String code = dto.getCode();
@@ -226,7 +226,7 @@ public class UserController {
      * @return 退出结果
      */
     @PostMapping("/loginout")
-    @Operation(summary = "用户退出")
+    @Operation(summary = "用户退出", description = "退出当前登录账号，清除会话信息")
     public R<String> loginout(HttpSession session) {
         session.removeAttribute("user");
         return R.success("退出成功");
@@ -239,7 +239,7 @@ public class UserController {
      * @return 用户信息
      */
     @GetMapping("/info")
-    @Operation(summary = "获取当前登录用户信息")
+    @Operation(summary = "获取当前登录用户信息", description = "返回当前登录用户的详细信息，需携带有效会话")
     public R<User> getCurrentUser(HttpSession session) {
         Long userId = (Long) session.getAttribute("user");
         if (userId == null) {
@@ -263,7 +263,7 @@ public class UserController {
      * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "用户分页查询")
+    @Operation(summary = "用户分页查询", description = "分页查询用户列表，支持按姓名、手机号模糊搜索和状态筛选，自动过滤当前租户数据")
     public R<Page<User>> page(
             @Parameter(name = "page", description = "页码", required = true, example = "1") int page,
             @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10") int pageSize,
@@ -299,7 +299,7 @@ public class UserController {
      * @return 操作结果
      */
     @PutMapping("/status")
-    @Operation(summary = "修改用户状态")
+    @Operation(summary = "修改用户状态", description = "启用或禁用指定用户账号，自动校验租户权限")
     public R<String> updateStatus(
             @Parameter(name = "id", description = "用户ID", required = true) Long id,
             @Parameter(name = "status", description = "状态：0禁用 1正常", required = true) Integer status) {
@@ -368,7 +368,7 @@ public class UserController {
      * @return 操作结果
      */
     @DeleteMapping
-    @Operation(summary = "删除用户")
+    @Operation(summary = "删除用户", description = "删除指定用户，自动校验租户权限")
     public R<String> delete(@Parameter(name = "id", description = "用户ID", required = true) Long id) {
         log.info("删除用户：id={}", id);
 

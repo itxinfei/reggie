@@ -1,10 +1,17 @@
 package com.reggie.config;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import java.lang.reflect.Array;
+
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -17,6 +24,7 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import java.lang.reflect.Array;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,24 +47,63 @@ public class RedisConfig {
     private static final long DEFAULT_CACHE_TTL_MINUTES = 30;
 
     /**
-     * 配置RedisTemplate
-     * key使用String序列化，value使用Jackson JSON序列化
+     * 允许反序列化的包路径白名单
+     */
+    private static final String[] ALLOWED_PACKAGES = {
+            "com.reggie.",
+            "java.util.",
+            "java.time.",
+            "java.lang."
+    };
+
+    /**
+     * 统一配置 ObjectMapper Bean
+     * 避免重复创建，集中管理序列化策略
+     * <p>
+     * 安全注意：启用 DefaultTyping 用于 Redis 反序列化时保留类型信息，
+     * 同时使用白名单限制允许的包路径，防止反序列化漏洞。
      *
-     * @param connectionFactory Redis连接工厂
-     * @return 配置好的RedisTemplate
+     * @return 配置好的 ObjectMapper
      */
     @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
-
-        // JSON 序列化配置
+    public ObjectMapper redisObjectMapper() {
         ObjectMapper om = new ObjectMapper();
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         om.registerModule(new JavaTimeModule());
 
-        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(om);
+        // 使用白名单限制允许反序列化的包路径，防止反序列化漏洞
+        PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
+                .allowIfBaseType(Object.class)
+                .allowIfSubType(Array.class)
+                .allowIfSubType("com.reggie.")
+                .allowIfSubType("java.util.")
+                .allowIfSubType("java.time.")
+                .allowIfSubType("java.lang.")
+                .build();
+
+        om.activateDefaultTyping(ptv,
+                ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
+        return om;
+    }
+
+    /**
+     * 配置RedisTemplate
+     * key使用String序列化，value使用Jackson JSON序列化
+     *
+     * @param connectionFactory Redis连接工厂
+     * @param objectMapper      统一配置的ObjectMapper
+     * @return 配置好的RedisTemplate
+     */
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory,
+                                                        @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+
+        // 使用 GenericJackson2JsonRedisSerializer + 自定义 ObjectMapper
+        // ObjectMapper 已启用 DefaultTyping 确保反序列化时类型正确
+        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
 
         StringRedisSerializer stringSerializer = new StringRedisSerializer();
 
@@ -77,17 +124,13 @@ public class RedisConfig {
      * 支持不同缓存名称配置不同的TTL过期时间
      *
      * @param connectionFactory Redis连接工厂
+     * @param objectMapper      统一配置的ObjectMapper
      * @return CacheManager实例
      */
     @Bean
-    public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        // 配置JSON序列化
-        ObjectMapper om = new ObjectMapper();
-        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        om.registerModule(new JavaTimeModule());
-
-        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(om);
+    public CacheManager cacheManager(RedisConnectionFactory connectionFactory,
+                                      @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
 
         // 默认缓存配置：30分钟过期
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()

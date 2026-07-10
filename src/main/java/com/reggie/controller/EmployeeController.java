@@ -155,6 +155,45 @@ public class EmployeeController {
         return R.success(result);
     }
 
+    /**
+     * 忘记密码 - 通过用户名+手机号验证后重置密码
+     * @param params 包含 username, phone, newPassword
+     * @return 操作结果
+     */
+    @PostMapping("/forgot-password")
+    @Operation(summary = "忘记密码", description = "通过用户名和手机号验证后重置密码")
+    public R<String> forgotPassword(@RequestBody Map<String, String> params) {
+        String username = params.get("username");
+        String phone = params.get("phone");
+        String newPassword = params.get("newPassword");
+
+        if (username == null || username.trim().isEmpty()) {
+            return R.error("请输入用户名");
+        }
+        if (phone == null || phone.trim().isEmpty()) {
+            return R.error("请输入手机号");
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            return R.error("新密码至少6位");
+        }
+
+        LambdaQueryWrapper<Employee> qw = new LambdaQueryWrapper<>();
+        qw.eq(Employee::getUsername, username.trim());
+        qw.eq(Employee::getPhone, phone.trim());
+        Employee emp = employeeService.getOne(qw);
+
+        if (emp == null) {
+            return R.error("用户名与手机号不匹配");
+        }
+
+        emp.setPassword(PasswordUtils.encodePassword(newPassword));
+        emp.setPasswordType(SecurityConstants.DEFAULT_PASSWORD_TYPE);
+        employeeService.updateById(emp);
+
+        log.info("员工重置密码成功 - username: {}, empId: {}", username, emp.getId());
+        return R.success("密码重置成功，请使用新密码登录");
+    }
+
     private String maskPhone(String phone) {
         if (phone == null || phone.length() < 7) {
             return phone;
@@ -223,15 +262,17 @@ public class EmployeeController {
             LogMaskUtils.maskPhone(employee.getPhone()),
             LogMaskUtils.maskIdCard(employee.getIdNumber()));
 
-        // 设置初始密码（使用BCrypt加密）
-        employee.setPassword(PasswordUtils.encodePassword(SecurityConstants.DEFAULT_PASSWORD));
+        // 生成随机初始密码（使用BCrypt加密）
+        String initialPassword = SecurityConstants.generateRandomPassword();
+        employee.setPassword(PasswordUtils.encodePassword(initialPassword));
         employee.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
 
         employee.setTenantId(BaseContext.getCurrentTenantId());
 
         employeeService.save(employee);
 
-        return R.success("新增员工成功");
+        log.info("新增员工成功，初始密码已生成（请妥善保管）");
+        return R.success("新增员工成功，初始密码：" + initialPassword);
     }
 
     /**
@@ -287,6 +328,10 @@ public class EmployeeController {
         if (!isAdmin(request)) {
             return R.error("权限不足，仅管理员可修改员工信息");
         }
+
+        // 安全检查：禁止通过此接口修改密码和密码类型
+        employee.setPassword(null);
+        employee.setPasswordType(null);
 
         log.info("修改员工信息，手机号={}，身份证号={}",
             LogMaskUtils.maskPhone(employee.getPhone()),

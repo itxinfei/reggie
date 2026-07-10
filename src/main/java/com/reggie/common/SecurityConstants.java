@@ -1,5 +1,7 @@
 package com.reggie.common;
 
+import java.security.SecureRandom;
+
 /**
  * 安全相关常量
  *
@@ -56,7 +58,32 @@ public final class SecurityConstants {
     public static final String PASSWORD_TYPE_BCRYPT = "BCRYPT";
 
     /**
-     * 默认密码
+     * 默认密码类型（新用户/重置密码使用）
      */
-    public static final String DEFAULT_PASSWORD = "123456";
+    public static final String DEFAULT_PASSWORD_TYPE = PASSWORD_TYPE_BCRYPT;
+
+    /**
+     * 随机密码字符集（不含易混淆字符：0/O/1/l/I）
+     */
+    private static final String PASSWORD_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
+
+    /**
+     * 默认密码长度
+     */
+    private static final int DEFAULT_PASSWORD_LENGTH = 8;
+
+    /**
+     * 生成随机密码
+     * 用于新员工创建或密码重置，避免硬编码弱密码
+     *
+     * @return 随机生成的密码
+     */
+    public static String generateRandomPassword() {
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder(DEFAULT_PASSWORD_LENGTH);
+        for (int i = 0; i < DEFAULT_PASSWORD_LENGTH; i++) {
+            sb.append(PASSWORD_CHARS.charAt(random.nextInt(PASSWORD_CHARS.length())));
+        }
+        return sb.toString();
+    }
 }

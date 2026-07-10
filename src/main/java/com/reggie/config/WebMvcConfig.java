@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 
@@ -16,44 +16,39 @@ import java.util.List;
  *
  * @author reggie
  * @since 2026-07-09
+ * 修改点(2026-07-10)：从 extends WebMvcConfigurationSupport 改为 implements WebMvcConfigurer，
+ * 避免禁用Spring Boot MVC自动配置（否则springdoc-openapi和WebJars自动配置会失效）。
  */
 @Slf4j
 @Configuration
-public class WebMvcConfig extends WebMvcConfigurationSupport {
+public class WebMvcConfig implements WebMvcConfigurer {
 
     /**
      * 设置静态资源映射
-     * 映射前端页面、后端管理页面和Swagger UI资源
+     * 映射前端页面、后端管理页面资源
+     * Swagger UI 和 WebJars 资源由 springdoc-openapi 和 Spring Boot 自动配置处理，无需手动添加
      *
      * @param registry 资源处理器注册表
      */
     @Override
-    protected void addResourceHandlers(ResourceHandlerRegistry registry) {
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
         log.info("开始进行静态资源映射...");
         registry.addResourceHandler("/backend/**").addResourceLocations("classpath:/backend/");
         registry.addResourceHandler("/front/**").addResourceLocations("classpath:/front/");
-        
-        // Swagger UI 静态资源配置
-        registry.addResourceHandler("/swagger-ui/**")
-                .addResourceLocations("classpath:/META-INF/resources/webjars/springdoc-openapi-ui/1.6.9/");
-        registry.addResourceHandler("/webjars/**")
-                .addResourceLocations("classpath:/META-INF/resources/webjars/");
     }
 
     /**
-     * 扩展MVC框架的消息转换器
-     * 添加自定义Jackson对象转换器，支持Long类型序列化为字符串
+     * 修改点：通过 WebMvcConfigurer 方式扩展消息转换器
+     * 追加自定义Jackson转换器以支持Long类型序列化为字符串、Java 8时间类型格式化。
+     * 注意：不再声明ObjectMapper Bean，避免与RedisConfig的redisObjectMapper冲突。
      *
      * @param converters 消息转换器列表
      */
     @Override
-    protected void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+    public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
         log.info("扩展消息转换器...");
-        //创建消息转换器对象
         MappingJackson2HttpMessageConverter messageConverter = new MappingJackson2HttpMessageConverter();
-        //设置对象转换器，底层使用Jackson将Java对象转为json
         messageConverter.setObjectMapper(new JacksonObjectMapper());
-        //将上面的消息转换器对象追加到mvc框架的转换器集合中
-        converters.add(0,messageConverter);
+        converters.add(0, messageConverter);
     }
 }

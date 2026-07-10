@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
@@ -16,111 +17,97 @@ import java.time.LocalDateTime;
  * 地址簿
  */
 @Data
+@Schema(description = "收货地址实体")
 public class AddressBook implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @Schema(description = "地址ID", example = "1")
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
+    @Schema(description = "租户ID", example = "1")
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    /** 用户id */
+    @Schema(description = "用户ID", example = "1")
     private Long userId;
 
-
-    /** 收货人 */
+    @Schema(description = "收货人", example = "张三", required = true)
     @NotBlank(message = "收货人不能为空")
     @Size(max = 30, message = "收货人姓名不能超过30个字符")
     private String consignee;
 
-
-    /** 手机号 */
+    @Schema(description = "手机号", example = "13800138000", required = true)
     @NotBlank(message = "手机号不能为空")
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
 
-
-    /** 性别 0 女 1 男 */
+    @Schema(description = "性别：0=女，1=男", example = "1")
     @Size(max = 5, message = "性别格式不正确")
     private String sex;
 
-
-    /** 省级区划编号 */
+    @Schema(description = "省级区划编号", example = "110000", required = true)
     @NotBlank(message = "省级区划编号不能为空")
     private String provinceCode;
 
-
-    /** 省级名称 */
+    @Schema(description = "省级名称", example = "北京市", required = true)
     @NotBlank(message = "省级名称不能为空")
     private String provinceName;
 
-
-    /** 市级区划编号 */
+    @Schema(description = "市级区划编号", example = "110100", required = true)
     @NotBlank(message = "市级区划编号不能为空")
     private String cityCode;
 
-
-    /** 市级名称 */
+    @Schema(description = "市级名称", example = "北京市", required = true)
     @NotBlank(message = "市级名称不能为空")
     private String cityName;
 
-
-    /** 区级区划编号 */
+    @Schema(description = "区级区划编号", example = "110105", required = true)
     @NotBlank(message = "区级区划编号不能为空")
     private String districtCode;
 
-
-    /** 区级名称 */
+    @Schema(description = "区级名称", example = "朝阳区", required = true)
     @NotBlank(message = "区级名称不能为空")
     private String districtName;
 
-
-    /** 街道/乡镇级区划编号 */
+    @Schema(description = "街道/乡镇级区划编号", example = "110105001")
     private String streetCode;
 
-
-    /** 街道/乡镇级名称 */
+    @Schema(description = "街道/乡镇级名称", example = "三里屯街道")
     private String streetName;
 
-
-    /** 详细地址 */
+    @Schema(description = "详细地址", example = "xxx路xxx号xxx小区", required = true)
     @NotBlank(message = "详细地址不能为空")
     @Size(max = 200, message = "详细地址不能超过200个字符")
     private String detail;
 
-
-    /** 标签 */
+    @Schema(description = "标签", example = "家")
     @Size(max = 100, message = "标签不能超过100个字符")
     private String label;
 
-    /** 是否默认 0 否 1是 */
+    @Schema(description = "是否默认地址：0=否，1=是", example = "1")
     public static final int NOT_DEFAULT = 0;
     public static final int IS_DEFAULT = 1;
     private Integer isDefault;
 
-    /** 创建时间 */
+    @Schema(description = "创建时间")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-
-    /** 更新时间 */
+    @Schema(description = "更新时间")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-
-    /** 创建人 */
+    @Schema(description = "创建人ID")
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
-
-    /** 修改人 */
+    @Schema(description = "修改人ID")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 
-
-    /** 是否删除 */
+    @Schema(description = "是否删除：0=否，1=是")
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
 }

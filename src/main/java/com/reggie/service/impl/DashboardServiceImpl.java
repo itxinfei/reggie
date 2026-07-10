@@ -96,14 +96,15 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"}) // Redis Hash返回Object类型，需要泛型转换
     public Map<String, Object> getOverview(Long tenantId) {
-        String cacheKey = KEY_OVERVIEW + tenantId;
+        // tenantId为null时不使用缓存（超级管理员视图，避免数据串租户）
+        String cacheKey = tenantId != null ? KEY_OVERVIEW + tenantId : null;
 
-        // [Redis] 尝试从缓存获取
-        if (isRedisAvailable()) {
+        // [Redis] 尝试从缓存获取（仅当tenantId不为null时）
+        if (isRedisAvailable() && cacheKey != null) {
             try {
                 Map<Object, Object> cached = redisTemplate.opsForHash().entries(cacheKey);
                 if (cached != null && !cached.isEmpty()) {
-                    log.info("[Dashboard] Redis命中 - 概览数据 key={}", cacheKey);
+                    log.debug("[Dashboard] Redis命中 - 概览数据 key={}", cacheKey);
                     Map<String, Object> result = new LinkedHashMap<>();
                     cached.forEach((k, v) -> result.put(String.valueOf(k), v));
                     // 修正缓存来源标记
@@ -122,11 +123,12 @@ public class DashboardServiceImpl implements DashboardService {
             overview = computeOverview(tenantId);
         } catch (Exception e) {
             log.error("[Dashboard] 计算概览异常: {}", e.getMessage(), e);
-            overview = fallbackErrorResult("概览数据查询失败");
+            // 异常时不缓存，避免错误数据长时间生效
+            return fallbackErrorResult("概览数据查询失败");
         }
 
-        // [Redis] 回填缓存
-        if (isRedisAvailable()) {
+        // [Redis] 回填缓存（仅缓存有效数据）
+        if (isRedisAvailable() && cacheKey != null) {
             try {
                 Map<String, Object> hashData = new HashMap<>(overview);
                 redisTemplate.opsForHash().putAll(cacheKey, hashData);
@@ -228,14 +230,15 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"}) // Redis缓存返回Object类型，需要泛型转换
     public List<Map<String, Object>> getTrend(Long tenantId) {
-        String cacheKey = KEY_TREND + tenantId;
+        // tenantId为null时不使用缓存（超级管理员视图，避免数据串租户）
+        String cacheKey = tenantId != null ? KEY_TREND + tenantId : null;
 
-        // [Redis] 尝试从缓存获取
-        if (isRedisAvailable()) {
+        // [Redis] 尝试从缓存获取（仅当tenantId不为null时）
+        if (isRedisAvailable() && cacheKey != null) {
             try {
                 Object cached = redisTemplate.opsForValue().get(cacheKey);
                 if (cached != null) {
-                    log.info("[Dashboard] Redis命中 - 趋势数据 key={}", cacheKey);
+                    log.debug("[Dashboard] Redis命中 - 趋势数据 key={}", cacheKey);
                     List<Map<String, Object>> result = (List<Map<String, Object>>) cached;
                     result.forEach(m -> m.put("cacheSource", "Redis"));
                     return result;
@@ -252,11 +255,12 @@ public class DashboardServiceImpl implements DashboardService {
             trend = computeTrend(tenantId);
         } catch (Exception e) {
             log.error("[Dashboard] 计算趋势异常: {}", e.getMessage(), e);
-            trend = new ArrayList<>();
+            // 异常时不缓存，避免错误数据长时间生效，下次请求可重新计算
+            return new ArrayList<>();
         }
 
-        // [Redis] 回填缓存
-        if (isRedisAvailable()) {
+        // [Redis] 回填缓存（仅缓存有效数据，空结果不缓存）
+        if (isRedisAvailable() && trend != null && !trend.isEmpty()) {
             try {
                 redisTemplate.opsForValue().set(cacheKey, trend, TTL_TREND, TimeUnit.MINUTES);
                 log.info("[Dashboard] 趋势数据已缓存至Redis key={}", cacheKey);
@@ -324,14 +328,15 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"}) // Redis Hash返回Object类型，需要泛型转换
     public Map<String, Object> getOrderStatusDistribution(Long tenantId) {
-        String cacheKey = KEY_ORDER_STATUS + tenantId;
+        // tenantId为null时不使用缓存（超级管理员视图，避免数据串租户）
+        String cacheKey = tenantId != null ? KEY_ORDER_STATUS + tenantId : null;
 
-        // [Redis] 尝试从缓存获取
-        if (isRedisAvailable()) {
+        // [Redis] 尝试从缓存获取（仅当tenantId不为null时）
+        if (isRedisAvailable() && cacheKey != null) {
             try {
                 Map<Object, Object> cached = redisTemplate.opsForHash().entries(cacheKey);
                 if (cached != null && !cached.isEmpty()) {
-                    log.info("[Dashboard] Redis命中 - 订单状态分布 key={}", cacheKey);
+                    log.debug("[Dashboard] Redis命中 - 订单状态分布 key={}", cacheKey);
                     Map<String, Object> result = new LinkedHashMap<>();
                     cached.forEach((k, v) -> result.put(String.valueOf(k), v));
                     // 修正缓存来源标记
@@ -350,17 +355,19 @@ public class DashboardServiceImpl implements DashboardService {
             distribution = computeOrderStatusDistribution(tenantId);
         } catch (Exception e) {
             log.error("[Dashboard] 计算订单状态分布异常: {}", e.getMessage(), e);
-            distribution = new LinkedHashMap<>();
-            distribution.put("待付款", 0);
-            distribution.put("待派送/处理", 0);
-            distribution.put("派送中", 0);
-            distribution.put("已完成", 0);
-            distribution.put("已取消", 0);
-            distribution.put("cacheSource", "Error");
+            // 异常时不缓存，避免错误数据长时间生效
+            Map<String, Object> errorResult = new LinkedHashMap<>();
+            errorResult.put("待付款", 0);
+            errorResult.put("待派送/处理", 0);
+            errorResult.put("派送中", 0);
+            errorResult.put("已完成", 0);
+            errorResult.put("已取消", 0);
+            errorResult.put("cacheSource", "Error");
+            return errorResult;
         }
 
-        // [Redis] 回填缓存
-        if (isRedisAvailable()) {
+        // [Redis] 回填缓存（仅缓存有效数据）
+        if (isRedisAvailable() && cacheKey != null) {
             try {
                 Map<String, Object> hashData = new HashMap<>(distribution);
                 redisTemplate.opsForHash().putAll(cacheKey, hashData);
@@ -428,15 +435,16 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"}) // Redis ZSet返回Object类型，需要泛型转换
     public List<Map<String, Object>> getHotDishes(Long tenantId, int limit) {
-        String cacheKey = KEY_HOT_DISHES + tenantId;
+        // tenantId为null时不使用缓存（超级管理员视图，避免数据串租户）
+        String cacheKey = tenantId != null ? KEY_HOT_DISHES + tenantId : null;
 
-        // [Redis ZSet] 尝试从缓存获取
-        if (isRedisAvailable()) {
+        // [Redis ZSet] 尝试从缓存获取（仅当tenantId不为null时）
+        if (isRedisAvailable() && cacheKey != null) {
             try {
                 Set<ZSetOperations.TypedTuple<Object>> topSet =
                         redisTemplate.opsForZSet().reverseRangeWithScores(cacheKey, 0, limit - 1);
                 if (topSet != null && !topSet.isEmpty()) {
-                    log.info("[Dashboard] Redis命中 - 热销菜品 ZSet key={}", cacheKey);
+                    log.debug("[Dashboard] Redis命中 - 热销菜品 ZSet key={}", cacheKey);
                     List<Map<String, Object>> result = new ArrayList<>();
                     for (ZSetOperations.TypedTuple<Object> tuple : topSet) {
                         Map<String, Object> item = new LinkedHashMap<>();
@@ -468,9 +476,12 @@ public class DashboardServiceImpl implements DashboardService {
                 String tempKey = cacheKey + ":temp";
                 redisTemplate.delete(tempKey);
 
+                // 修改点：final引用确保lambda中可用（hotDishes在catch中可能被重赋值）
+                final List<Map<String, Object>> finalHotDishes = hotDishes;
+
                 // 使用Pipeline批量写入，减少网络往返
                 List<Object> results = redisTemplate.executePipelined((org.springframework.data.redis.core.RedisCallback<Object>) connection -> {
-                    for (Map<String, Object> dish : hotDishes) {
+                    for (Map<String, Object> dish : finalHotDishes) {
                         String name = String.valueOf(dish.get("name"));
                         Object countObj = dish.get("count");
                         double score = countObj instanceof Integer ? (Integer) countObj
@@ -481,9 +492,8 @@ public class DashboardServiceImpl implements DashboardService {
                     return null;
                 });
 
-                // Pipeline成功后，原子性rename（Redis 4.0+支持RENAME）
-                // 如果不支持rename，直接使用tempKey，删除旧Key
-                redisTemplate.delete(cacheKey);
+                // Pipeline成功后，使用RENAME原子替换（Redis RENAME命令会原子覆盖目标Key）
+                // 修改点：移除多余的delete操作，RENAME本身已原子替换目标Key
                 redisTemplate.rename(tempKey, cacheKey);
 
                 log.info("[Dashboard] 热销菜品已缓存至Redis ZSet key={}", cacheKey);
@@ -613,8 +623,8 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     /**
-     * 清除指定租户的 Dashboard 缓存（概览 + 订单状态分布）
-     * 修改点：订单状态变更时调用，防止 Redis 缓存导致数据不实
+     * 清除指定租户的 Dashboard 缓存（概览 + 订单状态分布 + 趋势 + 热销菜品）
+     * 订单状态变更时调用，防止 Redis 缓存导致数据不实
      */
     @Override
     public void clearOverviewCache(Long tenantId) {
@@ -622,9 +632,14 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             String overviewKey = KEY_OVERVIEW + tenantId;
             String statusKey = KEY_ORDER_STATUS + tenantId;
+            String trendKey = KEY_TREND + tenantId;
+            String hotDishesKey = KEY_HOT_DISHES + tenantId;
             redisTemplate.delete(overviewKey);
             redisTemplate.delete(statusKey);
-            log.info("[Dashboard] 已清除缓存 overviewKey={}, statusKey={}", overviewKey, statusKey);
+            redisTemplate.delete(trendKey);
+            redisTemplate.delete(hotDishesKey);
+            log.info("[Dashboard] 已清除缓存 overviewKey={}, statusKey={}, trendKey={}, hotDishesKey={}",
+                    overviewKey, statusKey, trendKey, hotDishesKey);
         } catch (Exception e) {
             log.warn("[Dashboard] 清除缓存失败: {}", e.getMessage());
         }

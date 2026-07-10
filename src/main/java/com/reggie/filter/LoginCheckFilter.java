@@ -61,6 +61,12 @@ public class LoginCheckFilter implements Filter{
                 "/recommend/hot",
                 "/recommend/new-arrivals",
                 "/recommend/setmeals",
+                // 修改点：放行公开的商家信息接口（首页匿名访问）
+                "/restaurant/info",
+                "/restaurant/status",
+                // 放行AI模块的公开API（健康检查、对话同步等允许匿名访问）
+                "/api/ai/health",
+                "/api/ai/conversations",
                 // 放行API文档相关路径
                 "/swagger-ui/**",
                 "/swagger-ui.html",

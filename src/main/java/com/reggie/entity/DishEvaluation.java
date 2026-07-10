@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -18,98 +19,65 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("dish_evaluation")
+@Schema(description = "菜品评价实体")
 public class DishEvaluation implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键ID
-     */
+    @Schema(description = "评价ID", example = "1")
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
-    /**
-     * 租户ID
-     */
+    @Schema(description = "租户ID", example = "1")
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    /**
-     * 订单ID
-     */
+    @Schema(description = "订单ID", example = "1")
     private Long orderId;
 
-    /**
-     * 评价用户ID
-     */
+    @Schema(description = "评价用户ID", example = "1")
     private Long userId;
 
-    /**
-     * 评价用户名
-     */
+    @Schema(description = "评价用户名", example = "张三")
     private String userName;
 
-    /**
-     * 评价菜品ID
-     */
+    @Schema(description = "评价菜品ID", example = "1")
     private Long dishId;
 
-    /**
-     * 菜品名称
-     */
+    @Schema(description = "菜品名称", example = "鱼香肉丝")
     private String dishName;
 
-    /**
-     * 评分（1-5分）
-     */
+    @Schema(description = "评分（1-5分）", example = "5")
     private Integer starRating;
 
-    /**
-     * 评价内容
-     */
+    @Schema(description = "评价内容", example = "味道很好，分量足")
     private String content;
 
-    /**
-     * 评价图片JSON数组
-     */
+    @Schema(description = "评价图片JSON数组", example = "[\"https://xxx.com/1.jpg\"]")
     private String images;
 
-    /**
-     * 商家回复内容
-     */
+    @Schema(description = "商家回复内容", example = "感谢您的好评！")
     private String replyContent;
 
-    /**
-     * 商家回复时间
-     */
+    @Schema(description = "商家回复时间")
     private LocalDateTime replyTime;
 
-    /**
-     * 审核状态：0待审核 1通过 2拒绝
-     */
+    @Schema(description = "审核状态：0=待审核，1=通过，2=拒绝", example = "1")
     private Integer status;
 
-    /**
-     * 创建时间
-     */
+    @Schema(description = "创建时间")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    /**
-     * 更新时间
-     */
+    @Schema(description = "更新时间")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-    /**
-     * 创建人
-     */
+    @Schema(description = "创建人ID")
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
-    /**
-     * 修改人
-     */
+    @Schema(description = "修改人ID")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 }

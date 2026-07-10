@@ -2,7 +2,9 @@ package com.reggie.common.aspect;
 
 import com.reggie.common.R;
 import com.reggie.common.annotation.RequiresPermission;
-import com.reggie.common.BaseContext;
+import com.reggie.module.sys.entity.Role;
+import com.reggie.module.sys.mapper.RoleMapper;
+import com.reggie.module.sys.service.PermissionService;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -21,43 +23,36 @@ import java.util.concurrent.TimeUnit;
 /**
  * 权限校验切面
  * 拦截带有 @RequiresPermission 注解的方法，校验当前用户是否有权限
+ * <p>
+ * 修改点：缓存未命中时通过PermissionService从数据库加载权限，而非返回管理员全部权限
+ * 防止越权风险。
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Aspect
 @Component
 public class PermissionAspect {
 
-    @Autowired
+    @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Autowired
+    private PermissionService permissionService;
+
+    @Autowired
+    private RoleMapper roleMapper;
+
     private static final String PERMISSION_PREFIX = "sys:employee:permissions:";
+
+    /** 缓存过期时间（小时） */
+    private static final long CACHE_TTL_HOURS = 1;
 
     /**
      * 超级管理员角色标识（直接放行）
      */
     private static final String ADMIN_ROLE_KEY = "admin";
-
-    /**
-     * 超级管理员权限标识集合（所有权限）
-     */
-    private static final Set<String> ADMIN_PERMISSIONS = new HashSet<>(Arrays.asList(
-            "system", "role:view", "role:add", "role:edit", "role:delete",
-            "employee:view", "employee:add", "employee:edit", "employee:delete",
-            "config:view", "config:edit", "template:view", "template:add",
-            "log:view",
-            "category:view", "category:add", "category:edit", "category:delete",
-            "dish:view", "dish:add", "dish:edit", "dish:delete", "dish:enable",
-            "setmeal:view", "setmeal:add", "setmeal:edit", "setmeal:delete",
-            "order:view", "order:cancel", "order:deliver", "order:complete", "order:refund",
-            "payment:view",
-            "table:view", "table:add", "table:edit", "table:delete",
-            "queue:view", "reservation:view",
-            "material:view", "purchase:view", "stockcheck:view",
-            "member:view", "points:view", "coupon:view", "user:view",
-            "report:daily", "report:ranking", "report:payment", "report:timeslot",
-            "recommend:view", "campaign:view", "campaign:push",
-            "store:view", "store:create", "store:sync", "store:dashboard"
-    ));
 
     @Around("@annotation(com.reggie.common.annotation.RequiresPermission)")
     public Object checkPermission(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -86,8 +81,8 @@ public class PermissionAspect {
         }
 
         // 获取用户权限列表
-        Set<String> userPermissions = getUserPermissions(employeeId);
-        if (userPermissions == null || userPermissions.isEmpty()) {
+        Set<String> userPermissions = getUserPermissions(employeeId, roleKey);
+        if (userPermissions.isEmpty()) {
             log.warn("[权限拦截] 用户无权限: employeeId={}, required={}", employeeId, annotation.value());
             return R.error("权限不足");
         }
@@ -133,18 +128,100 @@ public class PermissionAspect {
     }
 
     /**
-     * 获取用户权限集合（从Redis缓存读取）
+     * 获取用户权限集合
+     * <p>
+     * 修改点：优先级：Redis缓存 → 数据库查询（含缓存回填）→ 空集合（安全降级）
+     * 不再返回ADMIN_PERMISSIONS，防止缓存未命中导致越权
+     *
+     * @param employeeId 员工ID
+     * @param roleKey    角色标识（admin/manager）
+     * @return 权限Key集合，异常时返回空集合
      */
-    private Set<String> getUserPermissions(Long employeeId) {
-        String cacheKey = PERMISSION_PREFIX + employeeId;
-        Object cached = redisTemplate.opsForValue().get(cacheKey);
-        if (cached instanceof Set) {
-            return (Set<String>) cached;
+    private Set<String> getUserPermissions(Long employeeId, String roleKey) {
+        // 1. 优先从 Redis 缓存获取
+        if (redisTemplate != null) {
+            try {
+                String cacheKey = PERMISSION_PREFIX + employeeId;
+                Object cached = redisTemplate.opsForValue().get(cacheKey);
+                if (cached instanceof Set) {
+                    return (Set<String>) cached;
+                }
+                if (cached instanceof List) {
+                    return new HashSet<>((List<String>) cached);
+                }
+            } catch (Exception e) {
+                log.warn("[权限缓存] 读取缓存失败，降级查数据库：employeeId={}", employeeId, e);
+            }
         }
-        if (cached instanceof List) {
-            return new HashSet<>((List<String>) cached);
+
+        // 2. 缓存未命中，从数据库加载
+        Set<String> permissions = loadPermissionsFromDb(employeeId, roleKey);
+
+        // 3. 回填缓存（包含空集合，防止缓存穿透）
+        if (redisTemplate != null) {
+            try {
+                String cacheKey = PERMISSION_PREFIX + employeeId;
+                redisTemplate.opsForValue().set(cacheKey, permissions, CACHE_TTL_HOURS, TimeUnit.HOURS);
+            } catch (Exception e) {
+                log.warn("[权限缓存] 回填缓存失败：employeeId={}", employeeId, e);
+            }
         }
-        // 缓存未命中时，从数据库加载（简化：临时放行，后续由LoginCheckFilter预加载）
-        return ADMIN_PERMISSIONS;
+
+        return permissions;
+    }
+
+    /**
+     * 从数据库加载用户权限
+     * <p>
+     * 修改点：根据 roleKey 查询角色ID，再查权限列表
+     *
+     * @param employeeId 员工ID
+     * @param roleKey    角色标识
+     * @return 权限Key集合，异常时返回空集合（安全降级，不放行）
+     */
+    private Set<String> loadPermissionsFromDb(Long employeeId, String roleKey) {
+        try {
+            Role role = roleMapper.findByRoleKey(roleKey);
+            if (role == null) {
+                log.warn("[权限加载] 未找到角色：roleKey={}, employeeId={}", roleKey, employeeId);
+                return Collections.emptySet();
+            }
+
+            List<String> permKeys = permissionService.getPermissionKeysByRoleIds(
+                    Collections.singletonList(role.getId()));
+            if (permKeys == null || permKeys.isEmpty()) {
+                log.warn("[权限加载] 角色无权限：roleId={}, roleKey={}, employeeId={}",
+                        role.getId(), roleKey, employeeId);
+                return Collections.emptySet();
+            }
+
+            log.info("[权限加载] 数据库加载成功：employeeId={}, roleKey={}, permCount={}",
+                    employeeId, roleKey, permKeys.size());
+            return new HashSet<>(permKeys);
+        } catch (Exception e) {
+            log.error("[权限加载] 数据库查询异常：employeeId={}, roleKey={}, error={}",
+                    employeeId, roleKey, e.getMessage(), e);
+            // 安全降级：异常时返回空集合，不放行任何权限
+            return Collections.emptySet();
+        }
+    }
+
+    /**
+     * 清除指定员工权限缓存
+     * 供外部调用（权限变更时）
+     *
+     * @param employeeId 员工ID
+     */
+    public void clearEmployeePermissionCache(Long employeeId) {
+        if (redisTemplate == null || employeeId == null) {
+            return;
+        }
+        try {
+            String cacheKey = PERMISSION_PREFIX + employeeId;
+            redisTemplate.delete(cacheKey);
+            log.info("[权限缓存] 已清除员工权限缓存：employeeId={}", employeeId);
+        } catch (Exception e) {
+            log.warn("[权限缓存] 清除缓存失败：employeeId={}", employeeId, e);
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.reggie.module.sys.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("role")
+@Schema(description = "角色实体")
 public class Role implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -28,39 +30,45 @@ public class Role implements Serializable {
     /** 配送员角色标识 */
     public static final String ROLE_KEY_DELIVERY = "delivery";
 
+    @Schema(description = "角色ID", example = "1")
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /** 租户ID，NULL表示全局角色（所有租户共享） */
+    @Schema(description = "租户ID（NULL表示全局角色）", example = "1")
     private Long tenantId;
 
-    /** 角色名称 */
+    @Schema(description = "角色名称", example = "店长", required = true)
     private String roleName;
 
-    /** 角色标识（英文，如chef/waiter/cashier） */
+    @Schema(description = "角色标识", example = "manager", required = true)
     private String roleKey;
 
-    /** 角色描述 */
+    @Schema(description = "角色描述", example = "店铺管理员，拥有所有权限")
     private String description;
 
-    /** 排序，数值越大越靠前 */
+    @Schema(description = "排序（数值越大越靠前）", example = "1")
     private Integer sort;
 
-    /** 状态 0:禁用 1:启用 */
+    @Schema(description = "状态：0=禁用，1=启用", example = "1")
     private Integer status;
 
+    @Schema(description = "创建时间")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
+    @Schema(description = "更新时间")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
+    @Schema(description = "创建人ID")
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
+    @Schema(description = "修改人ID")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 
+    @Schema(description = "是否删除：0=否，1=是")
     @TableLogic
     private Integer isDeleted;
 }

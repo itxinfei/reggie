@@ -93,15 +93,19 @@ public class DishController {
      * @param pageSize 每页数量
      * @param name 菜品名称（可选，模糊查询）
      * @param status 售卖状态（可选，'0'=停售 ,'1'=启售）
+     * @param categoryId 菜品分类ID（可选）
      * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "菜品分页查询", description = "分页查询菜品列表，支持按名称模糊搜索和状态筛选，自动关联分类名称")
+    @Operation(summary = "菜品分页查询", description = "分页查询菜品列表，支持按名称模糊搜索、状态筛选和分类筛选，自动关联分类名称")
     @Parameter(name = "page", description = "页码，从1开始", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "菜品名称（可选，模糊查询）")
     @Parameter(name = "status", description = "售卖状态（可选，'0'=停售 ,'1'=启售）")
-    public R<Page<DishDto>> page(int page,int pageSize,String name, @RequestParam(required = false) String status){
+    @Parameter(name = "categoryId", description = "菜品分类ID（可选）")
+    public R<Page<DishDto>> page(int page,int pageSize,String name,
+                                  @RequestParam(required = false) String status,
+                                  @RequestParam(required = false) Long categoryId){
 
         //构造分页构造器对象
         Page<Dish> pageInfo = new Page<>(page,pageSize);
@@ -112,6 +116,7 @@ public class DishController {
         //添加过滤条件
         queryWrapper.like(name != null,Dish::getName,name);
         queryWrapper.eq(status != null && !status.isEmpty(), Dish::getStatus, status);
+        queryWrapper.eq(categoryId != null, Dish::getCategoryId, categoryId);
         //添加排序条件
         queryWrapper.orderByDesc(Dish::getUpdateTime);
 

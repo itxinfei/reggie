@@ -1,6 +1,7 @@
 package com.reggie.module.sys.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -11,18 +12,21 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("role_permission")
+@Schema(description = "角色权限关联实体")
 public class RolePermission implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @Schema(description = "关联ID", example = "1")
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /** 角色ID */
+    @Schema(description = "角色ID", example = "1", required = true)
     private Long roleId;
 
-    /** 权限ID */
+    @Schema(description = "权限ID", example = "1", required = true)
     private Long permissionId;
 
+    @Schema(description = "创建时间")
     private LocalDateTime createTime;
 }

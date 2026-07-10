@@ -15,9 +15,12 @@ import com.reggie.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 
@@ -41,13 +44,13 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
 
     /**
      * 新增套餐，同时需要保存套餐和菜品的关联关系
-     * @param setmealDto
+     * 缓存删除在事务提交后执行，避免事务回滚导致缓存与数据库不一致
+     *
+     * @param setmealDto 套餐DTO
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveWithDish(SetmealDto setmealDto) {
-        redisCacheUtil.doubleDeleteAllEntries("setmeal");
-
         //保存套餐的基本信息，操作setmeal，执行insert操作
         this.save(setmealDto);
 
@@ -57,15 +60,25 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
             //保存套餐和菜品的关联信息，操作setmeal_dish,执行insert操作
             setmealDishService.saveBatch(setmealDishes);
         }
+
+        // 事务提交后清除缓存（避免事务回滚导致缓存与数据库不一致）
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                redisCacheUtil.doubleDeleteAllEntries("setmeal");
+            }
+        });
     }
 
     /**
      * 根据id查询套餐及关联菜品
-     * @param id
-     * @return
+     * 使用sync=true防止缓存击穿
+     *
+     * @param id 套餐ID
+     * @return 套餐DTO
      */
     @Override
-    @Cacheable(value = "setmeal", key = "#id")
+    @Cacheable(value = "setmeal", key = "#id", sync = true)
     public SetmealDto getByIdWithDish(Long id) {
         Setmeal setmeal = this.getById(id);
         if (setmeal == null) {
@@ -81,11 +94,15 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
         return setmealDto;
     }
 
+    /**
+     * 更新套餐
+     * 缓存删除在事务提交后执行
+     *
+     * @param setmealDto 套餐DTO
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateWithDish(SetmealDto setmealDto) {
-        redisCacheUtil.doubleDelete("setmeal", setmealDto.getId());
-
         this.updateById(setmealDto);
 
         LambdaQueryWrapper<SetmealDish> queryWrapper = new LambdaQueryWrapper<>();
@@ -97,18 +114,24 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
             dishes.forEach(item -> item.setSetmealId(setmealDto.getId()));
             setmealDishService.saveBatch(dishes);
         }
+
+        // 事务提交后清除缓存
+        Long setmealId = setmealDto.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                redisCacheUtil.doubleDelete("setmeal", setmealId);
+            }
+        });
     }
 
     /**
      * 删除套餐及关联菜品
+     * 先校验状态，再删除数据和缓存
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void removeWithDish(List<Long> ids) {
-        if (ids != null) {
-            ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
-        }
-
         //select count(*) from setmeal where id in (1,2,3) and status = 1
         //查询套餐状态，确定是否可用删除
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
@@ -129,21 +152,38 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
         lambdaQueryWrapper.in(SetmealDish::getSetmealId,ids);
         //删除关系表中的数据----setmeal_dish
         setmealDishService.remove(lambdaQueryWrapper);
+
+        // 事务提交后清除缓存
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                if (ids != null) {
+                    ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
+                }
+            }
+        });
     }
 
     /**
      * 批量更新套餐状态
+     * 缓存删除在事务提交后执行
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Integer status, List<Long> ids) {
-        if (ids != null) {
-            ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
-        }
-
         LambdaUpdateWrapper<Setmeal> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.in(Setmeal::getId, ids);
         updateWrapper.set(Setmeal::getStatus, status);
         this.update(updateWrapper);
+
+        // 事务提交后清除缓存
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                if (ids != null) {
+                    ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
+                }
+            }
+        });
     }
 }

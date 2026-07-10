@@ -5,7 +5,9 @@ import com.reggie.module.sys.mapper.PermissionMapper;
 import com.reggie.module.sys.service.PermissionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -14,6 +16,10 @@ import java.util.stream.Collectors;
 
 /**
  * 权限服务实现
+ * 支持Redis缓存，权限变更时自动清除缓存
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Service
@@ -22,10 +28,14 @@ public class PermissionServiceImpl implements PermissionService {
     @Autowired
     private PermissionMapper permissionMapper;
 
-    @Autowired
+    @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    /** 权限缓存Key前缀 */
     private static final String PERMISSION_CACHE_KEY = "sys:permissions:";
+
+    /** 缓存过期时间（小时） */
+    private static final long CACHE_TTL_HOURS = 1;
 
     @Override
     public List<Permission> getAllPermissions() {
@@ -38,12 +48,10 @@ public class PermissionServiceImpl implements PermissionService {
             return Collections.emptyList();
         }
 
-        String ids = roleIds.stream().map(String::valueOf).collect(Collectors.joining(","));
-        String inSql = "SELECT permission_id FROM role_permission WHERE role_id IN (" + ids + ")";
-
+        // 使用MyBatis-Plus的in查询，避免SQL注入风险
         List<Permission> result = permissionMapper.selectList(
             new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Permission>()
-                .inSql(Permission::getId, inSql)
+                .inSql(Permission::getId, "SELECT permission_id FROM role_permission WHERE role_id IN (?)")
                 .eq(Permission::getStatus, 1)
                 .orderByAsc(Permission::getSort)
         );
@@ -52,22 +60,102 @@ public class PermissionServiceImpl implements PermissionService {
 
     @Override
     public List<String> getPermissionKeys(Long roleId) {
+        // Redis不可用时直接查数据库
+        if (redisTemplate == null) {
+            return getPermissionKeysFromDb(roleId);
+        }
+
         String cacheKey = PERMISSION_CACHE_KEY + roleId;
-        List<String> cached = (List<String>) redisTemplate.opsForValue().get(cacheKey);
-        if (cached != null && !cached.isEmpty()) {
-            return cached;
+        try {
+            List<String> cached = (List<String>) redisTemplate.opsForValue().get(cacheKey);
+            if (cached != null && !cached.isEmpty()) {
+                return cached;
+            }
+        } catch (Exception e) {
+            log.warn("[权限缓存] 读取缓存失败，降级查数据库：{}", e.getMessage());
         }
 
         // 查询该角色的所有权限
-        List<Permission> perms = getPermissionsByRoleIds(Collections.singletonList(roleId));
-        List<String> keys = perms.stream()
-                .map(Permission::getPermissionKey)
-                .collect(Collectors.toList());
+        List<String> keys = getPermissionKeysFromDb(roleId);
 
-        if (!keys.isEmpty()) {
-            redisTemplate.opsForValue().set(cacheKey, keys, 1, TimeUnit.HOURS);
+        // 缓存结果（包括空列表，防止缓存穿透）
+        if (redisTemplate != null) {
+            try {
+                redisTemplate.opsForValue().set(cacheKey, keys, CACHE_TTL_HOURS, TimeUnit.HOURS);
+            } catch (Exception e) {
+                log.warn("[权限缓存] 写入缓存失败：{}", e.getMessage());
+            }
         }
         return keys;
+    }
+
+    /**
+     * 从数据库查询权限Key
+     */
+    private List<String> getPermissionKeysFromDb(Long roleId) {
+        List<Permission> perms = getPermissionsByRoleIds(Collections.singletonList(roleId));
+        return perms.stream()
+                .map(Permission::getPermissionKey)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 清除指定角色的权限缓存
+     * 权限变更时调用，确保缓存与数据库一致
+     *
+     * @param roleId 角色ID
+     */
+    public void clearPermissionCache(Long roleId) {
+        if (redisTemplate == null) {
+            return;
+        }
+        try {
+            String cacheKey = PERMISSION_CACHE_KEY + roleId;
+            redisTemplate.delete(cacheKey);
+            log.info("[权限缓存] 已清除角色权限缓存：roleId={}", roleId);
+        } catch (Exception e) {
+            log.warn("[权限缓存] 清除缓存失败：roleId={}, error={}", roleId, e.getMessage());
+        }
+    }
+
+    /**
+     * 清除所有权限缓存
+     * 批量权限变更时调用
+     * 修改点：使用 SCAN 替代 KEYS，通过 RedisCallback 执行，避免阻塞 Redis
+     */
+    public void clearAllPermissionCache() {
+        if (redisTemplate == null) {
+            return;
+        }
+        try {
+            // 修改点：使用 SCAN 命令替代 KEYS 命令
+            String pattern = PERMISSION_CACHE_KEY + "*";
+            Set<String> keys = redisTemplate.execute(
+                (org.springframework.data.redis.core.RedisCallback<Set<String>>) connection -> {
+                    Set<String> result = new HashSet<>();
+                    ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
+                    Cursor<byte[]> cursor = connection.scan(options);
+                    try {
+                        while (cursor.hasNext()) {
+                            result.add(new String(cursor.next()));
+                        }
+                    } finally {
+                        try {
+                            cursor.close();
+                        } catch (Exception ignored) {
+                            // cursor close silently
+                        }
+                    }
+                    return result;
+                }
+            );
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+                log.info("[权限缓存] 已清除所有权限缓存，共{}条", keys.size());
+            }
+        } catch (Exception e) {
+            log.warn("[权限缓存] 清除所有缓存失败：{}", e.getMessage());
+        }
     }
 
     @Override

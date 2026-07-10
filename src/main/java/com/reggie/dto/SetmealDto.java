@@ -2,6 +2,7 @@ package com.reggie.dto;
 
 import com.reggie.entity.Setmeal;
 import com.reggie.entity.SetmealDish;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import java.util.List;
@@ -14,15 +15,12 @@ import java.util.List;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
+@Schema(description = "套餐数据传输对象（含菜品列表）")
 public class SetmealDto extends Setmeal {
 
-    /**
-     * 套餐菜品关系列表
-     */
+    @Schema(description = "套餐菜品关系列表")
     private List<SetmealDish> setmealDishes;
 
-    /**
-     * 分类名称
-     */
+    @Schema(description = "分类名称", example = "超值套餐")
     private String categoryName;
 }

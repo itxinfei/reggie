@@ -142,6 +142,10 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
 
     // ==================== 画像刷新 ====================
 
+    /** 画像刷新冷却时间（10分钟），避免每次对话都全量刷新 */
+    // 修改点：新增节流机制，减少不必要的画像刷新计算
+    private static final long REFRESH_COOLDOWN_MS = 10 * 60 * 1000;
+
     @Override
     public void refreshProfile(Long userId) {
         if (userId == null) return;
@@ -161,6 +165,26 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
 
         userProfileMapper.updateById(profile);
         log.info("用户画像已更新: userId={}, confidence={}", userId, confidence);
+    }
+
+    /**
+     * 按需刷新用户画像（带节流）
+     * 修改点：如果距上次刷新不足10分钟，跳过本次刷新
+     *
+     * @param userId 用户ID
+     */
+    @Override
+    public void refreshIfNeeded(Long userId) {
+        if (userId == null) return;
+        UserProfile profile = getOrCreateProfile(userId);
+        if (profile == null) return;
+        if (profile.getLastAnalyzedTime() != null
+                && System.currentTimeMillis() - profile.getLastAnalyzedTime().atZone(
+                        java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() < REFRESH_COOLDOWN_MS) {
+            log.debug("用户画像刷新跳过（冷却期内）: userId={}", userId);
+            return;
+        }
+        refreshProfile(userId);
     }
 
     /**

@@ -3,8 +3,11 @@ package com.reggie.common;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -15,11 +18,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
+import java.util.Arrays;
 
 /**
  * 暴力破解防护过滤器
  * 检测登录失败次数，超过阈值锁定账号/IP
+ * 使用Lua脚本保证increment+expire的原子性
  *
  * 注意：需要 Redis 支持，如果 Redis 不可用则自动降级（不启用防护）
  *
@@ -61,6 +65,15 @@ public class BruteForceProtectionFilter implements Filter {
     private static final String LOGIN_LOCKED_KEY_PREFIX = "login:locked:";
 
     /**
+     * Lua脚本：暴力破解防护原子操作
+     * 修改点：使用专用脚本 brute_force.lua，将 increment+expire+锁定+清理 合并为原子操作
+     * KEYS[1] = 失败计数Key, KEYS[2] = 锁定Key
+     * ARGV[1] = 过期时间(秒), ARGV[2] = 最大失败次数
+     * 返回值 = {count, locked}
+     */
+    private DefaultRedisScript<Long> incrementWithExpireScript;
+
+    /**
      * 检查暴力破解防护是否启用
      *
      * @return true=启用，false=禁用
@@ -81,6 +94,18 @@ public class BruteForceProtectionFilter implements Filter {
         } else {
             log.info("暴力破解防护未启用（Redis不可用），已降级");
         }
+    }
+
+    /**
+     * 初始化Lua脚本
+     * 修改点：加载专用暴力破解脚本 brute_force.lua
+     */
+    @PostConstruct
+    public void init() {
+        incrementWithExpireScript = new DefaultRedisScript<>();
+        incrementWithExpireScript.setScriptSource(new ResourceScriptSource(
+                new org.springframework.core.io.ClassPathResource("scripts/brute_force.lua")));
+        incrementWithExpireScript.setResultType(Long.class);
     }
 
     @Override
@@ -132,6 +157,7 @@ public class BruteForceProtectionFilter implements Filter {
 
     /**
      * 记录登录失败
+     * 修改点：使用专用 Lua 脚本 brute_force.lua 保证 increment+expire+锁定+清理 原子执行
      *
      * @param identifier 标识（用户名/IP）
      */
@@ -144,25 +170,25 @@ public class BruteForceProtectionFilter implements Filter {
         String lockedKey = LOGIN_LOCKED_KEY_PREFIX + identifier;
 
         try {
-            // 增加失败计数
-            Long failures = redisTemplate.opsForValue().increment(failureKey);
+            // 修改点：使用Lua脚本原子性执行全部操作
+            // KEYS: [failureKey, lockedKey]  ARGV: [expire, maxAttempts]
+            // 返回 -1 表示已锁定，否则为当前失败次数
+            Long failures = redisTemplate.execute(incrementWithExpireScript,
+                    Arrays.asList(failureKey, lockedKey),
+                    900,           // ARGV[1]: 过期时间15分钟
+                    MAX_FAILED_ATTEMPTS);  // ARGV[2]: 最大尝试次数
 
-            if (failures != null && failures == 1) {
-                // 首次失败，设置过期时间（15分钟）
-                redisTemplate.expire(failureKey, 900, TimeUnit.SECONDS);
-            }
-
-            log.info("登录失败 - 标识：{}, 失败次数：{}/{}", identifier, failures, MAX_FAILED_ATTEMPTS);
-
-            // 检查是否需要锁定
-            if (failures != null && failures >= MAX_FAILED_ATTEMPTS) {
-                redisTemplate.opsForValue().set(lockedKey, "locked", LOCKOUT_DURATION, TimeUnit.SECONDS);
-                redisTemplate.delete(failureKey);
-                log.warn("账号已被锁定 {} 秒 - 标识：{}, 失败次数：{}",
-                    LOCKOUT_DURATION, identifier, failures);
+            if (failures != null && failures == -1) {
+                log.warn("账号已被锁定 {} 秒 - 标识：{}", LOCKOUT_DURATION, identifier);
+            } else if (failures != null) {
+                log.info("登录失败 - 标识：{}, 失败次数：{}/{}", identifier, failures, MAX_FAILED_ATTEMPTS);
+                if (failures >= MAX_FAILED_ATTEMPTS) {
+                    log.warn("账号已被锁定 {} 秒 - 标识：{}, 失败次数：{}",
+                        LOCKOUT_DURATION, identifier, failures);
+                }
             }
         } catch (Exception e) {
-            log.error("记录登录失败异常：{}", e.getMessage());
+            log.error("记录登录失败异常：identifier={}, error={}", identifier, e.getMessage());
         }
     }
 

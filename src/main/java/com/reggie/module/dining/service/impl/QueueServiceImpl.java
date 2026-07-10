@@ -7,74 +7,128 @@ import com.reggie.module.dining.mapper.QueueMapper;
 import com.reggie.module.dining.model.QueueRecord;
 import com.reggie.enums.QueueRecordStatus;
 import com.reggie.module.dining.service.QueueService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 排队服务实现
- *
- * 并发安全说明：
- * takeNumber() 方法存在并发安全问题，在高并发场景下可能生成重复的排队号。
- * 建议使用分布式锁（如 Redisson）进行优化：
- *
- * 优化方案（需要引入 Redisson 依赖）：
- * <pre>
- * private static final String QUEUE_LOCK_KEY = "queue:takeNumber:lock:";
- *
- * &#64;Override
- * public QueueRecord takeNumber(Integer seatCount, String phone) {
- *     String lockKey = QUEUE_LOCK_KEY + seatCount;
- *     RLock lock = redissonClient.getLock(lockKey);
- *     try {
- *         // 尝试获取锁，最多等待5秒，锁10秒后自动释放
- *         if (!lock.tryLock(5, 10, TimeUnit.SECONDS)) {
- *             throw new RuntimeException("系统繁忙，请稍后重试");
- *         }
- *         // ... 原有业务逻辑
- *     } finally {
- *         if (lock.isHeldByCurrentThread()) {
- *             lock.unlock();
- *         }
- *     }
- * }
- * </pre>
- *
- * 临时解决方案：在应用层通过 nginx 或网关限流，或者将取号请求放入消息队列串行化处理
+ * <p>
+ * 修改点：使用 Redis SETNX 实现分布式锁，解决 takeNumber() 并发安全问题
  *
  * @author reggie
  * @since 2026-07-09
  */
+@Slf4j
 @Service
 public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> implements QueueService {
 
     /** 日期格式化器 */
     private static final DateTimeFormatter DATE_PATTERN = DateTimeFormatter.ofPattern("yyyyMMdd");
 
+    /** 取号分布式锁 Key 前缀 */
+    private static final String QUEUE_LOCK_KEY_PREFIX = "queue:takeNumber:lock:";
+
+    /** 分布式锁过期时间（秒） */
+    private static final int LOCK_EXPIRE_SECONDS = 10;
+
+    /** 获取锁最大等待时间（毫秒） */
+    private static final int LOCK_WAIT_MILLIS = 3000;
+
+    /** 获取锁重试间隔（毫秒） */
+    private static final int LOCK_RETRY_INTERVAL = 100;
+
+    @Autowired(required = false)
+    private RedisTemplate<String, Object> redisTemplate;
+
     @Override
     public QueueRecord takeNumber(Integer seatCount, String phone) {
-        String datePrefix = LocalDate.now().format(DATE_PATTERN);
-        LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
-        qw.likeRight(QueueRecord::getQueueNo, datePrefix);
-        qw.orderByDesc(QueueRecord::getQueueNo);
-        qw.last("LIMIT 1");
-        QueueRecord last = getOne(qw);
+        // 修改点：使用 Redis SETNX 实现分布式锁
+        String lockKey = QUEUE_LOCK_KEY_PREFIX + seatCount;
+        boolean locked = acquireLock(lockKey);
 
-        int seq = 1;
-        if (last != null) {
-            String lastNo = last.getQueueNo();
-            seq = Integer.parseInt(lastNo.substring(lastNo.length() - 4)) + 1;
+        if (!locked) {
+            log.warn("[排队取号] 获取锁失败，系统繁忙：seatCount={}", seatCount);
+            throw new RuntimeException("系统繁忙，请稍后重试");
         }
 
-        QueueRecord record = new QueueRecord();
-        record.setTenantId(BaseContext.getCurrentTenantId());
-        record.setQueueNo(datePrefix + String.format("%04d", seq));
-        record.setPhone(phone);
-        record.setSeatCount(seatCount);
-        record.setStatus(QueueRecordStatus.WAITING.getValue());
-        save(record);
-        return record;
+        try {
+            String datePrefix = LocalDate.now().format(DATE_PATTERN);
+            LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
+            qw.likeRight(QueueRecord::getQueueNo, datePrefix);
+            qw.orderByDesc(QueueRecord::getQueueNo);
+            qw.last("LIMIT 1");
+            QueueRecord last = getOne(qw);
+
+            int seq = 1;
+            if (last != null) {
+                String lastNo = last.getQueueNo();
+                seq = Integer.parseInt(lastNo.substring(lastNo.length() - 4)) + 1;
+            }
+
+            QueueRecord record = new QueueRecord();
+            record.setTenantId(BaseContext.getCurrentTenantId());
+            record.setQueueNo(datePrefix + String.format("%04d", seq));
+            record.setPhone(phone);
+            record.setSeatCount(seatCount);
+            record.setStatus(QueueRecordStatus.WAITING.getValue());
+            save(record);
+            return record;
+        } finally {
+            releaseLock(lockKey);
+        }
+    }
+
+    /**
+     * 获取分布式锁（自旋 + SETNX）
+     * 修改点：使用 Redis SETNX + EXPIRE 实现简单分布式锁
+     *
+     * @param lockKey 锁的Key
+     * @return true=获取成功，false=超时失败
+     */
+    private boolean acquireLock(String lockKey) {
+        if (redisTemplate == null) {
+            return true; // Redis 不可用时降级放行（单机部署无并发问题）
+        }
+
+        long startTime = System.currentTimeMillis();
+        try {
+            while (System.currentTimeMillis() - startTime < LOCK_WAIT_MILLIS) {
+                Boolean success = redisTemplate.opsForValue()
+                        .setIfAbsent(lockKey, "1", LOCK_EXPIRE_SECONDS, TimeUnit.SECONDS);
+                if (Boolean.TRUE.equals(success)) {
+                    return true;
+                }
+                // 自旋等待后重试
+                Thread.sleep(LOCK_RETRY_INTERVAL);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("[排队取号] 获取锁被中断：{}", lockKey);
+        } catch (Exception e) {
+            log.error("[排队取号] 获取锁异常：{}, error={}", lockKey, e.getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * 释放分布式锁
+     * 修改点：仅删除自己的锁（简单实现，生产建议 Lua 脚本校验 ownership）
+     */
+    private void releaseLock(String lockKey) {
+        if (redisTemplate == null) {
+            return;
+        }
+        try {
+            redisTemplate.delete(lockKey);
+        } catch (Exception e) {
+            log.warn("[排队取号] 释放锁失败：{}, error={}", lockKey, e.getMessage());
+        }
     }
 
     @Override

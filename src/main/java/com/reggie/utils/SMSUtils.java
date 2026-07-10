@@ -23,14 +23,14 @@ public final class SMSUtils {
     }
 
     /**
-     * 阿里云AccessKey ID（从配置注入）
+     * 阿里云AccessKey ID（从配置注入，使用volatile保证线程可见性）
      */
-    private static String accessKeyId;
+    private static volatile String accessKeyId;
 
     /**
-     * 阿里云AccessKey Secret（从配置注入）
+     * 阿里云AccessKey Secret（从配置注入，使用volatile保证线程可见性）
      */
-    private static String accessKeySecret;
+    private static volatile String accessKeySecret;
 
     /**
      * 初始化短信凭证（由SmsConfig或启动时调用）
