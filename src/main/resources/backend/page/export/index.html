@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>数据导出 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../styles/common.css" />
+    <link rel="stylesheet" href="../../styles/page.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #f0f2f5; color: #303133; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -58,18 +59,8 @@
         .quick-range span:hover { color: #409eff; border-color: #409eff; }
         .quick-range span.active { background: #409eff; color: #fff; border-color: #409eff; }
 
-        /* 按钮 */
-        .btn-row { display: flex; gap: 10px; }
-        .btn {
-            padding: 8px 20px; border: none; border-radius: 4px; cursor: pointer;
-            font-size: 13px; font-weight: 500; transition: all 0.2s;
-            display: inline-flex; align-items: center; gap: 6px;
-        }
-        .btn-excel { background: #f5f7fa; color: #217346; border: 1px solid #217346; }
-        .btn-excel:hover { background: #217346; color: #fff; }
-        .btn-pdf { background: #f5f7fa; color: #d9363e; border: 1px solid #d9363e; }
-        .btn-pdf:hover { background: #d9363e; color: #fff; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* 按钮行 */
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
 
         /* Loading 遮罩 */
         .btn-loading {
@@ -171,8 +162,8 @@
                     </div>
                 </div>
                 <div class="btn-row">
-                    <button class="btn btn-excel" :class="{'btn-loading': orderExport.loading}" :disabled="orderExport.loading" @click="exportOrder('excel')">导出 Excel</button>
-                    <button class="btn btn-pdf" :class="{'btn-loading': orderExport.loading}" :disabled="orderExport.loading" @click="exportOrder('pdf')">导出 PDF</button>
+                    <button class="app-btn app-btn-excel" :class="{'btn-loading': orderExport.loading}" :disabled="orderExport.loading" @click="exportOrder('excel')">导出 Excel</button>
+                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': orderExport.loading}" :disabled="orderExport.loading" @click="exportOrder('pdf')">导出 PDF</button>
                 </div>
             </div>
 
@@ -192,8 +183,8 @@
                     </div>
                 </div>
                 <div class="btn-row">
-                    <button class="btn btn-excel" :class="{'btn-loading': dishExport.loading}" :disabled="dishExport.loading" @click="exportDish('excel')">导出 Excel</button>
-                    <button class="btn btn-pdf" :class="{'btn-loading': dishExport.loading}" :disabled="dishExport.loading" @click="exportDish('pdf')">导出 PDF</button>
+                    <button class="app-btn app-btn-excel" :class="{'btn-loading': dishExport.loading}" :disabled="dishExport.loading" @click="exportDish('excel')">导出 Excel</button>
+                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': dishExport.loading}" :disabled="dishExport.loading" @click="exportDish('pdf')">导出 PDF</button>
                 </div>
             </div>
 
@@ -213,8 +204,8 @@
                     </div>
                 </div>
                 <div class="btn-row">
-                    <button class="btn btn-excel" :class="{'btn-loading': empExport.loading}" :disabled="empExport.loading" @click="exportEmp('excel')">导出 Excel</button>
-                    <button class="btn btn-pdf" :class="{'btn-loading': empExport.loading}" :disabled="empExport.loading" @click="exportEmp('pdf')">导出 PDF</button>
+                    <button class="app-btn app-btn-excel" :class="{'btn-loading': empExport.loading}" :disabled="empExport.loading" @click="exportEmp('excel')">导出 Excel</button>
+                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': empExport.loading}" :disabled="empExport.loading" @click="exportEmp('pdf')">导出 PDF</button>
                 </div>
             </div>
 
@@ -241,8 +232,8 @@
                     </div>
                 </div>
                 <div class="btn-row">
-                    <button class="btn btn-excel" :class="{'btn-loading': reportExport.loading}" :disabled="reportExport.loading" @click="exportReport('excel')">导出 Excel</button>
-                    <button class="btn btn-pdf" :class="{'btn-loading': reportExport.loading}" :disabled="reportExport.loading" @click="exportReport('pdf')">导出 PDF</button>
+                    <button class="app-btn app-btn-excel" :class="{'btn-loading': reportExport.loading}" :disabled="reportExport.loading" @click="exportReport('excel')">导出 Excel</button>
+                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': reportExport.loading}" :disabled="reportExport.loading" @click="exportReport('pdf')">导出 PDF</button>
                 </div>
             </div>
         </div>
@@ -251,8 +242,7 @@
         <div class="history-section">
             <div class="history-title" style="display:flex;justify-content:space-between;align-items:center;">
                 <span>&#128197; 导出记录 <span style="font-size:12px;color:#c0c4cc;font-weight:400;">（最近 {{ history.length }} 条）</span></span>
-                <button v-if="history.length > 0" @click="clearHistory" style="padding:4px 12px;border:1px solid #f56c6c;border-radius:4px;
-                    background:#fff;color:#f56c6c;font-size:12px;cursor:pointer;">清空记录</button>
+                <button v-if="history.length > 0" @click="clearHistory" class="app-btn app-btn-danger app-btn-sm">清空记录</button>
             </div>
             <div class="history-list" v-if="history.length > 0">
                 <div class="history-item" v-for="(item, idx) in history" :key="idx">

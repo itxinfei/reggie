@@ -8,66 +8,8 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
-    /* ========== 数据统计卡片 ========== */
-    .stats-cards {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 20px 24px;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.3s;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-      border: 1px solid #f0f2f5;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    }
-
-    /* 修改点：stats-card 可点击筛选 */
-    .stat-card.clickable { cursor: pointer; user-select: none; }
-    .stat-card.active {
-      border-color: #409eff;
-      box-shadow: 0 0 0 2px rgba(64,158,255,0.3);
-      transform: translateY(-3px);
-    }
-
-    .stat-card .stat-icon-wrap {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      flex-shrink: 0;
-    }
-
-    .stat-card.primary .stat-icon-wrap { background: rgba(64,158,255,0.1); color: #409eff; }
-    .stat-card.success .stat-icon-wrap { background: rgba(103,194,58,0.1); color: #67c23a; }
-    .stat-card.warning .stat-icon-wrap { background: rgba(230,162,60,0.1); color: #e6a23c; }
-    .stat-card.danger .stat-icon-wrap  { background: rgba(245,108,108,0.1); color: #f56c6c; }
-
-    .stat-card .stat-info { flex: 1; }
-    .stat-card .stat-label { font-size: 13px; color: #909399; margin-bottom: 6px; font-weight: 500; }
-    .stat-card .stat-value { font-size: 28px; font-weight: 700; line-height: 1.2; }
-
-    .stat-card.primary .stat-value { color: #409eff; }
-    .stat-card.success .stat-value { color: #67c23a; }
-    .stat-card.warning .stat-value { color: #e6a23c; }
-    .stat-card.danger .stat-value  { color: #f56c6c; }
 
     /* ========== 桌台网格卡片视图 ========== */
     .table-grid-toggle { display: flex; align-items: center; gap: 8px; }
@@ -179,15 +121,15 @@
 
       <!-- ========== 搜索 + 操作栏 ========== -->
       <div class="tableBar">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <el-input v-model="input" placeholder="请输入桌台名称" style="width: 200px" clearable
+        <div>
+          <el-input v-model="input" placeholder="请输入桌台名称" clearable
             @keyup.enter.native="handleQuery">
             <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
           </el-input>
-          <el-select v-model="areaId" placeholder="请选择区域" clearable style="width: 160px;" @change="handleQuery">
+          <el-select v-model="areaId" placeholder="请选择区域" clearable @change="handleQuery">
             <el-option v-for="item in areaList" :key="item.id" :label="item.name" :value="item.id"></el-option>
           </el-select>
-          <el-select v-model="statusFilter" placeholder="桌台状态" clearable style="width: 120px;" @change="handleQuery">
+          <el-select v-model="statusFilter" placeholder="桌台状态" clearable @change="handleQuery">
             <el-option label="空闲" value="FREE"></el-option>
             <el-option label="占用" value="OCCUPIED"></el-option>
             <el-option label="预留" value="RESERVED"></el-option>
@@ -246,7 +188,7 @@
           <template slot-scope="scope">
             <el-button type="text" size="small" @click="editHandle(scope.row)">修改</el-button>
             <el-button type="text" size="small" @click="showQrcode(scope.row)">二维码</el-button>
-            <el-button type="text" size="small" style="color:#f56c6c;" @click="deleteHandle(scope.row.id)">删除</el-button>
+            <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(scope.row.id)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -264,18 +206,18 @@
               <span>状态：<strong>{{ statusLabels[row.status] || row.status }}</strong></span>
             </div>
             <div class="card-actions">
-              <el-button type="text" size="mini" @click.stop="editHandle(row)">修改</el-button>
-              <el-button type="text" size="mini" @click.stop="showQrcode(row)">二维码</el-button>
+              <el-button type="text" size="small" @click.stop="editHandle(row)">修改</el-button>
+              <el-button type="text" size="small" @click.stop="showQrcode(row)">二维码</el-button>
               <!-- 修改点：快捷状态切换按钮 -->
               <el-dropdown trigger="click" @command="(val) => quickChangeStatus(row, val)" @click.native.stop>
-                <el-button type="text" size="mini">切换状态</el-button>
+                <el-button type="text" size="small">切换状态</el-button>
                 <el-dropdown-menu slot="dropdown">
                   <el-dropdown-item command="FREE" :disabled="row.status === 'FREE'">设为空闲</el-dropdown-item>
                   <el-dropdown-item command="OCCUPIED" :disabled="row.status === 'OCCUPIED'">设为占用</el-dropdown-item>
                   <el-dropdown-item command="RESERVED" :disabled="row.status === 'RESERVED'">设为预留</el-dropdown-item>
                 </el-dropdown-menu>
               </el-dropdown>
-              <el-button type="text" size="mini" style="color:#f56c6c;" @click.stop="deleteHandle(row.id)">删除</el-button>
+              <el-button type="text" size="small" class="btn-delete" @click.stop="deleteHandle(row.id)">删除</el-button>
             </div>
           </div>
         </div>
@@ -296,7 +238,7 @@
     </div>
 
     <!-- ========== 新增/编辑对话框 ========== -->
-    <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="480px" :before-close="handleClose">
+    <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="520px" :before-close="handleClose">
       <el-form ref="tableForm" :model="form" :rules="formRules" label-width="90px" size="small">
         <el-form-item label="桌台名称" prop="name">
           <el-input v-model="form.name" placeholder="如：A1、VIP包间" maxlength="14" show-word-limit />
@@ -330,7 +272,7 @@
     </el-dialog>
 
     <!-- ========== 二维码预览弹窗 ========== -->
-    <el-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible" width="400px" center>
+    <el-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible" width="420px" center>
       <div class="qrcode-content">
         <div class="qrcode-title">桌台：{{ qrcodeDialog.tableName }}</div>
         <div class="qrcode-subtitle">编号：{{ qrcodeDialog.tableId }}</div>

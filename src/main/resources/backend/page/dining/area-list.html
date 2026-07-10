@@ -8,73 +8,8 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
-    /* ========== 数据统计卡片 ========== */
-    .stats-cards {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 20px 24px;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.3s;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-      border: 1px solid #f0f2f5;
-    }
-
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    }
-
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--gradient);
-    }
-
-    .stat-card .stat-icon {
-      position: absolute;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 42px;
-    }
-
-    .stat-card .stat-label {
-      font-size: 13px;
-      color: #909399;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-
-    .stat-card .stat-value {
-      font-size: 30px;
-      font-weight: 700;
-      line-height: 1.2;
-      background: var(--gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
-    .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
-    .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
-
-    @media (max-width: 768px) {
-      .stats-cards { grid-template-columns: 1fr; }
-    }
   </style>
 </head>
 <body>
@@ -97,14 +32,19 @@
           <div class="stat-label">平均桌台/区域</div>
           <div class="stat-value">{{ stats.avgTablesPerArea || 0 }}</div>
         </div>
+        <div class="stat-card info">
+          <div class="stat-icon">🏢</div>
+          <div class="stat-label">最大容量区域</div>
+          <div class="stat-value" style="font-size: 20px">{{ stats.maxTablesArea || '-' }}</div>
+        </div>
       </div>
 
       <div class="tableBar">
-        <el-input v-model="input" placeholder="请输入区域名称" style="width: 250px" clearable @keyup.enter.native="handleQuery">
+        <el-input v-model="input" placeholder="请输入区域名称" clearable @keyup.enter.native="handleQuery">
           <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
         </el-input>
-        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
-        <el-button style="margin-left: 10px" @click="reset">重置</el-button>
+        <el-button type="primary" @click="handleQuery">查询</el-button>
+        <el-button @click="reset">重置</el-button>
         <div class="tableLab">
           <el-button type="primary" @click="addHandle">+ 新增区域</el-button>
         </div>
@@ -131,7 +71,7 @@
         @current-change="handleCurrentChange"
       ></el-pagination>
     </div>
-    <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="30%" :before-close="handleClose">
+    <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="420px" :before-close="handleClose">
       <el-form ref="form" :model="form" label-width="100px">
         <el-form-item label="区域名称：">
           <el-input v-model="form.name" placeholder="请输入区域名称" maxlength="14" />
@@ -166,7 +106,8 @@
           stats: {
             totalAreas: 0,
             totalTables: 0,
-            avgTablesPerArea: 0
+            avgTablesPerArea: 0,
+            maxTablesArea: '-'   // 修改点：桌台最多的区域名称
           },
           dialog: {
             title: '',
@@ -222,12 +163,29 @@
             const totalTables = tableRes.data?.total || 0
             const avg = totalAreas > 0 ? (totalTables / totalAreas).toFixed(1) : 0
 
+            // 修改点：按区域名称分组统计桌台数，找出最大容量区域
+            const tableRecords = tableRes.data?.records || []
+            const areaCountMap = {}
+            tableRecords.forEach(function(t) {
+              var name = t.areaName || '未知区域'
+              areaCountMap[name] = (areaCountMap[name] || 0) + 1
+            })
+            var maxArea = '-'
+            var maxCount = 0
+            Object.keys(areaCountMap).forEach(function(k) {
+              if (areaCountMap[k] > maxCount) {
+                maxCount = areaCountMap[k]
+                maxArea = k + '(' + maxCount + '桌)'
+              }
+            })
+
             return {
               code: 1,
               data: {
                 totalAreas: totalAreas,
                 totalTables: totalTables,
-                avgTablesPerArea: avg
+                avgTablesPerArea: avg,
+                maxTablesArea: maxArea
               }
             }
           } catch (err) {

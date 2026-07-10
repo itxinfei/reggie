@@ -8,17 +8,8 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
-    .stats-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
-    .stat-card { background: #fff; border-radius: 12px; padding: 20px 24px; position: relative; overflow: hidden; transition: all 0.3s; box-shadow: 0 2px 12px rgba(0,0,0,0.04); border: 1px solid #f0f2f5; }
-    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gradient); }
-    .stat-card .stat-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 42px;  }
-    .stat-card .stat-label { font-size: 13px; color: #909399; margin-bottom: 8px; font-weight: 500; }
-    .stat-card .stat-value { font-size: 30px; font-weight: 700; line-height: 1.2; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
-    .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
-    .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
   </style>
 </head>
 <body>
@@ -40,6 +31,11 @@
           <div class="stat-icon">📊</div>
           <div class="stat-label">最低积分门槛</div>
           <div class="stat-value" style="font-size: 22px">{{ stats.lowestPoints || 0 }}</div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-icon">💯</div>
+          <div class="stat-label">平均折扣率</div>
+          <div class="stat-value" style="font-size: 22px">{{ stats.avgDiscount || '-' }}</div>
         </div>
       </div>
 
@@ -121,7 +117,7 @@
             pageSize: 10,
             tableData: [],
             // 修改点：新增统计对象
-            stats: { totalLevels: 0, highestLevel: '-', lowestPoints: 0 },
+            stats: { totalLevels: 0, highestLevel: '-', lowestPoints: 0, avgDiscount: '-' },
             // 修改点：字段名统一对齐实体：minPoints / discount / sort
             formData: {
               title: '新增会员等级',
@@ -165,7 +161,7 @@
           // 修改点：根据数据库真实数据计算统计
           calcStats(records) {
             if (!records || records.length === 0) {
-              this.stats = { totalLevels: 0, highestLevel: '-', lowestPoints: 0 }
+              this.stats = { totalLevels: 0, highestLevel: '-', lowestPoints: 0, avgDiscount: '-' }
               return
             }
             // total来自分页总数
@@ -183,6 +179,14 @@
               return prev
             }, null)
             this.stats.lowestPoints = lowest || 0
+            // 修改点：计算平均折扣率
+            var validDiscounts = records.filter(function(d) { return d.discount != null && d.discount > 0 })
+            if (validDiscounts.length > 0) {
+              var sum = validDiscounts.reduce(function(s, d) { return s + (d.discount || 0) }, 0)
+              this.stats.avgDiscount = (sum / validDiscounts.length * 100).toFixed(0) + '%'
+            } else {
+              this.stats.avgDiscount = '-'
+            }
           },
           handleQuery() {
             this.page = 1

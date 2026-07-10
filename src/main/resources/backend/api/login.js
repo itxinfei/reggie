@@ -12,3 +12,12 @@ function logoutApi(){
     'method': 'post',
   })
 }
+
+// 忘记密码
+function forgotPasswordApi(data) {
+  return $axios({
+    'url': '/employee/forgot-password',
+    'method': 'post',
+    data
+  })
+}

@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
     .tableBar .filter-group {
       display: flex;
@@ -26,85 +27,6 @@
       margin-right: 0 !important;
     }
 
-    /* ========== 数据统计卡片 ========== */
-    .stats-cards {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 20px 24px;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.3s;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-      border: 1px solid #f0f2f5;
-    }
-
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    }
-
-    /* 修改点：stats-card 可点击筛选 */
-    .stat-card.clickable { cursor: pointer; user-select: none; }
-    .stat-card.active {
-      border-color: #409eff;
-      box-shadow: 0 0 0 2px rgba(64,158,255,0.3);
-      transform: translateY(-3px);
-    }
-
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--gradient);
-    }
-
-    .stat-card .stat-icon {
-      position: absolute;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 42px;
-    }
-
-    .stat-card .stat-label {
-      font-size: 13px;
-      color: #909399;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-
-    .stat-card .stat-value {
-      font-size: 30px;
-      font-weight: 700;
-      line-height: 1.2;
-      background: var(--gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
-    .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
-    .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
-    .stat-card.danger  { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
-
-    @media (max-width: 1400px) {
-      .stats-cards { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (max-width: 768px) {
-      .stats-cards { grid-template-columns: 1fr; }
-    }
   </style>
 </head>
 <body>
@@ -137,12 +59,12 @@
 
       <div class="tableBar">
         <div class="filter-group">
-          <el-select v-model="searchPlatform" placeholder="平台" clearable style="width:120px">
+          <el-select v-model="searchPlatform" placeholder="平台" clearable class="el-select--wide-xs">
             <el-option label="美团" value="MEITUAN"></el-option>
             <el-option label="饿了么" value="ELEME"></el-option>
             <el-option label="抖音" value="DOUYIN"></el-option>
           </el-select>
-          <el-select v-model="searchStatus" placeholder="状态" clearable style="width:120px">
+          <el-select v-model="searchStatus" placeholder="状态" clearable class="el-select--wide-xs">
             <el-option label="待处理" value="PENDING"></el-option>
             <el-option label="已接单" value="ACCEPTED"></el-option>
             <el-option label="已完成" value="COMPLETED"></el-option>
@@ -155,7 +77,7 @@
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             value-format="yyyy-MM-dd"
-            style="width:240px"
+            class="el-date-editor--md"
           ></el-date-picker>
           <el-button type="primary" @click="handleQuery">查询</el-button>
           <el-button @click="reset">重置</el-button>

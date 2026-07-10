@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
   .search-btn { margin-left: 10px; }
@@ -25,75 +26,6 @@
   .rank-badge.r3 { background: #ffa940; color: #fff; }
   .rank-badge.rn { background: #f0f0f0; color: #666; }
 
-  /* ========== 数据统计卡片 ========== */
-  .stats-cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-bottom: 20px;
-  }
-
-  .stat-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 20px 24px;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-    border: 1px solid #f0f2f5;
-  }
-
-  .stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  }
-
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--gradient);
-  }
-
-  .stat-card .stat-icon {
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 42px;
-  }
-
-  .stat-card .stat-label {
-    font-size: 13px;
-    color: #909399;
-    margin-bottom: 8px;
-    font-weight: 500;
-  }
-
-  .stat-card .stat-value {
-    font-size: 30px;
-    font-weight: 700;
-    line-height: 1.2;
-    background: var(--gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
-  .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
-  .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
-
-  @media (max-width: 1400px) {
-    .stats-cards { grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (max-width: 768px) {
-    .stats-cards { grid-template-columns: 1fr; }
-  }
   /* 空状态样式 */
   .chart-empty {
     display: flex; align-items: center; justify-content: center;
@@ -144,6 +76,11 @@
           <div class="stat-icon">📊</div>
           <div class="stat-label">总销量（份）</div>
           <div class="stat-value">{{ stats.totalSales || 0 }}</div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-icon">📈</div>
+          <div class="stat-label">平均销量</div>
+          <div class="stat-value">{{ stats.avgSales || 0 }}</div>
         </div>
       </div>
 
@@ -203,7 +140,8 @@
           stats: {
             totalDishes: 0,
             topDishes: 0,
-            totalSales: 0
+            totalSales: 0,
+            avgSales: 0        // 修改点：平均每个菜品销量
           },
           chart: null,
           trendChart: null,
@@ -300,12 +238,15 @@
             if (String(res.code) === '1') {
               const data = res.data || []
               const totalSales = data.reduce((sum, item) => sum + (item.count || 0), 0)
+              // 修改点：计算平均销量（保留整数）
+              const avgSales = data.length > 0 ? Math.round(totalSales / data.length) : 0
               return {
                 code: 1,
                 data: {
                   totalDishes: data.length,
                   topDishes: data.length,
-                  totalSales: totalSales
+                  totalSales: totalSales,
+                  avgSales: avgSales
                 }
               }
             }

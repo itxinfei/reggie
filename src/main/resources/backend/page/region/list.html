@@ -17,14 +17,14 @@
         <el-input v-model="input.name" placeholder="地区名称" style="width: 180px" clearable @keyup.enter.native="handleQuery">
           <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
         </el-input>
-        <el-select v-model="input.level" placeholder="层级" clearable style="width: 120px; margin-left: 10px" @change="handleQuery">
+        <el-select v-model="input.level" placeholder="层级" clearable class="el-select--wide-xs" @change="handleQuery">
           <el-option label="全部" :value="null"></el-option>
           <el-option label="省份" :value="1"></el-option>
           <el-option label="城市" :value="2"></el-option>
           <el-option label="区/县" :value="3"></el-option>
         </el-select>
-        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
-        <el-button style="margin-left: 10px" @click="reset">重置</el-button>
+        <el-button type="primary" @click="handleQuery">查询</el-button>
+        <el-button @click="reset">重置</el-button>
         <el-button type="primary" @click="addHandle">+ 新增地区</el-button>
       </div>
 
@@ -58,7 +58,7 @@
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="40%" :before-close="handleClose">
+    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="600px" :before-close="handleClose">
       <el-form class="demo-form-inline" label-width="100px">
         <el-form-item label="地区名称：">
           <el-input v-model="formData.name" placeholder="请输入地区名称" maxlength="50" />

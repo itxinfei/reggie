@@ -1,0 +1,170 @@
+/**
+ * AI模型配置页面样式（从 provider-config.html 提取）
+ * 修改点：独立CSS文件便于维护
+ * @author reggie
+ * @since 2026-07-10
+ */
+
+/* 激活供应商高亮卡片 */
+.active-provider-card {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+    border: 2px solid #409eff;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+.active-provider-card::before {
+    content: '当前激活';
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #409eff;
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 14px;
+    border-radius: 0 10px 0 10px;
+    font-weight: 500;
+}
+.active-provider-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.provider-icon-large {
+    width: 56px; height: 56px;
+    border-radius: 12px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    flex-shrink: 0;
+}
+.provider-detail { flex: 1; }
+.provider-detail .name {
+    font-size: 18px; font-weight: 600; color: #303133;
+}
+.provider-detail .model {
+    font-size: 14px; color: #606266; margin-top: 6px;
+    font-weight: 500;
+}
+.provider-detail .url {
+    font-size: 13px; color: #909399; margin-top: 4px;
+    word-break: break-all;
+}
+
+/* 二级标题 */
+.section-title {
+    font-size: 16px; font-weight: 600; color: #303133;
+    margin-bottom: 16px; padding-bottom: 12px;
+    border-bottom: 1px solid #ebeef5;
+    display: flex; align-items: center; gap: 8px;
+}
+.section-title .count-tip {
+    font-size: 13px; font-weight: 400; color: #909399;
+}
+
+/* 供应商卡片网格 */
+.provider-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+}
+.provider-card {
+    background: #fff;
+    border: 1px solid #e4e7ed;
+    border-radius: 10px;
+    padding: 18px 20px;
+    transition: all 0.25s;
+    cursor: pointer;
+    position: relative;
+}
+.provider-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+    border-color: #c0c4cc;
+}
+.provider-card.active-card {
+    border-color: #409eff;
+    background: #f0f9ff;
+}
+.provider-card.disabled-card {
+    opacity: 0.55;
+}
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.card-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    background: #f5f7fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+.card-info { flex: 1; min-width: 0; }
+.card-info .name {
+    font-size: 15px; font-weight: 600; color: #303133;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.card-info .model-name {
+    font-size: 13px; color: #606266; margin-top: 4px;
+}
+.card-status {
+    padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 500;
+    flex-shrink: 0;
+}
+.card-status.active { background: #f0f9eb; color: #52b818; }
+.card-status.inactive { background: #f5f5f5; color: #909399; }
+.card-desc {
+    font-size: 13px; color: #303133; line-height: 1.6; margin-bottom: 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.card-meta {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 12px; color: #606266;
+}
+.card-meta .meta-item { display: flex; align-items: center; gap: 4px; }
+.card-actions {
+    display: flex; gap: 8px; margin-top: 14px;
+    padding-top: 14px; border-top: 1px solid #ebeef5;
+}
+.card-actions .el-button { flex: 1; }
+
+/* 预设图标颜色 */
+.icon-deepseek { background: #e6f7ff; }
+.icon-qwen { background: #fff0f0; }
+.icon-zhipu { background: #f0f9ff; }
+.icon-ernie { background: #f0f5ff; }
+.icon-baichuan { background: #fdf6ec; }
+.icon-moonshot { background: #f9f0ff; }
+.icon-minimax { background: #fff0e6; }
+.icon-360 { background: #f5f5f5; }
+
+/* 弹窗内表单可读性增强 */
+.dialog-form .el-form-item__label {
+    color: #303133; font-weight: 500;
+}
+.dialog-form .el-input__inner { color: #303133; }
+.dialog-form .el-textarea__inner { color: #303133; }
+.dialog-form .key-hint {
+    font-size: 12px; color: #e6a23c; line-height: 1.8;
+}
+.dialog-form .field-tip {
+    font-size: 12px; color: #909399; margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+    .provider-grid { grid-template-columns: 1fr; }
+    .active-provider-info { flex-direction: column; text-align: center; }
+}

@@ -257,6 +257,28 @@
           </el-image>
           <div class="title">{{ detailsDialog.item.name }}</div>
           <div class="content">{{ detailsDialog.item.description }}</div>
+          <!-- 评价展示 -->
+          <div class="eval-section" v-if="detailsDialog.item.evalStats">
+            <div class="eval-summary">
+              <span class="eval-rating">{{ detailsDialog.item.evalStats.avgRating || '--' }}</span>
+              <span class="eval-stars">
+                <i v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (detailsDialog.item.evalStats.avgRating || 0) }">★</i>
+              </span>
+              <span class="eval-count">{{ detailsDialog.item.evalStats.totalCount || 0 }} 条评价</span>
+            </div>
+            <div class="eval-reviews" v-if="detailsDialog.item.evalList && detailsDialog.item.evalList.length > 0">
+              <div v-for="review in detailsDialog.item.evalList" :key="review.id" class="eval-review-item">
+                <div class="eval-review-header">
+                  <span class="eval-review-user">{{ review.userName || '用户' }}</span>
+                  <span class="eval-review-stars">
+                    <i v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (review.starRating || 0) }">★</i>
+                  </span>
+                </div>
+                <div class="eval-review-content">{{ review.content }}</div>
+                <div class="eval-review-time">{{ formatDate(review.createTime) }}</div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="divNum">
           <div class="left">
@@ -473,6 +495,7 @@
         <script src="./api/main.js"></script>
         <script src="./api/address.js"></script>
         <script src="./api/recommend.js"></script>
+        <script src="./api/evaluation.js"></script>
         <!-- 修改点：引入AI助手API -->
         <script src="./api/ai.js"></script>
   </body>
@@ -1253,6 +1276,8 @@
               if(Array.isArray(item.flavors)){
                 this.detailsDialog.item = item
                 this.detailsDialog.show = true
+                // 加载菜品评价数据
+                this.loadDishEvaluations(item.id)
               }else{
                 // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
                 try {
@@ -1267,6 +1292,30 @@
                   }
                 } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
               }
+            },
+
+            // 加载菜品评价数据
+            async loadDishEvaluations(dishId) {
+              try {
+                const [statsRes, listRes] = await Promise.all([
+                  getDishRatingStats(dishId),
+                  getDishEvaluations(dishId, 1, 3)
+                ])
+                if (statsRes.code === 1) {
+                  this.detailsDialog.item.evalStats = statsRes.data || {}
+                }
+                if (listRes.code === 1) {
+                  this.detailsDialog.item.evalList = listRes.data.records || []
+                }
+              } catch (e) {
+                // 静默失败，不影响菜品详情展示
+              }
+            },
+
+            // 格式化日期
+            formatDate(dateStr) {
+              if (!dateStr) return ''
+              return dateStr.replace('T', ' ').substring(0, 19)
             }
 
           }

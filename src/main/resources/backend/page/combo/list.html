@@ -9,87 +9,8 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
-    /* ========== 数据统计卡片 ========== */
-    .stats-cards {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 20px 24px;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.3s;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-      border: 1px solid #f0f2f5;
-    }
-
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    }
-
-    /* 修改点：stats-card 可点击筛选 */
-    .stat-card.clickable { cursor: pointer; user-select: none; }
-    .stat-card.active {
-      border-color: #409eff;
-      box-shadow: 0 0 0 2px rgba(64,158,255,0.3);
-      transform: translateY(-3px);
-    }
-
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--gradient);
-    }
-
-    .stat-card .stat-icon {
-      position: absolute;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 42px;
-    }
-
-    .stat-card .stat-label {
-      font-size: 13px;
-      color: #909399;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-
-    .stat-card .stat-value {
-      font-size: 30px;
-      font-weight: 700;
-      line-height: 1.2;
-      background: var(--gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
-    .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
-    .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
-    .stat-card.danger  { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
-    .stat-card.info    { --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%); }
-
-    @media (max-width: 1400px) {
-      .stats-cards { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (max-width: 768px) {
-      .stats-cards { grid-template-columns: 1fr; }
-    }
   </style>
 </head>
 <body>
@@ -124,7 +45,7 @@
         <el-input
           v-model="input"
           placeholder="请输入套餐名称"
-          style="width: 250px"
+          class="el-input--wide"
           clearable
           @keyup.enter.native="handleQuery"
         >
@@ -138,9 +59,9 @@
         <el-button type="primary" size="small" @click="handleQuery">查询</el-button>
         <el-button size="small" @click="reset">重置</el-button>
         <div class="tableLab">
-          <el-button type="primary" size="small" @click="deleteHandle('批量')">批量删除</el-button>
-          <el-button type="primary" size="small" @click="statusHandle('1')">批量启售</el-button>
-          <el-button type="primary" size="small" @click="statusHandle('0')">批量停售</el-button>
+          <el-button type="danger" size="small" @click="deleteHandle('批量')">批量删除</el-button>
+          <el-button type="success" size="small" @click="statusHandle('1')">批量启售</el-button>
+          <el-button type="warning" size="small" @click="statusHandle('0')">批量停售</el-button>
           <el-button type="primary" size="small" @click="addSetMeal('add')">
             + 新建套餐
           </el-button>
@@ -252,15 +173,15 @@
         label-width="120px"
       >
         <el-form-item label="套餐名称:" prop="name">
-          <el-input v-model="comboForm.name" placeholder="请填写套餐名称" maxlength="20" style="width: 293px;" />
+          <el-input v-model="comboForm.name" placeholder="请填写套餐名称" maxlength="20" />
         </el-form-item>
         <el-form-item label="套餐分类:" prop="categoryId">
-          <el-select v-model="comboForm.categoryId" placeholder="请选择套餐分类" style="width: 293px;">
+          <el-select v-model="comboForm.categoryId" placeholder="请选择套餐分类">
             <el-option v-for="item in comboCategoryList" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="套餐价格:" prop="price">
-          <el-input v-model="comboForm.price" placeholder="请设置套餐价格" style="width: 293px;" />
+          <el-input v-model="comboForm.price" placeholder="请设置套餐价格" />
         </el-form-item>
         <el-form-item label="套餐菜品:" prop="dishList">
           <div class="addDish">
@@ -308,7 +229,7 @@
           </el-upload>
         </el-form-item>
         <el-form-item label="套餐描述:">
-          <el-input v-model="comboForm.description" type="textarea" :rows="3" placeholder="套餐描述，最长200字" maxlength="200" style="width: 293px;" />
+          <el-input v-model="comboForm.description" type="textarea" :rows="3" placeholder="套餐描述，最长200字" maxlength="200" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">

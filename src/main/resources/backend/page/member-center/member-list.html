@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
     .search-btn { margin-left: 10px; }
     .info-box { margin: -15px -44px 20px; }
@@ -16,77 +17,6 @@
     .info-box .item-box .label { width: 96px; }
     .info-box .item-box .des { flex: 1; color: #333333; }
 
-    /* ========== 数据统计卡片 ========== */
-    .stats-cards {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 20px 24px;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.3s;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-      border: 1px solid #f0f2f5;
-    }
-
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    }
-
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--gradient);
-    }
-
-    .stat-card .stat-icon {
-      position: absolute;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 42px;
-    }
-
-    .stat-card .stat-label {
-      font-size: 13px;
-      color: #909399;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-
-    .stat-card .stat-value {
-      font-size: 30px;
-      font-weight: 700;
-      line-height: 1.2;
-      background: var(--gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
-    .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
-    .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
-    .stat-card.danger  { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
-
-    @media (max-width: 1400px) {
-      .stats-cards { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (max-width: 768px) {
-      .stats-cards { grid-template-columns: 1fr; }
-    }
   </style>
 </head>
 <body>
@@ -118,11 +48,11 @@
       </div>
 
       <div class="tableBar">
-        <el-input v-model="input.name" placeholder="请输入会员名称" style="width: 200px" clearable @keyup.enter.native="handleQuery">
+        <el-input v-model="input.name" placeholder="请输入会员名称" clearable @keyup.enter.native="handleQuery">
           <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
         </el-input>
-        <el-input v-model="input.phone" placeholder="请输入手机号" style="width: 200px; margin-left: 10px" clearable @keyup.enter.native="handleQuery"></el-input>
-        <el-select v-model="input.levelId" placeholder="请选择会员等级" style="width: 200px; margin-left: 10px" clearable @change="handleQuery">
+        <el-input v-model="input.phone" placeholder="请输入手机号" clearable @keyup.enter.native="handleQuery"></el-input>
+        <el-select v-model="input.levelId" placeholder="请选择会员等级" clearable @change="handleQuery">
           <el-option v-for="item in levelOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
         </el-select>
         <el-button type="primary" class="search-btn" @click="handleQuery">查询</el-button>
@@ -207,10 +137,10 @@
           <span>{{ rechargeMember.name }}</span>
         </el-form-item>
         <el-form-item label="充值金额：">
-          <el-input v-model="rechargeForm.amount" type="number" placeholder="请输入充值金额" style="width: 293px;"></el-input>
+          <el-input v-model="rechargeForm.amount" type="number" placeholder="请输入充值金额" />
         </el-form-item>
         <el-form-item label="赠送金额：">
-          <el-input v-model="rechargeForm.giftAmount" type="number" placeholder="请输入赠送金额" style="width: 293px;"></el-input>
+          <el-input v-model="rechargeForm.giftAmount" type="number" placeholder="请输入赠送金额" />
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">

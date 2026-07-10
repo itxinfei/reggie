@@ -85,7 +85,7 @@
     </div>
 
     <!-- 新建门店对话框 -->
-    <el-dialog title="新建门店" :visible.sync="createDialogVisible" width="550px" @close="resetCreateForm">
+    <el-dialog title="新建门店" :visible.sync="createDialogVisible" width="600px" @close="resetCreateForm">
         <el-form :model="createForm" ref="createFormRef" label-width="100px" size="small">
             <el-form-item label="门店名称" prop="storeName" :rules="[{required:true,message:'必填'}]">
                 <el-input v-model="createForm.storeName" placeholder="如：瑞吉外卖-朝阳店" maxlength="100" />
@@ -132,10 +132,10 @@
             <el-button size="small" type="primary" @click="syncType('dishes')" :loading="syncing.dishes">
                 <i class="el-icon-sell"></i> 同步菜品
             </el-button>
-            <el-button size="small" type="success" @click="syncType('categories')" :loading="syncing.categories" style="margin-left:8px;">
+            <el-button size="small" type="success" @click="syncType('categories')" :loading="syncing.categories">
                 <i class="el-icon-menu"></i> 同步分类
             </el-button>
-            <el-button size="small" type="warning" @click="syncType('setmeals')" :loading="syncing.setmeals" style="margin-left:8px;">
+            <el-button size="small" type="warning" @click="syncType('setmeals')" :loading="syncing.setmeals">
                 <i class="el-icon-s-grid"></i> 同步套餐
             </el-button>
         </div>

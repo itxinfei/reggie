@@ -13,13 +13,13 @@
   <div class="dashboard-container" id="stock-check-app">
     <div class="container">
       <div class="tableBar">
-        <el-select v-model="input.status" placeholder="状态" style="width: 130px" clearable @change="handleQuery">
+        <el-select v-model="input.status" placeholder="状态" class="el-select--narrow-sm" clearable @change="handleQuery">
           <el-option label="进行中" value="0"></el-option>
           <el-option label="已完成" value="1"></el-option>
         </el-select>
-        <el-date-picker v-model="input.dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" style="margin-left: 10px" value-format="yyyy-MM-dd" @change="handleQuery"></el-date-picker>
-        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
-        <el-button style="margin-left: 10px" @click="reset">重置</el-button>
+        <el-date-picker v-model="input.dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd" @change="handleQuery"></el-date-picker>
+        <el-button type="primary" @click="handleQuery">查询</el-button>
+        <el-button @click="reset">重置</el-button>
         <el-button type="primary" @click="addHandle">+ 新增盘点</el-button>
       </div>
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
@@ -66,14 +66,14 @@
     <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="40%" :before-close="handleClose">
       <el-form class="demo-form-inline" label-width="120px">
         <el-form-item label="盘点明细：">
-          <div v-for="(item, index) in formData.details" :key="index" style="display: flex; margin-bottom: 8px; gap: 8px; align-items: center;">
-            <el-select v-model="item.materialId" placeholder="食材" style="width: 200px" filterable>
+          <div v-for="(item, index) in formData.details" :key="index" class="detail-row">
+            <el-select v-model="item.materialId" placeholder="食材" filterable>
               <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id"></el-option>
             </el-select>
-            <el-input v-model="item.actualQty" placeholder="实际数量" type="number" style="width: 120px" />
-            <el-button type="danger" size="mini" @click="removeDetail(index)">删除</el-button>
+            <el-input v-model="item.actualQty" placeholder="实际数量" type="number" class="el-input--narrow-md" />
+            <el-button type="danger" size="small" @click="removeDetail(index)">删除</el-button>
           </div>
-          <el-button type="primary" size="mini" @click="addDetail">+ 添加盘点项</el-button>
+          <el-button type="primary" size="small" @click="addDetail">+ 添加盘点项</el-button>
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">

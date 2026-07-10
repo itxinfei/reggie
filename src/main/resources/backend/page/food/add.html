@@ -16,6 +16,76 @@
           margin-right: 4px;
       }
 
+    /* 口味编辑样式 */
+    .flavorBox {
+      border: 1px solid #ebeef5;
+      border-radius: 8px;
+      padding: 16px;
+      background: #fafbfc;
+    }
+    .flavor-empty {
+      text-align: center;
+      padding: 24px;
+      color: #c0c4cc;
+    }
+    .flavor-empty .el-button {
+      color: #409eff;
+    }
+    .flavor-item {
+      border: 1px solid #e4e7ed;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: #fff;
+      transition: all 0.2s;
+    }
+    .flavor-item:hover {
+      border-color: #c0c4cc;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .flavor-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .flavor-index {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #409eff;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .flavor-tags {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .flavor-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+      padding: 8px;
+      background: #f5f7fa;
+      border-radius: 6px;
+    }
+    .flavor-presets .el-tag {
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .flavor-presets .el-tag:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(64, 158, 255, 0.2);
+    }
   </style>
 </head>
 <body>
@@ -60,88 +130,61 @@
           />
         </el-form-item>
         <el-form-item label="口味做法配置:">
-          <el-form-item>
-            <div class="flavorBox">
-              <span
-                v-if="dishFlavors.length == 0"
-                class="addBut"
-                @click="addFlavore"
-              > + 添加口味</span>
-              <div
-                v-if="dishFlavors.length != 0"
-                class="flavor"
-              >
-                <div class="title">
-                  <span>口味名（3个字内）</span><span>口味标签（输入标签回车添加）</span>
+          <div class="flavorBox">
+            <div v-if="dishFlavors.length === 0" class="flavor-empty">
+              <el-button type="text" icon="el-icon-plus" @click="addFlavore">添加口味配置</el-button>
+            </div>
+            <div v-else class="flavor-list">
+              <div v-for="(item, index) in dishFlavors" :key="index" class="flavor-item">
+                <div class="flavor-header">
+                  <span class="flavor-index">{{ index + 1 }}</span>
+                  <el-input
+                    v-model="item.name"
+                    size="small"
+                    placeholder="口味名称（如：辣度、温度）"
+                    maxlength="10"
+                    style="width: 160px;"
+                    @focus="selectFlavor(true, index)"
+                    @blur="outSelect(false, index)"
+                  ></el-input>
+                  <el-button type="text" size="small" class="btn-delete" @click="delFlavor(index)">删除此口味</el-button>
                 </div>
-                <div class="cont">
-                  <div
-                    v-for="(item, index) in dishFlavors"
-                    :key="index"
-                    class="items"
-                  >
-                    <div class="itTit">
-                      <!-- <SelectInput
-                        :dish-flavors-data="dishFlavorsData"
-                        :index="index"
-                        :value="item.name"
-                        @select="selectHandle"
-                      /> -->
-                      <div class="selectInput">
-                        <div>
-                           <el-input
-                              v-model="item.name"
-                              type="text"
-                              placeholder="请输入口味"
-                              @focus="selectFlavor(true,index)"
-                              @blur="outSelect(false,index)"
-                              @input="inputHandle(index)"
-                            />
-                        </div>
-                        <div v-show="item.showOption" class="flavorSelect">
-                          <span
-                            v-for="(it, ind) in dishFlavorsData"
-                            :key="ind"
-                            class="items"
-                            @click="checkOption(it,ind,index)"
-                          >{{ it.name }}</span>
-                          <span
-                            v-if="dishFlavorsData.length === 0"
-                            class="none"
-                          >无数据</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      class="labItems"
-                    >
-                      <span
-                        v-for="(it, ind) in item.value"
-                        :key="ind"
-                      >{{ it }} <i @click="delFlavorLabel(index, ind)">X</i></span>
-                      <div
-                        class="inputBox"
-                        :style="inputStyle"
-                        contenteditable="true"
-                        @focus="flavorPosition(index)"
-                        @keydown.enter="(val)=>keyDownHandle(val,index)"
-                      ></div>
-                    </div>
-                    <span
-                      class="delFlavor delBut non"
-                      @click="delFlavor(index)"
-                    >删除</span>
-                  </div>
+                <!-- 预定义标签快捷选择 -->
+                <div class="flavor-presets" v-if="item.showOption && dishFlavorsData.length > 0">
+                  <el-tag
+                    v-for="(preset, pIdx) in getPresetOptions(index)"
+                    :key="pIdx"
+                    size="mini"
+                    effect="plain"
+                    style="cursor: pointer; margin: 2px 4px 2px 0;"
+                    @click.native="applyPreset(index, preset)"
+                  >{{ preset }}</el-tag>
                 </div>
-                <div
-                  class="addBut"
-                  @click="addFlavore"
-                >
-                  添加口味
+                <div class="flavor-tags">
+                  <el-tag
+                    v-for="(tag, tIdx) in item.value"
+                    :key="tIdx"
+                    size="small"
+                    closable
+                    type="info"
+                    @close="delFlavorLabel(index, tIdx)"
+                  >{{ tag }}</el-tag>
+                  <el-input
+                    v-if="item.inputVisible"
+                    v-model="item.inputValue"
+                    size="mini"
+                    :ref="'tagInput' + index"
+                    style="width: 90px;"
+                    maxlength="10"
+                    @keyup.enter.native="handleTagInputConfirm(index)"
+                    @blur="handleTagInputConfirm(index)"
+                  ></el-input>
+                  <el-button v-else size="small" type="text" icon="el-icon-plus" @click="showTagInput(index)">添加标签</el-button>
                 </div>
               </div>
+              <el-button type="text" icon="el-icon-plus" @click="addFlavore" style="margin-top: 8px;">添加新口味</el-button>
             </div>
-          </el-form-item>
+          </div>
         </el-form-item>
         <el-form-item
           label="菜品图片:"
@@ -307,11 +350,10 @@
                     try {
                       parsedValue = JSON.parse(obj.value)
                     } catch(e) {
-                      // 如果 value 不是合法 JSON（如直接存了"微辣"），转为数组
                       parsedValue = typeof obj.value === 'string' ? obj.value.split(',').map(s => s.trim()).filter(Boolean) : [obj.value]
                     }
                   }
-                  return { ...obj, value: parsedValue, showOption: false }
+                  return { ...obj, value: parsedValue, showOption: false, inputVisible: false, inputValue: '' }
                 })
                 // this.ruleForm.id = res.data.data.categoryId
                 // this.imageUrl = res.data.data.image
@@ -323,7 +365,13 @@
           },
           // 按钮 - 添加口味
           addFlavore () {
-            this.dishFlavors.push({'name': '', 'value': [], showOption: false}) // JSON.parse(JSON.stringify(this.dishFlavorsData))
+            this.dishFlavors.push({
+              'name': '',
+              'value': [],
+              showOption: false,
+              inputVisible: false,
+              inputValue: ''
+            })
           },
 
           // 按钮 - 删除口味
@@ -336,12 +384,12 @@
             this.dishFlavors[index].value.splice(ind, 1)
           },
 
-          //口味位置记录
+          // 口味位置记录
           flavorPosition (index) {
             this.index = index
           },
 
-          // 添加口味标签
+          // 添加口味标签（旧方法，保留兼容）
           keyDownHandle (val, index) {
             const evt = val.originalEvent || event
             if (evt) {
@@ -349,7 +397,6 @@
               evt.preventDefault()
               evt.stopPropagation()
             }
-
             if (val.target.innerText.trim() !== '') {
               this.dishFlavors[index].value.push(val.target.innerText)
               val.target.innerText = ''
@@ -407,6 +454,54 @@
             const arrDate = [...this.dishFlavors]
             arrDate[key] = JSON.parse(JSON.stringify(this.dishFlavorsData[ind]))
             this.dishFlavors = arrDate
+          },
+
+          // 显示标签输入框
+          showTagInput(index) {
+            this.dishFlavors[index].inputVisible = true
+            this.$nextTick(() => {
+              const ref = this.$refs['tagInput' + index]
+              if (ref && ref[0]) ref[0].$refs.input.focus()
+            })
+          },
+
+          // 确认添加标签
+          handleTagInputConfirm(index) {
+            const inputValue = this.dishFlavors[index].inputValue
+            if (inputValue && inputValue.trim()) {
+              const trimmed = inputValue.trim()
+              // 避免重复
+              if (!this.dishFlavors[index].value.includes(trimmed)) {
+                this.dishFlavors[index].value.push(trimmed)
+              }
+            }
+            this.dishFlavors[index].inputVisible = false
+            this.dishFlavors[index].inputValue = ''
+          },
+
+          // 获取预设标签选项（匹配当前口味名）
+          getPresetOptions(index) {
+            const flavorName = (this.dishFlavors[index].name || '').toLowerCase()
+            const matched = this.dishFlavorsData.filter(f => {
+              const name = (f.name || '').toLowerCase()
+              return name.includes(flavorName) || flavorName.includes(name) || flavorName === ''
+            })
+            // 返回所有预设的 value 选项（扁平化）
+            const allValues = []
+            const used = new Set(this.dishFlavors[index].value)
+            matched.forEach(f => {
+              f.value.forEach(v => {
+                if (!used.has(v)) allValues.push(v)
+              })
+            })
+            return allValues.slice(0, 8)
+          },
+
+          // 应用预设标签
+          applyPreset(index, presetValue) {
+            if (!this.dishFlavors[index].value.includes(presetValue)) {
+              this.dishFlavors[index].value.push(presetValue)
+            }
           },
 
           submitForm(formName, st) {

@@ -7,47 +7,49 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
-    .log-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
-    .log-stat-card { background: #fff; border-radius: 8px; padding: 16px 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
-    .log-stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-    .log-stat-val { font-size: 24px; font-weight: 700; color: #1a1a1a; }
-    .log-stat-label { font-size: 13px; color: #999; margin-top: 2px; }
-    .log-stat-card.today .log-stat-icon { background: #e6f7ff; color: #1890ff; }
-    .log-stat-card.total .log-stat-icon { background: #f0f9eb; color: #52c41a; }
   </style>
 </head>
 <body>
   <div class="dashboard-container" id="log-app">
-    <!-- 统计卡片 -->
-    <div class="log-stats">
-      <div class="log-stat-card today">
-        <div class="log-stat-icon">📋</div>
-        <div>
-          <div class="log-stat-val">{{ stats.todayCount || 0 }}</div>
-          <div class="log-stat-label">今日操作次数</div>
+    <!-- 修改点：统一为标准4卡片布局 -->
+    <div class="container">
+      <div class="stats-cards">
+        <div class="stat-card primary">
+          <div class="stat-icon">📋</div>
+          <div class="stat-label">今日操作次数</div>
+          <div class="stat-value">{{ stats.todayCount || 0 }}</div>
         </div>
-      </div>
-      <div class="log-stat-card total">
-        <div class="log-stat-icon">📊</div>
-        <div>
-          <div class="log-stat-val">{{ stats.totalCount || 0 }}</div>
-          <div class="log-stat-label">累计操作次数</div>
+        <div class="stat-card success">
+          <div class="stat-icon">📊</div>
+          <div class="stat-label">累计操作次数</div>
+          <div class="stat-value">{{ stats.totalCount || 0 }}</div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-icon">✅</div>
+          <div class="stat-label">操作成功</div>
+          <div class="stat-value">{{ stats.successCount || 0 }}</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">❌</div>
+          <div class="stat-label">操作失败</div>
+          <div class="stat-value">{{ stats.errorCount || 0 }}</div>
         </div>
       </div>
     </div>
 
     <div class="container">
       <div class="tableBar">
-        <el-input v-model="searchModule" placeholder="操作模块" style="width: 140px" clearable @keyup.enter.native="handleQuery"></el-input>
-        <el-select v-model="searchType" placeholder="操作类型" clearable style="width: 120px" @change="handleQuery">
+        <el-input v-model="searchModule" placeholder="操作模块" class="el-input--narrow-md" clearable @keyup.enter.native="handleQuery"></el-input>
+        <el-select v-model="searchType" placeholder="操作类型" clearable class="el-select--wide-xs" @change="handleQuery">
           <el-option label="新增" value="INSERT"></el-option>
           <el-option label="修改" value="UPDATE"></el-option>
           <el-option label="删除" value="DELETE"></el-option>
           <el-option label="其他" value="OTHER"></el-option>
         </el-select>
         <el-input v-model="searchOperator" placeholder="操作人" style="width: 120px" clearable @keyup.enter.native="handleQuery"></el-input>
-        <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd" @change="handleQuery" style="width: 240px"></el-date-picker>
+        <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd" @change="handleQuery" class="el-date-editor--md"></el-date-picker>
         <el-button type="primary" @click="handleQuery">查询</el-button>
         <el-button @click="resetSearch">重置</el-button>
       </div>
@@ -120,7 +122,7 @@
           page: 1,
           pageSize: 10,
           loading: false,
-          stats: { todayCount: 0, totalCount: 0 }
+          stats: { todayCount: 0, totalCount: 0, successCount: 0, errorCount: 0 }
         }
       },
       created() {
@@ -146,12 +148,27 @@
             this.loading = false
           }).catch(() => { this.loading = false })
         },
-        loadStats() {
-          sysApi.logStats().then(res => {
-            if (res && res.code === 1) {
-              this.stats = res.data || this.stats
+        // 修改点：并行加载基础统计和成功/失败统计
+        async loadStats() {
+          try {
+            const [statsRes, logRes] = await Promise.all([
+              sysApi.logStats(),
+              sysApi.logPage({ page: 1, pageSize: 1000 })
+            ])
+            if (statsRes && statsRes.code === 1) {
+              this.stats = Object.assign({}, this.stats, statsRes.data || {})
             }
-          })
+            // 修改点：从日志记录中统计成功/失败数
+            if (logRes && logRes.code === 1) {
+              const records = logRes.data.records || []
+              const successCount = records.filter(function(r) { return r.isSuccess === 1 }).length
+              const errorCount = records.filter(function(r) { return r.isSuccess === 0 }).length
+              this.stats.successCount = successCount
+              this.stats.errorCount = errorCount
+            }
+          } catch (err) {
+            console.warn('加载日志统计数据失败:', err)
+          }
         },
         handleQuery() {
           this.page = 1

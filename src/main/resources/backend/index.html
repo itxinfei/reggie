@@ -93,13 +93,47 @@
               <button class="hamburger-btn" @click="toggleSidebar" title="展开菜单">
                 <span></span><span></span><span></span>
               </button>
+              <!-- 全局搜索 -->
+              <div class="global-search">
+                <el-input
+                  v-model="searchKeyword"
+                  placeholder="搜索菜单..."
+                  size="small"
+                  clearable
+                  @focus="showSearchDropdown = true"
+                  @input="filterSearch"
+                  @keyup.enter.native="goToFirstResult"
+                >
+                  <i slot="prefix" class="el-input__icon el-icon-search"></i>
+                </el-input>
+                <div class="search-dropdown" v-show="showSearchDropdown && searchResults.length > 0">
+                  <div
+                    class="search-item"
+                    v-for="item in searchResults"
+                    :key="item.id"
+                    @click="navigateToSearch(item)"
+                  >
+                    <i :class="['iconfont', item.icon]"></i>
+                    <span class="search-item-name">{{ item.parentName }}</span>
+                    <span class="search-item-child">{{ item.name }}</span>
+                  </div>
+                </div>
+              </div>
               <!-- 返回按钮 -->
               <button v-if="goBackFlag" class="back-btn" @click="goBack()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 返回
               </button>
-              <!-- 页面标题 -->
-              <h1 class="page-title">{{headTitle}}</h1>
+              <!-- 面包屑导航（同时作为页面标题，最后一级不再重复显示） -->
+              <div class="breadcrumb" v-if="breadcrumbs.length > 0">
+                <template v-for="(crumb, index) in breadcrumbs">
+                  <span v-if="index > 0" class="crumb-sep">/</span>
+                  <span :class="['crumb-item', { clickable: index < breadcrumbs.length - 1, 'crumb-current': index === breadcrumbs.length - 1 }]"
+                        @click="index < breadcrumbs.length - 1 && navigateToBreadcrumb(index)">
+                    {{ crumb }}
+                  </span>
+                </template>
+              </div>
             </div>
             <div class="topbar-right">
               <div class="user-info">
@@ -164,51 +198,54 @@
                 { id: '3-3', name: '打印配置', url: 'page/printer/config-list.html', icon: 'icon-category' },
                 { id: '3-4', name: '打印日志', url: 'page/printer/log-list.html', icon: 'icon-combo' },
               ]},
-              { id: '4', name: '配送与堂食', icon: 'icon-order', children: [
-                { id: '4-1', name: '外卖配送', url: 'page/delivery/order-list.html', icon: 'icon-user' },
-                { id: '4-2', name: '桌台管理', url: 'page/dining/table-list.html', icon: 'icon-food' },
-                { id: '4-3', name: '区域管理', url: 'page/dining/area-list.html', icon: 'icon-category' },
-                { id: '4-4', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'icon-member' },
-                { id: '4-5', name: '预订管理', url: 'page/dining/reservation-list.html', icon: 'icon-order' },
+              { id: '4', name: '外卖配送', icon: 'icon-order', children: [
+                { id: '4-1', name: '配送订单', url: 'page/delivery/order-list.html', icon: 'icon-order' },
               ]},
-              { id: '5', name: '进销存', icon: 'icon-category', children: [
-                { id: '5-1', name: '原料管理', url: 'page/inventory/material-list.html', icon: 'icon-category' },
-                { id: '5-2', name: '库存盘点', url: 'page/inventory/stock-check.html', icon: 'icon-lock' },
-                { id: '5-3', name: '库存流水', url: 'page/inventory/stock-record.html', icon: 'icon-order' },
-                { id: '5-4', name: '采购管理', url: 'page/inventory/purchase-list.html', icon: 'icon-combo' },
-                { id: '5-5', name: '供应商管理', url: 'page/inventory/supplier-list.html', icon: 'icon-user' },
+              { id: '5', name: '堂食管理', icon: 'icon-food', children: [
+                { id: '5-1', name: '桌台管理', url: 'page/dining/table-list.html', icon: 'icon-food' },
+                { id: '5-2', name: '区域管理', url: 'page/dining/area-list.html', icon: 'icon-category' },
+                { id: '5-3', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'icon-member' },
+                { id: '5-4', name: '预订管理', url: 'page/dining/reservation-list.html', icon: 'icon-order' },
               ]},
-              { id: '6', name: '会员与用户', icon: 'icon-member', children: [
-                { id: '6-1', name: '会员等级', url: 'page/member-center/level-list.html', icon: 'icon-member' },
-                { id: '6-2', name: '积分管理', url: 'page/member-center/points-list.html', icon: 'icon-category' },
-                { id: '6-3', name: '优惠券', url: 'page/member-center/coupon-list.html', icon: 'icon-order' },
-                { id: '6-4', name: '充值记录', url: 'page/member-center/recharge-list.html', icon: 'icon-lock' },
-                { id: '6-5', name: 'C端用户', url: 'page/user/list.html', icon: 'icon-user' },
+              { id: '6', name: '进销存', icon: 'icon-category', children: [
+                { id: '6-1', name: '原料管理', url: 'page/inventory/material-list.html', icon: 'icon-category' },
+                { id: '6-2', name: '库存盘点', url: 'page/inventory/stock-check.html', icon: 'icon-lock' },
+                { id: '6-3', name: '库存流水', url: 'page/inventory/stock-record.html', icon: 'icon-order' },
+                { id: '6-4', name: '采购管理', url: 'page/inventory/purchase-list.html', icon: 'icon-combo' },
+                { id: '6-5', name: '供应商管理', url: 'page/inventory/supplier-list.html', icon: 'icon-user' },
               ]},
-              { id: '7', name: '数据分析', icon: 'icon-category', children: [
-                { id: '7-1', name: '经营报表', url: 'page/report/daily.html', icon: 'icon-order' },
-                { id: '7-2', name: '菜品排行', url: 'page/report/dish-ranking.html', icon: 'icon-food' },
-                { id: '7-3', name: '支付分析', url: 'page/report/payment-analysis.html', icon: 'icon-lock' },
-                { id: '7-4', name: '时段分析', url: 'page/report/time-slot.html', icon: 'icon-category' },
+              { id: '7', name: '会员与用户', icon: 'icon-member', children: [
+                { id: '7-1', name: '会员等级', url: 'page/member-center/level-list.html', icon: 'icon-member' },
+                { id: '7-2', name: '积分管理', url: 'page/member-center/points-list.html', icon: 'icon-category' },
+                { id: '7-3', name: '优惠券', url: 'page/member-center/coupon-list.html', icon: 'icon-order' },
+                { id: '7-4', name: '充值记录', url: 'page/member-center/recharge-list.html', icon: 'icon-lock' },
+                { id: '7-5', name: 'C端用户', url: 'page/user/list.html', icon: 'icon-user' },
               ]},
-              { id: '8', name: '营销中心', icon: 'icon-category', children: [
-                { id: '8-1', name: '智能推荐', url: 'page/recommend/overview.html', icon: 'icon-food' },
-                { id: '8-2', name: '营销活动', url: 'page/recommend/campaigns.html', icon: 'icon-category' },
+              { id: '8', name: '数据分析', icon: 'icon-category', children: [
+                { id: '8-1', name: '经营报表', url: 'page/report/daily.html', icon: 'icon-order' },
+                { id: '8-2', name: '菜品排行', url: 'page/report/dish-ranking.html', icon: 'icon-food' },
+                { id: '8-3', name: '支付分析', url: 'page/report/payment-analysis.html', icon: 'icon-lock' },
+                { id: '8-4', name: '时段分析', url: 'page/report/time-slot.html', icon: 'icon-category' },
+                { id: '8-5', name: '评价管理', url: 'page/report/evaluation-list.html', icon: 'icon-member' },
               ]},
-              { id: '9', name: '门店管理', icon: 'icon-food', children: [
-                { id: '9-1', name: '门店列表', url: 'page/store/list.html', icon: 'icon-food' },
-                { id: '9-2', name: '总部控制台', url: 'page/store/dashboard.html', icon: 'icon-lock' },
+              { id: '9', name: '营销中心', icon: 'icon-category', children: [
+                { id: '9-1', name: '智能推荐', url: 'page/recommend/overview.html', icon: 'icon-food' },
+                { id: '9-2', name: '营销活动', url: 'page/recommend/campaigns.html', icon: 'icon-category' },
               ]},
-              { id: '10', name: '系统管理', icon: 'icon-category', children: [
-                { id: '10-1', name: '员工管理', url: 'page/member/list.html', icon: 'icon-member' },
-                { id: '10-2', name: '角色管理', url: 'page/sys/role-list.html', icon: 'icon-member' },
-                { id: '10-3', name: '通知模板', url: 'page/sys/template-list.html', icon: 'icon-order' },
-                { id: '10-4', name: '系统配置', url: 'page/sys/config-list.html', icon: 'icon-category' },
-                { id: '10-5', name: '操作日志', url: 'page/sys/operation-log.html', icon: 'icon-category' },
+              { id: '10', name: '门店管理', icon: 'icon-food', children: [
+                { id: '10-1', name: '门店列表', url: 'page/store/list.html', icon: 'icon-food' },
+                { id: '10-2', name: '总部控制台', url: 'page/store/dashboard.html', icon: 'icon-lock' },
               ]},
-              { id: '11', name: 'AI助手', icon: 'icon-order', children: [
-                { id: '11-1', name: 'AI对话', url: 'page/ai/assistant.html', icon: 'icon-order' },
-                { id: '11-2', name: '模型配置', url: 'page/ai/provider-config.html', icon: 'icon-category' },
+              { id: '11', name: '系统管理', icon: 'icon-category', children: [
+                { id: '11-1', name: '员工管理', url: 'page/member/list.html', icon: 'icon-member' },
+                { id: '11-2', name: '角色管理', url: 'page/sys/role-list.html', icon: 'icon-member' },
+                { id: '11-3', name: '通知模板', url: 'page/sys/template-list.html', icon: 'icon-order' },
+                { id: '11-4', name: '系统配置', url: 'page/sys/config-list.html', icon: 'icon-category' },
+                { id: '11-5', name: '操作日志', url: 'page/sys/operation-log.html', icon: 'icon-category' },
+              ]},
+              { id: '12', name: 'AI助手', icon: 'icon-notice', children: [
+                { id: '12-1', name: 'AI对话', url: 'page/ai/assistant.html', icon: 'icon-notice' },
+                { id: '12-2', name: '模型配置', url: 'page/ai/provider-config.html', icon: 'icon-category' },
               ]},
             ],
             iframeUrl: 'page/dashboard/overview.html',
@@ -216,10 +253,29 @@
             goBackFlag: false,
             loading: true,
             timer: null,
-            navHistory: []  // 导航历史栈，用于返回按钮
+            navHistory: [],  // 导航历史栈，用于返回按钮
+            searchKeyword: '',       // 全局搜索关键词
+            showSearchDropdown: false, // 搜索下拉框
+            searchResults: [],       // 搜索结果
+            allMenuItems: []         // 扁平化菜单列表（搜索用）
           }
         },
-        computed: {},
+        computed: {
+          breadcrumbs() {
+            const crumbs = ['首页']
+            const currentItem = this.menuList.find(item =>
+              item.children && item.children.some(sub => sub.id === this.menuActived)
+            )
+            if (currentItem && currentItem.children) {
+              crumbs.push(currentItem.name)
+              const subItem = currentItem.children.find(sub => sub.id === this.menuActived)
+              if (subItem) {
+                crumbs.push(subItem.name)
+              }
+            }
+            return crumbs
+          }
+        },
         created() {
           const userInfo = window.localStorage.getItem('userInfo')
           if (userInfo) {
@@ -230,9 +286,14 @@
         beforeDestroy() {
           this.timer = null
           clearTimeout(this.timer)
+          document.removeEventListener('click', this.handleDocumentClick)
         },
         mounted() {
           window.menuHandle = this.menuHandle
+          // 构建扁平化菜单索引（用于全局搜索）
+          this.buildMenuIndex()
+          // 点击外部关闭搜索下拉
+          document.addEventListener('click', this.handleDocumentClick)
         },
         methods: {
           logout() {
@@ -251,6 +312,81 @@
               this.iframeUrl = homeMenu.url
               this.headTitle = homeMenu.name
               this.goBackFlag = false
+            }
+          },
+          navigateToBreadcrumb(index) {
+            // index 0 = 首页, index 1 = 父菜单, index 2 = 当前子页面
+            if (index === 0) {
+              this.goHome()
+            } else if (index === 1) {
+              const currentItem = this.menuList.find(item =>
+                item.children && item.children.some(sub => sub.id === this.menuActived)
+              )
+              if (currentItem && currentItem.children && currentItem.children.length > 0) {
+                const firstChild = currentItem.children[0]
+                this.menuHandle(firstChild, false)
+              }
+            }
+          },
+          // ========== 全局搜索 ==========
+          buildMenuIndex() {
+            // 扁平化菜单列表，方便搜索
+            this.allMenuItems = []
+            this.menuList.forEach(parent => {
+              if (parent.children && parent.children.length > 0) {
+                parent.children.forEach(child => {
+                  this.allMenuItems.push({
+                    id: child.id,
+                    name: child.name,
+                    url: child.url,
+                    icon: child.icon || parent.icon,
+                    parentName: parent.name
+                  })
+                })
+              } else if (parent.url) {
+                this.allMenuItems.push({
+                  id: parent.id,
+                  name: parent.name,
+                  url: parent.url,
+                  icon: parent.icon,
+                  parentName: ''
+                })
+              }
+            })
+          },
+          filterSearch() {
+            const keyword = this.searchKeyword.trim().toLowerCase()
+            if (!keyword) {
+              this.searchResults = []
+              this.showSearchDropdown = false
+              return
+            }
+            this.searchResults = this.allMenuItems.filter(item =>
+              item.name.toLowerCase().includes(keyword) ||
+              item.parentName.toLowerCase().includes(keyword)
+            ).slice(0, 8)  // 最多显示 8 条
+            this.showSearchDropdown = this.searchResults.length > 0
+          },
+          navigateToSearch(item) {
+            this.showSearchDropdown = false
+            this.searchKeyword = ''
+            // 找到对应的菜单项并导航
+            const menuItem = { id: item.id, name: item.name, url: item.url }
+            this.menuHandle(menuItem, false)
+          },
+          goToFirstResult() {
+            if (this.searchResults.length > 0) {
+              this.navigateToSearch(this.searchResults[0])
+            }
+          },
+          closeSearch() {
+            this.showSearchDropdown = false
+          },
+          handleDocumentClick(e) {
+            // 如果点击不在搜索组件内，关闭下拉
+            const searchEl = document.querySelector('.global-search')
+            if (searchEl && !searchEl.contains(e.target)) {
+              this.showSearchDropdown = false
             }
           },
           goBack() {

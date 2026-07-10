@@ -7,11 +7,14 @@
 /* ---- 页面容器 ---- */
 
 /* 登录页全局覆盖 — 避免使用内联样式 */
+/* 修改点：body 必须撑满视口，否则 flex 居中不生效 */
 body.login-page {
   overflow: visible;
   background: transparent;
   max-width: none;
   height: auto;
+  min-height: 100vh;
+  margin: 0;
 }
 #login {
   min-height: 100vh;
@@ -657,48 +660,247 @@ body.login-page {
   }
 }
 
-/* 桌面端 (> 750px) */
+/* 桌面端 (> 750px) — 修改点：px替换rem，因base.js将根字号锁为28px导致元素爆炸 */
 @media screen and (min-width: 751px) {
-  #login {
-    padding: 0;
-    padding-bottom: 60rem;
+  /* 修改点：覆盖index.css的html/body全局750px宽度限制，撑满视口 */
+  html {
+    max-width: none !important;
+    width: 100%;
   }
 
+  /* 修改点：body撑满视口并用flex居中 */
+  body.login-page {
+    max-width: none !important;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background: linear-gradient(180deg, #FFF3D6 0%, #FFE8C0 16%, #FFF2DF 34%, #FFF9F2 56%, #FFFFFF 100%);
+  }
+
+  /* 修改点：#login设为居中卡片，px覆盖关键尺寸 */
+  #login {
+    padding: 20px 0 40px;
+    min-height: auto;
+    width: 420px;
+    max-width: 92vw;
+    border-radius: 24px;
+    background: linear-gradient(180deg, #FFF3D6 0%, #FFE8C0 18%, #FFF0DA 38%, #FFF7EE 60%, #FFFFFF 100%);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08), 0 2px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  /* 修改点：桌面端隐藏装饰伪元素，卡片自带背景 */
+  #login::before,
+  #login::after {
+    display: none;
+  }
+
+  /* 品牌区域 */
   #login .brandArea {
     padding-top: 0;
-    padding-bottom: 50rem;
-    width: 420rem;
-    max-width: 420rem;
+    padding-bottom: 36px;
+    width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
   }
 
+  #login .brandIcon {
+    margin-bottom: 12px;
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  #login .brandIcon svg {
+    width: 56px;
+    height: 56px;
+  }
+
+  #login .brandName {
+    font-size: 26px;
+    letter-spacing: 3px;
+    margin-bottom: 4px;
+  }
+
+  #login .brandSlogan {
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  /* 表单卡片 */
+  #login .divContainer {
+    width: calc(100% - 48px) !important;
+    max-width: 372px !important;
+    border-radius: 14px;
+    padding: 2px 0;
+    margin-bottom: 16px;
+  }
+
+  #login .divSplit {
+    margin: 0 16px;
+  }
+
+  #login .inputItem {
+    padding: 2px 16px;
+  }
+  #login .codeItem {
+    padding-right: 100px;
+  }
+
+  /* 输入框 — px覆写 */
+  #login .divContainer .el-input__inner {
+    height: 48px !important;
+    line-height: 48px !important;
+    font-size: 15px !important;
+    padding-left: 30px !important;
+  }
+  #login .divContainer .el-input__inner::placeholder {
+    font-size: 13px !important;
+  }
+  #login .divContainer .el-input--prefix .el-input__inner {
+    padding-left: 34px !important;
+  }
+  #login .divContainer .el-input__prefix {
+    left: 16px;
+    line-height: 48px !important;
+  }
+  #login .divContainer .el-input__prefix .inputIcon {
+    font-size: 16px;
+    line-height: 48px !important;
+  }
+  #login .divContainer .el-input__suffix {
+    line-height: 48px !important;
+    right: 4px;
+  }
+
+  /* 验证码按钮 */
+  #login .codeBtn {
+    right: 16px;
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 14px;
+  }
+
+  /* 错误提示 */
+  #login .divMsg {
+    width: calc(100% - 48px) !important;
+    max-width: 372px;
+    font-size: 11px;
+    line-height: 18px;
+    margin-bottom: 4px;
+  }
+
+  /* 登录按钮 */
+  #login .btnLogin {
+    width: calc(100% - 48px) !important;
+    max-width: 372px !important;
+    height: 44px !important;
+    border-radius: 22px !important;
+    font-size: 16px !important;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+
+  /* 协议行 */
+  #login .agreementRow {
+    width: calc(100% - 48px) !important;
+    max-width: 372px;
+    margin-bottom: 0;
+    padding: 4px 0;
+  }
+
+  #login .agreementText {
+    font-size: 11px;
+    line-height: 18px;
+  }
+
+  #login .checkIcon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+  }
+  #login .checkIcon .el-icon-check {
+    font-size: 10px;
+  }
+
+  /* 协议弹窗 */
+  .agreementDialog {
+    max-width: 480px !important;
+    border-radius: 12px !important;
+  }
+  .agreementDialog .el-dialog__header {
+    padding: 14px 16px 12px;
+  }
+  .agreementDialog .el-dialog__title {
+    font-size: 16px;
+  }
+  .agreementDialog .el-dialog__body {
+    padding: 0 16px 4px;
+    max-height: 50vh;
+  }
+  #login .agreementContent {
+    font-size: 12px;
+  }
+  #login .agreementContent h3 {
+    font-size: 15px;
+    margin: 8px 0 4px;
+  }
+  #login .agreementContent .updateDate {
+    font-size: 10px;
+  }
+  #login .agreementContent .policySection {
+    margin-bottom: 12px;
+  }
+  #login .agreementContent .policySection h4 {
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  #login .agreementContent .policySection p {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .agreementDialog .dialog-footer {
+    padding-right: 6px;
+  }
+  .agreementDialog .dialogConfirmBtn {
+    border-radius: 18px !important;
+    padding: 8px 36px !important;
+    font-size: 13px !important;
+    min-width: 120px;
+  }
+
+  /* 动画修复 — px单位替代rem */
+  @keyframes fadeInUpDesktop {
+    0%   { opacity: 0; transform: translateY(16px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  #login .brandArea,
   #login .divContainer,
   #login .btnLogin,
-  #login .agreementRow,
-  #login .divMsg {
-    width: 420rem !important;
-    max-width: 420rem;
-    box-sizing: border-box !important;
+  #login .agreementRow {
+    animation-name: fadeInUpDesktop;
+    animation-duration: 0.45s;
   }
-
-  .agreementDialog {
-    max-width: 520rem !important;
-  }
+  #login .brandArea    { animation-delay: 0.05s; }
+  #login .divContainer { animation-delay: 0.15s; }
+  #login .btnLogin     { animation-delay: 0.25s; }
+  #login .agreementRow { animation-delay: 0.35s; }
 }
 
-/* 高分辨率大屏 */
+/* 高分辨率大屏 (> 1200px) — 修改点：px单位，确保卡片居中 + 背景撑满 */
 @media screen and (min-width: 1200px) {
-  #login {
+  body.login-page {
     background: linear-gradient(180deg, #FFF3D6 0%, #FFE8C0 16%, #FFF2DF 34%, #FFF9F2 56%, #FFFFFF 100%);
-    justify-content: center;
+  }
+
+  #login {
+    padding: 30px 0 50px;
+    box-shadow: 0 12px 60px rgba(0, 0, 0, 0.1), 0 4px 20px rgba(0, 0, 0, 0.06);
   }
 
   #login .brandArea {
-    padding-top: 0;
-    padding-bottom: 60rem;
-  }
-
-  #login .brandIcon:hover {
-    transform: scale(1.08);
+    padding-bottom: 44px;
   }
 }

@@ -7,171 +7,8 @@
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
     <link rel="stylesheet" href="../../styles/common.css" />
     <link rel="stylesheet" href="../../styles/page.css" />
-    <style>
-        /* 激活供应商高亮卡片 */
-        .active-provider-card {
-            background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
-            border: 2px solid #409eff;
-            border-radius: 10px;
-            padding: 20px 24px;
-            margin-bottom: 24px;
-            position: relative;
-            overflow: hidden;
-        }
-        .active-provider-card::before {
-            content: '当前激活';
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: #409eff;
-            color: #fff;
-            font-size: 12px;
-            padding: 4px 14px;
-            border-radius: 0 10px 0 10px;
-            font-weight: 500;
-        }
-        .active-provider-info {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        .provider-icon-large {
-            width: 56px; height: 56px;
-            border-radius: 12px;
-            background: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            flex-shrink: 0;
-        }
-        .provider-detail { flex: 1; }
-        .provider-detail .name {
-            font-size: 18px; font-weight: 600; color: #303133;
-        }
-        .provider-detail .model {
-            font-size: 14px; color: #606266; margin-top: 6px;
-            font-weight: 500;
-        }
-        .provider-detail .url {
-            font-size: 13px; color: #909399; margin-top: 4px;
-            word-break: break-all;
-        }
-
-        /* 二级标题 */
-        .section-title {
-            font-size: 16px; font-weight: 600; color: #303133;
-            margin-bottom: 16px; padding-bottom: 12px;
-            border-bottom: 1px solid #ebeef5;
-            display: flex; align-items: center; gap: 8px;
-        }
-        .section-title .count-tip {
-            font-size: 13px; font-weight: 400; color: #909399;
-        }
-
-        /* 供应商卡片网格 */
-        .provider-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-            gap: 16px;
-        }
-        .provider-card {
-            background: #fff;
-            border: 1px solid #e4e7ed;
-            border-radius: 10px;
-            padding: 18px 20px;
-            transition: all 0.25s;
-            cursor: pointer;
-            position: relative;
-        }
-        .provider-card:hover {
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-            transform: translateY(-2px);
-            border-color: #c0c4cc;
-        }
-        .provider-card.active-card {
-            border-color: #409eff;
-            background: #f0f9ff;
-        }
-        .provider-card.disabled-card {
-            opacity: 0.55;
-        }
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-        .card-icon {
-            width: 44px; height: 44px;
-            border-radius: 10px;
-            background: #f5f7fa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            flex-shrink: 0;
-        }
-        .card-info { flex: 1; min-width: 0; }
-        .card-info .name {
-            font-size: 15px; font-weight: 600; color: #303133;
-            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-        .card-info .model-name {
-            font-size: 13px; color: #606266; margin-top: 4px;
-        }
-        .card-status {
-            padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 500;
-            flex-shrink: 0;
-        }
-        .card-status.active { background: #f0f9eb; color: #52b818; }
-        .card-status.inactive { background: #f5f5f5; color: #909399; }
-        .card-desc {
-            font-size: 13px; color: #303133; line-height: 1.6; margin-bottom: 12px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .card-meta {
-            display: flex; align-items: center; gap: 14px;
-            font-size: 12px; color: #606266;
-        }
-        .card-meta .meta-item { display: flex; align-items: center; gap: 4px; }
-        .card-actions {
-            display: flex; gap: 8px; margin-top: 14px;
-            padding-top: 14px; border-top: 1px solid #ebeef5;
-        }
-        .card-actions .el-button { flex: 1; }
-
-        /* 预设图标颜色 */
-        .icon-deepseek { background: #e6f7ff; }
-        .icon-qwen { background: #fff0f0; }
-        .icon-zhipu { background: #f0f9ff; }
-        .icon-ernie { background: #f0f5ff; }
-        .icon-baichuan { background: #fdf6ec; }
-        .icon-moonshot { background: #f9f0ff; }
-        .icon-minimax { background: #fff0e6; }
-        .icon-360 { background: #f5f5f5; }
-
-        /* 弹窗内表单可读性增强 */
-        .dialog-form .el-form-item__label {
-            color: #303133; font-weight: 500;
-        }
-        .dialog-form .el-input__inner { color: #303133; }
-        .dialog-form .el-textarea__inner { color: #303133; }
-        .dialog-form .key-hint {
-            font-size: 12px; color: #e6a23c; line-height: 1.8;
-        }
-        .dialog-form .field-tip {
-            font-size: 12px; color: #909399; margin-top: 2px;
-        }
-
-        @media (max-width: 768px) {
-            .provider-grid { grid-template-columns: 1fr; }
-            .active-provider-info { flex-direction: column; text-align: center; }
-        }
-    </style>
+    <!-- 修改点：样式已提取至独立CSS文件 -->
+    <link rel="stylesheet" href="../../styles/ai-provider.css" />
 </head>
 <body>
 <div class="dashboard-container" id="provider-app">
@@ -249,12 +86,12 @@
                     </span>
                 </div>
                 <div class="card-actions">
-                    <el-button v-if="!provider.isActive" type="success" size="mini"
+                    <el-button v-if="!provider.isActive" type="success" size="small"
                                @click="activateProvider(provider.id)">激活</el-button>
-                    <el-button v-else type="info" size="mini" disabled>已激活</el-button>
-                    <el-button type="primary" size="mini" @click="testProvider(provider.id)">测试</el-button>
-                    <el-button size="mini" @click="openEditDialog(provider)">编辑</el-button>
-                    <el-button type="danger" size="mini" @click="deleteProvider(provider.id)"
+                    <el-button v-else type="info" size="small" disabled>已激活</el-button>
+                    <el-button type="primary" size="small" @click="testProvider(provider.id)">测试</el-button>
+                    <el-button size="small" @click="openEditDialog(provider)">编辑</el-button>
+                    <el-button type="danger" size="small" @click="deleteProvider(provider.id)"
                                :disabled="provider.isActive">删除</el-button>
                 </div>
             </div>
@@ -341,18 +178,6 @@
         baichuan: '🌊', moonshot: '🌙', minimax: '✨', '360': '🛡️', custom: '⚙️'
     };
 
-    // 预设供应商模板
-    var PRESETS = [
-        { providerCode: 'deepseek', providerName: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', modelName: 'deepseek-chat', remark: '国产高性价比大模型，中文理解能力强', timeout: 60, maxTokens: 4096, temperature: 0.7, apiFormat: 'openai_compatible' },
-        { providerCode: 'qwen', providerName: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', modelName: 'qwen-turbo', remark: '阿里云通义千问，多模态能力强', timeout: 60, maxTokens: 2048, temperature: 0.7, apiFormat: 'openai_compatible' },
-        { providerCode: 'zhipu', providerName: '智谱AI', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', modelName: 'glm-4-flash', remark: '智谱GLM系列，对话流畅', timeout: 60, maxTokens: 2048, temperature: 0.7, apiFormat: 'openai_compatible' },
-        { providerCode: 'ernie', providerName: '文心一言', baseUrl: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat', modelName: 'ernie-speed', remark: '百度文心大模型，知识覆盖面广', timeout: 60, maxTokens: 2048, temperature: 0.7, apiFormat: 'baidu' },
-        { providerCode: 'baichuan', providerName: '百川智能', baseUrl: 'https://api.baichuan-ai.com/v1', modelName: 'baichuan3-turbo', remark: '百川系列，性价比高', timeout: 60, maxTokens: 2048, temperature: 0.7, apiFormat: 'openai_compatible' },
-        { providerCode: 'moonshot', providerName: '月之暗面', baseUrl: 'https://api.moonshot.cn/v1', modelName: 'moonshot-v1-8k', remark: 'Kimi智能助手，超长上下文', timeout: 60, maxTokens: 4096, temperature: 0.7, apiFormat: 'openai_compatible' },
-        { providerCode: 'minimax', providerName: 'MiniMax', baseUrl: 'https://api.minimax.chat/v1', modelName: 'abab6.5s-chat', remark: 'MiniMax，响应速度快', timeout: 60, maxTokens: 2048, temperature: 0.7, apiFormat: 'openai_compatible' },
-        { providerCode: '360', providerName: '360智脑', baseUrl: 'https://api.360.cn/v1', modelName: '360gpt-pro', remark: '360大模型，安全可靠', timeout: 60, maxTokens: 2048, temperature: 0.7, apiFormat: '360' }
-    ];
-
     new Vue({
         el: '#provider-app',
         data: {
@@ -430,7 +255,6 @@
                 var provider = this.providers.find(function(p) { return p.id === id; });
                 if (!provider) return;
 
-                // 显示持久加载提示，拿到引用以便后续关闭
                 var loadingMsg = this.$message({
                     type: 'info',
                     message: '正在测试 ' + provider.providerName + ' 连接...',
@@ -495,22 +319,18 @@
             },
 
             openEditDialog: function(provider) {
-                // 修改点：先加载列表中的基本字段，再调接口获取完整 API 密钥回写
                 this.form = JSON.parse(JSON.stringify(provider));
                 var self = this;
-                var originalKey = provider.apiKey || '';
-                this.form._hasExistingKey = !!(originalKey && originalKey.indexOf('****') > 0);
+                this.form._hasExistingKey = !!(provider.apiKey && provider.apiKey.indexOf('****') > 0);
                 this.dialogTitle = '编辑模型 - ' + (provider.providerName || provider.providerCode);
                 this.dialogVisible = true;
 
-                // 修改点：异步加载完整密钥，编辑模式下回写真实 apiKey
                 $axios.get('/admin/ai/provider/get/' + provider.id).then(function(res) {
                     if (res.code === 1 && res.data) {
                         self.form.apiKey = res.data.apiKey || '';
                         self.form._hasExistingKey = !!(res.data.apiKey);
                     }
                 }).catch(function() {
-                    // 加载失败则保持脱敏标记，用户不修改密钥则后端保留原值
                     if (self.form._hasExistingKey) {
                         self.form.apiKey = '';
                     }
@@ -527,7 +347,6 @@
                 var self = this;
                 this.submitting = true;
 
-                // 修改点：编辑模式下如果用户未修改密钥，不传 apiKey 以保留原有密钥
                 var payload = JSON.parse(JSON.stringify(self.form));
                 if (self.form.id && self.form._hasExistingKey && !self.form.apiKey) {
                     delete payload.apiKey;

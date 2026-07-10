@@ -13,17 +13,17 @@
   <div class="dashboard-container" id="queue-app">
     <div class="container">
       <div class="tableBar">
-        <el-input v-model="input" placeholder="请输入手机号" style="width: 200px" clearable @keyup.enter.native="handleQuery">
+        <el-input v-model="input" placeholder="请输入手机号" clearable @keyup.enter.native="handleQuery">
           <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
         </el-input>
-        <el-select v-model="status" placeholder="请选择状态" clearable style="width: 150px; margin-left: 10px;" @change="handleQuery">
+        <el-select v-model="status" placeholder="请选择状态" clearable class="el-select--narrow" style="margin-left: 10px;" @change="handleQuery">
           <el-option label="等待中" value="WAITING"></el-option>
           <el-option label="已叫号" value="CALLED"></el-option>
           <el-option label="已入座" value="SEATED"></el-option>
           <el-option label="已取消" value="CANCELLED"></el-option>
         </el-select>
-        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
-        <el-button style="margin-left: 10px" @click="reset">重置</el-button>
+        <el-button type="primary" @click="handleQuery">查询</el-button>
+        <el-button @click="reset">重置</el-button>
         <div class="tableLab">
           <el-button type="primary" @click="takeHandle">+ 取号</el-button>
         </div>
@@ -59,7 +59,7 @@
         @current-change="handleCurrentChange"
       ></el-pagination>
     </div>
-    <el-dialog title="取号" :visible.sync="dialog.visible" width="30%" :before-close="handleClose">
+    <el-dialog title="取号" :visible.sync="dialog.visible" width="420px" :before-close="handleClose">
       <el-form ref="form" :model="form" label-width="100px">
         <el-form-item label="手机号：">
           <el-input v-model="form.phone" placeholder="请输入手机号" maxlength="11" />

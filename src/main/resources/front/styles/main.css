@@ -1119,6 +1119,98 @@
   height: 18rem;
 }
 
+/* ====== 菜品详情弹窗 - 评价展示 ====== */
+#main .detailsDialog .eval-section {
+  margin-top: 16rem;
+  padding-top: 16rem;
+  border-top: 1px solid #f0f2f5;
+  text-align: left;
+}
+
+#main .detailsDialog .eval-summary {
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  margin-bottom: 12rem;
+}
+
+#main .detailsDialog .eval-rating {
+  font-size: 22rem;
+  font-weight: 700;
+  color: #f7ba2a;
+}
+
+#main .detailsDialog .eval-stars {
+  display: inline-flex;
+  gap: 1rem;
+}
+
+#main .detailsDialog .eval-stars .star {
+  font-size: 16rem;
+  color: #e4e7ed;
+}
+
+#main .detailsDialog .eval-stars .star.filled {
+  color: #f7ba2a;
+}
+
+#main .detailsDialog .eval-count {
+  font-size: 12rem;
+  color: #999;
+  margin-left: 4rem;
+}
+
+#main .detailsDialog .eval-reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 10rem;
+}
+
+#main .detailsDialog .eval-review-item {
+  padding: 10rem 12rem;
+  background: #f9fafb;
+  border-radius: 8rem;
+}
+
+#main .detailsDialog .eval-review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6rem;
+}
+
+#main .detailsDialog .eval-review-user {
+  font-size: 13rem;
+  font-weight: 600;
+  color: #333;
+}
+
+#main .detailsDialog .eval-review-stars {
+  display: inline-flex;
+  gap: 1rem;
+}
+
+#main .detailsDialog .eval-review-stars .star {
+  font-size: 12rem;
+  color: #e4e7ed;
+}
+
+#main .detailsDialog .eval-review-stars .star.filled {
+  color: #f7ba2a;
+}
+
+#main .detailsDialog .eval-review-content {
+  font-size: 13rem;
+  color: #666;
+  line-height: 20rem;
+  margin-bottom: 4rem;
+}
+
+#main .detailsDialog .eval-review-time {
+  font-size: 11rem;
+  color: #bbb;
+}
+
 /* ================================================================
    套餐详情弹窗
    ================================================================ */

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>消息通知管理</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/page.css" />
+    <link rel="stylesheet" href="../../styles/components-stats-card.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -13,11 +15,6 @@
         .app-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
         /* 页头统计 */
-        .stat-cards { display: flex; gap: 16px; margin-bottom: 16px; }
-        .stat-card { flex: 1; background: #fff; border-radius: 8px; padding: 16px 20px;
-                     box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 12px; }
-        .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex;
-                     align-items: center; justify-content: center; font-size: 24px; }
         .stat-icon.sms { background: #e6f7ff; color: #1890ff; }
         .stat-icon.push { background: #f0f5ff; color: #722ed1; }
         .stat-icon.success { background: #f6ffed; color: #52c41a; }
@@ -49,7 +46,7 @@
         .panel-body { flex: 1; overflow-y: auto; padding: 8px 0; }
 
         /* 搜索栏 */
-        .search-bar { padding: 8px 12px; display: flex; gap: 8px; border-bottom: 1px solid #f0f0f0; }
+        .search-bar { padding: 8px 12px; display: flex; gap: 8px; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; }
         .search-bar input, .search-bar select { padding: 5px 10px; border: 1px solid #d9d9d9;
                 border-radius: 4px; font-size: 13px; }
         .search-bar input { width: 140px; }
@@ -86,25 +83,6 @@
         .msg-compose textarea { min-height: 60px; }
         .msg-compose .field-label { font-size: 12px; color: #999; margin-bottom: 3px; display: block; }
 
-        /* 按钮 */
-        .btn { padding: 7px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;
-               transition: all 0.2s; }
-        .btn-primary { background: #1890ff; color: #fff; }
-        .btn-primary:hover { background: #40a9ff; }
-        .btn-primary:disabled { background: #91d5ff; cursor: not-allowed; }
-        .btn-success { background: #52c41a; color: #fff; }
-        .btn-success:hover { background: #73d13d; }
-        .btn-success:disabled { background: #b7eb8f; cursor: not-allowed; }
-        .btn-purple { background: #722ed1; color: #fff; }
-        .btn-purple:hover { background: #9254de; }
-        .btn-purple:disabled { background: #d3adf7; cursor: not-allowed; }
-        .btn-danger { background: #ff4d4f; color: #fff; }
-        .btn-danger:hover { background: #ff7875; }
-        .btn-default { background: #fff; border: 1px solid #d9d9d9; color: #333; }
-        .btn-default:hover { border-color: #1890ff; color: #1890ff; }
-        .btn-sm { padding: 4px 10px; font-size: 12px; }
-        .btn-group { display: flex; gap: 8px; margin-top: 10px; }
-
         /* 发送结果弹窗 */
         .send-result { margin-top: 12px; padding: 12px 16px; border-radius: 6px; font-size: 13px; }
         .send-result.success { background: #f6ffed; border: 1px solid #b7eb8f; color: #389e0d; }
@@ -138,29 +116,6 @@
 
         .empty-state { text-align: center; padding: 40px; color: #999; }
 
-        /* 弹窗 */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0,0,0,0.45); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-overlay.show { display: flex; }
-        .modal { background: #fff; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto;
-                 box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
-        .modal-header { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; display: flex;
-                        justify-content: space-between; align-items: center; }
-        .modal-header h3 { font-size: 16px; }
-        .modal-close { cursor: pointer; font-size: 18px; color: #999; background: none; border: none; }
-        .modal-body { padding: 20px; }
-        .modal-footer { padding: 12px 20px; border-top: 1px solid #f0f0f0; display: flex;
-                        justify-content: flex-end; gap: 8px; }
-
-        .form-group { margin-bottom: 14px; }
-        .form-group label { display: block; margin-bottom: 4px; font-size: 13px; color: #555; font-weight: 500; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 7px 10px;
-                border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; }
-        .form-group textarea { min-height: 80px; resize: vertical; }
-        .form-group .hint { font-size: 12px; color: #999; margin-top: 2px; }
-        .form-row { display: flex; gap: 12px; }
-        .form-row .form-group { flex: 1; }
-
         .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
         .toolbar select, .toolbar input { padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px;
                 font-size: 13px; }
@@ -173,29 +128,29 @@
     <div id="app">
         <div class="app-container">
             <!-- 统计卡片 -->
-            <div class="stat-cards">
-                <div class="stat-card">
+            <div class="stats-cards--flex">
+                <div class="stat-card stat-card--flex">
                     <div class="stat-icon sms">📱</div>
                     <div>
                         <div class="stat-value">{{ stats.todaySms }}</div>
                         <div class="stat-label">今日短信发送</div>
                     </div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card stat-card--flex">
                     <div class="stat-icon push">🔔</div>
                     <div>
                         <div class="stat-value">{{ stats.todayPush }}</div>
                         <div class="stat-label">今日APP推送</div>
                     </div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card stat-card--flex">
                     <div class="stat-icon success">✅</div>
                     <div>
                         <div class="stat-value">{{ stats.todaySuccess }}</div>
                         <div class="stat-label">发送成功</div>
                     </div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card stat-card--flex">
                     <div class="stat-icon fail">❌</div>
                     <div>
                         <div class="stat-value">{{ stats.todayFail }}</div>
@@ -231,9 +186,9 @@
                                    @keyup.enter="searchUsers()" />
                             <input type="text" v-model="userSearch.phone" placeholder="手机号搜索"
                                    @keyup.enter="searchUsers()" />
-                            <button class="btn btn-primary btn-sm" @click="searchUsers()">搜索</button>
-                            <button class="btn btn-default btn-sm" @click="selectAllPage()">本页全选</button>
-                            <button class="btn btn-default btn-sm" @click="deselectAll()">清空选择</button>
+                            <button class="app-btn app-btn-primary app-btn-sm" @click="searchUsers()">搜索</button>
+                            <button class="app-btn app-btn-default app-btn-sm" @click="selectAllPage()">本页全选</button>
+                            <button class="app-btn app-btn-default app-btn-sm" @click="deselectAll()">清空选择</button>
                         </div>
                         <div class="panel-body">
                             <table class="user-list-table">
@@ -283,7 +238,7 @@
                     <div class="user-select-right">
                         <div class="panel-header">
                             <span>已选用户 ({{ selectedUsers.length }})</span>
-                            <button class="btn btn-sm btn-default" @click="deselectAll()"
+                            <button class="app-btn app-btn-default app-btn-sm" @click="deselectAll()"
                                     v-if="selectedUsers.length > 0">全部移除</button>
                         </div>
                         <div class="selected-users">
@@ -304,8 +259,8 @@
                             <div class="hint" style="text-align:right;">
                                 {{ smsForm.content.length }}/200 字符
                             </div>
-                            <div class="btn-group">
-                                <button class="btn btn-success"
+                            <div class="app-btn-group">
+                                <button class="app-btn app-btn-success"
                                         :disabled="smsForm.sending || selectedUsers.length === 0 || !smsForm.content"
                                         @click="doSendSms()">
                                     📱 {{ smsForm.sending ? '发送中...' : '发送短信 (' + selectedUsers.length + '人)' }}
@@ -339,9 +294,9 @@
                                    @keyup.enter="searchPushUsers()" />
                             <input type="text" v-model="pushUserSearch.phone" placeholder="手机号搜索"
                                    @keyup.enter="searchPushUsers()" />
-                            <button class="btn btn-primary btn-sm" @click="searchPushUsers()">搜索</button>
-                            <button class="btn btn-default btn-sm" @click="selectAllPushPage()">本页全选</button>
-                            <button class="btn btn-default btn-sm" @click="deselectAllPush()">清空选择</button>
+                            <button class="app-btn app-btn-primary app-btn-sm" @click="searchPushUsers()">搜索</button>
+                            <button class="app-btn app-btn-default app-btn-sm" @click="selectAllPushPage()">本页全选</button>
+                            <button class="app-btn app-btn-default app-btn-sm" @click="deselectAllPush()">清空选择</button>
                         </div>
                         <div class="panel-body">
                             <table class="user-list-table">
@@ -390,7 +345,7 @@
                     <div class="user-select-right">
                         <div class="panel-header">
                             <span>已选用户 ({{ pushSelectedUsers.length }})</span>
-                            <button class="btn btn-sm btn-default" @click="deselectAllPush()"
+                            <button class="app-btn app-btn-default app-btn-sm" @click="deselectAllPush()"
                                     v-if="pushSelectedUsers.length > 0">全部移除</button>
                         </div>
                         <div class="selected-users">
@@ -411,8 +366,8 @@
                             <div class="hint" style="text-align:right;">
                                 {{ pushForm.content.length }}/500 字符
                             </div>
-                            <div class="btn-group">
-                                <button class="btn btn-purple"
+                            <div class="app-btn-group">
+                                <button class="app-btn app-btn-purple"
                                         :disabled="pushForm.sending || pushSelectedUsers.length === 0 || !pushForm.title || !pushForm.content"
                                         @click="doSendPush()">
                                     🔔 {{ pushForm.sending ? '推送中...' : '发送APP推送 (' + pushSelectedUsers.length + '人)' }}
@@ -446,7 +401,7 @@
                         <option :value="2">APP推送</option>
                         <option :value="3">短信+推送</option>
                     </select>
-                    <button class="btn btn-default btn-sm" @click="loadRecords(1)">刷新</button>
+                    <button class="app-btn app-btn-default app-btn-sm" @click="loadRecords(1)">刷新</button>
                 </div>
                 <table>
                     <thead>
@@ -510,7 +465,7 @@
                         <option value="SYSTEM">系统通知</option>
                         <option value="JOB_NOTICE">工作通知</option>
                     </select>
-                    <button class="btn btn-primary" @click="openTemplateModal()">+ 新增模板</button>
+                    <button class="app-btn app-btn-primary" @click="openTemplateModal()">+ 新增模板</button>
                 </div>
                 <table>
                     <thead>
@@ -542,10 +497,10 @@
                             </td>
                             <td>{{ formatDate(t.updateTime) }}</td>
                             <td>
-                                <button class="btn btn-sm btn-default" @click="openTemplateModal(t)">编辑</button>
-                                <button class="btn btn-sm btn-default"
+                                <button class="app-btn app-btn-default app-btn-sm" @click="openTemplateModal(t)">编辑</button>
+                                <button class="app-btn app-btn-default app-btn-sm"
                                         @click="toggleTemplate(t)">{{ t.status===1?'停用':'启用' }}</button>
-                                <button class="btn btn-sm btn-danger" @click="deleteTemplate(t.id)">删除</button>
+                                <button class="app-btn app-btn-danger app-btn-sm" @click="deleteTemplate(t.id)">删除</button>
                             </td>
                         </tr>
                         <tr v-if="templates.length===0">
@@ -623,8 +578,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-default" @click="closeTemplateModal()">取消</button>
-                    <button class="btn btn-primary" @click="saveTemplate()">保存</button>
+                    <button class="app-btn app-btn-default" @click="closeTemplateModal()">取消</button>
+                    <button class="app-btn app-btn-primary" @click="saveTemplate()">保存</button>
                 </div>
             </div>
         </div>

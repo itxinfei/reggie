@@ -4,6 +4,7 @@
     <meta charset="UTF-8"/>
     <title>智能推荐概览</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/components-stats-card.css" />
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -12,28 +13,6 @@
         .page-header h2 { font-size: 20px; color: #303133; }
         .page-header p { font-size: 13px; color: #909399; margin-top: 4px; }
         .page-header .header-actions { float: right; margin-top: -24px; display: flex; gap: 8px; }
-
-        /* 统计卡片 */
-        .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-        .stat-card { background: #fff; border-radius: 10px; padding: 22px 24px; box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-            position: relative; overflow: hidden; transition: all 0.3s; cursor: default; }
-        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
-        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
-        .stat-card.blue::before { background: linear-gradient(90deg, #409eff, #66b1ff); }
-        .stat-card.green::before { background: linear-gradient(90deg, #67c23a, #85ce61); }
-        .stat-card.orange::before { background: linear-gradient(90deg, #e6a23c, #ebb563); }
-        .stat-card.purple::before { background: linear-gradient(90deg, #9c27b0, #ce93d8); }
-        .stat-card .label { font-size: 13px; color: #909399; margin-bottom: 8px; font-weight: 500; }
-        .stat-card .value { font-size: 30px; font-weight: 700; color: #303133; }
-        .stat-card .sub { font-size: 12px; color: #c0c4cc; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
-        .trend-up { color: #67c23a; font-size: 12px; font-weight: 600; }
-        .trend-down { color: #f56c6c; font-size: 12px; font-weight: 600; }
-        .trend-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center;
-            justify-content: center; position: absolute; right: 20px; top: 22px; font-size: 20px; }
-        .trend-icon.blue { background: rgba(64,158,255,0.1); color: #409eff; }
-        .trend-icon.green { background: rgba(103,194,58,0.1); color: #67c23a; }
-        .trend-icon.orange { background: rgba(230,162,60,0.1); color: #e6a23c; }
-        .trend-icon.purple { background: rgba(156,39,176,0.1); color: #9c27b0; }
 
         /* 图表行 */
         .charts-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
@@ -91,28 +70,28 @@
 
     <!-- 算法状态卡片 -->
     <div class="stat-cards">
-        <div class="stat-card blue">
+        <div class="stat-card primary">
             <div class="trend-icon blue">🎯</div>
-            <div class="label">推荐覆盖率</div>
-            <div class="value">{{ stats.hybridRate || '--' }}<span style="font-size:14px;" v-if="stats.hybridRate">%</span></div>
+            <div class="stat-label">推荐覆盖率</div>
+            <div class="stat-value">{{ stats.hybridRate || '--' }}<span style="font-size:14px;" v-if="stats.hybridRate">%</span></div>
             <div class="sub">CF + Content + HotRank 混合</div>
         </div>
-        <div class="stat-card green">
+        <div class="stat-card success">
             <div class="trend-icon green">👆</div>
-            <div class="label">推荐点击率 (CTR)</div>
-            <div class="value">{{ stats.clickRate || '--' }}<span style="font-size:14px;" v-if="stats.clickRate">%</span></div>
+            <div class="stat-label">推荐点击率 (CTR)</div>
+            <div class="stat-value">{{ stats.clickRate || '--' }}<span style="font-size:14px;" v-if="stats.clickRate">%</span></div>
             <div class="sub">近7天 <span class="trend-up" v-if="stats.ctrTrend > 0">↑ {{ stats.ctrTrend }}%</span></div>
         </div>
-        <div class="stat-card orange">
+        <div class="stat-card warning">
             <div class="trend-icon orange">🔄</div>
-            <div class="label">推荐转化率</div>
-            <div class="value">{{ stats.conversionRate || '--' }}<span style="font-size:14px;" v-if="stats.conversionRate">%</span></div>
+            <div class="stat-label">推荐转化率</div>
+            <div class="stat-value">{{ stats.conversionRate || '--' }}<span style="font-size:14px;" v-if="stats.conversionRate">%</span></div>
             <div class="sub">加购/点击比 <span class="trend-up" v-if="stats.cvrTrend > 0">↑ {{ stats.cvrTrend }}%</span></div>
         </div>
-        <div class="stat-card purple">
+        <div class="stat-card info">
             <div class="trend-icon purple">💰</div>
-            <div class="label">推荐贡献GMV</div>
-            <div class="value">¥{{ formatValue(stats.recommendGMV) }}</div>
+            <div class="stat-label">推荐贡献GMV</div>
+            <div class="stat-value">¥{{ formatValue(stats.recommendGMV) }}</div>
             <div class="sub">推荐入口产生的订单金额</div>
         </div>
     </div>
@@ -156,7 +135,7 @@
     <div class="hot-section">
         <div class="panel-title">
             <i class="el-icon-star-on" style="color:#e6a23c;"></i> 今日热门菜品排行
-            <el-button type="primary" size="mini" @click="refreshHotRank" style="margin-left:auto;" :loading="loadingHot">刷新排行</el-button>
+            <el-button type="primary" size="small" @click="refreshHotRank" :loading="loadingHot">刷新排行</el-button>
         </div>
         <div class="algo-tags">
             <span class="algo-tag" :class="{active: algoType === 'all'}" @click="loadHotByAlgo('all')">全部算法</span>

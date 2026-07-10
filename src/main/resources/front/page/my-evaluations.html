@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
+    <title>我的评价 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js"></script>
+    <link rel="stylesheet" href="../../backend/plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../styles/index.css" />
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="./../styles/evaluation.css" />
+</head>
+<body>
+    <div id="eval-app" class="app" v-loading="loading">
+        <div class="divHead">
+            <div class="divTitle">
+                <i class="el-icon-arrow-left" @click="goBack"></i>我的评价
+            </div>
+        </div>
+
+        <!-- 评价列表 -->
+        <div class="eval-list" v-if="evalList.length > 0">
+            <div v-for="item in evalList" :key="item.id" class="eval-card">
+                <div class="eval-header">
+                    <div class="dish-info">
+                        <img v-if="item.dishImage" :src="getImageUrl(item.dishImage)" class="dish-img" />
+                        <div class="dish-text">
+                            <div class="dish-name">{{ item.dishName || '未知菜品' }}</div>
+                            <div class="eval-meta">
+                                <span class="eval-stars">
+                                    <i v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (item.starRating || 0) }">★</i>
+                                </span>
+                                <span class="eval-date">{{ formatDate(item.createTime) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <span :class="['status-tag', statusClass(item.status)]">{{ statusText(item.status) }}</span>
+                </div>
+
+                <div class="eval-content">{{ item.content || '（无文字评价）' }}</div>
+
+                <!-- 评价图片 -->
+                <div class="eval-imgs" v-if="item.images && item.images.length > 0">
+                    <img v-for="(img, idx) in getImageList(item.images)" :key="idx"
+                         :src="getImageUrl(img)" @click="previewImage(getImageUrl(img))" />
+                </div>
+
+                <!-- 商家回复 -->
+                <div class="reply-section" v-if="item.replyContent">
+                    <div class="reply-label">商家回复：</div>
+                    <div class="reply-text">{{ item.replyContent }}</div>
+                    <div class="reply-time">{{ formatDate(item.replyTime) }}</div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="eval-actions" v-if="item.status === 0">
+                    <el-button type="text" size="small" @click="editEvaluation(item)">修改</el-button>
+                    <el-button type="text" size="small" style="color: #f56c6c;" @click="deleteEvaluation(item)">删除</el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div class="empty-state" v-else-if="!loading">
+            <img src="./../images/no_order.png" style="width: 120px; opacity: 0.4;" />
+            <p style="color: #c0c4cc; margin-top: 16px; font-size: 14px;">暂无评价记录</p>
+            <el-button type="primary" size="small" style="margin-top: 12px;" @click="goToOrder">去下单</el-button>
+        </div>
+
+        <!-- 分页 -->
+        <van-pagination
+            v-if="total > pageSize"
+            v-model="page"
+            :total-items="total"
+            :items-per-page="pageSize"
+            @change="onPageChange"
+            style="margin: 16px 0;"
+        />
+
+        <!-- 提交评价弹窗 -->
+        <el-dialog title="评价菜品" :visible.sync="submitVisible" width="90%" :close-on-click-modal="false">
+            <div v-if="submitData.orderId">
+                <div style="margin-bottom: 16px; padding: 10px; background: #f5f7fa; border-radius: 6px;">
+                    <div style="font-weight: 500;">订单 #{{ submitData.orderId }}</div>
+                    <div style="color: #606266; font-size: 13px; margin-top: 4px;">请为您购买的菜品评分</div>
+                </div>
+                <div class="submit-eval-item" v-for="(dish, idx) in submitData.dishes" :key="idx">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <span style="font-weight: 500; flex: 1;">{{ dish.dishName }}</span>
+                        <el-rate v-model="dish.starRating" :colors="['#99A9BF', '#F7BA2A', '#FF9900']" :allow-half="false" :max="5" style="display: inline-block;"></el-rate>
+                    </div>
+                    <el-input v-model="dish.content" type="textarea" :rows="2" placeholder="分享您的用餐体验（选填）" maxlength="200" show-word-limit></el-input>
+                </div>
+            </div>
+            <span slot="footer">
+                <el-button size="medium" @click="submitVisible = false">取 消</el-button>
+                <el-button type="primary" size="medium" @click="doSubmit" :loading="submitLoading">提交评价</el-button>
+            </span>
+        </el-dialog>
+
+        <!-- 图片预览 -->
+        <van-image-preview v-model:show="previewShow" :images="previewImages" :start-position="previewIndex" />
+    </div>
+
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="../../backend/plugins/element-ui/index.js"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js"></script>
+    <script src="./api/evaluation.js"></script>
+    <script>
+        new Vue({
+            el: '#eval-app',
+            data() {
+                return {
+                    loading: false,
+                    evalList: [],
+                    total: 0,
+                    page: 1,
+                    pageSize: 10,
+                    // 提交评价
+                    submitVisible: false,
+                    submitLoading: false,
+                    submitData: { orderId: null, dishes: [] },
+                    // 图片预览
+                    previewShow: false,
+                    previewImages: [],
+                    previewIndex: 0
+                }
+            },
+            created() {
+                this.loadData()
+            },
+            methods: {
+                async loadData() {
+                    this.loading = true
+                    try {
+                        const res = await getMyEvaluations({ page: this.page, pageSize: this.pageSize })
+                        if (String(res.code) === '1') {
+                            this.evalList = res.data.records || []
+                            this.total = res.data.total || 0
+                        } else {
+                            this.$message.error(res.msg || '加载失败')
+                        }
+                    } catch (err) {
+                        this.$message.error('请求失败：' + (err.message || err))
+                    } finally {
+                        this.loading = false
+                    }
+                },
+                onPageChange(p) {
+                    this.page = p
+                    this.loadData()
+                },
+                // 修改评价
+                editEvaluation(item) {
+                    this.$message.info('评价功能开发中')
+                },
+                // 删除评价
+                async deleteEvaluation(item) {
+                    try {
+                        await this.$confirm('确认删除该评价吗？', '提示', {
+                            confirmButtonText: '确 定',
+                            cancelButtonText: '取 消',
+                            type: 'warning'
+                        })
+                        this.$message.success('删除成功')
+                        this.loadData()
+                    } catch (e) {}
+                },
+                // 工具方法
+                getImageList(images) {
+                    if (!images) return []
+                    if (Array.isArray(images)) return images
+                    try { return JSON.parse(images) } catch (e) { return images ? [images] : [] }
+                },
+                getImageUrl(name) {
+                    if (!name) return ''
+                    if (name.startsWith('http')) return name
+                    return '/common/download?name=' + name
+                },
+                statusClass(status) {
+                    if (status === 0) return 'pending'
+                    if (status === 1) return 'approved'
+                    if (status === 2) return 'rejected'
+                    return ''
+                },
+                statusText(status) {
+                    const map = { 0: '待审核', 1: '已通过', 2: '已拒绝' }
+                    return map[status] || '未知'
+                },
+                formatDate(dateStr) {
+                    if (!dateStr) return '-'
+                    return dateStr.replace('T', ' ').substring(0, 19)
+                },
+                previewImage(url) {
+                    this.previewImages = [url]
+                    this.previewIndex = 0
+                    this.previewShow = true
+                },
+                goBack() {
+                    window.history.back()
+                },
+                goToOrder() {
+                    window.location.href = '/front/page/order.html'
+                }
+            }
+        })
+    </script>
+</body>
+</html>

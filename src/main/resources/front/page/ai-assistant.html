@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI智能点餐助手</title>
-    <link rel="stylesheet" href="../../plugins/vant/index.css">
-    <link rel="stylesheet" href="../../styles/index.css">
+    <!-- 修改点：修正静态资源路径（../../plugins/ → ../styles/, /front/ 目录实际位置） -->
+    <link rel="stylesheet" href="../styles/vant.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -87,6 +88,20 @@
             font-size: 16px; color: #999; cursor: pointer; padding: 4px;
         }
         .sidebar-item .conv-delete:hover { color: #f56c6c; }
+
+        /* 修改点：场景切换标签 */
+        .scene-tabs {
+            display: flex; gap: 0; padding: 0 16px;
+            background: #fafafa; border-bottom: 1px solid #eee;
+            overflow-x: auto; flex-shrink: 0;
+        }
+        .scene-tab {
+            padding: 10px 14px; font-size: 13px; font-weight: 500;
+            color: #909399; cursor: pointer; border-bottom: 2px solid transparent;
+            white-space: nowrap; transition: all 0.2s;
+        }
+        .scene-tab:hover { color: #FF6B35; }
+        .scene-tab.active { color: #FF6B35; border-bottom-color: #FF6B35; }
 
         /* 快捷提示 */
         .quick-tips {
@@ -251,12 +266,28 @@
         }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
+        /* 修改点：侧边栏加载中 */
+        .sidebar-loading {
+            text-align: center; padding: 40px 20px; color: #909399; font-size: 13px;
+        }
         /* 空状态 */
         .empty-sidebar {
             text-align: center; padding: 40px 20px; color: #c0c4cc;
         }
         .empty-sidebar .empty-icon { font-size: 48px; margin-bottom: 12px; }
         .empty-sidebar p { font-size: 13px; }
+
+        /* 修改点：清空全部按钮 */
+        .sidebar-footer {
+            padding: 10px 16px; border-top: 1px solid #eee;
+            text-align: center;
+        }
+        .clear-all-btn {
+            padding: 6px 20px; font-size: 12px; color: #f56c6c;
+            border: 1px solid #fde2e2; background: #fef0f0;
+            border-radius: 14px; cursor: pointer; transition: all 0.2s;
+        }
+        .clear-all-btn:hover { background: #fde2e2; }
     </style>
 </head>
 <body>
@@ -281,7 +312,9 @@
                 <button class="new-chat-btn" @click="newConversation">+ 新对话</button>
             </div>
             <div class="sidebar-list">
-                <div v-if="conversations.length === 0" class="empty-sidebar">
+                <!-- 修改点：加载中 -->
+                <div v-if="sidebarLoading" class="sidebar-loading">加载中...</div>
+                <div v-else-if="conversations.length === 0" class="empty-sidebar">
                     <div class="empty-icon">💬</div>
                     <p>暂无对话记录</p>
                 </div>
@@ -289,34 +322,70 @@
                      :class="['sidebar-item', {active: currentConversationId === conv.id}]"
                      @click="switchConversation(conv.id)">
                     <div class="conv-title">{{ conv.title || '新对话' }}</div>
-                    <div class="conv-time">{{ conv.timeText }}</div>
+                    <div class="conv-time">{{ conv.timeText || '' }}</div>
                     <span class="conv-delete" @click.stop="deleteConversation(conv.id)" title="删除">🗑️</span>
                 </div>
             </div>
+            <!-- 修改点：清空全部按钮 -->
+            <div class="sidebar-footer" v-if="conversations.length > 0">
+                <button class="clear-all-btn" @click="clearAllConversations">🗑️ 清空全部对话</button>
+            </div>
         </div>
 
-        <!-- 快捷提示 -->
+        <!-- 修改点：场景切换标签 -->
+        <div class="scene-tabs">
+            <span v-for="scene in scenes"
+                  :class="['scene-tab', { active: currentScene === scene.value }]"
+                  @click="switchScene(scene.value)">
+                {{ scene.label }}
+            </span>
+        </div>
+
+        <!-- 修改点：按场景动态快捷提示 -->
         <div class="quick-tips" v-if="messages.length <= 1">
-            <!-- 用户画像标签（基于历史偏好） -->
+            <!-- 用户画像标签（基于历史偏好，仅点餐场景显示） -->
             <span class="quick-tip" v-for="tag in userProfileTags" :key="tag"
                   style="background:#FFF0E6;border-color:#FF6B35;color:#FF6B35;"
                   @click="sendQuickTip(tag)">
                 {{ tag }}
             </span>
+            <!-- 场景快捷提示 -->
+            <span class="quick-tip" v-for="tip in currentQuickTips" :key="tip"
+                  @click="sendQuickTip(tip)">
+                {{ tip }}
+            </span>
         </div>
 
         <!-- 聊天区域 -->
         <div class="chat-area" ref="chatArea">
-            <!-- 欢迎消息 -->
+            <!-- 修改点：按场景显示不同欢迎消息 -->
             <div class="chat-msg assistant" v-if="messages.length === 0">
                 <div class="chat-avatar">🤖</div>
                 <div class="chat-bubble">
-                    你好！我是小吉，你的智能点餐助手 🤗<br><br>
-                    告诉我你想吃什么，我来帮你推荐最合适的菜品！<br><br>
-                    💡 <b>试试这样说：</b><br>
-                    · "我想吃辣的，2个人"<br>
-                    · "有没有清淡一点的菜"<br>
-                    · "帮我推荐100以内的套餐"
+                    <template v-if="currentScene === 'dish_desc'">
+                        你好！我是小吉，美食文案专家 📝<br><br>
+                        输入菜名，我帮你写出让人流口水的美食描述！<br><br>
+                        💡 <b>试试输入：</b><br>
+                        · "红烧肉"<br>
+                        · "清蒸鲈鱼"<br>
+                        · "麻辣香锅"
+                    </template>
+                    <template v-else-if="currentScene === 'marketing'">
+                        你好！我是小吉，营销策略顾问 📢<br><br>
+                        告诉我你的需求，我帮你写活动文案和促销方案！<br><br>
+                        💡 <b>试试这样说：</b><br>
+                        · "帮我写一个满减活动文案"<br>
+                        · "新店开业的促销方案"<br>
+                        · "会员日专属优惠文案"
+                    </template>
+                    <template v-else>
+                        你好！我是小吉，你的智能点餐助手 🤗<br><br>
+                        告诉我你想吃什么，我来帮你推荐最合适的菜品！<br><br>
+                        💡 <b>试试这样说：</b><br>
+                        · "我想吃辣的，2个人"<br>
+                        · "有没有清淡一点的菜"<br>
+                        · "帮我推荐100以内的套餐"
+                    </template>
                 </div>
             </div>
 
@@ -370,8 +439,8 @@
                 </div>
             </template>
 
-            <!-- 加载中 -->
-            <div class="chat-msg assistant" v-if="loading">
+            <!-- 加载中 -- 修改点：修复双头像bug，streaming消息与loading指示器互斥 -->
+            <div class="chat-msg assistant" v-if="loading && !hasStreamingMessage">
                 <div class="chat-avatar">🤖</div>
                 <div class="chat-bubble">
                     <div class="typing-indicator">
@@ -399,9 +468,11 @@
         </div>
     </div>
 
-    <script src="../../plugins/vue.min.js"></script>
-    <script src="../../plugins/vant.min.js"></script>
-    <script src="../../js/request.js"></script>
+    <!-- 修改点：修正JS资源路径，Vue/axios在backend/plugins下，Vant在front/js下 -->
+    <script src="/backend/plugins/vue/vue.js"></script>
+    <script src="/backend/plugins/axios/axios.min.js"></script>
+    <script src="../js/vant.min.js"></script>
+    <script src="../js/request.js"></script>
     <script src="../api/ai.js"></script>
     <script>
     (function() {
@@ -503,16 +574,34 @@
                 inputText: '',
                 loading: false,
                 messages: [],
-                quickTips: [
-                    '我想吃辣的',
-                    '推荐清淡的菜',
-                    '2个人，预算100',
-                    '有什么招牌菜',
-                    '适合小孩吃的',
-                    '帮我搭配一个套餐'
+                // 修改点：按场景动态快捷提示
+                quickTips: [],
+                // 修改点：场景切换
+                currentScene: 'order_assistant',
+                scenes: [
+                    { label: '🍽️ 点餐推荐', value: 'order_assistant' },
+                    { label: '📝 菜品描述', value: 'dish_desc' },
+                    { label: '📢 营销文案', value: 'marketing' }
                 ],
+                // 修改点：按场景的快捷提示配置
+                quickTipsMap: {
+                    order_assistant: [
+                        '我想吃辣的', '推荐清淡的菜',
+                        '2个人，预算100', '有什么招牌菜',
+                        '适合小孩吃的', '帮我搭配一个套餐'
+                    ],
+                    dish_desc: [
+                        '红烧肉', '麻辣香锅',
+                        '清蒸鲈鱼', '宫保鸡丁'
+                    ],
+                    marketing: [
+                        '满减活动文案', '新店开业促销',
+                        '会员日专属优惠', '节假日活动方案'
+                    ]
+                },
                 // 对话管理
                 sidebarOpen: false,
+                sidebarLoading: false,
                 conversations: [],
                 currentConversationId: null,
                 // 请求控制
@@ -529,23 +618,41 @@
                 inputPlaceholder: '告诉小吉你想吃什么...'
             },
 
+            computed: {
+                // 修改点：根据当前场景计算快捷提示
+                currentQuickTips: function() {
+                    return this.quickTipsMap[this.currentScene] || [];
+                },
+                // 修改点：检测是否已有流式消息，避免与loading指示器的chat-avatar重复
+                hasStreamingMessage: function() {
+                    var self = this;
+                    return self.messages.some(function(m) {
+                        return m.role === 'assistant' && m.streaming === true;
+                    });
+                }
+            },
+
             created: function() {
                 this.loadUserInfo();
+                // 修改点：先加载本地缓存，再异步从后端同步
                 this.loadConversations();
                 this.loadUserProfileTags();
-                // 如果没有对话，创建新对话
+                // 如果有本地对话直接加载
                 if (this.conversations.length === 0) {
                     this.newConversation(true);
                 } else {
-                    // 加载最近的对话
                     this.switchConversation(this.conversations[0].id);
+                }
+                // 修改点：仅登录用户异步后端同步（未登录时API调用会触发request.js拦截器跳转登录页）
+                if (this.userInfo) {
+                    this.syncConversationsFromBackend();
                 }
             },
 
             mounted: function() {
                 this.initVoice();
                 this.scrollToBottom();
-                // 修改点：注册 ESC 键监听，支持关闭侧边栏
+                // 注册 ESC 键监听，支持关闭侧边栏
                 this._handleEscKey = function(e) {
                     if ((e.key === 'Escape' || e.key === 'Esc') && this.sidebarOpen) {
                         this.toggleSidebar(false);
@@ -555,7 +662,7 @@
             },
 
             beforeDestroy: function() {
-                // 修改点：移除 ESC 键监听
+                // 移除 ESC 键监听
                 if (this._handleEscKey) {
                     document.removeEventListener('keydown', this._handleEscKey);
                 }
@@ -570,8 +677,10 @@
                         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
                         title: '',
                         messages: [],
+                        scene: this.currentScene,
                         createdAt: Date.now(),
-                        updatedAt: Date.now()
+                        updatedAt: Date.now(),
+                        timeText: '刚刚'    // 修改点：初始化 timeText
                     };
                     this.conversations.unshift(conv);
                     this.currentConversationId = conv.id;
@@ -624,11 +733,11 @@
                 /** 保存对话到 localStorage */
                 saveConversations: function() {
                     try {
-                        // 将当前消息同步到对话
                         var currentConv = this.getCurrentConversation();
                         if (currentConv) {
-                            currentConv.messages = this.messages.slice(0, 100); // 限制100条
+                            currentConv.messages = this.messages.slice(0, 100);
                             currentConv.updatedAt = Date.now();
+                            currentConv.timeText = formatTime(Date.now());  // 修改点：更新 timeText
                             if (this.messages.length > 0) {
                                 var firstUserMsg = this.messages.find(function(m) { return m.role === 'user'; });
                                 if (firstUserMsg) {
@@ -649,7 +758,12 @@
                         if (raw) {
                             var data = JSON.parse(raw);
                             if (Array.isArray(data)) {
-                                this.conversations = data.slice(0, 50);
+                                // 修改点：为每个对话计算 timeText
+                                var self = this;
+                                this.conversations = data.slice(0, 50).map(function(c) {
+                                    c.timeText = formatTime(c.updatedAt || c.createdAt || Date.now());
+                                    return c;
+                                });
                             }
                         }
                     } catch (e) {
@@ -660,6 +774,85 @@
                 /** 获取当前对话对象 */
                 getCurrentConversation: function() {
                     return this.conversations.find(function(c) { return c.id === this.currentConversationId; }.bind(this));
+                },
+
+                // 修改点：从后端 API 同步对话列表（不阻塞，静默更新）
+                syncConversationsFromBackend: function() {
+                    var self = this;
+                    if (typeof aiApi === 'undefined' || !aiApi.getConversations) return;
+                    aiApi.getConversations(1, 50).then(function(res) {
+                        var data = res.data || res;
+                        // 后端返回 R<T> 包装：code=1 时取 data
+                        var backendList = (data && data.code === 1) ? data.data : data;
+                        if (!Array.isArray(backendList) || backendList.length === 0) return;
+                        // 合并后端数据到本地（以后端为主，但不覆盖本地未保存的消息）
+                        backendList.forEach(function(backendConv) {
+                            var localIdx = -1;
+                            for (var i = 0; i < self.conversations.length; i++) {
+                                if (self.conversations[i].id === backendConv.conversationId) {
+                                    localIdx = i;
+                                    break;
+                                }
+                            }
+                            var conv = {
+                                id: backendConv.conversationId,
+                                title: backendConv.title || '对话',
+                                scene: backendConv.scene || 'order_assistant',
+                                messages: [],
+                                createdAt: backendConv.createTime ? new Date(backendConv.createTime).getTime() : Date.now(),
+                                updatedAt: backendConv.updateTime ? new Date(backendConv.updateTime).getTime() : Date.now(),
+                                timeText: formatTime(backendConv.updateTime || backendConv.createTime || Date.now()),
+                                messageCount: backendConv.messageCount || 0
+                            };
+                            if (localIdx >= 0) {
+                                // 保留本地消息数据
+                                conv.messages = self.conversations[localIdx].messages || [];
+                                self.conversations.splice(localIdx, 1, conv);
+                            } else {
+                                self.conversations.push(conv);
+                            }
+                        });
+                        // 按更新时间排序
+                        self.conversations.sort(function(a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+                        self.saveConversations();
+                    }).catch(function() {
+                        // 后端不可用时静默忽略，使用本地缓存
+                    });
+                },
+
+                // 修改点：清空全部对话
+                clearAllConversations: function() {
+                    var self = this;
+                    vant.Dialog.confirm({
+                        title: '清空对话',
+                        message: '确定要清空全部对话记录吗？此操作不可恢复。'
+                    }).then(function() {
+                        self.conversations = [];
+                        self.currentConversationId = null;
+                        self.messages = [];
+                        localStorage.removeItem('ai_conversations');
+                        self.newConversation(true);
+                    }).catch(function() {});
+                },
+
+                // 修改点：场景切换
+                switchScene: function(scene) {
+                    if (this.currentScene === scene) return;
+                    this.currentScene = scene;
+                    // 切换场景时创建新对话
+                    this.saveConversations();
+                    this.newConversation(true);
+                    this.inputPlaceholder = this.getScenePlaceholder(scene);
+                },
+
+                // 修改点：获取场景提示语
+                getScenePlaceholder: function(scene) {
+                    var map = {
+                        order_assistant: '告诉小吉你想吃什么...',
+                        dish_desc: '输入菜名，AI帮你写美食描述...',
+                        marketing: '输入营销需求，例：满减活动文案...'
+                    };
+                    return map[scene] || '输入消息...';
                 },
 
                 // ==================== 用户上下文 ====================
@@ -685,17 +878,22 @@
                                 self.userProfileTags = JSON.parse(cached);
                             } catch(e) {}
                         }
-
+                        // 修改点：仅登录用户异步从后端获取（未登录时API调用会触发拦截器跳转登录页）
+                        if (!self.userInfo) return;
                         // 异步从后端获取最新画像摘要
                         if (typeof aiApi !== 'undefined' && aiApi.getProfileSummary) {
                             aiApi.getProfileSummary().then(function(res) {
-                                if (res && res.code === 1 && res.data && res.data.tags) {
-                                    self.userProfileTags = res.data.tags.slice(0, 5);
+                                var data = res.data || res;
+                                var result = (data && data.code === 1) ? data.data : data;
+                                if (result && result.tags && result.tags.length > 0) {
+                                    self.userProfileTags = result.tags.slice(0, 5);
                                     try {
                                         localStorage.setItem('ai_profile_tags', JSON.stringify(self.userProfileTags));
                                     } catch(e) {}
                                 }
-                            }).catch(function() {});
+                            }).catch(function() {
+                                // 修改点：后端不可用时静默忽略，使用缓存
+                            });
                         }
                     } catch (e) { }
                 },
@@ -781,22 +979,42 @@
                     this.scrollToBottom();
 
                     var self = this;
-                    var context = this.buildContext();
-
-                    // 获取当前对话ID和用户ID
                     var conversationId = self.currentConversationId;
                     var userId = self.getUserId();
+                    var scene = self.currentScene;
 
-                    aiApi.orderAssistant(text, userId, conversationId).then(function(res) {
+                    // 修改点：根据场景选择不同的 API
+                    var apiCall;
+                    if (scene === 'order_assistant') {
+                        apiCall = aiApi.orderAssistant(text, userId, conversationId);
+                    } else {
+                        // dish_desc / marketing 使用通用 chat 接口
+                        apiCall = aiApi.chat(text, scene, conversationId);
+                    }
+
+                    apiCall.then(function(res) {
                         // 检查是否是最新请求
                         if (requestId !== self.currentRequestId) return;
 
                         var data = res.data || res;
-                        assistantMsg.content = data.content || '抱歉，我没理解您的意思，换个说法试试？';
+                        // 解析 R<T> 包装：code=1 时取 data
+                        var responseData = (data && data.code === 1) ? data.data : data;
+                        assistantMsg.content = (responseData && responseData.content)
+                            ? responseData.content
+                            : '抱歉，我没理解您的意思，换个说法试试？';
                         assistantMsg.streaming = false;
                         assistantMsg.showFeedback = true;
                         assistantMsg.renderedParts = safeFormatContent(assistantMsg.content);
-                        assistantMsg.dishes = data.dishes || [];
+                        // 修改点：仅点餐场景显示菜品卡片
+                        assistantMsg.dishes = (scene === 'order_assistant' && responseData && responseData.dishes)
+                            ? responseData.dishes : [];
+
+                        // 修改点：处理后端返回的 conversationId（自动创建的对话）
+                        var meta = (responseData && responseData.data) || {};
+                        if (meta.conversationId && !self.currentConversationId) {
+                            self.currentConversationId = meta.conversationId;
+                        }
+
                         self.scrollToBottom();
                         self.saveConversations();
                     }).catch(function(err) {
@@ -836,13 +1054,19 @@
 
                 // ==================== 推荐菜品操作 ====================
 
+                // 修改点：加入购物车——修复图片路径和菜品ID映射
                 addToCart: function(dish) {
+                    // 修改点：统一处理图片路径
+                    var imgUrl = dish.image || '';
+                    if (!imgUrl && dish.imageUrl) imgUrl = dish.imageUrl;
+                    // 修改点：如果菜品ID缺省则降级处理
+                    var dishId = dish.dishId || dish.id || 0;
                     if (window.addDishToCart) {
                         window.addDishToCart({
-                            id: dish.dishId,
+                            id: dishId,
                             name: dish.name,
                             price: dish.price || 0,
-                            image: dish.image || '',
+                            image: imgUrl,
                             flavors: []
                         });
                     } else {
@@ -857,11 +1081,14 @@
                     // 向后端发送反馈（静默处理，不阻塞UI）
                     var self = this;
                     try {
-                        aiApi.recordFeedback && aiApi.recordFeedback({
-                            dishId: msg.dishes && msg.dishes.length > 0 ? msg.dishes[0].dishId : null,
-                            feedbackType: type,
-                            messageId: msg.id
-                        }).catch(function() {});
+                        // 修改点：使用正确的 API 调用和参数
+                        if (typeof aiApi !== 'undefined' && aiApi.recordFeedback) {
+                            aiApi.recordFeedback({
+                                messageId: msg.id,
+                                feedbackType: type,
+                                scene: self.currentScene
+                            }).catch(function() {});
+                        }
                     } catch (e) { }
                     this.saveConversations();
                 },
@@ -940,13 +1167,12 @@
                     e.target.src = '../../images/noImg.png';
                 },
 
+                // 修改点：始终直接导航回首页，不依赖不可靠的 history.back()
                 close: function() {
                     this.saveConversations();
-                    if (window.history.length > 1) {
-                        window.history.back();
-                    } else {
-                        window.location.href = '../index.html';
-                    }
+                    // 使用 replace 避免 AI 助手页面留在浏览器后退栈中
+                    // 修改点：绝对路径而非相对路径，index.html 实际在 /front/ 根目录
+                    window.location.replace('/front/index.html');
                 }
             }
         });

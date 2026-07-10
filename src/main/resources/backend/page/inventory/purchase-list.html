@@ -13,16 +13,16 @@
   <div class="dashboard-container" id="purchase-app">
     <div class="container">
       <div class="tableBar">
-        <el-select v-model="input.supplierId" placeholder="供应商" style="width: 150px" clearable @change="handleQuery">
+        <el-select v-model="input.supplierId" placeholder="供应商" class="el-select--narrow" clearable @change="handleQuery">
           <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
         </el-select>
-        <el-select v-model="input.status" placeholder="状态" style="width: 130px; margin-left: 10px" clearable @change="handleQuery">
+        <el-select v-model="input.status" placeholder="状态" clearable @change="handleQuery">
           <el-option label="待收货" value="0"></el-option>
           <el-option label="已收货" value="1"></el-option>
           <el-option label="已取消" value="2"></el-option>
         </el-select>
-        <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
-        <el-button style="margin-left: 10px" @click="reset">重置</el-button>
+        <el-button type="primary" @click="handleQuery">查询</el-button>
+        <el-button @click="reset">重置</el-button>
         <el-button type="primary" @click="addHandle">+ 新增采购单</el-button>
       </div>
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
@@ -65,7 +65,7 @@
       </el-table>
       <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" :current-page.sync="page" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
     </div>
-    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="50%" :before-close="handleClose">
+    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="720px" :before-close="handleClose">
       <el-form class="demo-form-inline" label-width="120px">
         <el-form-item label="供应商：">
           <el-select v-model="formData.supplierId" placeholder="请选择" style="width: 100%">
@@ -73,7 +73,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="采购明细：">
-          <div v-for="(item, index) in formData.details" :key="index" style="display: flex; margin-bottom: 8px; gap: 8px; align-items: center;">
+          <div v-for="(item, index) in formData.details" :key="index" class="detail-row">
             <el-select v-model="item.materialId" placeholder="食材" style="width: 160px" filterable>
               <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id"></el-option>
             </el-select>

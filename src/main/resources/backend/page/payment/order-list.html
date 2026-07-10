@@ -8,82 +8,12 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
   .search-btn {
     margin-left: 20px;
   }
 
-  /* ========== 数据统计卡片 ========== */
-  .stats-cards {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 20px;
-  }
-
-  .stat-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 20px 24px;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-    border: 1px solid #f0f2f5;
-  }
-
-  .stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  }
-
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--gradient);
-  }
-
-  .stat-card .stat-icon {
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 42px;
-  }
-
-  .stat-card .stat-label {
-    font-size: 13px;
-    color: #909399;
-    margin-bottom: 8px;
-    font-weight: 500;
-  }
-
-  .stat-card .stat-value {
-    font-size: 30px;
-    font-weight: 700;
-    line-height: 1.2;
-    background: var(--gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
-  .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
-  .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
-  .stat-card.danger  { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
-
-  @media (max-width: 1400px) {
-    .stats-cards { grid-template-columns: repeat(2, 1fr); }
-  }
-
-  @media (max-width: 768px) {
-    .stats-cards { grid-template-columns: 1fr; }
-  }
   </style>
 </head>
 <body>
@@ -92,7 +22,7 @@
       <!-- ========== 数据统计卡片 ========== -->
       <!-- 修改点：卡片可点击筛选，点击后同步设置支付状态下拉框并过滤列表 -->
       <div class="stats-cards">
-        <div class="stat-card primary">
+        <div class="stat-card primary clickable" :class="{ active: activeFilter === 'TODAY' }" @click="filterByToday()">
           <div class="stat-icon">💳</div>
           <div class="stat-label">今日支付订单</div>
           <div class="stat-value">{{ stats.todayPayments || 0 }}</div>
@@ -115,12 +45,12 @@
       </div>
 
       <div class="tableBar">
-        <el-input v-model="inputOrderId" placeholder="请输入订单号" style="width: 180px" clearable></el-input>
-        <el-select v-model="inputChannel" placeholder="支付渠道" style="width: 140px; margin-left: 15px" clearable>
+        <el-input v-model="inputOrderId" placeholder="请输入订单号" clearable></el-input>
+        <el-select v-model="inputChannel" placeholder="支付渠道" clearable>
           <el-option label="支付宝" value="ALIPAY"></el-option>
           <el-option label="微信" value="WECHAT"></el-option>
         </el-select>
-        <el-select v-model="inputStatus" placeholder="支付状态" style="width: 140px; margin-left: 15px" clearable>
+        <el-select v-model="inputStatus" placeholder="支付状态" clearable>
           <el-option label="待支付" value="PENDING"></el-option>
           <el-option label="成功" value="SUCCESS"></el-option>
           <el-option label="失败" value="FAIL"></el-option>
@@ -135,7 +65,7 @@
           start-placeholder="开始日期"
           end-placeholder="结束日期"
           :default-time="['00:00:00', '23:59:59']"
-          style="width: 400px; margin-left: 15px"
+          class="el-date-editor--2xl"
         ></el-date-picker>
         <el-button type="primary" class="search-btn" @click="handleQuery">查询</el-button>
         <el-button type="default" class="search-btn" @click="handleReset">重置</el-button>
@@ -394,6 +324,30 @@
             this.orderTime = ''
             this.beginTime = ''
             this.endTime = ''
+            this.page = 1
+            this.init()
+          },
+          // 修改点：点击"今日支付订单"卡片，按今日日期筛选
+          filterByToday() {
+            if (this.activeFilter === 'TODAY') {
+              this.activeFilter = ''
+              this.orderTime = ''
+              this.beginTime = ''
+              this.endTime = ''
+            } else {
+              this.activeFilter = 'TODAY'
+              var today = new Date()
+              var todayStr = today.getFullYear() + '-'
+                + String(today.getMonth() + 1).padStart(2, '0') + '-'
+                + String(today.getDate()).padStart(2, '0')
+              this.beginTime = todayStr + ' 00:00:00'
+              this.endTime = todayStr + ' 23:59:59'
+              this.orderTime = [this.beginTime, this.endTime]
+            }
+            // 清空其他筛选条件
+            this.inputOrderId = ''
+            this.inputChannel = ''
+            this.inputStatus = ''
             this.page = 1
             this.init()
           },

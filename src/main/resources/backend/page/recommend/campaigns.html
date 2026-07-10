@@ -146,15 +146,15 @@
         </div>
 
         <!-- ========== 搜索栏 ========== -->
-        <div class="tableBar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <el-input v-model="searchName" placeholder="搜索活动名称" size="small" style="width:200px;" clearable @keyup.enter.native="loadData" />
-            <el-select v-model="searchStatus" placeholder="状态筛选" size="small" style="width:120px;" clearable @change="loadData">
+        <div class="tableBar">
+            <el-input v-model="searchName" placeholder="搜索活动名称" size="small" clearable @keyup.enter.native="loadData" />
+            <el-select v-model="searchStatus" placeholder="状态筛选" size="small" clearable @change="loadData">
                 <el-option label="草稿" :value="0" />
                 <el-option label="进行中" :value="1" />
                 <el-option label="已结束" :value="2" />
                 <el-option label="已暂停" :value="3" />
             </el-select>
-            <el-select v-model="searchType" placeholder="活动类型" size="small" style="width:120px;" clearable @change="loadData">
+            <el-select v-model="searchType" placeholder="活动类型" size="small" clearable @change="loadData">
                 <el-option v-for="(label, val) in typeMap" :key="val" :label="label" :value="Number(val)" />
             </el-select>
             <el-button type="primary" size="small" icon="el-icon-search" @click="loadData">查询</el-button>
@@ -207,12 +207,12 @@
             <!-- 修改点：操作列精简，180px 足够 -->
             <el-table-column label="操作" width="200" align="center" fixed="right">
                 <template slot-scope="scope">
-                    <el-button type="text" size="small" @click="openDialog('edit', scope.row)">编辑</el-button>
+                    <el-button type="text" size="small" class="btn-view" @click="openDialog('edit', scope.row)">编辑</el-button>
                     <el-button type="text" size="small" v-if="scope.row.status === 0" @click="publishCampaign(scope.row)">发布</el-button>
                     <el-button type="text" size="small" v-if="scope.row.status === 1" @click="pauseCampaign(scope.row)">暂停</el-button>
-                    <el-button type="text" size="small" style="color:#409eff;" v-if="scope.row.status === 1" @click="openPushDialog(scope.row)">推送</el-button>
-                    <el-dropdown trigger="click" @command="(cmd) => handleRowCommand(cmd, scope.row)" style="vertical-align:top;">
-                        <el-button type="text" size="small" style="color:#909399;">更多</el-button>
+                    <el-button type="text" size="small" class="btn-view" v-if="scope.row.status === 1" @click="openPushDialog(scope.row)">推送</el-button>
+                    <el-dropdown trigger="click" @command="(cmd) => handleRowCommand(cmd, scope.row)">
+                        <el-button type="text" size="small" class="text-info">更多</el-button>
                         <el-dropdown-menu slot="dropdown">
                             <el-dropdown-item command="stats" icon="el-icon-data-line">活动统计</el-dropdown-item>
                             <el-dropdown-item command="delete" icon="el-icon-delete" style="color:#f56c6c;">删除</el-dropdown-item>
@@ -223,11 +223,10 @@
         </el-table>
 
         <!-- ========== 批量操作 + 分页 ========== -->
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;">
-            <div>
-                <el-button size="mini" :disabled="selectedRows.length === 0" @click="batchDelete">批量删除</el-button>
-                <el-button size="mini" type="warning" :disabled="selectedRows.length === 0" @click="batchPause">批量暂停</el-button>
-            </div>
+        <div class="tableBar-actions">
+            <el-button size="small" :disabled="selectedRows.length === 0" @click="batchDelete">批量删除</el-button>
+            <el-button size="small" type="warning" :disabled="selectedRows.length === 0" @click="batchPause">批量暂停</el-button>
+        </div>
             <el-pagination
                 class="pageList"
                 :page-sizes="[10, 20, 30, 40]"
@@ -242,7 +241,7 @@
     </div>
 
     <!-- ========== 新建/编辑对话框 ========== -->
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="640px" @close="resetForm">
+    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="720px" @close="resetForm">
         <el-form :model="form" :rules="rules" ref="campaignForm" label-width="90px" size="small">
             <el-row :gutter="16">
                 <el-col :span="14">
@@ -315,7 +314,7 @@
     </el-dialog>
 
     <!-- ========== 推送消息对话框 ========== -->
-    <el-dialog title="推送营销消息" :visible.sync="pushDialogVisible" width="500px">
+    <el-dialog title="推送营销消息" :visible.sync="pushDialogVisible" width="600px">
         <el-form label-width="90px" size="small">
             <el-form-item label="活动名称">
                 <el-tag type="primary">{{ pushTargetCampaign ? pushTargetCampaign.name : '' }}</el-tag>

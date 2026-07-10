@@ -1,0 +1,197 @@
+/* ========== 统计卡片统一组件 ==========
+ * 适用于 iframe 架构下无构建工具的场景
+ * 使用方式：<link rel="stylesheet" href="../../styles/components-stats-card.css" />
+ * 经典变体：默认（图标绝对定位右上角，数值渐变文字）
+ * 桌台变体：加 .stat-card--flex 类（图标圆角容器 + flex 布局，数值纯色）
+ */
+
+/* ========== 容器 ========== */
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* 3 列布局（员工管理等只有 3 张卡片的页面） */
+.stats-cards--col-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* flex 行布局（图标在左，文字在右，用于通知管理等页面） */
+.stats-cards--flex {
+  display: flex;
+  gap: 16px;
+}
+
+/* ========== 卡片基础（经典变体） ========== */
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f0f2f5;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* 顶部渐变条 */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient);
+}
+
+/* 图标（经典变体：绝对定位右上角） */
+.stat-card .stat-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 42px;
+}
+
+/* 标签和数值 */
+.stat-card .stat-label,
+.stat-card .label {
+  font-size: 13px;
+  color: #909399;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.stat-card .stat-value,
+.stat-card .value {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 辅助信息行 */
+.stat-card .sub {
+  font-size: 12px;
+  color: #c0c4cc;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ========== 颜色主题 ========== */
+.stat-card.primary  { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
+.stat-card.success  { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
+.stat-card.warning  { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
+.stat-card.danger   { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
+.stat-card.info     { --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%); }
+
+/* 别名（兼容使用 blue/green/orange/purple 命名的页面） */
+.stat-card.blue     { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
+.stat-card.green    { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
+.stat-card.orange   { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
+.stat-card.purple   { --gradient: linear-gradient(135deg, #9c27b0 0%, #ce93d8 100%); }
+
+/* 趋势图标（推荐概览等页面右上角浮标） */
+.stat-card .trend-icon {
+  position: absolute;
+  right: 20px;
+  top: 22px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.stat-card .trend-icon.blue   { background: rgba(64, 158, 255, 0.1); color: #409eff; }
+.stat-card .trend-icon.green  { background: rgba(103, 194, 58, 0.1); color: #67c23a; }
+.stat-card .trend-icon.orange { background: rgba(230, 162, 60, 0.1); color: #e6a23c; }
+.stat-card .trend-icon.purple { background: rgba(156, 39, 176, 0.1); color: #9c27b0; }
+
+/* ========== 可点击卡片（筛选用） ========== */
+.stat-card.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.stat-card.clickable.active {
+  border-color: #409eff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.15);
+}
+
+/* ========== 桌台变体（flex 布局） ========== */
+.stat-card--flex {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* 图标圆角容器 */
+.stat-card--flex .stat-icon {
+  position: static;
+  transform: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+/* 颜色背景（桌台变体用纯色背景而非渐变文字） */
+.stat-card--flex.primary .stat-icon { background: rgba(64, 158, 255, 0.1); color: #409eff; }
+.stat-card--flex.success .stat-icon { background: rgba(103, 194, 58, 0.1); color: #67c23a; }
+.stat-card--flex.warning .stat-icon { background: rgba(230, 162, 60, 0.1); color: #e6a23c; }
+.stat-card--flex.danger  .stat-icon { background: rgba(245, 108, 108, 0.1); color: #f56c6c; }
+.stat-card--flex.info    .stat-icon { background: rgba(144, 147, 153, 0.1); color: #909399; }
+
+/* 桌台变体：数值用纯色 */
+.stat-card--flex .stat-value {
+  font-size: 28px;
+  background: none;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: unset;
+  background-clip: unset;
+}
+.stat-card--flex.primary .stat-value { color: #409eff; }
+.stat-card--flex.success .stat-value { color: #67c23a; }
+.stat-card--flex.warning .stat-value { color: #e6a23c; }
+.stat-card--flex.danger  .stat-value { color: #f56c6c; }
+.stat-card--flex.info    .stat-value { color: #909399; }
+
+/* 桌台变体信息区 */
+.stat-card--flex .stat-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 1400px) {
+  .stats-cards,
+  .stats-cards--col-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-cards,
+  .stats-cards--col-3 {
+    grid-template-columns: 1fr;
+  }
+}

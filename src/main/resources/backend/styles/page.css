@@ -14,12 +14,29 @@
   margin-bottom: 20px;
   justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 6px;
 }
 .dashboard-container .container .tableBar > .tableLab,
 .dashboard-container .container .tableBar > .action-group {
   margin-left: auto;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+/* 修改点：tableBar 按钮不可见修复 —— 确保按钮在窄屏时换行而非溢出 */
+.dashboard-container .container {
+  overflow: visible;
+}
+/* 按钮一行放不下时自动换行 */
+.dashboard-container .container .tableBar > .tableLab .el-button {
+  margin-left: 0;
+  white-space: nowrap;
+}
+.dashboard-container .container .tableBar > .el-button {
+  margin-left: 0;
+  white-space: nowrap;
 }
 .dashboard-container .container .tableBox {
   width: 100%;
@@ -231,6 +248,24 @@
   text-align: center !important;
 }
 
+/* 标准输入框宽度（弹窗表单内使用） */
+.dashboard-container .container .el-dialog .el-input,
+.dashboard-container .container .el-dialog .el-select,
+.dashboard-container .container .el-dialog .el-textarea__inner {
+  width: 293px;
+  max-width: 100%;
+}
+.dashboard-container .container .el-dialog .el-input--small,
+.dashboard-container .container .el-dialog .el-select--small {
+  width: 200px;
+  max-width: 100%;
+}
+/* 全宽输入框（弹窗内） */
+.dashboard-container .container .el-dialog .el-input--full,
+.dashboard-container .container .el-dialog .el-textarea__inner {
+  width: 100%;
+}
+
 /* 统一表格视觉样式 */
 .tableBox .el-table {
   font-size: 13px;
@@ -266,12 +301,14 @@
 }
 
 /* 蓝色操作按钮 */
-.tableBox .el-button--text.blueBug {
+.tableBox .el-button--text.blueBug,
+.btn-view {
   color: #409EFF;
   background-color: transparent;
 }
 
-.tableBox .el-button--text.blueBug:hover {
+.tableBox .el-button--text.blueBug:hover,
+.btn-view:hover {
   background-color: #ECF5FF;
   color: #409EFF;
 }
@@ -310,9 +347,9 @@
   overflow: hidden;
 }
 
-/* 搜索图标垂直居中 */
-.tableBar .el-input .el-input__icon {
-  line-height: 40px;
+/* 搜索图标样式 */
+.dashboard-container .container .tableBar .el-input .search-icon {
+  cursor: pointer;
 }
 
 /* 文本按钮悬停效果 */
@@ -349,4 +386,695 @@
   border: 1px solid #ebeef5;
   border-radius: 4px;
   overflow: hidden;
+}
+
+/* ========== tableBar 统一样式增强 ========== */
+
+/* 筛选条件组（外卖配送等复杂筛选场景） */
+.dashboard-container .container .tableBar .filter-group {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* 操作按钮组（靠右对齐） */
+.dashboard-container .container .tableBar .action-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* 统一输入框宽度 */
+.dashboard-container .container .tableBar .el-input {
+  width: 200px;
+}
+
+/* 统一下拉框宽度 */
+.dashboard-container .container .tableBar .el-select {
+  width: 200px;
+}
+
+/* 统一日期选择器宽度 */
+.dashboard-container .container .tableBar .el-date-editor {
+  width: 260px;
+}
+
+/* 统一查询按钮间距 */
+.dashboard-container .container .tableBar .search-btn {
+  margin-left: 8px;
+}
+
+/* 视图切换器（桌台管理的表格/卡片切换） */
+.table-grid-toggle {
+  display: flex;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-left: 10px;
+}
+.table-grid-toggle .toggle-btn {
+  padding: 6px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #606266;
+  background: #fff;
+  transition: all 0.3s;
+  border: none;
+}
+.table-grid-toggle .toggle-btn.active {
+  background: #409eff;
+  color: #fff;
+}
+.table-grid-toggle .toggle-btn:hover:not(.active) {
+  color: #409eff;
+}
+
+/* ========== tableBar 各页面自定义宽度（非标准尺寸） ========== */
+
+/* --- 120px 下拉框（配送/打印/日志） --- */
+.dashboard-container .container .tableBar .el-select--wide-xs {
+  width: 120px;
+}
+
+/* --- 130px 下拉框 --- */
+.dashboard-container .container .tableBar .el-select--narrow-sm {
+  width: 130px;
+}
+
+/* --- 140px 输入框/下拉框 --- */
+.dashboard-container .container .tableBar .el-input--narrow-md,
+.dashboard-container .container .tableBar .el-select--narrow-md {
+  width: 140px;
+}
+
+/* --- 150px 下拉框（排队/预订/采购） --- */
+.dashboard-container .container .tableBar .el-select--narrow {
+  width: 150px;
+}
+
+/* --- 180px 输入框（打印日志） --- */
+.dashboard-container .container .tableBar .el-input--wide-sm {
+  width: 180px;
+}
+
+/* --- 240px 下拉框/日期选择器 --- */
+.dashboard-container .container .tableBar .el-select--wide-md,
+.dashboard-container .container .tableBar .el-date-editor--md {
+  width: 240px;
+}
+
+/* --- 250px 输入框（菜品/套餐/分类/订单） --- */
+.dashboard-container .container .tableBar .el-input--wide {
+  width: 250px;
+}
+
+/* --- 320px 日期选择器（打印日志） --- */
+.dashboard-container .container .tableBar .el-date-editor--lg {
+  width: 320px;
+}
+
+/* --- 380px 日期选择器（预订管理） --- */
+.dashboard-container .container .tableBar .el-date-editor--xl {
+  width: 380px;
+}
+
+/* --- 400px 日期选择器（订单管理/外卖配送） --- */
+.dashboard-container .container .tableBar .el-date-editor--2xl {
+  width: 400px;
+}
+
+/* --- 500px 日期选择器（支付管理） --- */
+.dashboard-container .container .tableBar .el-date-editor--3xl {
+  width: 500px;
+}
+
+/* 表单内行布局（盘点明细等） */
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* ========== 弹窗宽度规范 ========== */
+
+/* 小弹窗：简单表单（删除确认、快速编辑） */
+.dashboard-container .container .el-dialog--sm {
+  width: 420px;
+}
+/* 标准弹窗：常规表单（新增/编辑） */
+.dashboard-container .container .el-dialog--md {
+  width: 600px;
+}
+/* 大弹窗：复杂表单（打印配置、活动编辑） */
+.dashboard-container .container .el-dialog--lg {
+  width: 720px;
+}
+/* 全宽弹窗：表格选择、数据对比 */
+.dashboard-container .container .el-dialog--xl {
+  width: 900px;
+}
+
+/* ========== 表格列宽规范 ========== */
+
+/* 操作列统一宽度 */
+.el-table .action-col {
+  width: 160px;
+  min-width: 160px;
+}
+.el-table .action-col-narrow {
+  width: 120px;
+  min-width: 120px;
+}
+.el-table .action-col-wide {
+  width: 200px;
+  min-width: 200px;
+}
+
+/* ID 列 */
+.el-table .id-col {
+  width: 80px;
+  min-width: 80px;
+}
+.el-table .id-col-long {
+  width: 120px;
+  min-width: 120px;
+}
+
+/* 状态列 */
+.el-table .status-col {
+  width: 100px;
+  min-width: 100px;
+}
+
+/* 图片列 */
+.el-table .img-col {
+  width: 80px;
+  min-width: 80px;
+}
+
+/* 评分/星级列 */
+.el-table .rating-col {
+  width: 140px;
+  min-width: 140px;
+}
+
+/* ========== 表单 label-width 规范 ========== */
+
+.dashboard-container .container .el-form-item__label {
+  font-weight: 500;
+  color: #606266;
+}
+/* 标准表单 label 宽度 */
+.dashboard-container .container .el-form--label-width-sm .el-form-item__label {
+  width: 80px !important;
+}
+.dashboard-container .container .el-form--label-width-md .el-form-item__label {
+  width: 100px !important;
+}
+.dashboard-container .container .el-form--label-width-lg .el-form-item__label {
+  width: 120px !important;
+}
+.dashboard-container .container .el-form--label-width-xl .el-form-item__label {
+  width: 140px !important;
+}
+
+/* ========== 按钮样式规范 ========== */
+
+/* --- 尺寸规范 --- */
+/* tableBar 按钮统一 small */
+.dashboard-container .container .tableBar .el-button {
+  font-size: 13px;
+  padding: 9px 15px;
+  height: 32px;
+  line-height: 1;
+}
+.dashboard-container .container .tableBar .el-button [class*="el-icon"] {
+  font-size: 13px;
+}
+/* dialog footer 按钮统一 medium */
+.dashboard-container .container .el-dialog .dialog-footer .el-button {
+  font-size: 14px;
+  min-width: 80px;
+}
+
+/* --- 语义按钮类（替代 inline style） --- */
+/* 查看/编辑 */
+.btn-view {
+  color: #409eff;
+}
+.btn-view:hover {
+  background: #ecf5ff;
+}
+/* 删除 */
+.btn-delete {
+  color: #f56c6c;
+}
+.btn-delete:hover {
+  background: #fef0f0;
+}
+/* 启用/通过 */
+.btn-success {
+  color: #67c23a;
+}
+.btn-success:hover {
+  background: #f0f9eb;
+}
+/* 禁用/拒绝 */
+.btn-warning {
+  color: #e6a23c;
+}
+.btn-warning:hover {
+  background: #fdf6ec;
+}
+/* 信息/详情 */
+.btn-info {
+  color: #909399;
+}
+.btn-info:hover {
+  background: #f4f4f5;
+}
+
+/* --- 按钮间距规范 --- */
+.tableBox .el-button {
+  margin: 0 4px;
+}
+.tableBox .el-button:first-child {
+  margin-left: 0;
+}
+.tableBox .el-button:last-child {
+  margin-right: 0;
+}
+
+/* --- dialog footer 按钮间距 --- */
+.dashboard-container .container .el-dialog .dialog-footer {
+  text-align: right;
+  padding-top: 16px;
+  border-top: 1px solid #f0f2f5;
+}
+.dashboard-container .container .el-dialog .dialog-footer .el-button {
+  margin-left: 10px;
+}
+.dashboard-container .container .el-dialog .dialog-footer .el-button:first-child {
+  margin-left: 0;
+}
+
+/* --- 按钮间距工具类 --- */
+.ml-0 { margin-left: 0 !important; }
+.ml-8 { margin-left: 8px !important; }
+.ml-10 { margin-left: 10px !important; }
+.ml-auto { margin-left: auto !important; }
+
+/* --- 文本按钮颜色工具类（替代 inline style） --- */
+.text-danger { color: #f56c6c !important; }
+.text-danger:hover { background: #fef0f0 !important; }
+.text-warning { color: #e6a23c !important; }
+.text-warning:hover { background: #fdf6ec !important; }
+.text-success { color: #67c23a !important; }
+.text-success:hover { background: #f0f9eb !important; }
+.text-primary { color: #409eff !important; }
+.text-primary:hover { background: #ecf5ff !important; }
+.text-info { color: #909399 !important; }
+.text-info:hover { background: #f4f4f5 !important; }
+
+/* ========== 统一按钮系统（非 Element UI 页面用） ========== */
+
+/* --- 基础按钮重置 --- */
+.app-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 18px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  user-select: none;
+  outline: none;
+  vertical-align: middle;
+}
+.app-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.app-btn:focus {
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+/* --- 尺寸变体 --- */
+.app-btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.app-btn-lg {
+  padding: 10px 24px;
+  font-size: 14px;
+}
+
+/* --- 颜色变体 --- */
+/* 主操作 - 蓝色 */
+.app-btn-primary {
+  background: #409eff;
+  border-color: #409eff;
+  color: #fff;
+}
+.app-btn-primary:hover:not(:disabled) {
+  background: #66b1ff;
+  border-color: #66b1ff;
+}
+.app-btn-primary:active:not(:disabled) {
+  background: #3a8ee6;
+  border-color: #3a8ee6;
+}
+
+/* 成功/确认 - 绿色 */
+.app-btn-success {
+  background: #67c23a;
+  border-color: #67c23a;
+  color: #fff;
+}
+.app-btn-success:hover:not(:disabled) {
+  background: #85ce61;
+  border-color: #85ce61;
+}
+.app-btn-success:active:not(:disabled) {
+  background: #5daf34;
+  border-color: #5daf34;
+}
+
+/* 危险/删除 - 红色 */
+.app-btn-danger {
+  background: #f56c6c;
+  border-color: #f56c6c;
+  color: #fff;
+}
+.app-btn-danger:hover:not(:disabled) {
+  background: #f78989;
+  border-color: #f78989;
+}
+.app-btn-danger:active:not(:disabled) {
+  background: #dd6161;
+  border-color: #dd6161;
+}
+
+/* 警告 - 橙色 */
+.app-btn-warning {
+  background: #e6a23c;
+  border-color: #e6a23c;
+  color: #fff;
+}
+.app-btn-warning:hover:not(:disabled) {
+  background: #ebb563;
+  border-color: #ebb563;
+}
+.app-btn-warning:active:not(:disabled) {
+  background: #cf9236;
+  border-color: #cf9236;
+}
+
+/* 信息 - 灰色 */
+.app-btn-info {
+  background: #909399;
+  border-color: #909399;
+  color: #fff;
+}
+.app-btn-info:hover:not(:disabled) {
+  background: #a6a9ad;
+  border-color: #a6a9ad;
+}
+.app-btn-info:active:not(:disabled) {
+  background: #82848a;
+  border-color: #82848a;
+}
+
+/* 默认/取消 - 白底边框 */
+.app-btn-default {
+  background: #fff;
+  border-color: #dcdfe6;
+  color: #606266;
+}
+.app-btn-default:hover:not(:disabled) {
+  color: #409eff;
+  border-color: #c6e2ff;
+  background: #ecf5ff;
+}
+.app-btn-default:active:not(:disabled) {
+  color: #3a8ee6;
+  border-color: #3a8ee6;
+}
+
+/* 文本按钮 - 无背景无边框 */
+.app-btn-text {
+  background: transparent;
+  border-color: transparent;
+  color: #606266;
+  padding: 4px 10px;
+}
+.app-btn-text:hover:not(:disabled) {
+  background: #f5f7fa;
+  color: #409eff;
+}
+
+/* 导出 Excel 专用（独立于颜色体系） */
+.app-btn-excel {
+  background: #f0f9eb;
+  border-color: #b7eb8f;
+  color: #389e0d;
+}
+.app-btn-excel:hover:not(:disabled) {
+  background: #389e0d;
+  border-color: #389e0d;
+  color: #fff;
+}
+
+/* 导出 PDF 专用 */
+.app-btn-pdf {
+  background: #fef0f0;
+  border-color: #ffccc7;
+  color: #cf1322;
+}
+.app-btn-pdf:hover:not(:disabled) {
+  background: #cf1322;
+  border-color: #cf1322;
+  color: #fff;
+}
+
+/* 紫色按钮（通知管理 - APP推送专用） */
+.app-btn-purple {
+  background: #722ed1;
+  border-color: #722ed1;
+  color: #fff;
+}
+.app-btn-purple:hover:not(:disabled) {
+  background: #9254de;
+  border-color: #9254de;
+}
+.app-btn-purple:active:not(:disabled) {
+  background: #531dab;
+  border-color: #531dab;
+}
+
+/* --- 按钮组 --- */
+.app-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.app-btn-group--right {
+  justify-content: flex-end;
+}
+
+/* ========== 表单布局优化 ========== */
+
+/* 弹窗内表单：防止内容被截断，确保可滚动 */
+.el-dialog__body {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* 弹窗内表单行内布局 */
+.form-inline-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.form-inline-row .form-inline-item {
+  flex: 1;
+  min-width: 0;
+}
+.form-inline-row .form-inline-item--fixed {
+  flex: 0 0 auto;
+}
+
+/* 表单区域防止溢出 */
+.el-dialog .el-form {
+  overflow: visible;
+}
+.el-dialog .el-form-item {
+  margin-bottom: 18px;
+}
+.el-dialog .el-form-item:last-child {
+  margin-bottom: 0;
+}
+
+/* 筛选栏输入框统一最小宽度，防止挤压变形 */
+.filter-input {
+  min-width: 120px;
+}
+.filter-input--sm {
+  min-width: 80px;
+}
+.filter-input--lg {
+  min-width: 180px;
+}
+
+/* 自定义模态弹窗统一规范（非 Element UI 弹窗） */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 2000;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  overflow-y: auto;
+}
+.modal-overlay.show {
+  display: flex;
+}
+.modal-container,
+.modal {
+  background: #fff;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+}
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #ebeef5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.modal-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #303133;
+}
+.modal-close {
+  cursor: pointer;
+  font-size: 18px;
+  color: #909399;
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
+}
+.modal-close:hover {
+  color: #303133;
+}
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #ebeef5;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* 表单组（非 Element UI） */
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #606266;
+  font-weight: 500;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #409eff;
+}
+.form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.form-group .hint {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+}
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+.form-row .form-group {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ========== 响应式适配 ========== */
+
+/* 窄屏时弹窗表单输入框自适应 */
+@media (max-width: 768px) {
+  .dashboard-container .container .el-dialog .el-input,
+  .dashboard-container .container .el-dialog .el-select {
+    width: 100% !important;
+  }
+
+  .dashboard-container .container .tableBar .el-input,
+  .dashboard-container .container .tableBar .el-select,
+  .dashboard-container .container .tableBar .el-date-editor {
+    width: 100% !important;
+  }
+
+  .dashboard-container .container .tableBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-container,
+  .modal {
+    max-width: 95vw;
+  }
 }
