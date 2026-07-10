@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 /**
  * 门店配置
  * 门店级别的功能开关和运营参数
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("store_config")
@@ -24,6 +27,7 @@ public class StoreConfig implements Serializable {
     /** 配置类型 - 其他 */
     public static final int CONFIG_TYPE_OTHER = 4;
 
+    /** 主键ID */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 

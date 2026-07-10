@@ -5,6 +5,12 @@ import com.reggie.entity.Employee;
 import com.reggie.entity.Tenant;
 import javax.servlet.http.HttpSession;
 
+/**
+ * 租户管理服务接口，提供租户注册、管理员创建及验证码管理功能
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 public interface TenantService extends IService<Tenant> {
 
     /**

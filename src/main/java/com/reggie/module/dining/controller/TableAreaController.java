@@ -21,6 +21,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
+/**
+ * 堂食区域管理控制器
+ * 提供桌台区域的增删改查接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/dining/area")

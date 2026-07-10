@@ -22,6 +22,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 打印机打印控制器
+ * 提供订单打印、打印机测试、状态查询等接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/printer")

@@ -8,10 +8,15 @@ import lombok.Getter;
 @Getter
 public enum PurchaseOrderStatus {
 
+    /** 草稿 */
     DRAFT("DRAFT", "草稿"),
+    /** 已下单 */
     ORDERED("ORDERED", "已下单"),
+    /** 部分收货 */
     PARTIAL("PARTIAL", "部分收货"),
+    /** 已收货 */
     RECEIVED("RECEIVED", "已收货"),
+    /** 已取消 */
     CANCELLED("CANCELLED", "已取消");
 
     private final String value;

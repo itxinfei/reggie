@@ -18,10 +18,17 @@ import java.time.format.DateTimeFormatter;
 
 import static com.reggie.module.payment.model.PaymentOrder.*;
 
+/**
+ * 支付订单服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @Service
 public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, PaymentOrder> implements PaymentOrderService {
 
+    /** 订单服务 */
     @Autowired
     private OrderService orderService;
 

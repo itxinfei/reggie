@@ -21,14 +21,23 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 配送服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 public class DeliveryServiceImpl implements DeliveryService {
 
+    /** 日志记录器 */
     private static final Logger log = LoggerFactory.getLogger(DeliveryServiceImpl.class);
 
+    /** 配送平台工厂 */
     @Autowired
     private DeliveryPlatformFactory factory;
 
+    /** 配送订单Mapper */
     @Autowired
     private DeliveryOrderMapper deliveryOrderMapper;
 

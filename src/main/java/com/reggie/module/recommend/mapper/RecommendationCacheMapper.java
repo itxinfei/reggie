@@ -8,7 +8,10 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Delete;
 
 /**
- * 推荐结果缓存Mapper
+ * 推荐结果缓存 Mapper
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Mapper
 public interface RecommendationCacheMapper extends BaseMapper<RecommendationCache> {

@@ -20,10 +20,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 智能推荐Controller
- * 提供菜品推荐、偏好分析、浏览记录等API
+ * 智能推荐控制器
+ * 提供菜品推荐、偏好分析、浏览记录等接口
  *
- * @author Reggie Team
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
@@ -71,7 +72,7 @@ public class RecommendController {
     }
 
     /**
-     * 修改点：获取推荐引擎真实统计数据
+     * 获取推荐引擎真实统计数据
      * GET /recommend/stats
      * 从数据库计算覆盖率、点击率、转化率等指标
      */
@@ -222,7 +223,7 @@ public class RecommendController {
     }
 
     /**
-     * 修改点：获取用户所有消息列表（分页）
+     * 获取用户所有消息列表（分页）
      * GET /recommend/messages?page=1&pageSize=20
      */
     @GetMapping("/messages")
@@ -240,7 +241,7 @@ public class RecommendController {
     }
 
     /**
-     * 修改点：获取未读消息数量（用于首页铃铛角标）
+     * 获取未读消息数量（用于首页铃铛角标）
      * GET /recommend/messages/unread-count
      */
     @GetMapping("/messages/unread-count")
@@ -346,7 +347,6 @@ public class RecommendController {
 
     /**
      * 从Session获取当前登录用户ID
-     * 修改点：session中存储的是Long(user.getId())而非User对象，修复instanceof检查错误
      */
     private Long getUserId(HttpSession session) {
         if (session == null) return null;

@@ -2,7 +2,7 @@
 
 # 🍜 瑞吉外卖 (Reggie Takeout)
 
-### 餐饮企业一站式外卖管理系统
+### 搭载 AI 智能调度的餐饮全栈系统
 
 <p align="center">
 
@@ -10,7 +10,7 @@
 <img src="https://img.shields.io/badge/Spring_Boot-2.4.5-green?logo=spring" alt="Spring Boot"/>
 <img src="https://img.shields.io/badge/MyBatis_Plus-3.4.2-blue?logo=mybatis" alt="MyBatis Plus"/>
 <img src="https://img.shields.io/badge/Vue.js-2.6.14-green?logo=vue.js" alt="Vue.js"/>
-<img src="https://img.shields.io/badge/Redis-6.0-red?logo=redis" alt="Redis"/>
+<img src="https://img.shields.shields.io/badge/Redis-6.0-red?logo=redis" alt="Redis"/>
 <img src="https://img.shields.io/badge/MySQL-8.0-blue?logo=mysql" alt="MySQL"/>
 
 </p>
@@ -51,6 +51,15 @@
 ## 项目介绍
 
 **瑞吉外卖（Reggie Takeout）** 是一个完整的餐饮外卖管理系统，专为餐饮企业提供外卖订单管理解决方案。项目采用前后端分离架构，后端基于 Spring Boot 2.4.5 + MyBatis Plus 3.4.2 构建，前端使用 Vue.js 2 + ElementUI（管理后台）和 Vant UI（移动端）。
+
+### 🤖 AI 智能调度引擎
+
+本系统核心创新在于 **AI 智能调度引擎**，通过接入大语言模型（LLM）实现：
+
+- **智能点餐推荐**：基于用户历史订单、口味偏好、实时销量数据，AI 自动推荐个性化菜品组合
+- **菜品描述生成**：AI 自动生成菜品描述、营养成分、烹饪方法等文案，提升商品展示效果
+- **经营数据分析**：AI 智能分析销售趋势、菜品热度、时段分布，提供经营决策建议
+- **自动化任务处理**：AI 任务引擎自动处理超时订单、幂等防重校验、定时订单回收
 
 ### 核心亮点
 
@@ -99,7 +108,7 @@
 
 ---
 
-## 快速开始
+## 🚀 快速开始
 
 ### 环境要求
 
@@ -143,7 +152,7 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar
 
 ---
 
-## 功能清单
+## 📋 功能清单
 
 ### 核心业务
 
@@ -158,6 +167,19 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar
 | 📦 订单管理 | 订单查询/详情 | 分页查询、状态流转、订单明细 |
 | 🛒 购物车 | 购物车管理 | 增加/减少数量、清空购物车 |
 | 📍 地址管理 | 地址 CRUD | 收货地址增删改查、默认地址 |
+
+</div>
+
+### 🤖 AI 智能助手
+
+<div align="center">
+
+| 功能 | 描述 | 技术实现 |
+|------|------|----------|
+| 🎯 **智能点餐推荐** | 基于用户画像和实时数据的个性化推荐 | 协同过滤 + LLM 分析 |
+| 📝 **菜品描述生成** | AI 自动生成菜品文案、营养成分、烹饪建议 | DeepSeek/通义千问 API |
+| 📊 **经营数据分析** | 智能分析销售趋势、菜品热度、时段分布 | LLM 数据分析 + 可视化 |
+| ⚡ **自动化任务处理** | 超时订单处理、幂等防重校验、定时回收 | Spring 定时任务 + AI 决策 |
 
 </div>
 
@@ -178,7 +200,6 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar
 | 🔔 消息通知 | 模板管理/多渠道推送 | 短信通知、APP 推送、多渠道路由、定时发送 |
 | 📥 数据导出 | Excel/PDF 导出 | 订单/菜品/员工/报表多维度导出 |
 | 🏪 多门店管理 | 门店信息/数据隔离 | 门店 CRUD、数据同步、门店仪表盘、员工权限 |
-| 🤖 AI 智能助手 | LLM 大模型驱动 | 智能点餐推荐、菜品描述生成、经营数据分析 |
 
 </div>
 
@@ -199,7 +220,7 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar
 
 ---
 
-## 技术栈
+## 💻 技术栈
 
 <div align="center">
 
@@ -216,6 +237,7 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar
 | 测试 | 🧪 H2 Database | 1.4.200 |
 | 文档 | 📄 Springdoc | 1.6.9 |
 | 工具 | 📷 ZXing / 🔒 Jasypt | 3.5.1 / 3.0.3 |
+| **AI** | 🤖 **DeepSeek/通义千问/OpenAI** | **LLM API** |
 
 | 前端 | 版本 |
 |------|------|
@@ -228,7 +250,7 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar
 
 ---
 
-## 项目结构
+## 📁 项目结构
 
 ```
 reggie/
@@ -269,7 +291,7 @@ reggie/
 
 ---
 
-## 测试
+## 🧪 测试
 
 ```bash
 mvn test -DfailIfNoTests=false
@@ -292,11 +314,11 @@ mvn test -DfailIfNoTests=false
 
 ---
 
-## 开发路线图
+## 🗺️ 开发路线图
 
 <div align="center">
 
-### 已完成
+### ✅ 已完成
 
 | 功能 | 说明 |
 |------|------|
@@ -313,23 +335,68 @@ mvn test -DfailIfNoTests=false
 | 营销功能 | 会员 + 优惠券 + 积分 + 充值 |
 | 配送管理 | 美团/饿了么/抖音平台对接 |
 | 小票打印 | 飞鹅/易联云/芯烨多品牌 |
-| **AI 智能助手** | **智能点餐推荐 + 菜品描述生成 + 经营分析** |
+| **🤖 AI 智能助手** | **智能点餐推荐 + 菜品描述生成 + 经营分析 + 自动任务调度** |
 | 消息通知 | 短信通知、APP 推送、模板管理、多渠道路由、定时发送 |
 | 数据导出 | 订单/菜品/员工/报表多维度 Excel 和 PDF 导出 |
 | 营销推荐 | 协同过滤推荐、偏好分析、营销活动管理、批量消息推送 |
 | 多门店管理 | 门店 CRUD、数据同步、门店仪表盘、员工权限隔离 |
 
-### 计划中
+### 🔮 计划中
 
 | 功能 | 说明 |
 |------|------|
-| AI 销量预测 | 基于历史数据预测菜品销量，辅助采购 |
+| AI 销量预测 | 基于历史数据预测菜品销量，辅助采购决策 |
+| 智能客服 | AI 自动回复用户咨询，处理常见问题 |
+| 语音点餐 | 接入语音识别，支持语音下单 |
 
 </div>
 
 ---
 
-## 贡献指南
+## 🤖 AI 智能助手配置
+
+### 快速体验
+
+AI 助手默认使用 **Mock 模拟模式**，无需任何配置即可体验基础功能。
+
+### 接入真实 AI 服务
+
+推荐使用 **DeepSeek**，性价比高且效果优秀：
+
+1. 注册并获取 API Key：[DeepSeek 开放平台](https://platform.deepseek.com/)
+2. 修改 `src/main/resources/application.yml`：
+
+```yaml
+reggie:
+  ai:
+    enabled: true
+    provider: deepseek
+    api-key: sk-your-api-key-here    # 填入你的API Key
+    base-url: https://api.deepseek.com/v1
+    model: deepseek-chat
+```
+
+### 支持的 AI 服务
+
+<div align="center">
+
+| 服务 | base-url | model 示例 | 推荐度 |
+|------|----------|-----------|--------|
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` | ⭐⭐⭐⭐⭐ |
+| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` | ⭐⭐⭐⭐ |
+| OpenAI | `https://api.openai.com/v1` | `gpt-3.5-turbo` | ⭐⭐⭐⭐ |
+| Ollama(本地) | `http://localhost:11434/v1` | `qwen2.5:7b` | ⭐⭐⭐ |
+
+</div>
+
+### AI 功能入口
+
+- 📱 **用户端**：首页顶部 🤖 图标 → AI 智能点餐助手
+- 🖥️ **管理端**：左侧菜单 → AI 助手
+
+---
+
+## 🤝 贡献指南
 
 ### 贡献流程
 
@@ -357,7 +424,7 @@ mvn test -DfailIfNoTests=false
 
 ---
 
-## 常见问题
+## ❓ 常见问题
 
 <details>
 <summary><b>如何重置管理员密码？</b></summary>
@@ -465,42 +532,19 @@ POST /tenant/register
 </details>
 
 <details>
-<summary><b>如何配置 AI 智能助手？</b></summary>
+<summary><b>AI 助手不工作怎么办？</b></summary>
 
-AI 助手默认使用 **Mock 模拟模式**，无需任何配置即可体验基础功能。
+1. **检查配置**：确认 `application.yml` 中 AI 配置正确
+2. **检查网络**：确保能访问 AI 服务 API（如 api.deepseek.com）
+3. **检查 API Key**：确认 API Key 有效且余额充足
+4. **查看日志**：检查控制台是否有 AI 相关错误日志
+5. **使用 Mock 模式**：设置 `reggie.ai.enabled: false` 可回退到 Mock 模式
 
-**接入真实 AI 服务（推荐 DeepSeek）：**
-
-1. 注册并获取 API Key：[DeepSeek 开放平台](https://platform.deepseek.com/)
-2. 修改 `src/main/resources/application.yml`：
-
-```yaml
-reggie:
-  ai:
-    enabled: true
-    provider: deepseek
-    api-key: sk-your-api-key-here    # 填入你的API Key
-    base-url: https://api.deepseek.com/v1
-    model: deepseek-chat
-```
-
-**支持的其他 AI 服务：**
-
-| 服务 | base-url | model 示例 |
-|------|----------|-----------|
-| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
-| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
-| OpenAI | `https://api.openai.com/v1` | `gpt-3.5-turbo` |
-| Ollama(本地) | `http://localhost:11434/v1` | `qwen2.5:7b` |
-
-**AI 功能入口：**
-- 📱 用户端：首页顶部 🤖 图标 → AI 智能点餐助手
-- 🖥️ 管理端：左侧菜单 → AI 助手
 </details>
 
 ---
 
-## 联系方式
+## 📞 联系方式
 
 <div align="center">
 

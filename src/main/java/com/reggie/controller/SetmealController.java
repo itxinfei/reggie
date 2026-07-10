@@ -36,6 +36,9 @@ import java.util.stream.Collectors;
 
 /**
  * 套餐管理
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 
 @RestController
@@ -81,11 +84,12 @@ public class SetmealController {
      * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "套餐分页查询", description = "分页查询套餐列表，支持按名称模糊搜索，自动关联分类名称")
+    @Operation(summary = "套餐分页查询", description = "分页查询套餐列表，支持按名称模糊搜索和状态筛选，自动关联分类名称")
     @Parameter(name = "page", description = "页码，从1开始", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "套餐名称（可选，模糊查询）")
-    public R<Page<SetmealDto>> page(int page,int pageSize,String name){
+    @Parameter(name = "status", description = "售卖状态（可选，'0'=停售 ,'1'=启售）")
+    public R<Page<SetmealDto>> page(int page,int pageSize,String name, @RequestParam(required = false) String status){
         //分页构造器对象
         Page<Setmeal> pageInfo = new Page<>(page,pageSize);
         Page<SetmealDto> dtoPage = new Page<>();
@@ -93,6 +97,7 @@ public class SetmealController {
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
         //添加查询条件，根据name进行like模糊查询
         queryWrapper.like(name != null,Setmeal::getName,name);
+        queryWrapper.eq(status != null && !status.isEmpty(), Setmeal::getStatus, status);
         //添加排序条件，根据更新时间降序排列
         queryWrapper.orderByDesc(Setmeal::getUpdateTime);
 
@@ -121,6 +126,12 @@ public class SetmealController {
         return R.success(dtoPage);
     }
 
+    /**
+     * 根据ID查询套餐详情
+     *
+     * @param id 套餐ID
+     * @return 套餐详情
+     */
     @GetMapping("/{id}")
     @Operation(summary = "查询套餐详情", description = "根据ID查询套餐基本信息及关联菜品列表")
     @Parameter(name = "id", description = "套餐ID", required = true)
@@ -129,6 +140,12 @@ public class SetmealController {
         return R.success(setmealDto);
     }
 
+    /**
+     * 修改套餐信息
+     *
+     * @param setmealDto 套餐DTO（包含ID、基本信息及菜品列表）
+     * @return 操作结果
+     */
     @PutMapping
     @Operation(summary = "修改套餐", description = "更新套餐基本信息及关联菜品")
     @Parameter(name = "setmealDto", description = "套餐DTO（包含ID、基本信息及菜品列表）", required = true)
@@ -137,6 +154,13 @@ public class SetmealController {
         return R.success("修改套餐成功");
     }
 
+    /**
+     * 批量更新套餐状态
+     *
+     * @param status 状态值：1-起售，0-停售
+     * @param ids 套餐ID列表，逗号分隔（如 1,2,3）
+     * @return 操作结果
+     */
     @PostMapping("/status/{status}")
     @Operation(summary = "更新套餐状态", description = "批量更新套餐售卖状态（起售/停售）")
     @Parameter(name = "status", description = "状态值：1-起售，0-停售", required = true)
@@ -150,6 +174,12 @@ public class SetmealController {
         return R.success("操作成功");
     }
 
+    /**
+     * 查询套餐包含的菜品列表
+     *
+     * @param id 套餐ID
+     * @return 套餐菜品列表
+     */
     @GetMapping("/dish/{id}")
     @Operation(summary = "查询套餐菜品", description = "查询套餐包含的菜品列表")
     @Parameter(name = "id", description = "套餐ID", required = true)
@@ -190,7 +220,6 @@ public class SetmealController {
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(setmeal.getCategoryId() != null,Setmeal::getCategoryId,setmeal.getCategoryId());
         queryWrapper.eq(setmeal.getStatus() != null,Setmeal::getStatus,setmeal.getStatus());
-        // 修改点：支持按套餐名称模糊搜索
         queryWrapper.like(setmeal.getName() != null && !setmeal.getName().trim().isEmpty(), Setmeal::getName, setmeal.getName());
         queryWrapper.orderByDesc(Setmeal::getUpdateTime);
 

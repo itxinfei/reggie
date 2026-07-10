@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 /**
  * 门店员工权限关联
  * 记录员工在各门店的角色和权限分配
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("store_employee_permission")
@@ -26,6 +29,7 @@ public class StoreEmployeePermission implements Serializable {
     /** 角色类型 - 配送员 */
     public static final int ROLE_DELIVERY = 5;
 
+    /** 主键ID */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 

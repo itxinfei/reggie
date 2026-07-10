@@ -26,102 +26,101 @@ public class AddressBook implements Serializable {
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    //用户id
-    // 修改点：移除@NotNull，userId由Controller通过BaseContext安全注入，不由前端传入
+    /** 用户id */
     private Long userId;
 
 
-    //收货人
+    /** 收货人 */
     @NotBlank(message = "收货人不能为空")
     @Size(max = 30, message = "收货人姓名不能超过30个字符")
     private String consignee;
 
 
-    //手机号
+    /** 手机号 */
     @NotBlank(message = "手机号不能为空")
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
 
 
-    //性别 0 女 1 男
+    /** 性别 0 女 1 男 */
     @Size(max = 5, message = "性别格式不正确")
     private String sex;
 
 
-    //省级区划编号
+    /** 省级区划编号 */
     @NotBlank(message = "省级区划编号不能为空")
     private String provinceCode;
 
 
-    //省级名称
+    /** 省级名称 */
     @NotBlank(message = "省级名称不能为空")
     private String provinceName;
 
 
-    //市级区划编号
+    /** 市级区划编号 */
     @NotBlank(message = "市级区划编号不能为空")
     private String cityCode;
 
 
-    //市级名称
+    /** 市级名称 */
     @NotBlank(message = "市级名称不能为空")
     private String cityName;
 
 
-    //区级区划编号
+    /** 区级区划编号 */
     @NotBlank(message = "区级区划编号不能为空")
     private String districtCode;
 
 
-    //区级名称
+    /** 区级名称 */
     @NotBlank(message = "区级名称不能为空")
     private String districtName;
 
 
-    // 修改点：新增四级联动 — 街道/乡镇级区划编号
+    /** 街道/乡镇级区划编号 */
     private String streetCode;
 
 
-    // 修改点：新增四级联动 — 街道/乡镇级名称
+    /** 街道/乡镇级名称 */
     private String streetName;
 
 
-    //详细地址
+    /** 详细地址 */
     @NotBlank(message = "详细地址不能为空")
     @Size(max = 200, message = "详细地址不能超过200个字符")
     private String detail;
 
 
-    //标签
+    /** 标签 */
     @Size(max = 100, message = "标签不能超过100个字符")
     private String label;
 
-    //是否默认 0 否 1是
+    /** 是否默认 0 否 1是 */
     public static final int NOT_DEFAULT = 0;
     public static final int IS_DEFAULT = 1;
     private Integer isDefault;
 
-    //创建时间
+    /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
 
-    //更新时间
+    /** 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
 
-    //创建人
+    /** 创建人 */
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
 
-    //修改人
+    /** 修改人 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 
 
-    //是否删除
+    /** 是否删除 */
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
 }

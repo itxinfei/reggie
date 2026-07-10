@@ -9,11 +9,17 @@ import org.springframework.stereotype.Component;
 /**
  * ApplicationContext 工具类
  * 用于在非Spring管理的对象中获取Bean
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Component
 public class ApplicationContextProvider implements ApplicationContextAware {
 
+    /**
+     * Spring应用上下文
+     */
     private static ApplicationContext applicationContext;
 
     @Override

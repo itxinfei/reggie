@@ -27,6 +27,13 @@ import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * 会员管理控制器
+ * 提供会员的注册、查询、充值、余额扣减等接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/member/member")

@@ -9,6 +9,9 @@ import javax.validation.constraints.Pattern;
 
 /**
  * 排队取号请求DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 public class TakeNumberDTO {

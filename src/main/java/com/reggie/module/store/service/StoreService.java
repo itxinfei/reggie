@@ -8,8 +8,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 门店管理服务
+ * 门店管理服务接口
  * 提供总部-分店模式下的门店全生命周期管理
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 public interface StoreService {
 

@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
 /**
  * 营销活动
  * 定义各类促销活动：满减、折扣、限时优惠等
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("marketing_campaign")
@@ -52,9 +55,11 @@ public class MarketingCampaign implements Serializable {
     /** 状态 - 已暂停 */
     public static final int STATUS_PAUSED = 3;
 
+    /** 主键ID */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
+    /** 租户ID */
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
@@ -106,15 +111,19 @@ public class MarketingCampaign implements Serializable {
     /** 关联优惠券模板ID */
     private Long couponTemplateId;
 
+    /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
+    /** 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
+    /** 创建人ID */
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
+    /** 更新人ID */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 }

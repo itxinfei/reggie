@@ -5,7 +5,10 @@ import com.reggie.module.store.model.StoreConfig;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 门店配置Mapper
+ * 门店配置 Mapper
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Mapper
 public interface StoreConfigMapper extends BaseMapper<StoreConfig> {

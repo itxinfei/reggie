@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Dish flavor
+ * 菜品口味
  */
 @Data
 public class DishFlavor implements Serializable {
@@ -22,41 +22,41 @@ public class DishFlavor implements Serializable {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    // Name
-    @NotBlank(message = "Flavor name cannot be empty")
-    @Size(max = 64, message = "Flavor name cannot exceed 64 characters")
+    /** 口味名称 */
+    @NotBlank(message = "口味名称不能为空")
+    @Size(max = 64, message = "口味名称不能超过64个字符")
     private String name;
 
-    // Flavor value
-    @NotBlank(message = "Flavor value cannot be empty")
-    @Size(max = 64, message = "Flavor value cannot exceed 64 characters")
+    /** 口味值 */
+    @NotBlank(message = "口味值不能为空")
+    @Size(max = 64, message = "口味值不能超过64个字符")
     private String value;
 
-    // Dish ID
-    @NotNull(message = "Dish ID cannot be empty")
+    /** 菜品ID */
+    @NotNull(message = "菜品ID不能为空")
     private Long dishId;
 
-    // Tenant ID
+    /** 租户ID */
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    // Create time
+    /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    // Update time
+    /** 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-    // Create user
+    /** 创建人 */
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
-    // Update user
+    /** 修改人 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 
-    // Is deleted
+    /** 是否删除 */
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
 

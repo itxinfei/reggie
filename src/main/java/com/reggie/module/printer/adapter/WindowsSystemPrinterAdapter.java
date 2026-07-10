@@ -17,12 +17,27 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+/**
+ * Windows系统打印机适配器
+ * 通过Java Print Service API与Windows系统打印机交互
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @Component
 public class WindowsSystemPrinterAdapter implements PrinterAdapter {
 
+    /** 文本MIME类型 */
     private static final String TEXT_MIME_TYPE = "text/plain; charset=UTF-8";
 
+    /**
+     * 打印任务
+     *
+     * @param job    打印任务
+     * @param config 打印机配置
+     * @return 是否打印成功
+     */
     @Override
     public boolean print(PrintJob job, PrinterConfig config) {
         String printerName = getPrinterName(config);
@@ -57,6 +72,12 @@ public class WindowsSystemPrinterAdapter implements PrinterAdapter {
         }
     }
 
+    /**
+     * 查询打印机状态
+     *
+     * @param config 打印机配置
+     * @return 打印机状态
+     */
     @Override
     public PrinterStatus queryStatus(PrinterConfig config) {
         PrinterStatus status = new PrinterStatus();
@@ -95,6 +116,12 @@ public class WindowsSystemPrinterAdapter implements PrinterAdapter {
         }
     }
 
+    /**
+     * 测试打印机连接
+     *
+     * @param config 打印机配置
+     * @return 是否连接成功
+     */
     @Override
     public boolean testConnection(PrinterConfig config) {
         String printerName = getPrinterName(config);
@@ -128,6 +155,11 @@ public class WindowsSystemPrinterAdapter implements PrinterAdapter {
         }
     }
 
+    /**
+     * 列出系统所有可用的打印机
+     *
+     * @return 打印机服务列表
+     */
     public List<PrintService> listSystemPrinters() {
         PrintService[] services = PrintServiceLookup.lookupPrintServices(
                 DocFlavor.INPUT_STREAM.AUTOSENSE, null);

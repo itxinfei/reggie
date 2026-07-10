@@ -7,6 +7,9 @@ import javax.validation.constraints.NotBlank;
 
 /**
  * 发送短信验证码请求DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 public class SendMsgDTO {

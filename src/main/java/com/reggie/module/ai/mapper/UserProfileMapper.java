@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Param;
  * AI用户画像 Mapper
  *
  * @author reggie
- * @since 2026-07-10
+ * @since 2026-07-09
  */
 @Mapper
 public interface UserProfileMapper extends BaseMapper<UserProfile> {

@@ -11,15 +11,20 @@ import java.util.Set;
 import javax.servlet.SessionTrackingMode;
 
 /**
- * Session 安全配置
+ * Session 安全配置类
+ * 配置Session超时时间和追踪模式
  *
- * @author itxinfei
+ * @author reggie
+ * @since 2026-07-09
  */
 @Configuration
 public class SessionTimeoutConfig {
 
     /**
-     * 配置 Session 超时时间和追踪模式
+     * 配置Session超时时间和追踪模式
+     * 禁用URL重写，防止Session ID泄露
+     *
+     * @return ServletContext初始化器
      */
     @Bean
     public ServletContextInitializer sessionConfig() {

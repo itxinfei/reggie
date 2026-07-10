@@ -11,12 +11,16 @@ import java.time.LocalDateTime;
 /**
  * 通知模板实体
  * 支持短信和APP推送两种渠道的消息模板管理
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("notification_template")
 public class NotificationTemplate implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    /** 主键ID */
     private Long id;
 
     /** 租户ID */

@@ -26,16 +26,25 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+/**
+ * 库存盘点服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @Service
 public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCheck> implements StockCheckService {
 
+    /** 食材服务 */
     @Autowired
     private MaterialService materialService;
 
+    /** 库存记录服务 */
     @Autowired
     private StockRecordService stockRecordService;
 
+    /** 盘点明细Mapper */
     @Autowired
     private StockCheckDetailMapper stockCheckDetailMapper;
 
@@ -60,7 +69,6 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    // 修改点：参数从List<Map>改为List<StockCheckItemDTO>，强类型更安全
     public void completeCheck(Long checkId, List<StockCheckItemDTO> items) {
         StockCheck sc = getById(checkId);
         if (sc == null) {

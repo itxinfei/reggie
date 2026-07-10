@@ -7,6 +7,9 @@ import javax.validation.constraints.NotNull;
 
 /**
  * 地址设置默认DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @Schema(description = "地址设置默认")

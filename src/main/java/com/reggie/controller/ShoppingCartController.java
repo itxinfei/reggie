@@ -21,7 +21,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 购物车
+ * 购物车管理
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController

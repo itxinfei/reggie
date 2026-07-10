@@ -6,6 +6,12 @@ import com.reggie.mapper.EmployeeMapper;
 import com.reggie.service.EmployeeService;
 import org.springframework.stereotype.Service;
 
+/**
+ * 员工服务实现类
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 public class EmployeeServiceImpl extends ServiceImpl<EmployeeMapper,Employee> implements EmployeeService{
 }

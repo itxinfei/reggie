@@ -7,6 +7,9 @@ import javax.validation.constraints.NotNull;
 
 /**
  * 修改桌台状态请求DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 public class ChangeTableStatusDTO {

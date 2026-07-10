@@ -15,10 +15,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 门店管理Controller
- * 提供门店CRUD、数据隔离、商品同步等API
+ * 门店管理控制器
+ * 提供门店CRUD、数据隔离、商品同步等接口
  *
- * @author Reggie Team
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
@@ -86,12 +87,10 @@ public class StoreController {
     /**
      * 切换门店
      * POST /store/switch/{tenantId}
-     * 修改点：更新HttpSession中的tenantId，确保后续请求使用正确的租户上下文
      */
     @PostMapping("/switch/{tenantId}")
     public R<Map<String, Object>> switchStore(@PathVariable Long tenantId,
                                                HttpSession session) {
-        // 修改点：持久化门店切换 - 同时更新ThreadLocal和Session
         Map<String, Object> storeInfo = storeService.switchStore(tenantId);
         session.setAttribute("tenantId", tenantId);
         log.info("[门店切换] Session tenantId已更新为: {}", tenantId);
@@ -132,7 +131,7 @@ public class StoreController {
         Long operatorId = body.get("operatorId") != null ?
                 Long.valueOf(body.get("operatorId").toString()) : null;
 
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("unchecked") // JSON反序列化类型转换，Integer转Long由调用方保证
         List<Long> dishIds = body.get("dishIds") != null ?
                 ((List<Integer>) body.get("dishIds")).stream()
                         .map(Long::valueOf).collect(java.util.stream.Collectors.toList()) : null;
@@ -167,7 +166,7 @@ public class StoreController {
         Long operatorId = body.get("operatorId") != null ?
                 Long.valueOf(body.get("operatorId").toString()) : null;
 
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("unchecked") // JSON反序列化类型转换，Integer转Long由调用方保证
         List<Long> setmealIds = body.get("setmealIds") != null ?
                 ((List<Integer>) body.get("setmealIds")).stream()
                         .map(Long::valueOf).collect(java.util.stream.Collectors.toList()) : null;

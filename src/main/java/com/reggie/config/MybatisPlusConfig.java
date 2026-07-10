@@ -14,6 +14,13 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * MyBatis-Plus 配置类
+ * 配置多租户插件和分页插件
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Configuration
 public class MybatisPlusConfig {
 
@@ -23,21 +30,27 @@ public class MybatisPlusConfig {
      * - employee: 在 EmployeeController 中手动添加了租户过滤
      * - shopping_cart: 暂无 tenant_id 列，通过 userId 关联隔离
      * - order_detail: 暂无 tenant_id 列，通过 orderId 关联隔离
+     * - ai_provider_config: 系统级AI大模型配置表，暂无 tenant_id 列，不需要租户隔离
      */
     private static final Set<String> IGNORE_TABLES = new HashSet<>(Arrays.asList(
-        "tenant", "employee", "shopping_cart", "order_detail"
+        "tenant", "employee", "shopping_cart", "order_detail", "ai_provider_config", "dish_evaluation"
     ));
 
+    /**
+     * 配置MyBatis-Plus拦截器
+     * 包含多租户拦截器和分页拦截器
+     *
+     * @return MyBatis-Plus拦截器
+     */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor(){
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
         mybatisPlusInterceptor.addInnerInterceptor(new TenantLineInnerInterceptor(new TenantLineHandler() {
-            // 修改点：记录是否有租户上下文（null表示无租户/未登录浏览场景）
             @Override
             public Expression getTenantId() {
                 Long tenantId = BaseContext.getCurrentTenantId();
                 if (tenantId == null) {
-                    // 修改点：MP 3.4.2的TenantLineInnerInterceptor不检查null，
+                    // MP 3.4.2的TenantLineInnerInterceptor不检查null，
                     // 直接add到SQL中导致WHERE tenant_id = null（永远false），
                     // 因此必须在ignoreTable中拦截所有表来跳过租户过滤。
                     return null;
@@ -52,7 +65,7 @@ public class MybatisPlusConfig {
 
             @Override
             public boolean ignoreTable(String tableName) {
-                // 修改点：无租户上下文时全局跳过租户隔离，避免MP 3.4.2生成tenant_id = null
+                // 无租户上下文时全局跳过租户隔离，避免MP 3.4.2生成tenant_id = null
                 if (BaseContext.getCurrentTenantId() == null) {
                     return true;
                 }

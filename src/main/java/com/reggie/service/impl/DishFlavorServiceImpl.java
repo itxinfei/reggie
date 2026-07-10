@@ -6,6 +6,12 @@ import com.reggie.mapper.DishFlavorMapper;
 import com.reggie.service.DishFlavorService;
 import org.springframework.stereotype.Service;
 
+/**
+ * 菜品口味服务实现类
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 public class DishFlavorServiceImpl extends ServiceImpl<DishFlavorMapper,DishFlavor> implements DishFlavorService {
 }

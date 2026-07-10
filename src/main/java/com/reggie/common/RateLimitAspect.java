@@ -18,19 +18,34 @@ import java.util.concurrent.TimeUnit;
  * 限流切面
  * 基于 Redis 滑动窗口算法实现接口限流
  *
- * @author itxinfei
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Aspect
 @Component
 public class RateLimitAspect {
 
+    /**
+     * Redis操作模板
+     */
     private final RedisTemplate<String, Object> redisTemplate;
+
+    /**
+     * 是否启用限流
+     */
     private final boolean enabled;
 
-    /** 匿名用户标识 */
+    /**
+     * 匿名用户标识
+     */
     private static final String ANONYMOUS_USER = "anonymous";
 
+    /**
+     * 构造方法，注入RedisTemplate
+     *
+     * @param redisTemplate Redis操作模板，可选依赖
+     */
     @Autowired
     public RateLimitAspect(@Autowired(required = false) RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;

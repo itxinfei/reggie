@@ -25,6 +25,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * 采购单管理控制器
+ * 提供采购单的创建、审核、收货、取消等接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/inventory/purchase-order")
@@ -45,7 +52,6 @@ public class PurchaseOrderController {
                                        @RequestParam(required = false) Long supplierId) {
         Page<PurchaseOrder> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<PurchaseOrder> qw = new LambdaQueryWrapper<>();
-        // 修改点：新增状态和供应商筛选条件
         qw.eq(status != null && !status.isEmpty(), PurchaseOrder::getStatus, status);
         qw.eq(supplierId != null, PurchaseOrder::getSupplierId, supplierId);
         qw.orderByDesc(PurchaseOrder::getCreatedTime);

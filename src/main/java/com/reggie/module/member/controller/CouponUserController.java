@@ -16,6 +16,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
+/**
+ * 用户优惠券管理控制器
+ * 提供用户优惠券的查询接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/member/coupon-user")

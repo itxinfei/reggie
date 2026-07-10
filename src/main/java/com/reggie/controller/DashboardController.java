@@ -30,6 +30,9 @@ import java.util.Map;
  *   <li><b>ZSet排行</b>：热销菜品实时排行（dashboard:hot-dishes:{tenantId}）</li>
  *   <li><b>健康检查</b>：Redis连通性检测（dashboard:health-check）</li>
  * <ul>
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @RestController
 @RequestMapping("/api/dashboard")
@@ -125,7 +128,6 @@ public class DashboardController {
         log.info("[Dashboard] 获取汇总数据 tenantId={}", tenantId);
 
         Map<String, Object> result = new HashMap<>();
-        // 修改点：每个子模块添加try-catch，单个模块失败不影响其他模块
         try {
             result.put("overview", dashboardService.getOverview(tenantId));
         } catch (Exception e) {
@@ -160,9 +162,6 @@ public class DashboardController {
         return R.success(result);
     }
 
-    /**
-     * 修改点：错误占位Map，异常时向前端返回空值而非崩溃
-     */
     private Map<String, Object> errorPlaceholder(String moduleName, Exception e) {
         Map<String, Object> map = new HashMap<>();
         map.put("totalOrders", 0);
@@ -172,9 +171,6 @@ public class DashboardController {
         return map;
     }
 
-    /**
-     * 修改点：健康检查错误占位
-     */
     private Map<String, Object> healthErrorPlaceholder(Exception e) {
         Map<String, Object> map = new HashMap<>();
         map.put("redisAvailable", false);

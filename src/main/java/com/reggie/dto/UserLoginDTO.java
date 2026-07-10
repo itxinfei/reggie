@@ -7,6 +7,9 @@ import javax.validation.constraints.NotBlank;
 
 /**
  * 用户登录请求DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 public class UserLoginDTO {

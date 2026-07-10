@@ -8,14 +8,18 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.dto.OrderDto;
 import com.reggie.entity.AddressBook;
+import com.reggie.entity.Dish;
 import com.reggie.entity.OrderDetail;
 import com.reggie.entity.Orders;
+import com.reggie.entity.SetmealDish;
 import com.reggie.entity.ShoppingCart;
 import com.reggie.entity.User;
 import com.reggie.mapper.OrderMapper;
 import com.reggie.service.AddressBookService;
+import com.reggie.service.DishService;
 import com.reggie.service.OrderDetailService;
 import com.reggie.service.OrderService;
+import com.reggie.service.SetmealDishService;
 import com.reggie.service.ShoppingCartService;
 import com.reggie.service.UserService;
 import com.reggie.module.printer.service.PrinterService;
@@ -28,27 +32,48 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * 订单服务实现类
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 @Slf4j
 public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implements OrderService {
 
+    /** 购物车服务 */
     @Autowired
     private ShoppingCartService shoppingCartService;
 
+    /** 用户服务 */
     @Autowired
     private UserService userService;
 
+    /** 地址簿服务 */
     @Autowired
     private AddressBookService addressBookService;
 
+    /** 订单明细服务 */
     @Autowired
     private OrderDetailService orderDetailService;
+
+    /** 菜品服务 */
+    @Autowired
+    private DishService dishService;
+
+    /** 套餐菜品关联服务 */
+    @Autowired
+    private SetmealDishService setmealDishService;
 
     /**
      * 打印服务（可选注入，无打印机配置时降级跳过）
@@ -141,6 +166,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         //向订单明细表插入数据，多条数据
         orderDetailService.saveBatch(orderDetails);
 
+        this.deductStockForOrder(shoppingCarts);
+
         //清空购物车数据
         shoppingCartService.remove(wrapper);
 
@@ -157,12 +184,77 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
     }
 
+    /**
+     * 遍历购物车中的菜品/套餐，扣减对应库存
+     * 库存不足时抛出异常，触发事务回滚
+     */
+    private void deductStockForOrder(List<ShoppingCart> shoppingCarts) {
+        for (ShoppingCart item : shoppingCarts) {
+            int number = item.getNumber() != null ? item.getNumber() : 1;
+
+            // 单品菜品：直接扣减
+            if (item.getDishId() != null) {
+                Dish dish = dishService.getById(item.getDishId());
+                if (dish != null && dish.getStockQty() != null) {
+                    BigDecimal newStock = dish.getStockQty().subtract(new BigDecimal(number));
+                    if (newStock.compareTo(BigDecimal.ZERO) < 0) {
+                        throw new CustomException("菜品「" + dish.getName() + "」库存不足，当前库存：" + dish.getStockQty());
+                    }
+                    dish.setStockQty(newStock);
+                    // 库存为0时自动停售
+                    if (newStock.compareTo(BigDecimal.ZERO) == 0) {
+                        dish.setStatus(0);
+                        log.info("[库存] 菜品「{}」已售罄，自动停售", dish.getName());
+                    }
+                    dishService.updateById(dish);
+                    log.info("[库存扣减] 菜品{} 扣减{}份，剩余库存{}", dish.getName(), number, newStock);
+                }
+            }
+
+            // 套餐：扣减套餐内所有菜品的库存
+            if (item.getSetmealId() != null) {
+                LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
+                sdWrapper.eq(SetmealDish::getSetmealId, item.getSetmealId());
+                List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
+                for (SetmealDish sd : setmealDishes) {
+                    Dish dish = dishService.getById(sd.getDishId());
+                    if (dish != null && dish.getStockQty() != null) {
+                        int qty = sd.getCopies() != null ? sd.getCopies() * number : number;
+                        BigDecimal newStock = dish.getStockQty().subtract(new BigDecimal(qty));
+                        if (newStock.compareTo(BigDecimal.ZERO) < 0) {
+                            throw new CustomException("菜品「" + dish.getName() + "」库存不足，当前库存：" + dish.getStockQty());
+                        }
+                        dish.setStockQty(newStock);
+                        if (newStock.compareTo(BigDecimal.ZERO) == 0) {
+                            dish.setStatus(0);
+                            log.info("[库存] 菜品「{}」已售罄，自动停售", dish.getName());
+                        }
+                        dishService.updateById(dish);
+                        log.info("[库存扣减] 套餐菜品{} 扣减{}份，剩余库存{}", dish.getName(), qty, newStock);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 后台分页查询订单
+     *
+     * @param page 页码
+     * @param pageSize 每页大小
+     * @param number 订单号
+     * @param beginTime 开始时间
+     * @param endTime 结束时间
+     * @param status 订单状态（可选）
+     * @return 订单分页结果
+     */
     @Override
-    public Page<Orders> orderPage(int page, int pageSize, String number, String beginTime, String endTime) {
+    public Page<Orders> orderPage(int page, int pageSize, String number, String beginTime, String endTime, Integer status) {
         Page<Orders> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
 
         queryWrapper.like(StringUtils.isNotBlank(number), Orders::getNumber, number);
+        queryWrapper.eq(status != null, Orders::getStatus, status);
 
         if (StringUtils.isNotBlank(beginTime)) {
             queryWrapper.ge(Orders::getOrderTime, beginTime);
@@ -173,20 +265,30 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         queryWrapper.orderByDesc(Orders::getOrderTime);
         this.page(pageInfo, queryWrapper);
+        backfillUserInfoBatch(pageInfo.getRecords());
         return pageInfo;
     }
 
+    /**
+     * 用户端分页查询订单
+     *
+     * @param page 页码
+     * @param pageSize 每页大小
+     * @param status 订单状态（可选）
+     * @return 订单分页结果
+     */
     @Override
     public Page<?> userPage(int page, int pageSize, Integer status) {
         Page<Orders> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Orders::getUserId, BaseContext.getCurrentId());
-        // 修改点：支持按订单状态筛选，不传则查全部
         if (status != null) {
             queryWrapper.eq(Orders::getStatus, status);
         }
         queryWrapper.orderByDesc(Orders::getOrderTime);
         this.page(pageInfo, queryWrapper);
+
+        backfillUserInfoBatch(pageInfo.getRecords());
 
         List<Long> orderIds = pageInfo.getRecords().stream().map(Orders::getId).collect(Collectors.toList());
         if (!orderIds.isEmpty()) {
@@ -210,14 +312,26 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         return pageInfo;
     }
 
+    /**
+     * 用户订单列表（最近订单）
+     *
+     * @return 订单列表
+     */
     @Override
     public List<Orders> userList() {
         LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Orders::getUserId, BaseContext.getCurrentId());
         queryWrapper.orderByDesc(Orders::getOrderTime);
-        return this.list(queryWrapper);
+        List<Orders> result = this.list(queryWrapper);
+        backfillUserInfoBatch(result);
+        return result;
     }
 
+    /**
+     * 再来一单（将历史订单商品添加到购物车）
+     *
+     * @param orderId 原订单ID
+     */
     @Override
     public void again(Long orderId) {
         LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
@@ -230,7 +344,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         Long userId = BaseContext.getCurrentId();
 
-        // 修改点：先查询用户购物车中已存在的商品，避免重复添加
         LambdaQueryWrapper<ShoppingCart> cartQuery = new LambdaQueryWrapper<>();
         cartQuery.eq(ShoppingCart::getUserId, userId);
         List<ShoppingCart> existingCarts = shoppingCartService.list(cartQuery);
@@ -281,6 +394,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
     }
 
+    /**
+     * 更新订单状态
+     *
+     * @param status 目标状态
+     * @param id 订单ID
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Integer status, Long id) {
@@ -464,5 +583,100 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                .orderByDesc(Orders::getOrderTime)
                .last("LIMIT 1");
         return this.getOne(wrapper);
+    }
+
+    // ==================== 用户信息回填 ====================
+
+    /**
+     * 回填单个订单的用户信息（用户名、手机号、地址、收货人）
+     * 当orders表冗余字段为空时，从user表和address_book表查询回填，确保前端正常显示
+     *
+     * @param order 订单实体
+     */
+    @Override
+    public void backfillUserInfo(Orders order) {
+        if (order != null) {
+            backfillUserInfoBatch(Collections.singletonList(order));
+        }
+    }
+
+    /**
+     * 批量回填订单的用户信息
+     * 通过userId关联user表获取userName，通过addressBookId关联address_book表获取phone/consignee/address
+     * 只回填当前为空的字段，已有值的保持不变
+     *
+     * @param orders 订单列表
+     */
+    private void backfillUserInfoBatch(List<Orders> orders) {
+        if (orders == null || orders.isEmpty()) {
+            return;
+        }
+
+        // 收集需要回填的userIds（userName为空）
+        Set<Long> userIds = orders.stream()
+                .filter(o -> StringUtils.isBlank(o.getUserName()))
+                .map(Orders::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        // 收集需要回填的addressBookIds（phone/address/consignee任一为空）
+        Set<Long> addrIds = orders.stream()
+                .filter(o -> StringUtils.isBlank(o.getPhone())
+                        || StringUtils.isBlank(o.getAddress())
+                        || StringUtils.isBlank(o.getConsignee()))
+                .map(Orders::getAddressBookId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        // 批量查询user表
+        Map<Long, User> userMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            List<User> users = userService.listByIds(new ArrayList<>(userIds));
+            for (User u : users) {
+                userMap.put(u.getId(), u);
+            }
+        }
+
+        // 批量查询address_book表
+        Map<Long, AddressBook> addrMap = new HashMap<>();
+        if (!addrIds.isEmpty()) {
+            List<AddressBook> addrs = addressBookService.listByIds(new ArrayList<>(addrIds));
+            for (AddressBook a : addrs) {
+                addrMap.put(a.getId(), a);
+            }
+        }
+
+        // 回填各订单的空字段
+        for (Orders order : orders) {
+            // 回填userName
+            if (StringUtils.isBlank(order.getUserName()) && order.getUserId() != null) {
+                User user = userMap.get(order.getUserId());
+                if (user != null && StringUtils.isNotBlank(user.getName())) {
+                    order.setUserName(user.getName());
+                }
+            }
+
+            // 回填phone/consignee/address
+            if (order.getAddressBookId() != null) {
+                AddressBook addr = addrMap.get(order.getAddressBookId());
+                if (addr != null) {
+                    if (StringUtils.isBlank(order.getPhone()) && StringUtils.isNotBlank(addr.getPhone())) {
+                        order.setPhone(addr.getPhone());
+                    }
+                    if (StringUtils.isBlank(order.getConsignee()) && StringUtils.isNotBlank(addr.getConsignee())) {
+                        order.setConsignee(addr.getConsignee());
+                    }
+                    if (StringUtils.isBlank(order.getAddress())) {
+                        String address = (addr.getProvinceName() == null ? "" : addr.getProvinceName())
+                                + (addr.getCityName() == null ? "" : addr.getCityName())
+                                + (addr.getDistrictName() == null ? "" : addr.getDistrictName())
+                                + (addr.getDetail() == null ? "" : addr.getDetail());
+                        if (StringUtils.isNotBlank(address)) {
+                            order.setAddress(address);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

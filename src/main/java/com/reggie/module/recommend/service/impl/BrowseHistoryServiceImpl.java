@@ -13,12 +13,16 @@ import java.util.Map;
 
 /**
  * 浏览历史服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Service
 public class BrowseHistoryServiceImpl extends ServiceImpl<BrowseHistoryMapper, BrowseHistory>
         implements BrowseHistoryService {
 
+    /** 浏览历史Mapper */
     @Autowired
     private BrowseHistoryMapper browseHistoryMapper;
 

@@ -36,7 +36,8 @@ import java.util.regex.Pattern;
  * 消息通知服务实现
  * 支持短信(阿里云)和APP推送(预留SDK接口)，具有完善的模板参数填充和失败处理
  *
- * @author Reggie Team
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Service
@@ -45,39 +46,46 @@ public class NotificationServiceImpl implements NotificationService {
     /** JSON序列化工具 */
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    /** 通知模板Mapper */
     @Resource
     private NotificationTemplateMapper templateMapper;
 
+    /** 通知记录Mapper */
     @Resource
     private NotificationRecordMapper recordMapper;
 
+    /** 用户设备Mapper */
     @Resource
     private UserDeviceMapper userDeviceMapper;
 
-    // 修改点：注入UserMapper和MarketingMessageMapper，实现通知发送与用户消息中心打通
+    /** 用户Mapper */
     @Resource
     private UserMapper userMapper;
 
+    /** 营销消息Mapper */
     @Resource
     private MarketingMessageMapper marketingMessageMapper;
 
-    // 修改点：注入PushProvider（策略模式），替代硬编码Mock逻辑
+    /** 推送服务提供商（策略模式） */
     @Resource
     private PushProvider pushProvider;
 
     /** 模板占位符正则: ${paramName} */
     private static final Pattern TEMPLATE_PATTERN = Pattern.compile("\\$\\{(\\w+)\\}");
 
-    // 修改点：阿里云短信配置改为从application.yml注入，支持多环境配置
+    /** 短信Mock模式开关 */
     @Value("${reggie.sms.mock-mode:true}")
     private boolean smsMockMode;
 
+    /** 阿里云短信AccessKey */
     @Value("${reggie.sms.access-key:}")
     private String smsAccessKey;
 
+    /** 阿里云短信SecretKey */
     @Value("${reggie.sms.secret-key:}")
     private String smsSecretKey;
 
+    /** 阿里云短信区域 */
     private static final String SMS_REGION = "cn-hangzhou";
 
     @Override
@@ -121,7 +129,6 @@ public class NotificationServiceImpl implements NotificationService {
                 boolean ok = sendToTarget(target, channel, template, title, content, params);
                 if (ok) {
                     successCount++;
-                    // 修改点：发送成功后同步写入用户消息中心，让用户端可见
                     syncToMarketingMessage(target, channel, title, content);
                 } else {
                     failCount++;
@@ -175,7 +182,6 @@ public class NotificationServiceImpl implements NotificationService {
                 boolean ok = sendToTarget(target, channel, template, title, content, params);
                 if (ok) {
                     successCount++;
-                    // 修改点：发送成功后同步写入用户消息中心
                     syncToMarketingMessage(target, channel, title, content);
                 } else {
                     failCount++;
@@ -197,14 +203,12 @@ public class NotificationServiceImpl implements NotificationService {
             return false;
         }
 
-        // 修改点：简易发送模式（无模板编码）直接发送文本内容
         if (smsMockMode) {
             log.info("[短信Mock] phone={}, sign={}, template={}, content={}",
                     phone, signName, templateCode, params);
             return true;
         }
 
-        // 修改点：无阿里云模板编码时，在非Mock环境打印日志并返回成功（需要预配模板）
         if (templateCode == null || templateCode.isEmpty()) {
             log.info("[短信-简易模式] phone={}, sign={}, content={}", phone, signName, params);
             // 简易模式下，生产环境需配置通用短信模板后取消下面注释
@@ -237,10 +241,6 @@ public class NotificationServiceImpl implements NotificationService {
             return false;
         }
     }
-
-    // 修改点：完善APP推送逻辑
-    // 使用PushProvider策略模式，支持Mock/极光/个推等多平台切换
-    // 推送到用户的所有设备（而非仅一台），并记录每设备发送结果
 
     @Override
     public int sendAppPush(List<Long> userIds, String title, String content) {
@@ -350,7 +350,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     /**
-     * 修改点：向单个用户的所有启用设备发送APP推送
+     * 向单个用户的所有启用设备发送APP推送
      * 使用PushProvider策略模式，推送所有设备而非仅一台
      *
      * @param userIdStr 用户ID字符串
@@ -394,7 +394,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     /**
-     * 修改点：统一渠道发送，支持channel=3(SMS+APP推送)同时发送两种通道
+     * 统一渠道发送，支持channel=3(SMS+APP推送)同时发送两种通道
      * @return true=至少一个通道发送成功
      */
     private boolean sendToTarget(String target, Integer channel, NotificationTemplate template,
@@ -413,7 +413,6 @@ public class NotificationServiceImpl implements NotificationService {
             pushOk = sendPushToUser(target, title, content);
         }
 
-        // 修改点：channel=3时任一成功即算成功
         if (channel == 3) {
             return smsOk || pushOk;
         }
@@ -466,7 +465,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     /**
-     * 修改点：将通知发送结果同步写入用户消息中心（marketing_message表）
+     * 将通知发送结果同步写入用户消息中心（marketing_message表）
      * 让用户在消息中心页面可以看到通知信息
      *
      * @param target  发送目标（手机号或用户ID）
@@ -497,7 +496,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     /**
-     * 修改点：根据target和channel解析用户ID
+     * 根据target和channel解析用户ID
      * - 短信渠道(channel=1)：target是手机号，查User表获取userId
      * - 推送渠道(channel=2)：target是用户ID，直接使用
      * - 混合渠道(channel=3)：优先按用户ID解析，失败则按手机号查
@@ -529,7 +528,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     /**
-     * 修改点：简易消息发送（无需模板，直接发送文本内容到对应渠道）
+     * 简易消息发送（无需模板，直接发送文本内容到对应渠道）
      * 同时将消息内容同步写入用户消息中心
      */
     @Override
@@ -596,7 +595,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     /**
-     * 修改点：获取当前是否为Mock模式
+     * 获取当前是否为Mock模式
      * 同时考虑短信Mock和推送Mock
      */
     @Override
@@ -605,7 +604,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     /**
-     * 修改点：向全部用户发送通知
+     * 向全部用户发送通知
      * 查询所有状态正常的用户，集体发送通知并同步写入消息中心
      */
     @Override

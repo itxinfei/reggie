@@ -10,6 +10,9 @@ import javax.validation.constraints.Size;
 
 /**
  * 用户发送短信DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @Schema(description = "用户手机号信息")

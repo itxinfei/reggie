@@ -24,6 +24,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 打印机配置管理控制器
+ * 提供打印机配置的增删改查接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/printer/config")
@@ -34,14 +41,26 @@ public class PrinterConfigController {
     private PrinterConfigService printerConfigService;
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询", description = "分页查询打印机配置列表，自动过滤当前租户数据")
+    @Operation(summary = "分页查询", description = "分页查询打印机配置列表，自动过滤当前租户数据，支持按名称、品牌、连接类型、状态筛选")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "打印机名称（可选，模糊查询）")
-    public R<Page<PrinterConfig>> page(int page, int pageSize, String name) {
+    @Parameter(name = "brand", description = "品牌型号（可选，模糊查询）")
+    @Parameter(name = "type", description = "连接类型（可选）：USB, TCP, CLOUD, BLUETOOTH")
+    @Parameter(name = "status", description = "状态（可选）：1=启用, 0=停用")
+    public R<Page<PrinterConfig>> page(int page, int pageSize, String name,
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) Integer status) {
         Page<PrinterConfig> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<PrinterConfig> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.like(name != null && !name.isEmpty(), PrinterConfig::getName, name);
+        // 修改点：支持按品牌模糊查询
+        queryWrapper.like(brand != null && !brand.isEmpty(), PrinterConfig::getBrand, brand);
+        // 修改点：支持按连接类型筛选
+        queryWrapper.eq(type != null && !type.isEmpty(), PrinterConfig::getType, type);
+        // 修改点：支持按状态筛选
+        queryWrapper.eq(status != null, PrinterConfig::getStatus, status);
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId != null) {
             queryWrapper.eq(PrinterConfig::getTenantId, tenantId);

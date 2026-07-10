@@ -13,11 +13,18 @@ import java.util.List;
  * 跨域配置
  * 解决前后端分离的跨域问题
  *
- * @author itxinfei
+ * @author reggie
+ * @since 2026-07-09
  */
 @Configuration
 public class CorsConfig {
 
+    /**
+     * 配置跨域过滤器
+     * 允许受信域名访问，支持GET、POST、PUT、DELETE、OPTIONS请求
+     *
+     * @return 跨域过滤器
+     */
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();

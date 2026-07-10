@@ -8,6 +8,9 @@ import javax.validation.constraints.NotNull;
 
 /**
  * 叫号请求DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 public class CallNextDTO {

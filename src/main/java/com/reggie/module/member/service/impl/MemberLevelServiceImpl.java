@@ -7,6 +7,12 @@ import com.reggie.module.member.model.MemberLevel;
 import com.reggie.module.member.service.MemberLevelService;
 import org.springframework.stereotype.Service;
 
+/**
+ * 会员等级服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 public class MemberLevelServiceImpl extends ServiceImpl<MemberLevelMapper, MemberLevel> implements MemberLevelService {
 

@@ -5,6 +5,9 @@ import lombok.Data;
 
 /**
  * 再来一单DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @Schema(description = "再来一单信息")

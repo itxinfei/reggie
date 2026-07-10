@@ -9,6 +9,9 @@ import java.util.Map;
 
 /**
  * 同步库存到外卖平台请求DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 public class SyncStockDTO {

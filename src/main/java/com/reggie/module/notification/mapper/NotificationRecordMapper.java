@@ -5,7 +5,10 @@ import com.reggie.module.notification.model.NotificationRecord;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 通知发送记录Mapper
+ * 通知发送记录 Mapper
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Mapper
 public interface NotificationRecordMapper extends BaseMapper<NotificationRecord> {

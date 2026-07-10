@@ -26,11 +26,12 @@ public class Employee implements Serializable {
     @Size(min = 4, max = 20, message = "用户名长度4-20位")
     private String username;
 
-    // 新增/修改时需要验证姓名，登录时不验证
+    /** 姓名 */
     @NotBlank(message = "姓名不能为空")
     @Size(max = 50, message = "姓名不能超过50位")
     private String name;
 
+    /** 密码 */
     private String password;
 
     /**
@@ -40,16 +41,18 @@ public class Employee implements Serializable {
      */
     private String passwordType = SecurityConstants.PASSWORD_TYPE_BCRYPT;
 
+    /** 手机号 */
     @Pattern(regexp = SecurityConstants.PHONE_PATTERN, message = "手机号格式不正确")
     @Size(max = 11, message = "手机号不能超过11个字符")
     private String phone;
 
-    // 修改点：设置默认值，避免org.springframework.dao.DataIntegrityViolationException: Field 'sex' doesn't have a default value
-    private String sex = "1"; // 默认男
+    /** 性别 */
+    private String sex = "1";
 
-    // 修改点：设置默认值，避免NOT NULL约束异常
-    private String idNumber = ""; // 身份证号码
+    /** 身份证号码 */
+    private String idNumber = "";
 
+    /** 状态 */
     private Integer status;
 
     /**
@@ -57,18 +60,23 @@ public class Employee implements Serializable {
      */
     private Integer role = 2; // 默认普通员工
 
+    /** 租户id */
     private Long tenantId;
 
-    @TableField(fill = FieldFill.INSERT) //插入时填充字段
+    /** 创建时间 */
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    @TableField(fill = FieldFill.INSERT_UPDATE) //插入和更新时填充字段
+    /** 更新时间 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-    @TableField(fill = FieldFill.INSERT) //插入时填充字段
+    /** 创建人 */
+    @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
-    @TableField(fill = FieldFill.INSERT_UPDATE) //插入和更新时填充字段
+    /** 修改人 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 
 }

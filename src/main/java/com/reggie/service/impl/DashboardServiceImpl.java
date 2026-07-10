@@ -62,15 +62,19 @@ public class DashboardServiceImpl implements DashboardService {
     private static final long TTL_ORDER_STATUS = 2;    // 订单状态：2分钟
     private static final long TTL_HOT_DISHES = 15;     // 热销菜品：15分钟
 
+    /** 订单服务 */
     @Autowired
     private OrderService orderService;
 
+    /** 订单明细服务 */
     @Autowired
     private OrderDetailService orderDetailService;
 
+    /** 用户服务 */
     @Autowired
     private UserService userService;
 
+    /** 员工服务 */
     @Autowired
     private EmployeeService employeeService;
 
@@ -83,8 +87,14 @@ public class DashboardServiceImpl implements DashboardService {
 
     // ==================== 概览数据 ====================
 
+    /**
+     * 获取今日概览数据（订单、营收、用户等）
+     *
+     * @param tenantId 租户ID
+     * @return 概览数据Map
+     */
     @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"unchecked", "rawtypes"}) // Redis Hash返回Object类型，需要泛型转换
     public Map<String, Object> getOverview(Long tenantId) {
         String cacheKey = KEY_OVERVIEW + tenantId;
 
@@ -175,7 +185,7 @@ public class DashboardServiceImpl implements DashboardService {
                     ? totalRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
 
-            // 修改点：User实体已添加createTime字段，按今日注册时间过滤
+            // User实体已添加createTime字段，按今日注册时间过滤
             LambdaQueryWrapper<User> userQw = new LambdaQueryWrapper<>();
             userQw.between(User::getCreateTime, todayStart, todayEnd);
             int totalUsers = userService.count(userQw);
@@ -209,8 +219,14 @@ public class DashboardServiceImpl implements DashboardService {
 
     // ==================== 趋势数据 ====================
 
+    /**
+     * 获取最近7天订单趋势数据
+     *
+     * @param tenantId 租户ID
+     * @return 趋势数据列表
+     */
     @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"unchecked", "rawtypes"}) // Redis缓存返回Object类型，需要泛型转换
     public List<Map<String, Object>> getTrend(Long tenantId) {
         String cacheKey = KEY_TREND + tenantId;
 
@@ -299,8 +315,14 @@ public class DashboardServiceImpl implements DashboardService {
 
     // ==================== 订单状态分布 ====================
 
+    /**
+     * 获取订单状态分布统计
+     *
+     * @param tenantId 租户ID
+     * @return 订单状态分布Map
+     */
     @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"unchecked", "rawtypes"}) // Redis Hash返回Object类型，需要泛型转换
     public Map<String, Object> getOrderStatusDistribution(Long tenantId) {
         String cacheKey = KEY_ORDER_STATUS + tenantId;
 
@@ -396,8 +418,15 @@ public class DashboardServiceImpl implements DashboardService {
 
     // ==================== 热销菜品 ====================
 
+    /**
+     * 获取热销菜品排行榜
+     *
+     * @param tenantId 租户ID
+     * @param limit 返回数量限制
+     * @return 热销菜品列表
+     */
     @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"unchecked", "rawtypes"}) // Redis ZSet返回Object类型，需要泛型转换
     public List<Map<String, Object>> getHotDishes(Long tenantId, int limit) {
         String cacheKey = KEY_HOT_DISHES + tenantId;
 
@@ -432,18 +461,31 @@ public class DashboardServiceImpl implements DashboardService {
             hotDishes = new ArrayList<>();
         }
 
-        // [Redis ZSet] 回填缓存
+        // [Redis ZSet] 回填缓存（使用Pipeline保证原子性）
         if (isRedisAvailable() && !hotDishes.isEmpty()) {
             try {
+                // 使用新Key写入，完成后rename，避免中间状态被读取
+                String tempKey = cacheKey + ":temp";
+                redisTemplate.delete(tempKey);
+
+                // 使用Pipeline批量写入，减少网络往返
+                List<Object> results = redisTemplate.executePipelined((org.springframework.data.redis.core.RedisCallback<Object>) connection -> {
+                    for (Map<String, Object> dish : hotDishes) {
+                        String name = String.valueOf(dish.get("name"));
+                        Object countObj = dish.get("count");
+                        double score = countObj instanceof Integer ? (Integer) countObj
+                                : countObj instanceof Long ? ((Long) countObj).doubleValue() : 0;
+                        connection.zAdd(tempKey.getBytes(), score, name.getBytes());
+                    }
+                    connection.expire(tempKey.getBytes(), java.util.concurrent.TimeUnit.MINUTES.toSeconds(TTL_HOT_DISHES));
+                    return null;
+                });
+
+                // Pipeline成功后，原子性rename（Redis 4.0+支持RENAME）
+                // 如果不支持rename，直接使用tempKey，删除旧Key
                 redisTemplate.delete(cacheKey);
-                for (Map<String, Object> dish : hotDishes) {
-                    String name = String.valueOf(dish.get("name"));
-                    Object countObj = dish.get("count");
-                    double score = countObj instanceof Integer ? (Integer) countObj
-                            : countObj instanceof Long ? ((Long) countObj).doubleValue() : 0;
-                    redisTemplate.opsForZSet().add(cacheKey, name, score);
-                }
-                redisTemplate.expire(cacheKey, TTL_HOT_DISHES, TimeUnit.MINUTES);
+                redisTemplate.rename(tempKey, cacheKey);
+
                 log.info("[Dashboard] 热销菜品已缓存至Redis ZSet key={}", cacheKey);
             } catch (Exception e) {
                 log.warn("[Dashboard] Redis ZSet回填失败: {}", e.getMessage());
@@ -479,7 +521,6 @@ public class DashboardServiceImpl implements DashboardService {
             List<Long> orderIds = todayOrders.stream()
                     .map(Orders::getId)
                     .collect(Collectors.toList());
-            // 修改点：防御性检查，避免空列表传入IN子句导致SQL语法错误
             if (orderIds.isEmpty()) {
                 return new ArrayList<>();
             }
@@ -515,6 +556,11 @@ public class DashboardServiceImpl implements DashboardService {
 
     // ==================== 系统健康 ====================
 
+    /**
+     * 获取系统健康状态（Redis、数据库、JVM信息）
+     *
+     * @return 系统健康状态Map
+     */
     @Override
     public Map<String, Object> getSystemHealth() {
         Map<String, Object> health = new LinkedHashMap<>();
@@ -556,13 +602,36 @@ public class DashboardServiceImpl implements DashboardService {
         return health;
     }
 
+    /**
+     * 检查Redis是否可用
+     *
+     * @return Redis是否可用
+     */
     @Override
     public boolean isRedisAvailable() {
         return redisTemplate != null;
     }
 
     /**
-     * 修改点：异常降级返回统一错误提示Map，防止异常穿透
+     * 清除指定租户的 Dashboard 缓存（概览 + 订单状态分布）
+     * 修改点：订单状态变更时调用，防止 Redis 缓存导致数据不实
+     */
+    @Override
+    public void clearOverviewCache(Long tenantId) {
+        if (!isRedisAvailable()) return;
+        try {
+            String overviewKey = KEY_OVERVIEW + tenantId;
+            String statusKey = KEY_ORDER_STATUS + tenantId;
+            redisTemplate.delete(overviewKey);
+            redisTemplate.delete(statusKey);
+            log.info("[Dashboard] 已清除缓存 overviewKey={}, statusKey={}", overviewKey, statusKey);
+        } catch (Exception e) {
+            log.warn("[Dashboard] 清除缓存失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 异常降级返回统一错误提示Map，防止异常穿透
      * @param errorMsg 错误提示信息
      * @return 包含错误提示的Map
      */

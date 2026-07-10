@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 /**
  * 营销消息推送记录
  * 记录每次营销消息的推送、阅读和使用情况
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("marketing_message")
@@ -33,9 +36,11 @@ public class MarketingMessage implements Serializable {
     /** 状态 - 已使用 */
     public static final int STATUS_USED = 3;
 
+    /** 主键ID */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
+    /** 租户ID */
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
@@ -63,6 +68,7 @@ public class MarketingMessage implements Serializable {
     /** 使用时间 */
     private LocalDateTime useTime;
 
+    /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

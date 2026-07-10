@@ -7,6 +7,9 @@ import javax.validation.constraints.NotNull;
 
 /**
  * 领取优惠券请求DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 public class ClaimCouponDTO {

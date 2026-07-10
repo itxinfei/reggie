@@ -43,6 +43,9 @@ public class AIChatController {
     @Resource
     private com.reggie.module.ai.service.UserProfileService userProfileService;
 
+    @Resource
+    private com.reggie.module.ai.provider.AiProviderManager aiProviderManager;
+
     // ==================== 核心对话接口 ====================
 
     /**
@@ -56,7 +59,21 @@ public class AIChatController {
         log.info("AI对话请求: userId={}, scene={}, messageLength={}",
                 userId, request.getScene(),
                 request.getMessage() != null ? request.getMessage().length() : 0);
+
+        if (request.getConversationId() == null || request.getConversationId().isEmpty()) {
+            AIConversation conv = aiChatService.createConversation(userId, null,
+                    request.getScene() != null ? request.getScene() : "business_analysis");
+            request.setConversationId(conv.getConversationId());
+            log.info("自动创建新对话: conversationId={}", conv.getConversationId());
+        }
+
         AIChatResponse response = aiChatService.chat(request);
+
+        if (response.getData() == null) {
+            response.setData(new HashMap<>());
+        }
+        response.getData().put("conversationId", request.getConversationId());
+
         return R.success(response);
     }
 
@@ -67,11 +84,20 @@ public class AIChatController {
     @Operation(summary = "AI流式对话", description = "SSE流式输出，逐字显示AI回复")
     public SseEmitter chatStream(@RequestParam String message, @RequestParam(required = false) String scene,
                                   @RequestParam(required = false) String conversationId) {
-        log.info("AI流式对话: scene={}, messageLength={}", scene, message.length());
+        Long userId = BaseContext.getCurrentId();
+        log.info("AI流式对话: userId={}, scene={}, messageLength={}", userId, scene, message.length());
+
+        if (conversationId == null || conversationId.isEmpty()) {
+            AIConversation conv = aiChatService.createConversation(userId, null,
+                    scene != null ? scene : "order_assistant");
+            conversationId = conv.getConversationId();
+        }
+
         AIChatRequest request = AIChatRequest.builder()
                 .message(message)
                 .scene(scene != null ? scene : "order_assistant")
                 .conversationId(conversationId)
+                .userId(userId)
                 .build();
         return aiChatService.chatStream(request);
     }
@@ -88,12 +114,9 @@ public class AIChatController {
 
         log.info("智能点餐请求: userId={}, messageLength={}", userId, message.length());
 
-        // 如果没有conversationId，创建新对话
         if (conversationId == null || conversationId.isEmpty()) {
-            if (userId != null) {
-                AIConversation conv = aiChatService.createConversation(userId, null, "order_assistant");
-                conversationId = conv.getConversationId();
-            }
+            AIConversation conv = aiChatService.createConversation(userId, null, "order_assistant");
+            conversationId = conv.getConversationId();
         }
 
         AIChatResponse response = aiChatService.orderAssistant(message, userId);
@@ -154,14 +177,15 @@ public class AIChatController {
     @GetMapping("/health")
     @Operation(summary = "AI服务健康检查", description = "检查AI服务是否可用")
     public R<Map<String, Object>> health() {
-        AIChatResponse testResponse = aiChatService.chat(
-                AIChatRequest.builder()
-                        .message("ping")
-                        .scene("order_assistant")
-                        .build()
-        );
+        AIChatResponse testResponse = aiProviderManager.chat(
+                java.util.Arrays.asList(
+                        com.reggie.module.ai.model.AIMessage.builder().role("user").content("ping").build()
+                ), 50, 0.1);
         boolean available = testResponse != null && testResponse.getContent() != null
-                && !testResponse.getContent().contains("不可用");
+                && !testResponse.getContent().contains("未配置")
+                && !testResponse.getContent().contains("未就绪")
+                && !testResponse.getContent().contains("不可用")
+                && !testResponse.getContent().contains("失败");
         Map<String, Object> result = new HashMap<>();
         result.put("available", available);
         result.put("model", testResponse != null ? testResponse.getModel() : "unknown");

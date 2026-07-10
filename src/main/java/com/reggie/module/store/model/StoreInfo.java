@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
 /**
  * 门店扩展信息
  * 在Tenant表基础上补充门店运营信息，实现总部-分店数据隔离
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("store_info")
@@ -26,6 +29,7 @@ public class StoreInfo implements Serializable {
     /** 门店类型 - 加盟店 */
     public static final int TYPE_FRANCHISE = 3;
 
+    /** 主键ID */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 

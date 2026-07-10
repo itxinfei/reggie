@@ -50,6 +50,14 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     }
 
+    /* 修改点：stats-card 可点击筛选 */
+    .stat-card.clickable { cursor: pointer; user-select: none; }
+    .stat-card.active {
+      border-color: #409eff;
+      box-shadow: 0 0 0 2px rgba(64,158,255,0.3);
+      transform: translateY(-3px);
+    }
+
     .stat-card::before {
       content: '';
       position: absolute;
@@ -66,7 +74,6 @@
       top: 50%;
       transform: translateY(-50%);
       font-size: 42px;
-      opacity: 0.08;
     }
 
     .stat-card .stat-label {
@@ -104,23 +111,24 @@
   <div class="dashboard-container" id="delivery-app">
     <div class="container">
       <!-- ========== 数据统计卡片 ========== -->
+      <!-- 修改点：卡片可点击筛选，同步设置状态筛选下拉框 -->
       <div class="stats-cards">
         <div class="stat-card primary">
           <div class="stat-icon">🛵</div>
           <div class="stat-label">今日订单</div>
           <div class="stat-value">{{ stats.todayOrders || 0 }}</div>
         </div>
-        <div class="stat-card success">
+        <div class="stat-card success clickable" :class="{ active: searchStatus === 'COMPLETED' }" @click="filterByStatus('COMPLETED')">
           <div class="stat-icon">✅</div>
           <div class="stat-label">已完成</div>
           <div class="stat-value">{{ stats.completedOrders || 0 }}</div>
         </div>
-        <div class="stat-card warning">
+        <div class="stat-card warning clickable" :class="{ active: searchStatus === 'PENDING' }" @click="filterByStatus('PENDING')">
           <div class="stat-icon">⏳</div>
           <div class="stat-label">待处理</div>
           <div class="stat-value">{{ stats.pendingOrders || 0 }}</div>
         </div>
-        <div class="stat-card danger">
+        <div class="stat-card danger clickable" :class="{ active: searchStatus === 'CANCELLED' }" @click="filterByStatus('CANCELLED')">
           <div class="stat-icon">❌</div>
           <div class="stat-label">已取消</div>
           <div class="stat-value">{{ stats.cancelledOrders || 0 }}</div>
@@ -232,6 +240,19 @@
         this.search()
       },
       methods: {
+        // 修改点：stats-card 点击切换状态筛选（清空平台/日期避免冲突，同步到下拉框）
+        filterByStatus(status) {
+          if (this.searchStatus === status) {
+            this.searchStatus = ''  // 再次点击取消筛选
+          } else {
+            this.searchStatus = status
+          }
+          // 修改点：卡片筛选时清空平台和日期条件，专注状态筛选
+          this.searchPlatform = ''
+          this.searchDateRange = []
+          this.page = 1
+          this.search()
+        },
         async search() {
           const params = {
             page: this.page,
@@ -264,18 +285,35 @@
           }
         },
         // 加载外卖订单统计数据
+        // 修改点：todayOrders 查询今日数据而非全量；stats 查询不传 status 筛选，避免统计偏差
         async loadDeliveryStats(params) {
           try {
-            const res = await deliveryOrderPage(params)
-            if (String(res.code) === '1') {
-              const records = res.data.records || []
-              const completedCount = records.filter(item => item.status === 'COMPLETED').length
-              const pendingCount = records.filter(item => item.status === 'PENDING').length
-              const cancelledCount = records.filter(item => item.status === 'CANCELLED').length
+            // 构造今日日期范围用于统计今日订单
+            var today = new Date()
+            var todayStr = today.getFullYear() + '-'
+              + String(today.getMonth() + 1).padStart(2, '0') + '-'
+              + String(today.getDate()).padStart(2, '0')
+
+            // 修改点：stats 查询移除 status 筛选，确保统计所有状态的订单数量
+            var statsParams = { page: 1, pageSize: 1000 }
+            if (params.platform) statsParams.platform = params.platform
+            if (params.startDate) statsParams.startDate = params.startDate
+            if (params.endDate) statsParams.endDate = params.endDate
+
+            const [todayRes, allRes] = await Promise.all([
+              deliveryOrderPage({ page: 1, pageSize: 1, beginTime: todayStr + ' 00:00:00', endTime: todayStr + ' 23:59:59' }),
+              deliveryOrderPage(statsParams)
+            ])
+            if (String(allRes.code) === '1') {
+              var records = allRes.data.records || []
+              var completedCount = records.filter(function(item) { return item.status === 'COMPLETED' }).length
+              var pendingCount = records.filter(function(item) { return item.status === 'PENDING' }).length
+              var cancelledCount = records.filter(function(item) { return item.status === 'CANCELLED' }).length
+              var todayCount = (String(todayRes.code) === '1') ? (todayRes.data.total || 0) : 0
               return {
                 code: 1,
                 data: {
-                  todayOrders: res.data.total || 0,
+                  todayOrders: todayCount,
                   completedOrders: completedCount,
                   pendingOrders: pendingCount,
                   cancelledOrders: cancelledCount

@@ -544,12 +544,28 @@
 #add_order .time-picker-title {
   height: 50rem;
   line-height: 50rem;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16rem;
   font-size: 17rem;
   font-weight: 700;
   color: #333;
   border-bottom: 1px solid #f0f0f0;
   margin-bottom: 6rem;
+}
+
+#add_order .time-picker-title .time-picker-close {
+  font-size: 20rem;
+  color: #999;
+  cursor: pointer;
+  font-weight: 400;
+  padding: 0 4rem;
+  line-height: 1;
+}
+
+#add_order .time-picker-title .time-picker-close:active {
+  color: #333;
 }
 
 #add_order .time-picker-list {

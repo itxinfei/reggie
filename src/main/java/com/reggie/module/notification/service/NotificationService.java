@@ -8,7 +8,8 @@ import java.util.Map;
  * 消息通知服务接口
  * 统一管理短信发送与APP推送
  *
- * @author Reggie Team
+ * @author reggie
+ * @since 2026-07-09
  */
 public interface NotificationService {
 

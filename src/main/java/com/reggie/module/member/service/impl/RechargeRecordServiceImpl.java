@@ -12,9 +12,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 
+/**
+ * 充值记录服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 public class RechargeRecordServiceImpl extends ServiceImpl<RechargeRecordMapper, RechargeRecord> implements RechargeRecordService {
 
+    /** 会员服务 */
     @Autowired
     private MemberService memberService;
 

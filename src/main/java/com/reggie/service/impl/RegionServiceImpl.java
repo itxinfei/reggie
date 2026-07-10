@@ -9,9 +9,20 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.ArrayList;
 
+/**
+ * 地区服务实现类
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> implements RegionService {
 
+    /**
+     * 获取地区树形结构
+     *
+     * @return 地区树形列表
+     */
     @Override
     public List<Region> getRegionTree() {
         // 查询所有未删除的地区，按sort排序
@@ -32,6 +43,12 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
         return rootList;
     }
 
+    /**
+     * 获取子地区列表
+     *
+     * @param parentId 父级ID
+     * @return 子地区列表
+     */
     @Override
     public List<Region> getChildren(Long parentId) {
         LambdaQueryWrapper<Region> wrapper = new LambdaQueryWrapper<>();

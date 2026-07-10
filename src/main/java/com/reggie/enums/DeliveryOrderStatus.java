@@ -8,11 +8,17 @@ import lombok.Getter;
 @Getter
 public enum DeliveryOrderStatus {
 
+    /** 待接单 */
     PENDING("PENDING", "待接单"),
+    /** 已接单 */
     ACCEPTED("ACCEPTED", "已接单"),
+    /** 取餐中 */
     PICKING("PICKING", "取餐中"),
+    /** 配送中 */
     DELIVERING("DELIVERING", "配送中"),
+    /** 已送达 */
     DELIVERED("DELIVERED", "已送达"),
+    /** 已取消 */
     CANCELLED("CANCELLED", "已取消");
 
     private final String value;

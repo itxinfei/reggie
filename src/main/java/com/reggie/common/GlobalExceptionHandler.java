@@ -14,6 +14,9 @@ import java.util.stream.Collectors;
 
 /**
  * 全局异常处理
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @ControllerAdvice(annotations = {RestController.class, Controller.class})
 @ResponseBody
@@ -21,8 +24,10 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     /**
-     * 异常处理方法
-     * @return
+     * 处理SQL完整性约束违反异常
+     *
+     * @param ex SQL完整性约束违反异常
+     * @return 统一响应对象
      */
     @ExceptionHandler(SQLIntegrityConstraintViolationException.class)
     public R<String> exceptionHandler(SQLIntegrityConstraintViolationException ex){
@@ -37,12 +42,24 @@ public class GlobalExceptionHandler {
         return R.error("未知错误");
     }
 
+    /**
+     * 处理自定义业务异常
+     *
+     * @param ex 自定义业务异常
+     * @return 统一响应对象
+     */
     @ExceptionHandler(CustomException.class)
     public R<String> exceptionHandler(CustomException ex){
         log.error("Business exception: {}", ex.getMessage(), ex);
         return R.error(ex.getMessage());
     }
 
+    /**
+     * 处理约束违反异常
+     *
+     * @param ex 约束违反异常
+     * @return 统一响应对象
+     */
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseBody
     public R<String> handleConstraintViolationException(ConstraintViolationException ex) {
@@ -54,6 +71,12 @@ public class GlobalExceptionHandler {
         return R.error("参数校验失败：" + message);
     }
 
+    /**
+     * 处理方法参数校验异常
+     *
+     * @param ex 方法参数校验异常
+     * @return 统一响应对象
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseBody
     public R<String> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
@@ -66,6 +89,12 @@ public class GlobalExceptionHandler {
         return R.error("参数校验失败：" + message);
     }
 
+    /**
+     * 处理系统通用异常
+     *
+     * @param ex 系统异常
+     * @return 统一响应对象
+     */
     @ExceptionHandler(Exception.class)
     @ResponseBody
     public R<String> handleException(Exception ex) {

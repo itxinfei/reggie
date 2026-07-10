@@ -11,10 +11,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * 总部控制台Dashboard Controller
- * 提供跨门店经营数据汇总、排行等API
+ * 总部控制台Dashboard控制器
+ * 提供跨门店经营数据汇总、排行等接口
  *
- * @author Reggie Team
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
@@ -60,7 +61,7 @@ public class StoreDashboardController {
     @GetMapping("/ranking")
     public R<Map<String, Object>> ranking() {
         Map<String, Object> data = storeService.getAggregatedDashboard();
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("unchecked") // Map.get返回Object类型，需要类型转换
         Object ranking = data.get("storeRanking");
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("storeRanking", ranking);

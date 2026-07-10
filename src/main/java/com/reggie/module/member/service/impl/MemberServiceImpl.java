@@ -17,12 +17,20 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+/**
+ * 会员服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> implements MemberService {
 
+    /** 会员等级服务 */
     @Autowired
     private MemberLevelService memberLevelService;
 
+    /** 积分记录服务 */
     @Autowired
     private PointsRecordService pointsRecordService;
 

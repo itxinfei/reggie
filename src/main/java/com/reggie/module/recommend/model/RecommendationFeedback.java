@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 /**
  * 推荐反馈
  * 记录用户对推荐结果的反馈，用于优化推荐算法
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("recommendation_feedback")
@@ -26,6 +29,7 @@ public class RecommendationFeedback implements Serializable {
     /** 反馈类型 - 不感兴趣 */
     public static final int FEEDBACK_NOT_INTERESTED = 5;
 
+    /** 主键ID */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
@@ -45,6 +49,7 @@ public class RecommendationFeedback implements Serializable {
     /** 反馈类型 */
     private Integer feedbackType;
 
+    /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

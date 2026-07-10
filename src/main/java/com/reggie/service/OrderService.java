@@ -7,16 +7,40 @@ import com.reggie.entity.Orders;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 订单管理服务接口，提供订单提交、查询、状态流转及幂等性保护功能
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 public interface OrderService extends IService<Orders> {
 
     /**
      * 用户下单
-     * @param orders
+     *
+     * @param orders 订单信息
      */
     public void submit(Orders orders);
 
-    Page<Orders> orderPage(int page, int pageSize, String number, String beginTime, String endTime);
+    /**
+     * 后台订单分页查询，支持按订单号和时间范围筛选
+     *
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @param number 订单号（可选）
+     * @param beginTime 开始时间（可选）
+     * @param endTime 结束时间（可选）
+     * @param status 订单状态（可选）
+     * @return 分页订单列表
+     */
+    Page<Orders> orderPage(int page, int pageSize, String number, String beginTime, String endTime, Integer status);
 
+    /**
+     * 修改订单状态
+     *
+     * @param status 目标状态
+     * @param id 订单ID
+     */
     void updateStatus(Integer status, Long id);
 
     /**
@@ -27,8 +51,18 @@ public interface OrderService extends IService<Orders> {
      */
     Page<?> userPage(int page, int pageSize, Integer status);
 
+    /**
+     * 查询当前用户的历史订单列表
+     *
+     * @return 用户订单列表
+     */
     List<Orders> userList();
 
+    /**
+     * 再来一单，根据历史订单重新下单
+     *
+     * @param orderId 历史订单ID
+     */
     void again(Long orderId);
 
     // ==================== 后台订单管理 ====================
@@ -72,4 +106,11 @@ public interface OrderService extends IService<Orders> {
      * @return 已存在的订单（如果重复提交），null（如果首次提交）
      */
     Orders checkIdempotency(String idempotencyKey);
+
+    /**
+     * 回填订单中的用户信息（用户名、手机号、地址、收货人）
+     *
+     * @param order 订单实体
+     */
+    void backfillUserInfo(Orders order);
 }

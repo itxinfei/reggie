@@ -27,34 +27,46 @@ import java.util.*;
  * 统一提供各业务模块的Excel和PDF导出功能
  * 修改点：全部导出方法添加try-catch，数据构建逻辑抽取为公共方法消除重复代码
  *
- * @author Reggie Team
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
 @RequestMapping("/export")
 public class ExportController {
 
+    /** 订单服务 */
     @Resource
     private OrderService orderService;
 
+    /** 订单明细服务 */
     @Resource
     private OrderDetailService orderDetailService;
 
+    /** 菜品服务 */
     @Resource
     private DishService dishService;
 
+    /** 分类服务 */
     @Resource
     private CategoryService categoryService;
 
+    /** 员工服务 */
     @Resource
     private EmployeeService employeeService;
 
+    /** 文件名日期格式 */
     private static final DateTimeFormatter FILE_DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     // ==================== 订单导出 ====================
 
     /**
      * 导出订单数据 - Excel
+     *
+     * @param startDate 开始日期（可选）
+     * @param endDate   结束日期（可选）
+     * @param status    订单状态（可选）
+     * @return Excel文件流
      */
     @GetMapping("/orders/excel")
     public ResponseEntity<?> exportOrdersExcel(
@@ -86,6 +98,11 @@ public class ExportController {
 
     /**
      * 导出订单数据 - PDF
+     *
+     * @param startDate 开始日期（可选）
+     * @param endDate   结束日期（可选）
+     * @param status    订单状态（可选）
+     * @return PDF文件流
      */
     @GetMapping("/orders/pdf")
     public ResponseEntity<?> exportOrdersPdf(
@@ -129,6 +146,9 @@ public class ExportController {
     /**
      * 导出菜品数据 - Excel
      * 修改点：抽取buildDishDataList公共方法，Excel/PDF共用
+     *
+     * @param categoryId 分类ID（可选）
+     * @return Excel文件流
      */
     @GetMapping("/dishes/excel")
     public ResponseEntity<?> exportDishesExcel(
@@ -154,6 +174,9 @@ public class ExportController {
 
     /**
      * 导出菜品数据 - PDF
+     *
+     * @param categoryId 分类ID（可选）
+     * @return PDF文件流
      */
     @GetMapping("/dishes/pdf")
     public ResponseEntity<?> exportDishesPdf(
@@ -185,6 +208,8 @@ public class ExportController {
 
     /**
      * 导出员工数据 - Excel
+     *
+     * @return Excel文件流
      */
     @GetMapping("/employees/excel")
     public ResponseEntity<?> exportEmployeesExcel() {
@@ -209,6 +234,8 @@ public class ExportController {
 
     /**
      * 导出员工数据 - PDF
+     *
+     * @return PDF文件流
      */
     @GetMapping("/employees/pdf")
     public ResponseEntity<?> exportEmployeesPdf() {

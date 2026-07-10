@@ -25,6 +25,13 @@ import javax.validation.Valid;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+/**
+ * 预订管理控制器
+ * 提供桌台预订的创建、确认、取消、到店等接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/dining/reservation")
@@ -51,7 +58,6 @@ public class ReservationController {
                                      @RequestParam(required = false) String reservedDate) {
         Page<Reservation> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<Reservation> qw = new LambdaQueryWrapper<>();
-        // 修改点：新增状态、姓名、手机号、日期筛选条件
         qw.eq(status != null && !status.isEmpty(), Reservation::getStatus, status);
         qw.like(customerName != null && !customerName.isEmpty(), Reservation::getCustomerName, customerName);
         qw.like(phone != null && !phone.isEmpty(), Reservation::getPhone, phone);

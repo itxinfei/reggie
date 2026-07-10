@@ -22,10 +22,10 @@ import java.io.IOException;
 @WebFilter(filterName = "loginCheckFilter",urlPatterns = "/*")
 @Slf4j
 public class LoginCheckFilter implements Filter{
-    //路径匹配器，支持通配符
+    /** 路径匹配器，支持通配符 */
     public static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
-    // 修改点：ObjectMapper 静态化，避免每次请求重复创建
+    /** JSON序列化工具 */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
@@ -51,16 +51,25 @@ public class LoginCheckFilter implements Filter{
                 "/user/sendMsg",
                 "/user/login",
                 "/tenant/register",
-                // 修改点：放行前端浏览菜单相关API，允许未登录用户浏览菜品和分类
+                // 放行前端浏览菜单相关API
                 "/category/list",
                 "/dish/list",
                 "/setmeal/list",
                 "/setmeal/dish/**",
-                // 修改点：放行推荐模块公开API，未登录时返回热门排行
+                // 放行推荐模块公开API
                 "/recommend/dishes",
                 "/recommend/hot",
                 "/recommend/new-arrivals",
-                "/recommend/setmeals"
+                "/recommend/setmeals",
+                // 放行API文档相关路径
+                "/swagger-ui/**",
+                "/swagger-ui.html",
+                "/swagger-ui/",
+                "/v3/api-docs/**",
+                "/v3/api-docs",
+                "/swagger-resources/**",
+                "/webjars/**",
+                "/doc.html"
             };
 
             //2、判断本次请求是否需要处理
@@ -79,8 +88,13 @@ public class LoginCheckFilter implements Filter{
 
                 Long empId = (Long) request.getSession().getAttribute("employee");
                 tenantId = (Long) request.getSession().getAttribute("tenantId");
+                String roleKey = (String) request.getSession().getAttribute("roleKey");
                 BaseContext.setCurrentId(empId);
                 BaseContext.setCurrentTenantId(tenantId);
+
+                // 将角色标识和员工ID存入request属性，供AOP权限拦截器使用
+                request.setAttribute("employeeId", empId);
+                request.setAttribute("roleKey", roleKey);
 
                 filterChain.doFilter(request, response);
                 return;

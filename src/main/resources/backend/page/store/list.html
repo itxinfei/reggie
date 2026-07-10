@@ -143,6 +143,9 @@
             <p>成功: {{ syncResult.synced }} 条 | 失败: {{ syncResult.failed }} 条</p>
             <p v-if="syncResult.errors && syncResult.errors.length > 0" style="color:#f56c6c; margin-top:4px;" v-for="(err, i) in syncResult.errors" :key="i">{{ err }}</p>
         </div>
+        <span slot="footer" class="dialog-footer">
+            <el-button size="medium" @click="syncDialogVisible = false">关 闭</el-button>
+        </span>
     </el-dialog>
 </div>
 

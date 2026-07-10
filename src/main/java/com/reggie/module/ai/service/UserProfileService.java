@@ -8,7 +8,7 @@ import com.reggie.module.ai.model.UserProfile;
  * 基于历史对话、点单、反馈数据构建用户长期记忆
  *
  * @author reggie
- * @since 2026-07-10
+ * @since 2026-07-09
  */
 public interface UserProfileService extends IService<UserProfile> {
 

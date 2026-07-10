@@ -13,7 +13,8 @@ import java.util.concurrent.TimeUnit;
  * 验证码工具类
  * 支持 Redis（优先，集群部署）和 Session（降级，单机部署）
  *
- * @author itxinfei
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Component
@@ -29,6 +30,9 @@ public class VerifyCodeUtils {
      */
     private static final int VERIFY_CODE_EXPIRE_SECONDS = 300; // 5分钟
 
+    /**
+     * Redis操作模板，可选依赖
+     */
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 

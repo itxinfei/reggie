@@ -10,7 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * 短信发送工具类
- * 修改点：凭证改为从application.yml注入，不再硬编码空字符串
+ * 凭证改为从application.yml注入，不再硬编码空字符串
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 public final class SMSUtils {
@@ -19,12 +22,21 @@ public final class SMSUtils {
         throw new AssertionError();
     }
 
-    /** 修改点：从配置注入的凭证，默认使用mock模式避免启动报错 */
+    /**
+     * 阿里云AccessKey ID（从配置注入）
+     */
     private static String accessKeyId;
+
+    /**
+     * 阿里云AccessKey Secret（从配置注入）
+     */
     private static String accessKeySecret;
 
     /**
      * 初始化短信凭证（由SmsConfig或启动时调用）
+     *
+     * @param keyId     阿里云AccessKey ID
+     * @param keySecret 阿里云AccessKey Secret
      */
     public static void init(String keyId, String keySecret) {
         accessKeyId = keyId;
@@ -40,7 +52,6 @@ public final class SMSUtils {
 	 * @param param 参数
 	 */
 	public static void sendMessage(String signName, String templateCode,String phoneNumbers,String param){
-	    // 修改点：未配置真实凭证时使用mock模式，避免生产环境抛出异常
 	    if (accessKeyId == null || accessKeyId.isEmpty() || accessKeySecret == null || accessKeySecret.isEmpty()) {
 	        log.warn("[短信Mock] 未配置SMS凭证，模拟发送: phone={}, sign={}, template={}, param={}",
 	                phoneNumbers, signName, templateCode, param);
@@ -70,7 +81,12 @@ public final class SMSUtils {
 		}
 	}
 
-	/** 脱敏AccessKey用于日志 */
+    /**
+     * 脱敏AccessKey用于日志输出，只显示前4位和后4位
+     *
+     * @param key 原始密钥字符串
+     * @return 脱敏后的密钥字符串
+     */
 	private static String maskKey(String key) {
 	    if (key == null || key.length() <= 8) return "***";
 	    return key.substring(0, 4) + "****" + key.substring(key.length() - 4);

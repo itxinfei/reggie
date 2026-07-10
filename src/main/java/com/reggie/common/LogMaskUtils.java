@@ -2,6 +2,9 @@ package com.reggie.common;
 
 /**
  * 日志脱敏工具类
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 public class LogMaskUtils {
 
@@ -126,6 +129,11 @@ public class LogMaskUtils {
 
     /**
      * 通用脱敏（保留前n后m）
+     *
+     * @param str 原始字符串
+     * @param keepPrefix 保留前缀长度
+     * @param keepSuffix 保留后缀长度
+     * @return 脱敏后的字符串
      */
     private static String maskGeneric(String str, int keepPrefix, int keepSuffix) {
         if (str == null || str.length() <= keepPrefix + keepSuffix) {
@@ -135,10 +143,23 @@ public class LogMaskUtils {
         return str.substring(0, keepPrefix) + mask(maskLength) + str.substring(str.length() - keepSuffix);
     }
 
+    /**
+     * 脱敏字符串末尾部分
+     *
+     * @param str 原始字符串
+     * @param keepPrefix 保留前缀长度
+     * @return 脱敏后的字符串
+     */
     private static String maskEnd(String str, int keepPrefix) {
         return maskGeneric(str, keepPrefix, 0);
     }
 
+    /**
+     * 生成指定长度的掩码字符串
+     *
+     * @param length 掩码长度
+     * @return 由*组成的字符串
+     */
     private static String mask(int length) {
         StringBuilder sb = new StringBuilder(length);
         for (int i = 0; i < length; i++) {

@@ -20,17 +20,23 @@ import java.util.Map;
 /**
  * 定时任务组件
  * 包含：订单超时自动取消、每日经营统计、库存预警
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Component
 public class OrderTimeoutTask {
 
+    /** 订单服务 */
     @Autowired
     private OrderService orderService;
 
+    /** 原料Mapper */
     @Autowired
     private MaterialMapper materialMapper;
 
+    /** 报表服务 */
     @Autowired
     private ReportService reportService;
 

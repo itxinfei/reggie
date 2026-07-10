@@ -19,24 +19,34 @@ import java.util.stream.Collectors;
 /**
  * 门店数据同步服务实现
  * 处理总部向分店的一键同步功能
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Service
 public class StoreSyncServiceImpl implements StoreSyncService {
 
+    /** 同步日志Mapper */
     @Autowired
     private StoreSyncLogMapper syncLogMapper;
+    /** 门店信息Mapper */
     @Autowired
     private StoreInfoMapper storeInfoMapper;
 
+    /** 菜品服务 */
     @Autowired
     private DishService dishService;
+    /** 分类服务 */
     @Autowired
     private CategoryService categoryService;
+    /** 套餐服务 */
     @Autowired
     private SetmealService setmealService;
+    /** 菜品口味服务 */
     @Autowired
     private DishFlavorService dishFlavorService;
+    /** 套餐菜品关联服务 */
     @Autowired
     private SetmealDishService setmealDishService;
 
@@ -189,7 +199,6 @@ public class StoreSyncServiceImpl implements StoreSyncService {
                     newSm.setTenantId(targetTenantId);
                     setmealService.save(newSm);
 
-                    // 修改点：同步套餐内的菜品关联(SetmealDish)，避免同步后套餐为空壳
                     LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
                     sdWrapper.eq(SetmealDish::getSetmealId, sm.getId());
                     List<SetmealDish> sdList = setmealDishService.list(sdWrapper);
@@ -239,7 +248,6 @@ public class StoreSyncServiceImpl implements StoreSyncService {
 
     @Override
     public List<Map<String, Object>> getSyncLogs(Long sourceTenantId, int page, int pageSize) {
-        // 修改点：使用MyBatis Plus分页，之前selectList返回全部数据忽略分页参数
         Page<StoreSyncLog> pageObj = new Page<>(page, pageSize);
         LambdaQueryWrapper<StoreSyncLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StoreSyncLog::getSourceTenantId, sourceTenantId)

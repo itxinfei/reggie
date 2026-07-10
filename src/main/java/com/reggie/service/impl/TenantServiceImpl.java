@@ -18,13 +18,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpSession;
 
+/**
+ * 租户服务实现类
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 @Slf4j
 public class TenantServiceImpl extends ServiceImpl<TenantMapper, Tenant> implements TenantService {
 
+    /** 员工服务 */
     @Autowired
     private EmployeeService employeeService;
 
+    /** 验证码工具 */
     @Autowired
     private VerifyCodeUtils verifyCodeUtils;
 
@@ -60,7 +68,6 @@ public class TenantServiceImpl extends ServiceImpl<TenantMapper, Tenant> impleme
         employee.setStatus(UserStatus.ENABLED.getValue());
         employee.setRole(1); // 租户管理员默认超级管理员角色
         employee.setTenantId(tenant.getId());
-        // 修改点：设置sex和idNumber默认值，避免NOT NULL约束异常
         employee.setSex("1");
         employee.setIdNumber("");
 

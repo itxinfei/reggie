@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 /**
  * 门店同步日志
  * 记录总部向分店同步菜品、分类、套餐、配置等数据的操作日志
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("store_sync_log")
@@ -42,6 +45,7 @@ public class StoreSyncLog implements Serializable {
     /** 同步状态 - 部分成功 */
     public static final int STATUS_PARTIAL = 3;
 
+    /** 主键ID */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 

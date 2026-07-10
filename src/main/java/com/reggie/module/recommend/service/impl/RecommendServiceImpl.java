@@ -33,7 +33,8 @@ import java.util.stream.Collectors;
  * 4. 热门排行：基于门店近期销量排序
  * 5. 冷启动：新用户使用热门排行，有数据后逐步切换到个性化推荐
  *
- * @author Reggie Team
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Service
@@ -48,34 +49,47 @@ public class RecommendServiceImpl implements RecommendService {
     /** 异步任务线程池 */
     private static final ExecutorService ASYNC_EXECUTOR = Executors.newFixedThreadPool(4);
 
+    /** 用户偏好标签Mapper */
     @Autowired
     private UserPreferenceMapper userPreferenceMapper;
+    /** 浏览历史Mapper */
     @Autowired
     private BrowseHistoryMapper browseHistoryMapper;
+    /** 推荐缓存Mapper */
     @Autowired
     private RecommendationCacheMapper cacheMapper;
+    /** 推荐反馈Mapper */
     @Autowired
     private RecommendationFeedbackMapper feedbackMapper;
+    /** 用户偏好分析服务 */
     @Autowired
     private PreferenceAnalysisServiceImpl preferenceAnalysisService;
 
     // 核心业务依赖：
+    /** 订单服务 */
     @Autowired
     private OrderService orderService;
+    /** 订单明细服务 */
     @Autowired
     private OrderDetailService orderDetailService;
+    /** 菜品服务 */
     @Autowired
     private DishService dishService;
+    /** 套餐服务 */
     @Autowired
     private SetmealService setmealService;
+    /** 分类服务 */
     @Autowired
     private CategoryService categoryService;
 
+    /** 浏览历史服务 */
     @Autowired
     private BrowseHistoryService browseHistoryService;
+    /** 营销活动服务 */
     @Autowired
     private MarketingCampaignService marketingCampaignService;
 
+    /** JSON序列化工具 */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -302,7 +316,6 @@ public class RecommendServiceImpl implements RecommendService {
             return Collections.emptyList();
         }
 
-        // 修改点：查询最近30天销量最高的菜品，过滤已下架(status!=1)的菜品
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         LambdaQueryWrapper<Orders> orderWrapper = new LambdaQueryWrapper<>();
         orderWrapper.ge(Orders::getCreateTime, thirtyDaysAgo);
@@ -333,7 +346,6 @@ public class RecommendServiceImpl implements RecommendService {
                 .limit(limit * 2) // 多取一些，过滤后仍够limit个
                 .map(e -> {
                     Dish dish = dishService.getById(e.getKey());
-                    // 修改点：过滤已下架菜品、不属于当前门店的菜品
                     if (dish == null || dish.getStatus() != 1) {
                         return null;
                     }
@@ -377,10 +389,6 @@ public class RecommendServiceImpl implements RecommendService {
         log.info("[推荐引擎] 刷新用户{}的推荐缓存完成", userId);
     }
 
-    /**
-     * 修改点：计算推荐引擎真实统计数据
-     * 从数据库实时计算覆盖率、点击率、转化率、GMV等
-     */
     @Override
     public Map<String, Object> calculateStats() {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -519,7 +527,7 @@ public class RecommendServiceImpl implements RecommendService {
             double positionalScore = weight * (1.0 / Math.sqrt(rank + 1));
             fusionScore.merge(dishId, positionalScore, Double::sum);
             dishInfoMap.putIfAbsent(dishId, item);
-            @SuppressWarnings("unchecked")
+            @SuppressWarnings("unchecked") // Map.computeIfAbsent返回值类型安全
             Set<String> sources = (Set<String>) item.computeIfAbsent("recommendSources",
                     k -> new LinkedHashSet<String>());
             sources.add(source);
@@ -537,7 +545,6 @@ public class RecommendServiceImpl implements RecommendService {
         // 品类匹配
         if (dish.getCategoryId() != null) {
             Category category = categoryService.getById(dish.getCategoryId());
-            // 修改点：根据分类名匹配
             if (category != null && categoryPrefs.contains(category.getName())) {
                 score += 0.5;
             }

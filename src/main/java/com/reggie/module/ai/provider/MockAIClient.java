@@ -25,9 +25,18 @@ import java.util.List;
 @ConditionalOnProperty(name = "reggie.ai.enabled", havingValue = "false", matchIfMissing = true)
 public class MockAIClient implements AIClient {
 
+    /** AI配置属性 */
     @Resource
     private AIConfigProperties aiConfig;
 
+    /**
+     * 发送聊天请求（模拟实现）
+     *
+     * @param messages   消息列表（system/user/assistant）
+     * @param maxTokens  最大返回Token数
+     * @param temperature 温度参数
+     * @return AI响应
+     */
     @Override
     public AIChatResponse chat(List<AIMessage> messages, int maxTokens, double temperature) {
         log.info("Mock AI响应: messagesCount={}", messages.size());
@@ -94,11 +103,21 @@ public class MockAIClient implements AIClient {
         }
     }
 
+    /**
+     * 获取提供商名称
+     *
+     * @return 提供商标识
+     */
     @Override
     public String getProviderName() {
         return "mock";
     }
 
+    /**
+     * 获取默认模型名称
+     *
+     * @return 模型名称
+     */
     @Override
     public String getDefaultModel() {
         return "mock-v1";

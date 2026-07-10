@@ -9,6 +9,9 @@ import java.math.BigDecimal;
 
 /**
  * 创建采购单请求DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 public class CreatePurchaseOrderDTO {

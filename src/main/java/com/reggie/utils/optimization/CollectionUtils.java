@@ -7,16 +7,20 @@ import java.util.stream.Collectors;
 
 /**
  * 集合转换工具类
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 public class CollectionUtils {
 
     /**
      * 类型安全转换（去除警告）
+     *
      * @param list 原始列表
-     * @param <T> 元素类型
+     * @param <T>  元素类型
      * @return 转换后的列表
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked") // 泛型类型擦除导致的类型转换警告，此处保证类型安全
     public static <T> List<T> toList(List<?> list) {
         return (List<T>) list;
     }

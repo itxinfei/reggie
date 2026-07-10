@@ -13,9 +13,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
+/**
+ * 预订服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reservation> implements ReservationService {
 
+    /** 堂食桌台服务 */
     @Autowired
     private DiningTableService diningTableService;
 

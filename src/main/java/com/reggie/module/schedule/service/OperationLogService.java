@@ -10,6 +10,10 @@ import java.util.Map;
 
 /**
  * 操作日志服务接口
+ * 记录系统操作日志，支持分页查询和过期清理
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 public interface OperationLogService extends IService<OperationLog> {
 

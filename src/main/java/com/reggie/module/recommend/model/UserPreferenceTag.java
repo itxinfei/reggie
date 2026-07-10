@@ -9,6 +9,9 @@ import java.time.LocalDateTime;
 /**
  * 用户偏好标签
  * 基于用户历史订单、浏览记录分析得出的口味/品类/价格偏好
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("user_preference_tag")
@@ -32,6 +35,7 @@ public class UserPreferenceTag implements Serializable {
     /** 数据来源 - 手动标注 */
     public static final String SOURCE_MANUAL = "MANUAL";
 
+    /** 主键ID */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
@@ -54,15 +58,19 @@ public class UserPreferenceTag implements Serializable {
     /** 数据来源 ORDER/BROWSE/MANUAL */
     private String source;
 
+    /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
+    /** 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
+    /** 创建人ID */
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
+    /** 更新人ID */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 }

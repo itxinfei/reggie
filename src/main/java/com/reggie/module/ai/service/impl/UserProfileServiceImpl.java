@@ -17,6 +17,7 @@ import com.reggie.module.recommend.mapper.UserPreferenceMapper;
 import com.reggie.module.recommend.model.UserPreferenceTag;
 import com.reggie.module.recommend.service.PreferenceAnalysisService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -29,30 +30,37 @@ import java.util.stream.Collectors;
  * 聚合多源数据构建用户长期记忆
  *
  * @author reggie
- * @since 2026-07-10
+ * @since 2026-07-09
  */
 @Slf4j
 @Service
 public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserProfile> implements UserProfileService {
 
+    /** 用户画像Mapper */
     @Resource
     private UserProfileMapper userProfileMapper;
 
+    /** 用户偏好分析服务 */
     @Resource
     private PreferenceAnalysisService preferenceAnalysisService;
 
+    /** 用户偏好标签Mapper */
     @Resource
     private UserPreferenceMapper userPreferenceMapper;
 
+    /** 菜品Mapper */
     @Resource
     private DishMapper dishMapper;
 
+    /** 订单Mapper */
     @Resource
     private OrderMapper orderMapper;
 
+    /** 订单明细Mapper */
     @Resource
     private OrderDetailMapper orderDetailMapper;
 
+    /** AI消息记录Mapper */
     @Resource
     private AIMessageRecordMapper aiMessageRecordMapper;
 
@@ -70,7 +78,12 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
             profile.setTotalFeedbacks(0);
             // 首次创建时立即分析一次
             refreshProfileFields(profile);
-            userProfileMapper.insert(profile);
+            try {
+                userProfileMapper.insert(profile);
+            } catch (DuplicateKeyException e) {
+                log.warn("并发创建用户画像冲突，重新查询已创建的画像 userId={}", userId);
+                profile = userProfileMapper.selectByUserId(userId);
+            }
         }
         return profile;
     }

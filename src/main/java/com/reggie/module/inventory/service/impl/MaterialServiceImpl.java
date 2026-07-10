@@ -11,6 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
+/**
+ * 食材服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @Service
 public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> implements MaterialService {

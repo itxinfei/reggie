@@ -22,25 +22,37 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 打印机服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @Service
 public class PrinterServiceImpl implements PrinterService {
 
+    /** 订单服务 */
     @Autowired
     private OrderService orderService;
 
+    /** 订单明细服务 */
     @Autowired
     private OrderDetailService orderDetailService;
 
+    /** 打印模板 */
     @Autowired
     private PrinterTemplate printerTemplate;
 
+    /** 打印机设备管理器 */
     @Autowired
     private PrinterDeviceManager printerDeviceManager;
 
+    /** 打印机配置服务 */
     @Autowired
     private PrinterConfigService printerConfigService;
 
+    /** 打印日志服务 */
     @Autowired
     private PrinterLogService printerLogService;
 

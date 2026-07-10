@@ -11,7 +11,7 @@ import java.util.List;
  * AI消息记录 Mapper
  *
  * @author reggie
- * @since 2026-07-10
+ * @since 2026-07-09
  */
 @Mapper
 public interface AIMessageRecordMapper extends BaseMapper<AIMessageRecord> {

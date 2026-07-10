@@ -8,9 +8,21 @@ import com.reggie.mapper.ShoppingCartMapper;
 import com.reggie.service.ShoppingCartService;
 import org.springframework.stereotype.Service;
 
+/**
+ * 购物车服务实现类
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, ShoppingCart> implements ShoppingCartService {
 
+    /**
+     * 购物车商品数量减一
+     *
+     * @param shoppingCart 购物车项
+     * @return 更新后的购物车项，数量为0时返回null
+     */
     @Override
     public ShoppingCart sub(ShoppingCart shoppingCart) {
         LambdaQueryWrapper<ShoppingCart> wrapper = new LambdaQueryWrapper<>();

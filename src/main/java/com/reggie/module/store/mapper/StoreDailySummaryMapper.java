@@ -5,7 +5,10 @@ import com.reggie.module.store.model.StoreDailySummary;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 门店每日经营汇总Mapper
+ * 门店每日经营汇总 Mapper
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Mapper
 public interface StoreDailySummaryMapper extends BaseMapper<StoreDailySummary> {

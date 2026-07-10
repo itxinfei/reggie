@@ -4,8 +4,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 数据概览仪表盘服务接口
- * 核心职责：聚合系统核心指标，通过Redis缓存降低数据库查询压力
+ * 数据概览仪表盘服务接口，聚合系统核心指标，通过Redis缓存降低数据库查询压力
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 public interface DashboardService {
 
@@ -61,4 +63,12 @@ public interface DashboardService {
      * @return true表示Redis连接正常
      */
     boolean isRedisAvailable();
+
+    /**
+     * 清除指定租户的 Dashboard 概览和订单状态分布缓存
+     * <p>当订单状态发生变更（创建/状态流转/取消/退款）时调用，确保前端看到的数据实时准确
+     *
+     * @param tenantId 租户ID
+     */
+    void clearOverviewCache(Long tenantId);
 }

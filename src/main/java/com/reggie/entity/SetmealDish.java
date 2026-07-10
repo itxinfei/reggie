@@ -17,7 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Setmeal-dish relation
+ * 套餐菜品关联
  */
 @Data
 @TableName("setmeal_dish")
@@ -28,48 +28,54 @@ public class SetmealDish implements Serializable {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
+    /** 租户ID */
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    // Setmeal ID
-    @NotNull(message = "Setmeal ID cannot be empty")
+    /** 套餐ID */
+    @NotNull(message = "套餐ID不能为空")
     private Long setmealId;
 
-    // Dish ID
-    @NotNull(message = "Dish ID cannot be empty")
+    /** 菜品ID */
+    @NotNull(message = "菜品ID不能为空")
     private Long dishId;
 
-    // Dish name
-    @NotBlank(message = "Dish name cannot be empty")
-    @Size(max = 64, message = "Dish name cannot exceed 64 characters")
+    /** 菜品名称 */
+    @NotBlank(message = "菜品名称不能为空")
+    @Size(max = 64, message = "菜品名称不能超过64个字符")
     private String name;
 
-    // Price
-    @NotNull(message = "Price cannot be empty")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
+    /** 价格 */
+    @NotNull(message = "价格不能为空")
+    @DecimalMin(value = "0.0", inclusive = false, message = "价格必须大于0")
     private BigDecimal price;
 
-    // Quantity
-    @NotNull(message = "Quantity cannot be empty")
-    @Min(value = 1, message = "Quantity must be greater than 0")
+    /** 数量 */
+    @NotNull(message = "数量不能为空")
+    @Min(value = 1, message = "数量必须大于0")
     private Integer copies;
 
-    // Sort order
-    @NotNull(message = "Sort cannot be empty")
+    /** 排序 */
+    @NotNull(message = "排序不能为空")
     private Integer sort;
 
+    /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
+    /** 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
+    /** 创建人 */
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
+    /** 修改人 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 
+    /** 是否删除 */
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
 }

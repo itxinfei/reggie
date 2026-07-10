@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.CustomException;
+import com.reggie.common.RedisCacheUtil;
 import com.reggie.dto.SetmealDto;
 import com.reggie.entity.Setmeal;
 import com.reggie.entity.SetmealDish;
@@ -14,19 +15,29 @@ import com.reggie.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * 套餐服务实现类
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 @Slf4j
-public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> implements SetmealService {
+public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> implements SetmealService {
 
+    /** 套餐菜品关联服务 */
     @Autowired
     private SetmealDishService setmealDishService;
+
+    /** Redis缓存工具 */
+    @Autowired
+    private RedisCacheUtil redisCacheUtil;
 
     /**
      * 新增套餐，同时需要保存套餐和菜品的关联关系
@@ -35,6 +46,8 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveWithDish(SetmealDto setmealDto) {
+        redisCacheUtil.doubleDeleteAllEntries("setmeal");
+
         //保存套餐的基本信息，操作setmeal，执行insert操作
         this.save(setmealDto);
 
@@ -70,8 +83,9 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @CacheEvict(value = "setmeal", key = "#setmealDto.id")
     public void updateWithDish(SetmealDto setmealDto) {
+        redisCacheUtil.doubleDelete("setmeal", setmealDto.getId());
+
         this.updateById(setmealDto);
 
         LambdaQueryWrapper<SetmealDish> queryWrapper = new LambdaQueryWrapper<>();
@@ -85,9 +99,16 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
         }
     }
 
+    /**
+     * 删除套餐及关联菜品
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void removeWithDish(List<Long> ids) {
+        if (ids != null) {
+            ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
+        }
+
         //select count(*) from setmeal where id in (1,2,3) and status = 1
         //查询套餐状态，确定是否可用删除
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
@@ -110,9 +131,16 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper,Setmeal> imple
         setmealDishService.remove(lambdaQueryWrapper);
     }
 
+    /**
+     * 批量更新套餐状态
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Integer status, List<Long> ids) {
+        if (ids != null) {
+            ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
+        }
+
         LambdaUpdateWrapper<Setmeal> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.in(Setmeal::getId, ids);
         updateWrapper.set(Setmeal::getStatus, status);

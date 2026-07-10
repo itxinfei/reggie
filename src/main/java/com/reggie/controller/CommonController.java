@@ -24,6 +24,9 @@ import java.util.UUID;
 
 /**
  * 文件上传和下载
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @RestController
 @RequestMapping("/common")

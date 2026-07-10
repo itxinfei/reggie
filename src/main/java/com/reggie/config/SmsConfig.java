@@ -8,10 +8,11 @@ import org.springframework.context.annotation.Configuration;
 import javax.annotation.PostConstruct;
 
 /**
- * 短信服务配置
+ * 短信服务配置类
  * 从application.yml读取阿里云SMS凭证并初始化SMSUtils
  *
- * @author Reggie Team
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Configuration
@@ -23,6 +24,10 @@ public class SmsConfig {
     @Value("${reggie.sms.secret-key:}")
     private String secretKey;
 
+    /**
+     * 初始化短信服务凭证
+     * 从配置文件读取accessKey和secretKey并初始化SMSUtils
+     */
     @PostConstruct
     public void initSmsUtils() {
         log.info("正在初始化短信服务凭证...");

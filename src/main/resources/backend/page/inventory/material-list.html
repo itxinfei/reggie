@@ -33,6 +33,14 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     }
 
+    /* 修改点：stats-card 可点击筛选 */
+    .stat-card.clickable { cursor: pointer; user-select: none; }
+    .stat-card.active {
+      border-color: #409eff;
+      box-shadow: 0 0 0 2px rgba(64,158,255,0.3);
+      transform: translateY(-3px);
+    }
+
     .stat-card::before {
       content: '';
       position: absolute;
@@ -49,7 +57,6 @@
       top: 50%;
       transform: translateY(-50%);
       font-size: 42px;
-      opacity: 0.08;
     }
 
     .stat-card .stat-label {
@@ -87,18 +94,19 @@
   <div class="dashboard-container" id="material-app">
     <div class="container">
       <!-- ========== 数据统计卡片 ========== -->
+      <!-- 修改点：卡片可点击筛选，启用中/库存预警可过滤列表 -->
       <div class="stats-cards">
-        <div class="stat-card primary">
+        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterBy('', '')">
           <div class="stat-icon">🥬</div>
           <div class="stat-label">食材总数</div>
           <div class="stat-value">{{ stats.totalMaterials || 0 }}</div>
         </div>
-        <div class="stat-card success">
+        <div class="stat-card success clickable" :class="{ active: activeFilter === '1' }" @click="filterBy('status', '1')">
           <div class="stat-icon">✅</div>
           <div class="stat-label">启用中</div>
           <div class="stat-value">{{ stats.activeMaterials || 0 }}</div>
         </div>
-        <div class="stat-card warning">
+        <div class="stat-card warning clickable" :class="{ active: activeFilter === 'low' }" @click="filterBy('lowStock', 'low')">
           <div class="stat-icon">⚠️</div>
           <div class="stat-label">库存预警</div>
           <div class="stat-value">{{ stats.lowStockMaterials || 0 }}</div>
@@ -118,6 +126,7 @@
           <el-option v-for="item in categoryOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
         </el-select>
         <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
+        <el-button style="margin-left: 10px" @click="reset">重置</el-button>
         <el-button type="primary" @click="addHandle">+ 新增食材</el-button>
         <el-button type="warning" @click="warningHandle">库存预警</el-button>
       </div>
@@ -240,6 +249,8 @@
               lowStockMaterials: 0,
               totalCategories: 0
             },
+            // 修改点：当前激活的筛选器值，空字符串=全部
+            activeFilter: '',
             input: {
               name: '',
               categoryId: ''
@@ -273,12 +284,20 @@
             const params = { page: this.page, pageSize: this.pageSize }
             if (this.input.name) params.name = this.input.name
             if (this.input.categoryId) params.categoryId = this.input.categoryId
+            // 修改点：传递状态筛选参数到后端
+            if (this.activeFilter && this.activeFilter !== 'low') params.status = this.activeFilter
 
             // 并行加载食材列表和统计数据
             const [materialRes, statsRes] = await Promise.all([
               materialPage(params),
               this.loadMaterialStats()
             ])
+            // 修改点：库存预警在前端过滤
+            if (materialRes && materialRes.data && materialRes.data.records && this.activeFilter === 'low') {
+              var records = materialRes.data.records
+              materialRes.data.records = records.filter(function(r) { return r.stockQty <= r.minStock })
+              materialRes.data.total = materialRes.data.records.length
+            }
 
             // 处理食材列表数据
             if (String(materialRes.code) === '1') {
@@ -300,7 +319,8 @@
               if (String(res.code) === '1') {
                 const records = res.data.records || []
                 const total = res.data.total || 0
-                const activeCount = records.filter(item => item.status === '1').length
+                // 修改点：后端 Material.status 为 Integer，JSON 序列化为数字 1/0
+                const activeCount = records.filter(item => item.status === 1).length
                 const lowStockCount = records.filter(item => item.stockQty <= item.minStock).length
                 // 获取分类数量
                 const categoryRes = await matCategoryList()
@@ -330,6 +350,28 @@
             })
           },
           handleQuery() {
+            // 修改点：搜索时清空卡片筛选状态
+            this.activeFilter = ''
+            this.page = 1
+            this.init()
+          },
+          reset() {
+            this.input.name = ''
+            this.input.categoryId = ''
+            this.activeFilter = ''
+            this.page = 1
+            this.init()
+          },
+          // 修改点：stats-card 点击切换筛选状态（清空搜索条件避免冲突）
+          filterBy(type, value) {
+            if (this.activeFilter === value) {
+              this.activeFilter = ''
+            } else {
+              this.activeFilter = value
+            }
+            // 修改点：卡片筛选时清空搜索输入
+            this.input.name = ''
+            this.input.categoryId = ''
             this.page = 1
             this.init()
           },

@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
  * @since 2026-07-10
  */
 @Data
+@TableName("ai_message")
 public class AIMessageRecord {
 
     @TableId(value = "id", type = IdType.ASSIGN_ID)

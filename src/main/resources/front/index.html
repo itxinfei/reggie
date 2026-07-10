@@ -183,7 +183,7 @@
       </div>
 
       <!-- ====== 口味选择弹窗 ====== -->
-      <van-dialog v-model="dialogFlavor.show" :show-confirm-button="false" class="dialogFlavor" ref="flavorDialog">
+      <van-dialog v-model="dialogFlavor.show" :show-confirm-button="false" :close-on-click-overlay="true" class="dialogFlavor" ref="flavorDialog">
         <div class="dialogTitle">{{ dialogFlavor.name }}</div>
         <div class="divContent">
           <div v-for="flavor in dialogFlavor.flavors" :key="flavor.id">
@@ -205,11 +205,14 @@
       </van-dialog>
 
       <!-- ====== 购物车弹出面板 ====== -->
-      <van-popup v-model="cartDialogShow" position="bottom" :style="{ height: '50%' }" class="dialogCart">
+      <van-popup v-model="cartDialogShow" position="bottom" :style="{ height: '50%' }" :close-on-click-overlay="true" class="dialogCart">
         <div class="divCartTitle">
           <div class="title">购物车</div>
           <div class="clear" @click="clearCart">
             <i class="el-icon-delete"></i> 清空
+          </div>
+          <div class="cart-close-btn" @click="cartDialogShow = false">
+            <img src="./images/close.png" style="width:18px;height:18px;"/>
           </div>
         </div>
         <div class="divCartContent">
@@ -242,6 +245,7 @@
       <!-- ====== 菜品详情弹窗 ====== -->
       <van-dialog v-model="detailsDialog.show"
         :show-confirm-button="false"
+        :close-on-click-overlay="true"
         class="detailsDialog"
         ref="detailsDialog"
       >
@@ -277,6 +281,7 @@
       <!-- ====== 套餐详情弹窗 ====== -->
       <van-dialog v-model="setMealDialog.show"
         :show-confirm-button="false"
+        :close-on-click-overlay="true"
         class="setMealDetailsDialog"
         ref="setMealDetailsDialogd"
       >
@@ -578,12 +583,16 @@
                 panel.addEventListener('scroll', this.onDishPanelScroll, { passive: true })
               }
             })
+            // 修改点：注册 ESC 键监听，支持关闭所有弹窗
+            document.addEventListener('keydown', this._handleEscKey)
           },
           beforeDestroy(){
             const panel = this.$refs.dishPanel
             if(panel){
               panel.removeEventListener('scroll', this.onDishPanelScroll)
             }
+            // 修改点：移除 ESC 键监听
+            document.removeEventListener('keydown', this._handleEscKey)
           },
           methods:{
             // 修改点：将common.js的全局函数imgPath注册为Vue实例方法，Vue模板中无法访问全局函数
@@ -832,6 +841,26 @@
             // 修改点：返回上一页（顶部导航使用）
             goBack(){
               history.go(-1)
+            },
+            // 修改点：ESC 键全局监听，按优先级依次关闭打开的弹窗/浮层
+            _handleEscKey(e){
+              if(e.key !== 'Escape' && e.key !== 'Esc') return
+              // 优先级：有表单输入时不处理，避免干扰用户输入
+              if(document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')){
+                return
+              }
+              // 按优先级关闭弹窗：搜索浮层 > 口味弹窗 > 详情弹窗 > 套餐弹窗 > 购物车
+              if(this.searchShow){
+                this.closeSearch()
+              }else if(this.dialogFlavor.show){
+                this.dialogFlavor.show = false
+              }else if(this.detailsDialog.show){
+                this.detailsDialog.show = false
+              }else if(this.setMealDialog.show){
+                this.setMealDialog.show = false
+              }else if(this.cartDialogShow){
+                this.cartDialogShow = false
+              }
             },
             //初始化数据
             initData(){

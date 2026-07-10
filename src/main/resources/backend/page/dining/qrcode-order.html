@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>扫码点餐 - 瑞吉外卖</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f5f7fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding-bottom: 70px; }
+    .header { background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: #fff; padding: 20px; text-align: center; }
+    .header .store-name { font-size: 18px; font-weight: 600; }
+    .header .table-info { font-size: 13px; opacity: 0.9; margin-top: 4px; }
+    .category-tabs { display: flex; gap: 0; background: #fff; border-bottom: 1px solid #ebeef5; overflow-x: auto; position: sticky; top: 0; z-index: 10; }
+    .category-tab { padding: 12px 20px; cursor: pointer; white-space: nowrap; font-size: 14px; color: #606266; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .category-tab.active { color: #ff6b35; border-bottom-color: #ff6b35; font-weight: 600; }
+    .dish-list { padding: 8px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .dish-card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s; }
+    .dish-card:active { transform: scale(0.98); }
+    .dish-card.sold-out { opacity: 0.6; }
+    .dish-img { width: 100%; height: 120px; object-fit: cover; display: block; background: #f5f7fa; }
+    .dish-info { padding: 8px 10px; }
+    .dish-name { font-size: 14px; font-weight: 600; color: #303133; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dish-price { font-size: 16px; font-weight: 700; color: #ff6b35; margin-top: 4px; }
+    .dish-price::before { content: '￥'; font-size: 12px; }
+    .sold-out-tag { position: relative; }
+    .sold-out-tag::after { content: '售罄'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); font-size: 20px; color: #f56c6c; font-weight: 700; border: 2px solid #f56c6c; padding: 2px 8px; border-radius: 4px; }
+    /* 购物车栏 */
+    .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #ebeef5; padding: 10px 16px; display: flex; align-items: center; gap: 12px; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.06); }
+    .cart-icon { width: 44px; height: 44px; border-radius: 50%; background: #ff6b35; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; position: relative; }
+    .cart-badge { position: absolute; top: -4px; right: -4px; background: #f56c6c; color: #fff; font-size: 11px; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+    .cart-info { flex: 1; }
+    .cart-total { font-size: 18px; font-weight: 700; color: #303133; }
+    .cart-total::before { content: '￥'; font-size: 12px; }
+    .cart-hint { font-size: 12px; color: #909399; }
+    .cart-btn { background: #ff6b35; color: #fff; border: none; padding: 10px 24px; border-radius: 20px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .cart-btn:disabled { background: #ccc; cursor: not-allowed; }
+    /* 购物车弹窗 */
+    .cart-dialog .el-dialog { border-radius: 12px; }
+    .cart-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f5f5f5; }
+    .cart-item-name { flex: 1; font-size: 14px; }
+    .cart-item-price { color: #ff6b35; font-weight: 600; margin-right: 12px; }
+    .qty-control { display: flex; align-items: center; gap: 8px; }
+    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #dcdfe6; background: #fff; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+    .qty-btn:disabled { color: #c0c4cc; cursor: not-allowed; }
+    .qty-num { font-size: 14px; min-width: 20px; text-align: center; }
+    /* 提交订单弹窗 */
+    .submit-dialog .el-dialog { border-radius: 12px; }
+    .empty-cart { text-align: center; padding: 40px; color: #c0c4cc; }
+  </style>
+</head>
+<body>
+  <div id="dine-app">
+    <!-- 页头 -->
+    <div class="header" v-if="tableInfo">
+      <div class="store-name">{{ storeInfo.name || '瑞吉外卖' }}</div>
+      <div class="table-info">🪑 {{ tableInfo.name }} · 可坐{{ tableInfo.seatCount }}人</div>
+    </div>
+
+    <!-- 加载中 -->
+    <div v-if="loading" style="text-align:center;padding:60px 0;color:#c0c4cc;">
+      <div>加载中...</div>
+    </div>
+
+    <!-- 分类Tab -->
+    <div class="category-tabs" v-if="!loading">
+      <div class="category-tab" :class="{active: activeCategory === 0}" @click="switchCategory(0)">全部</div>
+      <div class="category-tab" v-for="cat in categories" :key="cat.id" :class="{active: activeCategory === cat.id}" @click="switchCategory(cat.id)">
+        {{ cat.name }}
+      </div>
+    </div>
+
+    <!-- 菜品列表 -->
+    <div class="dish-list" v-if="!loading">
+      <div class="dish-card" v-for="dish in filteredDishes" :key="dish.id" :class="{'sold-out': dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)}" @click="addToCart(dish)">
+        <div style="position:relative;">
+          <img :src="getImage(dish.image)" class="dish-img" />
+          <div v-if="dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)" class="sold-out-tag"></div>
+        </div>
+        <div class="dish-info">
+          <div class="dish-name">{{ dish.name }}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+            <div class="dish-price">{{ (dish.price / 100).toFixed(2) }}</div>
+            <div style="font-size:11px;color:#909399;" v-if="dish.stockQty != null">库存{{ dish.stockQty }}</div>
+          </div>
+        </div>
+      </div>
+      <div v-if="filteredDishes.length === 0" class="empty-cart" style="grid-column:1/-1;">
+        暂无菜品
+      </div>
+    </div>
+
+    <!-- 购物车栏 -->
+    <div class="cart-bar" v-if="!loading && cartTotal > 0">
+      <div class="cart-icon" @click="showCartDialog">
+        🛒
+        <div class="cart-badge" v-if="cartTotal > 0">{{ cartTotal }}</div>
+      </div>
+      <div class="cart-info">
+        <div class="cart-total">{{ cartAmount.toFixed(2) }}</div>
+        <div class="cart-hint">另需配送费</div>
+      </div>
+      <button class="cart-btn" @click="submitOrder" :disabled="cartTotal === 0">去结算</button>
+    </div>
+
+    <!-- 购物车弹窗 -->
+    <el-dialog title="购物车" :visible.sync="cartDialog.visible" width="90%" max-width="420px" class="cart-dialog" :show-close="true">
+      <div v-if="cart.length === 0" class="empty-cart">购物车是空的</div>
+      <div v-for="item in cart" :key="item.dishId" class="cart-item">
+        <div class="cart-item-name">{{ item.name }}</div>
+        <div class="cart-item-price">￥{{ (item.price / 100).toFixed(2) }}</div>
+        <div class="qty-control">
+          <button class="qty-btn" @click="changeQty(item, -1)" :disabled="item.qty <= 1">-</button>
+          <span class="qty-num">{{ item.qty }}</span>
+          <button class="qty-btn" @click="changeQty(item, 1)">+</button>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- 提交订单弹窗 -->
+    <el-dialog title="确认订单" :visible.sync="submitDialog.visible" width="90%" max-width="420px" class="submit-dialog">
+      <div style="padding: 10px 0;">
+        <div style="font-size:14px;color:#606266;margin-bottom:12px;">
+          桌台：<strong>{{ tableInfo?.name }}</strong> · 共 <strong>{{ cartTotal }}</strong> 件商品
+        </div>
+        <div style="font-size:20px;font-weight:700;color:#ff6b35;margin-bottom:16px;">
+          合计：￥{{ cartAmount.toFixed(2) }}
+        </div>
+        <div class="form-group">
+          <label style="font-size:13px;color:#606266;display:block;margin-bottom:4px;">联系人</label>
+          <input v-model="submitForm.contactName" placeholder="请输入联系人姓名" style="width:100%;padding:8px 12px;border:1px solid #dcdfe6;border-radius:4px;font-size:14px;" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:13px;color:#606266;display:block;margin-bottom:4px;">手机号</label>
+          <input v-model="submitForm.contactPhone" placeholder="请输入手机号" type="tel" maxlength="11" style="width:100%;padding:8px 12px;border:1px solid #dcdfe6;border-radius:4px;font-size:14px;" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:13px;color:#606266;display:block;margin-bottom:4px;">备注</label>
+          <textarea v-model="submitForm.remark" placeholder="如有特殊需求请备注" rows="2" style="width:100%;padding:8px 12px;border:1px solid #dcdfe6;border-radius:4px;font-size:14px;resize:vertical;"></textarea>
+        </div>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="submitDialog.visible = false">取消</el-button>
+        <el-button type="primary" @click="confirmSubmit" :loading="submitting">提交订单</el-button>
+      </span>
+    </el-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../api/food.js"></script>
+  <script src="../../api/order.js"></script>
+  <script>
+    new Vue({
+      el: '#dine-app',
+      data() {
+        return {
+          tableId: null,
+          tableInfo: null,
+          storeInfo: null,
+          dishes: [],
+          categories: [],
+          activeCategory: 0,
+          loading: true,
+          cart: [],
+          cartDialog: { visible: false },
+          submitDialog: { visible: false },
+          submitForm: { contactName: '', contactPhone: '', remark: '' },
+          submitting: false
+        }
+      },
+      computed: {
+        filteredDishes() {
+          if (this.activeCategory === 0) return this.dishes
+          return this.dishes.filter(d => d.categoryId === this.activeCategory)
+        },
+        cartTotal() {
+          return this.cart.reduce((sum, item) => sum + item.qty, 0)
+        },
+        cartAmount() {
+          return this.cart.reduce((sum, item) => sum + (item.price / 100) * item.qty, 0)
+        }
+      },
+      created() {
+        // 从URL参数获取桌台ID
+        var urlParams = new URLSearchParams(window.location.search)
+        this.tableId = urlParams.get('tableId')
+        if (this.tableId) {
+          this.loadData()
+        } else {
+          this.loading = false
+          this.$message.error('无效的桌台二维码')
+        }
+      },
+      methods: {
+        async loadData() {
+          this.loading = true
+          try {
+            // 加载菜品列表（只加载启售的）
+            var dishRes = await getDishPage({ page: 1, pageSize: 100, status: 1 })
+            if (dishRes && dishRes.code === 1) {
+              this.dishes = (dishRes.data.records || []).map(d => ({ ...d, qty: 0 }))
+            }
+            // 加载分类
+            var catRes = await getCategoryList({ type: 1 })
+            if (catRes && catRes.code === 1) {
+              this.categories = catRes.data || []
+            }
+          } catch (err) {
+            console.error('加载数据失败:', err)
+          }
+          this.loading = false
+        },
+        getImage(img) {
+          if (!img) return './../../images/noImg.png'
+          if (img.startsWith('http')) return img
+          return './../../common/download?name=' + img
+        },
+        switchCategory(catId) {
+          this.activeCategory = catId
+        },
+        addToCart(dish) {
+          if (dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)) {
+            this.$message.warning('该菜品已售罄')
+            return
+          }
+          var existing = this.cart.find(item => item.dishId === dish.id)
+          if (existing) {
+            if (existing.qty >= (dish.stockQty || 999)) {
+              this.$message.warning('库存不足')
+              return
+            }
+            existing.qty++
+          } else {
+            this.cart.push({
+              dishId: dish.id,
+              name: dish.name,
+              price: dish.price || 0,
+              image: dish.image,
+              qty: 1
+            })
+          }
+        },
+        changeQty(item, delta) {
+          item.qty += delta
+          if (item.qty <= 0) {
+            var idx = this.cart.indexOf(item)
+            if (idx >= 0) this.cart.splice(idx, 1)
+          }
+        },
+        showCartDialog() {
+          this.cartDialog.visible = true
+        },
+        submitOrder() {
+          if (this.cart.length === 0) {
+            this.$message.warning('请先选择菜品')
+            return
+          }
+          this.submitDialog.visible = true
+        },
+        async confirmSubmit() {
+          if (!this.submitForm.contactName.trim()) {
+            this.$message.warning('请输入联系人姓名')
+            return
+          }
+          if (!this.submitForm.contactPhone.trim()) {
+            this.$message.warning('请输入手机号')
+            return
+          }
+          this.submitting = true
+          try {
+            // 构建订单
+            var orders = {
+              diningType: 'DINE_IN',
+              tableId: parseInt(this.tableId),
+              payMethod: 1,
+              remark: this.submitForm.remark || '',
+              userName: this.submitForm.contactName,
+              phone: this.submitForm.contactPhone,
+              address: this.storeInfo?.name || '堂食'
+            }
+            var res = await editOrderDetail(orders)
+            if (res && res.code === 1) {
+              this.$message.success('下单成功！订单号：' + res.data?.number)
+              this.cart = []
+              this.submitDialog.visible = false
+            } else {
+              this.$message.error(res?.msg || '下单失败')
+            }
+          } catch (err) {
+            this.$message.error('下单失败：' + err)
+          }
+          this.submitting = false
+        }
+      }
+    })
+  </script>
+</body>
+</html>

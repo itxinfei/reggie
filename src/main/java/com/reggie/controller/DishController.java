@@ -39,6 +39,9 @@ import java.util.stream.Collectors;
 
 /**
  * 菜品管理
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @RestController
 @RequestMapping("/dish")
@@ -89,14 +92,16 @@ public class DishController {
      * @param page 页码
      * @param pageSize 每页数量
      * @param name 菜品名称（可选，模糊查询）
+     * @param status 售卖状态（可选，'0'=停售 ,'1'=启售）
      * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "菜品分页查询", description = "分页查询菜品列表，支持按名称模糊搜索，自动关联分类名称")
+    @Operation(summary = "菜品分页查询", description = "分页查询菜品列表，支持按名称模糊搜索和状态筛选，自动关联分类名称")
     @Parameter(name = "page", description = "页码，从1开始", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "菜品名称（可选，模糊查询）")
-    public R<Page<DishDto>> page(int page,int pageSize,String name){
+    @Parameter(name = "status", description = "售卖状态（可选，'0'=停售 ,'1'=启售）")
+    public R<Page<DishDto>> page(int page,int pageSize,String name, @RequestParam(required = false) String status){
 
         //构造分页构造器对象
         Page<Dish> pageInfo = new Page<>(page,pageSize);
@@ -106,6 +111,7 @@ public class DishController {
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         //添加过滤条件
         queryWrapper.like(name != null,Dish::getName,name);
+        queryWrapper.eq(status != null && !status.isEmpty(), Dish::getStatus, status);
         //添加排序条件
         queryWrapper.orderByDesc(Dish::getUpdateTime);
 
@@ -166,9 +172,6 @@ public class DishController {
         return R.success("修改菜品成功");
     }
 
-    /**
-     * 修改点：原Controller中for循环逐条删除无事务保护，改为调用Service层事务方法
-     */
     @DeleteMapping
     @Operation(summary = "删除菜品", description = "批量删除菜品及关联口味数据，自动校验套餐引用")
     @Parameter(name = "ids", description = "菜品ID列表，逗号分隔（如 1,2,3）", required = true)
@@ -181,6 +184,13 @@ public class DishController {
         return R.success("删除成功");
     }
 
+    /**
+     * 批量更新菜品状态
+     *
+     * @param status 状态值：1-起售，0-停售
+     * @param ids 菜品ID列表，逗号分隔（如 1,2,3）
+     * @return 操作结果
+     */
     @PostMapping("/status/{status}")
     @Operation(summary = "更新菜品状态", description = "批量更新菜品售卖状态（起售/停售）")
     @Parameter(name = "status", description = "状态值：1-起售，0-停售", required = true)
@@ -194,6 +204,12 @@ public class DishController {
         return R.success("操作成功");
     }
 
+    /**
+     * 根据条件查询菜品列表
+     *
+     * @param dish 菜品查询条件（categoryId分类ID）
+     * @return 菜品列表
+     */
     @GetMapping("/list")
     @Operation(summary = "查询菜品列表", description = "根据条件查询在售菜品数据，自动过滤停售菜品")
     @Parameter(name = "dish", description = "菜品查询条件（categoryId分类ID）")
@@ -201,7 +217,6 @@ public class DishController {
         //构造查询条件
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(dish.getCategoryId() != null ,Dish::getCategoryId,dish.getCategoryId());
-        // 修改点：支持按菜品名称模糊搜索
         queryWrapper.like(dish.getName() != null && !dish.getName().trim().isEmpty(), Dish::getName, dish.getName());
         //添加条件，查询状态为1（起售状态）的菜品
         queryWrapper.eq(Dish::getStatus, DishStatus.ENABLED.getValue());

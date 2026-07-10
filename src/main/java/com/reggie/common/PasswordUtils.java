@@ -8,6 +8,9 @@ import java.nio.charset.StandardCharsets;
 /**
  * 密码加密工具类
  * 支持 MD5（旧）和 BCrypt（新）两种加密方式
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 public class PasswordUtils {
 

@@ -25,6 +25,13 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
 import java.time.LocalDateTime;
 
+/**
+ * 优惠券模板管理控制器
+ * 提供优惠券模板的增删改查、领取等接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/member/coupon-template")
@@ -35,14 +42,18 @@ public class CouponTemplateController {
     private CouponTemplateService couponTemplateService;
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询", description = "分页查询优惠券模板列表，支持按名称搜索，自动过滤当前租户数据")
+    @Operation(summary = "分页查询", description = "分页查询优惠券模板列表，支持按名称、类型、状态筛选，自动过滤当前租户数据")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "优惠券名称（可选，模糊查询）")
-    public R<Page<CouponTemplate>> page(int page, int pageSize, String name) {
+    @Parameter(name = "type", description = "优惠券类型（可选，FULL_REDUCTION/DISCOUNT/NEW_MEMBER）")
+    @Parameter(name = "status", description = "状态（可选，0禁用 1启用）")
+    public R<Page<CouponTemplate>> page(int page, int pageSize, String name, String type, Integer status) {
         Page<CouponTemplate> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<CouponTemplate> qw = new LambdaQueryWrapper<>();
         qw.like(name != null && !name.isEmpty(), CouponTemplate::getName, name);
+        qw.eq(type != null && !type.isEmpty(), CouponTemplate::getType, type);
+        qw.eq(status != null, CouponTemplate::getStatus, status);
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId != null) {
             qw.eq(CouponTemplate::getTenantId, tenantId);

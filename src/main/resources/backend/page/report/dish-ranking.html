@@ -11,7 +11,8 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
   .search-btn { margin-left: 10px; }
-  #rankingChart { width: 100%; height: 420px; }
+  #rankingChart { width: 100%; min-height: 300px; }
+  #trendLineChart { width: 100%; }
   .rank-badge {
     display: inline-block;
     width: 22px; height: 22px;
@@ -64,7 +65,6 @@
     top: 50%;
     transform: translateY(-50%);
     font-size: 42px;
-    opacity: 0.08;
   }
 
   .stat-card .stat-label {
@@ -88,8 +88,16 @@
   .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
   .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
 
+  @media (max-width: 1400px) {
+    .stats-cards { grid-template-columns: repeat(2, 1fr); }
+  }
   @media (max-width: 768px) {
     .stats-cards { grid-template-columns: 1fr; }
+  }
+  /* 空状态样式 */
+  .chart-empty {
+    display: flex; align-items: center; justify-content: center;
+    height: 200px; color: #c0c4cc; font-size: 14px; user-select: none;
   }
   </style>
 </head>
@@ -114,6 +122,7 @@
           <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
         </el-select>
         <el-button type="primary" class="search-btn" @click="loadData">查询</el-button>
+        <el-button class="search-btn" @click="reset">重置</el-button>
         <div class="tableLab">
           <el-button type="primary" @click="handleExport">导出</el-button>
         </div>
@@ -140,7 +149,7 @@
 
       <el-card shadow="never" style="margin-bottom: 20px;">
         <div slot="header">菜品销量排行（Top {{ tableData.length }}）</div>
-        <div id="rankingChart"></div>
+        <div id="rankingChart" :style="{ height: rankingChartHeight + 'px' }"></div>
       </el-card>
 
       <!-- Top3 菜品趋势对比 -->
@@ -201,6 +210,15 @@
           resizeHandler: null
         }
       },
+      computed: {
+        // 修改点：动态图表高度，根据数据量自适应，确保各条图形比例协调
+        rankingChartHeight() {
+          const n = this.tableData.length || 0
+          if (n === 0) return 420
+          // 每项约 38px 高度 + 46px grid 边距，上下限 300~600
+          return Math.max(300, Math.min(600, n * 38 + 46))
+        }
+      },
       created() {
         const now = new Date()
         const first = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -245,6 +263,8 @@
               params.startDate = this.dateRange[0]
               params.endDate   = this.dateRange[1]
             }
+            // 修改点：分类筛选真正联调 API
+            if (this.categoryFilter) params.categoryId = this.categoryFilter
 
             // 并行加载排行数据和统计数据
             const [rankRes, statsRes] = await Promise.all([
@@ -299,15 +319,28 @@
           if (!this.tableData || this.tableData.length === 0 || !this.trendChart) return
           var top3Names = this.tableData.slice(0, 3).map(function(d) { return d.name })
           if (top3Names.length === 0) return
-          // 获取最近7天各日期的趋势
+          // 修改点：传递真实日期范围，后端改为查询真实数据库
+          var self = this
           $axios.get('/api/report/dish-trend', {
-            params: { names: top3Names.join(','), days: 7 }
+            params: {
+              names: top3Names.join(','),
+              startDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[0] : '',
+              endDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[1] : ''
+            }
           }).then(res => {
             if (res.code === 1 && res.data) this.renderTrendChart(res.data)
           }).catch(() => {})
         },
         renderTrendChart(data) {
           if (!this.trendChart) return
+          // 修改点：空数据兜底
+          if (!data || !data.dates || !data.dates.length) {
+            this.trendChart.setOption({
+              title: { text: '暂无趋势数据', left: 'center', top: 'center',
+                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+            }, true)
+            return
+          }
           var colors = ['#ff4d4f', '#5470c6', '#91cc75']
           var dates = data.dates || []
           var series = (data.series || []).map(function(s, i) {
@@ -320,8 +353,11 @@
           })
           this.trendChart.setOption({
             tooltip: { trigger: 'axis' },
-            legend: { data: (data.series || []).map(function(s) { return s.name }), bottom: 0 },
-            grid: { left: 50, right: 30, top: 10, bottom: 40 },
+            // 修改点：legend bottom 从 0 提至 4，避免被 xAxis 标签遮挡
+            legend: { data: (data.series || []).map(function(s) { return s.name }), bottom: 4,
+              textStyle: { fontSize: 12, color: '#606266' } },
+            // 修改点：grid bottom 从 40 增至 44，为 legend 预留足够空间
+            grid: { left: 50, right: 30, top: 15, bottom: 44 },
             xAxis: { type: 'category', data: dates, boundaryGap: false },
             yAxis: { type: 'value', name: '销量(份)' },
             series: series
@@ -334,10 +370,20 @@
         },
         renderChart() {
           if (!this.chart) return
+          // 修改点：空数据兜底，显示友好提示
+          if (!this.tableData || this.tableData.length === 0) {
+            this.chart.setOption({
+              title: { text: '暂无排行数据', left: 'center', top: 'center',
+                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+            }, true)
+            return
+          }
           // 水平条形图，倒序展示（最高在上）
           const names  = this.tableData.map(item => item.name).reverse()
           const counts = this.tableData.map(item => item.count).reverse()
           const maxVal = counts.length ? Math.max(...counts) : 1
+          // 修改点：根据数据量动态调整 barMaxWidth，保证条形粗细合适
+          const barWidth = names.length <= 5 ? 26 : names.length <= 10 ? 22 : 18
           this.chart.setOption({
             tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
               formatter: p => `<b>${p[0].name}</b><br/>${p[0].marker} 销量：<b>${p[0].value} 份</b>` },
@@ -348,7 +394,7 @@
               axisLabel: { color: '#606266', interval: 0, width: 110,
                 overflow: 'truncate', fontSize: 13 } },
             series: [{
-              type: 'bar', data: counts, barMaxWidth: 32,
+              type: 'bar', data: counts, barMaxWidth: barWidth,
               itemStyle: {
                 borderRadius: [0, 6, 6, 0],
                 color(params) {
@@ -362,6 +408,18 @@
                 formatter: p => p.value + ' 份' }
             }]
           }, true)
+          // 修改点：DOM 高度更新后触发 chart resize
+          this.$nextTick(() => {
+            if (this.chart) this.chart.resize()
+          })
+        },
+        reset() {
+          this.dateRange = []
+          this.limit = 10
+          this.categoryFilter = null
+          this.tableData = []
+          if (this.chart) this.chart.clear()
+          if (this.trendChart) this.trendChart.clear()
         },
         handleExport() {
           if (!this.dateRange || this.dateRange.length < 2) {

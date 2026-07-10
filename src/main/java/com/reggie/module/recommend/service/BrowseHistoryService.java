@@ -7,7 +7,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 浏览历史服务
+ * 浏览历史服务接口
+ * 记录和分析用户菜品浏览行为
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 public interface BrowseHistoryService extends IService<BrowseHistory> {
 

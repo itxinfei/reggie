@@ -34,6 +34,14 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     }
 
+    /* 修改点：stats-card 可点击筛选 */
+    .stat-card.clickable { cursor: pointer; user-select: none; }
+    .stat-card.active {
+      border-color: #409eff;
+      box-shadow: 0 0 0 2px rgba(64,158,255,0.3);
+      transform: translateY(-3px);
+    }
+
     .stat-card::before {
       content: '';
       position: absolute;
@@ -50,7 +58,6 @@
       top: 50%;
       transform: translateY(-50%);
       font-size: 42px;
-      opacity: 0.08;
     }
 
     .stat-card .stat-label {
@@ -88,18 +95,19 @@
   <div class="dashboard-container" id="user-app">
     <div class="container">
       <!-- ========== 数据统计卡片 ========== -->
+      <!-- 修改点：卡片可点击筛选，点击后自动设置状态筛选项并查询 -->
       <div class="stats-cards">
-        <div class="stat-card primary">
+        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterByStatus('')">
           <div class="stat-icon">👥</div>
           <div class="stat-label">用户总数</div>
           <div class="stat-value">{{ stats.totalUsers || 0 }}</div>
         </div>
-        <div class="stat-card success">
+        <div class="stat-card success clickable" :class="{ active: activeFilter === 1 }" @click="filterByStatus(1)">
           <div class="stat-icon">✅</div>
           <div class="stat-label">正常用户</div>
           <div class="stat-value">{{ stats.activeUsers || 0 }}</div>
         </div>
-        <div class="stat-card warning">
+        <div class="stat-card warning clickable" :class="{ active: activeFilter === 0 }" @click="filterByStatus(0)">
           <div class="stat-icon">🚫</div>
           <div class="stat-label">已禁用</div>
           <div class="stat-value">{{ stats.disabledUsers || 0 }}</div>
@@ -139,6 +147,7 @@
           <el-option label="禁用" :value="0"></el-option>
         </el-select>
         <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
+        <el-button style="margin-left: 10px" @click="reset">重置</el-button>
       </div>
       <el-table
         v-loading="loading"
@@ -262,6 +271,8 @@
             disabledUsers: 0,
             newUsersThisMonth: 0
           },
+          // 修改点：当前激活的筛选器值，对应 stats-card
+          activeFilter: '',
           // 状态切换对话框
           statusDialog: {
             visible: false,
@@ -322,34 +333,30 @@
         },
 
         // 加载用户统计数据
+        // 修改点：/user/stats 接口不存在，改用 /user/page 获取全量数据后前端计算
         async loadUserStats() {
           try {
-            // 获取所有用户
-            const res = await $axios.get('/user/page', {
-              params: { page: 1, pageSize: 1000 }
-            })
-
+            const res = await $axios.get('/user/page', { params: { page: 1, pageSize: 1000 } })
             if (String(res.code) === '1') {
               const records = res.data.records || []
               const total = res.data.total || 0
+              // 后端 User.status 为 Integer，JSON 序列化为数字 1/0
               const activeCount = records.filter(item => item.status === 1).length
               const disabledCount = records.filter(item => item.status === 0).length
-
-              // 计算本月新增（修改点：字段名修正为createTime）
+              // 本月新增
               const now = new Date()
-              const thisMonth = records.filter(u => {
-                if (!u.createTime) return false
-                const created = new Date(u.createTime)
+              const newThisMonth = records.filter(function(m) {
+                if (!m.createTime) return false
+                const created = new Date(m.createTime)
                 return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear()
               }).length
-
               return {
                 code: 1,
                 data: {
                   totalUsers: total,
                   activeUsers: activeCount,
                   disabledUsers: disabledCount,
-                  newUsersThisMonth: thisMonth
+                  newUsersThisMonth: newThisMonth
                 }
               }
             }
@@ -359,10 +366,37 @@
           return { code: 0 }
         },
 
-        // 查询
+          // 查询
         handleQuery() {
+          // 修改点：搜索时清空卡片筛选状态并复位状态下拉
+          this.activeFilter = ''
+          this.input.status = null
           this.page = 1;
           this.init();
+        },
+        // 重置搜索条件，恢复表格初始状态
+        reset() {
+          this.input.name = ''
+          this.input.phone = ''
+          this.input.status = null
+          this.activeFilter = ''
+          this.page = 1
+          this.init()
+        },
+        // 修改点：stats-card 点击切换筛选状态（同步修改 search 区域的 status 下拉框，清空其他搜索）
+        filterByStatus(status) {
+          if (this.activeFilter === status) {
+            this.activeFilter = ''
+            this.input.status = null
+          } else {
+            this.activeFilter = status
+            this.input.status = status
+          }
+          // 修改点：卡片筛选时清空姓名/手机搜索条件
+          this.input.name = ''
+          this.input.phone = ''
+          this.page = 1
+          this.init()
         },
 
         // 状态切换（禁用/启用）

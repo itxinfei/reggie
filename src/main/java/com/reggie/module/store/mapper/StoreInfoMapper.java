@@ -9,7 +9,10 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * 门店信息Mapper
+ * 门店信息 Mapper
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Mapper
 public interface StoreInfoMapper extends BaseMapper<StoreInfo> {

@@ -43,8 +43,11 @@
                 </div>
 
                 <!-- 送达时间选择弹窗 -->
-                <van-popup v-model="showTimePicker" position="bottom" :style="{ height: '40%' }" class="time-picker-popup">
-                    <div class="time-picker-title">选择送达时间</div>
+                <van-popup v-model="showTimePicker" position="bottom" :style="{ height: '40%' }" :close-on-click-overlay="true" class="time-picker-popup">
+                    <div class="time-picker-title">
+                        <span>选择送达时间</span>
+                        <span class="time-picker-close" @click="showTimePicker = false">✕</span>
+                    </div>
                     <div class="time-picker-list">
                         <div
                             v-for="(t, idx) in timeOptions"

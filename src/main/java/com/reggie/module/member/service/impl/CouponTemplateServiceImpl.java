@@ -15,9 +15,16 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * 优惠券模板服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper, CouponTemplate> implements CouponTemplateService {
 
+    /** 用户优惠券服务 */
     @Autowired
     private CouponUserService couponUserService;
 

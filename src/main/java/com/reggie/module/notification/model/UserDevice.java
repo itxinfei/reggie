@@ -10,12 +10,16 @@ import java.time.LocalDateTime;
 /**
  * 用户设备实体
  * APP推送需要设备Token，支持Android/iOS/H5多端
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("user_device")
 public class UserDevice implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    /** 主键ID */
     private Long id;
 
     /** 用户ID */

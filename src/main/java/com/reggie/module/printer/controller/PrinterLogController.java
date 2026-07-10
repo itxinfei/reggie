@@ -19,6 +19,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+/**
+ * 打印机日志管理控制器
+ * 提供打印日志的分页查询接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/printer/log")

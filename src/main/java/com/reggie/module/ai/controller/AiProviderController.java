@@ -20,7 +20,7 @@ import java.util.Map;
  * 管理员可在此配置/切换不同的大模型供应商
  *
  * @author reggie
- * @since 2026-07-10
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
@@ -60,10 +60,22 @@ public class AiProviderController {
     @PostMapping("/add")
     @Operation(summary = "添加供应商", description = "新增AI供应商配置")
     public R<String> add(@RequestBody AiProviderConfig config) {
+        String validation = validateProviderConfig(config);
+        if (validation != null) {
+            return R.error(validation);
+        }
         config.setId(null);
         config.setIsActive(false);
         config.setIsDeleted(0);
+        if (config.getTimeout() == null) config.setTimeout(60);
+        if (config.getMaxTokens() == null) config.setMaxTokens(2048);
+        if (config.getTemperature() == null) config.setTemperature(0.7);
+        if (config.getApiFormat() == null || config.getApiFormat().isEmpty()) {
+            config.setApiFormat("openai_compatible");
+        }
+        if (config.getEnabled() == null) config.setEnabled(false);
         providerConfigService.save(config);
+        log.info("新增AI供应商: code={}, name={}", config.getProviderCode(), config.getProviderName());
         return R.success("添加成功");
     }
 
@@ -73,12 +85,25 @@ public class AiProviderController {
         if (config.getId() == null) {
             return R.error("ID不能为空");
         }
+        String validation = validateProviderConfig(config);
+        if (validation != null) {
+            return R.error(validation);
+        }
         // 不允许通过更新修改 isActive，需通过 activate 接口
         AiProviderConfig existing = providerConfigService.getById(config.getId());
-        if (existing != null) {
-            config.setIsActive(existing.getIsActive());
+        if (existing == null) {
+            return R.error("供应商配置不存在");
+        }
+        config.setIsActive(existing.getIsActive());
+        if (config.getApiKey() == null || config.getApiKey().trim().isEmpty()) {
+            config.setApiKey(existing.getApiKey());
         }
         providerConfigService.updateById(config);
+
+        if (Boolean.TRUE.equals(existing.getIsActive())) {
+            aiProviderManager.reloadConfig();
+            log.info("已更新激活的供应商配置并刷新缓存: code={}", existing.getProviderCode());
+        }
         return R.success("更新成功");
     }
 
@@ -86,7 +111,7 @@ public class AiProviderController {
     @Operation(summary = "删除供应商", description = "软删除AI供应商配置")
     public R<String> delete(@PathVariable Long id) {
         AiProviderConfig config = providerConfigService.getById(id);
-        if (config != null && config.getIsActive()) {
+        if (config != null && Boolean.TRUE.equals(config.getIsActive())) {
             return R.error("不能删除当前激活的供应商，请先切换其他供应商");
         }
         providerConfigService.removeById(id);
@@ -96,14 +121,33 @@ public class AiProviderController {
     @PostMapping("/activate/{id}")
     @Operation(summary = "切换供应商", description = "激活指定供应商（切换后AI将使用该供应商）")
     public R<String> activate(@PathVariable Long id) {
+        AiProviderConfig target = providerConfigService.getById(id);
+        if (target == null) {
+            return R.error("供应商配置不存在");
+        }
+        String validation = validateProviderConfig(target);
+        if (validation != null) {
+            return R.error("供应商配置不完整，无法激活：" + validation);
+        }
+
         boolean success = providerConfigService.activateProvider(id);
         if (success) {
             // 通知 ProviderManager 重新从数据库加载配置
             aiProviderManager.reloadConfig();
-            log.info("供应商已切换，ID={}", id);
-            return R.success("切换成功，AI将使用新的供应商");
+            log.info("供应商已切换，ID={}, code={}", id, target.getProviderCode());
+            return R.success("切换成功，AI将使用「" + target.getProviderName() + "」");
         }
         return R.error("切换失败");
+    }
+
+    @GetMapping("/get/{id}")
+    @Operation(summary = "获取单个供应商", description = "获取指定供应商的完整配置（含API密钥，仅供编辑使用）")
+    public R<AiProviderConfig> getDetail(@PathVariable Long id) {
+        AiProviderConfig config = providerConfigService.getById(id);
+        if (config == null) {
+            return R.error("供应商配置不存在");
+        }
+        return R.success(config);
     }
 
     @GetMapping("/test/{id}")
@@ -130,6 +174,25 @@ public class AiProviderController {
             providerConfigService.save(preset);
         }
         return R.success("已初始化 " + presets.size() + " 个预设供应商，请在后台配置API密钥后启用");
+    }
+
+    /**
+     * 校验供应商配置完整性
+     */
+    private String validateProviderConfig(AiProviderConfig config) {
+        if (config.getProviderCode() == null || config.getProviderCode().trim().isEmpty()) {
+            return "供应商编码不能为空";
+        }
+        if (config.getProviderName() == null || config.getProviderName().trim().isEmpty()) {
+            return "供应商名称不能为空";
+        }
+        if (config.getBaseUrl() == null || config.getBaseUrl().trim().isEmpty()) {
+            return "API基础URL不能为空";
+        }
+        if (config.getModelName() == null || config.getModelName().trim().isEmpty()) {
+            return "模型名称不能为空";
+        }
+        return null;
     }
 
     /**
@@ -265,6 +328,22 @@ public class AiProviderController {
         zhinv.setSort(8);
         zhinv.setRemark("360智脑");
         list.add(zhinv);
+
+        // 9. Anthropic Claude
+        AiProviderConfig claude = new AiProviderConfig();
+        claude.setProviderCode("anthropic");
+        claude.setProviderName("Anthropic Claude");
+        claude.setBaseUrl("https://api.anthropic.com/v1");
+        claude.setModelName("claude-sonnet-4-20250514");
+        claude.setApiFormat("anthropic");
+        claude.setTimeout(60);
+        claude.setMaxTokens(4096);
+        claude.setTemperature(0.7);
+        claude.setEnabled(true);
+        claude.setIsActive(false);
+        claude.setSort(9);
+        claude.setRemark("Anthropic Claude Sonnet 4，支持200K上下文，需海外API Key");
+        list.add(claude);
 
         return list;
     }

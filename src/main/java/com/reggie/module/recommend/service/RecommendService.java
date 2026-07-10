@@ -5,8 +5,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 智能推荐服务
+ * 智能推荐服务接口
  * 基于协同过滤、内容推荐、热门排行等多算法融合的菜品推荐引擎
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 public interface RecommendService {
 
@@ -80,7 +83,7 @@ public interface RecommendService {
     void refreshCache(Long userId);
 
     /**
-     * 修改点：计算推荐引擎真实统计数据
+     * 计算推荐引擎真实统计数据
      * 从数据库实时计算：覆盖率、点击率、转化率、推荐贡献GMV等
      *
      * @return 统计数据Map

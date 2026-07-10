@@ -34,21 +34,34 @@ import java.util.Map;
  *   <li>reggie.image.download-timeout: 下载超时时间（默认 10000ms）</li>
  * </ul>
  *
- * @author itxinfei
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Component
 public class TestImageGenerator implements CommandLineRunner {
 
+    /**
+     * 配置文件中的上传路径
+     */
     @Value("${reggie.path:}")
     private String configPath;
 
+    /**
+     * 是否下载真实图片（默认true）
+     */
     @Value("${reggie.image.download-real-images:true}")
     private boolean downloadRealImages;
 
+    /**
+     * 下载超时时间（毫秒，默认10000ms）
+     */
     @Value("${reggie.image.download-timeout:10000}")
     private int downloadTimeout;
 
+    /**
+     * Spring环境上下文，用于判断当前激活的环境配置
+     */
     private final Environment environment;
 
     // 构造函数注入 Environment
@@ -56,12 +69,19 @@ public class TestImageGenerator implements CommandLineRunner {
         this.environment = environment;
     }
 
+    /**
+     * 基础路径，用于存储生成的图片文件
+     */
     private String basePath;
 
-    // 菜品名称和对应颜色（降级方案）
+    /**
+     * 菜品名称和对应颜色（降级方案）
+     */
     private static final Map<String, Color> DISH_COLORS = new HashMap<>();
 
-    // 真实图片 URL（使用免费图库）
+    /**
+     * 真实图片URL（使用免费图库）
+     */
     private static final Map<String, String> DISH_IMAGE_URLS = new HashMap<>();
 
     static {
@@ -135,7 +155,9 @@ public class TestImageGenerator implements CommandLineRunner {
         DISH_COLORS.put("laocuhuasheng", new Color(140, 100, 60));
     }
 
-    // 菜品中文名
+    /**
+     * 菜品中文名映射
+     */
     private static final Map<String, String> DISH_NAMES = new HashMap<>();
 
     static {
@@ -166,6 +188,12 @@ public class TestImageGenerator implements CommandLineRunner {
      */
     private static final int MIN_VALID_IMAGE_SIZE = 1024; // 1KB
 
+    /**
+     * 应用启动时执行，自动下载或生成测试菜品图片
+     *
+     * @param args 命令行参数
+     * @throws Exception 启动异常
+     */
     @Override
     public void run(String... args) throws Exception {
         // 检查是否为开发环境

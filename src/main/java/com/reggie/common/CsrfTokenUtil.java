@@ -10,7 +10,8 @@ import lombok.extern.slf4j.Slf4j;
  * CSRF Token 生成器
  * 不依赖 Spring Security，轻量级实现
  *
- * @author itxinfei
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 public class CsrfTokenUtil {

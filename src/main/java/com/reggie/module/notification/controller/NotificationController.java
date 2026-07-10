@@ -15,10 +15,11 @@ import javax.annotation.Resource;
 import java.util.*;
 
 /**
- * 消息通知管理Controller
+ * 消息通知管理控制器
  * 提供通知模板管理、消息发送、发送记录查询等接口
  *
- * @author Reggie Team
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
@@ -116,15 +117,14 @@ public class NotificationController {
      * 请求体: { "bizType": "ORDER_NOTICE", "channel": 1, "targets": ["13800138000"],
      *          "params": { "userName": "张三", "orderNo": "NO123" },
      *          "sendTime": "2026-07-10T09:00:00" }
-     * 修改点：支持sendTime定时发送；修复channel=3(SMS+推送)同时发送两种渠道
      */
     @PostMapping("/send")
     public R<NotificationRecord> sendNotification(@RequestBody Map<String, Object> body) {
         String bizType = (String) body.get("bizType");
         Integer channel = (Integer) body.getOrDefault("channel", 1);
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
         List<String> targets = (List<String>) body.get("targets");
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
         Map<String, String> params = (Map<String, String>) body.get("params");
         String sendTimeStr = (String) body.get("sendTime");
 
@@ -132,7 +132,6 @@ public class NotificationController {
             return R.error("业务类型和目标用户不能为空");
         }
 
-        // 修改点：解析定时发送时间
         java.time.LocalDateTime sendTime = null;
         if (sendTimeStr != null && !sendTimeStr.isEmpty()) {
             try {
@@ -142,7 +141,6 @@ public class NotificationController {
             }
         }
 
-        // 修改点：定时发送→查找模板后走batchSend；立即发送→走sendByBizType
         if (sendTime != null && sendTime.isAfter(java.time.LocalDateTime.now())) {
             // 查找匹配的启用模板获取templateId
             LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
@@ -173,9 +171,9 @@ public class NotificationController {
         Long templateId = Long.valueOf(body.get("templateId").toString());
         Integer channel = (Integer) body.getOrDefault("channel", 1);
         Integer targetType = (Integer) body.getOrDefault("targetType", 1);
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
         List<String> targets = (List<String>) body.get("targets");
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
         Map<String, String> params = (Map<String, String>) body.get("params");
         String sendTimeStr = (String) body.get("sendTime");
 
@@ -190,7 +188,7 @@ public class NotificationController {
     }
 
     /**
-     * 修改点：向全部用户发送通知
+     * 向全部用户发送通知
      * 自动查询所有状态正常用户，按渠道发送并同步写入消息中心
      * 请求体: { "bizType": "PROMOTION", "channel": 1, "params": { "userName": "用户" } }
      */
@@ -198,7 +196,7 @@ public class NotificationController {
     public R<NotificationRecord> sendToAllUsers(@RequestBody Map<String, Object> body) {
         String bizType = (String) body.get("bizType");
         Integer channel = (Integer) body.getOrDefault("channel", 1);
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
         Map<String, String> params = (Map<String, String>) body.get("params");
 
         if (bizType == null) {
@@ -283,7 +281,7 @@ public class NotificationController {
         return map;
     }
 
-    // ==================== 修改点：简易消息发送 ====================
+    // ==================== 简易消息发送 ====================
 
     /**
      * 简易消息发送（无需模板，直接输入内容发送）
@@ -292,7 +290,7 @@ public class NotificationController {
     @PostMapping("/send-simple")
     public R<NotificationRecord> sendSimpleMessage(@RequestBody Map<String, Object> body) {
         Integer channel = (Integer) body.getOrDefault("channel", 1);
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
         List<String> targets = (List<String>) body.get("targets");
         String content = (String) body.get("content");
         String title = (String) body.get("title");

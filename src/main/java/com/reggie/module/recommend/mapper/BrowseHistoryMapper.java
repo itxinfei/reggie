@@ -10,7 +10,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 用户浏览历史Mapper
+ * 用户浏览历史 Mapper
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Mapper
 public interface BrowseHistoryMapper extends BaseMapper<BrowseHistory> {

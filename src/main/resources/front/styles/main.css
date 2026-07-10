@@ -734,10 +734,12 @@
 /* ================================================================
    口味选择弹窗
    ================================================================ */
+/* 修改点：移除 overflow:hidden，避免裁剪定位在弹窗外部的关闭按钮 */
+/* Vant van-dialog 默认 overflow:hidden，需用 !important 覆盖以确保关闭按钮可见 */
 #main .dialogFlavor {
   background: #fff;
   border-radius: 16rem;
-  overflow: hidden;
+  overflow: visible !important;
 }
 
 #main .dialogFlavor .dialogTitle {
@@ -824,16 +826,30 @@
   transform: scale(0.95);
 }
 
+/* 修改点：关闭按钮从弹窗下方移到弹窗内部右上角，避免被 overflow:hidden 裁剪 */
 #main .dialogFlavor .divFlavorClose {
   position: absolute;
-  bottom: -60rem;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 8rem;
+  right: 8rem;
+  width: 32rem;
+  height: 32rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.05);
+  transition: background 0.2s;
+}
+
+#main .dialogFlavor .divFlavorClose:active {
+  background: rgba(0,0,0,0.12);
 }
 
 #main .dialogFlavor .divFlavorClose img {
-  width: 36rem;
-  height: 36rem;
+  width: 18rem;
+  height: 18rem;
 }
 
 /* ================================================================
@@ -869,6 +885,15 @@
   color: #999;
   font-size: 14rem;
   cursor: pointer;
+}
+
+#main .dialogCart .divCartTitle .cart-close-btn {
+  cursor: pointer;
+  padding: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
 }
 
 #main .dialogCart .divCartContent {
@@ -962,10 +987,12 @@
 /* ================================================================
    菜品详情弹窗
    ================================================================ */
+/* 修改点：添加 overflow: visible !important 覆盖 Vant van-dialog 默认 overflow:hidden */
 #main .detailsDialog {
   display: flex;
   flex-direction: column;
   text-align: center;
+  overflow: visible !important;
 }
 
 #main .detailsDialog .divContainer {
@@ -1066,25 +1093,41 @@
   transform: scale(0.82);
 }
 
+/* 修改点：修复关闭按钮位置，避免被 van-dialog overflow:hidden 裁剪 */
 #main .detailsDialog .detailsDialogClose {
   position: absolute;
-  bottom: -55rem;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 8rem;
+  right: 8rem;
+  width: 32rem;
+  height: 32rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.05);
+  transition: background 0.2s;
+}
+
+#main .detailsDialog .detailsDialogClose:active {
+  background: rgba(0,0,0,0.12);
 }
 
 #main .detailsDialog .detailsDialogClose img {
-  width: 36rem;
-  height: 36rem;
+  width: 18rem;
+  height: 18rem;
 }
 
 /* ================================================================
    套餐详情弹窗
    ================================================================ */
+/* 修改点：添加 overflow: visible !important 覆盖 Vant van-dialog 默认 overflow:hidden */
 #main .setMealDetailsDialog {
   display: flex;
   flex-direction: column;
   text-align: center;
+  overflow: visible !important;
 }
 
 #main .setMealDetailsDialog .divContainer {

@@ -8,8 +8,11 @@ import lombok.Getter;
 @Getter
 public enum QueueRecordStatus {
 
+    /** 等待中 */
     WAITING("WAITING", "等待中"),
+    /** 已叫号 */
     CALLED("CALLED", "已叫号"),
+    /** 已取消 */
     CANCELLED("CANCELLED", "已取消");
 
     private final String value;

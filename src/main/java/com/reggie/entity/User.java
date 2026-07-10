@@ -25,32 +25,31 @@ public class User implements Serializable {
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    //姓名 - 新增/修改时需要验证，发送短信时不需要
-    // 修改点：移除@NotBlank，手机号登录创建的用户初始无姓名，允许为null
+    /** 姓名 */
     @Size(max = 50, message = "姓名不能超过50位")
     private String name;
 
-    //手机号
+    /** 手机号 */
     @NotBlank(message = "手机号不能为空")
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     @Size(max = 20, message = "手机号不能超过20个字符")
     private String phone;
 
-    //性别 0 女 1 男
+    /** 性别 0 女 1 男 */
     private String sex;
 
-    //身份证号
+    /** 身份证号 */
     @Size(max = 18, message = "身份证号不能超过18位")
     private String idNumber;
 
-    //头像
+    /** 头像 */
     @Size(max = 500, message = "头像地址不能超过500个字符")
     private String avatar;
 
-    //状态 0:禁用，1:正常
+    /** 状态 0:禁用，1:正常 */
     private Integer status;
 
-    // 修改点：添加createTime字段，支持今日新增用户统计
+    /** 创建时间 */
     @TableField(value = "create_time")
     private LocalDateTime createTime;
 }

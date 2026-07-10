@@ -21,24 +21,34 @@ import java.util.*;
 /**
  * 门店管理服务实现
  * 提供总部-分店模式下的门店全生命周期管理和数据隔离
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Service
 public class StoreServiceImpl implements StoreService {
 
+    /** 门店信息Mapper */
     @Autowired
     private StoreInfoMapper storeInfoMapper;
+    /** 门店日报汇总Mapper */
     @Autowired
     private StoreDailySummaryMapper summaryMapper;
+    /** 门店员工权限Mapper */
     @Autowired
     private StoreEmployeePermissionMapper permissionMapper;
 
+    /** 租户服务 */
     @Autowired
     private TenantService tenantService;
+    /** 员工服务 */
     @Autowired
     private EmployeeService employeeService;
+    /** 订单服务 */
     @Autowired
     private OrderService orderService;
+    /** 用户服务 */
     @Autowired
     private UserService userService;
 
@@ -59,14 +69,12 @@ public class StoreServiceImpl implements StoreService {
         Employee employee = new Employee();
         employee.setName(username);
         employee.setUsername(username);
-        // 修改点：密码必须BCrypt加密，与EmployeeController.save()保持一致
         employee.setPassword(PasswordUtils.encodePassword(password));
         employee.setStatus(1);
         employee.setTenantId(tenant.getId());
         // 修复：门店联系人手机号作为管理员手机号，避免employee.phone为NULL导致插入失败
         employee.setPhone(storeInfo.getContactPhone() != null
                 ? storeInfo.getContactPhone() : tenant.getPhone());
-        // 修改点：设置sex和idNumber默认值，避免NOT NULL约束异常
         employee.setSex("1");
         employee.setIdNumber("");
         employeeService.save(employee);
@@ -87,8 +95,6 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public List<Map<String, Object>> listAllStores() {
-        // 修改点：门店管理页面应始终展示所有门店，方便管理员切换和查看
-        // 不再根据当前tenantId做过滤，避免切换到分店后看不到其他门店列表
         List<StoreInfo> stores = storeInfoMapper.selectList(null);
 
         return stores.stream().map(si -> {

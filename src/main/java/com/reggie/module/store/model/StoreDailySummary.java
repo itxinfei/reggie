@@ -10,6 +10,9 @@ import java.time.LocalDateTime;
 /**
  * 门店每日经营汇总
  * 总部控制台聚合各门店经营数据的快照表
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("store_daily_summary")
@@ -17,6 +20,7 @@ public class StoreDailySummary implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    /** 主键ID */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 

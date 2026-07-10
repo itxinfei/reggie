@@ -23,18 +23,30 @@ import java.time.LocalDateTime;
 /**
  * 操作日志AOP切面
  * 自动记录Controller层的增删改操作
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Aspect
 @Component
 public class OperationLogAspect {
 
+    /** 操作日志服务 */
     @Autowired
     private OperationLogService operationLogService;
 
+    /** JSON序列化工具 */
     private static final JacksonObjectMapper OBJECT_MAPPER = new JacksonObjectMapper();
 
     // 只拦截 POST/PUT/DELETE（增删改）
+    /**
+     * 环绕通知：记录操作日志
+     *
+     * @param joinPoint 连接点
+     * @return 方法返回值
+     * @throws Throwable 异常
+     */
     @Around("@annotation(org.springframework.web.bind.annotation.PostMapping) " +
             "|| @annotation(org.springframework.web.bind.annotation.PutMapping) " +
             "|| @annotation(org.springframework.web.bind.annotation.DeleteMapping)")
@@ -70,6 +82,16 @@ public class OperationLogAspect {
         }
     }
 
+    /**
+     * 构建操作日志对象
+     *
+     * @param joinPoint 连接点
+     * @param request   HTTP请求
+     * @param success   是否成功
+     * @param errorMsg  错误信息
+     * @param duration  执行时长（毫秒）
+     * @return 操作日志对象
+     */
     private OperationLog buildOperationLog(ProceedingJoinPoint joinPoint,
                                            HttpServletRequest request,
                                            boolean success,
@@ -135,6 +157,12 @@ public class OperationLogAspect {
         }
     }
 
+    /**
+     * 获取客户端IP地址
+     *
+     * @param request HTTP请求
+     * @return 客户端IP
+     */
     private String getClientIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
         if (ip != null && ip.length() != 0 && !"unknown".equalsIgnoreCase(ip)) {

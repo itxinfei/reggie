@@ -22,24 +22,34 @@ import java.util.stream.Collectors;
 /**
  * 用户偏好分析服务实现
  * 基于订单历史和浏览记录，自动分析并更新用户口味、品类、价格、时段偏好标签
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Service
 public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService {
 
+    /** 用户偏好标签Mapper */
     @Autowired
     private UserPreferenceMapper userPreferenceMapper;
+    /** 浏览历史Mapper */
     @Autowired
     private BrowseHistoryMapper browseHistoryMapper;
 
+    /** 订单服务 */
     @Autowired
     private OrderService orderService;
+    /** 订单明细服务 */
     @Autowired
     private OrderDetailService orderDetailService;
+    /** 菜品服务 */
     @Autowired
     private DishService dishService;
+    /** 分类服务 */
     @Autowired
     private CategoryService categoryService;
+    /** 菜品口味服务 */
     @Autowired
     private DishFlavorService dishFlavorService;
 

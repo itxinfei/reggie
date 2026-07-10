@@ -6,6 +6,9 @@ import java.security.SecureRandom;
 
 /**
  * 随机生成验证码工具类
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 public final class ValidateCodeUtils {

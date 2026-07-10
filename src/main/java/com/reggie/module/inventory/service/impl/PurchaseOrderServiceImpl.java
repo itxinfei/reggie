@@ -23,16 +23,25 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+/**
+ * 采购单服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @Service
 public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, PurchaseOrder> implements PurchaseOrderService {
 
+    /** 采购单明细服务 */
     @Autowired
     private PurchaseOrderDetailService detailService;
 
+    /** 库存记录服务 */
     @Autowired
     private StockRecordService stockRecordService;
 
+    /** 食材服务 */
     @Autowired
     private MaterialService materialService;
 

@@ -13,10 +13,11 @@ import javax.validation.Valid;
 import java.util.*;
 
 /**
- * 营销活动管理Controller
- * 提供营销活动的CRUD、推送、自动发券等API
+ * 营销活动管理控制器
+ * 提供营销活动的CRUD、推送、自动发券等接口
  *
- * @author Reggie Team
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
@@ -28,15 +29,16 @@ public class MarketingController {
 
     /**
      * 分页查询营销活动
-     * GET /marketing/campaigns/page?page=1&pageSize=10&name=&status=
+     * GET /marketing/campaigns/page?page=1&pageSize=10&name=&status=&campaignType=
      */
     @GetMapping("/campaigns/page")
     public R<Page<MarketingCampaign>> pageCampaigns(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) Integer status) {
-        Page<MarketingCampaign> result = marketingCampaignService.pageCampaigns(page, pageSize, name, status);
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Integer campaignType) {
+        Page<MarketingCampaign> result = marketingCampaignService.pageCampaigns(page, pageSize, name, status, campaignType);
         return R.success(result);
     }
 
@@ -62,6 +64,26 @@ public class MarketingController {
         marketingCampaignService.updateById(campaign);
         log.info("[营销管理] 更新活动: id={}", campaign.getId());
         return R.success(campaign);
+    }
+
+    /**
+     * 批量删除营销活动
+     * POST /marketing/campaigns/batch-delete
+     */
+    @PostMapping("/campaigns/batch-delete")
+    public R<String> batchDeleteCampaigns(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked") // JSON反序列化类型转换，Number转Long由调用方保证
+        List<Number> rawIds = (List<Number>) body.get("ids");
+        if (rawIds == null || rawIds.isEmpty()) {
+            return R.error("请选择要删除的活动");
+        }
+        List<Long> ids = new ArrayList<>();
+        for (Number n : rawIds) {
+            ids.add(n.longValue());
+        }
+        int count = marketingCampaignService.batchDeleteCampaigns(ids);
+        log.info("[营销管理] 批量删除活动: count={}", count);
+        return R.success("成功删除 " + count + " 个活动");
     }
 
     /**
@@ -163,7 +185,7 @@ public class MarketingController {
     }
 
     /**
-     * 修改点：批量推送 - 根据活动目标人群自动匹配用户并推送
+     * 批量推送 - 根据活动目标人群自动匹配用户并推送
      * POST /marketing/batch-push/{campaignId}
      * 请求体: {"pushType": 1}
      */

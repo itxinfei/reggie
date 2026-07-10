@@ -35,6 +35,13 @@ var recommendBackendApi = {
     },
 
     /**
+     * 修改点(2026-07-10)：批量删除营销活动
+     */
+    batchDeleteCampaigns: function(data) {
+        return $axios.post('/marketing/campaigns/batch-delete', data);
+    },
+
+    /**
      * 查询营销活动详情
      */
     getCampaign: function(id) {

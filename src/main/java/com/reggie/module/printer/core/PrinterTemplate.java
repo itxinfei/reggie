@@ -11,12 +11,28 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 打印模板生成器
+ * 根据订单信息生成不同类型的打印任务（收银小票、厨房制作单、配送单）
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @Component
 public class PrinterTemplate {
 
+    /** 日期时间格式化器 */
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    /**
+     * 根据打印类型构建打印任务
+     *
+     * @param order     订单信息
+     * @param details   订单明细列表
+     * @param printType 打印类型（BILL/KITCHEN/DELIVERY）
+     * @return 打印任务
+     */
     public PrintJob build(Orders order, List<OrderDetail> details, String printType) {
         switch (printType) {
             case "BILL":
@@ -30,6 +46,13 @@ public class PrinterTemplate {
         }
     }
 
+    /**
+     * 生成收银小票打印任务
+     *
+     * @param order   订单信息
+     * @param details 订单明细列表
+     * @return 打印任务
+     */
     public PrintJob bill(Orders order, List<OrderDetail> details) {
         PrintJob job = new PrintJob();
         job.setOrderId(order.getId());
@@ -59,6 +82,13 @@ public class PrinterTemplate {
         return job;
     }
 
+    /**
+     * 生成厨房制作单打印任务
+     *
+     * @param order   订单信息
+     * @param details 订单明细列表
+     * @return 打印任务
+     */
     public PrintJob kitchen(Orders order, List<OrderDetail> details) {
         PrintJob job = new PrintJob();
         job.setOrderId(order.getId());
@@ -86,6 +116,13 @@ public class PrinterTemplate {
         return job;
     }
 
+    /**
+     * 生成配送单打印任务
+     *
+     * @param order   订单信息
+     * @param details 订单明细列表
+     * @return 打印任务
+     */
     public PrintJob delivery(Orders order, List<OrderDetail> details) {
         PrintJob job = new PrintJob();
         job.setOrderId(order.getId());

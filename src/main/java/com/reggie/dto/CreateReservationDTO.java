@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 
 /**
  * 创建预订请求DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 public class CreateReservationDTO {

@@ -2,10 +2,14 @@ package com.reggie.module.report.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
+import com.reggie.entity.Category;
+import com.reggie.entity.Dish;
 import com.reggie.entity.OrderDetail;
 import com.reggie.entity.Orders;
 import com.reggie.module.export.util.ExportUtil;
 import com.reggie.module.report.service.ReportService;
+import com.reggie.service.CategoryService;
+import com.reggie.service.DishService;
 import com.reggie.service.OrderDetailService;
 import com.reggie.service.OrderService;
 import lombok.extern.slf4j.Slf4j;
@@ -20,25 +24,44 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.IsoFields;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 经营报表服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @Service
 public class ReportServiceImpl implements ReportService {
 
+    /** 时段数量 */
     private static final int SLOT_COUNT = 5;
+    /** 时段名称 */
     private static final String[] SLOT_NAMES = {"早市(6-10)", "午市(10-14)", "下午茶(14-17)", "晚市(17-21)", "夜市(21-6)"};
 
     /** 导出历史记录存储，应用级别共享（导出操作已做租户隔离），线程安全 */
     private final List<Map<String, Object>> exportHistory =
             Collections.synchronizedList(new ArrayList<>());
 
+    /** 订单服务 */
     @Autowired
     private OrderService orderService;
 
+    /** 订单明细服务 */
     @Autowired
     private OrderDetailService orderDetailService;
+
+    /** 菜品服务 */
+    @Autowired
+    private DishService dishService;
+
+    /** 分类服务 */
+    @Autowired
+    private CategoryService categoryService;
 
     @Override
     public Map<String, Object> getDailyReport(String date, Long tenantId) {
@@ -322,8 +345,6 @@ public class ReportServiceImpl implements ReportService {
                     0,
                     "failed"
             );
-            // 修改点：不再返回空数组导致前端下载空文件，而是抛出RuntimeException
-            // ReportController的GlobalExceptionHandler会捕获并返回JSON错误给前端
             throw new RuntimeException("经营报表导出失败: " + e.getMessage(), e);
         } finally {
             BaseContext.setCurrentTenantId(originalTenantId);
@@ -359,5 +380,566 @@ public class ReportServiceImpl implements ReportService {
             exportHistory.clear();
             log.info("清除导出历史记录，共清除 {} 条", size);
         }
+    }
+
+    @Override
+    public Map<String, Object> getRepurchaseRate(String period, String startDate, String endDate, Long tenantId) {
+        Map<String, Object> result = new HashMap<>();
+        List<String> dates = new ArrayList<>();
+        List<Double> rates = new ArrayList<>();
+
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        try {
+            BaseContext.setCurrentTenantId(tenantId);
+
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+
+            // 查询日期范围内已完成的订单（status=4或5）
+            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+            orderQw.between(Orders::getOrderTime, start.atStartOfDay(), end.atTime(LocalTime.MAX));
+            orderQw.in(Orders::getStatus, Arrays.asList(Orders.STATUS_COMPLETED, Orders.STATUS_CANCELLED));
+            orderQw.select(Orders::getId, Orders::getUserId, Orders::getOrderTime);
+            List<Orders> orders = orderService.list(orderQw);
+
+            // 按时间窗口分组：(windowKey -> (userId -> count))
+            Map<String, Map<Long, Integer>> windowUserCountMap = new LinkedHashMap<>();
+            Map<String, Map<Long, Long>> windowUserFirstOrderMap = new LinkedHashMap<>();
+
+            for (Orders o : orders) {
+                if (o.getUserId() == null || o.getOrderTime() == null) continue;
+                String windowKey = getWindowKey(o.getOrderTime(), period);
+                windowUserCountMap
+                        .computeIfAbsent(windowKey, k -> new HashMap<>())
+                        .merge(o.getUserId(), 1, Integer::sum);
+            }
+
+            // 生成完整的时间窗口序列
+            List<String> allWindows = generateWindowSequence(start, end, period);
+            int totalUsers = 0;
+            int repurchaseUsers = 0;
+
+            for (String w : allWindows) {
+                dates.add(w);
+                Map<Long, Integer> userCountMap = windowUserCountMap.getOrDefault(w, new HashMap<>());
+                int windowTotal = userCountMap.size();
+                int windowRepurchase = (int) userCountMap.values().stream().filter(c -> c >= 2).count();
+                double rate = windowTotal > 0 ? (double) windowRepurchase / windowTotal * 100.0 : 0.0;
+                rates.add(Math.round(rate * 100.0) / 100.0);
+                totalUsers += windowTotal;
+                repurchaseUsers += windowRepurchase;
+            }
+
+            double totalRate = totalUsers > 0 ? (double) repurchaseUsers / totalUsers * 100.0 : 0.0;
+            result.put("dates", dates);
+            result.put("rates", rates);
+            result.put("totalRate", Math.round(totalRate * 100.0) / 100.0);
+            result.put("totalUsers", totalUsers);
+            result.put("repurchaseUsers", repurchaseUsers);
+
+        } finally {
+            BaseContext.setCurrentTenantId(originalTenantId);
+        }
+        return result;
+    }
+
+    private String getWindowKey(LocalDateTime dateTime, String period) {
+        switch (period) {
+            case "week":
+                return dateTime.getYear() + "-W" + String.format("%02d", dateTime.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR));
+            case "month":
+                return dateTime.getYear() + "-" + String.format("%02d", dateTime.getMonthValue());
+            case "year":
+                return String.valueOf(dateTime.getYear());
+            case "day":
+            default:
+                return dateTime.toLocalDate().toString();
+        }
+    }
+
+    private List<String> generateWindowSequence(LocalDate start, LocalDate end, String period) {
+        List<String> windows = new ArrayList<>();
+        if (period.equals("week")) {
+            // 按周生成
+            LocalDate current = start;
+            while (!current.isAfter(end)) {
+                String key = current.getYear() + "-W" + String.format("%02d", current.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR));
+                if (windows.isEmpty() || !windows.get(windows.size() - 1).equals(key)) {
+                    windows.add(key);
+                }
+                current = current.plusWeeks(1);
+            }
+        } else if (period.equals("month")) {
+            LocalDate current = start.withDayOfMonth(1);
+            while (!current.isAfter(end)) {
+                windows.add(current.getYear() + "-" + String.format("%02d", current.getMonthValue()));
+                current = current.plusMonths(1);
+            }
+        } else if (period.equals("year")) {
+            int startYear = start.getYear();
+            int endYear = end.getYear();
+            for (int y = startYear; y <= endYear; y++) {
+                windows.add(String.valueOf(y));
+            }
+        } else {
+            // day
+            LocalDate current = start;
+            while (!current.isAfter(end)) {
+                windows.add(current.toString());
+                current = current.plusDays(1);
+            }
+        }
+        return windows;
+    }
+
+    @Override
+    public List<Map<String, Object>> getCategorySales(String startDate, String endDate, Long tenantId) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        try {
+            BaseContext.setCurrentTenantId(tenantId);
+
+            // 1. 查询日期范围内的订单ID
+            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+            orderQw.between(Orders::getOrderTime,
+                    LocalDate.parse(startDate).atStartOfDay(),
+                    LocalDate.parse(endDate).atTime(LocalTime.MAX));
+            orderQw.select(Orders::getId);
+            List<Orders> orders = orderService.list(orderQw);
+            if (orders.isEmpty()) return result;
+
+            List<Long> orderIds = orders.stream().map(Orders::getId).collect(Collectors.toList());
+
+            // 2. 查询订单详情，获取(dishId, number)
+            LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
+            detailQw.in(OrderDetail::getOrderId, orderIds);
+            detailQw.isNotNull(OrderDetail::getDishId);
+            List<OrderDetail> details = orderDetailService.list(detailQw);
+            if (details.isEmpty()) return result;
+
+            // 3. 收集涉及的菜品ID
+            Set<Long> dishIds = details.stream()
+                    .map(OrderDetail::getDishId)
+                    .filter(id -> id != null)
+                    .collect(Collectors.toSet());
+            if (dishIds.isEmpty()) return result;
+
+            // 4. 查询菜品，获取 dishId -> categoryId 映射
+            LambdaQueryWrapper<Dish> dishQw = new LambdaQueryWrapper<>();
+            dishQw.in(Dish::getId, dishIds);
+            dishQw.select(Dish::getId, Dish::getCategoryId);
+            List<Dish> dishes = dishService.list(dishQw);
+            Map<Long, Long> dishCategoryMap = dishes.stream()
+                    .collect(Collectors.toMap(Dish::getId, Dish::getCategoryId, (a, b) -> a));
+
+            // 5. 查询分类，获取 categoryId -> categoryName 映射（只查菜品分类 type=1）
+            Set<Long> categoryIds = new HashSet<>(dishCategoryMap.values());
+            LambdaQueryWrapper<Category> catQw = new LambdaQueryWrapper<>();
+            catQw.in(Category::getId, categoryIds);
+            catQw.eq(Category::getType, 1);
+            catQw.select(Category::getId, Category::getName);
+            List<Category> categories = categoryService.list(catQw);
+            Map<Long, String> categoryNameMap = categories.stream()
+                    .collect(Collectors.toMap(Category::getId, Category::getName, (a, b) -> a));
+
+            // 6. 按分类名称聚合销量
+            Map<String, Integer> catSalesMap = new LinkedHashMap<>();
+            for (OrderDetail detail : details) {
+                Long dishId = detail.getDishId();
+                Long categoryId = dishCategoryMap.get(dishId);
+                if (categoryId == null) continue;
+                String catName = categoryNameMap.get(categoryId);
+                if (catName == null) catName = "其他";
+                int qty = detail.getNumber() != null ? detail.getNumber() : 0;
+                catSalesMap.merge(catName, qty, Integer::sum);
+            }
+
+            // 7. 转换为结果列表，按销量降序排列
+            catSalesMap.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                    .forEach(e -> {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("name", e.getKey());
+                        item.put("count", e.getValue());
+                        result.add(item);
+                    });
+
+        } finally {
+            BaseContext.setCurrentTenantId(originalTenantId);
+        }
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getDishTrend(List<String> dishNames, String startDate, String endDate, Long tenantId) {
+        Map<String, Object> result = new HashMap<>();
+        List<String> dates = new ArrayList<>();
+        List<Map<String, Object>> series = new ArrayList<>();
+
+        if (dishNames == null || dishNames.isEmpty()) {
+            result.put("dates", dates);
+            result.put("series", series);
+            return result;
+        }
+
+        // 初始化各菜品的 series 结构
+        Map<String, List<Integer>> dishDataMap = new LinkedHashMap<>();
+        for (String name : dishNames) {
+            dishDataMap.put(name.trim(), new ArrayList<>());
+        }
+
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        try {
+            BaseContext.setCurrentTenantId(tenantId);
+
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+
+            // 按天遍历
+            for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+                dates.add(date.toString().substring(5)); // MM-DD 格式
+
+                // 查询当天的订单ID
+                LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+                orderQw.between(Orders::getOrderTime, date.atStartOfDay(), date.atTime(LocalTime.MAX));
+                orderQw.select(Orders::getId);
+                List<Orders> dayOrders = orderService.list(orderQw);
+
+                // 当天无订单，各菜品销量为0
+                if (dayOrders.isEmpty()) {
+                    for (String name : dishNames) {
+                        dishDataMap.get(name.trim()).add(0);
+                    }
+                    continue;
+                }
+
+                List<Long> dayOrderIds = dayOrders.stream().map(Orders::getId).collect(Collectors.toList());
+
+                // 查询当天的订单详情
+                LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
+                detailQw.in(OrderDetail::getOrderId, dayOrderIds);
+                detailQw.select(OrderDetail::getName, OrderDetail::getNumber);
+                List<OrderDetail> dayDetails = orderDetailService.list(detailQw);
+
+                // 按菜品名称聚合当天销量
+                Map<String, Integer> dayCountMap = new HashMap<>();
+                for (OrderDetail d : dayDetails) {
+                    if (d.getName() != null) {
+                        dayCountMap.merge(d.getName(), d.getNumber() != null ? d.getNumber() : 0, Integer::sum);
+                    }
+                }
+
+                // 填充各菜品的当天销量
+                for (String name : dishNames) {
+                    String key = name.trim();
+                    dishDataMap.get(key).add(dayCountMap.getOrDefault(key, 0));
+                }
+            }
+
+            // 构建 series 列表
+            for (String name : dishNames) {
+                Map<String, Object> s = new HashMap<>();
+                s.put("name", name.trim());
+                s.put("data", dishDataMap.get(name.trim()));
+                series.add(s);
+            }
+
+        } finally {
+            BaseContext.setCurrentTenantId(originalTenantId);
+        }
+
+        result.put("dates", dates);
+        result.put("series", series);
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getPaymentTrend(String startDate, String endDate, Long tenantId) {
+        Map<String, Object> result = new HashMap<>();
+        List<String> dates = new ArrayList<>();
+        List<Double> wechatList = new ArrayList<>();
+        List<Double> alipayList = new ArrayList<>();
+        List<Double> balanceList = new ArrayList<>();
+
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        try {
+            BaseContext.setCurrentTenantId(tenantId);
+
+            // 查询日期范围内的所有订单
+            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+            orderQw.between(Orders::getOrderTime,
+                    LocalDate.parse(startDate).atStartOfDay(),
+                    LocalDate.parse(endDate).atTime(LocalTime.MAX));
+            orderQw.select(Orders::getOrderTime, Orders::getPayMethod, Orders::getAmount);
+            List<Orders> allOrders = orderService.list(orderQw);
+
+            // 按日期分组：dateStr -> {1: amount, 2: amount, 3: amount}
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+
+            // 初始化日期 -> (payMethod -> totalAmount) 映射
+            Map<String, Map<Integer, BigDecimal>> dailyMap = new LinkedHashMap<>();
+            for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+                String dateKey = d.toString().substring(5);
+                Map<Integer, BigDecimal> payMap = new HashMap<>();
+                payMap.put(1, BigDecimal.ZERO);
+                payMap.put(2, BigDecimal.ZERO);
+                payMap.put(3, BigDecimal.ZERO);
+                dailyMap.put(dateKey, payMap);
+            }
+
+            // 累加金额
+            for (Orders o : allOrders) {
+                if (o.getOrderTime() == null) continue;
+                String dateKey = o.getOrderTime().toLocalDate().toString().substring(5);
+                Map<Integer, BigDecimal> payMap = dailyMap.get(dateKey);
+                if (payMap == null) continue;
+                int payMethod = o.getPayMethod() != null ? o.getPayMethod() : 0;
+                BigDecimal amt = o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO;
+                if (payMethod >= 1 && payMethod <= 3) {
+                    payMap.put(payMethod, payMap.get(payMethod).add(amt));
+                }
+            }
+
+            // 构建返回数据
+            for (Map.Entry<String, Map<Integer, BigDecimal>> entry : dailyMap.entrySet()) {
+                dates.add(entry.getKey());
+                Map<Integer, BigDecimal> payMap = entry.getValue();
+                wechatList.add(payMap.get(1).setScale(2, RoundingMode.HALF_UP).doubleValue());
+                alipayList.add(payMap.get(2).setScale(2, RoundingMode.HALF_UP).doubleValue());
+                balanceList.add(payMap.get(3).setScale(2, RoundingMode.HALF_UP).doubleValue());
+            }
+
+        } finally {
+            BaseContext.setCurrentTenantId(originalTenantId);
+        }
+
+        result.put("dates", dates);
+        result.put("wechat", wechatList);
+        result.put("alipay", alipayList);
+        result.put("balance", balanceList);
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getTimeSlotHeatmap(String startDate, String endDate, Long tenantId) {
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> heatData = new ArrayList<>();
+
+        // 初始化 7天 × 5时段 的计数矩阵
+        int[][] counts = new int[7][SLOT_COUNT];
+        int maxVal = 0;
+
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        try {
+            BaseContext.setCurrentTenantId(tenantId);
+
+            // 查询日期范围内的所有订单
+            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+            orderQw.between(Orders::getOrderTime,
+                    LocalDate.parse(startDate).atStartOfDay(),
+                    LocalDate.parse(endDate).atTime(LocalTime.MAX));
+            orderQw.select(Orders::getOrderTime);
+            List<Orders> orders = orderService.list(orderQw);
+
+            for (Orders o : orders) {
+                if (o.getOrderTime() == null) continue;
+                // dayIdx: 周一=0 ... 周日=6
+                java.time.DayOfWeek dow = o.getOrderTime().getDayOfWeek();
+                int dayIdx = dow.getValue() - 1; // DayOfWeek: MON=1...SUN=7 -> 0...6
+
+                // slotIdx: 按小时划分到5个时段
+                int hour = o.getOrderTime().getHour();
+                int slotIdx;
+                if (hour >= 6 && hour < 10) slotIdx = 0;
+                else if (hour >= 10 && hour < 14) slotIdx = 1;
+                else if (hour >= 14 && hour < 17) slotIdx = 2;
+                else if (hour >= 17 && hour < 21) slotIdx = 3;
+                else slotIdx = 4;
+
+                counts[dayIdx][slotIdx]++;
+            }
+
+            // 构建结果
+            for (int dayIdx = 0; dayIdx < 7; dayIdx++) {
+                for (int slotIdx = 0; slotIdx < SLOT_COUNT; slotIdx++) {
+                    int value = counts[dayIdx][slotIdx];
+                    if (value > maxVal) maxVal = value;
+                    Map<String, Object> cell = new HashMap<>();
+                    cell.put("dayIdx", dayIdx);
+                    cell.put("slotIdx", slotIdx);
+                    cell.put("value", value);
+                    heatData.add(cell);
+                }
+            }
+
+        } finally {
+            BaseContext.setCurrentTenantId(originalTenantId);
+        }
+
+        result.put("data", heatData);
+        result.put("maxVal", maxVal);
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getRepurchaseRateByDish(String startDate, String endDate, int limit, Long tenantId) {
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> ranking = new ArrayList<>();
+
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        try {
+            BaseContext.setCurrentTenantId(tenantId);
+
+            // 1. 查询日期范围内已完成的订单
+            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+            orderQw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
+                    LocalDate.parse(endDate).atTime(LocalTime.MAX));
+            orderQw.in(Orders::getStatus, Arrays.asList(Orders.STATUS_COMPLETED, Orders.STATUS_CANCELLED));
+            orderQw.select(Orders::getId);
+            List<Orders> orders = orderService.list(orderQw);
+            if (orders.isEmpty()) {
+                result.put("ranking", ranking);
+                result.put("totalDishes", 0);
+                return result;
+            }
+
+            List<Long> orderIds = orders.stream().map(Orders::getId).collect(Collectors.toList());
+
+            // 2. 查询订单详情，关联菜品
+            LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
+            detailQw.in(OrderDetail::getOrderId, orderIds);
+            detailQw.isNotNull(OrderDetail::getDishId);
+            detailQw.select(OrderDetail::getDishId, OrderDetail::getOrderId);
+            List<OrderDetail> details = orderDetailService.list(detailQw);
+            if (details.isEmpty()) {
+                result.put("ranking", ranking);
+                result.put("totalDishes", 0);
+                return result;
+            }
+
+            // 3. 按 (dishId, userId) 分组统计购买次数
+            // 先通过 orderId 反查 userId
+            Map<Long, Long> orderIdUserIdMap = orders.stream()
+                    .collect(Collectors.toMap(Orders::getId, Orders::getUserId, (a, b) -> a));
+
+            Map<Long, Map<Long, Integer>> dishUserCountMap = new HashMap<>();
+            for (OrderDetail d : details) {
+                Long userId = orderIdUserIdMap.get(d.getOrderId());
+                if (userId == null) continue;
+                dishUserCountMap
+                        .computeIfAbsent(d.getDishId(), k -> new HashMap<>())
+                        .merge(userId, 1, Integer::sum);
+            }
+
+            // 4. 收集涉及的菜品ID并查询名称
+            Set<Long> dishIds = dishUserCountMap.keySet();
+            LambdaQueryWrapper<Dish> dishQw = new LambdaQueryWrapper<>();
+            dishQw.in(Dish::getId, dishIds);
+            dishQw.select(Dish::getId, Dish::getName);
+            List<Dish> dishes = dishService.list(dishQw);
+            Map<Long, String> dishNameMap = dishes.stream()
+                    .collect(Collectors.toMap(Dish::getId, Dish::getName, (a, b) -> a));
+
+            // 5. 计算每个菜品的复购率
+            for (Map.Entry<Long, Map<Long, Integer>> entry : dishUserCountMap.entrySet()) {
+                Long dishId = entry.getKey();
+                Map<Long, Integer> userCountMap = entry.getValue();
+                int totalUsers = userCountMap.size();
+                long repurchaseUsers = userCountMap.values().stream().filter(c -> c >= 2).count();
+                double rate = totalUsers > 0 ? (double) repurchaseUsers / totalUsers * 100.0 : 0.0;
+
+                Map<String, Object> item = new HashMap<>();
+                item.put("dishId", dishId);
+                item.put("dishName", dishNameMap.getOrDefault(dishId, "未知菜品"));
+                item.put("totalUsers", totalUsers);
+                item.put("repurchaseUsers", (int) repurchaseUsers);
+                item.put("rate", Math.round(rate * 100.0) / 100.0);
+                ranking.add(item);
+            }
+
+            // 6. 按复购率降序排列
+            ranking.sort((a, b) -> Double.compare((Double) b.get("rate"), (Double) a.get("rate")));
+            if (ranking.size() > limit) {
+                ranking = ranking.subList(0, limit);
+            }
+
+            result.put("ranking", ranking);
+            result.put("totalDishes", ranking.size());
+
+        } finally {
+            BaseContext.setCurrentTenantId(originalTenantId);
+        }
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getCohortAnalysis(String startDate, String endDate, Long tenantId) {
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> cohorts = new ArrayList<>();
+
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        try {
+            BaseContext.setCurrentTenantId(tenantId);
+
+            // 1. 查询日期范围内已完成订单的用户消费记录
+            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+            orderQw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
+                    LocalDate.parse(endDate).atTime(LocalTime.MAX));
+            orderQw.in(Orders::getStatus, Arrays.asList(Orders.STATUS_COMPLETED, Orders.STATUS_CANCELLED));
+            orderQw.select(Orders::getUserId, Orders::getOrderTime);
+            List<Orders> orders = orderService.list(orderQw);
+            if (orders.isEmpty()) {
+                result.put("cohorts", cohorts);
+                result.put("totalCohorts", 0);
+                return result;
+            }
+
+            // 2. 按用户分组，找到每个用户的首次消费日期
+            Map<Long, LocalDateTime> userFirstOrderMap = new HashMap<>();
+            for (Orders o : orders) {
+                if (o.getUserId() == null || o.getOrderTime() == null) continue;
+                userFirstOrderMap.merge(o.getUserId(), o.getOrderTime(), (old, newVal) -> old.isBefore(newVal) ? old : newVal);
+            }
+
+            // 3. 按首次消费月份分组
+            Map<String, Set<Long>> cohortUserMap = new LinkedHashMap<>();
+            for (Map.Entry<Long, LocalDateTime> entry : userFirstOrderMap.entrySet()) {
+                String cohortKey = entry.getValue().getYear() + "-" + String.format("%02d", entry.getValue().getMonthValue());
+                cohortUserMap.computeIfAbsent(cohortKey, k -> new HashSet<>()).add(entry.getKey());
+            }
+
+            // 4. 构建 userId -> 订单列表的映射，用于计算复购
+            Map<Long, List<Orders>> userOrdersMap = new HashMap<>();
+            for (Orders o : orders) {
+                if (o.getUserId() == null) continue;
+                userOrdersMap.computeIfAbsent(o.getUserId(), k -> new ArrayList<>()).add(o);
+            }
+
+            // 5. 计算每个 cohort 的复购率
+            for (Map.Entry<String, Set<Long>> entry : cohortUserMap.entrySet()) {
+                String cohortDate = entry.getKey();
+                Set<Long> users = entry.getValue();
+                int total = users.size();
+                long repurchase = users.stream()
+                        .filter(u -> userOrdersMap.getOrDefault(u, Collections.emptyList()).size() >= 2)
+                        .count();
+                double rate = total > 0 ? (double) repurchase / total * 100.0 : 0.0;
+
+                Map<String, Object> cohort = new HashMap<>();
+                cohort.put("cohortDate", cohortDate);
+                cohort.put("users", total);
+                cohort.put("repurchaseUsers", (int) repurchase);
+                cohort.put("repurchaseRate", Math.round(rate * 100.0) / 100.0);
+                cohorts.add(cohort);
+            }
+
+            result.put("cohorts", cohorts);
+            result.put("totalCohorts", cohorts.size());
+
+        } finally {
+            BaseContext.setCurrentTenantId(originalTenantId);
+        }
+        return result;
     }
 }

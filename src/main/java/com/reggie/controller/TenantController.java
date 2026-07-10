@@ -18,6 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 
+/**
+ * 租户管理
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/tenant")
@@ -27,6 +33,17 @@ public class TenantController {
     @Autowired
     private TenantService tenantService;
 
+    /**
+     * 租户注册
+     *
+     * @param tenant 租户信息
+     * @param username 管理员用户名
+     * @param password 管理员密码
+     * @param phone 手机号
+     * @param verifyCode 短信验证码
+     * @param session HTTP会话
+     * @return 注册结果
+     */
     @PostMapping("/register")
     @Operation(summary = "租户注册", description = "注册新租户并创建管理员账号")
     @Parameter(name = "tenant", description = "租户信息", required = true)

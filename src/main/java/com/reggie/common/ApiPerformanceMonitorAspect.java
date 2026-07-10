@@ -16,7 +16,8 @@ import java.util.Arrays;
  * 自动记录所有 Controller 接口的响应时间
  * 慢接口（>1秒）自动告警
  *
- * @author itxinfei
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Aspect

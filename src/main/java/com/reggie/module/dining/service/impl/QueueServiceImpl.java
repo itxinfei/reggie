@@ -42,10 +42,14 @@ import java.time.format.DateTimeFormatter;
  * </pre>
  *
  * 临时解决方案：在应用层通过 nginx 或网关限流，或者将取号请求放入消息队列串行化处理
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Service
 public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> implements QueueService {
 
+    /** 日期格式化器 */
     private static final DateTimeFormatter DATE_PATTERN = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     @Override

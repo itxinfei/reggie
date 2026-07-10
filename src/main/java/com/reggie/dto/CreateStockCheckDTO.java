@@ -8,6 +8,9 @@ import java.util.List;
 
 /**
  * 创建盘点单请求DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 public class CreateStockCheckDTO {

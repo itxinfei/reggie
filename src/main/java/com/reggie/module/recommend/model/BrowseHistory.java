@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 /**
  * 用户浏览历史记录
  * 追踪用户在前端浏览菜品/套餐的行为
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("user_browse_history")
@@ -29,6 +32,7 @@ public class BrowseHistory implements Serializable {
     /** 行为类型 - 分享 */
     public static final int ACTION_SHARE = 4;
 
+    /** 主键ID */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
@@ -54,6 +58,7 @@ public class BrowseHistory implements Serializable {
     /** 行为类型 1:浏览 2:收藏 3:加购 4:分享 */
     private Integer actionType;
 
+    /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

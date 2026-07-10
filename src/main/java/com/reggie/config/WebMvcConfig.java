@@ -10,24 +10,41 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupp
 
 import java.util.List;
 
+/**
+ * Web MVC 配置类
+ * 配置静态资源映射和消息转换器
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @Configuration
 public class WebMvcConfig extends WebMvcConfigurationSupport {
 
     /**
      * 设置静态资源映射
-     * @param registry
+     * 映射前端页面、后端管理页面和Swagger UI资源
+     *
+     * @param registry 资源处理器注册表
      */
     @Override
     protected void addResourceHandlers(ResourceHandlerRegistry registry) {
         log.info("开始进行静态资源映射...");
         registry.addResourceHandler("/backend/**").addResourceLocations("classpath:/backend/");
         registry.addResourceHandler("/front/**").addResourceLocations("classpath:/front/");
+        
+        // Swagger UI 静态资源配置
+        registry.addResourceHandler("/swagger-ui/**")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/springdoc-openapi-ui/1.6.9/");
+        registry.addResourceHandler("/webjars/**")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/");
     }
 
     /**
-     * 扩展mvc框架的消息转换器
-     * @param converters
+     * 扩展MVC框架的消息转换器
+     * 添加自定义Jackson对象转换器，支持Long类型序列化为字符串
+     *
+     * @param converters 消息转换器列表
      */
     @Override
     protected void extendMessageConverters(List<HttpMessageConverter<?>> converters) {

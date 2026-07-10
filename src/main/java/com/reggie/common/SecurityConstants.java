@@ -2,9 +2,15 @@ package com.reggie.common;
 
 /**
  * 安全相关常量
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 public final class SecurityConstants {
 
+    /**
+     * 私有构造方法，防止实例化
+     */
     private SecurityConstants() {
         throw new AssertionError();
     }

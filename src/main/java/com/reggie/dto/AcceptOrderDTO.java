@@ -9,6 +9,9 @@ import java.util.Map;
 
 /**
  * 外卖订单接单请求DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 public class AcceptOrderDTO {

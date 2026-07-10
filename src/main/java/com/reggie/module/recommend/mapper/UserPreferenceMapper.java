@@ -9,7 +9,10 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * 用户偏好标签Mapper
+ * 用户偏好标签 Mapper
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Mapper
 public interface UserPreferenceMapper extends BaseMapper<UserPreferenceTag> {

@@ -21,7 +21,15 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import java.security.SecureRandom;
+import java.util.HashMap;
+import java.util.Map;
 
+/**
+ * 用户管理
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @RestController
 @RequestMapping("/user")
 @Slf4j
@@ -68,13 +76,19 @@ public class UserController {
     /** 手机号正则 */
     private static final String PHONE_REGEX = "^1[3-9]\\d{9}$";
 
+    /**
+     * 发送短信验证码
+     *
+     * @param dto 发送短信请求
+     * @param session HTTP会话
+     * @return 发送结果
+     */
     @com.reggie.common.RateLimit(maxRequestsPerSecond = 3)
     @PostMapping("/sendMsg")
     @Operation(summary = "发送短信验证码")
     public R<String> sendMsg(@Valid @RequestBody SendMsgDTO dto, HttpSession session){
         String phone = dto.getPhone();
 
-        // 修改点：手机号格式校验
         if(phone == null || phone.isEmpty()){
             return R.error("手机号不能为空");
         }
@@ -82,14 +96,12 @@ public class UserController {
             return R.error("手机号格式不正确");
         }
 
-        // 修改点：同一手机号发送频率限制（60秒内只能发一次）
         Long lastSendTime = (Long) session.getAttribute("smsCode_" + phone + "_time");
         if(lastSendTime != null && System.currentTimeMillis() - lastSendTime < CODE_INTERVAL_MS){
             long remaining = (CODE_INTERVAL_MS - (System.currentTimeMillis() - lastSendTime)) / 1000;
             return R.error("请" + remaining + "秒后再试");
         }
 
-        // 修改点：使用SecureRandom生成随机验证码
         int code = SECURE_RANDOM.nextInt(9000) + 1000;
         String codeStr = String.valueOf(code);
 
@@ -97,14 +109,12 @@ public class UserController {
         session.setAttribute("smsCode_" + phone, codeStr);
         session.setAttribute("smsCode_" + phone + "_time", System.currentTimeMillis());
 
-        // 修改点：根据环境区分验证码处理策略
         if("dev".equals(activeProfile)){
             // 开发环境：在控制台打印完整验证码，方便调试
             log.info("【开发环境】验证码已生成 -> 手机号：{}，验证码：{}", phone, codeStr);
         } else {
             // 生产环境：仅记录脱敏日志；若配置了短信模板则通过阿里云发送真实短信
             log.info("【生产环境】验证码已生成 -> 手机号：{}，验证码：****", phone);
-            // 修改点：对接真实短信服务（需在application-prod.yml中配置sign-name和template-code）
             if(smsTemplateCode != null && !smsTemplateCode.isEmpty()){
                 try {
                     SMSUtils.sendMessage(smsSignName, smsTemplateCode, phone, codeStr);
@@ -122,6 +132,13 @@ public class UserController {
         return R.success("短信发送成功");
     }
 
+    /**
+     * 用户登录
+     *
+     * @param dto 用户登录信息
+     * @param session HTTP会话
+     * @return 用户信息
+     */
     @PostMapping("/login")
     @Operation(summary = "用户登录")
     public R<User> login(@Valid @RequestBody UserLoginDTO dto, HttpSession session){
@@ -135,7 +152,6 @@ public class UserController {
             return R.error("验证码不能为空");
         }
 
-        // 修改点：从Session校验验证码，修复原有空壳校验问题
         String sessionCode = (String) session.getAttribute("smsCode_" + phone);
         Long codeTime = (Long) session.getAttribute("smsCode_" + phone + "_time");
 
@@ -167,7 +183,6 @@ public class UserController {
         queryWrapper.eq(User::getPhone, phone);
         User user = userService.getOne(queryWrapper);
 
-        // 修改点：新用户注册时设置status=1（正常），避免DB默认值0导致用户被禁用
         if(user == null){
             user = new User();
             user.setPhone(phone);
@@ -176,7 +191,6 @@ public class UserController {
         }
 
         session.setAttribute("user", user.getId());
-        // 修改点：设置租户ID到Session，确保多门店数据隔离生效
         if (user.getTenantId() != null) {
             session.setAttribute("tenantId", user.getTenantId());
         }
@@ -205,6 +219,12 @@ public class UserController {
         }
     }
 
+    /**
+     * 用户退出
+     *
+     * @param session HTTP会话
+     * @return 退出结果
+     */
     @PostMapping("/loginout")
     @Operation(summary = "用户退出")
     public R<String> loginout(HttpSession session) {
@@ -212,7 +232,12 @@ public class UserController {
         return R.success("退出成功");
     }
 
-    // 修改点：新增获取当前登录用户信息接口，供前端个人中心使用
+    /**
+     * 获取当前登录用户信息
+     *
+     * @param session HTTP会话
+     * @return 用户信息
+     */
     @GetMapping("/info")
     @Operation(summary = "获取当前登录用户信息")
     public R<User> getCurrentUser(HttpSession session) {
@@ -227,6 +252,16 @@ public class UserController {
         return R.success(user);
     }
 
+    /**
+     * 用户分页查询
+     *
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param name 姓名
+     * @param phone 手机号
+     * @param status 状态：0禁用 1正常
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "用户分页查询")
     public R<Page<User>> page(
@@ -256,6 +291,13 @@ public class UserController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 修改用户状态
+     *
+     * @param id 用户ID
+     * @param status 状态：0禁用 1正常
+     * @return 操作结果
+     */
     @PutMapping("/status")
     @Operation(summary = "修改用户状态")
     public R<String> updateStatus(
@@ -281,6 +323,50 @@ public class UserController {
         return success ? R.success("操作成功") : R.error("操作失败");
     }
 
+    /**
+     * 用户统计
+     *
+     * @return 统计信息
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "用户统计", description = "获取用户总数、正常数、已禁用数、本月新增数")
+    public R<Map<String, Object>> stats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        LambdaQueryWrapper<User> totalQw = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<User> activeQw = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<User> disabledQw = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<User> newQw = new LambdaQueryWrapper<>();
+
+        if (tenantId != null) {
+            totalQw.eq(User::getTenantId, tenantId);
+            activeQw.eq(User::getTenantId, tenantId);
+            disabledQw.eq(User::getTenantId, tenantId);
+            newQw.eq(User::getTenantId, tenantId);
+        }
+
+        activeQw.eq(User::getStatus, 1);
+        disabledQw.eq(User::getStatus, 0);
+
+        // 本月新增：createTime >= 当月1日
+        java.time.LocalDateTime monthStart = java.time.LocalDate.now()
+                .withDayOfMonth(1).atStartOfDay();
+        newQw.ge(User::getCreateTime, monthStart);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalUsers", userService.count(totalQw));
+        result.put("activeUsers", userService.count(activeQw));
+        result.put("disabledUsers", userService.count(disabledQw));
+        result.put("newUsersThisMonth", userService.count(newQw));
+        return R.success(result);
+    }
+
+    /**
+     * 删除用户
+     *
+     * @param id 用户ID
+     * @return 操作结果
+     */
     @DeleteMapping
     @Operation(summary = "删除用户")
     public R<String> delete(@Parameter(name = "id", description = "用户ID", required = true) Long id) {

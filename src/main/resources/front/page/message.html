@@ -156,6 +156,19 @@
             },
             created: function() {
                 this.loadMessages();
+                // 修改点：注册 ESC 键监听，支持关闭消息详情弹窗
+                this._handleEscKey = function(e) {
+                    if ((e.key === 'Escape' || e.key === 'Esc') && this.detail.show) {
+                        this.closeDetail();
+                    }
+                }.bind(this);
+                document.addEventListener('keydown', this._handleEscKey);
+            },
+            beforeDestroy: function() {
+                // 修改点：移除 ESC 键监听
+                if (this._handleEscKey) {
+                    document.removeEventListener('keydown', this._handleEscKey);
+                }
             },
             methods: {
                 goBack: function() {

@@ -545,6 +545,20 @@
             mounted: function() {
                 this.initVoice();
                 this.scrollToBottom();
+                // 修改点：注册 ESC 键监听，支持关闭侧边栏
+                this._handleEscKey = function(e) {
+                    if ((e.key === 'Escape' || e.key === 'Esc') && this.sidebarOpen) {
+                        this.toggleSidebar(false);
+                    }
+                }.bind(this);
+                document.addEventListener('keydown', this._handleEscKey);
+            },
+
+            beforeDestroy: function() {
+                // 修改点：移除 ESC 键监听
+                if (this._handleEscKey) {
+                    document.removeEventListener('keydown', this._handleEscKey);
+                }
             },
 
             methods: {

@@ -9,6 +9,9 @@ import java.time.LocalDateTime;
 /**
  * 推荐结果缓存
  * 缓存用户个性化推荐结果，避免实时计算开销
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("recommendation_cache")
@@ -32,6 +35,7 @@ public class RecommendationCache implements Serializable {
     /** 算法 - 热门排行 */
     public static final String ALGO_HOT = "HotRank";
 
+    /** 主键ID */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
@@ -57,9 +61,11 @@ public class RecommendationCache implements Serializable {
     /** 缓存过期时间 */
     private LocalDateTime expireTime;
 
+    /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
+    /** 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }

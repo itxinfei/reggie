@@ -35,6 +35,12 @@ import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 员工管理
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/employee")
@@ -116,15 +122,23 @@ public class EmployeeController {
         //7、登录成功，将员工id和租户id存入Session
         // 注意：重新从数据库查询最新信息，确保租户上下文准确
         Employee freshEmp = employeeService.getById(emp.getId());
+        Long sessionTenantId;
+        String sessionRoleKey;
         if (freshEmp != null) {
             request.getSession().setAttribute("employee", freshEmp.getId());
             request.getSession().setAttribute("tenantId", freshEmp.getTenantId());
+            sessionTenantId = freshEmp.getTenantId();
+            sessionRoleKey = resolveRoleKey(freshEmp.getRole());
         } else {
             // 如果查询失败，使用原信息（降级处理）
             request.getSession().setAttribute("employee", emp.getId());
             request.getSession().setAttribute("tenantId", emp.getTenantId());
+            sessionTenantId = emp.getTenantId();
+            sessionRoleKey = resolveRoleKey(emp.getRole());
             log.warn("员工登录后无法刷新数据，使用内存中的租户信息可能已过期 - empId: {}", emp.getId());
         }
+
+        request.getSession().setAttribute("roleKey", sessionRoleKey);
 
         // 返回脱敏后的登录信息（不包含密码等敏感字段）
         java.util.HashMap<String, Object> result = new java.util.HashMap<>();
@@ -146,6 +160,15 @@ public class EmployeeController {
             return phone;
         }
         return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
+    }
+
+    /**
+     * 根据员工角色整数值解析角色标识
+     * 1=admin(超级管理员), 2=manager(店长/普通员工)
+     */
+    private String resolveRoleKey(Integer role) {
+        if (role == null) return "manager";
+        return role == 1 ? "admin" : "manager";
     }
 
     /**
@@ -219,11 +242,12 @@ public class EmployeeController {
      * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "员工分页查询", description = "分页查询员工列表，支持按姓名模糊搜索，自动过滤当前租户数据")
+    @Operation(summary = "员工分页查询", description = "分页查询员工列表，支持按姓名模糊搜索和状态筛选，自动过滤当前租户数据")
     @Parameter(name = "page", description = "页码，从1开始", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "员工姓名（可选，模糊查询）")
-    public R<Page<Employee>> page(int page,int pageSize,String name){
+    @Parameter(name = "status", description = "账号状态（可选，1=正常 ,0=禁用）")
+    public R<Page<Employee>> page(int page,int pageSize,String name, @RequestParam(required = false) Integer status){
         log.info("page = {},pageSize = {},name = {}" ,page,pageSize,name);
 
         //构造分页构造器
@@ -233,6 +257,7 @@ public class EmployeeController {
         LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper<>();
         //添加过滤条件
         queryWrapper.like(name != null && !name.isEmpty(),Employee::getName,name);
+        queryWrapper.eq(status != null, Employee::getStatus, status);
         //添加排序条件
         queryWrapper.orderByDesc(Employee::getUpdateTime);
 
@@ -312,7 +337,6 @@ public class EmployeeController {
 
     /**
      * 删除员工
-     * 修改点：新增员工删除接口，补全CRUD闭环
      * @param request HTTP请求对象
      * @param ids 员工ID列表
      * @return 操作结果
@@ -335,7 +359,6 @@ public class EmployeeController {
 
     /**
      * 修改密码
-     * 修改点：新增密码修改接口，员工可修改自己的密码
      * @param request HTTP请求对象
      * @param params 包含 oldPassword 和 newPassword
      * @return 操作结果

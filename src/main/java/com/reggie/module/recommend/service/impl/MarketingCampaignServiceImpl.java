@@ -29,29 +29,39 @@ import java.util.stream.Collectors;
 /**
  * 营销活动服务实现
  * 实现用户画像匹配、智能推送和自动发券
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Service
 public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignMapper, MarketingCampaign>
         implements MarketingCampaignService {
 
+    /** 营销活动Mapper */
     @Autowired
     private MarketingCampaignMapper campaignMapper;
+    /** 营销消息Mapper */
     @Autowired
     private MarketingMessageMapper messageMapper;
+    /** 优惠券模板服务 */
     @Autowired
     private CouponTemplateService couponTemplateService;
+    /** 优惠券模板Mapper */
     @Autowired
     private CouponTemplateMapper couponTemplateMapper;
+    /** 用户优惠券Mapper */
     @Autowired
     private CouponUserMapper couponUserMapper;
+    /** 用户偏好分析服务 */
     @Autowired
     private PreferenceAnalysisService preferenceAnalysisService;
+    /** 用户Mapper */
     @Autowired
     private UserMapper userMapper;
 
     @Override
-    public Page<MarketingCampaign> pageCampaigns(int page, int pageSize, String name, Integer status) {
+    public Page<MarketingCampaign> pageCampaigns(int page, int pageSize, String name, Integer status, Integer campaignType) {
         Long tenantId = BaseContext.getCurrentTenantId();
         LambdaQueryWrapper<MarketingCampaign> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(tenantId != null, MarketingCampaign::getTenantId, tenantId);
@@ -61,10 +71,24 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         if (status != null) {
             wrapper.eq(MarketingCampaign::getStatus, status);
         }
+        if (campaignType != null) {
+            wrapper.eq(MarketingCampaign::getCampaignType, campaignType);
+        }
         wrapper.orderByDesc(MarketingCampaign::getPriority)
                .orderByDesc(MarketingCampaign::getCreateTime);
 
         return campaignMapper.selectPage(new Page<>(page, pageSize), wrapper);
+    }
+
+    @Override
+    @Transactional
+    public int batchDeleteCampaigns(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        int count = campaignMapper.deleteBatchIds(ids);
+        log.info("[营销管理] 批量删除活动: ids={}, count={}", ids, count);
+        return count;
     }
 
     @Override
@@ -111,7 +135,6 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
             return false;
         }
 
-        // 修改点：创建推送消息，状态直接设为SENT（推送即已发送）
         MarketingMessage message = new MarketingMessage();
         message.setCampaignId(campaignId);
         message.setUserId(userId);
@@ -119,7 +142,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         message.setTitle(campaign.getName());
         message.setContent(campaign.getDescription() != null ?
                 campaign.getDescription() : "您有一份专属优惠待领取！");
-        message.setStatus(MarketingMessage.STATUS_SENT); // 修改点：推送即已发送，用户端可立即查询
+        message.setStatus(MarketingMessage.STATUS_SENT);
 
         messageMapper.insert(message);
 
@@ -163,9 +186,6 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         }
     }
 
-    /**
-     * 修改点：获取用户所有消息列表（分页），包含已读和未读消息
-     */
     @Override
     public Page<Map<String, Object>> getMessages(Long userId, int page, int pageSize) {
         if (userId == null) return new Page<>();
@@ -193,9 +213,6 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         return resultPage;
     }
 
-    /**
-     * 修改点：获取用户未读消息数量，用于首页消息铃铛角标
-     */
     @Override
     public int getUnreadCount(Long userId) {
         if (userId == null) return 0;
@@ -275,10 +292,6 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         return couponUserMapper.selectCount(wrapper) <= 1;
     }
 
-    /**
-     * 修改点：批量推送营销消息
-     * 根据活动目标人群，查询所有符合条件用户并批量创建推送消息
-     */
     @Override
     @Transactional
     public int batchPushMessages(Long campaignId, Integer pushType) {

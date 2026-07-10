@@ -11,41 +11,169 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
-        .ai-container {
-            max-width: 1000px;
+        /* 整体布局 */
+        .ai-layout {
+            max-width: 1300px;
             margin: 20px auto;
             height: calc(100vh - 40px);
             display: flex;
-            flex-direction: column;
             background: #fff;
             border-radius: 12px;
             box-shadow: 0 4px 24px rgba(0,0,0,0.08);
             overflow: hidden;
         }
 
+        /* ====== 左侧边栏 ====== */
+        .ai-sidebar {
+            width: 280px;
+            min-width: 280px;
+            background: #fafafa;
+            border-right: 1px solid #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s;
+        }
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sidebar-header h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #303133;
+        }
+        .sidebar-header .refresh-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            background: #fff;
+            color: #606266;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .sidebar-header .refresh-btn:hover { border-color: #1890ff; color: #1890ff; }
+
+        .new-chat-btn {
+            margin: 12px 16px;
+            padding: 10px 0;
+            background: linear-gradient(135deg, #1890ff 0%, #36cfc9 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .new-chat-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .new-chat-btn:disabled { background: #d9d9d9; cursor: not-allowed; transform: none; }
+
+        .conv-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 8px 8px;
+        }
+        .conv-list::-webkit-scrollbar { width: 4px; }
+        .conv-list::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 2px; }
+
+        .conv-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            margin-bottom: 4px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            gap: 8px;
+        }
+        .conv-item:hover { background: #e6f7ff; }
+        .conv-item.active { background: #e6f7ff; border: 1px solid #91d5ff; }
+
+        .conv-icon {
+            width: 32px; height: 32px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0; background: #f0f0f0;
+        }
+
+        .conv-info {
+            flex: 1; min-width: 0; overflow: hidden;
+        }
+        .conv-title {
+            font-size: 13px; font-weight: 500; color: #303133;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            line-height: 1.4;
+        }
+        .conv-meta {
+            font-size: 11px; color: #909399; margin-top: 2px;
+            display: flex; gap: 8px;
+        }
+        .conv-delete {
+            width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; color: #c0c4cc; cursor: pointer;
+            opacity: 0; transition: all 0.2s; flex-shrink: 0;
+            border: none; background: transparent;
+        }
+        .conv-item:hover .conv-delete { opacity: 1; }
+        .conv-delete:hover { color: #f56c6c; background: #fef0f0; }
+
+        .sidebar-empty {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            color: #c0c4cc; font-size: 13px; text-align: center; padding: 20px;
+        }
+        .sidebar-loading {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            color: #909399; font-size: 13px;
+        }
+
+        /* ====== 右侧主区域 ====== */
+        .ai-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
         /* 顶部栏 */
         .ai-header {
             background: linear-gradient(135deg, #1890ff 0%, #36cfc9 100%);
             color: #fff;
-            padding: 16px 24px;
+            padding: 14px 24px;
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-shrink: 0;
         }
         .ai-header .logo { font-size: 28px; }
         .ai-header h2 { font-size: 20px; font-weight: 600; margin: 0; }
-        .ai-header .subtitle { font-size: 13px; opacity: 0.85; margin-left: auto; }
+        .ai-header .subtitle { font-size: 13px; opacity: 0.9; margin-left: auto; }
+
+        /* 当前对话标题 */
+        .current-conv-title {
+            font-size: 12px; color: rgba(255,255,255,0.8);
+            margin-left: 12px; max-width: 200px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
 
         /* 场景切换 */
         .scene-selector {
             display: flex; gap: 8px; padding: 10px 24px;
             background: #fafafa; border-bottom: 1px solid #f0f0f0;
-            flex-wrap: wrap;
+            flex-wrap: wrap; flex-shrink: 0;
         }
         .scene-tag {
             padding: 5px 14px; border-radius: 12px; font-size: 13px;
             cursor: pointer; border: 1px solid #d9d9d9; background: #fff;
-            transition: all 0.2s; color: #666;
+            transition: all 0.2s; color: #303133; font-weight: 500;
         }
         .scene-tag:hover { border-color: #1890ff; color: #1890ff; }
         .scene-tag.active { background: #1890ff; color: #fff; border-color: #1890ff; }
@@ -53,12 +181,12 @@
         /* 快捷卡片 */
         .quick-cards {
             display: flex; flex-wrap: wrap; gap: 10px;
-            padding: 12px 24px; border-bottom: 1px solid #f0f0f0;
+            padding: 12px 24px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0;
         }
         .quick-card {
             padding: 8px 16px; background: #fafafa; border: 1px solid #e8e8e8;
             border-radius: 8px; font-size: 13px; cursor: pointer;
-            transition: all 0.2s; color: #666;
+            transition: all 0.2s; color: #303133; font-weight: 500;
         }
         .quick-card:hover { border-color: #1890ff; color: #1890ff; background: #e6f7ff; }
 
@@ -106,25 +234,13 @@
             border-radius: 4px; font-weight: 500;
         }
 
-        /* 统计卡片（AI回复中嵌入） */
-        .ai-stats-row {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-            margin: 12px 0;
-        }
-        .ai-stat-item {
-            background: #fafafa; border-radius: 8px; padding: 12px;
-            text-align: center; border: 1px solid #f0f0f0;
-        }
-        .ai-stat-item .stat-val { font-size: 20px; font-weight: 700; color: #1890ff; }
-        .ai-stat-item .stat-label { font-size: 12px; color: #999; margin-top: 4px; }
-
         /* 操作按钮组 */
         .action-btns {
             display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
         }
         .action-btn {
             padding: 6px 14px; border-radius: 6px; font-size: 13px;
-            border: 1px solid #d9d9d9; background: #fff; color: #666;
+            border: 1px solid #d9d9d9; background: #fff; color: #303133;
             cursor: pointer; transition: all 0.2s;
         }
         .action-btn:hover { border-color: #1890ff; color: #1890ff; }
@@ -136,7 +252,7 @@
         }
         .feedback-btn {
             padding: 3px 10px; border-radius: 12px; font-size: 12px;
-            border: 1px solid #d9d9d9; background: #fff; color: #666;
+            border: 1px solid #d9d9d9; background: #fff; color: #606266;
             cursor: pointer; transition: all 0.2s;
         }
         .feedback-btn.active-good { border-color: #67c23a; color: #67c23a; background: #f0f9eb; }
@@ -145,7 +261,7 @@
         /* 输入区 */
         .input-area {
             display: flex; gap: 12px; padding: 16px 24px;
-            border-top: 1px solid #f0f0f0; background: #fff;
+            border-top: 1px solid #f0f0f0; background: #fff; flex-shrink: 0;
             align-items: center;
         }
         .input-area input {
@@ -187,116 +303,172 @@
 
         /* 响应式 */
         @media (max-width: 768px) {
-            .ai-container { max-width: 100%; margin: 0; height: 100vh; border-radius: 0; }
+            .ai-layout { max-width: 100%; margin: 0; height: 100vh; border-radius: 0; }
+            .ai-sidebar { width: 0; min-width: 0; overflow: hidden; }
+            .ai-sidebar.open { width: 280px; min-width: 280px; }
             .chat-msg { max-width: 92%; }
             .ai-stats-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div id="ai-app" class="ai-container">
-        <!-- 顶部栏 -->
-        <div class="ai-header">
-            <span class="logo">🤖</span>
-            <h2>AI 经营分析助手</h2>
-            <span class="subtitle">Powered by AI</span>
-        </div>
+    <div id="ai-app" class="ai-layout">
+        <!-- ========== 左侧边栏：对话历史 ========== -->
+        <div class="ai-sidebar" :class="{ open: sidebarOpen }">
+            <div class="sidebar-header">
+                <h4>💬 对话历史</h4>
+                <button class="refresh-btn" @click="loadConversations" :disabled="sidebarLoading">
+                    {{ sidebarLoading ? '刷新中...' : '🔄 刷新' }}
+                </button>
+            </div>
 
-        <!-- 场景切换 -->
-        <div class="scene-selector">
-            <span v-for="scene in scenes"
-                  :class="['scene-tag', { active: currentScene === scene.value }]"
-                  @click="switchScene(scene.value)">
-                {{ scene.label }}
-            </span>
-        </div>
+            <button class="new-chat-btn" @click="createNewConversation" :disabled="loading">
+                ✨ 新建对话
+            </button>
 
-        <!-- 快捷卡片 -->
-        <div class="quick-cards" v-if="messages.length <= 1">
-            <span class="quick-card" v-for="tip in currentQuickTips" :key="tip" @click="sendQuick(tip)">
-                {{ tip }}
-            </span>
-        </div>
-
-        <!-- 聊天区 -->
-        <div class="chat-body" ref="chatBody">
-            <!-- 欢迎消息 -->
-            <div class="chat-msg assistant" v-if="messages.length === 0">
-                <div class="chat-avatar">🤖</div>
-                <div class="chat-bubble">
-                    <div style="font-weight:600;margin-bottom:6px;">👋 你好！我是AI经营分析助手</div>
-                    我可以帮你：<br>
-                    📊 <b>分析经营数据</b>，发现趋势和问题<br>
-                    📝 <b>生成菜品描述</b>，提升菜品吸引力<br>
-                    🎯 <b>优化营销策略</b>，提高转化率<br><br>
-                    选择一个场景，开始对话吧！
+            <!-- 对话列表 -->
+            <div class="conv-list" v-if="conversations.length > 0">
+                <div v-for="conv in conversations" :key="conv.conversationId"
+                     :class="['conv-item', { active: currentConversationId === conv.conversationId }]"
+                     @click="selectConversation(conv)">
+                    <div class="conv-icon">{{ getSceneIcon(conv.scene) }}</div>
+                    <div class="conv-info">
+                        <div class="conv-title">{{ conv.title || '新对话' }}</div>
+                        <div class="conv-meta">
+                            <span>{{ conv.messageCount || 0 }}条</span>
+                            <span>{{ formatConvTime(conv.updateTime || conv.createTime) }}</span>
+                        </div>
+                    </div>
+                    <button class="conv-delete" @click.stop="handleDeleteConv(conv)" title="删除对话">×</button>
                 </div>
             </div>
 
-            <!-- 对话消息 -->
-            <template v-for="(msg, idx) in messages">
-                <div :class="'chat-msg ' + msg.role" :key="msg.id || idx">
-                    <div class="chat-avatar">{{ msg.role === 'assistant' ? '🤖' : '👤' }}</div>
-                    <div style="flex:1;min-width:0;">
-                        <!-- 安全渲染AI回复 -->
-                        <div class="chat-bubble" :class="{'streaming-cursor': msg.streaming}">
-                            <template v-if="msg.role === 'assistant'">
-                                <span v-for="(part, pIdx) in msg.renderedParts" :key="pIdx">
-                                    <span v-if="part.type === 'text'">{{ part.text }}</span>
-                                    <span v-else-if="part.type === 'bold'" class="msg-bold">{{ part.text }}</span>
-                                    <span v-else-if="part.type === 'list'">
-                                        <ul class="msg-list">
-                                            <li v-for="(item, i) in part.items" :key="i">{{ item }}</li>
-                                        </ul>
-                                    </span>
-                                    <span v-else-if="part.type === 'highlight'" class="msg-highlight">{{ part.text }}</span>
-                                </span>
-                            </template>
-                            <template v-else>
-                                {{ msg.content }}
-                            </template>
-                        </div>
-                        <!-- 操作按钮 -->
-                        <div class="action-btns" v-if="msg.role === 'assistant' && msg.actions && !msg.streaming">
-                            <button class="action-btn" v-for="action in msg.actions" :key="action.label"
-                                    @click="handleAction(action)">
-                                {{ action.icon }} {{ action.label }}
-                            </button>
-                        </div>
-                        <!-- 反馈按钮 -->
-                        <div class="feedback-bar" v-if="msg.role === 'assistant' && msg.showFeedback && !msg.streaming">
-                            <button :class="['feedback-btn', msg.feedback === 'good' ? 'active-good' : '']"
-                                    @click="sendFeedback(msg, 'good')">👍 有用</button>
-                            <button :class="['feedback-btn', msg.feedback === 'bad' ? 'active-bad' : '']"
-                                    @click="sendFeedback(msg, 'bad')">👎 没用</button>
-                        </div>
-                    </div>
-                </div>
-            </template>
+            <!-- 无对话 -->
+            <div class="sidebar-empty" v-else-if="!sidebarLoading">
+                暂无对话历史<br>点击"新建对话"开始
+            </div>
 
             <!-- 加载中 -->
-            <div class="chat-msg assistant" v-if="loading">
-                <div class="chat-avatar">🤖</div>
-                <div class="chat-bubble">
-                    <div class="typing-dots">
-                        <span></span><span></span><span></span>
-                    </div>
-                </div>
+            <div class="sidebar-loading" v-if="sidebarLoading && conversations.length === 0">
+                加载中...
             </div>
         </div>
 
-        <!-- 输入区 -->
-        <div class="input-area">
-            <input
-                type="text"
-                v-model="inputText"
-                :placeholder="inputPlaceholder"
-                @keyup.enter="sendMessage"
-                :disabled="loading"
-            >
-            <button class="send-btn" @click="sendMessage" :disabled="!inputText.trim() || loading">
-                发送
-            </button>
+        <!-- ========== 右侧主区域 ========== -->
+        <div class="ai-main">
+            <!-- 顶部栏 -->
+            <div class="ai-header">
+                <span class="logo">🤖</span>
+                <h2>AI 经营分析助手</h2>
+                <span class="current-conv-title" v-if="currentConversation">
+                    {{ currentConversation.title }}
+                </span>
+                <span class="subtitle">Powered by AI</span>
+            </div>
+
+            <!-- 场景切换 -->
+            <div class="scene-selector">
+                <span v-for="scene in scenes"
+                      :class="['scene-tag', { active: currentScene === scene.value }]"
+                      @click="switchScene(scene.value)">
+                    {{ scene.label }}
+                </span>
+            </div>
+
+            <!-- 快捷卡片 -->
+            <div class="quick-cards" v-if="messages.length <= 1">
+                <span class="quick-card" v-for="tip in currentQuickTips" :key="tip" @click="sendQuick(tip)">
+                    {{ tip }}
+                </span>
+            </div>
+
+            <!-- 聊天区 -->
+            <div class="chat-body" ref="chatBody">
+                <!-- 欢迎消息 -->
+                <div class="chat-msg assistant" v-if="messages.length === 0 && !currentConversationId">
+                    <div class="chat-avatar">🤖</div>
+                    <div class="chat-bubble">
+                        <div style="font-weight:600;margin-bottom:6px;">👋 你好！我是AI经营分析助手</div>
+                        我可以帮你：<br>
+                        📊 <b>分析经营数据</b>，发现趋势和问题<br>
+                        📝 <b>生成菜品描述</b>，提升菜品吸引力<br>
+                        🎯 <b>优化营销策略</b>，提高转化率<br><br>
+                        选择一个场景，开始对话吧！
+                    </div>
+                </div>
+
+                <!-- 加载历史提示 -->
+                <div v-if="currentConversationId && messages.length === 0 && !loadingHistory" style="text-align:center;color:#909399;padding:40px;">
+                    该对话暂无消息记录
+                </div>
+                <div v-if="loadingHistory" style="text-align:center;color:#909399;padding:40px;">
+                    加载历史消息中...
+                </div>
+
+                <!-- 对话消息 -->
+                <template v-for="(msg, idx) in messages">
+                    <div :class="'chat-msg ' + msg.role" :key="msg._key || idx">
+                        <div class="chat-avatar">{{ msg.role === 'assistant' ? '🤖' : '👤' }}</div>
+                        <div style="flex:1;min-width:0;">
+                            <!-- 安全渲染AI回复 -->
+                            <div class="chat-bubble" :class="{'streaming-cursor': msg.streaming}">
+                                <template v-if="msg.role === 'assistant'">
+                                    <span v-for="(part, pIdx) in msg.renderedParts" :key="pIdx">
+                                        <span v-if="part.type === 'text'">{{ part.text }}</span>
+                                        <span v-else-if="part.type === 'bold'" class="msg-bold">{{ part.text }}</span>
+                                        <span v-else-if="part.type === 'list'">
+                                            <ul class="msg-list">
+                                                <li v-for="(item, i) in part.items" :key="i">{{ item }}</li>
+                                            </ul>
+                                        </span>
+                                        <span v-else-if="part.type === 'highlight'" class="msg-highlight">{{ part.text }}</span>
+                                    </span>
+                                </template>
+                                <template v-else>
+                                    {{ msg.content }}
+                                </template>
+                            </div>
+                            <!-- 反馈按钮（使用真实 messageId 而非前端生成的 ID） -->
+                            <div class="feedback-bar" v-if="msg.role === 'assistant' && msg.dbMessageId && !msg.streaming">
+                                <button :class="['feedback-btn', msg.feedback === 'good' ? 'active-good' : '']"
+                                        @click="sendFeedback(msg, 'good')">👍 有用</button>
+                                <button :class="['feedback-btn', msg.feedback === 'bad' ? 'active-bad' : '']"
+                                        @click="sendFeedback(msg, 'bad')">👎 没用</button>
+                            </div>
+                            <!-- 错误重试 -->
+                            <div v-if="msg.error && !msg.streaming" style="margin-top:6px;">
+                                <button class="action-btn" @click="retryMessage(msg)" style="color:#f56c6c;border-color:#f56c6c;">
+                                    🔄 重试
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- 加载中 -->
+                <div class="chat-msg assistant" v-if="loading && !hasStreamingMessage">
+                    <div class="chat-avatar">🤖</div>
+                    <div class="chat-bubble">
+                        <div class="typing-dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 输入区 -->
+            <div class="input-area">
+                <input
+                    type="text"
+                    v-model="inputText"
+                    :placeholder="inputPlaceholder"
+                    @keyup.enter="sendMessage"
+                    :disabled="loading"
+                >
+                <button class="send-btn" @click="sendMessage" :disabled="!inputText.trim() || loading">
+                    发送
+                </button>
+            </div>
         </div>
     </div>
 
@@ -354,18 +526,53 @@
             return merged;
         }
 
+        /** 格式化对话时间（后端返回 ISO 格式如 2026-07-10T14:30:00） */
+        function formatConvTime(dateStr) {
+            if (!dateStr) return '';
+            if (typeof dateStr === 'string' && dateStr.indexOf('T') > -1) {
+                var parts = dateStr.split('T');
+                var date = parts[0];
+                var time = parts[1] ? parts[1].substring(0, 5) : '';
+                return date + ' ' + time;
+            }
+            return String(dateStr);
+        }
+
+        /** 场景图标映射 */
+        var sceneIcons = {
+            business_analysis: '📊',
+            dish_desc: '📝',
+            marketing: '📢',
+            order_assistant: '🍽️'
+        };
+
         new Vue({
             el: '#ai-app',
             data: {
+                /* 输入 */
                 inputText: '',
                 loading: false,
+                currentRequestId: 0,
+
+                /* 对话管理 */
+                conversations: [],
+                currentConversationId: null,
+                sidebarLoading: false,
+                sidebarOpen: true,
+                loadingHistory: false,
+
+                /* 消息 */
                 messages: [],
                 currentScene: 'business_analysis',
+
+                /* 场景 */
                 scenes: [
                     { label: '📊 经营分析', value: 'business_analysis' },
                     { label: '📝 菜品描述', value: 'dish_desc' },
                     { label: '📢 营销文案', value: 'marketing' }
                 ],
+
+                /* 快捷提示 */
                 quickTipsMap: {
                     business_analysis: [
                         '今天营业额怎么样？',
@@ -383,8 +590,7 @@
                         '新店开业促销文案',
                         '会员日专属优惠文案'
                     ]
-                },
-                currentRequestId: 0
+                }
             },
 
             computed: {
@@ -398,68 +604,238 @@
                         marketing: '输入营销需求...'
                     };
                     return map[this.currentScene] || '输入消息...';
+                },
+                hasStreamingMessage: function() {
+                    var self = this;
+                    return self.messages.some(function(m) {
+                        return m.role === 'assistant' && m.streaming === true;
+                    });
+                },
+                /** 当前选中的对话对象 */
+                currentConversation: function() {
+                    var self = this;
+                    if (!self.currentConversationId || !self.conversations) return null;
+                    var found = self.conversations.filter(function(c) {
+                        return c.conversationId === self.currentConversationId;
+                    });
+                    return found.length > 0 ? found[0] : null;
                 }
             },
 
             mounted: function() {
-                this.scrollToBottom();
+                this.loadConversations();
             },
 
             methods: {
+                // ==================== 对话列表管理 ====================
+
+                /** 加载对话列表 */
+                loadConversations: function() {
+                    var self = this;
+                    self.sidebarLoading = true;
+                    aiBackendApi.getConversations(1, 50).then(function(res) {
+                        var data = res.data || res;
+                        self.conversations = (data && data.code === 1 ? data.data : data) || [];
+                        // 修改点：如果有对话，自动选中最近一条
+                        if (self.conversations.length > 0 && !self.currentConversationId) {
+                            self.selectConversation(self.conversations[0]);
+                        }
+                    }).catch(function(err) {
+                        console.error('加载对话列表失败:', err);
+                        self.conversations = [];
+                    }).finally(function() {
+                        self.sidebarLoading = false;
+                    });
+                },
+
+                /** 选择对话并加载历史消息 */
+                selectConversation: function(conv) {
+                    if (!conv || !conv.conversationId) return;
+                    var self = this;
+                    // 如果已经是当前对话，不重复加载
+                    if (self.currentConversationId === conv.conversationId && self.messages.length > 0) {
+                        return;
+                    }
+                    self.currentConversationId = conv.conversationId;
+                    self.currentScene = conv.scene || 'business_analysis';
+                    self.loadConversationMessages(conv.conversationId);
+                },
+
+                /** 加载指定对话的消息历史 */
+                loadConversationMessages: function(conversationId) {
+                    var self = this;
+                    self.messages = [];
+                    self.loadingHistory = true;
+                    aiBackendApi.getConversationDetail(conversationId).then(function(res) {
+                        var data = res.data || res;
+                        var records = (data && data.code === 1 ? data.data : data) || [];
+                        // 将数据库记录转换为消息格式
+                        self.messages = records.map(function(record) {
+                            var msg = {
+                                _key: 'msg_' + (record.id || Date.now() + Math.random()),
+                                dbMessageId: record.id,
+                                role: record.role || 'user',
+                                content: record.content || '',
+                                showFeedback: record.role === 'assistant',
+                                feedback: record.feedback || null,
+                                streaming: false,
+                                timestamp: record.createTime ? new Date(record.createTime).getTime() : Date.now()
+                            };
+                            // 安全渲染
+                            if (msg.role === 'assistant') {
+                                msg.renderedParts = safeFormatContent(msg.content);
+                            }
+                            return msg;
+                        });
+                    }).catch(function(err) {
+                        console.error('加载消息历史失败:', err);
+                        self.messages = [];
+                    }).finally(function() {
+                        self.loadingHistory = false;
+                        self.scrollToBottom();
+                    });
+                },
+
+                /** 新建对话 */
+                createNewConversation: function() {
+                    // 修改点：不在此时调后端创建对话，等用户发第一条消息时自动创建
+                    this.currentConversationId = null;
+                    this.messages = [];
+                    this.inputText = '';
+                    this.loading = false;
+                    this.scrollToBottom();
+                    // 高亮取消
+                    this.loadConversations();
+                },
+
+                /** 删除对话 */
+                handleDeleteConv: function(conv) {
+                    var self = this;
+                    if (!confirm('确定要删除对话"' + (conv.title || '新对话') + '"吗？删除后不可恢复。')) {
+                        return;
+                    }
+                    aiBackendApi.deleteConversation(conv.conversationId).then(function() {
+                        // 从列表中移除
+                        self.conversations = self.conversations.filter(function(c) {
+                            return c.conversationId !== conv.conversationId;
+                        });
+                        // 如果删除的是当前对话
+                        if (self.currentConversationId === conv.conversationId) {
+                            self.currentConversationId = null;
+                            self.messages = [];
+                            // 自动选中第一条
+                            if (self.conversations.length > 0) {
+                                self.selectConversation(self.conversations[0]);
+                            }
+                        }
+                    }).catch(function(err) {
+                        console.error('删除对话失败:', err);
+                        alert('删除失败，请重试');
+                    });
+                },
+
+                /** 获取场景图标 */
+                getSceneIcon: function(scene) {
+                    return sceneIcons[scene] || '💬';
+                },
+
+                /** 格式化对话时间 */
+                formatConvTime: function(time) {
+                    return formatConvTime(time);
+                },
+
+                // ==================== 消息发送 ====================
+
                 sendMessage: function() {
                     var text = this.inputText.trim();
                     if (!text || this.loading) return;
 
-                    this.currentRequestId++;
-                    var requestId = this.currentRequestId;
+                    var self = this;
+                    self.currentRequestId++;
+                    var requestId = self.currentRequestId;
 
+                    // 用户消息
                     var userMsg = {
-                        id: Date.now(), role: 'user', content: text, timestamp: Date.now()
-                    };
-                    var assistantMsg = {
-                        id: Date.now() + 1, role: 'assistant', content: '',
-                        renderedParts: [], streaming: true, showFeedback: false,
-                        feedback: null, error: false, retryData: null,
+                        _key: 'user_' + Date.now(),
+                        role: 'user',
+                        content: text,
                         timestamp: Date.now()
                     };
 
-                    this.messages.push(userMsg);
-                    this.messages.push(assistantMsg);
-                    this.inputText = '';
-                    this.loading = true;
-                    this.scrollToBottom();
+                    // AI 占位消息
+                    var assistantMsg = {
+                        _key: 'ai_' + (Date.now() + 1),
+                        role: 'assistant',
+                        content: '',
+                        renderedParts: [],
+                        streaming: true,
+                        showFeedback: false,
+                        feedback: null,
+                        error: false,
+                        timestamp: Date.now()
+                    };
 
-                    var self = this;
-                    aiBackendApi.chat(text, this.currentScene).then(function(res) {
+                    self.messages.push(userMsg);
+                    self.messages.push(assistantMsg);
+                    self.inputText = '';
+                    self.loading = true;
+                    self.scrollToBottom();
+
+                    // 修改点：传递 conversationId 实现多轮对话持久化
+                    aiBackendApi.chat(text, self.currentScene, self.currentConversationId).then(function(res) {
                         if (requestId !== self.currentRequestId) return;
+
                         var data = res.data || res;
-                        assistantMsg.content = data.content || '抱歉，我没理解您的意思，换个说法试试？';
+                        // 解析 R<T> 包装
+                        var responseData = data && data.code === 1 ? data.data : data;
+
+                        assistantMsg.content = (responseData && responseData.content)
+                            ? responseData.content
+                            : '抱歉，我没理解您的意思，换个说法试试？';
                         assistantMsg.streaming = false;
-                        assistantMsg.showFeedback = true;
                         assistantMsg.renderedParts = safeFormatContent(assistantMsg.content);
+
+                        // 修改点：从响应中提取 messageId 和 conversationId
+                        var meta = (responseData && responseData.data) || {};
+                        if (meta.messageId) {
+                            assistantMsg.dbMessageId = meta.messageId;
+                            assistantMsg.showFeedback = true;
+                        }
+                        // 修改点：如果后端自动创建了新对话，记录其 ID 并刷新列表
+                        if (meta.conversationId && !self.currentConversationId) {
+                            self.currentConversationId = meta.conversationId;
+                            self.loadConversations();
+                        }
+
+                        self.scrollToBottom();
                     }).catch(function() {
                         if (requestId !== self.currentRequestId) return;
                         assistantMsg.content = '抱歉，请求失败，请重试。';
                         assistantMsg.streaming = false;
                         assistantMsg.error = true;
-                        assistantMsg.retryData = { message: text, scene: self.currentScene };
                         assistantMsg.renderedParts = [{ type: 'text', text: assistantMsg.content }];
                     }).finally(function() {
                         if (requestId === self.currentRequestId) {
                             self.loading = false;
+                            self.scrollToBottom();
                         }
                     });
                 },
 
                 retryMessage: function(msg) {
-                    if (msg.retryData) {
-                        var idx = this.messages.indexOf(msg);
-                        if (idx > 0) {
-                            this.messages.splice(idx - 1, 2);
+                    var self = this;
+                    var idx = self.messages.indexOf(msg);
+                    if (idx > 0) {
+                        // 删除失败的 AI 消息及其前面的用户消息
+                        self.messages.splice(idx - 1, 2);
+                    }
+                    // 用之前的用户消息内容重新发送
+                    if (idx > 0) {
+                        var prevUser = self.messages[idx - 2];
+                        if (prevUser && prevUser.role === 'user') {
+                            self.inputText = prevUser.content;
+                            self.sendMessage();
                         }
-                        this.inputText = msg.retryData.message;
-                        this.currentScene = msg.retryData.scene || this.currentScene;
-                        this.sendMessage();
                     }
                 },
 
@@ -468,14 +844,16 @@
                     this.sendMessage();
                 },
 
+                // ==================== 场景切换 ====================
+
                 switchScene: function(scene) {
+                    // 修改点：切换场景时保留当前对话，仅更改场景标签
+                    // 实际的场景绑定到对话上，下次新建对话时会生效
                     this.currentScene = scene;
-                    this.messages.push({
-                        id: Date.now(), role: 'assistant', content: '已切换到「' + this.getSceneLabel(scene) + '」模式，请开始提问。',
-                        renderedParts: [{ type: 'text', text: '已切换到「' + this.getSceneLabel(scene) + '」模式，请开始提问。' }],
-                        streaming: false, showFeedback: false, timestamp: Date.now()
-                    });
-                    this.scrollToBottom();
+                    // 如果当前没有活跃对话，显示欢迎界面即可
+                    if (this.messages.length === 0 && !this.currentConversationId) {
+                        this.scrollToBottom();
+                    }
                 },
 
                 getSceneLabel: function(scene) {
@@ -483,24 +861,21 @@
                     return found.length > 0 ? found[0].label : scene;
                 },
 
-                handleAction: function(action) {
-                    if (action.handler === 'navigate') {
-                        window.location.href = action.url;
-                    } else if (action.handler === 'export') {
-                        window.location.href = action.url;
-                    }
-                },
+                // ==================== 反馈 ====================
 
                 sendFeedback: function(msg, type) {
+                    if (!msg.dbMessageId) return;
+                    var self = this;
                     msg.feedback = type;
-                    try {
-                        if (aiBackendApi.recordFeedback) {
-                            aiBackendApi.recordFeedback({
-                                messageId: msg.id, feedbackType: type, scene: this.currentScene
-                            }).catch(function() {});
-                        }
-                    } catch (e) { }
+                    aiBackendApi.recordFeedback({
+                        messageId: msg.dbMessageId,
+                        feedbackType: type
+                    }).catch(function(err) {
+                        console.error('反馈提交失败:', err);
+                    });
                 },
+
+                // ==================== 工具 ====================
 
                 scrollToBottom: function() {
                     var self = this;

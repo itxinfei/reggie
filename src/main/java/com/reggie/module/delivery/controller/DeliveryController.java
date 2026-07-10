@@ -23,6 +23,13 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
 import java.util.Map;
 
+/**
+ * 外卖平台对接控制器
+ * 提供外卖订单管理、菜品同步、库存同步等接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/delivery")

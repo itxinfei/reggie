@@ -34,6 +34,14 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     }
 
+    /* 修改点：stats-card 可点击筛选 */
+    .stat-card.clickable { cursor: pointer; user-select: none; }
+    .stat-card.active {
+      border-color: #409eff;
+      box-shadow: 0 0 0 2px rgba(64,158,255,0.3);
+      transform: translateY(-3px);
+    }
+
     .stat-card::before {
       content: '';
       position: absolute;
@@ -50,7 +58,6 @@
       top: 50%;
       transform: translateY(-50%);
       font-size: 42px;
-      opacity: 0.08;
     }
 
     .stat-card .stat-label {
@@ -89,23 +96,24 @@
    <div class="dashboard-container" id="food-app">
     <div class="container">
       <!-- ========== 数据统计卡片 ========== -->
+      <!-- 修改点：卡片可点击筛选，点击后高亮并按对应状态过滤列表 -->
       <div class="stats-cards">
-        <div class="stat-card primary">
+        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterBy('status', '')">
           <div class="stat-icon">🍽️</div>
           <div class="stat-label">菜品总数</div>
           <div class="stat-value">{{ stats.totalDishes || 0 }}</div>
         </div>
-        <div class="stat-card success">
+        <div class="stat-card success clickable" :class="{ active: activeFilter === '1' }" @click="filterBy('status', '1')">
           <div class="stat-icon">✅</div>
           <div class="stat-label">已启售</div>
           <div class="stat-value">{{ stats.activeDishes || 0 }}</div>
         </div>
-        <div class="stat-card warning">
+        <div class="stat-card warning clickable" :class="{ active: activeFilter === '0' }" @click="filterBy('status', '0')">
           <div class="stat-icon">⏸️</div>
           <div class="stat-label">已停售</div>
           <div class="stat-value">{{ stats.inactiveDishes || 0 }}</div>
         </div>
-        <div class="stat-card danger">
+        <div class="stat-card danger clickable" :class="{ active: activeFilter === 'deleted' }" @click="filterBy('status', 'deleted')">
           <div class="stat-icon">🗑️</div>
           <div class="stat-label">已删除</div>
           <div class="stat-value">{{ stats.deletedDishes || 0 }}</div>
@@ -127,6 +135,8 @@
             @click="handleQuery"
           ></i>
         </el-input>
+        <el-button type="primary" size="small" @click="handleQuery">查询</el-button>
+        <el-button size="small" @click="reset">重置</el-button>
         <div class="tableLab">
           <el-button type="primary" size="small" @click="deleteHandle('批量', null)">批量删除</el-button>
           <el-button type="primary" size="small" @click="statusHandle('1')">批量启售</el-button>
@@ -134,6 +144,7 @@
           <el-button type="primary" size="small" @click="addFoodtype('add')">
             + 新建菜品
           </el-button>
+          <el-button type="success" size="small" @click="exportDishes('excel')" icon="el-icon-download">导出</el-button>
         </div>
       </div>
       <el-table
@@ -178,6 +189,15 @@
             <el-tag :type="scope.row.status == '0' ? 'info' : 'success'" size="small">
               {{ scope.row.status == '0' ? '停售' : '启售' }}
             </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="库存" width="100" align="center">
+          <template slot-scope="scope">
+            <span :style="{ color: scope.row.stockQty != null && scope.row.minStock != null && scope.row.stockQty <= scope.row.minStock ? '#f56c6c' : '#303133', fontWeight: scope.row.stockQty != null && scope.row.minStock != null && scope.row.stockQty <= scope.row.minStock ? '600' : '400' }">
+              {{ scope.row.stockQty != null ? scope.row.stockQty : '-' }}
+            </span>
+            <el-tag v-if="scope.row.stockQty != null && scope.row.minStock != null && scope.row.stockQty <= scope.row.minStock && scope.row.stockQty > 0" type="danger" size="mini" effect="plain" style="margin-left:4px;">低</el-tag>
+            <el-tag v-if="scope.row.stockQty != null && scope.row.stockQty == 0" type="danger" size="mini">售罄</el-tag>
           </template>
         </el-table-column>
         <el-table-column
@@ -281,6 +301,7 @@
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
     <script src="../../api/food.js"></script>
+    <script src="../../api/export.js"></script>
     <script>
       new Vue({
         el: '#food-app',
@@ -301,6 +322,8 @@
                inactiveDishes: 0,
                deletedDishes: 0
              },
+             // 修改点：当前激活的筛选器值，空字符串=全部，对应 stats-card 点击
+             activeFilter: '',
              // 菜品弹窗相关
              dishDialog: {
                title: '添加菜品',
@@ -366,8 +389,11 @@
           async init () {
             this.loading = true
             // 并行加载菜品列表和统计数据
+            // 修改点：传递 activeFilter 状态参数到后端
+            var params = { page: this.page, pageSize: this.pageSize, name: this.input ? this.input : undefined }
+            if (this.activeFilter) { params.status = this.activeFilter }
             const [dishRes, statsRes] = await Promise.all([
-              getDishPage({ page: this.page, pageSize: this.pageSize, name: this.input ? this.input : undefined }),
+              getDishPage(params),
               this.loadDishStats()
             ])
 
@@ -385,17 +411,23 @@
             this.loading = false
           },
           // 加载菜品统计数据
+          // 修改点：通过拉取全量数据后按状态过滤，获取真实的已启售/已停售/已删除数量
           async loadDishStats() {
             try {
-              const res = await getDishPage({ page: 1, pageSize: 1 })
-              if (String(res.code) === '1') {
+              const [totalRes, listRes] = await Promise.all([
+                getDishPage({ page: 1, pageSize: 1 }),
+                getDishPage({ page: 1, pageSize: 1000 })
+              ])
+              if (String(totalRes.code) === '1') {
+                var records = listRes.data.records || []
                 return {
                   code: 1,
                   data: {
-                    totalDishes: res.data.total || 0,
-                    activeDishes: 0,
-                    inactiveDishes: 0,
-                    deletedDishes: 0
+                    totalDishes: totalRes.data.total || 0,
+                    // 修改点：后端 Dish.status 为 Integer，JSON 序列化为数字 1/0
+                    activeDishes: records.filter(function(r) { return r.status === 1 }).length,
+                    inactiveDishes: records.filter(function(r) { return r.status === 0 }).length,
+                    deletedDishes: 0  // 逻辑删除，分页接口仅查询未删除数据
                   }
                 }
               }
@@ -418,8 +450,29 @@
             return `/common/download?name=${image}`
           },
           handleQuery() {
+            // 修改点：搜索时清空卡片筛选状态
+            this.activeFilter = ''
             this.page = 1;
             this.init();
+          },
+          // 重置搜索条件，恢复表格初始状态
+          reset() {
+            this.input = ''
+            this.activeFilter = ''
+            this.page = 1
+            this.init()
+          },
+          // 修改点：stats-card 点击切换筛选状态（清空搜索框避免冲突）
+          filterBy(type, value) {
+            if (this.activeFilter === value) {
+              this.activeFilter = ''  // 再次点击取消筛选，显示全部
+            } else {
+              this.activeFilter = value
+            }
+            // 修改点：卡片筛选时清空搜索条件
+            this.input = ''
+            this.page = 1
+            this.init()
           },
           // 打开菜品弹窗
           addFoodtype (st) {
@@ -452,11 +505,18 @@
                   imageUrl: `/common/download?name=${data.image}`,
                   description: data.description || ''
                 }
-                this.dishFlavors = data.flavors && data.flavors.map(obj => ({
-                  ...obj,
-                  value: JSON.parse(obj.value),
-                  showOption: false
-                }))
+                // 修改点：安全的 JSON.parse，兼容数据库中 value 为非 JSON 的情况
+                this.dishFlavors = data.flavors && data.flavors.map(obj => {
+                  let parsedValue = []
+                  if (obj.value) {
+                    try {
+                      parsedValue = JSON.parse(obj.value)
+                    } catch(e) {
+                      parsedValue = typeof obj.value === 'string' ? obj.value.split(',').map(function(s) { return s.trim() }).filter(Boolean) : [obj.value]
+                    }
+                  }
+                  return { ...obj, value: parsedValue, showOption: false }
+                })
               } else {
                 this.$message.error(res.msg || '获取菜品信息失败')
               }
@@ -627,6 +687,19 @@
               checkArr.push(n.id)
             })
             this.checkList = checkArr
+          },
+          // 导出菜品
+          exportDishes(format) {
+            try {
+              var ext = format === 'excel' ? 'xlsx' : 'pdf'
+              var apiCall = format === 'excel'
+                ? exportApi.exportDishesExcel({})
+                : exportApi.exportDishesPdf({})
+              exportApi.downloadFile(apiCall, '菜品数据.' + ext)
+              this.$message.success('导出成功，文件已开始下载')
+            } catch (err) {
+              this.$message.error('导出失败：' + (err.message || err))
+            }
           },
           handleSizeChange (val) {
             this.pageSize = val

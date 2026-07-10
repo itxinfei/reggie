@@ -6,8 +6,11 @@ import com.reggie.module.ai.model.AiProviderConfig;
 import java.util.List;
 
 /**
- * AI供应商配置服务
+ * AI供应商配置服务接口
  * 管理员可在后台配置/切换不同的大模型供应商
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 public interface AiProviderConfigService extends IService<AiProviderConfig> {
 

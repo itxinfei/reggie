@@ -8,8 +8,11 @@ import lombok.Getter;
 @Getter
 public enum DiningTableStatus {
 
+    /** 空闲 */
     EMPTY("EMPTY", "空闲"),
+    /** 已占用 */
     OCCUPIED("OCCUPIED", "已占用"),
+    /** 已预订 */
     RESERVED("RESERVED", "已预订");
 
     private final String value;

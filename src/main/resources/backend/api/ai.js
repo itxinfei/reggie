@@ -1,16 +1,26 @@
 /**
  * AI智能助手 - 管理端API
- * 修改点：新增AI相关管理接口
+ * 修改点：全面重构，新增对话管理、用户画像等完整 API 封装
+ * 修改点：chat() 支持 conversationId，实现多轮对话持久化
  */
 var aiBackendApi = {
+    // ==================== 核心对话 ====================
+
     /**
-     * 通用AI对话
+     * 通用AI对话（非流式）
+     * @param {string} message - 用户消息
+     * @param {string} scene - 场景：business_analysis / dish_desc / marketing
+     * @param {string} conversationId - 会话ID（可选，不传则后端自动创建）
      */
-    chat: function(message, scene) {
-        return $axios.post('/api/ai/chat', {
+    chat: function(message, scene, conversationId) {
+        var params = {
             message: message,
             scene: scene || 'business_analysis'
-        });
+        };
+        if (conversationId) {
+            params.conversationId = conversationId;
+        }
+        return $axios.post('/api/ai/chat', params);
     },
 
     /**
@@ -39,5 +49,68 @@ var aiBackendApi = {
      */
     health: function() {
         return $axios.get('/api/ai/health');
+    },
+
+    // ==================== 对话管理 ====================
+
+    /**
+     * 获取用户对话列表
+     * @param {number} page - 页码，默认1
+     * @param {number} pageSize - 每页条数，默认20
+     */
+    getConversations: function(page, pageSize) {
+        return $axios.get('/api/ai/conversations', {
+            params: { page: page || 1, pageSize: pageSize || 20 }
+        });
+    },
+
+    /**
+     * 获取对话详情（含消息历史）
+     * @param {string} conversationId - 会话ID
+     */
+    getConversationDetail: function(conversationId) {
+        return $axios.get('/api/ai/conversations/' + conversationId);
+    },
+
+    /**
+     * 创建新对话
+     * @param {string} title - 对话标题（可选）
+     * @param {string} scene - 对话场景
+     */
+    createConversation: function(title, scene) {
+        return $axios.post('/api/ai/conversations', {
+            title: title || null,
+            scene: scene || 'business_analysis'
+        });
+    },
+
+    /**
+     * 删除对话
+     * @param {string} conversationId - 会话ID
+     */
+    deleteConversation: function(conversationId) {
+        return $axios.delete('/api/ai/conversations/' + conversationId);
+    },
+
+    // ==================== 反馈 ====================
+
+    /**
+     * 记录用户反馈（有用/没用）
+     * @param {object} params - { messageId, feedbackType }
+     */
+    recordFeedback: function(params) {
+        return $axios.post('/api/ai/feedback', {
+            messageId: params.messageId,
+            feedbackType: params.feedbackType
+        });
+    },
+
+    // ==================== 用户画像 ====================
+
+    /**
+     * 获取用户画像摘要
+     */
+    getProfile: function() {
+        return $axios.get('/api/ai/profile/summary');
     }
 };

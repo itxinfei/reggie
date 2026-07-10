@@ -34,6 +34,14 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     }
 
+    /* 修改点：stats-card 可点击筛选 */
+    .stat-card.clickable { cursor: pointer; user-select: none; }
+    .stat-card.active {
+      border-color: #409eff;
+      box-shadow: 0 0 0 2px rgba(64,158,255,0.3);
+      transform: translateY(-3px);
+    }
+
     .stat-card::before {
       content: '';
       position: absolute;
@@ -50,7 +58,6 @@
       top: 50%;
       transform: translateY(-50%);
       font-size: 42px;
-      opacity: 0.08;
     }
 
     .stat-card .stat-label {
@@ -85,25 +92,43 @@
   <div class="dashboard-container" id="category-app">
     <div class="container">
       <!-- ========== 数据统计卡片 ========== -->
+      <!-- 修改点：卡片可点击筛选，点击后按分类类型过滤列表 -->
       <div class="stats-cards">
-        <div class="stat-card primary">
+        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterByType('')">
           <div class="stat-icon">📂</div>
           <div class="stat-label">分类总数</div>
           <div class="stat-value">{{ stats.totalCategories || 0 }}</div>
         </div>
-        <div class="stat-card success">
+        <div class="stat-card success clickable" :class="{ active: activeFilter === '1' }" @click="filterByType('1')">
           <div class="stat-icon">🍽️</div>
           <div class="stat-label">菜品分类</div>
           <div class="stat-value">{{ stats.foodCategories || 0 }}</div>
         </div>
-        <div class="stat-card warning">
+        <div class="stat-card warning clickable" :class="{ active: activeFilter === '2' }" @click="filterByType('2')">
           <div class="stat-icon">🍱</div>
           <div class="stat-label">套餐分类</div>
           <div class="stat-value">{{ stats.comboCategories || 0 }}</div>
         </div>
       </div>
 
+      <!-- 修改点：新增搜索框，支持按分类名称搜索 -->
       <div class="tableBar">
+        <el-input
+          v-model="searchName"
+          placeholder="请输入分类名称"
+          style="width: 250px"
+          clearable
+          @keyup.enter.native="handleQuery"
+        >
+          <i
+            slot="prefix"
+            class="el-input__icon el-icon-search"
+            style="cursor: pointer"
+            @click="handleQuery"
+          ></i>
+        </el-input>
+        <el-button type="primary" size="small" @click="handleQuery">查询</el-button>
+        <el-button size="small" @click="reset">重置</el-button>
         <el-button
           type="primary"
           class="continue"
@@ -245,12 +270,16 @@
             tableData: [],
             loading: false,
             type :'',
+            // 修改点：搜索条件，与卡片筛选互斥
+            searchName: '',
             // 数据统计
             stats: {
               totalCategories: 0,
               foodCategories: 0,
               comboCategories: 0
             },
+            // 修改点：当前激活的分类类型筛选器，空字符串=全部
+            activeFilter: '',
             classData: {
               'title': '添加菜品分类',
               'dialogVisible': false,
@@ -269,9 +298,15 @@
         methods: {
           async init () {
             this.loading = true
+            // 修改点：传递类型筛选参数 + 名称搜索参数到后端
+            var params = {'page': this.page, 'pageSize': this.pageSize}
+            if (this.activeFilter) { params.type = this.activeFilter }
+            // 修改点：搜索名称去除首尾空格后传递，空字符串不传
+            var name = (this.searchName || '').trim()
+            if (name) { params.name = name }
             // 并行加载分类列表和统计数据
             const [categoryRes, statsRes] = await Promise.all([
-              getCategoryPage({'page': this.page, 'pageSize': this.pageSize}),
+              getCategoryPage(params),
               this.loadCategoryStats()
             ])
 
@@ -297,8 +332,9 @@
               if (String(res.code) === '1') {
                 const records = res.data.records || []
                 const total = res.data.total || 0
-                const foodCount = records.filter(item => item.type === '1').length
-                const comboCount = records.filter(item => item.type === '2').length
+                // 修改点：后端 type 是 Integer，JSON 序列化为数字 1/2，不能用字符串 '1'/'2' 做 === 比较
+                const foodCount = records.filter(item => item.type === 1).length
+                const comboCount = records.filter(item => item.type === 2).length
                 return {
                   code: 1,
                   data: {
@@ -314,8 +350,29 @@
             return { code: 0 }
           },
           handleQuery() {
+            // 修改点：搜索时复位卡片筛选，避免冲突
+            this.activeFilter = ''
             this.page = 1;
             this.init();
+          },
+          // 重置搜索条件，恢复表格初始状态
+          reset() {
+            this.searchName = ''
+            this.activeFilter = ''
+            this.page = 1
+            this.init()
+          },
+          // 修改点：stats-card 点击切换分类类型筛选（清空搜索条件避免冲突）
+          filterByType(type) {
+            if (this.activeFilter === type) {
+              this.activeFilter = ''  // 再次点击取消筛选
+            } else {
+              this.activeFilter = type
+            }
+            // 修改点：卡片筛选时清空搜索条件
+            this.searchName = ''
+            this.page = 1
+            this.init()
           },
            // 添加
           addClass(st) {
@@ -337,6 +394,7 @@
             this.classData.name = dat.name
             this.classData.sort = dat.sort
             this.classData.id = dat.id
+            this.type = dat.type
             this.classData.dialogVisible = true
           },
           // 关闭弹窗
@@ -396,7 +454,8 @@
             } else if (valid) {
               const reg = /^\d+$/
               if (reg.test(this.classData.sort)) {
-                editCategory({'id':this.classData.id,'name': this.classData.name, sort: this.classData.sort}).then(res => {
+                // 修改点：编辑时也带上 type 字段
+                editCategory({'id':this.classData.id,'name': this.classData.name, 'type': this.type, sort: this.classData.sort}).then(res => {
                   if (res.code === 1) {
                     this.$message.success('分类修改成功！')
                     this.classData.dialogVisible = false

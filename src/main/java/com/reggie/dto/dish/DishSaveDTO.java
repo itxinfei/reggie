@@ -13,6 +13,9 @@ import java.util.List;
 
 /**
  * 菜品新增/修改DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @Schema(description = "菜品信息")

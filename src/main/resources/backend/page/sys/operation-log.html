@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>操作日志 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+  <style>
+    .log-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
+    .log-stat-card { background: #fff; border-radius: 8px; padding: 16px 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .log-stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .log-stat-val { font-size: 24px; font-weight: 700; color: #1a1a1a; }
+    .log-stat-label { font-size: 13px; color: #999; margin-top: 2px; }
+    .log-stat-card.today .log-stat-icon { background: #e6f7ff; color: #1890ff; }
+    .log-stat-card.total .log-stat-icon { background: #f0f9eb; color: #52c41a; }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container" id="log-app">
+    <!-- 统计卡片 -->
+    <div class="log-stats">
+      <div class="log-stat-card today">
+        <div class="log-stat-icon">📋</div>
+        <div>
+          <div class="log-stat-val">{{ stats.todayCount || 0 }}</div>
+          <div class="log-stat-label">今日操作次数</div>
+        </div>
+      </div>
+      <div class="log-stat-card total">
+        <div class="log-stat-icon">📊</div>
+        <div>
+          <div class="log-stat-val">{{ stats.totalCount || 0 }}</div>
+          <div class="log-stat-label">累计操作次数</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="tableBar">
+        <el-input v-model="searchModule" placeholder="操作模块" style="width: 140px" clearable @keyup.enter.native="handleQuery"></el-input>
+        <el-select v-model="searchType" placeholder="操作类型" clearable style="width: 120px" @change="handleQuery">
+          <el-option label="新增" value="INSERT"></el-option>
+          <el-option label="修改" value="UPDATE"></el-option>
+          <el-option label="删除" value="DELETE"></el-option>
+          <el-option label="其他" value="OTHER"></el-option>
+        </el-select>
+        <el-input v-model="searchOperator" placeholder="操作人" style="width: 120px" clearable @keyup.enter.native="handleQuery"></el-input>
+        <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd" @change="handleQuery" style="width: 240px"></el-date-picker>
+        <el-button type="primary" @click="handleQuery">查询</el-button>
+        <el-button @click="resetSearch">重置</el-button>
+      </div>
+
+      <el-table :data="tableData" stripe border v-loading="loading" class="tableBox">
+        <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
+        <el-table-column prop="operatorName" label="操作人" width="100">
+          <template slot-scope="scope">
+            <el-tag size="small" type="info">{{ scope.row.operatorName || '-' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="module" label="操作模块" width="120">
+          <template slot-scope="scope">
+            <span style="font-weight:500;">{{ scope.row.module || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="operationType" label="操作类型" width="90" align="center">
+          <template slot-scope="scope">
+            <el-tag size="small" :type="opTypeTag(scope.row.operationType)">{{ scope.row.operationType }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="description" label="操作描述" min-width="200" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="requestUrl" label="请求地址" width="180" show-overflow-tooltip>
+          <template slot-scope="scope">{{ scope.row.requestUrl || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="requestMethod" label="方法" width="70" align="center">
+          <template slot-scope="scope">
+            <el-tag size="mini" effect="plain" :type="methodTag(scope.row.requestMethod)">{{ scope.row.requestMethod }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="isSuccess" label="状态" width="70" align="center">
+          <template slot-scope="scope">
+            <i class="el-icon-circle-check" style="color:#52c41a;font-size:16px;" v-if="scope.row.isSuccess === 1"></i>
+            <i class="el-icon-circle-close" style="color:#f56c6c;font-size:16px;" v-else-if="scope.row.isSuccess === 0"></i>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="操作时间" width="160"></el-table-column>
+      </el-table>
+
+      <el-pagination
+        class="pageList"
+        :page-sizes="[10, 20, 50]"
+        :page-size="pageSize"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="counts"
+        :current-page.sync="page"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange">
+      </el-pagination>
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../api/sys.js"></script>
+  <script>
+    new Vue({
+      el: '#log-app',
+      data() {
+        return {
+          searchModule: '',
+          searchType: '',
+          searchOperator: '',
+          dateRange: null,
+          tableData: [],
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          loading: false,
+          stats: { todayCount: 0, totalCount: 0 }
+        }
+      },
+      created() {
+        this.loadData()
+        this.loadStats()
+      },
+      methods: {
+        loadData() {
+          this.loading = true
+          var params = { page: this.page, pageSize: this.pageSize }
+          if (this.searchModule) params.module = this.searchModule
+          if (this.searchType) params.operationType = this.searchType
+          if (this.searchOperator) params.operatorName = this.searchOperator
+          if (this.dateRange && this.dateRange.length === 2) {
+            params.beginTime = this.dateRange[0]
+            params.endTime = this.dateRange[1]
+          }
+          sysApi.logPage(params).then(res => {
+            if (res && res.code === 1) {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total || 0
+            }
+            this.loading = false
+          }).catch(() => { this.loading = false })
+        },
+        loadStats() {
+          sysApi.logStats().then(res => {
+            if (res && res.code === 1) {
+              this.stats = res.data || this.stats
+            }
+          })
+        },
+        handleQuery() {
+          this.page = 1
+          this.loadData()
+        },
+        resetSearch() {
+          this.searchModule = ''
+          this.searchType = ''
+          this.searchOperator = ''
+          this.dateRange = null
+          this.handleQuery()
+        },
+        handleSizeChange(val) { this.pageSize = val; this.loadData() },
+        handleCurrentChange(val) { this.page = val; this.loadData() },
+        opTypeTag(type) {
+          var map = { 'INSERT': 'success', 'UPDATE': 'warning', 'DELETE': 'danger', 'OTHER': 'info' }
+          return map[type] || 'info'
+        },
+        methodTag(method) {
+          var map = { 'GET': 'success', 'POST': 'primary', 'PUT': 'warning', 'DELETE': 'danger' }
+          return map[method] || 'info'
+        }
+      }
+    })
+  </script>
+</body>
+</html>

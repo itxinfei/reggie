@@ -12,7 +12,7 @@ import java.util.List;
  * AI对话会话 Mapper
  *
  * @author reggie
- * @since 2026-07-10
+ * @since 2026-07-09
  */
 @Mapper
 public interface AIConversationMapper extends BaseMapper<AIConversation> {

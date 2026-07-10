@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 修改点：商家信息接口 — 前端动态获取评分、配送信息等，替代硬编码数据
+ * 商家信息接口
  *
  * @author reggie
  * @since 2026-07-09
@@ -25,7 +25,6 @@ public class RestaurantController {
 
     /**
      * 获取商家基本信息和配送参数
-     * 修改点：前端原来硬编码★4.8、月售999+、约30分钟、配送费¥6、距1.5km、¥15起送
      * 现在通过接口动态返回，便于后台配置调整
      */
     @GetMapping("/info")

@@ -523,10 +523,16 @@
           },
 
           // 保存添加菜品列表
+          // 修改点：使用 checkedList（用户实际选中项），合并而非替换已有菜品
           addTableList() {
-            this.dishTable = JSON.parse(JSON.stringify(this.checkList))
-            this.dishTable.forEach((n) => {
+            const existingIds = new Set(this.dishTable.map(function(item) { return item.dishId || item.id }))
+            var newItems = JSON.parse(JSON.stringify(this.checkedList))
+            var self = this
+            newItems.forEach(function(n) {
               n.copies = 1
+              if (!existingIds.has(n.dishId || n.id)) {
+                self.dishTable.push(n)
+              }
             })
             this.dialogVisible = false
             // 添加处理逻辑清空选中list
@@ -537,9 +543,10 @@
               if (valid) {
                 let params = { ...this.ruleForm }
                 params.price *= 100
+                // 修改点：dishId 添加 fallback，兼容新旧数据
                 params.setmealDishes = this.dishTable.map((obj) => ({
                   copies: obj.copies,
-                  dishId: obj.dishId,
+                  dishId: obj.dishId || obj.id,
                   name: obj.name,
                   price: obj.price,
                 }))

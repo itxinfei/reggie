@@ -8,22 +8,60 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <style>
+    .stats-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+    .stat-card { background: #fff; border-radius: 12px; padding: 20px 24px; position: relative; overflow: hidden; transition: all 0.3s; box-shadow: 0 2px 12px rgba(0,0,0,0.04); border: 1px solid #f0f2f5; }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gradient); }
+    .stat-card .stat-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 42px;  }
+    .stat-card .stat-label { font-size: 13px; color: #909399; margin-bottom: 8px; font-weight: 500; }
+    .stat-card .stat-value { font-size: 30px; font-weight: 700; line-height: 1.2; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .stat-card.primary { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
+    .stat-card.success { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
+    .stat-card.warning { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
+  </style>
 </head>
 <body>
   <div class="dashboard-container" id="level-app">
     <div class="container">
+      <!-- 修改点：新增统计卡片 -->
+      <div class="stats-cards">
+        <div class="stat-card primary">
+          <div class="stat-icon">🏅</div>
+          <div class="stat-label">等级总数</div>
+          <div class="stat-value">{{ stats.totalLevels || 0 }}</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">⬆️</div>
+          <div class="stat-label">最高等级</div>
+          <div class="stat-value" style="font-size: 20px">{{ stats.highestLevel || '-' }}</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-icon">📊</div>
+          <div class="stat-label">最低积分门槛</div>
+          <div class="stat-value" style="font-size: 22px">{{ stats.lowestPoints || 0 }}</div>
+        </div>
+      </div>
+
       <div class="tableBar">
         <el-button type="primary" @click="addHandle">+ 新增会员等级</el-button>
       </div>
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
         <el-table-column prop="name" label="等级名称"></el-table-column>
-        <el-table-column prop="requiredPoints" label="所需积分"></el-table-column>
-        <el-table-column prop="discountRate" label="折扣率">
+        <!-- 修改点：字段名 requiredPoints → minPoints，对齐实体 -->
+        <el-table-column prop="minPoints" label="所需积分"></el-table-column>
+        <!-- 修改点：字段名 discountRate → discount，对齐实体 BigDecimal -->
+        <el-table-column prop="discount" label="折扣率">
           <template slot-scope="scope">
-            <span>{{ scope.row.discountRate }}%</span>
+            <span>{{ scope.row.discount != null ? scope.row.discount : '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="sort" label="排序"></el-table-column>
+        <!-- 修改点：sort -->
+        <el-table-column prop="sort" label="排序">
+          <template slot-scope="scope">
+            <span>{{ scope.row.sort != null ? scope.row.sort : '-' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="160" align="center">
           <template slot-scope="scope">
             <el-button type="text" size="small" class="blueBug" @click="editHandle(scope.row)">修改</el-button>
@@ -42,19 +80,22 @@
         @current-change="handleCurrentChange"
       ></el-pagination>
     </div>
-    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="30%" :before-close="handleClose">
-      <el-form label-width="120px">
-        <el-form-item label="等级名称：">
+    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="35%" :before-close="handleClose">
+      <!-- 修改点：添加表单校验规则 -->
+      <el-form label-width="120px" :model="formData" :rules="formRules" ref="levelForm">
+        <el-form-item label="等级名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入等级名称" maxlength="20"></el-input>
         </el-form-item>
-        <el-form-item label="所需积分：">
-          <el-input v-model="formData.requiredPoints" type="number" placeholder="请输入所需积分"></el-input>
+        <!-- 修改点：字段名 requiredPoints → minPoints -->
+        <el-form-item label="所需积分：" prop="minPoints">
+          <el-input v-model.number="formData.minPoints" type="number" placeholder="请输入所需积分" min="0"></el-input>
         </el-form-item>
-        <el-form-item label="折扣率(%)：">
-          <el-input v-model="formData.discountRate" type="number" placeholder="请输入折扣率"></el-input>
+        <!-- 修改点：字段名 discountRate → discount -->
+        <el-form-item label="折扣率：" prop="discount">
+          <el-input v-model.number="formData.discount" type="number" placeholder="请输入折扣率（如0.85表示85折）" min="0" max="1" step="0.01"></el-input>
         </el-form-item>
-        <el-form-item label="排序：">
-          <el-input v-model="formData.sort" type="number" placeholder="请输入排序"></el-input>
+        <el-form-item label="排序：" prop="sort">
+          <el-input v-model.number="formData.sort" type="number" placeholder="请输入排序序号" min="0"></el-input>
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
@@ -79,14 +120,24 @@
             page: 1,
             pageSize: 10,
             tableData: [],
+            // 修改点：新增统计对象
+            stats: { totalLevels: 0, highestLevel: '-', lowestPoints: 0 },
+            // 修改点：字段名统一对齐实体：minPoints / discount / sort
             formData: {
               title: '新增会员等级',
               dialogVisible: false,
               id: '',
               name: '',
-              requiredPoints: '',
-              discountRate: '',
+              minPoints: '',
+              discount: '',
               sort: ''
+            },
+            // 修改点：新增前表单端校验规则
+            formRules: {
+              name: [{ required: true, message: '请输入等级名称', trigger: 'blur' }],
+              minPoints: [{ required: true, message: '请输入所需积分', trigger: 'blur' }],
+              discount: [{ required: true, message: '请输入折扣率', trigger: 'blur' }],
+              sort: [{ required: true, message: '请输入排序', trigger: 'blur' }]
             }
           }
         },
@@ -94,17 +145,44 @@
           this.init()
         },
         methods: {
+          // 修改点：加载列表并计算统计
           async init() {
-            await levelPage({ page: this.page, pageSize: this.pageSize }).then(res => {
+            this.loading = true
+            try {
+              var res = await levelPage({ page: this.page, pageSize: this.pageSize })
               if (String(res.code) === '1') {
                 this.tableData = res.data.records || []
                 this.counts = res.data.total
+                this.calcStats(this.tableData)
               } else {
                 this.$message.error(res.msg || '操作失败')
               }
-            }).catch(err => {
+            } catch (err) {
               this.$message.error('请求失败：' + err)
-            })
+            }
+            this.loading = false
+          },
+          // 修改点：根据数据库真实数据计算统计
+          calcStats(records) {
+            if (!records || records.length === 0) {
+              this.stats = { totalLevels: 0, highestLevel: '-', lowestPoints: 0 }
+              return
+            }
+            // total来自分页总数
+            this.stats.totalLevels = this.counts || records.length
+            // 最高等级 = minPoints最大的那条
+            var highest = records.reduce(function(prev, curr) {
+              return (curr.minPoints != null && (prev == null || curr.minPoints > prev.minPoints)) ? curr : prev
+            }, null)
+            this.stats.highestLevel = highest ? highest.name : '-'
+            // 最低积分门槛 = minPoints最小的(>0)
+            var lowest = records.reduce(function(prev, curr) {
+              if (curr.minPoints != null && curr.minPoints > 0) {
+                return (prev == null || curr.minPoints < prev) ? curr.minPoints : prev
+              }
+              return prev
+            }, null)
+            this.stats.lowestPoints = lowest || 0
           },
           handleQuery() {
             this.page = 1
@@ -115,72 +193,87 @@
             this.formData.title = '新增会员等级'
             this.formData.id = ''
             this.formData.name = ''
-            this.formData.requiredPoints = ''
-            this.formData.discountRate = ''
+            this.formData.minPoints = ''
+            this.formData.discount = ''
             this.formData.sort = ''
             this.formData.dialogVisible = true
+            // 重置表单校验状态
+            this.$nextTick(function() {
+              if (this.$refs.levelForm) this.$refs.levelForm.clearValidate()
+            })
           },
           editHandle(row) {
             this.action = 'edit'
             this.formData.title = '修改会员等级'
             this.formData.id = row.id
             this.formData.name = row.name
-            this.formData.requiredPoints = row.requiredPoints
-            this.formData.discountRate = row.discountRate
+            this.formData.minPoints = row.minPoints
+            this.formData.discount = row.discount
             this.formData.sort = row.sort
             this.formData.dialogVisible = true
+            this.$nextTick(function() {
+              if (this.$refs.levelForm) this.$refs.levelForm.clearValidate()
+            })
           },
+          // 修改点：提交前进行前端表单校验
           submitForm() {
-            const data = {
-              name: this.formData.name,
-              requiredPoints: this.formData.requiredPoints,
-              discountRate: this.formData.discountRate,
-              sort: this.formData.sort
-            }
-            if (this.action === 'add') {
-              addLevel(data).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('等级添加成功！')
-                  this.formData.dialogVisible = false
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            } else {
-              data.id = this.formData.id
-              updateLevel(data).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('等级修改成功！')
-                  this.formData.dialogVisible = false
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            }
+            var self = this
+            this.$refs.levelForm.validate(function(valid) {
+              if (!valid) {
+                self.$message.warning('请完善表单信息')
+                return false
+              }
+              var data = {
+                name: self.formData.name,
+                minPoints: self.formData.minPoints,
+                discount: self.formData.discount,
+                sort: self.formData.sort
+              }
+              if (self.action === 'add') {
+                addLevel(data).then(function(res) {
+                  if (res.code === 1) {
+                    self.$message.success('等级添加成功！')
+                    self.formData.dialogVisible = false
+                    self.handleQuery()
+                  } else {
+                    self.$message.error(res.msg || '操作失败')
+                  }
+                }).catch(function(err) {
+                  self.$message.error('请求失败：' + err)
+                })
+              } else {
+                data.id = self.formData.id
+                updateLevel(data).then(function(res) {
+                  if (res.code === 1) {
+                    self.$message.success('等级修改成功！')
+                    self.formData.dialogVisible = false
+                    self.handleQuery()
+                  } else {
+                    self.$message.error(res.msg || '操作失败')
+                  }
+                }).catch(function(err) {
+                  self.$message.error('请求失败：' + err)
+                })
+              }
+            })
           },
           deleteHandle(id) {
             this.$confirm('此操作将永久删除该等级, 是否继续?', '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
               type: 'warning'
-            }).then(() => {
-              deleteLevel(id).then(res => {
+            }).then(function() {
+              deleteLevel(id).then(function(res) {
                 if (res.code === 1) {
                   this.$message.success('删除成功！')
                   this.handleQuery()
                 } else {
                   this.$message.error(res.msg || '操作失败')
                 }
-              }).catch(err => {
+              }.bind(this)).catch(function(err) {
                 this.$message.error('请求失败：' + err)
-              })
-            })
+              }.bind(this))
+            }.bind(this))
           },
           handleClose() {
             this.formData.dialogVisible = false
@@ -198,4 +291,3 @@
     </script>
 </body>
 </html>
-

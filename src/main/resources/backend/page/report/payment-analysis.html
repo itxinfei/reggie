@@ -54,7 +54,6 @@
     top: 50%;
     transform: translateY(-50%);
     font-size: 42px;
-    opacity: 0.08;
   }
 
   .stat-card .stat-label {
@@ -102,6 +101,31 @@
           style="width: 380px"
         ></el-date-picker>
         <el-button type="primary" class="search-btn" @click="loadData">查询</el-button>
+        <el-button class="search-btn" @click="reset">重置</el-button>
+      </div>
+
+      <!-- ========== 数据统计卡片 ========== -->
+      <div class="stats-cards">
+        <div class="stat-card primary">
+          <div class="stat-icon">💳</div>
+          <div class="stat-label">交易总笔数</div>
+          <div class="stat-value">{{ totalCount }}</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">💰</div>
+          <div class="stat-label">交易总金额（元）</div>
+          <div class="stat-value">¥{{ formatMoney(totalAmount) }}</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-icon">🏅</div>
+          <div class="stat-label">最常用支付方式</div>
+          <div class="stat-value" style="font-size:20px;">{{ topChannel }}</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">📊</div>
+          <div class="stat-label">支付渠道数</div>
+          <div class="stat-value">{{ tableData.length || 0 }}</div>
+        </div>
       </div>
 
       <el-card shadow="never" style="margin-bottom:20px;">
@@ -115,7 +139,7 @@
       <!-- 支付金额趋势 -->
       <el-card shadow="never" style="margin-bottom:20px;">
         <div slot="header">每日支付金额趋势</div>
-        <div id="paymentTrendChart" style="width:100%;height:340px;"></div>
+        <div id="paymentTrendChart" style="width:100%;height:360px;"></div>
       </el-card>
 
       <!--
@@ -181,6 +205,16 @@
       computed: {
         totalCount() {
           return this.tableData.reduce((s, r) => s + (r.transactionCount || 0), 0)
+        },
+        // 修改点：新增总金额、最常用渠道计算属性
+        totalAmount() {
+          return this.tableData.reduce((s, r) => s + (Number(r.amount) || 0), 0)
+        },
+        topChannel() {
+          if (!this.tableData.length) return '--'
+          const top = this.tableData.reduce((max, r) =>
+            (r.transactionCount || 0) > (max.transactionCount || 0) ? r : max, this.tableData[0])
+          return top.channel || '--'
         }
       },
       created() {
@@ -252,28 +286,44 @@
         },
         renderPaymentTrend(data) {
           if (!this.trendChart) return
+          // 修改点：空数据兜底
+          if (!data || !data.dates || !data.dates.length) {
+            this.trendChart.setOption({
+              title: { text: '暂无趋势数据', left: 'center', top: 'center',
+                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+            }, true)
+            return
+          }
           var dates = data.dates || []
           this.trendChart.setOption({
             tooltip: { trigger: 'axis' },
             legend: { data: ['微信', '支付宝', '余额'], bottom: 0, textStyle: { fontSize: 12 } },
-            grid: { left: 55, right: 55, top: 10, bottom: 40 },
+            grid: { left: 55, right: 55, top: 15, bottom: 45 },
             xAxis: { type: 'category', data: dates, boundaryGap: false },
             yAxis: { type: 'value', name: '金额(元)' },
             series: [
               { name: '微信', type: 'line', data: data.wechat || [], smooth: true,
-                symbol: 'circle', symbolSize: 5, lineStyle: { color: '#07C160', width: 2.5 },
+                symbol: 'circle', symbolSize: 6, lineStyle: { color: '#07C160', width: 2.5 },
                 areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1, [
                   { offset: 0, color: 'rgba(7,193,96,0.2)' }, { offset: 1, color: 'rgba(7,193,96,0.02)' }]) } },
               { name: '支付宝', type: 'line', data: data.alipay || [], smooth: true,
-                symbol: 'circle', symbolSize: 5, lineStyle: { color: '#1677FF', width: 2.5 },
+                symbol: 'circle', symbolSize: 6, lineStyle: { color: '#1677FF', width: 2.5 },
                 areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1, [
                   { offset: 0, color: 'rgba(22,119,255,0.2)' }, { offset: 1, color: 'rgba(22,119,255,0.02)' }]) } },
               { name: '余额', type: 'line', data: data.balance || [], smooth: true,
-                symbol: 'circle', symbolSize: 5, lineStyle: { color: '#E6A23C', width: 2.5 },
+                symbol: 'circle', symbolSize: 6, lineStyle: { color: '#E6A23C', width: 2.5 },
                 areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1, [
                   { offset: 0, color: 'rgba(230,162,60,0.2)' }, { offset: 1, color: 'rgba(230,162,60,0.02)' }]) } }
             ]
           }, true)
+        },
+
+        reset() {
+          this.dateRange = []
+          this.tableData = []
+          if (this.pieChart) this.pieChart.clear()
+          if (this.barChart) this.barChart.clear()
+          if (this.trendChart) this.trendChart.clear()
         },
 
         // 将后端 Map 转为前端展示数组
@@ -321,8 +371,9 @@
               textStyle: { color: '#606266', fontSize: 12 } },
             series: [{
               type: 'pie',
+              // 修改点：center top 从 46% 提至 44%，为底部 legend 留出空间
               radius: isEmpty ? ['0%','55%'] : ['45%','68%'],
-              center: ['50%', '46%'],
+              center: ['50%', '44%'],
               avoidLabelOverlap: false,
               itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 3 },
               label: { show: !isEmpty, position: 'outside',
@@ -340,6 +391,15 @@
           const counts  = this.tableData.map(r => r.transactionCount)
           const amounts = this.tableData.map(r => r.amount != null ? Number(r.amount).toFixed(2) : 0)
           const hasAmount = this.tableData.some(r => r.amount != null)
+          // 修改点：根据渠道数动态调整柱宽，避免过宽或过窄
+          const barW = names.length <= 2 ? 48 : names.length <= 3 ? 36 : 24
+          if (!names.length) {
+            this.barChart.setOption({
+              title: { text: '暂无支付数据', left: 'center', top: 'center',
+                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+            }, true)
+            return
+          }
           this.barChart.setOption({
             tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
               formatter(params) {
@@ -362,7 +422,7 @@
                 axisLabel: { formatter: '¥{value}' }, splitLine: { show: false } } : {}
             ].filter(y => Object.keys(y).length),
             series: [
-              { name: '交易笔数', type: 'bar', data: counts, barWidth: 36,
+              { name: '交易笔数', type: 'bar', data: counts, barWidth: barW,
                 itemStyle: { borderRadius: [6, 6, 0, 0],
                   color(p) {
                     const key = Object.keys(CHANNEL_COLOR)[p.dataIndex]

@@ -8,8 +8,11 @@ import lombok.Getter;
 @Getter
 public enum CouponStatus {
 
+    /** 未使用 */
     UNUSED("UNUSED", "未使用"),
+    /** 已使用 */
     USED("USED", "已使用"),
+    /** 已过期 */
     EXPIRED("EXPIRED", "已过期");
 
     private final String value;

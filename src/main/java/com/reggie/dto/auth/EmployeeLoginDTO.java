@@ -8,6 +8,9 @@ import javax.validation.constraints.Size;
 
 /**
  * 员工登录DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @Schema(description = "员工登录信息")

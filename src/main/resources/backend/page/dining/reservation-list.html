@@ -37,6 +37,7 @@
           style="width: 380px; margin-left: 10px;"
         ></el-date-picker>
         <el-button type="primary" style="margin-left: 10px;" @click="handleQuery">查询</el-button>
+        <el-button style="margin-left: 10px;" @click="reset">重置</el-button>
       </div>
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
         <el-table-column type="index" label="序号" width="50"></el-table-column>
@@ -133,6 +134,16 @@
           })
         },
         handleQuery() {
+          this.page = 1
+          this.init()
+        },
+        reset() {
+          this.input = ''
+          this.phone = ''
+          this.status = ''
+          this.reserveTime = ''
+          this.beginTime = ''
+          this.endTime = ''
           this.page = 1
           this.init()
         },

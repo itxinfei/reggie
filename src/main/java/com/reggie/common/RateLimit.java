@@ -6,7 +6,8 @@ import java.lang.annotation.*;
  * 限流注解
  * 基于 Redis 的滑动窗口算法实现接口限流
  *
- * @author itxinfei
+ * @author reggie
+ * @since 2026-07-09
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

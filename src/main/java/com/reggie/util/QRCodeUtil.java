@@ -26,11 +26,17 @@ import java.util.Map;
 /**
  * 二维码工具类
  * 用于生成桌台二维码、菜品二维码等
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Component
 public class QRCodeUtil {
 
+    /**
+     * 文件上传路径，用于保存生成的二维码图片
+     */
     @Value("${reggie.path:}")
     private String uploadPath;
 

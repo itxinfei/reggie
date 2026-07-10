@@ -30,17 +30,30 @@ import java.util.*;
 @ConditionalOnProperty(name = "reggie.ai.enabled", havingValue = "true")
 public class OpenAICompatibleClient implements AIClient {
 
+    /** AI配置属性 */
     @Resource
     private AIConfigProperties aiConfig;
 
+    /** JSON序列化工具 */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    /**
+     * 初始化AI Provider
+     */
     @PostConstruct
     public void init() {
         log.info("AI Provider初始化完成: provider={}, model={}, baseUrl={}",
                 aiConfig.getProvider(), aiConfig.getModel(), aiConfig.getBaseUrl());
     }
 
+    /**
+     * 发送聊天请求
+     *
+     * @param messages   消息列表（system/user/assistant）
+     * @param maxTokens  最大返回Token数
+     * @param temperature 温度参数
+     * @return AI响应
+     */
     @Override
     public AIChatResponse chat(List<AIMessage> messages, int maxTokens, double temperature) {
         if (!aiConfig.isEnabled()) {
@@ -126,11 +139,21 @@ public class OpenAICompatibleClient implements AIClient {
         }
     }
 
+    /**
+     * 获取提供商名称
+     *
+     * @return 提供商标识
+     */
     @Override
     public String getProviderName() {
         return aiConfig.getProvider();
     }
 
+    /**
+     * 获取默认模型名称
+     *
+     * @return 模型名称
+     */
     @Override
     public String getDefaultModel() {
         return aiConfig.getModel();

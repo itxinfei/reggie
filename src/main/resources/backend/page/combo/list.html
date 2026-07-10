@@ -34,6 +34,14 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     }
 
+    /* 修改点：stats-card 可点击筛选 */
+    .stat-card.clickable { cursor: pointer; user-select: none; }
+    .stat-card.active {
+      border-color: #409eff;
+      box-shadow: 0 0 0 2px rgba(64,158,255,0.3);
+      transform: translateY(-3px);
+    }
+
     .stat-card::before {
       content: '';
       position: absolute;
@@ -50,7 +58,6 @@
       top: 50%;
       transform: translateY(-50%);
       font-size: 42px;
-      opacity: 0.08;
     }
 
     .stat-card .stat-label {
@@ -89,18 +96,19 @@
    <div class="dashboard-container" id="combo-app">
     <div class="container">
       <!-- ========== 数据统计卡片 ========== -->
+      <!-- 修改点：卡片可点击筛选，点击后高亮并按对应状态过滤列表 -->
       <div class="stats-cards">
-        <div class="stat-card primary">
+        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterBy('status', '')">
           <div class="stat-icon">🍱</div>
           <div class="stat-label">套餐总数</div>
           <div class="stat-value">{{ stats.totalCombos || 0 }}</div>
         </div>
-        <div class="stat-card success">
+        <div class="stat-card success clickable" :class="{ active: activeFilter === '1' }" @click="filterBy('status', '1')">
           <div class="stat-icon">✅</div>
           <div class="stat-label">已启售</div>
           <div class="stat-value">{{ stats.activeCombos || 0 }}</div>
         </div>
-        <div class="stat-card warning">
+        <div class="stat-card warning clickable" :class="{ active: activeFilter === '0' }" @click="filterBy('status', '0')">
           <div class="stat-icon">⏸️</div>
           <div class="stat-label">已停售</div>
           <div class="stat-value">{{ stats.inactiveCombos || 0 }}</div>
@@ -127,6 +135,8 @@
             @click="handleQuery"
           ></i>
         </el-input>
+        <el-button type="primary" size="small" @click="handleQuery">查询</el-button>
+        <el-button size="small" @click="reset">重置</el-button>
         <div class="tableLab">
           <el-button type="primary" size="small" @click="deleteHandle('批量')">批量删除</el-button>
           <el-button type="primary" size="small" @click="statusHandle('1')">批量启售</el-button>
@@ -398,6 +408,8 @@
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
     <script src="../../api/combo.js"></script>
+    <!-- 修改点：引入 food.js，提供 getCategoryList（分类列表）和 queryDishList（菜品列表）等公共 API -->
+    <script src="../../api/food.js"></script>
     <script>
       new Vue({
         el: '#combo-app',
@@ -418,6 +430,8 @@
                inactiveCombos: 0,
                comboCategories: 0
              },
+             // 修改点：当前激活的筛选器值，空字符串=全部
+             activeFilter: '',
              // 套餐弹窗相关
              comboDialog: {
                title: '添加套餐',
@@ -488,9 +502,12 @@
         methods: {
           async init () {
             this.loading = true
+            // 修改点：传递 activeFilter 状态参数到后端
+            var params = { page: this.page, pageSize: this.pageSize, name: this.input ? this.input : undefined }
+            if (this.activeFilter) { params.status = this.activeFilter }
             // 并行加载套餐列表和统计数据
             const [comboRes, statsRes] = await Promise.all([
-              getSetmealPage({ page: this.page, pageSize: this.pageSize, name: this.input ? this.input : undefined }),
+              getSetmealPage(params),
               this.loadComboStats()
             ])
 
@@ -508,17 +525,31 @@
             this.loading = false
           },
           // 加载套餐统计数据
+          // 修改点：通过拉取全量数据按状态过滤 + 查询套餐分类数，获取真实统计数据
           async loadComboStats() {
             try {
-              const res = await getSetmealPage({ page: 1, pageSize: 1 })
-              if (String(res.code) === '1') {
+              var self = this
+              const [totalRes, listRes, catRes] = await Promise.all([
+                getSetmealPage({ page: 1, pageSize: 1 }),
+                getSetmealPage({ page: 1, pageSize: 1000 }),
+                getCategoryList({ type: 2 })
+              ])
+              if (String(totalRes.code) === '1') {
+                var records = listRes.data.records || []
+                var catCount = 0
+                try {
+                  catCount = catRes ? (catRes.data || []).length : 0
+                } catch(e) {
+                  catCount = 0
+                }
                 return {
                   code: 1,
                   data: {
-                    totalCombos: res.data.total || 0,
-                    activeCombos: 0,
-                    inactiveCombos: 0,
-                    comboCategories: 0
+                    totalCombos: totalRes.data.total || 0,
+                    // 修改点：后端 Setmeal.status 为 Integer，JSON 序列化为数字 1/0
+                    activeCombos: records.filter(function(r) { return r.status === 1 }).length,
+                    inactiveCombos: records.filter(function(r) { return r.status === 0 }).length,
+                    comboCategories: catCount
                   }
                 }
               }
@@ -531,8 +562,29 @@
             return `/common/download?name=${image}`
           },
           handleQuery() {
+            // 修改点：搜索时清空卡片筛选状态
+            this.activeFilter = ''
             this.page = 1;
             this.init();
+          },
+          // 重置搜索条件，恢复表格初始状态
+          reset() {
+            this.input = ''
+            this.activeFilter = ''
+            this.page = 1
+            this.init()
+          },
+          // 修改点：stats-card 点击切换筛选状态（清空搜索框避免冲突）
+          filterBy(type, value) {
+            if (this.activeFilter === value) {
+              this.activeFilter = ''  // 再次点击取消筛选，显示全部
+            } else {
+              this.activeFilter = value
+            }
+            // 修改点：卡片筛选时清空搜索条件
+            this.input = ''
+            this.page = 1
+            this.init()
           },
           // 打开套餐弹窗
           addSetMeal (st) {

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
@@ -25,6 +26,9 @@ import java.util.List;
 
 /**
  * 分类管理
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @RestController
 @RequestMapping("/category")
@@ -55,14 +59,22 @@ public class CategoryController {
      * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "分类分页查询", description = "分页查询分类列表，按排序字段升序排列")
+    @Operation(summary = "分类分页查询", description = "分页查询分类列表，支持按类型、名称筛选，按排序字段升序排列")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
-    public R<Page<Category>> page(int page,int pageSize){
+    @Parameter(name = "type", description = "分类类型（可选，1=菜品分类 ,2=套餐分类）")
+    @Parameter(name = "name", description = "分类名称（可选，模糊搜索）")
+    // 修改点：新增 name 参数，支持按分类名称模糊搜索
+    public R<Page<Category>> page(int page, int pageSize,
+                                  @RequestParam(required = false) String type,
+                                  @RequestParam(required = false) String name) {
         //分页构造器
         Page<Category> pageInfo = new Page<>(page,pageSize);
         //条件构造器
         LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(type != null && !type.isEmpty(), Category::getType, type);
+        // 修改点：添加名称模糊搜索条件
+        queryWrapper.like(name != null && !name.isEmpty(), Category::getName, name);
         //添加排序条件，根据sort进行排序
         queryWrapper.orderByAsc(Category::getSort);
 
@@ -119,6 +131,12 @@ public class CategoryController {
         return R.success(category);
     }
 
+    /**
+     * 根据条件查询分类列表
+     *
+     * @param category 分类查询条件（type类型：1-菜品分类、2-套餐分类）
+     * @return 分类列表
+     */
     @GetMapping("/list")
     @Operation(summary = "查询分类列表", description = "根据条件查询分类数据，支持按类型筛选，按排序字段升序排列")
     @Parameter(name = "category", description = "分类查询条件（type类型：1-菜品分类、2-套餐分类）")

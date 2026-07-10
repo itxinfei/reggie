@@ -11,9 +11,16 @@ import com.reggie.module.dining.service.TableAreaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+/**
+ * 堂食桌台服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Service
 public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, DiningTable> implements DiningTableService {
 
+    /** 桌台区域服务 */
     @Autowired
     private TableAreaService tableAreaService;
 

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>通知模板 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+  <style>
+    .content-preview { background: #f5f7fa; padding: 8px 12px; border-radius: 4px; font-size: 12px; color: #606266; font-family: monospace; }
+    .modal-body .form-group { margin-bottom: 14px; }
+    .modal-body .form-group label { display: block; margin-bottom: 4px; font-size: 13px; color: #555; font-weight: 500; }
+    .modal-body .form-row { display: flex; gap: 12px; }
+    .modal-body .form-row .form-group { flex: 1; }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container" id="template-app">
+    <div class="container">
+      <div class="tableBar">
+        <el-select v-model="filterBizType" placeholder="业务类型" clearable style="width: 150px" @change="handleQuery">
+          <el-option label="订单通知" value="ORDER_NOTICE"></el-option>
+          <el-option label="营销推送" value="PROMOTION"></el-option>
+          <el-option label="验证码" value="VERIFY_CODE"></el-option>
+          <el-option label="系统通知" value="SYSTEM"></el-option>
+          <el-option label="工作通知" value="JOB_NOTICE"></el-option>
+        </el-select>
+        <el-button type="primary" @click="handleQuery">查询</el-button>
+        <el-button @click="resetSearch">重置</el-button>
+        <el-button type="success" @click="openDialog()">+ 新增模板</el-button>
+      </div>
+
+      <el-table :data="tableData" stripe border v-loading="loading" class="tableBox">
+        <el-table-column prop="templateName" label="模板名称" min-width="150">
+          <template slot-scope="scope"><strong>{{ scope.row.templateName }}</strong></template>
+        </el-table-column>
+        <el-table-column prop="bizType" label="业务类型" width="120">
+          <template slot-scope="scope">{{ bizTypeName(scope.row.bizType) }}</template>
+        </el-table-column>
+        <el-table-column prop="channel" label="渠道" width="100" align="center">
+          <template slot-scope="scope">
+            <el-tag size="small" :type="scope.row.channel === 1 ? 'info' : (scope.row.channel === 2 ? 'warning' : 'info')">
+              {{ channelName(scope.row.channel) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="content" label="内容预览" min-width="200" show-overflow-tooltip>
+          <template slot-scope="scope">
+            <div class="content-preview">{{ scope.row.content }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" align="center" width="80">
+          <template slot-scope="scope">
+            <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ scope.row.status === 1 ? '启用' : '停用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="updateTime" label="更新时间" width="160"></el-table-column>
+        <el-table-column label="操作" align="center" width="200" fixed="right">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" @click="openDialog(scope.row)">编辑</el-button>
+            <el-button type="text" size="small" @click="toggleStatus(scope.row)">
+              {{ scope.row.status === 1 ? '停用' : '启用' }}
+            </el-button>
+            <el-button type="text" size="small" class="delBut non" @click="deleteHandle(scope.row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <el-pagination
+        class="pageList"
+        :page-sizes="[10, 20, 50]"
+        :page-size="pageSize"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="counts"
+        :current-page.sync="page"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange">
+      </el-pagination>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="650px">
+      <div class="modal-body">
+        <div class="form-group">
+          <label>模板名称 *</label>
+          <el-input v-model="form.templateName" placeholder="如：订单确认通知"></el-input>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>业务类型 *</label>
+            <el-select v-model="form.bizType" style="width:100%">
+              <el-option label="订单通知" value="ORDER_NOTICE"></el-option>
+              <el-option label="营销推送" value="PROMOTION"></el-option>
+              <el-option label="验证码" value="VERIFY_CODE"></el-option>
+              <el-option label="系统通知" value="SYSTEM"></el-option>
+              <el-option label="工作通知" value="JOB_NOTICE"></el-option>
+            </el-select>
+          </div>
+          <div class="form-group">
+            <label>发送渠道 *</label>
+            <el-select v-model="form.channel" style="width:100%">
+              <el-option :label="'短信'" :value="1"></el-option>
+              <el-option :label="'APP推送'" :value="2"></el-option>
+              <el-option :label="'短信+APP推送'" :value="3"></el-option>
+            </el-select>
+          </div>
+        </div>
+        <div class="form-group" v-if="form.channel !== 2">
+          <label>外部模板编码（阿里云SMS模板CODE）</label>
+          <el-input v-model="form.templateCode" placeholder="如: SMS_ORDER_CONFIRM"></el-input>
+        </div>
+        <div class="form-group" v-if="form.channel !== 2">
+          <label>短信签名</label>
+          <el-input v-model="form.signName" placeholder="如: 瑞吉外卖"></el-input>
+        </div>
+        <div class="form-group" v-if="form.channel !== 1">
+          <label>推送标题（APP推送用）</label>
+          <el-input v-model="form.title" placeholder="如: 订单已确认"></el-input>
+        </div>
+        <div class="form-group">
+          <label>模板内容 *（支持占位符 ${paramName}）</label>
+          <el-input v-model="form.content" type="textarea" :rows="4"
+            placeholder="尊敬的${userName}，您的订单${orderNo}已确认，预计${deliveryTime}送达。"></el-input>
+        </div>
+        <div class="form-group">
+          <label>参数列表（JSON数组）</label>
+          <el-input v-model="form.paramList" placeholder='["userName","orderNo","deliveryTime"]'></el-input>
+          <div style="font-size:12px;color:#999;margin-top:2px;">对应模板内容中的占位符变量名</div>
+        </div>
+        <div class="form-group">
+          <label>备注</label>
+          <el-input v-model="form.remark" placeholder="模板使用说明"></el-input>
+        </div>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="submitForm" :loading="submitting">保 存</el-button>
+      </span>
+    </el-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../api/sys.js"></script>
+  <script>
+    new Vue({
+      el: '#template-app',
+      data() {
+        return {
+          filterBizType: '',
+          tableData: [],
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          loading: false,
+          submitting: false,
+          dialogVisible: false,
+          dialogTitle: '新增模板',
+          form: { channel: 1, bizType: 'ORDER_NOTICE', status: 1, templateName: '', content: '', paramList: '' }
+        }
+      },
+      created() {
+        this.loadData()
+      },
+      methods: {
+        loadData() {
+          this.loading = true
+          var params = { page: this.page, pageSize: this.pageSize }
+          if (this.filterBizType) params.bizType = this.filterBizType
+          sysApi.templatePage(params).then(res => {
+            if (res && res.code === 1) {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total || 0
+            }
+            this.loading = false
+          }).catch(() => { this.loading = false })
+        },
+        handleQuery() {
+          this.page = 1
+          this.loadData()
+        },
+        // 重置搜索条件，恢复表格初始状态
+        resetSearch() {
+          this.filterBizType = ''
+          this.page = 1
+          this.loadData()
+        },
+        handleSizeChange(val) { this.pageSize = val; this.loadData() },
+        handleCurrentChange(val) { this.page = val; this.loadData() },
+        bizTypeName(type) {
+          var map = { 'ORDER_NOTICE': '订单通知', 'PROMOTION': '营销推送', 'VERIFY_CODE': '验证码', 'SYSTEM': '系统通知', 'JOB_NOTICE': '工作通知' }
+          return map[type] || type
+        },
+        channelName(ch) {
+          var map = { 1: '短信', 2: 'APP推送', 3: '短信+推送' }
+          return map[ch] || '未知'
+        },
+        openDialog(row) {
+          if (row) {
+            this.dialogTitle = '编辑模板'
+            this.form = JSON.parse(JSON.stringify(row))
+          } else {
+            this.dialogTitle = '新增模板'
+            this.form = { channel: 1, bizType: 'ORDER_NOTICE', status: 1, templateName: '', content: '', paramList: '' }
+          }
+          this.dialogVisible = true
+        },
+        submitForm() {
+          if (!this.form.templateName || !this.form.content) {
+            this.$message.warning('请填写模板名称和内容')
+            return
+          }
+          this.submitting = true
+          var api = this.form.id ? sysApi.templateUpdate(this.form) : sysApi.templateAdd(this.form)
+          api.then(res => {
+            if (res && res.code === 1) {
+              this.$message.success(res.msg || '操作成功')
+              this.dialogVisible = false
+              this.loadData()
+            } else {
+              this.$message.error(res ? res.msg : '操作失败')
+            }
+          }).catch(() => { this.$message.error('操作失败') })
+            .finally(() => { this.submitting = false })
+        },
+        toggleStatus(row) {
+          var newStatus = row.status === 1 ? 0 : 1
+          sysApi.templateToggle(row.id, newStatus).then(res => {
+            if (res && res.code === 1) {
+              row.status = newStatus
+              this.$message.success(res.msg || '操作成功')
+            }
+          })
+        },
+        deleteHandle(id) {
+          this.$confirm('确定删除该模板吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(() => {
+              sysApi.templateDelete(id).then(res => {
+                if (res && res.code === 1) {
+                  this.$message.success('删除成功')
+                  this.loadData()
+                }
+              })
+            }).catch(() => {})
+        }
+      }
+    })
+  </script>
+</body>
+</html>

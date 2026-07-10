@@ -10,12 +10,16 @@ import java.time.LocalDateTime;
 /**
  * 通知发送记录实体
  * 记录每次短信/APP推送的发送详情与结果
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @TableName("notification_record")
 public class NotificationRecord implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    /** 主键ID */
     private Long id;
 
     /** 租户ID */

@@ -25,6 +25,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 
+/**
+ * 堂食桌台管理控制器
+ * 提供桌台的增删改查、状态管理、二维码生成等接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/dining/table")

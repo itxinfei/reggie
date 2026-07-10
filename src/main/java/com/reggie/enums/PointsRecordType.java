@@ -8,7 +8,9 @@ import lombok.Getter;
 @Getter
 public enum PointsRecordType {
 
+    /** 增加 */
     IN("IN", "增加"),
+    /** 扣除 */
     OUT("OUT", "扣除");
 
     private final String value;

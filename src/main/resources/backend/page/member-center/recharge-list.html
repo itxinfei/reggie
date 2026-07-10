@@ -17,6 +17,7 @@
           <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
         </el-input>
         <el-button type="primary" style="margin-left: 10px" @click="handleQuery">查询</el-button>
+        <el-button style="margin-left: 10px" @click="reset">重置</el-button>
       </div>
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
         <el-table-column prop="memberName" label="会员名称"></el-table-column>
@@ -85,6 +86,11 @@
             })
           },
           handleQuery() {
+            this.page = 1
+            this.init()
+          },
+          reset() {
+            this.input.phone = ''
             this.page = 1
             this.init()
           },

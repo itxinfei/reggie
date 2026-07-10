@@ -100,6 +100,8 @@ CREATE TABLE `delivery_order`  (
   `order_time` datetime NULL DEFAULT NULL COMMENT '下单时间',
   `created_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `create_user` bigint NULL DEFAULT NULL COMMENT '创建人',
+  `update_user` bigint NULL DEFAULT NULL COMMENT '修改人',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_platform_order`(`platform` ASC, `platform_order_id` ASC) USING BTREE,
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
@@ -229,6 +231,8 @@ CREATE TABLE `dish`  (
   `create_user` bigint NOT NULL COMMENT '创建人',
   `update_user` bigint NOT NULL COMMENT '修改人',
   `is_deleted` int NOT NULL DEFAULT 0 COMMENT '是否删除',
+  `stock_qty` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '当前库存数量',
+  `min_stock` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '最低库存预警阈值',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `idx_dish_name`(`name` ASC) USING BTREE,
   INDEX `idx_dish_tenant_category`(`tenant_id` ASC, `category_id` ASC) USING BTREE
@@ -237,9 +241,9 @@ CREATE TABLE `dish`  (
 -- ----------------------------
 -- Records of dish
 -- ----------------------------
-INSERT INTO `dish` VALUES (1, '红烧肉', 1, 58.00, 'DISH001', 'images/dishes/hongshaorou.jpg', '经典家常菜', 1, 1, 1, '2026-07-07 17:59:44', '2026-07-07 17:59:44', 1, 1, 0);
-INSERT INTO `dish` VALUES (2, '宫保鸡丁', 1, 48.00, 'DISH002', 'images/dishes/gongbaojiding.jpg', '川菜经典', 1, 2, 1, '2026-07-07 17:59:44', '2026-07-07 17:59:44', 1, 1, 0);
-INSERT INTO `dish` VALUES (3, '鱼香肉丝', 1, 46.00, 'DISH003', 'images/dishes/yuxiangrous.jpg', '酸甜可口', 1, 3, 1, '2026-07-07 17:59:44', '2026-07-07 17:59:44', 1, 1, 0);
+INSERT INTO `dish` VALUES (1, '红烧肉', 1, 58.00, 'DISH001', 'images/dishes/hongshaorou.jpg', '经典家常菜', 1, 1, 1, '2026-07-07 17:59:44', '2026-07-07 17:59:44', 1, 1, 0, 100.00, 10.00);
+INSERT INTO `dish` VALUES (2, '宫保鸡丁', 1, 48.00, 'DISH002', 'images/dishes/gongbaojiding.jpg', '川菜经典', 1, 2, 1, '2026-07-07 17:59:44', '2026-07-07 17:59:44', 1, 1, 0, 80.00, 10.00);
+INSERT INTO `dish` VALUES (3, '鱼香肉丝', 1, 46.00, 'DISH003', 'images/dishes/yuxiangrous.jpg', '酸甜可口', 1, 3, 1, '2026-07-07 17:59:44', '2026-07-07 17:59:44', 1, 1, 0, 120.00, 15.00);
 
 -- ----------------------------
 -- Table structure for dish_flavor
@@ -389,6 +393,7 @@ CREATE TABLE `member_level`  (
   `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `min_points` bigint NULL DEFAULT 0,
   `discount` decimal(4, 2) NULL DEFAULT 1.00 COMMENT '折扣',
+  `sort` int NOT NULL DEFAULT 0 COMMENT '排序',
   `created_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
@@ -396,11 +401,11 @@ CREATE TABLE `member_level`  (
 -- ----------------------------
 -- Records of member_level
 -- ----------------------------
-INSERT INTO `member_level` VALUES (1, 1, '普通会员', 0, 1.00, '2026-07-07 17:59:57');
-INSERT INTO `member_level` VALUES (2, 1, '银卡会员', 1000, 0.95, '2026-07-07 17:59:57');
-INSERT INTO `member_level` VALUES (3, 1, '金卡会员', 5000, 0.90, '2026-07-07 17:59:57');
-INSERT INTO `member_level` VALUES (4, 1, '钻石会员', 10000, 0.85, '2026-07-07 17:59:57');
-INSERT INTO `member_level` VALUES (5, 1, '至尊会员', 50000, 0.80, '2026-07-07 17:59:57');
+INSERT INTO `member_level` VALUES (1, 1, '普通会员', 0, 1.00, 1, '2026-07-07 17:59:57');
+INSERT INTO `member_level` VALUES (2, 1, '银卡会员', 1000, 0.95, 2, '2026-07-07 17:59:57');
+INSERT INTO `member_level` VALUES (3, 1, '金卡会员', 5000, 0.90, 3, '2026-07-07 17:59:57');
+INSERT INTO `member_level` VALUES (4, 1, '钻石会员', 10000, 0.85, 4, '2026-07-07 17:59:57');
+INSERT INTO `member_level` VALUES (5, 1, '至尊会员', 50000, 0.80, 5, '2026-07-07 17:59:57');
 
 -- ----------------------------
 -- Table structure for order_detail
@@ -467,8 +472,9 @@ CREATE TABLE `orders`  (
 -- ----------------------------
 -- Records of orders
 -- ----------------------------
-INSERT INTO `orders` VALUES (1, 'ORD20260101001', 4, 1, 1, '2026-07-02 18:08:32', '2026-07-02 19:08:32', 1, 328.00, '少辣', '13900139001', '北京市东城区王府井大街1号', '张小明', '张小明', NULL, 'DELIVERY', 1, NULL, NULL, NULL, NULL, 0);
-INSERT INTO `orders` VALUES (2, 'ORD20260102001', 4, 2, 3, '2026-07-03 18:08:32', '2026-07-03 19:08:32', 2, 156.00, NULL, '13900139002', '上海市徐汇区南京路100号', '李晓红', '李晓红', NULL, 'DELIVERY', 1, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `orders` (`id`, `number`, `status`, `user_id`, `address_book_id`, `order_time`, `checkout_time`, `pay_method`, `amount`, `remark`, `expect_delivery_time`, `phone`, `address`, `user_name`, `consignee`, `table_id`, `dining_type`, `idempotency_key`, `tenant_id`, `create_time`, `update_time`, `create_user`, `update_user`, `is_deleted`) VALUES
+(1, 'ORD20260101001', 4, 1, 1, '2026-07-02 18:08:32', '2026-07-02 19:08:32', 1, 328.00, '少辣', NULL, '13900139001', '北京市东城区王府井大街1号', '张小明', '张小明', NULL, 'DELIVERY', NULL, 1, NULL, NULL, NULL, NULL, 0),
+(2, 'ORD20260102001', 4, 2, 3, '2026-07-03 18:08:32', '2026-07-03 19:08:32', 2, 156.00, NULL, NULL, '13900139002', '上海市徐汇区南京路100号', '李晓红', '李晓红', NULL, 'DELIVERY', NULL, 1, NULL, NULL, NULL, NULL, 0);
 
 -- ----------------------------
 -- Table structure for payment_order
@@ -605,6 +611,7 @@ DROP TABLE IF EXISTS `refund_record`;
 CREATE TABLE `refund_record`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   `payment_order_id` bigint NOT NULL COMMENT '支付订单id',
+  `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户ID',
   `refund_no` varchar(64) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '退款单号',
   `amount` decimal(10, 2) NOT NULL COMMENT '退款金额',
   `reason` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '退款原因',
@@ -612,7 +619,8 @@ CREATE TABLE `refund_record`  (
   `created_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_refund_no`(`refund_no` ASC) USING BTREE,
-  INDEX `idx_payment`(`payment_order_id` ASC) USING BTREE
+  INDEX `idx_payment`(`payment_order_id` ASC) USING BTREE,
+  INDEX `idx_tenant_id`(`tenant_id` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_bin COMMENT = '退款记录' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
@@ -975,6 +983,120 @@ CREATE TABLE `operation_log`  (
   INDEX `idx_biz`(`table_name` ASC, `biz_id` ASC) USING BTREE,
   INDEX `idx_create_time`(`create_time` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_bin COMMENT = '操作审计日志' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_user_profile
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_user_profile`;
+CREATE TABLE `ai_user_profile`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `user_id` bigint NULL DEFAULT NULL COMMENT '用户ID',
+  `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户ID',
+  `taste_tags` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '偏好的口味标签（JSON数组）',
+  `category_tags` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '偏好的菜品分类（JSON数组）',
+  `disliked_tags` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '不喜欢的口味标签（JSON数组）',
+  `allergies` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '忌口/过敏信息',
+  `price_preference` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '价格偏好标签',
+  `avg_order_amount` int NULL DEFAULT NULL COMMENT '客单价均值（分）',
+  `usual_diners` int NULL DEFAULT NULL COMMENT '常用就餐人数',
+  `user_tags` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '用户标签（JSON数组）',
+  `frequent_dish_ids` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '常点菜品ID列表（JSON数组）',
+  `preferred_dining_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '偏好的配送方式',
+  `preferred_time_slot` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '偏好的送达时段',
+  `delivery_fee_sensitive` tinyint(1) NULL DEFAULT 1 COMMENT '是否在意配送费',
+  `confidence` decimal(5,2) NULL DEFAULT 0.00 COMMENT '画像置信度',
+  `last_analyzed_time` datetime NULL DEFAULT NULL COMMENT '最后更新画像的时间',
+  `total_conversations` int NULL DEFAULT 0 COMMENT '总对话次数',
+  `total_feedbacks` int NULL DEFAULT 0 COMMENT '总反馈次数',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime NOT NULL COMMENT '更新时间',
+  `create_user` bigint NULL DEFAULT NULL COMMENT '创建人',
+  `update_user` bigint NULL DEFAULT NULL COMMENT '修改人',
+  `is_deleted` int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_id`(`user_id` ASC) USING BTREE,
+  INDEX `idx_tenant_id`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI用户画像' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_provider_config
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_provider_config`;
+CREATE TABLE `ai_provider_config`  (
+  `id` bigint NOT NULL COMMENT '主键',
+  `provider_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '供应商编码',
+  `provider_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '供应商名称',
+  `base_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'API基础URL',
+  `model_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '模型名称',
+  `api_key` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'API密钥（加密存储）',
+  `timeout` int NULL DEFAULT 60 COMMENT '请求超时时间（秒）',
+  `max_tokens` int NULL DEFAULT 4096 COMMENT '最大Token数',
+  `temperature` decimal(3,2) NULL DEFAULT 0.70 COMMENT '温度参数（0-2）',
+  `api_format` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'openai_compatible' COMMENT 'API格式类型',
+  `extra_headers` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '额外请求头（JSON）',
+  `request_template` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '请求体映射模板（JSON）',
+  `response_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '响应解析路径（JSONPath）',
+  `icon_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '供应商图标URL',
+  `enabled` tinyint(1) NULL DEFAULT 0 COMMENT '是否启用',
+  `is_active` tinyint(1) NULL DEFAULT 0 COMMENT '是否是当前激活的供应商',
+  `last_test_time` datetime NULL DEFAULT NULL COMMENT '最后测试时间',
+  `last_test_result` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '最后测试结果',
+  `sort` int NULL DEFAULT 0 COMMENT '排序号',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime NOT NULL COMMENT '更新时间',
+  `create_user` bigint NULL DEFAULT NULL COMMENT '创建人',
+  `update_user` bigint NULL DEFAULT NULL COMMENT '修改人',
+  `is_deleted` int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_provider_code`(`provider_code` ASC) USING BTREE,
+  INDEX `idx_is_active`(`is_active` ASC) USING BTREE,
+  INDEX `idx_enabled`(`enabled` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI供应商配置' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_conversation
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_conversation`;
+CREATE TABLE `ai_conversation`  (
+  `id` bigint NOT NULL COMMENT '主键',
+  `conversation_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '会话ID（前端生成UUID）',
+  `user_id` bigint NULL DEFAULT NULL COMMENT '用户ID',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '会话标题',
+  `scene` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '场景',
+  `message_count` int NULL DEFAULT 0 COMMENT '消息数量',
+  `is_deleted` int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime NOT NULL COMMENT '更新时间',
+  `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户ID',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_conversation_id`(`conversation_id` ASC) USING BTREE,
+  INDEX `idx_user_id`(`user_id` ASC) USING BTREE,
+  INDEX `idx_tenant_id`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI对话会话' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_message
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_message`;
+CREATE TABLE `ai_message`  (
+  `id` bigint NOT NULL COMMENT '主键',
+  `conversation_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '会话ID',
+  `user_id` bigint NULL DEFAULT NULL COMMENT '用户ID',
+  `role` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色：user/assistant',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '消息内容',
+  `message_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'text' COMMENT '消息类型',
+  `feedback` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '反馈类型',
+  `dish_ids` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '推荐菜品ID列表（JSON）',
+  `tokens_used` int NULL DEFAULT 0 COMMENT 'Token使用量',
+  `is_deleted` int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户ID',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_conversation_id`(`conversation_id` ASC) USING BTREE,
+  INDEX `idx_user_id`(`user_id` ASC) USING BTREE,
+  INDEX `idx_create_time`(`create_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI消息记录' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for region
@@ -45987,7 +46109,7 @@ CREATE TABLE `store_daily_summary` (
 
 -- 1. 通知模板表
 CREATE TABLE IF NOT EXISTS `notification_template` (
-    `id` BIGINT NOT NULL COMMENT '主键ID',
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `tenant_id` BIGINT NULL COMMENT '租户ID',
     `template_name` VARCHAR(100) NOT NULL COMMENT '模板名称',
     `template_code` VARCHAR(64) NULL COMMENT '外部模板编码(如阿里云SMS模板CODE)',
@@ -46011,7 +46133,7 @@ CREATE TABLE IF NOT EXISTS `notification_template` (
 
 -- 2. 通知记录表
 CREATE TABLE IF NOT EXISTS `notification_record` (
-    `id` BIGINT NOT NULL COMMENT '主键ID',
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `tenant_id` BIGINT NULL COMMENT '租户ID',
     `template_id` BIGINT NULL COMMENT '模板ID',
     `biz_type` VARCHAR(50) NOT NULL COMMENT '业务类型',
@@ -46039,7 +46161,7 @@ CREATE TABLE IF NOT EXISTS `notification_record` (
 
 -- 3. 用户设备表 (APP推送需要设备Token)
 CREATE TABLE IF NOT EXISTS `user_device` (
-    `id` BIGINT NOT NULL COMMENT '主键ID',
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `user_id` BIGINT NOT NULL COMMENT '用户ID',
     `platform` VARCHAR(20) NOT NULL COMMENT '平台: ANDROID/IOS/H5',
     `device_token` VARCHAR(255) NULL COMMENT '设备推送Token',
@@ -46061,3 +46183,291 @@ INSERT INTO `notification_template` (`id`, `tenant_id`, `template_name`, `templa
 (4, NULL, '新优惠券通知', 'SMS_COUPON_NOTICE', 2, 'PROMOTION', '您有一张新优惠券', '亲爱的${userName}，您获得了一张${couponName}（满${minAmount}减${discountAmount}），有效期至${expireDate}，快去使用吧！', '["userName","couponName","minAmount","discountAmount","expireDate"]', NULL, 1, '发券后APP推送', NOW(), NOW(), 1, 1, 0),
 (5, NULL, '促销活动推送', 'APP_PROMOTION', 2, 'PROMOTION', '${title}', '${content}', '["title","content"]', NULL, 1, '营销活动APP推送', NOW(), NOW(), 1, 1, 0),
 (6, NULL, '新品尝鲜推送', 'APP_NEW_DISH', 2, 'PROMOTION', '尝鲜推荐：${dishName}', '${dishName} 新品上市！${dishDesc}，现在下单享新品特惠，快来尝尝吧~', '["dishName","dishDesc"]', NULL, 1, '新菜品上线通知', NOW(), NOW(), 1, 1, 0);
+
+-- ============================================================
+-- 系统管理模块 - 角色权限与系统配置
+-- 模块：角色管理、权限管理、系统配置
+-- 日期：2026-07-10
+-- ============================================================
+
+-- --------------------------------------------
+-- 1. 角色表
+-- 定义系统中可用的角色（店长、厨师、服务员、收银员、配送员等）
+-- --------------------------------------------
+DROP TABLE IF EXISTS `role`;
+CREATE TABLE `role` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户ID，NULL表示全局角色',
+    `role_name` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '角色名称',
+    `role_key` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '角色标识（英文，如chef/waiter/cashier）',
+    `description` varchar(200) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '角色描述',
+    `sort` int NOT NULL DEFAULT 0 COMMENT '排序，数值越大越靠前',
+    `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态 0:禁用 1:启用',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    `update_time` datetime NOT NULL COMMENT '更新时间',
+    `create_user` bigint NULL DEFAULT NULL COMMENT '创建人',
+    `update_user` bigint NULL DEFAULT NULL COMMENT '更新人',
+    `is_deleted` int NOT NULL DEFAULT 0 COMMENT '是否删除 0:未删除 1:已删除',
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE INDEX `uk_role_key`(`role_key` ASC) USING BTREE,
+    INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE=InnoDB CHARACTER SET=utf8mb3 COLLATE=utf8mb3_bin COMMENT='角色表' ROW_FORMAT=Dynamic;
+
+-- --------------------------------------------
+-- 2. 权限表
+-- 定义系统中的所有操作权限（菜单权限、按钮权限、数据权限）
+-- --------------------------------------------
+DROP TABLE IF EXISTS `permission`;
+CREATE TABLE `permission` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `permission_name` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '权限名称',
+    `permission_key` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '权限标识（如dish:view/dish:edit）',
+    `permission_type` tinyint NOT NULL DEFAULT 1 COMMENT '权限类型 1:菜单 2:按钮 3:数据',
+    `parent_id` bigint NOT NULL DEFAULT 0 COMMENT '父权限ID，0表示顶级',
+    `route_path` varchar(200) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '路由路径（菜单权限用）',
+    `icon` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '菜单图标',
+    `sort` int NOT NULL DEFAULT 0 COMMENT '排序',
+    `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态 0:禁用 1:启用',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    `update_time` datetime NOT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE INDEX `uk_permission_key`(`permission_key` ASC) USING BTREE,
+    INDEX `idx_parent`(`parent_id` ASC) USING BTREE
+) ENGINE=InnoDB CHARACTER SET=utf8mb3 COLLATE=utf8mb3_bin COMMENT='权限表' ROW_FORMAT=Dynamic;
+
+-- --------------------------------------------
+-- 3. 角色权限关联表
+-- 多对多关联：一个角色可拥有多个权限
+-- --------------------------------------------
+DROP TABLE IF EXISTS `role_permission`;
+CREATE TABLE `role_permission` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `role_id` bigint NOT NULL COMMENT '角色ID',
+    `permission_id` bigint NOT NULL COMMENT '权限ID',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE INDEX `uk_role_perm`(`role_id` ASC, `permission_id` ASC) USING BTREE,
+    INDEX `idx_role`(`role_id` ASC) USING BTREE
+) ENGINE=InnoDB CHARACTER SET=utf8mb3 COLLATE=utf8mb3_bin COMMENT='角色权限关联表' ROW_FORMAT=Dynamic;
+
+-- --------------------------------------------
+-- 4. 系统配置表
+-- 键值对存储系统级配置，支持多租户隔离
+-- --------------------------------------------
+DROP TABLE IF EXISTS `system_config`;
+CREATE TABLE `system_config` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint NULL DEFAULT NULL COMMENT '租户ID，NULL表示全局配置',
+    `config_key` varchar(64) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '配置键',
+    `config_value` varchar(2000) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '配置值',
+    `config_type` tinyint NOT NULL DEFAULT 1 COMMENT '配置类型 1:功能开关 2:运营参数 3:显示设置 4:其他',
+    `description` varchar(200) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '配置说明',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    `update_time` datetime NOT NULL COMMENT '更新时间',
+    `create_user` bigint NULL DEFAULT NULL COMMENT '创建人',
+    `update_user` bigint NULL DEFAULT NULL COMMENT '更新人',
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE INDEX `uk_tenant_key`(`tenant_id` ASC, `config_key` ASC) USING BTREE
+) ENGINE=InnoDB CHARACTER SET=utf8mb3 COLLATE=utf8mb3_bin COMMENT='系统配置表' ROW_FORMAT=Dynamic;
+
+-- ============================================================
+-- 系统管理模块 - 种子数据
+-- ============================================================
+
+-- 1. 默认角色
+INSERT INTO `role` (`id`, `tenant_id`, `role_name`, `role_key`, `description`, `sort`, `status`, `create_time`, `update_time`, `create_user`, `update_user`, `is_deleted`) VALUES
+(1, NULL, '超级管理员', 'admin', '拥有系统所有权限',    100, 1, NOW(), NOW(), 1, 1, 0),
+(2, NULL, '店长',       'manager', '门店运营管理，查看经营数据', 90, 1, NOW(), NOW(), 1, 1, 0),
+(3, NULL, '厨师',       'chef',    '菜品管理，查看订单',         80, 1, NOW(), NOW(), 1, 1, 0),
+(4, NULL, '服务员',     'waiter',  '桌台管理，订单查询',         70, 1, NOW(), NOW(), 1, 1, 0),
+(5, NULL, '收银员',     'cashier', '订单处理，收银对账',         60, 1, NOW(), NOW(), 1, 1, 0),
+(6, NULL, '配送员',     'delivery','配送订单管理',              50, 1, NOW(), NOW(), 1, 1, 0);
+
+-- 2. 权限数据（模块权限树）
+INSERT INTO `permission` (`id`, `permission_name`, `permission_key`, `permission_type`, `parent_id`, `route_path`, `icon`, `sort`, `status`, `create_time`, `update_time`) VALUES
+-- 商品管理
+(1,  '商品管理',   'product',        1, 0,  '',           'icon-category', 10, 1, NOW(), NOW()),
+(2,  '分类管理',   'category:view',  1, 1,  'page/category/list.html', 'icon-category', 1, 1, NOW(), NOW()),
+(3,  '分类新增',   'category:add',   2, 1,  '',           'icon-category', 2, 1, NOW(), NOW()),
+(4,  '分类修改',   'category:edit',  2, 1,  '',           'icon-category', 3, 1, NOW(), NOW()),
+(5,  '分类删除',   'category:delete',2, 1,  '',           'icon-category', 4, 1, NOW(), NOW()),
+(6,  '菜品管理',   'dish:view',      1, 1,  'page/food/list.html',     'icon-food',    5, 1, NOW(), NOW()),
+(7,  '菜品新增',   'dish:add',       2, 1,  '',           'icon-food',    6, 1, NOW(), NOW()),
+(8,  '菜品修改',   'dish:edit',      2, 1,  '',           'icon-food',    7, 1, NOW(), NOW()),
+(9,  '菜品删除',   'dish:delete',    2, 1,  '',           'icon-food',    8, 1, NOW(), NOW()),
+(10, '菜品启售',   'dish:enable',    2, 1,  '',           'icon-food',    9, 1, NOW(), NOW()),
+(11, '套餐管理',   'setmeal:view',   1, 1,  'page/combo/list.html',    'icon-combo',  10, 1, NOW(), NOW()),
+(12, '套餐新增',   'setmeal:add',    2, 1,  '',           'icon-combo',  11, 1, NOW(), NOW()),
+(13, '套餐修改',   'setmeal:edit',   2, 1,  '',           'icon-combo',  12, 1, NOW(), NOW()),
+(14, '套餐删除',   'setmeal:delete', 2, 1,  '',           'icon-combo',  13, 1, NOW(), NOW()),
+
+-- 订单管理
+(15, '订单管理',   'order',          1, 0,  '',           'icon-order',  20, 1, NOW(), NOW()),
+(16, '订单查询',   'order:view',     1, 15, 'page/order/list.html',    'icon-order',  1, 1, NOW(), NOW()),
+(17, '订单取消',   'order:cancel',   2, 15, '',           'icon-order',  2, 1, NOW(), NOW()),
+(18, '订单派送',   'order:deliver',  2, 15, '',           'icon-order',  3, 1, NOW(), NOW()),
+(19, '订单完成',   'order:complete', 2, 15, '',           'icon-order',  4, 1, NOW(), NOW()),
+(20, '订单退款',   'order:refund',   2, 15, '',           'icon-order',  5, 1, NOW(), NOW()),
+(21, '支付管理',   'payment:view',   1, 15, 'page/payment/order-list.html', 'icon-lock', 6, 1, NOW(), NOW()),
+
+-- 堂食管理
+(22, '堂食管理',   'dining',         1, 0,  '',           'icon-order',  30, 1, NOW(), NOW()),
+(23, '桌台管理',   'table:view',     1, 22, 'page/dining/table-list.html', 'icon-food', 1, 1, NOW(), NOW()),
+(24, '桌台新增',   'table:add',      2, 22, '',           'icon-food',   2, 1, NOW(), NOW()),
+(25, '桌台修改',   'table:edit',     2, 22, '',           'icon-food',   3, 1, NOW(), NOW()),
+(26, '桌台删除',   'table:delete',   2, 22, '',           'icon-food',   4, 1, NOW(), NOW()),
+(27, '排队管理',   'queue:view',     1, 22, 'page/dining/queue-list.html', 'icon-member', 5, 1, NOW(), NOW()),
+(28, '预订管理',   'reservation:view',1,22,'page/dining/reservation-list.html','icon-order',6,1,NOW(),NOW()),
+
+-- 进销存
+(29, '进销存',     'inventory',      1, 0,  '',           'icon-category', 40, 1, NOW(), NOW()),
+(30, '原料管理',   'material:view',  1, 29, 'page/inventory/material-list.html', 'icon-category', 1, 1, NOW(), NOW()),
+(31, '采购管理',   'purchase:view',  1, 29, 'page/inventory/purchase-list.html', 'icon-combo', 2, 1, NOW(), NOW()),
+(32, '库存盘点',   'stockcheck:view',1, 29, 'page/inventory/stock-check.html',  'icon-lock',  3, 1, NOW(), NOW()),
+
+-- 会员
+(33, '会员用户',   'member',         1, 0,  '',           'icon-member', 50, 1, NOW(), NOW()),
+(34, '会员管理',   'member:view',    1, 33, 'page/member-center/member-list.html','icon-member',1,1,NOW(),NOW()),
+(35, '积分管理',   'points:view',    1, 33, 'page/member-center/points-list.html','icon-category',2,1,NOW(),NOW()),
+(36, '优惠券',     'coupon:view',    1, 33, 'page/member-center/coupon-list.html','icon-order',3,1,NOW(),NOW()),
+(37, 'C端用户',    'user:view',      1, 33, 'page/user/list.html',              'icon-user', 4, 1, NOW(), NOW()),
+
+-- 数据分析
+(38, '数据分析',   'report',         1, 0,  '',           'icon-category', 60, 1, NOW(), NOW()),
+(39, '经营报表',   'report:daily',   1, 38, 'page/report/daily.html',           'icon-order',  1, 1, NOW(), NOW()),
+(40, '菜品排行',   'report:ranking', 1, 38, 'page/report/dish-ranking.html',    'icon-food',   2, 1, NOW(), NOW()),
+(41, '支付分析',   'report:payment', 1, 38, 'page/report/payment-analysis.html','icon-lock',  3, 1, NOW(), NOW()),
+(42, '时段分析',   'report:timeslot',1, 38, 'page/report/time-slot.html',       'icon-category',4,1, NOW(), NOW()),
+
+-- 营销中心
+(43, '营销中心',   'marketing',      1, 0,  '',           'icon-category', 70, 1, NOW(), NOW()),
+(44, '智能推荐',   'recommend:view', 1, 43, 'page/recommend/overview.html',    'icon-food',   1, 1, NOW(), NOW()),
+(45, '营销活动',   'campaign:view',  1, 43, 'page/recommend/campaigns.html',   'icon-category',2,1, NOW(), NOW()),
+(46, '营销推送',   'campaign:push',  2, 43, '',           'icon-category', 3, 1, NOW(), NOW()),
+
+-- 门店管理
+(47, '门店管理',   'store',          1, 0,  '',           'icon-food',  80, 1, NOW(), NOW()),
+(48, '门店列表',   'store:view',     1, 47, 'page/store/list.html',            'icon-food',  1, 1, NOW(), NOW()),
+(49, '门店创建',   'store:create',   2, 47, '',           'icon-food',  2, 1, NOW(), NOW()),
+(50, '数据同步',   'store:sync',     2, 47, '',           'icon-food',  3, 1, NOW(), NOW()),
+(51, '总部控制台', 'store:dashboard',1, 47, 'page/store/dashboard.html',       'icon-lock',  4, 1, NOW(), NOW()),
+
+-- 系统管理
+(52, '系统管理',   'system',         1, 0,  '',           'icon-category', 90, 1, NOW(), NOW()),
+(53, '员工管理',   'employee:view',  1, 52, 'page/member/list.html',           'icon-member', 1, 1, NOW(), NOW()),
+(54, '员工新增',   'employee:add',   2, 52, '',           'icon-member', 2, 1, NOW(), NOW()),
+(55, '员工修改',   'employee:edit',  2, 52, '',           'icon-member', 3, 1, NOW(), NOW()),
+(56, '员工删除',   'employee:delete',2, 52, '',           'icon-member', 4, 1, NOW(), NOW()),
+(57, '角色管理',   'role:view',      1, 52, 'page/sys/role-list.html',         'icon-member', 5, 1, NOW(), NOW()),
+(58, '角色新增',   'role:add',       2, 52, '',           'icon-member', 6, 1, NOW(), NOW()),
+(59, '角色修改',   'role:edit',      2, 52, '',           'icon-member', 7, 1, NOW(), NOW()),
+(60, '通知模板',   'template:view',  1, 52, 'page/sys/template-list.html',     'icon-order',  8, 1, NOW(), NOW()),
+(61, '模板新增',   'template:add',   2, 52, '',           'icon-order',  9, 1, NOW(), NOW()),
+(62, '系统配置',   'config:view',    1, 52, 'page/sys/config-list.html',       'icon-category',10,1, NOW(), NOW()),
+(63, '配置修改',   'config:edit',    2, 52, '',           'icon-category',11,1, NOW(), NOW()),
+(64, '操作日志',   'log:view',       1, 52, 'page/sys/operation-log.html',     'icon-category',12,1, NOW(), NOW());
+
+-- 3. 角色权限关联（超级管理员拥有所有权限）
+INSERT INTO `role_permission` (`role_id`, `permission_id`, `create_time`)
+SELECT 1, id, NOW() FROM `permission`;
+
+-- 店长权限（大部分业务权限，不含系统管理）
+INSERT INTO `role_permission` (`role_id`, `permission_id`, `create_time`) VALUES
+(2, 2, NOW()), (2, 3, NOW()), (2, 4, NOW()), (2, 5, NOW()),
+(2, 6, NOW()), (2, 7, NOW()), (2, 8, NOW()), (2, 10, NOW()),
+(2, 11, NOW()), (2, 12, NOW()), (2, 13, NOW()),
+(2, 16, NOW()), (2, 17, NOW()), (2, 18, NOW()), (2, 19, NOW()), (2, 20, NOW()),
+(2, 21, NOW()),
+(2, 23, NOW()), (2, 27, NOW()), (2, 28, NOW()),
+(2, 30, NOW()), (2, 31, NOW()), (2, 32, NOW()),
+(2, 34, NOW()), (2, 35, NOW()), (2, 36, NOW()),
+(2, 39, NOW()), (2, 40, NOW()), (2, 41, NOW()), (2, 42, NOW()),
+(2, 44, NOW()), (2, 45, NOW()),
+(2, 48, NOW()), (2, 53, NOW());
+
+-- 厨师权限（菜品+订单查看）
+INSERT INTO `role_permission` (`role_id`, `permission_id`, `create_time`) VALUES
+(3, 6, NOW()), (3, 7, NOW()), (3, 8, NOW()),
+(3, 16, NOW()),
+(3, 23, NOW()), (3, 27, NOW());
+
+-- 服务员权限（桌台+订单）
+INSERT INTO `role_permission` (`role_id`, `permission_id`, `create_time`) VALUES
+(3, 16, NOW()), (3, 17, NOW()),
+(3, 23, NOW()), (3, 27, NOW()), (3, 28, NOW());
+
+-- 收银员权限（订单+支付）
+INSERT INTO `role_permission` (`role_id`, `permission_id`, `create_time`) VALUES
+(3, 16, NOW()), (3, 17, NOW()), (3, 18, NOW()), (3, 19, NOW()), (3, 20, NOW()),
+(3, 21, NOW()),
+(3, 23, NOW());
+
+-- 配送员权限（配送订单）
+INSERT INTO `role_permission` (`role_id`, `permission_id`, `create_time`) VALUES
+(3, 16, NOW()), (3, 18, NOW());
+
+-- 4. 系统配置默认值
+INSERT INTO `system_config` (`tenant_id`, `config_key`, `config_value`, `config_type`, `description`, `create_time`, `update_time`, `create_user`, `update_user`) VALUES
+(NULL, 'store_name',          '瑞吉外卖',              1, '店铺名称',       NOW(), NOW(), 1, 1),
+(NULL, 'business_hours',      '09:00-22:00',            1, '营业时间',       NOW(), NOW(), 1, 1),
+(NULL, 'delivery_radius',     '3000',                   1, '配送半径(米)',   NOW(), NOW(), 1, 1),
+(NULL, 'min_delivery_amount', '20.00',                  1, '最低起送金额',   NOW(), NOW(), 1, 1),
+(NULL, 'delivery_fee',        '0.00',                   1, '配送费',         NOW(), NOW(), 1, 1),
+(NULL, 'auto_print_order',    'true',                   1, '下单自动打印小票',NOW(), NOW(), 1, 1),
+(NULL, 'order_timeout_min',   '30',                     1, '订单超时时间(分钟)', NOW(), NOW(), 1, 1),
+(NULL, 'sms_mock_mode',       'true',                   1, '短信Mock模式',   NOW(), NOW(), 1, 1),
+(NULL, 'push_mock_mode',      'true',                   1, '推送Mock模式',   NOW(), NOW(), 1, 1),
+(NULL, 'enable_dine_in',      'true',                   1, '启用堂食功能',   NOW(), NOW(), 1, 1),
+(NULL, 'enable_member',       'true',                   1, '启用会员功能',   NOW(), NOW(), 1, 1);
+
+-- ============================================================
+-- 体验完善 - Phase 5
+-- ============================================================
+
+-- ----------------------------
+-- Table structure for member_tag
+-- 会员标签表：运营人员手动/自动为会员打的业务标签
+-- ----------------------------
+DROP TABLE IF EXISTS `member_tag`;
+CREATE TABLE `member_tag` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `tenant_id` bigint NOT NULL COMMENT '租户ID',
+  `member_id` bigint NOT NULL COMMENT '会员ID',
+  `tag_name` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '标签名称',
+  `tag_type` int NOT NULL DEFAULT 1 COMMENT '标签类型 1手动添加 2自动生成',
+  `biz_tag` varchar(32) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '业务标签 HIGHLY_ACTIVE/HIGH_VALUE/NEW_USER/LAPSED/PROMOTION_SENSITIVE/FOODIE',
+  `tag_color` varchar(16) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT '#409EFF' COMMENT '标签颜色',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `create_user` bigint NOT NULL COMMENT '创建用户ID',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant_member`(`tenant_id` ASC, `member_id` ASC) USING BTREE,
+  INDEX `idx_biz_tag`(`tenant_id` ASC, `biz_tag` ASC) USING BTREE
+) ENGINE=InnoDB CHARACTER SET=utf8mb3 COLLATE=utf8mb3_bin COMMENT='会员标签表' ROW_FORMAT=Dynamic;
+
+-- ----------------------------
+-- Table structure for dish_evaluation
+-- 菜品评价表：用户对订单中的菜品进行评价和评分
+-- ----------------------------
+DROP TABLE IF EXISTS `dish_evaluation`;
+CREATE TABLE `dish_evaluation` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `tenant_id` bigint NOT NULL COMMENT '租户ID',
+  `order_id` bigint NOT NULL COMMENT '订单ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `user_name` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '用户姓名',
+  `dish_id` bigint NOT NULL COMMENT '菜品ID',
+  `dish_name` varchar(64) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '菜品名称',
+  `star_rating` int NOT NULL COMMENT '评分 1-5分',
+  `content` varchar(500) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '评价内容',
+  `images` varchar(1000) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '评价图片JSON数组',
+  `reply_content` varchar(500) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL DEFAULT NULL COMMENT '商家回复内容',
+  `reply_time` datetime NULL DEFAULT NULL COMMENT '商家回复时间',
+  `status` int NOT NULL DEFAULT 0 COMMENT '状态 0待审核 1已通过 2已拒绝',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime NOT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant_dish`(`tenant_id` ASC, `dish_id` ASC) USING BTREE,
+  INDEX `idx_tenant_user`(`tenant_id` ASC, `user_id` ASC) USING BTREE,
+  INDEX `idx_order`(`order_id` ASC) USING BTREE
+) ENGINE=InnoDB CHARACTER SET=utf8mb3 COLLATE=utf8mb3_bin COMMENT='菜品评价表' ROW_FORMAT=Dynamic;
+

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系统配置 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+</head>
+<body>
+  <div class="dashboard-container" id="config-app">
+    <div class="container">
+      <div class="tableBar">
+        <el-button type="primary" @click="openDialog()">+ 新增配置</el-button>
+        <el-button @click="loadData">刷新</el-button>
+      </div>
+
+      <el-table :data="tableData" stripe border v-loading="loading" class="tableBox">
+        <el-table-column prop="configKey" label="配置键" width="200" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="configValue" label="配置值" min-width="300" show-overflow-tooltip>
+          <template slot-scope="scope">
+            <el-input v-if="scope.row._editing" v-model="scope.row.configValue" size="small" @keyup.enter.native="saveInline(scope.row)"></el-input>
+            <span v-else>{{ scope.row.configValue }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="configType" label="类型" width="100" align="center">
+          <template slot-scope="scope">
+            <el-tag size="small" :type="typeTagType(scope.row.configType)">
+              {{ typeName(scope.row.configType) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="description" label="说明" show-overflow-tooltip min-width="180"></el-table-column>
+        <el-table-column label="操作" align="center" width="180" fixed="right">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" @click="editRow(scope.row)">编辑</el-button>
+            <el-button type="text" size="small" class="delBut non" @click="deleteHandle(scope.row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="500px">
+      <el-form :model="form" label-width="100px" size="small">
+        <el-form-item label="配置键" required>
+          <el-input v-model="form.configKey" :disabled="!!form.id" placeholder="如：store_name"></el-input>
+        </el-form-item>
+        <el-form-item label="配置值" required>
+          <el-input v-model="form.configValue" placeholder="配置值"></el-input>
+        </el-form-item>
+        <el-form-item label="类型">
+          <el-select v-model="form.configType">
+            <el-option :label="'功能开关'" :value="1"></el-option>
+            <el-option :label="'运营参数'" :value="2"></el-option>
+            <el-option :label="'显示设置'" :value="3"></el-option>
+            <el-option :label="'其他'" :value="4"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="说明">
+          <el-input v-model="form.description" type="textarea" :rows="2"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="submitForm" :loading="submitting">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../api/sys.js"></script>
+  <script>
+    new Vue({
+      el: '#config-app',
+      data() {
+        return {
+          tableData: [],
+          loading: false,
+          submitting: false,
+          dialogVisible: false,
+          dialogTitle: '新增配置',
+          form: { id: null, configKey: '', configValue: '', configType: 1, description: '' }
+        }
+      },
+      created() {
+        this.loadData()
+      },
+      methods: {
+        loadData() {
+          this.loading = true
+          sysApi.configList().then(res => {
+            if (res && res.code === 1) {
+              this.tableData = (res.data || []).map(item => {
+                return Object.assign({}, item, { _editing: false })
+              })
+            }
+            this.loading = false
+          }).catch(() => { this.loading = false })
+        },
+        typeName(type) {
+          var map = { 1: '功能开关', 2: '运营参数', 3: '显示设置', 4: '其他' }
+          return map[type] || '其他'
+        },
+        typeTagType(type) {
+          var map = { 1: 'success', 2: 'warning', 3: 'info', 4: '' }
+          return map[type] || ''
+        },
+        openDialog() {
+          this.dialogTitle = '新增配置'
+          this.form = { id: null, configKey: '', configValue: '', configType: 1, description: '' }
+          this.dialogVisible = true
+        },
+        editRow(row) {
+          this.dialogTitle = '编辑配置'
+          this.form = JSON.parse(JSON.stringify(row))
+          this.dialogVisible = true
+        },
+        saveInline(row) {
+          sysApi.configUpdate(row).then(res => {
+            if (res && res.code === 1) {
+              this.$message.success('保存成功')
+              row._editing = false
+            }
+          })
+        },
+        submitForm() {
+          if (!this.form.configKey || this.form.configValue === '') {
+            this.$message.warning('请填写配置键和配置值')
+            return
+          }
+          this.submitting = true
+          var api = this.form.id ? sysApi.configUpdate(this.form) : sysApi.configAdd(this.form)
+          api.then(res => {
+            if (res && res.code === 1) {
+              this.$message.success(res.msg || '操作成功')
+              this.dialogVisible = false
+              this.loadData()
+            } else {
+              this.$message.error(res ? res.msg : '操作失败')
+            }
+          }).catch(() => { this.$message.error('操作失败') })
+            .finally(() => { this.submitting = false })
+        },
+        deleteHandle(id) {
+          this.$confirm('确定删除该配置吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(() => {
+              sysApi.configDelete(id).then(res => {
+                if (res && res.code === 1) {
+                  this.$message.success('删除成功')
+                  this.loadData()
+                }
+              })
+            }).catch(() => {})
+        }
+      }
+    })
+  </script>
+</body>
+</html>

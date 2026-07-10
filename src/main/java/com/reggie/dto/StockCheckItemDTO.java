@@ -8,6 +8,9 @@ import java.math.BigDecimal;
 
 /**
  * 盘点明细项DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 public class StockCheckItemDTO {

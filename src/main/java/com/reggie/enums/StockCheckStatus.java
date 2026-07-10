@@ -8,8 +8,11 @@ import lombok.Getter;
 @Getter
 public enum StockCheckStatus {
 
+    /** 草稿 */
     DRAFT("DRAFT", "草稿"),
+    /** 进行中 */
     IN_PROGRESS("IN_PROGRESS", "进行中"),
+    /** 已完成 */
     DONE("DONE", "已完成");
 
     private final String value;

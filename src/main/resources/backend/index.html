@@ -199,19 +199,24 @@
                 { id: '9-1', name: '门店列表', url: 'page/store/list.html', icon: 'icon-food' },
                 { id: '9-2', name: '总部控制台', url: 'page/store/dashboard.html', icon: 'icon-lock' },
               ]},
-              { id: '10', name: '消息通知', url: 'page/notification/list.html', icon: 'icon-order' },
-              { id: '11', name: '数据导出', url: 'page/export/index.html', icon: 'icon-category' },
-              { id: '12', name: '员工管理', url: 'page/member/list.html', icon: 'icon-member' },
-              { id: '13', name: 'AI助手', icon: 'icon-order', children: [
-                { id: '13-1', name: 'AI对话', url: 'page/ai/assistant.html', icon: 'icon-order' },
-                { id: '13-2', name: '模型配置', url: 'page/ai/provider-config.html', icon: 'icon-category' },
+              { id: '10', name: '系统管理', icon: 'icon-category', children: [
+                { id: '10-1', name: '员工管理', url: 'page/member/list.html', icon: 'icon-member' },
+                { id: '10-2', name: '角色管理', url: 'page/sys/role-list.html', icon: 'icon-member' },
+                { id: '10-3', name: '通知模板', url: 'page/sys/template-list.html', icon: 'icon-order' },
+                { id: '10-4', name: '系统配置', url: 'page/sys/config-list.html', icon: 'icon-category' },
+                { id: '10-5', name: '操作日志', url: 'page/sys/operation-log.html', icon: 'icon-category' },
+              ]},
+              { id: '11', name: 'AI助手', icon: 'icon-order', children: [
+                { id: '11-1', name: 'AI对话', url: 'page/ai/assistant.html', icon: 'icon-order' },
+                { id: '11-2', name: '模型配置', url: 'page/ai/provider-config.html', icon: 'icon-category' },
               ]},
             ],
             iframeUrl: 'page/dashboard/overview.html',
             headTitle: '数据概览',
             goBackFlag: false,
             loading: true,
-            timer: null
+            timer: null,
+            navHistory: []  // 导航历史栈，用于返回按钮
           }
         },
         computed: {},
@@ -239,24 +244,40 @@
             })
           },
           goHome() {
+            this.navHistory = []  // 回到首页清空历史
             const homeMenu = this.menuList.find(item => item.id === '1')
             if (homeMenu) {
-              this.menuHandle(homeMenu, false)
+              this.menuActived = homeMenu.id
+              this.iframeUrl = homeMenu.url
+              this.headTitle = homeMenu.name
+              this.goBackFlag = false
             }
           },
           goBack() {
-            // window.location.href = 'javascript:history.go(-1)'
-            const menu = this.menuList.find(item=>item.id===this.menuActived)
-            // this.goBackFlag = false
-            // this.headTitle = menu.name
-            this.menuHandle(menu,false)
+            if (this.navHistory.length > 0) {
+              const prev = this.navHistory.pop()
+              this.loading = true
+              this.menuActived = prev.id
+              this.iframeUrl = prev.url
+              this.headTitle = prev.name
+              this.goBackFlag = this.navHistory.length > 0
+              this.closeLoading()
+            }
           },
           menuHandle(item, goBackFlag) {
+            // 压入导航历史（当前页面）
+            if (this.iframeUrl && this.menuActived) {
+              this.navHistory.push({
+                id: this.menuActived,
+                name: this.headTitle,
+                url: this.iframeUrl
+              })
+            }
             this.loading = true
             this.menuActived = item.id
             this.iframeUrl = item.url
             this.headTitle = item.name
-            this.goBackFlag = goBackFlag
+            this.goBackFlag = this.navHistory.length > 0
             this.closeLoading()
           },
           closeLoading(){

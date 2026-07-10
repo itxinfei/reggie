@@ -8,7 +8,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 营销活动服务
+ * 营销活动服务接口
+ * 管理营销活动的创建、推送、消息管理及自动发券
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 public interface MarketingCampaignService extends IService<MarketingCampaign> {
 
@@ -20,7 +24,9 @@ public interface MarketingCampaignService extends IService<MarketingCampaign> {
      * @param status 状态筛选
      * @return 分页结果
      */
-    Page<MarketingCampaign> pageCampaigns(int page, int pageSize, String name, Integer status);
+    Page<MarketingCampaign> pageCampaigns(int page, int pageSize, String name, Integer status, Integer campaignType);
+
+    int batchDeleteCampaigns(List<Long> ids);
 
     /**
      * 获取匹配用户的营销活动列表
@@ -57,7 +63,7 @@ public interface MarketingCampaignService extends IService<MarketingCampaign> {
     void markMessageRead(Long messageId);
 
     /**
-     * 修改点：获取用户所有消息列表（分页，包含已读和未读）
+     * 获取用户所有消息列表（分页，包含已读和未读）
      *
      * @param userId   用户ID
      * @param page     页码
@@ -67,7 +73,7 @@ public interface MarketingCampaignService extends IService<MarketingCampaign> {
     Page<Map<String, Object>> getMessages(Long userId, int page, int pageSize);
 
     /**
-     * 修改点：获取用户未读消息数量（用于首页角标）
+     * 获取用户未读消息数量（用于首页角标）
      *
      * @param userId 用户ID
      * @return 未读消息数量
@@ -83,7 +89,7 @@ public interface MarketingCampaignService extends IService<MarketingCampaign> {
     int autoDispatchCoupons(Long userId);
 
     /**
-     * 修改点：批量推送营销消息
+     * 批量推送营销消息
      * 根据活动目标人群自动匹配用户并批量创建推送消息
      *
      * @param campaignId 活动ID

@@ -28,6 +28,9 @@ import java.util.List;
 
 /**
  * 地址簿管理
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
@@ -54,10 +57,16 @@ public class AddressBookController {
         return R.success(addressBook);
     }
 
+    /**
+     * 修改地址信息
+     *
+     * @param addressBook 地址信息
+     * @return 修改结果
+     */
     @PutMapping
     @Operation(summary = "修改地址", description = "更新地址信息，自动校验租户权限")
     public R<AddressBook> update(@Valid @RequestBody AddressBook addressBook) {
-        // 租户校验：确保只能修改本租户的地址（修改点：防御NPE）
+        // 租户校验：确保只能修改本租户的地址
         AddressBook existing = addressBookService.getById(addressBook.getId());
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
@@ -67,11 +76,17 @@ public class AddressBookController {
         return R.success(addressBook);
     }
 
+    /**
+     * 批量删除地址
+     *
+     * @param ids 地址ID列表
+     * @return 删除结果
+     */
     @DeleteMapping
     @Operation(summary = "删除地址", description = "批量删除地址，自动校验租户权限")
     @Parameter(name = "ids", description = "地址ID列表", required = true)
     public R<String> delete(@RequestParam List<Long> ids) {
-        // 租户校验：确保只能删除本租户的地址（修改点：防御NPE）
+        // 租户校验：确保只能删除本租户的地址
         Long currentTenantId = BaseContext.getCurrentTenantId();
         for (Long id : ids) {
             AddressBook addressBook = addressBookService.getById(id);
@@ -83,12 +98,16 @@ public class AddressBookController {
         return R.success("删除成功");
     }
 
+    /**
+     * 查询最后更新的地址
+     *
+     * @return 最后更新的地址
+     */
     @GetMapping("/lastUpdate")
     @Operation(summary = "查询最后更新的地址", description = "查询用户最近更新的地址")
     public R<AddressBook> lastUpdate() {
         LambdaQueryWrapper<AddressBook> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(AddressBook::getUserId, BaseContext.getCurrentId());
-        // 修改点：仅当tenantId不为null时才添加租户过滤，避免NULL比较导致查不到数据
         Long currentTenantId = BaseContext.getCurrentTenantId();
         queryWrapper.eq(currentTenantId != null, AddressBook::getTenantId, currentTenantId);
         queryWrapper.orderByDesc(AddressBook::getUpdateTime);
@@ -110,7 +129,7 @@ public class AddressBookController {
         log.info("设置默认地址，手机号：{}，地址：{}",
             LogMaskUtils.maskPhone(addressBook.getPhone()),
             LogMaskUtils.maskAddress(addressBook.getDetail()));
-        // 租户校验（修改点：防御NPE）
+        // 租户校验
         AddressBook existing = addressBookService.getById(addressBook.getId());
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
@@ -118,7 +137,6 @@ public class AddressBookController {
         }
         LambdaUpdateWrapper<AddressBook> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(AddressBook::getUserId, BaseContext.getCurrentId());
-        // 修改点：仅当tenantId不为null时才添加租户过滤，复用上方已声明的currentTenantId
         wrapper.eq(currentTenantId != null, AddressBook::getTenantId, currentTenantId);
         wrapper.set(AddressBook::getIsDefault, AddressBook.NOT_DEFAULT);
         //SQL:update address_book set is_default = 0 where user_id = ? and tenant_id = ?

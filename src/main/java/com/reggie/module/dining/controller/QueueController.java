@@ -24,6 +24,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 
+/**
+ * 排队管理控制器
+ * 提供顾客取号、叫号、取消排队等接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/dining/queue")
@@ -44,7 +51,6 @@ public class QueueController {
                                      @RequestParam(required = false) String phone) {
         Page<QueueRecord> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
-        // 修改点：新增状态和手机号筛选条件
         qw.eq(status != null && !status.isEmpty(), QueueRecord::getStatus, status);
         qw.like(phone != null && !phone.isEmpty(), QueueRecord::getPhone, phone);
         qw.orderByAsc(QueueRecord::getCreatedTime);

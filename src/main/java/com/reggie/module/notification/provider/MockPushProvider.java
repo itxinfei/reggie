@@ -18,6 +18,13 @@ import java.util.List;
 @Component
 public class MockPushProvider implements PushProvider {
 
+    /**
+     * 向单个设备推送消息
+     *
+     * @param device  用户设备信息
+     * @param message 推送消息
+     * @return 是否推送成功
+     */
     @Override
     public boolean pushToDevice(UserDevice device, PushMessage message) {
         log.info("[APP推送Mock] userId={}, platform={}, token={}, title={}, content={}, clickAction={}, extras={}",
@@ -31,6 +38,13 @@ public class MockPushProvider implements PushProvider {
         return true;
     }
 
+    /**
+     * 向用户的所有设备批量推送消息
+     *
+     * @param devices 用户设备列表
+     * @param message 推送消息
+     * @return 成功推送的设备数量
+     */
     @Override
     public int pushToUserDevices(List<UserDevice> devices, PushMessage message) {
         if (devices == null || devices.isEmpty()) {
@@ -50,11 +64,21 @@ public class MockPushProvider implements PushProvider {
         return successCount;
     }
 
+    /**
+     * 获取提供商名称
+     *
+     * @return 提供商标识
+     */
     @Override
     public String getProviderName() {
         return "mock";
     }
 
+    /**
+     * 是否为模拟模式
+     *
+     * @return 是否为模拟模式
+     */
     @Override
     public boolean isMockMode() {
         return true;

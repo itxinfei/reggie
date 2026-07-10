@@ -23,13 +23,21 @@ import java.util.concurrent.TimeUnit;
  *
  * 注意：需要 Redis 支持，如果 Redis 不可用则自动降级（不启用防护）
  *
- * @author itxinfei
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @Component
 public class BruteForceProtectionFilter implements Filter {
 
+    /**
+     * Redis操作模板
+     */
     private final RedisTemplate<String, Object> redisTemplate;
+
+    /**
+     * 是否启用暴力破解防护
+     */
     private final boolean enabled;
 
     /**

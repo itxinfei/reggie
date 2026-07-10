@@ -14,7 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 订单明细
+ * 订单明细管理
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
@@ -25,6 +28,12 @@ public class OrderDetailController {
     @Autowired
     private OrderDetailService orderDetailService;
 
+    /**
+     * 根据ID查询订单明细详情
+     *
+     * @param id 订单明细ID
+     * @return 订单明细信息
+     */
     @GetMapping("/{id}")
     @Operation(summary = "查询订单明细", description = "根据ID查询订单明细详情")
     @Parameter(name = "id", description = "订单明细ID", required = true)

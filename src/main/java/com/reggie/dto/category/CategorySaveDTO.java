@@ -9,6 +9,9 @@ import javax.validation.constraints.Size;
 
 /**
  * 分类新增DTO
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Data
 @Schema(description = "分类信息")

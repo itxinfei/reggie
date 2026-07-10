@@ -41,7 +41,8 @@ import java.util.Map;
  * 提供统一的Excel(.xlsx)和PDF文件生成能力
  * 支持中文编码、自适应列宽、样式美化
  *
- * @author Reggie Team
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 public final class ExportUtil {
@@ -83,6 +84,10 @@ public final class ExportUtil {
 
     /**
      * 导出Excel文件到字节数组（供Controller缓存或异步处理）
+     *
+     * @param columns  列定义: LinkedHashMap<表头, 数据key>
+     * @param dataList 数据列表
+     * @return Excel文件字节数组
      */
     public static byte[] generateExcelBytes(LinkedHashMap<String, String> columns,
                                             List<Map<String, Object>> dataList) {
@@ -234,6 +239,12 @@ public final class ExportUtil {
 
     /**
      * 生成PDF字节数组
+     *
+     * @param title     文档标题
+     * @param columns   列定义
+     * @param dataList  数据列表
+     * @param summary   汇总信息（可选）
+     * @return PDF文件字节数组
      */
     public static byte[] generatePdfBytes(String title, LinkedHashMap<String, String> columns,
                                           List<Map<String, Object>> dataList,
@@ -243,7 +254,7 @@ public final class ExportUtil {
 
     /**
      * 生成PDF
-     * 修改点：PDF中文字体多级fallback，解决Linux/Docker环境无STSong-Light字体的问题
+     * PDF中文字体多级fallback，解决Linux/Docker环境无STSong-Light字体的问题
      */
     private static byte[] generatePdf(String title, LinkedHashMap<String, String> columns,
                                       List<Map<String, Object>> dataList,
@@ -253,7 +264,6 @@ public final class ExportUtil {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             PdfWriter.getInstance(document, bos);
 
-            // 修改点：尝试加载中文字体，多级fallback
             BaseFont baseFont = loadChineseBaseFont();
             com.itextpdf.text.Font titleFont = new com.itextpdf.text.Font(baseFont, 18, com.itextpdf.text.Font.BOLD);
             com.itextpdf.text.Font headerFont = new com.itextpdf.text.Font(baseFont, 10, com.itextpdf.text.Font.BOLD);
@@ -392,7 +402,7 @@ public final class ExportUtil {
 
     /**
      * 加载PDF中文字体，多级fallback
-     * 修改点：依次尝试常见中文字体，解决非中文环境无指定字体的问题
+     * 依次尝试常见中文字体，解决非中文环境无指定字体的问题
      *
      * 尝试顺序: STSong-Light → SimSun → SimHei → STSong → 系统默认Helvetica
      */

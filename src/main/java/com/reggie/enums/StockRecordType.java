@@ -8,8 +8,11 @@ import lombok.Getter;
 @Getter
 public enum StockRecordType {
 
+    /** 入库 */
     IN("IN", "入库"),
+    /** 出库 */
     OUT("OUT", "出库"),
+    /** 盘点调整 */
     CHECK("CHECK", "盘点调整");
 
     private final String value;

@@ -4,6 +4,12 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.entity.Region;
 import java.util.List;
 
+/**
+ * 地区管理服务接口，提供省市区三级地区数据的查询功能
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
 public interface RegionService extends IService<Region> {
 
     /**

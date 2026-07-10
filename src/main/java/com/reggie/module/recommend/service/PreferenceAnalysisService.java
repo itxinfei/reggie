@@ -1,8 +1,11 @@
 package com.reggie.module.recommend.service;
 
 /**
- * 用户偏好分析服务
+ * 用户偏好分析服务接口
  * 基于订单历史和浏览记录分析用户口味/品类偏好
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 public interface PreferenceAnalysisService {
 

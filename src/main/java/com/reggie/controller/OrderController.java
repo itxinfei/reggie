@@ -9,6 +9,7 @@ import com.reggie.entity.OrderDetail;
 import com.reggie.entity.Orders;
 import com.reggie.service.OrderDetailService;
 import com.reggie.service.OrderService;
+import com.reggie.service.DashboardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,7 +29,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 订单
+ * 订单管理
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
@@ -42,9 +46,11 @@ public class OrderController {
     @Autowired
     private OrderDetailService orderDetailService;
 
+    @Autowired
+    private DashboardService dashboardService;
+
     /**
      * 用户下单
-     * 修改点：返回订单ID、订单号和金额，修复原来只返回"下单成功"字符串导致前端无法跳转支付的问题
      * @param orders 订单信息
      * @return 订单关键信息（id, number, amount）
      */
@@ -76,7 +82,9 @@ public class OrderController {
         orders.setTenantId(BaseContext.getCurrentTenantId());
         orderService.submit(orders);
 
-        // 修改点：返回订单关键信息，前端可根据此信息跳转支付页面
+        // 修改点：下单后清除 Dashboard 缓存，确保今日订单数实时更新
+        clearDashboardCache();
+
         Map<String, Object> result = new HashMap<>();
         result.put("id", orders.getId());
         result.put("number", orders.getNumber());
@@ -88,7 +96,6 @@ public class OrderController {
 
     /**
      * 根据ID查询订单详情
-     * 修改点：新增订单详情查询接口，补全订单管理闭环
      * @param id 订单ID
      * @return 订单详情及关联明细
      */
@@ -100,11 +107,11 @@ public class OrderController {
         if (orders == null) {
             return R.error("订单不存在");
         }
-        // 租户校验（修改点：防御NPE，currentTenantId可能为null）
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (currentTenantId != null && !currentTenantId.equals(orders.getTenantId())) {
             return R.error("订单不属于当前租户");
         }
+        orderService.backfillUserInfo(orders);
         OrderDto orderDto = new OrderDto();
         org.springframework.beans.BeanUtils.copyProperties(orders, orderDto);
         // 查询订单明细
@@ -115,6 +122,16 @@ public class OrderController {
         return R.success(orderDto);
     }
 
+    /**
+     * 后台分页查询订单列表
+     *
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param number 订单号（可选）
+     * @param beginTime 开始时间（可选）
+     * @param endTime 结束时间（可选）
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "订单分页查询", description = "后台分页查询订单列表")
     @Parameter(name = "page", description = "页码", required = true)
@@ -122,12 +139,18 @@ public class OrderController {
     @Parameter(name = "number", description = "订单号（可选）")
     @Parameter(name = "beginTime", description = "开始时间（可选）")
     @Parameter(name = "endTime", description = "结束时间（可选）")
-    public R<Page<Orders>> page(int page, int pageSize, String number, String beginTime, String endTime) {
+    @Parameter(name = "status", description = "订单状态（可选，1=待付款,2=待接单/处理中,3=已接单/派送中,4=已完成,5=已取消,6=已退款）")
+    public R<Page<Orders>> page(int page, int pageSize, String number, String beginTime, String endTime, @RequestParam(required = false) Integer status) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext
-        Page<Orders> pageInfo = orderService.orderPage(page, pageSize, number, beginTime, endTime);
+        Page<Orders> pageInfo = orderService.orderPage(page, pageSize, number, beginTime, endTime, status);
         return R.success(pageInfo);
     }
 
+    /**
+     * 查询用户的所有订单
+     *
+     * @return 订单列表
+     */
     @GetMapping("/list")
     @Operation(summary = "查询订单列表", description = "查询用户的所有订单")
     public R<List<Orders>> list() {
@@ -136,22 +159,35 @@ public class OrderController {
         return R.success(list);
     }
 
+    /**
+     * 分页查询当前用户的订单
+     *
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param status 订单状态（可选：1待付款 2派送中 3已派送 4已完成 5已取消，不传则查全部）
+     * @return 分页结果
+     */
     @GetMapping("/userPage")
     @Operation(summary = "用户订单分页查询", description = "分页查询当前用户的订单，支持按状态筛选")
     @Parameter(name = "page", description = "页码", required = true)
     @Parameter(name = "pageSize", description = "每页数量", required = true)
-    @Parameter(name = "status", description = "订单状态（可选：1待付款 2派送中 3已派送 4已完成 5已取消，不传则查全部）")
+    @Parameter(name = "status", description = "订单状态（可选：1待付款 2待接单/处理中 3已接单/派送中 4已完成 5已取消 6已退款，不传则查全部）")
     public R<?> userPage(int page, int pageSize,
                          @RequestParam(required = false) Integer status) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext
         return R.success(orderService.userPage(page, pageSize, status));
     }
 
+    /**
+     * 再来一单，将订单商品重新添加到购物车
+     *
+     * @param orders 订单信息
+     * @return 操作结果
+     */
     @PostMapping("/again")
     @Operation(summary = "再来一单", description = "将订单商品重新添加到购物车")
     @Parameter(name = "orders", description = "订单信息", required = true)
     public R<String> again(@RequestBody Orders orders) {
-        // 租户校验：确保只能操作本租户的订单（修改点：防御NPE）
         Orders existing = orderService.getById(orders.getId());
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
@@ -161,17 +197,24 @@ public class OrderController {
         return R.success("添加购物车成功");
     }
 
+    /**
+     * 更新订单状态
+     *
+     * @param orders 订单状态信息
+     * @return 操作结果
+     */
     @PutMapping
     @Operation(summary = "更新订单状态", description = "更新订单状态")
     @Parameter(name = "orders", description = "订单状态信息", required = true)
     public R<String> updateStatus(@RequestBody Orders orders) {
-        // 租户校验：确保只能操作本租户的订单（修改点：防御NPE）
         Orders existing = orderService.getById(orders.getId());
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
             return R.error("订单不存在或不属于当前租户");
         }
         orderService.updateStatus(orders.getStatus(), orders.getId());
+        // 修改点：订单状态变更后清除 Dashboard 缓存，防止数据不实
+        clearDashboardCache();
         return R.success("操作成功");
     }
 
@@ -230,5 +273,19 @@ public class OrderController {
     public R<Map<String, Object>> statistics() {
         Map<String, Object> stats = orderService.getOrderStatistics();
         return R.success(stats);
+    }
+
+    /**
+     * 清除 Dashboard 缓存（在订单创建或状态变更后调用，确保概览数据实时准确）
+     */
+    private void clearDashboardCache() {
+        try {
+            Long tenantId = BaseContext.getCurrentTenantId();
+            if (dashboardService != null && tenantId != null) {
+                dashboardService.clearOverviewCache(tenantId);
+            }
+        } catch (Exception e) {
+            log.warn("清除Dashboard缓存失败: {}", e.getMessage());
+        }
     }
 }

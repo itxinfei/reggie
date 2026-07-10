@@ -6,7 +6,8 @@ import lombok.Getter;
 /**
  * 限流类型枚举
  *
- * @author itxinfei
+ * @author reggie
+ * @since 2026-07-09
  */
 @Getter
 @AllArgsConstructor
@@ -27,5 +28,8 @@ public enum RateLimitType {
      */
     GLOBAL("全局限流");
 
+    /**
+     * 限流类型描述
+     */
     private final String description;
 }

@@ -39,6 +39,14 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     }
 
+    /* 修改点：stats-card 可点击筛选 */
+    .stat-card.clickable { cursor: pointer; user-select: none; }
+    .stat-card.active {
+      border-color: #409eff;
+      box-shadow: 0 0 0 2px rgba(64,158,255,0.3);
+      transform: translateY(-3px);
+    }
+
     .stat-card::before {
       content: '';
       position: absolute;
@@ -55,7 +63,6 @@
       top: 50%;
       transform: translateY(-50%);
       font-size: 42px;
-      opacity: 0.08;
     }
 
     .stat-card .stat-label {
@@ -89,18 +96,19 @@
   <div class="dashboard-container" id="member-app">
     <div class="container">
       <!-- ========== 数据统计卡片 ========== -->
+      <!-- 修改点：卡片可点击筛选，点击后高亮并按对应状态过滤列表 -->
       <div class="stats-cards">
-        <div class="stat-card primary">
+        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterBy('status', '')">
           <div class="stat-icon">👥</div>
           <div class="stat-label">员工总数</div>
           <div class="stat-value">{{ stats.totalEmployees || 0 }}</div>
         </div>
-        <div class="stat-card success">
+        <div class="stat-card success clickable" :class="{ active: activeFilter === '1' }" @click="filterBy('status', '1')">
           <div class="stat-icon">✅</div>
           <div class="stat-label">在职员工</div>
           <div class="stat-value">{{ stats.activeEmployees || 0 }}</div>
         </div>
-        <div class="stat-card danger">
+        <div class="stat-card danger clickable" :class="{ active: activeFilter === '0' }" @click="filterBy('status', '0')">
           <div class="stat-icon">🚫</div>
           <div class="stat-label">已禁用</div>
           <div class="stat-value">{{ stats.disabledEmployees || 0 }}</div>
@@ -122,12 +130,15 @@
             @click="handleQuery"
           ></i>
         </el-input>
+        <el-button type="primary" size="small" @click="handleQuery">查询</el-button>
+        <el-button size="small" @click="reset">重置</el-button>
         <el-button
           type="primary"
           @click="addMemberHandle('add')"
         >
           + 添加员工
         </el-button>
+        <el-button type="success" size="small" @click="exportEmployees('excel')" icon="el-icon-download">导出</el-button>
       </div>
       <el-table
         v-loading="loading"
@@ -238,6 +249,7 @@
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
     <script src="../../api/member.js"></script>
+    <script src="../../api/export.js"></script>
     <script src="../../js/validate.js"></script>
     <script>
       new Vue({
@@ -258,6 +270,8 @@
                activeEmployees: 0,
                disabledEmployees: 0
              },
+             // 修改点：当前激活的筛选器值，空字符串=全部
+             activeFilter: '',
              // 员工弹窗相关
              memberDialog: {
                title: '添加员工',
@@ -307,11 +321,13 @@
         },
         methods: {
           async init () {
+            // 修改点：传递 activeFilter 状态参数到后端
             const params = {
               page: this.page,
               pageSize: this.pageSize,
               name: this.input ? this.input : undefined
             }
+            if (this.activeFilter) { params.status = this.activeFilter }
 
             // 并行加载员工列表和统计数据
             const [memberRes, statsRes] = await Promise.all([
@@ -337,8 +353,9 @@
               if (String(res.code) === '1') {
                 const records = res.data.records || []
                 const total = res.data.total || 0
-                const activeCount = records.filter(item => item.status === '1').length
-                const disabledCount = records.filter(item => item.status === '0').length
+                // 修改点：后端 Employee.status 为 Integer，JSON 序列化为数字 1/0
+                const activeCount = records.filter(item => item.status === 1).length
+                const disabledCount = records.filter(item => item.status === 0).length
                 return {
                   code: 1,
                   data: {
@@ -354,8 +371,29 @@
             return { code: 0 }
           },
           handleQuery() {
+            // 修改点：搜索时清空卡片筛选状态
+            this.activeFilter = ''
             this.page = 1;
             this.init();
+          },
+          // 重置搜索条件，恢复表格初始状态
+          reset() {
+            this.input = ''
+            this.activeFilter = ''
+            this.page = 1
+            this.init()
+          },
+          // 修改点：stats-card 点击切换筛选状态（清空搜索框避免冲突）
+          filterBy(type, value) {
+            if (this.activeFilter === value) {
+              this.activeFilter = ''  // 再次点击取消筛选，显示全部
+            } else {
+              this.activeFilter = value
+            }
+            // 修改点：卡片筛选时清空搜索条件
+            this.input = ''
+            this.page = 1
+            this.init()
           },
           // 打开员工弹窗
           addMemberHandle (st) {
@@ -469,6 +507,19 @@
                 this.$message.error('请求失败：' + err)
               })
             })
+          },
+          // 导出员工数据
+          exportEmployees(format) {
+            try {
+              var ext = format === 'excel' ? 'xlsx' : 'pdf'
+              var apiCall = format === 'excel'
+                ? exportApi.exportEmployeesExcel({})
+                : exportApi.exportEmployeesPdf({})
+              exportApi.downloadFile(apiCall, '员工数据.' + ext)
+              this.$message.success('导出成功，文件已开始下载')
+            } catch (err) {
+              this.$message.error('导出失败：' + (err.message || err))
+            }
           },
           handleSizeChange (val) {
             this.pageSize = val
