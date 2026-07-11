@@ -6,8 +6,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.module.ai.mapper.AiProviderConfigMapper;
 import com.reggie.module.ai.model.AiProviderConfig;
+import com.reggie.module.ai.provider.AiProviderManager;
 import com.reggie.module.ai.service.AiProviderConfigService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,12 +30,16 @@ import java.util.Map;
 /**
  * AI供应商配置服务实现
  * <p>
+ *
  * @author reggie
  * @since 2026-07-09
  */
 @Slf4j
 @Service
 public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMapper, AiProviderConfig> implements AiProviderConfigService {
+
+    @Autowired
+    private AiProviderManager aiProviderManager;
 
     // ==================== 查询 ====================
 
@@ -92,8 +98,9 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
         target.setIsActive(true);
         target.setEnabled(true);
         boolean result = this.updateById(target);
-        log.info("供应商已激活: code={}, name={}, id={}",
-                target.getProviderCode(), target.getProviderName(), target.getId());
+        log.info("供应商已激活: code={}, name={}, id={}", target.getProviderCode(), target.getProviderName(), target.getId());
+        // 通知 AiProviderManager 立即重新加载配置
+        aiProviderManager.reloadConfig();
         return result;
     }
 
@@ -127,9 +134,11 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
      * 测试 OpenAI 兼容格式的供应商（含 360 格式）
      */
     private String testOpenAICompatibleProvider(AiProviderConfig config) {
+        // 规范化 baseUrl，去除末尾斜杠，避免双重斜杠导致 404
+        String normalizedUrl = config.getBaseUrl() == null ? "" : config.getBaseUrl().replaceAll("/+$", "");
         HttpURLConnection conn = null;
         try {
-            String testUrl = config.getBaseUrl() + "/chat/completions";
+            String testUrl = normalizedUrl + "/chat/completions";
             URL url = new URL(testUrl);
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
@@ -156,7 +165,6 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             }
 
             int code = conn.getResponseCode();
-
             if (code == 200) {
                 updateTestResult(config, "success");
                 return "SUCCESS: 连接正常 (HTTP " + code + ")";
@@ -165,10 +173,10 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                 return "FAIL: API密钥无效或无权访问 (HTTP " + code + ")";
             } else if (code == 404) {
                 updateTestResult(config, "fail");
-                return "FAIL: API地址不存在 (HTTP 404)，请检查 baseUrl 配置";
+                return "FAIL: API地址不存在 (HTTP 404)，请求路径：" + testUrl + "，请求方法：POST，请检查 baseUrl 末尾是否有多余斜杠，以及模型名称是否正确";
             } else {
                 updateTestResult(config, "fail");
-                return "FAIL: HTTP " + code + "，请检查模型名称和API地址";
+                return "FAIL: HTTP " + code + "，请求路径：" + testUrl + "，请检查模型名称和API地址";
             }
         } catch (java.net.SocketTimeoutException e) {
             updateTestResult(config, "fail");
@@ -268,7 +276,6 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             }
 
             int code = conn.getResponseCode();
-
             if (code == 200) {
                 updateTestResult(config, "success");
                 return "SUCCESS: Anthropic API 连接正常 (HTTP " + code + ")";
@@ -277,10 +284,10 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                 return "FAIL: API密钥无效或无权访问 (HTTP " + code + ")";
             } else if (code == 404) {
                 updateTestResult(config, "fail");
-                return "FAIL: API地址不存在 (HTTP 404)，请检查 baseUrl 配置";
+                return "FAIL: API地址不存在 (HTTP 404)，请求路径：" + testUrl + "，请检查 baseUrl 和模型名称";
             } else {
                 updateTestResult(config, "fail");
-                return "FAIL: HTTP " + code + "，请检查模型名称和API地址";
+                return "FAIL: HTTP " + code + "，请求路径：" + testUrl + "，请检查模型名称和API地址";
             }
         } catch (java.net.SocketTimeoutException e) {
             updateTestResult(config, "fail");
@@ -327,16 +334,14 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                 config.setApiKey(existing.getApiKey());
             }
             this.updateById(config);
-            log.info("供应商已更新（upsert）: code={}, id={}, name={}",
-                    providerCode, existing.getId(), config.getProviderName());
+            log.info("供应商已更新（upsert）: code={}, id={}, name={}", providerCode, existing.getId(), config.getProviderName());
         } else {
             config.setId(null);
             config.setProviderCode(providerCode);
             config.setIsActive(config.getIsActive() != null ? config.getIsActive() : false);
             config.setIsDeleted(0);
             this.save(config);
-            log.info("供应商已新增（upsert）: code={}, name={}",
-                    providerCode, config.getProviderName());
+            log.info("供应商已新增（upsert）: code={}, name={}", providerCode, config.getProviderName());
         }
 
         return config;
@@ -422,10 +427,10 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
     /**
      * 解析模型列表响应，支持多种格式：
      * <ul>
-     *   <li>OpenAI 标准: { data: [{ id: "gpt-4", ... }] }</li>
-     *   <li>Ollama: { models: [{ name: "llama2", ... }] }</li>
-     *   <li>New API / One API: 同 OpenAI 格式</li>
-     *   <li>部分代理: 直接返回 [{ id: "x" }] 数组</li>
+     * <li>OpenAI 标准: { data: [{ id: "gpt-4", ... }] }</li>
+     * <li>Ollama: { models: [{ name: "llama2", ... }] }</li>
+     * <li>New API / One API: 同 OpenAI 格式</li>
+     * <li>部分代理: 直接返回 [{ id: "x" }] 数组</li>
      * </ul>
      */
     private List<String> parseModelListResponse(HttpURLConnection conn) {

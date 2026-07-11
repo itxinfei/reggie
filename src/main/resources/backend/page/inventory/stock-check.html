@@ -18,8 +18,8 @@
           <el-option label="已完成" value="1"></el-option>
         </el-select>
         <el-date-picker v-model="input.dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd" @change="handleQuery"></el-date-picker>
-        <el-button type="primary" @click="handleQuery">查询</el-button>
-        <el-button @click="reset">重置</el-button>
+        <el-button type="primary" class="btn-query" @click="handleQuery">查询</el-button>
+        <el-button class="btn-reset" @click="reset">重置</el-button>
         <el-button type="primary" @click="addHandle">+ 新增盘点</el-button>
       </div>
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
@@ -57,7 +57,7 @@
         <el-table-column prop="createdTime" label="创建时间" width="160" /></el-table-column>
         <el-table-column label="操作" width="120" align="center">
           <template slot-scope="scope">
-            <el-button type="text" size="small" class="blueBug" @click="completeHandle(scope.row.id)" v-if="scope.row.status == '0'">完成盘点</el-button>
+            <el-button type="text" size="small" class="btn-view" @click="completeHandle(scope.row.id)" v-if="scope.row.status == '0'">完成盘点</el-button>
           </template>
         </el-table-column>
       </el-table>

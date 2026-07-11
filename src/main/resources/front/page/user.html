@@ -77,7 +77,7 @@
                 </div>
                 <div class="result">
                     <span>共{{order[0].sumNum}} 件商品,实付</span>
-                    <span class="price">￥{{order[0].amount}}</span>
+                    <span class="price">￥{{ Number(order[0].amount).toFixed(2) }}</span>
                 </div>
                 <!-- 修改点：按钮级loading状态，禁用时防止重复点击 -->
                 <div class="btn" v-if="order[0].status === 4">

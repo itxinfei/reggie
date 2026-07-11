@@ -11,7 +11,6 @@
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
-  .search-btn { margin-left: 10px; }
   #rankingChart { width: 100%; min-height: 300px; }
   #trendLineChart { width: 100%; }
   .rank-badge {
@@ -44,17 +43,16 @@
           range-separator="至"
           start-placeholder="开始日期"
           end-placeholder="结束日期"
-          style="width: 380px"
         ></el-date-picker>
         <el-input-number v-model="limit" :min="5" :max="50" :step="5"
-          size="small" style="width:120px;margin-left:10px;" controls-position="right">
+          size="small" class="el-input--wide-xs" controls-position="right">
         </el-input-number>
         <span style="margin-left:6px;color:#909399;font-size:13px;">条</span>
-        <el-select v-model="categoryFilter" placeholder="菜品分类" size="small" style="width:150px;margin-left:10px;" clearable @change="loadData">
+        <el-select v-model="categoryFilter" placeholder="菜品分类" size="small" class="el-select--narrow" clearable @change="loadData">
           <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
         </el-select>
-        <el-button type="primary" class="search-btn" @click="loadData">查询</el-button>
-        <el-button class="search-btn" @click="reset">重置</el-button>
+        <el-button type="primary" class="btn-query" @click="loadData">查询</el-button>
+        <el-button class="btn-reset" @click="reset">重置</el-button>
         <div class="tableLab">
           <el-button type="primary" @click="handleExport">导出</el-button>
         </div>

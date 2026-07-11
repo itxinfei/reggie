@@ -5,213 +5,96 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>菜品管理 - 瑞吉外卖管理端</title>
-  <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <style>
+    body { overflow-x: visible; }
     /* 弹窗口味编辑样式 */
-    .flavorBox-dialog {
-      border: 1px solid #ebeef5;
-      border-radius: 8px;
-      padding: 12px;
-      background: #fafbfc;
-    }
-    .flavor-empty-dialog {
-      text-align: center;
-      padding: 16px;
-      color: #c0c4cc;
-    }
-    .flavor-item-dialog {
-      border: 1px solid #e4e7ed;
-      border-radius: 6px;
-      padding: 10px 12px;
-      margin-bottom: 8px;
-      background: #fff;
-    }
-    .flavor-header-dialog {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .flavor-header-dialog .flavor-index {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: #409eff;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 600;
-      flex-shrink: 0;
-    }
-    .flavor-tags-dialog {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px;
-      padding-left: 30px;
-    }
+    .flavorBox-dialog { border: 1px solid #ebeef5; border-radius: 8px; padding: 12px; background: #fafbfc; }
+    .flavor-empty-dialog { text-align: center; padding: 16px; color: #c0c4cc; }
+    .flavor-item-dialog { border: 1px solid #e4e7ed; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
+    .flavor-header-dialog { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .flavor-header-dialog .flavor-index { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #409eff; color: #fff; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+    .flavor-tags-dialog { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding-left: 30px; }
   </style>
 </head>
 <body>
-   <div class="dashboard-container" id="food-app">
+  <div class="dashboard-container" id="food-app">
     <div class="container">
-      <!-- ========== 数据统计卡片 ========== -->
-      <!-- 修改点：卡片可点击筛选，点击后高亮并按对应状态过滤列表 -->
-      <div class="stats-cards">
-        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterBy('status', '')">
-          <div class="stat-icon">🍽️</div>
-          <div class="stat-label">菜品总数</div>
-          <div class="stat-value">{{ stats.totalDishes || 0 }}</div>
-        </div>
-        <div class="stat-card success clickable" :class="{ active: activeFilter === '1' }" @click="filterBy('status', '1')">
-          <div class="stat-icon">✅</div>
-          <div class="stat-label">已启售</div>
-          <div class="stat-value">{{ stats.activeDishes || 0 }}</div>
-        </div>
-        <div class="stat-card warning clickable" :class="{ active: activeFilter === '0' }" @click="filterBy('status', '0')">
-          <div class="stat-icon">⏸️</div>
-          <div class="stat-label">已停售</div>
-          <div class="stat-value">{{ stats.inactiveDishes || 0 }}</div>
-        </div>
-        <div class="stat-card danger clickable" :class="{ active: activeFilter === 'deleted' }" @click="filterBy('status', 'deleted')">
-          <div class="stat-icon">🗑️</div>
-          <div class="stat-label">已删除</div>
-          <div class="stat-value">{{ stats.deletedDishes || 0 }}</div>
-        </div>
-      </div>
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
 
-      <div class="tableBar">
-        <el-input
-          v-model="input"
-          placeholder="请输入菜品名称"
-          class="el-input--wide"
-          clearable
-          @keyup.enter.native="handleQuery"
-        >
-          <i
-            slot="prefix"
-            class="el-input__icon el-icon-search"
-            style="cursor: pointer"
-            @click="handleQuery"
-          ></i>
-        </el-input>
-        <el-select v-model="categoryId" placeholder="全部分类" clearable style="width: 160px; margin-left: 10px;" @change="handleQuery">
-          <el-option v-for="item in categoryOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
-        </el-select>
-        <el-button type="primary" size="small" @click="handleQuery">查询</el-button>
-        <el-button size="small" @click="reset">重置</el-button>
-        <div class="tableLab">
-          <el-button type="danger" size="small" @click="deleteHandle('批量', null)">批量删除</el-button>
-          <el-button type="success" size="small" @click="statusHandle('1')">批量启售</el-button>
-          <el-button type="warning" size="small" @click="statusHandle('0')">批量停售</el-button>
-          <el-button type="primary" size="small" @click="addFoodtype('add')">+ 新建菜品</el-button>
-          <el-button type="success" size="small" icon="el-icon-download" @click="exportDishes('excel')">导出</el-button>
-        </div>
-      </div>
-      <el-table
-        v-loading="loading"
+      <!-- 搜索 + 操作栏（批量按钮 + 新增 + 导出通过 actions 传入） -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      ></table-bar>
+
+      <!-- 数据表格（多选 + 自定义图片/状态/库存列 + 操作列） -->
+      <crud-table
+        ref="crudTable"
         :data="tableData"
-        stripe
-        border
-        class="tableBox"
-        @selection-change="handleSelectionChange"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :selection="true"
+        :show-actions="true"
+        :actions-width="200"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        @selection-change="onSelection"
       >
-        <el-table-column
-          type="selection"
-          align="center"
-          width="50"
-        ></el-table-column>
-        <el-table-column
-          prop="name"
-          label="菜品名称"
-        ></el-table-column>
-        <el-table-column prop="image" label="图片" align="center">
-          <template slot-scope="{ row }">
-            <el-image style="width: auto; height: 40px; border:none;cursor: pointer; border-radius: 4px;"
+        <!-- 图片列 -->
+        <template #col-image="{ row }">
+          <el-image style="width:auto;height:40px;border:none;cursor:pointer;border-radius:4px;"
             :src="getImage(row.image)"
-            :preview-src-list="[ `/common/download?name=${row.image}` ]" >
+            :preview-src-list="[getImage(row.image)]">
             <div slot="error" class="image-slot">
-              <img src="./../../images/noImg.png"  style="width: auto; height: 40px; border:none; border-radius: 4px;" >
+              <img src="./../../images/noImg.png" style="width:auto;height:40px;border:none;border-radius:4px;">
             </div>
           </el-image>
-          </template>
-        </el-table-column>
-        <el-table-column
-          prop="categoryName"
-          label="菜品分类"
-        ></el-table-column>
-        <el-table-column label="售价">
-          <template slot-scope="scope">
-            <span style="margin-right: 10px;">￥{{ scope.row.price/100 }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="售卖状态">
-          <template slot-scope="scope">
-            <el-tag :type="scope.row.status == '0' ? 'info' : 'success'" size="small">
-              {{ scope.row.status == '0' ? '停售' : '启售' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="库存" width="100" align="center">
-          <template slot-scope="scope">
-            <span :style="{ color: scope.row.stockQty != null && scope.row.minStock != null && scope.row.stockQty <= scope.row.minStock ? '#f56c6c' : '#303133', fontWeight: scope.row.stockQty != null && scope.row.minStock != null && scope.row.stockQty <= scope.row.minStock ? '600' : '400' }">
-              {{ scope.row.stockQty != null ? scope.row.stockQty : '-' }}
-            </span>
-            <el-tag v-if="scope.row.stockQty != null && scope.row.minStock != null && scope.row.stockQty <= scope.row.minStock && scope.row.stockQty > 0" type="danger" size="mini" effect="plain" style="margin-left:4px;">低</el-tag>
-            <el-tag v-if="scope.row.stockQty != null && scope.row.stockQty == 0" type="danger" size="mini">售罄</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column
-          prop="updateTime"
-          label="最后操作时间"
-        >
-        </el-table-column>
-        <el-table-column
-          label="操作"
-          align="center"
-          width="200"
-        >
-          <template slot-scope="scope">
-            <el-button
-              type="text"
-              size="small"
-              class="blueBug"
-              @click="addFoodtype(scope.row.id)"
-            >修改</el-button>
-            <el-button
-              type="text"
-              size="small"
-              class="blueBug"
-              @click="statusHandle(scope.row)"
-            >{{ scope.row.status == '0' ? '启售' : '停售' }}</el-button>
-            <el-button
-              type="text"
-              size="small"
-              class="delBut non"
-              @click="deleteHandle('单删', scope.row.id)"
-            >删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination
-        class="pageList"
-        :page-sizes="[10, 20, 30, 40]"
-        :page-size="pageSize"
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="counts"
-        @size-change="handleSizeChange"
-        :current-page.sync="page"
-        @current-change="handleCurrentChange"
-      ></el-pagination>
+        </template>
+        <!-- 售价列 -->
+        <template #col-price="{ row }">
+          <span>￥{{ row.price / 100 }}</span>
+        </template>
+        <!-- 状态列 -->
+        <template #col-status="{ row }">
+          <el-tag :type="row.status == '0' ? 'info' : 'success'" size="small">
+            {{ row.status == '0' ? '停售' : '启售' }}
+          </el-tag>
+        </template>
+        <!-- 库存列 -->
+        <template #col-stock="{ row }">
+          <span :style="{ color: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? '#f56c6c' : '#303133', fontWeight: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? '600' : '400' }">
+            {{ row.stockQty != null ? row.stockQty : '-' }}
+          </span>
+          <el-tag v-if="row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock && row.stockQty > 0" type="danger" size="mini" effect="plain" style="margin-left:4px;">低</el-tag>
+          <el-tag v-if="row.stockQty != null && row.stockQty == 0" type="danger" size="mini">售罄</el-tag>
+        </template>
+        <!-- 操作按钮 -->
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="addFoodtype(row.id)">修改</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="statusHandle(row)">{{ row.status == '0' ? '启售' : '停售' }}</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', row.id)">删除</el-button>
+        </template>
+      </crud-table>
     </div>
 
-    <!-- 新增/修改菜品弹窗 -->
+    <!-- 新增/修改菜品弹窗（自定义底栏含"保存并继续添加"） -->
     <el-dialog
       :title="dishDialog.title"
       :visible.sync="dishDialog.visible"
@@ -219,12 +102,7 @@
       :before-close="handleDialogClose"
       :close-on-click-modal="false"
     >
-      <el-form
-        ref="dishForm"
-        :model="dishForm"
-        :rules="dishRules"
-        label-width="120px"
-      >
+      <el-form ref="dishForm" :model="dishForm" :rules="dishRules" label-width="120px">
         <el-form-item label="菜品名称:" prop="name">
           <el-input v-model="dishForm.name" placeholder="请填写菜品名称" maxlength="20" />
         </el-form-item>
@@ -261,34 +139,15 @@
               <div v-for="(item, index) in dishFlavors" :key="index" class="flavor-item-dialog">
                 <div class="flavor-header-dialog">
                   <span class="flavor-index">{{ index + 1 }}</span>
-                  <el-input
-                    v-model="item.name"
-                    size="small"
-                    placeholder="口味名称（如：辣度、温度）"
-                    maxlength="10"
-                    style="width: 140px;"
-                  ></el-input>
+                  <el-input v-model="item.name" size="small" placeholder="口味名称（如：辣度、温度）" maxlength="10" style="width: 140px;"></el-input>
                   <el-button type="text" size="small" class="btn-delete" @click="delDialogFlavor(index)">删除</el-button>
                 </div>
                 <div class="flavor-tags-dialog">
-                  <el-tag
-                    v-for="(tag, tIdx) in item.value"
-                    :key="tIdx"
-                    size="small"
-                    closable
-                    type="info"
-                    @close="delDialogFlavorLabel(index, tIdx)"
-                  >{{ tag }}</el-tag>
-                  <el-input
-                    v-if="item.inputVisible"
-                    v-model="item.inputValue"
-                    size="mini"
-                    :ref="'dialogTagInput' + index"
-                    style="width: 80px;"
-                    maxlength="10"
-                    @keyup.enter.native="confirmDialogTag(index)"
-                    @blur="confirmDialogTag(index)"
-                  ></el-input>
+                  <el-tag v-for="(tag, tIdx) in item.value" :key="tIdx" size="small" closable type="info"
+                    @close="delDialogFlavorLabel(index, tIdx)">{{ tag }}</el-tag>
+                  <el-input v-if="item.inputVisible" v-model="item.inputValue" size="mini"
+                    :ref="'dialogTagInput' + index" style="width: 80px;" maxlength="10"
+                    @keyup.enter.native="confirmDialogTag(index)" @blur="confirmDialogTag(index)"></el-input>
                   <el-button v-else size="mini" type="text" icon="el-icon-plus" @click="showDialogTagInput(index)">添加标签</el-button>
                 </div>
               </div>
@@ -304,469 +163,279 @@
       </div>
     </el-dialog>
   </div>
-    <!-- 开发环境版本，包含了有帮助的命令行警告 -->
-    <script src="../../plugins/vue/vue.js"></script>
-    <!-- 引入组件库 -->
-    <script src="../../plugins/element-ui/index.js"></script>
-    <!-- 引入axios -->
-    <script src="../../plugins/axios/axios.min.js"></script>
-    <script src="../../js/request.js"></script>
-    <script src="../../api/food.js"></script>
-    <script src="../../api/export.js"></script>
-    <script>
-      new Vue({
-        el: '#food-app',
-        data() {
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
+  <script src="../../api/food.js"></script>
+  <script src="../../api/export.js"></script>
+  <script>
+    new Vue({
+      el: '#food-app',
+      data: function() {
+        return {
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          loading: false,
+          dishState: '',
+          checkList: [],
+          // 统计
+          stats: { totalDishes: 0, activeDishes: 0, inactiveDishes: 0, deletedDishes: 0 },
+          activeFilter: '',
+          categoryId: '',
+          categoryOptions: [],
+          // 搜索配置
+          searchConfig: [
+            { type: 'input', field: 'name', placeholder: '请输入菜品名称', width: '200px' },
+            { type: 'select', field: 'categoryId', placeholder: '全部分类', width: '160px', options: [] }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'batchDelete', text: '批量删除', type: 'danger' },
+            { key: 'batchStart', text: '批量启售', type: 'success' },
+            { key: 'batchStop', text: '批量停售', type: 'warning' },
+            { key: 'add', text: '+ 新建菜品', type: 'primary' },
+            { key: 'export', text: '导出', type: 'success', icon: 'el-icon-download' }
+          ],
+          // 表格列配置
+          columns: [
+            { prop: 'name', label: '菜品名称' },
+            { prop: 'image', label: '图片', slot: true, width: 80, align: 'center' },
+            { prop: 'categoryName', label: '菜品分类' },
+            { prop: 'price', label: '售价', slot: true, width: 100 },
+            { prop: 'status', label: '售卖状态', slot: true, width: 90 },
+            { prop: 'stock', label: '库存', slot: true, width: 100, align: 'center' },
+            { prop: 'updateTime', label: '最后操作时间' }
+          ],
+          // 缓存搜索参数
+          lastSearch: {},
+          // 弹窗相关
+          dishDialog: { title: '添加菜品', visible: false, actionType: 'add', loading: false },
+          dishForm: { name: '', categoryId: '', price: '', image: '', imageUrl: '', description: '' },
+          dishList: [],
+          dishFlavors: [],
+          dishFlavorsData: [],
+          inputStyle: { 'flex': 1 },
+          index: 0
+        }
+      },
+      computed: {
+        statsCards: function() {
+          var self = this
+          return [
+            { key: '', icon: '🍽️', label: '菜品总数', value: self.stats.totalDishes, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '1', icon: '✅', label: '已启售', value: self.stats.activeDishes, color: 'success', clickable: true, active: self.activeFilter === '1' },
+            { key: '0', icon: '⏸️', label: '已停售', value: self.stats.inactiveDishes, color: 'warning', clickable: true, active: self.activeFilter === '0' },
+            { key: 'deleted', icon: '🗑️', label: '已删除', value: self.stats.deletedDishes, color: 'danger', clickable: true, active: self.activeFilter === 'deleted' }
+          ]
+        },
+        dishRules: function() {
+          var self = this
           return {
-             input: '',
-             counts: 0,
-             page: 1,
-             pageSize: 10,
-             tableData : [],
-             loading: false,
-             dishState : '',
-             checkList: [],
-             // 数据统计
-             stats: {
-               totalDishes: 0,
-               activeDishes: 0,
-               inactiveDishes: 0,
-               deletedDishes: 0
-             },
-             // 修改点：当前激活的筛选器值，空字符串=全部，对应 stats-card 点击
-             activeFilter: '',
-             // 搜索分类筛选
-             categoryId: '',
-             categoryOptions: [],
-             // 菜品弹窗相关
-             dishDialog: {
-               title: '添加菜品',
-               visible: false,
-               actionType: 'add',
-               loading: false
-             },
-             dishForm: {
-               name: '',
-               categoryId: '',
-               price: '',
-               image: '',
-               imageUrl: '',
-               description: ''
-             },
-             dishList: [],
-             dishFlavors: [],
-             dishFlavorsData: [],
-             inputStyle: {'flex': 1},
-             index: 0
-          }
-        },
-        computed: {
-          dishRules() {
-            return {
-              name: [
-                {required: true, message: '请填写菜品名称', trigger: 'blur'}
-              ],
-              categoryId: [
-                {required: true, message: '请选择菜品分类', trigger: 'change'}
-              ],
-              price: [
-                {
-                  required: true,
-                  validator: (rule, value, callback) => {
-                    if (!value) {
-                      callback(new Error('请填写菜品价格'))
-                    } else {
-                      const reg = /^\d+(\.\d{0,2})?$/
-                      if (reg.test(value)) {
-                        if(value < 10000) {
-                          callback()
-                        } else {
-                          callback(new Error('菜品价格小于10000'))
-                        }
-                      } else {
-                        callback(new Error('菜品价格格式只能为数字,且最多保留两位小数'))
-                      }
-                    }
-                  },
-                  trigger: 'blur'
-                }
-              ]
-            }
-          }
-        },
-        created() {
-          this.init()
-        },
-        mounted() {
-          this.loadCategoryOptions()
-        },
-        methods: {
-          async init () {
-            this.loading = true
-            // 并行加载菜品列表和统计数据
-            // 修改点：传递 activeFilter 状态参数到后端
-            var params = { page: this.page, pageSize: this.pageSize, name: this.input ? this.input : undefined }
-            if (this.activeFilter) { params.status = this.activeFilter }
-            if (this.categoryId) { params.categoryId = this.categoryId }
-            const [dishRes, statsRes] = await Promise.all([
-              getDishPage(params),
-              this.loadDishStats()
-            ])
-
-            // 处理菜品列表数据
-            if (String(dishRes.code) === '1') {
-              this.tableData = dishRes.data.records || []
-              this.counts = dishRes.data.total
-            }
-
-            // 处理统计数据
-            if (statsRes && String(statsRes.code) === '1') {
-              this.stats = statsRes.data || this.stats
-            }
-
-            this.loading = false
-          },
-          // 加载菜品统计数据
-          // 修改点：通过拉取全量数据后按状态过滤，获取真实的已启售/已停售/已删除数量
-          async loadDishStats() {
-            try {
-              const [totalRes, listRes] = await Promise.all([
-                getDishPage({ page: 1, pageSize: 1 }),
-                getDishPage({ page: 1, pageSize: 1000 })
-              ])
-              if (String(totalRes.code) === '1') {
-                var records = listRes.data.records || []
-                return {
-                  code: 1,
-                  data: {
-                    totalDishes: totalRes.data.total || 0,
-                    // 修改点：后端 Dish.status 为 Integer，JSON 序列化为数字 1/0
-                    activeDishes: records.filter(function(r) { return r.status === 1 }).length,
-                    inactiveDishes: records.filter(function(r) { return r.status === 0 }).length,
-                    deletedDishes: 0  // 逻辑删除，分页接口仅查询未删除数据
-                  }
-                }
-              }
-            } catch (err) {
-              console.warn('加载菜品统计数据失败:', err)
-            }
-            return { code: 0 }
-          },
-          // 加载菜品分类下拉列表（用于表单）
-          getDishList () {
-            getCategoryList({ type: 1 }).then(res => {
-              if (res.code === 1) {
-                this.dishList = res.data || []
-              }
-            }).catch(err => {
-              console.error('加载菜品分类失败:', err)
-            })
-          },
-          // 加载搜索筛选的分类选项
-          loadCategoryOptions () {
-            getCategoryList({ type: 1 }).then(res => {
-              if (res.code === 1) {
-                this.categoryOptions = res.data || []
-              }
-            }).catch(err => {
-              console.error('加载分类选项失败:', err)
-            })
-          },
-          getImage (image) {
-            return `/common/download?name=${image}`
-          },
-          handleQuery() {
-            // 修改点：搜索时清空卡片筛选状态
-            this.activeFilter = ''
-            this.page = 1;
-            this.init();
-          },
-          // 重置搜索条件，恢复表格初始状态
-          reset() {
-            this.input = ''
-            this.categoryId = ''
-            this.activeFilter = ''
-            this.page = 1
-            this.init()
-          },
-          // 修改点：stats-card 点击切换筛选状态（清空搜索框避免冲突）
-          filterBy(type, value) {
-            if (this.activeFilter === value) {
-              this.activeFilter = ''  // 再次点击取消筛选，显示全部
-            } else {
-              this.activeFilter = value
-            }
-            // 修改点：卡片筛选时清空搜索条件
-            this.input = ''
-            this.page = 1
-            this.init()
-          },
-          // 打开菜品弹窗
-          addFoodtype (st) {
-            this.resetDishForm()
-            if (st === 'add') {
-              this.dishDialog.title = '添加菜品'
-              this.dishDialog.actionType = 'add'
-              this.dishDialog.visible = true
-              this.getDishList()
-            } else {
-              this.dishDialog.title = '修改菜品'
-              this.dishDialog.actionType = 'edit'
-              this.dishDialog.visible = true
-              this.getDishList()
-              this.initDishForm(st)
-            }
-          },
-          // 初始化表单（修改时）
-          async initDishForm(id) {
-            try {
-              const res = await queryDishById(id)
-              if (String(res.code) === '1') {
-                const data = res.data
-                this.dishForm = {
-                  id: data.id,
-                  name: data.name,
-                  categoryId: data.categoryId,
-                  price: String(data.price / 100),
-                  image: data.image,
-                  imageUrl: `/common/download?name=${data.image}`,
-                  description: data.description || ''
-                }
-                // 修改点：安全的 JSON.parse，兼容数据库中 value 为非 JSON 的情况
-                this.dishFlavors = data.flavors && data.flavors.map(obj => {
-                  let parsedValue = []
-                  if (obj.value) {
-                    try {
-                      parsedValue = JSON.parse(obj.value)
-                    } catch(e) {
-                      parsedValue = typeof obj.value === 'string' ? obj.value.split(',').map(function(s) { return s.trim() }).filter(Boolean) : [obj.value]
-                    }
-                  }
-                  return { ...obj, value: parsedValue, showOption: false, inputVisible: false, inputValue: '' }
-                })
-              } else {
-                this.$message.error(res.msg || '获取菜品信息失败')
-              }
-            } catch (err) {
-              this.$message.error('请求失败：' + err)
-            }
-          },
-          // 重置表单
-          resetDishForm() {
-            this.dishForm = {
-              name: '',
-              categoryId: '',
-              price: '',
-              image: '',
-              imageUrl: '',
-              description: ''
-            }
-            this.dishFlavors = []
-            if (this.$refs.dishForm) {
-              this.$refs.dishForm.resetFields()
-            }
-          },
-          // 关闭弹窗
-          handleDialogClose() {
-            this.dishDialog.visible = false
-            this.resetDishForm()
-          },
-          // ========== 弹窗口味编辑方法 ==========
-          addDialogFlavor() {
-            this.dishFlavors.push({ name: '', value: [], inputVisible: false, inputValue: '' })
-          },
-          delDialogFlavor(index) {
-            this.dishFlavors.splice(index, 1)
-          },
-          delDialogFlavorLabel(index, tIdx) {
-            this.dishFlavors[index].value.splice(tIdx, 1)
-          },
-          showDialogTagInput(index) {
-            this.dishFlavors[index].inputVisible = true
-            this.$nextTick(() => {
-              const ref = this.$refs['dialogTagInput' + index]
-              if (ref && ref[0]) ref[0].$refs.input.focus()
-            })
-          },
-          confirmDialogTag(index) {
-            const inputValue = this.dishFlavors[index].inputValue
-            if (inputValue && inputValue.trim()) {
-              const trimmed = inputValue.trim()
-              if (!this.dishFlavors[index].value.includes(trimmed)) {
-                this.dishFlavors[index].value.push(trimmed)
-              }
-            }
-            this.dishFlavors[index].inputVisible = false
-            this.dishFlavors[index].inputValue = ''
-          },
-          // 提交菜品表单
-          submitDishForm(st) {
-            this.$refs.dishForm.validate((valid) => {
-              if (valid) {
-                let params = { ...this.dishForm }
-                params.price = params.price * 100
-                params.categoryId = params.categoryId
-                params.flavors = this.dishFlavors.map(obj => ({
-                  ...obj,
-                  value: JSON.stringify(obj.value)
-                }))
-                params.status = 1
-
-                if (!params.image) {
-                  this.$message.error('请上传菜品图片')
-                  return
-                }
-
-                if (this.dishDialog.actionType === 'add') {
-                  addDish(params).then(res => {
-                    if (res.code === 1) {
-                      this.$message.success('菜品添加成功！')
-                      this.dishDialog.visible = false
-                      this.handleQuery()
-                      if (st === 'continue') {
-                        this.resetDishForm()
-                        this.dishDialog.visible = true
-                      }
-                    } else {
-                      this.$message.error(res.msg || '操作失败')
-                    }
-                  }).catch(err => {
-                    this.$message.error('请求失败：' + err)
-                  })
-                } else {
-                  editDish(params).then(res => {
-                    if (res.code === 1) {
-                      this.$message.success('菜品修改成功！')
-                      this.dishDialog.visible = false
-                      this.handleQuery()
-                    } else {
-                      this.$message.error(res.msg || '操作失败')
-                    }
-                  }).catch(err => {
-                    this.$message.error('请求失败：' + err)
-                  })
-                }
-              }
-            })
-          },
-          // 图片上传成功
-          handleAvatarSuccess(response) {
-            if (response.code === 0 && response.msg === '未登录') {
-              window.top.location.href = '/backend/page/login/login.html'
-            } else {
-              this.dishForm.imageUrl = `/common/download?name=${response.data}`
-              this.dishForm.image = response.data
-            }
-          },
-          // 图片上传校验
-          onChange(file) {
-            if (file) {
-              const suffix = file.name.split('.')[1]
-              const size = file.size / 1024 / 1024 < 2
-              if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) {
-                this.$message.error('上传图片只支持 png、jpeg、jpg 格式！')
-                this.$refs.upload.clearFiles()
-                return false
-              }
-              if (!size) {
-                this.$message.error('上传文件大小不能超过 2MB!')
-                return false
-              }
-              return file
-            }
-          },
-
-          // 删除
-          deleteHandle (type, id) {
-            if (type === '批量' && id === null) {
-              if (this.checkList.length === 0) {
-                this.$message.error('请选择删除对象')
-                return
-              }
-            }
-            this.$confirm('确认删除该菜品, 是否继续?', '确定删除', {
-              'confirmButtonText': '确定',
-              'cancelButtonText': '取消',
-            }).then(() => {
-              deleteDish(type === '批量' ? this.checkList.join(',') : id).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('删除成功！')
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            })
-          },
-
-          //状态更改
-          statusHandle (row) {
-            let params = {}
-            if (typeof row === 'string' ) {
-              if (this.checkList.length === 0) {
-                this.$message.error('批量操作，请先勾选操作菜品！')
-                return false
-              }
-              params.id = this.checkList.join(',')
-              params.status = row
-            } else {
-              params.id = row.id
-              params.status = row.status ? '0' : '1'
-            }
-            this.dishState = params
-            this.$confirm('确认更改该菜品状态?', '提示', {
-              'confirmButtonText': '确定',
-              'cancelButtonText': '取消',
-              'type': 'warning'
-            }).then(() => {
-              // 起售停售---批量起售停售接口
-              dishStatusByStatus(this.dishState).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('菜品状态已经更改成功！')
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                  this.$message.error('请求失败：' + err)
-              })
-            })
-          },
-
-          // 全部操作
-          handleSelectionChange (val){
-            let checkArr = []
-            val.forEach((n) => {
-              checkArr.push(n.id)
-            })
-            this.checkList = checkArr
-          },
-          // 导出菜品
-          exportDishes(format) {
-            try {
-              var ext = format === 'excel' ? 'xlsx' : 'pdf'
-              var apiCall = format === 'excel'
-                ? exportApi.exportDishesExcel({})
-                : exportApi.exportDishesPdf({})
-              exportApi.downloadFile(apiCall, '菜品数据.' + ext)
-              this.$message.success('导出成功，文件已开始下载')
-            } catch (err) {
-              this.$message.error('导出失败：' + (err.message || err))
-            }
-          },
-          handleSizeChange (val) {
-            this.pageSize = val
-            this.init()
-          },
-          handleCurrentChange (val) {
-            this.page = val
-            this.init()
+            name: [{ required: true, message: '请填写菜品名称', trigger: 'blur' }],
+            categoryId: [{ required: true, message: '请选择菜品分类', trigger: 'change' }],
+            price: [{
+              required: true,
+              validator: function(rule, value, callback) {
+                if (!value) { callback(new Error('请填写菜品价格')); return }
+                var reg = /^\d+(\.\d{0,2})?$/
+                if (!reg.test(value)) { callback(new Error('菜品价格格式只能为数字,且最多保留两位小数')); return }
+                if (value >= 10000) { callback(new Error('菜品价格小于10000')); return }
+                callback()
+              }, trigger: 'blur'
+            }]
           }
         }
-      })
-    </script>
+      },
+      created: function() { this.init() },
+      mounted: function() { this.loadCategoryOptions() },
+      methods: {
+        async init() {
+          this.loading = true
+          var self = this
+          var params = { page: this.page, pageSize: this.pageSize, name: self.lastSearch.name || undefined, categoryId: self.lastSearch.categoryId || undefined }
+          if (self.activeFilter && self.activeFilter !== '') { params.status = self.activeFilter }
+          var results = await Promise.all([getDishPage(params), self.loadDishStats()])
+          var dishRes = results[0]
+          var statsRes = results[1]
+          if (String(dishRes.code) === '1') { self.tableData = dishRes.data.records || []; self.counts = dishRes.data.total }
+          if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+          self.loading = false
+        },
+        async loadDishStats() {
+          try {
+            var results = await Promise.all([getDishPage({ page: 1, pageSize: 1 }), getDishPage({ page: 1, pageSize: 1000 })])
+            var totalRes = results[0]
+            var listRes = results[1]
+            if (String(totalRes.code) === '1') {
+              var records = listRes.data.records || []
+              return { code: 1, data: { totalDishes: totalRes.data.total || 0, activeDishes: records.filter(function(r) { return r.status === 1 }).length, inactiveDishes: records.filter(function(r) { return r.status === 0 }).length, deletedDishes: 0 } }
+            }
+          } catch (err) { console.warn('加载菜品统计数据失败:', err) }
+          return { code: 0 }
+        },
+        loadCategoryOptions: function() {
+          var self = this
+          getCategoryList({ type: 1 }).then(function(res) {
+            if (res.code === 1) { self.categoryOptions = res.data || []; self.searchConfig[1].options = self.categoryOptions.map(function(c) { return { label: c.name, value: c.id } }) }
+          }).catch(function(err) { console.error('加载分类选项失败:', err) })
+        },
+        getDishList: function() {
+          var self = this
+          getCategoryList({ type: 1 }).then(function(res) { if (res.code === 1) { self.dishList = res.data || [] } }).catch(function(err) { console.error('加载菜品分类失败:', err) })
+        },
+        getImage: function(image) { return '/common/download?name=' + image },
+        // stat-cards 点击
+        onCardClick: function(payload) {
+          var self = this
+          self.activeFilter = payload.activeKey
+          self.lastSearch = {}
+          self.page = 1; self.init()
+        },
+        // table-bar 回调
+        onSearch: function(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
+          this.page = 1; this.init()
+        },
+        onReset: function() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.page = 1; this.init()
+        },
+        onAction: function(payload) {
+          var self = this
+          switch (payload.key) {
+            case 'batchDelete': self.deleteHandle('批量', null); break
+            case 'batchStart': self.statusHandle('1'); break
+            case 'batchStop': self.statusHandle('0'); break
+            case 'add': self.addFoodtype('add'); break
+            case 'export': self.exportDishes('excel'); break
+          }
+        },
+        onPageChange: function(payload) { this.page = payload.page; this.init() },
+        onSizeChange: function(payload) { this.pageSize = payload.pageSize; this.init() },
+        onSelection: function(payload) { this.checkList = payload.ids || [] },
+        // ========== 菜品弹窗 ==========
+        addFoodtype: function(st) {
+          this.resetDishForm()
+          if (st === 'add') { this.dishDialog.title = '添加菜品'; this.dishDialog.actionType = 'add'; this.dishDialog.visible = true; this.getDishList() }
+          else { this.dishDialog.title = '修改菜品'; this.dishDialog.actionType = 'edit'; this.dishDialog.visible = true; this.getDishList(); this.initDishForm(st) }
+        },
+        async initDishForm(id) {
+          var self = this
+          try {
+            var res = await queryDishById(id)
+            if (String(res.code) === '1') {
+              var data = res.data
+              self.dishForm = { id: data.id, name: data.name, categoryId: data.categoryId, price: String(data.price / 100), image: data.image, imageUrl: '/common/download?name=' + data.image, description: data.description || '' }
+              self.dishFlavors = data.flavors && data.flavors.map(function(obj) {
+                var parsedValue = []
+                if (obj.value) {
+                  try { parsedValue = JSON.parse(obj.value) }
+                  catch (e) { parsedValue = typeof obj.value === 'string' ? obj.value.split(',').map(function(s) { return s.trim() }).filter(Boolean) : [obj.value] }
+                }
+                return { name: obj.name, value: parsedValue, showOption: false, inputVisible: false, inputValue: '' }
+              }) || []
+            } else { self.$message.error(res.msg || '获取菜品信息失败') }
+          } catch (err) { self.$message.error('请求失败：' + err) }
+        },
+        resetDishForm: function() {
+          this.dishForm = { name: '', categoryId: '', price: '', image: '', imageUrl: '', description: '' }
+          this.dishFlavors = []
+          if (this.$refs.dishForm) { this.$refs.dishForm.resetFields() }
+        },
+        handleDialogClose: function() { this.dishDialog.visible = false; this.resetDishForm() },
+        // 口味编辑方法
+        addDialogFlavor: function() { this.dishFlavors.push({ name: '', value: [], inputVisible: false, inputValue: '' }) },
+        delDialogFlavor: function(index) { this.dishFlavors.splice(index, 1) },
+        delDialogFlavorLabel: function(index, tIdx) { this.dishFlavors[index].value.splice(tIdx, 1) },
+        showDialogTagInput: function(index) {
+          this.dishFlavors[index].inputVisible = true
+          var self = this
+          this.$nextTick(function() { var ref = self.$refs['dialogTagInput' + index]; if (ref && ref[0]) ref[0].$refs.input.focus() })
+        },
+        confirmDialogTag: function(index) {
+          var inputValue = this.dishFlavors[index].inputValue
+          if (inputValue && inputValue.trim()) { var trimmed = inputValue.trim(); if (!this.dishFlavors[index].value.includes(trimmed)) { this.dishFlavors[index].value.push(trimmed) } }
+          this.dishFlavors[index].inputVisible = false; this.dishFlavors[index].inputValue = ''
+        },
+        submitDishForm: function(st) {
+          var self = this
+          this.$refs.dishForm.validate(function(valid) {
+            if (!valid) return
+            var params = { ...self.dishForm }
+            params.price = params.price * 100
+            params.flavors = self.dishFlavors.map(function(obj) { return { name: obj.name, value: JSON.stringify(obj.value) } })
+            params.status = 1
+            if (!params.image) { self.$message.error('请上传菜品图片'); return }
+            if (self.dishDialog.actionType === 'add') {
+              addDish(params).then(function(res) {
+                if (res.code === 1) { self.$message.success('菜品添加成功！'); self.dishDialog.visible = false; self.init()
+                if (st === 'continue') { self.resetDishForm(); self.dishDialog.visible = true } }
+                else { self.$message.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.$message.error('请求失败：' + err) })
+            } else {
+              editDish(params).then(function(res) {
+                if (res.code === 1) { self.$message.success('菜品修改成功！'); self.dishDialog.visible = false; self.init() }
+                else { self.$message.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.$message.error('请求失败：' + err) })
+            }
+          })
+        },
+        handleAvatarSuccess: function(response) {
+          if (response.code === 0 && response.msg === '未登录') { window.top.location.href = '/backend/page/login/login.html' }
+          else { this.dishForm.imageUrl = '/common/download?name=' + response.data; this.dishForm.image = response.data }
+        },
+        onChange: function(file) {
+          if (file) {
+            var suffix = file.name.split('.')[1]; var size = file.size / 1024 / 1024 < 2
+            if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) { this.$message.error('上传图片只支持 png、jpeg、jpg 格式！'); this.$refs.upload.clearFiles(); return false }
+            if (!size) { this.$message.error('上传文件大小不能超过 2MB!'); return false }
+            return file
+          }
+        },
+        deleteHandle: function(type, id) {
+          var self = this
+          if (type === '批量' && id === null) { if (self.checkList.length === 0) { self.$message.error('请选择删除对象'); return } }
+          this.$confirm('确认删除该菜品, 是否继续?', '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消' })
+            .then(function() {
+              deleteDish(type === '批量' ? self.checkList.join(',') : id).then(function(res) {
+                if (res.code === 1) { self.$message.success('删除成功！'); self.init() }
+                else { self.$message.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.$message.error('请求失败：' + err) })
+            })
+        },
+        statusHandle: function(row) {
+          var self = this
+          var params = {}
+          if (typeof row === 'string') {
+            if (self.checkList.length === 0) { self.$message.error('批量操作，请先勾选操作菜品！'); return false }
+            params.id = self.checkList.join(','); params.status = row
+          } else { params.id = row.id; params.status = row.status ? '0' : '1' }
+          self.dishState = params
+          this.$confirm('确认更改该菜品状态?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              dishStatusByStatus(self.dishState).then(function(res) {
+                if (res.code === 1) { self.$message.success('菜品状态已经更改成功！'); self.init() }
+                else { self.$message.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.$message.error('请求失败：' + err) })
+            })
+        },
+        exportDishes: function(format) {
+          try {
+            var ext = format === 'excel' ? 'xlsx' : 'pdf'
+            var apiCall = format === 'excel' ? exportApi.exportDishesExcel({}) : exportApi.exportDishesPdf({})
+            exportApi.downloadFile(apiCall, '菜品数据.' + ext)
+            this.$message.success('导出成功，文件已开始下载')
+          } catch (err) { this.$message.error('导出失败：' + (err.message || err)) }
+        }
+      }
+    })
+  </script>
 </body>
 </html>
-

@@ -41,9 +41,9 @@
       </div>
 
       <div class="tableBar">
-        <el-input v-model="query.name" placeholder="名称" class="el-input--narrow-md" clearable size="small"></el-input>
-        <el-input v-model="query.brand" placeholder="品牌" class="el-input--narrow-sm" clearable size="small"></el-input>
-        <el-select v-model="query.type" placeholder="连接类型" class="el-select--narrow-sm" clearable size="small">
+        <el-input v-model="query.name" placeholder="名称" class="el-input--narrow" clearable size="small"></el-input>
+        <el-input v-model="query.brand" placeholder="品牌" class="el-input--narrow" clearable size="small"></el-input>
+        <el-select v-model="query.type" placeholder="连接类型" class="el-select--narrow" clearable size="small">
           <el-option label="USB" value="USB"></el-option>
           <el-option label="TCP" value="TCP"></el-option>
           <el-option label="CLOUD" value="CLOUD"></el-option>
@@ -53,8 +53,8 @@
           <el-option label="启用" :value="1"></el-option>
           <el-option label="停用" :value="0"></el-option>
         </el-select>
-        <el-button type="primary" size="small" @click="search">查询</el-button>
-        <el-button size="small" @click="reset">重置</el-button>
+        <el-button type="primary" size="small" class="btn-query" @click="search">查询</el-button>
+        <el-button size="small" class="btn-reset" @click="reset">重置</el-button>
         <div class="tableLab">
           <el-button type="primary" size="small" @click="showAdd">+ 新增打印机</el-button>
         </div>
@@ -81,9 +81,9 @@
         </el-table-column>
         <el-table-column label="操作" width="240" align="center">
           <template slot-scope="scope">
-            <el-button type="text" size="small" class="blueBug" @click="showEdit(scope.row)">编辑</el-button>
-            <el-button type="text" size="small" class="blueBug" @click="handleTest(scope.row)">测试连接</el-button>
-            <el-button type="text" size="small" class="delBut non" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button type="text" size="small" class="btn-view" @click="showEdit(scope.row)">编辑</el-button>
+            <el-button type="text" size="small" class="btn-view" @click="handleTest(scope.row)">测试连接</el-button>
+            <el-button type="text" size="small" class="btn-delete" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -105,7 +105,7 @@
           <el-input v-model="form.name" placeholder="请输入打印机名称，如：前台收银机"></el-input>
         </el-form-item>
         <el-form-item label="连接类型" prop="type">
-          <el-select v-model="form.type" placeholder="请选择连接类型" style="width:100%" @change="onTypeChange">
+          <el-select v-model="form.type" placeholder="请选择连接类型" style="width:auto;min-width:60%" @change="onTypeChange">
             <el-option label="USB（系统打印机）" value="USB"></el-option>
             <el-option label="TCP（网络打印机）" value="TCP"></el-option>
             <el-option label="CLOUD（云打印）" value="CLOUD"></el-option>

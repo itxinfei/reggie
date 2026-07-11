@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -32,7 +32,7 @@
           </div>
           <!-- 修改点：消息铃铛入口 + 未读角标 -->
           <div class="msg-bell" @click="toMessagePage" style="position:relative;margin-right:12px;cursor:pointer;">
-            <span style="font-size:18px;">🔔</span>
+            <span style="font-size:18px;">&#x1F514;</span>
             <span v-if="unreadMsgCount > 0" style="position:absolute;top:-6px;right:-8px;
                   background:#ff4d4f;color:#fff;font-size:10px;min-width:16px;height:16px;
                   line-height:16px;text-align:center;border-radius:8px;padding:0 4px;">
@@ -41,7 +41,7 @@
           </div>
           <!-- 修改点：AI点餐助手入口 -->
           <div class="ai-entry" @click="toAIAssistant" style="position:relative;margin-right:12px;cursor:pointer;">
-            <span style="font-size:20px;">🤖</span>
+            <span style="font-size:20px;">&#x1F916;</span>
           </div>
           <div class="user-btn" @click="toUserPage">
             <img :src="userAvatar || './images/headPage.png'" />
@@ -160,14 +160,14 @@
       </div>
 
       <!-- ====== 底部购物车栏 ====== -->
-      <div class="cart-bar" v-if="categoryList.length > 0" :style="{ zIndex: dialogFlavor.show ? 1 : 3000 }">
+      <div class="cart-bar" v-if="cartData && cartData.length > 0" :style="{ zIndex: dialogFlavor.show ? 1 : 3000 }">
         <div class="cart-icon-wrap" @click="openCart">
           <div :class="['cart-icon-img', cartData && cartData.length > 0 ? 'cart-icon-active' : 'cart-icon-empty']"></div>
           <div class="cart-badge" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
         </div>
         <div class="cart-price" v-if="cartData && cartData.length > 0">
           <span class="cart-symbol">¥</span>
-          <span class="cart-amount">{{ goodsPrice }}</span>
+          <span class="cart-amount">{{ goodsPrice.toFixed(2) }}</span>
         </div>
         <div class="cart-empty-text" v-else>购物车空空如也</div>
         <div class="cart-spacer"></div>
@@ -188,7 +188,7 @@
           </div>
         </div>
         <div class="divBottom">
-          <div><span class="spanMoney">￥</span>{{ dialogFlavor.price/100 }}</div>
+          <div><span class="spanMoney">￥</span>{{ (dialogFlavor.price/100).toFixed(2) }}</div>
           <div @click="dialogFlavorAddCart">加入购物车</div>
         </div>
         <div class="divFlavorClose" @click="dialogFlavor.show = false">
@@ -213,7 +213,7 @@
             <div class="divDesc">
               <div class="name">{{ item.name }}</div>
               <div class="price">
-                <span class="spanMoney">￥</span>{{ item.amount }}
+                <span class="spanMoney">￥</span>{{ item.amount.toFixed(2) }}
               </div>
             </div>
             <div class="divNum">
@@ -266,7 +266,7 @@
         </div>
         <div class="divNum">
           <div class="left">
-            <span>￥</span><span>{{ detailsDialog.item.price/100 }}</span>
+            <span>￥</span><span>{{ (detailsDialog.item.price/100).toFixed(2) }}</span>
           </div>
           <div class="right">
             <div class="divSubtract" v-if="detailsDialog.item.number > 0">
@@ -297,7 +297,7 @@
             <img :src="imgPath(item.image)" @error="imgError" class="meal-img">
             <div class="divSubTitle">{{ item.name + '(' + item.copies + '份)' }}
               <div class="divPrice">
-                <span>￥</span><span>{{ item.price/100 }}</span>
+                <span>￥</span><span>{{ (item.price/100).toFixed(2) }}</span>
               </div>
             </div>
             <div class="content">{{ item.description }}</div>
@@ -305,7 +305,7 @@
         </div>
         <div class="divNum">
           <div class="left">
-            <span>￥</span><span>{{ setMealDialog.item.price/100 }}</span>
+            <span>￥</span><span>{{ (setMealDialog.item.price/100).toFixed(2) }}</span>
           </div>
           <div class="right">
             <div class="divSubtract" v-if="setMealDialog.item.number > 0">
@@ -546,7 +546,8 @@
               this.cartData.forEach(item=>{
                 price += (item.number * item.amount)
               })
-              return price
+              // 修改点：四舍五入到分，避免浮点数累加误差（如 3.7199999999999998）
+              return Math.round(price * 100) / 100
             },
             // 修改点：当前选中分类名称，用于右侧列表标题
             activeCategoryName(){
@@ -1032,7 +1033,7 @@
               // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
               try {
                 let params = {
-                  amount: Math.round(item.price / 100 * 100) / 100, // 修改点：金额使用四舍五入避免浮点误差
+                  amount: parseFloat((item.price / 100).toFixed(2)), // 修改点：分转元 + toFixed，避免浮点误差
                   dishFlavor: item.dishFlavor,//口味  如果没有传undefined
                   dishId: undefined,//菜品id
                   setmealId: undefined,//套餐id

@@ -5,219 +5,379 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>供应商管理 - 瑞吉外卖管理端</title>
+  <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
 </head>
 <body>
-  <div class="dashboard-container" id="supplier-app">
-    <div class="container">
-      <div class="tableBar">
-        <el-input v-model="input.name" placeholder="供应商名称" class="el-input--wide-sm" clearable @keyup.enter.native="handleQuery">
-          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
-        </el-input>
-        <el-input v-model="input.contact" placeholder="联系人" clearable @keyup.enter.native="handleQuery">
-          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
-        </el-input>
-        <el-button type="primary" @click="handleQuery">查询</el-button>
-        <el-button @click="reset">重置</el-button>
-        <el-button type="primary" @click="addHandle">+ 新增供应商</el-button>
-      </div>
-      <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
-        <el-table-column prop="name" label="供应商名称" /></el-table-column>
-        <el-table-column prop="contact" label="联系人" /></el-table-column>
-        <el-table-column prop="phone" label="联系电话" /></el-table-column>
-        <el-table-column prop="address" label="地址" /></el-table-column>
-        <el-table-column label="状态">
-          <template slot-scope="scope">
-            <el-tag :type="scope.row.status == '1' ? 'success' : 'info'" size="small">
-              {{ scope.row.status == '1' ? '启用' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="160" align="center">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" class="blueBug" @click="editHandle(scope.row)">修改</el-button>
-            <el-button type="text" size="small" class="delBut non" @click="deleteHandle(scope.row.id)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" :current-page.sync="page" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
-    </div>
-    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="600px" :before-close="handleClose">
-      <el-form class="demo-form-inline" label-width="120px">
-        <el-form-item label="供应商名称：">
-          <el-input v-model="formData.name" placeholder="请输入供应商名称" />
-        </el-form-item>
-        <el-form-item label="联系人：">
-          <el-input v-model="formData.contact" placeholder="请输入联系人" />
-        </el-form-item>
-        <el-form-item label="联系电话：">
-          <el-input v-model="formData.phone" placeholder="请输入联系电话" />
-        </el-form-item>
-        <el-form-item label="地址：">
-          <el-input v-model="formData.address" placeholder="请输入地址" />
-        </el-form-item>
-        <el-form-item label="状态：">
-          <el-radio-group v-model="formData.status">
-            <el-radio :label="'1'">启用</el-radio>
-            <el-radio :label="'0'">禁用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="formData.dialogVisible = false">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitForm()">确 定</el-button>
-      </span>
-    </el-dialog>
+<div class="dashboard-container" id="supplier-app">
+  <div class="container">
+
+    <!-- ============================================================
+     组件1：stat-cards — 统计卡片
+     关联数据：statsCards（计算属性，从 stats 对象实时映射）
+     事件：@card-click → 按供应商状态筛选表格
+    ============================================================ -->
+    <stat-cards
+      :cards="statsCards"
+      :active-key.sync="activeStatus"
+      @card-click="onStatCardClick"
+    ></stat-cards>
+
+    <!-- ============================================================
+     组件2：table-bar — 搜索 + 操作按钮栏
+     搜索项：供应商名称、联系人（两个 input）
+     操作按钮：+ 新增供应商
+     事件：@search（触发分页查询） / @reset（清空并重新加载） / @action（按钮回调）
+    ============================================================ -->
+    <table-bar
+      ref="tableBar"
+      :search-items="searchConfig"
+      :actions="actionConfig"
+      @search="onSearch"
+      @reset="onReset"
+      @action="onAction"
+    ></table-bar>
+
+    <!-- ============================================================
+     组件3：crud-table — 完整 CRUD 数据表格
+     列定义：columns（名称、联系人、电话、地址、状态、操作）
+     分页：page/pageSize/total 双向绑定
+     操作列：修改/删除按钮（通过 #actions 插槽自定义）
+    ============================================================ -->
+    <crud-table
+      ref="crudTable"
+      :data="tableData"
+      :columns="columns"
+      :loading="loading"
+      :page="page"
+      :page-size="pageSize"
+      :total="counts"
+      :show-actions="true"
+      :actions-width="160"
+      @page-change="onPageChange"
+      @size-change="onSizeChange"
+    >
+      <!-- 状态列自定义渲染 -->
+      <template #col-status="{ row }">
+        <el-tag :type="String(row.status) === '1' ? 'success' : 'info'" size="small">
+          {{ String(row.status) === '1' ? '启用' : '禁用' }}
+        </el-tag>
+      </template>
+      <!-- 行操作按钮 -->
+      <template #actions="{ row }">
+        <el-button type="text" size="small" class="btn-view" @click="openEdit(row)">修改</el-button>
+        <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row.id)">删除</el-button>
+      </template>
+    </crud-table>
+
   </div>
-    <script src="../../plugins/vue/vue.js"></script>
-    <script src="../../plugins/element-ui/index.js"></script>
-    <script src="../../plugins/axios/axios.min.js"></script>
-    <script src="../../js/request.js"></script>
-    <script src="../../api/inventory.js"></script>
-    <script>
-      new Vue({
-        el: '#supplier-app',
-        data() {
-          return {
-            loading: false,
-            action: '',
-            counts: 0,
-            page: 1,
-            pageSize: 10,
-            tableData: [],
-            input: {
-              name: '',
-              contact: ''
-            },
-            formData: {
-              title: '新增供应商',
-              dialogVisible: false,
-              id: '',
-              name: '',
-              contact: '',
-              phone: '',
-              address: '',
-              status: '1'
-            }
-          }
-        },
-        created() {
-          this.init()
-        },
-        methods: {
-          async init() {
-            const params = { page: this.page, pageSize: this.pageSize }
-            if (this.input.name) params.name = this.input.name
-            if (this.input.contact) params.contact = this.input.contact
-            await supplierPage(params).then(res => {
-              if (String(res.code) === '1') {
-                this.tableData = res.data.records
-                this.counts = Number(res.data.total)
-              } else {
-                this.$message.error(res.msg || '操作失败')
-              }
-            }).catch(err => {
-              this.$message.error('请求失败：' + err)
-            })
+
+  <!-- ============================================================
+   组件4：crud-dialog — 新增/编辑弹窗
+   表单内容通过默认插槽传入，底部按钮由组件统一管理
+   ============================================================ -->
+  <crud-dialog
+    :title="dialogTitle"
+    :visible.sync="dialogVisible"
+    width="600px"
+    @submit="submitForm"
+    @close="resetForm"
+  >
+    <el-form ref="supplierForm" :model="formData" label-width="120px">
+      <el-form-item label="供应商名称：" prop="name" :rules="[{required: true, message: '请输入供应商名称', trigger: 'blur'}]">
+        <el-input v-model="formData.name" placeholder="请输入供应商名称" maxlength="50" />
+      </el-form-item>
+      <el-form-item label="联系人：">
+        <el-input v-model="formData.contact" placeholder="请输入联系人" maxlength="20" />
+      </el-form-item>
+      <el-form-item label="联系电话：">
+        <el-input v-model="formData.phone" placeholder="请输入联系电话" maxlength="20" />
+      </el-form-item>
+      <el-form-item label="地址：">
+        <el-input v-model="formData.address" placeholder="请输入地址" maxlength="100" />
+      </el-form-item>
+      <el-form-item label="状态：">
+        <el-radio-group v-model="formData.status">
+          <el-radio label="1">启用</el-radio>
+          <el-radio label="0">禁用</el-radio>
+        </el-radio-group>
+      </el-form-item>
+    </el-form>
+  </crud-dialog>
+
+</div>
+  <!-- 引入依赖 -->
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
+  <script src="../../api/inventory.js"></script>
+  <script>
+    new Vue({
+      el: '#supplier-app',
+      data() {
+        return {
+          // ===== 表格数据 =====
+          loading: false,
+          tableData: [],
+          page: 1,
+          pageSize: 10,
+          counts: 0,
+
+          // ===== 搜索条件（由 table-bar 组件管理，此处仅接收） =====
+          searchParams: {},
+
+          // ===== 卡片筛选状态 =====
+          activeStatus: '',
+
+          // ===== 弹窗 =====
+          dialogTitle: '新增供应商',
+          dialogVisible: false,
+          editMode: false,         // false=新增 / true=编辑
+          editId: null,
+
+          // ===== 表单 =====
+          formData: {
+            name: '',
+            contact: '',
+            phone: '',
+            address: '',
+            status: '1'
           },
-          handleQuery() {
-            this.page = 1
-            this.init()
+
+          // ===== 组件配置 =====
+
+          // 统计卡片配置（差异部分：各页面只需改这个数组）
+          statsData: {
+            totalCount: 0,
+            activeCount: 0,
+            disabledCount: 0
           },
-          reset() {
-            this.input.name = ''
-            this.input.contact = ''
-            this.page = 1
-            this.init()
-          },
-          addHandle() {
-            this.action = 'add'
-            this.formData.title = '新增供应商'
-            this.formData.id = ''
-            this.formData.name = ''
-            this.formData.contact = ''
-            this.formData.phone = ''
-            this.formData.address = ''
-            this.formData.status = '1'
-            this.formData.dialogVisible = true
-          },
-          editHandle(row) {
-            this.action = 'edit'
-            this.formData.title = '修改供应商'
-            this.formData.id = row.id
-            this.formData.name = row.name
-            this.formData.contact = row.contact
-            this.formData.phone = row.phone
-            this.formData.address = row.address
-            this.formData.status = String(row.status)
-            this.formData.dialogVisible = true
-          },
-          handleClose() {
-            this.formData.dialogVisible = false
-          },
-          deleteHandle(id) {
-            this.$confirm('此操作将永久删除该供应商, 是否继续?', '提示', {
-              confirmButtonText: '确定',
-              cancelButtonText: '取消',
-              type: 'warning'
-            }).then(() => {
-              deleteSupplier(id).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('删除成功！')
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            })
-          },
-          submitForm() {
-            const fd = this.formData
-            if (!fd.name) {
-              this.$message.error('请输入供应商名称')
-              return
-            }
-            if (this.action === 'add') {
-              addSupplier({ name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status }).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('添加成功！')
-                  this.formData.dialogVisible = false
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            } else {
-              updateSupplier({ id: fd.id, name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status }).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('修改成功！')
-                  this.formData.dialogVisible = false
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            }
-          },
-          handleSizeChange(val) {
-            this.pageSize = val
-            this.init()
-          },
-          handleCurrentChange(val) {
-            this.page = val
-            this.init()
-          }
+
+          // 搜索栏配置
+          searchConfig: [
+            { type: 'input', field: 'name', placeholder: '供应商名称' },
+            { type: 'input', field: 'contact', placeholder: '联系人', hideSearchIcon: true }
+          ],
+
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'add', text: '+ 新增供应商', type: 'primary' }
+          ],
+
+          // 表格列配置
+          columns: [
+            { prop: 'name', label: '供应商名称', minWidth: 160 },
+            { prop: 'contact', label: '联系人', width: 100 },
+            { prop: 'phone', label: '联系电话', width: 140 },
+            { prop: 'address', label: '地址', minWidth: 200, showOverflowTooltip: true },
+            { prop: 'status', label: '状态', width: 100, align: 'center', slot: true }
+          ]
         }
-      })
-    </script>
+      },
+
+      computed: {
+        /** 将 statsData 映射为 stat-cards 组件所需的 cards 数组 */
+        statsCards() {
+          return [
+            { key: 'all',    label: '供应商总数', value: this.statsData.totalCount,    icon: '🏢', color: 'primary' },
+            { key: 'active', label: '已启用',     value: this.statsData.activeCount,   icon: '✅', color: 'success', clickable: true },
+            { key: 'inactive', label: '已禁用',   value: this.statsData.disabledCount, icon: '⏸️', color: 'warning', clickable: true }
+          ]
+        }
+      },
+
+      created() {
+        this.loadData()
+      },
+
+      methods: {
+        // ==================== 数据加载 ====================
+
+        /** 主数据加载方法（表格 + 统计） */
+        async loadData() {
+          this.loading = true
+
+          // 构造分页查询参数（合并搜索条件与卡片筛选状态）
+          var params = { page: this.page, pageSize: this.pageSize }
+          Object.assign(params, this.searchParams)
+          if (this.activeStatus === 'active') params.status = '1'
+          else if (this.activeStatus === 'inactive') params.status = '0'
+
+          try {
+            const [pageRes, allRes] = await Promise.all([
+              supplierPage(params),
+              supplierPage({ page: 1, pageSize: 1000 })  // 拉全量统计
+            ])
+
+            if (String(pageRes.code) === '1') {
+              this.tableData = pageRes.data.records || []
+              this.counts = Number(pageRes.data.total)
+            } else {
+              this.$message.error(pageRes.msg || '加载数据失败')
+            }
+
+            if (String(allRes.code) === '1') {
+              var all = allRes.data.records || []
+              this.statsData = {
+                totalCount: String(allRes.data.total || 0),
+                activeCount: all.filter(function(r) { return String(r.status) === '1' }).length,
+                disabledCount: all.filter(function(r) { return String(r.status) === '0' }).length
+              }
+            }
+          } catch (err) {
+            this.$message.error('请求失败：' + err)
+          }
+
+          this.loading = false
+        },
+
+        // ==================== table-bar 事件 ====================
+
+        /** 搜索回调：重置页码后查询 */
+        onSearch(searchParams) {
+          this.searchParams = searchParams || {}
+          // 搜索时取消卡片高亮
+          this.activeStatus = ''
+          this.page = 1
+          this.loadData()
+        },
+
+        /** 重置回调：清除搜索条件并重新加载 */
+        onReset() {
+          this.searchParams = {}
+          this.activeStatus = ''
+          this.page = 1
+          this.loadData()
+        },
+
+        /** 操作按钮回调 */
+        onAction({ key }) {
+          if (key === 'add') {
+            this.openAdd()
+          }
+        },
+
+        // ==================== stat-cards 事件 ====================
+
+        /** 卡片点击筛选 */
+        onStatCardClick({ activeKey }) {
+          // 清空搜索条件
+          if (this.$refs.tableBar) {
+            this.$refs.tableBar.clearSearch()
+          }
+          this.searchParams = {}
+          this.page = 1
+          this.loadData()
+        },
+
+        // ==================== crud-table 事件 ====================
+
+        /** 分页回调 */
+        onPageChange({ page, pageSize }) {
+          this.page = page
+          this.pageSize = pageSize
+          this.loadData()
+        },
+
+        onSizeChange(val) {
+          this.pageSize = val
+          this.page = 1
+          this.loadData()
+        },
+
+        // ==================== 新增/编辑弹窗 ====================
+
+        openAdd() {
+          this.editMode = false
+          this.editId = null
+          this.dialogTitle = '新增供应商'
+          this.formData = { name: '', contact: '', phone: '', address: '', status: '1' }
+          this.dialogVisible = true
+        },
+
+        openEdit(row) {
+          this.editMode = true
+          this.editId = row.id
+          this.dialogTitle = '修改供应商'
+          this.formData = {
+            name: row.name || '',
+            contact: row.contact || '',
+            phone: row.phone || '',
+            address: row.address || '',
+            status: String(row.status || '1')
+          }
+          this.dialogVisible = true
+        },
+
+        /** 表单提交（校验通过后执行保存） */
+        submitForm() {
+          var self = this
+          this.$refs.supplierForm.validate(function (valid) {
+            if (!valid) return
+            self.doSave()
+          })
+        },
+
+        /** 执行新增/修改保存 */
+        doSave() {
+          var fd = this.formData
+          var apiCall = this.editMode
+            ? updateSupplier({ id: this.editId, name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status })
+            : addSupplier({ name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status })
+
+          var self = this
+          apiCall.then(function (res) {
+            if (res.code === 1) {
+              self.$message.success(self.editMode ? '修改成功！' : '添加成功！')
+              self.dialogVisible = false
+              self.loadData()
+            } else {
+              self.$message.error(res.msg || '操作失败')
+            }
+          }).catch(function (err) {
+            self.$message.error('请求失败：' + err)
+          })
+        },
+
+        resetForm() {
+          if (this.$refs.supplierForm) {
+            this.$refs.supplierForm.resetFields()
+          }
+        },
+
+        // ==================== 删除 ====================
+
+        handleDelete(id) {
+          var self = this
+          this.$confirm('此操作将永久删除该供应商, 是否继续?', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(function () {
+            deleteSupplier(id).then(function (res) {
+              if (res.code === 1) {
+                self.$message.success('删除成功！')
+                // 如果当前页删除后为空，回退一页
+                if (self.tableData.length === 1 && self.page > 1) {
+                  self.page--
+                }
+                self.loadData()
+              } else {
+                self.$message.error(res.msg || '操作失败')
+              }
+            }).catch(function (err) {
+              self.$message.error('请求失败：' + err)
+            })
+          })
+        }
+      }
+    })
+  </script>
 </body>
 </html>
-

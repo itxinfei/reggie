@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     /* ========== 现代化数据概览设计 ========== */
@@ -103,8 +104,8 @@
       transform: translateY(-1px);
     }
 
-    /* ========== KPI 卡片 - 4列整行显示 ========== */
-    .kpi-cards {
+    /* ========== KPI 卡片 - 4列整行显示（容器使用stats-cards统一规范） ========== */
+    .stats-cards {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 20px;
@@ -481,7 +482,7 @@
       .container {
         padding: 16px 20px 20px !important;
       }
-      .kpi-cards {
+      .stats-cards {
         grid-template-columns: repeat(2, 1fr);
         gap: 14px;
       }
@@ -512,7 +513,7 @@
       .container {
         padding: 12px 16px 16px !important;
       }
-      .kpi-cards {
+      .stats-cards {
         grid-template-columns: 1fr;
         gap: 12px;
       }
@@ -574,7 +575,7 @@
       </div>
 
       <!-- ========== KPI 指标卡片 ========== -->
-      <div class="kpi-cards">
+      <div class="stats-cards">
         <div class="kpi-card primary">
           <div class="kpi-icon-wrapper">📋</div>
           <div class="kpi-label">今日订单数</div>

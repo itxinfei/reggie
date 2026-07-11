@@ -19,15 +19,15 @@
   <div class="dashboard-container" id="template-app">
     <div class="container">
       <div class="tableBar">
-        <el-select v-model="filterBizType" placeholder="业务类型" clearable style="width: 150px" @change="handleQuery">
+        <el-select v-model="filterBizType" placeholder="业务类型" clearable class="el-select--narrow" @change="handleQuery">
           <el-option label="订单通知" value="ORDER_NOTICE"></el-option>
           <el-option label="营销推送" value="PROMOTION"></el-option>
           <el-option label="验证码" value="VERIFY_CODE"></el-option>
           <el-option label="系统通知" value="SYSTEM"></el-option>
           <el-option label="工作通知" value="JOB_NOTICE"></el-option>
         </el-select>
-        <el-button type="primary" @click="handleQuery">查询</el-button>
-        <el-button @click="resetSearch">重置</el-button>
+        <el-button type="primary" class="btn-query" @click="handleQuery">查询</el-button>
+        <el-button class="btn-reset" @click="resetSearch">重置</el-button>
         <el-button type="success" @click="openDialog()">+ 新增模板</el-button>
       </div>
 
@@ -64,7 +64,7 @@
             <el-button type="text" size="small" @click="toggleStatus(scope.row)">
               {{ scope.row.status === 1 ? '停用' : '启用' }}
             </el-button>
-            <el-button type="text" size="small" class="delBut non" @click="deleteHandle(scope.row.id)">删除</el-button>
+            <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(scope.row.id)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>

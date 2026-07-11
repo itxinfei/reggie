@@ -138,6 +138,15 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                     int tokensUsed = root.has("usage")
                             ? root.path("usage").path("total_tokens").asInt(0) : 0;
 
+                    // 思考模型（如 stepfun step-3.7-flash、DeepSeek-R1）content 可能为空，
+                    // 实际文本放在 reasoning_content 字段中
+                    if (content.isEmpty()) {
+                        String rc = messageNode.path("reasoning_content").asText("");
+                        if (!rc.isEmpty()) {
+                            content = rc;
+                        }
+                    }
+
                     log.info("AI响应[{} / {}]: tokensUsed={}, contentLength={}",
                             config.getProviderCode(), FORMAT_ID, tokensUsed, content.length());
                     return successResponse(content, config.getModelName(), tokensUsed);

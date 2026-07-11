@@ -41,17 +41,17 @@
 
     <div class="container">
       <div class="tableBar">
-        <el-input v-model="searchModule" placeholder="操作模块" class="el-input--narrow-md" clearable @keyup.enter.native="handleQuery"></el-input>
+        <el-input v-model="searchModule" placeholder="操作模块" class="el-input--narrow" clearable @keyup.enter.native="handleQuery"></el-input>
         <el-select v-model="searchType" placeholder="操作类型" clearable class="el-select--wide-xs" @change="handleQuery">
           <el-option label="新增" value="INSERT"></el-option>
           <el-option label="修改" value="UPDATE"></el-option>
           <el-option label="删除" value="DELETE"></el-option>
           <el-option label="其他" value="OTHER"></el-option>
         </el-select>
-        <el-input v-model="searchOperator" placeholder="操作人" style="width: 120px" clearable @keyup.enter.native="handleQuery"></el-input>
-        <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd" @change="handleQuery" class="el-date-editor--md"></el-date-picker>
-        <el-button type="primary" @click="handleQuery">查询</el-button>
-        <el-button @click="resetSearch">重置</el-button>
+        <el-input v-model="searchOperator" placeholder="操作人" class="el-input--wide-xs" clearable @keyup.enter.native="handleQuery"></el-input>
+        <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd" @change="handleQuery"></el-date-picker>
+        <el-button type="primary" class="btn-query" @click="handleQuery">查询</el-button>
+        <el-button class="btn-reset" @click="resetSearch">重置</el-button>
       </div>
 
       <el-table :data="tableData" stripe border v-loading="loading" class="tableBox">

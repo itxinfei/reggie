@@ -4,6 +4,7 @@
     <meta charset="UTF-8"/>
     <title>总部控制台</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/components-stats-card.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
@@ -47,7 +48,7 @@
     </div>
 
     <!-- 核心KPI -->
-    <div class="kpi-cards" v-if="dashboard">
+    <div class="stats-cards" v-if="dashboard">
         <div class="kpi-card">
             <div class="kpi-icon">🏪</div>
             <div class="kpi-value">{{ dashboard.totalStores || 0 }}</div>

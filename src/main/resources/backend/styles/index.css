@@ -48,6 +48,7 @@ html, body {
 .app-wrapper {
   display: flex;
   height: 100vh;
+  /* 修改点：恢复 overflow: hidden —— 侧边栏 + 顶栏需要固定不动，仅 iframe 内部页面自身滚动；外层 body 不应出现整体滚动条 */
   overflow: hidden;
   transition: padding-left var(--transition-smooth);
 }
@@ -415,6 +416,7 @@ html, body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  /* 修改点：恢复 height: 100vh + overflow: hidden —— 主内容区固定为视口高度，内部 iframe 自身负责滚动；防止外层出现横向/纵向滚动条 */
   height: 100vh;
   background: #f5f6fa;
   overflow: hidden;
@@ -504,90 +506,8 @@ html, body {
   background: #f3f4f6;
 }
 
-/* ---------- 全局搜索 ---------- */
-.global-search {
-  position: relative;
-  flex-shrink: 0;
-}
-.global-search .el-input {
-  width: 200px;
-  transition: width var(--transition-fast);
-}
-.global-search .el-input__inner {
-  border-radius: 8px !important;
-  background: #f3f4f6 !important;
-  border-color: transparent !important;
-  font-size: 13px !important;
-  height: 34px !important;
-  line-height: 34px !important;
-}
-.global-search .el-input__inner:focus {
-  background: #fff !important;
-  border-color: var(--accent-color) !important;
-  box-shadow: 0 0 0 3px rgba(255, 194, 0, 0.1) !important;
-}
-.global-search .el-input__prefix {
-  left: 8px;
-}
-.global-search .el-input__icon {
-  line-height: 34px;
-  color: var(--text-muted);
-}
-.search-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  width: 280px;
-  max-height: 360px;
-  overflow-y: auto;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e5e7eb;
-  z-index: 2000;
-  padding: 6px 0;
-}
-.search-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-  font-size: 13px;
-}
-.search-item:hover {
-  background: #f9fafb;
-}
-.search-item i[class*="ri-"] {
-  font-size: 16px;
-  color: var(--text-muted);
-  flex-shrink: 0;
-  width: 20px;
-  text-align: center;
-}
-.search-item-name {
-  color: var(--text-muted);
-  font-size: 12px;
-  flex-shrink: 0;
-  max-width: 60px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.search-item-child {
-  color: var(--text-primary);
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.search-empty {
-  padding: 16px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 13px;
-}
+
+
 
 /* ---------- 页面标题 (已废弃) ---------- */
 /* 修改点：页面标题由面包屑最后一级承担，不再使用独立的 h1.page-title */
@@ -684,6 +604,7 @@ html, body {
    ---------------------------------------------------------- */
 .app-main {
   flex: 1;
+  /* 修改点：恢复 overflow: hidden —— app-main 固定为顶栏之下剩余空间；iframe 内部页面由自身 body 滚动 */
   overflow: hidden;
   position: relative;
 }
@@ -695,9 +616,11 @@ html, body {
 
 .c_iframe {
   width: 100%;
+  /* 修改点：高度由 JS 设为 window.innerHeight - 56（视口高 - 顶栏），iframe 内部页面由自身 body 滚动；不再使用 scrollHeight 撑高 */
   height: 100%;
   border: 0;
-  overflow: hidden;
+  /* 修改点：iframe 自身允许滚动（让内部页面的 overflow: auto 生效），不再由父级承载 */
+  overflow: auto;
   display: block;
 }
 
@@ -742,11 +665,6 @@ html, body {
   /* 顶栏紧凑化 */
   .topbar {
     padding: 0 12px;
-  }
-
-  /* 移动端隐藏全局搜索 */
-  .global-search {
-    display: none;
   }
 
   .page-title {

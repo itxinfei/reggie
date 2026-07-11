@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     /* ========== 基础重置 ========== */
@@ -38,7 +39,7 @@
     }
 
     /* ========== 工具栏 ========== */
-    .toolbar {
+    .tableBar {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
@@ -51,23 +52,23 @@
       border: 1px solid rgba(255, 255, 255, 0.8);
       transition: all 0.3s;
     }
-    .toolbar:hover {
+    .tableBar:hover {
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
     }
-    .toolbar .toolbar-label {
+    .tableBar .toolbar-label {
       font-size: 14px;
       color: #606266;
       font-weight: 500;
       margin-right: 4px;
       flex-shrink: 0;
     }
-    .toolbar .toolbar-spacer {
+    .tableBar .toolbar-spacer {
       flex: 1;
       min-width: 0;
     }
 
-    /* ========== KPI 卡片 ========== */
-    .kpi-cards {
+    /* ========== KPI 卡片（容器使用stats-cards统一规范） ========== */
+    .stats-cards {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 16px;
@@ -352,18 +353,18 @@
     }
     @media (max-width: 1200px) {
       .container { padding: 20px 28px 28px !important; }
-      .toolbar { padding: 14px 20px; }
+      .tableBar { padding: 14px 20px; }
       /* 修改点：中等屏幕下双图改为单列 */
       .daily-two-col { grid-template-columns: 1fr !important; }
     }
     @media (max-width: 768px) {
       .container { padding: 12px 16px 16px !important; }
-      .kpi-cards { grid-template-columns: 1fr; gap: 12px; }
+      .stats-cards { grid-template-columns: 1fr; gap: 12px; }
       .kpi-card { padding: 18px; min-height: 110px; }
       .kpi-card .kpi-value { font-size: 26px; }
       .chart-box { height: 300px; }
-      .toolbar { flex-direction: column; align-items: stretch; }
-      .toolbar .toolbar-spacer { display: none; }
+      .tableBar { flex-direction: column; align-items: stretch; }
+      .tableBar .toolbar-spacer { display: none; }
     }
     @media (max-width: 480px) {
       .kpi-card { padding: 16px; min-height: 100px; }
@@ -372,11 +373,11 @@
   </style>
 </head>
 <body>
-  <div class="daily-container" id="report-daily-app">
+  <div class="dashboard-container daily-container" id="report-daily-app">
     <div class="container">
 
       <!-- ========== 工具栏：日期选择 + 导出按钮 ========== -->
-      <div class="toolbar">
+      <div class="tableBar">
         <span class="toolbar-label">
           <i class="el-icon-date" style="margin-right:4px;"></i>日期范围
         </span>
@@ -389,11 +390,10 @@
           end-placeholder="结束日期"
           value-format="yyyy-MM-dd"
           :shortcuts="dateShortcuts"
-          style="width: 340px;"
           @change="onDateChange"
         ></el-date-picker>
 
-        <el-button type="primary" icon="el-icon-search" @click="loadData">查询</el-button>
+        <el-button type="primary" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
 
         <span class="toolbar-spacer"></span>
 
@@ -417,7 +417,7 @@
       </div>
 
       <!-- ========== KPI 卡片 ========== -->
-      <div class="kpi-cards">
+      <div class="stats-cards">
         <div class="kpi-card primary">
           <div class="kpi-icon-wrapper">📋</div>
           <div class="kpi-label">订单总数</div>

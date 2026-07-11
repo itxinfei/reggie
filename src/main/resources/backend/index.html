@@ -14,7 +14,8 @@
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet" />
     <style>
       .body{
-        min-width: 1366px;
+        /* 修改点：移除 min-width: 1366px 强制宽度，避免窄屏下内部 iframe 内容被裁剪/横向溢出 */
+        min-width: 1024px;
       }
       .app-main{
         height: calc(100% - 56px);
@@ -94,32 +95,6 @@
               <button class="hamburger-btn" @click="toggleSidebar" title="展开菜单">
                 <span></span><span></span><span></span>
               </button>
-              <!-- 全局搜索 -->
-              <div class="global-search">
-                <el-input
-                  v-model="searchKeyword"
-                  placeholder="搜索菜单..."
-                  size="small"
-                  clearable
-                  @focus="showSearchDropdown = true"
-                  @input="filterSearch"
-                  @keyup.enter.native="goToFirstResult"
-                >
-                  <i slot="prefix" class="el-input__icon el-icon-search"></i>
-                </el-input>
-                <div class="search-dropdown" v-show="showSearchDropdown && searchResults.length > 0">
-                  <div
-                    class="search-item"
-                    v-for="item in searchResults"
-                    :key="item.id"
-                    @click="navigateToSearch(item)"
-                  >
-                    <i :class="item.icon"></i>
-                    <span class="search-item-name">{{ item.parentName }}</span>
-                    <span class="search-item-child">{{ item.name }}</span>
-                  </div>
-                </div>
-              </div>
               <!-- 返回按钮 -->
               <button v-if="goBackFlag" class="back-btn" @click="goBack()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -153,13 +128,14 @@
 
           <div class="app-main" v-loading="loading">
             <div class="divTmp" v-show="loading"></div>
+            <!-- 修改点：移除 height="auto"（浏览器不识别），添加 scrolling="yes" 让 iframe 内部页面自行滚动；高度由 JS 控制为 window.innerHeight - 56（视口 - 顶栏） -->
             <iframe
               id="cIframe"
               class="c_iframe"
               name="cIframe"
               :src="iframeUrl"
               width="100%"
-              height="auto"
+              scrolling="yes"
               frameborder="0"
               v-show="!loading"
             ></iframe>
@@ -205,7 +181,7 @@
               { id: '5', name: '堂食管理', icon: 'ri-store-2-line', children: [
                 { id: '5-1', name: '桌台管理', url: 'page/dining/table-list.html', icon: 'ri-layout-grid-line' },
                 { id: '5-2', name: '区域管理', url: 'page/dining/area-list.html', icon: 'ri-map-pin-2-line' },
-                { id: '5-3', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'ri-list-check-2-line' },
+                { id: '5-3', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'ri-ticket-line' },
                 { id: '5-4', name: '预订管理', url: 'page/dining/reservation-list.html', icon: 'ri-calendar-check-line' },
               ]},
               { id: '6', name: '进销存', icon: 'ri-archive-line', children: [
@@ -255,10 +231,6 @@
             loading: true,
             timer: null,
             navHistory: [],  // 导航历史栈，用于返回按钮
-            searchKeyword: '',       // 全局搜索关键词
-            showSearchDropdown: false, // 搜索下拉框
-            searchResults: [],       // 搜索结果
-            allMenuItems: []         // 扁平化菜单列表（搜索用）
           }
         },
         computed: {
@@ -284,17 +256,10 @@
           }
           this.closeLoading()
         },
-        beforeDestroy() {
-          this.timer = null
-          clearTimeout(this.timer)
-          document.removeEventListener('click', this.handleDocumentClick)
-        },
         mounted() {
           window.menuHandle = this.menuHandle
-          // 构建扁平化菜单索引（用于全局搜索）
-          this.buildMenuIndex()
-          // 点击外部关闭搜索下拉
-          document.addEventListener('click', this.handleDocumentClick)
+          // 修改点：监听窗口尺寸变化与 iframe 内容加载完成事件，动态调整 iframe 高度避免内容被裁剪
+          this.initIframeAutoHeight()
         },
         methods: {
           logout() {
@@ -327,67 +292,6 @@
                 const firstChild = currentItem.children[0]
                 this.menuHandle(firstChild, false)
               }
-            }
-          },
-          // ========== 全局搜索 ==========
-          buildMenuIndex() {
-            // 扁平化菜单列表，方便搜索
-            this.allMenuItems = []
-            this.menuList.forEach(parent => {
-              if (parent.children && parent.children.length > 0) {
-                parent.children.forEach(child => {
-                  this.allMenuItems.push({
-                    id: child.id,
-                    name: child.name,
-                    url: child.url,
-                    icon: child.icon || parent.icon,
-                    parentName: parent.name
-                  })
-                })
-              } else if (parent.url) {
-                this.allMenuItems.push({
-                  id: parent.id,
-                  name: parent.name,
-                  url: parent.url,
-                  icon: parent.icon,
-                  parentName: ''
-                })
-              }
-            })
-          },
-          filterSearch() {
-            const keyword = this.searchKeyword.trim().toLowerCase()
-            if (!keyword) {
-              this.searchResults = []
-              this.showSearchDropdown = false
-              return
-            }
-            this.searchResults = this.allMenuItems.filter(item =>
-              item.name.toLowerCase().includes(keyword) ||
-              item.parentName.toLowerCase().includes(keyword)
-            ).slice(0, 8)  // 最多显示 8 条
-            this.showSearchDropdown = this.searchResults.length > 0
-          },
-          navigateToSearch(item) {
-            this.showSearchDropdown = false
-            this.searchKeyword = ''
-            // 找到对应的菜单项并导航
-            const menuItem = { id: item.id, name: item.name, url: item.url }
-            this.menuHandle(menuItem, false)
-          },
-          goToFirstResult() {
-            if (this.searchResults.length > 0) {
-              this.navigateToSearch(this.searchResults[0])
-            }
-          },
-          closeSearch() {
-            this.showSearchDropdown = false
-          },
-          handleDocumentClick(e) {
-            // 如果点击不在搜索组件内，关闭下拉
-            const searchEl = document.querySelector('.global-search')
-            if (searchEl && !searchEl.contains(e.target)) {
-              this.showSearchDropdown = false
             }
           },
           goBack() {
@@ -434,7 +338,33 @@
           },
           closeSidebar() {
             this.sidebarOpen = false
+          },
+          // ========== iframe 高度自适应（修改点：iframe 高度 = 视口高 - 顶栏，由 iframe 自身滚动） ==========
+          initIframeAutoHeight() {
+            const iframe = document.getElementById('cIframe')
+            if (!iframe) return
+            // iframe 内容加载完成后调整高度
+            iframe.addEventListener('load', () => {
+              this.resizeIframe()
+            })
+            // 监听窗口大小变化，重新计算
+            window.addEventListener('resize', () => {
+              this.resizeIframe()
+            })
+            // 初始计算一次
+            this.resizeIframe()
+          },
+          resizeIframe() {
+            const iframe = document.getElementById('cIframe')
+            if (!iframe) return
+            // 修改点：iframe 高度固定为视口高 - 顶栏(56px)，内部页面自身 body 负责滚动
+            // 不再取内容 scrollHeight（那会导致 iframe 撑高超高但被外层 overflow:hidden 裁剪）
+            iframe.style.height = (window.innerHeight - 56) + 'px'
           }
+        },
+        beforeDestroy() {
+          this.timer = null
+          clearTimeout(this.timer)
         }
       })
     </script>

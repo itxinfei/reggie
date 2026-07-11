@@ -19,7 +19,7 @@ import java.io.IOException;
 /**
  * 检查用户是否已经完成登录
  */
-@WebFilter(filterName = "loginCheckFilter",urlPatterns = "/*")
+@WebFilter(filterName = "loginCheckFilter",urlPatterns = "/*", asyncSupported = true)
 @Slf4j
 public class LoginCheckFilter implements Filter{
     /** 路径匹配器，支持通配符 */

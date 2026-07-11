@@ -211,7 +211,7 @@
         <div class="filter-bar">
           <div class="filter-group">
             <span class="filter-label">菜品名称：</span>
-            <el-input v-model="filters.dishName" placeholder="请输入菜品名称" clearable size="small" style="width: 180px;" @keyup.enter.native="handleSearch"></el-input>
+            <el-input v-model="filters.dishName" placeholder="请输入菜品名称" clearable size="small" class="el-input--wide-sm" @keyup.enter.native="handleSearch"></el-input>
           </div>
           <div class="filter-group">
             <span class="filter-label">评分：</span>
@@ -220,8 +220,8 @@
               <button class="star-btn" :class="{ active: filters.starRating === null }" @click="filters.starRating = null" style="margin-left: 4px;">清除</button>
             </div>
           </div>
-          <el-button type="primary" size="small" icon="el-icon-search" @click="handleSearch">搜索</el-button>
-          <el-button size="small" icon="el-icon-refresh" @click="resetFilters">重置</el-button>
+          <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="handleSearch">搜索</el-button>
+          <el-button size="small" class="btn-reset" icon="el-icon-refresh" @click="resetFilters">重置</el-button>
         </div>
       </div>
 

@@ -780,11 +780,13 @@
                     if (!imgUrl && dish.imageUrl) imgUrl = dish.imageUrl;
                     // 修改点：如果菜品ID缺省则降级处理
                     var dishId = dish.dishId || dish.id || 0;
+                    // 修改点：dish.price 单位是分，需转换为元
+                    var price = dish.price ? parseFloat((dish.price / 100).toFixed(2)) : 0;
                     if (window.addDishToCart) {
                         window.addDishToCart({
                             id: dishId,
                             name: dish.name,
-                            price: dish.price || 0,
+                            price: price,
                             image: imgUrl,
                             flavors: []
                         });

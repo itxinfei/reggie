@@ -9,189 +9,111 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <style>
-
-    /* ========== 桌台网格卡片视图 ========== */
+    /* 卡片视图切换 */
     .table-grid-toggle { display: flex; align-items: center; gap: 8px; }
     .table-grid-toggle .toggle-btn {
       padding: 6px 12px; border: 1px solid #dcdfe6; border-radius: 4px;
       background: #fff; cursor: pointer; font-size: 14px; color: #606266;
       transition: all 0.2s; display: flex; align-items: center; gap: 4px;
     }
-    .table-grid-toggle .toggle-btn.active {
-      border-color: #409eff; color: #409eff; background: rgba(64,158,255,0.05);
-    }
+    .table-grid-toggle .toggle-btn.active { border-color: #409eff; color: #409eff; background: rgba(64,158,255,0.05); }
     .table-grid-toggle .toggle-btn:hover { border-color: #409eff; color: #409eff; }
-
     /* 卡片模式 */
-    .table-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 14px;
-    }
-
+    .table-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
     .table-card {
       background: #fff; border-radius: 10px; padding: 18px;
       border: 1px solid #ebeef5; transition: all 0.3s;
       position: relative; cursor: pointer;
     }
-    .table-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-    }
-    .table-card .card-status-dot {
-      position: absolute; top: 12px; right: 14px;
-      width: 10px; height: 10px; border-radius: 50%;
-    }
+    .table-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+    .table-card .card-status-dot { position: absolute; top: 12px; right: 14px; width: 10px; height: 10px; border-radius: 50%; }
     .table-card .card-status-dot.free    { background: #67c23a; }
     .table-card .card-status-dot.occupied { background: #f56c6c; animation: pulse 1.5s infinite; }
     .table-card .card-status-dot.reserved { background: #e6a23c; }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     .table-card .card-name { font-size: 16px; font-weight: 600; color: #303133; margin-bottom: 8px; }
     .table-card .card-meta { display: flex; flex-direction: column; gap: 4px; }
     .table-card .card-meta span { font-size: 12px; color: #909399; }
     .table-card .card-meta span strong { color: #606266; font-weight: 500; }
-    .table-card .card-actions {
-      margin-top: 12px; padding-top: 10px; border-top: 1px solid #f5f5f5;
-      display: flex; gap: 6px; flex-wrap: wrap;
-    }
+    .table-card .card-actions { margin-top: 12px; padding-top: 10px; border-top: 1px solid #f5f5f5; display: flex; gap: 6px; flex-wrap: wrap; }
     .table-card .card-actions .el-button { font-size: 12px; padding: 4px 10px; }
-
     /* 二维码弹窗 */
     .qrcode-content { text-align: center; padding: 20px 0; }
     .qrcode-content .qrcode-title { font-size: 16px; font-weight: 600; color: #303133; margin-bottom: 4px; }
     .qrcode-content .qrcode-subtitle { font-size: 13px; color: #909399; margin-bottom: 16px; }
-    .qrcode-content .qrcode-img-wrap {
-      background: #fff; border: 1px solid #ebeef5; border-radius: 8px;
-      padding: 16px; display: inline-block;
-    }
+    .qrcode-content .qrcode-img-wrap { background: #fff; border: 1px solid #ebeef5; border-radius: 8px; padding: 16px; display: inline-block; }
     .qrcode-content .qrcode-img-wrap img { width: 200px; height: 200px; display: block; }
     .qrcode-content .qrcode-tip { margin-top: 12px; font-size: 12px; color: #909399; }
-
-    @media (max-width: 1400px) {
-      .stats-cards { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (max-width: 768px) {
-      .stats-cards { grid-template-columns: 1fr; }
-      .table-cards { grid-template-columns: 1fr; }
-    }
   </style>
 </head>
 <body>
   <div class="dashboard-container" id="table-app">
     <div class="container">
-      <!-- ========== 数据统计卡片 ========== -->
-      <!-- 修改点：卡片可点击筛选，点击后同步设置状态筛选项 -->
-      <div class="stats-cards">
-        <div class="stat-card primary clickable" :class="{ active: statusFilter === '' }" @click="filterByStatus('')">
-          <div class="stat-icon-wrap">🪑</div>
-          <div class="stat-info">
-            <div class="stat-label">桌台总数</div>
-            <div class="stat-value">{{ stats.totalTables || 0 }}</div>
-          </div>
-        </div>
-        <div class="stat-card success clickable" :class="{ active: statusFilter === 'FREE' }" @click="filterByStatus('FREE')">
-          <div class="stat-icon-wrap">✓</div>
-          <div class="stat-info">
-            <div class="stat-label">空闲桌台</div>
-            <div class="stat-value">{{ stats.freeTables || 0 }}</div>
-          </div>
-        </div>
-        <div class="stat-card warning clickable" :class="{ active: statusFilter === 'OCCUPIED' }" @click="filterByStatus('OCCUPIED')">
-          <div class="stat-icon-wrap">👥</div>
-          <div class="stat-info">
-            <div class="stat-label">占用桌台</div>
-            <div class="stat-value">{{ stats.occupiedTables || 0 }}</div>
-          </div>
-        </div>
-        <div class="stat-card danger clickable" :class="{ active: statusFilter === 'RESERVED' }" @click="filterByStatus('RESERVED')">
-          <div class="stat-icon-wrap">📅</div>
-          <div class="stat-info">
-            <div class="stat-label">预留桌台</div>
-            <div class="stat-value">{{ stats.reservedTables || 0 }}</div>
-          </div>
-        </div>
-      </div>
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+        flex-style
+      ></stat-cards>
 
-      <!-- ========== 搜索 + 操作栏 ========== -->
-      <div class="tableBar">
-        <div>
-          <el-input v-model="input" placeholder="请输入桌台名称" clearable
-            @keyup.enter.native="handleQuery">
-            <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
-          </el-input>
-          <el-select v-model="areaId" placeholder="请选择区域" clearable @change="handleQuery">
-            <el-option v-for="item in areaList" :key="item.id" :label="item.name" :value="item.id"></el-option>
-          </el-select>
-          <el-select v-model="statusFilter" placeholder="桌台状态" clearable @change="handleQuery">
-            <el-option label="空闲" value="FREE"></el-option>
-            <el-option label="占用" value="OCCUPIED"></el-option>
-            <el-option label="预留" value="RESERVED"></el-option>
-          </el-select>
-          <el-button type="primary" @click="handleQuery">查询</el-button>
-          <el-button @click="reset">重置</el-button>
-          <span style="flex:1;"></span>
-          <div class="table-grid-toggle">
-            <div class="toggle-btn" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'">
-              列表
-            </div>
-            <div class="toggle-btn" :class="{ active: viewMode === 'card' }" @click="viewMode = 'card'">
-              卡片
-            </div>
-          </div>
+      <!-- 搜索 + 操作栏（含视图切换、新增按钮） -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        :show-search-btns="true"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      >
+        <!-- 视图切换按钮（table-bar 默认插槽） -->
+        <div class="table-grid-toggle" style="margin-left:auto;">
+          <div class="toggle-btn" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'">列表</div>
+          <div class="toggle-btn" :class="{ active: viewMode === 'card' }" @click="viewMode = 'card'">卡片</div>
         </div>
-        <div class="tableLab">
-          <el-button type="primary" @click="addHandle">+ 新增桌台</el-button>
-        </div>
-      </div>
+      </table-bar>
 
       <!-- ========== 表格视图 ========== -->
-      <el-table v-if="viewMode === 'table'" v-loading="loading" :data="tableData" stripe border class="tableBox">
-        <el-table-column type="index" label="序号" width="55" align="center"></el-table-column>
-        <el-table-column prop="name" label="桌台名称" min-width="120">
-          <template slot-scope="scope">
-            <span style="font-weight:500;">{{ scope.row.name }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="areaName" label="所属区域" width="100"></el-table-column>
-        <el-table-column prop="seatCount" label="座位数" width="80" align="center"></el-table-column>
-        <el-table-column label="状态" width="110" align="center">
-          <template slot-scope="scope">
-            <el-select v-model="scope.row.status" size="mini" style="width:90px;"
-              @change="(val) => quickChangeStatus(scope.row, val)">
-              <el-option label="空闲" value="FREE"></el-option>
-              <el-option label="占用" value="OCCUPIED"></el-option>
-              <el-option label="预留" value="RESERVED"></el-option>
-            </el-select>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态标签" width="80" align="center">
-          <template slot-scope="scope">
-            <el-tag :type="scope.row.status === 'FREE' ? 'success' : scope.row.status === 'OCCUPIED' ? 'danger' : 'warning'" size="small">
-              {{ statusLabels[scope.row.status] || scope.row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="最低消费" width="90" align="center">
-          <template slot-scope="scope">
-            <span>{{ scope.row.minAmount ? '￥' + scope.row.minAmount : '-' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="sort" label="排序" width="70" align="center"></el-table-column>
-        <el-table-column label="操作" width="240" align="center" fixed="right">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" @click="editHandle(scope.row)">修改</el-button>
-            <el-button type="text" size="small" @click="showQrcode(scope.row)">二维码</el-button>
-            <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(scope.row.id)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div v-if="viewMode === 'table'">
+        <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
+          <el-table-column type="index" label="序号" width="55" align="center"></el-table-column>
+          <el-table-column prop="name" label="桌台名称" min-width="120">
+            <template slot-scope="scope"><span style="font-weight:500;">{{ scope.row.name }}</span></template>
+          </el-table-column>
+          <el-table-column prop="areaName" label="所属区域" width="100"></el-table-column>
+          <el-table-column prop="seatCount" label="座位数" width="80" align="center"></el-table-column>
+          <el-table-column label="状态" width="110" align="center">
+            <template slot-scope="scope">
+              <el-select v-model="scope.row.status" size="mini" style="width:90px;" @change="(val) => quickChangeStatus(scope.row, val)">
+                <el-option label="空闲" value="FREE"></el-option>
+                <el-option label="占用" value="OCCUPIED"></el-option>
+                <el-option label="预留" value="RESERVED"></el-option>
+              </el-select>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态标签" width="80" align="center">
+            <template slot-scope="scope">
+              <el-tag :type="scope.row.status === 'FREE' ? 'success' : scope.row.status === 'OCCUPIED' ? 'danger' : 'warning'" size="small">
+                {{ statusLabels[scope.row.status] || scope.row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="最低消费" width="90" align="center">
+            <template slot-scope="scope"><span>{{ scope.row.minAmount ? '￥' + scope.row.minAmount : '-' }}</span></template>
+          </el-table-column>
+          <el-table-column prop="sort" label="排序" width="70" align="center"></el-table-column>
+          <el-table-column label="操作" width="240" align="center" fixed="right">
+            <template slot-scope="scope">
+              <el-button type="text" size="small" @click="editHandle(scope.row)">修改</el-button>
+              <el-button type="text" size="small" @click="showQrcode(scope.row)">二维码</el-button>
+              <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(scope.row.id)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <!-- ========== 卡片视图 ========== -->
       <div v-if="viewMode === 'card'">
@@ -208,7 +130,6 @@
             <div class="card-actions">
               <el-button type="text" size="small" @click.stop="editHandle(row)">修改</el-button>
               <el-button type="text" size="small" @click.stop="showQrcode(row)">二维码</el-button>
-              <!-- 修改点：快捷状态切换按钮 -->
               <el-dropdown trigger="click" @command="(val) => quickChangeStatus(row, val)" @click.native.stop>
                 <el-button type="text" size="small">切换状态</el-button>
                 <el-dropdown-menu slot="dropdown">
@@ -224,7 +145,7 @@
         <el-empty v-if="!loading && tableData.length === 0" description="暂无桌台数据，请点击上方「新增桌台」添加"></el-empty>
       </div>
 
-      <!-- ========== 分页 ========== -->
+      <!-- 分页 -->
       <el-pagination
         class="pageList"
         :page-sizes="[10, 20, 30, 40]"
@@ -237,8 +158,14 @@
       ></el-pagination>
     </div>
 
-    <!-- ========== 新增/编辑对话框 ========== -->
-    <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="520px" :before-close="handleClose">
+    <!-- 新增/编辑弹窗 -->
+    <crud-dialog
+      :title="dialog.title"
+      :visible.sync="dialog.visible"
+      width="520px"
+      @submit="submitForm"
+      @close="dialog.visible = false"
+    >
       <el-form ref="tableForm" :model="form" :rules="formRules" label-width="90px" size="small">
         <el-form-item label="桌台名称" prop="name">
           <el-input v-model="form.name" placeholder="如：A1、VIP包间" maxlength="14" show-word-limit />
@@ -265,13 +192,9 @@
           <el-input-number v-model="form.sort" :min="0" :max="999" style="width:100%;" />
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="handleClose">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitForm">确 定</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
 
-    <!-- ========== 二维码预览弹窗 ========== -->
+    <!-- 二维码弹窗 -->
     <el-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible" width="420px" center>
       <div class="qrcode-content">
         <div class="qrcode-title">桌台：{{ qrcodeDialog.tableName }}</div>
@@ -295,6 +218,7 @@
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../api/dining.js"></script>
   <script>
     new Vue({
@@ -302,318 +226,170 @@
       data: function() {
         return {
           loading: false,
-          input: '',
-          areaId: '',
-          statusFilter: '',
           areaList: [],
           counts: 0,
           page: 1,
           pageSize: 10,
           tableData: [],
           viewMode: 'table',
-          // 修改点：状态中文映射
           statusLabels: { FREE: '空闲', OCCUPIED: '占用', RESERVED: '预留' },
           // 统计
-          stats: {
-            totalTables: 0,
-            freeTables: 0,
-            occupiedTables: 0,
-            reservedTables: 0
-          },
-          // 编辑弹窗
-          dialog: {
-            title: '',
-            visible: false
-          },
-          form: {
-            id: '',
-            name: '',
-            areaId: '',
-            seatCount: 1,
-            minAmount: 0,
-            status: 'FREE',
-            sort: 0
-          },
+          stats: { totalTables: 0, freeTables: 0, occupiedTables: 0, reservedTables: 0 },
+          activeFilter: '',
+          // 搜索配置
+          searchConfig: [
+            { type: 'input', field: 'name', placeholder: '请输入桌台名称', width: '200px' },
+            { type: 'select', field: 'areaId', placeholder: '请选择区域', width: '150px', options: [] },
+            { type: 'select', field: 'status', placeholder: '桌台状态', width: '130px',
+              options: [
+                { label: '空闲', value: 'FREE' }, { label: '占用', value: 'OCCUPIED' }, { label: '预留', value: 'RESERVED' }
+              ] }
+          ],
+          // 操作按钮
+          actionConfig: [
+            { key: 'add', text: '+ 新增桌台', type: 'primary' }
+          ],
+          // 缓存搜索参数
+          lastSearch: {},
+          // 弹窗
+          dialog: { title: '', visible: false },
+          form: { id: '', name: '', areaId: '', seatCount: 1, minAmount: 0, status: 'FREE', sort: 0 },
           action: '',
-          // 修改点：表单验证规则
           formRules: {
-            name: [
-              { required: true, message: '请输入桌台名称', trigger: 'blur' },
-              { min: 1, max: 14, message: '桌台名称长度为 1-14 个字符', trigger: 'blur' }
-            ],
-            areaId: [
-              { required: true, message: '请选择所属区域', trigger: 'change' }
-            ],
-            seatCount: [
-              { required: true, message: '请输入座位数', trigger: 'blur' }
-            ],
-            status: [
-              { required: true, message: '请选择状态', trigger: 'change' }
-            ]
+            name: [{ required: true, message: '请输入桌台名称', trigger: 'blur' }, { min: 1, max: 14, message: '桌台名称长度为 1-14 个字符', trigger: 'blur' }],
+            areaId: [{ required: true, message: '请选择所属区域', trigger: 'change' }],
+            seatCount: [{ required: true, message: '请输入座位数', trigger: 'blur' }],
+            status: [{ required: true, message: '请选择状态', trigger: 'change' }]
           },
-          // 修改点：qrcodeDialog 统一放到 data 中
-          qrcodeDialog: {
-            visible: false,
-            tableName: '',
-            tableId: null,
-            imageUrl: ''
-          }
-        };
+          qrcodeDialog: { visible: false, tableName: '', tableId: null, imageUrl: '' }
+        }
       },
-      created: function() {
-        this.init();
-        this.loadAreaList();
+      computed: {
+        statsCards: function() {
+          var self = this
+          return [
+            { key: '', icon: '🪑', label: '桌台总数', value: self.stats.totalTables, color: 'primary', clickable: true, active: self.activeFilter === '', flex: true },
+            { key: 'FREE', icon: '✓', label: '空闲桌台', value: self.stats.freeTables, color: 'success', clickable: true, active: self.activeFilter === 'FREE', flex: true },
+            { key: 'OCCUPIED', icon: '👥', label: '占用桌台', value: self.stats.occupiedTables, color: 'warning', clickable: true, active: self.activeFilter === 'OCCUPIED', flex: true },
+            { key: 'RESERVED', icon: '📅', label: '预留桌台', value: self.stats.reservedTables, color: 'danger', clickable: true, active: self.activeFilter === 'RESERVED', flex: true }
+          ]
+        }
       },
+      created: function() { this.init(); this.loadAreaList() },
       methods: {
         init: function() {
-          var self = this;
-          var params = {
-            page: this.page,
-            pageSize: this.pageSize,
-            name: this.input || undefined,
-            areaId: this.areaId || undefined,
-            status: this.statusFilter || undefined
-          };
-
-          // 修改点：并行加载，先加载列表
-          self.loading = true;
-          Promise.all([
-            tablePage(params),
-            self.loadTableStats(params)
-          ]).then(function(results) {
-            var tableRes = results[0];
-            var statsRes = results[1];
-
-            if (String(tableRes.code) === '1') {
-              self.tableData = tableRes.data.records || [];
-              self.counts = tableRes.data.total || 0;
-            } else {
-              self.$message.error(tableRes.msg || '加载失败');
-            }
-
-            if (statsRes && String(statsRes.code) === '1') {
-              self.stats = statsRes.data || self.stats;
-            }
-          }).catch(function(err) {
-            self.$message.error('加载失败：' + (err.message || err));
-          }).finally(function() {
-            self.loading = false;
-          });
+          var self = this
+          var params = { page: this.page, pageSize: this.pageSize,
+            name: self.lastSearch.name || undefined, areaId: self.lastSearch.areaId || undefined, status: self.lastSearch.status || undefined }
+          self.loading = true
+          Promise.all([tablePage(params), self.loadTableStats(params)]).then(function(results) {
+            var tableRes = results[0]; var statsRes = results[1]
+            if (String(tableRes.code) === '1') { self.tableData = tableRes.data.records || []; self.counts = tableRes.data.total || 0 }
+            if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+          }).catch(function(err) { self.$message.error('加载失败：' + (err.message || err)) }).finally(function() { self.loading = false })
         },
-        // 修改点：优化统计加载，使用分页接口的 total 作为桌台总数
         loadTableStats: function(params) {
-          return tablePage({ page: 1, pageSize: 1000, name: params.name, areaId: params.areaId, status: params.status })
-            .then(function(res) {
-              if (String(res.code) === '1') {
-                var records = res.data.records || [];
-                return {
-                  code: 1,
-                  data: {
-                    totalTables: res.data.total || 0,
-                    freeTables: records.filter(function(r) { return r.status === 'FREE'; }).length,
-                    occupiedTables: records.filter(function(r) { return r.status === 'OCCUPIED'; }).length,
-                    reservedTables: records.filter(function(r) { return r.status === 'RESERVED'; }).length
-                  }
-                };
-              }
-              return { code: 0 };
-            }).catch(function(err) {
-              console.warn('统计加载失败:', err);
-              return { code: 0 };
-            });
+          return tablePage({ page: 1, pageSize: 1000, name: params.name, areaId: params.areaId, status: params.status }).then(function(res) {
+            if (String(res.code) === '1') {
+              var records = res.data.records || []
+              return { code: 1, data: { totalTables: res.data.total || 0, freeTables: records.filter(function(r) { return r.status === 'FREE' }).length, occupiedTables: records.filter(function(r) { return r.status === 'OCCUPIED' }).length, reservedTables: records.filter(function(r) { return r.status === 'RESERVED' }).length } }
+            }
+            return { code: 0 }
+          }).catch(function() { return { code: 0 } })
         },
         loadAreaList: function() {
-          var self = this;
+          var self = this
           areaList().then(function(res) {
-            if (res.code === 1) {
-              self.areaList = res.data || [];
-            }
-          }).catch(function(err) {
-            self.$message.error('区域加载失败：' + err);
-          });
+            if (res.code === 1) { self.areaList = res.data || []; self.searchConfig[1].options = self.areaList.map(function(a) { return { label: a.name, value: a.id } }) }
+          }).catch(function(err) { self.$message.error('区域加载失败：' + err) })
         },
-        handleQuery: function() {
-          // 修改点：搜索时清空卡片状态筛选
-          this.statusFilter = ''
-          this.page = 1;
-          this.init();
+        // stat-cards 点击
+        onCardClick: function(payload) {
+          var self = this
+          self.activeFilter = payload.activeKey
+          self.lastSearch = { status: self.activeFilter || undefined }
+          self.page = 1; self.init()
         },
-        reset: function() {
-          this.input = ''
-          this.areaId = ''
-          this.statusFilter = ''
-          this.page = 1
-          this.init()
+        // table-bar 回调
+        onSearch: function(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
+          this.page = 1; this.init()
         },
-        // 修改点：stats-card 点击切换桌台状态筛选（清空搜索输入和区域选择，同步 statusFilter 下拉框）
-        filterByStatus: function(status) {
-          if (this.statusFilter === status) {
-            this.statusFilter = ''  // 再次点击取消筛选
-          } else {
-            this.statusFilter = status
-          }
-          // 修改点：卡片筛选时清空搜索和区域筛选
-          this.input = ''
-          this.areaId = ''
-          this.page = 1
-          this.init()
+        onReset: function() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.page = 1; this.init()
         },
+        onAction: function(payload) { if (payload.key === 'add') this.addHandle() },
         addHandle: function() {
-          this.action = 'add';
-          this.dialog.title = '新增桌台';
-          this.form = { id: '', name: '', areaId: '', seatCount: 1, minAmount: 0, status: 'FREE', sort: 0 };
-          this.dialog.visible = true;
-          // 修改点：打开弹窗时清除验证
-          this.$nextTick(function() {
-            if (this.$refs.tableForm) this.$refs.tableForm.clearValidate();
-          });
+          this.action = 'add'; this.dialog.title = '新增桌台'
+          this.form = { id: '', name: '', areaId: '', seatCount: 1, minAmount: 0, status: 'FREE', sort: 0 }
+          this.dialog.visible = true
+          this.$nextTick(function() { if (this.$refs.tableForm) this.$refs.tableForm.clearValidate() }.bind(this))
         },
         editHandle: function(row) {
-          this.action = 'edit';
-          // 修改点：弹窗标题包含桌台名称
-          this.dialog.title = '修改桌台 - ' + row.name;
-          this.form = {
-            id: row.id,
-            name: row.name,
-            areaId: row.areaId,
-            seatCount: row.seatCount || 1,
-            minAmount: row.minAmount || 0,
-            status: row.status || 'FREE',
-            sort: row.sort || 0
-          };
-          this.dialog.visible = true;
-          this.$nextTick(function() {
-            if (this.$refs.tableForm) this.$refs.tableForm.clearValidate();
-          });
-        },
-        handleClose: function() {
-          this.dialog.visible = false;
+          this.action = 'edit'; this.dialog.title = '修改桌台 - ' + row.name
+          this.form = { id: row.id, name: row.name, areaId: row.areaId, seatCount: row.seatCount || 1, minAmount: row.minAmount || 0, status: row.status || 'FREE', sort: row.sort || 0 }
+          this.dialog.visible = true
+          this.$nextTick(function() { if (this.$refs.tableForm) this.$refs.tableForm.clearValidate() }.bind(this))
         },
         submitForm: function() {
-          var self = this;
-          // 修改点：使用 Element UI 表单验证
+          var self = this
           this.$refs.tableForm.validate(function(valid) {
-            if (!valid) return;
-
-            var data = {
-              name: self.form.name,
-              areaId: self.form.areaId,
-              seatCount: self.form.seatCount,
-              minAmount: self.form.minAmount,
-              status: self.form.status,
-              sort: self.form.sort
-            };
-
+            if (!valid) return
+            var data = { name: self.form.name, areaId: self.form.areaId, seatCount: self.form.seatCount, minAmount: self.form.minAmount, status: self.form.status, sort: self.form.sort }
             if (self.action === 'add') {
-              data.id = undefined;
               addTable(data).then(function(res) {
-                if (res.code === 1) {
-                  self.$message.success('桌台添加成功！');
-                  self.dialog.visible = false;
-                  self.handleQuery();
-                } else {
-                  self.$message.error(res.msg || '操作失败');
-                }
-              }).catch(function(err) {
-                self.$message.error('请求失败：' + (err.message || err));
-              });
+                if (res.code === 1) { self.$message.success('桌台添加成功！'); self.dialog.visible = false; self.init() }
+                else { self.$message.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)) })
             } else {
-              data.id = self.form.id;
+              data.id = self.form.id
               updateTable(data).then(function(res) {
-                if (res.code === 1) {
-                  self.$message.success('桌台修改成功！');
-                  self.dialog.visible = false;
-                  self.handleQuery();
-                } else {
-                  self.$message.error(res.msg || '操作失败');
-                }
-              }).catch(function(err) {
-                self.$message.error('请求失败：' + (err.message || err));
-              });
+                if (res.code === 1) { self.$message.success('桌台修改成功！'); self.dialog.visible = false; self.init() }
+                else { self.$message.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)) })
             }
-          });
+          })
         },
-        // 修改点：快捷状态切换（直接下拉选择，不再是循环切换）
         quickChangeStatus: function(row, newStatus) {
-          var self = this;
-          if (row.status === newStatus) return;
-
-          this.$confirm('确认将「' + row.name + '」状态改为「' + self.statusLabels[newStatus] + '」?', '提示', {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning'
-          }).then(function() {
-            updateTableStatus({ id: row.id, status: newStatus }).then(function(res) {
-              if (res.code === 1) {
-                row.status = newStatus;
-                self.$message.success('状态已更新');
-                self.init();
-              } else {
-                self.$message.error(res.msg || '操作失败');
-              }
-            }).catch(function(err) {
-              self.$message.error('请求失败：' + (err.message || err));
-            });
-          }).catch(function() {
-            // 取消操作，刷新列表恢复原状态
-            self.init();
-          });
+          var self = this
+          if (row.status === newStatus) return
+          this.$confirm('确认将「' + row.name + '」状态改为「' + self.statusLabels[newStatus] + '」?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              updateTableStatus({ id: row.id, status: newStatus }).then(function(res) {
+                if (res.code === 1) { row.status = newStatus; self.$message.success('状态已更新'); self.init() }
+                else { self.$message.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)) })
+            }).catch(function() { self.init() })
         },
         showQrcode: function(row) {
-          // 修改点：先清空旧数据再打开弹窗
-          this.qrcodeDialog = {
-            visible: true,
-            tableName: row.name,
-            tableId: row.id,
-            imageUrl: ''
-          };
-          var self = this;
-          tableQrcode(row.id).then(function(res) {
-            if (res.code === 1 && res.data) {
-              self.qrcodeDialog.imageUrl = res.data;
-            }
-          }).catch(function() {
-            self.$message.warning('二维码加载失败');
-          });
+          var self = this
+          this.qrcodeDialog = { visible: true, tableName: row.name, tableId: row.id, imageUrl: '' }
+          tableQrcode(row.id).then(function(res) { if (res.code === 1 && res.data) { self.qrcodeDialog.imageUrl = res.data } }).catch(function() { self.$message.warning('二维码加载失败') })
         },
         downloadQrcode: function() {
           if (this.qrcodeDialog.imageUrl) {
-            var a = document.createElement('a');
-            a.href = this.qrcodeDialog.imageUrl;
-            a.download = 'qrcode-table-' + this.qrcodeDialog.tableId + '.png';
-            a.click();
-            this.$message.success('二维码已开始下载');
+            var a = document.createElement('a'); a.href = this.qrcodeDialog.imageUrl;
+            a.download = 'qrcode-table-' + this.qrcodeDialog.tableId + '.png'; a.click();
+            this.$message.success('二维码已开始下载')
           }
         },
         deleteHandle: function(id) {
-          var self = this;
-          this.$confirm('确认删除该桌台？删除后不可恢复。', '确定删除', {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning'
-          }).then(function() {
-            deleteTable(id).then(function(res) {
-              if (res.code === 1) {
-                self.$message.success('删除成功！');
-                self.handleQuery();
-              } else {
-                self.$message.error(res.msg || '操作失败');
-              }
-            }).catch(function(err) {
-              self.$message.error('请求失败：' + (err.message || err));
-            });
-          }).catch(function() {});
+          var self = this
+          this.$confirm('确认删除该桌台？删除后不可恢复。', '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              deleteTable(id).then(function(res) {
+                if (res.code === 1) { self.$message.success('删除成功！'); self.init() }
+                else { self.$message.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)) })
+            })
         },
-        handleSizeChange: function(val) {
-          this.pageSize = val;
-          this.init();
-        },
-        handleCurrentChange: function(val) {
-          this.page = val;
-          this.init();
-        }
+        handleSizeChange: function(val) { this.pageSize = val; this.init() },
+        handleCurrentChange: function(val) { this.page = val; this.init() }
       }
-    });
+    })
   </script>
 </body>
 </html>

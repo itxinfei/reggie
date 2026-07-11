@@ -1,5 +1,7 @@
 .dashboard-container {
   padding: 20px;
+  /* 修改点：确保溢出内容不被裁剪，配合 tableBar 内部按钮自动换行 */
+  overflow: visible;
 }
 .dashboard-container .container {
   background: #fff;
@@ -8,35 +10,151 @@
   padding: 30px 28px;
   border-radius: 4px;
 }
+/* ========== tableBar — 搜索筛选 + 操作按钮栏 ========== */
+
+/* 主容器：flex row，space-between 分布搜索区和操作区，允许换行 */
+/* 修改点：主容器改为 flex-start，输入框和按钮自然紧靠；操作区用 margin-left: auto 推右 */
 .dashboard-container .container .tableBar {
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
   justify-content: flex-start;
+  margin-bottom: 20px;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 12px;
 }
-.dashboard-container .container .tableBar > .tableLab,
-.dashboard-container .container .tableBar > .action-group {
-  margin-left: auto;
-  flex-shrink: 0;
+
+/* 搜索区域：搜索控件 + 查询/重置按钮，紧靠不拉伸，撑不下就换行 */
+.dashboard-container .container .tableBar .search-area {
   display: flex;
   align-items: center;
+  flex: 0 1 auto;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px;
+  min-width: 0;
 }
-/* 修改点：tableBar 按钮不可见修复 —— 确保按钮在窄屏时换行而非溢出 */
-.dashboard-container .container {
-  overflow: visible;
+
+/* 搜索区内的输入框：默认 ~200px，允许缩小不漏出 */
+.dashboard-container .container .tableBar .search-area .el-input {
+  flex: 0 1 200px;
+  min-width: 140px;
+  width: auto;
 }
-/* 按钮一行放不下时自动换行 */
-.dashboard-container .container .tableBar > .tableLab .el-button {
-  margin-left: 0;
+
+/* 搜索区内的下拉框：默认 ~150px */
+.dashboard-container .container .tableBar .search-area .el-select {
+  flex: 0 1 150px;
+  min-width: 120px;
+  width: auto;
+}
+
+/* 搜索区内的日期选择器：默认 ~280px */
+.dashboard-container .container .tableBar .search-area .el-date-editor {
+  flex: 0 1 280px;
+  min-width: 220px;
+  width: auto;
+}
+
+/* 搜索区内控件通用清除所有固定宽度冲突 */
+.dashboard-container .container .tableBar .search-area .el-input--small,
+.dashboard-container .container .tableBar .search-area .el-select--small {
+  width: auto;
+}
+
+/* 搜索扩展插槽：自然跟随 */
+.dashboard-container .container .tableBar .search-area > .search-extra {
+  flex: 0 0 auto;
+}
+
+/* 查询/重置按钮组：绝不缩小 */
+.dashboard-container .container .tableBar .search-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ========== 按钮美化 ========== */
+
+/* 查询按钮：蓝色渐变 + 轻微阴影 */
+.dashboard-container .container .tableBar .btn-query,
+.dashboard-container .container .tableBar .search-btn.el-button--primary {
+  background: linear-gradient(135deg, #409eff, #66b1ff);
+  border: none;
+  color: #fff;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.35);
+  transition: all 0.25s ease;
+}
+.dashboard-container .container .tableBar .btn-query:hover,
+.dashboard-container .container .tableBar .search-btn.el-button--primary:hover {
+  background: linear-gradient(135deg, #5cadff, #409eff);
+  box-shadow: 0 4px 14px rgba(64, 158, 255, 0.5);
+  transform: translateY(-1px);
+}
+.dashboard-container .container .tableBar .btn-query.is-loading {
+  background: linear-gradient(135deg, #409eff, #66b1ff);
+}
+
+/* 重置按钮：白底细边框 */
+.dashboard-container .container .tableBar .btn-reset,
+.dashboard-container .container .tableBar .search-btn:not(.el-button--primary) {
+  background: #fff;
+  border: 1px solid #dcdfe6;
+  color: #606266;
+  transition: all 0.25s ease;
+}
+.dashboard-container .container .tableBar .btn-reset:hover,
+.dashboard-container .container .tableBar .search-btn:not(.el-button--primary):hover {
+  color: #409eff;
+  border-color: #c6e2ff;
+  background: #ecf5ff;
+  transform: translateY(-1px);
+}
+
+/* 操作按钮组：不缩小，撑不下整体换行；margin-left: auto 推到右侧 */
+.dashboard-container .container .tableBar .action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+/* 操作按钮：统一尺寸 + 微悬浮效果 */
+.dashboard-container .container .tableBar .btn-action {
+  font-size: 13px;
+  padding: 8px 16px !important;
+  height: 32px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  transition: all 0.25s ease;
   white-space: nowrap;
 }
-.dashboard-container .container .tableBar > .el-button {
-  margin-left: 0;
-  white-space: nowrap;
+.dashboard-container .container .tableBar .btn-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* 操作按钮类型微调：danger 按钮颜色鲜艳一点 */
+.dashboard-container .container .tableBar .btn-action.el-button--danger {
+  background: #f56c6c;
+  border-color: #f56c6c;
+}
+.dashboard-container .container .tableBar .btn-action.el-button--danger:hover {
+  background: #f78989;
+  border-color: #f78989;
+}
+
+/* 操作按钮类型微调：warning 按钮颜色 */
+.dashboard-container .container .tableBar .btn-action.el-button--warning {
+  background: #e6a23c;
+  border-color: #e6a23c;
+}
+.dashboard-container .container .tableBar .btn-action.el-button--warning:hover {
+  background: #ebb563;
+  border-color: #ebb563;
 }
 .dashboard-container .container .tableBox {
   width: 100%;
@@ -50,6 +168,11 @@
 .dashboard-container .container .pageList {
   text-align: center;
   margin-top: 20px;
+}
+
+/* 修改点：tableLab 操作区推到右侧，与 action-group 行为一致 */
+.dashboard-container .container .tableBar .tableLab {
+  margin-left: auto;
 }
 
 .dashboard-container .container .tableLab .span-btn {
@@ -388,7 +511,7 @@
   overflow: hidden;
 }
 
-/* ========== tableBar 统一样式增强 ========== */
+/* ========== tableBar 原生 HTML 页面回退样式（被 .search-area 覆盖的组件页不受影响） ========== */
 
 /* 筛选条件组（外卖配送等复杂筛选场景） */
 .dashboard-container .container .tableBar .filter-group {
@@ -396,31 +519,48 @@
   align-items: center;
   flex: 1;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
-/* 操作按钮组（靠右对齐） */
-.dashboard-container .container .tableBar .action-group {
+/* 原生 HTML 页面输入框基准宽度（组件页由 .search-area 规则覆盖） */
+.dashboard-container .container .tableBar .el-input {
+  width: 220px;
+}
+.dashboard-container .container .tableBar .el-select {
+  width: 160px;
+}
+.dashboard-container .container .tableBar .el-date-editor {
+  width: 360px;
+}
+
+/* 修改点：范围日期选择器整体高度与按钮/输入框统一为 32px */
+/* 根因：el-range-editor 根元素直接带 el-input__inner 类但不在 .el-input 包裹层内，*/
+/* 导致 .tableBar .el-input .el-input__inner 规则匹配不到，仍使用默认 40px 高度 */
+.dashboard-container .container .tableBar .el-range-editor.el-input__inner {
+  height: 32px;
+}
+
+/* 修改点：修复范围日期选择器内部 flex 布局，防止 "至" 分隔符被日期输入框挤压遮挡 */
+.dashboard-container .container .tableBar .el-range-editor .el-range-input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  line-height: 32px;
+}
+.dashboard-container .container .tableBar .el-range-editor .el-range-separator {
+  flex: none;
+  width: auto;
+  padding: 0 6px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  justify-content: center;
+}
+/* 修改点：范围选择器图标垂直居中 */
+.dashboard-container .container .tableBar .el-range-editor .el-range__icon,
+.dashboard-container .container .tableBar .el-range-editor .el-range__close-icon {
+  line-height: 32px;
 }
 
-/* 统一输入框宽度 */
-.dashboard-container .container .tableBar .el-input {
-  width: 200px;
-}
-
-/* 统一下拉框宽度 */
-.dashboard-container .container .tableBar .el-select {
-  width: 200px;
-}
-
-/* 统一日期选择器宽度 */
-.dashboard-container .container .tableBar .el-date-editor {
-  width: 260px;
-}
 
 /* 统一查询按钮间距 */
 .dashboard-container .container .tableBar .search-btn {
@@ -459,6 +599,11 @@
   width: 120px;
 }
 
+/* --- 120px 输入框（短文本如操作人、编号） --- */
+.dashboard-container .container .tableBar .el-input--wide-xs {
+  width: 120px;
+}
+
 /* --- 100px 下拉框（短选项如状态启用/停用） --- */
 .dashboard-container .container .tableBar .el-select--narrow-xs {
   width: 100px;
@@ -476,7 +621,8 @@
   width: 140px;
 }
 
-/* --- 150px 下拉框（排队/预订/采购） --- */
+/* --- 150px 输入框/下拉框（中等短文本/常规选项） --- */
+.dashboard-container .container .tableBar .el-input--narrow,
 .dashboard-container .container .tableBar .el-select--narrow {
   width: 150px;
 }
@@ -486,33 +632,14 @@
   width: 180px;
 }
 
-/* --- 240px 下拉框/日期选择器 --- */
-.dashboard-container .container .tableBar .el-select--wide-md,
-.dashboard-container .container .tableBar .el-date-editor--md {
-  width: 240px;
-}
-
-/* --- 250px 输入框（菜品/套餐/分类/订单） --- */
+/* --- 220px 输入框（菜品/套餐/分类/订单） --- */
+/* 修改点：原 250px 在 1366px 宽视口下与 tableLab 按钮组一起溢出；降至 220px 确保窄屏可读性 */
 .dashboard-container .container .tableBar .el-input--wide {
-  width: 250px;
+  width: 220px;
+  max-width: 100%;
 }
 
-/* --- 320px 日期选择器（打印日志） --- */
-.dashboard-container .container .tableBar .el-date-editor--lg {
-  width: 320px;
-}
-
-/* --- 380px 日期选择器（预订管理） --- */
-.dashboard-container .container .tableBar .el-date-editor--xl {
-  width: 380px;
-}
-
-/* --- 400px 日期选择器（订单管理/外卖配送） --- */
-.dashboard-container .container .tableBar .el-date-editor--2xl {
-  width: 400px;
-}
-
-/* --- 500px 日期选择器（支付管理） --- */
+/* --- 500px 日期选择器（支付管理/datetimerange 等需要更宽空间的场景） --- */
 .dashboard-container .container .tableBar .el-date-editor--3xl {
   width: 500px;
 }
@@ -611,12 +738,22 @@
 /* ========== 按钮样式规范 ========== */
 
 /* --- 尺寸规范 --- */
-/* tableBar 按钮统一 small */
+/* tableBar 按钮统一 small（与输入框高度 32px 对齐） */
 .dashboard-container .container .tableBar .el-button {
   font-size: 13px;
   padding: 9px 15px;
   height: 32px;
   line-height: 1;
+}
+/* 修改点：确保 tableBar 内输入框与按钮高度完全一致 */
+.dashboard-container .container .tableBar .el-input .el-input__inner {
+  height: 32px;
+  line-height: 32px;
+}
+/* 修改点：确保 tableBar 内下拉选择框与按钮高度完全一致 */
+.dashboard-container .container .tableBar .el-select .el-input__inner {
+  height: 32px;
+  line-height: 32px;
 }
 .dashboard-container .container .tableBar .el-button [class*="el-icon"] {
   font-size: 13px;
@@ -1061,26 +1198,82 @@
 
 /* ========== 响应式适配 ========== */
 
-/* 窄屏时弹窗表单输入框自适应 */
+/* 移动端 (≤768px)：纵向堆叠，search-area 和 action-group 各占满宽 */
 @media (max-width: 768px) {
   .dashboard-container .container .el-dialog .el-input,
   .dashboard-container .container .el-dialog .el-select {
     width: 100% !important;
   }
 
+  .dashboard-container .container .tableBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .dashboard-container .container .tableBar .search-area {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .dashboard-container .container .tableBar .search-area .el-input,
+  .dashboard-container .container .tableBar .search-area .el-select,
+  .dashboard-container .container .tableBar .search-area .el-date-editor,
   .dashboard-container .container .tableBar .el-input,
   .dashboard-container .container .tableBar .el-select,
   .dashboard-container .container .tableBar .el-date-editor {
     width: 100% !important;
+    flex: 1 1 auto;
   }
 
-  .dashboard-container .container .tableBar {
-    flex-direction: column;
-    align-items: stretch;
+  .dashboard-container .container .tableBar .search-actions {
+    flex-wrap: wrap;
+  }
+
+  .dashboard-container .container .tableBar .action-group {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .modal-container,
   .modal {
     max-width: 95vw;
+  }
+}
+
+/* 中等屏幕 (769px-1200px)：减小搜索控件弹性基准，压缩按钮 padding */
+@media (min-width: 769px) and (max-width: 1200px) {
+  .dashboard-container .container .tableBar {
+    gap: 8px;
+  }
+
+  .dashboard-container .container .tableBar .search-area .el-input {
+    flex-basis: 160px;
+    min-width: 120px;
+  }
+
+  .dashboard-container .container .tableBar .search-area .el-select {
+    flex-basis: 130px;
+    min-width: 100px;
+  }
+
+  .dashboard-container .container .tableBar .search-area .el-date-editor {
+    flex-basis: 220px;
+    min-width: 180px;
+  }
+
+  .dashboard-container .container .tableBar .search-actions {
+    gap: 6px;
+  }
+
+  .dashboard-container .container .tableBar .btn-action {
+    padding: 6px 12px !important;
+    font-size: 12px;
+  }
+
+  .dashboard-container .container .tableBar .btn-query,
+  .dashboard-container .container .tableBar .btn-reset {
+    padding: 7px 12px !important;
   }
 }

@@ -142,7 +142,7 @@
                             </div>
                             <!-- 错误重试 -->
                             <div v-if="msg.error && !msg.streaming" style="margin-top:6px;">
-                                <button class="action-btn" @click="retryMessage(msg)" style="color:#f56c6c;border-color:#f56c6c;">
+                                <button class="action-btn danger" @click="retryMessage(msg)">
                                     🔄 重试
                                 </button>
                             </div>

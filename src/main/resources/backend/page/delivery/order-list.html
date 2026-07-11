@@ -9,306 +9,224 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
-  <style>
-    .tableBar .filter-group {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex: 1;
-    }
-    .tableBar .action-group {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-shrink: 0;
-    }
-    .tableBar .el-select,
-    .tableBar .el-date-editor {
-      margin-right: 0 !important;
-    }
-
-  </style>
+  <link rel="stylesheet" href="../../styles/components.css" />
 </head>
 <body>
   <div class="dashboard-container" id="delivery-app">
     <div class="container">
-      <!-- ========== 数据统计卡片 ========== -->
-      <!-- 修改点：卡片可点击筛选，同步设置状态筛选下拉框 -->
-      <div class="stats-cards">
-        <div class="stat-card primary">
-          <div class="stat-icon">🛵</div>
-          <div class="stat-label">今日订单</div>
-          <div class="stat-value">{{ stats.todayOrders || 0 }}</div>
-        </div>
-        <div class="stat-card success clickable" :class="{ active: searchStatus === 'COMPLETED' }" @click="filterByStatus('COMPLETED')">
-          <div class="stat-icon">✅</div>
-          <div class="stat-label">已完成</div>
-          <div class="stat-value">{{ stats.completedOrders || 0 }}</div>
-        </div>
-        <div class="stat-card warning clickable" :class="{ active: searchStatus === 'PENDING' }" @click="filterByStatus('PENDING')">
-          <div class="stat-icon">⏳</div>
-          <div class="stat-label">待处理</div>
-          <div class="stat-value">{{ stats.pendingOrders || 0 }}</div>
-        </div>
-        <div class="stat-card danger clickable" :class="{ active: searchStatus === 'CANCELLED' }" @click="filterByStatus('CANCELLED')">
-          <div class="stat-icon">❌</div>
-          <div class="stat-label">已取消</div>
-          <div class="stat-value">{{ stats.cancelledOrders || 0 }}</div>
-        </div>
-      </div>
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
 
-      <div class="tableBar">
-        <div class="filter-group">
-          <el-select v-model="searchPlatform" placeholder="平台" clearable class="el-select--wide-xs">
-            <el-option label="美团" value="MEITUAN"></el-option>
-            <el-option label="饿了么" value="ELEME"></el-option>
-            <el-option label="抖音" value="DOUYIN"></el-option>
-          </el-select>
-          <el-select v-model="searchStatus" placeholder="状态" clearable class="el-select--wide-xs">
-            <el-option label="待处理" value="PENDING"></el-option>
-            <el-option label="已接单" value="ACCEPTED"></el-option>
-            <el-option label="已完成" value="COMPLETED"></el-option>
-            <el-option label="已取消" value="CANCELLED"></el-option>
-          </el-select>
-          <el-date-picker
-            v-model="searchDateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            value-format="yyyy-MM-dd"
-            class="el-date-editor--md"
-          ></el-date-picker>
-          <el-button type="primary" @click="handleQuery">查询</el-button>
-          <el-button @click="reset">重置</el-button>
-        </div>
-        <div class="action-group">
-          <el-button type="primary" @click="syncMenu">同步菜品</el-button>
-          <el-button type="primary" @click="syncStock">同步库存</el-button>
-        </div>
-      </div>
-      <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
-        <el-table-column prop="platformOrderId" label="平台订单号"></el-table-column>
-        <el-table-column label="平台">
-          <template slot-scope="scope">
-            <el-tag v-if="scope.row.platform === 'MEITUAN'">美团</el-tag>
-            <el-tag v-else-if="scope.row.platform === 'ELEME'" type="success">饿了么</el-tag>
-            <el-tag v-else-if="scope.row.platform === 'DOUYIN'" type="warning">抖音</el-tag>
-            <span v-else>{{ scope.row.platform }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="dishSummary" label="菜品摘要"></el-table-column>
-        <el-table-column label="金额">
-          <template slot-scope="scope">￥{{ scope.row.amount }}</template>
-        </el-table-column>
-        <el-table-column prop="userName" label="用户"></el-table-column>
-        <el-table-column prop="address" label="地址"></el-table-column>
-        <el-table-column label="状态">
-          <template slot-scope="scope">
-            <el-tag v-if="scope.row.status === 'PENDING'" type="warning">待处理</el-tag>
-            <el-tag v-else-if="scope.row.status === 'ACCEPTED'" type="success">已接单</el-tag>
-            <el-tag v-else-if="scope.row.status === 'COMPLETED'" type="info">已完成</el-tag>
-            <el-tag v-else-if="scope.row.status === 'CANCELLED'" type="danger">已取消</el-tag>
-            <span v-else>{{ scope.row.status }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="orderTime" label="下单时间"></el-table-column>
-        <el-table-column label="操作" width="120" align="center">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" class="blueBug" @click="acceptOrder(scope.row)" v-if="scope.row.status === 'PENDING'">手动接单</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination
-        class="pageList"
-        :page-sizes="[10, 20, 30, 40]"
+      <!-- 搜索 + 操作栏（同步按钮通过 actions 属性传入） -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      ></table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
         :page-size="pageSize"
-        layout="total, sizes, prev, pager, next, jumper"
         :total="counts"
-        :current-page.sync="page"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-      ></el-pagination>
+        :show-actions="true"
+        :actions-width="120"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-platform="{ row }">
+          <el-tag v-if="row.platform === 'MEITUAN'">美团</el-tag>
+          <el-tag v-else-if="row.platform === 'ELEME'" type="success">饿了么</el-tag>
+          <el-tag v-else-if="row.platform === 'DOUYIN'" type="warning">抖音</el-tag>
+          <span v-else>{{ row.platform }}</span>
+        </template>
+        <template #col-amount="{ row }">
+          <span>￥{{ row.amount }}</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag v-if="row.status === 'PENDING'" type="warning">待处理</el-tag>
+          <el-tag v-else-if="row.status === 'ACCEPTED'" type="success">已接单</el-tag>
+          <el-tag v-else-if="row.status === 'COMPLETED'" type="info">已完成</el-tag>
+          <el-tag v-else-if="row.status === 'CANCELLED'" type="danger">已取消</el-tag>
+          <span v-else>{{ row.status }}</span>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="acceptOrder(row)" v-if="row.status === 'PENDING'">手动接单</el-button>
+        </template>
+      </crud-table>
     </div>
   </div>
+
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../api/delivery.js"></script>
   <script>
     new Vue({
       el: '#delivery-app',
-      data() {
+      data: function() {
         return {
           loading: false,
           counts: 0,
           page: 1,
           pageSize: 10,
           tableData: [],
-          // 数据统计
-          stats: {
-            todayOrders: 0,
-            completedOrders: 0,
-            pendingOrders: 0,
-            cancelledOrders: 0
-          },
-          searchPlatform: '',
-          searchStatus: '',
-          searchDateRange: []
+          // 统计数据
+          stats: { todayOrders: 0, completedOrders: 0, pendingOrders: 0, cancelledOrders: 0 },
+          activeFilter: '',
+          // 搜索配置
+          searchConfig: [
+            { type: 'select', field: 'platform', placeholder: '平台', width: '120px',
+              options: [
+                { label: '美团', value: 'MEITUAN' }, { label: '饿了么', value: 'ELEME' }, { label: '抖音', value: 'DOUYIN' }
+              ] },
+            { type: 'select', field: 'status', placeholder: '状态', width: '120px',
+              options: [
+                { label: '待处理', value: 'PENDING' }, { label: '已接单', value: 'ACCEPTED' },
+                { label: '已完成', value: 'COMPLETED' }, { label: '已取消', value: 'CANCELLED' }
+              ] },
+            { type: 'date', field: 'dateRange', placeholder: '选择日期', width: '300px',
+              beginField: 'startDate', endField: 'endDate' }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'syncMenu', text: '同步菜品', type: 'primary' },
+            { key: 'syncStock', text: '同步库存', type: 'primary' }
+          ],
+          // 表格列配置
+          columns: [
+            { prop: 'platformOrderId', label: '平台订单号' },
+            { prop: 'platform', label: '平台', slot: true, width: 90 },
+            { prop: 'dishSummary', label: '菜品摘要' },
+            { prop: 'amount', label: '金额', slot: true, width: 100 },
+            { prop: 'userName', label: '用户' },
+            { prop: 'address', label: '地址' },
+            { prop: 'status', label: '状态', slot: true, width: 90 },
+            { prop: 'orderTime', label: '下单时间' }
+          ],
+          // 缓存搜索参数
+          lastSearch: {}
         }
       },
-      mounted() {
-        this.search()
+      computed: {
+        statsCards: function() {
+          var self = this
+          return [
+            { key: 'today', icon: '🛵', label: '今日订单', value: self.stats.todayOrders, color: 'primary' },
+            { key: 'COMPLETED', icon: '✅', label: '已完成', value: self.stats.completedOrders, color: 'success', clickable: true, active: self.activeFilter === 'COMPLETED' },
+            { key: 'PENDING', icon: '⏳', label: '待处理', value: self.stats.pendingOrders, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
+            { key: 'CANCELLED', icon: '❌', label: '已取消', value: self.stats.cancelledOrders, color: 'danger', clickable: true, active: self.activeFilter === 'CANCELLED' }
+          ]
+        }
       },
+      mounted: function() { this.search() },
       methods: {
-        // 修改点：stats-card 点击切换状态筛选（清空平台/日期避免冲突，同步到下拉框）
-        filterByStatus(status) {
-          if (this.searchStatus === status) {
-            this.searchStatus = ''  // 再次点击取消筛选
-          } else {
-            this.searchStatus = status
-          }
-          // 修改点：卡片筛选时清空平台和日期条件，专注状态筛选
-          this.searchPlatform = ''
-          this.searchDateRange = []
-          this.page = 1
-          this.search()
-        },
         async search() {
-          const params = {
-            page: this.page,
-            pageSize: this.pageSize,
-            platform: this.searchPlatform || undefined,
-            status: this.searchStatus || undefined
+          this.loading = true
+          var self = this
+          var params = {
+            page: self.page, pageSize: self.pageSize,
+            platform: self.lastSearch.platform || undefined,
+            status: self.lastSearch.status || undefined,
+            startDate: self.lastSearch.startDate || undefined,
+            endDate: self.lastSearch.endDate || undefined
           }
-          if (this.searchDateRange && this.searchDateRange.length === 2) {
-            params.startDate = this.searchDateRange[0]
-            params.endDate = this.searchDateRange[1]
-          }
-
-          // 并行加载订单列表和统计数据
-          const [orderRes, statsRes] = await Promise.all([
-            deliveryOrderPage(params),
-            this.loadDeliveryStats(params)
-          ])
-
-          // 处理订单列表数据
-          if (String(orderRes.code) === '1') {
-            this.tableData = orderRes.data.records || []
-            this.counts = orderRes.data.total
-          } else {
-            this.$message.error(orderRes.msg || '操作失败')
-          }
-
-          // 处理统计数据
-          if (statsRes && String(statsRes.code) === '1') {
-            this.stats = statsRes.data || this.stats
-          }
+          var results = await Promise.all([deliveryOrderPage(params), self.loadDeliveryStats(params)])
+          var orderRes = results[0]
+          var statsRes = results[1]
+          if (String(orderRes.code) === '1') { self.tableData = orderRes.data.records || []; self.counts = orderRes.data.total }
+          if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+          self.loading = false
         },
-        // 加载外卖订单统计数据
-        // 修改点：todayOrders 查询今日数据而非全量；stats 查询不传 status 筛选，避免统计偏差
         async loadDeliveryStats(params) {
           try {
-            // 构造今日日期范围用于统计今日订单
             var today = new Date()
-            var todayStr = today.getFullYear() + '-'
-              + String(today.getMonth() + 1).padStart(2, '0') + '-'
-              + String(today.getDate()).padStart(2, '0')
-
-            // 修改点：stats 查询移除 status 筛选，确保统计所有状态的订单数量
+            var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
             var statsParams = { page: 1, pageSize: 1000 }
             if (params.platform) statsParams.platform = params.platform
             if (params.startDate) statsParams.startDate = params.startDate
             if (params.endDate) statsParams.endDate = params.endDate
-
-            const [todayRes, allRes] = await Promise.all([
+            var results = await Promise.all([
               deliveryOrderPage({ page: 1, pageSize: 1, beginTime: todayStr + ' 00:00:00', endTime: todayStr + ' 23:59:59' }),
               deliveryOrderPage(statsParams)
             ])
+            var todayRes = results[0]
+            var allRes = results[1]
             if (String(allRes.code) === '1') {
               var records = allRes.data.records || []
-              var completedCount = records.filter(function(item) { return item.status === 'COMPLETED' }).length
-              var pendingCount = records.filter(function(item) { return item.status === 'PENDING' }).length
-              var cancelledCount = records.filter(function(item) { return item.status === 'CANCELLED' }).length
-              var todayCount = (String(todayRes.code) === '1') ? (todayRes.data.total || 0) : 0
-              return {
-                code: 1,
-                data: {
-                  todayOrders: todayCount,
-                  completedOrders: completedCount,
-                  pendingOrders: pendingCount,
-                  cancelledOrders: cancelledCount
-                }
-              }
+              return { code: 1, data: {
+                todayOrders: (String(todayRes.code) === '1') ? (todayRes.data.total || 0) : 0,
+                completedOrders: records.filter(function(r) { return r.status === 'COMPLETED' }).length,
+                pendingOrders: records.filter(function(r) { return r.status === 'PENDING' }).length,
+                cancelledOrders: records.filter(function(r) { return r.status === 'CANCELLED' }).length
+              }}
             }
-          } catch (err) {
-            console.warn('加载外卖订单统计数据失败:', err)
-          }
+          } catch (err) { console.warn('加载外卖订单统计数据失败:', err) }
           return { code: 0 }
         },
-        handleQuery() {
-          this.page = 1
-          this.search()
+        // stat-cards 点击
+        onCardClick: function(payload) {
+          var self = this
+          if (payload.key === 'COMPLETED' || payload.key === 'PENDING' || payload.key === 'CANCELLED') {
+            if (self.activeFilter === payload.key) { self.activeFilter = ''; self.lastSearch = {} }
+            else { self.activeFilter = payload.key; self.lastSearch = { status: payload.key } }
+          }
+          self.page = 1; self.search()
         },
-        reset() {
-          this.searchPlatform = ''
-          this.searchStatus = ''
-          this.searchDateRange = []
-          this.page = 1
-          this.search()
+        // table-bar 回调
+        onSearch: function(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
+          this.page = 1; this.search()
         },
+        onReset: function() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.page = 1; this.search()
+        },
+        onAction: function(payload) {
+          if (payload.key === 'syncMenu') this.syncMenu()
+          else if (payload.key === 'syncStock') this.syncStock()
+        },
+        onPageChange: function(payload) { this.page = payload.page; this.search() },
+        onSizeChange: function(payload) { this.pageSize = payload.pageSize; this.search() },
         async syncMenu() {
-          await deliverySyncMenu().then(res => {
-            if (String(res.code) === '1') {
-              this.$message.success('同步菜品成功')
-            } else {
-              this.$message.error(res.msg || '操作失败')
-            }
-          }).catch(err => {
-            this.$message.error('请求失败：' + err)
-          })
+          await deliverySyncMenu().then(function(res) {
+            if (String(res.code) === '1') this.$message.success('同步菜品成功')
+            else this.$message.error(res.msg || '操作失败')
+          }.bind(this)).catch(function(err) { this.$message.error('请求失败：' + err) }.bind(this))
         },
         async syncStock() {
-          await deliverySyncStock().then(res => {
-            if (String(res.code) === '1') {
-              this.$message.success('同步库存成功')
-            } else {
-              this.$message.error(res.msg || '操作失败')
-            }
-          }).catch(err => {
-            this.$message.error('请求失败：' + err)
-          })
+          await deliverySyncStock().then(function(res) {
+            if (String(res.code) === '1') this.$message.success('同步库存成功')
+            else this.$message.error(res.msg || '操作失败')
+          }.bind(this)).catch(function(err) { this.$message.error('请求失败：' + err) }.bind(this))
         },
-        async acceptOrder(row) {
-          this.$confirm('确认手动接单?', '提示', {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning'
-          }).then(() => {
-            deliveryAccept({ orderId: row.id }).then(res => {
-              if (String(res.code) === '1') {
-                this.$message.success('接单成功')
-                this.search()
-              } else {
-                this.$message.error(res.msg || '操作失败')
-              }
-            }).catch(err => {
-              this.$message.error('请求失败：' + err)
+        acceptOrder: function(row) {
+          var self = this
+          this.$confirm('确认手动接单?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              deliveryAccept({ orderId: row.id }).then(function(res) {
+                if (String(res.code) === '1') { self.$message.success('接单成功'); self.search() }
+                else { self.$message.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.$message.error('请求失败：' + err) })
             })
-          })
-        },
-        handleSizeChange(val) {
-          this.pageSize = val
-          this.search()
-        },
-        handleCurrentChange(val) {
-          this.page = val
-          this.search()
         }
       }
     })
   </script>
 </body>
 </html>
-

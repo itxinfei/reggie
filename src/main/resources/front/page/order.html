@@ -51,7 +51,7 @@
                             </div>
                         </div>
                         <div class="result">
-                            <span>共{{order.sumNum}} 件商品,实付</span><span class="price">￥{{order.amount}}</span>
+                            <span>共{{order.sumNum}} 件商品,实付</span><span class="price">￥{{ Number(order.amount).toFixed(2) }}</span>
                         </div>
                         <div class="btn" v-if="order.status === 1">
                             <div class="btnCancel" @click="cancelOrder(order)">取消订单</div>
@@ -99,6 +99,7 @@
                     statusTabs: [
                         { label: '全部', value: null },
                         { label: '待付款', value: 1 },
+                        { label: '待派送', value: 3 },
                         { label: '配送中', value: 2 },
                         { label: '已完成', value: 4 },
                         { label: '已取消', value: 5 }
@@ -172,6 +173,7 @@
                         }
                         this.paging.page = this.paging.page + 1
                     }else{
+                        this.loading = false;
                         vant.Toast.fail(res.msg || '加载订单失败');
                     }
                 },

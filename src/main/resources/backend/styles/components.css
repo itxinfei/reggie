@@ -1,0 +1,129 @@
+/* ============================================================
+ * 后台通用组件样式
+ * 适用于 iframe 架构 + Vue 2 + Element UI 的无构建工具场景
+ *
+ * 组件对应：
+ *   <stat-cards>    → components-stats-card.css（已有，不变）
+ *   <table-bar>     → page.css 中的 .tableBar 规则（已有，不变）
+ *   <crud-table>    → 本文件 .crud-table-wrapper
+ *   <crud-dialog>   → 复用 Element UI 的 el-dialog 样式（无需额外样式）
+ *
+ * 引入方式：
+ *   <link rel="stylesheet" href="../../styles/components.css" />
+ *
+ * @since 2025-07-11
+ * ============================================================ */
+
+/* ========== crud-table 容器 ========== */
+.crud-table-wrapper {
+  width: 100%;
+}
+
+.crud-table-wrapper .tableBox {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.crud-table-wrapper .tableBox .el-image img {
+  width: 40px;
+  border-radius: 5px;
+}
+
+/* 分页区域 */
+.crud-table-wrapper .pageList {
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* 操作列内按钮间距 */
+.crud-table-wrapper .tableBox .el-button--text + .el-button--text {
+  margin-left: 8px;
+}
+
+/* 修改点：统一按钮样式体系，去除操作列分隔线，旧版 blueBug/delBut 颜色与 btn-view/btn-delete 一致 */
+.crud-table-wrapper .tableBox .el-button--text.blueBug {
+  color: #409eff;
+}
+.crud-table-wrapper .tableBox .el-button--text.blueBug:hover {
+  background: #ecf5ff;
+}
+
+.crud-table-wrapper .tableBox .el-button--text.delBut {
+  color: #f56c6c;
+}
+.crud-table-wrapper .tableBox .el-button--text.delBut:hover {
+  background: #fef0f0;
+}
+
+/* ========== 表格内标签微调 ========== */
+.crud-table-wrapper .tableBox .el-tag--small {
+  font-size: 12px;
+}
+
+/* ========== 操作列按钮统一间距 ========== */
+.crud-table-wrapper .tableBox .el-button--text {
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+/* ========== dialog 通用微调 ========== */
+.dialog-footer {
+  text-align: right;
+  padding-top: 10px;
+}
+
+.dialog-footer .el-button {
+  min-width: 80px;
+}
+
+/* ========== 详情弹窗信息框 ========== */
+.info-box {
+  margin: -15px -44px 20px;
+}
+
+.info-box .item-box {
+  display: flex;
+  min-height: 20px;
+  line-height: 20px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #666666;
+  text-align: left;
+  margin-bottom: 14px;
+}
+
+.info-box .item-box:last-child {
+  margin-bottom: 0;
+}
+
+.info-box .item-box .label {
+  width: 96px;
+  flex-shrink: 0;
+}
+
+.info-box .item-box .des {
+  flex: 1;
+  color: #333333;
+}
+
+/* 操作列按钮颜色变体 */
+.el-button--text.btn-view {
+  color: #419eff;
+}
+
+.el-button--text.btn-delete {
+  color: #f56c6c;
+}
+
+.el-button--text.btn-warning {
+  color: #e6a23c;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 768px) {
+  .crud-table-wrapper .tableBox {
+    font-size: 13px;
+  }
+}

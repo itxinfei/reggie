@@ -57,8 +57,8 @@
             @click="handleQuery"
           ></i>
         </el-input>
-        <el-button type="primary" size="small" @click="handleQuery">查询</el-button>
-        <el-button size="small" @click="reset">重置</el-button>
+        <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
+        <el-button size="small" class="btn-reset" @click="reset">重置</el-button>
         <el-button
           type="primary"
           class="continue"
@@ -113,13 +113,13 @@
             <el-button
               type="text"
               size="small"
-              class="blueBug"
+              class="btn-view"
               @click="editHandle(scope.row)"
             >修改</el-button>
             <el-button
               type="text"
               size="small"
-              class="delBut non"
+              class="btn-delete"
               @click="deleteHandle(scope.row.id)"
             >删除</el-button>
           </template>

@@ -76,7 +76,7 @@
                                 <div class="numPrice">
                                     <span class="num">x{{item.number}}</span>
                                     <div class="price">
-                                        <span class="spanMoney">￥</span>{{item.amount}}</div>
+                                        <span class="spanMoney">￥</span>{{ item.amount.toFixed(2) }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -140,7 +140,7 @@
                 <div :class="{divGoodsNum:true, moreGoods:cartData && cartData.length > 99}" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
                 <div class="divNum">
                     <span>￥</span>
-                    <span>{{ finalPrice }}</span>
+                    <span>{{ finalPrice.toFixed(2) }}</span>
                     <span class="divDiscount" v-if="discountAmount > 0">已优惠¥{{ discountAmount }}</span>
                 </div>
                 <div class="divPrice"></div>
@@ -215,7 +215,8 @@
                     this.cartData.forEach(item=>{
                         price += (item.number * item.amount)
                     })
-                    return price
+                    // 修改点：四舍五入到分，避免浮点数累加误差（如 3.7199999999999998）
+                    return Math.round(price * 100) / 100
                     },
                     // 预计送达时间
                     expectDeliveryTime(){
@@ -235,7 +236,9 @@
                     },
                     // 修改点：计算实付金额（优惠后），作为订单实际金额传给后端
                     finalPrice(){
-                        return Math.max(0, this.goodsPrice - this.discountAmount)
+                        const raw = Math.max(0, this.goodsPrice - this.discountAmount)
+                        // 修改点：四舍五入到分，避免浮点数减法误差
+                        return Math.round(raw * 100) / 100
                     },
                     // 修改点：送达时间显示标签
                     selectedTimeLabel(){
@@ -273,7 +276,9 @@
                         e.target.src = './../images/noImg.png'
                     },
                     goBack(){
-                        history.go(-1)
+                        window.requestAnimationFrame(()=>{
+                            window.location.href = '/front/index.html'
+                        })
                     },
                     initData(){
                         //获取默认的地址

@@ -178,9 +178,27 @@
                     this.page = p
                     this.loadData()
                 },
-                // 修改评价
+                // 修改评价（删除后自动引导用户到订单页重新评价）
                 editEvaluation(item) {
-                    vant.Toast('暂不支持修改评价，请删除后重新提交')
+                    var self = this;
+                    vant.Dialog.confirm({
+                        title: '修改评价',
+                        message: '修改评价需要先删除当前评价，确认继续吗？',
+                        confirmButtonText: '继续修改',
+                        cancelButtonText: '取消',
+                        confirmButtonColor: '#ff976a'
+                    }).then(function() {
+                        return deleteMyEvaluation({ id: item.id });
+                    }).then(function(res) {
+                        if (res && res.code === 1) {
+                            vant.Toast.success('已删除，请到订单页重新评价');
+                            self.loadData();
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '删除失败');
+                        }
+                    }).catch(function(e) {
+                        // 用户取消或操作失败
+                    });
                 },
                 // 删除评价
                 async deleteEvaluation(item) {
