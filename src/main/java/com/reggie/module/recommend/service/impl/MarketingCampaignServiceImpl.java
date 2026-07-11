@@ -63,21 +63,71 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
     @Override
     public Page<MarketingCampaign> pageCampaigns(int page, int pageSize, String name, Integer status, Integer campaignType) {
         Long tenantId = BaseContext.getCurrentTenantId();
-        LambdaQueryWrapper<MarketingCampaign> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(tenantId != null, MarketingCampaign::getTenantId, tenantId);
-        if (name != null && !name.isEmpty()) {
-            wrapper.like(MarketingCampaign::getName, name);
-        }
-        if (status != null) {
-            wrapper.eq(MarketingCampaign::getStatus, status);
-        }
-        if (campaignType != null) {
-            wrapper.eq(MarketingCampaign::getCampaignType, campaignType);
-        }
-        wrapper.orderByDesc(MarketingCampaign::getPriority)
-               .orderByDesc(MarketingCampaign::getCreateTime);
 
-        return campaignMapper.selectPage(new Page<>(page, pageSize), wrapper);
+        // 修改点：使用新Mapper方法，附带pushCount真实统计
+        int offset = (page - 1) * pageSize;
+        long total = campaignMapper.countWithFilter(tenantId,
+                (name != null && !name.isEmpty()) ? name : null, status, campaignType);
+
+        List<Map<String, Object>> rows = campaignMapper.selectPageWithPushCount(
+                tenantId,
+                (name != null && !name.isEmpty()) ? name : null,
+                status, campaignType, offset, pageSize);
+
+        // 将Map结果转为MarketingCampaign列表，手动填充pushCount到临时Map后在前端处理
+        // 这里将push_count通过Map透传，前端可以直接读取
+        Page<MarketingCampaign> result = new Page<>(page, pageSize, total);
+        List<MarketingCampaign> records = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            MarketingCampaign mc = new MarketingCampaign();
+            mc.setId(toLong(row.get("id")));
+            mc.setTenantId(toLong(row.get("tenant_id")));
+            mc.setName((String) row.get("name"));
+            mc.setDescription((String) row.get("description"));
+            mc.setCampaignType((Integer) row.get("campaign_type"));
+            mc.setTargetType((Integer) row.get("target_type"));
+            mc.setTargetValue((String) row.get("target_value"));
+            mc.setRuleJson((String) row.get("rule_json"));
+            mc.setStatus((Integer) row.get("status"));
+            mc.setPriority((Integer) row.get("priority"));
+            mc.setStartTime(toLocalDateTime(row.get("start_time")));
+            mc.setEndTime(toLocalDateTime(row.get("end_time")));
+            mc.setMaxParticipants((Integer) row.get("max_participants"));
+            mc.setCurrentParticipants((Integer) row.get("current_participants"));
+            mc.setCouponTemplateId(toLong(row.get("coupon_template_id")));
+            mc.setCreateTime(toLocalDateTime(row.get("create_time")));
+            mc.setUpdateTime(toLocalDateTime(row.get("update_time")));
+            mc.setCreateUser(toLong(row.get("create_user")));
+            mc.setUpdateUser(toLong(row.get("update_user")));
+            // 修改点：映射SQL中的push_count到瞬态字段
+            mc.setPushCount(toInt(row.get("push_count")));
+            records.add(mc);
+        }
+        result.setRecords(records);
+        return result;
+    }
+
+    private Long toLong(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof Number) return ((Number) obj).longValue();
+        return null;
+    }
+
+    private Integer toInt(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof Number) return ((Number) obj).intValue();
+        return null;
+    }
+
+    private LocalDateTime toLocalDateTime(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof java.time.LocalDateTime) return (LocalDateTime) obj;
+        String s = obj.toString();
+        if (s.length() >= 19) {
+            s = s.substring(0, 19).replace('T', ' ');
+            return LocalDateTime.parse(s, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        }
+        return null;
     }
 
     @Override
@@ -359,5 +409,121 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         wrapper.eq(CouponUser::getMemberId, userId)
                .eq(CouponUser::getTemplateId, templateId);
         return couponUserMapper.selectCount(wrapper) > 0;
+    }
+
+    // ==================== 修改点：真实推送预览 ====================
+
+    @Override
+    public Map<String, Object> getCampaignStats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> stats = campaignMapper.getCampaignStats(tenantId);
+        if (stats == null) {
+            stats = new LinkedHashMap<>();
+            stats.put("total", 0);
+            stats.put("active", 0);
+            stats.put("draft", 0);
+            stats.put("ended", 0);
+            stats.put("paused", 0);
+            stats.put("total_participants", 0);
+            stats.put("total_pushed", 0);
+        }
+        log.debug("[营销统计] 查询结果: {}", stats);
+        return stats;
+    }
+
+    @Override
+    public int getPushCountByCampaignId(Long campaignId) {
+        if (campaignId == null) return 0;
+        return campaignMapper.countPushByCampaignId(campaignId);
+    }
+
+    @Override
+    public Map<String, Object> getPushPreview(Long campaignId, int limit) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        List<Map<String, Object>> preview = new ArrayList<>();
+
+        try {
+            MarketingCampaign campaign = getById(campaignId);
+            if (campaign == null) {
+                result.put("preview", preview);
+                result.put("estimate", 0);
+                return result;
+            }
+
+            Long tenantId = BaseContext.getCurrentTenantId();
+
+            // 查询当前门店所有启用用户
+            LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
+            userWrapper.eq(tenantId != null, User::getTenantId, tenantId)
+                       .eq(User::getStatus, 1);
+            List<User> allUsers = userMapper.selectList(userWrapper);
+
+            int matchedCount = 0;
+            for (User user : allUsers) {
+                if (preview.size() >= limit) {
+                    // 已达到预览数量上限，但仍继续统计总量
+                    matchedCount++;
+                    continue;
+                }
+
+                boolean isNewUser = isNewUser(user.getId());
+                boolean isHighFreq = preferenceAnalysisService.isHighFrequencyUser(user.getId());
+                boolean isChurnWarning = preferenceAnalysisService.isChurnWarningUser(user.getId());
+
+                if (isUserMatchCampaign(campaign, isNewUser, isHighFreq, isChurnWarning)) {
+                    // 脱敏显示用户名
+                    String name = user.getName() != null ? user.getName() : "";
+                    String maskedName = maskName(name);
+                    String matchReason = getMatchReason(isNewUser, isHighFreq, isChurnWarning);
+
+                    Map<String, Object> userInfo = new LinkedHashMap<>();
+                    userInfo.put("userId", user.getId());
+                    userInfo.put("name", maskedName);
+                    userInfo.put("matchReason", matchReason);
+                    preview.add(userInfo);
+                    matchedCount++;
+                }
+            }
+
+            // 如果已遍历完且没达到上限，matchedCount 就是实际匹配总量
+            int estimate = Math.max(matchedCount, preview.size());
+
+            result.put("preview", preview);
+            result.put("estimate", estimate);
+
+            log.info("[推送预览] 活动{}匹配用户: preview={}, estimate={}", campaignId, preview.size(), estimate);
+        } catch (Exception e) {
+            log.warn("[推送预览] 查询异常: {}", e.getMessage());
+            result.put("preview", preview);
+            result.put("estimate", 0);
+        }
+
+        return result;
+    }
+
+    /**
+     * 用户名脱敏，如"张三" -> "张*三"
+     */
+    private String maskName(String name) {
+        if (name == null || name.length() < 2) {
+            return name != null ? name + "*" : "***";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(name.charAt(0));
+        for (int i = 1; i < name.length() - 1; i++) {
+            sb.append('*');
+        }
+        sb.append(name.charAt(name.length() - 1));
+        return sb.toString();
+    }
+
+    /**
+     * 获取匹配原因描述
+     */
+    private String getMatchReason(boolean isNewUser, boolean isHighFreq, boolean isChurnWarning) {
+        if (isNewUser) return "新用户优惠";
+        if (isHighFreq) return "高频消费回馈";
+        if (isChurnWarning) return "流失预警触达";
+        return "活跃用户推荐";
     }
 }

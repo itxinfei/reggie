@@ -7,7 +7,7 @@ import com.reggie.common.R;
 import com.reggie.dto.ChangeTableStatusDTO;
 import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.service.DiningTableService;
-import com.reggie.util.QRCodeUtil;
+import com.reggie.utils.QRCodeUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

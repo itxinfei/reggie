@@ -477,10 +477,53 @@
       font-weight: 600;
     }
 
+    /* ========== 快捷入口 ========== */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 16px;
+    }
+    .qa-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      user-select: none;
+    }
+    .qa-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      border-color: #409eff;
+    }
+    .qa-card:active {
+      transform: translateY(-2px);
+    }
+    .qa-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+      transition: transform 0.3s;
+    }
+    .qa-card:hover .qa-icon {
+      transform: scale(1.15);
+    }
+    .qa-label {
+      font-size: 13px;
+      color: #606266;
+      font-weight: 500;
+    }
+
     /* ========== 响应式设计 ========== */
     @media (max-width: 1200px) {
       .container {
         padding: 16px 20px 20px !important;
+      }
+      .quick-actions {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
       }
       .stats-cards {
         grid-template-columns: repeat(2, 1fr);
@@ -512,6 +555,19 @@
     @media (max-width: 768px) {
       .container {
         padding: 12px 16px 16px !important;
+      }
+      .quick-actions {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+      }
+      .qa-card {
+        padding: 14px 8px;
+      }
+      .qa-icon {
+        font-size: 26px;
+      }
+      .qa-label {
+        font-size: 12px;
       }
       .stats-cards {
         grid-template-columns: 1fr;
@@ -559,18 +615,26 @@
   <div class="overview-container" id="dashboard-app" v-loading="loading">
     <div class="container">
 
-      <!-- ========== Redis 缓存状态条 ========== -->
-      <div class="redis-status-bar">
-        <div class="redis-indicator">
-          <span :class="['redis-dot', health.redisAvailable ? 'on' : 'off']"></span>
-          <strong>Redis缓存：{{ health.redisAvailable ? '已启用 · 加速' : '未启用 · 降级直查MySQL' }}</strong>
-          <span style="opacity:0.8;margin-left:8px;">{{ health.redisInfo }}</span>
+      <!-- ========== 页面标题栏 ========== -->
+      <div class="page-hero" style="background:#fff;border-radius:16px;padding:20px 28px;margin-bottom:20px;
+        box-shadow:0 2px 16px rgba(0,0,0,0.06);border:1px solid rgba(255,255,255,0.8);
+        display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:44px;height:44px;border-radius:12px;
+            background:linear-gradient(135deg,rgba(64,158,255,0.1) 0%,rgba(102,177,255,0.15) 100%);
+            display:flex;align-items:center;justify-content:center;font-size:22px;">📊</div>
+          <div>
+            <div style="font-size:18px;font-weight:700;color:#303133;">数据概览</div>
+            <div style="font-size:12px;color:#909399;">实时监控核心经营指标 · 自动刷新</div>
+          </div>
         </div>
-        <div class="redis-flow-tag">
-          <span>📊 Overview</span> →
-          <span>📈 Trend</span> →
-          <span>🔄 Status</span> →
-          <span>🔥 Hot</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <el-tag size="small" :type="health.redisAvailable ? 'success' : 'danger'" effect="plain">
+            Redis {{ health.redisAvailable ? '已启用' : '未启用' }}
+          </el-tag>
+          <el-tag size="small" :type="health.dbAvailable ? 'success' : 'danger'" effect="plain">
+            DB {{ health.dbAvailable ? '已连接' : '未连接' }}
+          </el-tag>
         </div>
       </div>
 
@@ -609,6 +673,60 @@
         </div>
       </div>
 
+      <!-- ========== 库存预警提示 ========== -->
+      <!-- 修改点：集成库存预警，显示低库存食材名称 -->
+      <div v-if="inventoryAlert && inventoryAlert.lowStockCount > 0" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;
+        background:linear-gradient(135deg,#fff7e6 0%,#fffbe6 100%);border:1px solid #ffe58f;border-radius:14px;padding:16px 22px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:24px;">⚠️</span>
+          <div>
+            <div style="font-weight:700;color:#e6a23c;font-size:15px;">库存预警：{{ inventoryAlert.lowStockCount }} 种食材库存不足</div>
+            <div style="font-size:12px;color:#909399;margin-top:2px;">
+              <span v-for="(item, idx) in (inventoryAlert.lowStockItems || [])" :key="idx" style="margin-right:12px;">
+                {{ item.name }}({{ item.stockQty }}{{ item.unit }})
+              </span>
+            </div>
+          </div>
+        </div>
+        <el-button type="warning" size="small" plain @click="goTo('page/inventory/material-list.html')">去补货</el-button>
+      </div>
+
+      <!-- ========== 快捷入口 ========== -->
+      <div class="quick-actions" style="margin-bottom:24px;">
+        <div class="qa-card" @click="goTo('page/food/list.html')">
+          <div class="qa-icon">🍽️</div>
+          <div class="qa-label">菜品管理</div>
+        </div>
+        <div class="qa-card" @click="goTo('page/order/list.html')">
+          <div class="qa-icon">📋</div>
+          <div class="qa-label">订单管理</div>
+        </div>
+        <div class="qa-card" @click="goTo('page/inventory/material-list.html')">
+          <div class="qa-icon">🥬</div>
+          <div class="qa-label">进销存</div>
+        </div>
+        <div class="qa-card" @click="goTo('page/dining/table-list.html')">
+          <div class="qa-icon">🪑</div>
+          <div class="qa-label">桌台管理</div>
+        </div>
+        <div class="qa-card" @click="goTo('page/delivery/order-list.html')">
+          <div class="qa-icon">🛵</div>
+          <div class="qa-label">配送订单</div>
+        </div>
+        <div class="qa-card" @click="goTo('page/report/daily.html')">
+          <div class="qa-icon">📈</div>
+          <div class="qa-label">经营报表</div>
+        </div>
+        <div class="qa-card" @click="goTo('page/member-center/coupon-list.html')">
+          <div class="qa-icon">🎫</div>
+          <div class="qa-label">优惠券</div>
+        </div>
+        <div class="qa-card" @click="goTo('page/member/list.html')">
+          <div class="qa-icon">👤</div>
+          <div class="qa-label">员工管理</div>
+        </div>
+      </div>
+
       <!-- ========== 图表区域: 趋势图 + 订单状态饼图 ========== -->
       <div class="charts-row">
         <div class="chart-panel">
@@ -639,37 +757,37 @@
         </div>
 
         <div class="bottom-panel">
-          <div class="panel-title">📊 今日经营概况</div>
+          <div class="panel-title">🖥 系统状态</div>
           <div class="health-grid">
-            <div class="health-item">
-              <span class="health-dot ok"></span>
-              <span class="health-label">今日新增订单</span>
-              <span class="health-value">{{ overview.todayOrders || 0 }} 单</span>
-            </div>
-            <div class="health-item">
-              <span class="health-dot ok"></span>
-              <span class="health-label">今日营业额</span>
-              <span class="health-value">￥{{ formatMoney(overview.todayRevenue) }}</span>
-            </div>
-            <div class="health-item">
-              <span class="health-dot ok"></span>
-              <span class="health-label">今日新增会员</span>
-              <span class="health-value">{{ overview.newMembersToday || 0 }} 人</span>
-            </div>
-            <div class="health-item">
-              <span class="health-dot ok"></span>
-              <span class="health-label">待处理订单</span>
-              <span class="health-value">{{ orderStatus.processing || 0 }} 单</span>
-            </div>
             <div class="health-item">
               <span :class="['health-dot', health.redisAvailable ? 'ok' : 'err']"></span>
               <span class="health-label">Redis 缓存</span>
-              <span class="health-value">{{ health.redisInfo }}</span>
+              <span class="health-value">{{ health.redisAvailable ? '正常' : '离线' }}</span>
             </div>
             <div class="health-item">
               <span :class="['health-dot', health.dbAvailable ? 'ok' : 'err']"></span>
               <span class="health-label">数据库连接</span>
-              <span class="health-value">{{ health.dbInfo }}</span>
+              <span class="health-value">{{ health.dbAvailable ? '正常' : '离线' }}</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot ok"></span>
+              <span class="health-label">操作系统</span>
+              <span class="health-value">{{ health.osName || '--' }}</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot ok"></span>
+              <span class="health-label">Java 版本</span>
+              <span class="health-value">{{ health.javaVersion || '--' }}</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot ok"></span>
+              <span class="health-label">CPU 核心数</span>
+              <span class="health-value">{{ health.availableProcessors || 0 }} 核</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot ok"></span>
+              <span class="health-label">JVM 内存</span>
+              <span class="health-value">{{ health.freeMemoryMB || 0 }} / {{ health.totalMemoryMB || 0 }} MB</span>
             </div>
           </div>
         </div>
@@ -683,6 +801,7 @@
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../api/inventory.js"></script>
 
   <script>
     new Vue({
@@ -694,6 +813,7 @@
           trend: [],
           orderStatus: {},
           hotDishes: [],
+          inventoryAlert: null,
           health: {
             redisAvailable: false,
             redisInfo: '未连接',
@@ -758,6 +878,9 @@
               this.health = data.health || {};
               this.serverTime = data.serverTime;
 
+              // 修改点：加载库存预警数据
+              this.loadInventoryAlert();
+
               // 更新图表
               this.$nextTick(() => {
                 this.renderTrendChart();
@@ -771,6 +894,16 @@
           } finally {
             this.loading = false;
           }
+        },
+
+        // 修改点：加载库存预警
+        async loadInventoryAlert() {
+          try {
+            const res = await inventoryStatsOverview();
+            if (res && String(res.code) === '1') {
+              this.inventoryAlert = res.data || null;
+            }
+          } catch (err) { /* 静默失败 */ }
         },
 
         // 检查ECharts是否已加载（CDN可能延迟）
@@ -1030,8 +1163,35 @@
 
         // 格式化金额
         formatMoney(val) {
-          if (val === null || val === undefined) return '0.00';
-          return Number(val).toFixed(2);
+          if (val === null || val === undefined) return '0.00'
+          return Number(val).toFixed(2)
+        },
+        // 快捷入口跳转
+        goTo(url) {
+          try {
+            if (window.parent && window.parent !== window) {
+              var menuList = window.parent.menuList || []
+              var target = menuList.find(function(item) {
+                if (item.url === url) return true
+                if (item.children) {
+                  return item.children.some(function(sub) { return sub.url === url })
+                }
+                return false
+              })
+              if (target) {
+                if (target.url === url) {
+                  window.parent.menuHandle(target, false)
+                } else {
+                  var sub = target.children.find(function(s) { return s.url === url })
+                  if (sub) window.parent.menuHandle(sub, false)
+                }
+                return
+              }
+            }
+            window.location.href = url
+          } catch (e) {
+            window.location.href = url
+          }
         }
       }
     });

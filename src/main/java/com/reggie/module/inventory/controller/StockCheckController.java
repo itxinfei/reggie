@@ -2,6 +2,7 @@ package com.reggie.module.inventory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.dto.CompleteStockCheckDTO;
 import com.reggie.dto.CreateStockCheckDTO;
@@ -47,6 +48,7 @@ public class StockCheckController {
     public R<Page<StockCheck>> page(int page, int pageSize) {
         Page<StockCheck> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<StockCheck> qw = new LambdaQueryWrapper<>();
+        qw.eq(BaseContext.getCurrentTenantId() != null, StockCheck::getTenantId, BaseContext.getCurrentTenantId());
         qw.orderByDesc(StockCheck::getCreatedTime);
         stockCheckService.page(pageInfo, qw);
         return R.success(pageInfo);

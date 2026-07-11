@@ -49,7 +49,7 @@
       <div class="tableBar">
         <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框，选项从数据库加载 -->
         <el-select v-model="input" placeholder="请选择员工姓名" class="el-select--narrow-xs" clearable filterable size="small"
-          :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据'">
+          :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">
           <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
         </el-select>
         <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
@@ -262,12 +262,22 @@
                 this.$message.warning('加载员工选项失败：' + (res.msg || '接口返回异常'))
               }
             } catch (err) {
+              // 修改点：NOTLOGIN 错误已在全局拦截器处理（跳转登录页），无需重复提示
+              if (err.message === 'NOTLOGIN') {
+                return
+              }
               this.optionsLoadError = true
               console.error('加载员工选项失败:', err)
               this.$message.error('加载筛选选项失败，请刷新页面重试')
             } finally {
               this.optionsLoading = false
             }
+          },
+          // 修改点：下拉框打开时若之前加载失败，自动重试
+          onFilterDropdownVisible(visible) {
+              if (visible && this.optionsLoadError) {
+                  this.loadFilterOptions()
+              }
           },
           async init () {
             // 修改点：传递 activeFilter 状态参数到后端

@@ -3,20 +3,29 @@ package com.reggie.module.store.controller;
 import com.reggie.common.R;
 import com.reggie.entity.Tenant;
 import com.reggie.module.store.model.StoreInfo;
+import com.reggie.module.store.model.StoreSearchDTO;
 import com.reggie.module.store.service.StoreService;
 import com.reggie.module.store.service.StoreSyncService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
 /**
  * 门店管理控制器
  * 提供门店CRUD、数据隔离、商品同步等接口
+ * 修改点：新增分页搜索、详情、编辑、批量操作、导出接口
  *
  * @author reggie
  * @since 2026-07-09
@@ -34,13 +43,33 @@ public class StoreController {
     // ==================== 门店管理 ====================
 
     /**
-     * 获取所有门店列表（总部视角）
+     * 分页搜索门店列表（支持多条件筛选与排序）
+     * POST /store/page
+     */
+    @PostMapping("/page")
+    public R<Map<String, Object>> pageStores(@RequestBody StoreSearchDTO dto) {
+        Map<String, Object> result = storeService.searchStores(dto);
+        return R.success(result);
+    }
+
+    /**
+     * 获取所有门店列表（总部视角，兼容旧接口）
      * GET /store/list
      */
     @GetMapping("/list")
     public R<List<Map<String, Object>>> listStores() {
         List<Map<String, Object>> stores = storeService.listAllStores();
         return R.success(stores);
+    }
+
+    /**
+     * 获取门店详情（编辑回显用）
+     * GET /store/detail/{tenantId}
+     */
+    @GetMapping("/detail/{tenantId}")
+    public R<Map<String, Object>> getStoreDetail(@PathVariable Long tenantId) {
+        Map<String, Object> detail = storeService.getStoreDetail(tenantId);
+        return R.success(detail);
     }
 
     /**
@@ -85,6 +114,17 @@ public class StoreController {
     }
 
     /**
+     * 编辑门店信息
+     * PUT /store/update/{tenantId}
+     */
+    @PutMapping("/update/{tenantId}")
+    public R<String> updateStore(@PathVariable Long tenantId,
+                                  @RequestBody Map<String, Object> updateData) {
+        storeService.updateStore(tenantId, updateData);
+        return R.success("编辑成功");
+    }
+
+    /**
      * 切换门店
      * POST /store/switch/{tenantId}
      */
@@ -106,6 +146,80 @@ public class StoreController {
                                    @RequestParam Integer status) {
         storeService.updateStoreStatus(tenantId, status);
         return R.success("状态更新成功");
+    }
+
+    /**
+     * 批量更新门店状态（上下架）
+     * PUT /store/batch/status
+     */
+    @PutMapping("/batch/status")
+    public R<Map<String, Object>> batchUpdateStatus(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Long> tenantIds = ((List<Integer>) body.get("tenantIds")).stream()
+                .map(Long::valueOf).collect(java.util.stream.Collectors.toList());
+        Integer status = Integer.valueOf(body.get("status").toString());
+        int successCount = storeService.batchUpdateStoreStatus(tenantIds, status);
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("successCount", successCount);
+        result.put("total", tenantIds.size());
+        return R.success(result);
+    }
+
+    /**
+     * 导出门店数据为CSV
+     * POST /store/export
+     */
+    @PostMapping("/export")
+    public void exportStores(@RequestBody StoreSearchDTO dto, HttpServletResponse response) {
+        List<Map<String, Object>> stores = storeService.exportStores(
+                dto.getKeyword(), dto.getStoreType(), dto.getStatus());
+
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String filename = "store_export_" + timestamp + ".csv";
+
+        response.setContentType("text/csv; charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=" +
+                new String(filename.getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1));
+        // BOM 头确保 Excel 正确识别 UTF-8
+        response.setHeader("Cache-Control", "no-cache");
+
+        try (OutputStream os = response.getOutputStream();
+             OutputStreamWriter writer = new OutputStreamWriter(os, StandardCharsets.UTF_8)) {
+            // BOM
+            writer.write('\uFEFF');
+            // CSV 头
+            writer.write("门店名称,门店编码,门店类型,状态,联系人,联系电话,地址,营业时间," +
+                    "外卖开关,堂食开关,配送半径(m),起送金额,配送费,今日订单,今日营收,创建时间\n");
+
+            for (Map<String, Object> row : stores) {
+                String storeName = nvl(row.get("storeName"));
+                String storeCode = nvl(row.get("storeCode"));
+                String storeType = storeTypeName(row.get("storeType"));
+                String status = "1".equals(nvl(row.get("status"))) ? "启用" : "停用";
+                String contactPerson = nvl(row.get("contactPerson"));
+                String contactPhone = nvl(row.get("contactPhone"));
+                String address = nvl(row.get("address"));
+                String businessHours = nvl(row.get("businessHours"));
+                String isDelivery = "1".equals(nvl(row.get("isDeliveryEnabled"))) ? "开" : "关";
+                String isDineIn = "1".equals(nvl(row.get("isDineInEnabled"))) ? "开" : "关";
+                String deliveryRadius = nvl(row.get("deliveryRadius"));
+                String minAmount = nvl(row.get("minDeliveryAmount"));
+                String deliveryFee = nvl(row.get("deliveryFee"));
+                String todayOrders = nvl(row.get("todayOrders"));
+                String todayAmount = nvl(row.get("todayAmount"));
+                String createTime = row.get("createTime") != null ? row.get("createTime").toString() : "";
+
+                writer.write(String.join(",", escapeCsv(storeName), escapeCsv(storeCode),
+                        escapeCsv(storeType), escapeCsv(status), escapeCsv(contactPerson),
+                        escapeCsv(contactPhone), escapeCsv(address), escapeCsv(businessHours),
+                        isDelivery, isDineIn, deliveryRadius, minAmount, deliveryFee,
+                        todayOrders, todayAmount, createTime) + "\n");
+            }
+            writer.flush();
+            log.info("[门店导出] 导出成功: {} 条记录", stores.size());
+        } catch (IOException e) {
+            log.error("[门店导出] 写入CSV失败: {}", e.getMessage());
+        }
     }
 
     /**
@@ -186,5 +300,39 @@ public class StoreController {
             @RequestParam(defaultValue = "10") int pageSize) {
         List<Map<String, Object>> logs = storeSyncService.getSyncLogs(sourceTenantId, page, pageSize);
         return R.success(logs);
+    }
+
+    // ==================== 工具方法 ====================
+
+    /**
+     * 空值转空字符串
+     */
+    private String nvl(Object val) {
+        return val == null ? "" : val.toString();
+    }
+
+    /**
+     * CSV 字段转义（处理逗号和引号）
+     */
+    private String escapeCsv(String val) {
+        if (val == null) return "";
+        if (val.contains(",") || val.contains("\"") || val.contains("\n")) {
+            return "\"" + val.replace("\"", "\"\"") + "\"";
+        }
+        return val;
+    }
+
+    /**
+     * 门店类型编码转中文
+     */
+    private String storeTypeName(Object typeObj) {
+        if (typeObj == null) return "";
+        int type = Integer.parseInt(typeObj.toString());
+        switch (type) {
+            case 1: return "直营总店";
+            case 2: return "直营分店";
+            case 3: return "加盟店";
+            default: return String.valueOf(type);
+        }
     }
 }

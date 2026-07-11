@@ -1,4 +1,4 @@
-package com.reggie.util;
+package com.reggie.utils;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;

@@ -134,7 +134,6 @@
           var self = this
           return [
             { key: '', icon: '📋', label: '排队总数', value: self.stats.totalQueues, color: 'primary', clickable: true, active: self.activeFilter === '' },
-            { key: 'WAITING', icon: '⏳', label: '等待中', value: self.stats.waitingCount, color: 'warning', clickable: true, active: self.activeFilter === 'WAITING' },
             { key: 'CALLED', icon: '🔔', label: '已叫号', value: self.stats.calledCount, color: 'info', clickable: true, active: self.activeFilter === 'CALLED' },
             { key: 'SEATED', icon: '✅', label: '已入座', value: self.stats.seatedCount, color: 'success', clickable: true, active: self.activeFilter === 'SEATED' },
             { key: 'CANCELLED', icon: '❌', label: '已取消', value: self.stats.cancelledCount, color: 'danger', clickable: true, active: self.activeFilter === 'CANCELLED' }

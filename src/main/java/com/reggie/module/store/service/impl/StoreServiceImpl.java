@@ -1,6 +1,8 @@
 package com.reggie.module.store.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.PasswordUtils;
 import com.reggie.entity.*;
@@ -21,6 +23,7 @@ import java.util.*;
 /**
  * 门店管理服务实现
  * 提供总部-分店模式下的门店全生命周期管理和数据隔离
+ * 修改点：新增分页搜索、编辑、批量操作、导出方法
  *
  * @author reggie
  * @since 2026-07-09
@@ -93,6 +96,66 @@ public class StoreServiceImpl implements StoreService {
         return storeInfo;
     }
 
+    // 修改点：新增编辑方法
+    @Override
+    @Transactional
+    public void updateStore(Long tenantId, Map<String, Object> updateData) {
+        // 1. 更新 Tenant 表
+        Tenant tenant = tenantService.getById(tenantId);
+        if (tenant == null) {
+            log.warn("[门店管理] 编辑门店失败: tenantId={} 不存在", tenantId);
+            return;
+        }
+        if (updateData.containsKey("storeName")) {
+            tenant.setName((String) updateData.get("storeName"));
+        }
+        if (updateData.containsKey("address")) {
+            tenant.setAddress((String) updateData.get("address"));
+        }
+        if (updateData.containsKey("status")) {
+            tenant.setStatus(Integer.valueOf(updateData.get("status").toString()));
+        }
+        tenantService.updateById(tenant);
+
+        // 2. 更新 StoreInfo 表
+        StoreInfo storeInfo = storeInfoMapper.findByTenantId(tenantId);
+        if (storeInfo != null) {
+            if (updateData.containsKey("storeCode")) {
+                storeInfo.setStoreCode((String) updateData.get("storeCode"));
+            }
+            if (updateData.containsKey("storeType")) {
+                storeInfo.setStoreType(Integer.valueOf(updateData.get("storeType").toString()));
+            }
+            if (updateData.containsKey("businessHours")) {
+                storeInfo.setBusinessHours((String) updateData.get("businessHours"));
+            }
+            if (updateData.containsKey("contactPerson")) {
+                storeInfo.setContactPerson((String) updateData.get("contactPerson"));
+            }
+            if (updateData.containsKey("contactPhone")) {
+                storeInfo.setContactPhone((String) updateData.get("contactPhone"));
+            }
+            if (updateData.containsKey("deliveryRadius")) {
+                storeInfo.setDeliveryRadius(Integer.valueOf(updateData.get("deliveryRadius").toString()));
+            }
+            if (updateData.containsKey("minDeliveryAmount")) {
+                storeInfo.setMinDeliveryAmount(new BigDecimal(updateData.get("minDeliveryAmount").toString()));
+            }
+            if (updateData.containsKey("deliveryFee")) {
+                storeInfo.setDeliveryFee(new BigDecimal(updateData.get("deliveryFee").toString()));
+            }
+            if (updateData.containsKey("isDeliveryEnabled")) {
+                storeInfo.setIsDeliveryEnabled(Integer.valueOf(updateData.get("isDeliveryEnabled").toString()));
+            }
+            if (updateData.containsKey("isDineInEnabled")) {
+                storeInfo.setIsDineInEnabled(Integer.valueOf(updateData.get("isDineInEnabled").toString()));
+            }
+            storeInfoMapper.updateById(storeInfo);
+        }
+
+        log.info("[门店管理] 编辑门店成功: tenantId={}", tenantId);
+    }
+
     @Override
     public List<Map<String, Object>> listAllStores() {
         List<StoreInfo> stores = storeInfoMapper.selectList(null);
@@ -109,6 +172,7 @@ public class StoreServiceImpl implements StoreService {
             Tenant tenant = tenantService.getById(si.getTenantId());
             map.put("storeName", tenant != null ? tenant.getName() : "");
             map.put("contactPhone", si.getContactPhone());
+            map.put("contactPerson", si.getContactPerson());
 
             // 今日概况
             StoreDailySummary summary = getTodaySummaryObj(si.getTenantId());
@@ -126,6 +190,34 @@ public class StoreServiceImpl implements StoreService {
             map.put("isDineInEnabled", si.getIsDineInEnabled());
             return map;
         }).collect(java.util.stream.Collectors.toList());
+    }
+
+    // 修改点：新增分页搜索方法
+    @Override
+    public Map<String, Object> searchStores(StoreSearchDTO dto) {
+        Page<Map<String, Object>> page = new Page<>(dto.getPage(), dto.getPageSize());
+        // 防止 SQL 注入：sortOrder 仅允许 asc/desc
+        String sortOrder = "desc";
+        if (dto.getSortOrder() != null && "asc".equalsIgnoreCase(dto.getSortOrder())) {
+            sortOrder = "asc";
+        }
+        IPage<Map<String, Object>> result = storeInfoMapper.searchStores(
+                page, dto.getKeyword(), dto.getStoreType(), dto.getStatus(),
+                dto.getSortBy(), sortOrder);
+
+        Map<String, Object> pageResult = new LinkedHashMap<>();
+        pageResult.put("records", result.getRecords());
+        pageResult.put("total", result.getTotal());
+        pageResult.put("pages", result.getPages());
+        pageResult.put("current", result.getCurrent());
+        pageResult.put("size", result.getSize());
+        return pageResult;
+    }
+
+    // 修改点：新增详情方法
+    @Override
+    public Map<String, Object> getStoreDetail(Long tenantId) {
+        return storeInfoMapper.searchStoreDetail(tenantId);
     }
 
     @Override
@@ -217,6 +309,33 @@ public class StoreServiceImpl implements StoreService {
             tenantService.updateById(tenant);
             log.info("[门店管理] 门店{}状态更新为: {}", tenantId, status);
         }
+    }
+
+    // 修改点：新增批量更新状态方法
+    @Override
+    @Transactional
+    public int batchUpdateStoreStatus(List<Long> tenantIds, Integer status) {
+        int successCount = 0;
+        for (Long tenantId : tenantIds) {
+            try {
+                Tenant tenant = tenantService.getById(tenantId);
+                if (tenant != null) {
+                    tenant.setStatus(status);
+                    tenantService.updateById(tenant);
+                    successCount++;
+                }
+            } catch (Exception e) {
+                log.error("[门店管理] 批量更新状态失败: tenantId={}, error={}", tenantId, e.getMessage());
+            }
+        }
+        log.info("[门店管理] 批量更新门店状态完成: 成功{}个, 目标状态={}", successCount, status);
+        return successCount;
+    }
+
+    // 修改点：新增导出方法
+    @Override
+    public List<Map<String, Object>> exportStores(String keyword, Integer storeType, Integer status) {
+        return storeInfoMapper.exportStores(keyword, storeType, status);
     }
 
     @Override

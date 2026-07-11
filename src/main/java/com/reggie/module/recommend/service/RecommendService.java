@@ -7,6 +7,7 @@ import java.util.Map;
 /**
  * 智能推荐服务接口
  * 基于协同过滤、内容推荐、热门排行等多算法融合的菜品推荐引擎
+ * 修改点：新增概览页真实统计方法，替换原先Math.random()假数据
  *
  * @author reggie
  * @since 2026-07-09
@@ -89,4 +90,40 @@ public interface RecommendService {
      * @return 统计数据Map
      */
     Map<String, Object> calculateStats();
+
+    // ==================== 修改点：概览页真实统计方法 ====================
+
+    /**
+     * 获取推荐反馈分布统计（从recommendation_feedback表真实查询）
+     * 替代原先的Math.random()假数据
+     *
+     * @param days 统计最近N天
+     * @return key: click/favorite/cart/order/unlike, value: 计数
+     */
+    Map<String, Integer> getFeedbackStats(int days);
+
+    /**
+     * 获取用户口味偏好分布（从user_preference_tag表真实查询）
+     * 替代原先的硬编码口味列表 + Math.random()
+     *
+     * @return 每项包含 name(口味名) 和 value(用户数)
+     */
+    List<Map<String, Object>> getPreferenceDistribution();
+
+    /**
+     * 获取推荐算法效果对比（从recommendation_feedback + recommendation_cache真实计算）
+     * 替代原先的Math.random()假数据
+     *
+     * @return 包含 algos/ctRates/cvRates 的Map
+     */
+    Map<String, Object> getAlgoCompare();
+
+    /**
+     * 获取浏览行为趋势（从user_browse_history表真实统计每日浏览/加购数）
+     * 替代原先的Math.random()假数据
+     *
+     * @param days 统计最近N天
+     * @return 包含 dates/browseCount/cartCount 的Map
+     */
+    Map<String, Object> getBrowseTrend(int days);
 }

@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 智能推荐控制器
@@ -267,81 +266,49 @@ public class RecommendController {
         return R.success("偏好分析已触发");
     }
 
-    // ======================== 概览页增强接口 ========================
+    // ======================== 修改点：概览页增强接口（全部改为真实DB统计） ========================
 
     /**
      * 获取推荐反馈分布统计（概览页反馈图表）
+     * 修改点：从 recommendation_feedback 表真实统计，不再使用 Math.random()
      * GET /recommend/feedback/stats?days=7
      */
     @GetMapping("/feedback/stats")
     public R<Map<String, Integer>> feedbackStats(@RequestParam(defaultValue = "7") int days) {
-        Map<String, Integer> stats = new LinkedHashMap<>();
-        // 统计各类反馈数量
-        stats.put("click", (int) (Math.random() * 500 + 100));
-        stats.put("favorite", (int) (Math.random() * 200 + 30));
-        stats.put("cart", (int) (Math.random() * 150 + 20));
-        stats.put("order", (int) (Math.random() * 80 + 10));
-        stats.put("unlike", (int) (Math.random() * 30 + 2));
+        Map<String, Integer> stats = recommendService.getFeedbackStats(days);
         return R.success(stats);
     }
 
     /**
      * 获取用户口味偏好分布（概览页偏好饼图）
+     * 修改点：从 user_preference_tag 表真实统计，不再使用硬编码+Math.random()
      * GET /recommend/preference/distribution
      */
     @GetMapping("/preference/distribution")
     public R<List<Map<String, Object>>> preferenceDistribution() {
-        List<Map<String, Object>> list = new ArrayList<>();
-        String[] tastes = {"麻辣", "清淡", "酸甜", "咸香", "鲜香", "蒜蓉", "烧烤", "油炸"};
-        for (String t : tastes) {
-            Map<String, Object> item = new HashMap<>();
-            item.put("name", t);
-            item.put("value", (int) (Math.random() * 200 + 10));
-            list.add(item);
-        }
+        List<Map<String, Object>> list = recommendService.getPreferenceDistribution();
         return R.success(list);
     }
 
     /**
      * 获取推荐算法效果对比（概览页对比柱状图）
+     * 修改点：从 recommendation_feedback + recommendation_cache 真实计算CTR/CVR
      * GET /recommend/algo/compare
      */
     @GetMapping("/algo/compare")
     public R<Map<String, Object>> algoCompare() {
-        Map<String, Object> result = new HashMap<>();
-        result.put("algos", Arrays.asList("协同过滤", "内容推荐", "热门排行", "混合推荐"));
-        result.put("ctRates", Arrays.asList(
-                Math.round(Math.random() * 10 + 10) / 1.0,
-                Math.round(Math.random() * 8 + 8) / 1.0,
-                Math.round(Math.random() * 15 + 5) / 1.0,
-                Math.round(Math.random() * 5 + 18) / 1.0));
-        result.put("cvRates", Arrays.asList(
-                Math.round(Math.random() * 8 + 5) / 1.0,
-                Math.round(Math.random() * 6 + 4) / 1.0,
-                Math.round(Math.random() * 10 + 3) / 1.0,
-                Math.round(Math.random() * 4 + 12) / 1.0));
+        Map<String, Object> result = recommendService.getAlgoCompare();
         return R.success(result);
     }
 
     /**
      * 获取浏览行为趋势（概览页趋势图）
+     * 修改点：从 user_browse_history 表真实统计每日浏览/加购数
      * GET /recommend/browse/trend?days=7
      */
     @GetMapping("/browse/trend")
     public R<Map<String, Object>> browseTrend(@RequestParam(defaultValue = "7") int days) {
-        Map<String, Object> result = new HashMap<>();
-        List<String> dates = new ArrayList<>();
-        List<Integer> browseCount = new ArrayList<>();
-        List<Integer> cartCount = new ArrayList<>();
-        for (int i = days - 1; i >= 0; i--) {
-            java.time.LocalDate d = java.time.LocalDate.now().minusDays(i);
-            dates.add(d.toString().substring(5));
-            browseCount.add((int) (Math.random() * 80 + 20));
-            cartCount.add((int) (Math.random() * 30 + 5));
-        }
-        result.put("dates", dates);
-        result.put("browseCount", browseCount);
-        result.put("cartCount", cartCount);
+        Map<String, Object> result = recommendService.getBrowseTrend(days);
         return R.success(result);
     }
 

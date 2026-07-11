@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <title>会员中心 - 瑞吉外卖</title>
+  <link rel="stylesheet" href="../styles/index.css">
+  <link rel="stylesheet" href="../styles/vant.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f5f6f8; font-family: var(--font-family-base); -webkit-font-smoothing: antialiased; }
+
+    /* ---- 头部 ---- */
+    .mc-header { position: relative; overflow: hidden; }
+    .mc-header-bg {
+      background: linear-gradient(160deg, #1a1a2e 0%, #16213e 40%, #1a3a5c 100%);
+      padding: 30rem 16rem 50rem; position: relative; z-index: 1;
+    }
+    .mc-header-bg::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 28rem;
+      background: #f5f6f8; border-radius: 20rem 20rem 0 0;
+    }
+    .mc-header-top { display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20rem; position: relative; z-index: 2; }
+    .mc-back { width: 32rem; height: 32rem; display: flex; align-items: center;
+      justify-content: center; cursor: pointer; }
+    .mc-back::before { content: '‹'; color: #fff; font-size: 28rem; font-weight: 300; line-height: 1; }
+    .mc-title { font-size: 17rem; font-weight: 600; color: #fff; letter-spacing: 1rem; }
+    .mc-rule { font-size: 12rem; color: rgba(255,255,255,0.6); cursor: pointer; }
+
+    /* ---- 会员卡 ---- */
+    .mc-card {
+      margin: -10rem 16rem 16rem; background: linear-gradient(135deg, #2d1b4e 0%, #1a2744 50%, #0d3349 100%);
+      border-radius: 16rem; padding: 20rem 20rem 16rem; position: relative; z-index: 3;
+      box-shadow: 0 8rem 30rem rgba(0,0,0,0.25); overflow: hidden;
+    }
+    .mc-card::before {
+      content: ''; position: absolute; top: -60rem; right: -40rem;
+      width: 200rem; height: 200rem; border-radius: 50%;
+      background: radial-gradient(circle, rgba(168,85,247,0.08) 0%, transparent 70%);
+    }
+    .mc-card::after {
+      content: ''; position: absolute; bottom: -30rem; left: -20rem;
+      width: 120rem; height: 120rem; border-radius: 50%;
+      background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
+    }
+    .mc-card-top { display: flex; align-items: center; justify-content: space-between;
+      position: relative; z-index: 1; margin-bottom: 16rem; }
+    .mc-level-name { font-size: 14rem; font-weight: 600; color: rgba(255,255,255,0.8); }
+    .mc-level-tag { padding: 4rem 12rem; border-radius: 20rem; font-size: 11rem;
+      font-weight: 600; letter-spacing: 0.5rem; }
+    .mc-level-tag.high { background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #5d4037; }
+    .mc-level-tag.mid { background: linear-gradient(135deg,#e2e8f0,#cbd5e1); color: #475569; }
+    .mc-level-tag.low { background: linear-gradient(135deg,#d97706,#b45309); color: #fff; }
+    .mc-level-tag.new { background: linear-gradient(135deg,#e0e0e0,#9e9e9e); color: #616161; }
+    .mc-card-stats { display: flex; position: relative; z-index: 1; }
+    .mc-card-stat { flex: 1; text-align: center; }
+    .mc-card-stat .val { font-size: 24rem; font-weight: 700; color: #fff;
+      font-family: var(--font-family-number); line-height: 1.2; }
+    .mc-card-stat .lbl { font-size: 11rem; color: rgba(255,255,255,0.5); margin-top: 4rem; }
+    .mc-card-stat-divider { width: 1rem; background: rgba(255,255,255,0.1); margin: 4rem 0; }
+    .mc-card-progress { margin-top: 14rem; position: relative; z-index: 1; }
+    .mc-prog-label { display: flex; justify-content: space-between; font-size: 11rem;
+      color: rgba(255,255,255,0.5); margin-bottom: 6rem; }
+    .mc-prog-label .next { color: #fbbf24; font-weight: 500; }
+    .mc-prog-bar { height: 5rem; background: rgba(255,255,255,0.1); border-radius: 3rem; overflow: hidden; }
+    .mc-prog-fill { height: 100%; background: linear-gradient(90deg,#fbbf24,#f59e0b);
+      border-radius: 3rem; transition: width 0.6s ease; }
+    .mc-non-member { text-align: center; padding: 12rem 0; position: relative; z-index: 1;
+      color: rgba(255,255,255,0.55); font-size: 13rem; }
+
+    /* ---- 版块 ---- */
+    .mc-section { margin: 0 16rem 14rem; background: #fff; border-radius: 14rem;
+      overflow: hidden; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
+    .mc-section-title { font-size: 15rem; font-weight: 600; color: #303133;
+      padding: 16rem 18rem 12rem; border-bottom: 1rem solid #f5f5f5;
+      display: flex; align-items: center; gap: 8rem; }
+    .mc-section-title .count { font-size: 12rem; color: #909399; font-weight: 400; }
+
+    /* ---- 权益 ---- */
+    .mc-benefits { display: flex; padding: 14rem 12rem; gap: 10rem; flex-wrap: wrap; }
+    .mc-benefit { flex: 1; min-width: 80rem; text-align: center; padding: 10rem 4rem; }
+    .mc-benefit-icon { width: 48rem; height: 48rem; margin: 0 auto 8rem; border-radius: 14rem;
+      display: flex; align-items: center; justify-content: center; font-size: 24rem; }
+    .mc-benefit-icon.locked { opacity: 0.4; filter: grayscale(0.8); }
+    .mc-benefit-name { font-size: 12rem; color: #303133; font-weight: 500; }
+    .mc-benefit-desc { font-size: 10rem; color: #909399; margin-top: 2rem; }
+
+    /* ---- Tab ---- */
+    .mc-tabs { display: flex; border-bottom: 1rem solid #f0f0f0; }
+    .mc-tab { flex: 1; text-align: center; padding: 14rem 0; font-size: 14rem;
+      color: #909399; cursor: pointer; transition: color 0.2s;
+      position: relative; user-select: none; }
+    .mc-tab.active { color: #303133; font-weight: 600; }
+    .mc-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%;
+      transform: translateX(-50%); width: 24rem; height: 3rem;
+      background: #f59e0b; border-radius: 2rem 2rem 0 0; }
+
+    /* ---- 积分列表 ---- */
+    .mc-points-list { padding: 0 16rem; max-height: 360rem; overflow-y: auto; }
+    .mc-point-item { display: flex; align-items: center; padding: 12rem 0;
+      border-bottom: 1rem solid #f8f8f8; }
+    .mc-point-item:last-child { border-bottom: none; }
+    .mc-point-icon { width: 36rem; height: 36rem; border-radius: 10rem;
+      display: flex; align-items: center; justify-content: center; font-size: 16rem;
+      flex-shrink: 0; margin-right: 12rem; }
+    .mc-point-icon.in { background: rgba(34,197,94,0.1); }
+    .mc-point-icon.out { background: rgba(249,115,22,0.1); }
+    .mc-point-info { flex: 1; }
+    .mc-point-info .p-title { font-size: 14rem; color: #303133; }
+    .mc-point-info .p-time { font-size: 11rem; color: #909399; margin-top: 2rem; }
+    .mc-point-val { font-size: 15rem; font-weight: 600; }
+    .mc-point-val.in { color: #22c55e; }
+    .mc-point-val.out { color: #f97316; }
+
+    /* ---- 优惠券 ---- */
+    .mc-coupons { padding: 12rem 16rem; display: flex; flex-direction: column; gap: 10rem;
+      max-height: 380rem; overflow-y: auto; }
+    .mc-coupon { display: flex; border-radius: 12rem; overflow: hidden;
+      box-shadow: 0 2rem 8rem rgba(0,0,0,0.04); position: relative; background: #fff; }
+    .mc-coupon.used { opacity: 0.55; }
+    .mc-coupon-left { width: 100rem; padding: 14rem 12rem; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      border-right: 1rem dashed #eee; flex-shrink: 0; position: relative; }
+    .mc-coupon-left::before,.mc-coupon-left::after {
+      content: ''; position: absolute; right: -5rem; width: 10rem; height: 10rem;
+      border-radius: 50%; background: #f5f6f8; }
+    .mc-coupon-left::before { top: -5rem; }
+    .mc-coupon-left::after { bottom: -5rem; }
+    .mc-coupon-left .c-amount { font-size: 20rem; font-weight: 700; color: #f59e0b; }
+    .mc-coupon-left .c-type { font-size: 11rem; color: #909399; margin-top: 2rem; }
+    .mc-coupon-right { flex: 1; padding: 12rem 14rem; display: flex;
+      flex-direction: column; justify-content: center; }
+    .mc-coupon-right .c-name { font-size: 14rem; font-weight: 600; color: #303133; }
+    .mc-coupon-right .c-cond { font-size: 11rem; color: #909399; margin-top: 4rem; }
+    .mc-coupon-right .c-expire { font-size: 11rem; color: #f97316; margin-top: 2rem; }
+    .mc-claim-btn { background: linear-gradient(135deg,#f59e0b,#fbbf24); border: none;
+      color: #fff; font-size: 12rem; padding: 6rem 14rem; border-radius: 20rem;
+      cursor: pointer; font-weight: 600; white-space: nowrap; }
+    .mc-claim-btn:active { opacity: 0.8; }
+    .mc-empty { text-align: center; padding: 40rem 0; color: #c0c4cc; font-size: 14rem; }
+
+    /* ---- 充值记录 ---- */
+    .mc-recharge-list { padding: 0 16rem; max-height: 340rem; overflow-y: auto; }
+    .mc-recharge-item { display: flex; align-items: center; padding: 12rem 0;
+      border-bottom: 1rem solid #f8f8f8; }
+    .mc-recharge-item:last-child { border-bottom: none; }
+    .mc-recharge-amount { font-size: 16rem; font-weight: 600; color: #f59e0b;
+      margin-right: 12rem; min-width: 80rem; }
+    .mc-recharge-info { flex: 1; }
+    .mc-recharge-info .r-time { font-size: 13rem; color: #303133; }
+    .mc-recharge-info .r-gift { font-size: 11rem; color: #10b981; margin-top: 2rem; }
+  </style>
+</head>
+<body>
+  <div id="member-center" style="min-height:100vh;">
+    <!-- 加载 -->
+    <van-overlay :show="loading" :z-index="999">
+      <van-loading size="36rem" text-color="#fff" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);">加载中...</van-loading>
+    </van-overlay>
+
+    <!-- 头部 -->
+    <div class="mc-header">
+      <div class="mc-header-bg">
+        <div class="mc-header-top">
+          <div class="mc-back" @click="goBack"></div>
+          <div class="mc-title">{{ memberInfo && memberInfo.isMember ? '我的会员' : '会员中心' }}</div>
+          <div class="mc-rule" @click="showRules">规则</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 会员卡 -->
+    <div class="mc-card" v-if="memberInfo">
+      <div class="mc-card-top" v-if="memberInfo.isMember && memberInfo.member">
+        <div class="mc-level-name">{{ memberInfo.level ? memberInfo.level.name : '普通会员' }}</div>
+        <div :class="['mc-level-tag', levelTagClass]">{{ levelTagText }}</div>
+      </div>
+      <div class="mc-card-stats" v-if="memberInfo.isMember && memberInfo.member">
+        <div class="mc-card-stat">
+          <div class="val">{{ fmtNum(memberInfo.member.points) }}</div>
+          <div class="lbl">当前积分</div>
+        </div>
+        <div class="mc-card-stat-divider"></div>
+        <div class="mc-card-stat">
+          <div class="val">￥{{ fmtMoney(memberInfo.member.balance) }}</div>
+          <div class="lbl">储值余额</div>
+        </div>
+        <div class="mc-card-stat-divider"></div>
+        <div class="mc-card-stat">
+          <div class="val">{{ memberInfo.couponCount || 0 }}</div>
+          <div class="lbl">优惠券</div>
+        </div>
+      </div>
+      <div class="mc-card-progress" v-if="memberInfo.isMember && nextLevel">
+        <div class="mc-prog-label">
+          <span>距下一级 {{ nextLevel.name }}</span>
+          <span class="next">还差 {{ needPts }} 积分</span>
+        </div>
+        <div class="mc-prog-bar">
+          <div class="mc-prog-fill" :style="{width: progressPct + '%'}"></div>
+        </div>
+      </div>
+      <div class="mc-non-member" v-else-if="!memberInfo.isMember">
+        成为会员，享专属折扣与权益
+        <van-button type="warning" size="small" round style="margin-left:8rem;" @click="activateMember">立即开通</van-button>
+      </div>
+    </div>
+
+    <!-- 会员权益 -->
+    <div class="mc-section">
+      <div class="mc-section-title">🎖 会员权益</div>
+      <div class="mc-benefits">
+        <div class="mc-benefit">
+          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(245,158,11,0.1);">💎</div>
+          <div class="mc-benefit-name">等级折扣</div>
+          <div class="mc-benefit-desc" v-if="memberInfo && memberInfo.level && memberInfo.level.discount != null">{{ (memberInfo.level.discount * 100).toFixed(0) }}折优惠</div>
+          <div class="mc-benefit-desc" v-else>按等级享优惠</div>
+        </div>
+        <div class="mc-benefit">
+          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(34,197,94,0.1);">🎁</div>
+          <div class="mc-benefit-name">积分奖励</div>
+          <div class="mc-benefit-desc">消费获积分</div>
+        </div>
+        <div class="mc-benefit">
+          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(59,130,246,0.1);">🎫</div>
+          <div class="mc-benefit-name">专属优惠券</div>
+          <div class="mc-benefit-desc">会员专享券</div>
+        </div>
+        <div class="mc-benefit">
+          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(139,92,246,0.1);">🎂</div>
+          <div class="mc-benefit-name">生日礼遇</div>
+          <div class="mc-benefit-desc">生日双倍积分</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: 积分 / 优惠券 / 充值 -->
+    <div class="mc-section">
+      <div class="mc-tabs">
+        <div :class="['mc-tab', activeTab==='points' ? 'active' : '']" @click="switchTab('points')">积分记录</div>
+        <div :class="['mc-tab', activeTab==='coupons' ? 'active' : '']" @click="switchTab('coupons')">我的优惠券</div>
+        <div :class="['mc-tab', activeTab==='recharge' ? 'active' : '']" @click="switchTab('recharge')">充值记录</div>
+      </div>
+
+      <!-- 积分记录 -->
+      <div class="mc-points-list" v-if="activeTab==='points'">
+        <div v-if="pointsData.length===0" class="mc-empty">暂无积分记录</div>
+        <div class="mc-point-item" v-for="item in pointsData" :key="item.id||item.createdTime">
+          <div :class="['mc-point-icon', item.type==='ACQUIRE'||item.type==='IN' ? 'in' : 'out']">
+            {{ item.type==='ACQUIRE'||item.type==='IN' ? '↑' : '↓' }}
+          </div>
+          <div class="mc-point-info">
+            <div class="p-title">{{ item.type==='ACQUIRE'||item.type==='IN' ? '获取积分' : '消耗积分' }}</div>
+            <div class="p-time">{{ item.createdTime }}</div>
+          </div>
+          <div :class="['mc-point-val', item.type==='ACQUIRE'||item.type==='IN' ? 'in' : 'out']">
+            {{ item.type==='ACQUIRE'||item.type==='IN' ? '+' : '-' }}{{ item.points }}
+          </div>
+        </div>
+      </div>
+
+      <!-- 我的优惠券 -->
+      <div class="mc-coupons" v-if="activeTab==='coupons'">
+        <div class="mc-section-title" style="padding-left:0;margin-bottom:0;font-size:13rem;">
+          可领取 <span class="count">({{ availCoupons.length }}张)</span>
+        </div>
+        <div v-if="availCoupons.length===0" class="mc-empty" style="padding:24rem 0;">暂无可领取的优惠券</div>
+        <div class="mc-coupon" v-for="c in availCoupons" :key="'avail-'+c.id">
+          <div class="mc-coupon-left">
+            <div class="c-amount">￥{{ Number(c.discountAmount||0).toFixed(0) }}</div>
+            <div class="c-type">{{ c.type==='FULL_REDUCTION' ? '满减' : c.type==='DISCOUNT' ? '折扣' : '新客' }}</div>
+          </div>
+          <div class="mc-coupon-right">
+            <div class="c-name">{{ c.name }}</div>
+            <div class="c-cond" v-if="c.conditionAmount>0">满￥{{ c.conditionAmount }}可用</div>
+            <div style="display:flex;justify-content:flex-end;margin-top:4rem;">
+              <button class="mc-claim-btn" @click="doClaim(c.id)" :disabled="claimLoading">立即领取</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mc-section-title" style="padding-left:0;margin-bottom:0;margin-top:8rem;font-size:13rem;">
+          我的优惠券 <span class="count">({{ myCoupons.length }}张)</span>
+        </div>
+        <div v-if="myCoupons.length===0" class="mc-empty" style="padding:24rem 0;">暂无优惠券</div>
+        <div :class="['mc-coupon', c.status==='USED'||c.status==='EXPIRED' ? 'used' : '']" v-for="c in myCoupons" :key="'my-'+c.id">
+          <div class="mc-coupon-left">
+            <div class="c-amount">￥{{ Number(c.amount||0).toFixed(0) }}</div>
+            <div class="c-type">{{ c.type||'通用' }}</div>
+          </div>
+          <div class="mc-coupon-right">
+            <div class="c-name">{{ c.name || '优惠券' }}</div>
+            <div class="c-expire" v-if="c.expireTime">有效期至 {{ c.expireTime }}</div>
+            <div class="c-cond" v-else-if="c.status==='USED'">已使用</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 充值记录 -->
+      <div class="mc-recharge-list" v-if="activeTab==='recharge'">
+        <div v-if="rechargeData.length===0" class="mc-empty">暂无充值记录</div>
+        <div class="mc-recharge-item" v-for="item in rechargeData" :key="item.id||item.createdTime">
+          <div class="mc-recharge-amount">+￥{{ item.amount }}</div>
+          <div class="mc-recharge-info">
+            <div class="r-time">{{ item.createdTime }}</div>
+            <div class="r-gift" v-if="item.giftAmount > 0">赠送 ￥{{ item.giftAmount }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height: 30rem;"></div>
+  </div>
+
+  <script src="../../backend/plugins/vue/vue.js"></script>
+  <script src="../js/vant.min.js"></script>
+  <script src="../js/base.js"></script>
+  <script src="../../backend/plugins/axios/axios.min.js"></script>
+  <script src="../js/request.js"></script>
+  <script src="../api/member-center.js"></script>
+  <script>
+    new Vue({
+      el: '#member-center',
+      data: function() {
+        return {
+          loading: false, claimLoading: false,
+          memberInfo: null,
+          activeTab: 'points',
+          pointsData: [],
+          myCoupons: [],
+          availCoupons: [],
+          rechargeData: [],
+          allLevels: []
+        }
+      },
+      computed: {
+        levelTagClass: function() {
+          if (!this.memberInfo || !this.memberInfo.level) return 'new'
+          var n = this.memberInfo.level.name
+          if (n.indexOf('钻石')!==-1||n.indexOf('荣耀')!==-1||n.indexOf('至尊')!==-1||n.indexOf('传奇')!==-1) return 'high'
+          if (n.indexOf('黄金')!==-1||n.indexOf('金卡')!==-1||n.indexOf('铂金')!==-1) return 'high'
+          if (n.indexOf('银')!==-1) return 'mid'
+          return 'low'
+        },
+        levelTagText: function() {
+          if (!this.memberInfo || !this.memberInfo.level) return '未开通'
+          return this.memberInfo.level.name || '会员'
+        },
+        nextLevel: function() {
+          if (!this.memberInfo || !this.memberInfo.isMember || !this.allLevels.length) return null
+          var curPts = this.memberInfo.member ? (this.memberInfo.member.points || 0) : 0
+          var sorted = this.allLevels.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
+          for (var i = 0; i < sorted.length; i++) {
+            if ((sorted[i].minPoints||0) > curPts) return sorted[i]
+          }
+          return null
+        },
+        needPts: function() {
+          if (!this.nextLevel) return 0
+          return (this.nextLevel.minPoints||0) - (this.memberInfo && this.memberInfo.member ? (this.memberInfo.member.points||0) : 0)
+        },
+        progressPct: function() {
+          if (!this.nextLevel || !this.memberInfo || !this.memberInfo.member) return 0
+          var cur = this.memberInfo.member.points || 0
+          var sorted = this.allLevels.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
+          var curLevelIdx = -1
+          for (var i = sorted.length - 1; i >= 0; i--) { if ((sorted[i].minPoints||0) <= cur) { curLevelIdx = i; break } }
+          if (curLevelIdx < 0) return Math.min(100, cur / (sorted[0].minPoints||1) * 100)
+          var curMin = sorted[curLevelIdx].minPoints || 0
+          var nextMin = (sorted[curLevelIdx+1] ? sorted[curLevelIdx+1].minPoints : curMin*2) || 1
+          return Math.min(100, (cur - curMin) / (nextMin - curMin) * 100)
+        }
+      },
+      created: function() { this.loadAll() },
+      methods: {
+        async loadAll() {
+          this.loading = true
+          try {
+            // 会员信息
+            var miRes = await getMyMemberInfo()
+            if (miRes.code === 1) {
+              this.memberInfo = miRes.data
+              if (miRes.data.isMember && miRes.data.member) {
+                sessionStorage.setItem("memberId", miRes.data.member.id)
+              }
+            }
+            // 等级列表(用于升级进度)
+            try {
+              var lvRes = await this.fetchLevels()
+              if (lvRes && lvRes.code === 1) this.allLevels = lvRes.data.records || []
+            } catch(e) {}
+            // 加载各tab数据
+            await Promise.all([
+              this.loadPoints(),
+              this.loadCoupons(),
+              this.loadRecharge()
+            ])
+          } catch(e) {}
+          this.loading = false
+        },
+        fetchLevels: function() {
+          return $axios({ url: '/api/member/level/page', method: 'get', params: { page: 1, pageSize: 100 } })
+        },
+        async loadPoints() {
+          var memberId = this.memberInfo && this.memberInfo.member ? this.memberInfo.member.id : null
+          if (!memberId) return
+          try {
+            var phone = this.memberInfo.member.phone || ''
+            var res = await getMyPointsList({ page: 1, pageSize: 30, phone: phone })
+            if (res.code === 1) this.pointsData = res.data.records || []
+          } catch(e) {}
+        },
+        async loadCoupons() {
+          var memberId = this.memberInfo && this.memberInfo.member ? this.memberInfo.member.id : null
+          if (!memberId) return
+          try {
+            var myRes = await getMyCoupons(memberId)
+            if (myRes.code === 1) this.myCoupons = myRes.data || []
+            var availRes = await getAvailableCoupons()
+            if (availRes.code === 1) {
+              var claimedIds = this.myCoupons.map(function(c) { return c.templateId })
+              this.availCoupons = (availRes.data.records || []).filter(function(c) {
+                return c.remainCount > 0 && claimedIds.indexOf(c.id) === -1
+              })
+            }
+          } catch(e) {}
+        },
+        async loadRecharge() {
+          var memberId = this.memberInfo && this.memberInfo.member ? this.memberInfo.member.id : null
+          if (!memberId) return
+          try {
+            var phone = this.memberInfo.member.phone || ''
+            var res = await getMyRechargeList({ page: 1, pageSize: 20, phone: phone })
+            if (res.code === 1) this.rechargeData = res.data.records || []
+          } catch(e) {}
+        },
+        switchTab: function(t) { this.activeTab = t },
+        async doClaim(templateId) {
+          var memberId = this.memberInfo && this.memberInfo.member ? this.memberInfo.member.id : null
+          if (!memberId) { vant.Toast.fail('请先成为会员'); return }
+          this.claimLoading = true
+          try {
+            var res = await claimCoupon({ memberId: memberId, templateId: templateId })
+            if (res.code === 1) {
+              vant.Toast.success('领取成功')
+              this.loadCoupons()
+            } else { vant.Toast.fail(res.msg || '领取失败') }
+          } catch(e) { vant.Toast.fail('领取失败') }
+          this.claimLoading = false
+        },
+        activateMember: function() { vant.Toast('请联系店铺开通会员') },
+        showRules: function() {
+          vant.Dialog.alert({
+            title: '会员规则',
+            message: '1. 消费即可获取积分\n2. 积分达到门槛自动升级\n3. 等级越高，折扣越大\n4. 积分可用于兑换优惠券\n5. 会员等级长期有效',
+            confirmButtonText: '知道了'
+          })
+        },
+        goBack: function() { history.go(-1) },
+        fmtNum: function(n) {
+          if (n == null) return '0'
+          return Number(n).toLocaleString()
+        },
+        fmtMoney: function(v) {
+          if (v == null) return '0.00'
+          return Number(v).toFixed(2)
+        }
+      }
+    })
+  </script>
+</body>
+</html>

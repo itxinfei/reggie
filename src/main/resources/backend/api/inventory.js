@@ -26,8 +26,9 @@ const addPurchase = (params) => $axios({ url: '/api/inventory/purchase-order', m
 const getPurchase = (id) => $axios({ url: `/api/inventory/purchase-order/${id}`, method: 'get' })
 const addPurchaseDetail = (params) => $axios({ url: '/api/inventory/purchase-order/addDetail', method: 'post', data: params })
 const receivePurchase = (id) => $axios({ url: `/api/inventory/purchase-order/receive/${id}`, method: 'put' })
+const approvePurchase = (id) => $axios({ url: `/api/inventory/purchase-order/approve/${id}`, method: 'put' })
 const cancelPurchase = (id) => $axios({ url: `/api/inventory/purchase-order/cancel/${id}`, method: 'put' })
-const purchaseDetailList = (orderId) => $axios({ url: `/api/inventory/purchase-order-detail/list/${orderId}`, method: 'get' })
+const purchaseDetailList = (orderId) => $axios({ url: `/api/inventory/purchase-order/detail/${orderId}`, method: 'get' })
 
 // 库存记录
 const stockRecordPage = (params) => $axios({ url: '/api/inventory/stock-record/page', method: 'get', params })
@@ -37,4 +38,9 @@ const stockOut = (params) => $axios({ url: '/api/inventory/stock-record/stockOut
 // 盘点
 const stockCheckPage = (params) => $axios({ url: '/api/inventory/stock-check/page', method: 'get', params })
 const addStockCheck = (params) => $axios({ url: '/api/inventory/stock-check', method: 'post', data: params })
-const completeStockCheck = (id) => $axios({ url: `/api/inventory/stock-check/complete/${id}`, method: 'put' })
+const completeStockCheck = (id, params) => $axios({ url: `/api/inventory/stock-check/complete/${id}`, method: 'put', data: params })
+
+// 进销存统计
+const inventoryStatsOverview = () => $axios({ url: '/api/inventory/stats/overview', method: 'get' })
+const inventoryPurchaseTrend = () => $axios({ url: '/api/inventory/stats/purchase-trend', method: 'get' })
+const inventoryStockTrend = () => $axios({ url: '/api/inventory/stats/stock-trend', method: 'get' })

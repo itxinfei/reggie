@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.reggie.module.store.mapper.StoreInfoMapper">
+
+    <!-- 门店搜索结果映射 -->
+    <resultMap id="storeSearchMap" type="java.util.LinkedHashMap">
+        <result column="tenant_id" property="tenantId" javaType="java.lang.Long"/>
+        <result column="store_code" property="storeCode"/>
+        <result column="store_type" property="storeType" javaType="java.lang.Integer"/>
+        <result column="parent_tenant_id" property="parentTenantId" javaType="java.lang.Long"/>
+        <result column="store_name" property="storeName"/>
+        <result column="contact_phone" property="contactPhone"/>
+        <result column="contact_person" property="contactPerson"/>
+        <result column="business_hours" property="businessHours"/>
+        <result column="tenant_address" property="address"/>
+        <result column="tenant_status" property="status" javaType="java.lang.Integer"/>
+        <result column="is_delivery_enabled" property="isDeliveryEnabled" javaType="java.lang.Integer"/>
+        <result column="is_dine_in_enabled" property="isDineInEnabled" javaType="java.lang.Integer"/>
+        <result column="delivery_radius" property="deliveryRadius" javaType="java.lang.Integer"/>
+        <result column="min_delivery_amount" property="minDeliveryAmount" javaType="java.math.BigDecimal"/>
+        <result column="delivery_fee" property="deliveryFee" javaType="java.math.BigDecimal"/>
+        <result column="today_orders" property="todayOrders" javaType="java.lang.Integer"/>
+        <result column="today_amount" property="todayAmount" javaType="java.math.BigDecimal"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <!--
+        动态分页查询门店列表
+        支持关键词、类型、状态筛选；支持排序
+    -->
+    <select id="searchStores" resultMap="storeSearchMap">
+        SELECT
+            si.tenant_id,
+            si.store_code,
+            si.store_type,
+            si.parent_tenant_id,
+            t.name AS store_name,
+            si.contact_phone,
+            si.contact_person,
+            si.business_hours,
+            t.address AS tenant_address,
+            t.status AS tenant_status,
+            si.is_delivery_enabled,
+            si.is_dine_in_enabled,
+            si.delivery_radius,
+            si.min_delivery_amount,
+            si.delivery_fee,
+            COALESCE(ds.total_orders, 0) AS today_orders,
+            COALESCE(ds.actual_amount, 0.00) AS today_amount,
+            t.create_time
+        FROM store_info si
+        INNER JOIN tenant t ON si.tenant_id = t.id
+        LEFT JOIN store_daily_summary ds ON si.tenant_id = ds.tenant_id
+            AND ds.summary_date = CURDATE()
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (t.name LIKE CONCAT('%', #{keyword}, '%')
+                     OR si.store_code LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="storeType != null">
+                AND si.store_type = #{storeType}
+            </if>
+            <if test="status != null">
+                AND t.status = #{status}
+            </if>
+        </where>
+        <choose>
+            <when test="sortBy != null and sortBy != ''">
+                <choose>
+                    <when test="sortBy == 'storeName'">
+                        ORDER BY t.name ${sortOrder}
+                    </when>
+                    <when test="sortBy == 'todayOrders'">
+                        ORDER BY today_orders ${sortOrder}
+                    </when>
+                    <when test="sortBy == 'todayAmount'">
+                        ORDER BY today_amount ${sortOrder}
+                    </when>
+                    <when test="sortBy == 'createTime'">
+                        ORDER BY t.create_time ${sortOrder}
+                    </when>
+                    <otherwise>
+                        ORDER BY t.create_time DESC
+                    </otherwise>
+                </choose>
+            </when>
+            <otherwise>
+                ORDER BY t.create_time DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 统计门店总数（配合筛选条件） -->
+    <select id="countStores" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM store_info si
+        INNER JOIN tenant t ON si.tenant_id = t.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (t.name LIKE CONCAT('%', #{keyword}, '%')
+                     OR si.store_code LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="storeType != null">
+                AND si.store_type = #{storeType}
+            </if>
+            <if test="status != null">
+                AND t.status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <!--
+        查询门店明细（单条）
+        用于编辑页面回显
+    -->
+    <select id="searchStoreDetail" resultMap="storeSearchMap">
+        SELECT
+            si.tenant_id,
+            si.store_code,
+            si.store_type,
+            si.parent_tenant_id,
+            t.name AS store_name,
+            si.contact_phone,
+            si.contact_person,
+            si.business_hours,
+            t.address AS tenant_address,
+            t.status AS tenant_status,
+            si.is_delivery_enabled,
+            si.is_dine_in_enabled,
+            si.delivery_radius,
+            si.min_delivery_amount,
+            si.delivery_fee,
+            COALESCE(ds.total_orders, 0) AS today_orders,
+            COALESCE(ds.actual_amount, 0.00) AS today_amount,
+            t.create_time
+        FROM store_info si
+        INNER JOIN tenant t ON si.tenant_id = t.id
+        LEFT JOIN store_daily_summary ds ON si.tenant_id = ds.tenant_id
+            AND ds.summary_date = CURDATE()
+        WHERE si.tenant_id = #{tenantId}
+    </select>
+
+    <!--
+        导出门店数据（不限制条数）
+        受相同筛选条件影响，供Excel/CSV导出使用
+    -->
+    <select id="exportStores" resultMap="storeSearchMap">
+        SELECT
+            si.tenant_id,
+            si.store_code,
+            si.store_type,
+            si.parent_tenant_id,
+            t.name AS store_name,
+            si.contact_phone,
+            si.contact_person,
+            si.business_hours,
+            t.address AS tenant_address,
+            t.status AS tenant_status,
+            si.is_delivery_enabled,
+            si.is_dine_in_enabled,
+            si.delivery_radius,
+            si.min_delivery_amount,
+            si.delivery_fee,
+            COALESCE(ds.total_orders, 0) AS today_orders,
+            COALESCE(ds.actual_amount, 0.00) AS today_amount,
+            t.create_time
+        FROM store_info si
+        INNER JOIN tenant t ON si.tenant_id = t.id
+        LEFT JOIN store_daily_summary ds ON si.tenant_id = ds.tenant_id
+            AND ds.summary_date = CURDATE()
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (t.name LIKE CONCAT('%', #{keyword}, '%')
+                     OR si.store_code LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="storeType != null">
+                AND si.store_type = #{storeType}
+            </if>
+            <if test="status != null">
+                AND t.status = #{status}
+            </if>
+        </where>
+        ORDER BY t.create_time DESC
+    </select>
+
+</mapper>

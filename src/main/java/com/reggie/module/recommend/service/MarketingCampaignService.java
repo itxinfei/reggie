@@ -97,4 +97,31 @@ public interface MarketingCampaignService extends IService<MarketingCampaign> {
      * @return 成功推送的用户数量
      */
     int batchPushMessages(Long campaignId, Integer pushType);
+
+    /**
+     * 获取推送预览 - 查询匹配活动目标人群的真实用户列表
+     * 修改点：从原先硬编码模拟数据改为真实查询匹配用户
+     *
+     * @param campaignId 活动ID
+     * @param limit      预览用户数量上限
+     * @return 包含 preview(用户列表) 和 estimate(预估总量) 的Map
+     */
+    Map<String, Object> getPushPreview(Long campaignId, int limit);
+
+    /**
+     * 获取营销活动全局统计数据
+     * 修改点：后端聚合真实数据，替代前端pageSize=1000拉全量
+     *
+     * @return 包含 total/active/draft/ended/paused/totalParticipants/totalPushed 的Map
+     */
+    Map<String, Object> getCampaignStats();
+
+    /**
+     * 获取单个活动的推送消息数
+     * 修改点：从marketing_message表真实统计，代替缺失的pushCount字段
+     *
+     * @param campaignId 活动ID
+     * @return 推送消息数
+     */
+    int getPushCountByCampaignId(Long campaignId);
 }

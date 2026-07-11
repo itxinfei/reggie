@@ -4,6 +4,7 @@ const updateMember = (params) => $axios({ url: '/api/member/member', method: 'pu
 const getMember = (id) => $axios({ url: `/api/member/member/${id}`, method: 'get' })
 const memberRecharge = (params) => $axios({ url: '/api/member/member/recharge', method: 'post', data: params })
 const memberDeductBalance = (params) => $axios({ url: '/api/member/member/deduct-balance', method: 'post', data: params })
+const memberMyInfo = () => $axios({ url: '/api/member/member/my-info', method: 'get' })
 
 const levelPage = (params) => $axios({ url: '/api/member/level/page', method: 'get', params })
 const addLevel = (params) => $axios({ url: '/api/member/level', method: 'post', data: params })
@@ -12,7 +13,10 @@ const deleteLevel = (id) => $axios({ url: `/api/member/level/${id}`, method: 'de
 const getLevel = (id) => $axios({ url: `/api/member/level/${id}`, method: 'get' })
 
 const rechargePage = (params) => $axios({ url: '/api/member/recharge/page', method: 'get', params })
+const rechargeStats = () => $axios({ url: '/api/member/recharge/stats', method: 'get' })
+
 const pointsPage = (params) => $axios({ url: '/api/member/points/page', method: 'get', params })
+const pointsStats = () => $axios({ url: '/api/member/points/stats', method: 'get' })
 
 const couponTemplatePage = (params) => $axios({ url: '/api/member/coupon-template/page', method: 'get', params })
 const addCouponTemplate = (params) => $axios({ url: '/api/member/coupon-template', method: 'post', data: params })

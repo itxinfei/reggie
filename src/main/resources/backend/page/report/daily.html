@@ -67,114 +67,7 @@
       min-width: 0;
     }
 
-    /* ========== KPI 卡片（容器使用stats-cards统一规范） ========== */
-    .stats-cards {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-    .kpi-card {
-      background: #fff;
-      border-radius: 14px;
-      padding: 22px 24px;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.8);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      min-height: 130px;
-    }
-    .kpi-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10);
-    }
-    .kpi-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 4px;
-      background: var(--gradient);
-      opacity: 0.85;
-    }
-    .kpi-card::after {
-      content: '';
-      position: absolute;
-      top: -40%; right: -25%;
-      width: 160px; height: 160px;
-      background: var(--gradient);
-      border-radius: 50%;
-      opacity: 0.05;
-      transition: all 0.5s;
-    }
-    .kpi-card:hover::after {
-      transform: scale(1.15);
-      opacity: 0.08;
-    }
-    .kpi-card .kpi-icon-wrapper {
-      position: absolute;
-      right: 18px; top: 20px;
-      width: 48px; height: 48px;
-      border-radius: 12px;
-      background: var(--icon-bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      transition: all 0.3s;
-    }
-    .kpi-card:hover .kpi-icon-wrapper {
-      transform: rotate(5deg) scale(1.1);
-    }
-    .kpi-card .kpi-label {
-      font-size: 13px;
-      color: #909399;
-      margin-bottom: 6px;
-      font-weight: 500;
-      letter-spacing: 0.3px;
-    }
-    .kpi-card .kpi-value {
-      font-size: 30px;
-      font-weight: 700;
-      line-height: 1.2;
-      word-break: break-all;
-      margin-bottom: 4px;
-      background: var(--gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .kpi-card .kpi-sub {
-      font-size: 12px;
-      color: #909399;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .kpi-card.primary {
-      --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
-      --icon-bg: linear-gradient(135deg, rgba(64, 158, 255, 0.10) 0%, rgba(102, 177, 255, 0.14) 100%);
-    }
-    .kpi-card.success {
-      --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
-      --icon-bg: linear-gradient(135deg, rgba(103, 194, 58, 0.10) 0%, rgba(133, 206, 97, 0.14) 100%);
-    }
-    .kpi-card.warning {
-      --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
-      --icon-bg: linear-gradient(135deg, rgba(230, 162, 60, 0.10) 0%, rgba(235, 181, 99, 0.14) 100%);
-    }
-    .kpi-card.danger {
-      --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
-      --icon-bg: linear-gradient(135deg, rgba(245, 108, 108, 0.10) 0%, rgba(247, 137, 137, 0.14) 100%);
-    }
-    .kpi-card.info {
-      --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
-      --icon-bg: linear-gradient(135deg, rgba(144, 147, 153, 0.10) 0%, rgba(166, 169, 173, 0.14) 100%);
-    }
+    /* ========== KPI 卡片（使用 components-stats-card.css 统一样式） ========== */
 
     /* ========== 图表面板 ========== */
     .chart-panel {
@@ -360,15 +253,15 @@
     @media (max-width: 768px) {
       .container { padding: 12px 16px 16px !important; }
       .stats-cards { grid-template-columns: 1fr; gap: 12px; }
-      .kpi-card { padding: 18px; min-height: 110px; }
-      .kpi-card .kpi-value { font-size: 26px; }
+      .stat-card { padding: 18px; min-height: 110px; }
+      .stat-card .stat-value { font-size: 26px; }
       .chart-box { height: 300px; }
       .tableBar { flex-direction: column; align-items: stretch; }
       .tableBar .toolbar-spacer { display: none; }
     }
     @media (max-width: 480px) {
-      .kpi-card { padding: 16px; min-height: 100px; }
-      .kpi-card .kpi-value { font-size: 24px; }
+      .stat-card { padding: 16px; min-height: 100px; }
+      .stat-card .stat-value { font-size: 24px; }
     }
   </style>
 </head>
@@ -418,33 +311,29 @@
 
       <!-- ========== KPI 卡片 ========== -->
       <div class="stats-cards">
-        <div class="kpi-card primary">
-          <div class="kpi-icon-wrapper">📋</div>
-          <div class="kpi-label">订单总数</div>
-          <div class="kpi-value">{{ dailyData.totalOrders || 0 }}</div>
-          <div class="kpi-sub">全部状态订单</div>
+        <div class="stat-card primary">
+          <div class="stat-icon">📋</div>
+          <div class="stat-label">订单总数</div>
+          <div class="stat-value">{{ dailyData.totalOrders || 0 }}</div>
+          <div class="sub">全部状态订单</div>
         </div>
-        <div class="kpi-card success">
-          <div class="kpi-icon-wrapper">💰</div>
-          <div class="kpi-label">营业额（元）</div>
-          <div class="kpi-value">¥{{ formatMoney(dailyData.totalAmount) }}</div>
-          <div class="kpi-sub">已完成订单金额</div>
+        <div class="stat-card success">
+          <div class="stat-icon">💰</div>
+          <div class="stat-label">营业额（元）</div>
+          <div class="stat-value">¥{{ formatMoney(dailyData.totalAmount) }}</div>
+          <div class="sub">已完成订单金额</div>
         </div>
-        <div class="kpi-card warning">
-          <div class="kpi-icon-wrapper">🏷️</div>
-          <div class="kpi-label">客单价（元）</div>
-          <div class="kpi-value">¥{{ formatMoney(dailyData.avgAmount) }}</div>
-          <div class="kpi-sub">人均消费</div>
+        <div class="stat-card warning">
+          <div class="stat-icon">🏷️</div>
+          <div class="stat-label">客单价（元）</div>
+          <div class="stat-value">¥{{ formatMoney(dailyData.avgAmount) }}</div>
+          <div class="sub">人均消费</div>
         </div>
-        <div class="kpi-card danger">
-          <div class="kpi-icon-wrapper">📊</div>
-          <div class="kpi-label">完成 / 取消</div>
-          <div class="kpi-value" style="font-size:24px;letter-spacing:1px;color:#303133;background:transparent;-webkit-text-fill-color:initial;background-clip:unset;-webkit-background-clip:unset;">
-            {{ dailyData.completedOrders || 0 }}
-            <span style="color:#c0c4cc;font-weight:400;margin:0 4px;"> / </span>
-            <span style="color:#F56C6C;">{{ dailyData.cancelledOrders || 0 }}</span>
-          </div>
-          <div class="kpi-sub">完成率 {{ completionRate }}%</div>
+        <div class="stat-card danger">
+          <div class="stat-icon">📊</div>
+          <div class="stat-label">完成 / 取消</div>
+          <div class="stat-value">{{ dailyData.completedOrders || 0 }} / {{ dailyData.cancelledOrders || 0 }}</div>
+          <div class="sub">完成率 {{ completionRate }}%</div>
         </div>
       </div>
 

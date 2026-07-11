@@ -11,107 +11,136 @@
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
-  #rankingChart { width: 100%; min-height: 300px; }
-  #trendLineChart { width: 100%; }
-  .rank-badge {
-    display: inline-block;
-    width: 22px; height: 22px;
-    line-height: 22px; text-align: center;
-    border-radius: 4px;
-    font-size: 12px; font-weight: 700;
-  }
-  .rank-badge.r1 { background: #ff4d4f; color: #fff; }
-  .rank-badge.r2 { background: #ff7a45; color: #fff; }
-  .rank-badge.r3 { background: #ffa940; color: #fff; }
-  .rank-badge.rn { background: #f0f0f0; color: #666; }
+    /* ========== 基础重置 ========== */
+    html, body { height: 100%; margin: 0; padding: 0; overflow-y: auto; overflow-x: hidden;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    .dish-ranking-page { min-height: 100%; display: flex; flex-direction: column; }
+    .dish-ranking-page .container { flex: 1; background: transparent; padding: 24px 32px 32px;
+      min-width: 0; max-width: 1600px; margin: 0 auto; width: 100%; }
 
-  /* 空状态样式 */
-  .chart-empty {
-    display: flex; align-items: center; justify-content: center;
-    height: 200px; color: #c0c4cc; font-size: 14px; user-select: none;
-  }
+    /* ========== 工具栏 ========== */
+    .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+      background: #fff; padding: 16px 24px; border-radius: 14px; margin-bottom: 20px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+      transition: all 0.3s; }
+    .filter-bar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .filter-bar .fl-label { font-size: 14px; color: #606266; font-weight: 500; flex-shrink: 0; }
+    .filter-bar .fl-spacer { flex: 1; min-width: 0; }
+    .filter-bar .fl-hint { font-size: 12px; color: #c0c4cc; }
+
+    /* ========== KPI 卡片（使用 components-stats-card.css 统一样式） ========== */
+    .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+
+    /* ========== 图表面板 ========== */
+    .chart-panel { background: #fff; border-radius: 16px; padding: 24px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+      transition: all 0.3s; margin-bottom: 20px; }
+    .chart-panel:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .chart-panel .panel-title { font-size: 16px; font-weight: 600; color: #303133;
+      margin-bottom: 20px; padding-bottom: 14px; border-bottom: 2px solid #f0f2f5;
+      display: flex; align-items: center; gap: 8px; }
+    .chart-box { width: 100%; min-height: 300px; }
+
+    /* ========== 排名样式 ========== */
+    .rank-badge { display: inline-block; width: 26px; height: 26px; line-height: 26px;
+      text-align: center; border-radius: 6px; font-size: 13px; font-weight: 700; }
+    .rank-badge.r1 { background: linear-gradient(135deg, #ff4d4f, #ff7875); color: #fff; }
+    .rank-badge.r2 { background: linear-gradient(135deg, #ff7a45, #ffa940); color: #fff; }
+    .rank-badge.r3 { background: linear-gradient(135deg, #ffa940, #ffc069); color: #fff; }
+    .rank-badge.rn { background: #f0f0f0; color: #909399; }
+
+    /* ========== 响应式 ========== */
+    @media (max-width: 1400px) { .stats-cards { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 1200px) { .container { padding: 20px 28px 28px !important; } }
+    @media (max-width: 768px) { .container { padding: 12px 16px 16px !important; }
+      .stats-cards { grid-template-columns: 1fr; gap: 12px; }
+      .stat-card { padding: 18px; min-height: 110px; } .stat-card .stat-value { font-size: 26px; }
+      .chart-box { min-height: 250px; } }
   </style>
 </head>
 <body>
-  <div class="dashboard-container" id="report-dish-app" v-loading="loading">
+  <div class="dish-ranking-page" id="report-dish-app" v-loading="loading">
     <div class="container">
-      <div class="tableBar">
-        <el-date-picker v-model="dateRange"
-          clearable
-          value-format="yyyy-MM-dd"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-        ></el-date-picker>
+
+      <!-- ========== 工具栏 ========== -->
+      <div class="filter-bar">
+        <span class="fl-label"><i class="el-icon-date" style="margin-right:4px;"></i>日期范围</span>
+        <el-date-picker v-model="dateRange" clearable value-format="yyyy-MM-dd"
+          type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
+          size="small"></el-date-picker>
+        <span class="fl-label" style="margin-left:8px;">数量</span>
         <el-input-number v-model="limit" :min="5" :max="50" :step="5"
-          size="small" class="el-input--wide-xs" controls-position="right">
+          size="small" controls-position="right" style="width:100px;">
         </el-input-number>
-        <span style="margin-left:6px;color:#909399;font-size:13px;">条</span>
-        <el-select v-model="categoryFilter" placeholder="菜品分类" size="small" class="el-select--narrow" clearable @change="loadData">
+        <span class="fl-hint">条</span>
+        <el-select v-model="categoryFilter" placeholder="菜品分类" size="small" clearable
+          @change="loadData" style="width:150px;">
           <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
         </el-select>
-        <el-button type="primary" class="btn-query" @click="loadData">查询</el-button>
-        <el-button class="btn-reset" @click="reset">重置</el-button>
-        <div class="tableLab">
-          <el-button type="primary" @click="handleExport">导出</el-button>
-        </div>
+        <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
+        <el-button size="small" class="btn-reset" icon="el-icon-refresh" @click="reset">重置</el-button>
+        <span class="fl-spacer"></span>
+        <el-button type="success" size="small" icon="el-icon-download" @click="handleExport">导出 CSV</el-button>
       </div>
 
-      <!-- ========== 数据统计卡片 ========== -->
+      <!-- ========== KPI 卡片 ========== -->
       <div class="stats-cards">
         <div class="stat-card primary">
-          <div class="stat-icon">🍽️</div>
+          <div class="stat-icon">🍽</div>
           <div class="stat-label">菜品总数</div>
           <div class="stat-value">{{ stats.totalDishes || 0 }}</div>
+          <div class="sub">当前分类下菜品数</div>
         </div>
         <div class="stat-card success">
           <div class="stat-icon">🏆</div>
           <div class="stat-label">上榜菜品</div>
           <div class="stat-value">{{ stats.topDishes || 0 }}</div>
+          <div class="sub">有销量的菜品</div>
         </div>
         <div class="stat-card warning">
           <div class="stat-icon">📊</div>
           <div class="stat-label">总销量（份）</div>
           <div class="stat-value">{{ stats.totalSales || 0 }}</div>
+          <div class="sub">选定时间范围内</div>
         </div>
         <div class="stat-card info">
           <div class="stat-icon">📈</div>
           <div class="stat-label">平均销量</div>
           <div class="stat-value">{{ stats.avgSales || 0 }}</div>
+          <div class="sub">份/菜品</div>
         </div>
       </div>
 
-      <el-card shadow="never" style="margin-bottom: 20px;">
-        <div slot="header">菜品销量排行（Top {{ tableData.length }}）</div>
-        <div id="rankingChart" :style="{ height: rankingChartHeight + 'px' }"></div>
-      </el-card>
+      <!-- ========== 水平排行榜图 ========== -->
+      <div class="chart-panel" style="margin-bottom:20px;">
+        <div class="panel-title">📊 菜品销量排行（Top {{ tableData.length }}）</div>
+        <div id="rankingChart" :style="{ height: rankingChartHeight + 'px' }" style="width:100%;"></div>
+      </div>
 
-      <!-- Top3 菜品趋势对比 -->
-      <el-card shadow="never" style="margin-bottom: 20px;" v-show="tableData.length > 0">
-        <div slot="header">Top 3 菜品销量趋势对比</div>
+      <!-- ========== Top3 趋势对比 ========== -->
+      <div class="chart-panel" style="margin-bottom:20px;" v-show="tableData.length > 0">
+        <div class="panel-title">📈 Top 3 菜品销量趋势对比</div>
         <div id="trendLineChart" style="width:100%;height:320px;"></div>
-      </el-card>
+      </div>
 
-      <!-- 后端返回字段：name, count（无 salesCount / amount） -->
-      <el-table :data="tableData" stripe border class="tableBox">
-        <el-table-column label="排名" width="70" align="center">
+      <!-- ========== 数据表格 ========== -->
+      <el-table :data="tableData" stripe border class="tableBox" v-loading="loading">
+        <el-table-column label="排名" width="80" align="center">
           <template slot-scope="{ $index }">
             <span :class="['rank-badge', $index === 0 ? 'r1' : $index === 1 ? 'r2' : $index === 2 ? 'r3' : 'rn']">
               {{ $index + 1 }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="name" label="菜品名称"></el-table-column>
-        <el-table-column prop="count" label="销量（份）" align="center"></el-table-column>
-        <el-table-column label="占比" align="center">
+        <el-table-column prop="name" label="菜品名称" min-width="180"></el-table-column>
+        <el-table-column prop="count" label="销量（份）" width="120" align="center"></el-table-column>
+        <el-table-column label="占比" min-width="180" align="center">
           <template slot-scope="{ row }">
-            <el-progress
-              :percentage="calcPercent(row.count)"
-              :show-text="true"
-              :stroke-width="10"
-              :format="p => p + '%'"
-            ></el-progress>
+            <el-progress :percentage="calcPercent(row.count)" :show-text="true"
+              :stroke-width="12" :format="function(p) { return p + '%'; }"
+              :color="progressColor(row.count)">
+            </el-progress>
           </template>
         </el-table-column>
       </el-table>
@@ -126,260 +155,210 @@
   <script>
     new Vue({
       el: '#report-dish-app',
-      data() {
+      data: function() {
         return {
-          loading: false,
-          dateRange: [],
-          limit: 10,
-          categoryFilter: null,
-          categories: [],
-          tableData: [],
-          // 数据统计
-          stats: {
-            totalDishes: 0,
-            topDishes: 0,
-            totalSales: 0,
-            avgSales: 0        // 修改点：平均每个菜品销量
-          },
-          chart: null,
-          trendChart: null,
-          resizeHandler: null
+          loading: false, dateRange: [], limit: 10, categoryFilter: null,
+          categories: [], tableData: [],
+          stats: { totalDishes: 0, topDishes: 0, totalSales: 0, avgSales: 0 },
+          chart: null, trendChart: null, resizeHandler: null
         }
       },
       computed: {
-        // 修改点：动态图表高度，根据数据量自适应，确保各条图形比例协调
-        rankingChartHeight() {
-          const n = this.tableData.length || 0
-          if (n === 0) return 420
-          // 每项约 38px 高度 + 46px grid 边距，上下限 300~600
-          return Math.max(300, Math.min(600, n * 38 + 46))
+        rankingChartHeight: function() {
+          var n = (this.tableData && this.tableData.length) || 0;
+          if (n === 0) return 420;
+          return Math.max(300, Math.min(600, n * 38 + 46));
         }
       },
-      created() {
-        const now = new Date()
-        const first = new Date(now.getFullYear(), now.getMonth(), 1)
-        const last  = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-        const fmt = d => d.getFullYear() + '-'
-          + String(d.getMonth() + 1).padStart(2, '0') + '-'
-          + String(d.getDate()).padStart(2, '0')
-        this.dateRange = [fmt(first), fmt(last)]
-        this.loadCategories()
+      created: function() {
+        var self = this;
+        var now = new Date();
+        var first = new Date(now.getFullYear(), now.getMonth(), 1);
+        var last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+        self.dateRange = [fmt(first), fmt(last)];
+        self.loadCategories();
       },
-      mounted() {
-        this.$nextTick(() => {
-          var rankingEl = document.getElementById('rankingChart')
-          var trendEl = document.getElementById('trendLineChart')
-          if (rankingEl) this.chart = echarts.init(rankingEl)
-          if (trendEl) this.trendChart = echarts.init(trendEl)
-          this.resizeHandler = () => {
-            if (this.chart) this.chart.resize()
-            if (this.trendChart) this.trendChart.resize()
-          }
-          window.addEventListener('resize', this.resizeHandler)
-          this.loadData()
-        })
+      mounted: function() {
+        var self = this;
+        self.$nextTick(function() {
+          var rEl = document.getElementById('rankingChart');
+          var tEl = document.getElementById('trendLineChart');
+          if (rEl) self.chart = echarts.init(rEl);
+          if (tEl) self.trendChart = echarts.init(tEl);
+          self.resizeHandler = function() {
+            if (self.chart) self.chart.resize();
+            if (self.trendChart) self.trendChart.resize();
+          };
+          window.addEventListener('resize', self.resizeHandler);
+          self.loadData();
+        });
       },
-      beforeDestroy() {
-        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler)
-        if (this.chart) this.chart.dispose()
-        if (this.trendChart) this.trendChart.dispose()
+      beforeDestroy: function() {
+        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
+        if (this.chart) this.chart.dispose();
+        if (this.trendChart) this.trendChart.dispose();
       },
       methods: {
-        // 加载菜品分类列表
-        loadCategories() {
-          $axios.get('/category/list').then(res => {
-            if (res.code === 1 && res.data) this.categories = res.data || [];
-          }).catch(() => {});
+        loadCategories: function() {
+          var self = this;
+          $axios.get('/category/list').then(function(res) {
+            if (res.code === 1 && res.data) self.categories = res.data || [];
+          }).catch(function() {});
         },
-        async loadData() {
-          this.loading = true
-          try {
-            const params = { limit: this.limit }
-            if (this.dateRange && this.dateRange.length >= 2) {
-              params.startDate = this.dateRange[0]
-              params.endDate   = this.dateRange[1]
-            }
-            // 修改点：分类筛选真正联调 API
-            if (this.categoryFilter) params.categoryId = this.categoryFilter
-
-            // 并行加载排行数据和统计数据
-            const [rankRes, statsRes] = await Promise.all([
-              reportDishRanking(params),
-              this.loadDishRankingStats()
-            ])
-
-            // 处理排行数据
-            if (String(rankRes.code) === '1') {
-              // 后端字段：name, count
-              this.tableData = rankRes.data || []
-              this.renderChart()
-              // 加载Top3趋势
-              this.loadTopTrend()
-            } else {
-              this.$message.error(rankRes.msg || '加载失败')
-            }
-
-            // 处理统计数据
-            if (statsRes && String(statsRes.code) === '1') {
-              this.stats = statsRes.data || this.stats
-            }
-          } catch (err) {
-            this.$message.error('请求失败：' + err)
-          } finally {
-            this.loading = false
+        loadData: function() {
+          var self = this;
+          self.loading = true;
+          var params = { limit: self.limit };
+          if (self.dateRange && self.dateRange.length >= 2) {
+            params.startDate = self.dateRange[0]; params.endDate = self.dateRange[1];
           }
-        },
-        // 加载菜品排行统计数据
-        async loadDishRankingStats() {
-          try {
-            const res = await reportDishRanking({ limit: 1000 })
-            if (String(res.code) === '1') {
-              const data = res.data || []
-              const totalSales = data.reduce((sum, item) => sum + (item.count || 0), 0)
-              // 修改点：计算平均销量（保留整数）
-              const avgSales = data.length > 0 ? Math.round(totalSales / data.length) : 0
-              return {
-                code: 1,
-                data: {
-                  totalDishes: data.length,
-                  topDishes: data.length,
-                  totalSales: totalSales,
-                  avgSales: avgSales
-                }
+          if (self.categoryFilter) params.categoryId = self.categoryFilter;
+
+          Promise.all([reportDishRanking(params), self.loadDishRankingStats()])
+            .then(function(results) {
+              var rankRes = results[0], statsRes = results[1];
+              if (String(rankRes.code) === '1') {
+                self.tableData = rankRes.data || [];
+                self.renderChart();
+                self.loadTopTrend();
+              } else { self.$message.error(rankRes.msg || '加载失败'); }
+              if (statsRes && String(statsRes.code) === '1') {
+                self.stats = statsRes.data || self.stats;
               }
-            }
-          } catch (err) {
-            console.warn('加载菜品排行统计数据失败:', err)
-          }
-          return { code: 0 }
+            }).catch(function(err) { self.$message.error('请求失败：' + err); })
+            .finally(function() { self.loading = false; });
         },
-        // 加载Top3趋势对比数据
-        loadTopTrend() {
-          if (!this.tableData || this.tableData.length === 0 || !this.trendChart) return
-          var top3Names = this.tableData.slice(0, 3).map(function(d) { return d.name })
-          if (top3Names.length === 0) return
-          // 修改点：传递真实日期范围，后端改为查询真实数据库
-          var self = this
+        loadDishRankingStats: function() {
+          var self = this;
+          return reportDishRanking({ limit: 1000 }).then(function(res) {
+            if (String(res.code) === '1') {
+              var data = res.data || [];
+              var totalSales = data.reduce(function(s, i) { return s + (i.count || 0); }, 0);
+              var avgSales = data.length > 0 ? Math.round(totalSales / data.length) : 0;
+              return { code: 1, data: { totalDishes: data.length, topDishes: data.length, totalSales: totalSales, avgSales: avgSales } };
+            }
+            return { code: 0 };
+          }).catch(function() { return { code: 0 }; });
+        },
+        loadTopTrend: function() {
+          var self = this;
+          if (!self.tableData || self.tableData.length === 0 || !self.trendChart) return;
+          var top3Names = self.tableData.slice(0, 3).map(function(d) { return d.name; });
+          if (top3Names.length === 0) return;
           $axios.get('/api/report/dish-trend', {
             params: {
               names: top3Names.join(','),
               startDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[0] : '',
               endDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[1] : ''
             }
-          }).then(res => {
-            if (res.code === 1 && res.data) this.renderTrendChart(res.data)
-          }).catch(() => {})
+          }).then(function(res) {
+            if (res.code === 1 && res.data) self.renderTrendChart(res.data);
+          }).catch(function() {});
         },
-        renderTrendChart(data) {
-          if (!this.trendChart) return
-          // 修改点：空数据兜底
+        renderTrendChart: function(data) {
+          if (!this.trendChart) return;
           if (!data || !data.dates || !data.dates.length) {
             this.trendChart.setOption({
               title: { text: '暂无趋势数据', left: 'center', top: 'center',
                 textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
-            }, true)
-            return
+            }, true); return;
           }
-          var colors = ['#ff4d4f', '#5470c6', '#91cc75']
-          var dates = data.dates || []
+          var colors = ['#ff4d4f', '#5470c6', '#91cc75'];
+          var dates = data.dates || [];
           var series = (data.series || []).map(function(s, i) {
             return {
-              name: s.name, type: 'line', data: s.data || [],
-              smooth: true, symbol: 'circle', symbolSize: 6,
-              lineStyle: { color: colors[i] || '#909399', width: 2.5 },
-              itemStyle: { color: colors[i] || '#909399' }
-            }
-          })
+              name: s.name, type: 'line', data: s.data || [], smooth: true,
+              symbol: 'circle', symbolSize: 7,
+              lineStyle: { color: colors[i] || '#909399', width: 3 },
+              itemStyle: { color: colors[i] || '#909399', borderColor: '#fff', borderWidth: 2 },
+              areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1, [
+                { offset: 0, color: (colors[i] || '#909399').replace(')', ',0.25)').replace('rgb', 'rgba') },
+                { offset: 1, color: 'rgba(255,255,255,0.02)' }]) }
+            };
+          });
           this.trendChart.setOption({
-            tooltip: { trigger: 'axis' },
-            // 修改点：legend bottom 从 0 提至 4，避免被 xAxis 标签遮挡
-            legend: { data: (data.series || []).map(function(s) { return s.name }), bottom: 4,
-              textStyle: { fontSize: 12, color: '#606266' } },
-            // 修改点：grid bottom 从 40 增至 44，为 legend 预留足够空间
-            grid: { left: 50, right: 30, top: 15, bottom: 44 },
-            xAxis: { type: 'category', data: dates, boundaryGap: false },
-            yAxis: { type: 'value', name: '销量(份)' },
+            tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)',
+              borderColor: '#e4e7ed', borderWidth: 1, textStyle: { color: '#303133', fontSize: 13 } },
+            legend: { data: (data.series || []).map(function(s) { return s.name; }),
+              bottom: 8, textStyle: { fontSize: 12, color: '#606266' } },
+            grid: { left: 50, right: 30, top: 20, bottom: 48 },
+            xAxis: { type: 'category', data: dates, boundaryGap: false,
+              axisLine: { lineStyle: { color: '#e4e7ed' } }, axisTick: { show: false } },
+            yAxis: { type: 'value', name: '销量(份)', splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } } },
             series: series
-          }, true)
+          }, true);
         },
-        calcPercent(count) {
-          if (!this.tableData.length) return 0
-          const max = this.tableData[0].count || 1
-          return Math.round(count / max * 100)
+        calcPercent: function(count) {
+          if (!this.tableData.length) return 0;
+          var max = this.tableData[0].count || 1;
+          return Math.round(count / max * 100);
         },
-        renderChart() {
-          if (!this.chart) return
-          // 修改点：空数据兜底，显示友好提示
+        progressColor: function(count) {
+          var max = this.tableData.length ? (this.tableData[0].count || 1) : 1;
+          var ratio = count / max;
+          if (ratio > 0.8) return '#ff4d4f';
+          if (ratio > 0.5) return '#409eff';
+          return '#91cc75';
+        },
+        renderChart: function() {
+          if (!this.chart) return;
           if (!this.tableData || this.tableData.length === 0) {
             this.chart.setOption({
               title: { text: '暂无排行数据', left: 'center', top: 'center',
                 textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
-            }, true)
-            return
+            }, true); return;
           }
-          // 水平条形图，倒序展示（最高在上）
-          const names  = this.tableData.map(item => item.name).reverse()
-          const counts = this.tableData.map(item => item.count).reverse()
-          const maxVal = counts.length ? Math.max(...counts) : 1
-          // 修改点：根据数据量动态调整 barMaxWidth，保证条形粗细合适
-          const barWidth = names.length <= 5 ? 26 : names.length <= 10 ? 22 : 18
+          var names = this.tableData.map(function(item) { return item.name; }).reverse();
+          var counts = this.tableData.map(function(item) { return item.count; }).reverse();
+          var maxVal = counts.length ? Math.max.apply(null, counts) : 1;
+          var barWidth = names.length <= 5 ? 26 : names.length <= 10 ? 22 : 18;
           this.chart.setOption({
             tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-              formatter: p => `<b>${p[0].name}</b><br/>${p[0].marker} 销量：<b>${p[0].value} 份</b>` },
-            grid: { left: 130, right: 60, top: 16, bottom: 30 },
+              backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e4e7ed', borderWidth: 1,
+              textStyle: { color: '#303133', fontSize: 13 },
+              formatter: function(p) { return '<b>' + p[0].name + '</b><br/>' + p[0].marker + ' 销量：<b>' + p[0].value + ' 份</b>'; } },
+            grid: { left: 130, right: 70, top: 16, bottom: 30 },
             xAxis: { type: 'value', name: '销量（份）',
-              splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
+              splitLine: { lineStyle: { type: 'dashed', color: '#f2f3f5' } },
+              axisLabel: { color: '#909399' } },
             yAxis: { type: 'category', data: names,
-              axisLabel: { color: '#606266', interval: 0, width: 110,
-                overflow: 'truncate', fontSize: 13 } },
-            series: [{
-              type: 'bar', data: counts, barMaxWidth: barWidth,
+              axisLabel: { color: '#606266', interval: 0, width: 110, overflow: 'truncate', fontSize: 13 } },
+            series: [{ type: 'bar', data: counts, barMaxWidth: barWidth,
               itemStyle: {
                 borderRadius: [0, 6, 6, 0],
-                color(params) {
-                  const ratio = params.value / maxVal
-                  if (ratio > 0.8) return '#ff4d4f'
-                  if (ratio > 0.5) return '#5470c6'
-                  return '#91cc75'
+                color: function(params) {
+                  var v = params.value, r = v / maxVal;
+                  if (r > 0.8) return new echarts.graphic.LinearGradient(0,0,1,0,
+                    [{ offset: 0, color: '#ff7875' }, { offset: 1, color: '#ff4d4f' }]);
+                  if (r > 0.5) return new echarts.graphic.LinearGradient(0,0,1,0,
+                    [{ offset: 0, color: '#66b1ff' }, { offset: 1, color: '#409eff' }]);
+                  return new echarts.graphic.LinearGradient(0,0,1,0,
+                    [{ offset: 0, color: '#85ce61' }, { offset: 1, color: '#67c23a' }]);
                 }
               },
-              label: { show: true, position: 'right', color: '#606266', fontSize: 12,
-                formatter: p => p.value + ' 份' }
+              label: { show: true, position: 'right', color: '#606266', fontSize: 12, fontWeight: 600,
+                formatter: function(p) { return p.value + ' 份'; } }
             }]
-          }, true)
-          // 修改点：DOM 高度更新后触发 chart resize
-          this.$nextTick(() => {
-            if (this.chart) this.chart.resize()
-          })
+          }, true);
+          this.$nextTick(function() { if (this.chart) this.chart.resize(); }.bind(this));
         },
-        reset() {
-          this.dateRange = []
-          this.limit = 10
-          this.categoryFilter = null
-          this.tableData = []
-          if (this.chart) this.chart.clear()
-          if (this.trendChart) this.trendChart.clear()
+        reset: function() {
+          this.dateRange = []; this.limit = 10; this.categoryFilter = null; this.tableData = [];
+          if (this.chart) this.chart.clear(); if (this.trendChart) this.trendChart.clear();
         },
-        handleExport() {
+        handleExport: function() {
           if (!this.dateRange || this.dateRange.length < 2) {
-            this.$message.warning('请先选择日期范围')
-            return
+            this.$message.warning('请先选择日期范围'); return;
           }
-          // 导出日报CSV（后端 export 接口当前导出日报数据）
-          reportExport({ startDate: this.dateRange[0], endDate: this.dateRange[1] })
-            .then(blob => {
-              if (blob && blob.type && blob.type.indexOf('json') > -1) {
-                this.$message.error('导出失败')
-                return
-              }
-              const link = document.createElement('a')
-              link.href = URL.createObjectURL(blob)
-              link.download = '菜品排名_' + this.dateRange[0] + '_' + this.dateRange[1] + '.csv'
-              link.click()
-              URL.revokeObjectURL(link.href)
-              this.$message.success('导出成功')
-            })
-            .catch(err => this.$message.error('导出失败：' + err))
+          reportExport({ startDate: this.dateRange[0], endDate: this.dateRange[1] }).then(function(blob) {
+            if (blob && blob.type && blob.type.indexOf('json') > -1) { this.$message.error('导出失败'); return; }
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '菜品排行_' + this.dateRange[0] + '_' + this.dateRange[1] + '.csv';
+            link.click(); URL.revokeObjectURL(link.href);
+            this.$message.success('导出成功');
+          }.bind(this)).catch(function(err) { this.$message.error('导出失败：' + err); }.bind(this));
         }
       }
     })

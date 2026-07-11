@@ -178,7 +178,8 @@
           return [
             { key: '', icon: '🎫', label: '优惠券总数', value: self.stats.totalCoupons, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: 'enabled', icon: '✅', label: '已启用', value: self.stats.enabledCount, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
-            { key: 'disabled', icon: '⏸️', label: '已禁用', value: self.stats.disabledCount, color: 'warning', clickable: true, active: self.activeFilter === 'disabled' }
+            { key: 'disabled', icon: '⏸️', label: '已禁用', value: self.stats.disabledCount, color: 'warning', clickable: true, active: self.activeFilter === 'disabled' },
+            { key: 'exhausted', icon: '💨', label: '已领完', value: self.stats.exhaustedCount || 0, color: 'danger' }
           ]
         }
       },
@@ -215,7 +216,8 @@
               return { code: 1, data: {
                 totalCoupons: res.data.total || 0,
                 enabledCount: records.filter(function(r) { return r.status === 1 }).length,
-                disabledCount: records.filter(function(r) { return r.status === 0 }).length
+                disabledCount: records.filter(function(r) { return r.status === 0 }).length,
+                exhaustedCount: records.filter(function(r) { return r.remainCount !== undefined && r.remainCount !== null && Number(r.remainCount) <= 0 }).length
               }}
             }
           } catch (err) { console.warn('加载优惠券统计失败:', err) }

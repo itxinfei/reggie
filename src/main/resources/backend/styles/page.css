@@ -1329,3 +1329,132 @@
     padding: 7px 12px !important;
   }
 }
+
+/* ============================================
+   修改点：修复 el-range__icon 垂直偏下 + search-area 整体美化
+   ============================================ */
+
+/* --- 1. 修复日期范围选择器图标垂直偏下 --- */
+/* 根因：common.css 中 .el-date-editor .el-range__icon 使用了 float:left + 固定 line-height，
+         在 flex 父容器中无法精确垂直居中，small 尺寸下 line-height:30px < height:32px 导致偏移 */
+
+/* 通用日期范围选择器图标：移除 float，统一用 flex 居中 */
+.dashboard-container .container .tableBar .el-range-editor .el-range__icon,
+.dashboard-container .container .tableBar .el-range-editor .el-range__close-icon {
+  float: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  height: 100%;
+  margin-left: 0;
+  width: auto;
+  flex-shrink: 0;
+}
+
+/* search-area 内日期选择器覆盖层级更高，确保生效 */
+.dashboard-container .container .tableBar .search-area .el-range-editor .el-range__icon,
+.dashboard-container .container .tableBar .search-area .el-range-editor .el-range__close-icon {
+  float: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  height: 100%;
+  margin-left: 0;
+  width: auto;
+  flex-shrink: 0;
+}
+
+/* 日期分隔符（"至"）垂直居中 */
+.dashboard-container .container .tableBar .el-range-editor .el-range-separator {
+  display: inline-flex !important;
+  align-items: center;
+  height: 100%;
+  line-height: 1;
+}
+
+/* --- 2. search-area 容器整体美化 --- */
+
+/* 2.1 输入框/下拉框文字垂直居中（消除上下padding导致的不居中） */
+.dashboard-container .container .tableBar .search-area .el-input__inner,
+.dashboard-container .container .tableBar .search-area .el-select .el-input__inner {
+  height: 32px;
+  line-height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 13px;
+}
+
+/* 2.2 搜索前缀/后缀图标容器使用 flex 居中（替代绝对定位 + line-height） */
+.dashboard-container .container .tableBar .search-area .el-input__prefix,
+.dashboard-container .container .tableBar .search-area .el-input__suffix {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  top: 0;
+  left: 5px;
+}
+
+.dashboard-container .container .tableBar .search-area .el-input__suffix {
+  left: auto;
+  right: 5px;
+}
+
+.dashboard-container .container .tableBar .search-area .el-input__prefix .el-input__icon,
+.dashboard-container .container .tableBar .search-area .el-input__suffix .el-input__icon {
+  line-height: 1;
+}
+
+/* 2.3 统一占位符颜色与字号 */
+.dashboard-container .container .tableBar .search-area .el-input__inner::placeholder,
+.dashboard-container .container .tableBar .search-area .el-select .el-input__inner::placeholder {
+  color: #c0c4cc;
+  font-size: 13px;
+}
+
+/* 2.4 搜索区按钮文字图标垂直对齐 */
+.dashboard-container .container .tableBar .search-area .search-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 32px;
+}
+
+.dashboard-container .container .tableBar .search-area .search-actions .el-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 7px 15px;
+  font-size: 13px;
+}
+
+.dashboard-container .container .tableBar .search-area .search-actions .el-button [class*="el-icon"] {
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* 2.5 搜索区内所有表单控件统一中线对齐 */
+.dashboard-container .container .tableBar .search-area > .el-input,
+.dashboard-container .container .tableBar .search-area > .el-select,
+.dashboard-container .container .tableBar .search-area > .el-date-editor {
+  vertical-align: middle;
+}
+
+/* 2.6 清除按钮图标垂直居中 */
+.dashboard-container .container .tableBar .search-area .el-input__clear {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  line-height: 1;
+}
+
+/* 2.7 日期编辑器中 range-input 文字垂直居中 */
+.dashboard-container .container .tableBar .search-area .el-range-editor .el-range-input {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  line-height: 1;
+}

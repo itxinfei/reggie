@@ -42,11 +42,15 @@
 
       <div class="tableBar">
         <el-select v-model="query.name" placeholder="名称" class="el-select--narrow-xs" clearable filterable size="small"
-          :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据，请确认已添加打印机'">
+          :loading="optionsLoading"
+          :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据，请确认已添加打印机')"
+          @visible-change="onFilterDropdownVisible">
           <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
         </el-select>
         <el-select v-model="query.brand" placeholder="品牌" class="el-select--narrow-xs" clearable filterable size="small"
-          :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据，请确认已添加打印机'">
+          :loading="optionsLoading"
+          :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据，请确认已添加打印机')"
+          @visible-change="onFilterDropdownVisible">
           <el-option v-for="b in filterOptions.brands" :key="b" :label="b" :value="b"></el-option>
         </el-select>
         <el-select v-model="query.type" placeholder="连接类型" class="el-select--narrow-xs" clearable size="small">
@@ -270,6 +274,10 @@
               this.$message.warning('加载筛选选项失败：' + (res.msg || '接口返回异常'))
             }
           } catch (err) {
+            // 修改点：NOTLOGIN 错误已在全局拦截器处理（跳转登录页），无需重复提示
+            if (err.message === 'NOTLOGIN') {
+              return
+            }
             this.optionsLoadError = true
             console.error('加载打印机筛选选项失败:', err)
             this.$message.error('加载打印机筛选选项失败，请刷新页面重试')

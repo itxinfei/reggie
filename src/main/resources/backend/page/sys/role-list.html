@@ -2,11 +2,14 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>角色管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
     .perm-tree-dialog .el-tree { max-height: 400px; overflow-y: auto; border: 1px solid #ebeef5; border-radius: 4px; padding: 10px; }
     .perm-tree-dialog .el-tree-node__content { height: 32px; }
@@ -18,83 +21,82 @@
 <body>
   <div class="dashboard-container" id="role-app">
     <div class="container">
-      <div class="tableBar">
-        <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框，选项从数据库加载 -->
-        <el-select v-model="searchName" placeholder="请选择角色名称" class="el-select--narrow-xs" clearable filterable size="small"
-          :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据'">
-          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
-        </el-select>
-        <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
-        </el-input>
-        <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
-        <el-button size="small" class="btn-reset" @click="resetSearch">重置</el-button>
-        <el-button type="primary" class="btn-add" @click="openDialog()">+ 新增角色</el-button>
-      </div>
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
 
-      <el-table :data="tableData" stripe border v-loading="loading" class="tableBox">
-        <el-table-column prop="roleName" label="角色名称" width="150"></el-table-column>
-        <el-table-column prop="roleKey" label="角色标识" width="120">
-          <template slot-scope="scope">
-            <el-tag size="small" type="info">{{ scope.row.roleKey }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="description" label="描述" show-overflow-tooltip></el-table-column>
-        <el-table-column prop="sort" label="排序" width="80" align="center"></el-table-column>
-        <el-table-column label="状态" align="center" width="100">
-          <template slot-scope="scope">
-            <el-tag :type="scope.row.status == 1 ? 'success' : 'danger'" size="small">
-              {{ scope.row.status == 1 ? '启用' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" align="center" width="260" fixed="right">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" @click="openPermDialog(scope.row)">权限分配</el-button>
-            <el-button type="text" size="small" @click="openDialog(scope.row)">编辑</el-button>
-            <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(scope.row.id)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <!-- 搜索 + 操作栏 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      ></table-bar>
 
-      <el-pagination
-        class="pageList"
-        :page-sizes="[10, 20, 50]"
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
         :page-size="pageSize"
-        layout="total, sizes, prev, pager, next, jumper"
         :total="counts"
-        :current-page.sync="page"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange">
-      </el-pagination>
+        :show-actions="true"
+        :actions-width="260"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-roleKey="{ row }">
+          <el-tag size="small" type="info">{{ row.roleKey }}</el-tag>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status == 1 ? 'success' : 'danger'" size="small">
+            {{ row.status == 1 ? '启用' : '禁用' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="openPermDialog(row)">权限分配</el-button>
+          <el-button type="text" size="small" class="btn-edit" @click="openDialog(row)">编辑</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
+        </template>
+      </crud-table>
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="500px" :before-close="handleClose">
-      <el-form :model="form" label-width="100px" size="small">
+    <crud-dialog
+      :title="formData.title"
+      :visible.sync="formData.dialogVisible"
+      width="500px"
+      @submit="submitForm"
+      @close="formData.dialogVisible = false"
+    >
+      <el-form label-width="100px" size="small">
         <el-form-item label="角色名称" required>
-          <el-input v-model="form.roleName" placeholder="如：店长"></el-input>
+          <el-input v-model="formData.roleName" placeholder="如：店长"></el-input>
         </el-form-item>
         <el-form-item label="角色标识" required>
-          <el-input v-model="form.roleKey" placeholder="如：manager（英文）"></el-input>
+          <el-input v-model="formData.roleKey" placeholder="如：manager（英文）"></el-input>
         </el-form-item>
         <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" :rows="2"></el-input>
+          <el-input v-model="formData.description" type="textarea" :rows="2"></el-input>
         </el-form-item>
         <el-form-item label="排序">
-          <el-input-number v-model="form.sort" :min="0" :max="999"></el-input-number>
+          <el-input-number v-model="formData.sort" :min="0" :max="999"></el-input-number>
         </el-form-item>
         <el-form-item label="状态">
-          <el-radio-group v-model="form.status">
+          <el-radio-group v-model="formData.status">
             <el-radio :label="1">启用</el-radio>
             <el-radio :label="0">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="dialogVisible = false">取 消</el-button>
-        <el-button type="primary" @click="submitForm" :loading="submitting">确 定</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- 权限分配弹窗 -->
     <el-dialog title="权限分配" :visible.sync="permDialogVisible" width="600px" class="perm-tree-dialog">
@@ -131,30 +133,50 @@
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../api/sys.js"></script>
   <script>
     new Vue({
       el: '#role-app',
       data() {
         return {
-          searchName: '',
-          // 修改点：搜索下拉框动态选项（从数据库加载角色名称）
-          filterOptions: { names: [] },
-          optionsLoading: false,
-          optionsLoadError: false,
-          tableData: [],
+          loading: false,
           counts: 0,
           page: 1,
           pageSize: 10,
-          loading: false,
+          tableData: [],
+          // 统计数据
+          stats: { total: 0, enabled: 0, disabled: 0, withPerms: 0 },
+          activeFilter: '',
+          lastSearch: {},
           submitting: false,
-
-          // 新增/编辑弹窗
-          dialogVisible: false,
-          dialogTitle: '新增角色',
-          form: { id: null, roleName: '', roleKey: '', description: '', sort: 0, status: 1 },
-
-          // 权限分配弹窗
+          // 搜索配置
+          searchConfig: [
+            { type: 'select', field: 'roleName', placeholder: '角色名称', width: '180px',
+              options: [],
+              loading: false,
+              filterable: true,
+              dynamicOptions: true }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'add', text: '+ 新增角色', type: 'primary' }
+          ],
+          // 表格列配置
+          columns: [
+            { prop: 'roleName', label: '角色名称', width: 150 },
+            { prop: 'roleKey', label: '角色标识', width: 120, slot: true },
+            { prop: 'description', label: '描述', showOverflowTooltip: true },
+            { prop: 'sort', label: '排序', width: 80, align: 'center' },
+            { prop: 'status', label: '状态', width: 100, align: 'center', slot: true }
+          ],
+          // 弹窗表单
+          formData: {
+            title: '新增角色',
+            dialogVisible: false,
+            id: null, roleName: '', roleKey: '', description: '', sort: 0, status: 1
+          },
+          // 权限分配
           permDialogVisible: false,
           permSubmitting: false,
           currentRole: null,
@@ -163,98 +185,165 @@
         }
       },
       created() {
-        this.loadFilterOptions()
         this.loadData()
+        this.loadRoleOptions()
+        this.loadStats()
+      },
+      computed: {
+        statsCards: function() {
+          var self = this
+          return [
+            { key: '', icon: '👥', label: '角色总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'enabled', icon: '✅', label: '已启用', value: self.stats.enabled || 0, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
+            { key: 'disabled', icon: '⏸️', label: '已禁用', value: self.stats.disabled || 0, color: 'warning', clickable: true, active: self.activeFilter === 'disabled' },
+            { key: 'withPerms', icon: '🔐', label: '已分配权限', value: self.stats.withPerms || 0, color: 'info', clickable: true, active: self.activeFilter === 'withPerms' }
+          ]
+        }
       },
       methods: {
-        // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
-        async loadFilterOptions() {
-          this.optionsLoading = true
-          this.optionsLoadError = false
+        async init() {
+          this.loading = true
+          var ls = this.lastSearch || {}
+          var params = {
+            page: this.page,
+            pageSize: this.pageSize,
+            roleName: ls.roleName || undefined,
+            status: ls.status || undefined
+          }
+          var results = await Promise.all([sysApi.rolePage(params), this.loadRoleStats()])
+          var roleRes = results[0]
+          var statsRes = results[1]
+          if (roleRes && roleRes.code === 1) {
+            this.tableData = roleRes.data.records || []
+            this.counts = roleRes.data.total || 0
+          }
+          if (statsRes && statsRes.code === 1) {
+            this.stats = Object.assign({}, this.stats, statsRes.data || {})
+          }
+          this.loading = false
+        },
+        async loadRoleStats() {
           try {
-            const res = await sysApi.roleOptions()
+            var res = await sysApi.rolePage({ page: 1, pageSize: 1000 })
+            if (String(res.code) === '1') {
+              var records = res.data.records || []
+              var withPerms = 0
+              records.forEach(function(r) {
+                if (r.permissionIds && r.permissionIds.length > 0) withPerms++
+              })
+              return { code: 1, data: {
+                total: res.data.total || 0,
+                enabled: records.filter(function(r) { return r.status === 1 }).length,
+                disabled: records.filter(function(r) { return r.status === 0 }).length,
+                withPerms: withPerms
+              }}
+            }
+          } catch (err) { console.warn('加载角色统计失败:', err) }
+          return { code: 0 }
+        },
+        async loadRoleOptions() {
+          var self = this
+          var searchItem = self.searchConfig.find(function(s) { return s.field === 'roleName' })
+          if (searchItem) searchItem.loading = true
+          try {
+            var res = await sysApi.roleOptions()
             if (String(res.code) === '1' && res.data) {
-              this.filterOptions.names = res.data.names || []
-            } else {
-              this.optionsLoadError = true
-              this.$message.warning('加载角色选项失败：' + (res.msg || '接口返回异常'))
+              var options = (res.data.names || []).map(function(n) {
+                return { label: n, value: n }
+              })
+              if (searchItem) searchItem.options = options
             }
           } catch (err) {
-            this.optionsLoadError = true
-            console.error('加载角色选项失败:', err)
-            this.$message.error('加载筛选选项失败，请刷新页面重试')
+            if (err.message !== 'NOTLOGIN') console.error('加载角色选项失败:', err)
           } finally {
-            this.optionsLoading = false
+            if (searchItem) searchItem.loading = false
           }
         },
         loadData() {
-          this.loading = true
-          var params = { page: this.page, pageSize: this.pageSize }
-          if (this.searchName) params.roleName = this.searchName
-          sysApi.rolePage(params).then(res => {
-            if (res && res.code === 1) {
-              this.tableData = res.data.records || []
-              this.counts = res.data.total || 0
-            }
-            this.loading = false
-          }).catch(() => { this.loading = false })
+          this.init()
         },
-        handleQuery() {
+        // stat-cards 点击
+        onCardClick: function(payload) {
+          var self = this
+          if (payload.key === '') {
+            self.activeFilter = ''
+          } else {
+            self.activeFilter = self.activeFilter === payload.key ? '' : payload.key
+          }
+          self.lastSearch = self.activeFilter ? this.buildFilterParams(self.activeFilter) : {}
+          self.page = 1
+          this.init()
+        },
+        buildFilterParams(key) {
+          if (key === 'enabled') return { status: '1' }
+          if (key === 'disabled') return { status: '0' }
+          return {}
+        },
+        // table-bar 回调
+        onSearch(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
           this.page = 1
-          this.loadData()
+          this.init()
         },
-        // 重置搜索条件，恢复表格初始状态
-        resetSearch() {
-          this.searchName = ''
+        onReset() {
+          this.activeFilter = ''
+          this.lastSearch = {}
           this.page = 1
-          this.loadData()
+          this.init()
         },
-        handleSizeChange(val) { this.pageSize = val; this.loadData() },
-        handleCurrentChange(val) { this.page = val; this.loadData() },
-
+        onAction(payload) {
+          if (payload.key === 'add') this.openDialog()
+        },
+        onPageChange(payload) {
+          this.page = payload.page
+          this.init()
+        },
+        onSizeChange(payload) {
+          this.pageSize = payload.pageSize
+          this.init()
+        },
         openDialog(row) {
           if (row) {
-            this.dialogTitle = '编辑角色'
-            this.form = JSON.parse(JSON.stringify(row))
+            this.formData.title = '编辑角色'
+            this.formData = Object.assign({}, this.formData, JSON.parse(JSON.stringify(row)))
           } else {
-            this.dialogTitle = '新增角色'
-            this.form = { id: null, roleName: '', roleKey: '', description: '', sort: 0, status: 1 }
+            this.formData.title = '新增角色'
+            this.formData = { title: '新增角色', dialogVisible: true, id: null, roleName: '', roleKey: '', description: '', sort: 0, status: 1 }
           }
-          this.dialogVisible = true
+          this.formData.dialogVisible = true
         },
-        handleClose() { this.dialogVisible = false },
-
         submitForm() {
-          if (!this.form.roleName || !this.form.roleKey) {
+          if (!this.formData.roleName || !this.formData.roleKey) {
             this.$message.warning('请填写角色名称和标识')
             return
           }
           this.submitting = true
-          var api = this.form.id ? sysApi.roleUpdate(this.form) : sysApi.roleAdd(this.form)
-          api.then(res => {
+          var self = this
+          var api = this.formData.id ? sysApi.roleUpdate(this.formData) : sysApi.roleAdd(this.formData)
+          api.then(function(res) {
             if (res && res.code === 1) {
-              this.$message.success(res.msg || '操作成功')
-              this.dialogVisible = false
-              this.loadData()
+              self.$message.success(res.msg || '操作成功')
+              self.formData.dialogVisible = false
+              self.init()
             } else {
-              this.$message.error(res ? res.msg : '操作失败')
+              self.$message.error(res ? res.msg : '操作失败')
             }
-          }).catch(() => { this.$message.error('操作失败') })
-            .finally(() => { this.submitting = false })
+          }).catch(function() { self.$message.error('操作失败') })
+            .finally(function() { self.submitting = false })
         },
-
         deleteHandle(id) {
+          var self = this
           this.$confirm('确定删除该角色吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
-            .then(() => {
-              sysApi.roleDelete(id).then(res => {
+            .then(function() {
+              sysApi.roleDelete(id).then(function(res) {
                 if (res && res.code === 1) {
-                  this.$message.success('删除成功')
-                  this.loadData()
+                  self.$message.success('删除成功')
+                  self.init()
                 }
               })
-            }).catch(() => {})
+            }).catch(function() {})
         },
-
         // ========== 权限分配 ==========
         openPermDialog(row) {
           this.currentRole = row
@@ -263,19 +352,20 @@
           this.loadRolePerms(row.id)
         },
         loadPermTree() {
-          sysApi.permissionTree().then(res => {
+          var self = this
+          sysApi.permissionTree().then(function(res) {
             if (res && res.code === 1) {
-              this.permTreeData = this.buildTree(res.data || [])
+              self.permTreeData = self.buildTree(res.data || [])
             }
           })
         },
         buildTree(flatList) {
           var map = new Map()
           var roots = []
-          flatList.forEach(item => {
+          flatList.forEach(function(item) {
             map.set(item.id, Object.assign({}, item, { children: [] }))
           })
-          flatList.forEach(item => {
+          flatList.forEach(function(item) {
             if (item.parentId == 0) {
               roots.push(map.get(item.id))
             } else {
@@ -288,12 +378,13 @@
           return roots
         },
         loadRolePerms(roleId) {
-          sysApi.rolePermissions(roleId).then(res => {
+          var self = this
+          sysApi.rolePermissions(roleId).then(function(res) {
             if (res && res.code === 1) {
-              this.checkedPerms = res.data || []
-              this.$nextTick(() => {
-                if (this.$refs.permTree) {
-                  this.$refs.permTree.setCheckedKeys(this.checkedPerms)
+              self.checkedPerms = res.data || []
+              self.$nextTick(function() {
+                if (self.$refs.permTree) {
+                  self.$refs.permTree.setCheckedKeys(self.checkedPerms)
                 }
               })
             }
@@ -307,15 +398,16 @@
         submitPerms() {
           var keys = this.$refs.permTree ? this.$refs.permTree.getCheckedKeys() : this.checkedPerms
           this.permSubmitting = true
-          sysApi.assignPermissions(this.currentRole.id, keys).then(res => {
+          var self = this
+          sysApi.assignPermissions(this.currentRole.id, keys).then(function(res) {
             if (res && res.code === 1) {
-              this.$message.success('权限分配成功')
-              this.permDialogVisible = false
+              self.$message.success('权限分配成功')
+              self.permDialogVisible = false
             } else {
-              this.$message.error(res ? res.msg : '操作失败')
+              self.$message.error(res ? res.msg : '操作失败')
             }
-          }).catch(() => { this.$message.error('操作失败') })
-            .finally(() => { this.permSubmitting = false })
+          }).catch(function() { self.$message.error('操作失败') })
+            .finally(function() { self.permSubmitting = false })
         }
       }
     })

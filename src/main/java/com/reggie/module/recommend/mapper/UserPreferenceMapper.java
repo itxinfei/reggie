@@ -7,9 +7,11 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 用户偏好标签 Mapper
+ * 修改点：新增口味偏好分布统计查询，替换原先硬编码假数据
  *
  * @author reggie
  * @since 2026-07-09
@@ -34,4 +36,18 @@ public interface UserPreferenceMapper extends BaseMapper<UserPreferenceTag> {
      */
     @Select("SELECT COUNT(*) FROM user_preference_tag WHERE user_id = #{userId}")
     int countByUserId(@Param("userId") Long userId);
+
+    /**
+     * 统计口味偏好标签分布（tag_type=1）
+     * 用于概览页偏好饼图
+     *
+     * @return 每行: tag_name, user_count (去重用户数)
+     */
+    @Select("SELECT tag_name AS name, COUNT(DISTINCT user_id) AS value " +
+            "FROM user_preference_tag " +
+            "WHERE tag_type = 1 " +
+            "GROUP BY tag_name " +
+            "ORDER BY value DESC " +
+            "LIMIT 10")
+    List<Map<String, Object>> countTasteDistribution();
 }

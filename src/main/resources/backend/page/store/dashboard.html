@@ -2,100 +2,238 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8"/>
-    <title>总部控制台</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>总部控制台 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/common.css" />
+    <link rel="stylesheet" href="../../styles/page.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
-        .page-header { margin-bottom: 20px; }
-        .page-header h2 { font-size: 22px; color: #303133; }
-        .page-header p { font-size: 13px; color: #909399; margin-top: 4px; }
-        /* 核心指标卡片 */
-        .kpi-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-        .kpi-card { background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center; }
-        .kpi-card .kpi-icon { font-size: 28px; margin-bottom: 8px; }
-        .kpi-card .kpi-value { font-size: 32px; font-weight: 700; color: #303133; }
-        .kpi-card .kpi-label { font-size: 13px; color: #909399; margin-top: 4px; }
-        .kpi-card .kpi-change { font-size: 12px; margin-top: 4px; }
-        /* 门店排行 */
-        .section { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .section + .section { margin-top: 20px; }
-        .section-title { font-size: 16px; font-weight: 600; color: #303133; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #ebeef5; }
-        .rank-list { list-style: none; }
-        .rank-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f5f7fa; }
-        .rank-item:last-child { border-bottom: none; }
-        .rank-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; margin-right: 12px; }
-        .rank-num.top1 { background: linear-gradient(135deg, #f56c6c, #e6420e); color: #fff; }
-        .rank-num.top2 { background: linear-gradient(135deg, #e6a23c, #d48728); color: #fff; }
-        .rank-num.top3 { background: linear-gradient(135deg, #67c23a, #5aaf1a); color: #fff; }
-        .rank-num.normal { background: #f5f7fa; color: #909399; }
-        .rank-info { flex: 1; }
-        .rank-name { font-size: 14px; font-weight: 500; color: #303133; }
-        .rank-code { font-size: 12px; color: #c0c4cc; }
-        .rank-stats { text-align: right; }
-        .rank-orders { font-size: 18px; font-weight: 600; color: #303133; }
-        .rank-amount { font-size: 16px; font-weight: 600; color: #e6420e; }
-        .rank-sub { font-size: 12px; color: #909399; }
-        .empty-wrap { text-align: center; padding: 80px 0; color: #909399; }
+        /* ========== 基础重置 ========== */
+        html, body {
+            height: 100%; margin: 0; padding: 0;
+            overflow-y: auto; overflow-x: hidden;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .store-dashboard { min-height: 100%; display: flex; flex-direction: column; }
+        .store-dashboard .container {
+            flex: 1; background: transparent; padding: 24px 32px 32px;
+            min-width: 0; max-width: 1600px; margin: 0 auto; width: 100%;
+        }
+
+        /* ========== 页面标题栏 ========== */
+        .page-hero {
+            background: #fff; border-radius: 16px; padding: 24px 28px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 16px;
+        }
+        .page-hero .hero-left { display: flex; align-items: center; gap: 14px; }
+        .page-hero .hero-icon {
+            width: 48px; height: 48px; border-radius: 14px;
+            background: linear-gradient(135deg, rgba(64,158,255,0.1) 0%, rgba(102,177,255,0.15) 100%);
+            display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0;
+        }
+        .page-hero .hero-title { font-size: 20px; font-weight: 700; color: #303133; }
+        .page-hero .hero-sub { font-size: 13px; color: #909399; margin-top: 2px; }
+        .page-hero .hero-meta { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .page-hero .meta-item { text-align: center; }
+        .page-hero .meta-value { font-size: 24px; font-weight: 700; color: #303133; }
+        .page-hero .meta-label { font-size: 12px; color: #909399; margin-top: 2px; }
+
+        /* ========== KPI 卡片（使用 components-stats-card.css 统一样式） ========== */
+        .stats-cards {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 20px; margin-bottom: 24px;
+        }
+
+        /* ========== 图表 + 排行 双栏 ========== */
+        .content-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;
+        }
+
+        /* ========== 图表面板 ========== */
+        .chart-panel {
+            background: #fff; border-radius: 16px; padding: 24px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+            transition: all 0.3s; display: flex; flex-direction: column; min-width: 0;
+        }
+        .chart-panel:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
+        .chart-panel .panel-title {
+            font-size: 16px; font-weight: 600; color: #303133;
+            margin-bottom: 20px; padding-bottom: 16px;
+            border-bottom: 2px solid #f0f2f5; flex-shrink: 0;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .chart-box { width: 100%; min-height: 400px; flex: 1; }
+
+        /* ========== 门店排行 ========== */
+        .ranking-panel {
+            background: #fff; border-radius: 16px; padding: 24px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+            transition: all 0.3s; min-width: 0;
+        }
+        .ranking-panel:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
+        .ranking-panel .panel-title {
+            font-size: 16px; font-weight: 600; color: #303133;
+            margin-bottom: 20px; padding-bottom: 16px;
+            border-bottom: 2px solid #f0f2f5;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .rank-list { list-style: none; padding: 0; margin: 0; }
+        .rank-item {
+            display: flex; align-items: center; padding: 16px 0;
+            border-bottom: 1px solid #f5f5f5; transition: all 0.2s; gap: 14px;
+        }
+        .rank-item:hover { background: #fafbfc; margin: 0 -12px; padding-left: 12px; padding-right: 12px; border-radius: 10px; }
+        .rank-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .rank-num {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 700; flex-shrink: 0;
+        }
+        .rank-num.r1 { background: linear-gradient(135deg, #ff4d4f, #ff7875); color: #fff; }
+        .rank-num.r2 { background: linear-gradient(135deg, #ff7a45, #ffa940); color: #fff; }
+        .rank-num.r3 { background: linear-gradient(135deg, #ffa940, #ffc069); color: #fff; }
+        .rank-num.rn { background: #f5f5f5; color: #909399; }
+        .rank-info { flex: 1; min-width: 0; }
+        .rank-name { font-size: 14px; font-weight: 600; color: #303133; display: flex; align-items: center; gap: 8px; }
+        .rank-store-code {
+            font-size: 11px; color: #c0c4cc; background: #f5f7fa;
+            padding: 2px 8px; border-radius: 4px; font-weight: 500;
+        }
+        .rank-bar-wrap { width: 120px; height: 8px; background: #f0f2f5; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+        .rank-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+        .rank-stats { text-align: right; flex-shrink: 0; min-width: 80px; }
+        .rank-orders { font-size: 16px; font-weight: 700; color: #303133; }
+        .rank-amount { font-size: 13px; color: #f56c6c; font-weight: 600; }
+
+        /* ========== 空状态 ========== */
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 80px 20px; color: #c0c4cc; text-align: center;
+        }
+        .empty-state .empty-icon { font-size: 56px; margin-bottom: 16px; opacity: 0.45; }
+        .empty-state .empty-text { font-size: 15px; margin-bottom: 8px; }
+        .empty-state .empty-hint { font-size: 12px; opacity: 0.7; }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 1200px) {
+            .container { padding: 16px 20px 20px !important; }
+            .stats-cards { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+            .content-grid { grid-template-columns: 1fr; gap: 20px; }
+            .stat-card { min-height: 120px; }
+            .stat-card .stat-value { font-size: 30px; }
+        }
+        @media (max-width: 768px) {
+            .container { padding: 12px 16px 16px !important; }
+            .stats-cards { grid-template-columns: 1fr; gap: 12px; }
+            .stat-card { padding: 18px; min-height: 100px; }
+            .stat-card .stat-value { font-size: 26px; }
+            .chart-box { min-height: 300px; }
+        }
     </style>
 </head>
 <body>
-<div id="app">
-    <div class="page-header">
-        <h2>总部控制台</h2>
-        <p>跨门店经营数据汇总 - 实时监控各门店运营状况</p>
-    </div>
+<div class="store-dashboard" id="store-dash-app" v-loading="loading">
+    <div class="container">
 
-    <!-- 核心KPI -->
-    <div class="stats-cards" v-if="dashboard">
-        <div class="kpi-card">
-            <div class="kpi-icon">🏪</div>
-            <div class="kpi-value">{{ dashboard.totalStores || 0 }}</div>
-            <div class="kpi-label">门店总数</div>
+        <!-- ========== 页面标题栏 ========== -->
+        <div class="page-hero">
+            <div class="hero-left">
+                <div class="hero-icon">🏢</div>
+                <div>
+                    <div class="hero-title">总部控制台</div>
+                    <div class="hero-sub">跨门店经营数据汇总 · 实时监控各门店运营状况</div>
+                </div>
+            </div>
+            <div class="hero-meta">
+                <div class="meta-item">
+                    <div class="meta-value">{{ dashboard.totalStores || 0 }}</div>
+                    <div class="meta-label">门店总数</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-value">¥{{ formatAmount(dashboard.todayTotalAmount) }}</div>
+                    <div class="meta-label">今日总营收</div>
+                </div>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-icon">📦</div>
-            <div class="kpi-value">{{ dashboard.todayTotalOrders || 0 }}</div>
-            <div class="kpi-label">今日总订单</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-icon">💰</div>
-            <div class="kpi-value">¥{{ formatAmount(dashboard.todayTotalAmount) }}</div>
-            <div class="kpi-label">今日总营收</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-icon">👤</div>
-            <div class="kpi-value">{{ dashboard.todayNewUsers || 0 }}</div>
-            <div class="kpi-label">今日新增用户</div>
-            <div class="kpi-change" style="color:#67c23a;">平均客单价 ¥{{ dashboard.avgOrderAmount ? formatAmount(dashboard.avgOrderAmount) : '0.00' }}</div>
-        </div>
-    </div>
 
-    <!-- 门店排行 -->
-    <div class="section">
-        <div class="section-title">门店实时排行（按今日订单量）</div>
-        <div v-if="dashboard && dashboard.storeRanking && dashboard.storeRanking.length > 0">
-            <ul class="rank-list">
-                <li class="rank-item" v-for="(store, idx) in dashboard.storeRanking" :key="store.tenantId">
-                    <div :class="['rank-num', idx === 0 ? 'top1' : idx === 1 ? 'top2' : idx === 2 ? 'top3' : 'normal']">
-                        {{ idx + 1 }}
-                    </div>
-                    <div class="rank-info">
-                        <div class="rank-name">{{ store.storeName }}</div>
-                        <div class="rank-code">{{ store.storeCode }}</div>
-                    </div>
-                    <div class="rank-stats">
-                        <div class="rank-orders">{{ store.todayOrders || 0 }}单</div>
-                        <div class="rank-amount">¥{{ formatAmount(store.todayAmount) }}</div>
-                    </div>
-                </li>
-            </ul>
+        <!-- ========== KPI 指标卡片 ========== -->
+        <div class="stats-cards" v-if="dashboard">
+            <div class="stat-card primary">
+                <div class="stat-icon">🏪</div>
+                <div class="stat-label">门店总数</div>
+                <div class="stat-value">{{ dashboard.totalStores || 0 }}</div>
+                <div class="sub">运营中门店</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-icon">📋</div>
+                <div class="stat-label">今日总订单</div>
+                <div class="stat-value">{{ dashboard.todayTotalOrders || 0 }}</div>
+                <div class="sub">全部门店订单汇总</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-icon">💰</div>
+                <div class="stat-label">今日总营收</div>
+                <div class="stat-value">¥{{ formatAmount(dashboard.todayTotalAmount) }}</div>
+                <div class="sub">客单价 ¥{{ formatAmount(dashboard.avgOrderAmount) }}</div>
+            </div>
+            <div class="stat-card info">
+                <div class="stat-icon">👤</div>
+                <div class="stat-label">今日新增用户</div>
+                <div class="stat-value">{{ dashboard.todayNewUsers || 0 }}</div>
+                <div class="sub">全平台新注册用户</div>
+            </div>
         </div>
-        <div v-else class="empty-wrap">
-            <p>暂无门店数据，请先创建门店</p>
-            <el-button type="primary" size="small" style="margin-top:12px;" @click="goToStoreList">前往门店管理</el-button>
+
+        <!-- ========== 图表 + 排行 双栏 ========== -->
+        <div class="content-grid">
+            <!-- 门店营收柱状图 -->
+            <div class="chart-panel">
+                <div class="panel-title">📊 各门店营收对比（今日）</div>
+                <div class="chart-box" id="storeBarChart"></div>
+            </div>
+
+            <!-- 门店排行 -->
+            <div class="ranking-panel">
+                <div class="panel-title">🏆 门店实时排行</div>
+                <div v-if="dashboard && dashboard.storeRanking && dashboard.storeRanking.length > 0">
+                    <ul class="rank-list">
+                        <li class="rank-item" v-for="(store, idx) in dashboard.storeRanking" :key="store.tenantId">
+                            <span :class="['rank-num', idx === 0 ? 'r1' : idx === 1 ? 'r2' : idx === 2 ? 'r3' : 'rn']">
+                                {{ idx + 1 }}
+                            </span>
+                            <div class="rank-info">
+                                <div class="rank-name">
+                                    {{ store.storeName }}
+                                    <span class="rank-store-code">{{ store.storeCode }}</span>
+                                </div>
+                            </div>
+                            <div class="rank-bar-wrap">
+                                <div class="rank-bar-fill"
+                                    :style="{ width: rankBarWidth(idx), background: idx === 0 ? '#ff4d4f' : idx === 1 ? '#ff7a45' : idx === 2 ? '#ffa940' : '#409eff' }">
+                                </div>
+                            </div>
+                            <div class="rank-stats">
+                                <div class="rank-orders">{{ store.todayOrders || 0 }} 单</div>
+                                <div class="rank-amount">¥{{ formatAmount(store.todayAmount) }}</div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div v-else class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <div class="empty-text">暂无门店数据</div>
+                    <div class="empty-hint">请先创建门店并完成配置</div>
+                </div>
+            </div>
         </div>
+
     </div>
 </div>
 
@@ -106,38 +244,113 @@
 <script src="../../api/store.js"></script>
 <script>
 new Vue({
-    el: '#app',
+    el: '#store-dash-app',
     data: {
         loading: false,
-        dashboard: null
+        dashboard: null,
+        barChart: null,
+        resizeHandler: null
     },
     created() { this.loadDashboard(); },
+    mounted() {
+        this.resizeHandler = () => { if (this.barChart) this.barChart.resize(); };
+        window.addEventListener('resize', this.resizeHandler);
+    },
+    beforeDestroy() {
+        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
+        if (this.barChart) this.barChart.dispose();
+    },
     methods: {
         loadDashboard() {
             this.loading = true;
             storeApi.getDashboardOverview().then(res => {
                 if (res.code === 1) {
                     this.dashboard = res.data;
+                    this.$nextTick(() => { this.renderBarChart(); });
+                } else {
+                    this.$message.error(res.msg || '加载数据失败');
                 }
             }).catch(err => {
-                this.$message.error('加载数据失败');
+                this.$message.error('加载失败：' + (err.message || '网络异常'));
             }).finally(() => { this.loading = false; });
         },
-        goToStoreList() {
-            // 通知父框架跳转到门店管理页
-            if (window.parent) {
-                // 触发父页面的菜单切换
-            }
+        renderBarChart() {
+            var self = this;
+            if (!self.dashboard || !self.dashboard.storeRanking) return;
+            var stores = self.dashboard.storeRanking.slice(0, 10);
+            var dom = document.getElementById('storeBarChart');
+            if (!dom) return;
+            if (!this.barChart) this.barChart = echarts.init(dom);
+            var hasData = stores.length > 0;
+            var names = hasData ? stores.map(function(s) { return s.storeName; }) : ['暂无数据'];
+            var orders = hasData ? stores.map(function(s) { return s.todayOrders || 0; }) : [0];
+            var amounts = hasData ? stores.map(function(s) { return s.todayAmount || 0; }) : [0];
+            var colors = ['#ff4d4f', '#ff7a45', '#ffa940', '#5470c6', '#91cc75', '#73c0de', '#9a60b4', '#fc8452', '#ea7ccc', '#36a3f5'];
+
+            this.barChart.setOption({
+                color: colors,
+                tooltip: {
+                    trigger: 'axis', axisPointer: { type: 'shadow' },
+                    backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e4e7ed', borderWidth: 1,
+                    textStyle: { color: '#303133', fontSize: 13 },
+                    formatter: function(params) {
+                        var html = '<b>' + params[0].axisValue + '</b><br/>';
+                        params.forEach(function(p) {
+                            var val = p.seriesName === '营收' ? '¥' + Number(p.value).toFixed(2) : p.value + ' 单';
+                            html += p.marker + ' ' + p.seriesName + '：<b>' + val + '</b><br/>';
+                        });
+                        return html;
+                    }
+                },
+                legend: { data: ['订单数', '营收'], bottom: 8, textStyle: { color: '#606266', fontSize: 13 } },
+                grid: { left: 55, right: 55, top: 20, bottom: 48 },
+                xAxis: {
+                    type: 'category', data: names,
+                    axisLine: { lineStyle: { color: '#e4e7ed' } },
+                    axisTick: { show: false },
+                    axisLabel: { color: '#909399', fontSize: 11, rotate: names.length > 5 ? 15 : 0 }
+                },
+                yAxis: [
+                    { type: 'value', name: '订单量(单)', nameTextStyle: { color: '#909399', fontSize: 12 },
+                      axisLabel: { color: '#909399', fontSize: 12 },
+                      splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } },
+                      axisLine: { show: false }, axisTick: { show: false } },
+                    { type: 'value', name: '营收(元)', nameTextStyle: { color: '#909399', fontSize: 12 },
+                      axisLabel: { color: '#909399', fontSize: 12, formatter: '¥{value}' },
+                      splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false } }
+                ],
+                series: [
+                    {
+                        name: '订单数', type: 'bar', data: orders,
+                        barWidth: 28, barGap: '20%',
+                        itemStyle: {
+                            borderRadius: [8, 8, 0, 0],
+                            color: function(p) { return colors[p.dataIndex % colors.length]; }
+                        },
+                        label: { show: hasData, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c}' }
+                    },
+                    {
+                        name: '营收', type: 'line', yAxisIndex: 1, data: amounts,
+                        smooth: true, symbol: 'emptyCircle', symbolSize: 8,
+                        lineStyle: { color: '#fac858', width: 3 },
+                        itemStyle: { color: '#fac858', borderColor: '#fff', borderWidth: 2 },
+                        label: {
+                            show: hasData, position: 'top', fontSize: 12, fontWeight: 700, color: '#e6a23c',
+                            formatter: function(p) { return '¥' + Number(p.value).toFixed(0); }
+                        }
+                    }
+                ]
+            }, true);
+        },
+        rankBarWidth(idx) {
+            if (!this.dashboard || !this.dashboard.storeRanking || !this.dashboard.storeRanking.length) return '0%';
+            var maxOrders = this.dashboard.storeRanking[0].todayOrders || 1;
+            var orders = this.dashboard.storeRanking[idx].todayOrders || 0;
+            return Math.max((orders / maxOrders * 100), 8) + '%';
         },
         formatAmount(amount) {
             if (!amount) return '0.00';
-            return typeof amount === 'number' ? amount.toFixed(2) : amount;
-        }
-    },
-    filters: {
-        formatAmount(val) {
-            if (!val) return '0.00';
-            return typeof val === 'number' ? val.toFixed(2) : val;
+            return typeof amount === 'number' ? amount.toFixed(2) : Number(amount).toFixed(2);
         }
     }
 });

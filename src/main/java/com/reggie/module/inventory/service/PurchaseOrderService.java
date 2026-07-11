@@ -43,6 +43,13 @@ public interface PurchaseOrderService extends IService<PurchaseOrder> {
     void receiveOrder(Long orderId);
 
     /**
+     * 审核通过采购订单（DRAFT → ORDERED）
+     *
+     * @param orderId 订单ID
+     */
+    void approveOrder(Long orderId);
+
+    /**
      * 取消采购订单
      *
      * @param orderId 订单ID

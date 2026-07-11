@@ -17,6 +17,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -115,6 +119,103 @@ public class PointsRecordController {
         result.put("total", pageInfo.getTotal());
         result.put("size", pageInfo.getSize());
         result.put("current", pageInfo.getCurrent());
+        return R.success(result);
+    }
+
+    /**
+     * 积分统计
+     * 返回全平台积分总览数据，包括总积分、今日/本月获取与消耗、近30天趋势
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "积分统计", description = "获取全平台积分统计数据：总积分、今日/本月获取与消耗、近30天趋势")
+    public R<Map<String, Object>> stats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        // 1. 全平台累计积分（所有会员积分之和）
+        LambdaQueryWrapper<Member> memberQw = new LambdaQueryWrapper<>();
+        if (tenantId != null) memberQw.eq(Member::getTenantId, tenantId);
+        List<Member> allMembers = memberService.list(memberQw);
+        long totalPoints = allMembers.stream().mapToLong(m -> m.getPoints() != null ? m.getPoints() : 0).sum();
+
+        // 2. 今日获取/消耗积分
+        LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
+        LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
+
+        LambdaQueryWrapper<PointsRecord> todayQw = new LambdaQueryWrapper<>();
+        if (tenantId != null) todayQw.eq(PointsRecord::getTenantId, tenantId);
+        todayQw.between(PointsRecord::getCreatedTime, todayStart, todayEnd);
+        List<PointsRecord> todayRecords = pointsRecordService.list(todayQw);
+        long todayAcquired = todayRecords.stream()
+                .filter(r -> "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN".equalsIgnoreCase(r.getType()))
+                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+        long todayConsumed = todayRecords.stream()
+                .filter(r -> "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT".equalsIgnoreCase(r.getType()))
+                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+
+        // 3. 本月获取/消耗积分
+        LocalDateTime monthStart = LocalDateTime.of(LocalDate.now().withDayOfMonth(1), LocalTime.MIN);
+        LocalDateTime monthEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
+
+        LambdaQueryWrapper<PointsRecord> monthQw = new LambdaQueryWrapper<>();
+        if (tenantId != null) monthQw.eq(PointsRecord::getTenantId, tenantId);
+        monthQw.between(PointsRecord::getCreatedTime, monthStart, monthEnd);
+        List<PointsRecord> monthRecords = pointsRecordService.list(monthQw);
+        long monthAcquired = monthRecords.stream()
+                .filter(r -> "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN".equalsIgnoreCase(r.getType()))
+                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+        long monthConsumed = monthRecords.stream()
+                .filter(r -> "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT".equalsIgnoreCase(r.getType()))
+                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+
+        // 4. 累计获取/消耗积分（全历史）
+        LambdaQueryWrapper<PointsRecord> allQw = new LambdaQueryWrapper<>();
+        if (tenantId != null) allQw.eq(PointsRecord::getTenantId, tenantId);
+        List<PointsRecord> allRecords = pointsRecordService.list(allQw);
+        long totalAcquired = allRecords.stream()
+                .filter(r -> "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN".equalsIgnoreCase(r.getType()))
+                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+        long totalConsumed = allRecords.stream()
+                .filter(r -> "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT".equalsIgnoreCase(r.getType()))
+                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+
+        // 5. 近30天每日积分趋势
+        List<Map<String, Object>> trend = new ArrayList<>();
+        for (int i = 29; i >= 0; i--) {
+            LocalDate date = LocalDate.now().minusDays(i);
+            LocalDateTime ds = LocalDateTime.of(date, LocalTime.MIN);
+            LocalDateTime de = LocalDateTime.of(date, LocalTime.MAX);
+            long dayAcquired = allRecords.stream()
+                    .filter(r -> {
+                        if (r.getCreatedTime() == null) return false;
+                        boolean inRange = !r.getCreatedTime().isBefore(ds) && !r.getCreatedTime().isAfter(de);
+                        boolean isAcquire = "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN".equalsIgnoreCase(r.getType());
+                        return inRange && isAcquire;
+                    })
+                    .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+            long dayConsumed = allRecords.stream()
+                    .filter(r -> {
+                        if (r.getCreatedTime() == null) return false;
+                        boolean inRange = !r.getCreatedTime().isBefore(ds) && !r.getCreatedTime().isAfter(de);
+                        boolean isConsume = "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT".equalsIgnoreCase(r.getType());
+                        return inRange && isConsume;
+                    })
+                    .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+            Map<String, Object> dayMap = new LinkedHashMap<>();
+            dayMap.put("date", date.toString());
+            dayMap.put("acquired", dayAcquired);
+            dayMap.put("consumed", dayConsumed);
+            trend.add(dayMap);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalPoints", totalPoints);
+        result.put("todayAcquired", todayAcquired);
+        result.put("todayConsumed", todayConsumed);
+        result.put("monthAcquired", monthAcquired);
+        result.put("monthConsumed", monthConsumed);
+        result.put("totalAcquired", totalAcquired);
+        result.put("totalConsumed", totalConsumed);
+        result.put("trend", trend);
         return R.success(result);
     }
 }

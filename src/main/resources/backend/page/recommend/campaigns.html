@@ -9,35 +9,10 @@
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <style>
-        /* ========== 统计卡片（覆盖stats-cards内的子卡片样式） ========== */
-        .summary-card {
-            background: #fff;
-            border-radius: 12px;
-            padding: 18px 22px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-            border: 1px solid #f0f2f5;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            transition: all 0.3s;
-        }
-        .summary-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-        .summary-card .card-icon {
-            width: 46px; height: 46px; border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 22px; flex-shrink: 0;
-        }
-        .summary-card .card-icon.blue   { background: rgba(64,158,255,0.1); color: #409eff; }
-        .summary-card .card-icon.green  { background: rgba(103,194,58,0.1); color: #67c23a; }
-        .summary-card .card-icon.orange { background: rgba(230,162,60,0.1); color: #e6a23c; }
-        .summary-card .card-icon.purple { background: rgba(155,81,224,0.1); color: #9b51e0; }
-        .summary-card .card-num   { font-size: 26px; font-weight: 700; color: #303133; line-height: 1.2; }
-        .summary-card .card-label { font-size: 12px; color: #909399; margin-top: 2px; }
-
         /* ========== 概览图表 ========== */
         .overview-charts {
             display: grid;
-            grid-template-columns: 1fr 2fr;
+            grid-template-columns: 1fr 1fr;
             gap: 16px;
             margin-bottom: 20px;
         }
@@ -86,34 +61,34 @@
 <body>
 <div class="dashboard-container" id="app">
     <div class="container">
-        <!-- ========== 活动概览统计 ========== -->
+        <!-- ========== 修改点：活动概览统计（使用统一 stat-card 组件 + 真实DB数据） ========== -->
         <div class="stats-cards">
-            <div class="summary-card">
-                <div class="card-icon blue">📋</div>
-                <div>
-                    <div class="card-num">{{ summary.total }}</div>
-                    <div class="card-label">活动总数</div>
+            <div class="stat-card stat-card--flex primary clickable" :class="{ active: searchStatus === null }" @click="quickFilter(null)">
+                <div class="stat-icon">📋</div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ summary.total }}</div>
+                    <div class="stat-label">活动总数</div>
                 </div>
             </div>
-            <div class="summary-card">
-                <div class="card-icon green">▶</div>
-                <div>
-                    <div class="card-num">{{ summary.active }}</div>
-                    <div class="card-label">进行中</div>
+            <div class="stat-card stat-card--flex success clickable" :class="{ active: searchStatus === 1 }" @click="quickFilter(1)">
+                <div class="stat-icon">▶</div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ summary.active }}</div>
+                    <div class="stat-label">进行中</div>
                 </div>
             </div>
-            <div class="summary-card">
-                <div class="card-icon orange">👥</div>
-                <div>
-                    <div class="card-num">{{ summary.totalParticipants }}</div>
-                    <div class="card-label">参与总人数</div>
+            <div class="stat-card stat-card--flex warning clickable" :class="{ active: searchStatus === 0 }" @click="quickFilter(0)">
+                <div class="stat-icon">📝</div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ summary.draft }}</div>
+                    <div class="stat-label">草稿</div>
                 </div>
             </div>
-            <div class="summary-card">
-                <div class="card-icon purple">📨</div>
-                <div>
-                    <div class="card-num">{{ summary.totalPushed }}</div>
-                    <div class="card-label">推送消息数</div>
+            <div class="stat-card stat-card--flex info">
+                <div class="stat-icon">📨</div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ summary.totalPushed }}</div>
+                    <div class="stat-label">推送消息数</div>
                 </div>
             </div>
         </div>
@@ -140,7 +115,7 @@
         <div class="tableBar">
             <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框 -->
             <el-select v-model="searchName" placeholder="选择活动名称" size="small" class="el-select--narrow-xs" clearable filterable
-              :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据'" @change="loadData">
+              :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="loadData" @visible-change="onFilterDropdownVisible">
               <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
             </el-select>
             <el-select v-model="searchStatus" placeholder="状态筛选" size="small" clearable @change="loadData">
@@ -400,7 +375,8 @@ new Vue({
             optionsLoading: false,
             optionsLoadError: false,
             selectedRows: [],
-            summary: { total: 0, active: 0, totalParticipants: 0, totalPushed: 0 },
+            // 修改点：summary 包含4种状态 + 推送总数，全部来自后端真实统计
+            summary: { total: 0, active: 0, draft: 0, ended: 0, paused: 0, totalParticipants: 0, totalPushed: 0 },
             // 修改点(2026-07-10)：新增 recentDates 用于图表的 X 轴
             recentDates: (function() {
                 var arr = [];
@@ -440,6 +416,7 @@ new Vue({
     created: function() {
         this.loadFilterOptions();
         this.loadData();
+        this.loadSummary();
         this.loadCouponTemplates();
     },
     mounted: function() {
@@ -466,12 +443,22 @@ new Vue({
                     self.$message.warning('加载活动选项失败：' + (res.msg || '接口返回异常'));
                 }
             }).catch(function(err) {
+                // 修改点：NOTLOGIN 错误已在全局拦截器处理（跳转登录页），无需重复提示
+                if (err.message === 'NOTLOGIN') {
+                    return;
+                }
                 self.optionsLoadError = true;
                 console.error('加载活动选项失败:', err);
                 self.$message.error('加载筛选选项失败，请刷新页面重试');
             }).finally(function() {
                 self.optionsLoading = false;
             });
+        },
+        // 修改点：下拉框打开时若之前加载失败，自动重试
+        onFilterDropdownVisible: function(visible) {
+            if (visible && this.optionsLoadError) {
+                this.loadFilterOptions();
+            }
         },
         /* ====== 图表初始化 ====== */
         initOverviewCharts: function() {
@@ -491,7 +478,7 @@ new Vue({
         },
         renderOverviewCharts: function() {
             var self = this;
-            // 状态分布饼图
+            // 状态分布饼图 — 修改点：展示全部4种状态
             if (this.statusPieChart) {
                 this.statusPieChart.setOption({
                     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
@@ -504,29 +491,35 @@ new Vue({
                         emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
                         data: [
                             { value: self.summary.active || 0, name: '进行中', itemStyle: { color: '#67c23a' } },
-                            { value: self.summary.total - self.summary.active || 0, name: '其他状态', itemStyle: { color: '#e0e0e0' } }
+                            { value: self.summary.draft || 0, name: '草稿', itemStyle: { color: '#909399' } },
+                            { value: self.summary.ended || 0, name: '已结束', itemStyle: { color: '#e6a23c' } },
+                            { value: self.summary.paused || 0, name: '已暂停', itemStyle: { color: '#f56c6c' } }
                         ]
                     }]
                 }, true);
             }
-            // 参与统计柱状图 — 修改点(2026-07-10)：使用真实汇总数据
+            // 推送与参与柱状图 — 修改点：保留推送/参与对比，但使用真实汇总数据
             if (this.overviewBarChart) {
                 this.overviewBarChart.setOption({
                     tooltip: { trigger: 'axis' },
-                    legend: { data: ['推送数', '参与数'], bottom: 0, textStyle: { fontSize: 12 } },
-                    grid: { left: 50, right: 20, top: 10, bottom: 40 },
-                    xAxis: { type: 'category', data: ['推送统计', '参与统计'] },
+                    legend: { data: ['推送消息数', '参与总人数'], bottom: 0, textStyle: { fontSize: 12 } },
+                    grid: { left: 55, right: 30, top: 20, bottom: 40 },
+                    xAxis: { type: 'category', data: ['推送统计', '参与统计'], axisLabel: { fontSize: 13 } },
                     yAxis: { type: 'value', minInterval: 1 },
                     series: [
                         {
-                            name: '推送数', type: 'bar',
+                            name: '推送消息数', type: 'bar',
                             data: [self.summary.totalPushed || 0],
-                            itemStyle: { color: '#5470c6', borderRadius: [4,4,0,0] }
+                            barWidth: 50,
+                            itemStyle: { color: '#5470c6', borderRadius: [6, 6, 0, 0] },
+                            label: { show: true, position: 'top', fontSize: 14, fontWeight: 'bold', color: '#5470c6' }
                         },
                         {
-                            name: '参与数', type: 'bar',
+                            name: '参与总人数', type: 'bar',
                             data: [self.summary.totalParticipants || 0],
-                            itemStyle: { color: '#91cc75', borderRadius: [4,4,0,0] }
+                            barWidth: 50,
+                            itemStyle: { color: '#91cc75', borderRadius: [6, 6, 0, 0] },
+                            label: { show: true, position: 'top', fontSize: 14, fontWeight: 'bold', color: '#67c23a' }
                         }
                     ]
                 }, true);
@@ -555,28 +548,24 @@ new Vue({
                     var data = res.data;
                     self.tableData = data.records || [];
                     self.total = data.total || 0;
-                    // 修改点：同时获取全量统计
-                    self.loadSummary();
                 }
             }).catch(function(err) {
                 self.$message.error('加载失败: ' + (err.response && err.response.data && err.response.data.msg || err.message));
             }).finally(function() { self.loading = false; });
         },
-        // 修改点：单独获取全量统计，修正 summary 计算
+        // 修改点：调用后端 stats API 获取真实统计数据（替代 pageSize=1000 前端聚合）
         loadSummary: function() {
             var self = this;
-            recommendBackendApi.getCampaignsPage({
-                page: 1, pageSize: 1000,
-                name: self.searchName || undefined,
-                status: self.searchStatus !== null ? self.searchStatus : undefined,
-                campaignType: self.searchType || undefined
-            }).then(function(res) {
-                if (res.code === 1) {
-                    var all = res.data.records || [];
-                    self.summary.total = res.data.total || 0;
-                    self.summary.active = all.filter(function(r) { return r.status === 1; }).length;
-                    self.summary.totalParticipants = all.reduce(function(s, r) { return s + (r.currentParticipants || 0); }, 0);
-                    self.summary.totalPushed = all.reduce(function(s, r) { return s + (r.pushCount || 0); }, 0);
+            recommendBackendApi.getCampaignStats().then(function(res) {
+                if (res.code === 1 && res.data) {
+                    var s = res.data;
+                    self.summary.total = s.total || 0;
+                    self.summary.active = s.active || 0;
+                    self.summary.draft = s.draft || 0;
+                    self.summary.ended = s.ended || 0;
+                    self.summary.paused = s.paused || 0;
+                    self.summary.totalParticipants = s.total_participants || 0;
+                    self.summary.totalPushed = s.total_pushed || 0;
                     self.renderOverviewCharts();
                 }
             }).catch(function() {});
@@ -617,6 +606,18 @@ new Vue({
           this.searchType = null
           this.currentPage = 1
           this.loadData()
+          this.loadSummary()
+        },
+        // 修改点：点击统计卡片快速筛选状态
+        quickFilter: function(status) {
+            if (this.searchStatus === status) {
+                this.searchStatus = null;
+            } else {
+                this.searchStatus = status;
+            }
+            this.currentPage = 1;
+            this.loadData();
+            this.loadSummary();
         },
         onSelectionChange: function(rows) { this.selectedRows = rows; },
         batchDelete: function() {
@@ -787,8 +788,26 @@ new Vue({
 
         /* ====== 统计 ====== */
         viewStats: function(row) {
-            this.statsCampaign = row;
-            this.statsDialogVisible = true;
+            // 修改点：确保 pushCount 有值，没有则从服务端查询
+            if (row.pushCount == null || row.pushCount === undefined) {
+                var self = this;
+                recommendBackendApi.getPushCount(row.id).then(function(res) {
+                    if (res.code === 1) {
+                        row.pushCount = res.data || 0;
+                    } else {
+                        row.pushCount = 0;
+                    }
+                    self.statsCampaign = row;
+                    self.statsDialogVisible = true;
+                }).catch(function() {
+                    row.pushCount = 0;
+                    self.statsCampaign = row;
+                    self.statsDialogVisible = true;
+                });
+            } else {
+                this.statsCampaign = row;
+                this.statsDialogVisible = true;
+            }
         },
         onStatsDialogOpen: function() {
             var self = this;

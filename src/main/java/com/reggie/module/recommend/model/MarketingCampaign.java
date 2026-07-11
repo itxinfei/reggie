@@ -126,4 +126,11 @@ public class MarketingCampaign implements Serializable {
     /** 更新人ID */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
+
+    /**
+     * 推送消息数量（不映射数据库字段，通过SQL JOIN计算）
+     * 修改点：新增此字段替代前端读取不存在的 pushCount
+     */
+    @TableField(exist = false)
+    private Integer pushCount;
 }

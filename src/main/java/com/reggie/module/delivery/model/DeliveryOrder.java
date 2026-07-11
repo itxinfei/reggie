@@ -1,5 +1,8 @@
 package com.reggie.module.delivery.model;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -12,11 +15,13 @@ import java.time.LocalDateTime;
  * @since 2026-07-09
  */
 @Data
+@TableName("delivery_order")
 public class DeliveryOrder implements Serializable {
     /** 序列化版本UID */
     private static final long serialVersionUID = 1L;
 
     /** 主键ID */
+    @TableId
     private Long id;
     /** 租户ID */
     private Long tenantId;
@@ -42,8 +47,10 @@ public class DeliveryOrder implements Serializable {
     private LocalDateTime createdTime;
     /** 更新时间 */
     private LocalDateTime updatedTime;
-    /** 创建人ID */
+    /** 创建人ID — 修改点：数据库字段为 create_user，须显式映射 */
+    @TableField("create_user")
     private Long createdUser;
-    /** 更新人ID */
+    /** 更新人ID — 修改点：数据库字段为 update_user，须显式映射 */
+    @TableField("update_user")
     private Long updatedUser;
 }

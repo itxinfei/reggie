@@ -6,14 +6,17 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.dto.DeductBalanceDTO;
 import com.reggie.dto.RechargeDTO;
+import com.reggie.module.member.model.CouponUser;
 import com.reggie.module.member.model.Member;
+import com.reggie.module.member.model.MemberLevel;
+import com.reggie.module.member.service.CouponUserService;
+import com.reggie.module.member.service.MemberLevelService;
 import com.reggie.module.member.service.MemberService;
 import com.reggie.module.member.service.RechargeRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,9 +26,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.validation.Valid;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * 会员管理控制器
@@ -42,10 +45,15 @@ public class MemberController {
 
     private final MemberService memberService;
     private final RechargeRecordService rechargeRecordService;
+    private final MemberLevelService memberLevelService;
+    private final CouponUserService couponUserService;
 
-    public MemberController(MemberService memberService, RechargeRecordService rechargeRecordService) {
+    public MemberController(MemberService memberService, RechargeRecordService rechargeRecordService,
+                            MemberLevelService memberLevelService, CouponUserService couponUserService) {
         this.memberService = memberService;
         this.rechargeRecordService = rechargeRecordService;
+        this.memberLevelService = memberLevelService;
+        this.couponUserService = couponUserService;
     }
 
     @GetMapping("/page")
@@ -112,6 +120,57 @@ public class MemberController {
             return R.success("扣减成功");
         }
         return R.error("余额不足或会员不存在");
+    }
+
+    /**
+     * C端：获取当前登录用户的会员信息
+     * 根据当前用户ID查询对应的会员信息，含等级详情、优惠券数量
+     */
+    @GetMapping("/my-info")
+    @Operation(summary = "C端-会员信息", description = "获取当前登录用户的会员信息：等级、积分、余额、可用优惠券数量、折扣率")
+    public R<Map<String, Object>> myInfo() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return R.error("用户未登录");
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        // 查询会员信息
+        LambdaQueryWrapper<Member> memberQw = new LambdaQueryWrapper<>();
+        memberQw.eq(Member::getUserId, userId);
+        if (tenantId != null) memberQw.eq(Member::getTenantId, tenantId);
+        Member member = memberService.getOne(memberQw);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (member == null) {
+            // 用户尚未注册为会员
+            result.put("isMember", false);
+            result.put("member", null);
+            result.put("level", null);
+            result.put("couponCount", 0);
+            return R.success(result);
+        }
+
+        result.put("isMember", true);
+        result.put("member", member);
+
+        // 查询等级信息
+        if (member.getLevelId() != null) {
+            MemberLevel level = memberLevelService.getById(member.getLevelId());
+            result.put("level", level);
+        } else {
+            result.put("level", null);
+        }
+
+        // 查询可用优惠券数量
+        LambdaQueryWrapper<CouponUser> couponQw = new LambdaQueryWrapper<>();
+        couponQw.eq(CouponUser::getMemberId, member.getId());
+        if (tenantId != null) couponQw.eq(CouponUser::getTenantId, tenantId);
+        couponQw.eq(CouponUser::getStatus, "UNUSED");
+        int couponCount = (int) couponUserService.count(couponQw);
+        result.put("couponCount", couponCount);
+
+        return R.success(result);
     }
 }
 

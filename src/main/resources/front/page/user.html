@@ -6,15 +6,71 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
     <title>个人中心 - 瑞吉外卖</title>
     <link rel="icon" href="./../images/favico.ico">
-    <!-- 引入样式  -->
     <link rel="stylesheet" href="../styles/index.css" />
-    <!--引入vant样式-->
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <!--本页面内容的样式-->
     <link rel="stylesheet" href="./../styles/user.css" />
+    <style>
+        /* 会员卡片 */
+        .member-card {
+            margin: 0 12rem 12rem;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border-radius: 14rem;
+            padding: 16rem 18rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4rem 16rem rgba(15, 52, 96, 0.3);
+        }
+        .member-card::before {
+            content: ''; position: absolute; top: -30rem; right: -30rem;
+            width: 120rem; height: 120rem; border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+        }
+        .member-card .card-top {
+            display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rem;
+            position: relative; z-index: 1;
+        }
+        .member-card .card-level-badge {
+            background: linear-gradient(135deg, #ffd54f, #ffb300);
+            color: #5d4037; font-size: 11rem; font-weight: 700;
+            padding: 3rem 10rem; border-radius: 20rem; letter-spacing: 0.5rem;
+        }
+        .member-card .card-level-badge.standard {
+            background: linear-gradient(135deg, #e0e0e0, #bdbdbd); color: #616161;
+        }
+        .member-card .card-arrow { color: rgba(255,255,255,0.5); font-size: 14rem; }
+        .member-card .card-stats {
+            display: flex; gap: 0; position: relative; z-index: 1;
+        }
+        .member-card .card-stat {
+            flex: 1; text-align: center; position: relative;
+        }
+        .member-card .card-stat:not(:last-child)::after {
+            content: ''; position: absolute; right: 0; top: 15%;
+            width: 1px; height: 70%;
+            background: rgba(255,255,255,0.15);
+        }
+        .member-card .card-stat .val {
+            font-size: 20rem; font-weight: 700; color: #fff;
+            font-family: var(--font-family-number);
+        }
+        .member-card .card-stat .lbl {
+            font-size: 11rem; color: rgba(255,255,255,0.55); margin-top: 2rem;
+        }
+        .member-card .card-coupon-tag {
+            margin-top: 10rem; font-size: 12rem; color: rgba(255,255,255,0.6);
+            display: flex; align-items: center; gap: 6rem; position: relative; z-index: 1;
+        }
+        .member-card .card-coupon-tag .coupon-count {
+            background: rgba(255,255,255,0.15); border-radius: 8rem;
+            padding: 3rem 8rem; color: #ffd54f; font-weight: 600;
+        }
+        .member-card .non-member-tip {
+            text-align: center; color: rgba(255,255,255,0.6); font-size: 13rem;
+            padding: 6rem 0; position: relative; z-index: 1;
+        }
+    </style>
 </head>
 <body>
-    <!-- 修改点：移除ElementUI v-loading，改用CSS加载遮罩 -->
     <div id="user" class="app" style="position:relative;">
         <div v-if="pageLoading" class="loading-overlay">
             <div class="loading-spinner"></div>
@@ -26,19 +82,54 @@
             <div class="divUser">
                 <img :src="userAvatar || './../images/headPage.png'"/>
                 <div class="desc">
-                    <!-- 修改点：动态性别图标 + 编辑入口 -->
                     <div class="divName">
                         {{ userName || '用户' }}
                         <img v-if="userGender === 1" src="./../images/women.png" class="gender-icon"/>
                         <img v-else-if="userGender === 0" src="./../images/man.png" class="gender-icon"/>
                     </div>
-                    <!-- 修改点：手机号脱敏显示 138****1234 -->
                     <div class="divPhone">{{ maskedPhone }}</div>
                 </div>
             </div>
         </div>
         <div class="divContent">
+            <!-- 会员卡片 -->
+            <div class="member-card" @click="goMemberCenter" v-if="memberInfo">
+                <div class="card-top">
+                    <span v-if="memberInfo.isMember && memberInfo.level" :class="['card-level-badge', memberInfo.level.name === '普通会员' ? 'standard' : '']">
+                        {{ memberInfo.level.name || '未知等级' }}
+                    </span>
+                    <span v-else class="card-level-badge standard">未开通会员</span>
+                    <span class="card-arrow">查看详情 ›</span>
+                </div>
+                <div class="card-stats" v-if="memberInfo.isMember && memberInfo.member">
+                    <div class="card-stat">
+                        <div class="val">{{ fmtThousand(memberInfo.member.points) }}</div>
+                        <div class="lbl">积分</div>
+                    </div>
+                    <div class="card-stat">
+                        <div class="val">{{ fmtThousand(memberInfo.member.balance) }}</div>
+                        <div class="lbl">余额</div>
+                    </div>
+                    <div class="card-stat">
+                        <div class="val">{{ memberInfo.couponCount || 0 }}</div>
+                        <div class="lbl">优惠券</div>
+                    </div>
+                </div>
+                <div class="card-coupon-tag" v-if="memberInfo.isMember && memberInfo.couponCount > 0">
+                    你有 <span class="coupon-count">{{ memberInfo.couponCount }}</span> 张可用优惠券
+                </div>
+                <div class="non-member-tip" v-else>
+                    开通会员解锁更多权益
+                </div>
+            </div>
+
             <div class="divLinks">
+                <div class="item" @click="goMemberCenter">
+                    <img src="./../images/locations.png"/>
+                    <span>会员中心</span>
+                    <i class="icon-arrow-right"></i>
+                </div>
+                <div class="divSplit"></div>
                 <div class="item" @click="toAddressPage">
                     <img src="./../images/locations.png"/>
                     <span>地址管理</span>
@@ -79,7 +170,6 @@
                     <span>共{{order[0].sumNum}} 件商品,实付</span>
                     <span class="price">￥{{ Number(order[0].amount).toFixed(2) }}</span>
                 </div>
-                <!-- 修改点：按钮级loading状态，禁用时防止重复点击 -->
                 <div class="btn" v-if="order[0].status === 4">
                     <div class="btnAgain"
                          :class="{ 'is-loading': addOrderLoading, 'is-disabled': addOrderLoading }"
@@ -88,7 +178,6 @@
                     </div>
                 </div>
             </div>
-            <!-- 修改点：退出登录按钮级loading -->
             <div class="quitLogin"
                  :class="{ 'is-loading': logoutLoading }"
                  @click="toPageLogin">
@@ -96,184 +185,152 @@
             </div>
         </div>
     </div>
-    <!-- 开发环境版本，包含了有帮助的命令行警告 -->
     <script src="../../backend/plugins/vue/vue.js"></script>
-    <!-- 引入vant组件 -->
-    <script src="./../js/vant.min.js"></script>    
-    <!--不同屏幕尺寸根字体设置-->
+    <script src="./../js/vant.min.js"></script>
     <script src="./../js/base.js"></script>
-    <!-- 引入axios -->
     <script src="../../backend/plugins/axios/axios.min.js"></script>
-        <script src="./../js/request.js"></script>
-        <script src="./../api/main.js"></script>
-        <script src="./../js/common.js"></script>
-        <script src="./../api/order.js"></script>
-        <script src="./../api/login.js"></script>
+    <script src="./../js/request.js"></script>
+    <script src="./../api/main.js"></script>
+    <script src="./../js/common.js"></script>
+    <script src="./../api/order.js"></script>
+    <script src="./../api/login.js"></script>
+    <script src="./../api/member-center.js"></script>
     <script>
         new Vue({
             el:"#user",
-            data(){
+            data: function(){
                 return {
-                    userPhone: '',
-                    // 修改点：新增用户真实信息字段
-                    userName: '',
-                    userAvatar: '',
-                    userGender: undefined, // 0=男, 1=女, undefined=未知
-                    // 修改点：分离loading状态：页面/再来一单/退出登录
-                    pageLoading: false,
-                    addOrderLoading: false,
-                    logoutLoading: false,
+                    userPhone: '', userName: '', userAvatar: '', userGender: undefined,
+                    pageLoading: false, addOrderLoading: false, logoutLoading: false,
+                    memberInfo: null,
                     order:[{
-                        orderTime:'',
-                        status:undefined,
-                        orderDetails:[{
-                            name:'',
-                            number:undefined,
-                        }],
-                        amount:undefined,
-                        sumNum:0,
+                        orderTime:'', status:undefined,
+                        orderDetails:[{ name:'', number:undefined }],
+                        amount:undefined, sumNum:0,
                     }],
                 }
             },
             computed:{
-                // 修改点：手机号脱敏显示 138****1234
-                maskedPhone(){
-                    const phone = this.userPhone
+                maskedPhone: function(){
+                    var phone = this.userPhone
                     if(!phone || phone.length < 7) return phone || ''
                     return phone.substring(0, 3) + '****' + phone.substring(phone.length - 4)
                 }
             },
-            created(){
+            created: function(){
                 this.userPhone = sessionStorage.getItem("userPhone") || ''
                 this.loadData()
             },
-            mounted(){},
             methods:{
                 async loadData(){
                     this.pageLoading = true
                     try {
                         await Promise.all([
                             this.fetchUserInfo(),
+                            this.fetchMemberInfo(),
                             this.getLatestOrder()
                         ])
-                    } finally {
-                        this.pageLoading = false
-                    }
+                    } finally { this.pageLoading = false }
                 },
                 async fetchUserInfo(){
                     try {
-                        const res = await getUserInfoApi()
+                        var res = await getUserInfoApi()
                         if(res.code === 1 && res.data){
                             this.userName = res.data.name || ''
                             this.userAvatar = res.data.avatar || ''
                             this.userPhone = res.data.phone || this.userPhone
                             this.userGender = res.data.sex !== undefined ? res.data.sex : undefined
-                            // 修改点：同步最新数据到sessionStorage
                             sessionStorage.setItem("userName", this.userName)
                             sessionStorage.setItem("userAvatar", this.userAvatar)
                             sessionStorage.setItem("userPhone", this.userPhone)
                         }
-                    } catch(e) {
-                        // 修改点：静默处理
-                    }
+                    } catch(e) {}
                 },
-                goBack(){
-                    history.go(-1)
+                async fetchMemberInfo(){
+                    try {
+                        var res = await getMyMemberInfo()
+                        if(res.code === 1) {
+                            this.memberInfo = res.data
+                            if (res.data.isMember && res.data.member) {
+                                sessionStorage.setItem("memberId", res.data.member.id)
+                            }
+                        }
+                    } catch(e) {}
                 },
-                getStatus(status){
-                    return getStatus(status)
+                goBack: function(){ history.go(-1) },
+                getStatus: function(status){ return getStatus(status) },
+                goMemberCenter: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/member-center.html' })
                 },
-                toAddressPage(){
-                    window.requestAnimationFrame(()=>{
-                        window.location.href = '/front/page/address.html'
-                    })  
+                toAddressPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/address.html' })
                 },
-                toOrderPage(){
-                    window.requestAnimationFrame(()=>{
-                        window.location.href = '/front/page/order.html'
-                    })
+                toOrderPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/order.html' })
                 },
-                toEvaluationPage(){
-                    window.requestAnimationFrame(()=>{
-                        window.location.href = '/front/page/my-evaluations.html'
-                    })
+                toEvaluationPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/my-evaluations.html' })
                 },
-                toMessagePage(){
-                    window.requestAnimationFrame(()=>{
-                        window.location.href = '/front/page/message.html'
-                    })
+                toMessagePage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/message.html' })
                 },
                 async getLatestOrder(){
-                    const params = {
-                        page:1,
-                        pageSize:1
-                    }
-                    const res = await orderPagingApi(params)
+                    var params = { page:1, pageSize:1 }
+                    var res = await orderPagingApi(params)
                     if(res.code === 1){
                         this.order = res.data.records
                         if(this.order && this.order.length > 0 && this.order[0].orderDetails){
-                            let number = 0
-                            this.order[0].orderDetails.forEach(item=>{
-                                number += item.number
-                            })
+                            var number = 0
+                            this.order[0].orderDetails.forEach(function(item){ number += item.number })
                             this.order[0].sumNum = number
                         }
-                    }else{
-                        vant.Toast.fail(res.msg || '加载订单失败');
                     }
                 },
-                // 修改点：独立loading，不阻塞其他按钮
                 async addOrderAgain(){
                     if(this.addOrderLoading) return;
                     this.addOrderLoading = true
                     try {
-                        const res = await orderAgainApi({id:this.order[0].id})
+                        var res = await orderAgainApi({id:this.order[0].id})
                         if(res.code === 1){
                             await cartListApi({})
-                            window.requestAnimationFrame(()=>{
-                                window.location.href = '/front/index.html'
-                            })
+                            window.requestAnimationFrame(function(){ window.location.href = '/front/index.html' })
                         }else{
                             vant.Toast.fail(res.msg || '再来一单失败');
                             this.addOrderLoading = false
                         }
-                    } catch(e) {
-                        this.addOrderLoading = false
-                    }
+                    } catch(e) { this.addOrderLoading = false }
                 },
-                // 修改点：独立loading，退出登录用Vant Dialog二次确认
                 async toPageLogin(){
                     if(this.logoutLoading) return;
-                    // 修改点：使用 Vant Dialog 二次确认
+                    var self = this
                     vant.Dialog.confirm({
-                        title: '确认退出',
-                        message: '退出登录后需要重新登录，确认退出吗？',
-                        confirmButtonText: '确认退出',
-                        confirmButtonColor: '#e94e3c',
-                        cancelButtonText: '取消'
-                    }).then(() => {
-                        this.doLogout()
-                    }).catch(() => {})
+                        title: '确认退出', message: '退出登录后需要重新登录，确认退出吗？',
+                        confirmButtonText: '确认退出', confirmButtonColor: '#e94e3c', cancelButtonText: '取消'
+                    }).then(function(){ self.doLogout() }).catch(function(){})
                 },
                 async doLogout(){
                     this.logoutLoading = true
                     try {
-                        const res = await loginoutApi()
+                        var res = await loginoutApi()
                         if(res.code === 1){
                             sessionStorage.removeItem("userPhone")
                             sessionStorage.removeItem("userId")
                             sessionStorage.removeItem("userName")
                             sessionStorage.removeItem("userAvatar")
-                            window.requestAnimationFrame(()=>{
-                                window.location.href = '/front/page/login.html'
-                            }) 
+                            sessionStorage.removeItem("memberId")
+                            window.requestAnimationFrame(function(){ window.location.href = '/front/page/login.html' })
                         }else{
                             vant.Toast.fail(res.msg || '退出失败');
                             this.logoutLoading = false
                         }
-                    } catch(e) {
-                        this.logoutLoading = false
-                    }
+                    } catch(e) { this.logoutLoading = false }
+                },
+                fmtThousand: function(v){
+                    if (v == null || v === '') return '0'
+                    var n = Number(v)
+                    if (n >= 10000) return (n/10000).toFixed(1) + 'w'
+                    if (n >= 1000) return (n/1000).toFixed(1) + 'k'
+                    return String(n)
                 }
             }
         })

@@ -132,6 +132,20 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void approveOrder(Long orderId) {
+        PurchaseOrder po = getById(orderId);
+        if (po == null) {
+            throw new CustomException("采购单不存在");
+        }
+        if (!PurchaseOrderStatus.DRAFT.getValue().equals(po.getStatus())) {
+            throw new CustomException("只有草稿状态的采购单才能审核");
+        }
+        po.setStatus(PurchaseOrderStatus.ORDERED.getValue());
+        updateById(po);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Long orderId) {
         PurchaseOrder po = getById(orderId);
         if (po == null) {

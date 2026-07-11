@@ -106,5 +106,19 @@ var recommendBackendApi = {
      */
     batchPush: function(campaignId, data) {
         return $axios.post('/marketing/batch-push/' + campaignId, data);
+    },
+
+    /**
+     * 修改点：获取营销活动全局统计数据（后端聚合，替代前端pageSize=1000）
+     */
+    getCampaignStats: function() {
+        return $axios.get('/marketing/campaigns/stats');
+    },
+
+    /**
+     * 修改点：获取单个活动的推送次数（从marketing_message表真实统计）
+     */
+    getPushCount: function(campaignId) {
+        return $axios.get('/marketing/campaigns/' + campaignId + '/push-count');
     }
 };

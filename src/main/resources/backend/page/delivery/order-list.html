@@ -21,7 +21,7 @@
         @card-click="onCardClick"
       ></stat-cards>
 
-      <!-- 搜索 + 操作栏（同步按钮通过 actions 属性传入） -->
+      <!-- 搜索 + 操作栏 -->
       <table-bar
         ref="tableBar"
         :search-items="searchConfig"
@@ -41,30 +41,101 @@
         :page-size="pageSize"
         :total="counts"
         :show-actions="true"
-        :actions-width="120"
+        :actions-width="220"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
         <template #col-platform="{ row }">
-          <el-tag v-if="row.platform === 'MEITUAN'">美团</el-tag>
-          <el-tag v-else-if="row.platform === 'ELEME'" type="success">饿了么</el-tag>
-          <el-tag v-else-if="row.platform === 'DOUYIN'" type="warning">抖音</el-tag>
+          <el-tag v-if="row.platform === 'MEITUAN'" size="small">美团</el-tag>
+          <el-tag v-else-if="row.platform === 'ELEME'" type="success" size="small">饿了么</el-tag>
+          <el-tag v-else-if="row.platform === 'DOUYIN'" type="warning" size="small">抖音</el-tag>
           <span v-else>{{ row.platform }}</span>
         </template>
         <template #col-amount="{ row }">
-          <span>￥{{ row.amount }}</span>
+          <span style="color:#f56c6c;font-weight:500">￥{{ row.amount }}</span>
         </template>
         <template #col-status="{ row }">
-          <el-tag v-if="row.status === 'PENDING'" type="warning">待处理</el-tag>
-          <el-tag v-else-if="row.status === 'ACCEPTED'" type="success">已接单</el-tag>
-          <el-tag v-else-if="row.status === 'COMPLETED'" type="info">已完成</el-tag>
-          <el-tag v-else-if="row.status === 'CANCELLED'" type="danger">已取消</el-tag>
+          <el-tag v-if="row.status === 'PENDING'" type="warning" size="small">待接单</el-tag>
+          <el-tag v-else-if="row.status === 'ACCEPTED'" size="small">已接单</el-tag>
+          <el-tag v-else-if="row.status === 'PICKING'" type="warning" size="small">取餐中</el-tag>
+          <el-tag v-else-if="row.status === 'DELIVERING'" type="primary" size="small">配送中</el-tag>
+          <el-tag v-else-if="row.status === 'DELIVERED'" type="success" size="small">已送达</el-tag>
+          <el-tag v-else-if="row.status === 'CANCELLED'" type="danger" size="small">已取消</el-tag>
           <span v-else>{{ row.status }}</span>
         </template>
         <template #actions="{ row }">
-          <el-button type="text" size="small" class="btn-view" @click="acceptOrder(row)" v-if="row.status === 'PENDING'">手动接单</el-button>
+          <el-button type="text" size="small" @click="showDetail(row)">详情</el-button>
+          <el-button type="text" size="small" class="btn-accept" @click="acceptOrder(row)" v-if="row.status === 'PENDING'">接单</el-button>
+          <el-button type="text" size="small" class="btn-pick" @click="statusChange(row, 'PICKING')" v-if="row.status === 'ACCEPTED'">取餐</el-button>
+          <el-button type="text" size="small" class="btn-deliver" @click="statusChange(row, 'DELIVERING')" v-if="row.status === 'PICKING'">配送</el-button>
+          <el-button type="text" size="small" class="btn-complete" @click="statusChange(row, 'DELIVERED')" v-if="row.status === 'DELIVERING'">送达</el-button>
+          <el-button type="text" size="small" class="btn-cancel" @click="cancelOrder(row)" v-if="row.status !== 'DELIVERED' && row.status !== 'CANCELLED'">取消</el-button>
         </template>
       </crud-table>
+
+      <!-- 订单详情弹窗 -->
+      <el-dialog
+        title="订单详情"
+        :visible.sync="detailVisible"
+        width="560px"
+        :close-on-click-modal="true"
+        @closed="resetDetail"
+      >
+        <el-descriptions v-if="detailOrder" :column="2" border size="small">
+          <el-descriptions-item label="平台订单号">{{ detailOrder.platformOrderId }}</el-descriptions-item>
+          <el-descriptions-item label="外卖平台">
+            <el-tag v-if="detailOrder.platform === 'MEITUAN'" size="mini">美团</el-tag>
+            <el-tag v-else-if="detailOrder.platform === 'ELEME'" type="success" size="mini">饿了么</el-tag>
+            <el-tag v-else-if="detailOrder.platform === 'DOUYIN'" type="warning" size="mini">抖音</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="订单状态">
+            <el-tag v-if="detailOrder.status === 'PENDING'" type="warning" size="mini">待接单</el-tag>
+            <el-tag v-else-if="detailOrder.status === 'ACCEPTED'" size="mini">已接单</el-tag>
+            <el-tag v-else-if="detailOrder.status === 'PICKING'" type="warning" size="mini">取餐中</el-tag>
+            <el-tag v-else-if="detailOrder.status === 'DELIVERING'" type="primary" size="mini">配送中</el-tag>
+            <el-tag v-else-if="detailOrder.status === 'DELIVERED'" type="success" size="mini">已送达</el-tag>
+            <el-tag v-else-if="detailOrder.status === 'CANCELLED'" type="danger" size="mini">已取消</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="订单金额"><b style="color:#f56c6c">￥{{ detailOrder.amount }}</b></el-descriptions-item>
+          <el-descriptions-item label="菜品摘要">{{ detailOrder.dishSummary || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="用户姓名">{{ detailOrder.userName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="联系电话">{{ detailOrder.phone || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="配送地址">{{ detailOrder.address || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="下单时间">{{ detailOrder.orderTime || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="更新时间">{{ detailOrder.updatedTime || '-' }}</el-descriptions-item>
+        </el-descriptions>
+        <span slot="footer" class="dialog-footer">
+          <el-button @click="detailVisible = false">关闭</el-button>
+        </span>
+      </el-dialog>
+
+      <!-- 取消原因弹窗 -->
+      <el-dialog
+        title="取消订单"
+        :visible.sync="cancelVisible"
+        width="420px"
+        :close-on-click-modal="true"
+        @closed="cancelForm = {}"
+      >
+        <el-form :model="cancelForm" label-width="80px" size="small">
+          <el-form-item label="订单号">
+            <span>{{ cancelForm.platformOrderId }}</span>
+          </el-form-item>
+          <el-form-item label="取消原因">
+            <el-select v-model="cancelForm.reason" placeholder="请选择取消原因" style="width:100%" clearable filterable>
+              <el-option label="商品售罄" value="商品售罄"></el-option>
+              <el-option label="店铺休息" value="店铺休息"></el-option>
+              <el-option label="无法配送" value="无法配送"></el-option>
+              <el-option label="用户要求取消" value="用户要求取消"></el-option>
+              <el-option label="其他原因" value="其他原因"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+          <el-button @click="cancelVisible = false" size="small">取消</el-button>
+          <el-button type="danger" @click="confirmCancel" size="small" :loading="cancelLoading">确认取消</el-button>
+        </span>
+      </el-dialog>
     </div>
   </div>
 
@@ -84,20 +155,23 @@
           page: 1,
           pageSize: 10,
           tableData: [],
-          // 统计数据
-          stats: { todayOrders: 0, completedOrders: 0, pendingOrders: 0, cancelledOrders: 0 },
+          // 统计数据（从服务端加载）
+          stats: {
+            todayOrders: 0, pendingCount: 0, acceptedCount: 0, pickingCount: 0,
+            deliveringCount: 0, completedCount: 0, cancelledCount: 0,
+            totalCount: 0, totalAmount: 0
+          },
           activeFilter: '',
+          // 筛选选项（从服务端动态加载）
+          filterOptions: { platforms: [], statuses: [] },
+          optionsLoading: false,
+          optionsLoadError: false,
           // 搜索配置
           searchConfig: [
             { type: 'select', field: 'platform', placeholder: '平台', width: '120px',
-              options: [
-                { label: '美团', value: 'MEITUAN' }, { label: '饿了么', value: 'ELEME' }, { label: '抖音', value: 'DOUYIN' }
-              ] },
+              options: this.filterOptions ? this.filterOptions.platforms : [] },
             { type: 'select', field: 'status', placeholder: '状态', width: '120px',
-              options: [
-                { label: '待处理', value: 'PENDING' }, { label: '已接单', value: 'ACCEPTED' },
-                { label: '已完成', value: 'COMPLETED' }, { label: '已取消', value: 'CANCELLED' }
-              ] },
+              options: this.filterOptions ? this.filterOptions.statuses : [] },
             { type: 'date', field: 'dateRange', placeholder: '选择日期', width: '300px',
               beginField: 'startDate', endField: 'endDate' }
           ],
@@ -108,122 +182,255 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'platformOrderId', label: '平台订单号' },
-            { prop: 'platform', label: '平台', slot: true, width: 90 },
-            { prop: 'dishSummary', label: '菜品摘要' },
-            { prop: 'amount', label: '金额', slot: true, width: 100 },
-            { prop: 'userName', label: '用户' },
-            { prop: 'address', label: '地址' },
-            { prop: 'status', label: '状态', slot: true, width: 90 },
-            { prop: 'orderTime', label: '下单时间' }
+            { prop: 'platformOrderId', label: '平台订单号', minWidth: 160 },
+            { prop: 'platform', label: '平台', slot: true, width: 85 },
+            { prop: 'dishSummary', label: '菜品摘要', minWidth: 140 },
+            { prop: 'amount', label: '金额(元)', slot: true, width: 95 },
+            { prop: 'userName', label: '用户', width: 85 },
+            { prop: 'phone', label: '电话', width: 120 },
+            { prop: 'address', label: '地址', minWidth: 150 },
+            { prop: 'status', label: '状态', slot: true, width: 85 },
+            { prop: 'orderTime', label: '下单时间', width: 165 }
           ],
           // 缓存搜索参数
-          lastSearch: {}
+          lastSearch: {},
+          // 详情弹窗
+          detailVisible: false,
+          detailOrder: null,
+          // 取消弹窗
+          cancelVisible: false,
+          cancelLoading: false,
+          cancelForm: {},
+          // 状态映射表
+          statusLabelMap: {
+            'PENDING': '待接单', 'ACCEPTED': '已接单', 'PICKING': '取餐中',
+            'DELIVERING': '配送中', 'DELIVERED': '已送达', 'CANCELLED': '已取消'
+          }
         }
       },
       computed: {
         statsCards: function() {
           var self = this
           return [
-            { key: 'today', icon: '🛵', label: '今日订单', value: self.stats.todayOrders, color: 'primary' },
-            { key: 'COMPLETED', icon: '✅', label: '已完成', value: self.stats.completedOrders, color: 'success', clickable: true, active: self.activeFilter === 'COMPLETED' },
-            { key: 'PENDING', icon: '⏳', label: '待处理', value: self.stats.pendingOrders, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
-            { key: 'CANCELLED', icon: '❌', label: '已取消', value: self.stats.cancelledOrders, color: 'danger', clickable: true, active: self.activeFilter === 'CANCELLED' }
+            { key: 'PENDING', icon: '&#x23F3;', label: '待处理', value: self.stats.pendingCount, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
+            { key: 'DELIVERING', icon: '&#x1F698;', label: '配送中', value: (self.stats.deliveringCount || 0), color: 'info', clickable: true, active: self.activeFilter === 'DELIVERING' },
+            { key: 'DELIVERED', icon: '&#x2705;', label: '已完成', value: self.stats.completedCount, color: 'success', clickable: true, active: self.activeFilter === 'DELIVERED' },
+            { key: 'CANCELLED', icon: '&#x274C;', label: '已取消', value: self.stats.cancelledCount, color: 'danger', clickable: true, active: self.activeFilter === 'CANCELLED' }
+          ]
+        },
+        // 动态更新 searchConfig 中下拉框的选项
+        dynamicSearchConfig: function() {
+          return [
+            { type: 'select', field: 'platform', placeholder: '平台', width: '120px',
+              options: this.filterOptions.platforms || [] },
+            { type: 'select', field: 'status', placeholder: '状态', width: '120px',
+              options: this.filterOptions.statuses || [] },
+            { type: 'date', field: 'dateRange', placeholder: '选择日期', width: '300px',
+              beginField: 'startDate', endField: 'endDate' }
           ]
         }
       },
-      mounted: function() { this.search() },
+      watch: {
+        dynamicSearchConfig: function(val) {
+          if (this.$refs.tableBar) {
+            this.$refs.tableBar.searchItems = val
+          }
+        }
+      },
+      created: function() {
+        this.loadFilterOptions()
+      },
+      mounted: function() {
+        this.search()
+      },
       methods: {
+        // ==================== 筛选选项加载 ====================
+        async loadFilterOptions() {
+          this.optionsLoading = true
+          this.optionsLoadError = false
+          try {
+            var res = await deliveryFilterOptions()
+            if (String(res.code) === '1' && res.data) {
+              this.filterOptions.platforms = res.data.platforms || []
+              this.filterOptions.statuses = res.data.statuses || []
+            } else {
+              this.optionsLoadError = true
+            }
+          } catch (err) {
+            // 修改点：NOTLOGIN 错误已在全局拦截器处理，无需重复提示
+            if (err.message === 'NOTLOGIN') return
+            this.optionsLoadError = true
+            console.error('加载筛选选项失败:', err)
+            this.$message.error('加载筛选选项失败，请刷新页面重试')
+          } finally {
+            this.optionsLoading = false
+          }
+        },
+        // ==================== 数据加载 ====================
         async search() {
           this.loading = true
-          var self = this
-          var params = {
-            page: self.page, pageSize: self.pageSize,
-            platform: self.lastSearch.platform || undefined,
-            status: self.lastSearch.status || undefined,
-            startDate: self.lastSearch.startDate || undefined,
-            endDate: self.lastSearch.endDate || undefined
-          }
-          var results = await Promise.all([deliveryOrderPage(params), self.loadDeliveryStats(params)])
-          var orderRes = results[0]
-          var statsRes = results[1]
-          if (String(orderRes.code) === '1') { self.tableData = orderRes.data.records || []; self.counts = orderRes.data.total }
-          if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
-          self.loading = false
-        },
-        async loadDeliveryStats(params) {
           try {
-            var today = new Date()
-            var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
-            var statsParams = { page: 1, pageSize: 1000 }
-            if (params.platform) statsParams.platform = params.platform
-            if (params.startDate) statsParams.startDate = params.startDate
-            if (params.endDate) statsParams.endDate = params.endDate
-            var results = await Promise.all([
-              deliveryOrderPage({ page: 1, pageSize: 1, beginTime: todayStr + ' 00:00:00', endTime: todayStr + ' 23:59:59' }),
-              deliveryOrderPage(statsParams)
-            ])
-            var todayRes = results[0]
-            var allRes = results[1]
-            if (String(allRes.code) === '1') {
-              var records = allRes.data.records || []
-              return { code: 1, data: {
-                todayOrders: (String(todayRes.code) === '1') ? (todayRes.data.total || 0) : 0,
-                completedOrders: records.filter(function(r) { return r.status === 'COMPLETED' }).length,
-                pendingOrders: records.filter(function(r) { return r.status === 'PENDING' }).length,
-                cancelledOrders: records.filter(function(r) { return r.status === 'CANCELLED' }).length
-              }}
+            var params = {
+              page: this.page, pageSize: this.pageSize,
+              platform: this.lastSearch.platform || undefined,
+              status: this.lastSearch.status || undefined,
+              startDate: this.lastSearch.startDate || undefined,
+              endDate: this.lastSearch.endDate || undefined
             }
-          } catch (err) { console.warn('加载外卖订单统计数据失败:', err) }
-          return { code: 0 }
-        },
-        // stat-cards 点击
-        onCardClick: function(payload) {
-          var self = this
-          if (payload.key === 'COMPLETED' || payload.key === 'PENDING' || payload.key === 'CANCELLED') {
-            if (self.activeFilter === payload.key) { self.activeFilter = ''; self.lastSearch = {} }
-            else { self.activeFilter = payload.key; self.lastSearch = { status: payload.key } }
+            var results = await Promise.all([
+              deliveryOrderPage(params),
+              deliveryStats({ platform: params.platform, startDate: params.startDate, endDate: params.endDate })
+            ])
+            var orderRes = results[0]
+            var statsRes = results[1]
+            if (String(orderRes.code) === '1') {
+              this.tableData = orderRes.data.records || []
+              this.counts = orderRes.data.total
+            } else {
+              this.$message.error(orderRes.msg || '加载订单列表失败')
+            }
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
+            }
+          } catch (err) {
+            if (err.message === 'NOTLOGIN') return
+            console.error('加载订单列表失败:', err)
+            this.$message.error('加载订单列表失败，请刷新页面重试')
+          } finally {
+            this.loading = false
           }
-          self.page = 1; self.search()
+        },
+        // stat-cards 点击筛选
+        onCardClick: function(payload) {
+          if (payload.key === 'PENDING' || payload.key === 'DELIVERING'
+              || payload.key === 'DELIVERED' || payload.key === 'CANCELLED') {
+            if (this.activeFilter === payload.key) {
+              this.activeFilter = ''
+              this.lastSearch = {}
+            } else {
+              this.activeFilter = payload.key
+              this.lastSearch = { status: payload.key }
+            }
+          }
+          this.page = 1
+          this.search()
         },
         // table-bar 回调
         onSearch: function(searchParams) {
           this.activeFilter = ''
-          this.lastSearch = searchParams
-          this.page = 1; this.search()
+          this.lastSearch = searchParams || {}
+          this.page = 1
+          this.search()
         },
         onReset: function() {
           this.activeFilter = ''
           this.lastSearch = {}
-          this.page = 1; this.search()
+          this.page = 1
+          this.search()
         },
         onAction: function(payload) {
           if (payload.key === 'syncMenu') this.syncMenu()
           else if (payload.key === 'syncStock') this.syncStock()
         },
-        onPageChange: function(payload) { this.page = payload.page; this.search() },
-        onSizeChange: function(payload) { this.pageSize = payload.pageSize; this.search() },
+        onPageChange: function(payload) {
+          this.page = payload.page
+          this.search()
+        },
+        onSizeChange: function(payload) {
+          this.pageSize = payload.pageSize
+          this.search()
+        },
+        // ==================== 同步操作 ====================
         async syncMenu() {
-          await deliverySyncMenu().then(function(res) {
+          try {
+            var res = await deliverySyncMenu()
             if (String(res.code) === '1') this.$message.success('同步菜品成功')
-            else this.$message.error(res.msg || '操作失败')
-          }.bind(this)).catch(function(err) { this.$message.error('请求失败：' + err) }.bind(this))
+            else this.$message.warning(res.msg || '同步失败，请稍后重试')
+          } catch (err) {
+            if (err.message === 'NOTLOGIN') return
+            this.$message.error('请求失败：' + err)
+          }
         },
         async syncStock() {
-          await deliverySyncStock().then(function(res) {
+          try {
+            var res = await deliverySyncStock()
             if (String(res.code) === '1') this.$message.success('同步库存成功')
-            else this.$message.error(res.msg || '操作失败')
-          }.bind(this)).catch(function(err) { this.$message.error('请求失败：' + err) }.bind(this))
+            else this.$message.warning(res.msg || '同步失败，请稍后重试')
+          } catch (err) {
+            if (err.message === 'NOTLOGIN') return
+            this.$message.error('请求失败：' + err)
+          }
         },
+        // ==================== 订单操作 ====================
         acceptOrder: function(row) {
           var self = this
-          this.$confirm('确认手动接单?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
-            .then(function() {
-              deliveryAccept({ orderId: row.id }).then(function(res) {
+          this.$confirm(
+            '确认接单【' + row.platformOrderId + '】？接单后将通知平台。',
+            '确认接单',
+            { confirmButtonText: '确定', cancelButtonText: '取消', type: 'success' }
+          ).then(function() {
+            deliveryAccept({ platform: row.platform, platformOrderId: row.platformOrderId })
+              .then(function(res) {
                 if (String(res.code) === '1') { self.$message.success('接单成功'); self.search() }
                 else { self.$message.error(res.msg || '操作失败') }
-              }).catch(function(err) { self.$message.error('请求失败：' + err) })
+              })
+              .catch(function(err) { self.$message.error('请求失败：' + err) })
+          }).catch(function() { })
+        },
+        // 修改点：完整的状态流转操作
+        statusChange: function(row, targetStatus) {
+          var self = this
+          var label = this.statusLabelMap[targetStatus] || targetStatus
+          var confirmText = '确认将【' + row.platformOrderId + '】状态更新为"' + label + '"？'
+          var typeMap = { 'PICKING': 'warning', 'DELIVERING': 'primary', 'DELIVERED': 'success' }
+          var confirmType = typeMap[targetStatus] || 'info'
+
+          this.$confirm(confirmText, '状态更新', {
+            confirmButtonText: '确定', cancelButtonText: '取消', type: confirmType
+          }).then(function() {
+            deliveryUpdateStatus({ id: row.id, status: targetStatus })
+              .then(function(res) {
+                if (String(res.code) === '1') { self.$message.success('状态更新成功'); self.search() }
+                else { self.$message.error(res.msg || '操作失败') }
+              })
+              .catch(function(err) { self.$message.error('请求失败：' + err) })
+          }).catch(function() { })
+        },
+        cancelOrder: function(row) {
+          this.cancelForm = {
+            id: row.id,
+            platformOrderId: row.platformOrderId,
+            reason: ''
+          }
+          this.cancelVisible = true
+        },
+        confirmCancel: function() {
+          if (!this.cancelForm.reason) {
+            this.$message.warning('请选择取消原因')
+            return
+          }
+          var self = this
+          this.cancelLoading = true
+          deliveryUpdateStatus({ id: this.cancelForm.id, status: 'CANCELLED', remark: this.cancelForm.reason })
+            .then(function(res) {
+              if (String(res.code) === '1') {
+                self.$message.success('订单已取消')
+                self.cancelVisible = false
+                self.search()
+              } else {
+                self.$message.error(res.msg || '操作失败')
+              }
             })
+            .catch(function(err) { self.$message.error('请求失败：' + err) })
+            .finally(function() { self.cancelLoading = false })
+        },
+        // ==================== 详情弹窗 ====================
+        showDetail: function(row) {
+          this.detailOrder = Object.assign({}, row)
+          this.detailVisible = true
+        },
+        resetDetail: function() {
+          this.detailOrder = null
         }
       }
     })

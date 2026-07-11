@@ -4,81 +4,132 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>采购记录 - 瑞吉外卖管理端</title>
+  <title>采购入库 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+    /* ========== 采购管理专用样式 ========== */
+    .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    .purchase-chart { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px; height: 320px; }
+    .detail-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+    @media (max-width: 1200px) { .stats-cards { grid-template-columns: repeat(2, 1fr); } }
+  </style>
 </head>
 <body>
   <div class="dashboard-container" id="purchase-app">
     <div class="container">
+      <!-- 统计卡片 -->
+      <div class="stats-cards">
+        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterByStatus('')">
+          <div class="stat-icon">📦</div>
+          <div class="stat-label">采购单总数</div>
+          <div class="stat-value">{{ stats.totalOrders || 0 }}</div>
+        </div>
+        <div class="stat-card warning clickable" :class="{ active: activeFilter === 'DRAFT' }" @click="filterByStatus('DRAFT')">
+          <div class="stat-icon">📝</div>
+          <div class="stat-label">待审核</div>
+          <div class="stat-value">{{ stats.pendingApprove || 0 }}</div>
+        </div>
+        <div class="stat-card info clickable" :class="{ active: activeFilter === 'ORDERED' }" @click="filterByStatus('ORDERED')">
+          <div class="stat-icon">🚚</div>
+          <div class="stat-label">待收货</div>
+          <div class="stat-value">{{ stats.pendingReceive || 0 }}</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">💵</div>
+          <div class="stat-label">本月采购金额</div>
+          <div class="stat-value">¥{{ formatMoney(stats.monthAmount) }}</div>
+        </div>
+      </div>
+
+      <!-- 采购趋势图 -->
+      <div class="purchase-chart" id="purchaseTrendChart"></div>
+
+      <!-- 筛选与操作栏 -->
       <div class="tableBar">
         <el-select v-model="input.supplierId" placeholder="供应商" class="el-select--narrow" clearable @change="handleQuery">
           <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
         </el-select>
-        <el-select v-model="input.status" placeholder="状态" class="el-select--narrow-sm" clearable @change="handleQuery">
-          <el-option label="待收货" value="0"></el-option>
-          <el-option label="已收货" value="1"></el-option>
-          <el-option label="已取消" value="2"></el-option>
+        <el-select v-model="activeFilter" placeholder="状态" class="el-select--narrow-sm" clearable @change="handleQuery">
+          <el-option label="草稿" value="DRAFT"></el-option>
+          <el-option label="已下单" value="ORDERED"></el-option>
+          <el-option label="部分收货" value="PARTIAL"></el-option>
+          <el-option label="已收货" value="RECEIVED"></el-option>
+          <el-option label="已取消" value="CANCELLED"></el-option>
         </el-select>
         <el-button type="primary" class="btn-query" @click="handleQuery">查询</el-button>
         <el-button class="btn-reset" @click="reset">重置</el-button>
         <el-button type="primary" class="btn-add" @click="addHandle">+ 新增采购单</el-button>
       </div>
+
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
         <el-table-column type="expand">
           <template slot-scope="props">
-            <el-table :data="props.row.details" stripe class="tableBox" v-if="props.row.details">
-              <el-table-column prop="materialName" label="食材名称" /></el-table-column>
-              <el-table-column prop="quantity" label="数量" /></el-table-column>
+            <el-table :data="props.row.details" stripe class="tableBox" v-if="props.row.details && props.row.details.length">
+              <el-table-column prop="materialName" label="食材名称" />
+              <el-table-column prop="qty" label="数量" />
               <el-table-column label="单价">
                 <template slot-scope="scope">￥{{ scope.row.unitPrice }}</template>
               </el-table-column>
+              <el-table-column label="已收货">
+                <template slot-scope="scope">{{ scope.row.receivedQty || 0 }}</template>
+              </el-table-column>
               <el-table-column label="小计">
-                <template slot-scope="scope">￥{{ scope.row.subtotal }}</template>
+                <template slot-scope="scope">￥{{ scope.row.amount }}</template>
               </el-table-column>
             </el-table>
-            <span v-else>暂无明细数据</span>
+            <div v-else style="text-align:center;padding:16px;color:#c0c4cc;">暂无明细数据</div>
           </template>
         </el-table-column>
-        <el-table-column prop="id" label="采购单号" width="100" /></el-table-column>
+        <el-table-column prop="orderNo" label="采购单号" width="160" />
         <el-table-column label="供应商">
           <template slot-scope="scope">{{ scope.row.supplierName }}</template>
         </el-table-column>
         <el-table-column label="总金额">
-          <template slot-scope="scope">￥{{ scope.row.totalAmount }}</template>
+          <template slot-scope="scope">￥{{ (scope.row.totalAmount || 0).toString() }}</template>
         </el-table-column>
-        <el-table-column label="状态">
+        <el-table-column label="状态" width="100">
           <template slot-scope="scope">
-            <el-tag :type="scope.row.status == '0' ? 'warning' : scope.row.status == '1' ? 'success' : 'info'">
-              {{ scope.row.status == '0' ? '待收货' : scope.row.status == '1' ? '已收货' : '已取消' }}
-            </el-tag>
+            <el-tag :type="statusType(scope.row.status)" size="small">{{ statusLabel(scope.row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdTime" label="创建时间" width="160" /></el-table-column>
-        <el-table-column label="操作" width="160" align="center">
+        <el-table-column prop="operator" label="操作员" width="100" />
+        <el-table-column prop="createdTime" label="创建时间" width="160" />
+        <el-table-column label="操作" width="220" align="center">
           <template slot-scope="scope">
-            <el-button type="text" size="small" class="btn-view" @click="receiveHandle(scope.row.id)" v-if="scope.row.status == '0'">收货</el-button>
-            <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(scope.row.id)" v-if="scope.row.status == '0'">取消</el-button>
+            <el-button type="text" size="small" class="btn-view" @click="approveHandle(scope.row)" v-if="scope.row.status === 'DRAFT'">审核</el-button>
+            <el-button type="text" size="small" class="btn-view" @click="receiveHandle(scope.row)" v-if="scope.row.status === 'ORDERED' || scope.row.status === 'PARTIAL'">收货</el-button>
+            <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(scope.row)" v-if="scope.row.status === 'DRAFT' || scope.row.status === 'ORDERED'">取消</el-button>
           </template>
         </el-table-column>
       </el-table>
       <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" :current-page.sync="page" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
     </div>
-    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="720px" :before-close="handleClose">
-      <el-form class="demo-form-inline" label-width="120px">
+
+    <!-- 新增采购单对话框 -->
+    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="680px" :before-close="handleClose">
+      <el-form class="demo-form-inline" label-width="100px">
         <el-form-item label="供应商：">
-          <el-select v-model="formData.supplierId" placeholder="请选择" style="width: 100%">
+          <el-select v-model="formData.supplierId" placeholder="请选择" style="width:100%">
             <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
           </el-select>
         </el-form-item>
+        <el-form-item label="操作员：">
+          <el-input v-model="formData.operator" placeholder="请输入操作员姓名" style="width:220px" />
+        </el-form-item>
+        <el-form-item label="备注：">
+          <el-input v-model="formData.remark" placeholder="采购备注（可选）" />
+        </el-form-item>
         <el-form-item label="采购明细：">
           <div v-for="(item, index) in formData.details" :key="index" class="detail-row">
-            <el-select v-model="item.materialId" placeholder="食材" style="width: 160px" filterable>
+            <el-select v-model="item.materialId" placeholder="食材" style="width:160px" filterable>
               <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id"></el-option>
             </el-select>
-            <el-input v-model="item.quantity" placeholder="数量" type="number" style="width: 100px" />
-            <el-input v-model="item.unitPrice" placeholder="单价" type="number" style="width: 100px" />
+            <el-input v-model="item.qty" placeholder="数量" type="number" style="width:100px" />
+            <el-input v-model="item.unitPrice" placeholder="单价" type="number" style="width:100px" />
             <el-button type="danger" size="mini" @click="removeDetail(index)">删除</el-button>
           </div>
           <el-button type="primary" size="mini" @click="addDetail">+ 添加明细</el-button>
@@ -90,181 +141,197 @@
       </span>
     </el-dialog>
   </div>
-    <script src="../../plugins/vue/vue.js"></script>
-    <script src="../../plugins/element-ui/index.js"></script>
-    <script src="../../plugins/axios/axios.min.js"></script>
-    <script src="../../js/request.js"></script>
-    <script src="../../api/inventory.js"></script>
-    <script>
-      new Vue({
-        el: '#purchase-app',
-        data() {
-          return {
-            loading: false,
-            action: '',
-            counts: 0,
-            page: 1,
-            pageSize: 10,
-            tableData: [],
-            input: {
-              supplierId: '',
-              status: ''
-            },
-            supplierOptions: [],
-            materialOptions: [],
-            formData: {
-              title: '新增采购单',
-              dialogVisible: false,
-              supplierId: '',
-              details: []
-            }
-          }
-        },
-        created() {
-          this.init()
-        },
-        methods: {
-          async init() {
-            this.loadSupplierOptions()
-            const params = { page: this.page, pageSize: this.pageSize }
-            if (this.input.supplierId) params.supplierId = this.input.supplierId
-            if (this.input.status !== '') params.status = this.input.status
-            await purchasePage(params).then(res => {
-              if (String(res.code) === '1') {
-                this.tableData = res.data.records
-                this.counts = Number(res.data.total)
-              } else {
-                this.$message.error(res.msg || '操作失败')
-              }
-            }).catch(err => {
-              this.$message.error('请求失败：' + err)
-            })
-          },
-          loadSupplierOptions() {
-            supplierList().then(res => {
-              if (res.code === 1) this.supplierOptions = res.data
-            })
-          },
-          loadMaterialOptions() {
-            materialList().then(res => {
-              if (res.code === 1) this.materialOptions = res.data
-            })
-          },
-          loadDetails(row) {
-            if (!row.id) return
-            purchaseDetailList(row.id).then(res => {
-              if (res.code === 1) {
-                this.$set(row, 'details', res.data)
-              }
-            }).catch(err => {
-              this.$message.error('请求失败：' + err)
-            })
-          },
-          handleQuery() {
-            this.page = 1
-            this.init()
-          },
-          reset() {
-            this.input.supplierId = ''
-            this.input.status = ''
-            this.page = 1
-            this.init()
-          },
-          addHandle() {
-            this.action = 'add'
-            this.formData.title = '新增采购单'
-            this.formData.supplierId = ''
-            this.formData.details = [{ materialId: '', quantity: '', unitPrice: '' }]
-            this.formData.dialogVisible = true
-            this.loadSupplierOptions()
-            this.loadMaterialOptions()
-          },
-          handleClose() {
-            this.formData.dialogVisible = false
-          },
-          addDetail() {
-            this.formData.details.push({ materialId: '', quantity: '', unitPrice: '' })
-          },
-          removeDetail(index) {
-            this.formData.details.splice(index, 1)
-          },
-          receiveHandle(id) {
-            this.$confirm('确认收货该采购单?', '提示', {
-              confirmButtonText: '确定',
-              cancelButtonText: '取消',
-              type: 'warning'
-            }).then(() => {
-              receivePurchase(id).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('收货成功！')
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            })
-          },
-          cancelHandle(id) {
-            this.$confirm('确认取消该采购单?', '提示', {
-              confirmButtonText: '确定',
-              cancelButtonText: '取消',
-              type: 'warning'
-            }).then(() => {
-              cancelPurchase(id).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('取消成功！')
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            })
-          },
-          submitForm() {
-            const fd = this.formData
-            if (!fd.supplierId) {
-              this.$message.error('请选择供应商')
-              return
-            }
-            if (!fd.details.length || !fd.details[0].materialId) {
-              this.$message.error('请添加至少一条采购明细')
-              return
-            }
-            addPurchase({ supplierId: fd.supplierId }).then(res => {
-              if (res.code === 1) {
-                const orderId = res.data
-                const detailPromises = fd.details.map(d => {
-                  return addPurchaseDetail({ orderId: orderId, materialId: d.materialId, quantity: d.quantity, unitPrice: d.unitPrice })
-                })
-                Promise.all(detailPromises).then(() => {
-                  this.$message.success('采购单创建成功！')
-                  this.formData.dialogVisible = false
-                  this.handleQuery()
-                }).catch(err => {
-                  this.$message.error('添加明细出错了：' + err)
-                })
-              } else {
-                this.$message.error(res.msg || '操作失败')
-              }
-            }).catch(err => {
-              this.$message.error('请求失败：' + err)
-            })
-          },
-          handleSizeChange(val) {
-            this.pageSize = val
-            this.init()
-          },
-          handleCurrentChange(val) {
-            this.page = val
-            this.init()
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../api/inventory.js"></script>
+  <script>
+    new Vue({
+      el: '#purchase-app',
+      data() {
+        return {
+          loading: false, counts: 0, page: 1, pageSize: 10, tableData: [],
+          activeFilter: '',
+          stats: { totalOrders: 0, pendingApprove: 0, pendingReceive: 0, monthAmount: 0 },
+          input: { supplierId: '' },
+          supplierOptions: [], materialOptions: [],
+          trendChart: null,
+          formData: {
+            title: '新增采购单', dialogVisible: false,
+            supplierId: '', operator: '', remark: '',
+            details: [{ materialId: '', qty: '', unitPrice: '' }]
           }
         }
-      })
-    </script>
+      },
+      created() { this.init() },
+      mounted() { window.addEventListener('resize', () => { if (this.trendChart) this.trendChart.resize() }) },
+      beforeDestroy() { if (this.trendChart) this.trendChart.dispose() },
+      methods: {
+        async init() {
+          this.loadSupplierOptions()
+          // 加载统计
+          try {
+            const statsRes = await inventoryStatsOverview()
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = {
+                totalOrders: statsRes.data.monthPOCount || 0,
+                pendingApprove: (statsRes.data.monthPOCount || 0),
+                pendingReceive: statsRes.data.pendingReceiveCount || 0,
+                monthAmount: statsRes.data.monthPOAmount || 0
+              }
+              // 获取待审核数量
+              try {
+                const draftRes = await purchasePage({ page: 1, pageSize: 1, status: 'DRAFT' })
+                if (draftRes && String(draftRes.code) === '1') this.stats.pendingApprove = Number(draftRes.data.total) || 0
+              } catch (e) {}
+            }
+          } catch (e) { console.warn('获取统计失败:', e) }
+
+          // 加载列表
+          const params = { page: this.page, pageSize: this.pageSize }
+          if (this.input.supplierId) params.supplierId = this.input.supplierId
+          if (this.activeFilter) params.status = this.activeFilter
+          try {
+            const res = await purchasePage(params)
+            if (String(res.code) === '1') {
+              this.tableData = res.data.records || []
+              this.counts = Number(res.data.total) || 0
+              // 更新待审核数量
+              if (!this.activeFilter) {
+                const allCount = this.counts
+                this.stats.totalOrders = allCount
+              }
+            }
+          } catch (err) { this.$message.error('请求失败：' + (err.message || err)) }
+
+          // 加载趋势图
+          this.$nextTick(() => this.renderTrendChart())
+        },
+        async renderTrendChart() {
+          if (typeof echarts === 'undefined') return
+          const dom = document.getElementById('purchaseTrendChart')
+          if (!dom) return
+          if (!this.trendChart) this.trendChart = echarts.init(dom)
+          try {
+            const res = await inventoryPurchaseTrend()
+            let dates = [], amounts = [], counts = []
+            if (res && String(res.code) === '1' && res.data) {
+              res.data.forEach(d => {
+                dates.push(d.date); amounts.push(Number(d.amount) || 0); counts.push(d.count || 0)
+              })
+            }
+            if (dates.length === 0) { dates = ['暂无']; amounts = [0]; counts = [0] }
+            this.trendChart.setOption({
+              color: ['#409eff', '#67c23a'],
+              tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+              legend: { data: ['采购金额', '采购单数'], bottom: 0 },
+              grid: { left: 60, right: 60, top: 30, bottom: 40 },
+              xAxis: { type: 'category', data: dates, axisLabel: { rotate: 45, fontSize: 11 } },
+              yAxis: [
+                { type: 'value', name: '金额(元)', axisLabel: { formatter: '¥{value}' }, splitLine: { lineStyle: { type: 'dashed' } } },
+                { type: 'value', name: '单数' }
+              ],
+              series: [
+                { name: '采购金额', type: 'bar', data: amounts, barWidth: 14, itemStyle: { borderRadius: [6,6,0,0], color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#6c9df8'},{offset:1,color:'#409eff'}]) } },
+                { name: '采购单数', type: 'line', yAxisIndex: 1, data: counts, smooth: true, lineStyle: { width: 2, color: '#67c23a' }, symbol: 'circle', symbolSize: 6 }
+              ]
+            })
+          } catch (e) { console.warn('趋势图加载失败:', e) }
+        },
+        filterByStatus(status) {
+          this.activeFilter = this.activeFilter === status ? '' : status
+          this.page = 1; this.init()
+        },
+        loadSupplierOptions() { supplierList().then(res => { if (res.code === 1) this.supplierOptions = res.data }) },
+        loadMaterialOptions() { materialList().then(res => { if (res.code === 1) this.materialOptions = res.data }) },
+        loadDetails(row) {
+          if (!row.id || row.details) return
+          purchaseDetailList(row.id).then(res => {
+            if (res.code === 1) this.$set(row, 'details', res.data || [])
+          }).catch(err => { this.$message.error('请求失败：' + err) })
+        },
+        handleQuery() { this.page = 1; this.init() },
+        reset() { this.input.supplierId = ''; this.activeFilter = ''; this.page = 1; this.init() },
+        addHandle() {
+          this.formData = {
+            title: '新增采购单', dialogVisible: true,
+            supplierId: '', operator: '', remark: '',
+            details: [{ materialId: '', qty: '', unitPrice: '' }]
+          }
+          this.loadSupplierOptions(); this.loadMaterialOptions()
+        },
+        handleClose() { this.formData.dialogVisible = false },
+        addDetail() { this.formData.details.push({ materialId: '', qty: '', unitPrice: '' }) },
+        removeDetail(index) { this.formData.details.splice(index, 1) },
+        // 修改点：审核采购单
+        approveHandle(row) {
+          this.$confirm('确认审核通过该采购单? 审核后将进入待收货状态。', '提示', {
+            confirmButtonText: '确定', cancelButtonText: '取消', type: 'info'
+          }).then(() => {
+            approvePurchase(row.id).then(res => {
+              if (res.code === 1) { this.$message.success('审核通过！'); this.handleQuery() }
+              else this.$message.error(res.msg || '操作失败')
+            }).catch(err => { this.$message.error('请求失败：' + err) })
+          }).catch(() => {})
+        },
+        receiveHandle(row) {
+          this.$confirm('确认收货该采购单? 收货后将自动入库增加库存。', '提示', {
+            confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
+          }).then(() => {
+            receivePurchase(row.id).then(res => {
+              if (res.code === 1) { this.$message.success('收货成功！库存已更新'); this.handleQuery() }
+              else this.$message.error(res.msg || '操作失败')
+            }).catch(err => { this.$message.error('请求失败：' + err) })
+          }).catch(() => {})
+        },
+        cancelHandle(row) {
+          this.$confirm('确认取消该采购单?', '提示', {
+            confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
+          }).then(() => {
+            cancelPurchase(row.id).then(res => {
+              if (res.code === 1) { this.$message.success('取消成功！'); this.handleQuery() }
+              else this.$message.error(res.msg || '操作失败')
+            }).catch(err => { this.$message.error('请求失败：' + err) })
+          }).catch(() => {})
+        },
+        submitForm() {
+          const fd = this.formData
+          if (!fd.supplierId) { this.$message.error('请选择供应商'); return }
+          if (!fd.operator) { this.$message.error('请输入操作员'); return }
+          if (!fd.details.length || !fd.details[0].materialId) { this.$message.error('请添加至少一条采购明细'); return }
+          // 创建采购单
+          addPurchase({ supplierId: fd.supplierId, operator: fd.operator, remark: fd.remark }).then(res => {
+            if (res.code === 1) {
+              const orderId = res.data.id || res.data
+              const detailPromises = fd.details.filter(d => d.materialId && d.qty).map(d =>
+                addPurchaseDetail({ orderId: orderId, materialId: d.materialId, qty: Number(d.qty), unitPrice: Number(d.unitPrice) })
+              )
+              Promise.all(detailPromises).then(() => {
+                this.$message.success('采购单创建成功！')
+                this.formData.dialogVisible = false
+                this.handleQuery()
+              }).catch(err => { this.$message.error('添加明细出错：' + err) })
+            } else this.$message.error(res.msg || '创建失败')
+          }).catch(err => { this.$message.error('请求失败：' + err) })
+        },
+        statusType(status) {
+          const map = { DRAFT: 'info', ORDERED: 'warning', PARTIAL: '', RECEIVED: 'success', CANCELLED: 'danger' }
+          return map[status] || 'info'
+        },
+        statusLabel(status) {
+          const map = { DRAFT: '草稿', ORDERED: '已下单', PARTIAL: '部分收货', RECEIVED: '已收货', CANCELLED: '已取消' }
+          return map[status] || status
+        },
+        formatMoney(val) {
+          if (val === null || val === undefined) return '0.00'
+          return Number(val).toFixed(2)
+        },
+        handleSizeChange(val) { this.pageSize = val; this.init() },
+        handleCurrentChange(val) { this.page = val; this.init() }
+      }
+    })
+  </script>
 </body>
 </html>
-

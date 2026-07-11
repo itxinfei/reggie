@@ -161,26 +161,14 @@ public class MarketingController {
     }
 
     /**
-     * 获取推送预览 - 查看目标用户预览列表
+     * 获取推送预览 - 查看匹配活动的真实用户列表
+     * 修改点：从硬编码模拟数据改为真实查询匹配用户
      * GET /marketing/push-preview/{campaignId}?limit=10
      */
     @GetMapping("/push-preview/{campaignId}")
     public R<Map<String, Object>> pushPreview(@PathVariable Long campaignId,
                                                @RequestParam(defaultValue = "10") int limit) {
-        Map<String, Object> result = new HashMap<>();
-        // 模拟预览数据
-        List<Map<String, Object>> preview = new ArrayList<>();
-        String[] mockNames = {"张*三", "李*四", "王*五", "赵*六", "陈*七", "刘*八", "周*九", "吴*十", "郑*一", "冯*二"};
-        String[] mockReasons = {"新用户", "高频消费", "近期浏览", "活跃用户", "流失预警"};
-        for (int i = 0; i < Math.min(limit, 10); i++) {
-            Map<String, Object> user = new HashMap<>();
-            user.put("userId", (long) (1000 + i));
-            user.put("name", mockNames[i % mockNames.length]);
-            user.put("matchReason", mockReasons[i % mockReasons.length]);
-            preview.add(user);
-        }
-        result.put("preview", preview);
-        result.put("estimate", 150 + (int) (Math.random() * 300));
+        Map<String, Object> result = marketingCampaignService.getPushPreview(campaignId, limit);
         return R.success(result);
     }
 
@@ -211,5 +199,27 @@ public class MarketingController {
         Map<String, List<String>> result = new HashMap<>();
         result.put("names", new ArrayList<>(nameSet));
         return R.success(result);
+    }
+
+    /**
+     * 获取营销活动全局统计数据
+     * 修改点：后端聚合真实数据，替代前端pageSize=1000查询
+     * GET /marketing/campaigns/stats
+     */
+    @GetMapping("/campaigns/stats")
+    public R<Map<String, Object>> campaignStats() {
+        Map<String, Object> stats = marketingCampaignService.getCampaignStats();
+        return R.success(stats);
+    }
+
+    /**
+     * 获取单个活动的推送次数
+     * 修改点：从marketing_message表真实统计
+     * GET /marketing/campaigns/{id}/push-count
+     */
+    @GetMapping("/campaigns/{id}/push-count")
+    public R<Integer> pushCount(@PathVariable Long id) {
+        int count = marketingCampaignService.getPushCountByCampaignId(id);
+        return R.success(count);
     }
 }

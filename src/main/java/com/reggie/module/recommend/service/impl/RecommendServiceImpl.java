@@ -460,6 +460,167 @@ public class RecommendServiceImpl implements RecommendService {
         return stats;
     }
 
+    // ==================== 修改点：概览页真实统计方法（替换Math.random()假数据） ====================
+
+    @Override
+    public Map<String, Integer> getFeedbackStats(int days) {
+        Map<String, Integer> stats = new LinkedHashMap<>();
+        stats.put("click", 0);
+        stats.put("favorite", 0);
+        stats.put("cart", 0);
+        stats.put("order", 0);
+        stats.put("unlike", 0);
+
+        try {
+            String startTime = LocalDateTime.now().minusDays(days).toString();
+            List<Map<String, Object>> rows = feedbackMapper.countByTypeSince(startTime);
+
+            for (Map<String, Object> row : rows) {
+                Integer type = (Integer) row.get("feedback_type");
+                Long cnt = ((Number) row.get("cnt")).longValue();
+                switch (type) {
+                    case RecommendationFeedback.FEEDBACK_CLICK:
+                        stats.put("click", cnt.intValue());
+                        break;
+                    case RecommendationFeedback.FEEDBACK_FAVORITE:
+                        stats.put("favorite", cnt.intValue());
+                        break;
+                    case RecommendationFeedback.FEEDBACK_ADD_CART:
+                        stats.put("cart", cnt.intValue());
+                        break;
+                    case RecommendationFeedback.FEEDBACK_ORDER:
+                        stats.put("order", cnt.intValue());
+                        break;
+                    case RecommendationFeedback.FEEDBACK_NOT_INTERESTED:
+                        stats.put("unlike", cnt.intValue());
+                        break;
+                    default:
+                        break;
+                }
+            }
+            log.debug("[推荐引擎] 反馈分布统计: days={}, stats={}", days, stats);
+        } catch (Exception e) {
+            log.warn("[推荐引擎] 反馈分布统计异常: {}", e.getMessage());
+        }
+        return stats;
+    }
+
+    @Override
+    public List<Map<String, Object>> getPreferenceDistribution() {
+        try {
+            List<Map<String, Object>> result = userPreferenceMapper.countTasteDistribution();
+            if (result != null && !result.isEmpty()) {
+                log.debug("[推荐引擎] 口味偏好分布: count={}", result.size());
+                return result;
+            }
+        } catch (Exception e) {
+            log.warn("[推荐引擎] 偏好分布查询异常: {}", e.getMessage());
+        }
+        return Collections.emptyList();
+    }
+
+    @Override
+    public Map<String, Object> getAlgoCompare() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("algos", Arrays.asList("协同过滤", "内容推荐", "热门排行", "混合推荐"));
+        result.put("ctRates", Arrays.asList(0.0, 0.0, 0.0, 0.0));
+        result.put("cvRates", Arrays.asList(0.0, 0.0, 0.0, 0.0));
+
+        try {
+            String startTime = LocalDateTime.now().minusDays(30).toString();
+            List<Map<String, Object>> rows = feedbackMapper.countByAlgorithmSince(startTime);
+
+            // 算法名 -> 索引映射
+            Map<String, Integer> algoIndex = new HashMap<>();
+            algoIndex.put("CF", 0);
+            algoIndex.put("CONTENT", 1);
+            algoIndex.put("HOT", 2);
+            algoIndex.put("HYBRID", 3);
+
+            double[] ctRates = new double[]{0.0, 0.0, 0.0, 0.0};
+            double[] cvRates = new double[]{0.0, 0.0, 0.0, 0.0};
+
+            for (Map<String, Object> row : rows) {
+                String algo = (String) row.get("algorithm");
+                Long clickCnt = ((Number) row.get("click_cnt")).longValue();
+                Long orderCnt = ((Number) row.get("order_cnt")).longValue();
+                Long totalCnt = ((Number) row.get("total_cnt")).longValue();
+
+                Integer idx = algoIndex.getOrDefault(algo, -1);
+                if (idx >= 0 && totalCnt > 0) {
+                    ctRates[idx] = Math.round(clickCnt * 1000.0 / totalCnt) / 10.0;
+                    cvRates[idx] = Math.round(orderCnt * 1000.0 / totalCnt) / 10.0;
+                }
+            }
+
+            List<Double> ctList = new ArrayList<>();
+            List<Double> cvList = new ArrayList<>();
+            for (int i = 0; i < 4; i++) {
+                ctList.add(ctRates[i]);
+                cvList.add(cvRates[i]);
+            }
+            result.put("ctRates", ctList);
+            result.put("cvRates", cvList);
+
+            log.debug("[推荐引擎] 算法效果对比: ct={}, cv={}", ctList, cvList);
+        } catch (Exception e) {
+            log.warn("[推荐引擎] 算法对比查询异常: {}", e.getMessage());
+        }
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getBrowseTrend(int days) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        List<String> dates = new ArrayList<>();
+        List<Integer> browseCount = new ArrayList<>();
+        List<Integer> cartCount = new ArrayList<>();
+
+        try {
+            String startTime = LocalDateTime.now().minusDays(days).toString();
+            List<Map<String, Object>> rows = browseHistoryMapper.countDailyTrend(startTime);
+
+            // 构建日期索引Map，方便按日期查找
+            Map<String, Map<String, Object>> dateMap = new LinkedHashMap<>();
+            for (Map<String, Object> row : rows) {
+                String date = row.get("date").toString();
+                dateMap.put(date, row);
+            }
+
+            // 按日期顺序填充，缺失日期补0
+            for (int i = days - 1; i >= 0; i--) {
+                java.time.LocalDate d = java.time.LocalDate.now().minusDays(i);
+                String dateKey = d.toString();
+                String label = d.toString().substring(5); // MM-DD 格式
+                dates.add(label);
+
+                Map<String, Object> row = dateMap.get(dateKey);
+                if (row != null) {
+                    browseCount.add(((Number) row.get("browse_count")).intValue());
+                    cartCount.add(((Number) row.get("cart_count")).intValue());
+                } else {
+                    browseCount.add(0);
+                    cartCount.add(0);
+                }
+            }
+
+            log.debug("[推荐引擎] 浏览趋势: dates size={}, browse={}, cart={}", dates.size(), browseCount, cartCount);
+        } catch (Exception e) {
+            log.warn("[推荐引擎] 浏览趋势查询异常: {}", e.getMessage());
+            // 异常时返回空日期+0值
+            for (int i = days - 1; i >= 0; i--) {
+                java.time.LocalDate d = java.time.LocalDate.now().minusDays(i);
+                dates.add(d.toString().substring(5));
+                browseCount.add(0);
+                cartCount.add(0);
+            }
+        }
+        result.put("dates", dates);
+        result.put("browseCount", browseCount);
+        result.put("cartCount", cartCount);
+        return result;
+    }
+
     // ==================== 私有方法：核心算法逻辑 ====================
 
     /**

@@ -8,27 +8,65 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
-  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
-    .info-box { margin: -15px -44px 20px; }
-    .info-box .item-box { display: flex; height: 20px; line-height: 20px; font-size: 14px; font-weight: 400; color: #666666; text-align: left; margin-bottom: 14px; }
-    .info-box .item-box:last-child { margin-bottom: 0; }
-    .info-box .item-box .label { width: 96px; }
-    .info-box .item-box .des { flex: 1; color: #333333; }
+    .stats-cards--col-3 {
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; padding: 4px 0; }
+    .detail-item { display: flex; align-items: center; }
+    .detail-item .d-label { width: 80px; font-size: 14px; color: #909399; flex-shrink: 0; }
+    .detail-item .d-value { font-size: 14px; color: #303133; font-weight: 500; }
+    .level-badge { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+    .level-badge.gold-badge { background: #fef3c7; color: #d97706; }
+    .level-badge.silver-badge { background: #e2e8f0; color: #64748b; }
+    .level-badge.bronze-badge { background: #fed7aa; color: #c2410c; }
+    .level-badge.default-badge { background: #dbeafe; color: #2563eb; }
+    @media (max-width: 900px) {
+      .stat-card { min-width: 140px; flex: 1 1 calc(50% - 8px); }
+    }
   </style>
 </head>
 <body>
   <div class="dashboard-container" id="member-app">
     <div class="container">
-      <!-- 数据统计卡片 -->
-      <stat-cards
-        :cards="statsCards"
-        :active-key.sync="activeFilter"
-        @card-click="onCardClick"
-      ></stat-cards>
+      <!-- ===== 统计卡片 ===== -->
+      <div class="stats-cards stats-cards--col-3">
+        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="onFilterClick('')">
+          <div class="stat-icon">👥</div>
+          <div class="stat-label">会员总数</div>
+          <div class="stat-value">{{ stats.totalMembers }}</div>
+          <div class="sub">全部会员</div>
+        </div>
+        <div class="stat-card warning clickable" :class="{ active: activeFilter === 'gold' }" @click="onFilterClick('gold')">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-label">高级会员</div>
+          <div class="stat-value">{{ stats.highLevelCount }}</div>
+          <div class="sub">黄金及以上</div>
+        </div>
+        <div class="stat-card info clickable" :class="{ active: activeFilter === 'silver' }" @click="onFilterClick('silver')">
+          <div class="stat-icon">🥈</div>
+          <div class="stat-label">中级会员</div>
+          <div class="stat-value">{{ stats.midLevelCount }}</div>
+          <div class="sub">银卡级别</div>
+        </div>
+        <div class="stat-card danger clickable" :class="{ active: activeFilter === 'bronze' }" @click="onFilterClick('bronze')">
+          <div class="stat-icon">🆕</div>
+          <div class="stat-label">初级会员</div>
+          <div class="stat-value">{{ stats.lowLevelCount }}</div>
+          <div class="sub">青铜及以下</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">📈</div>
+          <div class="stat-label">本月新增</div>
+          <div class="stat-value">{{ stats.newMembersThisMonth }}</div>
+          <div class="sub">本月注册</div>
+        </div>
+      </div>
 
-      <!-- 搜索栏 -->
+      <!-- ===== 搜索栏 ===== -->
       <table-bar
         ref="tableBar"
         :search-items="searchConfig"
@@ -36,7 +74,7 @@
         @reset="onReset"
       ></table-bar>
 
-      <!-- 数据表格 -->
+      <!-- ===== 数据表格 ===== -->
       <crud-table
         ref="crudTable"
         :data="tableData"
@@ -50,53 +88,57 @@
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
+        <template #col-levelName="{ row }">
+          <span :class="getLevelClass(row.levelName)">{{ row.levelName || '普通会员' }}</span>
+        </template>
         <template #col-balance="{ row }">
-          <span>￥{{ row.balance }}</span>
+          <span style="color:#f59e0b;font-weight:600;">￥{{ row.balance }}</span>
         </template>
         <template #col-totalConsumption="{ row }">
-          <span>￥{{ row.totalConsumption }}</span>
+          <span style="font-weight:500;">￥{{ row.totalConsumption }}</span>
         </template>
         <template #actions="{ row }">
-          <el-button type="text" size="small" class="btn-view" @click="viewDetail(row)">查看详情</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="viewDetail(row)">详情</el-button>
           <el-button type="text" size="small" class="btn-view" @click="showRecharge(row)">充值</el-button>
         </template>
       </crud-table>
     </div>
 
-    <!-- 查看详情弹框 -->
-    <crud-dialog
-      title="会员详情"
-      :visible.sync="detailDialogVisible"
-      width="500px"
-      :show-submit="false"
-      cancel-text="关 闭"
-    >
-      <div class="info-box">
-        <div class="item-box"><span class="label">会员名称：</span><span class="des">{{ detail.name }}</span></div>
-        <div class="item-box"><span class="label">手机号：</span><span class="des">{{ detail.phone }}</span></div>
-        <div class="item-box"><span class="label">会员等级：</span><span class="des">{{ detail.levelName }}</span></div>
-        <div class="item-box"><span class="label">积分：</span><span class="des">{{ detail.points }}</span></div>
-        <div class="item-box"><span class="label">余额：</span><span class="des">￥{{ detail.balance }}</span></div>
-        <div class="item-box"><span class="label">累计消费：</span><span class="des">￥{{ detail.totalConsumption }}</span></div>
-        <div class="item-box"><span class="label">注册时间：</span><span class="des">{{ detail.createdTime }}</span></div>
+    <!-- ===== 详情弹窗 ===== -->
+    <crud-dialog title="会员详情" :visible.sync="detailDialogVisible" width="520px" :show-submit="false" cancel-text="关 闭">
+      <div class="detail-grid">
+        <div class="detail-item"><span class="d-label">会员名称：</span><span class="d-value">{{ detail.name }}</span></div>
+        <div class="detail-item"><span class="d-label">手机号：</span><span class="d-value">{{ detail.phone }}</span></div>
+        <div class="detail-item"><span class="d-label">会员等级：</span><span class="d-value"><span :class="getLevelClass(detail.levelName)">{{ detail.levelName || '普通会员' }}</span></span></div>
+        <div class="detail-item"><span class="d-label">积分：</span><span class="d-value" style="color:#8b5cf6;font-weight:600;">{{ detail.points }}</span></div>
+        <div class="detail-item"><span class="d-label">余额：</span><span class="d-value" style="color:#f59e0b;font-weight:600;">￥{{ detail.balance }}</span></div>
+        <div class="detail-item"><span class="d-label">累计消费：</span><span class="d-value" style="font-weight:600;">￥{{ detail.totalConsumption }}</span></div>
+        <div class="detail-item"><span class="d-label">注册时间：</span><span class="d-value">{{ detail.createdTime }}</span></div>
+        <div class="detail-item"><span class="d-label">会员状态：</span><span class="d-value">{{ detail.status === 1 ? '正常' : '已禁用' }}</span></div>
       </div>
     </crud-dialog>
 
-    <!-- 充值弹框 -->
-    <crud-dialog
-      title="会员充值"
-      :visible.sync="rechargeDialogVisible"
-      width="500px"
-      @submit="submitRecharge"
-      @close="rechargeDialogVisible = false"
-    >
-      <el-form label-width="120px">
-        <el-form-item label="会员名称："><span>{{ rechargeMember.name }}</span></el-form-item>
+    <!-- ===== 充值弹窗 ===== -->
+    <crud-dialog title="会员充值" :visible.sync="rechargeDialogVisible" width="480px" @submit="submitRecharge" @close="rechargeDialogVisible = false">
+      <el-form label-width="110px" size="medium">
+        <el-form-item label="会员名称："><span style="font-weight:600;">{{ rechargeMember.name }}</span></el-form-item>
+        <el-form-item label="手机号："><span>{{ rechargeMember.phone }}</span></el-form-item>
         <el-form-item label="充值金额：">
-          <el-input v-model="rechargeForm.amount" type="number" placeholder="请输入充值金额" />
+          <el-input v-model.number="rechargeForm.amount" type="number" placeholder="请输入充值金额" style="width:100%;">
+            <template slot="prepend">¥</template>
+          </el-input>
         </el-form-item>
         <el-form-item label="赠送金额：">
-          <el-input v-model="rechargeForm.giftAmount" type="number" placeholder="请输入赠送金额" />
+          <el-input v-model.number="rechargeForm.giftAmount" type="number" placeholder="请输入赠送金额" style="width:100%;">
+            <template slot="prepend">¥</template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="支付方式：">
+          <el-radio-group v-model="rechargeForm.paymentMethod">
+            <el-radio label="WECHAT">微信支付</el-radio>
+            <el-radio label="ALIPAY">支付宝</el-radio>
+            <el-radio label="BANK_CARD">银行卡</el-radio>
+          </el-radio-group>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -113,184 +155,122 @@
       el: '#member-app',
       data: function() {
         return {
-          loading: false,
-          counts: 0,
-          page: 1,
-          pageSize: 10,
-          tableData: [],
-          // 搜索条件
+          loading: false, counts: 0, page: 1, pageSize: 10, tableData: [],
           searchConfig: [
-            { type: 'input', field: 'name', placeholder: '请输入会员名称', width: '200px' },
-            { type: 'input', field: 'phone', placeholder: '请输入手机号', width: '180px', hideSearchIcon: true },
-            { type: 'select', field: 'levelId', placeholder: '请选择会员等级', width: '180px',
-              options: [] }
+            { type: 'input', field: 'name', placeholder: '会员名称', width: '200px' },
+            { type: 'input', field: 'phone', placeholder: '手机号', width: '180px', hideSearchIcon: true },
+            { type: 'select', field: 'levelId', placeholder: '会员等级', width: '180px', options: [] }
           ],
-          // 统计卡片配置
-          stats: { totalMembers: 0, goldMembers: 0, silverMembers: 0, newMembersThisMonth: 0 },
-          activeFilter: '',
-          levelOptions: [],
-          // 表格列配置
+          stats: { totalMembers: 0, highLevelCount: 0, midLevelCount: 0, lowLevelCount: 0, newMembersThisMonth: 0 },
+          activeFilter: '', levelOptions: [],
           columns: [
             { prop: 'name', label: '会员名称' },
             { prop: 'phone', label: '手机号' },
-            { prop: 'levelName', label: '会员等级' },
+            { prop: 'levelName', label: '会员等级', slot: true },
             { prop: 'points', label: '积分' },
             { prop: 'balance', label: '余额', slot: true },
             { prop: 'totalConsumption', label: '累计消费', slot: true },
-            { prop: 'createdTime', label: '注册时间' }
+            { prop: 'createdTime', label: '注册时间', width: 170 }
           ],
-          // 弹窗数据
-          detailDialogVisible: false,
-          detail: {},
-          rechargeDialogVisible: false,
-          rechargeMember: {},
-          rechargeForm: { amount: '', giftAmount: '0' },
-          // 缓存搜索参数
+          detailDialogVisible: false, detail: {},
+          rechargeDialogVisible: false, rechargeMember: {},
+          rechargeForm: { amount: '', giftAmount: '0', paymentMethod: 'WECHAT' },
           searchInput: { name: '', phone: '', levelId: '' }
         }
       },
-      computed: {
-        statsCards: function() {
-          var self = this
-          return [
-            { key: 'all', icon: '👥', label: '会员总数', value: self.stats.totalMembers, color: 'primary', clickable: true, active: self.activeFilter === 'all' },
-            { key: 'gold', icon: '⭐', label: '金牌会员', value: self.stats.goldMembers, color: 'success', clickable: true, active: self.activeFilter === 'gold' },
-            { key: 'silver', icon: '🥈', label: '银牌会员', value: self.stats.silverMembers, color: 'warning', clickable: true, active: self.activeFilter === 'silver' },
-            { key: 'new', icon: '🆕', label: '本月新增', value: self.stats.newMembersThisMonth, color: 'danger' }
-          ]
-        }
-      },
-      created: function() {
-        this.init()
-        this.loadLevels()
-      },
+      created: function() { this.init(); this.loadLevels() },
       methods: {
         async init() {
-          var params = {
-            page: this.page,
-            pageSize: this.pageSize,
-            name: this.searchInput.name || undefined,
-            phone: this.searchInput.phone || undefined,
-            levelId: this.searchInput.levelId || undefined
-          }
+          this.loading = true
+          var params = { page: this.page, pageSize: this.pageSize, name: this.searchInput.name || undefined, phone: this.searchInput.phone || undefined, levelId: this.searchInput.levelId || undefined }
           var self = this
-          var results = await Promise.all([
-            memberPage(params),
-            self.loadMemberStats()
-          ])
-          var memberRes = results[0]
-          var statsRes = results[1]
-          if (String(memberRes.code) === '1') {
-            self.tableData = memberRes.data.records || []
-            self.counts = memberRes.data.total
-          }
-          if (statsRes && String(statsRes.code) === '1') {
-            self.stats = statsRes.data || self.stats
-          }
+          try {
+            var results = await Promise.all([memberPage(params), self.loadMemberStats()])
+            var memberRes = results[0], statsRes = results[1]
+            if (String(memberRes.code) === '1') {
+              self.tableData = memberRes.data.records || []
+              self.counts = memberRes.data.total
+            }
+            if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+          } catch(e) { self.$message.error('请求失败：' + e) }
+          this.loading = false
         },
         async loadMemberStats() {
           try {
-            var res = await memberPage({ page: 1, pageSize: 1000 })
+            var res = await memberPage({ page: 1, pageSize: 9999 })
             var levelRes = await levelPage({ page: 1, pageSize: 100 })
-            if (String(res.code) === '1') {
-              var records = res.data.records || []
-              var total = res.data.total || 0
-              var goldLevelIds = []
-              var silverLevelIds = []
-              if (levelRes.code === 1) {
-                var levels = levelRes.data.records || []
-                goldLevelIds = levels.filter(function(l) { return l.name && l.name.indexOf('黄金') !== -1 }).map(function(l) { return l.id })
-                silverLevelIds = levels.filter(function(l) { return l.name && (l.name.indexOf('白银') !== -1 || l.name.indexOf('银牌') !== -1) }).map(function(l) { return l.id })
-              }
-              var goldCount = records.filter(function(m) { return goldLevelIds.indexOf(m.levelId) !== -1 }).length
-              var silverCount = records.filter(function(m) { return silverLevelIds.indexOf(m.levelId) !== -1 }).length
-              var now = new Date()
-              var thisMonth = records.filter(function(m) {
-                if (!m.createdTime) return false
-                var created = new Date(m.createdTime)
-                return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear()
-              }).length
-              return { code: 1, data: { totalMembers: total, goldMembers: goldCount, silverMembers: silverCount, newMembersThisMonth: thisMonth } }
-            }
-          } catch (err) { console.warn('加载会员统计数据失败:', err) }
-          return { code: 0 }
+            if (String(res.code) !== '1') return { code: 0 }
+            var records = res.data.records || [], total = res.data.total || 0
+            var levels = (levelRes.code === 1) ? (levelRes.data.records || []) : []
+            // 按积分门槛分类
+            var sortedLevels = levels.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
+            var highMinPts = sortedLevels.length >= 3 ? sortedLevels[Math.floor(sortedLevels.length*0.6)].minPoints : 5000
+            var midMinPts = sortedLevels.length >= 2 ? sortedLevels[Math.floor(sortedLevels.length*0.3)].minPoints : 1000
+            var highLevelIds = sortedLevels.filter(function(l) { return (l.minPoints||0) >= highMinPts }).map(function(l) { return l.id })
+            var midLevelIds = sortedLevels.filter(function(l) { var p=l.minPoints||0; return p >= midMinPts && p < highMinPts }).map(function(l) { return l.id })
+            var lowLevelIds = sortedLevels.filter(function(l) { return (l.minPoints||0) < midMinPts }).map(function(l) { return l.id })
+            var highCount = records.filter(function(m) { return highLevelIds.indexOf(m.levelId)!==-1 }).length
+            var midCount = records.filter(function(m) { return midLevelIds.indexOf(m.levelId)!==-1 }).length
+            var lowCount = records.filter(function(m) { return lowLevelIds.indexOf(m.levelId)!==-1 || !m.levelId }).length
+            var now = new Date()
+            var newThisMonth = records.filter(function(m) {
+              if (!m.createdTime) return false
+              var d = new Date(m.createdTime)
+              return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear()
+            }).length
+            return { code: 1, data: { totalMembers: total, highLevelCount: highCount, midLevelCount: midCount, lowLevelCount: lowCount, newMembersThisMonth: newThisMonth } }
+          } catch(e) { return { code: 0 } }
         },
         loadLevels: function() {
           var self = this
           levelPage({ page: 1, pageSize: 100 }).then(function(res) {
             if (String(res.code) === '1') {
               self.levelOptions = res.data.records || []
-              // 同步选项到 searchConfig
               self.searchConfig[2].options = self.levelOptions.map(function(l) { return { label: l.name, value: l.id } })
             }
-          }).catch(function(err) { self.$message.error('请求失败：' + err) })
+          }).catch(function() {})
         },
-        // stat-cards 点击回调
-        onCardClick: function(payload) {
-          if (!payload.activeKey) {
-            this.activeFilter = ''
-            this.searchInput.levelId = ''
-          } else if (payload.key === 'all') {
-            this.activeFilter = 'all'
-            this.searchInput.levelId = ''
-          } else if (payload.key === 'gold') {
-            this.activeFilter = 'gold'
-            var goldLevel = this.levelOptions.find(function(l) { return l.name && l.name.indexOf('黄金') !== -1 })
-            this.searchInput.levelId = goldLevel ? goldLevel.id : ''
-          } else if (payload.key === 'silver') {
-            this.activeFilter = 'silver'
-            var silverLevel = this.levelOptions.find(function(l) { return l.name && (l.name.indexOf('白银') !== -1 || l.name.indexOf('银牌') !== -1) })
-            this.searchInput.levelId = silverLevel ? silverLevel.id : ''
-          }
-          this.searchInput.name = ''
-          this.searchInput.phone = ''
-          this.page = 1
-          this.init()
+        getLevelClass: function(name) {
+          if (!name) return 'level-badge default-badge'
+          if (name.indexOf('黄金')!==-1||name.indexOf('金卡')!==-1||name.indexOf('钻石')!==-1||name.indexOf('铂金')!==-1||name.indexOf('荣耀')!==-1||name.indexOf('至尊')!==-1||name.indexOf('传奇')!==-1) return 'level-badge gold-badge'
+          if (name.indexOf('银')!==-1) return 'level-badge silver-badge'
+          if (name.indexOf('青铜')!==-1||name.indexOf('普通')!==-1) return 'level-badge bronze-badge'
+          return 'level-badge default-badge'
         },
-        // table-bar 回调
-        onSearch: function(searchParams) {
-          this.searchInput = { name: searchParams.name || '', phone: searchParams.phone || '', levelId: searchParams.levelId || '' }
-          this.activeFilter = ''
-          this.page = 1
-          this.init()
-        },
-        onReset: function() {
+        onFilterClick: function(key) {
+          this.activeFilter = this.activeFilter === key ? '' : key
           this.searchInput = { name: '', phone: '', levelId: '' }
-          this.activeFilter = ''
-          this.page = 1
-          this.init()
+          if (key === 'gold') {
+            var gold = this.levelOptions.find(function(l) { return l.name && l.name.indexOf('黄金')!==-1 })
+            this.searchInput.levelId = gold ? gold.id : ''
+          } else if (key === 'silver') {
+            var silver = this.levelOptions.find(function(l) { return l.name && (l.name.indexOf('银')!==-1) })
+            this.searchInput.levelId = silver ? silver.id : ''
+          } else if (key === 'bronze') {
+            var bronze = this.levelOptions.find(function(l) { return l.name && (l.name.indexOf('青铜')!==-1||l.name.indexOf('普通')!==-1) })
+            this.searchInput.levelId = bronze ? bronze.id : ''
+          }
+          this.page = 1; this.init()
         },
-        onPageChange: function(payload) {
-          this.page = payload.page
-          this.init()
-        },
-        onSizeChange: function(payload) {
-          this.pageSize = payload.pageSize
-          this.init()
-        },
+        onSearch: function(p) { this.activeFilter = ''; this.searchInput = { name: p.name || '', phone: p.phone || '', levelId: p.levelId || '' }; this.page = 1; this.init() },
+        onReset: function() { this.activeFilter = ''; this.searchInput = { name: '', phone: '', levelId: '' }; this.page = 1; this.init() },
+        onPageChange: function(p) { this.page = p.page; this.init() },
+        onSizeChange: function(p) { this.pageSize = p.pageSize; this.init() },
         viewDetail: function(row) {
           var self = this
           getMember(row.id).then(function(res) {
             if (String(res.code) === '1') { self.detail = res.data; self.detailDialogVisible = true }
             else { self.$message.error(res.msg || '操作失败') }
-          }).catch(function(err) { self.$message.error('请求失败：' + err) })
+          }).catch(function(e) { self.$message.error('请求失败：' + e) })
         },
-        showRecharge: function(row) {
-          this.rechargeMember = row
-          this.rechargeForm = { amount: '', giftAmount: '0' }
-          this.rechargeDialogVisible = true
-        },
+        showRecharge: function(row) { this.rechargeMember = row; this.rechargeForm = { amount: '', giftAmount: '0', paymentMethod: 'WECHAT' }; this.rechargeDialogVisible = true },
         submitRecharge: function() {
           if (!this.rechargeForm.amount || this.rechargeForm.amount <= 0) { this.$message.error('请输入有效的充值金额'); return }
           var self = this
-          memberRecharge({
-            memberId: self.rechargeMember.id,
-            amount: self.rechargeForm.amount,
-            giftAmount: self.rechargeForm.giftAmount || 0
-          }).then(function(res) {
+          memberRecharge({ memberId: self.rechargeMember.id, amount: self.rechargeForm.amount, giftAmount: self.rechargeForm.giftAmount || 0, paymentMethod: self.rechargeForm.paymentMethod }).then(function(res) {
             if (res.code === 1) { self.$message.success('充值成功！'); self.rechargeDialogVisible = false; self.init() }
             else { self.$message.error(res.msg || '操作失败') }
-          }).catch(function(err) { self.$message.error('请求失败：' + err) })
+          }).catch(function(e) { self.$message.error('请求失败：' + e) })
         }
       }
     })

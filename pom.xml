@@ -114,6 +114,13 @@
             <artifactId>commons-lang3</artifactId>
         </dependency>
 
+        <!-- Hutool 工具库 -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.8.22</version>
+        </dependency>
+
         <!-- Spring Security Crypto for BCrypt password encoding -->
         <dependency>
             <groupId>org.springframework.security</groupId>

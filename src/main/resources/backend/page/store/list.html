@@ -7,94 +7,170 @@
     <link rel="stylesheet" href="../../styles/common.css" />
     <link rel="stylesheet" href="../../styles/page.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
-    <link rel="stylesheet" href="../../styles/components.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
-        .store-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
-        .store-card { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); border-left: 4px solid #409eff; transition: all 0.2s; cursor: pointer; }
-        .store-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); transform: translateY(-2px); }
-        .store-card.disabled { border-left-color: #909399; opacity: 0.7; }
-        .store-card .store-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-        .store-card .store-name { font-size: 16px; font-weight: 600; color: #303133; }
-        .store-card .store-code { font-size: 12px; color: #909399; }
-        .store-card .store-meta { display: flex; gap: 24px; margin-bottom: 12px; font-size: 13px; color: #606266; flex-wrap: wrap; }
-        .store-card .store-meta i { margin-right: 4px; color: #409eff; }
-        .store-card .store-stats { display: flex; gap: 16px; padding-top: 12px; border-top: 1px solid #ebeef5; }
-        .store-card .stat-item { flex: 1; text-align: center; }
-        .store-card .stat-value { font-size: 20px; font-weight: 600; color: #303133; }
-        .store-card .stat-label { font-size: 12px; color: #909399; margin-top: 2px; }
-        .store-card .store-actions { margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end; }
-        .empty-wrap { text-align: center; padding: 80px 0; color: #909399; }
-        .dialog-footer { text-align: right; }
-        .sync-section { margin-top: 16px; }
+        .dashboard-container { max-width: 1400px; margin: 0 auto; }
+        .container { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+
+        /* 工具栏 */
+        .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid #ebeef5; margin-bottom: 16px; }
+        .toolbar .el-input, .toolbar .el-select { width: 180px; }
+        .toolbar .spacer { flex: 1; }
+
+        /* 表格 */
+        .store-table { margin-top: 4px; }
+        .store-table .cell-status { display: flex; align-items: center; gap: 6px; }
+        .tag-active { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; background: #f0f9eb; color: #67c23a; }
+        .tag-inactive { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; background: #fef0f0; color: #f56c6c; }
+        .amount-highlight { color: #e6a23c; font-weight: 600; }
+        .order-count { font-weight: 600; color: #409eff; }
+
+        /* 编辑弹窗 */
+        .form-section-title { font-size: 14px; font-weight: 600; color: #303133; margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px dashed #e4e7ed; }
+        .form-section-title:first-child { margin-top: 0; }
+        .footer-actions { text-align: right; padding-top: 8px; }
+
+        /* 空状态 */
+        .empty-wrap { text-align: center; padding: 60px 0; color: #909399; }
+
+        .sync-section { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
     </style>
 </head>
 <body>
 <div id="app">
     <div class="dashboard-container">
         <div class="container">
-            <!-- 数据统计卡片 -->
-            <stat-cards
-              :cards="statsCards"
-              :active-key.sync="activeFilter"
-              @card-click="onCardClick"
-            ></stat-cards>
+            <!-- ===== 统计卡片 ===== -->
+            <div class="stats-cards">
+                <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="onStatClick('')">
+                  <div class="stat-icon">&#127968;</div>
+                  <div class="stat-label">门店总数</div>
+                  <div class="stat-value">{{ stats.totalStores }}</div>
+                </div>
+                <div class="stat-card success clickable" :class="{ active: activeFilter === 'active' }" @click="onStatClick('active')">
+                  <div class="stat-icon">&#9989;</div>
+                  <div class="stat-label">已启用</div>
+                  <div class="stat-value">{{ stats.activeStores }}</div>
+                </div>
+                <div class="stat-card warning clickable" :class="{ active: activeFilter === 'inactive' }" @click="onStatClick('inactive')">
+                  <div class="stat-icon">&#9208;</div>
+                  <div class="stat-label">已停用</div>
+                  <div class="stat-value">{{ stats.inactiveStores }}</div>
+                </div>
+                <div class="stat-card info">
+                  <div class="stat-icon">&#128176;</div>
+                  <div class="stat-label">今日有营收门店</div>
+                  <div class="stat-value">{{ stats.todayTotalStores }}<span style="font-size:14px;font-weight:400;">家</span></div>
+                </div>
+            </div>
 
-            <!-- 搜索 + 操作栏 -->
-            <table-bar
-              ref="tableBar"
-              :search-items="searchConfig"
-              :actions="actionConfig"
-              @search="onSearch"
-              @reset="onReset"
-              @action="onAction"
-            ></table-bar>
+            <!-- ===== 高级搜索 + 操作按钮 ===== -->
+            <div class="toolbar">
+                <el-input v-model="search.keyword" placeholder="门店名称 / 编码" clearable size="small" @clear="doSearch" @keyup.enter.native="doSearch">
+                    <i slot="prefix" class="el-input__icon el-icon-search"></i>
+                </el-input>
+                <el-select v-model="search.storeType" placeholder="门店类型" clearable size="small" @change="doSearch">
+                    <el-option label="全部类型" :value="null"></el-option>
+                    <el-option label="直营总店" :value="1"></el-option>
+                    <el-option label="直营分店" :value="2"></el-option>
+                    <el-option label="加盟店" :value="3"></el-option>
+                </el-select>
+                <el-select v-model="search.status" placeholder="门店状态" clearable size="small" @change="doSearch">
+                    <el-option label="全部状态" :value="null"></el-option>
+                    <el-option label="已启用" :value="1"></el-option>
+                    <el-option label="已停用" :value="0"></el-option>
+                </el-select>
+                <el-button size="small" type="primary" icon="el-icon-search" @click="doSearch">搜索</el-button>
+                <el-button size="small" icon="el-icon-refresh-left" @click="resetSearch">重置</el-button>
 
-            <!-- 门店卡片列表 -->
-            <div v-loading="loading">
-                <div v-if="stores.length > 0" class="store-cards">
-                    <div v-for="store in stores" :key="store.tenantId"
-                         :class="['store-card', store.status === 0 ? 'disabled' : '']">
-                        <div class="store-header">
-                            <div>
-                                <div class="store-name">
-                                    <el-tag :type="storeTypeTag(store.storeType)" size="mini">{{ storeTypeName(store.storeType) }}</el-tag>
-                                    {{ store.storeName }}
-                                </div>
-                                <div class="store-code">编码：{{ store.storeCode }}</div>
-                            </div>
+                <span class="spacer"></span>
+
+                <el-button size="small" type="success" icon="el-icon-plus" @click="openCreateDialog">新建门店</el-button>
+                <el-button size="small" type="warning" icon="el-icon-upload2" @click="batchEnable" :disabled="selection.length === 0">批量启用</el-button>
+                <el-button size="small" type="info" icon="el-icon-download" @click="batchDisable" :disabled="selection.length === 0">批量停用</el-button>
+                <el-button size="small" icon="el-icon-download" @click="doExport">导出数据</el-button>
+            </div>
+
+            <!-- ===== 数据表格 ===== -->
+            <div v-loading="loading" class="store-table">
+                <el-table
+                    :data="tableData"
+                    border
+                    stripe
+                    size="small"
+                    @selection-change="onSelectionChange"
+                    @sort-change="onSortChange"
+                    :default-sort="{prop: 'createTime', order: 'descending'}"
+                    style="width:100%">
+                    <el-table-column type="selection" width="45" fixed="left"></el-table-column>
+                    <el-table-column label="序号" type="index" width="55" align="center"></el-table-column>
+                    <el-table-column prop="storeName" label="门店名称" min-width="150" sortable="custom">
+                        <template slot-scope="{row}">
+                            <el-tag :type="storeTypeTag(row.storeType)" size="mini" effect="plain">{{ storeTypeName(row.storeType) }}</el-tag>
+                            <span style="margin-left:6px; font-weight:500;">{{ row.storeName }}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="storeCode" label="门店编码" width="110" sortable="custom"></el-table-column>
+                    <el-table-column prop="contactPerson" label="联系人" width="90"></el-table-column>
+                    <el-table-column prop="contactPhone" label="联系电话" width="120"></el-table-column>
+                    <el-table-column prop="address" label="地址" min-width="150" show-overflow-tooltip></el-table-column>
+                    <el-table-column label="外卖/堂食" width="100" align="center">
+                        <template slot-scope="{row}">
+                            <span :style="{color: row.isDeliveryEnabled == 1 ? '#67c23a' : '#c0c4cc'}">&#128666;</span>
+                            <span style="margin:0 2px;">/</span>
+                            <span :style="{color: row.isDineInEnabled == 1 ? '#409eff' : '#c0c4cc'}">&#127869;</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="状态" width="80" align="center">
+                        <template slot-scope="{row}">
                             <el-switch
-                                v-model="store.status"
+                                v-model="row.status"
                                 :active-value="1"
                                 :inactive-value="0"
-                                active-text="启用"
-                                inactive-text="停用"
-                                @change="toggleStatus(store)"
-                            />
-                        </div>
-                        <div class="store-meta">
-                            <span><i class="el-icon-phone-outline"></i>{{ store.contactPhone || '-' }}</span>
-                            <span><i class="el-icon-truck"></i>外卖: {{ store.isDeliveryEnabled ? '开' : '关' }}</span>
-                            <span><i class="el-icon-s-home"></i>堂食: {{ store.isDineInEnabled ? '开' : '关' }}</span>
-                        </div>
-                        <div class="store-stats">
-                            <div class="stat-item">
-                                <div class="stat-value">{{ store.todayOrders }}</div>
-                                <div class="stat-label">今日订单</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value">¥{{ formatAmount(store.todayAmount) }}</div>
-                                <div class="stat-label">今日营收</div>
-                            </div>
-                        </div>
-                        <div class="store-actions">
-                            <el-button type="text" size="small" icon="el-icon-switch-button" @click="switchToStore(store)">切换</el-button>
-                            <el-button type="text" size="small" icon="el-icon-refresh" @click="openSyncDialog(store)">同步</el-button>
-                        </div>
-                    </div>
-                </div>
-                <div v-else class="empty-wrap">
+                                @change="toggleSingleStatus(row)"
+                                active-color="#13ce66"
+                                inactive-color="#c0cc4c">
+                            </el-switch>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="todayOrders" label="今日订单" width="90" align="center" sortable="custom">
+                        <template slot-scope="{row}">
+                            <span class="order-count">{{ row.todayOrders || 0 }}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="todayAmount" label="今日营收" width="110" align="right" sortable="custom">
+                        <template slot-scope="{row}">
+                            <span class="amount-highlight">&yen;{{ fmtAmount(row.todayAmount) }}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="createTime" label="创建时间" width="160" sortable="custom">
+                        <template slot-scope="{row}">{{ row.createTime ? row.createTime.substring(0,10) : '' }}</template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="200" fixed="right" align="center">
+                        <template slot-scope="{row}">
+                            <el-button type="text" size="mini" icon="el-icon-edit" @click="openEditDialog(row)">编辑</el-button>
+                            <el-button type="text" size="mini" icon="el-icon-switch-button" @click="switchToStore(row)">切换</el-button>
+                            <el-button type="text" size="mini" icon="el-icon-refresh" @click="openSyncDialog(row)">同步</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+
+                <!-- 分页 -->
+                <el-pagination
+                    v-if="pagination.total > 0"
+                    style="margin-top:16px; text-align:right;"
+                    :current-page="pagination.current"
+                    :page-sizes="[10, 20, 50, 100]"
+                    :page-size="pagination.size"
+                    :total="pagination.total"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    @size-change="onPageSizeChange"
+                    @current-change="onPageChange">
+                </el-pagination>
+
+                <!-- 空状态 -->
+                <div v-if="!loading && tableData.length === 0" class="empty-wrap">
                     <i class="el-icon-s-shop" style="font-size:48px;"></i>
                     <p style="margin-top:12px;">暂无门店数据</p>
                     <el-button type="primary" size="small" style="margin-top:12px;" @click="openCreateDialog">创建第一家门店</el-button>
@@ -103,66 +179,146 @@
         </div>
     </div>
 
-    <!-- 新建门店对话框 -->
-    <el-dialog title="新建门店" :visible.sync="createDialogVisible" width="600px" @close="resetCreateForm">
-        <el-form :model="createForm" ref="createFormRef" label-width="100px" size="small">
-            <el-form-item label="门店名称" prop="storeName" :rules="[{required:true,message:'必填'}]">
-                <el-input v-model="createForm.storeName" placeholder="如：瑞吉外卖-朝阳店" maxlength="100" />
+    <!-- ===== 新建/编辑门店对话框 ===== -->
+    <el-dialog :title="dialogTitle" :visible.sync="formDialogVisible" width="650px" @close="resetForm" :close-on-click-modal="false">
+        <el-form :model="form" ref="formRef" label-width="100px" size="small" :rules="formRules">
+            <div class="form-section-title">基本信息</div>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="门店名称" prop="storeName">
+                        <el-input v-model="form.storeName" placeholder="如：瑞吉外卖-朝阳店" maxlength="100" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="门店编码" prop="storeCode">
+                        <el-input v-model="form.storeCode" placeholder="如：BJ001" maxlength="32" />
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="门店类型" prop="storeType">
+                        <el-select v-model="form.storeType" style="width:100%">
+                            <el-option label="直营总店" :value="1" />
+                            <el-option label="直营分店" :value="2" />
+                            <el-option label="加盟店" :value="3" />
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="营业时间" prop="businessHours">
+                        <el-time-picker
+                            v-model="form.businessHoursRange"
+                            is-range
+                            range-separator="至"
+                            start-placeholder="开始"
+                            end-placeholder="结束"
+                            format="HH:mm"
+                            value-format="HH:mm"
+                            style="width:100%"
+                            placeholder="选择营业时间">
+                        </el-time-picker>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+
+            <div class="form-section-title">联系信息</div>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="联系人" prop="contactPerson">
+                        <el-input v-model="form.contactPerson" placeholder="门店联系人" maxlength="64" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="联系电话" prop="contactPhone">
+                        <el-input v-model="form.contactPhone" placeholder="联系电话" maxlength="20" />
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-form-item label="门店地址" prop="address">
+                <el-input v-model="form.address" placeholder="门店详细地址" maxlength="200" />
             </el-form-item>
-            <el-form-item label="门店编码" prop="storeCode" :rules="[{required:true,message:'必填'}]">
-                <el-input v-model="createForm.storeCode" placeholder="如：BJ001" maxlength="32" />
-            </el-form-item>
-            <el-form-item label="门店类型">
-                <el-select v-model="createForm.storeType" style="width:100%">
-                    <el-option label="直营总店" :value="1" />
-                    <el-option label="直营分店" :value="2" />
-                    <el-option label="加盟店" :value="3" />
-                </el-select>
-            </el-form-item>
-            <el-form-item label="联系人">
-                <el-input v-model="createForm.contactPerson" placeholder="门店联系人" maxlength="64" />
-            </el-form-item>
-            <el-form-item label="联系电话">
-                <el-input v-model="createForm.contactPhone" placeholder="联系电话" maxlength="20" />
-            </el-form-item>
-            <el-form-item label="地址">
-                <el-input v-model="createForm.address" placeholder="门店地址" maxlength="200" />
-            </el-form-item>
-            <el-form-item label="营业时间">
-                <el-input v-model="createForm.businessHours" placeholder="如：09:00-22:00" maxlength="100" />
-            </el-form-item>
-            <el-form-item label="管理员账号" prop="adminUsername" :rules="[{required:true,message:'必填'}]">
-                <el-input v-model="createForm.adminUsername" placeholder="门店管理员登录账号" />
-            </el-form-item>
-            <el-form-item label="管理员密码" prop="adminPassword" :rules="[{required:true,message:'必填'}]">
-                <el-input v-model="createForm.adminPassword" type="password" placeholder="初始密码" />
-            </el-form-item>
+
+            <div class="form-section-title">运营设置</div>
+            <el-row :gutter="16">
+                <el-col :span="8">
+                    <el-form-item label="配送半径(m)">
+                        <el-input-number v-model="form.deliveryRadius" :min="500" :max="20000" :step="500" controls-position="right" style="width:100%" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                    <el-form-item label="起送金额">
+                        <el-input-number v-model="form.minDeliveryAmount" :min="0" :max="200" :precision="2" :step="1" controls-position="right" style="width:100%" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                    <el-form-item label="配送费">
+                        <el-input-number v-model="form.deliveryFee" :min="0" :max="50" :precision="2" :step="0.5" controls-position="right" style="width:100%" />
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="8">
+                    <el-form-item label="支持外卖">
+                        <el-switch v-model="form.isDeliveryEnabled" :active-value="1" :inactive-value="0" active-color="#13ce66" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                    <el-form-item label="支持堂食">
+                        <el-switch v-model="form.isDineInEnabled" :active-value="1" :inactive-value="0" active-color="#409eff" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                    <el-form-item label="门店状态">
+                        <el-switch v-model="form.status" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="停用" />
+                    </el-form-item>
+                </el-col>
+            </el-row>
+
+            <!-- 新建时显示管理员信息 -->
+            <template v-if="isCreate">
+                <div class="form-section-title">管理员账号</div>
+                <el-row :gutter="16">
+                    <el-col :span="12">
+                        <el-form-item label="管理员账号" prop="adminUsername">
+                            <el-input v-model="form.adminUsername" placeholder="门店管理员登录账号" maxlength="32" />
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="管理员密码" prop="adminPassword">
+                            <el-input v-model="form.adminPassword" type="password" placeholder="初始密码，至少6位" maxlength="32" show-password />
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+            </template>
         </el-form>
-        <div class="dialog-footer">
-            <el-button size="small" @click="createDialogVisible = false">取消</el-button>
-            <el-button type="primary" size="small" @click="submitCreateForm" :loading="submitting">确认创建</el-button>
+        <div class="footer-actions">
+            <el-button size="small" @click="formDialogVisible = false">取消</el-button>
+            <el-button type="primary" size="small" @click="submitForm" :loading="submitting">{{ isCreate ? '确认创建' : '保存修改' }}</el-button>
         </div>
     </el-dialog>
 
-    <!-- 数据同步对话框 -->
-    <el-dialog title="数据同步" :visible.sync="syncDialogVisible" width="500px">
-        <p style="margin-bottom:12px; color:#606266;">将总部数据同步到 <b>{{ syncTargetName }}</b></p>
+    <!-- ===== 数据同步对话框 ===== -->
+    <el-dialog title="数据同步" :visible.sync="syncDialogVisible" width="520px" @close="syncResult=null">
+        <p style="margin-bottom:14px; color:#606266; font-size:13px;">
+            将总部数据同步到 <b style="color:#303133;">{{ syncTargetName }}</b>
+        </p>
         <div class="sync-section">
-            <el-button size="small" type="primary" @click="syncType('dishes')" :loading="syncing.dishes">
-                <i class="el-icon-sell"></i> 同步菜品
-            </el-button>
-            <el-button size="small" type="success" @click="syncType('categories')" :loading="syncing.categories">
-                <i class="el-icon-menu"></i> 同步分类
-            </el-button>
-            <el-button size="small" type="warning" @click="syncType('setmeals')" :loading="syncing.setmeals">
-                <i class="el-icon-s-grid"></i> 同步套餐
-            </el-button>
+            <el-button size="small" type="primary" @click="doSync('dishes')" :loading="syncing.dishes" icon="el-icon-sell">同步菜品</el-button>
+            <el-button size="small" type="success" @click="doSync('categories')" :loading="syncing.categories" icon="el-icon-menu">同步分类</el-button>
+            <el-button size="small" type="warning" @click="doSync('setmeals')" :loading="syncing.setmeals" icon="el-icon-s-grid">同步套餐</el-button>
         </div>
-        <div v-if="syncResult" style="margin-top:16px; padding:12px; background:#f0f9eb; border-radius:6px; font-size:13px;">
-            <p>成功: {{ syncResult.synced }} 条 | 失败: {{ syncResult.failed }} 条</p>
-            <p v-if="syncResult.errors && syncResult.errors.length > 0" style="color:#f56c6c; margin-top:4px;" v-for="(err, i) in syncResult.errors" :key="i">{{ err }}</p>
-        </div>
-        <span slot="footer" class="dialog-footer">
+        <el-alert
+            v-if="syncResult"
+            :title="'同步完成：成功 ' + syncResult.synced + ' 条，失败 ' + syncResult.failed + ' 条'"
+            :type="syncResult.failed > 0 ? 'warning' : 'success'"
+            :closable="false"
+            style="margin-top:14px;">
+        </el-alert>
+        <p v-if="syncResult && syncResult.errors && syncResult.errors.length > 0"
+           v-for="(err, i) in syncResult.errors" :key="i"
+           style="font-size:12px; color:#f56c6c; margin-top:4px;">{{ err }}</p>
+        <span slot="footer">
             <el-button size="medium" @click="syncDialogVisible = false">关 闭</el-button>
         </span>
     </el-dialog>
@@ -179,24 +335,44 @@ new Vue({
     data: {
         loading: false,
         submitting: false,
-        stores: [],
-        // 统计数据
-        stats: { totalStores: 0, activeStores: 0, inactiveStores: 0 },
+        // 表格数据
+        tableData: [],
+        selection: [],           // 已选行
+        // 统计
+        stats: { totalStores: 0, activeStores: 0, inactiveStores: 0, todayTotalStores: 0 },
         activeFilter: '',
-        // 搜索配置
-        searchConfig: [
-            { type: 'input', field: 'name', placeholder: '请输入门店名称', width: '200px' }
-        ],
-        // 操作按钮配置
-        actionConfig: [
-            { key: 'add', text: '+ 新建门店', type: 'primary' }
-        ],
-        createDialogVisible: false,
-        createForm: {
-            storeName: '', storeCode: '', storeType: 2, contactPerson: '',
-            contactPhone: '', address: '', businessHours: '09:00-22:00',
+        // 搜索条件
+        search: { keyword: '', storeType: null, status: null },
+        // 排序
+        sort: { sortBy: 'createTime', sortOrder: 'desc' },
+        // 分页
+        pagination: { current: 1, size: 10, total: 0, pages: 0 },
+        // 表单
+        formDialogVisible: false,
+        isCreate: true,
+        editTenantId: null,
+        form: {
+            storeName: '', storeCode: '', storeType: 2,
+            contactPerson: '', contactPhone: '', address: '',
+            businessHours: '', businessHoursRange: null,
+            deliveryRadius: 3000, minDeliveryAmount: 20.00, deliveryFee: 0.00,
+            isDeliveryEnabled: 1, isDineInEnabled: 1, status: 1,
             adminUsername: '', adminPassword: ''
         },
+        formRules: {
+            storeName: [{ required: true, message: '请输入门店名称', trigger: 'blur' }],
+            storeCode: [{ required: true, message: '请输入门店编码', trigger: 'blur' }],
+            storeType: [{ required: true, message: '请选择门店类型', trigger: 'change' }],
+            contactPhone: [
+                { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+            ],
+            adminUsername: [{ required: true, message: '请输入管理员账号', trigger: 'blur' }],
+            adminPassword: [
+                { required: true, message: '请输入管理员密码', trigger: 'blur' },
+                { min: 6, message: '密码至少6位', trigger: 'blur' }
+            ]
+        },
+        // 同步
         syncDialogVisible: false,
         syncTargetId: null,
         syncTargetName: '',
@@ -204,160 +380,317 @@ new Vue({
         syncResult: null
     },
     computed: {
-        statsCards: function() {
-            var self = this
-            return [
-                { key: '', icon: '🏪', label: '门店总数', value: self.stats.totalStores, color: 'primary', clickable: true, active: self.activeFilter === '' },
-                { key: 'active', icon: '✅', label: '已启用', value: self.stats.activeStores, color: 'success', clickable: true, active: self.activeFilter === 'active' },
-                { key: 'inactive', icon: '⏸️', label: '已停用', value: self.stats.inactiveStores, color: 'warning', clickable: true, active: self.activeFilter === 'inactive' }
-            ]
-        }
+        dialogTitle: function() { return this.isCreate ? '新建门店' : '编辑门店'; }
     },
-    created() { this.loadData(); },
+    created: function() { this.loadData(); },
     methods: {
-        async loadData() {
-            this.loading = true
-            var self = this
-            var results = await Promise.all([
-                storeApi.listStores(),
-                self.loadStoreStats()
-            ])
-            var storeRes = results[0]
-            var statsRes = results[1]
-            if (storeRes && storeRes.code === 1) {
-                self.stores = storeRes.data || []
-            }
-            if (statsRes && String(statsRes.code) === '1') {
-                self.stats = statsRes.data || self.stats
-            }
-            this.loading = false
-        },
-        async loadStoreStats() {
-            try {
-                var res = await storeApi.listStores()
-                if (res && res.code === 1 && res.data) {
-                    var stores = res.data || []
-                    return { code: 1, data: {
-                        totalStores: stores.length,
-                        activeStores: stores.filter(function(s) { return s.status === 1 }).length,
-                        inactiveStores: stores.filter(function(s) { return s.status === 0 }).length
-                    }}
-                }
-            } catch (err) { console.warn('加载门店统计失败:', err) }
-            return { code: 0 }
-        },
-        // stat-cards 点击
-        onCardClick: function(payload) {
-            var self = this
-            if (payload.key === '') {
-                self.activeFilter = ''
-            } else {
-                self.activeFilter = self.activeFilter === payload.key ? '' : payload.key
-            }
-            self.page = 1
-            this.loadData()
-        },
-        // table-bar 回调
-        onSearch: function(searchParams) {
-            this.activeFilter = ''
-            this.lastSearch = searchParams
-            this.loadData()
-        },
-        onReset: function() {
-            this.activeFilter = ''
-            this.lastSearch = {}
-            this.loadData()
-        },
-        onAction: function(payload) {
-            if (payload.key === 'add') this.openCreateDialog()
-        },
-        openCreateDialog() {
-            this.resetCreateForm()
-            this.createDialogVisible = true
-        },
-        resetCreateForm() {
-            this.createForm = {
-                storeName: '', storeCode: '', storeType: 2, contactPerson: '',
-                contactPhone: '', address: '', businessHours: '09:00-22:00',
-                adminUsername: '', adminPassword: ''
+        // ========== 数据加载 ==========
+        loadData: function() {
+            var self = this;
+            self.loading = true;
+            var params = {
+                keyword: self.search.keyword || null,
+                storeType: self.search.storeType,
+                status: self.search.status,
+                page: self.pagination.current,
+                pageSize: self.pagination.size,
+                sortBy: self.sort.sortBy,
+                sortOrder: self.sort.sortOrder
             };
-            if (this.$refs.createFormRef) this.$refs.createFormRef.resetFields();
-        },
-        submitCreateForm() {
-            var self = this
-            this.$refs.createFormRef.validate(function(valid) {
-                if (!valid) return
-                self.submitting = true
-                storeApi.createStore(self.createForm).then(function(res) {
-                    if (res.code === 1) {
-                        self.$message.success('门店创建成功')
-                        self.createDialogVisible = false
-                        self.loadData()
-                    } else {
-                        self.$message.error(res.data?.msg || '创建失败')
-                    }
-                }).catch(function(err) {
-                    self.$message.error('创建失败: ' + (err.response?.data?.msg || err.message))
-                }).finally(function() { self.submitting = false })
-            })
-        },
-        toggleStatus(store) {
-            var self = this
-            storeApi.updateStatus(store.tenantId, store.status).then(function(res) {
-                if (res.code === 1) {
-                    self.$message.success('状态已更新')
-                }
-            }).catch(function() { self.loadData() })
-        },
-        switchToStore(store) {
-            var self = this
-            storeApi.switchStore(store.tenantId).then(function(res) {
-                if (res.code === 1) {
-                    self.$message.success('已切换到门店：' + store.storeName)
-                    self.loadData()
-                }
-            })
-        },
-        openSyncDialog(store) {
-            this.syncTargetId = store.tenantId
-            this.syncTargetName = store.storeName
-            this.syncResult = null
-            this.syncDialogVisible = true
-        },
-        syncType(type) {
-            var self = this
-            var sourceTenantId = this.stores[0]?.tenantId
-            var apiCall
-            switch(type) {
-                case 'dishes':
-                    apiCall = storeApi.syncDishes({ sourceTenantId: sourceTenantId, targetTenantId: this.syncTargetId, dishIds: null, operatorId: 1 })
-                    break
-                case 'categories':
-                    apiCall = storeApi.syncCategories({ sourceTenantId: sourceTenantId, targetTenantId: this.syncTargetId, operatorId: 1 })
-                    break
-                case 'setmeals':
-                    apiCall = storeApi.syncSetmeals({ sourceTenantId: sourceTenantId, targetTenantId: this.syncTargetId, setmealIds: null, operatorId: 1 })
-                    break
-            }
-            if (!apiCall) return
-            this.syncing[type] = true
-            apiCall.then(function(res) {
-                if (res.code === 1) {
-                    self.syncResult = res.data
-                    self.$message.success('同步完成')
+            // 如果选了统计卡片筛选，覆盖status
+            if (self.activeFilter === 'active') { params.status = 1; }
+            else if (self.activeFilter === 'inactive') { params.status = 0; }
+
+            storeApi.pageStores(params).then(function(res) {
+                if (res && res.code === 1 && res.data) {
+                    self.tableData = res.data.records || [];
+                    self.pagination.total = res.data.total || 0;
+                    self.pagination.pages = res.data.pages || 0;
+                    self.pagination.current = res.data.current || 1;
+                    self.pagination.size = res.data.size || 10;
+                    // 计算统计
+                    self.updateStats();
                 }
             }).catch(function(err) {
-                self.$message.error('同步失败')
-            }).finally(function() { self.syncing[type] = false })
+                self.$message.error('加载门店数据失败');
+            }).finally(function() { self.loading = false; });
         },
-        storeTypeTag(type) { return type === 1 ? 'danger' : type === 2 ? 'success' : 'warning' },
-        storeTypeName(type) {
-            var map = { 1: '总店', 2: '直营', 3: '加盟' }
-            return map[type] || ''
+        updateStats: function() {
+            var self = this;
+            // 用listAllStores获取所有门店做统计
+            storeApi.listStores().then(function(res) {
+                if (res && res.code === 1 && res.data) {
+                    var list = res.data || [];
+                    self.stats.totalStores = list.length;
+                    self.stats.activeStores = list.filter(function(s) { return s.status === 1; }).length;
+                    self.stats.inactiveStores = list.filter(function(s) { return s.status === 0; }).length;
+                    self.stats.todayTotalStores = list.filter(function(s) { return (s.todayOrders || 0) > 0; }).length;
+                }
+            }).catch(function() {});
         },
-        formatAmount(amount) {
-            if (!amount) return '0.00'
-            return typeof amount === 'number' ? amount.toFixed(2) : amount
+
+        // ========== 搜索 ==========
+        doSearch: function() {
+            this.pagination.current = 1;
+            this.activeFilter = '';
+            this.loadData();
+        },
+        resetSearch: function() {
+            this.search = { keyword: '', storeType: null, status: null };
+            this.sort = { sortBy: 'createTime', sortOrder: 'desc' };
+            this.activeFilter = '';
+            this.pagination.current = 1;
+            this.loadData();
+        },
+        onStatClick: function(key) {
+            if (this.activeFilter === key) {
+                this.activeFilter = '';
+            } else {
+                this.activeFilter = key;
+            }
+            this.pagination.current = 1;
+            this.loadData();
+        },
+
+        // ========== 排序 ==========
+        onSortChange: function(sortInfo) {
+            if (sortInfo.prop) {
+                this.sort.sortBy = sortInfo.prop;
+                this.sort.sortOrder = sortInfo.order === 'ascending' ? 'asc' : 'desc';
+            } else {
+                this.sort = { sortBy: 'createTime', sortOrder: 'desc' };
+            }
+            this.loadData();
+        },
+
+        // ========== 分页 ==========
+        onPageChange: function(page) {
+            this.pagination.current = page;
+            this.loadData();
+        },
+        onPageSizeChange: function(size) {
+            this.pagination.size = size;
+            this.pagination.current = 1;
+            this.loadData();
+        },
+
+        // ========== 选择 ==========
+        onSelectionChange: function(val) { this.selection = val; },
+
+        // ========== 批量操作 ==========
+        batchEnable: function() {
+            this.batchConfirm(1, '批量启用');
+        },
+        batchDisable: function() {
+            this.batchConfirm(0, '批量停用');
+        },
+        batchConfirm: function(status, label) {
+            var self = this;
+            var ids = self.selection.map(function(r) { return r.tenantId; });
+            if (ids.length === 0) { self.$message.warning('请选择门店'); return; }
+            self.$confirm('确认' + label + '已选的 ' + ids.length + ' 个门店吗？', '提示', {
+                confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
+            }).then(function() {
+                storeApi.batchUpdateStatus(ids, status).then(function(res) {
+                    if (res && res.code === 1) {
+                        var result = res.data;
+                        self.$message.success(label + '成功：' + result.successCount + '/' + result.total);
+                        self.loadData();
+                    } else {
+                        self.$message.error(label + '失败');
+                    }
+                }).catch(function() { self.$message.error(label + '失败'); });
+            }).catch(function() {});
+        },
+        doExport: function() {
+            var self = this;
+            var params = {
+                keyword: self.search.keyword || null,
+                storeType: self.search.storeType,
+                status: self.search.status
+            };
+            self.$message({ message: '正在导出，请稍候...', type: 'info', duration: 2000 });
+            storeApi.exportStores(params).then(function(res) {
+                var blob = new Blob([res], { type: 'text/csv;charset=utf-8' });
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'store_export_' + new Date().toISOString().slice(0,10) + '.csv';
+                a.click();
+                window.URL.revokeObjectURL(url);
+                self.$message.success('导出成功');
+            }).catch(function() {
+                self.$message.error('导出失败');
+            });
+        },
+
+        // ========== 单行操作 ==========
+        toggleSingleStatus: function(row) {
+            var self = this;
+            storeApi.updateStatus(row.tenantId, row.status).then(function(res) {
+                if (res && res.code === 1) {
+                    self.$message.success('状态已更新');
+                }
+            }).catch(function() { self.loadData(); });
+        },
+        switchToStore: function(row) {
+            var self = this;
+            storeApi.switchStore(row.tenantId).then(function(res) {
+                if (res && res.code === 1) {
+                    self.$message.success('已切换到门店：' + row.storeName);
+                    self.loadData();
+                }
+            });
+        },
+
+        // ========== 编辑 ==========
+        openEditDialog: function(row) {
+            var self = this;
+            self.isCreate = false;
+            self.editTenantId = row.tenantId;
+            storeApi.getStoreDetail(row.tenantId).then(function(res) {
+                if (res && res.code === 1 && res.data) {
+                    var d = res.data;
+                    self.form = {
+                        storeName: d.storeName || '',
+                        storeCode: d.storeCode || '',
+                        storeType: d.storeType || 2,
+                        contactPerson: d.contactPerson || '',
+                        contactPhone: d.contactPhone || '',
+                        address: d.address || '',
+                        businessHours: d.businessHours || '',
+                        businessHoursRange: self.parseBusinessHours(d.businessHours),
+                        deliveryRadius: d.deliveryRadius || 3000,
+                        minDeliveryAmount: d.minDeliveryAmount || 20.00,
+                        deliveryFee: d.deliveryFee || 0.00,
+                        isDeliveryEnabled: d.isDeliveryEnabled || 1,
+                        isDineInEnabled: d.isDineInEnabled || 1,
+                        status: d.status || 1,
+                        adminUsername: '', adminPassword: ''
+                    };
+                    self.formDialogVisible = true;
+                }
+            }).catch(function() {
+                self.$message.error('获取门店详情失败');
+            });
+        },
+
+        // ========== 新建 ==========
+        openCreateDialog: function() {
+            this.isCreate = true;
+            this.editTenantId = null;
+            this.resetForm();
+            this.formDialogVisible = true;
+        },
+        resetForm: function() {
+            this.form = {
+                storeName: '', storeCode: '', storeType: 2,
+                contactPerson: '', contactPhone: '', address: '',
+                businessHours: '', businessHoursRange: null,
+                deliveryRadius: 3000, minDeliveryAmount: 20.00, deliveryFee: 0.00,
+                isDeliveryEnabled: 1, isDineInEnabled: 1, status: 1,
+                adminUsername: '', adminPassword: ''
+            };
+            if (this.$refs.formRef) this.$refs.formRef.clearValidate();
+        },
+        submitForm: function() {
+            var self = this;
+            self.$refs.formRef.validate(function(valid) {
+                if (!valid) return;
+                self.submitting = true;
+
+                // 处理营业时间
+                var businessHours = self.form.businessHours;
+                if (self.form.businessHoursRange && self.form.businessHoursRange.length === 2) {
+                    businessHours = self.form.businessHoursRange[0] + '-' + self.form.businessHoursRange[1];
+                }
+
+                var payload = {
+                    storeName: self.form.storeName,
+                    storeCode: self.form.storeCode,
+                    storeType: self.form.storeType,
+                    contactPerson: self.form.contactPerson,
+                    contactPhone: self.form.contactPhone,
+                    address: self.form.address,
+                    businessHours: businessHours,
+                    deliveryRadius: self.form.deliveryRadius,
+                    minDeliveryAmount: self.form.minDeliveryAmount,
+                    deliveryFee: self.form.deliveryFee,
+                    isDeliveryEnabled: self.form.isDeliveryEnabled,
+                    isDineInEnabled: self.form.isDineInEnabled,
+                    status: self.form.status
+                };
+
+                var apiCall;
+                if (self.isCreate) {
+                    payload.adminUsername = self.form.adminUsername;
+                    payload.adminPassword = self.form.adminPassword;
+                    apiCall = storeApi.createStore(payload);
+                } else {
+                    apiCall = storeApi.updateStore(self.editTenantId, payload);
+                }
+
+                apiCall.then(function(res) {
+                    if (res && res.code === 1) {
+                        self.$message.success(self.isCreate ? '门店创建成功' : '编辑成功');
+                        self.formDialogVisible = false;
+                        self.loadData();
+                    } else {
+                        self.$message.error(res.msg || '操作失败');
+                    }
+                }).catch(function(err) {
+                    self.$message.error('操作失败: ' + (err.response && err.response.data && err.response.data.msg || err.message));
+                }).finally(function() { self.submitting = false; });
+            });
+        },
+
+        // ========== 同步 ==========
+        openSyncDialog: function(row) {
+            this.syncTargetId = row.tenantId;
+            this.syncTargetName = row.storeName;
+            this.syncResult = null;
+            this.syncDialogVisible = true;
+        },
+        doSync: function(type) {
+            var self = this;
+            var sourceTenantId = null;
+            if (self.tableData.length > 0) sourceTenantId = self.tableData[0].tenantId;
+            var apiMap = {
+                dishes: storeApi.syncDishes({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, dishIds: null, operatorId: 1 }),
+                categories: storeApi.syncCategories({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, operatorId: 1 }),
+                setmeals: storeApi.syncSetmeals({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, setmealIds: null, operatorId: 1 })
+            };
+            var apiCall = apiMap[type];
+            if (!apiCall) return;
+            self.syncing[type] = true;
+            apiCall.then(function(res) {
+                if (res && res.code === 1) {
+                    self.syncResult = res.data;
+                    self.$message.success('同步完成');
+                }
+            }).catch(function() {
+                self.$message.error('同步失败');
+            }).finally(function() { self.syncing[type] = false; });
+        },
+
+        // ========== 工具方法 ==========
+        storeTypeTag: function(type) {
+            return type === 1 ? 'danger' : type === 2 ? 'success' : 'warning';
+        },
+        storeTypeName: function(type) {
+            var map = { 1: '总店', 2: '直营', 3: '加盟' };
+            return map[type] || String(type);
+        },
+        fmtAmount: function(val) {
+            if (val === null || val === undefined) return '0.00';
+            if (typeof val === 'number') return val.toFixed(2);
+            return Number(val).toFixed(2);
+        },
+        parseBusinessHours: function(val) {
+            if (!val) return null;
+            var parts = val.split('-');
+            if (parts.length === 2) return [parts[0], parts[1]];
+            return null;
         }
     }
 });

@@ -2,6 +2,7 @@ package com.reggie.module.inventory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.dto.AddPurchaseDetailDTO;
 import com.reggie.dto.CreatePurchaseOrderDTO;
@@ -52,6 +53,7 @@ public class PurchaseOrderController {
                                        @RequestParam(required = false) Long supplierId) {
         Page<PurchaseOrder> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<PurchaseOrder> qw = new LambdaQueryWrapper<>();
+        qw.eq(BaseContext.getCurrentTenantId() != null, PurchaseOrder::getTenantId, BaseContext.getCurrentTenantId());
         qw.eq(status != null && !status.isEmpty(), PurchaseOrder::getStatus, status);
         qw.eq(supplierId != null, PurchaseOrder::getSupplierId, supplierId);
         qw.orderByDesc(PurchaseOrder::getCreatedTime);
@@ -106,6 +108,14 @@ public class PurchaseOrderController {
     public R<String> cancel(@PathVariable Long id) {
         purchaseOrderService.cancelOrder(id);
         return R.success("取消成功");
+    }
+
+    @PutMapping("/approve/{id}")
+    @Operation(summary = "审核通过", description = "审核通过采购单，将草稿状态转为已下单状态，允许后续收货")
+    @Parameter(name = "id", description = "采购单ID", required = true)
+    public R<String> approve(@PathVariable Long id) {
+        purchaseOrderService.approveOrder(id);
+        return R.success("审核通过");
     }
 }
 

@@ -637,29 +637,29 @@ INSERT INTO `employee` VALUES (11, '临时员工', 'tempuser', '$2a$10$KpveBkD6h
 -- ----------------------------
 DROP TABLE IF EXISTS `marketing_campaign`;
 CREATE TABLE `marketing_campaign`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '涓婚敭',
-  `tenant_id` bigint NOT NULL COMMENT '绉熸埛ID',
-  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '娲诲姩鍚嶇О',
-  `description` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '娲诲姩鎻忚堪',
-  `campaign_type` tinyint NOT NULL COMMENT '娲诲姩绫诲瀷 1:婊″噺 2:鎶樻墸 3:璧犲搧 4:棣栧崟浼樻儬 5:浼氬憳涓撲韩 6:闄愭椂绉掓潃',
-  `target_type` tinyint NOT NULL DEFAULT 1 COMMENT '鐩?爣绫诲瀷 1:鍏ㄩ儴鐢ㄦ埛 2:鏂扮敤鎴?3:楂橀?鐢ㄦ埛 4:娴佸け棰勮?鐢ㄦ埛 5:鎸囧畾绛夌骇',
-  `target_value` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '鐩?爣鍊?绛夌骇ID鍒楄〃/鐢ㄦ埛ID鍒楄〃锛孞SON)',
-  `rule_json` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '娲诲姩瑙勫垯 JSON锛屽?婊″噺鏉′欢銆佹姌鎵ｇ巼绛',
-  `status` tinyint NOT NULL DEFAULT 0 COMMENT '鐘舵? 0:鑽夌? 1:杩涜?涓?2:宸茬粨鏉?3:宸叉殏鍋',
-  `priority` int NOT NULL DEFAULT 0 COMMENT '浼樺厛绾э紝鏁板?瓒婂ぇ浼樺厛绾ц秺楂',
-  `start_time` datetime NOT NULL COMMENT '娲诲姩寮??鏃堕棿',
-  `end_time` datetime NOT NULL COMMENT '娲诲姩缁撴潫鏃堕棿',
-  `max_participants` int NULL DEFAULT NULL COMMENT '鏈?ぇ鍙備笌浜烘暟锛孨ULL琛ㄧず涓嶉檺',
-  `current_participants` int NOT NULL DEFAULT 0 COMMENT '褰撳墠鍙備笌浜烘暟',
-  `coupon_template_id` bigint NULL DEFAULT NULL COMMENT '鍏宠仈浼樻儬鍒告ā鏉縄D',
-  `create_time` datetime NOT NULL COMMENT '鍒涘缓鏃堕棿',
-  `update_time` datetime NOT NULL COMMENT '鏇存柊鏃堕棿',
-  `create_user` bigint NOT NULL COMMENT '鍒涘缓浜',
-  `update_user` bigint NOT NULL COMMENT '淇?敼浜',
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL COMMENT '租户ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '活动名称',
+  `description` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '活动描述',
+  `campaign_type` tinyint NOT NULL COMMENT '活动类型 1:满减 2:折扣 3:赠品 4:首单优惠 5:会员专享 6:限时秒杀',
+  `target_type` tinyint NOT NULL DEFAULT 1 COMMENT '目标类型 1:全部用户 2:新用户 3:高频用户 4:流失预警用户 5:指定等级',
+  `target_value` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '目标值(等级ID列表/用户ID列表，JSON)',
+  `rule_json` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '活动规则 JSON，如满减条件、折扣率等',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态 0:草稿 1:进行中 2:已结束 3:已暂停',
+  `priority` int NOT NULL DEFAULT 0 COMMENT '优先级，数值越大优先级越高',
+  `start_time` datetime NOT NULL COMMENT '活动开始时间',
+  `end_time` datetime NOT NULL COMMENT '活动结束时间',
+  `max_participants` int NULL DEFAULT NULL COMMENT '最大参与人数，NULL表示不限',
+  `current_participants` int NOT NULL DEFAULT 0 COMMENT '当前参与人数',
+  `coupon_template_id` bigint NULL DEFAULT NULL COMMENT '关联优惠券模板ID',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime NOT NULL COMMENT '更新时间',
+  `create_user` bigint NOT NULL COMMENT '创建人',
+  `update_user` bigint NOT NULL COMMENT '修改人',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_tenant_status`(`tenant_id` ASC, `status` ASC) USING BTREE,
   INDEX `idx_time`(`start_time` ASC, `end_time` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '钀ラ攢娲诲姩' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '营销活动' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of marketing_campaign
@@ -680,22 +680,22 @@ INSERT INTO `marketing_campaign` VALUES (10, 1, '清凉一夏', '夏季饮品满
 -- ----------------------------
 DROP TABLE IF EXISTS `marketing_message`;
 CREATE TABLE `marketing_message`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '涓婚敭',
-  `tenant_id` bigint NOT NULL COMMENT '绉熸埛ID',
-  `campaign_id` bigint NOT NULL COMMENT '鍏宠仈钀ラ攢娲诲姩ID',
-  `user_id` bigint NOT NULL COMMENT '鎺ㄩ?鐢ㄦ埛ID',
-  `push_type` tinyint NOT NULL COMMENT '鎺ㄩ?绫诲瀷 1:棣栭〉寮圭獥 2:娑堟伅閫氱煡 3:鐭?俊 4:浼樻儬鍒歌嚜鍔ㄥ彂鏀',
-  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '鎺ㄩ?鏍囬?',
-  `content` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '鎺ㄩ?鍐呭?',
-  `status` tinyint NOT NULL DEFAULT 0 COMMENT '鐘舵? 0:寰呮帹閫?1:宸叉帹閫?2:宸茶? 3:宸蹭娇鐢',
-  `read_time` datetime NULL DEFAULT NULL COMMENT '闃呰?鏃堕棿',
-  `use_time` datetime NULL DEFAULT NULL COMMENT '浣跨敤鏃堕棿',
-  `create_time` datetime NOT NULL COMMENT '鍒涘缓鏃堕棿',
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL COMMENT '租户ID',
+  `campaign_id` bigint NOT NULL COMMENT '关联营销活动ID',
+  `user_id` bigint NOT NULL COMMENT '推送用户ID',
+  `push_type` tinyint NOT NULL COMMENT '推送类型 1:首页弹窗 2:消息通知 3:短信 4:优惠券自动发放',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '推送标题',
+  `content` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '推送内容',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态 0:待推送 1:已推送 2:已读 3:已使用',
+  `read_time` datetime NULL DEFAULT NULL COMMENT '阅读时间',
+  `use_time` datetime NULL DEFAULT NULL COMMENT '使用时间',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_user`(`user_id` ASC) USING BTREE,
   INDEX `idx_campaign`(`campaign_id` ASC) USING BTREE,
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '钀ラ攢娑堟伅鎺ㄩ?璁板綍' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '营销消息推送记录' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of marketing_message
