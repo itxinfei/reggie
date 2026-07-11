@@ -36,7 +36,21 @@ src/main/java/com/reggie/
 │   ├── printer/     # 小票打印（多品牌适配）
 │   └── report/      # 经营报表
 └── util/            # 二维码生成、测试图片生成器
+
+src/main/resources/
+├── backend/         # 管理后台（Element UI，50+ 页面）
+│   └── index.html   # 主框架，CDN 依赖：Vue 2.6、Element UI 2.x、Axios、Remix Icon 4.6
+└── front/           # 移动端（Vant UI，12 个页面）
 ```
+
+## 前端图标规范（2026-07-11 更新）
+
+- **图标库**：Remix Icon 4.6（CDN：`cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css`）
+- **许可证**：Apache 2.0，免费商用，2700+ 图标
+- **使用方式**：`<i class="ri-xxx-line"></i>`，所有图标以 `ri-` 开头，建议使用 `line` 风格
+- **菜单配置**：`backend/index.html` 的 `menuList` 中 `icon` 值格式为 `ri-{name}-line`
+- **禁止**：不得使用旧 iconfont 样式类（`icon-category`、`icon-member` 等），旧 iconfont 文件已全部删除
+- **搜索**：https://remixicon.com/ 在线搜索所需图标名称
 
 ## 代码规范（阿里巴巴 Java 开发规范）
 

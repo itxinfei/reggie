@@ -10,7 +10,8 @@
     <link rel="stylesheet" href="plugins/element-ui/index.css" />
     <link rel="stylesheet" href="styles/common.css" />
     <link rel="stylesheet" href="styles/index.css" />
-    <link rel="stylesheet" href="styles/icon/iconfont.css" />
+    <!-- Remix Icon v4.6 — 2700+ 免费商用图标，替代原 iconfont（仅7个图标） -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet" />
     <style>
       .body{
         min-width: 1366px;
@@ -55,7 +56,7 @@
               <div v-for="item in menuList" :key="item.id">
                 <el-submenu :index="item.id" v-if="item.children && item.children.length>0">
                   <template slot="title">
-                    <i class="iconfont" :class="item.icon"></i>
+                    <i :class="item.icon"></i>
                     <span>{{item.name}}</span>
                   </template>
                   <el-menu-item
@@ -64,13 +65,13 @@
                     :key="sub.id"
                     @click="menuHandle(sub,false)"
                     >
-                    <i :class="['iconfont', sub.icon]"></i>
+                    <i :class="sub.icon"></i>
                     <span slot="title">{{sub.name}}</span>
                     </el-menu-item
                   >
                 </el-submenu>
                 <el-menu-item v-else :index="item.id" @click="menuHandle(item,false)">
-                  <i class="iconfont" :class="item.icon"></i>
+                  <i :class="item.icon"></i>
                   <span slot="title">{{item.name}}</span>
                 </el-menu-item>
               </div>
@@ -113,7 +114,7 @@
                     :key="item.id"
                     @click="navigateToSearch(item)"
                   >
-                    <i :class="['iconfont', item.icon]"></i>
+                    <i :class="item.icon"></i>
                     <span class="search-item-name">{{ item.parentName }}</span>
                     <span class="search-item-child">{{ item.name }}</span>
                   </div>
@@ -186,66 +187,66 @@
             sidebarCollapsed: false,
             sidebarOpen: false,
             menuList: [
-              { id: '1', name: '数据概览', url: 'page/dashboard/overview.html', icon: 'icon-category' },
-              { id: '2', name: '商品管理', icon: 'icon-category', children: [
-                { id: '2-1', name: '分类管理', url: 'page/category/list.html', icon: 'icon-category' },
-                { id: '2-2', name: '菜品管理', url: 'page/food/list.html', icon: 'icon-food' },
-                { id: '2-3', name: '套餐管理', url: 'page/combo/list.html', icon: 'icon-combo' },
+              { id: '1', name: '数据概览', url: 'page/dashboard/overview.html', icon: 'ri-dashboard-line' },
+              { id: '2', name: '商品管理', icon: 'ri-shopping-bag-3-line', children: [
+                { id: '2-1', name: '分类管理', url: 'page/category/list.html', icon: 'ri-apps-2-line' },
+                { id: '2-2', name: '菜品管理', url: 'page/food/list.html', icon: 'ri-restaurant-2-line' },
+                { id: '2-3', name: '套餐管理', url: 'page/combo/list.html', icon: 'ri-stack-line' },
               ]},
-              { id: '3', name: '订单管理', icon: 'icon-order', children: [
-                { id: '3-1', name: '订单明细', url: 'page/order/list.html', icon: 'icon-order' },
-                { id: '3-2', name: '支付管理', url: 'page/payment/order-list.html', icon: 'icon-lock' },
-                { id: '3-3', name: '打印配置', url: 'page/printer/config-list.html', icon: 'icon-category' },
-                { id: '3-4', name: '打印日志', url: 'page/printer/log-list.html', icon: 'icon-combo' },
+              { id: '3', name: '订单管理', icon: 'ri-file-list-3-line', children: [
+                { id: '3-1', name: '订单明细', url: 'page/order/list.html', icon: 'ri-file-list-3-line' },
+                { id: '3-2', name: '支付管理', url: 'page/payment/order-list.html', icon: 'ri-money-dollar-circle-line' },
+                { id: '3-3', name: '打印配置', url: 'page/printer/config-list.html', icon: 'ri-printer-line' },
+                { id: '3-4', name: '打印日志', url: 'page/printer/log-list.html', icon: 'ri-file-history-line' },
               ]},
-              { id: '4', name: '外卖配送', icon: 'icon-order', children: [
-                { id: '4-1', name: '配送订单', url: 'page/delivery/order-list.html', icon: 'icon-order' },
+              { id: '4', name: '外卖配送', icon: 'ri-motorbike-line', children: [
+                { id: '4-1', name: '配送订单', url: 'page/delivery/order-list.html', icon: 'ri-map-pin-line' },
               ]},
-              { id: '5', name: '堂食管理', icon: 'icon-food', children: [
-                { id: '5-1', name: '桌台管理', url: 'page/dining/table-list.html', icon: 'icon-food' },
-                { id: '5-2', name: '区域管理', url: 'page/dining/area-list.html', icon: 'icon-category' },
-                { id: '5-3', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'icon-member' },
-                { id: '5-4', name: '预订管理', url: 'page/dining/reservation-list.html', icon: 'icon-order' },
+              { id: '5', name: '堂食管理', icon: 'ri-store-2-line', children: [
+                { id: '5-1', name: '桌台管理', url: 'page/dining/table-list.html', icon: 'ri-layout-grid-line' },
+                { id: '5-2', name: '区域管理', url: 'page/dining/area-list.html', icon: 'ri-map-pin-2-line' },
+                { id: '5-3', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'ri-list-check-2-line' },
+                { id: '5-4', name: '预订管理', url: 'page/dining/reservation-list.html', icon: 'ri-calendar-check-line' },
               ]},
-              { id: '6', name: '进销存', icon: 'icon-category', children: [
-                { id: '6-1', name: '原料管理', url: 'page/inventory/material-list.html', icon: 'icon-category' },
-                { id: '6-2', name: '库存盘点', url: 'page/inventory/stock-check.html', icon: 'icon-lock' },
-                { id: '6-3', name: '库存流水', url: 'page/inventory/stock-record.html', icon: 'icon-order' },
-                { id: '6-4', name: '采购管理', url: 'page/inventory/purchase-list.html', icon: 'icon-combo' },
-                { id: '6-5', name: '供应商管理', url: 'page/inventory/supplier-list.html', icon: 'icon-user' },
+              { id: '6', name: '进销存', icon: 'ri-archive-line', children: [
+                { id: '6-1', name: '原料管理', url: 'page/inventory/material-list.html', icon: 'ri-leaf-line' },
+                { id: '6-2', name: '库存盘点', url: 'page/inventory/stock-check.html', icon: 'ri-check-double-line' },
+                { id: '6-3', name: '库存流水', url: 'page/inventory/stock-record.html', icon: 'ri-route-line' },
+                { id: '6-4', name: '采购管理', url: 'page/inventory/purchase-list.html', icon: 'ri-shopping-cart-2-line' },
+                { id: '6-5', name: '供应商管理', url: 'page/inventory/supplier-list.html', icon: 'ri-truck-line' },
               ]},
-              { id: '7', name: '会员与用户', icon: 'icon-member', children: [
-                { id: '7-1', name: '会员等级', url: 'page/member-center/level-list.html', icon: 'icon-member' },
-                { id: '7-2', name: '积分管理', url: 'page/member-center/points-list.html', icon: 'icon-category' },
-                { id: '7-3', name: '优惠券', url: 'page/member-center/coupon-list.html', icon: 'icon-order' },
-                { id: '7-4', name: '充值记录', url: 'page/member-center/recharge-list.html', icon: 'icon-lock' },
-                { id: '7-5', name: 'C端用户', url: 'page/user/list.html', icon: 'icon-user' },
+              { id: '7', name: '会员与用户', icon: 'ri-group-line', children: [
+                { id: '7-1', name: '会员等级', url: 'page/member-center/level-list.html', icon: 'ri-vip-crown-line' },
+                { id: '7-2', name: '积分管理', url: 'page/member-center/points-list.html', icon: 'ri-coin-line' },
+                { id: '7-3', name: '优惠券', url: 'page/member-center/coupon-list.html', icon: 'ri-coupon-line' },
+                { id: '7-4', name: '充值记录', url: 'page/member-center/recharge-list.html', icon: 'ri-bank-card-line' },
+                { id: '7-5', name: 'C端用户', url: 'page/user/list.html', icon: 'ri-user-3-line' },
               ]},
-              { id: '8', name: '数据分析', icon: 'icon-category', children: [
-                { id: '8-1', name: '经营报表', url: 'page/report/daily.html', icon: 'icon-order' },
-                { id: '8-2', name: '菜品排行', url: 'page/report/dish-ranking.html', icon: 'icon-food' },
-                { id: '8-3', name: '支付分析', url: 'page/report/payment-analysis.html', icon: 'icon-lock' },
-                { id: '8-4', name: '时段分析', url: 'page/report/time-slot.html', icon: 'icon-category' },
-                { id: '8-5', name: '评价管理', url: 'page/report/evaluation-list.html', icon: 'icon-member' },
+              { id: '8', name: '数据分析', icon: 'ri-bar-chart-line', children: [
+                { id: '8-1', name: '经营报表', url: 'page/report/daily.html', icon: 'ri-line-chart-line' },
+                { id: '8-2', name: '菜品排行', url: 'page/report/dish-ranking.html', icon: 'ri-trophy-line' },
+                { id: '8-3', name: '支付分析', url: 'page/report/payment-analysis.html', icon: 'ri-funds-line' },
+                { id: '8-4', name: '时段分析', url: 'page/report/time-slot.html', icon: 'ri-time-line' },
+                { id: '8-5', name: '评价管理', url: 'page/report/evaluation-list.html', icon: 'ri-star-line' },
               ]},
-              { id: '9', name: '营销中心', icon: 'icon-category', children: [
-                { id: '9-1', name: '智能推荐', url: 'page/recommend/overview.html', icon: 'icon-food' },
-                { id: '9-2', name: '营销活动', url: 'page/recommend/campaigns.html', icon: 'icon-category' },
+              { id: '9', name: '营销中心', icon: 'ri-megaphone-line', children: [
+                { id: '9-1', name: '智能推荐', url: 'page/recommend/overview.html', icon: 'ri-lightbulb-flash-line' },
+                { id: '9-2', name: '营销活动', url: 'page/recommend/campaigns.html', icon: 'ri-flag-line' },
               ]},
-              { id: '10', name: '门店管理', icon: 'icon-food', children: [
-                { id: '10-1', name: '门店列表', url: 'page/store/list.html', icon: 'icon-food' },
-                { id: '10-2', name: '总部控制台', url: 'page/store/dashboard.html', icon: 'icon-lock' },
+              { id: '10', name: '门店管理', icon: 'ri-building-4-line', children: [
+                { id: '10-1', name: '门店列表', url: 'page/store/list.html', icon: 'ri-store-line' },
+                { id: '10-2', name: '总部控制台', url: 'page/store/dashboard.html', icon: 'ri-dashboard-3-line' },
               ]},
-              { id: '11', name: '系统管理', icon: 'icon-category', children: [
-                { id: '11-1', name: '员工管理', url: 'page/member/list.html', icon: 'icon-member' },
-                { id: '11-2', name: '角色管理', url: 'page/sys/role-list.html', icon: 'icon-member' },
-                { id: '11-3', name: '通知模板', url: 'page/sys/template-list.html', icon: 'icon-order' },
-                { id: '11-4', name: '系统配置', url: 'page/sys/config-list.html', icon: 'icon-category' },
-                { id: '11-5', name: '操作日志', url: 'page/sys/operation-log.html', icon: 'icon-category' },
+              { id: '11', name: '系统管理', icon: 'ri-settings-3-line', children: [
+                { id: '11-1', name: '员工管理', url: 'page/member/list.html', icon: 'ri-user-settings-line' },
+                { id: '11-2', name: '角色管理', url: 'page/sys/role-list.html', icon: 'ri-shield-user-line' },
+                { id: '11-3', name: '通知模板', url: 'page/sys/template-list.html', icon: 'ri-message-2-line' },
+                { id: '11-4', name: '系统配置', url: 'page/sys/config-list.html', icon: 'ri-tools-line' },
+                { id: '11-5', name: '操作日志', url: 'page/sys/operation-log.html', icon: 'ri-file-list-2-line' },
               ]},
-              { id: '12', name: 'AI助手', icon: 'icon-notice', children: [
-                { id: '12-1', name: 'AI对话', url: 'page/ai/assistant.html', icon: 'icon-notice' },
-                { id: '12-2', name: '模型配置', url: 'page/ai/provider-config.html', icon: 'icon-category' },
+              { id: '12', name: 'AI助手', icon: 'ri-robot-3-line', children: [
+                { id: '12-1', name: 'AI对话', url: 'page/ai/assistant.html', icon: 'ri-chat-3-line' },
+                { id: '12-2', name: '模型配置', url: 'page/ai/provider-config.html', icon: 'ri-cpu-line' },
               ]},
             ],
             iframeUrl: 'page/dashboard/overview.html',

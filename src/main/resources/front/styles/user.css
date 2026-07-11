@@ -1,29 +1,28 @@
+/* 修改点：统一样式，使用CSS变量，修复高度溢出，按钮状态反馈 */
 #user {
   height: 100%;
 }
 
+/* ---- 头部：统一品牌渐变色 + 调整高度适配用户信息 ---- */
 #user .divHead {
   width: 100%;
-  height: 164rem;
-  opacity: 1;
-  background: linear-gradient(160deg, #ffc200 0%, #ffb300 60%, #ffa000 100%);
+  height: 140rem;
+  background: var(--color-primary-gradient);
   box-sizing: border-box;
-  padding-left: 12rem;
-  padding-right: 12rem;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
 }
 
 #user .divHead .divTitle {
   height: 25rem;
-  opacity: 1;
-  font-size: 18rem;
-  font-family: PingFangSC, PingFangSC-Semibold;
+  font-size: var(--header-title-font-size);
+  font-family: var(--font-family-title);
   font-weight: 600;
   text-align: center;
-  color: #333333;
+  color: var(--color-text-primary);
   line-height: 25rem;
-  letter-spacing: 0;
-  padding-top: 50rem;
-  margin-bottom: 18rem;
+  padding-top: 44rem;
+  margin-bottom: 14rem;
   position: relative;
 }
 
@@ -32,7 +31,7 @@
   left: 0;
   margin-top: 5rem;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform var(--transition-fast);
 }
 
 #user .divHead .divTitle i:active {
@@ -45,10 +44,10 @@
 }
 
 #user .divHead .divUser > img {
-  width: 58rem;
-  height: 58rem;
-  border-radius: 50%;
-  margin-right: 16rem;
+  width: 52rem;
+  height: 52rem;
+  border-radius: var(--radius-round);
+  margin-right: var(--spacing-md);
   border: 2px solid rgba(255, 255, 255, 0.6);
   background: #f0f0f0;
   object-fit: cover;
@@ -61,48 +60,47 @@
 }
 
 #user .divHead .divUser .desc .divName {
-  opacity: 1;
-  font-size: 16rem;
-  font-family: PingFangSC, PingFangSC-Semibold;
+  font-size: var(--font-size-lg);
+  font-family: var(--font-family-title);
   font-weight: 600;
   text-align: left;
-  color: #333333;
-  margin-right: 6rem;
-  margin-bottom: 5rem;
+  color: var(--color-text-primary);
+  margin-bottom: 4rem;
   display: flex;
   align-items: center;
 }
 
-#user .divHead .divUser .desc .divName img {
+/* 修改点：动态性别图标 */
+#user .divHead .divUser .desc .divName .gender-icon {
   width: 16rem;
   height: 16rem;
-  opacity: 1;
   margin-left: 6rem;
+  opacity: 0.8;
 }
 
+/* 修改点：手机号脱敏显示 */
 #user .divHead .divUser .desc .divPhone {
-  font-size: 13px;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-size: 13rem;
+  font-family: var(--font-family-body);
   font-weight: 400;
   text-align: left;
   color: rgba(51, 51, 51, 0.75);
 }
 
 #user .divContent {
-  height: calc(100% - 174rem);
+  height: calc(100% - 148rem);
   overflow-y: auto;
-  padding-bottom: 20rem;
+  padding-bottom: var(--spacing-xl);
 }
 
+/* ---- 修改点：移除固定高度，防止菜单溢出 ---- */
 #user .divLinks {
-  height: 104rem;
-  opacity: 1;
-  background: #ffffff;
-  border-radius: 8rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
   padding-left: 17rem;
   padding-right: 11rem;
-  margin: 10rem;
-  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
+  margin: var(--spacing-md) var(--spacing-md) 0;
+  box-shadow: var(--shadow-card);
 }
 
 #user .divLinks .item {
@@ -112,7 +110,7 @@
   display: flex;
   align-items: center;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--transition-fast);
 }
 
 #user .divLinks .item:active {
@@ -120,8 +118,7 @@
 }
 
 #user .divLinks .divSplit {
-  height: 1rem;
-  opacity: 1;
+  height: 1px;
   background-color: #ebebeb;
   border: 0;
 }
@@ -133,9 +130,9 @@
 }
 
 #user .divLinks .item span {
-  font-size: 14rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  color: #333333;
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
+  color: var(--color-text-primary);
 }
 
 #user .divLinks .item i {
@@ -146,39 +143,36 @@
   color: #c0c4cc;
 }
 
+/* ---- 最新订单卡片 ---- */
 #user .divOrders {
-  margin: 0 10rem 10rem 10rem;
-  background: #ffffff;
-  border-radius: 8rem;
-  padding-left: 10rem;
-  padding-right: 10rem;
+  margin: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
   padding-bottom: 17rem;
-  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-card);
 }
 
 #user .divOrders .title {
   height: 60rem;
   line-height: 60rem;
-  opacity: 1;
-  font-size: 16rem;
-  font-family: PingFangSC, PingFangSC-Semibold;
+  font-size: var(--font-size-lg);
+  font-family: var(--font-family-title);
   font-weight: 600;
   text-align: left;
-  color: #333333;
-  letter-spacing: 0;
+  color: var(--color-text-primary);
   border-bottom: 2px solid #efefef;
 }
 
 #user .divOrders .timeStatus {
   height: 46rem;
-  line-height: 16rem;
-  font-size: 14rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
   font-weight: 400;
   text-align: left;
-  color: #666666;
+  color: var(--color-text-secondary);
   line-height: 20rem;
-  letter-spacing: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -186,11 +180,11 @@
 }
 
 #user .divOrders .timeStatus span:first-child {
-  color: #333333;
+  color: var(--color-text-primary);
 }
 
 #user .divOrders .dishList {
-  padding-top: 10rem;
+  padding-top: var(--spacing-sm);
   padding-bottom: 11rem;
 }
 
@@ -200,82 +194,103 @@
   display: flex;
   justify-content: space-between;
   height: 20rem;
-  opacity: 1;
-  font-size: 14rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
   font-weight: 400;
   text-align: left;
-  color: #666666;
+  color: var(--color-text-secondary);
   line-height: 20rem;
-  letter-spacing: 0;
 }
 
 #user .divOrders .result {
   display: flex;
   justify-content: flex-end;
   height: 20rem;
-  opacity: 1;
-  font-size: 14rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
   font-weight: 400;
   text-align: left;
-  color: #666666;
+  color: var(--color-text-secondary);
   line-height: 20rem;
 }
 
 #user .divOrders .result .price {
   color: #20232a;
   font-weight: 600;
-  font-family: DIN, DIN-Medium;
+  font-family: var(--font-family-number);
 }
 
 #user .divOrders .btn {
-  margin-top: 20rem;
+  margin-top: var(--spacing-xl);
   display: flex;
   justify-content: flex-end;
 }
 
+/* ---- 修改点：按钮状态反馈全流程 ---- */
 #user .divOrders .btn .btnAgain {
   width: 124rem;
   height: 36rem;
-  opacity: 1;
   border: 1px solid #e5e4e4;
   border-radius: 19rem;
-  font-size: 14rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
   font-weight: 500;
   text-align: center;
-  color: #333333;
+  color: var(--color-text-primary);
   line-height: 36rem;
-  letter-spacing: 0;
   position: relative;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-normal);
+  user-select: none;
 }
 
+/* hover */
 #user .divOrders .btn .btnAgain:active {
-  background: #f5f5f5;
-  border-color: #ffc200;
+  background: var(--bg-hover);
+  border-color: var(--color-primary);
 }
 
+/* loading态 */
+#user .divOrders .btn .btnAgain.is-loading {
+  color: var(--color-text-disabled);
+  border-color: #e5e4e4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* disabled态 */
+#user .divOrders .btn .btnAgain.is-disabled {
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ---- 退出登录 ---- */
 #user .quitLogin {
-  margin: 0 10rem 10rem 10rem;
+  margin: 0 var(--spacing-md) var(--spacing-md);
   height: 50rem;
-  opacity: 1;
-  background: #ffffff;
-  border-radius: 8rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
   font-size: 15rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: var(--font-family-body);
   font-weight: 500;
   text-align: center;
-  color: #e94e3c;
+  color: var(--color-danger);
   line-height: 50rem;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-card);
+  user-select: none;
 }
 
 #user .quitLogin:active {
   background: #fef0f0;
   color: #d43c33;
+}
+
+/* loading态 */
+#user .quitLogin.is-loading {
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+  pointer-events: none;
 }

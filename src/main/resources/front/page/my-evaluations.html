@@ -7,16 +7,19 @@
     <title>我的评价 - 瑞吉外卖</title>
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js"></script>
-    <link rel="stylesheet" href="../../backend/plugins/element-ui/index.css" />
     <link rel="stylesheet" href="../styles/index.css" />
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="./../styles/evaluation.css" />
 </head>
 <body>
-    <div id="eval-app" class="app" v-loading="loading">
+    <div id="eval-app" class="app">
+        <!-- 修改点：ElementUI v-loading 替换为纯CSS loading -->
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
         <div class="divHead">
             <div class="divTitle">
-                <i class="el-icon-arrow-left" @click="goBack"></i>我的评价
+                <i class="icon-back-arrow" @click="goBack"></i>我的评价
             </div>
         </div>
 
@@ -56,8 +59,9 @@
 
                 <!-- 操作按钮 -->
                 <div class="eval-actions" v-if="item.status === 0">
-                    <el-button type="text" size="small" @click="editEvaluation(item)">修改</el-button>
-                    <el-button type="text" size="small" style="color: #f56c6c;" @click="deleteEvaluation(item)">删除</el-button>
+                    <!-- 修改点：el-button 替换为原生button -->
+                    <button class="btn-text" @click="editEvaluation(item)">修改</button>
+                    <button class="btn-text btn-text-danger" @click="deleteEvaluation(item)">删除</button>
                 </div>
             </div>
         </div>
@@ -66,7 +70,8 @@
         <div class="empty-state" v-else-if="!loading">
             <img src="./../images/no_order.png" style="width: 120px; opacity: 0.4;" />
             <p style="color: #c0c4cc; margin-top: 16px; font-size: 14px;">暂无评价记录</p>
-            <el-button type="primary" size="small" style="margin-top: 12px;" @click="goToOrder">去下单</el-button>
+            <!-- 修改点：el-button 替换为原生button -->
+            <button class="btn-primary" @click="goToOrder">去下单</button>
         </div>
 
         <!-- 分页 -->
@@ -79,36 +84,56 @@
             style="margin: 16px 0;"
         />
 
-        <!-- 提交评价弹窗 -->
-        <el-dialog title="评价菜品" :visible.sync="submitVisible" width="90%" :close-on-click-modal="false">
-            <div v-if="submitData.orderId">
-                <div style="margin-bottom: 16px; padding: 10px; background: #f5f7fa; border-radius: 6px;">
-                    <div style="font-weight: 500;">订单 #{{ submitData.orderId }}</div>
-                    <div style="color: #606266; font-size: 13px; margin-top: 4px;">请为您购买的菜品评分</div>
+        <!-- 提交评价弹窗——el-dialog 替换为纯CSS模态框 -->
+        <div v-if="submitVisible" class="submit-modal">
+            <div class="submit-dialog">
+                <div class="submit-modal-header">
+                    <h3>评价菜品</h3>
+                    <span class="modal-close" @click="submitVisible = false">✕</span>
                 </div>
-                <div class="submit-eval-item" v-for="(dish, idx) in submitData.dishes" :key="idx">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                        <span style="font-weight: 500; flex: 1;">{{ dish.dishName }}</span>
-                        <el-rate v-model="dish.starRating" :colors="['#99A9BF', '#F7BA2A', '#FF9900']" :allow-half="false" :max="5" style="display: inline-block;"></el-rate>
+                <div class="submit-modal-body">
+                    <div v-if="submitData.orderId">
+                        <div class="submit-order-info">
+                            <div class="submit-order-id">订单 #{{ submitData.orderId }}</div>
+                            <div class="submit-order-tip">请为您购买的菜品评分</div>
+                        </div>
+                        <div class="submit-eval-item" v-for="(dish, idx) in submitData.dishes" :key="idx">
+                            <div class="submit-dish-row">
+                                <span class="submit-dish-name">{{ dish.dishName }}</span>
+                                <!-- 修改点：el-rate 替换为自定义星级评分组件 -->
+                                <span class="star-rating">
+                                    <span v-for="s in 5" :key="s"
+                                          :class="['star-item', { active: s <= dish.starRating }]"
+                                          @click="dish.starRating = s">★</span>
+                                </span>
+                            </div>
+                            <!-- 修改点：el-input textarea 替换为原生textarea -->
+                            <textarea v-model="dish.content" rows="2" class="eval-textarea"
+                                      placeholder="分享您的用餐体验（选填）" maxlength="200"></textarea>
+                            <span class="eval-word-count" v-if="dish.content">{{ dish.content.length }}/200</span>
+                        </div>
                     </div>
-                    <el-input v-model="dish.content" type="textarea" :rows="2" placeholder="分享您的用餐体验（选填）" maxlength="200" show-word-limit></el-input>
+                </div>
+                <div class="submit-modal-footer">
+                    <!-- 修改点：el-button 替换为原生button -->
+                    <button class="btn-cancel" @click="submitVisible = false">取 消</button>
+                    <button class="btn-submit" @click="doSubmit" :disabled="submitLoading">
+                        {{ submitLoading ? '提交中...' : '提交评价' }}
+                    </button>
                 </div>
             </div>
-            <span slot="footer">
-                <el-button size="medium" @click="submitVisible = false">取 消</el-button>
-                <el-button type="primary" size="medium" @click="doSubmit" :loading="submitLoading">提交评价</el-button>
-            </span>
-        </el-dialog>
+            <div class="modal-overlay" @click="submitVisible = false"></div>
+        </div>
 
         <!-- 图片预览 -->
         <van-image-preview v-model:show="previewShow" :images="previewImages" :start-position="previewIndex" />
     </div>
 
     <script src="../../backend/plugins/vue/vue.js"></script>
-    <script src="../../backend/plugins/element-ui/index.js"></script>
+    <script src="./../js/vant.min.js"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js"></script>
-    <script src="./api/evaluation.js"></script>
+    <script src="../api/evaluation.js"></script>
     <script>
         new Vue({
             el: '#eval-app',
@@ -137,14 +162,14 @@
                     this.loading = true
                     try {
                         const res = await getMyEvaluations({ page: this.page, pageSize: this.pageSize })
-                        if (String(res.code) === '1') {
+                        if (res.code === 1) {
                             this.evalList = res.data.records || []
                             this.total = res.data.total || 0
                         } else {
-                            this.$message.error(res.msg || '加载失败')
+                            vant.Toast.fail(res.msg || '加载失败')
                         }
                     } catch (err) {
-                        this.$message.error('请求失败：' + (err.message || err))
+                        vant.Toast.fail('请求失败：' + (err.message || err))
                     } finally {
                         this.loading = false
                     }
@@ -155,20 +180,30 @@
                 },
                 // 修改评价
                 editEvaluation(item) {
-                    this.$message.info('评价功能开发中')
+                    vant.Toast('暂不支持修改评价，请删除后重新提交')
                 },
                 // 删除评价
                 async deleteEvaluation(item) {
                     try {
-                        await this.$confirm('确认删除该评价吗？', '提示', {
-                            confirmButtonText: '确 定',
-                            cancelButtonText: '取 消',
-                            type: 'warning'
+                        await vant.Dialog.confirm({
+                            title: '删除评价',
+                            message: '确认删除该评价吗？删除后不可恢复。',
+                            confirmButtonText: '确认删除',
+                            confirmButtonColor: '#f56c6c',
+                            cancelButtonText: '取消'
                         })
-                        this.$message.success('删除成功')
-                        this.loadData()
-                    } catch (e) {}
-                },
+                        try {
+                            const res = await deleteMyEvaluation({ id: item.id })
+                            if (res.code === 1) {
+                                vant.Toast.success('删除成功')
+                                this.loadData()
+                            } else {
+                                vant.Toast.fail(res.msg || '删除失败')
+                            }
+                        } catch (err) {
+                            vant.Toast.fail('删除失败：' + (err.message || err))
+                        }
+                    } catch (e) { /* 用户取消 */ }
                 // 工具方法
                 getImageList(images) {
                     if (!images) return []
@@ -192,7 +227,18 @@
                 },
                 formatDate(dateStr) {
                     if (!dateStr) return '-'
-                    return dateStr.replace('T', ' ').substring(0, 19)
+                    var d = new Date(dateStr)
+                    if (isNaN(d.getTime())) return dateStr.substring(0, 10)
+                    var now = new Date()
+                    var pad = function(n) { return String(n).padStart(2, '0') }
+                    var dateFmt = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+                    var todayFmt = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate())
+                    var time = pad(d.getHours()) + ':' + pad(d.getMinutes())
+                    if (dateFmt === todayFmt) return '今天 ' + time
+                    var yesterday = new Date(now.getTime() - 86400000)
+                    var yestFmt = yesterday.getFullYear() + '-' + pad(yesterday.getMonth()+1) + '-' + pad(yesterday.getDate())
+                    if (dateFmt === yestFmt) return '昨天 ' + time
+                    return dateFmt + ' ' + time
                 },
                 previewImage(url) {
                     this.previewImages = [url]

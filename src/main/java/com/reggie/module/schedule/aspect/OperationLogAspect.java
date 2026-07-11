@@ -39,6 +39,9 @@ public class OperationLogAspect {
     /** JSON序列化工具 */
     private static final JacksonObjectMapper OBJECT_MAPPER = new JacksonObjectMapper();
 
+    /** error_msg 数据库字段上限，留 10 个字符安全余量 */
+    private static final int ERROR_MSG_MAX_LENGTH = 490;
+
     // 只拦截 POST/PUT/DELETE（增删改）
     /**
      * 环绕通知：记录操作日志
@@ -67,7 +70,7 @@ public class OperationLogAspect {
             success = true;
             return result;
         } catch (Exception e) {
-            errorMsg = e.getMessage();
+            errorMsg = truncateErrorMsg(e.getMessage());
             throw e;
         } finally {
             try {
@@ -80,6 +83,19 @@ public class OperationLogAspect {
                 log.error("记录操作日志失败", e);
             }
         }
+    }
+
+    /**
+     * 截断错误信息，避免超出数据库字段长度
+     */
+    private String truncateErrorMsg(String errorMsg) {
+        if (errorMsg == null) {
+            return null;
+        }
+        if (errorMsg.length() <= ERROR_MSG_MAX_LENGTH) {
+            return errorMsg;
+        }
+        return errorMsg.substring(0, ERROR_MSG_MAX_LENGTH) + "...";
     }
 
     /**

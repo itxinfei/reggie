@@ -13,7 +13,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #F5F5F5;
+  background: var(--bg-page);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft Yahei", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -52,27 +52,28 @@
   max-width: 110rem;
 }
 
-.top-bar .location .el-icon-location-outline {
-  color: #fff;
-  font-size: 16rem;
-  margin-right: 2rem;
+.top-bar .location .icon-location-outline {
+  width: 16rem;
+  height: 16rem;
+  border-color: var(--color-text-white);
+  margin-right: 4rem;
   flex-shrink: 0;
+  border-width: 1.5rem;
   filter: drop-shadow(0 1rem 1rem rgba(0,0,0,0.08));
+}
+.top-bar .location .icon-location-outline::after {
+  width: 5rem;
+  height: 5rem;
+  background: var(--color-text-white);
 }
 
 .top-bar .location span {
   font-size: 15rem;
   font-weight: 700;
-  color: #333;
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.top-bar .location .arr {
-  font-size: 10rem;
-  color: rgba(51,51,51,0.7);
-  margin-left: 1rem;
 }
 
 .top-bar .search-box {
@@ -94,13 +95,13 @@
 }
 
 .top-bar .search-box i {
-  color: #999;
+  color: var(--color-text-hint);
   font-size: 15rem;
   margin-right: 5rem;
 }
 
 .top-bar .search-box span {
-  color: #bbb;
+  color: var(--color-text-disabled);
   font-size: 13rem;
 }
 
@@ -125,7 +126,7 @@
 
 /* ---- 商家信息卡片 ---- */
 .restaurant-card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 12rem;
   padding: 14rem 14rem 8rem 14rem;
   box-shadow: 0 2rem 12rem rgba(0,0,0,0.06);
@@ -163,7 +164,7 @@
 .restaurant-card .rc-name {
   font-size: 18rem;
   font-weight: 700;
-  color: #222;
+  color: var(--color-text-primary);
   margin-right: 6rem;
 }
 
@@ -179,7 +180,7 @@
 
 .restaurant-card .rc-meta {
   font-size: 11rem;
-  color: #666;
+  color: var(--color-text-secondary);
   margin-bottom: 4rem;
   display: flex;
   align-items: center;
@@ -198,7 +199,7 @@
 
 .restaurant-card .rc-delivery {
   font-size: 11rem;
-  color: #999;
+  color: var(--color-text-hint);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -235,7 +236,7 @@
 .coupon-bar .coupon-item .coupon-tag {
   font-size: 10rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-white);
   background: #F34346;
   padding: 1rem 4rem;
   border-radius: 2rem;
@@ -245,14 +246,14 @@
 
 .coupon-bar .coupon-item .coupon-text {
   font-size: 10rem;
-  color: #F34346;
+  color: var(--color-price);
   font-weight: 500;
   white-space: nowrap;
   line-height: 14rem;
 }
 
 .coupon-bar .coupon-arrow {
-  color: #bbb;
+  color: var(--color-text-disabled);
   font-size: 14rem;
   flex-shrink: 0;
   font-weight: 600;
@@ -305,7 +306,7 @@
 /* ---- 左侧分类栏（精确美团样式） ---- */
 .category-sidebar {
   width: 80rem;
-  background: #F6F6F6;
+  background: var(--bg-page);
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -335,7 +336,7 @@
 
 .category-sidebar .cat-item .cat-text {
   font-size: 13rem;
-  color: #666;
+  color: var(--color-text-secondary);
   line-height: 20rem;
   word-break: break-all;
   transition: all 0.2s;
@@ -346,13 +347,13 @@
 }
 
 .category-sidebar .cat-item.active {
-  background: #fff;
+  background: var(--bg-card);
 }
 
 .category-sidebar .cat-item.active .cat-text {
   font-size: 14rem;
   font-weight: 700;
-  color: #222;
+  color: var(--color-text-primary);
 }
 
 .category-sidebar .cat-item.active::before {
@@ -373,7 +374,7 @@
   height: 16rem;
   line-height: 16rem;
   background: #F34346;
-  color: #fff;
+  color: var(--color-text-white);
   font-size: 10rem;
   font-weight: 600;
   border-radius: 8rem;
@@ -390,24 +391,12 @@
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  background: #fff;
+  background: var(--bg-card);
   padding-bottom: 70rem;
 }
 
 .dish-panel::-webkit-scrollbar {
   display: none;
-}
-
-/* 分类标题（美团风格：灰底 + 小字） */
-.dish-section-title {
-  padding: 10rem 14rem 6rem 14rem;
-  font-size: 12rem;
-  color: #aaa;
-  background: #F5F5F5;
-  font-weight: 500;
-  position: sticky;
-  top: 0;
-  z-index: 2;
 }
 
 /* 菜品条目 */
@@ -444,12 +433,12 @@
   background: #F9F9F9;
 }
 
-.dish-item .di-image .el-image {
+.dish-item .di-image img {
   width: 100%;
   height: 100%;
 }
 
-.dish-item .di-image .el-image img {
+.dish-item .di-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -467,7 +456,7 @@
   top: 0;
   left: 0;
   background: linear-gradient(135deg, #FF4757, #FF6348);
-  color: #fff;
+  color: var(--color-text-white);
   font-size: 9rem;
   font-weight: 600;
   padding: 1rem 5rem;
@@ -488,7 +477,7 @@
 .dish-item .di-name {
   font-size: 15rem;
   font-weight: 600;
-  color: #222;
+  color: var(--color-text-primary);
   line-height: 21rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -498,7 +487,7 @@
 
 .dish-item .di-desc {
   font-size: 11rem;
-  color: #999;
+  color: var(--color-text-hint);
   line-height: 15rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -508,7 +497,7 @@
 
 .dish-item .di-sales {
   font-size: 10rem;
-  color: #bbb;
+  color: var(--color-text-disabled);
   margin-bottom: 5rem;
 }
 
@@ -521,7 +510,7 @@
 .dish-item .di-price {
   font-size: 18rem;
   font-weight: 700;
-  color: #F34346;
+  color: var(--color-price);
   line-height: 1;
 }
 
@@ -559,7 +548,7 @@
   justify-content: center;
   font-size: 14rem;
   font-weight: 700;
-  color: #333;
+  color: var(--color-text-primary);
   min-width: 22rem;
   text-align: center;
   line-height: 20rem;
@@ -572,7 +561,7 @@
   align-items: center;
   justify-content: center;
   background: #FFD100;
-  color: #333;
+  color: var(--color-text-primary);
   font-size: 10rem;
   font-weight: 600;
   padding: 2rem 8rem;
@@ -593,7 +582,7 @@
 .empty-tip {
   text-align: center;
   padding: 80rem 0;
-  color: #bbb;
+  color: var(--color-text-disabled);
 }
 
 .empty-tip img {
@@ -605,7 +594,7 @@
 
 .empty-tip p {
   font-size: 14rem;
-  color: #ccc;
+  color: var(--color-text-disabled);
 }
 
 /* ================================================================
@@ -661,7 +650,7 @@
   top: -4rem;
   right: -6rem;
   background: #F34346;
-  color: #fff;
+  color: var(--color-text-white);
   font-size: 10rem;
   font-weight: 700;
   min-width: 18rem;
@@ -675,7 +664,7 @@
 }
 
 .cart-bar .cart-price {
-  color: #fff;
+  color: var(--color-text-white);
   font-weight: 600;
   display: flex;
   align-items: baseline;
@@ -693,7 +682,7 @@
 }
 
 .cart-bar .cart-empty-text {
-  color: #999;
+  color: var(--color-text-hint);
   font-size: 13rem;
 }
 
@@ -716,7 +705,7 @@
 
 .cart-bar .cart-submit-active {
   background: linear-gradient(135deg, #FFD100, #FFAE00);
-  color: #333;
+  color: var(--color-text-primary);
   box-shadow: 0 2rem 6rem rgba(255,209,0,0.35);
 }
 
@@ -727,7 +716,7 @@
 
 .cart-bar .cart-submit-disabled {
   background: #555;
-  color: #888;
+  color: var(--color-text-disabled);
   cursor: not-allowed;
 }
 
@@ -737,7 +726,7 @@
 /* 修改点：移除 overflow:hidden，避免裁剪定位在弹窗外部的关闭按钮 */
 /* Vant van-dialog 默认 overflow:hidden，需用 !important 覆盖以确保关闭按钮可见 */
 #main .dialogFlavor {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 16rem;
   overflow: visible !important;
 }
@@ -747,7 +736,7 @@
   margin-bottom: 14rem;
   font-size: 18rem;
   font-weight: 700;
-  color: #333;
+  color: var(--color-text-primary);
   text-align: center;
 }
 
@@ -757,7 +746,7 @@
 
 #main .dialogFlavor .divContent .divFlavorTitle {
   font-size: 14rem;
-  color: #666;
+  color: var(--color-text-secondary);
   line-height: 20rem;
   margin-left: 4rem;
   margin-bottom: 8rem;
@@ -767,14 +756,14 @@
 #main .dialogFlavor .divContent span {
   display: inline-block;
   height: 30rem;
-  background: #fff;
+  background: var(--bg-card);
   border: 1px solid #E0E0E0;
   border-radius: 15rem;
   line-height: 30rem;
   padding: 0 14rem;
   margin: 0 4rem 8rem 4rem;
   font-size: 13rem;
-  color: #333;
+  color: var(--color-text-primary);
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -800,7 +789,7 @@
 #main .dialogFlavor .divBottom div:first-child {
   font-size: 20rem;
   font-weight: 700;
-  color: #F34346;
+  color: var(--color-price);
   line-height: 30rem;
 }
 
@@ -817,7 +806,7 @@
   line-height: 34rem;
   font-size: 14rem;
   font-weight: 700;
-  color: #333;
+  color: var(--color-text-primary);
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -856,7 +845,7 @@
    购物车弹窗
    ================================================================ */
 #main .dialogCart {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 16rem 16rem 0 0;
 }
 
@@ -872,7 +861,7 @@
 #main .dialogCart .divCartTitle .title {
   font-size: 17rem;
   font-weight: 700;
-  color: #222;
+  color: var(--color-text-primary);
 }
 
 #main .dialogCart .divCartTitle i {
@@ -882,7 +871,7 @@
 }
 
 #main .dialogCart .divCartTitle .clear {
-  color: #999;
+  color: var(--color-text-hint);
   font-size: 14rem;
   cursor: pointer;
 }
@@ -909,7 +898,7 @@
   position: relative;
 }
 
-#main .dialogCart .divCartContent .el-image {
+#main .dialogCart .divCartContent .cart-img {
   width: 50rem;
   height: 50rem;
   flex-shrink: 0;
@@ -918,7 +907,7 @@
   overflow: hidden;
 }
 
-#main .dialogCart .divCartContent .el-image img {
+#main .dialogCart .divCartContent .cart-img img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -931,7 +920,7 @@
 #main .dialogCart .divCartContent .divDesc .name {
   font-size: 15rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
   line-height: 20rem;
   margin-bottom: 4rem;
 }
@@ -939,7 +928,7 @@
 #main .dialogCart .divCartContent .divDesc .price {
   font-size: 16rem;
   font-weight: 700;
-  color: #F34346;
+  color: var(--color-price);
 }
 
 #main .dialogCart .divCartContent .divDesc .price .spanMoney {
@@ -966,7 +955,7 @@
 #main .dialogCart .divCartContent .divCartItem .divNum .divDishNum {
   font-size: 15rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
   min-width: 18rem;
   text-align: center;
 }
@@ -977,7 +966,7 @@
   left: 62rem;
   right: 0;
   height: 1px;
-  background: #F5F5F5;
+  background: var(--bg-page);
 }
 
 #main .dialogCart .divCartContent .divCartItem:last-child .divSplit {
@@ -1001,13 +990,13 @@
   max-height: 50vh;
 }
 
-#main .detailsDialog .el-image {
+#main .detailsDialog .dialog-img {
   width: 100%;
   border-radius: 10rem;
   overflow: hidden;
 }
 
-#main .detailsDialog .el-image img {
+#main .detailsDialog .dialog-img img {
   width: 100%;
   border-radius: 10rem;
 }
@@ -1015,7 +1004,7 @@
 #main .detailsDialog .title {
   font-size: 18rem;
   font-weight: 700;
-  color: #222;
+  color: var(--color-text-primary);
   line-height: 28rem;
   margin-top: 14rem;
   margin-bottom: 8rem;
@@ -1026,7 +1015,7 @@
 
 #main .detailsDialog .content {
   font-size: 14rem;
-  color: #666;
+  color: var(--color-text-secondary);
   line-height: 22rem;
   text-align: justify;
 }
@@ -1043,7 +1032,7 @@
 #main .detailsDialog .divNum .left {
   font-size: 20rem;
   font-weight: 700;
-  color: #F34346;
+  color: var(--color-price);
   line-height: 36rem;
 }
 
@@ -1060,7 +1049,7 @@
 #main .detailsDialog .divNum .divDishNum {
   font-size: 15rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
   min-width: 18rem;
   text-align: center;
 }
@@ -1071,7 +1060,7 @@
   border-radius: 14rem;
   font-size: 12rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
   line-height: 28rem;
   padding: 0 14rem;
   cursor: pointer;
@@ -1156,7 +1145,7 @@
 
 #main .detailsDialog .eval-count {
   font-size: 12rem;
-  color: #999;
+  color: var(--color-text-hint);
   margin-left: 4rem;
 }
 
@@ -1182,7 +1171,7 @@
 #main .detailsDialog .eval-review-user {
   font-size: 13rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 #main .detailsDialog .eval-review-stars {
@@ -1201,14 +1190,14 @@
 
 #main .detailsDialog .eval-review-content {
   font-size: 13rem;
-  color: #666;
+  color: var(--color-text-secondary);
   line-height: 20rem;
   margin-bottom: 4rem;
 }
 
 #main .detailsDialog .eval-review-time {
   font-size: 11rem;
-  color: #bbb;
+  color: var(--color-text-disabled);
 }
 
 /* ================================================================
@@ -1231,18 +1220,18 @@
 #main .setMealDetailsDialog .title {
   font-size: 18rem;
   font-weight: 700;
-  color: #222;
+  color: var(--color-text-primary);
   line-height: 28rem;
   margin-bottom: 10rem;
 }
 
-#main .setMealDetailsDialog .el-image {
+#main .setMealDetailsDialog .meal-img {
   width: 100%;
   border-radius: 8rem;
   overflow: hidden;
 }
 
-#main .setMealDetailsDialog .el-image img {
+#main .setMealDetailsDialog .meal-img img {
   width: 100%;
   border-radius: 8rem;
 }
@@ -1253,7 +1242,7 @@
   margin-bottom: 4rem;
   font-size: 15rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
   line-height: 22rem;
   position: relative;
 }
@@ -1264,7 +1253,7 @@
   top: 0;
   font-size: 16rem;
   font-weight: 700;
-  color: #F34346;
+  color: var(--color-price);
   line-height: 22rem;
 }
 
@@ -1274,7 +1263,7 @@
 
 #main .setMealDetailsDialog .content {
   font-size: 12rem;
-  color: #999;
+  color: var(--color-text-hint);
   line-height: 18rem;
   text-align: left;
 }
@@ -1292,7 +1281,7 @@
 #main .setMealDetailsDialog .divNum .left {
   font-size: 20rem;
   font-weight: 700;
-  color: #F34346;
+  color: var(--color-price);
   line-height: 36rem;
 }
 
@@ -1309,7 +1298,7 @@
 #main .setMealDetailsDialog .divNum .divDishNum {
   font-size: 15rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
   min-width: 18rem;
   text-align: center;
 }
@@ -1320,7 +1309,7 @@
   border-radius: 14rem;
   font-size: 12rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
   line-height: 28rem;
   padding: 0 12rem;
   cursor: pointer;
@@ -1344,7 +1333,7 @@
   border-radius: 16rem;
   font-size: 14rem;
   font-weight: 700;
-  color: #333;
+  color: var(--color-text-primary);
   line-height: 32rem;
   cursor: pointer;
 }
@@ -1374,7 +1363,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: #fff;
+  background: var(--bg-card);
   z-index: 999;
   display: flex;
   flex-direction: column;
@@ -1391,7 +1380,7 @@
   display: flex;
   align-items: center;
   padding: 8rem 12rem;
-  background: #fff;
+  background: var(--bg-card);
   gap: 10rem;
   flex-shrink: 0;
   border-bottom: 0.5px solid #F0F0F0;
@@ -1401,7 +1390,7 @@
   flex: 1;
   display: flex;
   align-items: center;
-  background: #F5F5F5;
+  background: var(--bg-page);
   border-radius: 20rem;
   padding: 0 12rem;
   height: 36rem;
@@ -1414,7 +1403,7 @@
 
 .search-input-wrap .so-icon {
   font-size: 16rem;
-  color: #999;
+  color: var(--color-text-hint);
   margin-right: 6rem;
   flex-shrink: 0;
 }
@@ -1424,18 +1413,18 @@
   border: none;
   background: transparent;
   font-size: 14rem;
-  color: #333;
+  color: var(--color-text-primary);
   outline: none;
   line-height: 36rem;
 }
 
 .search-input-wrap .search-input::placeholder {
-  color: #bbb;
+  color: var(--color-text-disabled);
 }
 
 .search-input-wrap .so-clear {
   font-size: 17rem;
-  color: #ccc;
+  color: var(--color-text-disabled);
   margin-left: 4rem;
   flex-shrink: 0;
   cursor: pointer;
@@ -1443,7 +1432,7 @@
 
 .search-cancel {
   font-size: 15rem;
-  color: #333;
+  color: var(--color-text-primary);
   cursor: pointer;
   flex-shrink: 0;
   font-weight: 500;
@@ -1468,12 +1457,12 @@
   padding: 16rem 0 10rem 0;
   font-size: 14rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
-.search-section-title .el-icon-delete {
+.search-section-title .icon-delete {
   font-size: 16rem;
-  color: #ccc;
+  color: var(--color-text-disabled);
   cursor: pointer;
 }
 
@@ -1485,8 +1474,8 @@
 
 .search-tag {
   display: inline-block;
-  background: #F5F5F5;
-  color: #666;
+  background: var(--bg-page);
+  color: var(--color-text-secondary);
   font-size: 12rem;
   padding: 5rem 12rem;
   border-radius: 14rem;
@@ -1505,7 +1494,7 @@
 .search-empty-state {
   text-align: center;
   padding: 60rem 0;
-  color: #ccc;
+  color: var(--color-text-disabled);
   font-size: 14rem;
 }
 
@@ -1513,25 +1502,25 @@
 .search-summary {
   padding: 12rem 0 4rem 0;
   font-size: 12rem;
-  color: #999;
+  color: var(--color-text-hint);
 }
 
 .search-summary b {
-  color: #F34346;
+  color: var(--color-price);
   font-weight: 700;
 }
 
 .search-subtitle {
   font-size: 13rem;
   font-weight: 700;
-  color: #333;
+  color: var(--color-text-primary);
   padding: 12rem 0 6rem 0;
 }
 
 .search-empty-result {
   text-align: center;
   padding: 80rem 0;
-  color: #bbb;
+  color: var(--color-text-disabled);
 }
 
 .search-empty-result img {
@@ -1543,12 +1532,12 @@
 
 .search-empty-result p {
   font-size: 14rem;
-  color: #ccc;
+  color: var(--color-text-disabled);
 }
 
 .search-empty-result p.sub {
   font-size: 12rem;
-  color: #ddd;
+  color: var(--color-text-disabled);
   margin-top: 4rem;
 }
 
@@ -1562,7 +1551,7 @@
 
 /* 修改点：搜索联想建议下拉 */
 .search-suggestions {
-  background: #fff;
+  background: var(--bg-card);
   border-top: 0.5px solid #F0F0F0;
   overflow: hidden;
 }
@@ -1578,11 +1567,11 @@
 }
 
 .search-suggestions .suggestion-item:active {
-  background: #f5f5f5;
+  background: var(--bg-page);
 }
 
-.search-suggestions .suggestion-item .el-icon-search {
-  color: #bbb;
+.search-suggestions .suggestion-item .icon-search {
+  color: var(--color-text-disabled);
   font-size: 14rem;
   margin-right: 10rem;
   flex-shrink: 0;
@@ -1591,7 +1580,7 @@
 .search-suggestions .suggestion-item .suggestion-name {
   flex: 1;
   font-size: 14rem;
-  color: #333;
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1599,10 +1588,10 @@
 
 .search-suggestions .suggestion-item .suggestion-type {
   font-size: 11rem;
-  color: #bbb;
+  color: var(--color-text-disabled);
   flex-shrink: 0;
   margin-left: 8rem;
-  background: #f5f5f5;
+  background: var(--bg-page);
   padding: 1rem 6rem;
   border-radius: 3rem;
 }
@@ -1611,7 +1600,7 @@
    智能推荐区域
    ================================================================ */
 .recommend-section {
-  background: #fff;
+  background: var(--bg-card);
   margin: 0 12rem 0;
   padding: 12rem 0 8rem;
   border-bottom: 6rem solid #f5f5f5;
@@ -1625,11 +1614,11 @@
 .recommend-title {
   font-size: 15rem;
   font-weight: 700;
-  color: #333;
+  color: var(--color-text-primary);
 }
 .recommend-sub {
   font-size: 11rem;
-  color: #999;
+  color: var(--color-text-hint);
   margin-left: 8rem;
 }
 .recommend-scroll {
@@ -1666,7 +1655,7 @@
 }
 .ri-name {
   font-size: 12rem;
-  color: #333;
+  color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

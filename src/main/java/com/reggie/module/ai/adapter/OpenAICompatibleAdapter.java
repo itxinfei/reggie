@@ -104,7 +104,7 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                 log.error("AI请求[{} / {}]失败: url={}, code={}, error={}, requestBody={}",
                         config.getProviderCode(), FORMAT_ID, apiUrl, responseCode, errorBody,
                         truncate(jsonBody, 500));
-                String userMsg = buildUserFriendlyError(config.getProviderName(), parseErrorMessage(errorBody));
+                String userMsg = buildUserFriendlyError(config.getProviderName(), errorBody);
                 return errorResponse(userMsg, config);
             }
         } catch (Exception e) {
@@ -126,6 +126,7 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
     private AIChatResponse parseResponse(HttpURLConnection conn, AiProviderConfig config) {
         try {
             String rawBody = readResponseBody(conn);
+
             JsonNode root = getObjectMapper().readTree(rawBody);
 
             // 优先解析 choices[0].message.content（标准 OpenAI 格式）
@@ -169,43 +170,14 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             return errorResponse(config.getProviderName() + "返回了无法识别的响应格式", config);
 
         } catch (com.fasterxml.jackson.core.JsonParseException e) {
-            String htmlPreview = readBodyAsTextSafely(conn);
-            log.error("AI接口[{} / {}]返回了非JSON响应(HTTP 200): bodyPreview={}",
-                    config.getProviderCode(), FORMAT_ID, truncate(htmlPreview, 200));
+            log.error("AI接口[{} / {}]返回了非JSON响应: bodyPreview={}",
+                    config.getProviderCode(), FORMAT_ID, truncate(e.getMessage(), 200));
             return errorResponse("AI接口地址配置错误（" + config.getProviderName()
                     + "）：服务器返回了非 JSON 格式的响应。请检查「" + config.getBaseUrl()
                     + "」是否为正确的 API 基础地址。", config);
         } catch (Exception e) {
             log.error("AI响应[{} / {}]解析异常", config.getProviderCode(), FORMAT_ID, e);
             return errorResponse("AI服务返回异常（" + config.getProviderName() + "）：" + e.getMessage(), config);
-        }
-    }
-
-    /**
-     * 从错误响应中提取可读的错误消息
-     * <pre>{ error: { message: "xxx" } }</pre>
-     */
-    private String parseErrorMessage(String errorBody) {
-        try {
-            JsonNode root = getObjectMapper().readTree(errorBody);
-            JsonNode error = root.path("error");
-            if (error.isObject()) {
-                return error.path("message").asText(errorBody);
-            }
-            return root.toString();
-        } catch (Exception e) {
-            return errorBody;
-        }
-    }
-
-    /**
-     * 安全读取响应体文本（用于已消费的流诊断）
-     */
-    private String readBodyAsTextSafely(HttpURLConnection conn) {
-        try {
-            return readResponseBody(conn);
-        } catch (Exception e) {
-            return "(无法读取响应体: " + e.getMessage() + ")";
         }
     }
 }

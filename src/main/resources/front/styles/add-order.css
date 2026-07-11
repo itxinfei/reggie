@@ -1,19 +1,18 @@
+/* 修改点：统一头部品牌色渐变 */
 #add_order .divHead {
   width: 100%;
-  height: 88rem;
-  opacity: 1;
-  background: linear-gradient(180deg, #2b2b2b, #333333);
+  height: var(--header-height);
+  background: var(--color-primary-gradient);
   position: relative;
 }
 
 #add_order .divHead .divTitle {
-  font-size: 18rem;
-  font-family: PingFangSC, PingFangSC-Semibold;
+  font-size: var(--header-title-font-size);
+  font-family: var(--font-family-title);
   font-weight: 600;
   text-align: center;
-  color: #ffffff;
+  color: var(--color-text-primary);
   line-height: 25rem;
-  letter-spacing: 0;
   position: absolute;
   bottom: 13rem;
   width: 100%;
@@ -21,11 +20,11 @@
 
 #add_order .divHead .divTitle i {
   position: absolute;
-  left: 16rem;
+  left: var(--spacing-lg);
   top: 50%;
   transform: translate(0, -50%);
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform var(--transition-fast);
 }
 
 #add_order .divHead .divTitle i:active {
@@ -40,25 +39,23 @@
 
 #add_order .divContent .divAddress {
   height: 120rem;
-  opacity: 1;
-  background: #ffffff;
-  border-radius: 8rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
   position: relative;
-  padding: 11rem 10rem 0 16rem;
-  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
+  padding: 11rem var(--spacing-md) 0 var(--spacing-lg);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
-  transition: box-shadow 0.2s;
+  transition: box-shadow var(--transition-fast);
 }
 
 #add_order .divContent .divAddress:active {
-  box-shadow: 0 1rem 8rem rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-card-hover);
 }
 
 #add_order .divContent .divAddress .address {
   height: 25rem;
-  opacity: 1;
   font-size: 18rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: var(--font-family-body);
   font-weight: 500;
   text-align: left;
   color: #20232a;
@@ -67,7 +64,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  width: 300rem;
+  max-width: 100%;
 }
 
 #add_order .divContent .divAddress .name {
@@ -144,16 +141,13 @@
   display: flex;
 }
 
-#add_order .divContent .order .itemList .item .el-image {
+/* 修改点：el-image替换为原生img */
+#add_order .divContent .order .itemList .item .dish-image {
   padding-top: 20rem;
   padding-bottom: 20rem;
   width: 64rem;
   height: 64rem;
-}
-
-#add_order .divContent .order .itemList .item .el-image img {
-  width: 64rem;
-  height: 64rem;
+  object-fit: cover;
 }
 
 #add_order .divContent .order .itemList .item:first-child .desc {

@@ -8,8 +8,6 @@
         <link rel="icon" href="./../images/favico.ico">
         <!--不同屏幕尺寸根字体设置-->
         <script src="./../js/base.js"></script>
-        <!--element-ui的样式-->
-        <link rel="stylesheet" href="../../backend/plugins/element-ui/index.css" />
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
@@ -18,27 +16,31 @@
         <link rel="stylesheet" href="./../styles/add-order.css" />
     </head>
     <body>
-        <div id="add_order" class="app" v-loading="loading">
+        <!-- 修改点：移除ElementUI v-loading，改用CSS加载遮罩 -->
+        <div id="add_order" class="app" style="position:relative;">
+            <div v-if="loading" class="loading-overlay">
+                <div class="loading-spinner"></div>
+            </div>
             <div class="divHead">
                 <div class="divTitle">
-                    <i class="el-icon-arrow-left" @click="goBack"></i>瑞吉外卖
+                    <i class="icon-back-arrow" @click="goBack"></i>瑞吉外卖
                 </div>
             </div>
             <div class="divContent">
                 <div class="divAddress">
                     <div @click="toAddressPage">                    
-                        <div class="address">{{address.detail}}</div>
+                        <div class="address">{{ addressFull }}</div>
                         <div class="name">
                             <span>{{address.consignee}}{{address.sex === '1' ? '先生':'女士'}}</span>
                             <span>{{address.phone}}</span>
                         </div>
-                        <i class="el-icon-arrow-right"></i>
+                        <i class="icon-arrow-right"></i>
                     </div>
                     <div class="divSplit"></div>
                     <!-- 修改点：送达时间可选择 -->
                     <div class="divFinishTime" @click="showTimePicker = true">
                         预计{{ selectedTimeLabel }}
-                        <i class="el-icon-arrow-right" style="font-size:12rem;vertical-align:middle;"></i>
+                        <i class="icon-arrow-right" style="font-size:12rem;vertical-align:middle;"></i>
                     </div>
                 </div>
 
@@ -67,11 +69,8 @@
                     <div class="divSplit"></div>
                     <div class="itemList">
                         <div class="item" v-for="(item,index) in cartData" :key="index">
-                            <el-image :src="imgPath(item.image)">
-                                <div slot="error" class="image-slot">
-                                    <img src="./../images/noImg.png"/>
-                                </div>
-                            </el-image>
+                            <!-- 修改点：el-image替换为原生img，错误时显示占位图 -->
+                            <img :src="imgPath(item.image)" @error="imgError" class="dish-image" />
                             <div class="desc">
                                 <div class="name">{{item.name}}</div>
                                 <div class="numPrice">
@@ -150,9 +149,7 @@
         </div>
         <!-- 开发环境版本，包含了有帮助的命令行警告 -->
         <script src="../../backend/plugins/vue/vue.js"></script>
-        <!-- 引入组件库 -->
-        <script src="../../backend/plugins/element-ui/index.js"></script>
-        <!-- 引入vant样式 -->
+        <!-- 引入vant -->
         <script src="./../js/vant.min.js"></script>      
         <script src="./../api/address.js"></script>
         <!-- 引入axios -->
@@ -170,6 +167,9 @@
                             phone:'',//手机号
                             consignee:'',//姓名
                             detail:'',//详细地址
+                            provinceName:'',// 修改点：省
+                            cityName:'',// 修改点：市
+                            districtName:'',// 修改点：区
                             sex:'1',
                             id:undefined
                         },
@@ -247,6 +247,12 @@
                             return option.time + ' ' + option.label
                         }
                         return this.finishTime
+                    },
+                    // 修改点：完整地址拼接
+                    addressFull(){
+                        const a = this.address
+                        const parts = [a.provinceName, a.cityName, a.districtName, a.detail].filter(Boolean)
+                        return parts.join('') || a.detail || '请选择收货地址'
                     }
                 },
                 created(){
@@ -261,6 +267,10 @@
                     // 修改点：将common.js的全局函数imgPath注册为Vue实例方法
                     imgPath(path){
                       return '/common/download?name=' + path
+                    },
+                    // 修改点：图片加载失败兜底
+                    imgError(e){
+                        e.target.src = './../images/noImg.png'
                     },
                     goBack(){
                         history.go(-1)
@@ -311,7 +321,7 @@
                         if(res.code === 1){
                             this.cartData = res.data
                         }else{
-                            this.$notify({ type:'warning', message:res.msg});
+                            vant.Toast.fail(res.msg || '加载购物车失败');
                         }
                     },
                     // 修改点：选择优惠券
@@ -325,11 +335,11 @@
                     },
                     async goToPaySuccess(){
                         if(!this.cartData || this.cartData.length === 0){
-                            this.$notify({ type:'warning', message:'购物车为空，请先添加商品'});
+                            vant.Toast.fail('购物车为空，请先添加商品');
                             return
                         }
                         if(!this.address.id){
-                            this.$notify({ type:'warning', message:'请先添加收货地址'});
+                            vant.Toast.fail('请先添加收货地址');
                             return
                         }
                         if(this.loading) return;
@@ -348,7 +358,7 @@
                                 window.location.replace('/front/page/pay-success.html')
                             })
                         }else{
-                            this.$notify({ type:'warning', message:res.msg});
+                            vant.Toast.fail(res.msg || '提交订单失败');
                         }
                     },
                 }

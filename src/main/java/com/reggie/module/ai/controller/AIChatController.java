@@ -119,7 +119,8 @@ public class AIChatController {
             conversationId = conv.getConversationId();
         }
 
-        AIChatResponse response = aiChatService.orderAssistant(message, userId);
+        // 修改点：已在Controller层统一创建对话，Service层复用此conversationId避免重复创建
+        AIChatResponse response = aiChatService.orderAssistant(message, userId, conversationId);
         // 附加 conversationId 到响应中，方便前端后续使用
         if (response != null && response.getData() == null) {
             response.setData(new HashMap<>());
@@ -136,8 +137,8 @@ public class AIChatController {
     @GetMapping("/order-assistant/stream")
     @Operation(summary = "智能点餐助手（流式）", description = "SSE流式输出推荐结果")
     public SseEmitter orderAssistantStream(@RequestParam String message,
-                                            @RequestParam(required = false) Long userId,
                                             @RequestParam(required = false) String conversationId) {
+        Long userId = BaseContext.getCurrentId();
         log.info("智能点餐流式: userId={}, messageLength={}", userId, message.length());
         return aiChatService.orderAssistantStream(message, userId, conversationId);
     }

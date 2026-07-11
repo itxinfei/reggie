@@ -1,10 +1,85 @@
+/* ================================================================
+   全局设计 Token 系统 — 瑞吉外卖 v5
+   所有页面统一引用，确保品牌一致性
+   ================================================================ */
+:root {
+  /* ---- 品牌色 ---- */
+  --color-primary: #ffc200;
+  --color-primary-dark: #ff9a00;
+  --color-primary-light: #ffd54f;
+  --color-primary-gradient: linear-gradient(135deg, #ffc200 0%, #ff9a00 100%);
+
+  /* ---- 文字色 ---- */
+  --color-text-primary: #333333;
+  --color-text-secondary: #666666;
+  --color-text-hint: #999999;
+  --color-text-disabled: #cccccc;
+  --color-text-white: #ffffff;
+
+  /* ---- 功能色 ---- */
+  --color-danger: #e94e3c;
+  --color-success: #07c160;
+  --color-warning: #ffb300;
+  --color-info: #1890ff;
+  --color-price: #F34346;
+
+  /* ---- 背景色 ---- */
+  --bg-page: #f3f2f7;
+  --bg-card: #ffffff;
+  --bg-input: #f8f9fa;
+  --bg-hover: #f5f5f5;
+
+  /* ---- 圆角 ---- */
+  --radius-sm: 4rem;
+  --radius-md: 8rem;
+  --radius-lg: 12rem;
+  --radius-xl: 16rem;
+  --radius-round: 50%;
+
+  /* ---- 间距 ---- */
+  --spacing-xs: 4rem;
+  --spacing-sm: 8rem;
+  --spacing-md: 12rem;
+  --spacing-lg: 16rem;
+  --spacing-xl: 20rem;
+
+  /* ---- 头部 ---- */
+  --header-height: 88rem;
+  --header-title-font-size: 18rem;
+
+  /* ---- 字体 ---- */
+  --font-family-base: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft Yahei", sans-serif;
+  --font-family-title: PingFangSC, PingFangSC-Semibold;
+  --font-family-body: PingFangSC, PingFangSC-Regular;
+  --font-family-number: DIN, DIN-Medium;
+
+  /* ---- 字号 ---- */
+  --font-size-xs: 10rem;
+  --font-size-sm: 12rem;
+  --font-size-md: 14rem;
+  --font-size-lg: 16rem;
+  --font-size-xl: 18rem;
+
+  /* ---- 阴影 ---- */
+  --shadow-card: 0 2rem 10rem rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 4rem 16rem rgba(0, 0, 0, 0.08);
+
+  /* ---- 动画 ---- */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ================================================================
+   全局基础样式
+   ================================================================ */
 html,
 body {
   max-width: 750px;
   height: 100%;
-  background: #f3f2f7;
-  font-family: Helvetica;
+  background: var(--bg-page);
+  font-family: var(--font-family-base);
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 html,
@@ -89,39 +164,166 @@ i {
   background-color: rgba(0, 0, 0, 0.3);
 }
 
+/* ---- 通用返回箭头 (纯CSS，无需ElementUI依赖) ---- */
+.icon-back-arrow {
+  display: inline-block;
+  width: 10rem;
+  height: 10rem;
+  border-left: 2rem solid currentColor;
+  border-bottom: 2rem solid currentColor;
+  transform: rotate(45deg);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+/* ---- 通用右箭头 ---- */
+.icon-arrow-right {
+  display: inline-block;
+  width: 8rem;
+  height: 8rem;
+  border-right: 2rem solid currentColor;
+  border-top: 2rem solid currentColor;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+/* ---- 通用定位图标 (替代el-icon-location-outline) ---- */
+.icon-location-outline {
+  display: inline-block;
+  width: 36rem;
+  height: 36rem;
+  border: 3rem solid var(--color-text-hint);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  position: relative;
+}
+
+.icon-location-outline::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 10rem;
+  height: 10rem;
+  background: var(--color-text-hint);
+  border-radius: 50%;
+}
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.loading-spinner {
+  width: 32rem;
+  height: 32rem;
+  border: 3rem solid var(--color-text-disabled);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: loading-spin 0.8s linear infinite;
+}
+
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 修改点：ElementUI 替换 —— 搜索图标（放大镜） */
+.icon-search {
+  display: inline-block;
+  width: 14rem;
+  height: 14rem;
+  border: 2rem solid currentColor;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+.icon-search::after {
+  content: '';
+  position: absolute;
+  bottom: -2rem;
+  right: -2rem;
+  width: 7rem;
+  height: 2rem;
+  background: currentColor;
+  transform: rotate(45deg);
+  transform-origin: left center;
+  border-radius: 1rem;
+}
+
+/* 修改点：ElementUI 替换 —— 向下箭头图标 */
+.icon-arrow-down {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 5rem solid transparent;
+  border-right: 5rem solid transparent;
+  border-top: 6rem solid currentColor;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* 修改点：ElementUI 替换 —— 圆形关闭图标 */
+.icon-circle-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20rem;
+  height: 20rem;
+  border-radius: 50%;
+  background: var(--color-text-disabled);
+  color: var(--color-text-white);
+  font-size: 14rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.icon-circle-close:active {
+  background: var(--color-text-hint);
+}
+
 .van-dialog {
   overflow: inherit;
 }
 
 ::-webkit-input-placeholder {
-  font-size: 13rem;
+  font-size: 13px;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
   text-align: left;
-  color: #999999;
+  color: var(--color-text-hint);
 }
 
 :-moz-placeholder {
   /* Firefox 18- */
-  font-size: 13rem;
+  font-size: 13px;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
   text-align: left;
-  color: #999999;
+  color: var(--color-text-hint);
 }
 ::-moz-placeholder {
   /* Firefox 19+ */
-  font-size: 13rem;
+  font-size: 13px;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
   text-align: left;
-  color: #999999;
+  color: var(--color-text-hint);
 }
 
 :-ms-input-placeholder {
-  font-size: 13rem;
+  font-size: 13px;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
   text-align: left;
-  color: #999999;
+  color: var(--color-text-hint);
 }

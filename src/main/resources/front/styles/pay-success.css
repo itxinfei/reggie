@@ -1,41 +1,37 @@
+/* 修改点：统一品牌色头部 + 移除ElementUI依赖 */
 #pay_success .divHead {
   width: 100%;
-  height: 88rem;
-  opacity: 1;
-  background: #333333;
+  height: var(--header-height);
+  background: var(--color-primary-gradient);
   position: relative;
 }
 
 #pay_success .divHead .divTitle {
-  font-size: 18rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 500;
+  font-size: var(--header-title-font-size);
+  font-family: var(--font-family-title);
+  font-weight: 600;
   text-align: center;
-  color: #ffffff;
-  line-height: 25rem;
-  letter-spacing: 0;
-  position: absolute;
-  bottom: 13rem;
-  width: 100%;
+  color: var(--color-text-primary);
+  line-height: var(--header-height);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 var(--spacing-lg);
 }
 
 #pay_success .divHead .divTitle i {
-  margin-left: 16rem;
+  color: var(--color-text-primary);
 }
 
 #pay_success .divHead .divTitle img {
   width: 18rem;
   height: 18rem;
-  margin-right: 19rem;
 }
 
 #pay_success .divContent {
-  height: calc(100vh - 88rem);
+  height: calc(100vh - var(--header-height));
   width: 100%;
-  background: #ffffff;
+  background: var(--bg-card);
   display: flex;
   flex-direction: column;
   text-align: center;
@@ -51,12 +47,11 @@
 
 #pay_success .divContent .divSuccess {
   height: 33rem;
-  opacity: 1;
   font-size: 24rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: var(--font-family-title);
   font-weight: 500;
   text-align: center;
-  color: #333333;
+  color: var(--color-text-primary);
   line-height: 33rem;
   margin-top: 19rem;
   margin-bottom: 10rem;
@@ -65,12 +60,11 @@
 #pay_success .divContent .divDesc,
 #pay_success .divContent .divDesc1 {
   height: 22rem;
-  opacity: 1;
-  font-size: 16rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-size: var(--font-size-lg);
+  font-family: var(--font-family-title);
   font-weight: 400;
   text-align: center;
-  color: #666666;
+  color: var(--color-text-secondary);
   line-height: 22rem;
 }
 
@@ -82,16 +76,18 @@
 #pay_success .divContent .btnView {
   width: 124rem;
   height: 36rem;
-  opacity: 1;
-  background: #ffc200;
-  border-radius: 18px;
-  opacity: 1;
+  background: var(--color-primary);
+  border-radius: 18rem;
   font-size: 15rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: var(--font-family-title);
   font-weight: 500;
   text-align: center;
-  color: #333333;
-  line-height: 21rem;
-  letter-spacing: 0;
+  color: var(--color-text-primary);
   line-height: 36rem;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+#pay_success .divContent .btnView:active {
+  opacity: 0.8;
 }

@@ -559,7 +559,7 @@ html, body {
 .search-item:hover {
   background: #f9fafb;
 }
-.search-item .iconfont {
+.search-item i[class*="ri-"] {
   font-size: 16px;
   color: var(--text-muted);
   flex-shrink: 0;
@@ -808,3 +808,8 @@ html, body {
 .app-main .el-loading-mask {
   background: rgba(245, 246, 250, 0.7);
 }
+
+/* ----------------------------------------------------------
+   17. 已废弃 — 图标库已从 iconfont（7个）迁移至 Remix Icon（2700+）
+   修改点：2026-07-11 全局替换 icon-xxx 为 ri-xxx-line，移除 CSS mask 兜底方案
+   ---------------------------------------------------------- */

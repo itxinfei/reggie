@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.BaseContext;
 import com.reggie.entity.Dish;
 import com.reggie.mapper.DishMapper;
 import com.reggie.module.ai.config.AIConfigProperties;
@@ -18,6 +19,7 @@ import com.reggie.module.recommend.service.PreferenceAnalysisService;
 import com.reggie.module.ai.service.UserProfileService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
@@ -96,14 +98,17 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
     @Override
     public SseEmitter chatStream(AIChatRequest request) {
+        final Long userId = request.getUserId();
+        final String conversationId = request.getConversationId();
+        final String scene = request.getScene();
+        final String userMessage = request.getMessage();
         long sseTimeout = resolveSseTimeout();
         SseEmitter emitter = new SseEmitter(sseTimeout);
-        emitter.onTimeout(() -> log.warn("SSE连接超时: conversationId={}", request.getConversationId()));
-        emitter.onError((e) -> log.warn("SSE连接错误: conversationId={}", request.getConversationId(), e));
-        emitter.onCompletion(() -> log.debug("SSE连接完成: conversationId={}", request.getConversationId()));
+        emitter.onTimeout(() -> log.warn("SSE连接超时: conversationId={}", conversationId));
+        emitter.onError((e) -> log.warn("SSE连接错误: conversationId={}", conversationId, e));
+        emitter.onCompletion(() -> log.debug("SSE连接完成: conversationId={}", conversationId));
 
         saveUserMessage(request);
-        final Long userId = request.getUserId();
         final AiProviderConfig providerConfig = aiProviderManager.getActiveConfig();
 
         CompletableFuture.runAsync(() -> {
@@ -115,18 +120,28 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                         ? providerConfig.getTemperature() : aiConfig.getTemperature();
                 AIChatResponse response = aiProviderManager.chat(messages, maxTokens, temperature);
 
+                // 错误响应：如果AI返回了错误内容，发送error事件而非正常流
+                if (response != null && isErrorResponse(response.getContent())) {
+                    Map<String, Object> errorData = new HashMap<>();
+                    errorData.put("message", response.getContent());
+                    emitter.send(SseEmitter.event().name("error").data(errorData));
+                    Map<String, Object> doneData = new HashMap<>();
+                    doneData.put("status", "complete");
+                    emitter.send(SseEmitter.event().name("done").data(doneData));
+                    emitter.complete();
+                    return;
+                }
+
                 Long savedAiMsgId = null;
                 if (response != null && response.getContent() != null) {
-                    // 点餐场景：先解析推荐菜品，再清理content中的JSON
-                    if ("order_assistant".equals(request.getScene())) {
+                    if ("order_assistant".equals(scene)) {
                         response.setDishes(parseRecommendedDishes(response.getContent()));
                         response.setContent(cleanJsonFromContent(response.getContent()));
                     }
-                    savedAiMsgId = saveAiMessage(request.getConversationId(), userId,
+                    savedAiMsgId = saveAiMessage(conversationId, userId,
                             response.getContent(), response.getTokensUsed(),
-                            "order_assistant".equals(request.getScene()) ? response.getDishes() : null);
+                            "order_assistant".equals(scene) ? response.getDishes() : null);
 
-                    // 流式发送内容（按字符块模拟流式效果）
                     String content = response.getContent();
                     String[] chunks = splitIntoChunks(content, 20);
                     for (int i = 0; i < chunks.length; i++) {
@@ -142,7 +157,6 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                     }
                 }
 
-                // 发送完成事件（携带 messageId）
                 Map<String, Object> doneData = new HashMap<>();
                 doneData.put("status", "complete");
                 if (savedAiMsgId != null) {
@@ -150,17 +164,16 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 }
                 emitter.send(SseEmitter.event().name("done").data(doneData));
 
-                // 点餐场景：发送推荐菜品（已在前面解析并设置到response中）
-                if ("order_assistant".equals(request.getScene()) && response != null && response.getDishes() != null && !response.getDishes().isEmpty()) {
+                if ("order_assistant".equals(scene) && response != null && response.getDishes() != null && !response.getDishes().isEmpty()) {
                     String dishJson = OBJECT_MAPPER.writeValueAsString(response.getDishes());
                     emitter.send(SseEmitter.event().name("dishes").data(dishJson));
                 }
 
-                updateConversationTitle(request.getConversationId(), request.getMessage());
+                updateConversationTitle(conversationId, userMessage);
 
                 emitter.complete();
             } catch (Exception e) {
-                log.error("SSE流式对话异常: conversationId={}", request.getConversationId(), e);
+                log.error("SSE流式对话异常: conversationId={}", conversationId, e);
                 try {
                     Map<String, Object> errorData = new HashMap<>();
                     errorData.put("message", "服务暂时不可用，请稍后重试");
@@ -250,8 +263,8 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     }
 
     @Override
-    public AIChatResponse orderAssistant(String userMessage, Long userId) {
-        // 异步刷新用户画像（不阻塞对话）
+    public AIChatResponse orderAssistant(String userMessage, Long userId, String conversationId) {
+        // 修改点：异步刷新用户画像（不阻塞对话）
         if (userId != null) {
             CompletableFuture.runAsync(() -> {
                 try {
@@ -263,13 +276,18 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             }, aiExecutor);
         }
 
+        // 修改点：仅在未提供conversationId时新建对话，避免Controller层与Service层双重创建导致孤立对话
+        if (conversationId == null || conversationId.isEmpty()) {
+            AIConversation conv = createConversation(userId, null, "order_assistant");
+            conversationId = conv.getConversationId();
+        }
+
         Map<String, Object> context = buildOrderContext(userId);
 
-        AIConversation conv = createConversation(userId, null, "order_assistant");
         AIChatRequest request = AIChatRequest.builder()
                 .message(userMessage)
                 .scene("order_assistant")
-                .conversationId(conv.getConversationId())
+                .conversationId(conversationId)
                 .userId(userId)
                 .context(context)
                 .build();
@@ -326,6 +344,21 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
     @Override
     public List<AIMessageRecord> getConversationMessages(String conversationId) {
+        if (conversationId == null || conversationId.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId == null) {
+            return Collections.emptyList();
+        }
+        LambdaQueryWrapper<AIConversation> convWrapper = new LambdaQueryWrapper<>();
+        convWrapper.select(AIConversation::getUserId)
+                .eq(AIConversation::getConversationId, conversationId)
+                .eq(AIConversation::getIsDeleted, 0);
+        AIConversation conv = conversationMapper.selectOne(convWrapper);
+        if (conv == null || !currentUserId.equals(conv.getUserId())) {
+            return Collections.emptyList();
+        }
         LambdaQueryWrapper<AIMessageRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AIMessageRecord::getConversationId, conversationId)
                 .eq(AIMessageRecord::getIsDeleted, 0)
@@ -349,6 +382,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void deleteConversation(String conversationId, Long userId) {
         LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AIConversation::getConversationId, conversationId)
@@ -358,7 +392,6 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         if (conv != null) {
             conv.setIsDeleted(1);
             conversationMapper.updateById(conv);
-            // 修改点：批量更新消息记录，消除N+1问题
             LambdaUpdateWrapper<AIMessageRecord> msgUpdateWrapper = new LambdaUpdateWrapper<>();
             msgUpdateWrapper.eq(AIMessageRecord::getConversationId, conversationId)
                     .eq(AIMessageRecord::getIsDeleted, 0)
@@ -369,21 +402,14 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
     @Override
     public void saveMessage(AIMessageRecord record) {
-        if (record.getConversationId() != null) {
-            if (record.getCreateTime() == null) {
-                record.setCreateTime(LocalDateTime.now());
-            }
-            messageRecordMapper.insert(record);
-            // 更新会话消息计数
-            LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(AIConversation::getConversationId, record.getConversationId());
-            AIConversation conv = conversationMapper.selectOne(wrapper);
-            if (conv != null) {
-                conv.setMessageCount((conv.getMessageCount() != null ? conv.getMessageCount() : 0) + 1);
-                conv.setUpdateTime(LocalDateTime.now());
-                conversationMapper.updateById(conv);
-            }
+        if (record.getConversationId() == null) {
+            return;
         }
+        if (record.getCreateTime() == null) {
+            record.setCreateTime(LocalDateTime.now());
+        }
+        messageRecordMapper.insert(record);
+        updateMessageCount(record.getConversationId());
     }
 
     @Override
@@ -563,41 +589,85 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     }
 
     /**
-     * 从AI回复中清理JSON部分，只保留人类可读的文本内容
+     * 从AI回复中清理JSON部分，只保留人类可读的文本内容。
+     * <p>仅移除真正的代码块 JSON，尽量保留自然语言中的括号文本。
      */
     private String cleanJsonFromContent(String content) {
         if (content == null) return null;
         String cleaned = content;
-        // 清理JSON数组
-        int start = cleaned.indexOf('[');
-        int end = cleaned.lastIndexOf(']');
-        if (start >= 0 && end > start) {
-            String before = cleaned.substring(0, start).trim();
-            String after = cleaned.substring(end + 1).trim();
-            cleaned = (before + " " + after).trim();
-        }
-        // 清理JSON对象
-        start = cleaned.indexOf('{');
-        end = cleaned.lastIndexOf('}');
-        if (start >= 0 && end > start) {
-            String before = cleaned.substring(0, start).trim();
-            String after = cleaned.substring(end + 1).trim();
-            cleaned = (before + " " + after).trim();
-        }
-        // 清理可能残留的代码块标记
-        cleaned = cleaned.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");
-        return cleaned.trim();
+        // 优先清理 markdown 代码块
+        cleaned = cleaned.replaceAll("(?s)```json\\s*[\\s\\S]*?```", "");
+        cleaned = cleaned.replaceAll("(?s)```\\s*[\\s\\S]*?```", "");
+        // 只清理代码块后残留的空行/多余空白
+        cleaned = cleaned.replaceAll("\\n{3,}", "\n\n").trim();
+        return cleaned;
     }
 
+    /**
+     * 从AI回复中提取可用于解析的JSON子串，避免自然语言括号干扰。
+     * <p>优先提取代码块内的 JSON；否则从首个 '{' / '[' 开始，匹配同类型闭合符。 */
     private String extractJson(String content) {
-        if (content == null) return null;
-        int start = content.indexOf('[');
-        int end = content.lastIndexOf(']');
-        if (start >= 0 && end > start) return content.substring(start, end + 1);
-        start = content.indexOf('{');
-        end = content.lastIndexOf('}');
-        if (start >= 0 && end > start) return content.substring(start, end + 1);
+        if (content == null || content.isEmpty()) return null;
+
+        // 优先提取代码块中的 JSON
+        int codeBlock = content.indexOf("```json");
+        if (codeBlock >= 0) {
+            int start = content.indexOf('\n', codeBlock + "```json".length());
+            if (start >= 0) {
+                int end = content.indexOf("```", start + 1);
+                if (end > start) {
+                    String block = content.substring(start + 1, end).trim();
+                    if (!block.isEmpty()) return block;
+                }
+            }
+        }
+
+        // 仅当字符串整体就是 JSON 时，直接返回
+        String trimmed = content.trim();
+        if ((trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+            (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+            return trimmed;
+        }
+
+        // 从首个 '{' / '[' 开始，匹配同类型闭合符，避免跨括号类型误匹配
+        for (int i = 0; i < trimmed.length(); i++) {
+            char c = trimmed.charAt(i);
+            if (c == '{' || c == '[') {
+                int end = findMatchingBracket(trimmed, i, c);
+                if (end > i) {
+                    return trimmed.substring(i, end + 1);
+                }
+            }
+        }
         return null;
+    }
+
+    private static int findMatchingBracket(String s, int start, char open) {
+        char close = open == '{' ? '}' : ']';
+        int depth = 1;
+        boolean inString = false;
+        for (int i = start + 1; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (inString) {
+                if (c == '\\') {
+                    i++;
+                } else if (c == '"') {
+                    inString = false;
+                }
+            } else {
+                if (c == '"') {
+                    inString = true;
+                } else if (c == open) {
+                    depth++;
+                } else if (c == close) {
+                    depth--;
+                    if (depth == 0) {
+                        return i;
+                    }
+                }
+            }
+        }
+        return -1;
     }
 
     /** 将文本分割为流式块 */
@@ -612,6 +682,23 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             result[i] = text.substring(start, end);
         }
         return result;
+    }
+
+    /**
+     * 判断 AI 响应内容是否为错误信息。
+     * <p>当前采用启发式：若内容以常见错误前缀开头，则视为错误响应。</p>
+     */
+    private boolean isErrorResponse(String content) {
+        if (content == null || content.isEmpty()) {
+            return false;
+        }
+        String lower = content.toLowerCase(Locale.ROOT);
+        return lower.startsWith("ai服务")
+                || lower.startsWith("无法连接")
+                || lower.startsWith("连接失败")
+                || lower.startsWith("请求失败")
+                || lower.startsWith("网关响应解析失败")
+                || lower.startsWith("模型返回了空响应");
     }
 
     // ==================== 消息持久化方法 ====================
@@ -636,7 +723,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     }
 
     /**
-     * 保存用户消息到数据库
+     * 保存用户消息到数据库（含去重检查，防止SSE重连/重复请求导致的消息双写）
      *
      * @return 保存后的消息ID
      */
@@ -645,6 +732,21 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             return null;
         }
         try {
+            // 修改点：去重检查——同一对话中，5秒内相同内容的用户消息视为重复，跳过保存
+            LambdaQueryWrapper<AIMessageRecord> dedupWrapper = new LambdaQueryWrapper<>();
+            dedupWrapper.eq(AIMessageRecord::getConversationId, request.getConversationId())
+                    .eq(AIMessageRecord::getRole, "user")
+                    .eq(AIMessageRecord::getContent, request.getMessage())
+                    .eq(AIMessageRecord::getIsDeleted, 0)
+                    .gt(AIMessageRecord::getCreateTime, LocalDateTime.now().minusSeconds(5))
+                    .orderByDesc(AIMessageRecord::getCreateTime);
+            AIMessageRecord existingMsg = messageRecordMapper.selectOne(dedupWrapper);
+            if (existingMsg != null) {
+                log.debug("检测到重复用户消息，跳过保存: conversationId={}, contentLength={}",
+                        request.getConversationId(), request.getMessage().length());
+                return existingMsg.getId();
+            }
+
             AIMessageRecord record = new AIMessageRecord();
             record.setConversationId(request.getConversationId());
             record.setUserId(request.getUserId());
@@ -665,16 +767,30 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     }
 
     /**
-     * 保存AI回复消息到数据库
+     * 保存AI回复消息到数据库（含去重检查）
      *
      * @return 保存后的消息ID
      */
     private Long saveAiMessage(String conversationId, Long userId, String content,
                                 Integer tokensUsed, List<AIRecommendedDish> dishes) {
-        if (conversationId == null || conversationId.isEmpty()) {
+        if (conversationId == null || conversationId.isEmpty() || content == null) {
             return null;
         }
         try {
+            // 修改点：去重检查——同一对话中，10秒内相同内容的AI回复视为重复
+            LambdaQueryWrapper<AIMessageRecord> dedupWrapper = new LambdaQueryWrapper<>();
+            dedupWrapper.eq(AIMessageRecord::getConversationId, conversationId)
+                    .eq(AIMessageRecord::getRole, "assistant")
+                    .eq(AIMessageRecord::getContent, content)
+                    .eq(AIMessageRecord::getIsDeleted, 0)
+                    .gt(AIMessageRecord::getCreateTime, LocalDateTime.now().minusSeconds(10))
+                    .orderByDesc(AIMessageRecord::getCreateTime);
+            AIMessageRecord existingMsg = messageRecordMapper.selectOne(dedupWrapper);
+            if (existingMsg != null) {
+                log.debug("检测到重复AI回复消息，跳过保存: conversationId={}", conversationId);
+                return existingMsg.getId();
+            }
+
             AIMessageRecord record = new AIMessageRecord();
             record.setConversationId(conversationId);
             record.setUserId(userId);
@@ -693,7 +809,8 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                         dishIdList.add(dish.getDishId());
                     }
                     record.setDishIds(OBJECT_MAPPER.writeValueAsString(dishIdList));
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.warn("序列化推荐菜品ID失败: conversationId={}", conversationId, e);
                 }
             }
 
@@ -709,19 +826,16 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     }
 
     /**
-     * 更新对话的消息计数和最后更新时间
+     * 更新对话的消息计数和最后更新时间（原子递增，避免竞态条件）
      */
     private void updateMessageCount(String conversationId) {
         try {
-            LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
+            LambdaUpdateWrapper<AIConversation> wrapper = new LambdaUpdateWrapper<>();
             wrapper.eq(AIConversation::getConversationId, conversationId)
-                    .eq(AIConversation::getIsDeleted, 0);
-            AIConversation conv = conversationMapper.selectOne(wrapper);
-            if (conv != null) {
-                conv.setMessageCount((conv.getMessageCount() != null ? conv.getMessageCount() : 0) + 1);
-                conv.setUpdateTime(LocalDateTime.now());
-                conversationMapper.updateById(conv);
-            }
+                    .eq(AIConversation::getIsDeleted, 0)
+                    .setSql("message_count = IFNULL(message_count, 0) + 1")
+                    .set(AIConversation::getUpdateTime, LocalDateTime.now());
+            conversationMapper.update(null, wrapper);
         } catch (Exception e) {
             log.warn("更新消息计数失败: conversationId={}", conversationId, e);
         }

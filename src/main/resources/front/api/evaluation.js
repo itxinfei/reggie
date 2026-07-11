@@ -33,3 +33,12 @@ const getDishRatingStats = (dishId) => {
     method: 'get'
   })
 }
+
+// 修改点：新增删除评价接口
+const deleteMyEvaluation = (data) => {
+  return $axios({
+    url: '/api/dish-evaluation',
+    method: 'delete',
+    data
+  })
+}

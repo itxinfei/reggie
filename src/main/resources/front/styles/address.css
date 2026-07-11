@@ -1,7 +1,7 @@
 /* ---- 地址管理页面样式 ---- */
-/* 修改点：与编辑页统一视觉风格 */
+/* 修改点：使用全局CSS变量统一品牌色 */
 
-/* 登录页全局覆盖 — 避免使用内联样式 */
+/* 页面全局覆盖 */
 body.scrollable-page {
   overflow: visible;
   background: transparent;
@@ -12,18 +12,18 @@ body.scrollable-page {
 /* ========== 顶部标题栏 ========== */
 #address .divHead {
   width: 100%;
-  height: 88rem;
-  background: linear-gradient(135deg, #ffc200 0%, #ff9a00 100%);
+  height: var(--header-height);
+  background: var(--color-primary-gradient);
   position: relative;
   box-shadow: 0 2rem 8rem rgba(255, 154, 0, 0.25);
 }
 
 #address .divHead .divTitle {
-  font-size: 18rem;
-  font-family: PingFangSC, PingFangSC-Semibold;
+  font-size: var(--header-title-font-size);
+  font-family: var(--font-family-title);
   font-weight: 600;
   text-align: center;
-  color: #333333;
+  color: var(--color-text-primary);
   line-height: 25rem;
   position: absolute;
   bottom: 14rem;
@@ -32,12 +32,12 @@ body.scrollable-page {
 
 #address .divHead .divTitle i {
   position: absolute;
-  left: 16rem;
+  left: var(--spacing-lg);
   top: 50%;
   transform: translate(0, -50%);
   cursor: pointer;
   font-size: 20rem;
-  transition: transform 0.2s;
+  transition: transform var(--transition-fast);
 }
 #address .divHead .divTitle i:active { transform: translate(0, -50%) scale(1.2); }
 
@@ -52,7 +52,7 @@ body.scrollable-page {
 /* ========== 地址卡片 ========== */
 #address .divContent .divItem {
   min-height: 128rem;
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: 12rem;
   margin-top: 10rem;
   margin-left: 12rem;
@@ -67,8 +67,8 @@ body.scrollable-page {
 
 #address .divContent .divItem:active {
   box-shadow: 0 4rem 16rem rgba(0, 0, 0, 0.08);
-  background: #fafafa;
-  border-left-color: #ffc200;
+  background: var(--bg-hover);
+  border-left-color: var(--color-primary);
 }
 
 /* ---- 编辑按钮 ---- */
@@ -93,7 +93,7 @@ body.scrollable-page {
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
   text-align: left;
-  color: #333333;
+  color: var(--color-text-primary);
   line-height: 22rem;
   padding-top: 16rem;
   /* 修改点：允许两行显示，省市区+详细地址可能较长 */
@@ -137,7 +137,7 @@ body.scrollable-page {
 }
 #address .divContent .divItem .divAddress .spanNone {
   background: linear-gradient(135deg, #f5f5f5, #eeeeee);
-  color: #888888;
+  color: var(--color-text-disabled);
 }
 
 /* ---- 收货人信息 ---- */
@@ -151,20 +151,20 @@ body.scrollable-page {
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
   text-align: left;
-  color: #999999;
+  color: var(--color-text-hint);
   line-height: 20rem;
   margin-right: 10rem;
 }
 
 #address .divContent .divItem .divUserPhone span:first-child {
   margin-right: 2rem;
-  color: #555555;
+  color: var(--color-text-secondary);
 }
 
 /* ---- 分割线 ---- */
 #address .divContent .divItem .divSplit {
   height: 1px;
-  background: #f0f0f0;
+  background: var(--bg-hover);
   border: 0;
   margin: 10rem 0 8rem;
 }
@@ -176,13 +176,13 @@ body.scrollable-page {
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
   text-align: left;
-  color: #999999;
+  color: var(--color-text-hint);
   line-height: 20rem;
   cursor: pointer;
   user-select: none;
   transition: color 0.2s;
 }
-#address .divContent .divItem .divDefault:active { color: #333333; }
+#address .divContent .divItem .divDefault:active { color: var(--color-text-primary); }
 
 #address .divContent .divItem .divDefault img {
   height: 20rem;
@@ -205,7 +205,7 @@ body.scrollable-page {
   width: 80rem;
   height: 80rem;
   border-radius: 50%;
-  background: #f5f5f5;
+  background: var(--bg-page);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -214,20 +214,20 @@ body.scrollable-page {
 
 #address .emptyState .emptyIcon i {
   font-size: 36rem;
-  color: #cccccc;
+  color: var(--color-text-disabled);
 }
 
 #address .emptyState .emptyText {
   font-size: 16rem;
   font-family: PingFangSC, PingFangSC-Regular;
-  color: #999999;
+  color: var(--color-text-hint);
   margin-bottom: 12rem;
 }
 
 #address .emptyState .emptyHint {
   font-size: 14rem;
   font-family: PingFangSC, PingFangSC-Regular;
-  color: #ffc200;
+  color: var(--color-primary);
   cursor: pointer;
   text-decoration: underline;
 }
@@ -235,13 +235,13 @@ body.scrollable-page {
 /* ========== 底部添加按钮 ========== */
 #address .divBottom {
   height: 42rem;
-  background: linear-gradient(135deg, #ffc200 0%, #ffb000 100%);
+  background: var(--color-primary-gradient);
   border-radius: 21rem;
   font-size: 15rem;
   font-family: PingFangSC, PingFangSC-Semibold;
   font-weight: 600;
   text-align: center;
-  color: #333333;
+  color: var(--color-text-primary);
   line-height: 42rem;
   letter-spacing: 1rem;
   position: absolute;

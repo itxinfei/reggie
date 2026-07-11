@@ -114,7 +114,7 @@ mvn clean package spring-boot:run -DskipTests
 |------|------|------|
 | 🖥️ 管理后台 | http://localhost:8080/backend/index.html | PC 后台管理系统 |
 | 📱 移动端 | http://localhost:8080/front/index.html | 手机 H5 点餐端 |
-| 🔌 Swagger | http://localhost:8080/doc.html | API 接口文档 |
+| 🔌 Swagger UI | http://localhost:8080/swagger-ui.html | API 接口文档 |
 
 ### 生产部署
 
@@ -203,6 +203,7 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar
 | PC UI | Element UI | 2.15.10 |
 | 移动 UI | Vant UI | 2.12.0 |
 | HTTP | Axios | 0.21.1 |
+| 图标 | Remix Icon | 4.6 (CDN) |
 
 </div>
 
@@ -265,7 +266,7 @@ reggie/
 | 📥 **数据导出** | 订单/菜品/员工/报表多维度 Excel & PDF 导出 |
 | 🤖 **AI 引擎 v2.0** | 多模型适配器（支持 9 种模型）、SSE 流式输出、对话管理、用户画像 |
 | ⚙️ **自动化任务** | 支付订单超时处理、定时订单回收、幂等防重校验 |
-| 🎨 **前端优化** | 全站按钮样式统一、表格美化、响应式布局 |
+| 🎨 **前端优化** | 全站按钮样式统一、表格美化、响应式布局、图标库迁移（iconfont → Remix Icon 4.6，2700+ 图标） |
 
 ### 🔮 规划中
 
@@ -436,7 +437,33 @@ spring:
 </details>
 
 <details>
-<summary><b>修改服务端口？</b></summary>
+<summary><b>前端用什么图标库？</b></summary>
+
+本项目已从 iconfont（仅7个图标）迁移到 **Remix Icon 4.6**（Apache 2.0 许可证，2700+ 图标）。
+
+**使用方式**：
+```html
+<!-- CDN 已引入在 backend/index.html -->
+<i class="ri-user-line"></i>         <!-- 用户图标 -->
+<i class="ri-robot-3-line"></i>      <!-- AI 图标 -->
+```
+
+**常见图标速查**：
+| 场景 | 图标类名 |
+|------|----------|
+| 用户/员工 | `ri-user-3-line` |
+| 订单/单据 | `ri-file-list-3-line` |
+| 商品/菜品 | `ri-restaurant-2-line` |
+| 分类/模块 | `ri-apps-2-line` |
+| 锁/安全 | `ri-lock-line` |
+| 设置 | `ri-settings-3-line` |
+| AI | `ri-robot-3-line` |
+| 对话 | `ri-chat-3-line` |
+
+完整图标列表：https://remixicon.com/
+
+> ⚠️ **禁止使用旧 iconfont 类名**（`icon-category`、`icon-member` 等），旧字体文件已全部删除。
+</details>
 
 ```yaml
 server:

@@ -2,6 +2,8 @@ package com.reggie.module.ai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.module.ai.mapper.AiProviderConfigMapper;
 import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.service.AiProviderConfigService;
@@ -9,11 +11,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -290,6 +296,204 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                 conn.disconnect();
             }
         }
+    }
+
+    // ==================== 修改点：Upsert 逻辑 ====================
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AiProviderConfig saveOrUpdateByCode(AiProviderConfig config) {
+        if (config.getProviderCode() == null || config.getProviderCode().trim().isEmpty()) {
+            throw new IllegalArgumentException("供应商编码不能为空");
+        }
+
+        String providerCode = config.getProviderCode().trim();
+
+        // 查询同 providerCode 的所有记录（含已软删），避免唯一键冲突
+        LambdaQueryWrapper<AiProviderConfig> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AiProviderConfig::getProviderCode, providerCode);
+        AiProviderConfig existing = this.getOne(wrapper);
+
+        if (existing != null) {
+            // 如果记录被软删，恢复它并启用
+            if (Integer.valueOf(1).equals(existing.getIsDeleted())) {
+                existing.setIsDeleted(0);
+                existing.setEnabled(true);
+            }
+            // 复用已有 ID，保留现有激活状态，避免唯一键冲突
+            config.setId(existing.getId());
+            config.setIsActive(existing.getIsActive() != null ? existing.getIsActive() : false);
+            if (config.getApiKey() == null || config.getApiKey().trim().isEmpty()) {
+                config.setApiKey(existing.getApiKey());
+            }
+            this.updateById(config);
+            log.info("供应商已更新（upsert）: code={}, id={}, name={}",
+                    providerCode, existing.getId(), config.getProviderName());
+        } else {
+            config.setId(null);
+            config.setProviderCode(providerCode);
+            config.setIsActive(config.getIsActive() != null ? config.getIsActive() : false);
+            config.setIsDeleted(0);
+            this.save(config);
+            log.info("供应商已新增（upsert）: code={}, name={}",
+                    providerCode, config.getProviderName());
+        }
+
+        return config;
+    }
+
+    // ==================== 修改点：拉取模型列表 ====================
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    @Override
+    public List<String> fetchModelList(String baseUrl, String apiKey) {
+        if (baseUrl == null || baseUrl.trim().isEmpty()) {
+            log.warn("fetchModelList: baseUrl 为空");
+            return Collections.emptyList();
+        }
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            log.warn("fetchModelList: apiKey 为空");
+            return Collections.emptyList();
+        }
+
+        HttpURLConnection conn = null;
+        try {
+            // 规范化 baseUrl，去除末尾斜杠
+            String normalizedUrl = baseUrl.replaceAll("/+$", "");
+            // 尝试多个可能的模型列表端点
+            String[] candidatePaths = {"/models", "/v1/models"};
+            List<String> allModels = new ArrayList<>();
+
+            for (String path : candidatePaths) {
+                String modelUrl = normalizedUrl + path;
+                try {
+                    URL url = new URL(modelUrl);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("GET");
+                    conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+                    conn.setRequestProperty("Content-Type", "application/json");
+                    conn.setConnectTimeout(10000);
+                    conn.setReadTimeout(15000);
+
+                    int code = conn.getResponseCode();
+                    if (code == 200) {
+                        List<String> models = parseModelListResponse(conn);
+                        allModels.addAll(models);
+                        // 取到数据就结束，不继续尝试其他路径
+                        if (!models.isEmpty()) break;
+                    } else if (code == 401 || code == 403) {
+                        // 密钥无效，不必尝试其他端点
+                        log.warn("fetchModelList: API密钥无效, url={}, code={}", modelUrl, code);
+                        break;
+                    }
+                    // 其他错误（404等），继续尝试下一个路径
+                } catch (java.net.SocketTimeoutException e) {
+                    log.warn("fetchModelList: 超时 url={}", modelUrl);
+                } catch (java.net.ConnectException e) {
+                    log.warn("fetchModelList: 无法连接 url={}", modelUrl);
+                } finally {
+                    if (conn != null) {
+                        conn.disconnect();
+                        conn = null;
+                    }
+                }
+            }
+
+            // 去重
+            List<String> result = new ArrayList<>();
+            for (String m : allModels) {
+                if (!result.contains(m)) {
+                    result.add(m);
+                }
+            }
+            log.info("fetchModelList: 获取到 {} 个模型, baseUrl={}", result.size(), normalizedUrl);
+            return result;
+        } catch (Exception e) {
+            log.error("fetchModelList: 未预期异常, baseUrl={}", baseUrl, e);
+            return Collections.emptyList();
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    /**
+     * 解析模型列表响应，支持多种格式：
+     * <ul>
+     *   <li>OpenAI 标准: { data: [{ id: "gpt-4", ... }] }</li>
+     *   <li>Ollama: { models: [{ name: "llama2", ... }] }</li>
+     *   <li>New API / One API: 同 OpenAI 格式</li>
+     *   <li>部分代理: 直接返回 [{ id: "x" }] 数组</li>
+     * </ul>
+     */
+    private List<String> parseModelListResponse(HttpURLConnection conn) {
+        List<String> models = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+            String body = sb.toString();
+            if (body.trim().isEmpty()) {
+                return models;
+            }
+
+            JsonNode root = OBJECT_MAPPER.readTree(body);
+
+            // 格式1：{ data: [{ id: "model-name" }] } —— OpenAI / New API / One API
+            JsonNode data = root.get("data");
+            if (data != null && data.isArray()) {
+                for (JsonNode node : data) {
+                    String modelId = node.path("id").asText("");
+                    if (!modelId.isEmpty()) {
+                        models.add(modelId);
+                    }
+                }
+                return models;
+            }
+
+            // 格式2：{ models: [{ name: "model-name" }] } —— Ollama
+            JsonNode modelsNode = root.get("models");
+            if (modelsNode != null && modelsNode.isArray()) {
+                for (JsonNode node : modelsNode) {
+                    String modelName = node.path("name").asText("");
+                    if (!modelName.isEmpty()) {
+                        models.add(modelName);
+                    }
+                }
+                return models;
+            }
+
+            // 格式3：直接是数组 [{ id: "m1" }, { id: "m2" }]
+            if (root.isArray()) {
+                for (JsonNode node : root) {
+                    String id = node.path("id").asText("");
+                    if (!id.isEmpty()) {
+                        models.add(id);
+                    }
+                }
+                return models;
+            }
+
+            // 格式4：{ object: "list", data: [...] } —— DeepSeek 等
+            JsonNode dataNode = root.get("data");
+            if (dataNode != null && dataNode.isArray()) {
+                for (JsonNode node : dataNode) {
+                    String modelId = node.path("id").asText("");
+                    if (!modelId.isEmpty()) {
+                        models.add(modelId);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            log.warn("解析模型列表响应失败", e);
+        }
+        return models;
     }
 
     /**

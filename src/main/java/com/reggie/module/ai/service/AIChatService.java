@@ -8,7 +8,6 @@ import com.reggie.module.ai.model.AIMessageRecord;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * AI聊天服务接口
@@ -41,8 +40,9 @@ public interface AIChatService extends IService<AIConversation> {
 
     /**
      * 智能点餐推荐（非流式）
+     * 修改点：新增conversationId参数，避免Controller和Service各自创建对话导致孤立数据
      */
-    AIChatResponse orderAssistant(String userMessage, Long userId);
+    AIChatResponse orderAssistant(String userMessage, Long userId, String conversationId);
 
     /**
      * 生成菜品描述

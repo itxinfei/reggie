@@ -1,0 +1,44 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]: AI 智能点餐助手
+    - generic [ref=e7]:
+      - generic "对话历史" [ref=e8] [cursor=pointer]: ☰
+      - generic "关闭" [ref=e9] [cursor=pointer]: ✕
+  - generic [ref=e10]:
+    - generic [ref=e11]:
+      - heading "💬 对话历史" [level=3] [ref=e12]
+      - button "+ 新对话" [active] [ref=e13] [cursor=pointer]
+    - generic [ref=e14]:
+      - generic [ref=e59] [cursor=pointer]:
+        - generic [ref=e60]: 新对话
+        - generic [ref=e61]: 刚刚
+        - generic "删除" [ref=e62]: 🗑️
+      - generic [ref=e49] [cursor=pointer]:
+        - generic [ref=e50]: 新对话
+        - generic [ref=e51]: 刚刚
+        - generic "删除" [ref=e52]: 🗑️
+      - generic [ref=e40] [cursor=pointer]:
+        - generic [ref=e41]: 新对话
+        - generic [ref=e42]: 刚刚
+        - generic "删除" [ref=e43]: 🗑️
+      - generic [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]: 新对话
+        - generic [ref=e17]: 刚刚
+        - generic "删除" [ref=e18]: 🗑️
+    - button "🗑️ 清空全部对话" [ref=e20] [cursor=pointer]
+  - generic [ref=e21]:
+    - generic [ref=e22] [cursor=pointer]: 🍽️ 点餐推荐
+    - generic [ref=e23] [cursor=pointer]: 📝 菜品描述
+    - generic [ref=e24] [cursor=pointer]: 📢 营销文案
+  - generic [ref=e25]:
+    - generic [ref=e53] [cursor=pointer]: 满减活动文案
+    - generic [ref=e54] [cursor=pointer]: 新店开业促销
+    - generic [ref=e55] [cursor=pointer]: 会员日专属优惠
+    - generic [ref=e56] [cursor=pointer]: 节假日活动方案
+  - generic [ref=e33]:
+    - generic [ref=e34]: 🤖
+    - generic [ref=e35]: 你好！我是小吉，营销策略顾问 📢 告诉我你的需求，我帮你写活动文案和促销方案！ 💡 试试这样说： · "帮我写一个满减活动文案" · "新店开业的促销方案" · "会员日专属优惠文案"
+  - generic [ref=e36]:
+    - button "🎤" [ref=e37] [cursor=pointer]
+    - textbox "输入营销需求，例：满减活动文案..." [ref=e57]
+    - button "➤" [disabled] [ref=e39]

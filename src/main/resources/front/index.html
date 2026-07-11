@@ -9,8 +9,6 @@
     <link rel="icon" href="images/favico.ico">
     <!--不同屏幕尺寸根字体设置-->
     <script src="./js/base.js"></script>
-    <!--element-ui的样式-->
-    <link rel="stylesheet" href="../backend/plugins/element-ui/index.css" />
     <!--引入vant样式-->
     <link rel="stylesheet" href="styles/vant.min.css"/>
     <!-- 引入样式  -->
@@ -25,17 +23,16 @@
         <!-- 顶部导航：定位 | 搜索 | 用户 -->
         <div class="top-bar">
           <div class="location" @click="toAddressPage">
-            <i class="el-icon-location-outline"></i>
-            <span>{{ addressInfo ? (addressInfo.label || addressInfo.cityName + addressInfo.districtName) : '请选择收货地址' }}</span>
-            <i class="el-icon-arrow-down arr"></i>
+            <i class="icon-location-outline"></i>
+            <span>{{ addressInfo ? (addressInfo.label || addressInfo.cityName + addressInfo.districtName) : '收货地址' }}</span>
           </div>
           <div class="search-box" @click="onSearchClick">
-            <i class="el-icon-search"></i>
+            <i class="icon-search"></i>
             <span>搜索菜品、套餐</span>
           </div>
           <!-- 修改点：消息铃铛入口 + 未读角标 -->
           <div class="msg-bell" @click="toMessagePage" style="position:relative;margin-right:12px;cursor:pointer;">
-            <i class="el-icon-bell" style="font-size:20px;color:#666;"></i>
+            <span style="font-size:18px;">🔔</span>
             <span v-if="unreadMsgCount > 0" style="position:absolute;top:-6px;right:-8px;
                   background:#ff4d4f;color:#fff;font-size:10px;min-width:16px;height:16px;
                   line-height:16px;text-align:center;border-radius:8px;padding:0 4px;">
@@ -131,18 +128,13 @@
 
         <!-- 右侧菜品列表 -->
         <div class="dish-panel" ref="dishPanel">
-          <div class="dish-section-title" v-if="activeCategoryName">{{ activeCategoryName }}</div>
           <div
             class="dish-item"
             v-for="(item,index) in dishList"
             :key="index"
           >
             <div class="di-image" @click="dishDetails(item)">
-              <el-image :src="imgPath(item.image)">
-                <div slot="error" class="image-slot">
-                  <img src="./images/noImg.png"/>
-                </div>
-              </el-image>
+              <img :src="imgPath(item.image)" @error="imgError">
               <div class="di-tag" v-if="item.saleNum > 100">热卖</div>
             </div>
             <div class="di-info" @click="dishDetails(item)">
@@ -209,7 +201,7 @@
         <div class="divCartTitle">
           <div class="title">购物车</div>
           <div class="clear" @click="clearCart">
-            <i class="el-icon-delete"></i> 清空
+            <span style="font-size:14px;">🗑️</span> 清空
           </div>
           <div class="cart-close-btn" @click="cartDialogShow = false">
             <img src="./images/close.png" style="width:18px;height:18px;"/>
@@ -217,11 +209,7 @@
         </div>
         <div class="divCartContent">
           <div v-for="item in cartData" :key="item.id" class="divCartItem">
-            <el-image :src="imgPath(item.image)">
-              <div slot="error" class="image-slot">
-                <img src="./images/noImg.png"/>
-              </div>
-            </el-image>
+            <img :src="imgPath(item.image)" @error="imgError" class="cart-img">
             <div class="divDesc">
               <div class="name">{{ item.name }}</div>
               <div class="price">
@@ -250,11 +238,7 @@
         ref="detailsDialog"
       >
         <div class="divContainer">
-          <el-image :src="imgPath(detailsDialog.item.image)">
-            <div slot="error" class="image-slot">
-              <img src="./images/noImg.png"/>
-            </div>
-          </el-image>
+          <img :src="imgPath(detailsDialog.item.image)" @error="imgError" class="dialog-img">
           <div class="title">{{ detailsDialog.item.name }}</div>
           <div class="content">{{ detailsDialog.item.description }}</div>
           <!-- 评价展示 -->
@@ -310,11 +294,7 @@
         <div class="divContainer">
           <div class="title">{{ setMealDialog.item.name }}</div>
           <div class="item" v-for="(item,index) in setMealDialog.item.list" :key="index">
-            <el-image :src="imgPath(item.image)">
-              <div slot="error" class="image-slot">
-                <img src="./images/noImg.png"/>
-              </div>
-            </el-image>
+            <img :src="imgPath(item.image)" @error="imgError" class="meal-img">
             <div class="divSubTitle">{{ item.name + '(' + item.copies + '份)' }}
               <div class="divPrice">
                 <span>￥</span><span>{{ item.price/100 }}</span>
@@ -347,7 +327,7 @@
     <div class="search-overlay" v-if="searchShow" @click.self="closeSearch">
       <div class="search-header">
         <div class="search-input-wrap">
-          <i class="el-icon-search so-icon"></i>
+          <i class="icon-search so-icon"></i>
           <input
             type="text"
             class="search-input"
@@ -358,7 +338,7 @@
             @keyup.enter="doSearch"
           />
           <i
-            class="el-icon-circle-close so-clear"
+            class="icon-circle-close so-clear"
             v-if="searchKeyword"
             @click="clearSearch"
           ></i>
@@ -374,7 +354,7 @@
           :key="idx"
           @click="selectSuggestion(sug)"
         >
-          <i class="el-icon-search"></i>
+          <i class="icon-search"></i>
           <span class="suggestion-name">{{ sug.name }}</span>
           <span class="suggestion-type">{{ sug.isMeal ? '套餐' : '菜品' }}</span>
         </div>
@@ -386,7 +366,7 @@
         <div class="search-section" v-if="!searchKeyword">
           <div class="search-section-title" v-if="searchHistory.length > 0">
             <span>搜索历史</span>
-            <i class="el-icon-delete" @click="clearSearchHistory" title="清空"></i>
+            <span @click="clearSearchHistory" title="清空" style="cursor:pointer;font-size:16px;">🗑️</span>
           </div>
           <div class="search-tags">
             <span
@@ -415,11 +395,7 @@
             :key="'d' + idx"
           >
             <div class="di-image" @click="dishDetails(item)">
-              <el-image :src="imgPath(item.image)">
-                <div slot="error" class="image-slot">
-                  <img src="./images/noImg.png"/>
-                </div>
-              </el-image>
+              <img :src="imgPath(item.image)" @error="imgError">
             </div>
             <div class="di-info" @click="dishDetails(item)">
               <div class="di-name">{{ item.name }}</div>
@@ -445,11 +421,7 @@
             :key="'m' + idx"
           >
             <div class="di-image" @click="dishDetails(item)">
-              <el-image :src="imgPath(item.image)">
-                <div slot="error" class="image-slot">
-                  <img src="./images/noImg.png"/>
-                </div>
-              </el-image>
+              <img :src="imgPath(item.image)" @error="imgError">
             </div>
             <div class="di-info" @click="dishDetails(item)">
               <div class="di-name">{{ item.name }}</div>
@@ -484,8 +456,6 @@
 
         <!-- 开发环境版本，包含了有帮助的命令行警告 -->
         <script src="../backend/plugins/vue/vue.js"></script>
-        <!-- 引入组件库 -->
-        <script src="../backend/plugins/element-ui/index.js"></script>
         <!-- 引入vant样式 -->
         <script src="./js/vant.min.js"></script>        
         <!-- 引入axios -->
@@ -621,6 +591,11 @@
             // 修改点：将common.js的全局函数imgPath注册为Vue实例方法，Vue模板中无法访问全局函数
             imgPath(path){
               return '/common/download?name=' + path
+            },
+            // 修改点：图片加载失败兜底，替代el-image的error slot
+            imgError(e){
+              if (e.target.src.indexOf('/front/images/noImg.png') >= 0) return
+              e.target.src = './images/noImg.png'
             },
             // 修改点：加载智能推荐菜品
             loadRecommendations(){
@@ -910,7 +885,7 @@
                     }
                   }
                 }else{
-                  this.$notify({ type:'warning', message:res[0].msg});
+                  vant.Toast.fail(res[0].msg || '加载分类失败');
                 }
                 //获取购物车数据（仅登录后，索引1）
                 if(isLogin && res[1] && res[1].code === 1){
@@ -1001,7 +976,7 @@
                   }
                   this.dishList = dishList
                 }else{
-                  this.$notify({ type:'warning', message:res.msg})
+                  vant.Toast.fail(res.msg || '加载菜品失败')
                 }
               } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
@@ -1026,7 +1001,7 @@
                     }
                     this.dishList = dishList
                 }else{
-                  this.$notify({ type:'warning', message:res.msg})
+                  vant.Toast.fail(res.msg || '加载套餐失败')
                 }
               } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
@@ -1039,15 +1014,16 @@
                 if(res.code === 1){
                   this.cartData = res.data
                 }else{
-                  this.$notify({ type:'warning', message:res.msg})
+                  vant.Toast.fail(res.msg || '加载购物车失败')
                 }
               } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
             //菜单中往购物车中添加商品
+            // 修改点：修复菜品/套餐误判 — item.flavors !== undefined 可靠区分（菜品有flavors字段，套餐无）
             async addCart(item){
               // 修改点：未登录时跳转登录页
               if(!this.userPhone){
-                this.$notify({ type:'warning', message:'请先登录'});
+                vant.Toast.fail('请先登录');
                 window.requestAnimationFrame(()=>{
                   window.location.href = '/front/page/login.html'
                 })
@@ -1063,9 +1039,10 @@
                   name: item.name,
                   image: item.image
                 }
-                if(Array.isArray(item.flavors)){//表示是菜品
+                // 修改点：item.flavors !== undefined 可靠区分菜品和套餐，避免无口味菜品误判为套餐
+                if(item.flavors !== undefined){//表示是菜品（包含无口味的菜品）
                   params.dishId = item.id
-                }else{//表示套餐 套餐没有口味
+                }else{//表示套餐 套餐没有口味字段
                   params.setmealId = item.id
                 }
                 const res = await addCartApi(params)
@@ -1078,34 +1055,36 @@
                   }
                   this.getCartData()
                 }else{
-                  this.$notify({ type:'warning', message:res.msg})
+                  vant.Toast.fail(res.msg || '添加失败')
                 }
               } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
 
             //菜单中减少选中的商品
+            // 修改点：修复 res.data 为 null 时 NPE（数量=1删除返回null）；修复菜品/套餐误判
             async subtractCart(item){
                 // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
                 try {
-                  let params = {
-                    dishId:item.id,
-                  }
-                  if(!Array.isArray(item.flavors)){
-                    params = {
-                      setmealId:item.id,
-                    }
+                  // 修改点：item.flavors !== undefined 可靠区分菜品（有flavors字段）和套餐（无该字段）
+                  const isDish = item.flavors !== undefined
+                  let params = {}
+                  if(isDish){
+                    params.dishId = item.id
+                  }else{
+                    params.setmealId = item.id
                   }
                   const res = await updateCartApi(params)
                   if(!res) return
                   if(res.code === 1){
-                    // 修改点：使用统一的同步方法
-                    this.syncCartNumber(item.id, res.data.number, true)
+                    // 修改点：res.data 可能为 null（后端数量=1时删除返回null），安全取值
+                    const newNum = (res.data && typeof res.data.number === 'number') ? res.data.number : undefined
+                    this.syncCartNumber(item.id, newNum, true)
                     if(this.setMealDialog.show){
-                      item.number = (res.data.number === 0 ? undefined : res.data.number)
+                      item.number = (newNum == null) ? undefined : newNum
                     }
                     this.getCartData()
                   }else{
-                    this.$notify({ type:'warning', message:res.msg})
+                    vant.Toast.fail(res.msg || '操作失败')
                   }
                 } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
@@ -1135,11 +1114,12 @@
                   this.syncCartNumber(item.dishId || item.setmealId, res.data.number, false)
                   this.getCartData()
                 }else{
-                  this.$notify({ type:'warning', message:res.msg})
+                  vant.Toast.fail(res.msg || '操作失败')
                 }
               } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
             //购物车中减少商品数量
+            // 修改点：修复 res.data 为 null 时 NPE（数量=1删除返回null）
             async cartNumberSubtract(item){
               // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
               try {
@@ -1150,33 +1130,38 @@
                   const res = await updateCartApi(params)
                   if(!res) return
                   if(res.code === 1){
-                    // 修改点：使用统一的同步方法
-                    this.syncCartNumber(item.dishId || item.setmealId, res.data.number, true)
+                    // 修改点：res.data 可能为 null（后端数量=1时删除返回null），安全取值
+                    const newNum = (res.data && typeof res.data.number === 'number') ? res.data.number : undefined
+                    this.syncCartNumber(item.dishId || item.setmealId, newNum, true)
                     this.getCartData()
                   }else{
-                    this.$notify({ type:'warning', message:res.msg})
+                    vant.Toast.fail(res.msg || '操作失败')
                   }
               } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
             
             // 修改点：提取通用的购物车数量的菜单同步逻辑，同时同步搜索结果
+            // 修改点：加固null/undefined安全 — 当后端删除返回null时，清空前端数量
             syncCartNumber(dishId, newNumber, clearOnZero){
               if(typeof dishId === 'undefined' || dishId === null) return;
+              // 修改点：数量为null或undefined时（后端删除返回null），统一清空为undefined
+              const shouldClear = clearOnZero && (newNumber === 0 || newNumber == null);
+              const finalNum = shouldClear ? undefined : (newNumber == null ? undefined : newNumber);
               // 同步菜品列表
               this.dishList.forEach(dish => {
                 if(dish.id === dishId){
-                  dish.number = (newNumber === 0 && clearOnZero) ? undefined : newNumber;
+                  dish.number = finalNum;
                 }
               });
               // 同步搜索结果
               this.searchDishList.forEach(dish => {
                 if(dish.id === dishId){
-                  dish.number = (newNumber === 0 && clearOnZero) ? undefined : newNumber;
+                  dish.number = finalNum;
                 }
               });
               this.searchMealList.forEach(meal => {
                 if(meal.id === dishId){
-                  meal.number = (newNumber === 0 && clearOnZero) ? undefined : newNumber;
+                  meal.number = finalNum;
                 }
               });
             },
@@ -1200,7 +1185,7 @@
                   this.cartData = []
                   this.cartDialogShow = false
                 }else{
-                  this.$notify({ type:'warning', message:res.msg})
+                  vant.Toast.fail(res.msg || '清空失败')
                 }
               } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
             },
@@ -1232,7 +1217,7 @@
                   dishFlavor.push(item.dishFlavor)
                 }else{
                       flag = false
-                      Notify({ type: 'warning', message: '请选择'+ item.name });
+                      vant.Toast.fail('请选择' + item.name);
                 }
               })
               if(flag){
@@ -1252,7 +1237,7 @@
             toAddOrderPage(){
               // 修改点：未登录时跳转登录页
               if(!this.userPhone){
-                this.$notify({ type:'warning', message:'请先登录'});
+                vant.Toast.fail('请先登录');
                 window.requestAnimationFrame(()=>{
                   window.location.href = '/front/page/login.html'
                 })
@@ -1288,7 +1273,7 @@
                     this.setMealDialog.item = {...item,list:res.data}
                     this.setMealDialog.show = true
                   }else{
-                    this.$notify({ type:'warning', message:res.msg})
+                    vant.Toast.fail(res.msg || '加载套餐详情失败')
                   }
                 } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
               }

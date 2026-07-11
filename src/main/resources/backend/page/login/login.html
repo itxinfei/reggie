@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css">
   <link rel="stylesheet" href="../../styles/login.css">
-  <link rel="stylesheet" href="../../styles/icon/iconfont.css" />
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet" />
 
 </head> 
 
@@ -26,10 +26,10 @@
           </div>
           <el-form-item prop="username">
             <el-input v-model="loginForm.username" type="text" auto-complete="off" placeholder="账号" maxlength="20"
-              prefix-icon="iconfont icon-user" />
+              prefix-icon="ri-user-3-line" />
           </el-form-item>
           <el-form-item prop="password">
-            <el-input v-model="loginForm.password" type="password" placeholder="密码" prefix-icon="iconfont icon-lock" maxlength="20"
+            <el-input v-model="loginForm.password" type="password" placeholder="密码" prefix-icon="ri-lock-line" maxlength="20"
               @keyup.enter.native="handleLogin" />
           </el-form-item>
           <el-form-item style="width:100%;">

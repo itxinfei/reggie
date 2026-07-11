@@ -1,0 +1,16 @@
+- generic [ref=f10e2]:
+  - generic [ref=f10e3]:
+    - generic [ref=f10e16]: 瑞吉外卖
+    - generic [ref=f10e17]: 美味生活，即刻送达
+  - generic [ref=f10e18]:
+    - generic [ref=f10e20]:
+      - textbox "请输入手机号码" [active] [ref=f10e21]
+      - generic [ref=f10e22]: 
+    - generic [ref=f10e25]:
+      - generic [ref=f10e26]:
+        - textbox "请输入验证码" [ref=f10e27]
+        - generic [ref=f10e28]: 
+      - generic [ref=f10e30] [cursor=pointer]: 获取验证码
+  - button "登录" [disabled] [ref=f10e31]
+  - generic [ref=f10e32]: 已阅读并同意 《用户协议》 和 《隐私政策》
+  - text: 

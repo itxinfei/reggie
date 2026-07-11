@@ -58,15 +58,16 @@ public class AiProviderController {
     }
 
     @PostMapping("/add")
-    @Operation(summary = "添加供应商", description = "新增AI供应商配置")
-    public R<String> add(@RequestBody AiProviderConfig config) {
+    @Operation(summary = "添加供应商（upsert）", description = "新增AI供应商配置，若providerCode已存在则自动更新")
+    public R<Map<String, Object>> add(@RequestBody AiProviderConfig config) {
         String validation = validateProviderConfig(config);
         if (validation != null) {
             return R.error(validation);
         }
-        config.setId(null);
-        config.setIsActive(false);
-        config.setIsDeleted(0);
+        // 新增时不允许直接设为激活
+        if (config.getIsActive() == null || config.getIsActive()) {
+            config.setIsActive(false);
+        }
         if (config.getTimeout() == null) config.setTimeout(60);
         if (config.getMaxTokens() == null) config.setMaxTokens(2048);
         if (config.getTemperature() == null) config.setTemperature(0.7);
@@ -74,9 +75,17 @@ public class AiProviderController {
             config.setApiFormat("openai_compatible");
         }
         if (config.getEnabled() == null) config.setEnabled(false);
-        providerConfigService.save(config);
-        log.info("新增AI供应商: code={}, name={}", config.getProviderCode(), config.getProviderName());
-        return R.success("添加成功");
+
+        // 修改点：使用 upsert 逻辑，providerCode 已存在则更新而非抛 DuplicateKeyException
+        AiProviderConfig saved = providerConfigService.saveOrUpdateByCode(config);
+        String action = (saved.getId() != null && saved.getId().equals(config.getId())) ? "更新" : "新增";
+        log.info("{}AI供应商: code={}, name={}, id={}", action, saved.getProviderCode(), saved.getProviderName(), saved.getId());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("action", action);
+        result.put("msg", action + "成功");
+        return R.success(result);
     }
 
     @PostMapping("/update")
@@ -160,6 +169,31 @@ public class AiProviderController {
         return R.success(resp);
     }
 
+    // ==================== 修改点：从供应商API拉取模型列表 ====================
+
+    @PostMapping("/fetch-models")
+    @Operation(summary = "拉取模型列表", description = "调用AI供应商的 /models 接口获取可用模型列表（参考ChatBox/NextChat交互模式）")
+    public R<List<String>> fetchModels(@RequestBody Map<String, String> params) {
+        String baseUrl = params.get("baseUrl");
+        String apiKey = params.get("apiKey");
+
+        if (baseUrl == null || baseUrl.trim().isEmpty()) {
+            return R.error("API 地址不能为空");
+        }
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            return R.error("API 密钥不能为空");
+        }
+
+        log.info("拉取模型列表: baseUrl={}", baseUrl);
+        List<String> models = providerConfigService.fetchModelList(baseUrl.trim(), apiKey.trim());
+
+        if (models.isEmpty()) {
+            return R.error("未能获取到模型列表，请检查 API 地址和密钥是否正确。提示：支持 OpenAI 兼容格式的 /models 接口。");
+        }
+
+        return R.success(models);
+    }
+
     // ==================== 预设供应商快捷初始化 ====================
 
     @PostMapping("/init-presets")
@@ -201,7 +235,7 @@ public class AiProviderController {
     private List<AiProviderConfig> getPresetProviders() {
         List<AiProviderConfig> list = new ArrayList<>();
 
-        // 1. DeepSeek
+        // 1. DeepSeek（默认不激活，需管理员配置 API Key 后手动激活）
         AiProviderConfig ds = new AiProviderConfig();
         ds.setProviderCode("deepseek");
         ds.setProviderName("DeepSeek");
@@ -212,7 +246,7 @@ public class AiProviderController {
         ds.setMaxTokens(2048);
         ds.setTemperature(0.7);
         ds.setEnabled(true);
-        ds.setIsActive(true);
+        ds.setIsActive(false);
         ds.setSort(1);
         ds.setRemark("DeepSeek V3，性价比高，支持128K上下文");
         list.add(ds);

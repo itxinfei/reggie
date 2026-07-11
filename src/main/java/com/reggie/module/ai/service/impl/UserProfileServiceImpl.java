@@ -286,10 +286,18 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
         String[] tasteKeywords = {"辣", "清淡", "甜", "酸", "麻", "鲜", "清淡", "重口", "素食", "海鲜"};
 
         for (AIMessageRecord feedback : feedbacks) {
-            if ("good".equals(feedback.getFeedback()) && feedback.getContent() != null) {
-                for (String keyword : tasteKeywords) {
-                    if (feedback.getContent().contains(keyword)) {
-                        goodTastes.add(keyword);
+            if (feedback.getContent() != null) {
+                if ("good".equals(feedback.getFeedback())) {
+                    for (String keyword : tasteKeywords) {
+                        if (feedback.getContent().contains(keyword)) {
+                            goodTastes.add(keyword);
+                        }
+                    }
+                } else if ("bad".equals(feedback.getFeedback())) {
+                    for (String keyword : tasteKeywords) {
+                        if (feedback.getContent().contains(keyword)) {
+                            badTastes.add(keyword);
+                        }
                     }
                 }
             }
@@ -297,6 +305,9 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
 
         if (!goodTastes.isEmpty()) {
             profile.setTasteTags(String.join(",", goodTastes));
+        }
+        if (!badTastes.isEmpty()) {
+            profile.setDislikedTags(String.join(",", badTastes));
         }
 
         // 同时从推荐模块获取品类偏好

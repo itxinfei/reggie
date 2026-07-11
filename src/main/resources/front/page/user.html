@@ -6,8 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
     <title>个人中心 - 瑞吉外卖</title>
     <link rel="icon" href="./../images/favico.ico">
-    <!--element-ui的样式-->
-    <link rel="stylesheet" href="../../backend/plugins/element-ui/index.css" />
     <!-- 引入样式  -->
     <link rel="stylesheet" href="../styles/index.css" />
     <!--引入vant样式-->
@@ -16,16 +14,26 @@
     <link rel="stylesheet" href="./../styles/user.css" />
 </head>
 <body>
-    <div id="user" class="app" v-loading="loading">
+    <!-- 修改点：移除ElementUI v-loading，改用CSS加载遮罩 -->
+    <div id="user" class="app" style="position:relative;">
+        <div v-if="pageLoading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
         <div class="divHead">
             <div class="divTitle">
-                <i class="el-icon-arrow-left" @click="goBack"></i>个人中心
+                <i class="icon-back-arrow" @click="goBack"></i>个人中心
             </div>
             <div class="divUser">
                 <img :src="userAvatar || './../images/headPage.png'"/>
                 <div class="desc">
-                    <div class="divName">{{ userName || '用户' }} <img src="./../images/women.png"/></div>
-                    <div class="divPhone">{{ userPhone }}</div>
+                    <!-- 修改点：动态性别图标 + 编辑入口 -->
+                    <div class="divName">
+                        {{ userName || '用户' }}
+                        <img v-if="userGender === 1" src="./../images/women.png" class="gender-icon"/>
+                        <img v-else-if="userGender === 0" src="./../images/man.png" class="gender-icon"/>
+                    </div>
+                    <!-- 修改点：手机号脱敏显示 138****1234 -->
+                    <div class="divPhone">{{ maskedPhone }}</div>
                 </div>
             </div>
         </div>
@@ -34,26 +42,25 @@
                 <div class="item" @click="toAddressPage">
                     <img src="./../images/locations.png"/>
                     <span>地址管理</span>
-                    <i class="el-icon-arrow-right"></i>
+                    <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
-                <!-- 修改点：消息中心入口 -->
                 <div class="item" @click="toMessagePage">
                     <img src="./../images/orders.png"/>
                     <span>消息中心</span>
-                    <i class="el-icon-arrow-right"></i>
+                    <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toOrderPage">
                     <img src="./../images/orders.png"/>
                     <span>历史订单</span>
-                    <i class="el-icon-arrow-right"></i>
+                    <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toEvaluationPage">
                     <img src="./../images/orders.png"/>
                     <span>我的评价</span>
-                    <i class="el-icon-arrow-right"></i>
+                    <i class="icon-arrow-right"></i>
                 </div>
             </div>
             <div class="divOrders" v-if="order[0]">
@@ -61,7 +68,6 @@
                 <div class="timeStatus">
                     <span>{{order[0].orderTime}}</span>
                     <span>{{getStatus(order[0].status)}}</span>
-                    <!-- <span>正在派送</span> -->
                 </div>
                 <div class="dishList">
                     <div v-for="(item,index) in order[0].orderDetails" :key="index" class="item">
@@ -73,19 +79,25 @@
                     <span>共{{order[0].sumNum}} 件商品,实付</span>
                     <span class="price">￥{{order[0].amount}}</span>
                 </div>
+                <!-- 修改点：按钮级loading状态，禁用时防止重复点击 -->
                 <div class="btn" v-if="order[0].status === 4">
-                    <div class="btnAgain" @click="addOrderAgain">再来一单</div>
+                    <div class="btnAgain"
+                         :class="{ 'is-loading': addOrderLoading, 'is-disabled': addOrderLoading }"
+                         @click="addOrderAgain">
+                        {{ addOrderLoading ? '处理中...' : '再来一单' }}
+                    </div>
                 </div>
             </div>
-            <div class="quitLogin" @click="toPageLogin">
-                退出登录
+            <!-- 修改点：退出登录按钮级loading -->
+            <div class="quitLogin"
+                 :class="{ 'is-loading': logoutLoading }"
+                 @click="toPageLogin">
+                {{ logoutLoading ? '退出中...' : '退出登录' }}
             </div>
         </div>
     </div>
     <!-- 开发环境版本，包含了有帮助的命令行警告 -->
     <script src="../../backend/plugins/vue/vue.js"></script>
-    <!-- 引入组件库 -->
-    <script src="../../backend/plugins/element-ui/index.js"></script>
     <!-- 引入vant组件 -->
     <script src="./../js/vant.min.js"></script>    
     <!--不同屏幕尺寸根字体设置-->
@@ -106,7 +118,11 @@
                     // 修改点：新增用户真实信息字段
                     userName: '',
                     userAvatar: '',
-                    loading:false,
+                    userGender: undefined, // 0=男, 1=女, undefined=未知
+                    // 修改点：分离loading状态：页面/再来一单/退出登录
+                    pageLoading: false,
+                    addOrderLoading: false,
+                    logoutLoading: false,
                     order:[{
                         orderTime:'',
                         status:undefined,
@@ -119,26 +135,31 @@
                     }],
                 }
             },
-            computed:{},
+            computed:{
+                // 修改点：手机号脱敏显示 138****1234
+                maskedPhone(){
+                    const phone = this.userPhone
+                    if(!phone || phone.length < 7) return phone || ''
+                    return phone.substring(0, 3) + '****' + phone.substring(phone.length - 4)
+                }
+            },
             created(){
                 this.userPhone = sessionStorage.getItem("userPhone") || ''
-                // 修改点：同时加载用户信息和最新订单
                 this.loadData()
             },
             mounted(){},
             methods:{
                 async loadData(){
-                    this.loading = true
+                    this.pageLoading = true
                     try {
                         await Promise.all([
                             this.fetchUserInfo(),
                             this.getLatestOrder()
                         ])
                     } finally {
-                        this.loading = false
+                        this.pageLoading = false
                     }
                 },
-                // 修改点：从后端获取真实用户信息，并同步到sessionStorage确保其他页面一致
                 async fetchUserInfo(){
                     try {
                         const res = await getUserInfoApi()
@@ -146,13 +167,14 @@
                             this.userName = res.data.name || ''
                             this.userAvatar = res.data.avatar || ''
                             this.userPhone = res.data.phone || this.userPhone
-                            // 修改点：同步最新数据到sessionStorage，确保首页头像/用户名一致
+                            this.userGender = res.data.sex !== undefined ? res.data.sex : undefined
+                            // 修改点：同步最新数据到sessionStorage
                             sessionStorage.setItem("userName", this.userName)
                             sessionStorage.setItem("userAvatar", this.userAvatar)
                             sessionStorage.setItem("userPhone", this.userPhone)
                         }
                     } catch(e) {
-                        // 修改点：静默处理，用户信息获取失败不影响页面
+                        // 修改点：静默处理
                     }
                 },
                 goBack(){
@@ -176,7 +198,6 @@
                         window.location.href = '/front/page/my-evaluations.html'
                     })
                 },
-                // 修改点：跳转消息中心
                 toMessagePage(){
                     window.requestAnimationFrame(()=>{
                         window.location.href = '/front/page/message.html'
@@ -198,35 +219,47 @@
                             this.order[0].sumNum = number
                         }
                     }else{
-                        this.$notify({ type:'warning', message:res.msg});
+                        vant.Toast.fail(res.msg || '加载订单失败');
                     }
                 },
+                // 修改点：独立loading，不阻塞其他按钮
                 async addOrderAgain(){
-                    if(this.loading) return;
-                    this.loading = true
+                    if(this.addOrderLoading) return;
+                    this.addOrderLoading = true
                     try {
                         const res = await orderAgainApi({id:this.order[0].id})
                         if(res.code === 1){
-                            // 修改点：先刷新购物车数据，确保首页立即显示正确数量
                             await cartListApi({})
                             window.requestAnimationFrame(()=>{
                                 window.location.href = '/front/index.html'
                             })
                         }else{
-                            this.$notify({ type:'warning', message:res.msg});
+                            vant.Toast.fail(res.msg || '再来一单失败');
+                            this.addOrderLoading = false
                         }
-                    } finally {
-                        this.loading = false
+                    } catch(e) {
+                        this.addOrderLoading = false
                     }
                 },
+                // 修改点：独立loading，退出登录用Vant Dialog二次确认
                 async toPageLogin(){
-                    // 修改点：防重复点击
-                    if(this.loading) return;
-                    this.loading = true
+                    if(this.logoutLoading) return;
+                    // 修改点：使用 Vant Dialog 二次确认
+                    vant.Dialog.confirm({
+                        title: '确认退出',
+                        message: '退出登录后需要重新登录，确认退出吗？',
+                        confirmButtonText: '确认退出',
+                        confirmButtonColor: '#e94e3c',
+                        cancelButtonText: '取消'
+                    }).then(() => {
+                        this.doLogout()
+                    }).catch(() => {})
+                },
+                async doLogout(){
+                    this.logoutLoading = true
                     try {
                         const res = await loginoutApi()
                         if(res.code === 1){
-                            // 修改点：清除所有登录态信息（userPhone/userId/userName/userAvatar）防止数据泄露
                             sessionStorage.removeItem("userPhone")
                             sessionStorage.removeItem("userId")
                             sessionStorage.removeItem("userName")
@@ -235,10 +268,11 @@
                                 window.location.href = '/front/page/login.html'
                             }) 
                         }else{
-                            this.$notify({ type:'warning', message:res.msg});
+                            vant.Toast.fail(res.msg || '退出失败');
+                            this.logoutLoading = false
                         }
-                    } finally {
-                        this.loading = false
+                    } catch(e) {
+                        this.logoutLoading = false
                     }
                 }
             }

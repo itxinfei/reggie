@@ -7,14 +7,17 @@
         <title>登录 - 瑞吉外卖</title>
         <link rel="icon" href="./../images/favico.ico">
         <script src="./../js/base.js"></script>
-        <link rel="stylesheet" href="../../backend/plugins/element-ui/index.css" />
         <link rel="stylesheet" href="../styles/vant.min.css"/>
-        <link rel="stylesheet" href="../../backend/styles/icon/iconfont.css" />
+        <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet" />
         <link rel="stylesheet" href="../styles/index.css" />
         <link rel="stylesheet" href="./../styles/login.css" />
     </head>
     <body class="login-page">
-        <div id="login" v-loading="loading">
+        <div id="login">
+            <!-- 修改点：ElementUI v-loading 替换为纯CSS loading -->
+            <div v-if="loading" class="loading-overlay">
+                <div class="loading-spinner"></div>
+            </div>
             <!-- 品牌区 - 美团风格：食物主题插画 -->
             <div class="brandArea">
                 <div class="brandIcon">
@@ -58,15 +61,19 @@
             <!-- 表单卡片 -->
             <div class="divContainer">
                 <div class="inputItem">
-                    <el-input placeholder="请输入手机号码" v-model="form.phone" maxlength="11">
-                        <i slot="prefix" class="inputIcon iconfont icon-user"></i>
-                    </el-input>
+                    <!-- 修改点：el-input 替换为原生input -->
+                    <div class="input-wrapper">
+                        <i class="inputIcon ri-user-3-line input-prefix"></i>
+                        <input type="text" class="code-input" placeholder="请输入手机号码" v-model="form.phone" maxlength="11" ref="phoneInput">
+                    </div>
                 </div>
                 <div class="divSplit"></div>
                 <div class="inputItem codeItem">
-                    <el-input placeholder="请输入验证码" v-model="form.code" maxlength="6">
-                        <i slot="prefix" class="inputIcon iconfont icon-lock"></i>
-                    </el-input>
+                    <!-- 修改点：el-input 替换为原生input -->
+                    <div class="input-wrapper">
+                        <i class="inputIcon ri-lock-line input-prefix"></i>
+                        <input type="text" class="code-input" placeholder="请输入验证码" v-model="form.code" maxlength="6">
+                    </div>
                     <span class="codeBtn"
                           @click='getCode'
                           :class="{codeDisabled: countdown > 0}">
@@ -80,19 +87,20 @@
 
             <!-- 登录按钮 -->
             <!-- 修改点：增加协议勾选校验 -->
-            <el-button
+            <!-- 修改点：el-button 替换为原生button -->
+            <button
                 :class="['btnLogin', canLogin ? 'btnActive' : 'btnDisabled']"
                 @click="btnLogin"
-                :disabled="!canLogin"
-                :loading="loading">
-                登录
-            </el-button>
+                :disabled="!canLogin || loading">
+                {{ loading ? '登录中...' : '登录' }}
+            </button>
 
             <!-- 修改点：协议勾选框 + 查看全文链接 -->
             <div class="agreementRow">
                 <label class="agreementCheckbox" @click="toggleAgreement">
                     <span class="checkIcon" :class="{checked: agreed}">
-                        <i v-if="agreed" class="el-icon-check"></i>
+                        <!-- 修改点：el-icon-check 替换为CSS勾选图标 -->
+                        <span v-if="agreed" class="check-mark">✓</span>
                     </span>
                 </label>
                 <span class="agreementText">
@@ -103,15 +111,15 @@
                 </span>
             </div>
 
-            <!-- 修改点：用户协议弹窗 -->
-            <el-dialog
-                :visible.sync="dialogVisible"
-                :title="dialogTitle"
-                width="90%"
-                :close-on-click-modal="false"
-                custom-class="agreementDialog"
-                center>
-                <div class="agreementContent">
+            <!-- 修改点：用户协议弹窗——el-dialog 替换为纯CSS模态框 -->
+            <div v-if="dialogVisible" class="agreementModal">
+                <div class="agreementDialog">
+                    <div class="modal-header">
+                        <h3 class="modal-title">{{ dialogTitle }}</h3>
+                        <span class="modal-close" @click="dialogVisible = false">✕</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="agreementContent">
                     <h3 v-if="dialogType === 'user'">瑞吉外卖用户服务协议</h3>
                     <h3 v-else>瑞吉外卖隐私政策</h3>
                     <p class="updateDate">更新日期：2026年07月01日</p>
@@ -208,14 +216,17 @@
                         </div>
                     </template>
                 </div>
-                <span slot="footer" class="dialog-footer">
-                    <el-button type="primary" @click="dialogVisible = false" class="dialogConfirmBtn">我知道了</el-button>
-                </span>
-            </el-dialog>
+                    </div>
+                    <div class="modal-footer">
+                        <!-- 修改点：el-button 替换为原生button -->
+                        <button class="dialogConfirmBtn" @click="dialogVisible = false">我知道了</button>
+                    </div>
+                </div>
+                <div class="modal-overlay" @click="dialogVisible = false"></div>
+            </div>
         </div>
 
         <script src="../../backend/plugins/vue/vue.js"></script>
-        <script src="../../backend/plugins/element-ui/index.js"></script>
         <script src="./../js/vant.min.js"></script>
         <script src="../../backend/plugins/axios/axios.min.js"></script>
         <script src="./../js/request.js"></script>
@@ -249,10 +260,9 @@
             },
             created(){},
             mounted(){
-                // 修改点：自动聚焦手机号输入框
+                // 修改点：自动聚焦手机号输入框（ref方式替代el-input__inner选择器）
                 this.$nextTick(() => {
-                    const inputs = document.querySelectorAll('#login .el-input__inner')
-                    if(inputs.length > 0) inputs[0].focus()
+                    if (this.$refs.phoneInput) this.$refs.phoneInput.focus()
                 })
             },
             beforeDestroy(){
@@ -284,25 +294,25 @@
                                 }
                             }, 1000);
                         } else {
-                            this.$notify({ type:'warning', message: res.msg || '验证码发送失败'});
+                            vant.Notify({ type:'warning', message: res.msg || '验证码发送失败'});
                         }
                     } catch(e) {
-                        this.$notify({ type:'warning', message:'网络异常，请稍后再试'});
+                        vant.Notify({ type:'warning', message:'网络异常，请稍后再试'});
                     }
                 },
                 // 修改点：完善登录逻辑 — 错误提示、存储用户完整信息、加载态
                 async btnLogin(){
                     if(!this.form.phone){
-                        this.$notify({ type:'warning', message:'请输入手机号码'});
+                        vant.Notify({ type:'warning', message:'请输入手机号码'});
                         return
                     }
                     if(!this.form.code){
-                        this.$notify({ type:'warning', message:'请输入验证码'});
+                        vant.Notify({ type:'warning', message:'请输入验证码'});
                         return
                     }
                     // 修改点：增加协议同意校验
                     if(!this.agreed){
-                        this.$notify({ type:'warning', message:'请先阅读并同意用户协议与隐私政策'});
+                        vant.Notify({ type:'warning', message:'请先阅读并同意用户协议与隐私政策'});
                         return
                     }
                     if(this.loading) return;
@@ -322,10 +332,10 @@
                                 window.location.href = '/front/index.html'
                             })
                         }else{
-                            this.$notify({ type:'warning', message:res.msg || '登录失败'});
+                            vant.Notify({ type:'warning', message:res.msg || '登录失败'});
                         }
                     } catch(e) {
-                        this.$notify({ type:'warning', message:'网络异常，请稍后再试'});
+                        vant.Notify({ type:'warning', message:'网络异常，请稍后再试'});
                     } finally {
                         this.loading = false
                     }

@@ -8,8 +8,6 @@
         <link rel="icon" href="./../images/favico.ico">
         <!--不同屏幕尺寸根字体设置-->
         <script src="./../js/base.js"></script>
-        <!--element-ui的样式-->
-        <link rel="stylesheet" href="../../backend/plugins/element-ui/index.css" />
         <!-- 引入样式  -->
         <link rel="stylesheet" href="../styles/index.css" />
         <!--引入vant样式-->
@@ -21,7 +19,7 @@
         <div id="order" class="app">
             <div class="divHead">
                 <div class="divTitle">
-                    <i class="el-icon-arrow-left" @click="goBack"></i>历史订单
+                    <i class="icon-back-arrow" @click="goBack"></i>历史订单
                 </div>
             </div>
             <!-- 修改点：美团风格状态Tab筛选栏 -->
@@ -41,14 +39,13 @@
                     finished-text="没有更多了"
                     @load="getList"
                     >
-                    <van-cell v-for="(order,index) in orderList" :key="index" class="item">
+                    <van-cell v-for="order in orderList" :key="order.id" class="item">
                         <div class="timeStatus">
                             <span>{{order.orderTime}}</span>
                             <span>{{getStatus(order.status)}}</span>
-                            <!-- <span>正在派送</span> -->
                         </div>
                         <div class="dishList">
-                            <div v-for="(item,index) in order.orderDetails" :key="index" class="item">
+                            <div v-for="(item,dIdx) in order.orderDetails" :key="dIdx" class="item">
                                 <span>{{item.name}}</span>
                                 <span>x{{item.number}}</span>
                             </div>
@@ -65,17 +62,17 @@
                     </van-cell>
                 </van-list>
             </div>
+            <!-- 修改点：空状态增加引导按钮 -->
             <div class="divNoData" v-else>
                 <div class="divContainer">
                     <img src="./../images/no_order.png"/>
                     <div>暂无订单</div>
+                    <div class="goShopBtn" @click="goHome">去逛逛</div>
                 </div>
             </div>
         </div>
         <!-- 开发环境版本，包含了有帮助的命令行警告 -->
         <script src="../../backend/plugins/vue/vue.js"></script>
-        <!-- 引入组件库 -->
-        <script src="../../backend/plugins/element-ui/index.js"></script>
         <!-- 引入vant组件 -->
         <script src="./../js/vant.min.js"></script>    
         <!-- 引入axios -->
@@ -124,6 +121,11 @@
                         history.go(-1)
                     }
                 },
+                goHome(){
+                    window.requestAnimationFrame(()=>{
+                        window.location.href = '/front/index.html'
+                    })
+                },
                 initData(){
                     this.getList()
                 },
@@ -170,7 +172,7 @@
                         }
                         this.paging.page = this.paging.page + 1
                     }else{
-                        this.$notify({ type:'warning', message:res.msg});
+                        vant.Toast.fail(res.msg || '加载订单失败');
                     }
                 },
                 getStatus(status){
@@ -188,7 +190,7 @@
                                 window.location.href = '/front/index.html'
                             })
                         }else{
-                            this.$notify({ type:'warning', message:res.msg});
+                            vant.Toast.fail(res.msg || '再来一单失败');
                         }
                     } finally {
                         this.submitting = false
@@ -214,12 +216,12 @@
                                 this.finished = false
                                 this.loading = true
                                 this.getList()
-                                this.$notify({ type:'success', message:'订单已取消'});
+                                vant.Toast.success('订单已取消');
                             }else{
-                                this.$notify({ type:'warning', message: (res && res.msg) || '取消失败'});
+                                vant.Toast.fail((res && res.msg) || '取消失败');
                             }
                         } catch(e) {
-                            this.$notify({ type:'warning', message: '网络异常，请稍后重试'});
+                            vant.Toast.fail('网络异常，请稍后重试');
                         } finally {
                             this.submitting = false
                         }

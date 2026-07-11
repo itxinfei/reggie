@@ -67,6 +67,9 @@ public class LoginCheckFilter implements Filter{
                 // 放行AI模块的公开API（健康检查、对话同步等允许匿名访问）
                 "/api/ai/health",
                 "/api/ai/conversations",
+                // 修改点：放行静态资源目录，避免图片/上传文件被拦截导致死循环请求
+                "/images/**",
+                "/uploads/**",
                 // 放行API文档相关路径
                 "/swagger-ui/**",
                 "/swagger-ui.html",

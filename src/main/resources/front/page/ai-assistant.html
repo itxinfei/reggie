@@ -7,294 +7,13 @@
     <!-- 修改点：修正静态资源路径（../../plugins/ → ../styles/, /front/ 目录实际位置） -->
     <link rel="stylesheet" href="../styles/vant.min.css">
     <link rel="stylesheet" href="../styles/index.css">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-
-        .ai-container {
-            max-width: 500px;
-            margin: 0 auto;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background: #fff;
-            position: relative;
-        }
-
-        /* 顶部栏 */
-        .ai-header {
-            background: linear-gradient(135deg, #FF6B35 0%, #f7931e 100%);
-            color: #fff;
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
-            flex-shrink: 0;
-        }
-        .ai-header .title { font-size: 18px; font-weight: 600; }
-        .ai-header .close-btn { font-size: 24px; cursor: pointer; padding: 4px; }
-        .ai-header .header-actions { display: flex; gap: 12px; align-items: center; }
-        .ai-header .header-btn {
-            font-size: 18px; cursor: pointer; padding: 4px; opacity: 0.9;
-            transition: opacity 0.2s;
-        }
-        .ai-header .header-btn:hover { opacity: 1; }
-        .ai-header .status-dot {
-            width: 8px; height: 8px; border-radius: 50%; background: #4caf50;
-            display: inline-block; margin-right: 6px; animation: pulse 2s infinite;
-        }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-        /* 对话管理侧边栏 */
-        .sidebar-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.4); z-index: 999;
-            opacity: 0; pointer-events: none; transition: opacity 0.3s;
-        }
-        .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
-        .conversation-sidebar {
-            position: fixed; top: 0; left: 0; bottom: 0; width: 280px;
-            background: #fff; z-index: 1000; transform: translateX(-100%);
-            transition: transform 0.3s ease; display: flex; flex-direction: column;
-            box-shadow: 2px 0 12px rgba(0,0,0,0.15);
-        }
-        .conversation-sidebar.active { transform: translateX(0); }
-        .sidebar-header {
-            padding: 16px; border-bottom: 1px solid #eee;
-            display: flex; align-items: center; justify-content: space-between;
-        }
-        .sidebar-header h3 { font-size: 16px; color: #333; }
-        .sidebar-header .new-chat-btn {
-            padding: 6px 14px; background: #FF6B35; color: #fff; border: none;
-            border-radius: 16px; font-size: 13px; cursor: pointer;
-        }
-        .sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
-        .sidebar-item {
-            padding: 12px 14px; border-radius: 8px; cursor: pointer;
-            margin-bottom: 4px; transition: all 0.2s; position: relative;
-        }
-        .sidebar-item:hover { background: #f5f5f5; }
-        .sidebar-item.active { background: #FFF0E6; }
-        .sidebar-item .conv-title {
-            font-size: 14px; color: #333; overflow: hidden;
-            text-overflow: ellipsis; white-space: nowrap; padding-right: 30px;
-        }
-        .sidebar-item .conv-time {
-            font-size: 11px; color: #999; margin-top: 4px;
-        }
-        .sidebar-item .conv-delete {
-            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-            font-size: 16px; color: #999; cursor: pointer; padding: 4px;
-        }
-        .sidebar-item .conv-delete:hover { color: #f56c6c; }
-
-        /* 修改点：场景切换标签 */
-        .scene-tabs {
-            display: flex; gap: 0; padding: 0 16px;
-            background: #fafafa; border-bottom: 1px solid #eee;
-            overflow-x: auto; flex-shrink: 0;
-        }
-        .scene-tab {
-            padding: 10px 14px; font-size: 13px; font-weight: 500;
-            color: #909399; cursor: pointer; border-bottom: 2px solid transparent;
-            white-space: nowrap; transition: all 0.2s;
-        }
-        .scene-tab:hover { color: #FF6B35; }
-        .scene-tab.active { color: #FF6B35; border-bottom-color: #FF6B35; }
-
-        /* 快捷提示 */
-        .quick-tips {
-            display: flex; flex-wrap: wrap; gap: 8px;
-            padding: 12px 16px; background: #fafafa;
-            border-bottom: 1px solid #eee; flex-shrink: 0;
-        }
-        .quick-tip {
-            font-size: 12px; padding: 6px 14px; border-radius: 16px;
-            background: #fff; border: 1px solid #FF6B35; color: #FF6B35;
-            cursor: pointer; white-space: nowrap; transition: all 0.2s;
-        }
-        .quick-tip:active { background: #FF6B35; color: #fff; }
-
-        /* 聊天区域 */
-        .chat-area {
-            flex: 1; overflow-y: auto; padding: 16px;
-            display: flex; flex-direction: column; gap: 12px;
-        }
-        .chat-msg {
-            display: flex; gap: 8px; max-width: 85%;
-            animation: slideUp 0.3s ease;
-        }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .chat-msg.assistant { align-self: flex-start; }
-        .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
-        .chat-avatar {
-            width: 36px; height: 36px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 18px; flex-shrink: 0;
-        }
-        .chat-msg.assistant .chat-avatar { background: #FFF0E6; }
-        .chat-msg.user .chat-avatar { background: #FF6B35; color: #fff; }
-        .chat-bubble {
-            padding: 10px 14px; border-radius: 16px; font-size: 14px;
-            line-height: 1.7; word-break: break-word;
-        }
-        .chat-msg.assistant .chat-bubble {
-            background: #f5f5f5; border-top-left-radius: 4px;
-        }
-        .chat-msg.user .chat-bubble {
-            background: #FF6B35; color: #fff; border-top-right-radius: 4px;
-        }
-
-        /* 安全的富文本渲染 - 仅支持有限的格式化 */
-        .chat-bubble .msg-bold { font-weight: 600; }
-        .chat-bubble .msg-list {
-            margin: 6px 0; padding-left: 20px;
-        }
-        .chat-bubble .msg-list li { margin: 3px 0; }
-        .chat-bubble .msg-line { display: block; margin: 4px 0; }
-        .chat-bubble .msg-highlight {
-            background: #FFF0E6; color: #FF6B35; padding: 2px 6px;
-            border-radius: 4px; font-weight: 500;
-        }
-
-        /* 推荐菜品卡片 */
-        .dish-recommendations {
-            display: flex; flex-direction: column; gap: 8px; margin-top: 10px;
-        }
-        .dish-card {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px; background: #fff; border-radius: 10px;
-            border: 1px solid #eee; cursor: pointer; transition: box-shadow 0.2s;
-        }
-        .dish-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .dish-card img {
-            width: 56px; height: 56px; border-radius: 8px;
-            object-fit: cover; background: #f0f0f0; flex-shrink: 0;
-        }
-        .dish-card .dish-info { flex: 1; min-width: 0; }
-        .dish-card .dish-name {
-            font-size: 13px; font-weight: 500; color: #333;
-            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-        .dish-card .dish-reason { font-size: 11px; color: #999; margin-top: 2px; }
-        .dish-card .dish-price { font-size: 14px; color: #FF6B35; font-weight: 600; margin-top: 4px; }
-        .dish-card .add-btn {
-            width: 28px; height: 28px; border-radius: 50%; background: #FF6B35;
-            color: #fff; border: none; font-size: 16px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-
-        /* 反馈按钮 */
-        .feedback-bar {
-            display: flex; gap: 8px; margin-top: 8px; padding-left: 4px;
-        }
-        .feedback-btn {
-            padding: 3px 10px; border-radius: 12px; font-size: 11px;
-            border: 1px solid #ddd; background: #fff; color: #666;
-            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 3px;
-        }
-        .feedback-btn:hover { border-color: #FF6B35; color: #FF6B35; }
-        .feedback-btn.active-good { border-color: #67c23a; color: #67c23a; background: #f0f9eb; }
-        .feedback-btn.active-bad { border-color: #f56c6c; color: #f56c6c; background: #fef0f0; }
-
-        /* 加载动画 */
-        .typing-indicator {
-            display: flex; gap: 4px; padding: 8px 0;
-        }
-        .typing-indicator span {
-            width: 6px; height: 6px; border-radius: 50%; background: #ccc;
-            animation: typing 1.4s infinite;
-        }
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typing {
-            0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
-            30% { opacity: 1; transform: scale(1); }
-        }
-
-        /* 错误重试 */
-        .retry-bar {
-            display: flex; align-items: center; gap: 8px; margin-top: 6px;
-        }
-        .retry-btn {
-            padding: 4px 12px; border-radius: 12px; font-size: 12px;
-            border: 1px solid #FF6B35; color: #FF6B35; background: #fff;
-            cursor: pointer;
-        }
-        .retry-btn:hover { background: #FFF0E6; }
-
-        /* 输入区 */
-        .input-area {
-            display: flex; gap: 10px; padding: 12px 16px;
-            border-top: 1px solid #eee; background: #fff;
-            align-items: center; flex-shrink: 0;
-        }
-        .input-area input {
-            flex: 1; border: 1px solid #e0e0e0; border-radius: 24px;
-            padding: 10px 16px; font-size: 14px; outline: none;
-            transition: border-color 0.2s;
-        }
-        .input-area input:focus { border-color: #FF6B35; }
-        .input-area input:disabled { background: #f5f5f5; }
-        .voice-btn {
-            width: 40px; height: 40px; border-radius: 50%; border: 1px solid #e0e0e0;
-            background: #fff; font-size: 18px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-            transition: all 0.2s;
-        }
-        .voice-btn:active { background: #f5f5f5; }
-        .voice-btn.recording {
-            background: #f56c6c; color: #fff; border-color: #f56c6c;
-            animation: pulse 1s infinite;
-        }
-        .send-btn {
-            width: 40px; height: 40px; border-radius: 50%;
-            background: linear-gradient(135deg, #FF6B35, #f7931e);
-            color: #fff; border: none; font-size: 18px; cursor: pointer;
-            flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-        }
-        .send-btn:disabled { background: #ccc; cursor: not-allowed; }
-
-        /* 流式光标 */
-        .streaming-cursor::after {
-            content: '▋'; color: #FF6B35; animation: blink 0.8s infinite;
-            margin-left: 2px;
-        }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-
-        /* 修改点：侧边栏加载中 */
-        .sidebar-loading {
-            text-align: center; padding: 40px 20px; color: #909399; font-size: 13px;
-        }
-        /* 空状态 */
-        .empty-sidebar {
-            text-align: center; padding: 40px 20px; color: #c0c4cc;
-        }
-        .empty-sidebar .empty-icon { font-size: 48px; margin-bottom: 12px; }
-        .empty-sidebar p { font-size: 13px; }
-
-        /* 修改点：清空全部按钮 */
-        .sidebar-footer {
-            padding: 10px 16px; border-top: 1px solid #eee;
-            text-align: center;
-        }
-        .clear-all-btn {
-            padding: 6px 20px; font-size: 12px; color: #f56c6c;
-            border: 1px solid #fde2e2; background: #fef0f0;
-            border-radius: 14px; cursor: pointer; transition: all 0.2s;
-        }
-        .clear-all-btn:hover { background: #fde2e2; }
-    </style>
+    <link rel="stylesheet" href="../styles/ai-assistant.css">
 </head>
 <body>
     <div id="ai-app" class="ai-container">
         <!-- 顶部栏 -->
         <div class="ai-header">
-            <div style="display:flex;align-items:center;gap:8px;">
+            <div class="header-left">
                 <span class="status-dot"></span>
                 <span class="title">AI 智能点餐助手</span>
             </div>
@@ -344,8 +63,8 @@
         <!-- 修改点：按场景动态快捷提示 -->
         <div class="quick-tips" v-if="messages.length <= 1">
             <!-- 用户画像标签（基于历史偏好，仅点餐场景显示） -->
-            <span class="quick-tip" v-for="tag in userProfileTags" :key="tag"
-                  style="background:#FFF0E6;border-color:#FF6B35;color:#FF6B35;"
+            <span v-for="tag in userProfileTags" :key="tag"
+                  class="quick-tip profile-tag"
                   @click="sendQuickTip(tag)">
                 {{ tag }}
             </span>
@@ -393,7 +112,7 @@
             <template v-for="(msg, idx) in messages">
                 <div :class="'chat-msg ' + msg.role" :key="msg.id || idx">
                     <div class="chat-avatar">{{ msg.role === 'assistant' ? '🤖' : '👤' }}</div>
-                    <div style="flex:1;min-width:0;">
+                    <div class="msg-body">
                         <div class="chat-bubble" :class="{'streaming-cursor': msg.streaming}">
                             <!-- 安全渲染：仅支持有限格式，杜绝 XSS -->
                             <template v-if="msg.role === 'assistant'">
@@ -401,7 +120,7 @@
                                     <span v-if="part.type === 'text'" class="msg-line">{{ part.text }}</span>
                                     <span v-else-if="part.type === 'bold'" class="msg-bold">{{ part.text }}</span>
                                     <span v-else-if="part.type === 'list'" class="msg-list">
-                                        <ul style="margin:4px 0;padding-left:18px;">
+                                        <ul>
                                             <li v-for="(item, i) in part.items" :key="i">{{ item }}</li>
                                         </ul>
                                     </span>
@@ -415,7 +134,7 @@
                         <!-- 推荐菜品卡片 -->
                         <div class="dish-recommendations" v-if="msg.dishes && msg.dishes.length > 0">
                             <div class="dish-card" v-for="dish in msg.dishes" :key="dish.dishId" @click="addToCart(dish)">
-                                <img :src="dish.image || '../../images/noImg.png'" :alt="dish.name" @error="imgError">
+                                <img :src="dish.image || '/front/images/noImg.png'" :alt="dish.name" @error="imgError">
                                 <div class="dish-info">
                                     <div class="dish-name">{{ dish.name }}</div>
                                     <div class="dish-reason" v-if="dish.reason">{{ dish.reason }}</div>
@@ -1163,8 +882,11 @@
                     });
                 },
 
+                /* 修改点：修复死循环——加载失败时改用绝对路径兜底，并防重入 */
                 imgError: function(e) {
-                    e.target.src = '../../images/noImg.png';
+                    // 如果已经指向兜底图片，不再重复替换（防止死循环）
+                    if (e.target.src.indexOf('/front/images/noImg.png') >= 0) return;
+                    e.target.src = '/front/images/noImg.png';
                 },
 
                 // 修改点：始终直接导航回首页，不依赖不可靠的 history.back()

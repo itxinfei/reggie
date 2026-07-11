@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -95,17 +96,41 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
         Map<Long, String> categoryNameMap = new HashMap<>();
 
         List<Orders> orders = getUserRecentOrders(userId, since);
+        List<Long> allDishIds = new ArrayList<>();
         for (Orders order : orders) {
             List<OrderDetail> details = getOrderDetails(order.getId());
             for (OrderDetail detail : details) {
-                Dish dish = dishService.getById(detail.getDishId());
-                if (dish != null && dish.getCategoryId() != null) {
-                    categoryCount.merge(dish.getCategoryId(), 1, Integer::sum);
-                    if (!categoryNameMap.containsKey(dish.getCategoryId())) {
-                        Category cat = categoryService.getById(dish.getCategoryId());
-                        if (cat != null) {
-                            categoryNameMap.put(dish.getCategoryId(), cat.getName());
-                        }
+                if (detail.getDishId() != null) {
+                    allDishIds.add(detail.getDishId());
+                }
+            }
+        }
+
+        // 批量查询菜品，避免 N+1
+        Map<Long, Dish> dishMap = dishService.listByIds(allDishIds).stream()
+                .collect(Collectors.toMap(Dish::getId, Function.identity()));
+
+        // 收集需要查询的分类ID，批量查询
+        Set<Long> categoryIdsToQuery = new HashSet<>();
+        for (Dish dish : dishMap.values()) {
+            if (dish.getCategoryId() != null) {
+                categoryIdsToQuery.add(dish.getCategoryId());
+            }
+        }
+        Map<Long, Category> categoryMap = new HashMap<>();
+        if (!categoryIdsToQuery.isEmpty()) {
+            categoryMap = categoryService.listByIds(categoryIdsToQuery).stream()
+                    .collect(Collectors.toMap(Category::getId, Function.identity()));
+        }
+
+        // 统计品类
+        for (Dish dish : dishMap.values()) {
+            if (dish.getCategoryId() != null) {
+                categoryCount.merge(dish.getCategoryId(), 1, Integer::sum);
+                if (!categoryNameMap.containsKey(dish.getCategoryId())) {
+                    Category cat = categoryMap.get(dish.getCategoryId());
+                    if (cat != null) {
+                        categoryNameMap.put(dish.getCategoryId(), cat.getName());
                     }
                 }
             }
@@ -132,33 +157,48 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
         Map<String, Integer> flavorCount = new HashMap<>();
 
         List<Orders> orders = getUserRecentOrders(userId, since);
+        List<Long> allDishIds = new ArrayList<>();
         for (Orders order : orders) {
             List<OrderDetail> details = getOrderDetails(order.getId());
             for (OrderDetail detail : details) {
-                Dish dish = dishService.getById(detail.getDishId());
-                if (dish != null) {
-                    // 通过菜品口味表获取口味信息
-                    LambdaQueryWrapper<DishFlavor> flavorWrapper = new LambdaQueryWrapper<>();
-                    flavorWrapper.eq(DishFlavor::getDishId, dish.getId());
-                    List<DishFlavor> flavors = dishFlavorService.list(flavorWrapper);
-                    for (DishFlavor flavor : flavors) {
-                        if (flavor.getValue() != null && !flavor.getValue().isEmpty()) {
-                            // 提取口味关键词
-                            String tasteKey = extractTasteKeyword(flavor.getValue());
-                            if (tasteKey != null) {
-                                flavorCount.merge(tasteKey, 1, Integer::sum);
-                            }
-                        }
-                    }
+                if (detail.getDishId() != null) {
+                    allDishIds.add(detail.getDishId());
+                }
+            }
+        }
 
-                    // 从菜品名称和描述提取口味
-                    if (dish.getName() != null) {
-                        countTasteFromText(dish.getName(), flavorCount);
-                    }
-                    if (dish.getDescription() != null) {
-                        countTasteFromText(dish.getDescription(), flavorCount);
+        // 批量查询菜品，避免 N+1
+        Map<Long, Dish> dishMap = dishService.listByIds(allDishIds).stream()
+                .collect(Collectors.toMap(Dish::getId, Function.identity()));
+
+        // 批量查询口味
+        Set<Long> dishIdsForFlavor = new HashSet<>(dishMap.keySet());
+        Map<Long, List<DishFlavor>> flavorMap = new HashMap<>();
+        if (!dishIdsForFlavor.isEmpty()) {
+            LambdaQueryWrapper<DishFlavor> flavorWrapper = new LambdaQueryWrapper<>();
+            flavorWrapper.in(DishFlavor::getDishId, dishIdsForFlavor);
+            List<DishFlavor> allFlavors = dishFlavorService.list(flavorWrapper);
+            for (DishFlavor f : allFlavors) {
+                flavorMap.computeIfAbsent(f.getDishId(), k -> new ArrayList<>()).add(f);
+            }
+        }
+
+        for (Dish dish : dishMap.values()) {
+            List<DishFlavor> flavors = flavorMap.getOrDefault(dish.getId(), Collections.emptyList());
+            for (DishFlavor flavor : flavors) {
+                if (flavor.getValue() != null && !flavor.getValue().isEmpty()) {
+                    String tasteKey = extractTasteKeyword(flavor.getValue());
+                    if (tasteKey != null) {
+                        flavorCount.merge(tasteKey, 1, Integer::sum);
                     }
                 }
+            }
+
+            if (dish.getName() != null) {
+                countTasteFromText(dish.getName(), flavorCount);
+            }
+            if (dish.getDescription() != null) {
+                countTasteFromText(dish.getDescription(), flavorCount);
             }
         }
 

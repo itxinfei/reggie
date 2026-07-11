@@ -114,7 +114,36 @@
                 <el-input v-model="form.baseUrl" placeholder="https://api.deepseek.com/v1" />
             </el-form-item>
             <el-form-item label="模型名称" required>
-                <el-input v-model="form.modelName" placeholder="deepseek-chat / qwen-turbo / glm-4" />
+                <!-- 修改点：模型名称支持手动输入 + 一键拉取API模型列表（参考ChatBox/NextChat体验） -->
+                <div style="display:flex;gap:8px;width:100%;">
+                    <el-input v-model="form.modelName" placeholder="deepseek-chat / qwen-turbo / glm-4"
+                        style="flex:1;" />
+                    <el-button size="mini" type="success" @click="fetchModelList"
+                        :loading="fetchingModels" :disabled="!form.baseUrl || !form.apiKey">
+                        {{ fetchingModels ? '获取中...' : '获取模型列表' }}
+                    </el-button>
+                </div>
+                <div class="field-tip">
+                    手动输入或点击「获取模型列表」自动拉取（需先填写 API 地址和密钥）
+                </div>
+                <!-- 修改点：模型列表下拉选择区 -->
+                <div v-if="modelList.length > 0" class="model-list-panel">
+                    <div class="model-list-header">
+                        共 {{ modelList.length }} 个可用模型，点击即可选择：
+                        <span class="model-list-clear" @click="modelList = []">✕ 收起</span>
+                    </div>
+                    <div class="model-list-items">
+                        <span v-for="m in modelList" :key="m"
+                              :class="['model-chip', { active: form.modelName === m }]"
+                              @click="selectModel(m)">
+                            {{ m }}
+                        </span>
+                    </div>
+                </div>
+                <!-- 修改点：获取失败时的错误提示 -->
+                <div v-if="modelFetchError" class="model-fetch-error">
+                    ⚠ {{ modelFetchError }}
+                </div>
             </el-form-item>
             <el-form-item label="API 密钥" required>
                 <el-input v-model="form.apiKey" type="password"
@@ -186,6 +215,10 @@
             dialogVisible: false,
             dialogTitle: '添加模型',
             submitting: false,
+            // 修改点：模型列表拉取状态
+            fetchingModels: false,
+            modelList: [],
+            modelFetchError: '',
             form: {
                 id: null,
                 providerCode: '',
@@ -314,6 +347,10 @@
                     apiFormat: 'openai_compatible', timeout: 60,
                     maxTokens: 2048, temperature: 0.7, remark: ''
                 };
+                // 修改点：重置模型列表状态
+                this.modelList = [];
+                this.modelFetchError = '';
+                this.fetchingModels = false;
                 this.dialogTitle = '添加模型';
                 this.dialogVisible = true;
             },
@@ -322,6 +359,10 @@
                 this.form = JSON.parse(JSON.stringify(provider));
                 var self = this;
                 this.form._hasExistingKey = !!(provider.apiKey && provider.apiKey.indexOf('****') > 0);
+                // 修改点：重置模型列表状态
+                this.modelList = [];
+                this.modelFetchError = '';
+                this.fetchingModels = false;
                 this.dialogTitle = '编辑模型 - ' + (provider.providerName || provider.providerCode);
                 this.dialogVisible = true;
 
@@ -360,8 +401,15 @@
 
                 api.then(function(res) {
                     if (res.code === 1) {
-                        self.$message.success(self.form.id ? '更新成功' : '添加成功');
+                        // 修改点：add 接口返回 { action:"新增"/"更新", msg }，update 返回简单字符串
+                        var msg = res.msg || '';
+                        if (res.data && res.data.msg) {
+                            msg = res.data.msg;
+                        }
+                        self.$message.success(msg || (self.form.id ? '更新成功' : '添加成功'));
                         self.dialogVisible = false;
+                        self.modelList = [];
+                        self.modelFetchError = '';
                         self.loadData();
                     } else {
                         self.$message.error(res.msg || '操作失败');
@@ -391,6 +439,43 @@
                         self.$message.error('初始化失败：' + (err.message || err));
                     });
                 }).catch(function() {});
+            },
+
+            // 修改点：从AI供应商API拉取可用模型列表（参考ChatBox/NextChat交互方式）
+            fetchModelList: function() {
+                var self = this;
+                if (!this.form.baseUrl || !this.form.apiKey) {
+                    this.$message.warning('请先填写 API 地址和 API 密钥');
+                    return;
+                }
+                this.fetchingModels = true;
+                this.modelFetchError = '';
+                this.modelList = [];
+
+                $axios.post('/admin/ai/provider/fetch-models', {
+                    baseUrl: this.form.baseUrl,
+                    apiKey: this.form.apiKey
+                }).then(function(res) {
+                    if (res.code === 1) {
+                        self.modelList = res.data || [];
+                        if (self.modelList.length === 0) {
+                            self.modelFetchError = '该供应商未返回任何模型，请手动输入模型名称';
+                        } else {
+                            self.$message.success('成功获取 ' + self.modelList.length + ' 个模型');
+                        }
+                    } else {
+                        self.modelFetchError = res.msg || '获取失败';
+                    }
+                }).catch(function(err) {
+                    self.modelFetchError = '请求失败：' + (err.message || err);
+                }).finally(function() {
+                    self.fetchingModels = false;
+                });
+            },
+
+            // 修改点：选择模型
+            selectModel: function(modelName) {
+                this.form.modelName = modelName;
             },
 
             handleClose: function() {

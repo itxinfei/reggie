@@ -27,11 +27,11 @@ body.scrollable-page {
    ============================================ */
 #address_edit .divHead {
   width: 100%;
-  height: 88rem;
-  background: linear-gradient(135deg, #ffd43b 0%, #ffa426 100%);
+  height: var(--header-height);
+  background: var(--color-primary-gradient);
   position: relative;
   flex-shrink: 0;
-  box-shadow: 0 2rem 12rem rgba(255, 164, 38, 0.3);
+  box-shadow: 0 2rem 12rem rgba(255, 154, 0, 0.25);
   z-index: 10;
 }
 #address_edit .divHead .divTitle {
@@ -39,7 +39,7 @@ body.scrollable-page {
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
   font-weight: 600;
   text-align: center;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
   line-height: 25rem;
   position: absolute;
   bottom: 14rem;
@@ -55,7 +55,7 @@ body.scrollable-page {
   transform: translateY(-50%);
   cursor: pointer;
   font-size: 22rem;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
   font-style: normal;
   font-weight: 700;
   padding: 4rem 8rem;
@@ -518,7 +518,7 @@ body.scrollable-page {
   justify-content: space-between;
   padding: 15rem 24rem;
   font-size: 16rem;
-  color: #333333;
+  color: var(--color-text-primary);
   cursor: pointer;
   transition: background 0.15s ease;
   border-left: 3px solid transparent;

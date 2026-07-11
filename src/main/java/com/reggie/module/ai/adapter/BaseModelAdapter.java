@@ -129,18 +129,22 @@ public abstract class BaseModelAdapter implements AiModelAdapter {
     }
 
     /**
-     * 将 InputStream 读取为字符串，最多读 15 行（防止超大响应）
+     * 将 InputStream 读取为字符串，按完整内容读取，最多读取 1MB 防止异常超大响应。
      */
     private String readStream(InputStream stream) throws Exception {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
         StringBuilder sb = new StringBuilder();
-        String line;
-        int lineCount = 0;
-        while ((line = reader.readLine()) != null && lineCount < 15) {
-            sb.append(line).append("\n");
-            lineCount++;
+        byte[] buf = new byte[4096];
+        int len;
+        int total = 0;
+        int maxBytes = 1024 * 1024;
+        while ((len = stream.read(buf)) != -1) {
+            total += len;
+            if (total > maxBytes) {
+                sb.append(new String(buf, 0, maxBytes - (total - len), java.nio.charset.StandardCharsets.UTF_8));
+                break;
+            }
+            sb.append(new String(buf, 0, len, java.nio.charset.StandardCharsets.UTF_8));
         }
-        reader.close();
         return sb.toString().trim();
     }
 
