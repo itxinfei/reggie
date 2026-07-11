@@ -9,10 +9,18 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
   <div class="dashboard-container" id="queue-app">
     <div class="container">
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
       <!-- 搜索 + 操作栏 -->
       <table-bar
         ref="tableBar"
@@ -86,6 +94,9 @@
           page: 1,
           pageSize: 10,
           tableData: [],
+          // 统计数据
+          stats: { totalQueues: 0, waitingCount: 0, calledCount: 0, seatedCount: 0, cancelledCount: 0 },
+          activeFilter: '',
           // 搜索配置
           searchConfig: [
             { type: 'input', field: 'phone', placeholder: '请输入手机号', width: '200px' },
@@ -118,6 +129,18 @@
       created() {
         this.init()
       },
+      computed: {
+        statsCards: function() {
+          var self = this
+          return [
+            { key: '', icon: '📋', label: '排队总数', value: self.stats.totalQueues, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'WAITING', icon: '⏳', label: '等待中', value: self.stats.waitingCount, color: 'warning', clickable: true, active: self.activeFilter === 'WAITING' },
+            { key: 'CALLED', icon: '🔔', label: '已叫号', value: self.stats.calledCount, color: 'info', clickable: true, active: self.activeFilter === 'CALLED' },
+            { key: 'SEATED', icon: '✅', label: '已入座', value: self.stats.seatedCount, color: 'success', clickable: true, active: self.activeFilter === 'SEATED' },
+            { key: 'CANCELLED', icon: '❌', label: '已取消', value: self.stats.cancelledCount, color: 'danger', clickable: true, active: self.activeFilter === 'CANCELLED' }
+          ]
+        }
+      },
       methods: {
         async init() {
           this.loading = true
@@ -128,22 +151,56 @@
             phone: ls.phone || undefined,
             status: ls.status || undefined
           }
-          await queuePage(params).then(res => {
-            if (String(res.code) === '1') {
-              this.tableData = res.data.records || []
-              this.counts = res.data.total
-            } else {
-              this.$message.error(res.msg || '操作失败')
-            }
-          }).catch(err => { this.$message.error('请求失败：' + err) })
+          var results = await Promise.all([queuePage(params), this.loadQueueStats()])
+          var queueRes = results[0]
+          var statsRes = results[1]
+          if (String(queueRes.code) === '1') {
+            this.tableData = queueRes.data.records || []
+            this.counts = queueRes.data.total
+          } else {
+            this.$message.error(queueRes.msg || '操作失败')
+          }
+          if (statsRes && String(statsRes.code) === '1') {
+            this.stats = statsRes.data || this.stats
+          }
           this.loading = false
         },
+        async loadQueueStats() {
+          try {
+            var res = await queuePage({ page: 1, pageSize: 1000 })
+            if (String(res.code) === '1') {
+              var records = res.data.records || []
+              return { code: 1, data: {
+                totalQueues: res.data.total || 0,
+                waitingCount: records.filter(function(r) { return r.status === 'WAITING' }).length,
+                calledCount: records.filter(function(r) { return r.status === 'CALLED' }).length,
+                seatedCount: records.filter(function(r) { return r.status === 'SEATED' }).length,
+                cancelledCount: records.filter(function(r) { return r.status === 'CANCELLED' }).length
+              }}
+            }
+          } catch (err) { console.warn('加载排队统计失败:', err) }
+          return { code: 0 }
+        },
+        // stat-cards 点击
+        onCardClick: function(payload) {
+          var self = this
+          if (payload.key === '') {
+            self.activeFilter = ''
+          } else {
+            self.activeFilter = self.activeFilter === payload.key ? '' : payload.key
+          }
+          self.lastSearch = self.activeFilter ? { status: self.activeFilter } : {}
+          self.page = 1
+          this.init()
+        },
         onSearch(searchParams) {
+          this.activeFilter = ''
           this.lastSearch = searchParams
           this.page = 1
           this.init()
         },
         onReset() {
+          this.activeFilter = ''
           this.lastSearch = {}
           this.page = 1
           this.init()

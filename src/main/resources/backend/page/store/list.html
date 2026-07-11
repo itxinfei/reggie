@@ -4,11 +4,13 @@
     <meta charset="UTF-8"/>
     <title>门店管理</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/common.css" />
+    <link rel="stylesheet" href="../../styles/page.css" />
+    <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+    <link rel="stylesheet" href="../../styles/components.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
-        .page-header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .page-header h2 { font-size: 20px; color: #303133; }
         .store-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
         .store-card { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); border-left: 4px solid #409eff; transition: all 0.2s; cursor: pointer; }
         .store-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); transform: translateY(-2px); }
@@ -16,7 +18,7 @@
         .store-card .store-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
         .store-card .store-name { font-size: 16px; font-weight: 600; color: #303133; }
         .store-card .store-code { font-size: 12px; color: #909399; }
-        .store-card .store-meta { display: flex; gap: 24px; margin-bottom: 12px; font-size: 13px; color: #606266; }
+        .store-card .store-meta { display: flex; gap: 24px; margin-bottom: 12px; font-size: 13px; color: #606266; flex-wrap: wrap; }
         .store-card .store-meta i { margin-right: 4px; color: #409eff; }
         .store-card .store-stats { display: flex; gap: 16px; padding-top: 12px; border-top: 1px solid #ebeef5; }
         .store-card .stat-item { flex: 1; text-align: center; }
@@ -30,57 +32,74 @@
 </head>
 <body>
 <div id="app">
-    <div class="page-header">
-        <h2>门店管理</h2>
-        <el-button type="primary" size="small" @click="openCreateDialog" icon="el-icon-plus">+ 新建门店</el-button>
-    </div>
+    <div class="dashboard-container">
+        <div class="container">
+            <!-- 数据统计卡片 -->
+            <stat-cards
+              :cards="statsCards"
+              :active-key.sync="activeFilter"
+              @card-click="onCardClick"
+            ></stat-cards>
 
-    <div v-loading="loading">
-        <div v-if="stores.length > 0" class="store-cards">
-            <div v-for="store in stores" :key="store.tenantId"
-                 :class="['store-card', store.status === 0 ? 'disabled' : '']">
-                <div class="store-header">
-                    <div>
-                        <div class="store-name">
-                            <el-tag :type="storeTypeTag(store.storeType)" size="mini">{{ storeTypeName(store.storeType) }}</el-tag>
-                            {{ store.storeName }}
+            <!-- 搜索 + 操作栏 -->
+            <table-bar
+              ref="tableBar"
+              :search-items="searchConfig"
+              :actions="actionConfig"
+              @search="onSearch"
+              @reset="onReset"
+              @action="onAction"
+            ></table-bar>
+
+            <!-- 门店卡片列表 -->
+            <div v-loading="loading">
+                <div v-if="stores.length > 0" class="store-cards">
+                    <div v-for="store in stores" :key="store.tenantId"
+                         :class="['store-card', store.status === 0 ? 'disabled' : '']">
+                        <div class="store-header">
+                            <div>
+                                <div class="store-name">
+                                    <el-tag :type="storeTypeTag(store.storeType)" size="mini">{{ storeTypeName(store.storeType) }}</el-tag>
+                                    {{ store.storeName }}
+                                </div>
+                                <div class="store-code">编码：{{ store.storeCode }}</div>
+                            </div>
+                            <el-switch
+                                v-model="store.status"
+                                :active-value="1"
+                                :inactive-value="0"
+                                active-text="启用"
+                                inactive-text="停用"
+                                @change="toggleStatus(store)"
+                            />
                         </div>
-                        <div class="store-code">编码：{{ store.storeCode }}</div>
-                    </div>
-                    <el-switch
-                        v-model="store.status"
-                        :active-value="1"
-                        :inactive-value="0"
-                        active-text="启用"
-                        inactive-text="停用"
-                        @change="toggleStatus(store)"
-                    />
-                </div>
-                <div class="store-meta">
-                    <span><i class="el-icon-phone-outline"></i>{{ store.contactPhone || '-' }}</span>
-                    <span><i class="el-icon-truck"></i>外卖: {{ store.isDeliveryEnabled ? '开' : '关' }}</span>
-                    <span><i class="el-icon-s-home"></i>堂食: {{ store.isDineInEnabled ? '开' : '关' }}</span>
-                </div>
-                <div class="store-stats">
-                    <div class="stat-item">
-                        <div class="stat-value">{{ store.todayOrders }}</div>
-                        <div class="stat-label">今日订单</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">¥{{ formatAmount(store.todayAmount) }}</div>
-                        <div class="stat-label">今日营收</div>
+                        <div class="store-meta">
+                            <span><i class="el-icon-phone-outline"></i>{{ store.contactPhone || '-' }}</span>
+                            <span><i class="el-icon-truck"></i>外卖: {{ store.isDeliveryEnabled ? '开' : '关' }}</span>
+                            <span><i class="el-icon-s-home"></i>堂食: {{ store.isDineInEnabled ? '开' : '关' }}</span>
+                        </div>
+                        <div class="store-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">{{ store.todayOrders }}</div>
+                                <div class="stat-label">今日订单</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">¥{{ formatAmount(store.todayAmount) }}</div>
+                                <div class="stat-label">今日营收</div>
+                            </div>
+                        </div>
+                        <div class="store-actions">
+                            <el-button type="text" size="small" icon="el-icon-switch-button" @click="switchToStore(store)">切换</el-button>
+                            <el-button type="text" size="small" icon="el-icon-refresh" @click="openSyncDialog(store)">同步</el-button>
+                        </div>
                     </div>
                 </div>
-                <div class="store-actions">
-                    <el-button type="text" size="small" icon="el-icon-switch-button" @click="switchToStore(store)">切换</el-button>
-                    <el-button type="text" size="small" icon="el-icon-refresh" @click="openSyncDialog(store)">同步</el-button>
+                <div v-else class="empty-wrap">
+                    <i class="el-icon-s-shop" style="font-size:48px;"></i>
+                    <p style="margin-top:12px;">暂无门店数据</p>
+                    <el-button type="primary" size="small" style="margin-top:12px;" @click="openCreateDialog">创建第一家门店</el-button>
                 </div>
             </div>
-        </div>
-        <div v-else class="empty-wrap">
-            <i class="el-icon-s-shop" style="font-size:48px;"></i>
-            <p style="margin-top:12px;">暂无门店数据</p>
-            <el-button type="primary" size="small" style="margin-top:12px;" @click="openCreateDialog">创建第一家门店</el-button>
         </div>
     </div>
 
@@ -161,6 +180,17 @@ new Vue({
         loading: false,
         submitting: false,
         stores: [],
+        // 统计数据
+        stats: { totalStores: 0, activeStores: 0, inactiveStores: 0 },
+        activeFilter: '',
+        // 搜索配置
+        searchConfig: [
+            { type: 'input', field: 'name', placeholder: '请输入门店名称', width: '200px' }
+        ],
+        // 操作按钮配置
+        actionConfig: [
+            { key: 'add', text: '+ 新建门店', type: 'primary' }
+        ],
         createDialogVisible: false,
         createForm: {
             storeName: '', storeCode: '', storeType: 2, contactPerson: '',
@@ -173,21 +203,77 @@ new Vue({
         syncing: { dishes: false, categories: false, setmeals: false },
         syncResult: null
     },
-    created() { this.loadStores(); },
+    computed: {
+        statsCards: function() {
+            var self = this
+            return [
+                { key: '', icon: '🏪', label: '门店总数', value: self.stats.totalStores, color: 'primary', clickable: true, active: self.activeFilter === '' },
+                { key: 'active', icon: '✅', label: '已启用', value: self.stats.activeStores, color: 'success', clickable: true, active: self.activeFilter === 'active' },
+                { key: 'inactive', icon: '⏸️', label: '已停用', value: self.stats.inactiveStores, color: 'warning', clickable: true, active: self.activeFilter === 'inactive' }
+            ]
+        }
+    },
+    created() { this.loadData(); },
     methods: {
-        loadStores() {
-            this.loading = true;
-            storeApi.listStores().then(res => {
-                if (res.code === 1) {
-                    this.stores = res.data || [];
+        async loadData() {
+            this.loading = true
+            var self = this
+            var results = await Promise.all([
+                storeApi.listStores(),
+                self.loadStoreStats()
+            ])
+            var storeRes = results[0]
+            var statsRes = results[1]
+            if (storeRes && storeRes.code === 1) {
+                self.stores = storeRes.data || []
+            }
+            if (statsRes && String(statsRes.code) === '1') {
+                self.stats = statsRes.data || self.stats
+            }
+            this.loading = false
+        },
+        async loadStoreStats() {
+            try {
+                var res = await storeApi.listStores()
+                if (res && res.code === 1 && res.data) {
+                    var stores = res.data || []
+                    return { code: 1, data: {
+                        totalStores: stores.length,
+                        activeStores: stores.filter(function(s) { return s.status === 1 }).length,
+                        inactiveStores: stores.filter(function(s) { return s.status === 0 }).length
+                    }}
                 }
-            }).catch(err => {
-                this.$message.error('加载失败');
-            }).finally(() => { this.loading = false; });
+            } catch (err) { console.warn('加载门店统计失败:', err) }
+            return { code: 0 }
+        },
+        // stat-cards 点击
+        onCardClick: function(payload) {
+            var self = this
+            if (payload.key === '') {
+                self.activeFilter = ''
+            } else {
+                self.activeFilter = self.activeFilter === payload.key ? '' : payload.key
+            }
+            self.page = 1
+            this.loadData()
+        },
+        // table-bar 回调
+        onSearch: function(searchParams) {
+            this.activeFilter = ''
+            this.lastSearch = searchParams
+            this.loadData()
+        },
+        onReset: function() {
+            this.activeFilter = ''
+            this.lastSearch = {}
+            this.loadData()
+        },
+        onAction: function(payload) {
+            if (payload.key === 'add') this.openCreateDialog()
         },
         openCreateDialog() {
-            this.resetCreateForm();
-            this.createDialogVisible = true;
+            this.resetCreateForm()
+            this.createDialogVisible = true
         },
         resetCreateForm() {
             this.createForm = {
@@ -198,78 +284,80 @@ new Vue({
             if (this.$refs.createFormRef) this.$refs.createFormRef.resetFields();
         },
         submitCreateForm() {
-            this.$refs.createFormRef.validate(valid => {
-                if (!valid) return;
-                this.submitting = true;
-                storeApi.createStore(this.createForm).then(res => {
+            var self = this
+            this.$refs.createFormRef.validate(function(valid) {
+                if (!valid) return
+                self.submitting = true
+                storeApi.createStore(self.createForm).then(function(res) {
                     if (res.code === 1) {
-                        this.$message.success('门店创建成功');
-                        this.createDialogVisible = false;
-                        this.loadStores();
+                        self.$message.success('门店创建成功')
+                        self.createDialogVisible = false
+                        self.loadData()
                     } else {
-                        this.$message.error(res.data?.msg || '创建失败');
+                        self.$message.error(res.data?.msg || '创建失败')
                     }
-                }).catch(err => {
-                    this.$message.error('创建失败: ' + (err.response?.data?.msg || err.message));
-                }).finally(() => { this.submitting = false; });
-            });
+                }).catch(function(err) {
+                    self.$message.error('创建失败: ' + (err.response?.data?.msg || err.message))
+                }).finally(function() { self.submitting = false })
+            })
         },
         toggleStatus(store) {
-            storeApi.updateStatus(store.tenantId, store.status).then(res => {
+            var self = this
+            storeApi.updateStatus(store.tenantId, store.status).then(function(res) {
                 if (res.code === 1) {
-                    this.$message.success('状态已更新');
+                    self.$message.success('状态已更新')
                 }
-            }).catch(() => { this.loadStores(); });
+            }).catch(function() { self.loadData() })
         },
         switchToStore(store) {
-            storeApi.switchStore(store.tenantId).then(res => {
+            var self = this
+            storeApi.switchStore(store.tenantId).then(function(res) {
                 if (res.code === 1) {
-                    this.$message.success('已切换到门店：' + store.storeName);
-                    this.loadStores();
+                    self.$message.success('已切换到门店：' + store.storeName)
+                    self.loadData()
                 }
-            });
+            })
         },
         openSyncDialog(store) {
-            this.syncTargetId = store.tenantId;
-            this.syncTargetName = store.storeName;
-            this.syncResult = null;
-            this.syncDialogVisible = true;
+            this.syncTargetId = store.tenantId
+            this.syncTargetName = store.storeName
+            this.syncResult = null
+            this.syncDialogVisible = true
         },
         syncType(type) {
-            let apiCall;
-            const sourceTenantId = this.stores[0]?.tenantId; // 第一个门店作为总部
-
+            var self = this
+            var sourceTenantId = this.stores[0]?.tenantId
+            var apiCall
             switch(type) {
                 case 'dishes':
-                    apiCall = storeApi.syncDishes({ sourceTenantId, targetTenantId: this.syncTargetId, dishIds: null, operatorId: 1 });
-                    break;
+                    apiCall = storeApi.syncDishes({ sourceTenantId: sourceTenantId, targetTenantId: this.syncTargetId, dishIds: null, operatorId: 1 })
+                    break
                 case 'categories':
-                    apiCall = storeApi.syncCategories({ sourceTenantId, targetTenantId: this.syncTargetId, operatorId: 1 });
-                    break;
+                    apiCall = storeApi.syncCategories({ sourceTenantId: sourceTenantId, targetTenantId: this.syncTargetId, operatorId: 1 })
+                    break
                 case 'setmeals':
-                    apiCall = storeApi.syncSetmeals({ sourceTenantId, targetTenantId: this.syncTargetId, setmealIds: null, operatorId: 1 });
-                    break;
+                    apiCall = storeApi.syncSetmeals({ sourceTenantId: sourceTenantId, targetTenantId: this.syncTargetId, setmealIds: null, operatorId: 1 })
+                    break
             }
-
-            if (!apiCall) return;
-            this.syncing[type] = true;
-            apiCall.then(res => {
+            if (!apiCall) return
+            this.syncing[type] = true
+            apiCall.then(function(res) {
                 if (res.code === 1) {
-                    this.syncResult = res.data;
-                    this.$message.success('同步完成');
+                    self.syncResult = res.data
+                    self.$message.success('同步完成')
                 }
-            }).catch(err => {
-                this.$message.error('同步失败');
-            }).finally(() => { this.syncing[type] = false; });
+            }).catch(function(err) {
+                self.$message.error('同步失败')
+            }).finally(function() { self.syncing[type] = false })
         },
-        storeTypeTag(type) { return type === 1 ? 'danger' : type === 2 ? 'success' : 'warning'; },
+        storeTypeTag(type) { return type === 1 ? 'danger' : type === 2 ? 'success' : 'warning' },
         storeTypeName(type) {
-            const map = { 1: '总店', 2: '直营', 3: '加盟' };
-            return map[type] || '';
+            var map = { 1: '总店', 2: '直营', 3: '加盟' }
+            return map[type] || ''
         },
         formatAmount(amount) {
-            if (!amount) return '0.00';
-            return typeof amount === 'number' ? amount.toFixed(2) : amount;
+            if (!amount) return '0.00'
+            return typeof amount === 'number' ? amount.toFixed(2) : amount
         }
     }
 });

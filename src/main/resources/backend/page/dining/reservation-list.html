@@ -9,10 +9,18 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
   <div class="dashboard-container" id="reservation-app">
     <div class="container">
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
       <!-- 搜索栏 -->
       <table-bar
         ref="tableBar"
@@ -66,6 +74,9 @@
           page: 1,
           pageSize: 10,
           tableData: [],
+          // 统计数据
+          stats: { totalReservations: 0, pendingCount: 0, confirmedCount: 0, arrivedCount: 0, cancelledCount: 0 },
+          activeFilter: '',
           // 搜索配置（日期范围拆分为 beginTime/endTime）
           searchConfig: [
             { type: 'input', field: 'customerName', placeholder: '请输入客户姓名', width: '200px' },
@@ -96,6 +107,18 @@
       created() {
         this.init()
       },
+      computed: {
+        statsCards: function() {
+          var self = this
+          return [
+            { key: '', icon: '📋', label: '预约总数', value: self.stats.totalReservations, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'PENDING', icon: '⏳', label: '待确认', value: self.stats.pendingCount, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
+            { key: 'CONFIRMED', icon: '✅', label: '已确认', value: self.stats.confirmedCount, color: 'success', clickable: true, active: self.activeFilter === 'CONFIRMED' },
+            { key: 'ARRIVED', icon: '📍', label: '已到店', value: self.stats.arrivedCount, color: 'info', clickable: true, active: self.activeFilter === 'ARRIVED' },
+            { key: 'CANCELLED', icon: '❌', label: '已取消', value: self.stats.cancelledCount, color: 'danger', clickable: true, active: self.activeFilter === 'CANCELLED' }
+          ]
+        }
+      },
       methods: {
         async init() {
           this.loading = true
@@ -109,22 +132,56 @@
             beginTime: ls.beginTime || undefined,
             endTime: ls.endTime || undefined
           }
-          await reservationPage(params).then(res => {
-            if (String(res.code) === '1') {
-              this.tableData = res.data.records || []
-              this.counts = res.data.total
-            } else {
-              this.$message.error(res.msg || '操作失败')
-            }
-          }).catch(err => { this.$message.error('请求失败：' + err) })
+          var results = await Promise.all([reservationPage(params), this.loadReservationStats()])
+          var resvRes = results[0]
+          var statsRes = results[1]
+          if (String(resvRes.code) === '1') {
+            this.tableData = resvRes.data.records || []
+            this.counts = resvRes.data.total
+          } else {
+            this.$message.error(resvRes.msg || '操作失败')
+          }
+          if (statsRes && String(statsRes.code) === '1') {
+            this.stats = statsRes.data || this.stats
+          }
           this.loading = false
         },
+        async loadReservationStats() {
+          try {
+            var res = await reservationPage({ page: 1, pageSize: 1000 })
+            if (String(res.code) === '1') {
+              var records = res.data.records || []
+              return { code: 1, data: {
+                totalReservations: res.data.total || 0,
+                pendingCount: records.filter(function(r) { return r.status === 'PENDING' }).length,
+                confirmedCount: records.filter(function(r) { return r.status === 'CONFIRMED' }).length,
+                arrivedCount: records.filter(function(r) { return r.status === 'ARRIVED' }).length,
+                cancelledCount: records.filter(function(r) { return r.status === 'CANCELLED' }).length
+              }}
+            }
+          } catch (err) { console.warn('加载预约统计失败:', err) }
+          return { code: 0 }
+        },
+        // stat-cards 点击
+        onCardClick: function(payload) {
+          var self = this
+          if (payload.key === '') {
+            self.activeFilter = ''
+          } else {
+            self.activeFilter = self.activeFilter === payload.key ? '' : payload.key
+          }
+          self.lastSearch = self.activeFilter ? { status: self.activeFilter } : {}
+          self.page = 1
+          this.init()
+        },
         onSearch(searchParams) {
+          this.activeFilter = ''
           this.lastSearch = searchParams
           this.page = 1
           this.init()
         },
         onReset() {
+          this.activeFilter = ''
           this.lastSearch = {}
           this.page = 1
           this.init()

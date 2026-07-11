@@ -9,10 +9,18 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
   <div class="dashboard-container" id="coupon-app">
     <div class="container">
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
       <!-- 搜索 + 操作栏 -->
       <table-bar
         ref="tableBar"
@@ -112,6 +120,9 @@
           page: 1,
           pageSize: 10,
           tableData: [],
+          // 统计数据
+          stats: { totalCoupons: 0, enabledCount: 0, disabledCount: 0 },
+          activeFilter: '',
           // 搜索配置
           searchConfig: [
             { type: 'input', field: 'name', placeholder: '请输入优惠券名称', width: '220px' },
@@ -161,6 +172,16 @@
       created() {
         this.init()
       },
+      computed: {
+        statsCards: function() {
+          var self = this
+          return [
+            { key: '', icon: '🎫', label: '优惠券总数', value: self.stats.totalCoupons, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'enabled', icon: '✅', label: '已启用', value: self.stats.enabledCount, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
+            { key: 'disabled', icon: '⏸️', label: '已禁用', value: self.stats.disabledCount, color: 'warning', clickable: true, active: self.activeFilter === 'disabled' }
+          ]
+        }
+      },
       methods: {
         async init() {
           this.loading = true
@@ -172,25 +193,59 @@
             type: sv.type || undefined,
             status: sv.status || undefined
           }
-          await couponTemplatePage(params).then(res => {
-            if (String(res.code) === '1') {
-              this.tableData = res.data.records || []
-              this.counts = res.data.total
-            } else {
-              this.$message.error(res.msg || '操作失败')
-            }
-          }).catch(err => {
-            this.$message.error('请求失败：' + err)
-          })
+          var results = await Promise.all([couponTemplatePage(params), this.loadCouponStats()])
+          var couponRes = results[0]
+          var statsRes = results[1]
+          if (String(couponRes.code) === '1') {
+            this.tableData = couponRes.data.records || []
+            this.counts = couponRes.data.total
+          } else {
+            this.$message.error(couponRes.msg || '操作失败')
+          }
+          if (statsRes && String(statsRes.code) === '1') {
+            this.stats = statsRes.data || this.stats
+          }
           this.loading = false
+        },
+        async loadCouponStats() {
+          try {
+            var res = await couponTemplatePage({ page: 1, pageSize: 1000 })
+            if (String(res.code) === '1') {
+              var records = res.data.records || []
+              return { code: 1, data: {
+                totalCoupons: res.data.total || 0,
+                enabledCount: records.filter(function(r) { return r.status === 1 }).length,
+                disabledCount: records.filter(function(r) { return r.status === 0 }).length
+              }}
+            }
+          } catch (err) { console.warn('加载优惠券统计失败:', err) }
+          return { code: 0 }
+        },
+        // stat-cards 点击
+        onCardClick: function(payload) {
+          var self = this
+          if (payload.key === '') {
+            self.activeFilter = ''
+            self.searchValues = { name: '', type: '', status: '' }
+          } else if (payload.key === 'enabled') {
+            self.activeFilter = self.activeFilter === 'enabled' ? '' : 'enabled'
+            self.searchValues = { name: '', type: '', status: self.activeFilter ? '1' : '' }
+          } else if (payload.key === 'disabled') {
+            self.activeFilter = self.activeFilter === 'disabled' ? '' : 'disabled'
+            self.searchValues = { name: '', type: '', status: self.activeFilter ? '0' : '' }
+          }
+          self.page = 1
+          this.init()
         },
         // table-bar 回调
         onSearch(searchParams) {
+          this.activeFilter = ''
           this.searchValues = searchParams
           this.page = 1
           this.init()
         },
         onReset() {
+          this.activeFilter = ''
           this.searchValues = {}
           this.page = 1
           this.init()
