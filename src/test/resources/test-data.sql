@@ -5,10 +5,13 @@
 
 SET time_zone = '+08:00';
 
+-- 使用INSERT IGNORE避免主键重复错误
+SET sql_mode = '';
+
 -- ========================================
 -- 1. 菜品分类 (category) - 12条
 -- ========================================
-INSERT INTO category (id, tenant_id, type, name, sort, create_time, update_time, is_deleted) VALUES
+INSERT IGNORE INTO category (id, tenant_id, type, name, sort, create_time, update_time, is_deleted) VALUES
 (1, 1, 1, '热销', 1, NOW(), NOW(), 0),
 (2, 1, 1, '优惠', 2, NOW(), NOW(), 0),
 (3, 1, 1, '热菜', 3, NOW(), NOW(), 0),
@@ -25,7 +28,7 @@ INSERT INTO category (id, tenant_id, type, name, sort, create_time, update_time,
 -- ========================================
 -- 2. 菜品 (dish) - 30条
 -- ========================================
-INSERT INTO dish (id, tenant_id, name, category_id, price, code, image, description, status, sort, create_time, update_time, is_deleted) VALUES
+INSERT IGNORE INTO dish (id, tenant_id, name, category_id, price, code, image, description, status, sort, create_time, update_time, is_deleted) VALUES
 -- 热销菜品
 (1, 1, '红烧肉', 1, 5800, 'DISH001', './images/dish1.jpg', '经典家常菜，肥而不腻，入口即化', 1, 1, NOW(), NOW(), 0),
 (2, 1, '宫保鸡丁', 1, 4800, 'DISH002', './images/dish2.jpg', '川菜经典，麻辣鲜香，花生酥脆', 1, 2, NOW(), NOW(), 0),
@@ -77,7 +80,7 @@ INSERT INTO dish (id, tenant_id, name, category_id, price, code, image, descript
 -- ========================================
 -- 3. 菜品口味 (dish_flavor) - 25条
 -- ========================================
-INSERT INTO dish_flavor (id, tenant_id, dish_id, name, value, create_time, update_time, is_deleted) VALUES
+INSERT IGNORE INTO dish_flavor (id, tenant_id, dish_id, name, value, create_time, update_time, is_deleted) VALUES
 (1, 1, 1, '辣度', '["不辣","微辣","中辣","重辣"]', NOW(), NOW(), 0),
 (2, 1, 2, '辣度', '["不辣","微辣","中辣","重辣"]', NOW(), NOW(), 0),
 (3, 1, 2, '忌口', '["不要葱","不要蒜","不要香菜"]', NOW(), NOW(), 0),
@@ -107,7 +110,7 @@ INSERT INTO dish_flavor (id, tenant_id, dish_id, name, value, create_time, updat
 -- ========================================
 -- 4. 套餐 (setmeal) - 12条
 -- ========================================
-INSERT INTO setmeal (id, tenant_id, category_id, name, price, status, code, description, image, create_time, update_time, is_deleted) VALUES
+INSERT IGNORE INTO setmeal (id, tenant_id, category_id, name, price, status, code, description, image, create_time, update_time, is_deleted) VALUES
 (1, 1, 11, '单人工作餐', 2800, 1, 'SET001', '适合一人用餐，包含主食+菜品+饮品', './images/setmeal1.jpg', NOW(), NOW(), 0),
 (2, 1, 11, '经济单人餐', 1980, 1, 'SET002', '经济实惠，饱腹之选', './images/setmeal2.jpg', NOW(), NOW(), 0),
 (3, 1, 11, '豪华单人餐', 3800, 1, 'SET003', '丰盛美味，满足感强', './images/setmeal3.jpg', NOW(), NOW(), 0),
@@ -124,7 +127,7 @@ INSERT INTO setmeal (id, tenant_id, category_id, name, price, status, code, desc
 -- ========================================
 -- 5. 套餐菜品关联 (setmeal_dish) - 40条
 -- ========================================
-INSERT INTO setmeal_dish (id, tenant_id, setmeal_id, dish_id, name, price, copies, sort, create_time, update_time, is_deleted) VALUES
+INSERT IGNORE INTO setmeal_dish (id, tenant_id, setmeal_id, dish_id, name, price, copies, sort, create_time, update_time, is_deleted) VALUES
 -- 单人工作餐
 (1, 1, 1, 20, '扬州炒饭', 3200, 1, 1, NOW(), NOW(), 0),
 (2, 1, 1, 1, '红烧肉', 5800, 1, 2, NOW(), NOW(), 0),
@@ -190,7 +193,7 @@ INSERT INTO setmeal_dish (id, tenant_id, setmeal_id, dish_id, name, price, copie
 -- ========================================
 -- 6. 员工 (employee) - 10条
 -- ========================================
-INSERT INTO employee (id, username, name, password, password_type, phone, sex, id_number, status, tenant_id, create_time, update_time, create_user, update_user) VALUES
+INSERT IGNORE INTO employee (id, username, name, password, password_type, phone, sex, id_number, status, tenant_id, create_time, update_time, create_user, update_user) VALUES
 (1, 'admin', '系统管理员', 'e10adc3949ba59abbe56e057f20f883e', 'MD5', '13800138001', '男', '110101199001011234', 1, 1, NOW(), NOW(), 1, 1),
 (2, 'zhangsan', '张三', 'e10adc3949ba59abbe56e057f20f883e', 'MD5', '13800138002', '男', '110101199002021234', 1, 1, NOW(), NOW(), 1, 1),
 (3, 'lisi', '李四', 'e10adc3949ba59abbe56e057f20f883e', 'MD5', '13800138003', '女', '110101199003031234', 1, 1, NOW(), NOW(), 1, 1),
@@ -205,7 +208,7 @@ INSERT INTO employee (id, username, name, password, password_type, phone, sex, i
 -- ========================================
 -- 7. 地址簿 (address_book) - 12条
 -- ========================================
-INSERT INTO address_book (id, user_id, consignee, sex, phone, province_code, province_name, city_code, city_name, district_code, district_name, detail, label, is_default, create_time, update_time, is_deleted, tenant_id) VALUES
+INSERT IGNORE INTO address_book (id, user_id, consignee, sex, phone, province_code, province_name, city_code, city_name, district_code, district_name, detail, label, is_default, create_time, update_time, is_deleted, tenant_id) VALUES
 (1, 1, '张小明', '男', '13900139001', '110000', '北京市', '110100', '北京市', '110101', '东城区', '北京市东城区王府井大街1号', '家', 1, NOW(), NOW(), 0, 1),
 (2, 1, '张小明', '男', '13900139001', '110000', '北京市', '110100', '北京市', '110102', '西城区', '北京市西城区金融街8号', '公司', 0, NOW(), NOW(), 0, 1),
 (3, 2, '李晓红', '女', '13900139002', '310000', '上海市', '310100', '上海市', '310104', '徐汇区', '上海市徐汇区南京路100号', '家', 1, NOW(), NOW(), 0, 1),
@@ -222,7 +225,7 @@ INSERT INTO address_book (id, user_id, consignee, sex, phone, province_code, pro
 -- ========================================
 -- 8. 会员等级 (member_level) - 5条
 -- ========================================
-INSERT INTO member_level (id, tenant_id, name, min_points, discount, created_time) VALUES
+INSERT IGNORE INTO member_level (id, tenant_id, name, min_points, discount, created_time) VALUES
 (1, 1, '普通会员', 0, 1.00, NOW()),
 (2, 1, '银卡会员', 1000, 0.95, NOW()),
 (3, 1, '金卡会员', 5000, 0.90, NOW()),
@@ -232,7 +235,7 @@ INSERT INTO member_level (id, tenant_id, name, min_points, discount, created_tim
 -- ========================================
 -- 9. 会员 (member) - 12条
 -- ========================================
-INSERT INTO member (id, tenant_id, user_id, level_id, name, phone, points, balance, total_consumption, status, created_time, updated_time) VALUES
+INSERT IGNORE INTO member (id, tenant_id, user_id, level_id, name, phone, points, balance, total_consumption, status, created_time, updated_time) VALUES
 (1, 1, 1, 3, '张小明', '13900139001', 6500, 1580.50, 3680.00, 1, NOW(), NOW()),
 (2, 1, 2, 2, '李晓红', '13900139002', 2800, 680.00, 1520.00, 1, NOW(), NOW()),
 (3, 1, 3, 4, '王大军', '13900139003', 12500, 3580.00, 8960.00, 1, NOW(), NOW()),
@@ -249,7 +252,7 @@ INSERT INTO member (id, tenant_id, user_id, level_id, name, phone, points, balan
 -- ========================================
 -- 10. 桌台 (dining_table) - 15条
 -- ========================================
-INSERT INTO dining_table (id, tenant_id, area_id, name, seat_count, status, min_amount, qr_code_url, sort, created_time, updated_time) VALUES
+INSERT IGNORE INTO dining_table (id, tenant_id, area_id, name, seat_count, status, min_amount, qr_code_url, sort, created_time, updated_time) VALUES
 (1, 1, 1, 'A01', 4, 'FREE', NULL, 'http://localhost:8080/qr/table/A01', 1, NOW(), NOW()),
 (2, 1, 1, 'A02', 4, 'OCCUPIED', 200.00, 'http://localhost:8080/qr/table/A02', 2, NOW(), NOW()),
 (3, 1, 1, 'A03', 6, 'FREE', NULL, 'http://localhost:8080/qr/table/A03', 3, NOW(), NOW()),
@@ -269,7 +272,7 @@ INSERT INTO dining_table (id, tenant_id, area_id, name, seat_count, status, min_
 -- ========================================
 -- 11. 区域 (dining_area) - 8条
 -- ========================================
-INSERT INTO dining_area (id, tenant_id, name, sort, created_time, updated_time) VALUES
+INSERT IGNORE INTO dining_area (id, tenant_id, name, sort, created_time, updated_time) VALUES
 (1, 1, '大厅A区', 1, NOW(), NOW()),
 (2, 1, '大厅B区', 2, NOW(), NOW()),
 (3, 1, '包间区', 3, NOW(), NOW()),
@@ -282,7 +285,7 @@ INSERT INTO dining_area (id, tenant_id, name, sort, created_time, updated_time) 
 -- ========================================
 -- 12. 用户 (user) - 12条
 -- ========================================
-INSERT INTO user (id, tenant_id, name, phone, sex, id_number, avatar, status) VALUES
+INSERT IGNORE INTO user (id, tenant_id, name, phone, sex, id_number, avatar, status) VALUES
 (1, 1, '张小明', '13900139001', '男', '110101199001011001', './images/avatar1.jpg', 1),
 (2, 1, '李晓红', '13900139002', '女', '110101199002021002', './images/avatar2.jpg', 1),
 (3, 1, '王大军', '13900139003', '男', '110101199003031003', './images/avatar3.jpg', 1),
@@ -299,7 +302,7 @@ INSERT INTO user (id, tenant_id, name, phone, sex, id_number, avatar, status) VA
 -- ========================================
 -- 13. 订单 (orders) - 12条
 -- ========================================
-INSERT INTO orders (id, number, status, user_id, address_book_id, order_time, checkout_time, pay_method, amount, remark, phone, address, user_name, consignee, table_id, dining_type) VALUES
+INSERT IGNORE INTO orders (id, number, status, user_id, address_book_id, order_time, checkout_time, pay_method, amount, remark, phone, address, user_name, consignee, table_id, dining_type) VALUES
 (1, 'ORD20260101001', 4, 1, 1, DATE_SUB(NOW(), INTERVAL 5 DAY), DATE_SUB(NOW(), INTERVAL 5 DAY) + INTERVAL 1 HOUR, 1, 328.00, '少辣', '13900139001', '北京市东城区王府井大街1号', '张小明', '张小明', NULL, 'DELIVERY'),
 (2, 'ORD20260102001', 4, 2, 3, DATE_SUB(NOW(), INTERVAL 4 DAY), DATE_SUB(NOW(), INTERVAL 4 DAY) + INTERVAL 1 HOUR, 2, 156.00, NULL, '13900139002', '上海市徐汇区南京路100号', '李晓红', '李晓红', NULL, 'DELIVERY'),
 (3, 'ORD20260103001', 4, 3, NULL, DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY) + INTERVAL 2 HOUR, 1, 858.00, '商务宴请', '13900139003', NULL, '王大军', '王大军', 12, 'DINING'),
@@ -316,7 +319,7 @@ INSERT INTO orders (id, number, status, user_id, address_book_id, order_time, ch
 -- ========================================
 -- 14. 订单明细 (order_detail) - 35条
 -- ========================================
-INSERT INTO order_detail (id, name, image, order_id, dish_id, setmeal_id, dish_flavor, number, amount) VALUES
+INSERT IGNORE INTO order_detail (id, name, image, order_id, dish_id, setmeal_id, dish_flavor, number, amount) VALUES
 (1, '扬州炒饭', './images/dish20.jpg', 1, 20, NULL, NULL, 1, 32.00),
 (2, '红烧肉', './images/dish1.jpg', 1, 1, NULL, '["微辣"]', 1, 58.00),
 (3, '珍珠奶茶', './images/dish23.jpg', 1, 23, NULL, '["少糖","少冰"]', 1, 18.00),
@@ -356,7 +359,7 @@ INSERT INTO order_detail (id, name, image, order_id, dish_id, setmeal_id, dish_f
 -- ========================================
 -- 15. 购物车 (shopping_cart) - 10条
 -- ========================================
-INSERT INTO shopping_cart (id, name, user_id, dish_id, setmeal_id, dish_flavor, number, amount, image, create_time) VALUES
+INSERT IGNORE INTO shopping_cart (id, name, user_id, dish_id, setmeal_id, dish_flavor, number, amount, image, create_time) VALUES
 (1, '红烧肉', 1, 1, NULL, '["微辣"]', 2, 116.00, './images/dish1.jpg', NOW()),
 (2, '珍珠奶茶', 1, 23, NULL, '["少糖","少冰"]', 1, 18.00, './images/dish23.jpg', NOW()),
 (3, '宫保鸡丁', 2, 2, NULL, '["中辣"]', 1, 48.00, './images/dish2.jpg', NOW()),
