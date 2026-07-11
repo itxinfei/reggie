@@ -41,8 +41,12 @@
       </div>
 
       <div class="tableBar">
-        <el-input v-model="query.name" placeholder="名称" class="el-input--wide-xs" clearable size="small"></el-input>
-        <el-input v-model="query.brand" placeholder="品牌" class="el-input--wide-xs" clearable size="small"></el-input>
+        <el-select v-model="query.name" placeholder="名称" class="el-select--narrow-xs" clearable filterable size="small">
+          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+        </el-select>
+        <el-select v-model="query.brand" placeholder="品牌" class="el-select--narrow-xs" clearable filterable size="small">
+          <el-option v-for="b in filterOptions.brands" :key="b" :label="b" :value="b"></el-option>
+        </el-select>
         <el-select v-model="query.type" placeholder="连接类型" class="el-select--narrow-xs" clearable size="small">
           <el-option label="USB" value="USB"></el-option>
           <el-option label="TCP" value="TCP"></el-option>
@@ -206,6 +210,11 @@
           },
           // 修改点：当前激活的卡片筛选器值，与 query.status 同步
           activeFilter: '',
+          // 修改点：搜索下拉框动态选项（从数据库加载）
+          filterOptions: {
+            names: [],
+            brands: []
+          },
           dialog: {
             title: '',
             visible: false,
@@ -236,9 +245,22 @@
         }
       },
       created() {
+        this.loadFilterOptions()
         this.init()
       },
       methods: {
+        // 修改点：加载筛选下拉框选项（名称+品牌，从数据库动态查询）
+        async loadFilterOptions() {
+          try {
+            const res = await printerConfigOptions()
+            if (String(res.code) === '1' && res.data) {
+              this.filterOptions.names = res.data.names || []
+              this.filterOptions.brands = res.data.brands || []
+            }
+          } catch (err) {
+            console.warn('加载打印机筛选选项失败:', err)
+          }
+        },
         async init() {
           const params = {
             page: this.query.page,

@@ -22,7 +22,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 打印机配置管理控制器
@@ -125,6 +130,40 @@ public class PrinterConfigController {
         queryWrapper.orderByAsc(PrinterConfig::getSort);
         List<PrinterConfig> list = printerConfigService.list(queryWrapper);
         return R.success(list);
+    }
+
+    /**
+     * 获取筛选下拉选项（名称列表 + 品牌列表）
+     * <p>从数据库动态查询当前租户的所有打印机名称和品牌，供前端下拉框使用</p>
+     *
+     * @return 包含 nameOptions 和 brandOptions 的 Map
+     */
+    @GetMapping("/options")
+    @Operation(summary = "筛选选项", description = "获取打印机名称和品牌列表，供搜索条件下拉框使用")
+    public R<Map<String, List<String>>> options() {
+        LambdaQueryWrapper<PrinterConfig> queryWrapper = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(PrinterConfig::getTenantId, tenantId);
+        }
+        queryWrapper.orderByAsc(PrinterConfig::getSort);
+        List<PrinterConfig> list = printerConfigService.list(queryWrapper);
+
+        Set<String> nameSet = new HashSet<>();
+        Set<String> brandSet = new HashSet<>();
+        for (PrinterConfig config : list) {
+            if (config.getName() != null && !config.getName().isEmpty()) {
+                nameSet.add(config.getName());
+            }
+            if (config.getBrand() != null && !config.getBrand().isEmpty()) {
+                brandSet.add(config.getBrand());
+            }
+        }
+
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        result.put("brands", new ArrayList<>(brandSet));
+        return R.success(result);
     }
 }
 
