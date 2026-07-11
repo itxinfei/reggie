@@ -459,7 +459,13 @@
   width: 120px;
 }
 
-/* --- 130px 下拉框 --- */
+/* --- 100px 下拉框（短选项如状态启用/停用） --- */
+.dashboard-container .container .tableBar .el-select--narrow-xs {
+  width: 100px;
+}
+
+/* --- 130px 输入框/下拉框 --- */
+.dashboard-container .container .tableBar .el-input--narrow-sm,
 .dashboard-container .container .tableBar .el-select--narrow-sm {
   width: 130px;
 }

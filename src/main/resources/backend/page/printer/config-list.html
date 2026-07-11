@@ -41,15 +41,15 @@
       </div>
 
       <div class="tableBar">
-        <el-input v-model="query.name" placeholder="名称" style="width: 160px" clearable size="small"></el-input>
-        <el-input v-model="query.brand" placeholder="品牌" style="width: 160px" clearable size="small"></el-input>
-        <el-select v-model="query.type" placeholder="连接类型" style="width: 140px" clearable size="small">
+        <el-input v-model="query.name" placeholder="名称" class="el-input--narrow-md" clearable size="small"></el-input>
+        <el-input v-model="query.brand" placeholder="品牌" class="el-input--narrow-sm" clearable size="small"></el-input>
+        <el-select v-model="query.type" placeholder="连接类型" class="el-select--narrow-sm" clearable size="small">
           <el-option label="USB" value="USB"></el-option>
           <el-option label="TCP" value="TCP"></el-option>
           <el-option label="CLOUD" value="CLOUD"></el-option>
           <el-option label="BLUETOOTH" value="BLUETOOTH"></el-option>
         </el-select>
-        <el-select v-model="query.status" placeholder="状态" class="el-select--narrow" clearable size="small">
+        <el-select v-model="query.status" placeholder="状态" class="el-select--narrow-xs" clearable size="small">
           <el-option label="启用" :value="1"></el-option>
           <el-option label="停用" :value="0"></el-option>
         </el-select>
