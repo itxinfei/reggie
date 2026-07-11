@@ -21,8 +21,12 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 用户管理
@@ -385,6 +389,31 @@ public class UserController {
 
         boolean success = userService.removeById(id);
         return success ? R.success("删除成功") : R.error("删除失败");
+    }
+
+    /**
+     * 获取筛选下拉选项（用户姓名 + 手机号列表）
+     * <p>从数据库动态查询当前租户的所有C端用户，供前端下拉框使用</p>
+     */
+    @GetMapping("/options")
+    @Operation(summary = "筛选选项", description = "获取所有用户姓名和手机号，供搜索条件下拉框使用")
+    public R<Map<String, List<String>>> options() {
+        LambdaQueryWrapper<User> qw = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) { qw.eq(User::getTenantId, tenantId); }
+        qw.orderByAsc(User::getName);
+        List<User> list = userService.list(qw);
+
+        Set<String> nameSet = new HashSet<>();
+        Set<String> phoneSet = new HashSet<>();
+        for (User u : list) {
+            if (u.getName() != null && !u.getName().isEmpty()) { nameSet.add(u.getName()); }
+            if (u.getPhone() != null && !u.getPhone().isEmpty()) { phoneSet.add(u.getPhone()); }
+        }
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        result.put("phones", new ArrayList<>(phoneSet));
+        return R.success(result);
     }
 
 }

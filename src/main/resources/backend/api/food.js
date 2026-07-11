@@ -1,3 +1,6 @@
+// 修改点：筛选下拉选项（动态加载菜品名称）
+const dishOptions = () => $axios({ url: '/dish/options', method: 'get' })
+
 // 查询列表接口
 const getDishPage = (params) => {
   return $axios({

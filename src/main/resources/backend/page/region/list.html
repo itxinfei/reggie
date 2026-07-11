@@ -14,9 +14,11 @@
     <div class="container">
       <!-- 搜索栏 -->
       <div class="tableBar">
-        <el-input v-model="input.name" placeholder="地区名称" class="el-input--wide-sm" clearable @keyup.enter.native="handleQuery">
-          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
-        </el-input>
+        <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框 -->
+        <el-select v-model="input.name" placeholder="选择地区名称" class="el-select--narrow-xs" clearable filterable size="small"
+          :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据'" @change="handleQuery">
+          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+        </el-select>
         <el-select v-model="input.level" placeholder="层级" clearable class="el-select--wide-xs" @change="handleQuery">
           <el-option label="全部" :value="null"></el-option>
           <el-option label="省份" :value="1"></el-option>
@@ -100,6 +102,10 @@
       data() {
         return {
           input: { name: '', level: null },
+          // 修改点：搜索下拉框动态选项（从数据库加载地区名称）
+          filterOptions: { names: [] },
+          optionsLoading: false,
+          optionsLoadError: false,
           counts: 0,
           page: 1,
           pageSize: 10,
@@ -113,6 +119,7 @@
         }
       },
       created() {
+        this.loadFilterOptions()
         this.init()
       },
       watch: {
@@ -126,6 +133,26 @@
         }
       },
       methods: {
+        // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
+        async loadFilterOptions() {
+          this.optionsLoading = true
+          this.optionsLoadError = false
+          try {
+            const res = await regionOptions()
+            if (String(res.code) === '1' && res.data) {
+              this.filterOptions.names = res.data.names || []
+            } else {
+              this.optionsLoadError = true
+              this.$message.warning('加载地区选项失败：' + (res.msg || '接口返回异常'))
+            }
+          } catch (err) {
+            this.optionsLoadError = true
+            console.error('加载地区选项失败:', err)
+            this.$message.error('加载筛选选项失败，请刷新页面重试')
+          } finally {
+            this.optionsLoading = false
+          }
+        },
         async init() {
           this.loading = true
           const params = { page: this.page, pageSize: this.pageSize, name: this.input.name || undefined, level: this.input.level }

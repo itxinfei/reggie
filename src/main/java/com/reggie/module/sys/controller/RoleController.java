@@ -16,9 +16,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 角色管理Controller
@@ -136,5 +139,24 @@ public class RoleController {
     public R<List<Permission>> permissionTree() {
         List<Permission> allPerms = permissionService.getAllPermissions();
         return R.success(allPerms);
+    }
+
+    /**
+     * 获取筛选下拉选项（角色名称列表）
+     * <p>从数据库动态查询所有角色名称，供前端下拉框使用</p>
+     */
+    @GetMapping("/options")
+    @Operation(summary = "筛选选项", description = "获取所有角色名称，供搜索条件下拉框使用")
+    public R<Map<String, List<String>>> options() {
+        List<Role> list = roleService.list();
+        Set<String> nameSet = new HashSet<>();
+        for (Role role : list) {
+            if (role.getRoleName() != null && !role.getRoleName().isEmpty()) {
+                nameSet.add(role.getRoleName());
+            }
+        }
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        return R.success(result);
     }
 }

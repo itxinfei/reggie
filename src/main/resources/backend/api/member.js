@@ -1,3 +1,6 @@
+// 修改点：筛选下拉选项（动态加载员工姓名）
+const employeeOptions = () => $axios({ url: '/employee/options', method: 'get' })
+
 function getMemberList (params) {
   return $axios({
     url: '/employee/page',

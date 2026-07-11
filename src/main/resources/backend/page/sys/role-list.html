@@ -19,14 +19,12 @@
   <div class="dashboard-container" id="role-app">
     <div class="container">
       <div class="tableBar">
-        <el-input
-          v-model="searchName"
-          placeholder="请输入角色名称"
-          class="el-input--wide"
-          clearable
-          @keyup.enter.native="handleQuery"
-        >
-          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
+        <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框，选项从数据库加载 -->
+        <el-select v-model="searchName" placeholder="请选择角色名称" class="el-select--narrow-xs" clearable filterable size="small"
+          :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据'">
+          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+        </el-select>
+        <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
         </el-input>
         <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
         <el-button size="small" class="btn-reset" @click="resetSearch">重置</el-button>
@@ -140,6 +138,10 @@
       data() {
         return {
           searchName: '',
+          // 修改点：搜索下拉框动态选项（从数据库加载角色名称）
+          filterOptions: { names: [] },
+          optionsLoading: false,
+          optionsLoadError: false,
           tableData: [],
           counts: 0,
           page: 1,
@@ -161,9 +163,30 @@
         }
       },
       created() {
+        this.loadFilterOptions()
         this.loadData()
       },
       methods: {
+        // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
+        async loadFilterOptions() {
+          this.optionsLoading = true
+          this.optionsLoadError = false
+          try {
+            const res = await sysApi.roleOptions()
+            if (String(res.code) === '1' && res.data) {
+              this.filterOptions.names = res.data.names || []
+            } else {
+              this.optionsLoadError = true
+              this.$message.warning('加载角色选项失败：' + (res.msg || '接口返回异常'))
+            }
+          } catch (err) {
+            this.optionsLoadError = true
+            console.error('加载角色选项失败:', err)
+            this.$message.error('加载筛选选项失败，请刷新页面重试')
+          } finally {
+            this.optionsLoading = false
+          }
+        },
         loadData() {
           this.loading = true
           var params = { page: this.page, pageSize: this.pageSize }

@@ -1,3 +1,6 @@
+// 修改点：筛选下拉选项（动态加载套餐名称）
+const setmealOptions = () => $axios({ url: '/setmeal/options', method: 'get' })
+
 // 查询列表数据
 const getSetmealPage = (params) => {
   return $axios({

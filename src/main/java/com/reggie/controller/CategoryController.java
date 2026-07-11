@@ -22,7 +22,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 分类管理
@@ -150,5 +155,30 @@ public class CategoryController {
 
         List<Category> list = categoryService.list(queryWrapper);
         return R.success(list);
+    }
+
+    /**
+     * 获取筛选下拉选项（分类名称列表）
+     * <p>从数据库动态查询所有分类名称，供前端下拉框使用</p>
+     *
+     * @return 包含 names 列表的 Map
+     */
+    @GetMapping("/options")
+    @Operation(summary = "筛选选项", description = "获取所有分类名称，供搜索条件下拉框使用")
+    public R<Map<String, List<String>>> options() {
+        LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByAsc(Category::getSort);
+        List<Category> list = categoryService.list(queryWrapper);
+
+        Set<String> nameSet = new HashSet<>();
+        for (Category cat : list) {
+            if (cat.getName() != null && !cat.getName().isEmpty()) {
+                nameSet.add(cat.getName());
+            }
+        }
+
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        return R.success(result);
     }
 }

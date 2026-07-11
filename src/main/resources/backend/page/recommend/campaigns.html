@@ -138,7 +138,11 @@
 
         <!-- ========== 搜索栏 ========== -->
         <div class="tableBar">
-            <el-input v-model="searchName" placeholder="搜索活动名称" size="small" clearable @keyup.enter.native="loadData" />
+            <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框 -->
+            <el-select v-model="searchName" placeholder="选择活动名称" size="small" class="el-select--narrow-xs" clearable filterable
+              :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据'" @change="loadData">
+              <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+            </el-select>
             <el-select v-model="searchStatus" placeholder="状态筛选" size="small" clearable @change="loadData">
                 <el-option label="草稿" :value="0" />
                 <el-option label="进行中" :value="1" />
@@ -391,6 +395,10 @@ new Vue({
             loading: false, submitting: false, pushing: false,
             tableData: [], total: 0, currentPage: 1, pageSize: 10,
             searchName: '', searchStatus: null, searchType: null,
+            // 修改点：搜索下拉框动态选项
+            filterOptions: { names: [] },
+            optionsLoading: false,
+            optionsLoadError: false,
             selectedRows: [],
             summary: { total: 0, active: 0, totalParticipants: 0, totalPushed: 0 },
             // 修改点(2026-07-10)：新增 recentDates 用于图表的 X 轴
@@ -430,6 +438,7 @@ new Vue({
         };
     },
     created: function() {
+        this.loadFilterOptions();
         this.loadData();
         this.loadCouponTemplates();
     },
@@ -444,6 +453,26 @@ new Vue({
         if (this.statsChart) this.statsChart.dispose();
     },
     methods: {
+        /* ====== 筛选选项加载 ====== */
+        loadFilterOptions: function() {
+            var self = this;
+            self.optionsLoading = true;
+            self.optionsLoadError = false;
+            recommendBackendApi.campaignOptions().then(function(res) {
+                if (String(res.code) === '1' && res.data) {
+                    self.filterOptions.names = res.data.names || [];
+                } else {
+                    self.optionsLoadError = true;
+                    self.$message.warning('加载活动选项失败：' + (res.msg || '接口返回异常'));
+                }
+            }).catch(function(err) {
+                self.optionsLoadError = true;
+                console.error('加载活动选项失败:', err);
+                self.$message.error('加载筛选选项失败，请刷新页面重试');
+            }).finally(function() {
+                self.optionsLoading = false;
+            });
+        },
         /* ====== 图表初始化 ====== */
         initOverviewCharts: function() {
             var self = this;

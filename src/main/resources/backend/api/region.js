@@ -1,3 +1,6 @@
+// 修改点：筛选下拉选项（动态加载地区名称）
+const regionOptions = () => $axios({ url: '/region/options', method: 'get' })
+
 // 获取地区树形数据
 const regionTree = () => $axios({ url: '/region/tree', method: 'get' })
 

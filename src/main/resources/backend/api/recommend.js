@@ -13,6 +13,11 @@ var recommendBackendApi = {
         return $axios.get('/marketing/campaigns/page', { params: params });
     },
 
+    // 修改点：筛选下拉选项（动态加载活动名称）
+    campaignOptions: function() {
+        return $axios.get('/marketing/campaigns/options');
+    },
+
     /**
      * 创建营销活动
      */

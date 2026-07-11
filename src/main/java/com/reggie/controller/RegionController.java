@@ -12,7 +12,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 行政区划管理
@@ -135,5 +140,25 @@ public class RegionController {
         }
         regionService.removeById(id);
         return R.success("删除成功");
+    }
+
+    /**
+     * 获取筛选下拉选项（地区名称列表）
+     * <p>从数据库动态查询所有地区名称，供前端下拉框使用</p>
+     */
+    @GetMapping("/options")
+    @Operation(summary = "筛选选项", description = "获取所有地区名称，供搜索条件下拉框使用")
+    public R<Map<String, List<String>>> options() {
+        LambdaQueryWrapper<Region> qw = new LambdaQueryWrapper<>();
+        qw.orderByAsc(Region::getName);
+        List<Region> list = regionService.list(qw);
+
+        Set<String> nameSet = new HashSet<>();
+        for (Region r : list) {
+            if (r.getName() != null && !r.getName().isEmpty()) { nameSet.add(r.getName()); }
+        }
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        return R.success(result);
     }
 }

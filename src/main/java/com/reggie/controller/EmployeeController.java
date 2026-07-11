@@ -32,8 +32,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 员工管理
@@ -466,5 +470,34 @@ public class EmployeeController {
         }
 
         return false;
+    }
+
+    /**
+     * 获取筛选下拉选项（员工姓名列表）
+     * <p>从数据库动态查询当前租户的所有员工姓名，供前端下拉框使用</p>
+     *
+     * @return 包含 names 列表的 Map
+     */
+    @GetMapping("/options")
+    @Operation(summary = "筛选选项", description = "获取当前租户所有员工姓名，供搜索条件下拉框使用")
+    public R<Map<String, List<String>>> options() {
+        LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(Employee::getTenantId, tenantId);
+        }
+        queryWrapper.orderByAsc(Employee::getName);
+        List<Employee> list = employeeService.list(queryWrapper);
+
+        Set<String> nameSet = new HashSet<>();
+        for (Employee emp : list) {
+            if (emp.getName() != null && !emp.getName().isEmpty()) {
+                nameSet.add(emp.getName());
+            }
+        }
+
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        return R.success(result);
     }
 }

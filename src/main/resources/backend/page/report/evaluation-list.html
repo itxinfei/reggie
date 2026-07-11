@@ -211,7 +211,11 @@
         <div class="filter-bar">
           <div class="filter-group">
             <span class="filter-label">菜品名称：</span>
-            <el-input v-model="filters.dishName" placeholder="请输入菜品名称" clearable size="small" class="el-input--wide-sm" @keyup.enter.native="handleSearch"></el-input>
+            <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框 -->
+            <el-select v-model="filters.dishName" placeholder="选择菜品名称" clearable size="small" class="el-select--narrow-xs" filterable
+              :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据'">
+              <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+            </el-select>
           </div>
           <div class="filter-group">
             <span class="filter-label">评分：</span>
@@ -413,6 +417,10 @@
             starRating: null,
             status: null
           },
+          // 修改点：搜索下拉框动态选项（从数据库加载菜品名称）
+          filterOptions: { names: [] },
+          optionsLoading: false,
+          optionsLoadError: false,
           filterStatus: null,
           stats: { total: 0, pending: 0, approved: 0, rejected: 0 },
           // 详情弹窗
@@ -430,10 +438,31 @@
         }
       },
       created() {
+        this.loadFilterOptions()
         this.loadData()
         this.loadStats()
       },
       methods: {
+        // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
+        async loadFilterOptions() {
+          this.optionsLoading = true
+          this.optionsLoadError = false
+          try {
+            const res = await dishOptions()
+            if (String(res.code) === '1' && res.data) {
+              this.filterOptions.names = res.data.names || []
+            } else {
+              this.optionsLoadError = true
+              this.$message.warning('加载菜品选项失败：' + (res.msg || '接口返回异常'))
+            }
+          } catch (err) {
+            this.optionsLoadError = true
+            console.error('加载菜品选项失败:', err)
+            this.$message.error('加载筛选选项失败，请刷新页面重试')
+          } finally {
+            this.optionsLoading = false
+          }
+        },
         // 加载评价列表
         async loadData() {
           this.loading = true

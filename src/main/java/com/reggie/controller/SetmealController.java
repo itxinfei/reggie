@@ -28,10 +28,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -241,6 +245,31 @@ public class SetmealController {
                 .filter(s -> !s.isEmpty())
                 .map(Long::parseLong)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取筛选下拉选项（套餐名称列表）
+     * <p>从数据库动态查询所有套餐名称，供前端下拉框使用</p>
+     *
+     * @return 包含 names 列表的 Map
+     */
+    @GetMapping("/options")
+    @Operation(summary = "筛选选项", description = "获取所有套餐名称，供搜索条件下拉框使用")
+    public R<Map<String, List<String>>> options() {
+        LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByAsc(Setmeal::getName);
+        List<Setmeal> list = setmealService.list(queryWrapper);
+
+        Set<String> nameSet = new HashSet<>();
+        for (Setmeal meal : list) {
+            if (meal.getName() != null && !meal.getName().isEmpty()) {
+                nameSet.add(meal.getName());
+            }
+        }
+
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        return R.success(result);
     }
 
 }

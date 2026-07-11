@@ -43,20 +43,11 @@
 
       <!-- 修改点：新增搜索框，支持按分类名称搜索 -->
       <div class="tableBar">
-        <el-input
-          v-model="searchName"
-          placeholder="请输入分类名称"
-          class="el-input--wide"
-          clearable
-          @keyup.enter.native="handleQuery"
-        >
-          <i
-            slot="prefix"
-            class="el-input__icon el-icon-search"
-            style="cursor: pointer"
-            @click="handleQuery"
-          ></i>
-        </el-input>
+        <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框，选项从数据库加载 -->
+        <el-select v-model="searchName" placeholder="请选择分类名称" class="el-select--narrow-xs" clearable filterable size="small"
+          :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据'">
+          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+        </el-select>
         <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
         <el-button size="small" class="btn-reset" @click="reset">重置</el-button>
         <el-button
@@ -202,6 +193,10 @@
             type :'',
             // 修改点：搜索条件，与卡片筛选互斥
             searchName: '',
+            // 修改点：搜索下拉框动态选项（从数据库加载分类名称）
+            filterOptions: { names: [] },
+            optionsLoading: false,
+            optionsLoadError: false,
             // 数据统计
             stats: {
               totalCategories: 0,
@@ -222,11 +217,32 @@
         },
         computed: {},
         created() {
+          this.loadFilterOptions()
           this.init()
         },
         mounted() {
         },
         methods: {
+          // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
+          async loadFilterOptions() {
+            this.optionsLoading = true
+            this.optionsLoadError = false
+            try {
+              const res = await categoryOptions()
+              if (String(res.code) === '1' && res.data) {
+                this.filterOptions.names = res.data.names || []
+              } else {
+                this.optionsLoadError = true
+                this.$message.warning('加载分类选项失败：' + (res.msg || '接口返回异常'))
+              }
+            } catch (err) {
+              this.optionsLoadError = true
+              console.error('加载分类选项失败:', err)
+              this.$message.error('加载筛选选项失败，请刷新页面重试')
+            } finally {
+              this.optionsLoading = false
+            }
+          },
           async init () {
             this.loading = true
             // 修改点：传递类型筛选参数 + 名称搜索参数到后端

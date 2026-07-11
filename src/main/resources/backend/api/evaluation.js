@@ -1,3 +1,6 @@
+// 修改点：筛选下拉选项（动态加载菜品名称，供评价报表页面使用）
+const dishOptions = () => $axios({ url: '/dish/options', method: 'get' })
+
 // 菜品评价管理接口
 const getEvaluationPage = (params) => {
   return $axios({

@@ -197,4 +197,19 @@ public class MarketingController {
         int count = marketingCampaignService.batchPushMessages(campaignId, pushType);
         return R.success("已向" + count + "位用户推送营销消息");
     }
+
+    /**
+     * 获取筛选下拉选项（营销活动名称列表）
+     */
+    @GetMapping("/campaigns/options")
+    public R<Map<String, List<String>>> campaignOptions() {
+        List<MarketingCampaign> list = marketingCampaignService.list();
+        Set<String> nameSet = new HashSet<>();
+        for (MarketingCampaign c : list) {
+            if (c.getName() != null && !c.getName().isEmpty()) { nameSet.add(c.getName()); }
+        }
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        return R.success(result);
+    }
 }

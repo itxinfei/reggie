@@ -7,6 +7,10 @@ const sysApi = {
     roleList() {
         return $axios.get('/sys/role/list')
     },
+    // 修改点：筛选下拉选项（动态加载角色名称）
+    roleOptions() {
+        return $axios.get('/sys/role/options')
+    },
     roleAdd(data) {
         return $axios.post('/sys/role', data)
     },

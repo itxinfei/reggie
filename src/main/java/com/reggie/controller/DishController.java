@@ -32,9 +32,12 @@ import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -274,6 +277,25 @@ public class DishController {
                 .filter(s -> !s.isEmpty())
                 .map(Long::parseLong)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取筛选下拉选项（菜品名称列表）
+     * <p>从数据库动态查询所有菜品名称，供前端下拉框使用</p>
+     */
+    @GetMapping("/options")
+    @Operation(summary = "筛选选项", description = "获取所有菜品名称，供搜索条件下拉框使用")
+    public R<Map<String, List<String>>> options() {
+        LambdaQueryWrapper<Dish> qw = new LambdaQueryWrapper<>();
+        qw.orderByAsc(Dish::getName);
+        List<Dish> list = dishService.list(qw);
+        Set<String> nameSet = new HashSet<>();
+        for (Dish d : list) {
+            if (d.getName() != null && !d.getName().isEmpty()) { nameSet.add(d.getName()); }
+        }
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        return R.success(result);
     }
 
 }

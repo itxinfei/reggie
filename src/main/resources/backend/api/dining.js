@@ -1,3 +1,6 @@
+// 修改点：筛选下拉选项（动态加载区域名称）
+const areaOptions = () => $axios({ url: '/api/dining/area/options', method: 'get' })
+
 const areaPage = (params) => $axios({ url: '/api/dining/area/page', method: 'get', params })
 const areaList = () => $axios({ url: '/api/dining/area/list', method: 'get' })
 const addArea = (params) => $axios({ url: '/api/dining/area', method: 'post', data: params })

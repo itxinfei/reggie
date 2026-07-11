@@ -1,3 +1,6 @@
+// 修改点：筛选下拉选项（动态加载分类名称）
+const categoryOptions = () => $axios({ url: '/category/options', method: 'get' })
+
 // 查询列表接口
 const getCategoryPage = (params) => {
   return $axios({

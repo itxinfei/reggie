@@ -40,17 +40,11 @@
 
     <!-- ========== 搜索筛选 + 操作按钮栏 ========== -->
     <div class="tableBar">
-      <!-- 搜索输入框（size="small" 确保与按钮高度一致） -->
-      <el-input
-        v-model="input"
-        placeholder="请输入套餐名称"
-        size="small"
-        class="el-input--wide"
-        clearable
-        @keyup.enter.native="handleQuery"
-      >
-        <i slot="prefix" class="el-input__icon el-icon-search" @click="handleQuery"></i>
-      </el-input>
+      <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框，选项从数据库加载 -->
+      <el-select v-model="input" placeholder="请选择套餐名称" class="el-select--narrow-xs" clearable filterable size="small"
+        :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据'">
+        <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+      </el-select>
 
       <!-- 查询 / 重置按钮（与输入框高度对齐） -->
       <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
@@ -284,6 +278,10 @@ new Vue({
   data() {
     return {
       input: '',
+      // 修改点：搜索下拉框动态选项（从数据库加载套餐名称）
+      filterOptions: { names: [] },
+      optionsLoading: false,
+      optionsLoadError: false,
       counts: 0,
       page: 1,
       pageSize: 10,
@@ -363,9 +361,30 @@ new Vue({
     }
   },
   created() {
+    this.loadFilterOptions()
     this.init()
   },
   methods: {
+    // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
+    async loadFilterOptions() {
+      this.optionsLoading = true
+      this.optionsLoadError = false
+      try {
+        const res = await setmealOptions()
+        if (String(res.code) === '1' && res.data) {
+          this.filterOptions.names = res.data.names || []
+        } else {
+          this.optionsLoadError = true
+          this.$message.warning('加载套餐选项失败：' + (res.msg || '接口返回异常'))
+        }
+      } catch (err) {
+        this.optionsLoadError = true
+        console.error('加载套餐选项失败:', err)
+        this.$message.error('加载筛选选项失败，请刷新页面重试')
+      } finally {
+        this.optionsLoading = false
+      }
+    },
     // ========== 数据加载 ==========
     async init() {
       this.loading = true

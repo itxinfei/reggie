@@ -19,7 +19,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 堂食区域管理控制器
@@ -93,6 +98,31 @@ public class TableAreaController {
             return R.success(area);
         }
         return R.error("没有查询到对应区域");
+    }
+
+    /**
+     * 获取筛选下拉选项（区域名称列表）
+     * <p>从数据库动态查询所有区域名称，供前端下拉框使用</p>
+     *
+     * @return 包含 names 列表的 Map
+     */
+    @GetMapping("/options")
+    @Operation(summary = "筛选选项", description = "获取所有区域名称，供搜索条件下拉框使用")
+    public R<Map<String, List<String>>> options() {
+        LambdaQueryWrapper<TableArea> qw = new LambdaQueryWrapper<>();
+        qw.orderByAsc(TableArea::getSort);
+        List<TableArea> list = tableAreaService.list(qw);
+
+        Set<String> nameSet = new HashSet<>();
+        for (TableArea area : list) {
+            if (area.getName() != null && !area.getName().isEmpty()) {
+                nameSet.add(area.getName());
+            }
+        }
+
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        return R.success(result);
     }
 }
 

@@ -43,14 +43,15 @@
 
       <!-- 搜索项 -->
       <div class="tableBar">
-        <el-input
-          v-model="input.name"
-          placeholder="请输入用户姓名"
-          clearable
-          @keyup.enter.native="handleQuery"
-        >
-          <i
-            slot="prefix"
+        <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框，选项从数据库加载 -->
+        <el-select v-model="input.name" placeholder="请选择用户姓名" class="el-select--narrow-xs" clearable filterable size="small"
+          :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据'">
+          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+        </el-select>
+        <el-select v-model="input.phone" placeholder="请选择手机号" class="el-select--narrow-xs" clearable filterable size="small"
+          :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据'">
+          <el-option v-for="p in filterOptions.phones" :key="p" :label="p" :value="p"></el-option>
+        </el-select>
             class="el-input__icon el-icon-search"
             style="cursor: pointer"
             @click="handleQuery"
@@ -179,6 +180,10 @@
             phone: '',
             status: null  // 修改点：初始值改为null，避免空字符串引发参数类型问题
           },
+          // 修改点：搜索下拉框动态选项（从数据库加载用户姓名和手机号）
+          filterOptions: { names: [], phones: [] },
+          optionsLoading: false,
+          optionsLoadError: false,
           counts: 0,
           page: 1,
           pageSize: 10,
@@ -204,11 +209,33 @@
         }
       },
       created() {
+        this.loadFilterOptions()
         this.init()
       },
       mounted() {
       },
       methods: {
+        // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
+        async loadFilterOptions() {
+          this.optionsLoading = true
+          this.optionsLoadError = false
+          try {
+            const res = await $axios({ url: '/user/options', method: 'get' })
+            if (String(res.code) === '1' && res.data) {
+              this.filterOptions.names = res.data.names || []
+              this.filterOptions.phones = res.data.phones || []
+            } else {
+              this.optionsLoadError = true
+              this.$message.warning('加载用户选项失败：' + (res.msg || '接口返回异常'))
+            }
+          } catch (err) {
+            this.optionsLoadError = true
+            console.error('加载用户选项失败:', err)
+            this.$message.error('加载筛选选项失败，请刷新页面重试')
+          } finally {
+            this.optionsLoading = false
+          }
+        },
         // 初始化加载
         async init () {
           this.loading = true

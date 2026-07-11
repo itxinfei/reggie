@@ -41,10 +41,12 @@
       </div>
 
       <div class="tableBar">
-        <el-select v-model="query.name" placeholder="名称" class="el-select--narrow-xs" clearable filterable size="small">
+        <el-select v-model="query.name" placeholder="名称" class="el-select--narrow-xs" clearable filterable size="small"
+          :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据，请确认已添加打印机'">
           <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
         </el-select>
-        <el-select v-model="query.brand" placeholder="品牌" class="el-select--narrow-xs" clearable filterable size="small">
+        <el-select v-model="query.brand" placeholder="品牌" class="el-select--narrow-xs" clearable filterable size="small"
+          :loading="optionsLoading" :no-data-text="optionsLoading ? '加载中...' : '暂无数据，请确认已添加打印机'">
           <el-option v-for="b in filterOptions.brands" :key="b" :label="b" :value="b"></el-option>
         </el-select>
         <el-select v-model="query.type" placeholder="连接类型" class="el-select--narrow-xs" clearable size="small">
@@ -215,6 +217,10 @@
             names: [],
             brands: []
           },
+          // 修改点：下拉选项加载状态（控制 loading 动画和 no-data-text 提示）
+          optionsLoading: false,
+          // 修改点：下拉选项加载失败标记（用户可见的错误提示）
+          optionsLoadError: false,
           dialog: {
             title: '',
             visible: false,
@@ -250,15 +256,25 @@
       },
       methods: {
         // 修改点：加载筛选下拉框选项（名称+品牌，从数据库动态查询）
+        // 通用优化方案：设置 loading 状态 + 区分"空数据"与"加载失败" + 提供重试入口
         async loadFilterOptions() {
+          this.optionsLoading = true
+          this.optionsLoadError = false
           try {
             const res = await printerConfigOptions()
             if (String(res.code) === '1' && res.data) {
               this.filterOptions.names = res.data.names || []
               this.filterOptions.brands = res.data.brands || []
+            } else {
+              this.optionsLoadError = true
+              this.$message.warning('加载筛选选项失败：' + (res.msg || '接口返回异常'))
             }
           } catch (err) {
-            console.warn('加载打印机筛选选项失败:', err)
+            this.optionsLoadError = true
+            console.error('加载打印机筛选选项失败:', err)
+            this.$message.error('加载打印机筛选选项失败，请刷新页面重试')
+          } finally {
+            this.optionsLoading = false
           }
         },
         async init() {
