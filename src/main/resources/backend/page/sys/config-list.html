@@ -12,8 +12,8 @@
   <div class="dashboard-container" id="config-app">
     <div class="container">
       <div class="tableBar">
-        <el-button type="primary" @click="openDialog()">+ 新增配置</el-button>
-        <el-button @click="loadData">刷新</el-button>
+        <el-button type="primary" class="btn-add" @click="openDialog()">+ 新增配置</el-button>
+        <el-button class="btn-refresh" @click="loadData">刷新</el-button>
       </div>
 
       <el-table :data="tableData" stripe border v-loading="loading" class="tableBox">

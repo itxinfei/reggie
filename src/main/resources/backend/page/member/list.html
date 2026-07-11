@@ -62,11 +62,12 @@
         <el-button size="small" class="btn-reset" @click="reset">重置</el-button>
         <el-button
           type="primary"
+          class="btn-add"
           @click="addMemberHandle('add')"
         >
           + 添加员工
         </el-button>
-        <el-button type="success" size="small" @click="exportEmployees('excel')" icon="el-icon-download">导出</el-button>
+        <el-button type="success" size="small" class="btn-export" @click="exportEmployees('excel')" icon="el-icon-download">导出</el-button>
       </div>
       <el-table
         v-loading="loading"

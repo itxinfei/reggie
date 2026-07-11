@@ -48,4 +48,12 @@ public class AIConversation {
     /** 租户ID */
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    /** 创建人 */
+    @TableField(fill = FieldFill.INSERT)
+    private Long createUser;
+
+    /** 更新人 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateUser;
 }

@@ -30,7 +30,7 @@
         </el-input>
         <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
         <el-button size="small" class="btn-reset" @click="resetSearch">重置</el-button>
-        <el-button type="primary" @click="openDialog()">+ 新增角色</el-button>
+        <el-button type="primary" class="btn-add" @click="openDialog()">+ 新增角色</el-button>
       </div>
 
       <el-table :data="tableData" stripe border v-loading="loading" class="tableBox">

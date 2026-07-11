@@ -50,7 +50,11 @@ public class MyMetaObjecthandler implements MetaObjectHandler {
     public void updateFill(MetaObject metaObject) {
         log.debug("公共字段自动填充[update]");
 
-        metaObject.setValue("updateTime",LocalDateTime.now());
-        metaObject.setValue("updateUser",BaseContext.getCurrentId());
+        if (metaObject.hasSetter("updateTime")) {
+            metaObject.setValue("updateTime", LocalDateTime.now());
+        }
+        if (metaObject.hasSetter("updateUser")) {
+            metaObject.setValue("updateUser", BaseContext.getCurrentId());
+        }
     }
 }

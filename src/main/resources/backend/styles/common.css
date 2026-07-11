@@ -45,12 +45,12 @@ a:hover {
   outline: none;
   text-decoration: none;
 }
-/* 修改点：统一按钮样式体系，去除分隔线，与 btn-view/btn-delete 视觉一致 */
+/* 修改点：统一文字链接为项目主色 #ffc200 */
 .blueBug {
-  color: #409eff !important;
+  color: #ffc200 !important;
 }
 .blueBug:hover {
-  background: #ecf5ff !important;
+  background: #fffbf0 !important;
 }
 .delBut {
   color: #f56c6c !important;
@@ -74,21 +74,21 @@ div:focus {
 .app-container {
   padding: 20px;
 }
-/* 修改点：统一"保存并继续添加"按钮为项目主色 #409eff，与所有 primary 按钮一致 */
+/* 修改点：统一"保存并继续添加"按钮为项目主色 #ffc200，与所有 primary 按钮一致 */
 .continue {
-  background: #409eff !important;
-  border-color: #409eff !important;
-  color: #ffffff !important;
+  background: #ffc200 !important;
+  border-color: #ffc200 !important;
+  color: #333333 !important;
 }
 .continue:hover {
-  background: #66b1ff !important;
-  border-color: #66b1ff !important;
-  color: #ffffff !important;
+  background: #fdd24c !important;
+  border-color: #fdd24c !important;
+  color: #333333 !important;
 }
 .continue:active {
-  background: #3a8ee6 !important;
-  border-color: #3a8ee6 !important;
-  color: #ffffff !important;
+  background: #efb602 !important;
+  border-color: #efb602 !important;
+  color: #333333 !important;
 }
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
@@ -3423,14 +3423,6 @@ input[type="number"] {
   float: left;
   line-height: 32px;
 }
-.el-date-editor .el-range-input,
-.el-date-editor .el-range-separator {
-  height: 100%;
-  margin: 0;
-  text-align: center;
-  display: inline-block;
-  font-size: 14px;
-}
 .el-date-editor .el-range-input {
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -3438,8 +3430,28 @@ input[type="number"] {
   border: none;
   outline: 0;
   padding: 0;
-  width: 39%;
+  height: 100%;
+  margin: 0;
+  text-align: center;
+  display: inline-block;
+  font-size: 14px;
+  flex: 1;
+  min-width: 0;
   color: #818693;
+}
+.el-date-editor .el-range-separator {
+  height: 100%;
+  margin: 0;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  padding: 0 10px;
+  line-height: 32px;
+  width: auto;
+  flex: none;
+  color: #20232a;
 }
 .el-date-editor .el-range-input::-webkit-input-placeholder {
   color: #bac0cd;
@@ -3449,12 +3461,6 @@ input[type="number"] {
 }
 .el-date-editor .el-range-input::placeholder {
   color: #bac0cd;
-}
-.el-date-editor .el-range-separator {
-  padding: 0 5px;
-  line-height: 32px;
-  width: 5%;
-  color: #20232a;
 }
 .el-date-editor .el-range__close-icon {
   font-size: 14px;
@@ -3472,16 +3478,18 @@ input[type="number"] {
   -ms-flex-align: center;
   align-items: center;
   padding: 3px 10px;
+  height: 32px;
 }
 .el-range-editor .el-range-input {
   line-height: 1;
+  align-self: stretch;
 }
 .el-range-editor.is-active,
 .el-range-editor.is-active:hover {
   border-color: #ffc200;
 }
 .el-range-editor--medium.el-input__inner {
-  height: 36px;
+  height: 32px;
 }
 .el-range-editor--medium .el-range-separator {
   line-height: 28px;
@@ -3498,15 +3506,15 @@ input[type="number"] {
   height: 32px;
 }
 .el-range-editor--small .el-range-separator {
-  line-height: 24px;
-  font-size: 13px;
+  line-height: 30px;
+  font-size: 14px;
 }
 .el-range-editor--small .el-range-input {
-  font-size: 13px;
+  font-size: 14px;
 }
 .el-range-editor--small .el-range__close-icon,
 .el-range-editor--small .el-range__icon {
-  line-height: 24px;
+  line-height: 30px;
 }
 .el-range-editor--mini.el-input__inner {
   height: 28px;

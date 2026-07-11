@@ -41,22 +41,22 @@
       </div>
 
       <div class="tableBar">
-        <el-input v-model="query.name" placeholder="名称" class="el-input--narrow" clearable size="small"></el-input>
-        <el-input v-model="query.brand" placeholder="品牌" class="el-input--narrow" clearable size="small"></el-input>
-        <el-select v-model="query.type" placeholder="连接类型" class="el-select--narrow" clearable size="small">
+        <el-input v-model="query.name" placeholder="名称" class="el-input--wide-xs" clearable size="small"></el-input>
+        <el-input v-model="query.brand" placeholder="品牌" class="el-input--wide-xs" clearable size="small"></el-input>
+        <el-select v-model="query.type" placeholder="连接类型" class="el-select--narrow-xs" clearable size="small">
           <el-option label="USB" value="USB"></el-option>
           <el-option label="TCP" value="TCP"></el-option>
           <el-option label="CLOUD" value="CLOUD"></el-option>
           <el-option label="BLUETOOTH" value="BLUETOOTH"></el-option>
         </el-select>
-        <el-select v-model="query.status" placeholder="状态" class="el-select--narrow-xs" clearable size="small">
+        <el-select v-model="query.status" placeholder="状态" class="el-select--narrow-xxs" clearable size="small">
           <el-option label="启用" :value="1"></el-option>
           <el-option label="停用" :value="0"></el-option>
         </el-select>
         <el-button type="primary" size="small" class="btn-query" @click="search">查询</el-button>
         <el-button size="small" class="btn-reset" @click="reset">重置</el-button>
         <div class="tableLab">
-          <el-button type="primary" size="small" @click="showAdd">+ 新增打印机</el-button>
+          <el-button type="primary" size="small" class="btn-add" @click="showAdd">+ 新增打印机</el-button>
         </div>
       </div>
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">

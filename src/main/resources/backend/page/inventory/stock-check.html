@@ -20,7 +20,7 @@
         <el-date-picker v-model="input.dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd" @change="handleQuery"></el-date-picker>
         <el-button type="primary" class="btn-query" @click="handleQuery">查询</el-button>
         <el-button class="btn-reset" @click="reset">重置</el-button>
-        <el-button type="primary" @click="addHandle">+ 新增盘点</el-button>
+        <el-button type="primary" class="btn-add" @click="addHandle">+ 新增盘点</el-button>
       </div>
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
         <el-table-column type="expand">

@@ -58,10 +58,10 @@
 
       <!-- 操作按钮组：margin-left: auto 推到右侧 -->
       <div class="tableLab">
-        <el-button type="danger" size="small" @click="deleteHandle('批量')">批量删除</el-button>
+        <el-button type="danger" size="small" class="btn-delete" @click="deleteHandle('批量')">批量删除</el-button>
         <el-button type="success" size="small" @click="statusHandle('1')">批量启售</el-button>
         <el-button type="warning" size="small" @click="statusHandle('0')">批量停售</el-button>
-        <el-button type="primary" size="small" @click="addSetMeal('add')">+ 新建套餐</el-button>
+        <el-button type="primary" size="small" class="btn-add" @click="addSetMeal('add')">+ 新建套餐</el-button>
       </div>
     </div>
 

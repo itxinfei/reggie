@@ -92,14 +92,14 @@
 }
 
 /* ========== 颜色主题 ========== */
-.stat-card.primary  { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
+.stat-card.primary  { --gradient: linear-gradient(135deg, #ffc200 0%, #fdd24c 100%); }
 .stat-card.success  { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
 .stat-card.warning  { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
 .stat-card.danger   { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
 .stat-card.info     { --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%); }
 
 /* 别名（兼容使用 blue/green/orange/purple 命名的页面） */
-.stat-card.blue     { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); }
+.stat-card.blue     { --gradient: linear-gradient(135deg, #ffc200 0%, #fdd24c 100%); }
 .stat-card.green    { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
 .stat-card.orange   { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
 .stat-card.purple   { --gradient: linear-gradient(135deg, #9c27b0 0%, #ce93d8 100%); }
@@ -117,7 +117,7 @@
   justify-content: center;
   font-size: 20px;
 }
-.stat-card .trend-icon.blue   { background: rgba(64, 158, 255, 0.1); color: #409eff; }
+.stat-card .trend-icon.blue   { background: rgba(255, 194, 0, 0.1); color: #ffc200; }
 .stat-card .trend-icon.green  { background: rgba(103, 194, 58, 0.1); color: #67c23a; }
 .stat-card .trend-icon.orange { background: rgba(230, 162, 60, 0.1); color: #e6a23c; }
 .stat-card .trend-icon.purple { background: rgba(156, 39, 176, 0.1); color: #9c27b0; }
@@ -129,8 +129,8 @@
 }
 
 .stat-card.clickable.active {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.15);
+  border-color: #ffc200;
+  box-shadow: 0 0 0 2px rgba(255, 194, 0, 0.15);
 }
 
 /* ========== 桌台变体（flex 布局） ========== */
@@ -155,7 +155,7 @@
 }
 
 /* 颜色背景（桌台变体用纯色背景而非渐变文字） */
-.stat-card--flex.primary .stat-icon { background: rgba(64, 158, 255, 0.1); color: #409eff; }
+.stat-card--flex.primary .stat-icon { background: rgba(255, 194, 0, 0.1); color: #ffc200; }
 .stat-card--flex.success .stat-icon { background: rgba(103, 194, 58, 0.1); color: #67c23a; }
 .stat-card--flex.warning .stat-icon { background: rgba(230, 162, 60, 0.1); color: #e6a23c; }
 .stat-card--flex.danger  .stat-icon { background: rgba(245, 108, 108, 0.1); color: #f56c6c; }
@@ -169,7 +169,7 @@
   -webkit-text-fill-color: unset;
   background-clip: unset;
 }
-.stat-card--flex.primary .stat-value { color: #409eff; }
+.stat-card--flex.primary .stat-value { color: #ffc200; }
 .stat-card--flex.success .stat-value { color: #67c23a; }
 .stat-card--flex.warning .stat-value { color: #e6a23c; }
 .stat-card--flex.danger  .stat-value { color: #f56c6c; }

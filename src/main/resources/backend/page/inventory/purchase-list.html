@@ -16,14 +16,14 @@
         <el-select v-model="input.supplierId" placeholder="供应商" class="el-select--narrow" clearable @change="handleQuery">
           <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
         </el-select>
-        <el-select v-model="input.status" placeholder="状态" clearable @change="handleQuery">
+        <el-select v-model="input.status" placeholder="状态" class="el-select--narrow-sm" clearable @change="handleQuery">
           <el-option label="待收货" value="0"></el-option>
           <el-option label="已收货" value="1"></el-option>
           <el-option label="已取消" value="2"></el-option>
         </el-select>
         <el-button type="primary" class="btn-query" @click="handleQuery">查询</el-button>
         <el-button class="btn-reset" @click="reset">重置</el-button>
-        <el-button type="primary" @click="addHandle">+ 新增采购单</el-button>
+        <el-button type="primary" class="btn-add" @click="addHandle">+ 新增采购单</el-button>
       </div>
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
         <el-table-column type="expand">

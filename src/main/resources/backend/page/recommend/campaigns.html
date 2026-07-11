@@ -150,9 +150,9 @@
             </el-select>
             <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
             <el-button size="small" class="btn-reset" @click="resetSearch">重置</el-button>
-            <el-button size="small" icon="el-icon-refresh" @click="loadData">刷新</el-button>
+            <el-button size="small" class="btn-refresh" icon="el-icon-refresh" @click="loadData">刷新</el-button>
             <span style="flex:1;"></span>
-            <el-button type="primary" size="small" icon="el-icon-plus" @click="openDialog('create')">新建活动</el-button>
+            <el-button type="primary" size="small" class="btn-add" icon="el-icon-plus" @click="openDialog('create')">新建活动</el-button>
         </div>
 
         <!-- ========== 表格 ========== -->

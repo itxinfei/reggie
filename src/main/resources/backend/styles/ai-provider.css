@@ -8,7 +8,7 @@
 /* 激活供应商高亮卡片 */
 .active-provider-card {
     background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
-    border: 2px solid #409eff;
+    border: 2px solid #ffc200;
     border-radius: 10px;
     padding: 20px 24px;
     margin-bottom: 24px;
@@ -20,7 +20,7 @@
     position: absolute;
     top: 0;
     right: 0;
-    background: #409eff;
+    background: #ffc200;
     color: #fff;
     font-size: 12px;
     padding: 4px 14px;
@@ -88,7 +88,7 @@
     border-color: #c0c4cc;
 }
 .provider-card.active-card {
-    border-color: #409eff;
+    border-color: #ffc200;
     background: #f0f9ff;
 }
 .provider-card.disabled-card {
@@ -199,12 +199,12 @@
     white-space: nowrap;
 }
 .model-chip:hover {
-    border-color: #409eff; color: #409eff;
-    background: #ecf5ff;
+    border-color: #ffc200; color: #ffc200;
+    background: #fffbf0;
 }
 .model-chip.active {
-    border-color: #409eff; color: #fff;
-    background: #409eff;
+    border-color: #ffc200; color: #fff;
+    background: #ffc200;
 }
 .model-fetch-error {
     margin-top: 6px; padding: 6px 10px;

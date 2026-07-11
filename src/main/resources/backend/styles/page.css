@@ -10,62 +10,75 @@
   padding: 30px 28px;
   border-radius: 4px;
 }
-/* ========== tableBar — 搜索筛选 + 操作按钮栏 ========== */
+/* ========== tableBar — 搜索筛选 + 操作按钮栏（统一设计规范） ========== */
 
-/* 主容器：flex row，space-between 分布搜索区和操作区，允许换行 */
-/* 修改点：主容器改为 flex-start，输入框和按钮自然紧靠；操作区用 margin-left: auto 推右 */
+/* 主容器：flex row，控件紧靠，操作区推到右侧 */
 .dashboard-container .container .tableBar {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   margin-bottom: 20px;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
 }
 
-/* 搜索区域：搜索控件 + 查询/重置按钮，紧靠不拉伸，撑不下就换行 */
+/* 搜索区域（<table-bar> 组件使用，聚合搜索控件+查询/重置按钮） */
 .dashboard-container .container .tableBar .search-area {
   display: flex;
   align-items: center;
   flex: 0 1 auto;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
-/* 搜索区内的输入框：默认 ~200px，允许缩小不漏出 */
+/* 搜索区内的输入框：默认 200px */
 .dashboard-container .container .tableBar .search-area .el-input {
   flex: 0 1 200px;
-  min-width: 140px;
+  min-width: 150px;
+  width: auto !important;
+}
+
+/* tableBar 内的输入框（不含 search-area）：默认 120px，窄屏可收缩 */
+.dashboard-container .container .tableBar > .el-input {
+  flex: 0 1 120px;
+  min-width: 100px;
   width: auto;
 }
 
-/* 搜索区内的下拉框：默认 ~150px */
+/* 搜索区内的下拉框：默认 160px */
 .dashboard-container .container .tableBar .search-area .el-select {
-  flex: 0 1 150px;
+  flex: 0 1 160px;
   min-width: 120px;
+  width: auto !important;
+}
+
+/* tableBar 内的下拉框（不含 search-area）：默认 100px，窄屏可收缩 */
+.dashboard-container .container .tableBar > .el-select {
+  flex: 0 1 100px;
+  min-width: 80px;
   width: auto;
 }
 
-/* 搜索区内的日期选择器：默认 ~280px */
+/* 搜索区内的日期选择器：默认 340px */
 .dashboard-container .container .tableBar .search-area .el-date-editor {
-  flex: 0 1 280px;
-  min-width: 220px;
-  width: auto;
+  flex: 0 1 340px;
+  min-width: 260px;
+  width: auto !important;
 }
 
-/* 搜索区内控件通用清除所有固定宽度冲突 */
+/* 搜索区内控件清除 Element UI 固定宽度冲突 */
 .dashboard-container .container .tableBar .search-area .el-input--small,
 .dashboard-container .container .tableBar .search-area .el-select--small {
-  width: auto;
+  width: auto !important;
 }
 
-/* 搜索扩展插槽：自然跟随 */
+/* 搜索扩展插槽 */
 .dashboard-container .container .tableBar .search-area > .search-extra {
   flex: 0 0 auto;
 }
 
-/* 查询/重置按钮组：绝不缩小 */
+/* 查询/重置按钮组 */
 .dashboard-container .container .tableBar .search-actions {
   display: flex;
   align-items: center;
@@ -73,46 +86,122 @@
   flex-shrink: 0;
 }
 
-/* ========== 按钮美化 ========== */
+/* ============================================
+   统一按钮颜色体系（按功能明确区分）
+   ============================================ */
 
-/* 查询按钮：蓝色渐变 + 轻微阴影 */
-.dashboard-container .container .tableBar .btn-query,
-.dashboard-container .container .tableBar .search-btn.el-button--primary {
-  background: linear-gradient(135deg, #409eff, #66b1ff);
-  border: none;
-  color: #fff;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.35);
+/* 基础按钮尺寸 */
+.dashboard-container .container .tableBar .el-button:not(.el-button--text) {
+  font-size: 13px;
+  padding: 7px 15px;
+  height: 32px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
   transition: all 0.25s ease;
+  white-space: nowrap;
 }
-.dashboard-container .container .tableBar .btn-query:hover,
-.dashboard-container .container .tableBar .search-btn.el-button--primary:hover {
-  background: linear-gradient(135deg, #5cadff, #409eff);
-  box-shadow: 0 4px 14px rgba(64, 158, 255, 0.5);
+.dashboard-container .container .tableBar .el-button:not(.el-button--text):hover {
   transform: translateY(-1px);
 }
+
+/* --- 查询按钮：项目主色 #ffc200 --- */
+.dashboard-container .container .tableBar .btn-query {
+  background: #ffc200 !important;
+  border: none !important;
+  color: #333 !important;
+  font-weight: 500;
+}
+.dashboard-container .container .tableBar .btn-query:hover {
+  background: #fdd24c !important;
+  color: #333 !important;
+}
 .dashboard-container .container .tableBar .btn-query.is-loading {
-  background: linear-gradient(135deg, #409eff, #66b1ff);
+  background: #ffc200 !important;
 }
 
-/* 重置按钮：白底细边框 */
-.dashboard-container .container .tableBar .btn-reset,
-.dashboard-container .container .tableBar .search-btn:not(.el-button--primary) {
+/* --- 重置按钮：白底细边框（次要操作） --- */
+.dashboard-container .container .tableBar .btn-reset {
   background: #fff;
   border: 1px solid #dcdfe6;
   color: #606266;
-  transition: all 0.25s ease;
 }
-.dashboard-container .container .tableBar .btn-reset:hover,
-.dashboard-container .container .tableBar .search-btn:not(.el-button--primary):hover {
-  color: #409eff;
-  border-color: #c6e2ff;
-  background: #ecf5ff;
-  transform: translateY(-1px);
+.dashboard-container .container .tableBar .btn-reset:hover {
+  color: #ffc200;
+  border-color: #fbe396;
+  background: #fffbf0;
 }
 
-/* 操作按钮组：不缩小，撑不下整体换行；margin-left: auto 推到右侧 */
+/* --- 新增按钮：绿色渐变（创建/添加） --- */
+.dashboard-container .container .tableBar .btn-add,
+.dashboard-container .container .tableBar .btn-action.el-button--success {
+  background: linear-gradient(135deg, #67c23a, #85ce61) !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
+}
+.dashboard-container .container .tableBar .btn-add:hover,
+.dashboard-container .container .tableBar .btn-action.el-button--success:hover {
+  background: linear-gradient(135deg, #85ce61, #67c23a) !important;
+  box-shadow: 0 4px 14px rgba(103, 194, 58, 0.45);
+}
+
+/* --- 删除按钮：红色渐变（危险操作） --- */
+.dashboard-container .container .tableBar .btn-delete,
+.dashboard-container .container .tableBar .btn-action.el-button--danger {
+  background: linear-gradient(135deg, #f56c6c, #f89898) !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(245, 108, 108, 0.3);
+}
+.dashboard-container .container .tableBar .btn-delete:hover,
+.dashboard-container .container .tableBar .btn-action.el-button--danger:hover {
+  background: linear-gradient(135deg, #f89898, #f56c6c) !important;
+  box-shadow: 0 4px 14px rgba(245, 108, 108, 0.45);
+}
+
+/* --- 导出按钮：橙色渐变（数据导出） --- */
+.dashboard-container .container .tableBar .btn-export,
+.dashboard-container .container .tableBar .btn-action.el-button--warning {
+  background: linear-gradient(135deg, #e6a23c, #eebe77) !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(230, 162, 60, 0.3);
+}
+.dashboard-container .container .tableBar .btn-export:hover,
+.dashboard-container .container .tableBar .btn-action.el-button--warning:hover {
+  background: linear-gradient(135deg, #eebe77, #e6a23c) !important;
+  box-shadow: 0 4px 14px rgba(230, 162, 60, 0.45);
+}
+
+/* --- 刷新按钮：信息灰边框（数据刷新） --- */
+.dashboard-container .container .tableBar .btn-refresh {
+  background: #fff;
+  border: 1px solid #c0c4cc;
+  color: #909399;
+}
+.dashboard-container .container .tableBar .btn-refresh:hover {
+  color: #ffc200;
+  border-color: #fbe396;
+  background: #fffbf0;
+}
+
+/* --- 预警按钮：橙色渐变（库存预警等） --- */
+.dashboard-container .container .tableBar .btn-warning-status {
+  background: linear-gradient(135deg, #e6a23c, #eebe77) !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(230, 162, 60, 0.3);
+}
+.dashboard-container .container .tableBar .btn-warning-status:hover {
+  background: linear-gradient(135deg, #eebe77, #e6a23c) !important;
+  box-shadow: 0 4px 14px rgba(230, 162, 60, 0.45);
+}
+
+/* --- 操作按钮组（右侧，自动推到最右边） --- */
 .dashboard-container .container .tableBar .action-group {
   display: flex;
   align-items: center;
@@ -122,39 +211,13 @@
   margin-left: auto;
 }
 
-/* 操作按钮：统一尺寸 + 微悬浮效果 */
+/* 操作按钮微悬浮效果 */
 .dashboard-container .container .tableBar .btn-action {
-  font-size: 13px;
-  padding: 8px 16px !important;
-  height: 32px;
-  border-radius: 4px;
-  letter-spacing: 0.3px;
-  transition: all 0.25s ease;
-  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 .dashboard-container .container .tableBar .btn-action:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-/* 操作按钮类型微调：danger 按钮颜色鲜艳一点 */
-.dashboard-container .container .tableBar .btn-action.el-button--danger {
-  background: #f56c6c;
-  border-color: #f56c6c;
-}
-.dashboard-container .container .tableBar .btn-action.el-button--danger:hover {
-  background: #f78989;
-  border-color: #f78989;
-}
-
-/* 操作按钮类型微调：warning 按钮颜色 */
-.dashboard-container .container .tableBar .btn-action.el-button--warning {
-  background: #e6a23c;
-  border-color: #e6a23c;
-}
-.dashboard-container .container .tableBar .btn-action.el-button--warning:hover {
-  background: #ebb563;
-  border-color: #ebb563;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 .dashboard-container .container .tableBox {
   width: 100%;
@@ -231,7 +294,7 @@
   overflow: hidden;
 }
 .addBrand-container .avatar-uploader .el-upload:hover {
-  border-color: #409eff;
+  border-color: #ffc200;
 }
 .addBrand-container .avatar-uploader-icon {
   font-size: 28px;
@@ -426,14 +489,14 @@
 /* 蓝色操作按钮 */
 .tableBox .el-button--text.blueBug,
 .btn-view {
-  color: #409EFF;
+  color: #ffc200;
   background-color: transparent;
 }
 
 .tableBox .el-button--text.blueBug:hover,
 .btn-view:hover {
   background-color: #ECF5FF;
-  color: #409EFF;
+  color: #ffc200;
 }
 
 /* 红色操作按钮 */
@@ -522,50 +585,14 @@
   gap: 8px;
 }
 
-/* 原生 HTML 页面输入框基准宽度（组件页由 .search-area 规则覆盖） */
-.dashboard-container .container .tableBar .el-input {
-  width: 220px;
-}
-.dashboard-container .container .tableBar .el-select {
-  width: 160px;
-}
-.dashboard-container .container .tableBar .el-date-editor {
-  width: 360px;
+/* 原生 HTML 页面 tableBar 直接子控件统一间距（组件页由 .search-area 的 gap 控制） */
+/* 修改点：防止控件之间无间距导致按钮被贴紧/遮挡 */
+.dashboard-container .container .tableBar > .el-input,
+.dashboard-container .container .tableBar > .el-select,
+.dashboard-container .container .tableBar > .el-date-editor {
+  margin-right: 8px !important;
 }
 
-/* 修改点：范围日期选择器整体高度与按钮/输入框统一为 32px */
-/* 根因：el-range-editor 根元素直接带 el-input__inner 类但不在 .el-input 包裹层内，*/
-/* 导致 .tableBar .el-input .el-input__inner 规则匹配不到，仍使用默认 40px 高度 */
-.dashboard-container .container .tableBar .el-range-editor.el-input__inner {
-  height: 32px;
-}
-
-/* 修改点：修复范围日期选择器内部 flex 布局，防止 "至" 分隔符被日期输入框挤压遮挡 */
-.dashboard-container .container .tableBar .el-range-editor .el-range-input {
-  flex: 1;
-  width: auto;
-  min-width: 0;
-  line-height: 32px;
-}
-.dashboard-container .container .tableBar .el-range-editor .el-range-separator {
-  flex: none;
-  width: auto;
-  padding: 0 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-/* 修改点：范围选择器图标垂直居中 */
-.dashboard-container .container .tableBar .el-range-editor .el-range__icon,
-.dashboard-container .container .tableBar .el-range-editor .el-range__close-icon {
-  line-height: 32px;
-}
-
-
-/* 统一查询按钮间距 */
-.dashboard-container .container .tableBar .search-btn {
-  margin-left: 8px;
-}
 
 /* 视图切换器（桌台管理的表格/卡片切换） */
 .table-grid-toggle {
@@ -585,63 +612,88 @@
   border: none;
 }
 .table-grid-toggle .toggle-btn.active {
-  background: #409eff;
+  background: #ffc200;
   color: #fff;
 }
 .table-grid-toggle .toggle-btn:hover:not(.active) {
-  color: #409eff;
+  color: #ffc200;
 }
 
-/* ========== tableBar 各页面自定义宽度（非标准尺寸） ========== */
+/* ========== tableBar 各页面自定义宽度（弹性模式，优先收缩日期选择器） ========== */
+/* 修改点：全部从固定 width 改为 flex: 0 1 <width> + min-width，窄屏自动收缩 */
+
+/* --- 80px 下拉框（2字极短选项如启用/停用） --- */
+/* 修改点：不参与弹性收缩，保持固定宽度以区别内容长度 */
+.dashboard-container .container .tableBar .el-select--narrow-xxs {
+  flex: 0 0 80px;
+  min-width: 80px;
+  width: auto;
+}
+
+/* --- 100px 下拉框（短选项如连接类型/状态） --- */
+.dashboard-container .container .tableBar .el-select--narrow-xs {
+  flex: 0 0 100px;
+  width: auto;
+}
 
 /* --- 120px 下拉框（配送/打印/日志） --- */
 .dashboard-container .container .tableBar .el-select--wide-xs {
-  width: 120px;
+  flex: 0 1 120px;
+  min-width: 90px;
+  width: auto;
 }
 
 /* --- 120px 输入框（短文本如操作人、编号） --- */
 .dashboard-container .container .tableBar .el-input--wide-xs {
-  width: 120px;
-}
-
-/* --- 100px 下拉框（短选项如状态启用/停用） --- */
-.dashboard-container .container .tableBar .el-select--narrow-xs {
-  width: 100px;
+  flex: 0 1 120px;
+  min-width: 90px;
+  width: auto;
 }
 
 /* --- 130px 输入框/下拉框 --- */
 .dashboard-container .container .tableBar .el-input--narrow-sm,
 .dashboard-container .container .tableBar .el-select--narrow-sm {
-  width: 130px;
+  flex: 0 1 130px;
+  min-width: 100px;
+  width: auto;
 }
 
 /* --- 140px 输入框/下拉框 --- */
 .dashboard-container .container .tableBar .el-input--narrow-md,
 .dashboard-container .container .tableBar .el-select--narrow-md {
-  width: 140px;
+  flex: 0 1 140px;
+  min-width: 110px;
+  width: auto;
 }
 
 /* --- 150px 输入框/下拉框（中等短文本/常规选项） --- */
+/* 修改点：命名留存，但语义已修正 —— 弹性基准 150px，可缩至 120px */
 .dashboard-container .container .tableBar .el-input--narrow,
 .dashboard-container .container .tableBar .el-select--narrow {
-  width: 150px;
+  flex: 0 1 150px;
+  min-width: 120px;
+  width: auto;
 }
 
-/* --- 180px 输入框（打印日志） --- */
+/* --- 180px 输入框（打印日志/搜索等） --- */
 .dashboard-container .container .tableBar .el-input--wide-sm {
-  width: 180px;
+  flex: 0 1 180px;
+  min-width: 140px;
+  width: auto;
 }
 
 /* --- 220px 输入框（菜品/套餐/分类/订单） --- */
-/* 修改点：原 250px 在 1366px 宽视口下与 tableLab 按钮组一起溢出；降至 220px 确保窄屏可读性 */
 .dashboard-container .container .tableBar .el-input--wide {
-  width: 220px;
-  max-width: 100%;
+  flex: 0 1 220px;
+  min-width: 160px;
+  width: auto;
 }
 
 /* --- 500px 日期选择器（支付管理/datetimerange 等需要更宽空间的场景） --- */
 .dashboard-container .container .tableBar .el-date-editor--3xl {
-  width: 500px;
+  flex: 0 1 500px;
+  min-width: 320px;
+  width: auto;
 }
 
 /* 表单内行布局（盘点明细等） */
@@ -767,10 +819,10 @@
 /* --- 语义按钮类（替代 inline style） --- */
 /* 查看/编辑 */
 .btn-view {
-  color: #409eff;
+  color: #ffc200;
 }
 .btn-view:hover {
-  background: #ecf5ff;
+  background: #fffbf0;
 }
 /* 删除 */
 .btn-delete {
@@ -838,8 +890,8 @@
 .text-warning:hover { background: #fdf6ec !important; }
 .text-success { color: #67c23a !important; }
 .text-success:hover { background: #f0f9eb !important; }
-.text-primary { color: #409eff !important; }
-.text-primary:hover { background: #ecf5ff !important; }
+.text-primary { color: #ffc200 !important; }
+.text-primary:hover { background: #fffbf0 !important; }
 .text-info { color: #909399 !important; }
 .text-info:hover { background: #f4f4f5 !important; }
 
@@ -869,7 +921,7 @@
   cursor: not-allowed;
 }
 .app-btn:focus {
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  box-shadow: 0 0 0 2px rgba(255, 194, 0, 0.2);
 }
 
 /* --- 尺寸变体 --- */
@@ -885,17 +937,17 @@
 /* --- 颜色变体 --- */
 /* 主操作 - 蓝色 */
 .app-btn-primary {
-  background: #409eff;
-  border-color: #409eff;
+  background: #ffc200;
+  border-color: #ffc200;
   color: #fff;
 }
 .app-btn-primary:hover:not(:disabled) {
-  background: #66b1ff;
-  border-color: #66b1ff;
+  background: #ffc200;
+  border-color: #ffc200;
 }
 .app-btn-primary:active:not(:disabled) {
-  background: #3a8ee6;
-  border-color: #3a8ee6;
+  background: #efb602;
+  border-color: #efb602;
 }
 
 /* 成功/确认 - 绿色 */
@@ -965,13 +1017,13 @@
   color: #606266;
 }
 .app-btn-default:hover:not(:disabled) {
-  color: #409eff;
-  border-color: #c6e2ff;
-  background: #ecf5ff;
+  color: #ffc200;
+  border-color: #fbe396;
+  background: #fffbf0;
 }
 .app-btn-default:active:not(:disabled) {
-  color: #3a8ee6;
-  border-color: #3a8ee6;
+  color: #efb602;
+  border-color: #efb602;
 }
 
 /* 文本按钮 - 无背景无边框 */
@@ -983,7 +1035,7 @@
 }
 .app-btn-text:hover:not(:disabled) {
   background: #f5f7fa;
-  color: #409eff;
+  color: #ffc200;
 }
 
 /* 导出 Excel 专用（独立于颜色体系） */
@@ -1176,7 +1228,7 @@
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  border-color: #409eff;
+  border-color: #ffc200;
 }
 .form-group textarea {
   min-height: 80px;

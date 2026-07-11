@@ -42,10 +42,10 @@
 
 /* 修改点：统一按钮样式体系，去除操作列分隔线，旧版 blueBug/delBut 颜色与 btn-view/btn-delete 一致 */
 .crud-table-wrapper .tableBox .el-button--text.blueBug {
-  color: #409eff;
+  color: #ffc200;
 }
 .crud-table-wrapper .tableBox .el-button--text.blueBug:hover {
-  background: #ecf5ff;
+  background: #fffbf0;
 }
 
 .crud-table-wrapper .tableBox .el-button--text.delBut {

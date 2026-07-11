@@ -28,7 +28,7 @@
         </el-select>
         <el-button type="primary" class="btn-query" @click="handleQuery">查询</el-button>
         <el-button class="btn-reset" @click="resetSearch">重置</el-button>
-        <el-button type="success" @click="openDialog()">+ 新增模板</el-button>
+        <el-button type="success" class="btn-add" @click="openDialog()">+ 新增模板</el-button>
       </div>
 
       <el-table :data="tableData" stripe border v-loading="loading" class="tableBox">

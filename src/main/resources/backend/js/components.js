@@ -238,7 +238,7 @@ Vue.component('table-bar', {
         '  :type="btn.type || \'default\'"' +
         '  :size="btn.size || \'small\'"' +
         '  :icon="btn.icon || \'\'"' +
-        '  :class="[\'btn-action\', btn.cssClass || \'\']"' +
+        '  :class="[\'btn-action\', getBtnClass(btn), btn.cssClass || \'\']"' +
         '  :disabled="!!btn.disabled"' +
         '  @click="$emit(\'action\', { key: btn.key, btn: btn, searchParams: getSearchParams() })"' +
         '>' +
@@ -291,6 +291,16 @@ Vue.component('table-bar', {
     /** 外部可调用的清除方法：this.$refs.xxx.clearSearch() */
     clearSearch: function () {
       this.doReset()
+    },
+    /** 根据按钮 key 自动映射功能 CSS class */
+    getBtnClass: function (btn) {
+      var key = (btn.key || '').toLowerCase()
+      if (key.indexOf('add') !== -1 || key.indexOf('create') !== -1 || key.indexOf('new') !== -1) return 'btn-add'
+      if (key.indexOf('delete') !== -1 || key.indexOf('remove') !== -1 || key.indexOf('batchdelete') !== -1) return 'btn-delete'
+      if (key.indexOf('export') !== -1) return 'btn-export'
+      if (key.indexOf('refresh') !== -1) return 'btn-refresh'
+      if (key.indexOf('warning') !== -1) return 'btn-warning-status'
+      return ''
     }
   }
 })

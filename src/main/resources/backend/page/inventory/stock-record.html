@@ -16,7 +16,7 @@
         <el-select v-model="input.materialId" placeholder="食材" class="el-select--narrow" clearable filterable @change="handleQuery">
           <el-option v-for="item in materialOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
         </el-select>
-        <el-select v-model="input.type" placeholder="类型" clearable @change="handleQuery">
+        <el-select v-model="input.type" placeholder="类型" class="el-select--narrow-xs" clearable @change="handleQuery">
           <el-option label="入库" value="IN"></el-option>
           <el-option label="出库" value="OUT"></el-option>
           <el-option label="盘点" value="CHECK"></el-option>

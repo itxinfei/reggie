@@ -65,8 +65,8 @@ body.login-page {
   transition: border-color 0.3s, box-shadow 0.3s;
 }
 .login-form .el-input__inner:focus {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  border-color: #ffc200;
+  box-shadow: 0 0 0 2px rgba(255, 194, 0, 0.2);
 }
 .login-form .el-input__prefix {
   left: 8px;
@@ -83,7 +83,7 @@ body.login-page {
 .login-form .el-input--medium .el-input__icon {
   line-height: 38px;
 }
-/* 修改点：登录按钮统一为项目主色 #409eff */
+/* 修改点：登录按钮统一为项目主色 #ffc200 */
 .login-btn {
   border-radius: 17px;
   padding: 11px 20px !important;
@@ -91,13 +91,13 @@ body.login-page {
   font-weight: 500;
   font-size: 14px;
   border: 0;
-  background-color: #409eff;
+  background-color: #ffc200;
   color: #ffffff;
   transition: all 0.3s ease;
 }
 .login-btn:hover,
 .login-btn:focus {
-  background-color: #66b1ff;
+  background-color: #fdd24c;
 }
 .login-form-title {
   height: 36px;
