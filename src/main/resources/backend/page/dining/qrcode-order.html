@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>扫码点餐 - 瑞吉外卖</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
@@ -92,16 +93,16 @@
     </div>
 
     <!-- 购物车栏 -->
-    <div class="cart-bar" v-if="!loading && cartTotal > 0">
+    <div class="cart-bar" v-if="!loading && cartTotal() > 0">
       <div class="cart-icon" @click="showCartDialog">
         🛒
-        <div class="cart-badge" v-if="cartTotal > 0">{{ cartTotal }}</div>
+        <div class="cart-badge" v-if="cartTotal() > 0">{{ cartTotal() }}</div>
       </div>
       <div class="cart-info">
-        <div class="cart-total">{{ cartAmount.toFixed(2) }}</div>
-        <div class="cart-hint">另需配送费</div>
+        <div class="cart-total">{{ cartAmount().toFixed(2) }}</div>
+        <div class="cart-hint">堂食扫码点餐</div>
       </div>
-      <button class="cart-btn" @click="submitOrder" :disabled="cartTotal === 0">去结算</button>
+      <button class="cart-btn" @click="submitOrder" :disabled="cartTotal() === 0">去结算</button>
     </div>
 
     <!-- 购物车弹窗 -->
@@ -122,17 +123,20 @@
     <el-dialog title="确认订单" :visible.sync="submitDialog.visible" width="90%" max-width="420px" class="submit-dialog">
       <div style="padding: 10px 0;">
         <div style="font-size:14px;color:#606266;margin-bottom:12px;">
-          桌台：<strong>{{ tableInfo?.name }}</strong> · 共 <strong>{{ cartTotal }}</strong> 件商品
+          🪑 桌台：<strong>{{ tableInfo?.name }}</strong>（可坐{{ tableInfo?.seatCount }}人）
+        </div>
+        <div style="font-size:14px;color:#606266;margin-bottom:12px;">
+          共 <strong>{{ cartTotal() }}</strong> 件商品
         </div>
         <div style="font-size:20px;font-weight:700;color:#ff6b35;margin-bottom:16px;">
-          合计：￥{{ cartAmount.toFixed(2) }}
+          合计：￥{{ cartAmount().toFixed(2) }}
         </div>
         <div class="form-group">
-          <label style="font-size:13px;color:#606266;display:block;margin-bottom:4px;">联系人</label>
+          <label style="font-size:13px;color:#606266;display:block;margin-bottom:4px;">联系人 <span style="color:#f56c6c;">*</span></label>
           <input v-model="submitForm.contactName" placeholder="请输入联系人姓名" style="width:100%;padding:8px 12px;border:1px solid #dcdfe6;border-radius:4px;font-size:14px;" />
         </div>
         <div class="form-group">
-          <label style="font-size:13px;color:#606266;display:block;margin-bottom:4px;">手机号</label>
+          <label style="font-size:13px;color:#606266;display:block;margin-bottom:4px;">手机号 <span style="color:#f56c6c;">*</span></label>
           <input v-model="submitForm.contactPhone" placeholder="请输入手机号" type="tel" maxlength="11" style="width:100%;padding:8px 12px;border:1px solid #dcdfe6;border-radius:4px;font-size:14px;" />
         </div>
         <div class="form-group">
@@ -153,6 +157,7 @@
   <script src="../../js/request.js"></script>
   <script src="../../api/food.js"></script>
   <script src="../../api/order.js"></script>
+  <script src="../../api/dining.js"></script>
   <script>
     new Vue({
       el: '#dine-app',
@@ -176,20 +181,14 @@
         filteredDishes() {
           if (this.activeCategory === 0) return this.dishes
           return this.dishes.filter(d => d.categoryId === this.activeCategory)
-        },
-        cartTotal() {
-          return this.cart.reduce((sum, item) => sum + item.qty, 0)
-        },
-        cartAmount() {
-          return this.cart.reduce((sum, item) => sum + (item.price / 100) * item.qty, 0)
         }
       },
       created() {
-        // 从URL参数获取桌台ID
         var urlParams = new URLSearchParams(window.location.search)
         this.tableId = urlParams.get('tableId')
         if (this.tableId) {
           this.loadData()
+          this.loadTableInfo()
         } else {
           this.loading = false
           this.$message.error('无效的桌台二维码')
@@ -199,12 +198,10 @@
         async loadData() {
           this.loading = true
           try {
-            // 加载菜品列表（只加载启售的）
             var dishRes = await getDishPage({ page: 1, pageSize: 100, status: 1 })
             if (dishRes && dishRes.code === 1) {
               this.dishes = (dishRes.data.records || []).map(d => ({ ...d, qty: 0 }))
             }
-            // 加载分类
             var catRes = await getCategoryList({ type: 1 })
             if (catRes && catRes.code === 1) {
               this.categories = catRes.data || []
@@ -213,6 +210,16 @@
             console.error('加载数据失败:', err)
           }
           this.loading = false
+        },
+        async loadTableInfo() {
+          try {
+            var res = await tableInfo(this.tableId)
+            if (res && res.code === 1 && res.data) {
+              this.tableInfo = res.data
+            }
+          } catch (err) {
+            console.error('加载桌台信息失败:', err)
+          }
         },
         getImage(img) {
           if (!img) return './../../images/noImg.png'
@@ -237,6 +244,7 @@
           } else {
             this.cart.push({
               dishId: dish.id,
+              setmealId: null,
               name: dish.name,
               price: dish.price || 0,
               image: dish.image,
@@ -250,6 +258,12 @@
             var idx = this.cart.indexOf(item)
             if (idx >= 0) this.cart.splice(idx, 1)
           }
+        },
+        cartTotal() {
+          return this.cart.reduce((sum, item) => sum + item.qty, 0)
+        },
+        cartAmount() {
+          return this.cart.reduce((sum, item) => sum + (item.price / 100) * item.qty, 0)
         },
         showCartDialog() {
           this.cartDialog.visible = true
@@ -272,21 +286,39 @@
           }
           this.submitting = true
           try {
-            // 构建订单
-            var orders = {
-              diningType: 'DINE_IN',
-              tableId: parseInt(this.tableId),
-              payMethod: 1,
-              remark: this.submitForm.remark || '',
-              userName: this.submitForm.contactName,
-              phone: this.submitForm.contactPhone,
-              address: this.storeInfo?.name || '堂食'
-            }
-            var res = await editOrderDetail(orders)
+            // 构建订单明细
+            var orderDetails = this.cart.map(function(item) {
+              return {
+                dishId: item.dishId,
+                setmealId: item.setmealId,
+                name: item.name,
+                image: item.image,
+                number: item.qty,
+                amount: item.price / 100,
+                dishFlavor: ''
+              }
+            })
+
+            // 调用堂食下单接口
+            var res = await submitEatInOrder({
+              order: {
+                tableId: parseInt(this.tableId),
+                tableName: this.tableInfo ? this.tableInfo.name : ('桌台' + this.tableId),
+                userName: this.submitForm.contactName,
+                phone: this.submitForm.contactPhone,
+                remark: this.submitForm.remark || '',
+                payMethod: 1,
+                customerCount: this.tableInfo ? this.tableInfo.seatCount : 4
+              },
+              orderDetails: orderDetails
+            })
+
             if (res && res.code === 1) {
-              this.$message.success('下单成功！订单号：' + res.data?.number)
+              this.$message.success('下单成功！订单号：' + (res.data?.number || ''))
               this.cart = []
               this.submitDialog.visible = false
+              // 刷新桌台状态
+              this.loadTableInfo()
             } else {
               this.$message.error(res?.msg || '下单失败')
             }

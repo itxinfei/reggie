@@ -1,3 +1,12 @@
+// 堂食扫码下单
+const submitEatInOrder = (data) => {
+  return $axios({
+    url: '/order/eatIn',
+    method: 'post',
+    data: data
+  })
+}
+
 // 查询列表页接口
 const getOrderDetailPage = (params) => {
   return $axios({

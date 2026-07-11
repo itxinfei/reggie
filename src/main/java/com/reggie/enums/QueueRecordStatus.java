@@ -12,9 +12,10 @@ public enum QueueRecordStatus {
     WAITING("WAITING", "等待中"),
     /** 已叫号 */
     CALLED("CALLED", "已叫号"),
+    /** 已入座 */
+    SEATED("SEATED", "已入座"),
     /** 已取消 */
     CANCELLED("CANCELLED", "已取消");
-
     private final String value;
     private final String desc;
 

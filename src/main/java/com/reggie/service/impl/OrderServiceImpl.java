@@ -23,6 +23,7 @@ import com.reggie.service.SetmealDishService;
 import com.reggie.service.ShoppingCartService;
 import com.reggie.service.UserService;
 import com.reggie.module.printer.service.PrinterService;
+import com.reggie.module.dining.service.DiningTableService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,6 +81,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      */
     @Autowired(required = false)
     private PrinterService printerService;
+
+    /**
+     * 堂食桌台服务
+     */
+    @Autowired(required = false)
+    private DiningTableService diningTableService;
 
     /**
      * 用户下单
@@ -180,6 +187,138 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             } catch (Exception e) {
                 // 打印失败不影响下单结果
                 log.warn("[打印] 自动打印触发失败，订单ID={}, 原因={}", finalOrderId, e.getMessage());
+            }
+        }
+    }
+
+    // ==================== 堂食扫码下单 ====================
+
+    /**
+     * 堂食扫码下单（不经过购物车，直接从前端传入菜品列表）
+     *
+     * @param orders       订单基本信息（source/tableId/tableName/contact 等）
+     * @param orderDetails 订单明细列表
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void submitEatInOrder(Orders orders, List<OrderDetail> orderDetails) {
+        if (orderDetails == null || orderDetails.isEmpty()) {
+            throw new CustomException("请至少选择一道菜品");
+        }
+
+        // 设置堂食来源
+        orders.setSource(com.reggie.enums.OrderSource.EAT_IN.getValue());
+        Long tableId = orders.getTableId();
+        if (tableId == null) {
+            throw new CustomException("桌台信息缺失，请重新扫码");
+        }
+
+        // 查询桌台信息（用于填充桌台名称）
+        if (diningTableService != null) {
+            com.reggie.module.dining.model.DiningTable table = diningTableService.getById(tableId);
+            if (table != null) {
+                orders.setTableName(table.getName());
+            }
+        }
+
+        Long userId = BaseContext.getCurrentId();
+        long orderId = IdWorker.getId();
+
+        // 计算总金额
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (OrderDetail detail : orderDetails) {
+            detail.setOrderId(orderId);
+            BigDecimal amt = detail.getAmount() != null ? detail.getAmount() : BigDecimal.ZERO;
+            Integer num = detail.getNumber() != null ? detail.getNumber() : 0;
+            totalAmount = totalAmount.add(amt.multiply(new BigDecimal(num)));
+        }
+
+        // 设置订单字段
+        orders.setId(orderId);
+        orders.setOrderTime(LocalDateTime.now());
+        orders.setCheckoutTime(LocalDateTime.now());
+        orders.setStatus(Orders.STATUS_ORDERED);
+        orders.setAmount(totalAmount.setScale(2, java.math.RoundingMode.HALF_UP));
+        orders.setUserId(userId);
+        orders.setNumber(String.valueOf(orderId));
+        orders.setIdempotencyKey(generateIdempotencyKey(userId));
+        orders.setUserName(orders.getUserName() != null ? orders.getUserName() : "堂食顾客");
+        orders.setConsignee(orders.getConsignee() != null ? orders.getConsignee() : orders.getUserName());
+        orders.setPhone(orders.getPhone() != null ? orders.getPhone() : "");
+        orders.setAddress(orders.getTableName() != null ? "堂食-" + orders.getTableName() : "堂食");
+        orders.setAddressBookId(null); // 堂食无地址簿
+
+        this.save(orders);
+        orderDetailService.saveBatch(orderDetails);
+
+        // 扣减库存
+        this.deductStockForOrderDetails(orderDetails);
+
+        // 更新桌台状态为占用
+        if (diningTableService != null) {
+            try {
+                diningTableService.changeStatus(tableId, com.reggie.enums.DiningTableStatus.OCCUPIED.getValue());
+                log.info("[堂食] 桌台已标记为占用: tableId={}, orderId={}", tableId, orderId);
+            } catch (Exception e) {
+                log.warn("[堂食] 更新桌台状态失败: tableId={}, error={}", tableId, e.getMessage());
+            }
+        }
+
+        // 自动触发打印（异步）
+        if (printerService != null) {
+            final long finalOrderId = orderId;
+            try {
+                printerService.printOrder(finalOrderId, "BILL");
+                printerService.printOrder(finalOrderId, "KITCHEN");
+            } catch (Exception e) {
+                log.warn("[打印] 堂食订单打印触发失败，订单ID={}, 原因={}", finalOrderId, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 根据订单明细扣减菜品库存
+     */
+    private void deductStockForOrderDetails(List<OrderDetail> orderDetails) {
+        for (OrderDetail detail : orderDetails) {
+            int number = detail.getNumber() != null ? detail.getNumber() : 1;
+
+            // 单品菜品
+            if (detail.getDishId() != null) {
+                Dish dish = dishService.getById(detail.getDishId());
+                if (dish != null && dish.getStockQty() != null) {
+                    BigDecimal newStock = dish.getStockQty().subtract(new BigDecimal(number));
+                    if (newStock.compareTo(BigDecimal.ZERO) < 0) {
+                        throw new CustomException("菜品「" + dish.getName() + "」库存不足，当前库存：" + dish.getStockQty());
+                    }
+                    dish.setStockQty(newStock);
+                    if (newStock.compareTo(BigDecimal.ZERO) == 0) {
+                        dish.setStatus(0);
+                    }
+                    dishService.updateById(dish);
+                }
+            }
+
+            // 套餐菜品
+            if (detail.getSetmealId() != null) {
+                LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
+                sdWrapper.eq(SetmealDish::getSetmealId, detail.getSetmealId());
+                List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
+                for (SetmealDish sd : setmealDishes) {
+                    Dish dish = dishService.getById(sd.getDishId());
+                    if (dish != null && dish.getStockQty() != null) {
+                        int qty = sd.getCopies() != null ? sd.getCopies() * number : number;
+                        BigDecimal newStock = dish.getStockQty().subtract(new BigDecimal(qty));
+                        if (newStock.compareTo(BigDecimal.ZERO) < 0) {
+                            throw new CustomException("菜品「" + dish.getName() + "」库存不足");
+                        }
+                        dish.setStockQty(newStock);
+                        if (newStock.compareTo(BigDecimal.ZERO) == 0) {
+                            dish.setStatus(0);
+                        }
+                        dishService.updateById(dish);
+                    }
+                }
             }
         }
     }

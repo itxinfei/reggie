@@ -5,6 +5,7 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.LogMaskUtils;
 import com.reggie.common.R;
 import com.reggie.dto.OrderDto;
+import com.reggie.dto.EatInOrderRequest;
 import com.reggie.entity.OrderDetail;
 import com.reggie.entity.Orders;
 import com.reggie.service.OrderDetailService;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -91,6 +93,51 @@ public class OrderController {
         result.put("amount", orders.getAmount());
         result.put("status", orders.getStatus());
         result.put("duplicate", false);
+        return R.success(result);
+    }
+
+    /**
+     * 堂食扫码下单（不经过购物车，直接传入菜品列表）
+     * @param request 堂食下单请求（含订单信息和明细列表）
+     * @return 订单关键信息
+     */
+    @PostMapping("/eatIn")
+    @Operation(summary = "堂食扫码下单", description = "顾客扫码点餐，直接传入菜品列表下单，自动更新桌台状态")
+    @Parameter(name = "request", description = "堂食下单请求（订单信息+明细列表）", required = true)
+    public R<Map<String, Object>> eatIn(@RequestBody @Validated EatInOrderRequest request) {
+        log.info("[堂食] 扫码下单: tableId={}, customerCount={}, items={}",
+            request.getOrder().getTableId(),
+            request.getOrder().getCustomerCount(),
+            request.getOrderDetails() != null ? request.getOrderDetails().size() : 0);
+
+        // 构建 Orders 对象
+        EatInOrderRequest.OrderInfo orderInfo = request.getOrder();
+        Orders orders = new Orders();
+        orders.setTableId(orderInfo.getTableId());
+        orders.setTableName(orderInfo.getTableName());
+        orders.setUserName(orderInfo.getUserName());
+        orders.setPhone(orderInfo.getPhone());
+        orders.setRemark(orderInfo.getRemark());
+        orders.setPayMethod(orderInfo.getPayMethod());
+        orders.setCustomerCount(orderInfo.getCustomerCount());
+
+        // 幂等性校验
+        String idempotencyKey = orderInfo.getUserName() + "_" + orderInfo.getTableId() + "_" + System.currentTimeMillis();
+        orders.setIdempotencyKey(idempotencyKey);
+
+        orders.setTenantId(BaseContext.getCurrentTenantId());
+        orderService.submitEatInOrder(orders, request.getOrderDetails());
+
+        // 清除 Dashboard 缓存
+        clearDashboardCache();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", orders.getId());
+        result.put("number", orders.getNumber());
+        result.put("amount", orders.getAmount());
+        result.put("status", orders.getStatus());
+        result.put("tableId", orders.getTableId());
+        result.put("tableName", orders.getTableName());
         return R.success(result);
     }
 

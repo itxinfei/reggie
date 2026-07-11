@@ -336,7 +336,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
             // 查询最近30天订单的就餐方式分布
             LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(Orders::getUserId, userId)
-                    .isNotNull(Orders::getDiningType)
+                    .isNotNull(Orders::getSource)
                     .ge(Orders::getOrderTime, java.time.LocalDateTime.now().minusDays(30))
                     .last("LIMIT 100");
             List<Orders> orders = orderMapper.selectList(wrapper);
@@ -344,7 +344,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
             if (orders.isEmpty()) return "delivery";
 
             Map<String, Long> typeCount = orders.stream()
-                    .collect(Collectors.groupingBy(Orders::getDiningType, Collectors.counting()));
+                    .collect(Collectors.groupingBy(Orders::getSource, Collectors.counting()));
 
             return typeCount.entrySet().stream()
                     .max(Map.Entry.comparingByValue())

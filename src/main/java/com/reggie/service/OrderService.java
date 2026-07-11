@@ -2,6 +2,7 @@ package com.reggie.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.reggie.entity.OrderDetail;
 import com.reggie.entity.Orders;
 
 import java.util.List;
@@ -21,6 +22,14 @@ public interface OrderService extends IService<Orders> {
      * @param orders 订单信息
      */
     public void submit(Orders orders);
+
+    /**
+     * 堂食扫码下单（无需购物车和地址簿）
+     *
+     * @param orders 订单信息（含 source/tableId/tableName）
+     * @param orderDetails 订单明细列表（直接从前端传入）
+     */
+    void submitEatInOrder(Orders orders, List<OrderDetail> orderDetails);
 
     /**
      * 后台订单分页查询，支持按订单号和时间范围筛选

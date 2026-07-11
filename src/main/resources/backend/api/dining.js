@@ -15,6 +15,7 @@ const deleteTable = (id) => $axios({ url: `/api/dining/table/${id}`, method: 'de
 const getTable = (id) => $axios({ url: `/api/dining/table/${id}`, method: 'get' })
 const updateTableStatus = (params) => $axios({ url: '/api/dining/table/status', method: 'put', data: params })
 const tableQrcode = (id) => $axios({ url: `/api/dining/table/qrcode/${id}`, method: 'get' })
+const tableInfo = (id) => $axios({ url: `/api/dining/table/${id}`, method: 'get' })
 
 const queuePage = (params) => $axios({ url: '/api/dining/queue/page', method: 'get', params })
 const queueTake = (params) => $axios({ url: '/api/dining/queue/take', method: 'post', data: params })

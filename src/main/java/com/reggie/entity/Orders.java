@@ -95,12 +95,25 @@ public class Orders implements Serializable {
     @Size(max = 30, message = "收货人姓名不能超过30个字符")
     private String consignee;
 
-    @Schema(description = "桌号（堂食使用）", example = "1")
+    @Schema(description = "就餐方式：TAKEOUT=外卖配送，EAT_IN=堂食扫码，QUEUE=排队，RESERVATION=预订", example = "TAKEOUT")
+    @TableField("dining_type")
+    @Size(max = 20, message = "就餐方式不能超过20个字符")
+    private String source;
+
+    @Schema(description = "桌台ID（堂食/排队/预订使用）", example = "1")
     private Long tableId;
 
-    @Schema(description = "就餐方式", example = "外卖")
-    @Size(max = 20, message = "就餐方式不能超过20个字符")
-    private String diningType;
+    @Schema(description = "桌台名称（冗余，便于展示）", example = "A01")
+    private String tableName;
+
+    @Schema(description = "排队记录ID（排队场景）", example = "1")
+    private Long queueId;
+
+    @Schema(description = "预订记录ID（预订场景）", example = "1")
+    private Long reservationId;
+
+    @Schema(description = "用餐人数", example = "4")
+    private Integer customerCount;
 
     @Schema(description = "创建时间")
     @TableField(fill = FieldFill.INSERT)
