@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -8,18 +8,41 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
   <div class="dashboard-container" id="category-app">
     <div class="container">
-      <div class="tableBar">
-        <el-button type="primary" class="btn-add" @click="addHandle">
-          + 新增食材分类
-        </el-button>
+      <!-- ========== 数据统计卡片 ========== -->
+      <div class="stats-cards">
+        <div class="stat-card primary">
+          <div class="stat-icon">📂</div>
+          <div class="stat-label">食材分类总数</div>
+          <div class="stat-value">{{ stats.totalCategories || 0 }}</div>
+        </div>
       </div>
+
+      <!-- ========== 搜索筛选 + 操作按钮 ========== -->
+      <div class="tableBar">
+        <el-select v-model="input.name" placeholder="分类名称" class="el-select--narrow-xs" clearable filterable @change="handleQuery">
+          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+        </el-select>
+        <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
+        <el-button size="small" class="btn-reset" @click="reset">重置</el-button>
+        <div class="tableLab">
+          <el-button type="primary" size="small" class="btn-add" @click="addHandle">+ 新增食材分类</el-button>
+        </div>
+      </div>
+
+      <!-- ========== 数据表格 ========== -->
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
         <el-table-column prop="name" label="分类名称" /></el-table-column>
-        <el-table-column prop="sort" label="排序" /></el-table-column>
+        <el-table-column prop="sort" label="排序" width="100" align="center" /></el-table-column>
+        <el-table-column label="食材数量" width="120" align="center">
+          <template slot-scope="scope">
+            <span style="color: #606266; font-weight: 500;">{{ scope.row.materialCount || 0 }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="160" align="center">
           <template slot-scope="scope">
             <el-button type="text" size="small" class="btn-view" @click="editHandle(scope.row)">修改</el-button>
@@ -29,13 +52,14 @@
       </el-table>
       <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" :current-page.sync="page" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
     </div>
-    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="600px" :before-close="handleClose">
+
+    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="480px" :before-close="handleClose">
       <el-form class="demo-form-inline" label-width="120px">
         <el-form-item label="分类名称：">
-          <el-input v-model="formData.name" placeholder="请输入分类名称" maxlength="14" style="width: 293px;" />
+          <el-input v-model="formData.name" placeholder="请输入分类名称" maxlength="14" style="width: 240px;" />
         </el-form-item>
         <el-form-item label="排序：">
-          <el-input v-model="formData.sort" type="number" placeholder="请输入排序" style="width: 293px;" />
+          <el-input v-model="formData.sort" type="number" placeholder="数值越小越靠前" style="width: 240px;" />
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
@@ -44,141 +68,186 @@
       </span>
     </el-dialog>
   </div>
-    <script src="../../plugins/vue/vue.js"></script>
-    <script src="../../plugins/element-ui/index.js"></script>
-    <script src="../../plugins/axios/axios.min.js"></script>
-    <script src="../../js/request.js"></script>
-    <script src="../../api/inventory.js"></script>
-    <script>
-      new Vue({
-        el: '#category-app',
-        data() {
-          return {
-            loading: false,
-            action: '',
-            counts: 0,
-            page: 1,
-            pageSize: 10,
-            tableData: [],
-            formData: {
-              title: '新增食材分类',
-              dialogVisible: false,
-              id: '',
-              name: '',
-              sort: ''
-            }
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../api/inventory.js"></script>
+  <script>
+    new Vue({
+      el: '#category-app',
+      data() {
+        return {
+          loading: false,
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          stats: { totalCategories: 0 },
+          // 搜索条件
+          input: { name: '' },
+          // 动态下拉选项
+          filterOptions: { names: [] },
+          optionsLoading: false,
+          optionsLoadError: false,
+          formData: {
+            title: '新增食材分类',
+            dialogVisible: false,
+            id: '',
+            name: '',
+            sort: ''
+          }
+        }
+      },
+      created() {
+        this.init()
+        this.loadFilterOptions()
+      },
+      methods: {
+        async init() {
+          const params = { page: this.page, pageSize: this.pageSize }
+          if (this.input.name) params.name = this.input.name
+
+          // 并行加载列表和统计
+          const [pageRes, statsRes] = await Promise.all([
+            matCategoryPage(params),
+            this.loadStats()
+          ])
+
+          if (String(pageRes.code) === '1') {
+            this.tableData = pageRes.data.records || []
+            this.counts = Number(pageRes.data.total) || 0
+          } else {
+            this.$message.error(pageRes.msg || '操作失败')
+          }
+
+          if (statsRes && String(statsRes.code) === '1') {
+            this.stats = statsRes.data || this.stats
           }
         },
-        created() {
+        // 加载分类下拉选项
+        async loadFilterOptions() {
+          this.optionsLoading = true
+          this.optionsLoadError = false
+          try {
+            const res = await matCategoryList()
+            if (String(res.code) === '1' && res.data) {
+              this.filterOptions.names = res.data.map(function(c) { return c.name })
+            }
+          } catch (err) {
+            this.optionsLoadError = true
+          } finally {
+            this.optionsLoading = false
+          }
+        },
+        // 加载统计
+        async loadStats() {
+          try {
+            const res = await matCategoryList()
+            if (String(res.code) === '1') {
+              return {
+                code: 1,
+                data: { totalCategories: (res.data || []).length }
+              }
+            }
+          } catch (err) {
+            console.warn('加载分类统计失败:', err)
+          }
+          return { code: 0 }
+        },
+        handleQuery() {
+          this.page = 1
           this.init()
         },
-        methods: {
-          async init() {
-            const params = { page: this.page, pageSize: this.pageSize }
-            await matCategoryPage(params).then(res => {
-              if (String(res.code) === '1') {
-                this.tableData = res.data.records
-                this.counts = Number(res.data.total)
+        reset() {
+          this.input.name = ''
+          this.page = 1
+          this.init()
+        },
+        addHandle() {
+          this.formData = {
+            title: '新增食材分类',
+            dialogVisible: true,
+            id: '',
+            name: '',
+            sort: ''
+          }
+        },
+        editHandle(row) {
+          this.formData = {
+            title: '修改食材分类',
+            dialogVisible: true,
+            id: row.id,
+            name: row.name,
+            sort: row.sort
+          }
+        },
+        handleClose() {
+          this.formData.dialogVisible = false
+        },
+        submitForm() {
+          const fd = this.formData
+          if (!fd.name && fd.name !== 0) {
+            this.$message.error('请输入分类名称')
+            return
+          }
+          if (fd.sort === '' && fd.sort !== 0) {
+            this.$message.error('请输入排序')
+            return
+          }
+          const reg = /^\d+$/
+          if (!reg.test(String(fd.sort))) {
+            this.$message.error('排序只能输入数字类型')
+            return
+          }
+          const action = this.formData.id ? updateMatCategory : addMatCategory
+          const params = this.formData.id
+            ? { id: fd.id, name: fd.name, sort: fd.sort }
+            : { name: fd.name, sort: fd.sort }
+
+          action(params).then(res => {
+            if (res.code === 1) {
+              this.$message.success(this.formData.id ? '分类修改成功！' : '分类添加成功！')
+              this.formData.dialogVisible = false
+              this.init()
+            } else {
+              this.$message.error(res.msg || '操作失败')
+            }
+          }).catch(err => {
+            this.$message.error('请求失败：' + err)
+          })
+        },
+        deleteHandle(id) {
+          this.$confirm('此操作将永久删除该分类, 是否继续?', '提示', {
+            confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
+          }).then(() => {
+            deleteMatCategory(id).then(res => {
+              if (res.code === 1) {
+                this.$message.success('删除成功！')
+                // 当前页删除后为空则回退
+                if (this.tableData.length === 1 && this.page > 1) {
+                  this.page--
+                }
+                this.init()
               } else {
                 this.$message.error(res.msg || '操作失败')
               }
             }).catch(err => {
               this.$message.error('请求失败：' + err)
             })
-          },
-          handleQuery() {
-            this.page = 1
-            this.init()
-          },
-          addHandle() {
-            this.action = 'add'
-            this.formData.title = '新增食材分类'
-            this.formData.name = ''
-            this.formData.sort = ''
-            this.formData.id = ''
-            this.formData.dialogVisible = true
-          },
-          editHandle(row) {
-            this.action = 'edit'
-            this.formData.title = '修改食材分类'
-            this.formData.name = row.name
-            this.formData.sort = row.sort
-            this.formData.id = row.id
-            this.formData.dialogVisible = true
-          },
-          handleClose() {
-            this.formData.dialogVisible = false
-          },
-          deleteHandle(id) {
-            this.$confirm('此操作将永久删除该分类, 是否继续?', '提示', {
-              confirmButtonText: '确定',
-              cancelButtonText: '取消',
-              type: 'warning'
-            }).then(() => {
-              deleteMatCategory(id).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('删除成功！')
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            })
-          },
-          submitForm() {
-            const fd = this.formData
-            if (!fd.name && fd.name !== 0) {
-              this.$message.error('请输入分类名称')
-              return
-            }
-            if (fd.sort === '' && fd.sort !== 0) {
-              this.$message.error('请输入排序')
-              return
-            }
-            const reg = /^\d+$/
-            if (!reg.test(String(fd.sort))) {
-              this.$message.error('排序只能输入数字类型')
-              return
-            }
-            if (this.action === 'add') {
-              addMatCategory({ name: fd.name, sort: fd.sort }).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('分类添加成功！')
-                  this.formData.dialogVisible = false
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            } else {
-              updateMatCategory({ id: fd.id, name: fd.name, sort: fd.sort }).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('分类修改成功！')
-                  this.formData.dialogVisible = false
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            }
-          },
-          handleSizeChange(val) {
-            this.pageSize = val
-            this.init()
-          },
-          handleCurrentChange(val) {
-            this.page = val
-            this.init()
-          }
+          })
+        },
+        handleSizeChange(val) {
+          this.pageSize = val
+          this.init()
+        },
+        handleCurrentChange(val) {
+          this.page = val
+          this.init()
         }
-      })
-    </script>
+      }
+    })
+  </script>
 </body>
 </html>
-

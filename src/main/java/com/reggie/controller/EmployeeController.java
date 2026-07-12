@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -160,15 +161,18 @@ public class EmployeeController {
     }
 
     /**
-     * 忘记密码 - 通过用户名+手机号验证后重置密码
-     * @param params 包含 username, phone, newPassword
+     * 忘记密码 - 通过用户名+手机号+短信验证码验证后重置密码
+     * @param params 包含 username, phone, code, newPassword
+     * @param session HTTP会话
      * @return 操作结果
      */
     @PostMapping("/forgot-password")
-    @Operation(summary = "忘记密码", description = "通过用户名和手机号验证后重置密码")
-    public R<String> forgotPassword(@RequestBody Map<String, String> params) {
+    @Operation(summary = "忘记密码", description = "通过用户名、手机号和短信验证码验证后重置密码")
+    @RateLimit(maxRequestsPerSecond = 2)
+    public R<String> forgotPassword(HttpServletRequest request, @RequestBody Map<String, String> params, HttpSession session) {
         String username = params.get("username");
         String phone = params.get("phone");
+        String code = params.get("code");
         String newPassword = params.get("newPassword");
 
         if (username == null || username.trim().isEmpty()) {
@@ -177,9 +181,24 @@ public class EmployeeController {
         if (phone == null || phone.trim().isEmpty()) {
             return R.error("请输入手机号");
         }
+        if (code == null || code.trim().isEmpty()) {
+            return R.error("请输入短信验证码");
+        }
         if (newPassword == null || newPassword.length() < 6) {
             return R.error("新密码至少6位");
         }
+
+        // 校验短信验证码
+        String sessionCode = (String) session.getAttribute("smsCode_" + phone);
+        if (sessionCode == null) {
+            return R.error("请先获取短信验证码");
+        }
+        if (!sessionCode.equals(code)) {
+            return R.error("验证码错误");
+        }
+        // 验证通过后清除验证码（一次性使用）
+        session.removeAttribute("smsCode_" + phone);
+        session.removeAttribute("smsCode_" + phone + "_time");
 
         LambdaQueryWrapper<Employee> qw = new LambdaQueryWrapper<>();
         qw.eq(Employee::getUsername, username.trim());
@@ -194,7 +213,8 @@ public class EmployeeController {
         emp.setPasswordType(SecurityConstants.DEFAULT_PASSWORD_TYPE);
         employeeService.updateById(emp);
 
-        log.info("员工重置密码成功 - username: {}, empId: {}", username, emp.getId());
+        log.info("员工重置密码成功 - username: {}, empId: {}, ip: {}",
+            username, emp.getId(), request.getRemoteAddr());
         return R.success("密码重置成功，请使用新密码登录");
     }
 

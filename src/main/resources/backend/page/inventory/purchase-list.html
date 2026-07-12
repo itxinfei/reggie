@@ -12,10 +12,11 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     /* ========== 采购管理专用样式 ========== */
-    .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-    .purchase-chart { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px; height: 320px; }
+    .purchase-chart { background: #fff; border-radius: 14px; padding: 20px 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px; height: 340px; }
     .detail-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
-    @media (max-width: 1200px) { .stats-cards { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 1200px) {
+      .stats-cards { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
@@ -23,17 +24,17 @@
     <div class="container">
       <!-- 统计卡片 -->
       <div class="stats-cards">
-        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterByStatus('')">
+        <div class="stat-card primary clickable" :class="{ active: cardFilter === '' }" @click="filterByStatus('')">
           <div class="stat-icon">📦</div>
           <div class="stat-label">采购单总数</div>
           <div class="stat-value">{{ stats.totalOrders || 0 }}</div>
         </div>
-        <div class="stat-card warning clickable" :class="{ active: activeFilter === 'DRAFT' }" @click="filterByStatus('DRAFT')">
+        <div class="stat-card warning clickable" :class="{ active: cardFilter === 'DRAFT' }" @click="filterByStatus('DRAFT')">
           <div class="stat-icon">📝</div>
           <div class="stat-label">待审核</div>
           <div class="stat-value">{{ stats.pendingApprove || 0 }}</div>
         </div>
-        <div class="stat-card info clickable" :class="{ active: activeFilter === 'ORDERED' }" @click="filterByStatus('ORDERED')">
+        <div class="stat-card info clickable" :class="{ active: cardFilter === 'ORDERED' }" @click="filterByStatus('ORDERED')">
           <div class="stat-icon">🚚</div>
           <div class="stat-label">待收货</div>
           <div class="stat-value">{{ stats.pendingReceive || 0 }}</div>
@@ -53,7 +54,7 @@
         <el-select v-model="input.supplierId" placeholder="供应商" class="el-select--narrow" clearable @change="handleQuery">
           <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
         </el-select>
-        <el-select v-model="activeFilter" placeholder="状态" class="el-select--narrow-sm" clearable @change="handleQuery">
+        <el-select v-model="input.status" placeholder="状态" class="el-select--narrow-sm" clearable @change="handleQuery">
           <el-option label="草稿" value="DRAFT"></el-option>
           <el-option label="已下单" value="ORDERED"></el-option>
           <el-option label="部分收货" value="PARTIAL"></el-option>
@@ -153,9 +154,9 @@
       data() {
         return {
           loading: false, counts: 0, page: 1, pageSize: 10, tableData: [],
-          activeFilter: '',
-          stats: { totalOrders: 0, pendingApprove: 0, pendingReceive: 0, monthAmount: 0 },
-          input: { supplierId: '' },
+          // 修改点：分离卡片筛选和下拉筛选，避免冲突
+          cardFilter: '',
+          input: { supplierId: '', status: '' },
           supplierOptions: [], materialOptions: [],
           trendChart: null,
           formData: {
@@ -191,17 +192,16 @@
 
           // 加载列表
           const params = { page: this.page, pageSize: this.pageSize }
+          params.status = this.cardFilter || this.input.status || undefined
           if (this.input.supplierId) params.supplierId = this.input.supplierId
-          if (this.activeFilter) params.status = this.activeFilter
           try {
             const res = await purchasePage(params)
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
               this.counts = Number(res.data.total) || 0
-              // 更新待审核数量
-              if (!this.activeFilter) {
-                const allCount = this.counts
-                this.stats.totalOrders = allCount
+              // 无筛选条件时用总数作为采购单总数
+              if (!this.cardFilter && !this.input.status) {
+                this.stats.totalOrders = this.counts
               }
             }
           } catch (err) { this.$message.error('请求失败：' + (err.message || err)) }
@@ -241,7 +241,7 @@
           } catch (e) { console.warn('趋势图加载失败:', e) }
         },
         filterByStatus(status) {
-          this.activeFilter = this.activeFilter === status ? '' : status
+          this.cardFilter = this.cardFilter === status ? '' : status
           this.page = 1; this.init()
         },
         loadSupplierOptions() { supplierList().then(res => { if (res.code === 1) this.supplierOptions = res.data }) },
@@ -253,7 +253,7 @@
           }).catch(err => { this.$message.error('请求失败：' + err) })
         },
         handleQuery() { this.page = 1; this.init() },
-        reset() { this.input.supplierId = ''; this.activeFilter = ''; this.page = 1; this.init() },
+        reset() { this.input.supplierId = ''; this.input.status = ''; this.cardFilter = ''; this.page = 1; this.init() },
         addHandle() {
           this.formData = {
             title: '新增采购单', dialogVisible: true,

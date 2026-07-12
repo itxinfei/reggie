@@ -12,6 +12,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.lang.reflect.Array;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +39,7 @@ import java.util.Map;
  * @since 2026-07-09
  */
 @Configuration
+@ConditionalOnProperty(prefix = "spring.redis", name = "host")
 @EnableCaching
 public class RedisConfig {
 

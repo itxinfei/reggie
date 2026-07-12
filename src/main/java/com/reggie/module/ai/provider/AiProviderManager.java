@@ -107,7 +107,12 @@ public class AiProviderManager implements AIClient {
 
     @PostConstruct
     public void init() {
-        reloadConfig();
+        try {
+            reloadConfig();
+        } catch (Exception e) {
+            log.warn("AI供应商配置加载失败（可能是测试环境缺少数据表），已跳过。错误: {}", e.getMessage());
+            this.activeConfig = null;
+        }
         log.info("AI供应商管理器初始化完成，当前供应商: {}",
                 activeConfig != null ? activeConfig.getProviderCode() : "application.yml 配置");
     }

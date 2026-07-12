@@ -33,6 +33,7 @@ public class EmployeeControllerTest {
 
     @BeforeEach
     void setUp() {
+        BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 
         Employee employee = new Employee();

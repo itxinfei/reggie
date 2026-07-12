@@ -71,11 +71,11 @@ public class PrinterServiceTest {
         testOrder.setConsignee("张三");
         testOrder.setPhone("13800138000");
         testOrder.setTableId(5L);
-        testOrder.setDiningType("堂食");
+        testOrder.setSource("EAT_IN");
 
         testDetails = new ArrayList<>();
         OrderDetail d1 = new OrderDetail();
-        d1.setId(1L);
+        d1.setId(100L);
         d1.setOrderId(100L);
         d1.setName("宫保鸡丁");
         d1.setNumber(2);
@@ -84,7 +84,7 @@ public class PrinterServiceTest {
         testDetails.add(d1);
 
         OrderDetail d2 = new OrderDetail();
-        d2.setId(2L);
+        d2.setId(101L);
         d2.setOrderId(100L);
         d2.setName("米饭");
         d2.setNumber(2);

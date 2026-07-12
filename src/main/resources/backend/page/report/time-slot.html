@@ -17,60 +17,56 @@
     .timeslot-page { min-height: 100%; display: flex; flex-direction: column; }
     .timeslot-page .container { flex: 1; background: transparent; padding: 24px 32px 32px;
       min-width: 0; max-width: 1600px; margin: 0 auto; width: 100%; }
-
-    .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+    .timeslot-page .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
       background: #fff; padding: 16px 24px; border-radius: 14px; margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8); }
-    .filter-bar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .filter-bar .fl-label { font-size: 14px; color: #606266; font-weight: 500; flex-shrink: 0; }
-    .filter-bar .fl-spacer { flex: 1; min-width: 0; }
-
-    /* ========== KPI 卡片 ========== */
-    .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-    .kpi-card { background: #fff; border-radius: 14px; padding: 22px 24px; position: relative; overflow: hidden;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+      transition: box-shadow 0.3s; }
+    .timeslot-page .filter-bar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .timeslot-page .filter-bar .fl-label { font-size: 14px; color: #606266; font-weight: 500; flex-shrink: 0; }
+    .timeslot-page .filter-bar .fl-spacer { flex: 1; min-width: 0; }
+    .timeslot-page .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    .timeslot-page .kpi-card { background: #fff; border-radius: 14px; padding: 22px 24px; position: relative; overflow: hidden;
       transition: all 0.3s cubic-bezier(0.4,0,0.2,1); box-shadow: 0 2px 16px rgba(0,0,0,0.06);
       border: 1px solid rgba(255,255,255,0.8); display: flex; flex-direction: column; justify-content: space-between;
       min-height: 130px; }
-    .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.10); }
-    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    .timeslot-page .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.10); }
+    .timeslot-page .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
       background: var(--gradient); opacity: 0.85; }
-    .kpi-card::after { content: ''; position: absolute; top: -40%; right: -25%;
+    .timeslot-page .kpi-card::after { content: ''; position: absolute; top: -40%; right: -25%;
       width: 160px; height: 160px; background: var(--gradient); border-radius: 50%;
       opacity: 0.05; transition: all 0.5s; }
-    .kpi-card:hover::after { transform: scale(1.15); opacity: 0.08; }
-    .kpi-card .kpi-icon-wrap { position: absolute; right: 18px; top: 20px; width: 48px; height: 48px;
+    .timeslot-page .kpi-card:hover::after { transform: scale(1.15); opacity: 0.08; }
+    .timeslot-page .kpi-card .kpi-icon-wrap { position: absolute; right: 18px; top: 20px; width: 48px; height: 48px;
       border-radius: 12px; background: var(--icon-bg); display: flex; align-items: center; justify-content: center;
       font-size: 24px; transition: all 0.3s; }
-    .kpi-card:hover .kpi-icon-wrap { transform: rotate(5deg) scale(1.1); }
-    .kpi-card .kpi-label { font-size: 13px; color: #909399; margin-bottom: 6px; font-weight: 500; }
-    .kpi-card .kpi-value { font-size: 28px; font-weight: 700; line-height: 1.2; margin-bottom: 4px;
+    .timeslot-page .kpi-card:hover .kpi-icon-wrap { transform: rotate(5deg) scale(1.1); }
+    .timeslot-page .kpi-card .kpi-label { font-size: 13px; color: #909399; margin-bottom: 6px; font-weight: 500; }
+    .timeslot-page .kpi-card .kpi-value { font-size: 28px; font-weight: 700; line-height: 1.2; margin-bottom: 4px;
       background: var(--gradient); -webkit-background-clip: text;
       -webkit-text-fill-color: transparent; background-clip: text; }
-    .kpi-card .kpi-sub { font-size: 12px; color: #909399; }
-    .kpi-card.primary  { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+    .timeslot-page .kpi-card .kpi-sub { font-size: 12px; color: #909399; }
+    .timeslot-page .kpi-card.primary  { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
       --icon-bg: linear-gradient(135deg, rgba(64,158,255,0.1) 0%, rgba(102,177,255,0.14) 100%); }
-    .kpi-card.success  { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+    .timeslot-page .kpi-card.success  { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
       --icon-bg: linear-gradient(135deg, rgba(103,194,58,0.1) 0%, rgba(133,206,97,0.14) 100%); }
-    .kpi-card.warning  { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
+    .timeslot-page .kpi-card.warning  { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
       --icon-bg: linear-gradient(135deg, rgba(230,162,60,0.1) 0%, rgba(235,181,99,0.14) 100%); }
-    .kpi-card.info     { --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
+    .timeslot-page .kpi-card.info     { --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
       --icon-bg: linear-gradient(135deg, rgba(144,147,153,0.1) 0%, rgba(166,169,173,0.14) 100%); }
-
-    /* ========== 图表面板 ========== */
-    .chart-panel { background: #fff; border-radius: 16px; padding: 24px;
+    .timeslot-page .chart-panel { background: #fff; border-radius: 16px; padding: 24px;
       box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
       transition: all 0.3s; margin-bottom: 20px; }
-    .chart-panel:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
-    .chart-panel .panel-title { font-size: 16px; font-weight: 600; color: #303133;
+    .timeslot-page .chart-panel:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .timeslot-page .chart-panel .panel-title { font-size: 16px; font-weight: 600; color: #303133;
       margin-bottom: 20px; padding-bottom: 14px; border-bottom: 2px solid #f0f2f5;
       display: flex; align-items: center; gap: 8px; }
-    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .chart-box { width: 100%; height: 380px; }
-
-    @media (max-width: 1200px) { .container { padding: 16px 20px 20px !important; }
-      .charts-row { grid-template-columns: 1fr; } .stats-cards { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 768px) { .container { padding: 12px 16px 16px !important; }
-      .stats-cards { grid-template-columns: 1fr; } .chart-box { height: 300px; } }
+    /* 修改点：图表行使用 grid + min-height 防塌陷 */
+    .timeslot-page .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .timeslot-page .chart-box { width: 100%; height: 380px; min-height: 300px; }
+    @media (max-width: 1200px) { .timeslot-page .container { padding: 16px 20px 20px !important; }
+      .timeslot-page .charts-row { grid-template-columns: 1fr; } .timeslot-page .stats-cards { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) { .timeslot-page .container { padding: 12px 16px 16px !important; }
+      .timeslot-page .stats-cards { grid-template-columns: 1fr; } .timeslot-page .chart-box { height: 300px; min-height: 260px; } }
   </style>
 </head>
 <body>
@@ -121,15 +117,15 @@
       <div class="chart-panel">
         <div class="panel-title">📊 时段订单与营业额分布</div>
         <div class="charts-row">
-          <div class="chart-box" id="barChart"></div>
-          <div class="chart-box" id="pieChart"></div>
+          <div id="barChart" class="chart-box"></div>
+          <div id="pieChart" class="chart-box"></div>
         </div>
       </div>
 
       <!-- ========== 工作日×时段热力图 ========== -->
       <div class="chart-panel">
         <div class="panel-title">🗺 工作日 × 时段 客流量热力图</div>
-        <div id="heatmapChart" style="width:100%;height:420px;"></div>
+        <div id="heatmapChart" style="width:100%;height:420px;min-height:320px;"></div>
       </div>
 
       <!-- ========== 数据表格 ========== -->
@@ -161,197 +157,236 @@
   <script src="../../js/request.js"></script>
   <script src="../../api/report.js"></script>
   <script>
-    new Vue({
-      el: '#report-timeslot-app',
-      data: function() {
-        return {
-          loading: false, dateRange: [], tableData: [],
-          barChart: null, pieChart: null, heatmapChart: null, resizeHandler: null
-        }
-      },
-      computed: {
-        totalCount: function() { return this.tableData.reduce(function(s, r) { return s + (r.count || 0); }, 0); },
-        totalAmount: function() { return this.tableData.reduce(function(s, r) { return s + (Number(r.amount) || 0); }, 0); },
-        peakSlot: function() {
-          if (!this.tableData.length) return '--';
-          var p = this.tableData.reduce(function(m, r) { return (r.count || 0) > (m.count || 0) ? r : m; }, this.tableData[0]);
-          return p.name || '--';
-        }
-      },
-      created: function() {
-        var now = new Date();
-        var first = new Date(now.getFullYear(), now.getMonth(), 1);
-        var last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-        this.dateRange = [fmt(first), fmt(last)];
-      },
-      mounted: function() {
-        var self = this;
-        self.$nextTick(function() {
-          self.barChart = echarts.init(document.getElementById('barChart'));
-          self.pieChart = echarts.init(document.getElementById('pieChart'));
-          self.heatmapChart = echarts.init(document.getElementById('heatmapChart'));
-          self.resizeHandler = function() {
-            if (self.barChart) self.barChart.resize();
-            if (self.pieChart) self.pieChart.resize();
-            if (self.heatmapChart) self.heatmapChart.resize();
-          };
-          window.addEventListener('resize', self.resizeHandler);
-          self.loadData();
-        });
-      },
-      beforeDestroy: function() {
-        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
-        if (this.barChart) this.barChart.dispose();
-        if (this.pieChart) this.pieChart.dispose();
-        if (this.heatmapChart) this.heatmapChart.dispose();
-      },
-      methods: {
-        loadData: function() {
-          var self = this;
-          if (!self.dateRange || self.dateRange.length < 2) {
-            self.$message.warning('请选择日期范围'); return;
+    (function() {
+      var COLORS = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#fc8452','#9a60b4'];
+      new Vue({
+        el: '#report-timeslot-app',
+        data: function() {
+          return {
+            loading: false, dateRange: [], tableData: [],
+            barChart: null, pieChart: null, heatmapChart: null,
+            resizeHandler: null, observer: null
           }
-          self.loading = true;
-          reportTimeSlot({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(res) {
-            if (String(res.code) === '1') {
-              self.tableData = res.data || [];
-              self.renderCharts(); self.loadHeatmap();
-            } else { self.$message.error(res.msg || '加载失败'); }
-          }).catch(function(err) { self.$message.error('请求失败：' + err); })
-          .finally(function() { self.loading = false; });
         },
-        loadHeatmap: function() {
-          var self = this; if (!self.heatmapChart) return;
-          $axios.get('/api/report/time-slot/heatmap', { params: { startDate: self.dateRange[0], endDate: self.dateRange[1] } })
-            .then(function(res) { if (res.code === 1 && res.data) self.renderHeatmap(res.data); })
-            .catch(function() {});
-        },
-        renderHeatmap: function(data) {
-          if (!this.heatmapChart) return;
-          var days = ['周一','周二','周三','周四','周五','周六','周日'];
-          var slots = ['早市','午市','下午茶','晚市','夜市'];
-          var heatData = (data.data || []).map(function(d) { return [d.slotIdx || 0, d.dayIdx || 0, d.value || 0]; });
-          this.heatmapChart.setOption({
-            tooltip: { formatter: function(p) { return days[p.value[1]] + ' ' + slots[p.value[0]] + ': ' + p.value[2] + ' 单'; },
-              backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e4e7ed', borderWidth: 1,
-              textStyle: { color: '#303133', fontSize: 13 } },
-            grid: { left: 80, right: 30, top: 15, bottom: 70 },
-            xAxis: { type: 'category', data: slots, splitArea: { show: true },
-              axisLabel: { fontSize: 12, color: '#606266' } },
-            yAxis: { type: 'category', data: days, splitArea: { show: true },
-              axisLabel: { fontSize: 12, color: '#606266' } },
-            visualMap: { min: 0, max: data.maxVal || 100, calculable: true,
-              orient: 'horizontal', left: 'center', bottom: 8,
-              inRange: { color: ['#f0f4ff','#a0cfff','#409eff','#2b6cb0','#1a365d'] },
-              text: ['高', '低'], textStyle: { fontSize: 11, color: '#606266' } },
-            series: [{ type: 'heatmap', data: heatData,
-              label: { show: true, fontSize: 12, color: function(p) { return p.value > (data.maxVal || 100) * 0.6 ? '#fff' : '#303133'; } },
-              emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' } } }]
-          }, true);
-        },
-        reset: function() {
-          this.dateRange = []; this.tableData = [];
-          if (this.barChart) this.barChart.clear();
-          if (this.pieChart) this.pieChart.clear();
-          if (this.heatmapChart) this.heatmapChart.clear();
-        },
-        calcPercent: function(count) {
-          var t = this.totalCount; if (!t) return '0.0';
-          return (count / t * 100).toFixed(1);
-        },
-        formatMoney: function(val) { return Number(val || 0).toFixed(2); },
-        slotHeatColor: function(row) {
-          if (!this.tableData.length) return '#909399';
-          var max = this.tableData.reduce(function(m, r) { return Math.max(m, r.count || 0); }, 1);
-          var r = (row.count || 0) / max;
-          if (r > 0.8) return '#ff4d4f'; if (r > 0.5) return '#e6a23c'; return '#409eff';
-        },
-        renderCharts: function() { this.renderBar(); this.renderPie(); },
-        renderBar: function() {
-          if (!this.barChart) return;
-          var COLORS = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#fc8452','#9a60b4'];
-          if (!this.tableData.length) {
-            this.barChart.setOption({ title: { text: '暂无时段数据', left: 'center', top: 'center',
-              textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } } }, true); return;
+        computed: {
+          totalCount: function() { return this.tableData.reduce(function(s, r) { return s + (r.count || 0); }, 0); },
+          totalAmount: function() { return this.tableData.reduce(function(s, r) { return s + (Number(r.amount) || 0); }, 0); },
+          peakSlot: function() {
+            if (!this.tableData.length) return '--';
+            var p = this.tableData.reduce(function(m, r) { return (r.count || 0) > (m.count || 0) ? r : m; }, this.tableData[0]);
+            return p.name || '--';
           }
-          var names = this.tableData.map(function(r) { return r.name; });
-          var counts = this.tableData.map(function(r) { return r.count; });
-          var amounts = this.tableData.map(function(r) { return Number(r.amount || 0).toFixed(2); });
-          var barW = names.length <= 3 ? 40 : names.length <= 5 ? 30 : 22;
-          var self = this;
-          this.barChart.setOption({
-            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-              backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e4e7ed', borderWidth: 1,
-              textStyle: { color: '#303133', fontSize: 13 },
-              formatter: function(ps) {
-                var h = '<b>' + ps[0].axisValue + '</b><br/>';
-                ps.forEach(function(p) {
-                  var v = p.seriesName === '营业额' ? '¥' + p.value : p.value + ' 单';
-                  h += p.marker + ' ' + p.seriesName + '：<b>' + v + '</b><br/>';
-                }); return h;
-              } },
-            legend: { data: ['订单数', '营业额'], bottom: 4, textStyle: { fontSize: 12, color: '#606266' } },
-            grid: { left: 55, right: 60, top: 20, bottom: 48 },
-            xAxis: { type: 'category', data: names, axisTick: { show: false },
-              axisLabel: { color: '#606266', interval: 0, fontSize: 13 } },
-            yAxis: [
-              { type: 'value', name: '订单数',
-                splitLine: { lineStyle: { type: 'dashed', color: '#f2f3f5' } },
-                axisLabel: { color: '#909399', fontSize: 12 } },
-              { type: 'value', name: '营业额',
-                axisLabel: { formatter: '¥{value}', color: '#909399', fontSize: 12 },
-                splitLine: { show: false } }
-            ],
-            series: [
-              { name: '订单数', type: 'bar', data: counts, barWidth: barW,
-                itemStyle: { borderRadius: [8, 8, 0, 0],
-                  color: function(p) { return COLORS[p.dataIndex % COLORS.length]; } },
-                label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c} 单' } },
-              { name: '营业额', type: 'line', yAxisIndex: 1, data: amounts,
-                smooth: true, symbol: 'emptyCircle', symbolSize: 8,
-                lineStyle: { color: '#fac858', width: 3 },
-                itemStyle: { color: '#fac858', borderColor: '#fff', borderWidth: 2 },
-                label: { show: true, position: 'top', fontSize: 12, fontWeight: 700, color: '#e6a23c',
-                  formatter: function(p) { return '¥' + Number(p.value).toFixed(0); } } }
-            ]
-          }, true);
         },
-        renderPie: function() {
-          if (!this.pieChart) return;
-          var COLORS = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#fc8452','#9a60b4'];
-          var pieData = this.tableData.map(function(r, i) { return { name: r.name, value: r.count,
-            itemStyle: { color: COLORS[i % COLORS.length] } }; });
-          var isEmpty = pieData.every(function(d) { return !d.value; }) || !pieData.length;
-          this.pieChart.setOption({
-            tooltip: { trigger: 'item', backgroundColor: 'rgba(255,255,255,0.96)',
-              borderColor: '#e4e7ed', borderWidth: 1, textStyle: { color: '#303133', fontSize: 13 },
-              formatter: function(p) { return '<b>' + p.name + '</b><br/>' + p.marker + ' 订单：<b>' + p.value + ' 单</b>（' + p.percent + '%）'; } },
-            legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10,
-              textStyle: { color: '#606266', fontSize: 12 } },
-            series: [{ type: 'pie', radius: isEmpty ? ['0%','55%'] : ['45%','68%'], center: ['50%','44%'],
-              avoidLabelOverlap: false, itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 3 },
-              label: { show: !isEmpty, position: 'outside', formatter: '{b}\n{d}%',
-                fontSize: 13, lineHeight: 18, color: '#606266' },
-              labelLine: { show: !isEmpty, length: 25, length2: 20, lineStyle: { color: '#c0c4cc' } },
-              emphasis: { scaleSize: 10, label: { fontSize: 16, fontWeight: 'bold' } },
-              data: isEmpty ? [{ name: '暂无数据', value: 1, itemStyle: { color: '#e4e7ed' } }] : pieData }]
-          }, true);
+        created: function() {
+          var now = new Date();
+          var first = new Date(now.getFullYear(), now.getMonth(), 1);
+          var last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+          this.dateRange = [fmt(first), fmt(last)];
         },
-        handleExport: function() {
+        mounted: function() {
           var self = this;
-          if (!self.dateRange || self.dateRange.length < 2) { self.$message.warning('请先选择日期范围'); return; }
-          reportExport({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(blob) {
-            if (blob && blob.type && blob.type.indexOf('json') > -1) { self.$message.error('导出失败'); return; }
-            var link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = '时段分析_' + self.dateRange[0] + '_' + self.dateRange[1] + '.csv';
-            link.click(); URL.revokeObjectURL(link.href);
-            self.$message.success('导出成功');
-          }).catch(function(err) { self.$message.error('导出失败：' + err); });
+          self.$nextTick(function() {
+            self.initCharts();
+            self.loadData();
+          });
+        },
+        beforeDestroy: function() {
+          if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
+          if (this.observer) this.observer.disconnect();
+          [this.barChart, this.pieChart, this.heatmapChart].forEach(function(ch) {
+            if (ch) try { ch.dispose(); } catch(e) {}
+          });
+        },
+        methods: {
+          // 修改点：独立初始化逻辑，增加安全判断与延迟 resize 防止变形
+          initCharts: function() {
+            var self = this;
+            var tryInit = function(id, key) {
+              var el = document.getElementById(id);
+              if (!el) { console.warn('[time-slot] 图表容器未找到:', id); return null; }
+              var ch = echarts.init(el);
+              // 修改点：延迟手动 resize 确保父子容器尺寸稳定后再渲染
+              setTimeout(function() { if (ch && !ch.isDisposed()) ch.resize(); }, 300);
+              return ch;
+            };
+            self.barChart = tryInit('barChart', 'barChart');
+            self.pieChart = tryInit('pieChart', 'pieChart');
+            self.heatmapChart = tryInit('heatmapChart', 'heatmapChart');
+            self.resizeHandler = function() {
+              [self.barChart, self.pieChart, self.heatmapChart].forEach(function(ch) {
+                if (ch && !ch.isDisposed()) ch.resize();
+              });
+            };
+            window.addEventListener('resize', self.resizeHandler);
+            // 修改点：ResizeObserver 监听图表父容器尺寸变化
+            if (typeof ResizeObserver !== 'undefined') {
+              try {
+                self.observer = new ResizeObserver(function() {
+                  [self.barChart, self.pieChart, self.heatmapChart].forEach(function(ch) {
+                    if (ch && !ch.isDisposed()) ch.resize();
+                  });
+                });
+                var chartPanel = document.querySelector('.timeslot-page .chart-panel');
+                if (chartPanel) self.observer.observe(chartPanel.parentElement || chartPanel);
+              } catch(e) { console.warn('[time-slot] ResizeObserver 初始化失败:', e); }
+            }
+          },
+          loadData: function() {
+            var self = this;
+            if (!self.dateRange || self.dateRange.length < 2) {
+              self.$message.warning('请选择日期范围'); return;
+            }
+            self.loading = true;
+            reportTimeSlot({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(res) {
+              if (String(res.code) === '1') {
+                self.tableData = res.data || [];
+                self.$nextTick(function() { self.renderCharts(); self.loadHeatmap(); });
+              } else { self.$message.error(res.msg || '加载时段数据失败'); }
+            }).catch(function(err) { self.$message.error('请求失败：' + (err || '网络异常')); })
+            .finally(function() { self.loading = false; });
+          },
+          loadHeatmap: function() {
+            var self = this; if (!self.heatmapChart) return;
+            $axios.get('/api/report/time-slot/heatmap', { params: { startDate: self.dateRange[0], endDate: self.dateRange[1] } })
+              .then(function(res) { if (res.code === 1 && res.data) self.renderHeatmap(res.data); })
+              .catch(function() {});
+          },
+          renderHeatmap: function(data) {
+            if (!this.heatmapChart) return;
+            var days = ['周一','周二','周三','周四','周五','周六','周日'];
+            var slots = ['早市','午市','下午茶','晚市','夜市'];
+            var heatData = (data.data || []).map(function(d) { return [d.slotIdx || 0, d.dayIdx || 0, d.value || 0]; });
+            var maxVal = data.maxVal || 100;
+            this.heatmapChart.setOption({
+              tooltip: { formatter: function(p) { return days[p.value[1]] + ' ' + slots[p.value[0]] + ': ' + p.value[2] + ' 单'; },
+                backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e4e7ed', borderWidth: 1,
+                textStyle: { color: '#303133', fontSize: 13 } },
+              grid: { left: 80, right: 30, top: 15, bottom: 70 },
+              xAxis: { type: 'category', data: slots, splitArea: { show: true },
+                axisLabel: { fontSize: 12, color: '#606266' } },
+              yAxis: { type: 'category', data: days, splitArea: { show: true },
+                axisLabel: { fontSize: 12, color: '#606266' } },
+              visualMap: { min: 0, max: maxVal, calculable: true,
+                orient: 'horizontal', left: 'center', bottom: 8,
+                inRange: { color: ['#f0f4ff','#a0cfff','#409eff','#2b6cb0','#1a365d'] },
+                text: ['高', '低'], textStyle: { fontSize: 11, color: '#606266' } },
+              series: [{ type: 'heatmap', data: heatData,
+                label: { show: true, fontSize: 12, color: function(p) { return p.value > maxVal * 0.6 ? '#fff' : '#303133'; } },
+                emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' } } }]
+            }, true);
+          },
+          reset: function() {
+            this.dateRange = []; this.tableData = [];
+            [this.barChart, this.pieChart, this.heatmapChart].forEach(function(ch) {
+              if (ch && !ch.isDisposed()) ch.clear();
+            });
+          },
+          calcPercent: function(count) {
+            var t = this.totalCount; if (!t) return '0.0';
+            return (count / t * 100).toFixed(1);
+          },
+          formatMoney: function(val) { return Number(val || 0).toFixed(2); },
+          slotHeatColor: function(row) {
+            if (!this.tableData.length) return '#909399';
+            var max = this.tableData.reduce(function(m, r) { return Math.max(m, r.count || 0); }, 1);
+            var r = (row.count || 0) / max;
+            if (r > 0.8) return '#ff4d4f'; if (r > 0.5) return '#e6a23c'; return '#409eff';
+          },
+          renderCharts: function() {
+            var self = this;
+            // 修改点：渲染前先保障容器尺寸稳定
+            [self.barChart, self.pieChart].forEach(function(ch) {
+              if (ch && !ch.isDisposed()) ch.resize();
+            });
+            self.renderBar(); self.renderPie();
+          },
+          renderBar: function() {
+            if (!this.barChart) return;
+            if (!this.tableData.length) {
+              this.barChart.setOption({ title: { text: '暂无时段数据', left: 'center', top: 'center',
+                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } } }, true); return;
+            }
+            var names = this.tableData.map(function(r) { return r.name; });
+            var counts = this.tableData.map(function(r) { return r.count; });
+            var amounts = this.tableData.map(function(r) { return Number(r.amount || 0).toFixed(2); });
+            var barW = names.length <= 3 ? 40 : names.length <= 5 ? 30 : 22;
+            this.barChart.setOption({
+              tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+                backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e4e7ed', borderWidth: 1,
+                textStyle: { color: '#303133', fontSize: 13 },
+                formatter: function(ps) {
+                  var h = '<b>' + ps[0].axisValue + '</b><br/>';
+                  ps.forEach(function(p) {
+                    var v = p.seriesName === '营业额' ? '¥' + Number(p.value).toFixed(2) : p.value + ' 单';
+                    h += p.marker + ' ' + p.seriesName + '：<b>' + v + '</b><br/>';
+                  }); return h;
+                } },
+              legend: { data: ['订单数', '营业额'], bottom: 4, textStyle: { fontSize: 12, color: '#606266' } },
+              // 修改点：增大右 padding 防止营业额标签被裁剪
+              grid: { left: 50, right: 70, top: 25, bottom: 48 },
+              xAxis: { type: 'category', data: names, axisTick: { show: false },
+                axisLabel: { color: '#606266', interval: 0, fontSize: 13 } },
+              yAxis: [
+                { type: 'value', name: '订单数(单)',
+                  nameTextStyle: { color: '#909399', fontSize: 11 },
+                  splitLine: { lineStyle: { type: 'dashed', color: '#f2f3f5' } },
+                  axisLabel: { color: '#909399', fontSize: 12 } },
+                { type: 'value', name: '营业额(元)',
+                  nameTextStyle: { color: '#909399', fontSize: 11 },
+                  axisLabel: { formatter: '¥{value}', color: '#909399', fontSize: 12 },
+                  splitLine: { show: false } }
+              ],
+              series: [
+                { name: '订单数', type: 'bar', data: counts, barWidth: barW,
+                  itemStyle: { borderRadius: [8, 8, 0, 0],
+                    color: function(p) { return COLORS[p.dataIndex % COLORS.length]; } },
+                  label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c} 单' } },
+                { name: '营业额', type: 'line', yAxisIndex: 1, data: amounts,
+                  smooth: true, symbol: 'emptyCircle', symbolSize: 8,
+                  lineStyle: { color: '#fc8452', width: 3 },
+                  itemStyle: { color: '#fc8452', borderColor: '#fff', borderWidth: 2 },
+                  label: { show: true, position: 'top', fontSize: 12, fontWeight: 700, color: '#e6a23c',
+                    formatter: function(p) { return '¥' + Number(p.value).toFixed(0); } } }
+              ]
+            }, true);
+          },
+          renderPie: function() {
+            if (!this.pieChart) return;
+            var pieData = this.tableData.map(function(r, i) { return { name: r.name, value: r.count,
+              itemStyle: { color: COLORS[i % COLORS.length] } }; });
+            var isEmpty = pieData.every(function(d) { return !d.value; }) || !pieData.length;
+            this.pieChart.setOption({
+              tooltip: { trigger: 'item', backgroundColor: 'rgba(255,255,255,0.96)',
+                borderColor: '#e4e7ed', borderWidth: 1, textStyle: { color: '#303133', fontSize: 13 },
+                formatter: function(p) { return '<b>' + p.name + '</b><br/>' + p.marker + ' 订单：<b>' + p.value + ' 单</b>（' + p.percent + '%）'; } },
+              legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10,
+                textStyle: { color: '#606266', fontSize: 12 } },
+              series: [{ type: 'pie', radius: isEmpty ? ['0%','55%'] : ['45%','68%'], center: ['50%','44%'],
+                avoidLabelOverlap: false, itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 3 },
+                label: { show: !isEmpty, position: 'outside', formatter: '{b}\n{d}%',
+                  fontSize: 13, lineHeight: 18, color: '#606266' },
+                labelLine: { show: !isEmpty, length: 25, length2: 20, lineStyle: { color: '#c0c4cc' } },
+                emphasis: { scaleSize: 10, label: { fontSize: 16, fontWeight: 'bold' } },
+                data: isEmpty ? [{ name: '暂无数据', value: 1, itemStyle: { color: '#e4e7ed' } }] : pieData }]
+            }, true);
+          },
+          handleExport: function() {
+            var self = this;
+            if (!self.dateRange || self.dateRange.length < 2) { self.$message.warning('请先选择日期范围'); return; }
+            reportExport({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(blob) {
+              if (blob && blob.type && blob.type.indexOf('json') > -1) { self.$message.error('导出失败，文件格式异常'); return; }
+              var link = document.createElement('a');
+              link.href = URL.createObjectURL(blob);
+              link.download = '时段分析_' + self.dateRange[0] + '_' + self.dateRange[1] + '.csv';
+              document.body.appendChild(link); link.click(); document.body.removeChild(link);
+              URL.revokeObjectURL(link.href);
+              self.$message.success('导出成功');
+            }).catch(function(err) { self.$message.error('导出失败：' + (err || '网络异常')); });
+          }
         }
-      }
-    })
+      })
+    })();
   </script>
 </body>
 </html>

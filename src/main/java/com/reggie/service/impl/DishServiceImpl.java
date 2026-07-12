@@ -203,7 +203,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
     // ==================== 库存管理 ====================
 
     /**
-     * 扣减菜品库存
+     * 扣减菜品库存（使用乐观锁防止超卖）
      *
      * @param dishId 菜品ID
      * @param qty 扣减数量
@@ -215,26 +215,28 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
         }
         redisCacheUtil.doubleDeleteAllEntries("dishes");
 
-        Dish dish = this.getById(dishId);
-        if (dish == null) return;
+        // 使用乐观锁原子扣减：WHERE stock_qty >= ? 防止超卖
+        LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Dish::getId, dishId);
+        updateWrapper.ge(Dish::getStockQty, qty);
+        updateWrapper.setSql("stock_qty = stock_qty - " + qty.toPlainString());
 
-        BigDecimal currentStock = dish.getStockQty() != null ? dish.getStockQty() : BigDecimal.ZERO;
-        BigDecimal newStock = currentStock.subtract(qty);
-        if (newStock.compareTo(BigDecimal.ZERO) < 0) {
-            throw new CustomException("菜品「" + dish.getName() + "」库存不足，当前库存：" + currentStock);
+        boolean success = this.update(updateWrapper);
+        if (!success) {
+            // 查询当前库存用于错误提示
+            Dish dish = this.getById(dishId);
+            BigDecimal currentStock = dish != null && dish.getStockQty() != null
+                    ? dish.getStockQty() : java.math.BigDecimal.ZERO;
+            throw new CustomException("菜品库存不足，当前库存：" + currentStock + "，需要扣减：" + qty);
         }
-        dish.setStockQty(newStock);
-        // 库存为0时自动停售
-        if (newStock.compareTo(BigDecimal.ZERO) == 0) {
-            dish.setStatus(0);
-            log.info("[库存] 菜品「{}」已售罄，自动停售", dish.getName());
-        }
-        this.updateById(dish);
-        log.info("[库存扣减] 菜品{} 扣减{}份，剩余库存{}", dish.getName(), qty, newStock);
+
+        // 扣减成功后，检查是否需要自动停售
+        autoToggleSoldOut(dishId);
+        log.info("[库存扣减] 菜品ID={} 扣减{}份，乐观锁原子更新", dishId, qty);
     }
 
     /**
-     * 增加菜品库存
+     * 增加菜品库存（原子操作）
      *
      * @param dishId 菜品ID
      * @param qty 增加数量
@@ -246,21 +248,23 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
         }
         redisCacheUtil.doubleDeleteAllEntries("dishes");
 
+        // 先查询当前菜品信息
         Dish dish = this.getById(dishId);
         if (dish == null) return;
 
-        BigDecimal currentStock = dish.getStockQty() != null ? dish.getStockQty() : BigDecimal.ZERO;
-        BigDecimal newStock = currentStock.add(qty);
-        dish.setStockQty(newStock);
-        // 补货后如果之前是停售状态且库存大于0，自动恢复起售
-        if (dish.getStatus() != null && dish.getStatus() == 0 && newStock.compareTo(BigDecimal.ZERO) > 0) {
-            // 检查是否有最低库存设置
-            if (dish.getMinStock() != null && newStock.compareTo(dish.getMinStock()) >= 0) {
-                dish.setStatus(1);
-                log.info("[库存] 菜品「{}」补货至{}，恢复起售", dish.getName(), newStock);
-            }
+        BigDecimal newStock = (dish.getStockQty() != null ? dish.getStockQty() : BigDecimal.ZERO).add(qty);
+
+        // 使用原子更新
+        LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Dish::getId, dishId);
+        updateWrapper.set(Dish::getStockQty, newStock);
+        // 补货后如果之前是停售状态且库存大于最低库存，自动恢复起售
+        if (dish.getStatus() != null && dish.getStatus() == 0
+                && dish.getMinStock() != null && newStock.compareTo(dish.getMinStock()) >= 0) {
+            updateWrapper.set(Dish::getStatus, 1);
+            log.info("[库存] 菜品「{}」补货至{}，恢复起售", dish.getName(), newStock);
         }
-        this.updateById(dish);
+        this.update(updateWrapper);
         log.info("[库存补货] 菜品{} 补货{}份，当前库存{}", dish.getName(), qty, newStock);
     }
 

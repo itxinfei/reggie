@@ -31,6 +31,7 @@ public class CategoryControllerTest {
 
     @BeforeEach
     void setUp() {
+        BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 
         Category category = new Category();

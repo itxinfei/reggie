@@ -7,15 +7,15 @@
 <img src="https://img.shields.io/badge/Java-1.8-orange?logo=openjdk" alt="Java 1.8">
 <img src="https://img.shields.io/badge/Spring_Boot-2.4.5-6db33f?logo=springboot" alt="Spring Boot 2.4.5">
 <img src="https://img.shields.io/badge/MyBatis_Plus-3.4.2-1677ff?logo=mybatis" alt="MyBatis Plus 3.4.2">
-<img src="https://img.shields.io/badge/Vue.js-2.6.14-4fc08d?logo=vuedotjs" alt="Vue.js 2.6.14">
+<img src="https://img.shields.io/badge/Vue.js-2.6.12-4fc08d?logo=vuedotjs" alt="Vue.js 2.6.12">
 <img src="https://img.shields.io/badge/Redis-6.0-DC382D?logo=redis" alt="Redis">
-<img src="https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql" alt="MySQL 8.0">
+<img src="https://img.shields.io/badge/MySQL-5.7_|_8.0-4479A1?logo=mysql" alt="MySQL 5.7/8.0">
 
 <br>
 
 <img src="https://img.shields.io/badge/Element_UI-2.15.10-409eff?logo=element" alt="Element UI">
 <img src="https://img.shields.io/badge/Vant_UI-2.12.0-07c160?logo=vant" alt="Vant UI">
-<img src="https://img.shields.io/badge/H2_Database-1.4.200-0066cc?logo=h2database" alt="H2">
+<img src="https://img.shields.io/badge/Druid-1.1.23-ff69b4?logo=apache" alt="Druid">
 <img src="https://img.shields.io/badge/AI-DeepSeek_/_通义千问_/_OpenAI-8a2be2?logo=openai" alt="AI LLM">
 <img src="https://img.shields.io/badge/License-Apache_2.0-333333?logo=apache" alt="License">
 
@@ -24,7 +24,7 @@
 <img src="https://img.shields.io/badge/Modules-12+-1677ff?logo=spring" alt="12+ Modules">
 <img src="https://img.shields.io/badge/Data_Tables-50+-ff6b6b?logo=postgresql" alt="50+ Tables">
 <img src="https://img.shields.io/badge/Java_Files-407-4379a7?logo=java" alt="407 Java files">
-<img src="https://img.shields.io/badge/Total_Commits-271-success?logo=git" alt="271 commits">
+<img src="https://img.shields.io/badge/Total_Commits-194-success?logo=git" alt="194 commits">
 <a href="https://gitee.com/itxinfei/reggie"><img src="https://img.shields.io/badge/Gitee-itxinfei/reggie-c71d23?logo=gitee" alt="Gitee"></a>
 <a href="https://github.com/itxinfei/reggie"><img src="https://img.shields.io/badge/GitHub-Mirror-181717?logo=github" alt="GitHub Mirror"></a>
 
@@ -36,9 +36,13 @@
 
 **瑞吉外卖**是一套完整的餐饮管理系统，基于 Spring Boot + Vue 的单体应用架构，覆盖堂食、外卖、进销存、会员、支付、打印、报表等餐饮全业务场景。系统核心创新在于 **AI 智能引擎**，通过接入大语言模型实现智能点餐推荐、菜品描述生成、经营分析等能力。
 
-<div align="center">
+- 后台管理系统
 
+<div align="center">
 <img src="docs/imgs/后台管理系统.png" width="80%" alt="后台管理系统">
+
+- 前端用户
+
 <img src="docs/imgs/前端用户.png" width="40%" alt="移动端用户界面">
 
 </div>
@@ -50,7 +54,7 @@
 | 🏢 **企业级架构** | Spring Boot 2.4.5 + MyBatis Plus 3.4.2，RESTful API，分层清晰 |
 | 📱 **双端覆盖** | 管理后台（Element UI）+ 移动端（Vant UI / H5） |
 | 🔐 **多租户 SaaS** | 行级数据隔离，一套系统服务多家门店 |
-| 🧪 **开箱即用** | H2 内存数据库，无需安装 MySQL，一键启动 |
+| ⚡ **前后端一体** | 前端页面内嵌于 Spring Boot，单 Jar 部署，无需分离部署 |
 | 📦 **全业务覆盖** | 堂食 + 外卖配送 + 进销存 + 会员营销 + 支付 + 打印 + 报表 + 数据导出 |
 | 🏪 **多门店管理** | 门店 CRUD、数据同步、门店仪表盘、员工权限隔离 |
 | 💾 **50+ 张数据表** | 完整数据库设计，满足企业级数据管理需求 |
@@ -101,18 +105,31 @@
 
 | 依赖 | 版本 | 说明 |
 |------|------|------|
-| ☕ JDK | 8+ | 主流 LTS 版本均可 |
+| ☕ JDK | 8+ | 推荐 JDK 8，主流 LTS 版本均可 |
+| 🗄️ MySQL | 5.7+ / 8.0 | 必须安装，用于存储业务数据 |
 | 📦 Maven | 3.6+ | 构建和依赖管理 |
+| ⚡ Redis | 6.0+ | 缓存、Session 共享、API 限流 |
 | 🌐 浏览器 | Chrome / Edge / Firefox | 现代浏览器即可 |
 
-### 一键启动
-
-> 项目默认使用 **H2 内存数据库**，无需安装 MySQL，克隆即可运行。
+### 启动步骤
 
 ```bash
+# 1. 克隆项目
 git clone https://gitee.com/itxinfei/reggie.git
 cd reggie
-mvn clean package spring-boot:run -DskipTests
+
+# 2. 创建数据库并导入建表脚本
+# CREATE DATABASE reggie CHARACTER SET utf8mb4;
+# mysql -u root -p reggie < reggie.sql
+
+# 3. 修改数据库/Redis 配置
+# 编辑 src/main/resources/application-dev.yml
+
+# 4. 编译并启动
+mvn clean package -DskipTests
+java -jar target/reggie_take_out-1.0-SNAPSHOT.jar
+# 或直接运行
+mvn spring-boot:run
 ```
 
 启动后访问：
@@ -129,11 +146,12 @@ mvn clean package spring-boot:run -DskipTests
 # 1. 导入数据库
 mysql -u root -p < reggie.sql
 
-# 2. 修改 src/main/resources/application.yml 数据库配置
+# 2. 激活 prod 环境并修改 src/main/resources/application-prod.yml
+#    配置数据库、Redis 等生产参数（支持环境变量注入）
 
 # 3. 打包运行
 mvn clean package -DskipTests
-java -jar target/reggie_take_out-1.0-SNAPSHOT.jar
+java -jar target/reggie_take_out-1.0-SNAPSHOT.jar --spring.profiles.active=prod
 ```
 
 ---
@@ -194,9 +212,9 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar
 | Web | Spring MVC | 5.3.6 |
 | ORM | MyBatis Plus | 3.4.2 |
 | 缓存 | Redis + Spring Data Redis | 6.0+ |
-| 连接池 | Druid + HikariCP | 1.1.23 / 3.4.5 |
-| 数据库 | MySQL Driver | 8.0.23 |
-| 测试 | H2 Database + JUnit 5 | 1.4.200 |
+| 连接池 | Druid | 1.1.23 |
+| 数据库 | MySQL | 5.7+ / 8.0 |
+| 测试 | JUnit 5 + H2 (test scope) | 1.4.200 |
 | 文档 | Springdoc OpenAPI | 1.6.9 |
 | 安全 | Spring Security Crypto + Jasypt | 5.4.6 / 3.0.3 |
 | 工具 | ZXing 二维码 / AliYun SMS | 3.5.1 / 4.5.16 |
@@ -206,7 +224,7 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar
 
 | 分类 | 技术 | 版本 |
 |------|------|------|
-| 框架 | Vue.js | 2.6.14 |
+| 框架 | Vue.js | 2.6.12 |
 | PC UI | Element UI | 2.15.10 |
 | 移动 UI | Vant UI | 2.12.0 |
 | HTTP | Axios | 0.21.1 |
@@ -345,7 +363,7 @@ mvn test -DfailIfNoTests=false
 | 测试类型 | 覆盖范围 | 状态 |
 |---------|---------|------|
 | 集成测试 | Controller 层（@SpringBootTest + MockMvc） | ✅ |
-| H2 内存数据库 | 无需 Docker/MySQL，开箱即用 | ✅ |
+| H2 测试数据库 | 单元测试使用 H2 内存数据库，无需 Docker/MySQL | ✅ |
 | 核心业务测试 | 员工登录、菜品查询、订单提交、购物车 | ✅ |
 | 多租户测试 | 数据隔离验证 | ✅ |
 | 安全组件测试 | 暴力破解、限流、CSRF、密码加密 | ✅ |
@@ -401,14 +419,9 @@ System.out.println(hash); // 将输出值更新到 employee 表
 </details>
 
 <details>
-<summary><b>切换到 MySQL？</b></summary>
+<summary><b>如何配置数据库连接？</b></summary>
 
-```sql
-CREATE DATABASE reggie CHARACTER SET utf8mb4;
--- mysql -u root -p reggie < reggie.sql
-```
-
-修改 `application.yml`：
+项目默认使用 `dev` 环境（MySQL + Redis）。修改 `application-dev.yml`：
 
 ```yaml
 spring:
@@ -416,9 +429,16 @@ spring:
     druid:
       url: jdbc:mysql://localhost:3306/reggie?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true
       username: root
-      password: your_password
+      password: 123456
       driver-class-name: com.mysql.cj.jdbc.Driver
+  redis:
+    host: localhost
+    port: 6379
+    password: your_redis_password
+    database: 0
 ```
+
+> 首次使用需先创建数据库 `CREATE DATABASE reggie CHARACTER SET utf8mb4;` 然后执行 `mysql -u root -p reggie < reggie.sql` 导入建表脚本。
 </details>
 
 <details>
@@ -472,6 +492,11 @@ spring:
 > ⚠️ **禁止使用旧 iconfont 类名**（`icon-category`、`icon-member` 等），旧字体文件已全部删除。
 </details>
 
+<details>
+<summary><b>如何修改服务端口？</b></summary>
+
+修改 `application.yml`：
+
 ```yaml
 server:
   port: 8081
@@ -501,6 +526,6 @@ server:
 
 Made with ❤️ by [itxinfei](https://gitee.com/itxinfei)
 
-**407** Java 源文件 · **50** 管理后台页面 · **12** 移动端页面 · **271** 次提交
+**407** Java 源文件 · **50** 管理后台页面 · **12** 移动端页面 · **194** 次提交
 
 </div>

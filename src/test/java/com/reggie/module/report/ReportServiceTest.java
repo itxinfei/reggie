@@ -101,17 +101,15 @@ public class ReportServiceTest {
         Map<String, Object> report = reportService.getDailyReport("2026-07-01", tenantId);
 
         assertEquals(3, report.get("totalOrders"));
-        assertEquals(new BigDecimal("350.00"), report.get("totalAmount"));
+        assertEquals(new BigDecimal("300.00"), report.get("totalAmount"));
         assertEquals(2, report.get("completedOrders"));
         assertEquals(1, report.get("cancelledOrders"));
 
-        // 验证平均金额（约等于 116.67）
+        // 验证平均金额（completed orders平均 = 300/2 = 150.00）
         BigDecimal avgAmount = (BigDecimal) report.get("avgAmount");
         assertNotNull(avgAmount);
-        assertTrue(avgAmount.compareTo(new BigDecimal("116.00")) >= 0,
-                   "平均金额应大于等于 116.00");
-        assertTrue(avgAmount.compareTo(new BigDecimal("117.00")) <= 0,
-                   "平均金额应小于等于 117.00");
+        assertEquals(0, avgAmount.compareTo(new BigDecimal("150.00")),
+                     "已完成订单平均金额应为150.00");
     }
 
     @Test
@@ -188,7 +186,7 @@ public class ReportServiceTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.totalOrders").value(3))
-                .andExpect(jsonPath("$.data.totalAmount").value(350.00))
+                .andExpect(jsonPath("$.data.totalAmount").value(300.00))
                 .andExpect(jsonPath("$.data.completedOrders").value(2))
                 .andExpect(jsonPath("$.data.cancelledOrders").value(1));
     }

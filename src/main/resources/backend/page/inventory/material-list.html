@@ -41,16 +41,22 @@
       </div>
 
       <div class="tableBar">
-        <el-input v-model="input.name" placeholder="食材名称" class="el-input--wide-sm" clearable @keyup.enter.native="handleQuery">
-          <i slot="prefix" class="el-input__icon el-icon-search" style="cursor: pointer" @click="handleQuery"></i>
-        </el-input>
+        <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框，选项从数据库加载 -->
+        <el-select v-model="input.name" placeholder="食材名称" class="el-select--narrow-xs" clearable filterable size="small"
+          :loading="optionsLoading"
+          :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')"
+          @visible-change="onFilterDropdownVisible">
+          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+        </el-select>
         <el-select v-model="input.categoryId" placeholder="食材分类" class="el-select--narrow" clearable @change="handleQuery">
           <el-option v-for="item in categoryOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
         </el-select>
-        <el-button type="primary" class="btn-query" @click="handleQuery">查询</el-button>
-        <el-button class="btn-reset" @click="reset">重置</el-button>
-        <el-button type="primary" class="btn-add" @click="addHandle">+ 新增食材</el-button>
-        <el-button type="warning" class="btn-warning-status" @click="warningHandle">库存预警</el-button>
+        <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
+        <el-button size="small" class="btn-reset" @click="reset">重置</el-button>
+        <div class="tableLab">
+          <el-button type="primary" size="small" class="btn-add" @click="addHandle">+ 新增食材</el-button>
+          <el-button type="warning" size="small" class="btn-warning-status" @click="warningHandle">库存预警</el-button>
+        </div>
       </div>
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
         <el-table-column prop="name" label="食材名称" /></el-table-column>
@@ -177,6 +183,11 @@
               name: '',
               categoryId: ''
             },
+            // 修改点：搜索下拉框动态选项（从数据库加载）
+            filterOptions: { names: [] },
+            // 修改点：下拉选项加载状态
+            optionsLoading: false,
+            optionsLoadError: false,
             categoryOptions: [],
             supplierOptions: [],
             formData: {
@@ -200,6 +211,7 @@
         created() {
           this.init()
           this.loadOptions()
+          this.loadFilterOptions()
         },
         methods: {
           async init() {
@@ -270,6 +282,34 @@
             supplierList().then(res => {
               if (res.code === 1) this.supplierOptions = res.data
             })
+          },
+          // 修改点：加载搜索下拉框选项（从数据库动态查询）
+          async loadFilterOptions() {
+            this.optionsLoading = true
+            this.optionsLoadError = false
+            try {
+              const res = await materialList({ page: 1, pageSize: 500 })
+              if (String(res.code) === '1' && res.data) {
+                const names = new Set()
+                ;(res.data.records || []).forEach(function(r) {
+                  if (r.name) names.add(r.name)
+                })
+                this.filterOptions.names = Array.from(names)
+              } else {
+                this.optionsLoadError = true
+              }
+            } catch (err) {
+              this.optionsLoadError = true
+              console.warn('加载食材筛选选项失败:', err)
+            } finally {
+              this.optionsLoading = false
+            }
+          },
+          // 修改点：下拉框显示/隐藏时自动加载选项
+          async onFilterDropdownVisible(visible) {
+            if (visible && (!this.filterOptions.names || this.filterOptions.names.length === 0)) {
+              await this.loadFilterOptions()
+            }
           },
           handleQuery() {
             // 修改点：搜索时清空卡片筛选状态

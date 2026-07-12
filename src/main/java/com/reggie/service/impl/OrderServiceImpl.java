@@ -1,6 +1,7 @@
 package com.reggie.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -12,6 +13,7 @@ import com.reggie.entity.Dish;
 import com.reggie.entity.OrderDetail;
 import com.reggie.entity.Orders;
 import com.reggie.entity.SetmealDish;
+import com.reggie.entity.Setmeal;
 import com.reggie.entity.ShoppingCart;
 import com.reggie.entity.User;
 import com.reggie.mapper.OrderMapper;
@@ -20,6 +22,7 @@ import com.reggie.service.DishService;
 import com.reggie.service.OrderDetailService;
 import com.reggie.service.OrderService;
 import com.reggie.service.SetmealDishService;
+import com.reggie.service.SetmealService;
 import com.reggie.service.ShoppingCartService;
 import com.reggie.service.UserService;
 import com.reggie.module.printer.service.PrinterService;
@@ -75,6 +78,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     /** 套餐菜品关联服务 */
     @Autowired
     private SetmealDishService setmealDishService;
+
+    /** 套餐服务 */
+    @Autowired
+    private SetmealService setmealService;
 
     /**
      * 打印服务（可选注入，无打印机配置时降级跳过）
@@ -224,13 +231,34 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         Long userId = BaseContext.getCurrentId();
         long orderId = IdWorker.getId();
 
-        // 计算总金额
+        // 计算总金额（价格从菜品/套餐表服务端查询，防止客户端篡改）
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (OrderDetail detail : orderDetails) {
             detail.setOrderId(orderId);
-            BigDecimal amt = detail.getAmount() != null ? detail.getAmount() : BigDecimal.ZERO;
+            BigDecimal unitPrice;
+            String dishName;
+            if (detail.getDishId() != null) {
+                Dish dish = dishService.getById(detail.getDishId());
+                if (dish == null) {
+                    throw new CustomException("菜品不存在，ID：" + detail.getDishId());
+                }
+                unitPrice = dish.getPrice() != null ? dish.getPrice() : BigDecimal.ZERO;
+                dishName = dish.getName();
+            } else if (detail.getSetmealId() != null) {
+                Setmeal setmeal = setmealService.getById(detail.getSetmealId());
+                if (setmeal == null) {
+                    throw new CustomException("套餐不存在，ID：" + detail.getSetmealId());
+                }
+                unitPrice = setmeal.getPrice() != null ? setmeal.getPrice() : BigDecimal.ZERO;
+                dishName = setmeal.getName();
+            } else {
+                throw new CustomException("订单明细缺少菜品或套餐ID");
+            }
             Integer num = detail.getNumber() != null ? detail.getNumber() : 0;
-            totalAmount = totalAmount.add(amt.multiply(new BigDecimal(num)));
+            BigDecimal lineTotal = unitPrice.multiply(new BigDecimal(num));
+            detail.setAmount(lineTotal);
+            detail.setName(dishName);
+            totalAmount = totalAmount.add(lineTotal);
         }
 
         // 设置订单字段
@@ -277,77 +305,43 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     /**
-     * 根据订单明细扣减菜品库存
+     * 根据订单明细扣减菜品库存（乐观锁原子操作）
      */
     private void deductStockForOrderDetails(List<OrderDetail> orderDetails) {
         for (OrderDetail detail : orderDetails) {
             int number = detail.getNumber() != null ? detail.getNumber() : 1;
+            BigDecimal qty = new BigDecimal(number);
 
-            // 单品菜品
+            // 单品菜品：乐观锁原子扣减
             if (detail.getDishId() != null) {
-                Dish dish = dishService.getById(detail.getDishId());
-                if (dish != null && dish.getStockQty() != null) {
-                    BigDecimal newStock = dish.getStockQty().subtract(new BigDecimal(number));
-                    if (newStock.compareTo(BigDecimal.ZERO) < 0) {
-                        throw new CustomException("菜品「" + dish.getName() + "」库存不足，当前库存：" + dish.getStockQty());
-                    }
-                    dish.setStockQty(newStock);
-                    if (newStock.compareTo(BigDecimal.ZERO) == 0) {
-                        dish.setStatus(0);
-                    }
-                    dishService.updateById(dish);
-                }
+                deductStockAtomic(detail.getDishId(), qty);
             }
 
-            // 套餐菜品
+            // 套餐菜品：扣减套餐内所有菜品的库存
             if (detail.getSetmealId() != null) {
                 LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
                 sdWrapper.eq(SetmealDish::getSetmealId, detail.getSetmealId());
                 List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
                 for (SetmealDish sd : setmealDishes) {
-                    Dish dish = dishService.getById(sd.getDishId());
-                    if (dish != null && dish.getStockQty() != null) {
-                        int qty = sd.getCopies() != null ? sd.getCopies() * number : number;
-                        BigDecimal newStock = dish.getStockQty().subtract(new BigDecimal(qty));
-                        if (newStock.compareTo(BigDecimal.ZERO) < 0) {
-                            throw new CustomException("菜品「" + dish.getName() + "」库存不足");
-                        }
-                        dish.setStockQty(newStock);
-                        if (newStock.compareTo(BigDecimal.ZERO) == 0) {
-                            dish.setStatus(0);
-                        }
-                        dishService.updateById(dish);
-                    }
+                    int copies = sd.getCopies() != null ? sd.getCopies() : 1;
+                    deductStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)));
                 }
             }
         }
     }
 
     /**
-     * 遍历购物车中的菜品/套餐，扣减对应库存
+     * 遍历购物车中的菜品/套餐，扣减对应库存（乐观锁原子操作）
      * 库存不足时抛出异常，触发事务回滚
      */
     private void deductStockForOrder(List<ShoppingCart> shoppingCarts) {
         for (ShoppingCart item : shoppingCarts) {
             int number = item.getNumber() != null ? item.getNumber() : 1;
+            BigDecimal qty = new BigDecimal(number);
 
             // 单品菜品：直接扣减
             if (item.getDishId() != null) {
-                Dish dish = dishService.getById(item.getDishId());
-                if (dish != null && dish.getStockQty() != null) {
-                    BigDecimal newStock = dish.getStockQty().subtract(new BigDecimal(number));
-                    if (newStock.compareTo(BigDecimal.ZERO) < 0) {
-                        throw new CustomException("菜品「" + dish.getName() + "」库存不足，当前库存：" + dish.getStockQty());
-                    }
-                    dish.setStockQty(newStock);
-                    // 库存为0时自动停售
-                    if (newStock.compareTo(BigDecimal.ZERO) == 0) {
-                        dish.setStatus(0);
-                        log.info("[库存] 菜品「{}」已售罄，自动停售", dish.getName());
-                    }
-                    dishService.updateById(dish);
-                    log.info("[库存扣减] 菜品{} 扣减{}份，剩余库存{}", dish.getName(), number, newStock);
-                }
+                deductStockAtomic(item.getDishId(), qty);
             }
 
             // 套餐：扣减套餐内所有菜品的库存
@@ -356,23 +350,37 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 sdWrapper.eq(SetmealDish::getSetmealId, item.getSetmealId());
                 List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
                 for (SetmealDish sd : setmealDishes) {
-                    Dish dish = dishService.getById(sd.getDishId());
-                    if (dish != null && dish.getStockQty() != null) {
-                        int qty = sd.getCopies() != null ? sd.getCopies() * number : number;
-                        BigDecimal newStock = dish.getStockQty().subtract(new BigDecimal(qty));
-                        if (newStock.compareTo(BigDecimal.ZERO) < 0) {
-                            throw new CustomException("菜品「" + dish.getName() + "」库存不足，当前库存：" + dish.getStockQty());
-                        }
-                        dish.setStockQty(newStock);
-                        if (newStock.compareTo(BigDecimal.ZERO) == 0) {
-                            dish.setStatus(0);
-                            log.info("[库存] 菜品「{}」已售罄，自动停售", dish.getName());
-                        }
-                        dishService.updateById(dish);
-                        log.info("[库存扣减] 套餐菜品{} 扣减{}份，剩余库存{}", dish.getName(), qty, newStock);
-                    }
+                    int copies = sd.getCopies() != null ? sd.getCopies() : 1;
+                    deductStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)));
                 }
             }
+        }
+    }
+
+    /**
+     * 使用乐观锁原子扣减菜品库存
+     * WHERE stock_qty >= qty，防止并发超卖
+     */
+    private void deductStockAtomic(Long dishId, BigDecimal qty) {
+        if (dishId == null || qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Dish::getId, dishId);
+        updateWrapper.ge(Dish::getStockQty, qty);
+        updateWrapper.setSql("stock_qty = stock_qty - " + qty.toPlainString());
+
+        boolean success = dishService.update(updateWrapper);
+        if (!success) {
+            Dish dish = dishService.getById(dishId);
+            String name = dish != null ? dish.getName() : "ID=" + dishId;
+            BigDecimal currentStock = dish != null && dish.getStockQty() != null ? dish.getStockQty() : BigDecimal.ZERO;
+            throw new CustomException("菜品「" + name + "」库存不足，当前库存：" + currentStock + "，需要扣减：" + qty);
+        }
+
+        // 扣减成功后检查是否需要自动停售
+        if (dishService != null) {
+            dishService.autoToggleSoldOut(dishId);
         }
     }
 

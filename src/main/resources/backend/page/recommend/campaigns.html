@@ -112,26 +112,32 @@
         </div>
 
         <!-- ========== 搜索栏 ========== -->
+        <!-- 修改点：活动名称下拉框宽度200px，避免截断；状态/类型下拉框120px -->
         <div class="tableBar">
-            <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框 -->
-            <el-select v-model="searchName" placeholder="选择活动名称" size="small" class="el-select--narrow-xs" clearable filterable
-              :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="loadData" @visible-change="onFilterDropdownVisible">
-              <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
-            </el-select>
-            <el-select v-model="searchStatus" placeholder="状态筛选" size="small" clearable @change="loadData">
-                <el-option label="草稿" :value="0" />
-                <el-option label="进行中" :value="1" />
-                <el-option label="已结束" :value="2" />
-                <el-option label="已暂停" :value="3" />
-            </el-select>
-            <el-select v-model="searchType" placeholder="活动类型" size="small" clearable @change="loadData">
-                <el-option v-for="(label, val) in typeMap" :key="val" :label="label" :value="Number(val)" />
-            </el-select>
-            <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
-            <el-button size="small" class="btn-reset" @click="resetSearch">重置</el-button>
-            <el-button size="small" class="btn-refresh" icon="el-icon-refresh" @click="loadData">刷新</el-button>
-            <span style="flex:1;"></span>
-            <el-button type="primary" size="small" class="btn-add" icon="el-icon-plus" @click="openDialog('create')">新建活动</el-button>
+            <div class="search-area">
+                <el-select v-model="searchName" placeholder="选择活动名称" size="small" clearable filterable
+                  style="width:200px;"
+                  :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="loadData" @visible-change="onFilterDropdownVisible">
+                  <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+                </el-select>
+                <el-select v-model="searchStatus" placeholder="状态筛选" size="small" clearable @change="loadData" style="width:120px;">
+                    <el-option label="草稿" :value="0" />
+                    <el-option label="进行中" :value="1" />
+                    <el-option label="已结束" :value="2" />
+                    <el-option label="已暂停" :value="3" />
+                </el-select>
+                <el-select v-model="searchType" placeholder="活动类型" size="small" clearable @change="loadData" style="width:120px;">
+                    <el-option v-for="(label, val) in typeMap" :key="val" :label="label" :value="Number(val)" />
+                </el-select>
+                <div class="search-actions">
+                    <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
+                    <el-button size="small" class="btn-reset" @click="resetSearch">重置</el-button>
+                    <el-button size="small" class="btn-refresh" icon="el-icon-refresh" @click="loadData">刷新</el-button>
+                </div>
+            </div>
+            <div class="action-group">
+                <el-button type="primary" size="small" class="btn-add" icon="el-icon-plus" @click="openDialog('create')">新建活动</el-button>
+            </div>
         </div>
 
         <!-- ========== 表格 ========== -->
@@ -193,12 +199,13 @@
         </el-table>
 
         <!-- ========== 批量操作 + 分页 ========== -->
-        <div class="tableBar-actions">
-            <el-button size="small" :disabled="selectedRows.length === 0" @click="batchDelete">批量删除</el-button>
-            <el-button size="small" type="warning" :disabled="selectedRows.length === 0" @click="batchPause">批量暂停</el-button>
-        </div>
+        <!-- 修改点：使用flex布局使批量操作和分页在同行显示，左批量右分页 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:16px;">
+            <div style="display:flex;gap:8px;">
+                <el-button size="small" :disabled="selectedRows.length === 0" @click="batchDelete">批量删除</el-button>
+                <el-button size="small" type="warning" :disabled="selectedRows.length === 0" @click="batchPause">批量暂停</el-button>
+            </div>
             <el-pagination
-                class="pageList"
                 :page-sizes="[10, 20, 30, 40]"
                 :page-size="pageSize"
                 layout="total, sizes, prev, pager, next, jumper"

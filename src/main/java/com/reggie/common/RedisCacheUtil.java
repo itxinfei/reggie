@@ -55,11 +55,15 @@ public class RedisCacheUtil {
      */
     private ScheduledExecutorService scheduledExecutor;
 
-    @Autowired
+    @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
     @PostConstruct
     public void init() {
+        if (redisTemplate == null) {
+            log.warn("[缓存双删] Redis 不可用，缓存功能已禁用");
+            return;
+        }
         // 修改点：单线程调度器，按序执行延时删除，不阻塞业务线程池
         scheduledExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "cache-double-del-scheduled");
@@ -94,6 +98,8 @@ public class RedisCacheUtil {
      * @param key       缓存的 Key 值
      */
     public void doubleDelete(String cacheName, Object key) {
+        if (redisTemplate == null) return;
+
         // Spring Cache 默认 Key 格式: "cacheName::keyValue"
         String redisKey = cacheKey(cacheName, key);
 
@@ -114,6 +120,8 @@ public class RedisCacheUtil {
      * @param cacheName 缓存名称
      */
     public void doubleDeleteAllEntries(String cacheName) {
+        if (redisTemplate == null) return;
+
         String pattern = cacheKeyPattern(cacheName);
 
         // 一删：清除所有匹配的 Key
@@ -128,6 +136,7 @@ public class RedisCacheUtil {
      * 同步删除单个 Key
      */
     public void deleteKey(String redisKey) {
+        if (redisTemplate == null) return;
         try {
             redisTemplate.delete(redisKey);
         } catch (Exception e) {
@@ -143,6 +152,7 @@ public class RedisCacheUtil {
      * @return 删除的 Key 数量
      */
     public int deleteByPattern(String pattern) {
+        if (redisTemplate == null) return 0;
         try {
             // 使用RedisCallback直接操作Connection，支持SCAN
             Set<String> keys = redisTemplate.execute((RedisCallback<Set<String>>) connection -> {

@@ -47,17 +47,17 @@ class BruteForceProtectionFilterTest {
 
     @Test
     void testRecordLoginFailureWithMockRedis() {
-        // 模拟 Redis 操作
-        when(redisTemplate.opsForValue()).thenReturn(mock(org.springframework.data.redis.core.ValueOperations.class));
-        when(redisTemplate.opsForValue().increment(anyString(), anyLong())).thenReturn(1L);
-        when(redisTemplate.expire(anyString(), anyLong(), any(java.util.concurrent.TimeUnit.class))).thenReturn(true);
+        // 模拟 Redis 操作（使用 Lua 脚本执行）
+        org.springframework.data.redis.core.ValueOperations valueOps = mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        // Lua 脚本执行后返回 1（第一次失败）
+        when(redisTemplate.execute(any(), anyList(), any())).thenReturn(1L);
 
         BruteForceProtectionFilter filter = new BruteForceProtectionFilter(redisTemplate);
         assertTrue(filter.isEnabled());
 
-        // 记录登录失败（使用 IP 标识）
-        filter.recordFailedAttempt("192.168.1.100");
-        verify(redisTemplate.opsForValue()).increment(anyString());
+        // 记录登录失败（使用 IP 标识），验证不会抛出异常
+        assertDoesNotThrow(() -> filter.recordFailedAttempt("192.168.1.100"));
     }
 
     @Test

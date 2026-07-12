@@ -16,67 +16,56 @@
     .eval-app-wrap { min-height: 100%; display: flex; flex-direction: column; }
     .eval-app-wrap .container { flex: 1; background: transparent; padding: 24px 32px 32px;
       min-width: 0; max-width: 1600px; margin: 0 auto; width: 100%; }
-
-    /* ========== 统计卡片可点击样式 ========== */
-    .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-    .stat-card.clickable { cursor: pointer; user-select: none; }
-    .stat-card.clickable:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
-    .stat-card.clickable.active { border-color: #409eff; box-shadow: 0 0 0 2px rgba(64,158,255,0.2); }
-
-    /* ========== 筛选栏 ========== */
-    .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+    /* 修改点：stats-cards 使用 grid 并定义 clickable/active 交互效果 */
+    .eval-app-wrap .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    .eval-app-wrap .stat-card.clickable { cursor: pointer; user-select: none; transition: all 0.25s ease; }
+    .eval-app-wrap .stat-card.clickable:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+    .eval-app-wrap .stat-card.clickable.active { border-color: #409eff; box-shadow: 0 0 0 2px rgba(64,158,255,0.2); }
+    /* 修改点：筛选栏统一样式 */
+    .eval-app-wrap .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
       background: #fff; padding: 16px 24px; border-radius: 14px; margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8); }
-    .filter-bar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .filter-bar .fl-label { font-size: 14px; color: #606266; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
-
-    /* ========== 评分筛选按钮 ========== */
-    .star-filter { display: flex; align-items: center; gap: 4px; }
-    .star-btn { padding: 5px 12px; border: 1px solid #dcdfe6; border-radius: 6px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+      transition: box-shadow 0.3s; }
+    .eval-app-wrap .filter-bar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .eval-app-wrap .filter-bar .fl-label { font-size: 14px; color: #606266; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
+    .eval-app-wrap .star-filter { display: flex; align-items: center; gap: 4px; }
+    .eval-app-wrap .star-btn { padding: 5px 12px; border: 1px solid #dcdfe6; border-radius: 6px;
       background: #fff; cursor: pointer; font-size: 13px; font-weight: 500;
-      transition: all 0.2s; color: #606266; }
-    .star-btn:hover { border-color: #409eff; color: #409eff; }
-    .star-btn.active { background: #409eff; border-color: #409eff; color: #fff; }
-
-    /* ========== 评价星级 ========== */
-    .eval-stars { display: inline-flex; gap: 2px; }
-    .eval-stars .star { font-size: 16px; color: #e4e7ed; }
-    .eval-stars .star.filled { color: #f7ba2a; }
-    .eval-content { max-width: 280px; overflow: hidden; text-overflow: ellipsis;
+      transition: all 0.2s; color: #606266; outline: none; }
+    .eval-app-wrap .star-btn:hover { border-color: #409eff; color: #409eff; }
+    .eval-app-wrap .star-btn.active { background: #409eff; border-color: #409eff; color: #fff; }
+    .eval-app-wrap .eval-stars { display: inline-flex; gap: 2px; }
+    .eval-app-wrap .eval-stars .star { font-size: 16px; color: #e4e7ed; }
+    .eval-app-wrap .eval-stars .star.filled { color: #f7ba2a; }
+    .eval-app-wrap .eval-content { max-width: 280px; overflow: hidden; text-overflow: ellipsis;
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.5; }
-    .eval-images { display: flex; gap: 6px; flex-wrap: wrap; }
-    .eval-images img { width: 46px; height: 46px; border-radius: 6px; object-fit: cover;
+    .eval-app-wrap .eval-images { display: flex; gap: 6px; flex-wrap: wrap; }
+    .eval-app-wrap .eval-images img { width: 46px; height: 46px; border-radius: 6px; object-fit: cover;
       cursor: pointer; border: 1px solid #ebeef5; transition: transform 0.2s; }
-    .eval-images img:hover { transform: scale(1.1); }
-
-    /* ========== 状态标签 ========== */
-    .status-tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px;
+    .eval-app-wrap .eval-images img:hover { transform: scale(1.1); }
+    .eval-app-wrap .status-tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px;
       border-radius: 6px; font-size: 12px; font-weight: 600; }
-    .status-tag.pending { background: #fdf6ec; color: #e6a23c; }
-    .status-tag.approved { background: #f0f9eb; color: #67c23a; }
-    .status-tag.rejected { background: #fef0f0; color: #f56c6c; }
-    .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-    .status-dot.pending { background: #e6a23c; } .status-dot.approved { background: #67c23a; }
-    .status-dot.rejected { background: #f56c6c; }
-    .action-btns { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
-
-    /* ========== 详情弹窗 ========== */
-    .detail-section { margin-bottom: 20px; }
-    .detail-section-title { font-size: 15px; font-weight: 600; color: #303133;
+    .eval-app-wrap .status-tag.pending { background: #fdf6ec; color: #e6a23c; }
+    .eval-app-wrap .status-tag.approved { background: #f0f9eb; color: #67c23a; }
+    .eval-app-wrap .status-tag.rejected { background: #fef0f0; color: #f56c6c; }
+    .eval-app-wrap .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    .eval-app-wrap .status-dot.pending { background: #e6a23c; } .eval-app-wrap .status-dot.approved { background: #67c23a; }
+    .eval-app-wrap .status-dot.rejected { background: #f56c6c; }
+    .eval-app-wrap .action-btns { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+    .eval-app-wrap .detail-section { margin-bottom: 20px; }
+    .eval-app-wrap .detail-section-title { font-size: 15px; font-weight: 600; color: #303133;
       margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f0f2f5;
       display: flex; align-items: center; gap: 6px; }
-    .detail-row { display: flex; margin-bottom: 10px; font-size: 14px; line-height: 1.6; }
-    .detail-row .dlabel { width: 90px; color: #909399; flex-shrink: 0; }
-    .detail-row .dvalue { flex: 1; color: #303133; }
-    .reply-box { background: #f5f7fa; border-radius: 10px; padding: 14px 16px; margin-top: 8px; }
-    .reply-box .reply-time { font-size: 12px; color: #909399; margin-top: 6px; }
-    .image-preview { max-width: 100%; max-height: 450px; border-radius: 10px; }
-
-    /* ========== 响应式 ========== */
-    @media (max-width: 1200px) { .container { padding: 16px 20px 20px !important; } }
-    @media (max-width: 768px) { .container { padding: 12px 16px 16px !important; }
-      .stats-cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-      .filter-bar { flex-direction: column; align-items: stretch; } }
+    .eval-app-wrap .detail-row { display: flex; margin-bottom: 10px; font-size: 14px; line-height: 1.6; }
+    .eval-app-wrap .detail-row .dlabel { width: 90px; color: #909399; flex-shrink: 0; }
+    .eval-app-wrap .detail-row .dvalue { flex: 1; color: #303133; }
+    .eval-app-wrap .reply-box { background: #f5f7fa; border-radius: 10px; padding: 14px 16px; margin-top: 8px; }
+    .eval-app-wrap .reply-box .reply-time { font-size: 12px; color: #909399; margin-top: 6px; }
+    .eval-app-wrap .image-preview { max-width: 100%; max-height: 450px; border-radius: 10px; }
+    @media (max-width: 1200px) { .eval-app-wrap .container { padding: 16px 20px 20px !important; } }
+    @media (max-width: 768px) { .eval-app-wrap .container { padding: 12px 16px 16px !important; }
+      .eval-app-wrap .stats-cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .eval-app-wrap .filter-bar { flex-direction: column; align-items: stretch; } }
   </style>
 </head>
 <body>
@@ -123,9 +112,9 @@
           <div class="star-filter">
             <button v-for="s in [1,2,3,4,5]" :key="s" class="star-btn"
               :class="{ active: filters.starRating === s }"
-              @click="filters.starRating = filters.starRating === s ? null : s">{{ s }}★</button>
+              @click="filters.starRating = filters.starRating === s ? null : s" type="button">{{ s }}★</button>
             <button class="star-btn" :class="{ active: filters.starRating === null }"
-              @click="filters.starRating = null" style="margin-left:4px;">清除</button>
+              @click="filters.starRating = null" style="margin-left:4px;" type="button">清除</button>
           </div>
         </div>
         <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="handleSearch">搜索</el-button>
@@ -139,7 +128,7 @@
           <template slot-scope="scope">
             <div style="display:flex;align-items:center;gap:10px;">
               <img v-if="scope.row.dishImage" :src="getImageUrl(scope.row.dishImage)"
-                style="width:42px;height:42px;border-radius:8px;object-fit:cover;" />
+                style="width:42px;height:42px;border-radius:8px;object-fit:cover;" alt="" />
               <span style="font-weight:600;color:#303133;">{{ scope.row.dishName }}</span>
             </div>
           </template>
@@ -154,14 +143,14 @@
         </el-table-column>
         <el-table-column prop="content" label="评价内容" min-width="220">
           <template slot-scope="scope">
-            <div class="eval-content" :title="scope.row.content">{{ scope.row.content }}</div>
+            <div class="eval-content" :title="scope.row.content">{{ scope.row.content || '无文字评价' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="图片" width="100" align="center">
           <template slot-scope="scope">
-            <div class="eval-images" v-if="scope.row.images && scope.row.images.length > 0">
+            <div class="eval-images" v-if="hasImages(scope.row.images)">
               <img v-for="(img, idx) in getImageList(scope.row.images).slice(0, 3)" :key="idx"
-                   :src="getImageUrl(img)" @click="previewImage(getImageUrl(img))" />
+                   :src="getImageUrl(img)" @click="previewImage(getImageUrl(img))" alt="评价图片" />
             </div>
             <span v-else style="color:#c0c4cc;font-size:12px;">无</span>
           </template>
@@ -190,8 +179,8 @@
           <template slot-scope="scope">
             <div class="action-btns">
               <el-button type="text" size="small" class="btn-view" @click="viewDetail(scope.row)">查看</el-button>
-              <el-button v-if="scope.row.status === 0" type="text" size="small" class="btn-success" @click="auditEvaluation(scope.row, 1)">通过</el-button>
-              <el-button v-if="scope.row.status === 0" type="text" size="small" class="btn-delete" @click="auditEvaluation(scope.row, 2)">拒绝</el-button>
+              <el-button v-if="scope.row.status === 0" type="text" size="small" class="btn-success" @click="handleAudit(scope.row, 1)">通过</el-button>
+              <el-button v-if="scope.row.status === 0" type="text" size="small" class="btn-delete" @click="handleAudit(scope.row, 2)">拒绝</el-button>
               <el-button v-if="!scope.row.replyContent" type="text" size="small" class="btn-view" @click="openReply(scope.row)">回复</el-button>
             </div>
           </template>
@@ -225,7 +214,7 @@
           <div class="detail-section-title">💬 评价内容</div>
           <div style="padding:10px 0;line-height:1.8;color:#303133;font-size:14px;">{{ detailData.content || '（无文字内容）' }}</div>
           <div class="eval-images" v-if="detailImages.length > 0" style="margin-top:12px;">
-            <img v-for="(img, idx) in detailImages" :key="idx" :src="getImageUrl(img)" @click="previewImage(getImageUrl(img))" />
+            <img v-for="(img, idx) in detailImages" :key="idx" :src="getImageUrl(img)" @click="previewImage(getImageUrl(img))" alt="评价图片" />
           </div>
         </div>
         <div class="detail-section" v-if="detailData.replyContent">
@@ -238,7 +227,7 @@
       </div>
       <span slot="footer">
         <el-button size="medium" @click="closeDetail">关 闭</el-button>
-        <el-button v-if="detailData.status === 0" type="success" size="medium" @click="auditDetail(1)">审 核 通 过</el-button>
+        <el-button v-if="detailData.status === 0" type="success" size="medium" @click="handleAudit(detailData, 1); closeDetail()">审 核 通 过</el-button>
       </span>
     </el-dialog>
 
@@ -259,7 +248,7 @@
 
     <!-- ========== 图片预览 ========== -->
     <el-dialog :visible.sync="previewVisible" width="auto" :show-close="true" center>
-      <img :src="previewUrl" class="image-preview" />
+      <img :src="previewUrl" class="image-preview" alt="预览图片" />
     </el-dialog>
   </div>
 
@@ -269,129 +258,141 @@
   <script src="../../js/request.js"></script>
   <script src="../../api/evaluation.js"></script>
   <script>
-    new Vue({
-      el: '#eval-app',
-      data: function() {
-        return {
-          loading: false, tableData: [], total: 0, page: 1, pageSize: 10,
-          filters: { dishName: '', starRating: null, status: null },
-          filterOptions: { names: [] }, optionsLoading: false, optionsLoadError: false,
-          filterStatus: null, stats: { total: 0, pending: 0, approved: 0, rejected: 0 },
-          detailVisible: false, detailData: {}, detailImages: [],
-          replyVisible: false, replyData: {}, replyContent: '', replyLoading: false,
-          previewVisible: false, previewUrl: ''
+    // 修改点：使用 IIFE 避免全局变量污染，重命名 Vue 方法避免与JS API函数名冲突
+    (function() {
+      new Vue({
+        el: '#eval-app',
+        data: function() {
+          return {
+            loading: false, tableData: [], total: 0, page: 1, pageSize: 10,
+            filters: { dishName: '', starRating: null, status: null },
+            filterOptions: { names: [] }, optionsLoading: false, optionsLoadError: false,
+            filterStatus: null, stats: { total: 0, pending: 0, approved: 0, rejected: 0 },
+            detailVisible: false, detailData: {}, detailImages: [],
+            replyVisible: false, replyData: {}, replyContent: '', replyLoading: false,
+            previewVisible: false, previewUrl: ''
+          }
+        },
+        created: function() { this.loadFilterOptions(); this.loadData(); this.loadStats(); },
+        methods: {
+          loadFilterOptions: function() {
+            var self = this; self.optionsLoading = true; self.optionsLoadError = false;
+            dishOptions().then(function(res) {
+              if (String(res.code) === '1' && res.data) {
+                self.filterOptions.names = res.data.names || [];
+              } else { self.optionsLoadError = true; self.$message.warning('加载菜品选项失败：' + (res.msg || '接口返回异常')); }
+            }).catch(function(err) {
+              if (err && err.message === 'NOTLOGIN') return;
+              self.optionsLoadError = true; console.error('加载菜品选项失败:', err);
+            }).finally(function() { self.optionsLoading = false; });
+          },
+          onFilterDropdownVisible: function(visible) {
+            if (visible && this.optionsLoadError) this.loadFilterOptions();
+          },
+          loadData: function() {
+            var self = this; self.loading = true;
+            // 修改点：过滤null/undefined参数，避免传空字符串导致后端空查询
+            var params = { page: self.page, pageSize: self.pageSize };
+            if (self.filters.dishName) params.dishName = self.filters.dishName;
+            if (self.filters.status != null) params.status = self.filters.status;
+            if (self.filters.starRating != null) params.starRating = self.filters.starRating;
+            getEvaluationPage(params).then(function(res) {
+              if (String(res.code) === '1') {
+                self.tableData = res.data.records || []; self.total = res.data.total || 0;
+              } else { self.$message.error(res.msg || '加载评价列表失败'); }
+            }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)); })
+            .finally(function() { self.loading = false; });
+          },
+          loadStats: function() {
+            var self = this;
+            // 修改点：使用Promise.all批量请求，减少网络往返
+            var ps = [
+              getEvaluationPage({ page: 1, pageSize: 1 }),
+              getPendingEvaluations({ page: 1, pageSize: 1 }),
+              getEvaluationPage({ page: 1, pageSize: 1, status: 1 }),
+              getEvaluationPage({ page: 1, pageSize: 1, status: 2 })
+            ];
+            Promise.all(ps.map(function(p) { return p.catch(function() { return null; }); }))
+              .then(function(results) {
+                if (results[0] && String(results[0].code) === '1') self.stats.total = results[0].data.total || 0;
+                if (results[1] && String(results[1].code) === '1') self.stats.pending = results[1].data.total || 0;
+                if (results[2] && String(results[2].code) === '1') self.stats.approved = results[2].data.total || 0;
+                if (results[3] && String(results[3].code) === '1') self.stats.rejected = results[3].data.total || 0;
+              }).catch(function() {});
+          },
+          handleSearch: function() { this.page = 1; this.loadData(); },
+          resetFilters: function() {
+            this.filters = { dishName: '', starRating: null, status: null };
+            this.filterStatus = null; this.page = 1; this.loadData(); this.loadStats();
+          },
+          filterByStatus: function(status) {
+            this.filters.status = this.filterStatus === status ? null : status;
+            this.filterStatus = this.filters.status;
+            this.page = 1; this.loadData();
+          },
+          viewDetail: function(row) {
+            this.detailData = row; this.detailImages = this.getImageList(row.images); this.detailVisible = true;
+          },
+          closeDetail: function() { this.detailVisible = false; this.detailData = {}; this.detailImages = []; },
+          // 修改点：重命名为 handleAudit，避免与 evaluation.js 全局 auditEvaluation 函数名冲突
+          handleAudit: function(row, status) {
+            var self = this;
+            var action = status === 1 ? '通过' : '拒绝';
+            self.$confirm('确认' + action + '该评价吗？', '提示', {
+              confirmButtonText: '确 定', cancelButtonText: '取 消',
+              type: status === 1 ? 'success' : 'warning'
+            }).then(function() {
+              return auditEvaluation(row.id, status);
+            }).then(function(res) {
+              if (String(res.code) === '1') {
+                self.$message.success('审核' + action + '成功');
+                self.loadData(); self.loadStats();
+              } else { self.$message.error(res.msg || '审核' + action + '失败'); }
+            }).catch(function(e) {
+              if (e !== 'cancel') console.error('审核操作失败:', e);
+            });
+          },
+          openReply: function(row) {
+            this.replyData = row; this.replyContent = ''; this.replyVisible = true;
+          },
+          closeReply: function() { this.replyVisible = false; this.replyData = {}; this.replyContent = ''; },
+          submitReply: function() {
+            var self = this;
+            if (!self.replyContent.trim()) { self.$message.warning('请输入回复内容'); return; }
+            self.replyLoading = true;
+            replyEvaluation(self.replyData.id, self.replyContent.trim()).then(function(res) {
+              if (String(res.code) === '1') {
+                self.$message.success('回复成功'); self.closeReply(); self.loadData();
+              } else { self.$message.error(res.msg || '回复失败'); }
+            }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)); })
+            .finally(function() { self.replyLoading = false; });
+          },
+          handleSizeChange: function(val) { this.pageSize = val; this.page = 1; this.loadData(); },
+          handleCurrentChange: function(val) { this.page = val; this.loadData(); },
+          // 修改点：新增 hasImages 安全判断，替代模板中的 row.images.length 直接访问
+          hasImages: function(images) {
+            if (!images) return false;
+            if (Array.isArray(images)) return images.length > 0;
+            if (typeof images === 'string') return images.trim().length > 0 && images !== '[]';
+            return false;
+          },
+          getImageList: function(images) {
+            if (!images) return []; if (Array.isArray(images)) return images;
+            try { var parsed = JSON.parse(images); return Array.isArray(parsed) ? parsed : []; } catch(e) { return images ? [images] : []; }
+          },
+          getImageUrl: function(name) {
+            if (!name) return ''; if (typeof name === 'string' && name.indexOf('http') === 0) return name;
+            return '/common/download?name=' + encodeURIComponent(name);
+          },
+          statusClass: function(status) {
+            if (status === 0) return 'pending'; if (status === 1) return 'approved'; if (status === 2) return 'rejected'; return '';
+          },
+          statusText: function(status) { var m = { 0: '待审核', 1: '已通过', 2: '已拒绝' }; return m[status] != null ? m[status] : '未知'; },
+          formatDate: function(d) { if (!d) return '-'; return d.replace('T', ' ').substring(0, 19); },
+          previewImage: function(url) { this.previewUrl = url; this.previewVisible = true; }
         }
-      },
-      created: function() { this.loadFilterOptions(); this.loadData(); this.loadStats(); },
-      methods: {
-        loadFilterOptions: function() {
-          var self = this; self.optionsLoading = true; self.optionsLoadError = false;
-          dishOptions().then(function(res) {
-            if (String(res.code) === '1' && res.data) {
-              self.filterOptions.names = res.data.names || [];
-            } else { self.optionsLoadError = true; self.$message.warning('加载菜品选项失败：' + (res.msg || '接口返回异常')); }
-          }).catch(function(err) {
-            if (err.message === 'NOTLOGIN') return;
-            self.optionsLoadError = true; console.error('加载菜品选项失败:', err);
-          }).finally(function() { self.optionsLoading = false; });
-        },
-        onFilterDropdownVisible: function(visible) {
-          if (visible && this.optionsLoadError) this.loadFilterOptions();
-        },
-        loadData: function() {
-          var self = this; self.loading = true;
-          var params = { page: self.page, pageSize: self.pageSize,
-            dishName: self.filters.dishName || undefined, status: self.filters.status, starRating: self.filters.starRating };
-          getEvaluationPage(params).then(function(res) {
-            if (String(res.code) === '1') {
-              self.tableData = res.data.records || []; self.total = res.data.total || 0;
-            } else { self.$message.error(res.msg || '加载失败'); }
-          }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)); })
-          .finally(function() { self.loading = false; });
-        },
-        loadStats: function() {
-          var self = this;
-          getEvaluationPage({ page: 1, pageSize: 1 }).then(function(res) {
-            if (String(res.code) === '1') self.stats.total = res.data.total || 0;
-          }).catch(function() {});
-          getPendingEvaluations({ page: 1, pageSize: 1 }).then(function(res) {
-            if (String(res.code) === '1') self.stats.pending = res.data.total || 0;
-          }).catch(function() {});
-          // 已通过和已拒绝从API获取
-          getEvaluationPage({ page: 1, pageSize: 1, status: 1 }).then(function(res) {
-            if (String(res.code) === '1') self.stats.approved = res.data.total || 0;
-          }).catch(function() {});
-          getEvaluationPage({ page: 1, pageSize: 1, status: 2 }).then(function(res) {
-            if (String(res.code) === '1') self.stats.rejected = res.data.total || 0;
-          }).catch(function() {});
-        },
-        handleSearch: function() { this.page = 1; this.loadData(); },
-        resetFilters: function() {
-          this.filters = { dishName: '', starRating: null, status: null };
-          this.filterStatus = null; this.page = 1; this.loadData(); this.loadStats();
-        },
-        filterByStatus: function(status) {
-          this.filters.status = this.filterStatus === status ? null : status;
-          this.filterStatus = this.filters.status;
-          this.page = 1; this.loadData();
-        },
-        viewDetail: function(row) {
-          this.detailData = row; this.detailImages = this.getImageList(row.images); this.detailVisible = true;
-        },
-        closeDetail: function() { this.detailVisible = false; this.detailData = {}; this.detailImages = []; },
-        auditEvaluation: function(row, status) {
-          var self = this;
-          var action = status === 1 ? '通过' : '拒绝';
-          self.$confirm('确认' + action + '该评价吗？', '提示', {
-            confirmButtonText: '确 定', cancelButtonText: '取 消',
-            type: status === 1 ? 'success' : 'warning'
-          }).then(function() {
-            return auditEvaluation(row.id, status);
-          }).then(function(res) {
-            if (String(res.code) === '1') {
-              self.$message.success('审核' + action + '成功');
-              self.loadData(); self.loadStats();
-            } else { self.$message.error(res.msg || '审核' + action + '失败'); }
-          }).catch(function() {});
-        },
-        auditDetail: function(status) {
-          var self = this;
-          self.auditEvaluation(self.detailData, status);
-          self.closeDetail();
-        },
-        openReply: function(row) {
-          this.replyData = row; this.replyContent = ''; this.replyVisible = true;
-        },
-        closeReply: function() { this.replyVisible = false; this.replyData = {}; this.replyContent = ''; },
-        submitReply: function() {
-          var self = this;
-          if (!self.replyContent.trim()) { self.$message.warning('请输入回复内容'); return; }
-          self.replyLoading = true;
-          replyEvaluation(self.replyData.id, self.replyContent.trim()).then(function(res) {
-            if (String(res.code) === '1') {
-              self.$message.success('回复成功'); self.closeReply(); self.loadData();
-            } else { self.$message.error(res.msg || '回复失败'); }
-          }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)); })
-          .finally(function() { self.replyLoading = false; });
-        },
-        handleSizeChange: function(val) { this.pageSize = val; this.page = 1; this.loadData(); },
-        handleCurrentChange: function(val) { this.page = val; this.loadData(); },
-        getImageList: function(images) {
-          if (!images) return []; if (Array.isArray(images)) return images;
-          try { return JSON.parse(images); } catch(e) { return images ? [images] : []; }
-        },
-        getImageUrl: function(name) {
-          if (!name) return ''; if (name.startsWith('http')) return name;
-          return '/common/download?name=' + name;
-        },
-        statusClass: function(status) {
-          if (status === 0) return 'pending'; if (status === 1) return 'approved'; if (status === 2) return 'rejected'; return '';
-        },
-        statusText: function(status) { var m = { 0: '待审核', 1: '已通过', 2: '已拒绝' }; return m[status] || '未知'; },
-        formatDate: function(d) { if (!d) return '-'; return d.replace('T', ' ').substring(0, 19); },
-        previewImage: function(url) { this.previewUrl = url; this.previewVisible = true; }
-      }
-    })
+      })
+    })();
   </script>
 </body>
 </html>

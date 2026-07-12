@@ -54,6 +54,6 @@ public class User implements Serializable {
     private Integer status;
 
     @Schema(description = "创建时间")
-    @TableField(value = "create_time")
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

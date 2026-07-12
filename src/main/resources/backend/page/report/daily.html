@@ -338,22 +338,23 @@
       </div>
 
       <!-- ========== 趋势图 + 分类销售 双图 ========== -->
+      <!-- 修改点：图表容器增加 min-height 防止变形，统一 class 便于响应式 -->
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;" class="daily-two-col">
-        <div class="chart-panel" style="margin-bottom:0;">
+        <div class="chart-panel" style="margin-bottom:0;display:flex;flex-direction:column;">
           <div class="chart-title">
             <i class="el-icon-data-line" style="color:#409eff;"></i>
             营收趋势
             <span style="font-size:12px;color:#c0c4cc;font-weight:400;margin-left:4px;">（近7天）</span>
           </div>
-          <div class="chart-box" id="trendChart"></div>
+          <div class="chart-box" id="trendChart" style="flex:1;min-height:360px;"></div>
         </div>
-        <div class="chart-panel" style="margin-bottom:0;">
+        <div class="chart-panel" style="margin-bottom:0;display:flex;flex-direction:column;">
           <div class="chart-title">
             <i class="el-icon-pie-chart" style="color:#e6a23c;"></i>
             菜品分类销售占比
             <span style="font-size:12px;color:#c0c4cc;font-weight:400;margin-left:4px;">（基于已选日期）</span>
           </div>
-          <div class="chart-box" id="categoryChart"></div>
+          <div class="chart-box" id="categoryChart" style="flex:1;min-height:360px;"></div>
         </div>
       </div>
 
@@ -531,21 +532,33 @@
         // queryDate 默认值已通过 data() 中闭包设置
       },
       mounted() {
+        var self = this;
         this.$nextTick(() => {
-          this.chart = echarts.init(document.getElementById('trendChart'))
-          this.categoryChart = echarts.init(document.getElementById('categoryChart'))
+          // 修改点：安全初始化图表，增加容器存在判断
+          var initChart = function(id) {
+            var el = document.getElementById(id);
+            if (!el) { console.warn('[daily] 图表容器未找到:', id); return null; }
+            return echarts.init(el);
+          };
+          this.chart = initChart('trendChart');
+          this.categoryChart = initChart('categoryChart');
           this.resizeHandler = () => {
-            if (this.chart) this.chart.resize()
-            if (this.categoryChart) this.categoryChart.resize()
-          }
-          window.addEventListener('resize', this.resizeHandler)
-          this.loadData()
+            if (this.chart && !this.chart.isDisposed()) this.chart.resize();
+            if (this.categoryChart && !this.categoryChart.isDisposed()) this.categoryChart.resize();
+          };
+          window.addEventListener('resize', this.resizeHandler);
+          // 修改点：延迟 resize 确保 Chart 容器已撑开
+          setTimeout(function() {
+            if (self.chart) self.chart.resize();
+            if (self.categoryChart) self.categoryChart.resize();
+          }, 400);
+          this.loadData();
         })
       },
       beforeDestroy() {
-        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler)
-        if (this.chart) this.chart.dispose()
-        if (this.categoryChart) this.categoryChart.dispose()
+        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
+        if (this.chart) { try { this.chart.dispose(); } catch(e) {} }
+        if (this.categoryChart) { try { this.categoryChart.dispose(); } catch(e) {} }
       },
       methods: {
         // 格式化日期为 yyyy-MM-dd
@@ -589,6 +602,8 @@
             const trendRes = await $axios.get('/api/dashboard/trend')
             if (String(trendRes.code) === '1') {
               this.renderChart(trendRes.data || [])
+            } else {
+              this.renderChart([])
             }
 
             // 分类销售数据
@@ -614,14 +629,23 @@
 
         renderChart(trendData) {
           if (!this.chart) return
+          if (!trendData || trendData.length === 0) {
+            this.chart.setOption({
+              title: { text: '暂无趋势数据', left: 'center', top: 'center',
+                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+            }, true)
+            return
+          }
           const dates   = trendData.map(t => t.date)
           const orders  = trendData.map(t => t.orderCount || 0)
           const amounts = trendData.map(t => Number(t.revenue) || 0)
           const hasData = dates.length > 0
+          // 修改点：根据数据量自适应柱宽，防止图表拥挤变形
+          var barW = dates.length <= 5 ? 32 : dates.length <= 10 ? 26 : 20;
           this.chart.setOption({
             tooltip: {
               trigger: 'axis',
-              axisPointer: { type: 'cross', crossStyle: { color: '#999' } },
+              axisPointer: { type: 'cross', crossStyle: { color: '#d4d7de' } },
               backgroundColor: 'rgba(255,255,255,0.96)',
               borderColor: '#e4e7ed',
               borderWidth: 1,
@@ -638,13 +662,14 @@
               }
             },
             legend: { data: ['订单数', '营业额'], bottom: 8, textStyle: { color: '#606266', fontSize: 13 } },
-            grid: { left: 55, right: 55, top: 20, bottom: 48 },
+            // 修改点：增大 top/bottom/right 防止双Y轴标签和 legend 被裁剪
+            grid: { left: 50, right: 65, top: 30, bottom: 52 },
             xAxis: {
               type: 'category',
               data: hasData ? dates : ['暂无数据'],
               axisLine: { lineStyle: { color: '#e4e7ed' } },
               axisTick: { show: false },
-              axisLabel: { color: '#909399', fontSize: 12 }
+              axisLabel: { color: '#909399', fontSize: 12, rotate: dates.length > 7 ? 30 : 0 }
             },
             yAxis: [
               {
@@ -665,7 +690,7 @@
             series: [
               {
                 name: '订单数', type: 'bar', data: hasData ? orders : [0],
-                barWidth: 26, barGap: '20%',
+                barWidth: barW, barGap: '20%',
                 itemStyle: {
                   borderRadius: [6, 6, 0, 0],
                   color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -693,6 +718,9 @@
               }
             ]
           }, true)
+          // 修改点：渲染后延迟 resize 确保在 flex 布局中尺寸正确
+          var self = this;
+          setTimeout(function() { if (self.chart && !self.chart.isDisposed()) self.chart.resize(); }, 200);
         },
 
         // 渲染分类销售饼图

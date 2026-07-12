@@ -37,6 +37,7 @@ public class UserControllerTest {
 
     @BeforeEach
     void setUp() {
+        BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 
         // 创建测试用户
@@ -59,7 +60,7 @@ public class UserControllerTest {
                 .content("{\"phone\":\"13900139000\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data").value("手机验证码短信发送成功"));
+                .andExpect(jsonPath("$.data").value("短信发送成功"));
     }
 
     @Test
@@ -88,31 +89,22 @@ public class UserControllerTest {
     @Test
     void testLoginWithVerifyCode() throws Exception {
         // 先发送验证码
-        mockMvc.perform(post("/user/sendMsg")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"phone\":\"13800138000\"}"))
-                .andExpect(status().isOk());
-
-        // 模拟 Session 中的验证码
         MockHttpSession session = (MockHttpSession) mockMvc.perform(post("/user/sendMsg")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"phone\":\"13800138001\"}"))
+                .content("{\"phone\":\"13800138000\"}"))
+                .andExpect(status().isOk())
                 .andReturn()
                 .getRequest()
                 .getSession();
 
-        // 手动设置验证码（模拟）
-        session.setAttribute("13800138001", "1234");
+        // 从 Session 中获取实际生成的验证码
+        String code = (String) session.getAttribute("smsCode_13800138000");
 
-        // 使用验证码登录
-        Map<String, Object> loginData = new HashMap<>();
-        loginData.put("phone", "13800138001");
-        loginData.put("code", "1234");
-
+        // 使用正确的验证码登录
         mockMvc.perform(post("/user/login")
                 .session(session)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"phone\":\"13800138001\",\"code\":\"1234\"}"))
+                .content("{\"phone\":\"13800138000\",\"code\":\"" + code + "\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }

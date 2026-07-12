@@ -257,6 +257,8 @@
           this.closeLoading()
         },
         mounted() {
+          // 修改点：将菜单数据与处理方法暴露到全局，供 iframe 内页面通过 window.parent 调用
+          window.menuList = this.menuList
           window.menuHandle = this.menuHandle
           // 修改点：监听窗口尺寸变化与 iframe 内容加载完成事件，动态调整 iframe 高度避免内容被裁剪
           this.initIframeAutoHeight()

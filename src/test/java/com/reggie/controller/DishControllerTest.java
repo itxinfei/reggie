@@ -41,6 +41,7 @@ public class DishControllerTest {
 
     @BeforeEach
     void setUp() {
+        BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 
         Dish dish = new Dish();

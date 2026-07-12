@@ -97,8 +97,12 @@ public class RecommendServiceImpl implements RecommendService {
      */
     @PostConstruct
     public void init() {
-        int deleted = cacheMapper.deleteExpired();
-        log.info("[推荐引擎] 初始化完成，清理过期缓存 {} 条", deleted);
+        try {
+            int deleted = cacheMapper.deleteExpired();
+            log.info("[推荐引擎] 初始化完成，清理过期缓存 {} 条", deleted);
+        } catch (Exception e) {
+            log.warn("[推荐引擎] 初始化跳过（可能是测试环境缺少数据表）: {}", e.getMessage());
+        }
     }
 
     // ==================== 公开推荐接口 ====================

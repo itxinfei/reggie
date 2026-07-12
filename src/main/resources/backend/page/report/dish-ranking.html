@@ -187,17 +187,22 @@
           if (rEl) self.chart = echarts.init(rEl);
           if (tEl) self.trendChart = echarts.init(tEl);
           self.resizeHandler = function() {
-            if (self.chart) self.chart.resize();
-            if (self.trendChart) self.trendChart.resize();
+            if (self.chart && !self.chart.isDisposed()) self.chart.resize();
+            if (self.trendChart && !self.trendChart.isDisposed()) self.trendChart.resize();
           };
           window.addEventListener('resize', self.resizeHandler);
+          // 修改点：延迟 resize 保障容器尺寸稳定
+          setTimeout(function() {
+            if (self.chart) self.chart.resize();
+            if (self.trendChart) self.trendChart.resize();
+          }, 400);
           self.loadData();
         });
       },
       beforeDestroy: function() {
         if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
-        if (this.chart) this.chart.dispose();
-        if (this.trendChart) this.trendChart.dispose();
+        if (this.chart) { try { this.chart.dispose(); } catch(e) {} }
+        if (this.trendChart) { try { this.trendChart.dispose(); } catch(e) {} }
       },
       methods: {
         loadCategories: function() {
@@ -264,16 +269,26 @@
                 textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
             }, true); return;
           }
+          // 修改点：使用 hexToRgba 替代不可靠的字符串替换
+          var hexToRgba = function(hex, alpha) {
+            var h = hex.replace('#','');
+            if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+            var r = parseInt(h.substring(0,2), 16);
+            var g = parseInt(h.substring(2,4), 16);
+            var b = parseInt(h.substring(4,6), 16);
+            return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+          };
           var colors = ['#ff4d4f', '#5470c6', '#91cc75'];
           var dates = data.dates || [];
           var series = (data.series || []).map(function(s, i) {
+            var col = colors[i] || '#909399';
             return {
               name: s.name, type: 'line', data: s.data || [], smooth: true,
               symbol: 'circle', symbolSize: 7,
-              lineStyle: { color: colors[i] || '#909399', width: 3 },
-              itemStyle: { color: colors[i] || '#909399', borderColor: '#fff', borderWidth: 2 },
+              lineStyle: { color: col, width: 3 },
+              itemStyle: { color: col, borderColor: '#fff', borderWidth: 2 },
               areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1, [
-                { offset: 0, color: (colors[i] || '#909399').replace(')', ',0.25)').replace('rgb', 'rgba') },
+                { offset: 0, color: hexToRgba(col, 0.25) },
                 { offset: 1, color: 'rgba(255,255,255,0.02)' }]) }
             };
           });
@@ -282,12 +297,18 @@
               borderColor: '#e4e7ed', borderWidth: 1, textStyle: { color: '#303133', fontSize: 13 } },
             legend: { data: (data.series || []).map(function(s) { return s.name; }),
               bottom: 8, textStyle: { fontSize: 12, color: '#606266' } },
-            grid: { left: 50, right: 30, top: 20, bottom: 48 },
+            // 修改点：增大 grid 空间
+            grid: { left: 55, right: 30, top: 25, bottom: 52 },
             xAxis: { type: 'category', data: dates, boundaryGap: false,
-              axisLine: { lineStyle: { color: '#e4e7ed' } }, axisTick: { show: false } },
-            yAxis: { type: 'value', name: '销量(份)', splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } } },
+              axisLine: { lineStyle: { color: '#e4e7ed' } }, axisTick: { show: false },
+              axisLabel: { color: '#909399', fontSize: 12 } },
+            yAxis: { type: 'value', name: '销量(份)',
+              nameTextStyle: { color: '#909399', fontSize: 12 },
+              splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } } },
             series: series
           }, true);
+          var chart = this.trendChart;
+          setTimeout(function() { if (chart && !chart.isDisposed()) chart.resize(); }, 200);
         },
         calcPercent: function(count) {
           if (!this.tableData.length) return 0;
@@ -341,7 +362,7 @@
                 formatter: function(p) { return p.value + ' 份'; } }
             }]
           }, true);
-          this.$nextTick(function() { if (this.chart) this.chart.resize(); }.bind(this));
+          this.$nextTick(function() { if (this.chart) { this.chart.resize(); } }.bind(this));
         },
         reset: function() {
           this.dateRange = []; this.limit = 10; this.categoryFilter = null; this.tableData = [];

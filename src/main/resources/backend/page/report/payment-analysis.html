@@ -17,78 +17,65 @@
     .payment-page { min-height: 100%; display: flex; flex-direction: column; }
     .payment-page .container { flex: 1; background: transparent; padding: 24px 32px 32px;
       min-width: 0; max-width: 1600px; margin: 0 auto; width: 100%; }
-
-    .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+    .payment-page .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
       background: #fff; padding: 16px 24px; border-radius: 14px; margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8); }
-    .filter-bar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .filter-bar .fl-label { font-size: 14px; color: #606266; font-weight: 500; flex-shrink: 0; }
-    .filter-bar .fl-spacer { flex: 1; min-width: 0; }
-
-    /* ========== KPI 卡片 ========== */
-    .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-    .kpi-card { background: #fff; border-radius: 14px; padding: 22px 24px; position: relative; overflow: hidden;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+      transition: box-shadow 0.3s; }
+    .payment-page .filter-bar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .payment-page .filter-bar .fl-label { font-size: 14px; color: #606266; font-weight: 500; flex-shrink: 0; }
+    .payment-page .filter-bar .fl-spacer { flex: 1; min-width: 0; }
+    .payment-page .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    /* 修改点：kpi-card 放在 .payment-page 作用域下 */
+    .payment-page .kpi-card { background: #fff; border-radius: 14px; padding: 22px 24px; position: relative; overflow: hidden;
       transition: all 0.3s cubic-bezier(0.4,0,0.2,1); box-shadow: 0 2px 16px rgba(0,0,0,0.06);
       border: 1px solid rgba(255,255,255,0.8); display: flex; flex-direction: column; justify-content: space-between;
       min-height: 130px; }
-    .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.10); }
-    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    .payment-page .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.10); }
+    .payment-page .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
       background: var(--gradient); opacity: 0.85; }
-    .kpi-card::after { content: ''; position: absolute; top: -40%; right: -25%;
+    .payment-page .kpi-card::after { content: ''; position: absolute; top: -40%; right: -25%;
       width: 160px; height: 160px; background: var(--gradient); border-radius: 50%;
       opacity: 0.05; transition: all 0.5s; }
-    .kpi-card:hover::after { transform: scale(1.15); opacity: 0.08; }
-    .kpi-card .kpi-icon-wrap { position: absolute; right: 18px; top: 20px; width: 48px; height: 48px;
+    .payment-page .kpi-card:hover::after { transform: scale(1.15); opacity: 0.08; }
+    .payment-page .kpi-card .kpi-icon-wrap { position: absolute; right: 18px; top: 20px; width: 48px; height: 48px;
       border-radius: 12px; background: var(--icon-bg); display: flex; align-items: center; justify-content: center;
       font-size: 24px; transition: all 0.3s; }
-    .kpi-card:hover .kpi-icon-wrap { transform: rotate(5deg) scale(1.1); }
-    .kpi-card .kpi-label { font-size: 13px; color: #909399; margin-bottom: 6px; font-weight: 500; }
-    .kpi-card .kpi-value { font-size: 28px; font-weight: 700; line-height: 1.2; margin-bottom: 4px;
+    .payment-page .kpi-card:hover .kpi-icon-wrap { transform: rotate(5deg) scale(1.1); }
+    .payment-page .kpi-card .kpi-label { font-size: 13px; color: #909399; margin-bottom: 6px; font-weight: 500; }
+    .payment-page .kpi-card .kpi-value { font-size: 28px; font-weight: 700; line-height: 1.2; margin-bottom: 4px;
       background: var(--gradient); -webkit-background-clip: text;
       -webkit-text-fill-color: transparent; background-clip: text; }
-    .kpi-card .kpi-sub { font-size: 12px; color: #909399; }
-    .kpi-card.primary  { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+    .payment-page .kpi-card .kpi-sub { font-size: 12px; color: #909399; }
+    .payment-page .kpi-card.primary  { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
       --icon-bg: linear-gradient(135deg, rgba(64,158,255,0.1) 0%, rgba(102,177,255,0.14) 100%); }
-    .kpi-card.success  { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+    .payment-page .kpi-card.success  { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
       --icon-bg: linear-gradient(135deg, rgba(103,194,58,0.1) 0%, rgba(133,206,97,0.14) 100%); }
-    .kpi-card.warning  { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
+    .payment-page .kpi-card.warning  { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
       --icon-bg: linear-gradient(135deg, rgba(230,162,60,0.1) 0%, rgba(235,181,99,0.14) 100%); }
-    .kpi-card.info     { --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
+    .payment-page .kpi-card.info     { --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
       --icon-bg: linear-gradient(135deg, rgba(144,147,153,0.1) 0%, rgba(166,169,173,0.14) 100%); }
-
-    /* ========== 图表面板 ========== */
-    .chart-panel { background: #fff; border-radius: 16px; padding: 24px;
+    .payment-page .chart-panel { background: #fff; border-radius: 16px; padding: 24px;
       box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
       transition: all 0.3s; margin-bottom: 20px; }
-    .chart-panel:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
-    .chart-panel .panel-title { font-size: 16px; font-weight: 600; color: #303133;
+    .payment-page .chart-panel:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .payment-page .chart-panel .panel-title { font-size: 16px; font-weight: 600; color: #303133;
       margin-bottom: 20px; padding-bottom: 14px; border-bottom: 2px solid #f0f2f5;
       display: flex; align-items: center; gap: 8px; }
-    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .chart-box { width: 100%; height: 380px; }
-
-    @media (max-width: 1200px) { .container { padding: 16px 20px 20px !important; }
-      .charts-row { grid-template-columns: 1fr; } .stats-cards { grid-template-columns: repeat(2, 1fr); }
-      .kpi-card .kpi-value { font-size: 24px; } }
-    @media (max-width: 768px) { .container { padding: 12px 16px 16px !important; }
-      .stats-cards { grid-template-columns: 1fr; gap: 12px; }
-      .kpi-card { padding: 18px; min-height: 110px; } .chart-box { height: 300px; } }
+    .payment-page .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .payment-page .chart-box { width: 100%; height: 380px; min-height: 300px; }
+    @media (max-width: 1200px) { .payment-page .container { padding: 16px 20px 20px !important; }
+      .payment-page .charts-row { grid-template-columns: 1fr; } .payment-page .stats-cards { grid-template-columns: repeat(2, 1fr); }
+      .payment-page .kpi-card .kpi-value { font-size: 24px; } }
+    @media (max-width: 768px) { .payment-page .container { padding: 12px 16px 16px !important; }
+      .payment-page .stats-cards { grid-template-columns: 1fr; gap: 12px; }
+      .payment-page .kpi-card { padding: 18px; min-height: 110px; } .payment-page .chart-box { height: 300px; min-height: 260px; } }
   </style>
 </head>
 <body>
   <div class="payment-page" id="report-payment-app" v-loading="loading">
     <div class="container">
 
-      <!-- ========== 工具栏 ========== -->
-      <div class="filter-bar">
-        <span class="fl-label"><i class="el-icon-date" style="margin-right:4px;"></i>日期范围</span>
-        <el-date-picker v-model="dateRange" clearable value-format="yyyy-MM-dd"
-          type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
-          size="small"></el-date-picker>
-        <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
-        <el-button size="small" class="btn-reset" icon="el-icon-refresh" @click="reset">重置</el-button>
-      </div>
-
+      <!-- 修改点：统计卡片移至 filter-bar 上方 -->
       <!-- ========== KPI 卡片 ========== -->
       <div class="stats-cards">
         <div class="kpi-card primary">
@@ -117,19 +104,31 @@
         </div>
       </div>
 
+      <!-- ========== 工具栏 ========== -->
+      <div class="filter-bar">
+        <span class="fl-label"><i class="el-icon-date" style="margin-right:4px;"></i>日期范围</span>
+        <el-date-picker v-model="dateRange" clearable value-format="yyyy-MM-dd"
+          type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
+          size="small"></el-date-picker>
+        <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
+        <el-button size="small" class="btn-reset" icon="el-icon-refresh" @click="reset">重置</el-button>
+        <span class="fl-spacer"></span>
+        <el-button type="success" size="small" icon="el-icon-download" @click="handleExport">导出 CSV</el-button>
+      </div>
+
       <!-- ========== 支付方式分布 ========== -->
       <div class="chart-panel">
         <div class="panel-title">📊 支付方式分布</div>
         <div class="charts-row">
-          <div class="chart-box" id="pieChart"></div>
-          <div class="chart-box" id="barChart"></div>
+          <div id="pieChart" class="chart-box"></div>
+          <div id="barChart" class="chart-box"></div>
         </div>
       </div>
 
       <!-- ========== 每日支付金额趋势 ========== -->
       <div class="chart-panel">
         <div class="panel-title">📈 每日支付金额趋势</div>
-        <div id="paymentTrendChart" style="width:100%;height:360px;"></div>
+        <div id="paymentTrendChart" style="width:100%;height:360px;min-height:300px;"></div>
       </div>
 
       <!-- ========== 数据表格 ========== -->
@@ -163,193 +162,230 @@
     var CHANNEL_LABEL = { wechat: '微信支付', alipay: '支付宝', balance: '余额支付', other: '其他' };
     var CHANNEL_COLOR = { wechat: '#07C160', alipay: '#1677FF', balance: '#E6A23C', other: '#909399' };
 
-    new Vue({
-      el: '#report-payment-app',
-      data: function() {
-        return {
-          loading: false, dateRange: [], tableData: [],
-          pieChart: null, barChart: null, trendChart: null, resizeHandler: null
-        }
-      },
-      computed: {
-        totalCount: function() { return this.tableData.reduce(function(s, r) { return s + (r.transactionCount || 0); }, 0); },
-        totalAmount: function() { return this.tableData.reduce(function(s, r) { return s + (Number(r.amount) || 0); }, 0); },
-        topChannel: function() {
-          if (!this.tableData.length) return '--';
-          var top = this.tableData.reduce(function(m, r) { return (r.transactionCount || 0) > (m.transactionCount || 0) ? r : m; }, this.tableData[0]);
-          return top.channel || '--';
-        }
-      },
-      created: function() {
-        var now = new Date();
-        var first = new Date(now.getFullYear(), now.getMonth(), 1);
-        var last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-        this.dateRange = [fmt(first), fmt(last)];
-      },
-      mounted: function() {
-        var self = this;
-        self.$nextTick(function() {
-          self.pieChart = echarts.init(document.getElementById('pieChart'));
-          self.barChart = echarts.init(document.getElementById('barChart'));
-          self.trendChart = echarts.init(document.getElementById('paymentTrendChart'));
-          self.resizeHandler = function() {
-            if (self.pieChart) self.pieChart.resize();
-            if (self.barChart) self.barChart.resize();
-            if (self.trendChart) self.trendChart.resize();
-          };
-          window.addEventListener('resize', self.resizeHandler);
-          self.loadData();
-        });
-      },
-      beforeDestroy: function() {
-        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
-        if (this.pieChart) this.pieChart.dispose();
-        if (this.barChart) this.barChart.dispose();
-        if (this.trendChart) this.trendChart.dispose();
-      },
-      methods: {
-        loadData: function() {
+    (function() {
+      new Vue({
+        el: '#report-payment-app',
+        data: function() {
+          return {
+            loading: false, dateRange: [], tableData: [],
+            pieChart: null, barChart: null, trendChart: null, resizeHandler: null
+          }
+        },
+        computed: {
+          totalCount: function() { return this.tableData.reduce(function(s, r) { return s + (r.transactionCount || 0); }, 0); },
+          totalAmount: function() { return this.tableData.reduce(function(s, r) { return s + (Number(r.amount) || 0); }, 0); },
+          topChannel: function() {
+            if (!this.tableData.length) return '--';
+            var top = this.tableData.reduce(function(m, r) { return (r.transactionCount || 0) > (m.transactionCount || 0) ? r : m; }, this.tableData[0]);
+            return CHANNEL_LABEL[top.key] || top.channel || '--';
+          }
+        },
+        created: function() {
+          var now = new Date();
+          var first = new Date(now.getFullYear(), now.getMonth(), 1);
+          var last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+          this.dateRange = [fmt(first), fmt(last)];
+        },
+        mounted: function() {
           var self = this;
-          if (!self.dateRange || self.dateRange.length < 2) {
-            self.$message.warning('请选择日期范围'); return;
-          }
-          self.loading = true;
-          reportPayment({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(res) {
-            if (String(res.code) === '1') {
-              self.tableData = self.convertToArray(res.data || {});
-              self.renderCharts(); self.loadPaymentTrend();
-            } else { self.$message.error(res.msg || '加载失败'); }
-          }).catch(function(err) { self.$message.error('请求失败：' + err); })
-          .finally(function() { self.loading = false; });
+          self.$nextTick(function() {
+            // 修改点：安全初始化图表
+            var initChart = function(id) {
+              var el = document.getElementById(id);
+              if (!el) { console.warn('[payment] 图表容器未找到:', id); return null; }
+              return echarts.init(el);
+            };
+            self.pieChart = initChart('pieChart');
+            self.barChart = initChart('barChart');
+            self.trendChart = initChart('paymentTrendChart');
+            self.resizeHandler = function() {
+              [self.pieChart, self.barChart, self.trendChart].forEach(function(ch) {
+                if (ch && !ch.isDisposed()) ch.resize();
+              });
+            };
+            window.addEventListener('resize', self.resizeHandler);
+            // 修改点：延迟 resize 确保容器已撑开
+            setTimeout(function() {
+              [self.pieChart, self.barChart, self.trendChart].forEach(function(ch) {
+                if (ch && !ch.isDisposed()) ch.resize();
+              });
+            }, 400);
+            self.loadData();
+          });
         },
-        loadPaymentTrend: function() {
-          var self = this;
-          if (!self.trendChart) return;
-          $axios.get('/api/report/payment/trend', { params: { startDate: self.dateRange[0], endDate: self.dateRange[1] } })
-            .then(function(res) { if (res.code === 1 && res.data) self.renderPaymentTrend(res.data); })
-            .catch(function() {});
+        beforeDestroy: function() {
+          if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
+          [this.pieChart, this.barChart, this.trendChart].forEach(function(ch) {
+            if (ch) try { ch.dispose(); } catch(e) {}
+          });
         },
-        renderPaymentTrend: function(data) {
-          if (!this.trendChart) return;
-          if (!data || !data.dates || !data.dates.length) {
-            this.trendChart.setOption({ title: { text: '暂无趋势数据', left: 'center', top: 'center',
-              textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } } }, true); return;
-          }
-          var dates = data.dates || [], self = this;
-          var makeAreaGrad = function(c) { return new echarts.graphic.LinearGradient(0,0,0,1, [{ offset:0,color:c+'33'},{ offset:1,color:c+'05' }]); };
-          this.trendChart.setOption({
-            tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)',
-              borderColor: '#e4e7ed', borderWidth: 1, textStyle: { color: '#303133', fontSize: 13 } },
-            legend: { data: ['微信支付', '支付宝', '余额支付'], bottom: 8, textStyle: { fontSize: 12, color: '#606266' } },
-            grid: { left: 55, right: 30, top: 20, bottom: 48 },
-            xAxis: { type: 'category', data: dates, boundaryGap: false,
-              axisLine: { lineStyle: { color: '#e4e7ed' } }, axisTick: { show: false },
-              axisLabel: { color: '#909399', fontSize: 12 } },
-            yAxis: { type: 'value', name: '金额(元)',
-              splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } } },
-            series: [
-              { name: '微信支付', type: 'line', data: data.wechat || [], smooth: true, symbol: 'circle', symbolSize: 6,
-                lineStyle: { color: '#07C160', width: 3 }, itemStyle: { color: '#07C160', borderColor: '#fff', borderWidth: 2 },
-                areaStyle: { color: makeAreaGrad('#07C160') } },
-              { name: '支付宝', type: 'line', data: data.alipay || [], smooth: true, symbol: 'circle', symbolSize: 6,
-                lineStyle: { color: '#1677FF', width: 3 }, itemStyle: { color: '#1677FF', borderColor: '#fff', borderWidth: 2 },
-                areaStyle: { color: makeAreaGrad('#1677FF') } },
-              { name: '余额支付', type: 'line', data: data.balance || [], smooth: true, symbol: 'circle', symbolSize: 6,
-                lineStyle: { color: '#E6A23C', width: 3 }, itemStyle: { color: '#E6A23C', borderColor: '#fff', borderWidth: 2 },
-                areaStyle: { color: makeAreaGrad('#E6A23C') } }
-            ]
-          }, true);
-        },
-        reset: function() {
-          this.dateRange = []; this.tableData = [];
-          if (this.pieChart) this.pieChart.clear();
-          if (this.barChart) this.barChart.clear();
-          if (this.trendChart) this.trendChart.clear();
-        },
-        convertToArray: function(data) {
-          return Object.keys(CHANNEL_LABEL).filter(function(k) { return data[k] != null; })
-            .map(function(k) { var item = data[k] || {}; return { key: k, channel: CHANNEL_LABEL[k],
-              transactionCount: item.count || 0, amount: item.amount != null ? item.amount : null }; });
-        },
-        calcPercent: function(count) { if (!this.totalCount) return 0; return Math.round(count / this.totalCount * 100); },
-        channelProgressColor: function(key) { return CHANNEL_COLOR[key] || '#909399'; },
-        formatMoney: function(val) { return Number(val || 0).toFixed(2); },
-        renderCharts: function() { this.renderPie(); this.renderBar(); },
-        renderPie: function() {
-          if (!this.pieChart || !this.tableData.length) {
-            if (this.pieChart) this.pieChart.setOption({ title: { text: '暂无支付数据', left: 'center', top: 'center',
-              textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } } }, true); return;
-          }
-          var pieData = this.tableData.filter(function(r) { return r.transactionCount > 0; })
-            .map(function(r) { return { name: r.channel, value: r.transactionCount,
-              itemStyle: { color: CHANNEL_COLOR[r.key] || '#909399' } }; });
-          this.pieChart.setOption({
-            color: ['#07C160','#1677FF','#E6A23C','#909399'],
-            tooltip: { trigger: 'item', backgroundColor: 'rgba(255,255,255,0.96)',
-              borderColor: '#e4e7ed', borderWidth: 1, textStyle: { color: '#303133', fontSize: 13 },
-              formatter: function(p) { return '<b>' + p.name + '</b><br/>' + p.marker + ' 笔数：<b>' + p.value + '</b>（' + p.percent + '%）'; } },
-            legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10,
-              textStyle: { color: '#606266', fontSize: 12 } },
-            series: [{ type: 'pie', radius: ['45%','68%'], center: ['50%','44%'],
-              avoidLabelOverlap: false, itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 3 },
-              label: { position: 'outside', formatter: '{b}\n{d}%', fontSize: 13, lineHeight: 18, color: '#606266' },
-              labelLine: { length: 25, length2: 20, lineStyle: { color: '#c0c4cc' } },
-              emphasis: { scaleSize: 10, label: { fontSize: 16, fontWeight: 'bold' } },
-              data: pieData.length ? pieData : [{ name: '暂无数据', value: 1, itemStyle: { color: '#e4e7ed' } }] }]
-          }, true);
-        },
-        renderBar: function() {
-          if (!this.barChart || !this.tableData.length) {
-            if (this.barChart) this.barChart.setOption({ title: { text: '暂无支付数据', left: 'center', top: 'center',
-              textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } } }, true); return;
-          }
-          var names = this.tableData.map(function(r) { return r.channel; });
-          var counts = this.tableData.map(function(r) { return r.transactionCount; });
-          var amounts = this.tableData.map(function(r) { return r.amount != null ? Number(r.amount).toFixed(2) : 0; });
-          var hasAmount = this.tableData.some(function(r) { return r.amount != null; });
-          var barW = names.length <= 2 ? 48 : names.length <= 3 ? 36 : 24;
-          var self = this;
-          this.barChart.setOption({
-            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-              backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e4e7ed', borderWidth: 1,
-              textStyle: { color: '#303133', fontSize: 13 },
-              formatter: function(ps) {
-                var h = '<b>' + ps[0].axisValue + '</b><br/>';
-                ps.forEach(function(p) {
-                  var v = p.seriesName === '交易金额' ? '¥' + p.value : p.value + ' 笔';
-                  h += p.marker + ' ' + p.seriesName + '：<b>' + v + '</b><br/>';
-                }); return h;
-              } },
-            legend: { data: hasAmount ? ['交易笔数', '交易金额'] : ['交易笔数'], bottom: 4,
-              textStyle: { fontSize: 12, color: '#606266' } },
-            grid: { left: 55, right: hasAmount ? 60 : 20, top: 20, bottom: 48 },
-            xAxis: { type: 'category', data: names, axisTick: { show: false },
-              axisLabel: { color: '#606266', interval: 0, fontSize: 13 } },
-            yAxis: [
-              { type: 'value', name: '笔数',
-                splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } },
+        methods: {
+          loadData: function() {
+            var self = this;
+            if (!self.dateRange || self.dateRange.length < 2) {
+              self.$message.warning('请选择日期范围'); return;
+            }
+            self.loading = true;
+            reportPayment({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(res) {
+              if (String(res.code) === '1') {
+                self.tableData = self.convertToArray(res.data || {});
+                self.$nextTick(function() { self.renderCharts(); self.loadPaymentTrend(); });
+              } else { self.$message.error(res.msg || '加载支付数据失败'); }
+            }).catch(function(err) { self.$message.error('请求失败：' + (err || '网络异常')); })
+            .finally(function() { self.loading = false; });
+          },
+          loadPaymentTrend: function() {
+            var self = this;
+            if (!self.trendChart) return;
+            $axios.get('/api/report/payment/trend', { params: { startDate: self.dateRange[0], endDate: self.dateRange[1] } })
+              .then(function(res) { if (res.code === 1 && res.data) self.renderPaymentTrend(res.data); })
+              .catch(function() {});
+          },
+          renderPaymentTrend: function(data) {
+            if (!this.trendChart) return;
+            if (!data || !data.dates || !data.dates.length) {
+              this.trendChart.setOption({ title: { text: '暂无趋势数据', left: 'center', top: 'center',
+                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } } }, true); return;
+            }
+            var dates = data.dates || [];
+            var makeAreaGrad = function(c) { return new echarts.graphic.LinearGradient(0,0,0,1, [{ offset:0,color:c+'33'},{ offset:1,color:c+'05' }]); };
+            this.trendChart.setOption({
+              tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)',
+                borderColor: '#e4e7ed', borderWidth: 1, textStyle: { color: '#303133', fontSize: 13 } },
+              legend: { data: ['微信支付', '支付宝', '余额支付'], bottom: 8, textStyle: { fontSize: 12, color: '#606266' } },
+              // 修改点：增大左/底部 padding 防止标签被裁剪
+              grid: { left: 55, right: 30, top: 25, bottom: 52 },
+              xAxis: { type: 'category', data: dates, boundaryGap: false,
+                axisLine: { lineStyle: { color: '#e4e7ed' } }, axisTick: { show: false },
                 axisLabel: { color: '#909399', fontSize: 12 } },
-              hasAmount ? { type: 'value', name: '金额',
-                axisLabel: { formatter: '¥{value}', color: '#909399', fontSize: 12 },
-                splitLine: { show: false } } : {}
-            ].filter(function(y) { return Object.keys(y).length; }),
-            series: [
-              { name: '交易笔数', type: 'bar', data: counts, barWidth: barW,
-                itemStyle: { borderRadius: [8, 8, 0, 0],
-                  color: function(p) { var key = Object.keys(CHANNEL_COLOR)[p.dataIndex]; return CHANNEL_COLOR[key] || '#909399'; } },
-                label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c} 笔' } },
-              hasAmount ? { name: '交易金额', type: 'line', yAxisIndex: 1, data: amounts,
-                smooth: true, symbol: 'emptyCircle', symbolSize: 8,
-                lineStyle: { color: '#fac858', width: 3 },
-                itemStyle: { color: '#fac858', borderColor: '#fff', borderWidth: 2 },
-                label: { show: true, position: 'top', fontSize: 12, fontWeight: 700, color: '#e6a23c',
-                  formatter: function(p) { return '¥' + Number(p.value).toFixed(0); } } } : null
-            ].filter(function(s) { return s; })
-          }, true);
+              yAxis: { type: 'value', name: '金额(元)',
+                nameTextStyle: { color: '#909399', fontSize: 12 },
+                splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } } },
+              series: [
+                { name: '微信支付', type: 'line', data: data.wechat || [], smooth: true, symbol: 'circle', symbolSize: 6,
+                  lineStyle: { color: '#07C160', width: 3 }, itemStyle: { color: '#07C160', borderColor: '#fff', borderWidth: 2 },
+                  areaStyle: { color: makeAreaGrad('#07C160') } },
+                { name: '支付宝', type: 'line', data: data.alipay || [], smooth: true, symbol: 'circle', symbolSize: 6,
+                  lineStyle: { color: '#1677FF', width: 3 }, itemStyle: { color: '#1677FF', borderColor: '#fff', borderWidth: 2 },
+                  areaStyle: { color: makeAreaGrad('#1677FF') } },
+                { name: '余额支付', type: 'line', data: data.balance || [], smooth: true, symbol: 'circle', symbolSize: 6,
+                  lineStyle: { color: '#E6A23C', width: 3 }, itemStyle: { color: '#E6A23C', borderColor: '#fff', borderWidth: 2 },
+                  areaStyle: { color: makeAreaGrad('#E6A23C') } }
+              ]
+            }, true);
+          },
+          reset: function() {
+            this.dateRange = []; this.tableData = [];
+            [this.pieChart, this.barChart, this.trendChart].forEach(function(ch) {
+              if (ch && !ch.isDisposed()) ch.clear();
+            });
+          },
+          convertToArray: function(data) {
+            return Object.keys(CHANNEL_LABEL).filter(function(k) { return data[k] != null; })
+              .map(function(k) { var item = data[k] || {}; return { key: k, channel: CHANNEL_LABEL[k],
+                transactionCount: item.count || 0, amount: item.amount != null ? item.amount : null }; });
+          },
+          calcPercent: function(count) { if (!this.totalCount) return 0; return Math.round(count / this.totalCount * 100); },
+          channelProgressColor: function(key) { return CHANNEL_COLOR[key] || '#909399'; },
+          formatMoney: function(val) { return Number(val || 0).toFixed(2); },
+          renderCharts: function() {
+            // 修改点：渲染前 resize 确保容器尺寸正确
+            [this.pieChart, this.barChart].forEach(function(ch) {
+              if (ch && !ch.isDisposed()) ch.resize();
+            });
+            this.renderPie(); this.renderBar();
+          },
+          renderPie: function() {
+            if (!this.pieChart || !this.tableData.length) {
+              if (this.pieChart) this.pieChart.setOption({ title: { text: '暂无支付数据', left: 'center', top: 'center',
+                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } } }, true); return;
+            }
+            var pieData = this.tableData.filter(function(r) { return r.transactionCount > 0; })
+              .map(function(r) { return { name: r.channel, value: r.transactionCount,
+                itemStyle: { color: CHANNEL_COLOR[r.key] || '#909399' } }; });
+            this.pieChart.setOption({
+              color: ['#07C160','#1677FF','#E6A23C','#909399'],
+              tooltip: { trigger: 'item', backgroundColor: 'rgba(255,255,255,0.96)',
+                borderColor: '#e4e7ed', borderWidth: 1, textStyle: { color: '#303133', fontSize: 13 },
+                formatter: function(p) { return '<b>' + p.name + '</b><br/>' + p.marker + ' 笔数：<b>' + p.value + '</b>（' + p.percent + '%）'; } },
+              legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10,
+                textStyle: { color: '#606266', fontSize: 12 } },
+              series: [{ type: 'pie', radius: ['45%','68%'], center: ['50%','44%'],
+                avoidLabelOverlap: false, itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 3 },
+                label: { position: 'outside', formatter: '{b}\n{d}%', fontSize: 13, lineHeight: 18, color: '#606266' },
+                labelLine: { length: 25, length2: 20, lineStyle: { color: '#c0c4cc' } },
+                emphasis: { scaleSize: 10, label: { fontSize: 16, fontWeight: 'bold' } },
+                data: pieData.length ? pieData : [{ name: '暂无数据', value: 1, itemStyle: { color: '#e4e7ed' } }] }]
+            }, true);
+          },
+          renderBar: function() {
+            if (!this.barChart || !this.tableData.length) {
+              if (this.barChart) this.barChart.setOption({ title: { text: '暂无支付数据', left: 'center', top: 'center',
+                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } } }, true); return;
+            }
+            var names = this.tableData.map(function(r) { return r.channel; });
+            var counts = this.tableData.map(function(r) { return r.transactionCount; });
+            var amounts = this.tableData.map(function(r) { return r.amount != null ? Number(r.amount).toFixed(2) : 0; });
+            var hasAmount = this.tableData.some(function(r) { return r.amount != null; });
+            var barW = names.length <= 2 ? 48 : names.length <= 3 ? 36 : 24;
+            this.barChart.setOption({
+              tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+                backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e4e7ed', borderWidth: 1,
+                textStyle: { color: '#303133', fontSize: 13 },
+                formatter: function(ps) {
+                  var h = '<b>' + ps[0].axisValue + '</b><br/>';
+                  ps.forEach(function(p) {
+                    var v = p.seriesName === '交易金额' ? '¥' + Number(p.value).toFixed(2) : p.value + ' 笔';
+                    h += p.marker + ' ' + p.seriesName + '：<b>' + v + '</b><br/>';
+                  }); return h;
+                } },
+              legend: { data: hasAmount ? ['交易笔数', '交易金额'] : ['交易笔数'], bottom: 4,
+                textStyle: { fontSize: 12, color: '#606266' } },
+              // 修改点：增大右 padding 防止金额标签被裁剪
+              grid: { left: 55, right: hasAmount ? 70 : 20, top: 25, bottom: 52 },
+              xAxis: { type: 'category', data: names, axisTick: { show: false },
+                axisLabel: { color: '#606266', interval: 0, fontSize: 13 } },
+              yAxis: [
+                { type: 'value', name: '笔数',
+                  nameTextStyle: { color: '#909399', fontSize: 12 },
+                  splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } },
+                  axisLabel: { color: '#909399', fontSize: 12 } },
+                hasAmount ? { type: 'value', name: '金额',
+                  nameTextStyle: { color: '#909399', fontSize: 12 },
+                  axisLabel: { formatter: '¥{value}', color: '#909399', fontSize: 12 },
+                  splitLine: { show: false } } : {}
+              ].filter(function(y) { return Object.keys(y).length; }),
+              series: [
+                { name: '交易笔数', type: 'bar', data: counts, barWidth: barW,
+                  itemStyle: { borderRadius: [8, 8, 0, 0],
+                    color: function(p) { var key = Object.keys(CHANNEL_COLOR)[p.dataIndex]; return CHANNEL_COLOR[key] || '#909399'; } },
+                  label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c} 笔' } },
+                hasAmount ? { name: '交易金额', type: 'line', yAxisIndex: 1, data: amounts,
+                  smooth: true, symbol: 'emptyCircle', symbolSize: 8,
+                  lineStyle: { color: '#fc8452', width: 3 },
+                  itemStyle: { color: '#fc8452', borderColor: '#fff', borderWidth: 2 },
+                  label: { show: true, position: 'top', fontSize: 12, fontWeight: 700, color: '#e6a23c',
+                    formatter: function(p) { return '¥' + Number(p.value).toFixed(0); } } } : null
+              ].filter(function(s) { return s; })
+            }, true);
+          },
+          handleExport: function() {
+            var self = this;
+            if (!self.dateRange || self.dateRange.length < 2) { self.$message.warning('请先选择日期范围'); return; }
+            reportExport({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(blob) {
+              if (blob && blob.type && blob.type.indexOf('json') > -1) { self.$message.error('导出失败，文件格式异常'); return; }
+              var link = document.createElement('a');
+              link.href = URL.createObjectURL(blob);
+              link.download = '支付分析_' + self.dateRange[0] + '_' + self.dateRange[1] + '.csv';
+              document.body.appendChild(link); link.click(); document.body.removeChild(link);
+              URL.revokeObjectURL(link.href);
+              self.$message.success('导出成功');
+            }).catch(function(err) { self.$message.error('导出失败：' + (err || '网络异常')); });
+          }
         }
-      }
-    })
+      })
+    })();
   </script>
 </body>
 </html>

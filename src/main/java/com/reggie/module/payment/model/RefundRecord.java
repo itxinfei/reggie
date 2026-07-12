@@ -1,5 +1,7 @@
 package com.reggie.module.payment.model;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -31,5 +33,6 @@ public class RefundRecord implements Serializable {
     /** 退款状态 */
     private String status;
     /** 创建时间 */
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdTime;
 }

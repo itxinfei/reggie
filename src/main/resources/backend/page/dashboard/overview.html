@@ -429,105 +429,105 @@
       transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* ========== 系统健康状态 ========== */
-    .health-grid {
+    /* ========== 运营速览面板 ========== */
+    .ops-summary-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .health-item {
-      display: flex;
-      align-items: center;
-      padding: 12px 16px;
-      background: #fafbfc;
-      border-radius: 10px;
-      overflow: hidden;
-      transition: all 0.2s;
-      border: 1px solid #f0f2f5;
-    }
-    .health-item:hover {
-      background: #f5f7fa;
-      transform: translateX(4px);
-    }
-    .health-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-right: 12px;
-      flex-shrink: 0;
-    }
-    .health-dot.ok { background: #67c23a; box-shadow: 0 0 8px rgba(103, 194, 58, 0.4); }
-    .health-dot.err { background: #f56c6c; box-shadow: 0 0 8px rgba(245, 108, 108, 0.4); }
-
-    .health-label {
-      font-size: 13px;
-      color: #606266;
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-weight: 500;
-    }
-    .health-value {
-      font-size: 12px;
-      color: #909399;
-      flex-shrink: 0;
-      margin-left: 8px;
-      font-weight: 600;
-    }
-
-    /* ========== 快捷入口 ========== */
-    .quick-actions {
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
       gap: 16px;
     }
-    .qa-card {
-      background: #fff;
+    .ops-metric {
+      background: #fafbfc;
       border-radius: 12px;
-      padding: 20px 12px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.8);
-      user-select: none;
+      padding: 18px 16px;
+      border: 1px solid #f0f2f5;
+      transition: all 0.2s;
     }
-    .qa-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-      border-color: #409eff;
+    .ops-metric:hover {
+      background: #f0f4ff;
+      border-color: #d9ecff;
     }
-    .qa-card:active {
-      transform: translateY(-2px);
-    }
-    .qa-icon {
-      font-size: 32px;
+    .ops-metric-label {
+      font-size: 12px;
+      color: #909399;
       margin-bottom: 8px;
-      transition: transform 0.3s;
-    }
-    .qa-card:hover .qa-icon {
-      transform: scale(1.15);
-    }
-    .qa-label {
-      font-size: 13px;
-      color: #606266;
       font-weight: 500;
     }
+    .ops-metric-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #303133;
+      line-height: 1.2;
+    }
+    .ops-metric-compare {
+      font-size: 12px;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .ops-metric-compare.up { color: #67c23a; }
+    .ops-metric-compare.down { color: #f56c6c; }
+    .ops-metric-compare.flat { color: #909399; }
+
+    .ops-progress {
+      margin-top: 12px;
+    }
+    .ops-progress-bar {
+      height: 8px;
+      background: #f0f2f5;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .ops-progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .ops-progress-label {
+      font-size: 12px;
+      color: #909399;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* 系统状态精简条 */
+    .ops-sys-bar {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid #f0f2f5;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .ops-sys-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #909399;
+    }
+    .ops-sys-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .ops-sys-dot.ok { background: #67c23a; }
+    .ops-sys-dot.err { background: #f56c6c; }
 
     /* ========== 响应式设计 ========== */
     @media (max-width: 1200px) {
       .container {
         padding: 16px 20px 20px !important;
       }
-      .quick-actions {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
-      }
       .stats-cards {
         grid-template-columns: repeat(2, 1fr);
         gap: 14px;
+      }
+      .ops-summary-grid {
+        grid-template-columns: 1fr 1fr;
       }
       .kpi-card {
         padding: 20px;
@@ -547,31 +547,18 @@
       .redis-flow-tag {
         display: none;
       }
-      .health-grid {
-        grid-template-columns: 1fr 1fr;
-      }
     }
 
     @media (max-width: 768px) {
       .container {
         padding: 12px 16px 16px !important;
       }
-      .quick-actions {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 10px;
-      }
-      .qa-card {
-        padding: 14px 8px;
-      }
-      .qa-icon {
-        font-size: 26px;
-      }
-      .qa-label {
-        font-size: 12px;
-      }
       .stats-cards {
         grid-template-columns: 1fr;
         gap: 12px;
+      }
+      .ops-summary-grid {
+        grid-template-columns: 1fr;
       }
       .kpi-card {
         padding: 18px;
@@ -604,9 +591,6 @@
       }
       .kpi-card .kpi-sub {
         font-size: 11px;
-      }
-      .health-grid {
-        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -646,6 +630,7 @@
           <div class="kpi-value">{{ overview.totalOrders || 0 }}</div>
           <div class="kpi-sub">
             完成率 {{ overview.completionRate || 0 }}%
+            <span v-if="yesterdayOrders > 0" :class="['kpi-trend', orderTrendClass]" v-text="orderTrendText"></span>
             <span :class="['cache-tag', overview.cacheSource === 'Redis' ? 'redis' : 'mysql']">{{ overview.cacheSource || 'MySQL' }}</span>
           </div>
         </div>
@@ -653,7 +638,10 @@
           <div class="kpi-icon-wrapper">💰</div>
           <div class="kpi-label">今日营业额 (元)</div>
           <div class="kpi-value">{{ formatMoney(overview.totalRevenue) }}</div>
-          <div class="kpi-sub">客单价 ¥{{ overview.avgAmount || '0.00' }}</div>
+          <div class="kpi-sub">
+            客单价 ¥{{ overview.avgAmount || '0.00' }}
+            <span v-if="yesterdayRevenue > 0" :class="['kpi-trend', revenueTrendClass]" v-text="revenueTrendText"></span>
+          </div>
         </div>
         <div class="kpi-card warning">
           <div class="kpi-icon-wrapper">⏳</div>
@@ -668,7 +656,7 @@
           <div class="kpi-label">注册用户 / 在职员工</div>
           <div class="kpi-value">{{ overview.totalUsers || 0 }} <span style="font-size:18px;color:#c0c4cc;">/</span> {{ overview.activeEmployees || 0 }}</div>
           <div class="kpi-sub">
-            Redis: {{ health.redisAvailable ? '✅' : '❌' }} | DB: {{ health.dbAvailable ? '✅' : '❌' }}
+            数据来源: {{ overview.cacheSource || 'MySQL' }} | 刷新于 {{ lastRefreshTime }}
           </div>
         </div>
       </div>
@@ -689,42 +677,6 @@
           </div>
         </div>
         <el-button type="warning" size="small" plain @click="goTo('page/inventory/material-list.html')">去补货</el-button>
-      </div>
-
-      <!-- ========== 快捷入口 ========== -->
-      <div class="quick-actions" style="margin-bottom:24px;">
-        <div class="qa-card" @click="goTo('page/food/list.html')">
-          <div class="qa-icon">🍽️</div>
-          <div class="qa-label">菜品管理</div>
-        </div>
-        <div class="qa-card" @click="goTo('page/order/list.html')">
-          <div class="qa-icon">📋</div>
-          <div class="qa-label">订单管理</div>
-        </div>
-        <div class="qa-card" @click="goTo('page/inventory/material-list.html')">
-          <div class="qa-icon">🥬</div>
-          <div class="qa-label">进销存</div>
-        </div>
-        <div class="qa-card" @click="goTo('page/dining/table-list.html')">
-          <div class="qa-icon">🪑</div>
-          <div class="qa-label">桌台管理</div>
-        </div>
-        <div class="qa-card" @click="goTo('page/delivery/order-list.html')">
-          <div class="qa-icon">🛵</div>
-          <div class="qa-label">配送订单</div>
-        </div>
-        <div class="qa-card" @click="goTo('page/report/daily.html')">
-          <div class="qa-icon">📈</div>
-          <div class="qa-label">经营报表</div>
-        </div>
-        <div class="qa-card" @click="goTo('page/member-center/coupon-list.html')">
-          <div class="qa-icon">🎫</div>
-          <div class="qa-label">优惠券</div>
-        </div>
-        <div class="qa-card" @click="goTo('page/member/list.html')">
-          <div class="qa-icon">👤</div>
-          <div class="qa-label">员工管理</div>
-        </div>
       </div>
 
       <!-- ========== 图表区域: 趋势图 + 订单状态饼图 ========== -->
@@ -757,37 +709,64 @@
         </div>
 
         <div class="bottom-panel">
-          <div class="panel-title">🖥 系统状态</div>
-          <div class="health-grid">
-            <div class="health-item">
-              <span :class="['health-dot', health.redisAvailable ? 'ok' : 'err']"></span>
-              <span class="health-label">Redis 缓存</span>
-              <span class="health-value">{{ health.redisAvailable ? '正常' : '离线' }}</span>
+          <div class="panel-title">📋 今日运营速览</div>
+          <div class="ops-summary-grid">
+            <!-- 订单完成度 -->
+            <div class="ops-metric">
+              <div class="ops-metric-label">订单完成度</div>
+              <div class="ops-metric-value">{{ overview.completionRate || 0 }}%</div>
+              <div class="ops-progress">
+                <div class="ops-progress-bar">
+                  <div class="ops-progress-fill" :style="{ width: (overview.completionRate || 0) + '%', background: 'linear-gradient(90deg, #409eff, #66b1ff)' }"></div>
+                </div>
+                <div class="ops-progress-label">
+                  <span>已完成 {{ overview.completedOrders || 0 }}</span>
+                  <span>总计 {{ overview.totalOrders || 0 }}</span>
+                </div>
+              </div>
             </div>
-            <div class="health-item">
-              <span :class="['health-dot', health.dbAvailable ? 'ok' : 'err']"></span>
-              <span class="health-label">数据库连接</span>
-              <span class="health-value">{{ health.dbAvailable ? '正常' : '离线' }}</span>
+            <!-- 客单价 -->
+            <div class="ops-metric">
+              <div class="ops-metric-label">客单价</div>
+              <div class="ops-metric-value">¥{{ overview.avgAmount || '0.00' }}</div>
+              <div class="ops-metric-compare" :class="revenueTrendClass" v-if="yesterdayRevenue > 0">
+                {{ revenueTrendText }} vs 昨日
+              </div>
             </div>
-            <div class="health-item">
-              <span class="health-dot ok"></span>
-              <span class="health-label">操作系统</span>
-              <span class="health-value">{{ health.osName || '--' }}</span>
+            <!-- 对比昨日订单 -->
+            <div class="ops-metric">
+              <div class="ops-metric-label">对比昨日订单量</div>
+              <div class="ops-metric-value">{{ yesterdayOrders || '--' }} 单</div>
+              <div class="ops-metric-compare" :class="orderTrendClass" v-if="yesterdayOrders > 0">
+                {{ orderTrendText }}
+              </div>
+              <div class="ops-metric-compare flat" v-else>暂无昨日数据</div>
             </div>
-            <div class="health-item">
-              <span class="health-dot ok"></span>
-              <span class="health-label">Java 版本</span>
-              <span class="health-value">{{ health.javaVersion || '--' }}</span>
+            <!-- 对比昨日营业额 -->
+            <div class="ops-metric">
+              <div class="ops-metric-label">对比昨日营业额</div>
+              <div class="ops-metric-value">¥{{ formatMoney(yesterdayRevenue) }}</div>
+              <div class="ops-metric-compare" :class="revenueTrendClass" v-if="yesterdayRevenue > 0">
+                {{ revenueTrendText }}
+              </div>
+              <div class="ops-metric-compare flat" v-else>暂无昨日数据</div>
             </div>
-            <div class="health-item">
-              <span class="health-dot ok"></span>
-              <span class="health-label">CPU 核心数</span>
-              <span class="health-value">{{ health.availableProcessors || 0 }} 核</span>
+          </div>
+          <!-- 系统状态精简条 -->
+          <div class="ops-sys-bar">
+            <div class="ops-sys-item">
+              <span :class="['ops-sys-dot', health.redisAvailable ? 'ok' : 'err']"></span>
+              Redis {{ health.redisAvailable ? '正常' : '离线' }}
             </div>
-            <div class="health-item">
-              <span class="health-dot ok"></span>
-              <span class="health-label">JVM 内存</span>
-              <span class="health-value">{{ health.freeMemoryMB || 0 }} / {{ health.totalMemoryMB || 0 }} MB</span>
+            <div class="ops-sys-item">
+              <span :class="['ops-sys-dot', health.dbAvailable ? 'ok' : 'err']"></span>
+              DB {{ health.dbAvailable ? '正常' : '离线' }}
+            </div>
+            <div class="ops-sys-item">
+              JVM {{ health.freeMemoryMB || 0 }}/{{ health.totalMemoryMB || 0 }} MB
+            </div>
+            <div class="ops-sys-item">
+              CPU {{ health.availableProcessors || 0 }}核
             </div>
           </div>
         </div>
@@ -828,8 +807,15 @@
           trendChart: null,
           statusChart: null,
           refreshTimer: null,
-          // 修改点：记录resize处理函数引用，用于正确解绑
-          _resizeHandler: null
+          _resizeHandler: null,
+          // 修改点：昨日对比数据
+          yesterdayOrders: 0,
+          yesterdayRevenue: 0,
+          orderTrendClass: 'neutral',
+          orderTrendText: '--',
+          revenueTrendClass: 'neutral',
+          revenueTrendText: '--',
+          lastRefreshTime: '--'
         }
       },
       created() {
@@ -878,10 +864,16 @@
               this.health = data.health || {};
               this.serverTime = data.serverTime;
 
-              // 修改点：加载库存预警数据
+              // 修改点：计算昨日对比
+              this.calcYesterdayCompare();
+              // 修改点：记录刷新时间
+              var now = new Date();
+              this.lastRefreshTime = ('0' + now.getHours()).slice(-2) + ':'
+                + ('0' + now.getMinutes()).slice(-2) + ':'
+                + ('0' + now.getSeconds()).slice(-2);
+
               this.loadInventoryAlert();
 
-              // 更新图表
               this.$nextTick(() => {
                 this.renderTrendChart();
                 this.renderStatusChart();
@@ -904,6 +896,45 @@
               this.inventoryAlert = res.data || null;
             }
           } catch (err) { /* 静默失败 */ }
+        },
+
+        // 修改点：从趋势数据计算昨日对比
+        calcYesterdayCompare() {
+          var trend = this.trend || [];
+          if (trend.length < 2) {
+            this.yesterdayOrders = 0;
+            this.yesterdayRevenue = 0;
+            this.orderTrendClass = 'neutral';
+            this.orderTrendText = '--';
+            this.revenueTrendClass = 'neutral';
+            this.revenueTrendText = '--';
+            return;
+          }
+          var today = trend[trend.length - 1];
+          var yesterday = trend[trend.length - 2];
+          var todayOrders = today.orderCount || 0;
+          var yesterdayOrdersVal = yesterday.orderCount || 0;
+          var todayRevenue = Number(today.revenue) || 0;
+          var yesterdayRevenueVal = Number(yesterday.revenue) || 0;
+
+          this.yesterdayOrders = yesterdayOrdersVal;
+          this.yesterdayRevenue = yesterdayRevenueVal;
+
+          // 订单对比
+          if (yesterdayOrdersVal > 0) {
+            var orderChange = ((todayOrders - yesterdayOrdersVal) / yesterdayOrdersVal * 100);
+            this.orderTrendClass = orderChange > 0 ? 'up' : orderChange < 0 ? 'down' : 'neutral';
+            this.orderTrendText = (orderChange > 0 ? '↑' : orderChange < 0 ? '↓' : '→')
+              + ' ' + Math.abs(orderChange).toFixed(1) + '%';
+          }
+
+          // 营业额对比
+          if (yesterdayRevenueVal > 0) {
+            var revenueChange = ((todayRevenue - yesterdayRevenueVal) / yesterdayRevenueVal * 100);
+            this.revenueTrendClass = revenueChange > 0 ? 'up' : revenueChange < 0 ? 'down' : 'neutral';
+            this.revenueTrendText = (revenueChange > 0 ? '↑' : revenueChange < 0 ? '↓' : '→')
+              + ' ' + Math.abs(revenueChange).toFixed(1) + '%';
+          }
         },
 
         // 检查ECharts是否已加载（CDN可能延迟）
@@ -1166,31 +1197,29 @@
           if (val === null || val === undefined) return '0.00'
           return Number(val).toFixed(2)
         },
-        // 快捷入口跳转
+        // 修改点：统一页面跳转（供库存预警按钮等使用）
         goTo(url) {
           try {
-            if (window.parent && window.parent !== window) {
-              var menuList = window.parent.menuList || []
-              var target = menuList.find(function(item) {
-                if (item.url === url) return true
-                if (item.children) {
-                  return item.children.some(function(sub) { return sub.url === url })
+            if (window.parent && window.parent !== window && typeof window.parent.menuHandle === 'function') {
+              var menuList = window.parent.menuList;
+              if (menuList && menuList.length) {
+                for (var i = 0; i < menuList.length; i++) {
+                  var item = menuList[i];
+                  if (item.url === url) { window.parent.menuHandle(item, false); return; }
+                  if (item.children && item.children.length) {
+                    for (var j = 0; j < item.children.length; j++) {
+                      if (item.children[j].url === url) {
+                        window.parent.menuHandle(item.children[j], false);
+                        return;
+                      }
+                    }
+                  }
                 }
-                return false
-              })
-              if (target) {
-                if (target.url === url) {
-                  window.parent.menuHandle(target, false)
-                } else {
-                  var sub = target.children.find(function(s) { return s.url === url })
-                  if (sub) window.parent.menuHandle(sub, false)
-                }
-                return
               }
             }
-            window.location.href = url
+            window.location.href = url;
           } catch (e) {
-            window.location.href = url
+            window.location.href = url;
           }
         }
       }

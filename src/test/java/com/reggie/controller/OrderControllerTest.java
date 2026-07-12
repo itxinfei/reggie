@@ -56,8 +56,8 @@ public class OrderControllerTest {
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 
-        jdbcTemplate.update("INSERT INTO user (id, name, phone, status) VALUES (?, ?, ?, ?)",
-                1L, "测试用户", "13800138000", 1);
+        jdbcTemplate.update("INSERT INTO user (id, name, phone, status, create_time) VALUES (?, ?, ?, ?, ?)",
+                1L, "测试用户", "13800138000", 1, java.time.LocalDateTime.now());
 
         AddressBook address = new AddressBook();
         address.setId(1L);

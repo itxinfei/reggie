@@ -191,6 +191,8 @@ public class UserController {
             user = new User();
             user.setPhone(phone);
             user.setStatus(1);
+            // 设置租户ID，确保新用户关联到当前租户
+            user.setTenantId(BaseContext.getCurrentTenantId());
             userService.save(user);
         }
 
