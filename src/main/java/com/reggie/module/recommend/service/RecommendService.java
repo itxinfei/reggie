@@ -5,12 +5,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * <p>
  * 智能推荐服务接口
- * 基于协同过滤、内容推荐、热门排行等多算法融合的菜品推荐引擎
- * 修改点：新增概览页真实统计方法，替换原先Math.random()假数据
+ * </p>
+ * <p>基于协同过滤、内容推荐、热门排行等多算法融合的菜品推荐引擎</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface RecommendService {
 

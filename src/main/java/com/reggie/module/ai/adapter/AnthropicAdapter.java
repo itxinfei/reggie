@@ -10,22 +10,11 @@ import java.net.HttpURLConnection;
 import java.util.*;
 
 /**
- * Anthropic Messages API 适配器
  * <p>
- * 支持 Claude 系列模型：
- * claude-3-opus / claude-3-sonnet / claude-3-haiku / claude-3.5-sonnet 等。
+ * Anthropic Messages API 适配器，支持 Claude 系列模型。
  * </p>
  *
- * <p><b>Anthropic API 特点：</b></p>
- * <ul>
- *   <li>使用 {@code x-api-key} 头而非 {@code Authorization: Bearer}</li>
- *   <li>必须携带 {@code anthropic-version: 2023-06-01} 版本头</li>
- *   <li>{@code max_tokens} 是必填参数</li>
- *   <li>system prompt 放在顶层 {@code system} 字段，而非 messages 数组中</li>
- *   <li>响应 content 是数组 {@code [{type: "text", text: "..."}]}</li>
- * </ul>
- *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-10
  */
 @Slf4j

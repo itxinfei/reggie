@@ -44,6 +44,13 @@ public class RechargeRecordController {
     @Autowired
     private MemberService memberService;
 
+    /**
+     * 分页查询会员充值记录
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param phone 会员手机号（可选，精确查询）
+     * @return 充值记录分页结果（含关联会员信息）
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询会员充值记录，支持按手机号搜索，返回关联会员信息（名称、手机号）")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -124,6 +131,10 @@ public class RechargeRecordController {
     /**
      * 充值统计
      * 返回全平台充值总览数据：累计总额、今日/本月数据、近12月趋势、支付方式分布
+     */
+    /**
+     * 充值统计
+     * @return 全平台充值总览数据（累计总额、今日/本月数据、近12月趋势、支付方式分布）
      */
     @GetMapping("/stats")
     @Operation(summary = "充值统计", description = "获取全平台充值统计数据：累计总额、今日/本月金额与笔数、近12月趋势、支付方式分布")

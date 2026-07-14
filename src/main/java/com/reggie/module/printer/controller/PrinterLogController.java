@@ -35,16 +35,27 @@ public class PrinterLogController {
     @Autowired
     private PrinterLogService printerLogService;
 
+    /**
+     * 分页查询打印日志
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @param orderId 订单ID（可选）
+     * @param printType 打印类型（可选）
+     * @param status 状态（可选）
+     * @param beginTime 开始日期（可选）
+     * @param endTime 结束日期（可选）
+     * @return 分页结果
+     */
     @GetMapping("/page")
-    @Operation(summary = "分页查询", description = "分页查询打印日志，支持按订单ID、打印类型、状态、时间范围筛选")
+    @Operation(summary = "分页查询打印日志", description = "分页查询打印日志，支持按订单ID、打印类型、状态、时间范围筛选")
     public R<Page<PrinterLog>> page(
-            int page,
-            int pageSize,
-            @RequestParam(required = false) Long orderId,
-            @RequestParam(required = false) String printType,
-            @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) String beginTime,
-            @RequestParam(required = false) String endTime) {
+            @Parameter(description = "页码") int page,
+            @Parameter(description = "每页条数") int pageSize,
+            @Parameter(description = "订单ID（可选）") @RequestParam(required = false) Long orderId,
+            @Parameter(description = "打印类型（可选）") @RequestParam(required = false) String printType,
+            @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "开始日期（可选）") @RequestParam(required = false) String beginTime,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) String endTime) {
 
         Page<PrinterLog> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<PrinterLog> qw = new LambdaQueryWrapper<>();

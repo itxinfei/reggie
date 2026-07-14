@@ -6,10 +6,11 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 支付宝支付渠道适配器
- * 实现与支付宝支付平台的交互逻辑
+ * <p>
+ * 支付宝支付渠道适配器，实现与支付宝支付平台的交互逻辑。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

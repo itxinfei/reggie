@@ -5,10 +5,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * 配送平台工厂
- * 根据平台类型返回对应的平台适配器实例
+ * <p>
+ * 配送平台工厂，根据平台类型返回对应的平台适配器实例。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Component

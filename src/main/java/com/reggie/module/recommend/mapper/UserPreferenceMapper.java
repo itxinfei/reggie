@@ -10,29 +10,40 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 用户偏好标签 Mapper
- * 修改点：新增口味偏好分布统计查询，替换原先硬编码假数据
+ * <p>
+ * 用户偏好标签 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface UserPreferenceMapper extends BaseMapper<UserPreferenceTag> {
 
     /**
      * 查询用户指定类型的偏好标签，按权重降序
+     *
+     * @param userId 用户ID
+     * @param tagType 标签类型
+     * @return 偏好标签列表（按权重降序）
      */
     @Select("SELECT * FROM user_preference_tag WHERE user_id = #{userId} AND tag_type = #{tagType} ORDER BY tag_value DESC")
     List<UserPreferenceTag> findByUserAndType(@Param("userId") Long userId, @Param("tagType") Integer tagType);
 
     /**
      * 查询用户所有偏好标签
+     *
+     * @param userId 用户ID
+     * @return 所有偏好标签
      */
     @Select("SELECT * FROM user_preference_tag WHERE user_id = #{userId} ORDER BY tag_type, tag_value DESC")
     List<UserPreferenceTag> findByUserId(@Param("userId") Long userId);
 
     /**
      * 统计用户偏好标签数量
+     *
+     * @param userId 用户ID
+     * @return 偏好标签数量
      */
     @Select("SELECT COUNT(*) FROM user_preference_tag WHERE user_id = #{userId}")
     int countByUserId(@Param("userId") Long userId);

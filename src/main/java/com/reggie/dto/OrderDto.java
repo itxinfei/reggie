@@ -8,10 +8,12 @@ import lombok.EqualsAndHashCode;
 import java.util.List;
 
 /**
+ * <p>
  * 订单数据传输对象
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

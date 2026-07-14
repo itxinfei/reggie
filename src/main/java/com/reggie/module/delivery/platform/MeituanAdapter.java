@@ -7,10 +7,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 美团平台适配器
- * 实现与美团外卖平台的交互逻辑
+ * <p>
+ * 美团平台适配器，实现与美团外卖平台的交互逻辑。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

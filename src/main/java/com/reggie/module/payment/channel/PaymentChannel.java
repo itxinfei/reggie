@@ -3,10 +3,11 @@ package com.reggie.module.payment.channel;
 import java.util.Map;
 
 /**
- * 支付渠道接口（策略模式）
- * 定义与第三方支付平台（如支付宝、微信支付）的交互规范
+ * <p>
+ * 支付渠道接口（策略模式），定义与第三方支付平台的交互规范。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 public interface PaymentChannel {

@@ -16,8 +16,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * <p>
  * 操作日志查看Controller
  * 系统管理模块下的操作日志查看
+ * </p>
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
@@ -30,6 +35,14 @@ public class SysOperationLogController {
 
     /**
      * 操作日志分页查询
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @param module 模块名称
+     * @param operationType 操作类型
+     * @param operatorName 操作人姓名
+     * @param beginTime 开始时间
+     * @param endTime 结束时间
+     * @return 分页结果
      */
     @GetMapping("/page")
     @Operation(summary = "操作日志分页查询")
@@ -58,6 +71,9 @@ public class SysOperationLogController {
 
     /**
      * 查询指定业务记录的操作日志
+     * @param tableName 表名
+     * @param bizId 业务记录ID
+     * @return 操作日志列表
      */
     @GetMapping("/biz")
     @Operation(summary = "查询业务操作日志")
@@ -70,6 +86,7 @@ public class SysOperationLogController {
 
     /**
      * 操作日志统计
+     * @return 统计信息（今日操作数、总操作数）
      */
     @GetMapping("/stats")
     @Operation(summary = "操作日志统计")

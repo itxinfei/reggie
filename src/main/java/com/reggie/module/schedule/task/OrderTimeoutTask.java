@@ -18,10 +18,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 定时任务组件
- * 包含：订单超时自动取消、每日经营统计、库存预警
+ * <p>
+ * 定时任务组件，包含订单超时自动取消、每日经营统计、库存预警等定时任务。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

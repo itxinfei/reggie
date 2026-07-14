@@ -5,10 +5,12 @@ import com.reggie.entity.OrderDetail;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 订单明细Mapper接口
+ * <p>
+ * 订单明细 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface OrderDetailMapper extends BaseMapper<OrderDetail> {

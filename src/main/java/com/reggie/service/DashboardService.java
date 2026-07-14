@@ -4,10 +4,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * <p>
  * 数据概览仪表盘服务接口，聚合系统核心指标，通过Redis缓存降低数据库查询压力
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface DashboardService {
 

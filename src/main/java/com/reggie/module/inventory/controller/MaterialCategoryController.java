@@ -36,6 +36,12 @@ public class MaterialCategoryController {
     @Autowired
     private MaterialCategoryService materialCategoryService;
 
+    /**
+     * 分页查询食材分类列表
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询食材分类列表，按排序字段升序排列")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -48,6 +54,11 @@ public class MaterialCategoryController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 新增食材分类
+     * @param category 食材分类信息
+     * @return 操作结果
+     */
     @PostMapping
     @Operation(summary = "新增分类", description = "创建新的食材分类")
     public R<String> save(@RequestBody MaterialCategory category) {
@@ -55,6 +66,11 @@ public class MaterialCategoryController {
         return R.success("新增分类成功");
     }
 
+    /**
+     * 修改食材分类
+     * @param category 食材分类信息
+     * @return 操作结果
+     */
     @PutMapping
     @Operation(summary = "修改分类", description = "更新食材分类信息")
     public R<String> update(@RequestBody MaterialCategory category) {
@@ -70,6 +86,11 @@ public class MaterialCategoryController {
         return R.success("删除分类成功");
     }
 
+    /**
+     * 根据ID查询食材分类
+     * @param id 分类ID
+     * @return 分类详情
+     */
     @GetMapping("/{id}")
     @Operation(summary = "根据id查询", description = "根据ID查询食材分类详情")
     @Parameter(name = "id", description = "分类ID", required = true)
@@ -81,6 +102,10 @@ public class MaterialCategoryController {
         return R.success(category);
     }
 
+    /**
+     * 查询所有食材分类
+     * @return 分类列表
+     */
     @GetMapping("/list")
     @Operation(summary = "查询所有", description = "查询所有食材分类列表，按排序字段升序排列")
     public R<List<MaterialCategory>> list() {

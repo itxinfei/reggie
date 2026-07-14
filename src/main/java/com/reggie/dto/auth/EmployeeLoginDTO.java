@@ -7,10 +7,12 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
 /**
+ * <p>
  * 员工登录DTO
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Data
 @Schema(description = "员工登录信息")

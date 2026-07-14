@@ -9,16 +9,24 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * AI对话会话 Mapper
+ * <p>
+ * AI对话会话 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface AIConversationMapper extends BaseMapper<AIConversation> {
 
     /**
      * 查询用户的对话列表（分页）
+     *
+     * @param userId 用户ID
+     * @param isDeleted 是否删除
+     * @param offset 偏移量
+     * @param limit 条数
+     * @return 会话列表
      */
     List<AIConversation> selectUserConversations(@Param("userId") Long userId,
                                                   @Param("isDeleted") Integer isDeleted,

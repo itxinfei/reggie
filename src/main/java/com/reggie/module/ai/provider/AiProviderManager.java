@@ -20,32 +20,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AI供应商管理器（核心调度器）
  * <p>
- * 从数据库读取当前激活的供应商配置，通过适配器注册表将请求分发给对应格式的适配器。
+ * AI供应商管理器（核心调度器），从数据库读取当前激活的供应商配置，
+ * 通过适配器注册表将请求分发给对应格式的适配器。
  * </p>
  *
- * <p><b>适配器架构：</b></p>
- * <pre>
- *   chat()  →  查找适配器  →  适配器.chat()
- *        ┌──────────────────┐
- *        │ AiModelAdapter   │  (接口)
- *        ├──────────────────┤
- *        │ OpenAI 兼容格式    │  → GPT / DeepSeek / Qwen / GLM / Kimi / api.iamhc.cn ...
- *        │ Anthropic 格式    │  → Claude 系列
- *        │ 百度 ERNIE Bot    │  → 文心一言
- *        │ ...更多适配器...   │  → 随时扩展
- *        └──────────────────┘
- * </pre>
- *
- * <p><b>扩展新模型只需三步：</b></p>
- * <ol>
- *   <li>创建适配器类继承 {@code BaseModelAdapter}，实现请求/响应格式</li>
- *   <li>在 {@link #initAdapters()} 中注册：{@code registerAdapter(new XxxAdapter())}</li>
- *   <li>在后台管理系统中创建供应商配置，{@code apiFormat} 设为适配器的 {@code getFormatId()}</li>
- * </ol>
- *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-10
  */
 @Slf4j

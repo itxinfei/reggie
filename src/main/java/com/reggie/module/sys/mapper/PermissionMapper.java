@@ -9,25 +9,38 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * 权限Mapper
+ * <p>
+ * 权限 Mapper 接口
+ * </p>
+ *
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface PermissionMapper extends BaseMapper<Permission> {
 
     /**
      * 根据权限标识查询
+     *
+     * @param permissionKey 权限标识
+     * @return 权限信息
      */
     @Select("SELECT * FROM permission WHERE permission_key = #{permissionKey} AND status = 1")
     Permission findByPermissionKey(@Param("permissionKey") String permissionKey);
 
     /**
      * 查询所有权限（用于权限树构建）
+     *
+     * @return 所有启用权限列表
      */
     @Select("SELECT * FROM permission WHERE status = 1 ORDER BY sort ASC, id ASC")
     List<Permission> listAllEnabled();
 
     /**
      * 根据角色ID查询权限列表
+     *
+     * @param roleId 角色ID
+     * @return 权限列表
      */
     @Select("SELECT p.* FROM permission p " +
             "INNER JOIN role_permission rp ON p.id = rp.permission_id " +

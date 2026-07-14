@@ -42,6 +42,14 @@ public class PurchaseOrderController {
     @Autowired
     private PurchaseOrderService purchaseOrderService;
 
+    /**
+     * 分页查询采购单列表
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param status 采购单状态（可选）
+     * @param supplierId 供应商ID（可选）
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询采购单列表，支持按状态、供应商筛选，按创建时间降序排列")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -61,6 +69,11 @@ public class PurchaseOrderController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 创建采购单
+     * @param dto 采购单创建请求
+     * @return 采购单信息
+     */
     @PostMapping
     @Operation(summary = "创建采购单", description = "创建新的采购单并关联供应商")
     public R<PurchaseOrder> create(@Validated @RequestBody CreatePurchaseOrderDTO dto) {
@@ -79,6 +92,11 @@ public class PurchaseOrderController {
         return R.success(po);
     }
 
+    /**
+     * 查询采购单明细
+     * @param id 采购单ID
+     * @return 采购单明细列表
+     */
     @GetMapping("/detail/{id}")
     @Operation(summary = "查询采购单明细", description = "根据采购单ID查询所有明细项")
     @Parameter(name = "id", description = "采购单ID", required = true)
@@ -87,6 +105,11 @@ public class PurchaseOrderController {
         return R.success(details);
     }
 
+    /**
+     * 为采购单添加明细项
+     * @param dto 采购单明细请求
+     * @return 操作结果
+     */
     @PostMapping("/addDetail")
     @Operation(summary = "添加明细", description = "为采购单添加食材明细项")
     public R<String> addDetail(@Validated @RequestBody AddPurchaseDetailDTO dto) {
@@ -94,6 +117,11 @@ public class PurchaseOrderController {
         return R.success("添加明细成功");
     }
 
+    /**
+     * 确认采购单收货
+     * @param id 采购单ID
+     * @return 操作结果
+     */
     @PutMapping("/receive/{id}")
     @Operation(summary = "收货", description = "确认采购单收货并自动增加库存")
     @Parameter(name = "id", description = "采购单ID", required = true)
@@ -102,6 +130,11 @@ public class PurchaseOrderController {
         return R.success("收货成功");
     }
 
+    /**
+     * 取消采购单
+     * @param id 采购单ID
+     * @return 操作结果
+     */
     @PutMapping("/cancel/{id}")
     @Operation(summary = "取消", description = "取消采购单")
     @Parameter(name = "id", description = "采购单ID", required = true)
@@ -110,6 +143,11 @@ public class PurchaseOrderController {
         return R.success("取消成功");
     }
 
+    /**
+     * 审核通过采购单
+     * @param id 采购单ID
+     * @return 操作结果
+     */
     @PutMapping("/approve/{id}")
     @Operation(summary = "审核通过", description = "审核通过采购单，将草稿状态转为已下单状态，允许后续收货")
     @Parameter(name = "id", description = "采购单ID", required = true)

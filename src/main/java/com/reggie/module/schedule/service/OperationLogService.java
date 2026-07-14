@@ -9,11 +9,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * <p>
  * 操作日志服务接口
- * 记录系统操作日志，支持分页查询和过期清理
+ * </p>
+ * <p>记录系统操作日志，支持分页查询和过期清理</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface OperationLogService extends IService<OperationLog> {
 

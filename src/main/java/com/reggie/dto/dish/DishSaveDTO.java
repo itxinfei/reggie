@@ -12,10 +12,12 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
+ * <p>
  * 菜品新增/修改DTO
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Data
 @Schema(description = "菜品信息")

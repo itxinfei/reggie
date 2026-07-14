@@ -45,6 +45,16 @@ public class PrinterConfigController {
     @Autowired
     private PrinterConfigService printerConfigService;
 
+    /**
+     * 分页查询打印机配置列表
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param name 打印机名称（可选，模糊查询）
+     * @param brand 品牌型号（可选，模糊查询）
+     * @param type 连接类型（可选）
+     * @param status 状态（可选）
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询打印机配置列表，自动过滤当前租户数据，支持按名称、品牌、连接类型、状态筛选")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -75,6 +85,11 @@ public class PrinterConfigController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 新增打印机配置
+     * @param printerConfig 打印机配置信息
+     * @return 操作结果
+     */
     @PostMapping
     @Operation(summary = "新增配置", description = "创建新的打印机配置")
     public R<String> save(@RequestBody PrinterConfig printerConfig) {
@@ -85,6 +100,11 @@ public class PrinterConfigController {
         return R.success("新增打印机配置成功");
     }
 
+    /**
+     * 修改打印机配置
+     * @param printerConfig 打印机配置信息
+     * @return 操作结果
+     */
     @PutMapping
     @Operation(summary = "修改配置", description = "更新打印机配置信息")
     public R<String> update(@RequestBody PrinterConfig printerConfig) {
@@ -103,6 +123,11 @@ public class PrinterConfigController {
         return R.success("删除打印机配置成功");
     }
 
+    /**
+     * 根据ID查询打印机配置
+     * @param id 配置ID
+     * @return 配置详情
+     */
     @GetMapping("/{id}")
     @Operation(summary = "查询配置", description = "根据ID查询打印机配置详情")
     @Parameter(name = "id", description = "配置ID", required = true)
@@ -114,6 +139,11 @@ public class PrinterConfigController {
         return R.error("没有查询到对应打印机配置");
     }
 
+    /**
+     * 查询打印机配置列表
+     * @param printType 打印类型（可选）
+     * @return 配置列表
+     */
     @GetMapping("/list")
     @Operation(summary = "列表查询", description = "查询打印机配置列表，支持按打印类型筛选")
     @Parameter(name = "printType", description = "打印类型（可选）：BILL-小票、KITCHEN-厨房单、DELIVERY-配送单")

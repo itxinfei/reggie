@@ -7,10 +7,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 抖音外卖平台适配器
- * 实现与抖音外卖平台的交互逻辑（OAuth2.0 鉴权 + 订单/菜品/库存 API）
+ * <p>
+ * 抖音外卖平台适配器，实现与抖音外卖平台的交互逻辑。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-11
  */
 @Slf4j

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.reggie.common.SecurityConstants;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -17,7 +18,8 @@ import java.time.LocalDateTime;
  * 员工实体
  */
 @Data
-@Schema(description = "员工实体")
+@TableName("employee")
+@Schema(description = "员工")
 public class Employee implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -61,19 +63,19 @@ public class Employee implements Serializable {
     @Schema(description = "租户ID", example = "1")
     private Long tenantId;
 
-    @Schema(description = "创建时间")
+    @Schema(description = "创建时间", example = "2024-01-01 12:00:00")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    @Schema(description = "更新时间")
+    @Schema(description = "更新时间", example = "2024-01-01 12:00:00")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-    @Schema(description = "创建人ID")
+    @Schema(description = "创建人ID", example = "1")
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
-    @Schema(description = "修改人ID")
+    @Schema(description = "修改人ID", example = "1")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 

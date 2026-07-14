@@ -7,11 +7,13 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
+ * <p>
  * 采购订单服务接口
- * 提供采购订单的创建、明细添加、收货确认、取消等功能
+ * </p>
+ * <p>提供采购订单的创建、明细添加、收货确认、取消等功能</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface PurchaseOrderService extends IService<PurchaseOrder> {
 

@@ -15,10 +15,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * MyBatis-Plus 配置类
- * 配置多租户插件和分页插件
+ * <p>
+ * MyBatis-Plus配置类，配置多租户插件和分页插件。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Configuration

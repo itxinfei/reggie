@@ -96,9 +96,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     private DiningTableService diningTableService;
 
     /**
-     * 用户下单
+     * 用户下单（从购物车生成订单）
+     * 流程：查询购物车 → 验证用户和地址 → 生成订单和明细 → 扣减库存 → 清空购物车 → 触发打印
      *
-     * @param orders
+     * @param orders 订单信息
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -305,29 +306,74 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     /**
-     * 根据订单明细扣减菜品库存（乐观锁原子操作）
+     * 根据订单明细回退菜品库存（取消/拒单时调用）
      */
-    private void deductStockForOrderDetails(List<OrderDetail> orderDetails) {
+    private void refundStockForOrderDetails(List<OrderDetail> orderDetails) {
         for (OrderDetail detail : orderDetails) {
             int number = detail.getNumber() != null ? detail.getNumber() : 1;
             BigDecimal qty = new BigDecimal(number);
 
-            // 单品菜品：乐观锁原子扣减
+            // 单品菜品：增加库存
             if (detail.getDishId() != null) {
-                deductStockAtomic(detail.getDishId(), qty);
+                refundStockAtomic(detail.getDishId(), qty);
             }
 
-            // 套餐菜品：扣减套餐内所有菜品的库存
+            // 套餐菜品：回退套餐内所有菜品的库存
             if (detail.getSetmealId() != null) {
                 LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
                 sdWrapper.eq(SetmealDish::getSetmealId, detail.getSetmealId());
                 List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
                 for (SetmealDish sd : setmealDishes) {
                     int copies = sd.getCopies() != null ? sd.getCopies() : 1;
-                    deductStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)));
+                    refundStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)));
                 }
             }
         }
+    }
+
+    /**
+     * 遍历购物车中的菜品/套餐，回退对应库存（取消订单时调用）
+     */
+    private void refundStockForOrder(List<ShoppingCart> shoppingCarts) {
+        for (ShoppingCart item : shoppingCarts) {
+            int number = item.getNumber() != null ? item.getNumber() : 1;
+            BigDecimal qty = new BigDecimal(number);
+
+            // 单品菜品：直接增加库存
+            if (item.getDishId() != null) {
+                refundStockAtomic(item.getDishId(), qty);
+            }
+
+            // 套餐：回退套餐内所有菜品的库存
+            if (item.getSetmealId() != null) {
+                LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
+                sdWrapper.eq(SetmealDish::getSetmealId, item.getSetmealId());
+                List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
+                for (SetmealDish sd : setmealDishes) {
+                    int copies = sd.getCopies() != null ? sd.getCopies() : 1;
+                    refundStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)));
+                }
+            }
+        }
+    }
+
+    /**
+     * 使用乐观锁原子增加菜品库存（取消/拒单时回退库存）
+     */
+    private void refundStockAtomic(Long dishId, BigDecimal qty) {
+        if (dishId == null || qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Dish::getId, dishId);
+        updateWrapper.setSql("stock_qty = IFNULL(stock_qty, 0) + " + qty.toPlainString());
+        dishService.update(updateWrapper);
+
+        // 补货后如果之前是停售状态且库存大于最低库存，自动恢复起售
+        if (dishService != null) {
+            dishService.autoToggleSoldOut(dishId);
+        }
+        log.info("[库存回退] 菜品ID={} 回退{}份", dishId, qty);
     }
 
     /**
@@ -348,6 +394,32 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             if (item.getSetmealId() != null) {
                 LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
                 sdWrapper.eq(SetmealDish::getSetmealId, item.getSetmealId());
+                List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
+                for (SetmealDish sd : setmealDishes) {
+                    int copies = sd.getCopies() != null ? sd.getCopies() : 1;
+                    deductStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)));
+                }
+            }
+        }
+    }
+
+    /**
+     * 根据订单明细扣减菜品库存（乐观锁原子操作）
+     */
+    private void deductStockForOrderDetails(List<OrderDetail> orderDetails) {
+        for (OrderDetail detail : orderDetails) {
+            int number = detail.getNumber() != null ? detail.getNumber() : 1;
+            BigDecimal qty = new BigDecimal(number);
+
+            // 单品菜品：乐观锁原子扣减
+            if (detail.getDishId() != null) {
+                deductStockAtomic(detail.getDishId(), qty);
+            }
+
+            // 套餐菜品：扣减套餐内所有菜品的库存
+            if (detail.getSetmealId() != null) {
+                LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
+                sdWrapper.eq(SetmealDish::getSetmealId, detail.getSetmealId());
                 List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
                 for (SetmealDish sd : setmealDishes) {
                     int copies = sd.getCopies() != null ? sd.getCopies() : 1;
@@ -476,6 +548,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
     /**
      * 再来一单（将历史订单商品添加到购物车）
+     * 自动合并购物车中已存在的商品（累加数量）
      *
      * @param orderId 原订单ID
      */
@@ -577,9 +650,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     /**
-     * 拒单：待接单(2) → 已取消(5)
+     * 拒单：待接单(2) → 已取消(5)，同时回退库存
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void rejectOrder(Long id) {
         Orders order = this.getById(id);
         if (order == null) {
@@ -590,7 +664,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
         order.setStatus(Orders.STATUS_CANCELLED);
         this.updateById(order);
-        log.warn("订单已拒单: id={}, number={}", id, order.getNumber());
+
+        // 拒单时回退库存
+        refundStockByOrderId(id);
+
+        log.warn("订单已拒单（库存已回退）: id={}, number={}", id, order.getNumber());
     }
 
     /**
@@ -612,11 +690,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     /**
-     * 取消订单：任意非完成/取消状态 → 已取消(5)
+     * 取消订单：任意非完成/取消状态 → 已取消(5)，同时回退库存
      * @param id 订单ID
      * @param reason 取消原因
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Long id, String reason) {
         Orders order = this.getById(id);
         if (order == null) {
@@ -633,7 +712,29 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             order.setRemark(reason);
         }
         this.updateById(order);
-        log.warn("订单已取消: id={}, number={}, reason={}", id, order.getNumber(), reason);
+
+        // 取消订单时回退库存
+        refundStockByOrderId(id);
+
+        log.warn("订单已取消（库存已回退）: id={}, number={}, reason={}", id, order.getNumber(), reason);
+    }
+
+    /**
+     * 根据订单ID回退库存
+     * 查询订单明细，逐项回退菜品/套餐库存
+     */
+    private void refundStockByOrderId(Long orderId) {
+        try {
+            LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(OrderDetail::getOrderId, orderId);
+            List<OrderDetail> details = orderDetailService.list(wrapper);
+            if (details != null && !details.isEmpty()) {
+                refundStockForOrderDetails(details);
+            }
+        } catch (Exception e) {
+            // 库存回退失败不影响取消/拒单结果，记录日志告警
+            log.error("[库存回退] 订单ID={} 回退库存失败: {}", orderId, e.getMessage(), e);
+        }
     }
 
     /**
@@ -710,11 +811,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     // ==================== 幂等性保护 ====================
 
     /**
-     * 生成幂等令牌：userId_timestamp_random6
+     * 生成幂等令牌：userId_timestamp_uuid（使用UUID保证唯一性和安全性）
      */
     private String generateIdempotencyKey(Long userId) {
         return userId + "_" + System.currentTimeMillis() + "_"
-            + String.format("%06d", (int)(Math.random() * 1000000));
+            + java.util.UUID.randomUUID().toString().substring(0, 8);
     }
 
     /**

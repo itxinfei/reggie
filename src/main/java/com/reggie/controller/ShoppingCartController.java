@@ -3,7 +3,11 @@ package com.reggie.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.entity.Dish;
+import com.reggie.entity.Setmeal;
 import com.reggie.entity.ShoppingCart;
+import com.reggie.service.DishService;
+import com.reggie.service.SetmealService;
 import com.reggie.service.ShoppingCartService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,6 +39,12 @@ public class ShoppingCartController {
     @Autowired
     private ShoppingCartService shoppingCartService;
 
+    @Autowired
+    private DishService dishService;
+
+    @Autowired
+    private SetmealService setmealService;
+
     /**
      * 添加购物车
      * @param shoppingCart
@@ -56,6 +66,23 @@ public class ShoppingCartController {
 
         Long dishId = shoppingCart.getDishId();
 
+        // 从服务端获取菜品/套餐价格（防止客户端篡改）
+        if (dishId != null) {
+            Dish dish = dishService.getById(dishId);
+            if (dish != null) {
+                shoppingCart.setName(dish.getName());
+                shoppingCart.setImage(dish.getImage());
+                shoppingCart.setAmount(dish.getPrice());
+            }
+        } else if (shoppingCart.getSetmealId() != null) {
+            Setmeal setmeal = setmealService.getById(shoppingCart.getSetmealId());
+            if (setmeal != null) {
+                shoppingCart.setName(setmeal.getName());
+                shoppingCart.setImage(setmeal.getImage());
+                shoppingCart.setAmount(setmeal.getPrice());
+            }
+        }
+
         LambdaQueryWrapper<ShoppingCart> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ShoppingCart::getUserId,currentId);
 
@@ -73,10 +100,14 @@ public class ShoppingCartController {
         ShoppingCart cartServiceOne = shoppingCartService.getOne(queryWrapper);
 
         if(cartServiceOne != null){
-            //如果已经存在，就在原来数量基础上加一
-            Integer number = cartServiceOne.getNumber();
-            cartServiceOne.setNumber(number + 1);
-            shoppingCartService.updateById(cartServiceOne);
+            //如果已经存在，就在原来数量基础上加一（使用原子操作防止并发）
+            int updated = shoppingCartService.addQuantityAtomically(cartServiceOne.getId(), 1);
+            if (updated > 0) {
+                cartServiceOne.setNumber(cartServiceOne.getNumber() + 1);
+            } else {
+                // 并发冲突，重新查询
+                cartServiceOne = shoppingCartService.getById(cartServiceOne.getId());
+            }
         }else{
             //如果不存在，则添加到购物车，数量默认就是一
             shoppingCart.setNumber(1);
@@ -107,7 +138,7 @@ public class ShoppingCartController {
     }
 
     /**
-     * 减商品
+     * 减商品（使用原子操作防止并发竞态）
      * @param shoppingCart
      * @return
      */
@@ -115,11 +146,32 @@ public class ShoppingCartController {
     @Operation(summary = "减少购物车商品", description = "减少购物车中商品的数量")
     @Parameter(name = "shoppingCart", description = "购物车信息", required = true)
     public R<ShoppingCart> sub(@RequestBody ShoppingCart shoppingCart) {
-        ShoppingCart result = shoppingCartService.sub(shoppingCart);
-        if (result == null) {
+        // 先查找到购物车项
+        LambdaQueryWrapper<ShoppingCart> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ShoppingCart::getUserId, BaseContext.getCurrentId());
+        if (shoppingCart.getDishId() != null) {
+            wrapper.eq(ShoppingCart::getDishId, shoppingCart.getDishId());
+        } else if (shoppingCart.getSetmealId() != null) {
+            wrapper.eq(ShoppingCart::getSetmealId, shoppingCart.getSetmealId());
+        } else {
+            return R.error("缺少菜品或套餐ID");
+        }
+
+        ShoppingCart cartItem = shoppingCartService.getOne(wrapper);
+        if (cartItem == null) {
+            return R.error("购物车商品不存在");
+        }
+
+        // 使用原子操作减一，防止并发竞态
+        int affected = shoppingCartService.subQuantityAtomically(cartItem.getId());
+        if (affected > 0) {
+            cartItem.setNumber(cartItem.getNumber() - 1);
+            return R.success(cartItem);
+        } else {
+            // 数量已为1，删除后返回null
+            shoppingCartService.removeById(cartItem.getId());
             return R.success(null);
         }
-        return R.success(result);
     }
 
     /**

@@ -115,7 +115,7 @@ public class RecommendServiceImpl implements RecommendService {
         Long tenantId = BaseContext.getCurrentTenantId();
 
         // 1. 尝试从缓存获取
-        RecommendationCache cache = cacheMapper.findValidCache(userId, RecommendationCache.TYPE_DISH);
+        RecommendationCache cache = cacheMapper.findValidCache(userId, RecommendationCache.TYPE_DISH, tenantId);
         if (cache != null) {
             List<Long> cachedIds = parseDishIds(cache.getDishIds());
             if (!cachedIds.isEmpty()) {
@@ -155,7 +155,7 @@ public class RecommendServiceImpl implements RecommendService {
         Long tenantId = BaseContext.getCurrentTenantId();
 
         // 检查缓存
-        RecommendationCache cache = cacheMapper.findValidCache(userId, RecommendationCache.TYPE_SETMEAL);
+        RecommendationCache cache = cacheMapper.findValidCache(userId, RecommendationCache.TYPE_SETMEAL, tenantId);
         if (cache != null) {
             List<Long> cachedIds = parseDishIds(cache.getDishIds());
             if (!cachedIds.isEmpty()) {
@@ -409,6 +409,9 @@ public class RecommendServiceImpl implements RecommendService {
             // 2. 有推荐缓存的用户数 → 覆盖率
             LambdaQueryWrapper<RecommendationCache> cacheWrapper = new LambdaQueryWrapper<>();
             cacheWrapper.gt(RecommendationCache::getExpireTime, LocalDateTime.now());
+            if (tenantId != null) {
+                cacheWrapper.eq(RecommendationCache::getTenantId, tenantId);
+            }
             int cachedUsers = (int) cacheMapper.selectCount(cacheWrapper);
             int hybridRate = totalOrderUsers > 0 ? (int) (cachedUsers * 100.0 / totalOrderUsers) : 0;
 
@@ -417,6 +420,9 @@ public class RecommendServiceImpl implements RecommendService {
                     new LambdaQueryWrapper<>();
             LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
             feedbackWrapper.ge(RecommendationFeedback::getCreateTime, sevenDaysAgo);
+            if (tenantId != null) {
+                feedbackWrapper.eq(RecommendationFeedback::getTenantId, tenantId);
+            }
             List<RecommendationFeedback> feedbacks = feedbackMapper.selectList(feedbackWrapper);
 
             long totalFeedback = feedbacks.size();
@@ -441,6 +447,9 @@ public class RecommendServiceImpl implements RecommendService {
                 gmvWrapper.in(Orders::getUserId, feedbackUserIds)
                         .ge(Orders::getCreateTime, sevenDaysAgo)
                         .eq(Orders::getStatus, 4); // 已完成订单
+                if (tenantId != null) {
+                    gmvWrapper.eq(Orders::getTenantId, tenantId);
+                }
                 List<Orders> orders = orderService.list(gmvWrapper);
                 recommendGMV = orders.stream()
                         .mapToDouble(o -> o.getAmount() != null ? o.getAmount().doubleValue() : 0)
@@ -477,7 +486,8 @@ public class RecommendServiceImpl implements RecommendService {
 
         try {
             String startTime = LocalDateTime.now().minusDays(days).toString();
-            List<Map<String, Object>> rows = feedbackMapper.countByTypeSince(startTime);
+            Long tenantId = BaseContext.getCurrentTenantId();
+            List<Map<String, Object>> rows = feedbackMapper.countByTypeSince(startTime, tenantId);
 
             for (Map<String, Object> row : rows) {
                 Integer type = (Integer) row.get("feedback_type");
@@ -532,7 +542,8 @@ public class RecommendServiceImpl implements RecommendService {
 
         try {
             String startTime = LocalDateTime.now().minusDays(30).toString();
-            List<Map<String, Object>> rows = feedbackMapper.countByAlgorithmSince(startTime);
+            Long tenantId = BaseContext.getCurrentTenantId();
+            List<Map<String, Object>> rows = feedbackMapper.countByAlgorithmSince(startTime, tenantId);
 
             // 算法名 -> 索引映射
             Map<String, Integer> algoIndex = new HashMap<>();

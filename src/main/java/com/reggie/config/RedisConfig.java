@@ -31,11 +31,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Redis 配置类
- * 自定义 RedisTemplate 泛型类型为 <String, Object>，配置JSON序列化
- * 配置Spring Cache的RedisCacheManager，支持TTL过期时间
+ * <p>
+ * Redis配置类，自定义RedisTemplate泛型类型并配置Spring Cache的RedisCacheManager。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Configuration

@@ -5,9 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import java.security.SecureRandom;
 
 /**
- * 随机生成验证码工具类
+ * <p>
+ * 验证码生成工具类，支持4位/6位数字验证码和字符串验证码。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

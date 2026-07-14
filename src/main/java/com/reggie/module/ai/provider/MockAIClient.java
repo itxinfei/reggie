@@ -12,11 +12,11 @@ import javax.annotation.Resource;
 import java.util.List;
 
 /**
- * 模拟AI Provider（无需API Key即可使用）
- * 修改点：添加@Primary作为默认Bean，仅当AI未显式启用或未配置API Key时激活
- * 用于演示、测试或无网络环境
+ * <p>
+ * 模拟AI Provider，无需API Key即可使用，用于演示、测试或无网络环境。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

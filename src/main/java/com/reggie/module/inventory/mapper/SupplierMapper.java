@@ -5,10 +5,12 @@ import com.reggie.module.inventory.model.Supplier;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 供应商 Mapper
+ * <p>
+ * 供应商 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface SupplierMapper extends BaseMapper<Supplier> {

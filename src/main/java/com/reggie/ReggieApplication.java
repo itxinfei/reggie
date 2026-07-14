@@ -9,10 +9,13 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 /**
- * @Author pangzhao
- * @Date 2026-5-25 上午 8:49
- * @Description
- **/
+ * <p>
+ * 瑞吉外卖项目启动类
+ * </p>
+ *
+ * @author 心飞为你飞
+ * @since 2026-05-25
+ */
 @Slf4j
 @SpringBootApplication
 @ServletComponentScan

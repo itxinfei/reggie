@@ -5,11 +5,13 @@ import com.reggie.module.dining.model.Reservation;
 import java.time.LocalDateTime;
 
 /**
+ * <p>
  * 预订服务接口
- * 提供桌台预订、确认、取消、到店签到等功能
+ * </p>
+ * <p>提供桌台预订、确认、取消、到店签到等功能</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface ReservationService extends IService<Reservation> {
 

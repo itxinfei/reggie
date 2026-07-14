@@ -5,10 +5,12 @@ import com.reggie.module.ai.model.AiProviderConfig;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * AI供应商配置 Mapper
+ * <p>
+ * AI供应商配置 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface AiProviderConfigMapper extends BaseMapper<AiProviderConfig> {

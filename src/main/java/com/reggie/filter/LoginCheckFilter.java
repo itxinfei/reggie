@@ -17,7 +17,18 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * 检查用户是否已经完成登录
+ * <p>
+ * 登录校验过滤器，拦截所有请求检查用户登录状态
+ * </p>
+ * <p>
+ * 支持两种登录态：员工登录（session 中存 employee）和用户登录（session 中存 user）。
+ * 配置了排除路径列表，对不需要登录即可访问的路径直接放行。
+ * 登录成功后，将员工ID、租户ID、角色标识存入 ThreadLocal（BaseContext）和 request 属性，
+ * 供后续业务层和 AOP 权限拦截器使用。
+ * </p>
+ *
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @WebFilter(filterName = "loginCheckFilter",urlPatterns = "/*", asyncSupported = true)
 @Slf4j
@@ -27,6 +38,35 @@ public class LoginCheckFilter implements Filter{
 
     /** JSON序列化工具 */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    /** 不需要处理的请求路径（唯一来源，避免重复维护） */
+    private static final String[] EXCLUDE_URLS = new String[]{
+        "/employee/login",
+        "/employee/logout",
+        "/backend/**",
+        "/front/**",
+        "/common/**",
+        "/user/sendMsg",
+        "/user/login",
+        "/tenant/register",
+        // 修改点：放行公开的商家信息接口（首页匿名访问）
+        "/restaurant/info",
+        "/restaurant/status",
+        // 放行AI模块的公开API（健康检查允许匿名访问）
+        "/api/ai/health",
+        // 修改点：放行静态资源目录，避免图片/上传文件被拦截导致死循环请求
+        "/images/**",
+        "/uploads/**",
+        // 放行API文档相关路径
+        "/swagger-ui/**",
+        "/swagger-ui.html",
+        "/swagger-ui/",
+        "/v3/api-docs/**",
+        "/v3/api-docs",
+        "/swagger-resources/**",
+        "/webjars/**",
+        "/doc.html"
+    };
 
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
@@ -41,48 +81,8 @@ public class LoginCheckFilter implements Filter{
 
             log.info("拦截到请求：{}", requestURI);
 
-            //定义不需要处理的请求路径
-            String[] urls = new String[]{
-                "/employee/login",
-                "/employee/logout",
-                "/backend/**",
-                "/front/**",
-                "/common/**",
-                "/user/sendMsg",
-                "/user/login",
-                "/tenant/register",
-                // 放行前端浏览菜单相关API
-                "/category/list",
-                "/dish/list",
-                "/setmeal/list",
-                "/setmeal/dish/**",
-                // 放行推荐模块公开API
-                "/recommend/dishes",
-                "/recommend/hot",
-                "/recommend/new-arrivals",
-                "/recommend/setmeals",
-                // 修改点：放行公开的商家信息接口（首页匿名访问）
-                "/restaurant/info",
-                "/restaurant/status",
-                // 放行AI模块的公开API（健康检查、对话同步等允许匿名访问）
-                "/api/ai/health",
-                "/api/ai/conversations",
-                // 修改点：放行静态资源目录，避免图片/上传文件被拦截导致死循环请求
-                "/images/**",
-                "/uploads/**",
-                // 放行API文档相关路径
-                "/swagger-ui/**",
-                "/swagger-ui.html",
-                "/swagger-ui/",
-                "/v3/api-docs/**",
-                "/v3/api-docs",
-                "/swagger-resources/**",
-                "/webjars/**",
-                "/doc.html"
-            };
-
-            //2、判断本次请求是否需要处理
-            boolean check = check(urls, requestURI);
+            //2、判断本次请求是否需要处理（使用唯一的 EXCLUDE_URLS 常量）
+            boolean check = check(EXCLUDE_URLS, requestURI);
 
             //3、如果不需要处理，则直接放行
             if (check) {

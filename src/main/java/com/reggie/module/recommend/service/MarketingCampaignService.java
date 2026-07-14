@@ -8,11 +8,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * <p>
  * 营销活动服务接口
- * 管理营销活动的创建、推送、消息管理及自动发券
+ * </p>
+ * <p>管理营销活动的创建、推送、消息管理及自动发券</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface MarketingCampaignService extends IService<MarketingCampaign> {
 

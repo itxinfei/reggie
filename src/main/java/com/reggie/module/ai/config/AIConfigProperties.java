@@ -5,10 +5,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * AI模块配置属性
- * 支持OpenAI兼容API（通义千问/DeepSeek/OpenAI等）
+ * <p>
+ * AI模块配置属性，从application.yml读取AI服务配置，支持OpenAI兼容API。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Data

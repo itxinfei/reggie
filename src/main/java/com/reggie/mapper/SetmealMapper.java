@@ -5,10 +5,12 @@ import com.reggie.entity.Setmeal;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 套餐Mapper接口
+ * <p>
+ * 套餐 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface SetmealMapper extends BaseMapper<Setmeal> {

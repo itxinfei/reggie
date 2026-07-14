@@ -45,6 +45,11 @@ public class DeliveryController {
 
     // ==================== 订单查询 ====================
 
+    /**
+     * 查询外卖订单详情
+     * @param id 订单主键ID
+     * @return 配送订单详情
+     */
     @GetMapping("/orders/{id}")
     @Operation(summary = "查询外卖订单详情", description = "根据主键ID查询配送订单完整信息")
     public R<DeliveryOrder> getOrderDetail(@PathVariable Long id) {
@@ -55,21 +60,36 @@ public class DeliveryController {
         return R.success(order);
     }
 
+    /**
+     * 分页查询外卖订单
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param platform 外卖平台（可选）
+     * @param status 订单状态（可选）
+     * @param startDate 开始日期（可选）
+     * @param endDate 结束日期（可选）
+     * @return 分页结果
+     */
     @GetMapping("/orders")
     @Operation(summary = "分页查询外卖订单", description = "分页查询外卖平台订单，支持按平台、状态、时间范围筛选")
     public R<Page<DeliveryOrder>> pageOrders(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize,
-            @RequestParam(required = false) String platform,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "外卖平台（可选）") @RequestParam(required = false) String platform,
+            @Parameter(description = "状态（可选）") @RequestParam(required = false) String status,
+            @Parameter(description = "开始日期（可选）") @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) String endDate) {
         Page<DeliveryOrder> pageInfo = deliveryService.pageOrders(page, pageSize, platform, status, startDate, endDate);
         return R.success(pageInfo);
     }
 
     // ==================== 订单操作 ====================
 
+    /**
+     * 接单
+     * @param dto 接单请求
+     * @return 操作结果
+     */
     @PostMapping("/accept")
     @Operation(summary = "接单", description = "确认接单外卖订单（PENDING → ACCEPTED）")
     public R<String> acceptOrder(@Valid @RequestBody AcceptOrderDTO dto) {
@@ -77,38 +97,62 @@ public class DeliveryController {
         return result ? R.success("接单成功") : R.error("接单失败");
     }
 
+    /**
+     * 更新配送状态
+     * @param id 订单ID
+     * @param status 目标状态
+     * @param remark 备注（可选）
+     * @return 操作结果
+     */
     @PutMapping("/status")
-    @Operation(summary = "更新配送状态", description = "更新配送订单状态，支持完整生命周期：接单→取餐→配送→送达→取消")
+    @Operation(summary = "更新配送状态", description = "更新配送订单状态，支持完整生命周期：接单->取餐->配送->送达->取消")
     public R<String> updateStatus(
-            @RequestParam @NotNull(message = "订单ID不能为空") Long id,
-            @RequestParam @NotBlank(message = "目标状态不能为空") String status,
-            @RequestParam(required = false) String remark) {
+            @Parameter(description = "订单ID", required = true) @RequestParam @NotNull(message = "订单ID不能为空") Long id,
+            @Parameter(description = "目标状态", required = true) @RequestParam @NotBlank(message = "目标状态不能为空") String status,
+            @Parameter(description = "备注（可选）") @RequestParam(required = false) String remark) {
         boolean result = deliveryService.updateOrderStatus(id, status, remark);
         return result ? R.success("状态更新成功") : R.error("状态更新失败");
     }
 
     // ==================== 筛选选项与统计 ====================
 
+    /**
+     * 获取筛选选项
+     * @param platform 外卖平台（可选）
+     * @return 平台列表和状态选项
+     */
     @GetMapping("/options")
-    @Operation(summary = "获取筛选选项", description = "返回平台列表和状态选项，供前端下拉框使用")
+    @Operation(summary = "筛选选项", description = "返回平台列表和状态选项，供前端下拉框使用")
     public R<Map<String, Object>> getFilterOptions(
-            @RequestParam(required = false) String platform) {
+            @Parameter(description = "外卖平台（可选）") @RequestParam(required = false) String platform) {
         Map<String, Object> options = deliveryService.getFilterOptions(platform);
         return R.success(options);
     }
 
+    /**
+     * 配送统计
+     * @param platform 外卖平台（可选）
+     * @param startDate 开始日期（可选）
+     * @param endDate 结束日期（可选）
+     * @return 配送统计数据
+     */
     @GetMapping("/stats")
-    @Operation(summary = "获取配送统计", description = "获取今日订单数、各状态数量、金额汇总等配送统计数据")
+    @Operation(summary = "配送统计", description = "获取今日订单数、各状态数量、金额汇总等配送统计数据")
     public R<Map<String, Object>> getStats(
-            @RequestParam(required = false) String platform,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
+            @Parameter(description = "外卖平台（可选）") @RequestParam(required = false) String platform,
+            @Parameter(description = "开始日期（可选）") @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) String endDate) {
         Map<String, Object> stats = deliveryService.getDeliveryStats(platform, startDate, endDate);
         return R.success(stats);
     }
 
     // ==================== 平台同步 ====================
 
+    /**
+     * 同步菜品到外卖平台
+     * @param dto 菜品同步请求
+     * @return 操作结果
+     */
     @PostMapping("/sync/menu")
     @Operation(summary = "同步菜品", description = "同步菜单到外卖平台")
     public R<String> syncMenu(@Valid @RequestBody SyncMenuDTO dto) {
@@ -116,6 +160,11 @@ public class DeliveryController {
         return result ? R.success("菜单同步成功") : R.error("菜单同步失败");
     }
 
+    /**
+     * 同步库存到外卖平台
+     * @param dto 库存同步请求
+     * @return 操作结果
+     */
     @PostMapping("/sync/stock")
     @Operation(summary = "同步库存", description = "同步库存到外卖平台")
     public R<String> syncStock(@Valid @RequestBody SyncStockDTO dto) {
@@ -143,9 +192,17 @@ public class DeliveryController {
 
     // ==================== 平台回调 ====================
 
+    /**
+     * 接收外卖平台回调通知
+     * @param platform 外卖平台标识
+     * @param params 回调参数
+     * @return 处理结果
+     */
     @PostMapping("/callback/{platform}")
-    @Operation(summary = "平台回调", description = "接收外卖平台回调：新订单通知、状态变更、取消通知")
-    public R<String> callback(@PathVariable String platform, @RequestBody Map<String, String> params) {
+    @Operation(summary = "平台回调通知", description = "接收外卖平台回调：新订单通知、状态变更、取消通知")
+    public R<String> callback(
+            @Parameter(description = "外卖平台标识", required = true) @PathVariable String platform,
+            @Parameter(description = "回调参数") @RequestBody Map<String, String> params) {
         String result = deliveryService.handleCallback(platform, params);
         return "success".equals(result) ? R.success(result) : R.error(result);
     }

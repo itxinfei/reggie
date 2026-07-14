@@ -11,10 +11,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.List;
 
 /**
- * Web MVC 配置类
- * 配置静态资源映射和消息转换器
+ * <p>
+ * Web MVC配置类，配置静态资源映射和消息转换器。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  * 修改点(2026-07-10)：从 extends WebMvcConfigurationSupport 改为 implements WebMvcConfigurer，
  * 避免禁用Spring Boot MVC自动配置（否则springdoc-openapi和WebJars自动配置会失效）。

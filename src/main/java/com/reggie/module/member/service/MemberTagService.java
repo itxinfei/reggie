@@ -8,10 +8,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * <p>
  * 会员标签服务接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-10
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface MemberTagService extends IService<MemberTag> {
 

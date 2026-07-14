@@ -8,10 +8,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 会员标签Mapper接口
+ * <p>
+ * 会员标签 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-10
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface MemberTagMapper extends BaseMapper<MemberTag> {

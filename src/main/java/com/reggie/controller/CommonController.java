@@ -23,7 +23,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 文件上传和下载
+ * <p>
+ * 公共文件控制器
+ * 提供文件上传和下载接口
+ * </p>
  *
  * @author reggie
  * @since 2026-07-09
@@ -75,9 +78,8 @@ public class CommonController {
 
     /**
      * 文件上传
-     *
-     * @param file
-     * @return 文件上传的目录改为项目运行的根目录
+     * @param file 上传的文件
+     * @return 上传后的文件路径
      */
     @PostMapping("/upload")
     @Operation(summary = "文件上传", description = "上传图片文件（支持jpg、jpeg、png、gif，最大5MB）")
@@ -133,9 +135,8 @@ public class CommonController {
 
     /**
      * 文件下载
-     *
-     * @param name
-     * @param response
+     * @param name 文件名
+     * @param response HTTP响应对象
      */
     @GetMapping("/download")
     @Operation(summary = "文件下载", description = "下载图片文件")

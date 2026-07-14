@@ -10,10 +10,11 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * AI模块异步线程池配置
- * 为AI对话、画像刷新等异步任务提供专用线程池，避免占用ForkJoinPool
+ * <p>
+ * AI模块异步线程池配置，为AI对话、画像刷新等异步任务提供专用线程池。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-10
  */
 @Slf4j

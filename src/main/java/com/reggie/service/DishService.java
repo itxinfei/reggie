@@ -9,10 +9,12 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
+ * <p>
  * 菜品管理服务接口，提供菜品的增删改查、口味管理及库存管理功能
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface DishService extends IService<Dish> {
 

@@ -24,9 +24,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
+ * <p>
  * AI聊天控制器
  * 提供智能点餐、菜品描述生成、经营分析等AI能力
  * 新增：流式响应(SSE)、对话管理、反馈记录
+ * </p>
  *
  * @author reggie
  * @since 2026-07-09
@@ -50,6 +52,8 @@ public class AIChatController {
 
     /**
      * 通用AI对话接口（非流式）
+     * @param request AI对话请求参数
+     * @return AI回复结果
      */
     @PostMapping("/chat")
     @Operation(summary = "通用AI对话", description = "支持多场景：点餐推荐、菜品描述、经营分析、营销文案")
@@ -79,6 +83,10 @@ public class AIChatController {
 
     /**
      * 通用AI对话接口（SSE流式）
+     * @param message 用户消息
+     * @param scene 场景类型（可选）
+     * @param conversationId 对话ID（可选）
+     * @return SSE流式响应
      */
     @GetMapping("/chat/stream")
     @Operation(summary = "AI流式对话", description = "SSE流式输出，逐字显示AI回复")
@@ -104,6 +112,8 @@ public class AIChatController {
 
     /**
      * 智能点餐推荐（简化接口，非流式）
+     * @param params 请求参数（message、userId、conversationId）
+     * @return AI推荐结果
      */
     @PostMapping("/order-assistant")
     @Operation(summary = "智能点餐助手", description = "用户用自然语言描述需求，AI推荐最合适的菜品")
@@ -133,6 +143,9 @@ public class AIChatController {
 
     /**
      * 智能点餐推荐（SSE流式）
+     * @param message 用户消息
+     * @param conversationId 对话ID（可选）
+     * @return SSE流式响应
      */
     @GetMapping("/order-assistant/stream")
     @Operation(summary = "智能点餐助手（流式）", description = "SSE流式输出推荐结果")
@@ -147,6 +160,8 @@ public class AIChatController {
 
     /**
      * 生成菜品描述
+     * @param params 请求参数（dishName、categoryName、ingredients）
+     * @return 菜品描述文案
      */
     @PostMapping("/dish-description")
     @Operation(summary = "AI菜品描述生成", description = "输入菜品名称，AI生成专业美食描述文案")
@@ -161,6 +176,8 @@ public class AIChatController {
 
     /**
      * 经营数据分析
+     * @param params 请求参数（question、data）
+     * @return AI分析结果
      */
     @PostMapping("/business-analysis")
     @Operation(summary = "AI经营分析", description = "输入经营数据和问题，AI提供专业分析")
@@ -198,6 +215,9 @@ public class AIChatController {
 
     /**
      * 获取用户对话列表
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @return 对话列表
      */
     @GetMapping("/conversations")
     @Operation(summary = "获取对话列表", description = "获取当前用户的AI对话历史列表")
@@ -210,6 +230,8 @@ public class AIChatController {
 
     /**
      * 获取对话详情（含消息历史）
+     * @param conversationId 对话ID
+     * @return 消息历史列表
      */
     @GetMapping("/conversations/{conversationId}")
     @Operation(summary = "获取对话详情", description = "获取指定对话的消息历史")
@@ -220,6 +242,8 @@ public class AIChatController {
 
     /**
      * 创建新对话
+     * @param params 请求参数（title、scene）
+     * @return 创建的对话信息
      */
     @PostMapping("/conversations")
     @Operation(summary = "创建对话", description = "创建新的AI对话")
@@ -233,6 +257,8 @@ public class AIChatController {
 
     /**
      * 删除对话
+     * @param conversationId 对话ID
+     * @return 操作结果
      */
     @DeleteMapping("/conversations/{conversationId}")
     @Operation(summary = "删除对话", description = "软删除指定对话")
@@ -246,6 +272,8 @@ public class AIChatController {
 
     /**
      * 记录用户反馈
+     * @param params 请求参数（messageId、feedbackType）
+     * @return 操作结果
      */
     @PostMapping("/feedback")
     @Operation(summary = "记录反馈", description = "用户对AI回复的反馈（有用/没用）")

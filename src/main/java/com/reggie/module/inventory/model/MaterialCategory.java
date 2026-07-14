@@ -1,46 +1,43 @@
 package com.reggie.module.inventory.model;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 物料分类实体类
+ * 物料分类
  *
  * @author reggie
  * @since 2026-07-09
  */
 @Data
+@TableName("material_category")
+@Schema(description = "物料分类")
 public class MaterialCategory implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键ID
-     */
+    @Schema(description = "分类ID", example = "1")
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 租户ID
-     */
+    @Schema(description = "租户ID", example = "1")
     private Long tenantId;
 
-    /**
-     * 分类名称
-     */
+    @Schema(description = "分类名称", example = "蔬菜类", required = true)
     private String name;
 
-    /**
-     * 排序
-     */
+    @Schema(description = "排序号（升序）", example = "1")
     private Integer sort;
 
-    /**
-     * 创建时间
-     */
+    @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
     private LocalDateTime createdTime;
 
-    /**
-     * 更新时间
-     */
+    @Schema(description = "更新时间", example = "2026-07-09 12:00:00")
     private LocalDateTime updatedTime;
 }

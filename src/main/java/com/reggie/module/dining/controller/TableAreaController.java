@@ -42,6 +42,12 @@ public class TableAreaController {
     @Autowired
     private TableAreaService tableAreaService;
 
+    /**
+     * 分页查询桌台区域列表
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询桌台区域列表")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -54,6 +60,11 @@ public class TableAreaController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 新增桌台区域
+     * @param area 区域信息
+     * @return 新增区域信息
+     */
     @PostMapping
     @Operation(summary = "新增区域", description = "创建新的桌台区域")
     public R<TableArea> save(@RequestBody TableArea area) {
@@ -63,6 +74,11 @@ public class TableAreaController {
         return R.success(area);
     }
 
+    /**
+     * 修改桌台区域
+     * @param area 区域信息
+     * @return 操作结果
+     */
     @PutMapping
     @Operation(summary = "修改区域", description = "更新桌台区域信息")
     public R<String> update(@RequestBody TableArea area) {
@@ -80,6 +96,10 @@ public class TableAreaController {
         return R.success("删除区域成功");
     }
 
+    /**
+     * 查询所有桌台区域
+     * @return 区域列表
+     */
     @GetMapping("/list")
     @Operation(summary = "查询所有区域", description = "查询所有桌台区域列表")
     public R<List<TableArea>> list() {
@@ -89,6 +109,11 @@ public class TableAreaController {
         return R.success(list);
     }
 
+    /**
+     * 根据ID查询桌台区域
+     * @param id 区域ID
+     * @return 区域详情
+     */
     @GetMapping("/{id}")
     @Operation(summary = "根据id查询区域", description = "根据ID查询桌台区域详情")
     @Parameter(name = "id", description = "区域ID", required = true)

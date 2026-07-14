@@ -5,10 +5,12 @@ import com.reggie.entity.Employee;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 员工Mapper接口
+ * <p>
+ * 员工 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface EmployeeMapper extends BaseMapper<Employee>{

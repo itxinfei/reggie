@@ -4,10 +4,12 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.entity.Category;
 
 /**
+ * <p>
  * 分类管理服务接口，提供菜品分类和套餐分类的增删改查功能
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface CategoryService extends IService<Category> {
 

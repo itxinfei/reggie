@@ -5,10 +5,12 @@ import com.reggie.module.member.model.CouponUser;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 用户优惠券 Mapper
+ * <p>
+ * 用户优惠券 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface CouponUserMapper extends BaseMapper<CouponUser> {

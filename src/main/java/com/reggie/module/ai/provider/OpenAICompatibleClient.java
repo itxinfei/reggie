@@ -18,11 +18,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
- * OpenAI兼容API Provider
- * 修改点：添加@ConditionalOnProperty，仅当reggie.ai.enabled=true时激活
- * 支持OpenAI / 通义千问 / DeepSeek 等兼容OpenAI API格式的服务
+ * <p>
+ * OpenAI兼容API Provider，支持OpenAI、通义千问、DeepSeek等兼容OpenAI API格式的服务。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

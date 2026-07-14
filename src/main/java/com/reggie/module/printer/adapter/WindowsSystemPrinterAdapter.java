@@ -18,10 +18,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * Windows系统打印机适配器
- * 通过Java Print Service API与Windows系统打印机交互
+ * <p>
+ * Windows系统打印机适配器，通过Java Print Service API与Windows系统打印机交互。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

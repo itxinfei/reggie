@@ -7,21 +7,11 @@ import com.reggie.module.ai.model.AiProviderConfig;
 import java.util.List;
 
 /**
- * AI模型适配器接口（策略模式）
  * <p>
- * 每种 API 格式（OpenAI / Anthropic / 百度 / DeepSeek / 通义千问 等）
- * 对应一个适配器实现，负责将统一的内部消息格式转换为该厂商的 API 请求格式，
- * 并解析该厂商特有的响应结构。
+ * AI模型适配器接口（策略模式）
  * </p>
  *
- * <p><b>扩展新模型只需三步：</b></p>
- * <ol>
- *   <li>实现本接口（或继承 {@link BaseModelAdapter}）</li>
- *   <li>在 {@code AiProviderManager.initAdapters()} 中注册</li>
- *   <li>在后台管理页面配置 apiFormat 与适配器标识一致即可</li>
- * </ol>
- *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-10
  */
 public interface AiModelAdapter {

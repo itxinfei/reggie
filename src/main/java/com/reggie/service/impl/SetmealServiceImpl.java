@@ -43,7 +43,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
     private RedisCacheUtil redisCacheUtil;
 
     /**
-     * 新增套餐，同时需要保存套餐和菜品的关联关系
+     * 新增套餐，同时保存套餐和菜品的关联关系
      * 缓存删除在事务提交后执行，避免事务回滚导致缓存与数据库不一致
      *
      * @param setmealDto 套餐DTO

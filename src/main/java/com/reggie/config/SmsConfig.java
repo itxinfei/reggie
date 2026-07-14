@@ -8,10 +8,11 @@ import org.springframework.context.annotation.Configuration;
 import javax.annotation.PostConstruct;
 
 /**
- * 短信服务配置类
- * 从application.yml读取阿里云SMS凭证并初始化SMSUtils
+ * <p>
+ * 短信服务配置类，从application.yml读取阿里云SMS凭证并初始化SMSUtils。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

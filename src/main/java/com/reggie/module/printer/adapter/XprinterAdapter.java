@@ -8,10 +8,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 小票打印机适配器
- * 实现与小票打印机的交互逻辑
+ * <p>
+ * 小票打印机适配器，实现与小票打印机的交互逻辑。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

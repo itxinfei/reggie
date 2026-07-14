@@ -3,11 +3,15 @@ package com.reggie.module.notification.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.BaseContext;
 import com.reggie.module.notification.mapper.NotificationRecordMapper;
 import com.reggie.module.notification.mapper.NotificationTemplateMapper;
 import com.reggie.module.notification.model.NotificationRecord;
 import com.reggie.module.notification.model.NotificationTemplate;
 import com.reggie.module.notification.service.NotificationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,8 +19,10 @@ import javax.annotation.Resource;
 import java.util.*;
 
 /**
+ * <p>
  * 消息通知管理控制器
  * 提供通知模板管理、消息发送、发送记录查询等接口
+ * </p>
  *
  * @author reggie
  * @since 2026-07-09
@@ -24,6 +30,7 @@ import java.util.*;
 @Slf4j
 @RestController
 @RequestMapping("/notification")
+@Tag(name = "消息通知", description = "通知模板管理、消息发送、发送记录查询等接口")
 public class NotificationController {
 
     @Resource
@@ -39,15 +46,26 @@ public class NotificationController {
 
     /**
      * 分页查询通知模板
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @param bizType 业务类型
+     * @return 分页结果
      */
     @GetMapping("/template/page")
-    public R<Page<NotificationTemplate>> templatePage(@RequestParam(defaultValue = "1") int page,
-                                                       @RequestParam(defaultValue = "10") int pageSize,
-                                                       @RequestParam(required = false) String bizType) {
+    @Operation(summary = "分页查询模板", description = "分页查询通知模板列表，支持按业务类型筛选")
+    public R<Page<NotificationTemplate>> templatePage(
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "业务类型（可选）") @RequestParam(required = false) String bizType) {
         Page<NotificationTemplate> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
         if (bizType != null && !bizType.isEmpty()) {
             wrapper.eq(NotificationTemplate::getBizType, bizType);
+        }
+        // 租户隔离：仅查询当前租户的模板
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            wrapper.eq(NotificationTemplate::getTenantId, tenantId);
         }
         wrapper.orderByDesc(NotificationTemplate::getCreateTime);
         templateMapper.selectPage(pageInfo, wrapper);
@@ -56,11 +74,20 @@ public class NotificationController {
 
     /**
      * 获取模板详情
+     * @param id 模板ID
+     * @return 模板详情
      */
     @GetMapping("/template/{id}")
-    public R<NotificationTemplate> templateDetail(@PathVariable Long id) {
+    @Operation(summary = "查询模板详情", description = "根据ID查询通知模板详情")
+    public R<NotificationTemplate> templateDetail(
+            @Parameter(description = "模板ID", required = true) @PathVariable Long id) {
         NotificationTemplate template = templateMapper.selectById(id);
         if (template != null) {
+            // 租户校验：确保只能查看当前租户的模板
+            Long tenantId = BaseContext.getCurrentTenantId();
+            if (tenantId != null && !tenantId.equals(template.getTenantId())) {
+                return R.error("无权查看其他租户的模板");
+            }
             return R.success(template);
         }
         return R.error("模板不存在");
@@ -68,32 +95,68 @@ public class NotificationController {
 
     /**
      * 新增通知模板
+     * @param template 模板信息
+     * @return 操作结果
      */
     @PostMapping("/template")
-    public R<String> addTemplate(@RequestBody NotificationTemplate template) {
+    @Operation(summary = "新增通知模板", description = "创建新的通知模板")
+    public R<String> addTemplate(
+            @Parameter(description = "模板信息", required = true) @RequestBody NotificationTemplate template) {
+        // 显式设置租户ID（绕过MyBatis-Plus自动填充的时序问题）
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            template.setTenantId(tenantId);
+        }
         templateMapper.insert(template);
-        log.info("新增通知模板: id={}, name={}", template.getId(), template.getTemplateName());
+        log.info("新增通知模板: id={}, name={}, tenantId={}", template.getId(), template.getTemplateName(), tenantId);
         return R.success("添加成功");
     }
 
     /**
      * 修改通知模板
+     * @param template 模板信息
+     * @return 操作结果
      */
     @PutMapping("/template")
-    public R<String> updateTemplate(@RequestBody NotificationTemplate template) {
+    @Operation(summary = "修改通知模板", description = "更新通知模板信息")
+    public R<String> updateTemplate(
+            @Parameter(description = "模板信息", required = true) @RequestBody NotificationTemplate template) {
+        if (template.getId() == null) {
+            return R.error("模板ID不能为空");
+        }
+        // 租户校验：确保只能修改当前租户的模板
+        NotificationTemplate existing = templateMapper.selectById(template.getId());
+        if (existing == null) {
+            return R.error("模板不存在");
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null && !tenantId.equals(existing.getTenantId())) {
+            return R.error("无权修改其他租户的模板");
+        }
         templateMapper.updateById(template);
-        log.info("更新通知模板: id={}", template.getId());
+        log.info("更新通知模板: id={}, tenantId={}", template.getId(), tenantId);
         return R.success("修改成功");
     }
 
     /**
      * 启用/停用模板
+     * @param id 模板ID
+     * @param status 状态：1启用 0停用
+     * @return 操作结果
      */
     @PutMapping("/template/{id}/status/{status}")
-    public R<String> toggleTemplate(@PathVariable Long id, @PathVariable Integer status) {
+    @Operation(summary = "启用/停用模板", description = "切换通知模板的启用状态")
+    public R<String> toggleTemplate(
+            @Parameter(description = "模板ID", required = true) @PathVariable Long id,
+            @Parameter(description = "状态：1启用 0停用", required = true) @PathVariable Integer status) {
         NotificationTemplate template = templateMapper.selectById(id);
         if (template == null) {
             return R.error("模板不存在");
+        }
+        // 租户校验
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null && !tenantId.equals(template.getTenantId())) {
+            return R.error("无权操作其他租户的模板");
         }
         template.setStatus(status);
         templateMapper.updateById(template);
@@ -102,11 +165,24 @@ public class NotificationController {
 
     /**
      * 删除通知模板
+     * @param id 模板ID
+     * @return 操作结果
      */
     @DeleteMapping("/template/{id}")
-    public R<String> deleteTemplate(@PathVariable Long id) {
+    @Operation(summary = "删除通知模板", description = "删除指定的通知模板")
+    public R<String> deleteTemplate(
+            @Parameter(description = "模板ID", required = true) @PathVariable Long id) {
+        NotificationTemplate template = templateMapper.selectById(id);
+        if (template == null) {
+            return R.error("模板不存在");
+        }
+        // 租户校验
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null && !tenantId.equals(template.getTenantId())) {
+            return R.error("无权删除其他租户的模板");
+        }
         templateMapper.deleteById(id);
-        log.info("删除通知模板: id={}", id);
+        log.info("删除通知模板: id={}, tenantId={}", id, tenantId);
         return R.success("删除成功");
     }
 
@@ -114,12 +190,13 @@ public class NotificationController {
 
     /**
      * 发送通知（通用接口）
-     * 请求体: { "bizType": "ORDER_NOTICE", "channel": 1, "targets": ["13800138000"],
-     *          "params": { "userName": "张三", "orderNo": "NO123" },
-     *          "sendTime": "2026-07-10T09:00:00" }
+     * @param body 通知参数（bizType/channel/targets/params/sendTime）
+     * @return 发送记录
      */
     @PostMapping("/send")
-    public R<NotificationRecord> sendNotification(@RequestBody Map<String, Object> body) {
+    @Operation(summary = "发送通知", description = "通用通知发送接口，支持多渠道发送")
+    public R<NotificationRecord> sendNotification(
+            @Parameter(description = "通知参数（bizType/channel/targets/params/sendTime）", required = true) @RequestBody Map<String, Object> body) {
         String bizType = (String) body.get("bizType");
         Integer channel = (Integer) body.getOrDefault("channel", 1);
         @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
@@ -165,9 +242,13 @@ public class NotificationController {
 
     /**
      * 批量发送通知
+     * @param body 发送参数（templateId/channel/targetType/targets/params/sendTime）
+     * @return 发送记录
      */
     @PostMapping("/batch-send")
-    public R<NotificationRecord> batchSend(@RequestBody Map<String, Object> body) {
+    @Operation(summary = "批量发送通知", description = "批量发送通知消息")
+    public R<NotificationRecord> batchSend(
+            @Parameter(description = "发送参数（templateId/channel/targetType/targets/params/sendTime）", required = true) @RequestBody Map<String, Object> body) {
         Long templateId = Long.valueOf(body.get("templateId").toString());
         Integer channel = (Integer) body.getOrDefault("channel", 1);
         Integer targetType = (Integer) body.getOrDefault("targetType", 1);
@@ -189,11 +270,13 @@ public class NotificationController {
 
     /**
      * 向全部用户发送通知
-     * 自动查询所有状态正常用户，按渠道发送并同步写入消息中心
-     * 请求体: { "bizType": "PROMOTION", "channel": 1, "params": { "userName": "用户" } }
+     * @param body 推送参数（bizType/channel/params）
+     * @return 发送记录
      */
     @PostMapping("/send-all")
-    public R<NotificationRecord> sendToAllUsers(@RequestBody Map<String, Object> body) {
+    @Operation(summary = "全量推送", description = "向所有用户发送通知")
+    public R<NotificationRecord> sendToAllUsers(
+            @Parameter(description = "推送参数（bizType/channel/params）", required = true) @RequestBody Map<String, Object> body) {
         String bizType = (String) body.get("bizType");
         Integer channel = (Integer) body.getOrDefault("channel", 1);
         @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
@@ -214,12 +297,19 @@ public class NotificationController {
 
     /**
      * 分页查询发送记录
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @param bizType 业务类型
+     * @param status 状态
+     * @return 分页结果
      */
     @GetMapping("/record/page")
-    public R<Page<NotificationRecord>> recordPage(@RequestParam(defaultValue = "1") int page,
-                                                   @RequestParam(defaultValue = "10") int pageSize,
-                                                   @RequestParam(required = false) String bizType,
-                                                   @RequestParam(required = false) Integer status) {
+    @Operation(summary = "分页查询发送记录", description = "分页查询通知发送记录，支持按业务类型和状态筛选")
+    public R<Page<NotificationRecord>> recordPage(
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "业务类型（可选）") @RequestParam(required = false) String bizType,
+            @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status) {
         Page<NotificationRecord> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<NotificationRecord> wrapper = new LambdaQueryWrapper<>();
         if (bizType != null && !bizType.isEmpty()) {
@@ -228,6 +318,11 @@ public class NotificationController {
         if (status != null) {
             wrapper.eq(NotificationRecord::getStatus, status);
         }
+        // 租户隔离：仅查询当前租户的发送记录
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            wrapper.eq(NotificationRecord::getTenantId, tenantId);
+        }
         wrapper.orderByDesc(NotificationRecord::getCreateTime);
         recordMapper.selectPage(pageInfo, wrapper);
         return R.success(pageInfo);
@@ -235,11 +330,20 @@ public class NotificationController {
 
     /**
      * 获取发送记录详情
+     * @param id 记录ID
+     * @return 记录详情
      */
     @GetMapping("/record/{id}")
-    public R<NotificationRecord> recordDetail(@PathVariable Long id) {
+    @Operation(summary = "查询发送记录详情", description = "根据ID查询通知发送记录详情")
+    public R<NotificationRecord> recordDetail(
+            @Parameter(description = "记录ID", required = true) @PathVariable Long id) {
         NotificationRecord record = recordMapper.selectById(id);
         if (record != null) {
+            // 租户校验：确保只能查看当前租户的记录
+            Long tenantId = BaseContext.getCurrentTenantId();
+            if (tenantId != null && !tenantId.equals(record.getTenantId())) {
+                return R.error("无权查看其他租户的通知记录");
+            }
             return R.success(record);
         }
         return R.error("记录不存在");
@@ -249,9 +353,13 @@ public class NotificationController {
 
     /**
      * 注册/更新用户设备Token
+     * @param body 设备信息（userId/platform/deviceToken）
+     * @return 操作结果
      */
     @PostMapping("/device/register")
-    public R<String> registerDevice(@RequestBody Map<String, Object> body) {
+    @Operation(summary = "注册设备Token", description = "注册/更新用户设备推送Token")
+    public R<String> registerDevice(
+            @Parameter(description = "设备信息（userId/platform/deviceToken）", required = true) @RequestBody Map<String, Object> body) {
         Long userId = Long.valueOf(body.get("userId").toString());
         String platform = (String) body.get("platform");
         String deviceToken = (String) body.get("deviceToken");
@@ -262,8 +370,10 @@ public class NotificationController {
 
     /**
      * 获取业务类型枚举列表
+     * @return 业务类型列表
      */
     @GetMapping("/biz-types")
+    @Operation(summary = "业务类型列表", description = "获取所有通知业务类型枚举列表")
     public R<List<Map<String, String>>> getBizTypes() {
         List<Map<String, String>> types = new ArrayList<>();
         types.add(buildBizType("ORDER_NOTICE", "订单通知"));
@@ -285,10 +395,13 @@ public class NotificationController {
 
     /**
      * 简易消息发送（无需模板，直接输入内容发送）
-     * 请求体: { "channel": 1, "targets": ["13800138000"], "content": "消息内容", "title": "标题(推送用)" }
+     * @param body 消息参数（channel/targets/content/title）
+     * @return 发送记录
      */
     @PostMapping("/send-simple")
-    public R<NotificationRecord> sendSimpleMessage(@RequestBody Map<String, Object> body) {
+    @Operation(summary = "简易消息发送", description = "直接发送消息内容，无需模板（支持推送/短信/站内信）")
+    public R<NotificationRecord> sendSimpleMessage(
+            @Parameter(description = "消息参数（channel/targets/content/title）", required = true) @RequestBody Map<String, Object> body) {
         Integer channel = (Integer) body.getOrDefault("channel", 1);
         @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
         List<String> targets = (List<String>) body.get("targets");
@@ -313,6 +426,7 @@ public class NotificationController {
      * 通知服务健康检查
      */
     @GetMapping("/health")
+    @Operation(summary = "通知服务健康检查", description = "检查通知服务是否可用")
     public R<Map<String, Object>> health() {
         Map<String, Object> info = new HashMap<>();
         info.put("available", true);

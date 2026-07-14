@@ -24,7 +24,12 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ * <p>
  * 角色管理Controller
+ * </p>
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
@@ -39,11 +44,18 @@ public class RoleController {
     private PermissionService permissionService;
 
     /**
-     * 角色列表（分页）
+     * 角色分页查询
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @param roleName 角色名称
+     * @return 分页结果
      */
     @GetMapping("/page")
     @Operation(summary = "角色分页查询")
-    public R<Page<Role>> page(int page, int pageSize, String roleName) {
+    public R<Page<Role>> page(
+            @Parameter(description = "页码") int page,
+            @Parameter(description = "每页条数") int pageSize,
+            @Parameter(description = "角色名称") String roleName) {
         Page<Role> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
         if (roleName != null && !roleName.isEmpty()) {
@@ -57,6 +69,7 @@ public class RoleController {
 
     /**
      * 所有角色列表（下拉用）
+     * @return 角色列表
      */
     @GetMapping("/list")
     @Operation(summary = "角色列表")
@@ -70,10 +83,13 @@ public class RoleController {
 
     /**
      * 新增角色
+     * @param role 角色信息
+     * @return 操作结果
      */
     @PostMapping
-    @Operation(summary = "新增角色")
-    public R<String> add(@Valid @RequestBody Role role) {
+    @Operation(summary = "新增角色", description = "创建新角色，需提供角色名称和编码")
+    public R<String> add(
+            @Parameter(description = "角色信息") @Valid @RequestBody Role role) {
         role.setIsDeleted(0);
         roleService.save(role);
         return R.success("角色创建成功");
@@ -81,20 +97,25 @@ public class RoleController {
 
     /**
      * 修改角色
+     * @param role 角色信息
+     * @return 操作结果
      */
     @PutMapping
-    @Operation(summary = "修改角色")
-    public R<String> update(@Valid @RequestBody Role role) {
+    @Operation(summary = "修改角色", description = "更新角色信息")
+    public R<String> update(
+            @Parameter(description = "角色信息") @Valid @RequestBody Role role) {
         roleService.updateById(role);
         return R.success("角色更新成功");
     }
 
     /**
-     * 删除角色
+     * 删除角色（逻辑删除）
+     * @param id 角色ID
+     * @return 操作结果
      */
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除角色")
-    public R<String> delete(@PathVariable Long id) {
+    @Operation(summary = "删除角色", description = "逻辑删除指定角色")
+    public R<String> delete(@Parameter(description = "角色ID") @PathVariable Long id) {
         Role role = roleService.getById(id);
         if (role != null) {
             role.setIsDeleted(1);
@@ -105,20 +126,27 @@ public class RoleController {
 
     /**
      * 查询角色拥有的权限ID列表
+     * @param id 角色ID
+     * @return 权限ID列表
      */
     @GetMapping("/{id}/permissions")
-    @Operation(summary = "查询角色权限")
-    public R<List<Long>> getPermissions(@PathVariable Long id) {
+    @Operation(summary = "查询角色权限", description = "获取指定角色已分配的权限ID列表")
+    public R<List<Long>> getPermissions(@Parameter(description = "角色ID") @PathVariable Long id) {
         List<Long> permIds = roleService.getPermissionIds(id);
         return R.success(permIds);
     }
 
     /**
      * 为角色分配权限
+     * @param id 角色ID
+     * @param body 权限ID列表
+     * @return 操作结果
      */
     @PutMapping("/{id}/permissions")
-    @Operation(summary = "分配角色权限")
-    public R<String> assignPermissions(@PathVariable Long id, @RequestBody Map<String, List<Long>> body) {
+    @Operation(summary = "分配角色权限", description = "为角色批量分配权限")
+    public R<String> assignPermissions(
+            @Parameter(description = "角色ID") @PathVariable Long id,
+            @Parameter(description = "权限ID列表") @RequestBody Map<String, List<Long>> body) {
         List<Long> permissionIds = body.get("permissionIds");
         roleService.assignPermissions(id, permissionIds);
 
@@ -133,6 +161,7 @@ public class RoleController {
 
     /**
      * 获取所有权限（构建权限树）
+     * @return 权限列表
      */
     @GetMapping("/permissions/tree")
     @Operation(summary = "获取权限树")
@@ -143,7 +172,7 @@ public class RoleController {
 
     /**
      * 获取筛选下拉选项（角色名称列表）
-     * <p>从数据库动态查询所有角色名称，供前端下拉框使用</p>
+     * @return 包含角色名称列表的Map
      */
     @GetMapping("/options")
     @Operation(summary = "筛选选项", description = "获取所有角色名称，供搜索条件下拉框使用")

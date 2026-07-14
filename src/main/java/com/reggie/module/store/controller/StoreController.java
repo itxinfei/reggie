@@ -6,6 +6,9 @@ import com.reggie.module.store.model.StoreInfo;
 import com.reggie.module.store.model.StoreSearchDTO;
 import com.reggie.module.store.service.StoreService;
 import com.reggie.module.store.service.StoreSyncService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +36,7 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/store")
+@Tag(name = "门店管理", description = "门店CRUD、数据同步、商品管理及导出接口")
 public class StoreController {
 
     @Autowired
@@ -43,30 +47,37 @@ public class StoreController {
     // ==================== 门店管理 ====================
 
     /**
-     * 分页搜索门店列表（支持多条件筛选与排序）
-     * POST /store/page
+     * 分页搜索门店列表
+     * @param dto 搜索条件（关键字、门店类型、状态等）
+     * @return 分页结果
      */
     @PostMapping("/page")
+    @Operation(summary = "分页搜索门店", description = "分页搜索门店列表，支持多条件筛选与排序")
+    @Parameter(name = "dto", description = "搜索条件（关键字、门店类型、状态等）", required = true)
     public R<Map<String, Object>> pageStores(@RequestBody StoreSearchDTO dto) {
         Map<String, Object> result = storeService.searchStores(dto);
         return R.success(result);
     }
 
     /**
-     * 获取所有门店列表（总部视角，兼容旧接口）
-     * GET /store/list
+     * 获取所有门店列表（总部视角）
+     * @return 门店列表
      */
     @GetMapping("/list")
+    @Operation(summary = "获取所有门店列表", description = "总部视角获取所有门店列表，兼容旧接口")
     public R<List<Map<String, Object>>> listStores() {
         List<Map<String, Object>> stores = storeService.listAllStores();
         return R.success(stores);
     }
 
     /**
-     * 获取门店详情（编辑回显用）
-     * GET /store/detail/{tenantId}
+     * 获取门店详情
+     * @param tenantId 租户ID
+     * @return 门店详情
      */
     @GetMapping("/detail/{tenantId}")
+    @Operation(summary = "获取门店详情", description = "根据tenantId获取门店详情，用于编辑回显")
+    @Parameter(name = "tenantId", description = "租户ID", required = true)
     public R<Map<String, Object>> getStoreDetail(@PathVariable Long tenantId) {
         Map<String, Object> detail = storeService.getStoreDetail(tenantId);
         return R.success(detail);
@@ -77,16 +88,21 @@ public class StoreController {
      * GET /store/branches?parentTenantId=1
      */
     @GetMapping("/branches")
+    @Operation(summary = "获取分店列表", description = "获取某总店下的分店列表")
+    @Parameter(name = "parentTenantId", description = "总店tenantId", required = false)
     public R<List<StoreInfo>> listBranches(@RequestParam(required = false) Long parentTenantId) {
         List<StoreInfo> branches = storeService.listBranchStores(parentTenantId);
         return R.success(branches);
     }
 
     /**
-     * 创建门店
-     * POST /store/create
+     * 创建新门店
+     * @param body 门店信息
+     * @return 门店信息
      */
     @PostMapping("/create")
+    @Operation(summary = "创建门店", description = "创建新门店并关联租户和管理员账号")
+    @Parameter(name = "body", description = "门店信息（包含门店名称、编码、类型、联系方式、管理员账号等）", required = true)
     public R<StoreInfo> createStore(@Valid @RequestBody Map<String, Object> body) {
         // 构建StoreInfo
         StoreInfo storeInfo = new StoreInfo();
@@ -115,9 +131,14 @@ public class StoreController {
 
     /**
      * 编辑门店信息
-     * PUT /store/update/{tenantId}
+     * @param tenantId 租户ID
+     * @param updateData 门店更新数据
+     * @return 操作结果
      */
     @PutMapping("/update/{tenantId}")
+    @Operation(summary = "编辑门店", description = "根据tenantId更新门店信息")
+    @Parameter(name = "tenantId", description = "租户ID", required = true)
+    @Parameter(name = "updateData", description = "门店更新数据", required = true)
     public R<String> updateStore(@PathVariable Long tenantId,
                                   @RequestBody Map<String, Object> updateData) {
         storeService.updateStore(tenantId, updateData);
@@ -126,9 +147,13 @@ public class StoreController {
 
     /**
      * 切换门店
-     * POST /store/switch/{tenantId}
+     * @param tenantId 目标租户ID
+     * @param session HTTP会话
+     * @return 门店信息
      */
     @PostMapping("/switch/{tenantId}")
+    @Operation(summary = "切换门店", description = "切换当前会话的租户门店")
+    @Parameter(name = "tenantId", description = "目标租户ID", required = true)
     public R<Map<String, Object>> switchStore(@PathVariable Long tenantId,
                                                HttpSession session) {
         Map<String, Object> storeInfo = storeService.switchStore(tenantId);
@@ -142,6 +167,9 @@ public class StoreController {
      * PUT /store/{tenantId}/status
      */
     @PutMapping("/{tenantId}/status")
+    @Operation(summary = "更新门店状态", description = "根据tenantId更新门店启用/停用状态")
+    @Parameter(name = "tenantId", description = "租户ID", required = true)
+    @Parameter(name = "status", description = "状态值（1=启用 0=停用）", required = true)
     public R<String> updateStatus(@PathVariable Long tenantId,
                                    @RequestParam Integer status) {
         storeService.updateStoreStatus(tenantId, status);
@@ -149,10 +177,13 @@ public class StoreController {
     }
 
     /**
-     * 批量更新门店状态（上下架）
-     * PUT /store/batch/status
+     * 批量更新门店状态
+     * @param body 批量操作数据
+     * @return 操作结果
      */
     @PutMapping("/batch/status")
+    @Operation(summary = "批量更新门店状态", description = "批量更新门店启用/停用状态（上下架）")
+    @Parameter(name = "body", description = "批量操作数据（tenantIds状态列表、目标状态）", required = true)
     public R<Map<String, Object>> batchUpdateStatus(@RequestBody Map<String, Object> body) {
         @SuppressWarnings("unchecked")
         List<Long> tenantIds = ((List<Integer>) body.get("tenantIds")).stream()
@@ -167,9 +198,12 @@ public class StoreController {
 
     /**
      * 导出门店数据为CSV
-     * POST /store/export
+     * @param dto 搜索条件
+     * @param response HTTP响应
      */
     @PostMapping("/export")
+    @Operation(summary = "导出门店数据", description = "导出门店数据为CSV文件")
+    @Parameter(name = "dto", description = "搜索条件（关键字、门店类型、状态等）", required = true)
     public void exportStores(@RequestBody StoreSearchDTO dto, HttpServletResponse response) {
         List<Map<String, Object>> stores = storeService.exportStores(
                 dto.getKeyword(), dto.getStoreType(), dto.getStatus());
@@ -224,9 +258,12 @@ public class StoreController {
 
     /**
      * 获取门店今日概况
-     * GET /store/summary/today?tenantId=1
+     * @param tenantId 租户ID（可选）
+     * @return 门店今日经营概况
      */
     @GetMapping("/summary/today")
+    @Operation(summary = "获取门店今日概况", description = "获取门店今日经营概况数据")
+    @Parameter(name = "tenantId", description = "租户ID", required = false)
     public R<Map<String, Object>> todaySummary(@RequestParam(required = false) Long tenantId) {
         Map<String, Object> summary = storeService.getTodaySummary(tenantId);
         return R.success(summary);
@@ -236,9 +273,12 @@ public class StoreController {
 
     /**
      * 同步菜品到目标门店
-     * POST /store/sync/dishes
+     * @param body 同步数据
+     * @return 同步结果
      */
     @PostMapping("/sync/dishes")
+    @Operation(summary = "同步菜品", description = "将指定菜品从源门店同步到目标门店")
+    @Parameter(name = "body", description = "同步数据（sourceTenantId, targetTenantId, dishIds, operatorId）", required = true)
     public R<Map<String, Object>> syncDishes(@RequestBody Map<String, Object> body) {
         Long sourceTenantId = Long.valueOf(body.get("sourceTenantId").toString());
         Long targetTenantId = Long.valueOf(body.get("targetTenantId").toString());
@@ -256,9 +296,12 @@ public class StoreController {
 
     /**
      * 同步分类到目标门店
-     * POST /store/sync/categories
+     * @param body 同步数据
+     * @return 同步结果
      */
     @PostMapping("/sync/categories")
+    @Operation(summary = "同步分类", description = "将分类从源门店同步到目标门店")
+    @Parameter(name = "body", description = "同步数据（sourceTenantId, targetTenantId, operatorId）", required = true)
     public R<Map<String, Object>> syncCategories(@RequestBody Map<String, Object> body) {
         Long sourceTenantId = Long.valueOf(body.get("sourceTenantId").toString());
         Long targetTenantId = Long.valueOf(body.get("targetTenantId").toString());
@@ -271,9 +314,12 @@ public class StoreController {
 
     /**
      * 同步套餐到目标门店
-     * POST /store/sync/setmeals
+     * @param body 同步数据
+     * @return 同步结果
      */
     @PostMapping("/sync/setmeals")
+    @Operation(summary = "同步套餐", description = "将套餐从源门店同步到目标门店")
+    @Parameter(name = "body", description = "同步数据（sourceTenantId, targetTenantId, setmealIds, operatorId）", required = true)
     public R<Map<String, Object>> syncSetmeals(@RequestBody Map<String, Object> body) {
         Long sourceTenantId = Long.valueOf(body.get("sourceTenantId").toString());
         Long targetTenantId = Long.valueOf(body.get("targetTenantId").toString());
@@ -290,10 +336,17 @@ public class StoreController {
     }
 
     /**
-     * 查询同步日志
-     * GET /store/sync/logs?sourceTenantId=1&page=1&pageSize=10
+     * 查询菜品/分类/套餐同步操作日志
+     * @param sourceTenantId 源门店tenantId
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @return 同步日志列表
      */
     @GetMapping("/sync/logs")
+    @Operation(summary = "查询同步日志", description = "查询菜品/分类/套餐同步操作日志")
+    @Parameter(name = "sourceTenantId", description = "源门店tenantId", required = true)
+    @Parameter(name = "page", description = "页码", required = false, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = false, example = "10")
     public R<List<Map<String, Object>>> syncLogs(
             @RequestParam Long sourceTenantId,
             @RequestParam(defaultValue = "1") int page,

@@ -44,6 +44,12 @@ public class DiningTableController {
     @Autowired
     private QRCodeUtil qrCodeUtil;
 
+    /**
+     * 分页查询桌台列表
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @return 分页结果（自动关联区域信息）
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询桌台列表，自动关联区域信息")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -53,6 +59,11 @@ public class DiningTableController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 新增桌台
+     * @param table 桌台信息
+     * @return 新增桌台信息
+     */
     @PostMapping
     @Operation(summary = "新增桌台", description = "创建新的桌台并关联区域")
     public R<DiningTable> save(@RequestBody DiningTable table) {
@@ -62,6 +73,11 @@ public class DiningTableController {
         return R.success(table);
     }
 
+    /**
+     * 修改桌台
+     * @param table 桌台信息
+     * @return 操作结果
+     */
     @PutMapping
     @Operation(summary = "修改桌台", description = "更新桌台基本信息")
     public R<String> update(@RequestBody DiningTable table) {
@@ -79,6 +95,11 @@ public class DiningTableController {
         return R.success("删除桌台成功");
     }
 
+    /**
+     * 根据ID查询桌台
+     * @param id 桌台ID
+     * @return 桌台详情
+     */
     @GetMapping("/{id}")
     @Operation(summary = "根据id查询桌台", description = "根据ID查询桌台详情")
     @Parameter(name = "id", description = "桌台ID", required = true)
@@ -90,6 +111,11 @@ public class DiningTableController {
         return R.error("没有查询到对应桌台");
     }
 
+    /**
+     * 修改桌台状态
+     * @param dto 桌台状态变更请求
+     * @return 操作结果
+     */
     @PutMapping("/status")
     @Operation(summary = "修改桌台状态", description = "更新桌台使用状态（空闲/使用中/已预订等）")
     public R<String> changeStatus(@Valid @RequestBody ChangeTableStatusDTO dto) {
@@ -98,6 +124,11 @@ public class DiningTableController {
         return R.success("修改状态成功");
     }
 
+    /**
+     * 生成桌台二维码
+     * @param id 桌台ID
+     * @return Base64格式二维码图片
+     */
     @GetMapping("/qrcode/{id}")
     @Operation(summary = "生成桌台二维码", description = "生成桌台扫码点餐二维码（Base64格式）")
     @Parameter(name = "id", description = "桌台ID", required = true)

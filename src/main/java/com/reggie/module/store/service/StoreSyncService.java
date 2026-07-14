@@ -4,11 +4,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * <p>
  * 门店数据同步服务接口
- * 处理总部向分店同步菜品、分类、套餐、配置等数据
+ * </p>
+ * <p>处理总部向分店同步菜品、分类、套餐、配置等数据</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface StoreSyncService {
 

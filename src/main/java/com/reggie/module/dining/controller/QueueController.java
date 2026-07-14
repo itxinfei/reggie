@@ -40,6 +40,14 @@ public class QueueController {
     @Autowired
     private QueueService queueService;
 
+    /**
+     * 分页查询排队记录
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param status 排队状态（可选）
+     * @param phone 手机号（可选，模糊搜索）
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询排队记录列表，支持按状态、手机号筛选")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -58,6 +66,11 @@ public class QueueController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 顾客取号排队
+     * @param dto 取号请求
+     * @return 排队记录
+     */
     @PostMapping("/take")
     @Operation(summary = "取号", description = "顾客取号排队，支持指定座位数和手机号")
     public R<QueueRecord> takeNumber(@Valid @RequestBody TakeNumberDTO dto) {
@@ -67,6 +80,11 @@ public class QueueController {
         return R.success(record);
     }
 
+    /**
+     * 呼叫下一位顾客
+     * @param dto 叫号请求（可选）
+     * @return 排队记录
+     */
     @PutMapping("/call")
     @Operation(summary = "叫号", description = "呼叫下一位顾客，支持按座位数筛选")
     public R<QueueRecord> callNext(@Validated(org.springframework.validation.Validator.class) @RequestBody(required = false) CallNextDTO dto) {
@@ -76,6 +94,11 @@ public class QueueController {
         return record != null ? R.success(record) : R.error("没有等待中的顾客");
     }
 
+    /**
+     * 取消排队
+     * @param id 排队记录ID
+     * @return 操作结果
+     */
     @PutMapping("/cancel/{id}")
     @Operation(summary = "取消排队", description = "取消指定排队记录")
     @Parameter(name = "id", description = "排队记录ID", required = true)

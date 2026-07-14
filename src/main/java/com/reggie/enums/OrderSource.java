@@ -3,7 +3,12 @@ package com.reggie.enums;
 import lombok.Getter;
 
 /**
+ * <p>
  * 订单来源枚举
+ * </p>
+ *
+ * @author 心飞为你飞
+ * @since 2026-07-09
  */
 @Getter
 public enum OrderSource {

@@ -6,17 +6,18 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
+ * <p>
  * 菜品评价数据传输对象
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Data
+@Schema(description = "菜品评价数据传输对象")
 public class DishEvaluationDTO {
 
-    /**
-     * 评价ID
-     */
+    @Schema(description = "评价ID", example = "1")
     private Long id;
 
     /**

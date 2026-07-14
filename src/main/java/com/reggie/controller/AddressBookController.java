@@ -42,7 +42,10 @@ public class AddressBookController {
     private AddressBookService addressBookService;
 
     /**
-     * 新增
+     * 新增地址
+     *
+     * @param addressBook 地址信息
+     * @return 新增地址信息
      */
     @PostMapping
     @Operation(summary = "新增地址", description = "添加新的收货地址，自动关联当前用户")
@@ -121,6 +124,9 @@ public class AddressBookController {
 
     /**
      * 设置默认地址
+     *
+     * @param addressBook 地址信息
+     * @return 更新后的地址信息
      */
     @PutMapping("default")
     @Operation(summary = "设置默认地址", description = "将指定地址设为默认收货地址")
@@ -149,7 +155,10 @@ public class AddressBookController {
     }
 
     /**
-     * 根据id查询地址
+     * 根据ID查询地址
+     *
+     * @param id 地址ID
+     * @return 地址信息
      */
     @GetMapping("/{id}")
     @Operation(summary = "查询地址详情", description = "根据ID查询地址信息")
@@ -170,6 +179,8 @@ public class AddressBookController {
 
     /**
      * 查询默认地址
+     *
+     * @return 默认地址信息
      */
     @GetMapping("default")
     @Operation(summary = "查询默认地址", description = "查询用户的默认收货地址")
@@ -190,6 +201,9 @@ public class AddressBookController {
 
     /**
      * 查询指定用户的全部地址
+     *
+     * @param addressBook 地址查询条件
+     * @return 地址列表
      */
     @GetMapping("/list")
     @Operation(summary = "查询地址列表", description = "查询用户的所有地址")

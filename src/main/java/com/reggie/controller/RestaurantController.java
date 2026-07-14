@@ -25,7 +25,7 @@ public class RestaurantController {
 
     /**
      * 获取商家基本信息和配送参数
-     * 现在通过接口动态返回，便于后台配置调整
+     * @return 商家运营信息（评分、销量、配送费等）
      */
     @GetMapping("/info")
     @Operation(summary = "获取商家信息", description = "返回商家评分、销量、配送费等基本运营信息")

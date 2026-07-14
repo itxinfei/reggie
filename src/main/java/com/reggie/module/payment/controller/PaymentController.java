@@ -49,7 +49,7 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/api/payment")
-@Tag(name = "聚合支付")
+@Tag(name = "聚合支付", description = "统一支付、退款、支付回调等接口")
 public class PaymentController {
 
     @Autowired
@@ -67,9 +67,15 @@ public class PaymentController {
     @Autowired
     private DashboardService dashboardService;
 
+    /**
+     * 创建支付订单
+     * @param dto 支付请求参数
+     * @return 支付渠道响应（支付链接或二维码）
+     */
     @PostMapping("/pay")
-    @Operation(summary = "创建支付", description = "创建支付订单并调用支付渠道生成支付链接/二维码")
-    public R<PayResponse> pay(@Validated @RequestBody PayRequestDTO dto) {
+    @Operation(summary = "创建支付订单", description = "创建支付订单并调用支付渠道生成支付链接或二维码")
+    public R<PayResponse> pay(
+            @Parameter(description = "支付请求参数", required = true) @Validated @RequestBody PayRequestDTO dto) {
         PaymentOrder paymentOrder = paymentOrderService.createPaymentOrder(dto.getOrderId(), dto.getChannel(), dto.getAmount());
 
         PaymentChannel paymentChannel = paymentChannelFactory.getChannel(dto.getChannel());
@@ -82,10 +88,17 @@ public class PaymentController {
         return R.success(response);
     }
 
+    /**
+     * 接收支付渠道的异步通知
+     * @param channel 支付渠道：WECHAT-微信、ALIPAY-支付宝
+     * @param params 回调参数
+     * @return 处理结果
+     */
     @PostMapping("/notify/{channel}")
-    @Operation(summary = "支付回调", description = "接收支付渠道的异步通知，更新订单支付状态")
-    @Parameter(name = "channel", description = "支付渠道：WECHAT-微信、ALIPAY-支付宝", required = true)
-    public R<String> notify(@PathVariable String channel, @RequestBody Map<String, String> params) {
+    @Operation(summary = "支付回调通知", description = "接收支付渠道的异步通知，更新订单支付状态")
+    public R<String> notify(
+            @Parameter(description = "支付渠道：WECHAT-微信、ALIPAY-支付宝", required = true) @PathVariable String channel,
+            @Parameter(description = "回调参数") @RequestBody Map<String, String> params) {
         PaymentChannel paymentChannel = paymentChannelFactory.getChannel(channel);
         PayResponse response = paymentChannel.handleNotify(params);
         if (response.isSuccess()) {
@@ -98,9 +111,15 @@ public class PaymentController {
         return R.error("回调处理失败");
     }
 
+    /**
+     * 申请退款
+     * @param dto 退款请求参数
+     * @return 退款结果
+     */
     @PostMapping("/refund")
-    @Operation(summary = "退款", description = "申请退款并调用支付渠道处理退款")
-    public R<String> refund(@Validated @RequestBody RefundRequestDTO dto) {
+    @Operation(summary = "申请退款", description = "申请退款并调用支付渠道处理退款流程")
+    public R<String> refund(
+            @Parameter(description = "退款请求参数", required = true) @Validated @RequestBody RefundRequestDTO dto) {
         PaymentOrder paymentOrder = paymentOrderService.getById(dto.getPaymentOrderId());
         if (paymentOrder == null) {
             return R.error("支付订单不存在");
@@ -145,10 +164,15 @@ public class PaymentController {
         return R.error("退款失败: " + refundResponse.getErrorMsg());
     }
 
+    /**
+     * 根据交易号查询支付订单状态
+     * @param tradeNo 交易号
+     * @return 支付订单信息
+     */
     @GetMapping("/query/{tradeNo}")
     @Operation(summary = "查询支付状态", description = "根据交易号查询支付订单状态")
-    @Parameter(name = "tradeNo", description = "交易号", required = true)
-    public R<PaymentOrder> query(@PathVariable String tradeNo) {
+    public R<PaymentOrder> query(
+            @Parameter(description = "交易号", required = true) @PathVariable String tradeNo) {
         PaymentOrder po = paymentOrderService.lambdaQuery()
             .eq(PaymentOrder::getTradeNo, tradeNo).one();
         if (po == null) {
@@ -158,11 +182,13 @@ public class PaymentController {
     }
 
     @GetMapping("/page")
-    @Operation(summary = "分页查询", description = "分页查询支付订单列表，支持按订单ID、渠道、状态、时间范围筛选")
-    public R<Page<PaymentOrder>> page(int page, int pageSize,
+    @Operation(summary = "分页查询支付订单", description = "分页查询支付订单列表，支持按订单ID、渠道、状态、时间范围筛选")
+    public R<Page<PaymentOrder>> page(
+            @Parameter(description = "页码") int page,
+            @Parameter(description = "每页条数") int pageSize,
             @Parameter(description = "订单ID") Long orderId,
             @Parameter(description = "支付渠道：ALIPAY-支付宝, WECHAT-微信") String channel,
-            @Parameter(description = "支付状态：PENDING-待支付, SUCCESS-成功, FAIL/FAILED-失败, REFUND/REFUNDED-已退款") String status,
+            @Parameter(description = "支付状态：PENDING-待支付, SUCCESS-成功, FAIL-失败, REFUND-已退款") String status,
             @Parameter(description = "开始时间（yyyy-MM-dd HH:mm:ss）") String beginTime,
             @Parameter(description = "结束时间（yyyy-MM-dd HH:mm:ss）") String endTime) {
         Page<PaymentOrder> pageInfo = new Page<>(page, pageSize);

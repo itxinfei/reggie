@@ -4,10 +4,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * 打印机适配器工厂
- * 根据品牌类型返回对应的打印机适配器实例
+ * <p>
+ * 打印机适配器工厂，根据品牌类型返回对应的打印机适配器实例。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Component

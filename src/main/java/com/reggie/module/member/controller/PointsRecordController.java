@@ -43,6 +43,13 @@ public class PointsRecordController {
     @Autowired
     private MemberService memberService;
 
+    /**
+     * 分页查询会员积分记录
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param phone 会员手机号（可选，精确查询）
+     * @return 积分记录分页结果（含关联会员信息）
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询会员积分记录，支持按手机号搜索，返回关联会员信息（名称、手机号、余额）")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -125,6 +132,10 @@ public class PointsRecordController {
     /**
      * 积分统计
      * 返回全平台积分总览数据，包括总积分、今日/本月获取与消耗、近30天趋势
+     */
+    /**
+     * 积分统计
+     * @return 全平台积分总览数据（总积分、今日/本月获取与消耗、近30天趋势）
      */
     @GetMapping("/stats")
     @Operation(summary = "积分统计", description = "获取全平台积分统计数据：总积分、今日/本月获取与消耗、近30天趋势")

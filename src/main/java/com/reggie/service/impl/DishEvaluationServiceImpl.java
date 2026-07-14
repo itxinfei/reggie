@@ -46,11 +46,11 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
      * 根据ID查询评价
      *
      * @param id 评价ID
-     * @return 评价信息
+     * @return 评价信息，不存在返回null
      */
     @Override
     public DishEvaluation getById(Long id) {
-        return this.getById(id);
+        return super.getById(id);
     }
 
     /**

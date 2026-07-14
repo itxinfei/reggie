@@ -6,9 +6,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 集合转换工具类
+ * <p>
+ * 集合转换工具类，提供类型安全的集合映射操作
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 public class CollectionUtils {

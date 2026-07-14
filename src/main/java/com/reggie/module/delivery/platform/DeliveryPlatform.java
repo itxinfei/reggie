@@ -4,10 +4,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 配送平台接口（策略模式）
- * 定义与第三方配送平台（如饿了么、美团）的交互规范
+ * <p>
+ * 配送平台接口（策略模式），定义与第三方配送平台的交互规范。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 public interface DeliveryPlatform {

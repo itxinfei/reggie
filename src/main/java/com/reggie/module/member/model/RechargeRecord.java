@@ -1,32 +1,46 @@
 package com.reggie.module.member.model;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 充值记录实体类
+ * 充值记录
  *
  * @author reggie
  * @since 2026-07-09
  */
 @Data
+@TableName("recharge_record")
+@Schema(description = "会员充值记录")
 public class RechargeRecord implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
-    /** 主键ID */
+    @Schema(description = "充值记录ID", example = "1")
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
-    /** 租户ID */
+
+    @Schema(description = "租户ID", example = "1")
     private Long tenantId;
-    /** 会员ID */
+
+    @Schema(description = "会员ID", example = "1")
     private Long memberId;
-    /** 充值金额 */
+
+    @Schema(description = "充值金额（元）", example = "200.00")
     private BigDecimal amount;
-    /** 赠送金额 */
+
+    @Schema(description = "赠送金额（元）", example = "20.00")
     private BigDecimal giftAmount;
-    /** 支付方式（wechat微信 alipay支付宝） */
+
+    @Schema(description = "支付方式：wechat=微信，alipay=支付宝", example = "wechat")
     private String paymentMethod;
-    /** 创建时间 */
+
+    @Schema(description = "充值时间", example = "2026-07-09 10:00:00")
     private LocalDateTime createdTime;
 }

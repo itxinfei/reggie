@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.member.model.CouponTemplate;
 
 /**
+ * <p>
  * 优惠券模板服务接口
- * 提供优惠券领取、使用、过期清理等功能
+ * </p>
+ * <p>提供优惠券领取、使用、过期清理等功能</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface CouponTemplateService extends IService<CouponTemplate> {
 

@@ -232,6 +232,12 @@ public class DishController {
         //添加排序条件
         queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
 
+        // 多租户过滤：显式限制当前租户数据
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(Dish::getTenantId, tenantId);
+        }
+
         List<Dish> list = dishService.list(queryWrapper);
         if (list.isEmpty()) {
             return R.success(new ArrayList<>());
@@ -287,6 +293,10 @@ public class DishController {
     @Operation(summary = "筛选选项", description = "获取所有菜品名称，供搜索条件下拉框使用")
     public R<Map<String, List<String>>> options() {
         LambdaQueryWrapper<Dish> qw = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            qw.eq(Dish::getTenantId, tenantId);
+        }
         qw.orderByAsc(Dish::getName);
         List<Dish> list = dishService.list(qw);
         Set<String> nameSet = new HashSet<>();

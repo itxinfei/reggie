@@ -201,9 +201,10 @@ public class StoreServiceImpl implements StoreService {
         if (dto.getSortOrder() != null && "asc".equalsIgnoreCase(dto.getSortOrder())) {
             sortOrder = "asc";
         }
+        Long tenantId = BaseContext.getCurrentTenantId();
         IPage<Map<String, Object>> result = storeInfoMapper.searchStores(
                 page, dto.getKeyword(), dto.getStoreType(), dto.getStatus(),
-                dto.getSortBy(), sortOrder);
+                dto.getSortBy(), sortOrder, tenantId);
 
         Map<String, Object> pageResult = new LinkedHashMap<>();
         pageResult.put("records", result.getRecords());
@@ -335,7 +336,8 @@ public class StoreServiceImpl implements StoreService {
     // 修改点：新增导出方法
     @Override
     public List<Map<String, Object>> exportStores(String keyword, Integer storeType, Integer status) {
-        return storeInfoMapper.exportStores(keyword, storeType, status);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        return storeInfoMapper.exportStores(keyword, storeType, status, tenantId);
     }
 
     @Override

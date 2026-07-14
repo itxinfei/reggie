@@ -37,6 +37,12 @@ public class MemberLevelController {
     @Autowired
     private MemberLevelService memberLevelService;
 
+    /**
+     * 分页查询会员等级列表
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询会员等级列表，自动过滤当前租户数据")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -53,6 +59,11 @@ public class MemberLevelController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 新增会员等级
+     * @param memberLevel 会员等级信息
+     * @return 操作结果
+     */
     @PostMapping
     @Operation(summary = "新增等级", description = "创建新的会员等级")
     public R<String> save(@RequestBody MemberLevel memberLevel) {
@@ -62,6 +73,11 @@ public class MemberLevelController {
         return R.success("新增会员等级成功");
     }
 
+    /**
+     * 修改会员等级
+     * @param memberLevel 会员等级信息
+     * @return 操作结果
+     */
     @PutMapping
     @Operation(summary = "修改等级", description = "更新会员等级信息")
     public R<String> update(@RequestBody MemberLevel memberLevel) {
@@ -79,6 +95,11 @@ public class MemberLevelController {
         return R.success("删除会员等级成功");
     }
 
+    /**
+     * 根据ID查询会员等级
+     * @param id 等级ID
+     * @return 等级详情
+     */
     @GetMapping("/{id}")
     @Operation(summary = "查询等级", description = "根据ID查询会员等级详情")
     @Parameter(name = "id", description = "等级ID", required = true)

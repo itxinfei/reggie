@@ -1,5 +1,10 @@
 package com.reggie.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import javax.validation.constraints.DecimalMin;
@@ -14,13 +19,19 @@ import java.time.LocalDateTime;
  * 购物车
  */
 @Data
-@Schema(description = "购物车实体")
+@TableName("shopping_cart")
+@Schema(description = "购物车")
 public class ShoppingCart implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     @Schema(description = "购物车ID", example = "1")
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
+
+    @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
+    private Long tenantId;
 
     @Schema(description = "商品名称", example = "鱼香肉丝", required = true)
     @NotBlank(message = "商品名称不能为空")
@@ -53,5 +64,7 @@ public class ShoppingCart implements Serializable {
     private String image;
 
     @Schema(description = "创建时间")
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+
 }

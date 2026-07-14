@@ -21,14 +21,17 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 权限校验切面
- * 拦截带有 @RequiresPermission 注解的方法，校验当前用户是否有权限
  * <p>
- * 修改点：缓存未命中时通过PermissionService从数据库加载权限，而非返回管理员全部权限
- * 防止越权风险。
+ * 权限校验切面
+ * </p>
+ * <p>
+ * 拦截带有 {@link RequiresPermission} 注解的方法，校验当前用户是否具有所需权限。
+ * 权限数据优先从 Redis 缓存获取，缓存未命中时从数据库加载并回填缓存。
+ * 超级管理员（roleKey=admin）直接放行，无需权限校验。
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Slf4j
 @Aspect

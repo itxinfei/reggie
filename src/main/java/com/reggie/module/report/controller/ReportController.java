@@ -37,6 +37,11 @@ public class ReportController {
     @Autowired
     private ReportService reportService;
 
+    /**
+     * 获取指定日期的经营日报表
+     * @param date 日期，格式：yyyy-MM-dd
+     * @return 日报表数据（营业额、订单数、客单价等）
+     */
     @GetMapping("/daily")
     @Operation(summary = "日报表", description = "获取指定日期的经营日报表数据，包含营业额、订单数、客单价等核心指标")
     @Parameter(name = "date", description = "日期，格式：yyyy-MM-dd", required = true, example = "2026-07-08")
@@ -46,6 +51,13 @@ public class ReportController {
         return R.success(data);
     }
 
+    /**
+     * 获取指定时间段的菜品销售排行
+     * @param startDate 开始日期，格式：yyyy-MM-dd
+     * @param endDate 结束日期，格式：yyyy-MM-dd
+     * @param limit 返回前N条排行
+     * @return 菜品排行列表
+     */
     @GetMapping("/dish-ranking")
     @Operation(summary = "菜品排行", description = "获取指定时间段的菜品销售排行，支持限制返回数量")
     @Parameter(name = "startDate", description = "开始日期，格式：yyyy-MM-dd", required = true, example = "2026-07-01")
@@ -60,6 +72,12 @@ public class ReportController {
         return R.success(data);
     }
 
+    /**
+     * 获取指定时间段的营业时段分析
+     * @param startDate 开始日期，格式：yyyy-MM-dd
+     * @param endDate 结束日期，格式：yyyy-MM-dd
+     * @return 时段分析列表
+     */
     @GetMapping("/time-slot")
     @Operation(summary = "时段分析", description = "获取指定时间段的营业时段分析，识别高峰时段")
     @Parameter(name = "startDate", description = "开始日期，格式：yyyy-MM-dd", required = true, example = "2026-07-01")
@@ -72,6 +90,12 @@ public class ReportController {
         return R.success(data);
     }
 
+    /**
+     * 获取指定时间段的支付方式统计
+     * @param startDate 开始日期，格式：yyyy-MM-dd
+     * @param endDate 结束日期，格式：yyyy-MM-dd
+     * @return 支付方式统计数据
+     */
     @GetMapping("/payment")
     @Operation(summary = "支付方式分析", description = "获取指定时间段的支付方式统计，分析微信/支付宝等支付渠道占比")
     @Parameter(name = "startDate", description = "开始日期，格式：yyyy-MM-dd", required = true, example = "2026-07-01")
@@ -87,8 +111,10 @@ public class ReportController {
     // ======================== 增强分析接口 ========================
 
     /**
-     * 菜品分类销售占比（日报-分类饼图）
-     * GET /api/report/category-sales?startDate=&endDate=
+     * 菜品分类销售占比
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 各菜品分类销售数量和占比
      */
     @GetMapping("/category-sales")
     @Operation(summary = "菜品分类销售占比", description = "获取各菜品分类的销售数量和占比，数据来源：order_detail + dish + category 联表统计")
@@ -101,8 +127,11 @@ public class ReportController {
     }
 
     /**
-     * Top3菜品销量趋势对比（菜品排行-趋势折线图）
-     * GET /api/report/dish-trend?names=菜品A,菜品B,菜品C&startDate=&endDate=
+     * 获取指定菜品的每日销量趋势
+     * @param names 菜品名称列表（逗号分隔）
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 各菜品每日销量趋势数据
      */
     @GetMapping("/dish-trend")
     @Operation(summary = "菜品销量趋势", description = "获取指定菜品在日期范围内的每日销量趋势，数据来源：order_detail + orders 真实统计")
@@ -121,8 +150,10 @@ public class ReportController {
     }
 
     /**
-     * 每日支付金额趋势（支付分析-趋势折线图）
-     * GET /api/report/payment/trend?startDate=&endDate=
+     * 获取各支付渠道每日金额趋势
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 各支付渠道每日金额趋势
      */
     @GetMapping("/payment/trend")
     @Operation(summary = "支付金额趋势", description = "获取各支付渠道每日金额趋势，数据来源：orders 表真实统计")
@@ -134,8 +165,10 @@ public class ReportController {
     }
 
     /**
-     * 工作日×时段 客流量热力图数据（时段分析-热力图）
-     * GET /api/report/time-slot/heatmap?startDate=&endDate=
+     * 获取工作日与时段的客流量热力图数据
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 工作日与时段的客流量热力图数据
      */
     @GetMapping("/time-slot/heatmap")
     @Operation(summary = "时段热力图", description = "获取工作日×时段的客流量热力图数据，数据来源：orders 表真实统计")
@@ -147,8 +180,11 @@ public class ReportController {
     }
 
     /**
-     * 复购率统计（按日/周/月/年）
-     * GET /api/report/repurchase-rate?period=month&startDate=&endDate=
+     * 获取复购率统计趋势
+     * @param period 统计周期（day/week/month/year）
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 复购率趋势数据
      */
     @GetMapping("/repurchase-rate")
     @Operation(summary = "复购率统计", description = "获取指定时间范围内的复购率趋势，支持按日/周/月/年分组")
@@ -162,8 +198,11 @@ public class ReportController {
     }
 
     /**
-     * 菜品复购率排行
-     * GET /api/report/repurchase-rate/dish?startDate=&endDate=&limit=10
+     * 获取各菜品的复购率排行
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @param limit 返回前N条排行
+     * @return 菜品复购率排行
      */
     @GetMapping("/repurchase-rate/dish")
     @Operation(summary = "菜品复购率排行", description = "获取各菜品的复购率排行，数据来源：order_detail + orders 联表统计")
@@ -178,7 +217,9 @@ public class ReportController {
 
     /**
      * 同期群分析（Cohort Analysis）
-     * GET /api/report/cohort?startDate=&endDate=
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 同期群分析数据
      */
     @GetMapping("/cohort")
     @Operation(summary = "同期群分析", description = "按首次消费月份分组，分析各用户群的复购率表现")
@@ -190,6 +231,13 @@ public class ReportController {
         return R.success(data);
     }
 
+    /**
+     * 导出营业报表
+     * @param startDate 开始日期，格式：yyyy-MM-dd
+     * @param endDate 结束日期，格式：yyyy-MM-dd
+     * @param format 导出格式：excel 或 pdf
+     * @return 报表文件流
+     */
     @GetMapping("/export")
     @Operation(summary = "导出报表", description = "导出指定时间段的营业报表，支持Excel和PDF两种格式")
     @Parameter(name = "startDate", description = "开始日期，格式：yyyy-MM-dd", required = true, example = "2026-07-01")
@@ -224,7 +272,8 @@ public class ReportController {
     }
 
     /**
-     * 获取导出历史记录
+     * 获取经营报表导出历史记录
+     * @return 导出历史列表
      */
     @GetMapping("/export/history")
     @Operation(summary = "导出历史", description = "获取经营报表导出的历史记录列表，包含导出时间、文件名、文件大小等信息")
@@ -234,7 +283,8 @@ public class ReportController {
     }
 
     /**
-     * 清除导出历史记录
+     * 清除经营报表导出历史记录
+     * @return 操作结果
      */
     @DeleteMapping("/export/history")
     @Operation(summary = "清除导出历史", description = "清除所有经营报表导出历史记录")

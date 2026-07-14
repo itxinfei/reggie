@@ -6,11 +6,13 @@ import com.reggie.module.inventory.model.Material;
 import java.util.List;
 
 /**
+ * <p>
  * 原料管理服务接口
- * 提供原料信息维护、分页查询、库存预警等功能
+ * </p>
+ * <p>提供原料信息维护、分页查询、库存预警等功能</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface MaterialService extends IService<Material> {
 

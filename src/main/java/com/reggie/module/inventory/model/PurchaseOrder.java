@@ -1,67 +1,55 @@
 package com.reggie.module.inventory.model;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 采购订单实体类
+ * 采购订单
  *
  * @author reggie
  * @since 2026-07-09
  */
 @Data
+@TableName("purchase_order")
+@Schema(description = "采购订单")
 public class PurchaseOrder implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键ID
-     */
+    @Schema(description = "采购订单ID", example = "1")
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 租户ID
-     */
+    @Schema(description = "租户ID", example = "1")
     private Long tenantId;
 
-    /**
-     * 订单编号
-     */
+    @Schema(description = "采购单号", example = "PO20260709001")
     private String orderNo;
 
-    /**
-     * 供应商ID
-     */
+    @Schema(description = "供应商ID", example = "1")
     private Long supplierId;
 
-    /**
-     * 总金额
-     */
+    @Schema(description = "总金额（元）", example = "500.00")
     private BigDecimal totalAmount;
 
-    /**
-     * 状态
-     */
+    @Schema(description = "状态：PENDING=待审核，APPROVED=已审核，COMPLETED=已完成，CANCELLED=已取消", example = "PENDING")
     private String status;
 
-    /**
-     * 操作员
-     */
+    @Schema(description = "操作员", example = "张三")
     private String operator;
 
-    /**
-     * 备注
-     */
+    @Schema(description = "备注", example = "紧急采购")
     private String remark;
 
-    /**
-     * 创建时间
-     */
+    @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
     private LocalDateTime createdTime;
 
-    /**
-     * 更新时间
-     */
+    @Schema(description = "更新时间", example = "2026-07-09 12:00:00")
     private LocalDateTime updatedTime;
 }

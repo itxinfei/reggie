@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import javax.validation.constraints.NotBlank;
@@ -17,7 +18,8 @@ import java.time.LocalDateTime;
  * 地址簿
  */
 @Data
-@Schema(description = "收货地址实体")
+@TableName("address_book")
+@Schema(description = "收货地址")
 public class AddressBook implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -45,7 +47,7 @@ public class AddressBook implements Serializable {
 
     @Schema(description = "性别：0=女，1=男", example = "1")
     @Size(max = 5, message = "性别格式不正确")
-    private String sex;
+    private Integer sex;
 
     @Schema(description = "省级区划编号", example = "110000", required = true)
     @NotBlank(message = "省级区划编号不能为空")
@@ -91,23 +93,23 @@ public class AddressBook implements Serializable {
     public static final int IS_DEFAULT = 1;
     private Integer isDefault;
 
-    @Schema(description = "创建时间")
+    @Schema(description = "创建时间", example = "2024-01-01 12:00:00")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    @Schema(description = "更新时间")
+    @Schema(description = "更新时间", example = "2024-01-01 12:00:00")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-    @Schema(description = "创建人ID")
+    @Schema(description = "创建人ID", example = "1")
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
-    @Schema(description = "修改人ID")
+    @Schema(description = "修改人ID", example = "1")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 
-    @Schema(description = "是否删除：0=否，1=是")
+    @Schema(description = "是否删除：0=否，1=是", example = "0")
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
 }

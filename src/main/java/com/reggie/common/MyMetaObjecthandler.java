@@ -7,10 +7,15 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
 /**
- * 自定义元数据对象处理器
+ * <p>
+ * 自定义元数据对象处理器，实现 MyBatis-Plus 自动填充功能
+ * </p>
+ * <p>
+ * 自动填充字段：createTime、updateTime、createUser、updateUser、tenantId
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Component
 @Slf4j

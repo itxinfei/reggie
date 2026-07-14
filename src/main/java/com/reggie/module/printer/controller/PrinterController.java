@@ -41,6 +41,12 @@ public class PrinterController {
     @Autowired
     private PrinterAdapterFactory adapterFactory;
 
+    /**
+     * 根据订单ID打印订单小票
+     * @param orderId 订单ID
+     * @param type 打印类型：BILL-小票（默认）、KITCHEN-厨房单
+     * @return 操作结果
+     */
     @PostMapping("/print/{orderId}")
     @Operation(summary = "打印订单", description = "根据订单ID打印订单小票，支持多种打印类型（BILL-小票、KITCHEN-厨房单）")
     @Parameter(name = "orderId", description = "订单ID", required = true)
@@ -51,6 +57,11 @@ public class PrinterController {
         return R.success("打印任务已发送");
     }
 
+    /**
+     * 测试打印机连接
+     * @param id 打印机ID
+     * @return 连接测试结果
+     */
     @PostMapping("/test/{id}")
     @Operation(summary = "测试打印机连接", description = "测试指定打印机是否连接正常")
     @Parameter(name = "id", description = "打印机ID", required = true)
@@ -60,6 +71,11 @@ public class PrinterController {
         return ok ? R.success("打印机连接正常") : R.error("打印机连接失败");
     }
 
+    /**
+     * 查询打印机状态
+     * @param id 打印机ID
+     * @return 打印机状态
+     */
     @GetMapping("/status/{id}")
     @Operation(summary = "查询打印机状态", description = "查询指定打印机的当前状态（在线/离线/缺纸等）")
     @Parameter(name = "id", description = "打印机ID", required = true)
@@ -69,6 +85,10 @@ public class PrinterController {
         return R.success(status);
     }
 
+    /**
+     * 获取系统已安装打印机列表
+     * @return 系统打印机列表
+     */
     @GetMapping("/system/list")
     @Operation(summary = "获取系统已安装打印机列表", description = "获取服务器系统已安装的打印机列表，用于系统打印机绑定")
     public R<List<Map<String, String>>> listSystemPrinters() {

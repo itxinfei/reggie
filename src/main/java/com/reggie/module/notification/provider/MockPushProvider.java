@@ -8,10 +8,11 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 模拟推送Provider（无需接入第三方SDK即可使用）
- * 用于演示、测试或无推送平台环境
+ * <p>
+ * 模拟推送Provider，无需接入第三方SDK即可使用，用于演示、测试或无推送平台环境。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

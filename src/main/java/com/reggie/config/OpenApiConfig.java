@@ -14,10 +14,11 @@ import org.springframework.context.annotation.Configuration;
 import java.util.Arrays;
 
 /**
- * OpenAPI/Swagger 配置类
- * 提供API文档的详细信息
+ * <p>
+ * OpenAPI配置类，提供API文档的详细信息。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Configuration

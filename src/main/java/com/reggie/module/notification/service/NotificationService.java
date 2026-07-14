@@ -5,11 +5,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * <p>
  * 消息通知服务接口
- * 统一管理短信发送与APP推送
+ * </p>
+ * <p>统一管理短信发送与APP推送</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface NotificationService {
 

@@ -3,9 +3,11 @@ package com.reggie.module.payment.channel;
 import lombok.Data;
 
 /**
- * 支付响应结果
+ * <p>
+ * 支付响应结果封装类。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Data

@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * 订单
  */
 @Data
-@Schema(description = "订单实体")
+@Schema(description = "订单")
 public class Orders implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -53,10 +53,10 @@ public class Orders implements Serializable {
     @NotNull(message = "地址ID不能为空")
     private Long addressBookId;
 
-    @Schema(description = "下单时间")
+    @Schema(description = "下单时间", example = "2024-01-01 12:30:00")
     private LocalDateTime orderTime;
 
-    @Schema(description = "结账时间")
+    @Schema(description = "结账时间", example = "2024-01-01 13:00:00")
     private LocalDateTime checkoutTime;
 
     @Schema(description = "支付方式：1=微信，2=支付宝", example = "1")
@@ -103,35 +103,39 @@ public class Orders implements Serializable {
     @Schema(description = "桌台ID（堂食/排队/预订使用）", example = "1")
     private Long tableId;
 
-    @Schema(description = "桌台名称（冗余，便于展示）", example = "A01")
+    @Schema(description = "桌台名称（非数据库字段，冗余展示）", example = "A01")
+    @TableField(exist = false)
     private String tableName;
 
-    @Schema(description = "排队记录ID（排队场景）", example = "1")
+    @Schema(description = "排队记录ID（非数据库字段，排队场景关联）", example = "1")
+    @TableField(exist = false)
     private Long queueId;
 
-    @Schema(description = "预订记录ID（预订场景）", example = "1")
+    @Schema(description = "预订记录ID（非数据库字段，预订场景关联）", example = "1")
+    @TableField(exist = false)
     private Long reservationId;
 
-    @Schema(description = "用餐人数", example = "4")
+    @Schema(description = "用餐人数（非数据库字段）", example = "4")
+    @TableField(exist = false)
     private Integer customerCount;
 
-    @Schema(description = "创建时间")
+    @Schema(description = "创建时间", example = "2024-01-01 12:30:00")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    @Schema(description = "更新时间")
+    @Schema(description = "更新时间", example = "2024-01-01 13:00:00")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-    @Schema(description = "创建人ID")
+    @Schema(description = "创建人ID", example = "1")
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
-    @Schema(description = "修改人ID")
+    @Schema(description = "修改人ID", example = "1")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 
-    @Schema(description = "是否删除：0=否，1=是")
+    @Schema(description = "是否删除：0=否，1=是", example = "0")
     @TableLogic(value = "0", delval = "1")
     @TableField("is_deleted")
     private Integer isDeleted;

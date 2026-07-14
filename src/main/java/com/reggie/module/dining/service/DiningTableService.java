@@ -5,11 +5,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.dining.model.DiningTable;
 
 /**
+ * <p>
  * 堂食桌台服务接口
- * 提供桌台状态管理、分页查询等功能
+ * </p>
+ * <p>提供桌台状态管理、分页查询等功能</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface DiningTableService extends IService<DiningTable> {
 

@@ -3,11 +3,13 @@ package com.reggie.module.printer.service;
 import com.reggie.module.printer.model.PrinterStatus;
 
 /**
+ * <p>
  * 打印服务接口
- * 提供订单小票打印、打印机测试、状态查询等功能
+ * </p>
+ * <p>提供订单小票打印、打印机测试、状态查询等功能</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface PrinterService {
 

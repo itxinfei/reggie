@@ -1,7 +1,14 @@
 package com.reggie.module.ai.model;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -12,48 +19,52 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("ai_conversation")
-public class AIConversation {
+@Schema(description = "AI对话会话")
+public class AIConversation implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
+    @Schema(description = "会话ID", example = "1")
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
-    /** 会话ID (前端生成 UUID) */
+    @Schema(description = "会话UUID（前端生成）", example = "550e8400-e29b-41d4-a716-446655440000")
     private String conversationId;
 
-    /** 用户ID（关联登录用户） */
+    @Schema(description = "用户ID", example = "1")
     private Long userId;
 
-    /** 会话标题（首条消息摘要） */
+    @Schema(description = "会话标题（首条消息摘要）", example = "帮我推荐菜品")
     private String title;
 
-    /** 场景：order_assistant/dish_desc/business_analysis/marketing */
+    @Schema(description = "AI场景：order_assistant=订单助手，dish_desc=菜品描述，business_analysis=经营分析，marketing=营销建议", example = "order_assistant")
     private String scene;
 
-    /** 消息数量 */
+    @Schema(description = "消息数量", example = "5")
     private Integer messageCount;
 
-    /** 是否删除 */
+    @Schema(description = "是否删除：0=否，1=是", example = "0")
     @TableLogic
     @TableField("is_deleted")
     private Integer isDeleted;
 
-    /** 创建时间 */
+    @Schema(description = "创建时间", example = "2026-07-10 12:00:00")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    /** 更新时间 */
+    @Schema(description = "更新时间", example = "2026-07-10 12:05:00")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-    /** 租户ID */
+    @Schema(description = "租户ID", example = "1")
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    /** 创建人 */
-    @TableField(fill = FieldFill.INSERT)
+    @Schema(description = "创建人ID（非数据库字段，预留扩展）", example = "1")
+    @TableField(exist = false)
     private Long createUser;
 
-    /** 更新人 */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @Schema(description = "修改人ID（非数据库字段，预留扩展）", example = "1")
+    @TableField(exist = false)
     private Long updateUser;
 }

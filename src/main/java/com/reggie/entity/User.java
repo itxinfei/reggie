@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * 用户信息
  */
 @Data
-@Schema(description = "用户实体")
+@Schema(description = "用户（C端用户）")
 public class User implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -36,7 +36,7 @@ public class User implements Serializable {
     @Schema(description = "手机号", example = "13800138000", required = true)
     @NotBlank(message = "手机号不能为空")
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
-    @Size(max = 20, message = "手机号不能超过20个字符")
+    @Size(max = 100, message = "手机号不能超过100个字符")
     private String phone;
 
     @Schema(description = "性别：0=女，1=男", example = "1")
@@ -53,7 +53,8 @@ public class User implements Serializable {
     @Schema(description = "状态：0=禁用，1=正常", example = "1")
     private Integer status;
 
-    @Schema(description = "创建时间")
+    @Schema(description = "创建时间", example = "2024-01-01 12:00:00")
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+
 }

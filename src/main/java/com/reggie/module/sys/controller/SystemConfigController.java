@@ -6,6 +6,7 @@ import com.reggie.common.R;
 import com.reggie.module.sys.entity.SystemConfig;
 import com.reggie.module.sys.service.SystemConfigService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,8 +32,11 @@ public class SystemConfigController {
      * 配置列表（分页）
      */
     @GetMapping("/page")
-    @Operation(summary = "配置分页查询")
-    public R<Page<SystemConfig>> page(int page, int pageSize, String configKey) {
+    @Operation(summary = "配置分页查询", description = "分页查询系统配置")
+    public R<Page<SystemConfig>> page(
+            @Parameter(description = "页码") int page,
+            @Parameter(description = "每页条数") int pageSize,
+            @Parameter(description = "配置键") String configKey) {
         Page<SystemConfig> pageInfo = new Page<>(page, pageSize);
         // 简化查询，使用Service层方法
         List<SystemConfig> all = systemConfigService.list();
@@ -53,8 +57,9 @@ public class SystemConfigController {
      * 获取单个配置
      */
     @GetMapping("/{configKey}")
-    @Operation(summary = "获取配置值")
-    public R<String> getConfig(@PathVariable String configKey) {
+    @Operation(summary = "获取配置值", description = "根据配置键获取配置值")
+    public R<String> getConfig(
+            @Parameter(description = "配置键") @PathVariable String configKey) {
         String value = systemConfigService.getConfig(configKey);
         return R.success(value);
     }
@@ -63,8 +68,9 @@ public class SystemConfigController {
      * 新增配置
      */
     @PostMapping
-    @Operation(summary = "新增配置")
-    public R<String> add(@Valid @RequestBody SystemConfig config) {
+    @Operation(summary = "新增配置", description = "创建系统配置")
+    public R<String> add(
+            @Parameter(description = "配置信息") @Valid @RequestBody SystemConfig config) {
         systemConfigService.save(config);
         return R.success("配置创建成功");
     }
@@ -73,8 +79,9 @@ public class SystemConfigController {
      * 修改配置
      */
     @PutMapping
-    @Operation(summary = "修改配置")
-    public R<String> update(@Valid @RequestBody SystemConfig config) {
+    @Operation(summary = "修改配置", description = "更新系统配置")
+    public R<String> update(
+            @Parameter(description = "配置信息") @Valid @RequestBody SystemConfig config) {
         systemConfigService.updateById(config);
         return R.success("配置更新成功");
     }
@@ -83,8 +90,9 @@ public class SystemConfigController {
      * 批量更新配置（前端表单提交用）
      */
     @PutMapping("/batch")
-    @Operation(summary = "批量更新配置")
-    public R<String> batchUpdate(@RequestBody List<SystemConfig> configs) {
+    @Operation(summary = "批量更新配置", description = "批量更新系统配置项")
+    public R<String> batchUpdate(
+            @Parameter(description = "配置列表") @RequestBody List<SystemConfig> configs) {
         if (configs != null && !configs.isEmpty()) {
             for (SystemConfig config : configs) {
                 if (config.getConfigKey() != null) {
@@ -103,8 +111,9 @@ public class SystemConfigController {
      * 删除配置
      */
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除配置")
-    public R<String> delete(@PathVariable Long id) {
+    @Operation(summary = "删除配置", description = "删除指定系统配置")
+    public R<String> delete(
+            @Parameter(description = "配置ID") @PathVariable Long id) {
         systemConfigService.removeById(id);
         return R.success("配置删除成功");
     }

@@ -10,6 +10,9 @@ import com.reggie.module.recommend.service.BrowseHistoryService;
 import com.reggie.module.recommend.service.MarketingCampaignService;
 import com.reggie.module.recommend.service.PreferenceAnalysisService;
 import com.reggie.module.recommend.service.RecommendService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +31,7 @@ import java.util.*;
 @Slf4j
 @RestController
 @RequestMapping("/recommend")
+@Tag(name = "智能推荐", description = "菜品推荐、偏好分析、浏览记录等接口")
 public class RecommendController {
 
     /** 默认推荐数量 */
@@ -44,11 +48,14 @@ public class RecommendController {
 
     /**
      * 获取个性化菜品推荐
-     * GET /recommend/dishes?limit=10
+     * @param limit 推荐数量
+     * @param session HTTP会话
+     * @return 推荐菜品列表（未登录时返回热门菜品）
      */
     @GetMapping("/dishes")
+    @Operation(summary = "菜品推荐", description = "获取个性化菜品推荐，未登录时返回热门菜品")
     public R<List<Map<String, Object>>> recommendDishes(
-            @RequestParam(defaultValue = "10") int limit,
+            @Parameter(description = "推荐数量", example = "10") @RequestParam(defaultValue = "10") int limit,
             HttpSession session) {
         Long userId = getUserId(session);
         if (userId == null) {
@@ -61,33 +68,39 @@ public class RecommendController {
     }
 
     /**
-     * 获取热门排行
-     * GET /recommend/hot?limit=10
+     * 获取热门菜品排行
+     * @param limit 返回数量
+     * @return 热门菜品排行列表
      */
     @GetMapping("/hot")
-    public R<List<Map<String, Object>>> hotRank(@RequestParam(defaultValue = "10") int limit) {
+    @Operation(summary = "热门排行", description = "获取热门菜品排行")
+    public R<List<Map<String, Object>>> hotRank(
+            @Parameter(description = "返回数量", example = "10") @RequestParam(defaultValue = "10") int limit) {
         List<Map<String, Object>> result = recommendService.hotRankRecommend(null, limit);
         return R.success(result);
     }
 
     /**
      * 获取推荐引擎真实统计数据
-     * GET /recommend/stats
-     * 从数据库计算覆盖率、点击率、转化率等指标
+     * @return 覆盖率、点击率、转化率等指标
      */
     @GetMapping("/stats")
+    @Operation(summary = "推荐统计数据", description = "获取推荐引擎真实统计数据：覆盖率、点击率、转化率等指标")
     public R<Map<String, Object>> getStats() {
         Map<String, Object> stats = recommendService.calculateStats();
         return R.success(stats);
     }
 
     /**
-     * 获取新品尝鲜推荐
-     * GET /recommend/new-arrivals?limit=6
+     * 获取新品尝鲜推荐列表
+     * @param limit 推荐数量
+     * @param session HTTP会话
+     * @return 新品推荐列表
      */
     @GetMapping("/new-arrivals")
+    @Operation(summary = "新品推荐", description = "获取新品尝鲜推荐列表")
     public R<List<Map<String, Object>>> newArrivals(
-            @RequestParam(defaultValue = "6") int limit,
+            @Parameter(description = "推荐数量", example = "6") @RequestParam(defaultValue = "6") int limit,
             HttpSession session) {
         Long userId = getUserId(session);
         if (userId == null) {
@@ -98,12 +111,15 @@ public class RecommendController {
     }
 
     /**
-     * 套餐推荐
-     * GET /recommend/setmeals?limit=6
+     * 获取套餐推荐列表
+     * @param limit 推荐数量
+     * @param session HTTP会话
+     * @return 套餐推荐列表
      */
     @GetMapping("/setmeals")
+    @Operation(summary = "套餐推荐", description = "获取套餐推荐列表")
     public R<List<Map<String, Object>>> recommendSetmeals(
-            @RequestParam(defaultValue = "6") int limit,
+            @Parameter(description = "推荐数量", example = "6") @RequestParam(defaultValue = "6") int limit,
             HttpSession session) {
         Long userId = getUserId(session);
         if (userId == null) {
@@ -114,12 +130,16 @@ public class RecommendController {
     }
 
     /**
-     * 记录推荐反馈
-     * POST /recommend/feedback
+     * 记录用户对推荐结果的反馈
+     * @param feedback 反馈信息
+     * @param session HTTP会话
+     * @return 操作结果
      */
     @PostMapping("/feedback")
-    public R<String> recordFeedback(@RequestBody RecommendationFeedback feedback,
-                                     HttpSession session) {
+    @Operation(summary = "记录推荐反馈", description = "用户对推荐结果进行反馈（喜欢/不喜欢）")
+    public R<String> recordFeedback(
+            @Parameter(description = "反馈信息", required = true) @RequestBody RecommendationFeedback feedback,
+            HttpSession session) {
         Long userId = getUserId(session);
         if (userId != null) {
             feedback.setUserId(userId);
@@ -130,9 +150,11 @@ public class RecommendController {
 
     /**
      * 刷新推荐缓存（用户操作触发，如首页下拉刷新）
-     * POST /recommend/refresh-cache
+     * @param session HTTP会话
+     * @return 操作结果
      */
     @PostMapping("/refresh-cache")
+    @Operation(summary = "刷新推荐缓存", description = "用户操作触发推荐缓存刷新，如下拉刷新")
     public R<String> refreshCache(HttpSession session) {
         Long userId = getUserId(session);
         if (userId != null) {
@@ -143,11 +165,15 @@ public class RecommendController {
 
     /**
      * 记录用户浏览行为
-     * POST /recommend/browse
+     * @param body 浏览信息（targetType/targetId/targetName/duration/actionType）
+     * @param session HTTP会话
+     * @return 操作结果
      */
     @PostMapping("/browse")
-    public R<String> recordBrowse(@RequestBody Map<String, Object> body,
-                                   HttpSession session) {
+    @Operation(summary = "记录浏览行为", description = "记录用户浏览菜品的行为，用于推荐算法")
+    public R<String> recordBrowse(
+            @Parameter(description = "浏览信息（targetType/targetId/targetName/duration/actionType）", required = true) @RequestBody Map<String, Object> body,
+            HttpSession session) {
         Long userId = getUserId(session);
         if (userId == null) {
             return R.error("请先登录");
@@ -169,11 +195,14 @@ public class RecommendController {
 
     /**
      * 获取用户浏览历史
-     * GET /recommend/browse-history?limit=20
+     * @param limit 返回数量
+     * @param session HTTP会话
+     * @return 浏览历史列表
      */
     @GetMapping("/browse-history")
+    @Operation(summary = "浏览历史", description = "获取用户浏览历史列表")
     public R<List<BrowseHistory>> browseHistory(
-            @RequestParam(defaultValue = "20") int limit,
+            @Parameter(description = "返回数量", example = "20") @RequestParam(defaultValue = "20") int limit,
             HttpSession session) {
         Long userId = getUserId(session);
         if (userId == null) {
@@ -185,9 +214,11 @@ public class RecommendController {
 
     /**
      * 获取匹配用户的营销活动
-     * GET /recommend/campaigns
+     * @param session HTTP会话
+     * @return 营销活动列表
      */
     @GetMapping("/campaigns")
+    @Operation(summary = "营销活动匹配", description = "获取匹配当前用户的营销活动列表")
     public R<List<MarketingCampaign>> matchCampaigns(HttpSession session) {
         Long userId = getUserId(session);
         if (userId == null) {
@@ -199,9 +230,11 @@ public class RecommendController {
 
     /**
      * 获取未读营销消息
-     * GET /recommend/messages/unread
+     * @param session HTTP会话
+     * @return 未读营销消息列表
      */
     @GetMapping("/messages/unread")
+    @Operation(summary = "未读营销消息", description = "获取当前用户的未读营销消息列表")
     public R<List<Map<String, Object>>> unreadMessages(HttpSession session) {
         Long userId = getUserId(session);
         if (userId == null) {
@@ -212,23 +245,30 @@ public class RecommendController {
     }
 
     /**
-     * 标记消息已读
-     * PUT /recommend/messages/{id}/read
+     * 将指定营销消息标记为已读
+     * @param id 消息ID
+     * @return 操作结果
      */
     @PutMapping("/messages/{id}/read")
-    public R<String> markMessageRead(@PathVariable Long id) {
+    @Operation(summary = "标记消息已读", description = "将指定营销消息标记为已读")
+    public R<String> markMessageRead(
+            @Parameter(description = "消息ID", required = true) @PathVariable Long id) {
         marketingCampaignService.markMessageRead(id);
         return R.success("已标记");
     }
 
     /**
-     * 获取用户所有消息列表（分页）
-     * GET /recommend/messages?page=1&pageSize=20
+     * 获取当前用户的所有营销消息列表
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param session HTTP会话
+     * @return 分页消息列表
      */
     @GetMapping("/messages")
+    @Operation(summary = "用户消息列表", description = "获取当前用户的所有营销消息列表（分页）")
     public R<com.baomidou.mybatisplus.extension.plugins.pagination.Page<Map<String, Object>>> getUserMessages(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "20") int pageSize,
             HttpSession session) {
         Long userId = getUserId(session);
         if (userId == null) {
@@ -241,9 +281,11 @@ public class RecommendController {
 
     /**
      * 获取未读消息数量（用于首页铃铛角标）
-     * GET /recommend/messages/unread-count
+     * @param session HTTP会话
+     * @return 未读消息数量
      */
     @GetMapping("/messages/unread-count")
+    @Operation(summary = "未读消息数量", description = "获取未读消息数量，用于首页铃铛角标显示")
     public R<Integer> unreadCount(HttpSession session) {
         Long userId = getUserId(session);
         if (userId == null) {
@@ -254,10 +296,12 @@ public class RecommendController {
     }
 
     /**
-     * 触发偏好分析（用户订单完成后异步调用）
-     * POST /recommend/analyze-preference
+     * 触发用户口味偏好分析
+     * @param session HTTP会话
+     * @return 操作结果
      */
     @PostMapping("/analyze-preference")
+    @Operation(summary = "触发偏好分析", description = "触发用户口味偏好分析，通常在用户订单完成后调用")
     public R<String> analyzePreference(HttpSession session) {
         Long userId = getUserId(session);
         if (userId != null) {
@@ -270,21 +314,23 @@ public class RecommendController {
 
     /**
      * 获取推荐反馈分布统计（概览页反馈图表）
-     * 修改点：从 recommendation_feedback 表真实统计，不再使用 Math.random()
-     * GET /recommend/feedback/stats?days=7
+     * @param days 统计天数
+     * @return 反馈分布统计
      */
     @GetMapping("/feedback/stats")
-    public R<Map<String, Integer>> feedbackStats(@RequestParam(defaultValue = "7") int days) {
+    @Operation(summary = "反馈统计", description = "获取推荐反馈分布统计，用于概览页反馈图表")
+    public R<Map<String, Integer>> feedbackStats(
+            @Parameter(description = "统计天数") @RequestParam(defaultValue = "7") int days) {
         Map<String, Integer> stats = recommendService.getFeedbackStats(days);
         return R.success(stats);
     }
 
     /**
      * 获取用户口味偏好分布（概览页偏好饼图）
-     * 修改点：从 user_preference_tag 表真实统计，不再使用硬编码+Math.random()
-     * GET /recommend/preference/distribution
+     * @return 口味偏好分布列表
      */
     @GetMapping("/preference/distribution")
+    @Operation(summary = "口味偏好分布", description = "获取用户口味偏好分布，用于概览页偏好饼图")
     public R<List<Map<String, Object>>> preferenceDistribution() {
         List<Map<String, Object>> list = recommendService.getPreferenceDistribution();
         return R.success(list);
@@ -292,10 +338,10 @@ public class RecommendController {
 
     /**
      * 获取推荐算法效果对比（概览页对比柱状图）
-     * 修改点：从 recommendation_feedback + recommendation_cache 真实计算CTR/CVR
-     * GET /recommend/algo/compare
+     * @return 算法效果对比数据
      */
     @GetMapping("/algo/compare")
+    @Operation(summary = "算法效果对比", description = "获取推荐算法效果对比数据，用于概览页对比柱状图")
     public R<Map<String, Object>> algoCompare() {
         Map<String, Object> result = recommendService.getAlgoCompare();
         return R.success(result);
@@ -303,11 +349,13 @@ public class RecommendController {
 
     /**
      * 获取浏览行为趋势（概览页趋势图）
-     * 修改点：从 user_browse_history 表真实统计每日浏览/加购数
-     * GET /recommend/browse/trend?days=7
+     * @param days 统计天数
+     * @return 浏览行为趋势数据
      */
     @GetMapping("/browse/trend")
-    public R<Map<String, Object>> browseTrend(@RequestParam(defaultValue = "7") int days) {
+    @Operation(summary = "浏览趋势", description = "获取浏览行为趋势数据，用于概览页趋势图")
+    public R<Map<String, Object>> browseTrend(
+            @Parameter(description = "统计天数") @RequestParam(defaultValue = "7") int days) {
         Map<String, Object> result = recommendService.getBrowseTrend(days);
         return R.success(result);
     }

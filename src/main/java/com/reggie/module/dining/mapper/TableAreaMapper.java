@@ -5,10 +5,12 @@ import com.reggie.module.dining.model.TableArea;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 桌台区域 Mapper
+ * <p>
+ * 桌台区域 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface TableAreaMapper extends BaseMapper<TableArea> {

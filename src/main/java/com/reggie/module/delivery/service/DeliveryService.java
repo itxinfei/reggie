@@ -6,11 +6,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * <p>
  * 外卖配送服务接口
- * 提供第三方平台订单对接、菜单同步、库存同步、状态流转、筛选选项、统计等功能
+ * </p>
+ * <p>提供第三方平台订单对接、菜单同步、库存同步、状态流转、筛选选项、统计等功能</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface DeliveryService {
 

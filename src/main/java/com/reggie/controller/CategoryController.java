@@ -83,6 +83,12 @@ public class CategoryController {
         //添加排序条件，根据sort进行排序
         queryWrapper.orderByAsc(Category::getSort);
 
+        // 多租户过滤：显式限制当前租户数据
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(Category::getTenantId, tenantId);
+        }
+
         //分页查询
         categoryService.page(pageInfo,queryWrapper);
         return R.success(pageInfo);
@@ -153,6 +159,12 @@ public class CategoryController {
         //添加排序条件
         queryWrapper.orderByAsc(Category::getSort).orderByDesc(Category::getUpdateTime);
 
+        // 多租户过滤：显式限制当前租户数据
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(Category::getTenantId, tenantId);
+        }
+
         List<Category> list = categoryService.list(queryWrapper);
         return R.success(list);
     }
@@ -167,6 +179,10 @@ public class CategoryController {
     @Operation(summary = "筛选选项", description = "获取所有分类名称，供搜索条件下拉框使用")
     public R<Map<String, List<String>>> options() {
         LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(Category::getTenantId, tenantId);
+        }
         queryWrapper.orderByAsc(Category::getSort);
         List<Category> list = categoryService.list(queryWrapper);
 

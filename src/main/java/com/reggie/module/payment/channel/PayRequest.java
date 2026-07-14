@@ -4,9 +4,11 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 支付请求参数
+ * <p>
+ * 支付请求参数封装类。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Data

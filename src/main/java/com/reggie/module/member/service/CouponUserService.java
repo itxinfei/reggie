@@ -4,11 +4,30 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.member.model.CouponUser;
 
 /**
+ * <p>
  * 用户优惠券服务接口
- * 管理用户已领取的优惠券记录
+ * </p>
+ * <p>管理用户已领取的优惠券记录</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface CouponUserService extends IService<CouponUser> {
+
+    /**
+     * 查询用户已领取的优惠券列表
+     *
+     * @param userId 用户ID
+     * @param status 使用状态（可选）
+     * @return 优惠券列表
+     */
+    List<CouponUser> listByUserId(Long userId, Integer status);
+
+    /**
+     * 批量更新优惠券状态
+     *
+     * @param couponIds 优惠券用户记录ID列表
+     * @param status    目标状态
+     */
+    void batchUpdateStatus(List<Long> couponIds, Integer status);
 }

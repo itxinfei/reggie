@@ -6,16 +6,21 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * AI用户画像 Mapper
+ * <p>
+ * AI用户画像 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface UserProfileMapper extends BaseMapper<UserProfile> {
 
     /**
      * 根据用户ID查询画像
+     *
+     * @param userId 用户ID
+     * @return 用户画像
      */
     UserProfile selectByUserId(@Param("userId") Long userId);
 }

@@ -9,12 +9,12 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * 异步任务线程池配置
  * <p>
- * 为 Redis 缓存双删、短信发送等非核心业务提供独立线程池，
- * 确保不阻塞主业务流程。
+ * 异步任务线程池配置
+ * </p>
  *
- * @author Reggie Team
+ * @author 心飞为你飞
+ * @since 2026-07-09
  */
 @Slf4j
 @Configuration

@@ -6,11 +6,13 @@ import com.reggie.module.inventory.model.StockRecord;
 import java.math.BigDecimal;
 
 /**
+ * <p>
  * 库存流水记录服务接口
- * 记录原料的出库、入库流水
+ * </p>
+ * <p>记录原料的出库、入库流水</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface StockRecordService extends IService<StockRecord> {
 

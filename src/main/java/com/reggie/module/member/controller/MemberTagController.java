@@ -40,6 +40,14 @@ public class MemberTagController {
     @Autowired
     private MemberService memberService;
 
+    /**
+     * 为会员添加标签
+     * @param memberId 会员ID
+     * @param tagName 标签名称
+     * @param bizTag 业务标签
+     * @param tagColor 标签颜色
+     * @return 操作结果
+     */
     @PostMapping("/member/{memberId}/tags")
     @Operation(summary = "为会员添加标签", description = "为指定会员添加业务标签")
     public R<String> addTag(
@@ -62,6 +70,12 @@ public class MemberTagController {
         return R.error("添加标签失败");
     }
 
+    /**
+     * 删除会员标签
+     * @param memberId 会员ID
+     * @param tagId 标签ID
+     * @return 操作结果
+     */
     @DeleteMapping("/member/{memberId}/tags/{tagId}")
     @Operation(summary = "删除会员标签", description = "删除指定会员的指定标签")
     public R<String> removeTag(
@@ -84,6 +98,12 @@ public class MemberTagController {
         return R.error("删除标签失败");
     }
 
+    /**
+     * 批量删除会员标签
+     * @param memberId 会员ID
+     * @param dto 批量删除请求
+     * @return 操作结果
+     */
     @DeleteMapping("/member/{memberId}/tags/batch")
     @Operation(summary = "批量删除标签", description = "批量删除指定会员的标签")
     public R<String> batchRemoveTags(
@@ -101,6 +121,11 @@ public class MemberTagController {
         return R.error("批量删除标签失败");
     }
 
+    /**
+     * 查询会员标签列表
+     * @param memberId 会员ID
+     * @return 标签列表
+     */
     @GetMapping("/member/{memberId}/tags")
     @Operation(summary = "查询会员标签", description = "查询指定会员的所有标签")
     public R<List<MemberTag>> listByMemberId(
@@ -114,6 +139,10 @@ public class MemberTagController {
         return R.success(tags);
     }
 
+    /**
+     * 获取标签类型列表
+     * @return 标签类型列表
+     */
     @GetMapping("/tags/types")
     @Operation(summary = "获取标签类型列表", description = "获取所有标签类型（1手动添加 2自动生成）")
     public R<List<Map<String, Object>>> getTagTypes() {
@@ -123,6 +152,10 @@ public class MemberTagController {
         return R.success(types);
     }
 
+    /**
+     * 各业务标签会员数量统计
+     * @return 各业务标签的会员数量
+     */
     @GetMapping("/tags/biz-tags/count")
     @Operation(summary = "各业务标签数量统计", description = "统计各业务标签的会员数量")
     public R<Map<String, Long>> countByBizTag() {
@@ -134,6 +167,13 @@ public class MemberTagController {
         return R.success(countMap);
     }
 
+    /**
+     * 按业务标签查询会员列表
+     * @param bizTag 业务标签
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @return 会员分页列表
+     */
     @GetMapping("/tags/biz-tag/{bizTag}/members")
     @Operation(summary = "按业务标签查询会员", description = "查询具有指定业务标签的会员列表")
     public R<Page<Member>> getMembersByBizTag(
@@ -171,6 +211,10 @@ public class MemberTagController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 自动生成会员标签
+     * @return 操作结果
+     */
     @PostMapping("/auto-generate")
     @Operation(summary = "自动生成标签", description = "根据会员消费行为自动生成标签（定时任务调用）")
     public R<String> autoGenerateTags() {

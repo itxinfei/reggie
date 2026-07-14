@@ -9,12 +9,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * <p>
  * 门店管理服务接口
- * 提供总部-分店模式下的门店全生命周期管理
- * 修改点：新增分页搜索、编辑、批量操作、导出方法
+ * </p>
+ * <p>提供总部-分店模式下的门店全生命周期管理</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface StoreService {
 

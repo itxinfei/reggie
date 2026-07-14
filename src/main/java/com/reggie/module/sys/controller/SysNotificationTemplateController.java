@@ -17,8 +17,13 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 
 /**
+ * <p>
  * 通知模板管理Controller
  * 系统管理模块下的通知模板管理，替代原来的独立消息通知页面
+ * </p>
+ *
+ * @author reggie
+ * @since 2026-07-09
  */
 @Slf4j
 @RestController
@@ -34,10 +39,17 @@ public class SysNotificationTemplateController {
 
     /**
      * 模板分页查询
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @param bizType 业务类型
+     * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "模板分页查询")
-    public R<Page<NotificationTemplate>> page(int page, int pageSize, String bizType) {
+    @Operation(summary = "模板分页查询", description = "分页查询通知模板")
+    public R<Page<NotificationTemplate>> page(
+            @Parameter(description = "页码") int page,
+            @Parameter(description = "每页条数") int pageSize,
+            @Parameter(description = "业务类型") String bizType) {
         Page<NotificationTemplate> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
         if (bizType != null && !bizType.isEmpty()) {
@@ -50,10 +62,13 @@ public class SysNotificationTemplateController {
 
     /**
      * 所有模板列表
+     * @param bizType 业务类型
+     * @return 模板列表
      */
     @GetMapping("/list")
-    @Operation(summary = "模板列表")
-    public R<java.util.List<NotificationTemplate>> list(String bizType) {
+    @Operation(summary = "模板列表", description = "查询所有通知模板")
+    public R<java.util.List<NotificationTemplate>> list(
+            @Parameter(description = "业务类型") String bizType) {
         LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
         if (bizType != null && !bizType.isEmpty()) {
             wrapper.eq(NotificationTemplate::getBizType, bizType);
@@ -65,20 +80,26 @@ public class SysNotificationTemplateController {
 
     /**
      * 模板详情
+     * @param id 模板ID
+     * @return 模板详情
      */
     @GetMapping("/{id}")
-    @Operation(summary = "模板详情")
-    public R<NotificationTemplate> detail(@PathVariable Long id) {
+    @Operation(summary = "模板详情", description = "获取通知模板的详细信息")
+    public R<NotificationTemplate> detail(
+            @Parameter(description = "模板ID") @PathVariable Long id) {
         NotificationTemplate template = templateMapper.selectById(id);
         return R.success(template);
     }
 
     /**
      * 新增模板
+     * @param template 模板信息
+     * @return 操作结果
      */
     @PostMapping
-    @Operation(summary = "新增模板")
-    public R<String> add(@RequestBody NotificationTemplate template) {
+    @Operation(summary = "新增模板", description = "创建通知模板")
+    public R<String> add(
+            @Parameter(description = "模板信息") @RequestBody NotificationTemplate template) {
         template.setCreateTime(LocalDateTime.now());
         template.setUpdateTime(LocalDateTime.now());
         template.setIsDeleted(0);
@@ -88,10 +109,13 @@ public class SysNotificationTemplateController {
 
     /**
      * 修改模板
+     * @param template 模板信息
+     * @return 操作结果
      */
     @PutMapping
-    @Operation(summary = "修改模板")
-    public R<String> update(@RequestBody NotificationTemplate template) {
+    @Operation(summary = "修改模板", description = "更新通知模板信息")
+    public R<String> update(
+            @Parameter(description = "模板信息") @RequestBody NotificationTemplate template) {
         template.setUpdateTime(LocalDateTime.now());
         templateMapper.updateById(template);
         return R.success("模板更新成功");
@@ -99,10 +123,15 @@ public class SysNotificationTemplateController {
 
     /**
      * 启用/停用模板
+     * @param id 模板ID
+     * @param status 状态：1启用 0停用
+     * @return 操作结果
      */
     @PutMapping("/{id}/toggle")
-    @Operation(summary = "切换模板状态")
-    public R<String> toggle(@PathVariable Long id, @RequestParam Integer status) {
+    @Operation(summary = "切换模板状态", description = "启用或停用通知模板")
+    public R<String> toggle(
+            @Parameter(description = "模板ID") @PathVariable Long id,
+            @Parameter(description = "状态：1启用 0停用") @RequestParam Integer status) {
         NotificationTemplate template = new NotificationTemplate();
         template.setId(id);
         template.setStatus(status);
@@ -113,10 +142,13 @@ public class SysNotificationTemplateController {
 
     /**
      * 删除模板
+     * @param id 模板ID
+     * @return 操作结果
      */
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除模板")
-    public R<String> delete(@PathVariable Long id) {
+    @Operation(summary = "删除模板", description = "逻辑删除通知模板")
+    public R<String> delete(
+            @Parameter(description = "模板ID") @PathVariable Long id) {
         NotificationTemplate template = new NotificationTemplate();
         template.setId(id);
         template.setIsDeleted(1);

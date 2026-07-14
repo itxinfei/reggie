@@ -12,10 +12,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 打印模板生成器
- * 根据订单信息生成不同类型的打印任务（收银小票、厨房制作单、配送单）
+ * <p>
+ * 打印模板生成器，根据订单信息生成不同类型的打印任务。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

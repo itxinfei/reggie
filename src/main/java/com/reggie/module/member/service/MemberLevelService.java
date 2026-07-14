@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.member.model.MemberLevel;
 
 /**
+ * <p>
  * 会员等级服务接口
- * 管理会员等级体系（根据累计积分自动升级）
+ * </p>
+ * <p>管理会员等级体系（根据累计积分自动升级）</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface MemberLevelService extends IService<MemberLevel> {
 

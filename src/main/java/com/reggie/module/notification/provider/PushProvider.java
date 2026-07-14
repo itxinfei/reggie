@@ -6,10 +6,11 @@ import com.reggie.module.notification.model.UserDevice;
 import java.util.List;
 
 /**
- * 推送服务提供商统一接口（策略模式）
- * 所有推送平台（极光推送、个推、FCM等）需实现此接口
+ * <p>
+ * 推送服务提供商统一接口（策略模式），所有推送平台需实现此接口。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 public interface PushProvider {

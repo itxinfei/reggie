@@ -58,8 +58,9 @@ public class AiProviderController {
     }
 
     @PostMapping("/add")
-    @Operation(summary = "添加供应商（upsert）", description = "新增AI供应商配置，若providerCode已存在则自动更新")
-    public R<Map<String, Object>> add(@RequestBody AiProviderConfig config) {
+    @Operation(summary = "添加或更新供应商", description = "新增AI供应商配置，若providerCode已存在则自动更新")
+    public R<Map<String, Object>> add(
+            @Parameter(description = "供应商配置信息", required = true) @RequestBody AiProviderConfig config) {
         String validation = validateProviderConfig(config);
         if (validation != null) {
             return R.error(validation);
@@ -89,8 +90,9 @@ public class AiProviderController {
     }
 
     @PostMapping("/update")
-    @Operation(summary = "更新供应商", description = "修改AI供应商配置")
-    public R<String> update(@RequestBody AiProviderConfig config) {
+    @Operation(summary = "更新供应商配置", description = "修改AI供应商配置信息")
+    public R<String> update(
+            @Parameter(description = "供应商配置信息", required = true) @RequestBody AiProviderConfig config) {
         if (config.getId() == null) {
             return R.error("ID不能为空");
         }
@@ -117,8 +119,9 @@ public class AiProviderController {
     }
 
     @DeleteMapping("/delete/{id}")
-    @Operation(summary = "删除供应商", description = "软删除AI供应商配置")
-    public R<String> delete(@PathVariable Long id) {
+    @Operation(summary = "删除供应商", description = "软删除AI供应商配置，不能删除当前激活的供应商")
+    public R<String> delete(
+            @Parameter(description = "供应商配置ID", required = true) @PathVariable Long id) {
         AiProviderConfig config = providerConfigService.getById(id);
         if (config != null && Boolean.TRUE.equals(config.getIsActive())) {
             return R.error("不能删除当前激活的供应商，请先切换其他供应商");

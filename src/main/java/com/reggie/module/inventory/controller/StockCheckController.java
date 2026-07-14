@@ -41,6 +41,12 @@ public class StockCheckController {
     @Autowired
     private StockCheckService stockCheckService;
 
+    /**
+     * 分页查询库存盘点记录
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询库存盘点记录，按创建时间降序排列")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -54,6 +60,11 @@ public class StockCheckController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 创建库存盘点单
+     * @param dto 盘点单创建请求
+     * @return 盘点单信息
+     */
     @PostMapping
     @Operation(summary = "创建盘点单", description = "创建新的库存盘点单")
     public R<StockCheck> create(@Validated @RequestBody CreateStockCheckDTO dto) {
@@ -61,6 +72,12 @@ public class StockCheckController {
         return R.success(sc);
     }
 
+    /**
+     * 完成盘点并更新库存
+     * @param id 盘点单ID
+     * @param dto 盘点结果
+     * @return 操作结果
+     */
     @PutMapping("/complete/{id}")
     @Operation(summary = "完成盘点", description = "提交盘点结果并更新库存")
     @Parameter(name = "id", description = "盘点单ID", required = true)

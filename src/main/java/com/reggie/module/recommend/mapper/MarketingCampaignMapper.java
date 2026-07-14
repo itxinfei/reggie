@@ -10,25 +10,25 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 营销活动 Mapper
- * 修改点：新增真实统计查询方法
+ * <p>
+ * 营销活动 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface MarketingCampaignMapper extends BaseMapper<MarketingCampaign> {
 
     /**
      * 分页查询营销活动，附带推送数量（LEFT JOIN subquery）
-     * 修改点：每条活动记录附带真实的推送消息数，替换原先缺失的 pushCount
      *
      * @param tenantId 租户ID
-     * @param name     活动名称（模糊搜索，可选）
-     * @param status   状态筛选（可选）
-     * @param type     活动类型（可选）
-     * @param offset   分页偏移
-     * @param limit    分页条数
+     * @param name 活动名称（模糊搜索，可选）
+     * @param status 状态筛选（可选）
+     * @param type 活动类型（可选）
+     * @param offset 分页偏移
+     * @param limit 分页条数
      * @return 每行包含 push_count 字段
      */
     @Select("<script>"
@@ -61,6 +61,12 @@ public interface MarketingCampaignMapper extends BaseMapper<MarketingCampaign> {
 
     /**
      * 统计符合条件的活动总数（与分页SQL的WHERE条件一致）
+     *
+     * @param tenantId 租户ID
+     * @param name 活动名称
+     * @param status 状态
+     * @param type 活动类型
+     * @return 符合条件的活动总数
      */
     @Select("<script>"
             + "SELECT COUNT(*) FROM marketing_campaign "
@@ -82,7 +88,6 @@ public interface MarketingCampaignMapper extends BaseMapper<MarketingCampaign> {
 
     /**
      * 获取营销活动全局统计数据
-     * 修改点：一次性计算所有概览卡片数据，后端聚合替代前端pageSize=1000查询
      *
      * @param tenantId 租户ID
      * @return 包含 total/active/draft/ended/paused/totalParticipants/totalPushed 的Map
@@ -102,7 +107,9 @@ public interface MarketingCampaignMapper extends BaseMapper<MarketingCampaign> {
 
     /**
      * 获取单个活动的推送消息数量
-     * 修改点：统计弹窗中展示真实推送次数
+     *
+     * @param campaignId 活动ID
+     * @return 推送消息数量
      */
     @Select("SELECT COUNT(*) FROM marketing_message WHERE campaign_id = #{campaignId}")
     int countPushByCampaignId(@Param("campaignId") Long campaignId);

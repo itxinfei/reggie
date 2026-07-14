@@ -1,72 +1,58 @@
 package com.reggie.module.inventory.model;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 库存记录实体类
+ * 库存记录
  *
  * @author reggie
  * @since 2026-07-09
  */
 @Data
+@TableName("stock_record")
+@Schema(description = "库存变动记录")
 public class StockRecord implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键ID
-     */
+    @Schema(description = "记录ID", example = "1")
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 租户ID
-     */
+    @Schema(description = "租户ID", example = "1")
     private Long tenantId;
 
-    /**
-     * 物料ID
-     */
+    @Schema(description = "物料ID", example = "1")
     private Long materialId;
 
-    /**
-     * 类型
-     */
+    @Schema(description = "变动类型：IN=入库，OUT=出库，ADJUST=调整", example = "IN")
     private String type;
 
-    /**
-     * 数量
-     */
+    @Schema(description = "变动数量", example = "20.00")
     private BigDecimal qty;
 
-    /**
-     * 单价
-     */
+    @Schema(description = "单价（元）", example = "3.50")
     private BigDecimal unitPrice;
 
-    /**
-     * 总金额
-     */
+    @Schema(description = "变动总金额（元）", example = "70.00")
     private BigDecimal totalAmount;
 
-    /**
-     * 业务ID
-     */
+    @Schema(description = "关联业务ID（采购单/盘点单等）", example = "1")
     private Long bizId;
 
-    /**
-     * 备注
-     */
+    @Schema(description = "备注", example = "采购入库")
     private String remark;
 
-    /**
-     * 操作员
-     */
+    @Schema(description = "操作员", example = "张三")
     private String operator;
 
-    /**
-     * 创建时间
-     */
+    @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
     private LocalDateTime createdTime;
 }

@@ -9,10 +9,12 @@ import com.aliyuncs.profile.DefaultProfile;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 短信发送工具类
- * 凭证改为从application.yml注入，不再硬编码空字符串
+ * <p>
+ * 短信发送工具类，封装阿里云短信服务调用逻辑。
+ * 凭证从application.yml注入，不硬编码。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j
@@ -46,10 +48,11 @@ public final class SMSUtils {
 
 	/**
 	 * 发送短信
-	 * @param signName 签名
-	 * @param templateCode 模板
+	 *
+	 * @param signName     短信签名
+	 * @param templateCode 短信模板编号
 	 * @param phoneNumbers 手机号
-	 * @param param 参数
+	 * @param param         短信参数
 	 */
 	public static void sendMessage(String signName, String templateCode,String phoneNumbers,String param){
 	    if (accessKeyId == null || accessKeyId.isEmpty() || accessKeySecret == null || accessKeySecret.isEmpty()) {

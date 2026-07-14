@@ -1,19 +1,25 @@
 package com.reggie.module.payment.model;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 支付订单实体类
+ * 支付订单
  *
  * @author reggie
  * @since 2026-07-09
  */
 @Data
+@TableName("payment_order")
+@Schema(description = "支付订单")
 public class PaymentOrder implements Serializable {
     /** 序列化版本UID */
     private static final long serialVersionUID = 1L;
@@ -27,30 +33,42 @@ public class PaymentOrder implements Serializable {
     /** 状态常量：支付失败 */
     public static final String STATUS_FAIL = "FAIL";
 
-    /** 主键ID */
+    @Schema(description = "支付订单ID", example = "1")
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
-    /** 订单ID */
+
+    @Schema(description = "关联订单ID", example = "1")
     private Long orderId;
-    /** 租户ID */
+
+    @Schema(description = "租户ID", example = "1")
     private Long tenantId;
-    /** 交易流水号 */
+
+    @Schema(description = "内部交易流水号", example = "TX20260709001")
     private String tradeNo;
-    /** 渠道交易号 */
+
+    @Schema(description = "支付渠道交易号", example = "WX20260709001xxxx")
     private String channelTradeNo;
-    /** 支付渠道 */
+
+    @Schema(description = "支付渠道：WECHAT=微信，ALIPAY=支付宝", example = "WECHAT")
     private String channel;
-    /** 支付金额 */
+
+    @Schema(description = "支付金额（元）", example = "88.00")
     private BigDecimal amount;
-    /** 支付状态 */
+
+    @Schema(description = "支付状态：PENDING=待支付，SUCCESS=成功，REFUND=已退款，FAIL=失败", example = "SUCCESS")
     private String status;
-    /** 支付时间 */
+
+    @Schema(description = "支付时间", example = "2026-07-09 12:00:00")
     private LocalDateTime paidTime;
-    /** 通知时间 */
+
+    @Schema(description = "渠道异步通知时间", example = "2026-07-09 12:00:05")
     private LocalDateTime notifyTime;
-    /** 创建时间 */
+
+    @Schema(description = "创建时间", example = "2026-07-09 11:55:00")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdTime;
-    /** 更新时间 */
+
+    @Schema(description = "更新时间", example = "2026-07-09 12:05:00")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedTime;
 }

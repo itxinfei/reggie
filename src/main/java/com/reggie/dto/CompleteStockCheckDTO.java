@@ -7,12 +7,15 @@ import javax.validation.constraints.NotNull;
 import java.util.List;
 
 /**
+ * <p>
  * 完成盘点请求DTO
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Data
+@Schema(description = "完成盘点请求DTO")
 public class CompleteStockCheckDTO {
 
     @Schema(description = "盘点明细项列表", required = true)

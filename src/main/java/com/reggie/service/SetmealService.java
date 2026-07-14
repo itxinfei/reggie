@@ -7,10 +7,12 @@ import com.reggie.entity.Setmeal;
 import java.util.List;
 
 /**
+ * <p>
  * 套餐管理服务接口，提供套餐的增删改查及菜品关联管理功能
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface SetmealService extends IService<Setmeal> {
 

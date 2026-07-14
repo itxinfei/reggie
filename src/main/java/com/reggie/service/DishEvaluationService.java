@@ -8,10 +8,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * <p>
  * 菜品评价服务接口，提供评价的增删改查、评分统计等功能
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface DishEvaluationService extends IService<DishEvaluation> {
 

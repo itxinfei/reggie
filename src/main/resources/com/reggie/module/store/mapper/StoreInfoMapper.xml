@@ -54,6 +54,7 @@
         LEFT JOIN store_daily_summary ds ON si.tenant_id = ds.tenant_id
             AND ds.summary_date = CURDATE()
         <where>
+            si.tenant_id = #{tenantId}
             <if test="keyword != null and keyword != ''">
                 AND (t.name LIKE CONCAT('%', #{keyword}, '%')
                      OR si.store_code LIKE CONCAT('%', #{keyword}, '%'))
@@ -97,6 +98,7 @@
         FROM store_info si
         INNER JOIN tenant t ON si.tenant_id = t.id
         <where>
+            si.tenant_id = #{tenantId}
             <if test="keyword != null and keyword != ''">
                 AND (t.name LIKE CONCAT('%', #{keyword}, '%')
                      OR si.store_code LIKE CONCAT('%', #{keyword}, '%'))
@@ -170,6 +172,7 @@
         LEFT JOIN store_daily_summary ds ON si.tenant_id = ds.tenant_id
             AND ds.summary_date = CURDATE()
         <where>
+            si.tenant_id = #{tenantId}
             <if test="keyword != null and keyword != ''">
                 AND (t.name LIKE CONCAT('%', #{keyword}, '%')
                      OR si.store_code LIKE CONCAT('%', #{keyword}, '%'))

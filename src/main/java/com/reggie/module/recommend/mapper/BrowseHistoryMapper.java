@@ -10,23 +10,32 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 用户浏览历史 Mapper
- * 修改点：新增每日浏览/加购趋势统计查询，替换原先Math.random()假数据
+ * <p>
+ * 用户浏览历史 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface BrowseHistoryMapper extends BaseMapper<BrowseHistory> {
 
     /**
      * 查询用户最近N条浏览记录
+     *
+     * @param userId 用户ID
+     * @param limit 条数
+     * @return 浏览记录列表
      */
     @Select("SELECT * FROM user_browse_history WHERE user_id = #{userId} ORDER BY create_time DESC LIMIT #{limit}")
     List<BrowseHistory> findRecentByUserId(@Param("userId") Long userId, @Param("limit") int limit);
 
     /**
      * 统计用户浏览最多的菜品类别 TOP N
+     *
+     * @param userId 用户ID
+     * @param limit 条数
+     * @return 最多浏览的菜品列表
      */
     @Select("SELECT bh.target_id, bh.target_name, COUNT(*) as view_count " +
             "FROM user_browse_history bh " +
@@ -37,6 +46,10 @@ public interface BrowseHistoryMapper extends BaseMapper<BrowseHistory> {
 
     /**
      * 查询指定用户在某时间范围内的浏览记录数
+     *
+     * @param userId 用户ID
+     * @param startTime 起始时间
+     * @return 浏览记录数
      */
     @Select("SELECT COUNT(*) FROM user_browse_history " +
             "WHERE user_id = #{userId} AND create_time >= #{startTime}")
@@ -47,15 +60,20 @@ public interface BrowseHistoryMapper extends BaseMapper<BrowseHistory> {
      * 用于概览页浏览趋势折线图
      *
      * @param startTime 起始时间
+     * @param tenantId  租户ID（null不过滤）
      * @return 每行: date(日期), browse_count(浏览数), cart_count(加购数)
      */
-    @Select("SELECT " +
+    @Select("<script>" +
+            "SELECT " +
             "  DATE(create_time) AS date, " +
             "  SUM(CASE WHEN action_type = 1 THEN 1 ELSE 0 END) AS browse_count, " +
             "  SUM(CASE WHEN action_type = 3 THEN 1 ELSE 0 END) AS cart_count " +
             "FROM user_browse_history " +
             "WHERE create_time >= #{startTime} " +
+            "<if test='tenantId != null'>AND tenant_id = #{tenantId}</if>" +
             "GROUP BY DATE(create_time) " +
-            "ORDER BY date ASC")
-    List<Map<String, Object>> countDailyTrend(@Param("startTime") String startTime);
+            "ORDER BY date ASC" +
+            "</script>")
+    List<Map<String, Object>> countDailyTrend(@Param("startTime") String startTime,
+                                               @Param("tenantId") Long tenantId);
 }

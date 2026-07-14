@@ -43,6 +43,16 @@ public class ReservationController {
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    /**
+     * 分页查询预订记录
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param status 预订状态（可选）
+     * @param customerName 客户姓名（可选，模糊搜索）
+     * @param phone 手机号（可选，模糊搜索）
+     * @param reservedDate 预订日期（可选，格式yyyy-MM-dd）
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询预订记录列表，支持按状态、姓名、手机号、日期筛选")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -69,6 +79,11 @@ public class ReservationController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 新增预订
+     * @param dto 预订请求
+     * @return 预订记录
+     */
     @PostMapping
     @Operation(summary = "新增预订", description = "创建新的预订记录，支持指定桌台和人数")
     public R<Reservation> create(@Valid @RequestBody CreateReservationDTO dto) {
@@ -80,6 +95,11 @@ public class ReservationController {
         return R.success(r);
     }
 
+    /**
+     * 确认预订
+     * @param id 预订ID
+     * @return 操作结果
+     */
     @PutMapping("/confirm/{id}")
     @Operation(summary = "确认预订", description = "确认预订信息，标记为已确认状态")
     @Parameter(name = "id", description = "预订ID", required = true)
@@ -89,6 +109,11 @@ public class ReservationController {
         return R.success("确认预订成功");
     }
 
+    /**
+     * 取消预订
+     * @param id 预订ID
+     * @return 操作结果
+     */
     @PutMapping("/cancel/{id}")
     @Operation(summary = "取消预订", description = "取消指定预订记录")
     @Parameter(name = "id", description = "预订ID", required = true)
@@ -98,6 +123,11 @@ public class ReservationController {
         return R.success("取消预订成功");
     }
 
+    /**
+     * 标记顾客已到店
+     * @param id 预订ID
+     * @return 操作结果
+     */
     @PutMapping("/arrive/{id}")
     @Operation(summary = "到店", description = "标记顾客已到店")
     @Parameter(name = "id", description = "预订ID", required = true)

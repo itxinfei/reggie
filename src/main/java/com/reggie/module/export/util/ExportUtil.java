@@ -37,11 +37,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 数据导出工具类
- * 提供统一的Excel(.xlsx)和PDF文件生成能力
- * 支持中文编码、自适应列宽、样式美化
+ * <p>
+ * 数据导出工具类，提供统一的Excel和PDF文件生成能力。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

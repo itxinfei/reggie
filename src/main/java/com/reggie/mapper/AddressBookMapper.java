@@ -5,10 +5,12 @@ import com.reggie.entity.AddressBook;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 地址簿Mapper接口
+ * <p>
+ * 地址簿 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface AddressBookMapper extends BaseMapper<AddressBook> {

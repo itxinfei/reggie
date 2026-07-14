@@ -13,10 +13,11 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 打印机设备管理器
- * 统一管理打印机设备的发现、打印、状态查询等操作
+ * <p>
+ * 打印机设备管理器，统一管理打印机设备的发现、打印、状态查询等操作。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

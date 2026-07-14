@@ -5,10 +5,12 @@ import com.reggie.module.member.model.MemberLevel;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 会员等级 Mapper
+ * <p>
+ * 会员等级 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface MemberLevelMapper extends BaseMapper<MemberLevel> {

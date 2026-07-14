@@ -7,10 +7,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 饿了么平台适配器
- * 实现与饿了么外卖平台的交互逻辑
+ * <p>
+ * 饿了么平台适配器，实现与饿了么外卖平台的交互逻辑。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

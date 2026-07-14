@@ -11,10 +11,11 @@ import java.util.Set;
 import javax.servlet.SessionTrackingMode;
 
 /**
- * Session 安全配置类
- * 配置Session超时时间和追踪模式
+ * <p>
+ * Session安全配置类，配置Session超时时间和追踪模式。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Configuration

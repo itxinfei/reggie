@@ -6,6 +6,9 @@ import com.reggie.common.R;
 import com.reggie.entity.*;
 import com.reggie.module.export.util.ExportUtil;
 import com.reggie.service.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ContentDisposition;
@@ -33,6 +36,7 @@ import java.util.*;
 @Slf4j
 @RestController
 @RequestMapping("/export")
+@Tag(name = "数据导出", description = "订单、菜品、员工等业务数据的Excel/PDF导出功能")
 public class ExportController {
 
     /** 订单服务 */
@@ -69,10 +73,11 @@ public class ExportController {
      * @return Excel文件流
      */
     @GetMapping("/orders/excel")
+    @Operation(summary = "导出订单Excel", description = "导出订单数据为Excel文件，支持按日期范围和订单状态筛选")
     public ResponseEntity<?> exportOrdersExcel(
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
-            @RequestParam(required = false) Integer status) {
+            @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
+            @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
 
         try {
             List<Orders> orders = queryOrders(startDate, endDate, status);
@@ -105,10 +110,11 @@ public class ExportController {
      * @return PDF文件流
      */
     @GetMapping("/orders/pdf")
+    @Operation(summary = "导出订单PDF", description = "导出订单数据为PDF报表，支持按日期范围和订单状态筛选")
     public ResponseEntity<?> exportOrdersPdf(
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
-            @RequestParam(required = false) Integer status) {
+            @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
+            @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
 
         try {
             List<Orders> orders = queryOrders(startDate, endDate, status);
@@ -151,8 +157,9 @@ public class ExportController {
      * @return Excel文件流
      */
     @GetMapping("/dishes/excel")
+    @Operation(summary = "导出菜品Excel", description = "导出菜品数据为Excel文件，支持按分类筛选")
     public ResponseEntity<?> exportDishesExcel(
-            @RequestParam(required = false) Long categoryId) {
+            @Parameter(description = "分类ID（可选）") @RequestParam(required = false) Long categoryId) {
 
         try {
             LinkedHashMap<String, String> columns = new LinkedHashMap<>();
@@ -179,8 +186,9 @@ public class ExportController {
      * @return PDF文件流
      */
     @GetMapping("/dishes/pdf")
+    @Operation(summary = "导出菜品PDF", description = "导出菜品数据为PDF报表，支持按分类筛选")
     public ResponseEntity<?> exportDishesPdf(
-            @RequestParam(required = false) Long categoryId) {
+            @Parameter(description = "分类ID（可选）") @RequestParam(required = false) Long categoryId) {
 
         try {
             LinkedHashMap<String, String> columns = new LinkedHashMap<>();
@@ -212,6 +220,7 @@ public class ExportController {
      * @return Excel文件流
      */
     @GetMapping("/employees/excel")
+    @Operation(summary = "导出员工Excel", description = "导出员工数据为Excel文件")
     public ResponseEntity<?> exportEmployeesExcel() {
 
         try {
@@ -238,6 +247,7 @@ public class ExportController {
      * @return PDF文件流
      */
     @GetMapping("/employees/pdf")
+    @Operation(summary = "导出员工PDF", description = "导出员工数据为PDF报表")
     public ResponseEntity<?> exportEmployeesPdf() {
 
         try {
@@ -352,7 +362,13 @@ public class ExportController {
         List<Dish> dishes = queryDishes(categoryId);
 
         Map<Long, String> categoryMap = new HashMap<>();
-        for (Category c : categoryService.list()) {
+        LambdaQueryWrapper<Category> categoryWrapper = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            categoryWrapper.eq(Category::getTenantId, tenantId);
+        }
+        categoryWrapper.orderByAsc(Category::getSort);
+        for (Category c : categoryService.list(categoryWrapper)) {
             categoryMap.put(c.getId(), c.getName());
         }
 

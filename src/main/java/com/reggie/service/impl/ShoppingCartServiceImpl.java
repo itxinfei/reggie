@@ -37,7 +37,7 @@ public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, Sho
             return null;
         }
 
-        // 先查询当前数量
+        // 先查询当前购物车项是否存在
         ShoppingCart cartItem = this.getOne(wrapper);
         if (cartItem == null) {
             return null;
@@ -66,5 +66,46 @@ public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, Sho
             this.removeById(cartItem.getId());
             return null;
         }
+    }
+
+    /**
+     * 原子操作：减少购物车商品数量（纯SQL原子更新，防止并发竞态）
+     * 使用 UPDATE ... SET number = number - 1 WHERE id = ? AND number > 1
+     * 返回受影响行数：1=成功，0=数量已为1或不存在
+     *
+     * @param itemId 购物车项ID
+     * @return 受影响行数
+     */
+    @Override
+    public int subQuantityAtomically(Long itemId) {
+        if (itemId == null) {
+            return 0;
+        }
+        // 原子更新：只有 number > 1 时才减 1
+        LambdaUpdateWrapper<ShoppingCart> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(ShoppingCart::getId, itemId)
+                     .gt(ShoppingCart::getNumber, 1)
+                     .setSql("number = number - 1");
+        return this.update(updateWrapper) ? 1 : 0;
+    }
+
+    /**
+     * 原子操作：增加购物车商品数量
+     * 使用 UPDATE ... SET number = number + 1 WHERE id = ?
+     * 如果记录不存在返回 0，调用方需另行处理
+     *
+     * @param itemId 购物车项ID
+     * @param increment 增加数量，默认为1
+     * @return 受影响行数
+     */
+    @Override
+    public int addQuantityAtomically(Long itemId, int increment) {
+        if (itemId == null || increment <= 0) {
+            return 0;
+        }
+        LambdaUpdateWrapper<ShoppingCart> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(ShoppingCart::getId, itemId)
+                     .setSql("number = number + " + increment);
+        return this.update(updateWrapper) ? 1 : 0;
     }
 }

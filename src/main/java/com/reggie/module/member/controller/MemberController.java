@@ -56,6 +56,14 @@ public class MemberController {
         this.couponUserService = couponUserService;
     }
 
+    /**
+     * 分页查询会员列表
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param name 会员姓名（可选，模糊查询）
+     * @param phone 手机号（可选，模糊查询）
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询会员列表，支持按姓名、手机号搜索，自动过滤当前租户数据")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -76,6 +84,11 @@ public class MemberController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 新增会员
+     * @param member 会员信息
+     * @return 会员信息
+     */
     @PostMapping
     @Operation(summary = "新增会员", description = "根据手机号注册新会员，自动生成会员卡号")
     public R<Member> save(@RequestBody Member member) {
@@ -84,6 +97,11 @@ public class MemberController {
         return R.success(result);
     }
 
+    /**
+     * 修改会员
+     * @param member 会员信息
+     * @return 操作结果
+     */
     @PutMapping
     @Operation(summary = "修改会员", description = "更新会员基本信息")
     public R<String> update(@RequestBody Member member) {
@@ -93,6 +111,11 @@ public class MemberController {
         return R.success("修改会员成功");
     }
 
+    /**
+     * 根据ID查询会员
+     * @param id 会员ID
+     * @return 会员详情
+     */
     @GetMapping("/{id}")
     @Operation(summary = "查询会员", description = "根据ID查询会员详情")
     @Parameter(name = "id", description = "会员ID", required = true)
@@ -104,6 +127,11 @@ public class MemberController {
         return R.error("没有查询到对应会员");
     }
 
+    /**
+     * 会员充值
+     * @param dto 充值请求
+     * @return 操作结果
+     */
     @PostMapping("/recharge")
     @Operation(summary = "会员充值", description = "为会员账户充值，支持赠送金额")
     public R<String> recharge(@Validated @RequestBody RechargeDTO dto) {
@@ -112,6 +140,11 @@ public class MemberController {
         return R.success("充值成功");
     }
 
+    /**
+     * 扣减会员余额
+     * @param dto 余额扣减请求
+     * @return 操作结果
+     */
     @PostMapping("/deduct-balance")
     @Operation(summary = "扣减余额", description = "扣减会员账户余额（用于订单抵扣等）")
     public R<String> deductBalance(@Validated @RequestBody DeductBalanceDTO dto) {

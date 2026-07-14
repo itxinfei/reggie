@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>登录 - 瑞吉外卖管理端</title>
   <link rel="shortcut icon" href="../../favicon.ico">
   <!-- 引入样式 -->
@@ -12,42 +11,115 @@
   <link rel="stylesheet" href="../../styles/common.css">
   <link rel="stylesheet" href="../../styles/login.css">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet" />
-
-</head> 
+</head>
 
 <body class="login-page">
+  <!-- 动态背景画布 -->
+  <canvas id="login-canvas" class="login-canvas" aria-hidden="true"></canvas>
+
   <div class="login" id="login-app">
-    <div class="login-box">
-      <img src="../../images/login/login-l.png" alt="">
-      <div class="login-form">
-        <el-form ref="loginForm" :model="loginForm" :rules="loginRules" >
-          <div class="login-form-title">
-            <img src="../../images/login/logo.png" style="width:160px;height:50px;" alt="瑞吉外卖" />
+    <div class="login-wrapper" :class="{ 'loading': loading }">
+      <div class="login-box" :class="{ 'mounted': mounted }">
+        <!-- 左侧品牌展示 -->
+        <div class="login-brand">
+          <div class="brand-image-wrap">
+            <img src="../../images/login/login-l.png" alt="瑞吉外卖" class="brand-image" />
+            <div class="brand-overlay"></div>
           </div>
-          <el-form-item prop="username">
-            <el-input v-model="loginForm.username" type="text" auto-complete="off" placeholder="账号" maxlength="20"
-              prefix-icon="ri-user-3-line" />
-          </el-form-item>
-          <el-form-item prop="password">
-            <el-input v-model="loginForm.password" type="password" placeholder="密码" prefix-icon="ri-lock-line" maxlength="20"
-              @keyup.enter.native="handleLogin" />
-          </el-form-item>
-          <el-form-item style="width:100%;">
-            <el-button :loading="loading" class="login-btn" size="medium" type="primary" style="width:100%;"
-              @click.native.prevent="handleLogin">
-              <span v-if="!loading">登录</span>
-              <span v-else>登录中...</span>
-            </el-button>
-          </el-form-item>
-          <div style="text-align: right; margin-top: -10px; margin-bottom: 10px;">
-            <el-button type="text" class="text-info" style="padding: 0;" @click="showForgotPassword">忘记密码？</el-button>
+          <div class="brand-content">
+            <img src="../../images/login/login-logo.png" alt="瑞吉外卖" class="brand-logo" />
+            <h1 class="brand-title">瑞吉外卖管理端</h1>
+            <p class="brand-subtitle">智能 · 高效 · 美味</p>
+            <div class="brand-tags">
+              <span class="brand-tag"><i class="ri-restaurant-2-line"></i> 菜品管理</span>
+              <span class="brand-tag"><i class="ri-file-list-3-line"></i> 订单追踪</span>
+              <span class="brand-tag"><i class="ri-bar-chart-line"></i> 经营分析</span>
+            </div>
           </div>
-        </el-form>
+        </div>
+
+        <!-- 右侧登录表单 -->
+        <div class="login-form-wrap">
+          <div class="login-form-header">
+            <h2 class="form-title">欢迎回来</h2>
+            <p class="form-desc">请登录您的管理账号</p>
+          </div>
+
+          <div class="login-form-body">
+            <el-form ref="loginForm" :model="loginForm" :rules="loginRules" @keyup.enter.native="handleLogin">
+              <el-form-item prop="username">
+                <div class="custom-input" :class="{ 'focused': focusedField === 'username', 'filled': loginForm.username }">
+                  <label class="custom-input-label">
+                    <i class="ri-user-3-line"></i>
+                    <span>账号</span>
+                  </label>
+                  <el-input
+                    v-model="loginForm.username"
+                    type="text"
+                    auto-complete="off"
+                    maxlength="20"
+                    @focus="focusedField = 'username'"
+                    @blur="focusedField = ''"
+                  />
+                </div>
+              </el-form-item>
+
+              <el-form-item prop="password">
+                <div class="custom-input" :class="{ 'focused': focusedField === 'password', 'filled': loginForm.password }">
+                  <label class="custom-input-label">
+                    <i class="ri-lock-line"></i>
+                    <span>密码</span>
+                  </label>
+                  <el-input
+                    v-model="loginForm.password"
+                    :type="showPassword ? 'text' : 'password'"
+                    maxlength="20"
+                    @focus="focusedField = 'password'"
+                    @blur="focusedField = ''"
+                    @keyup.enter.native="handleLogin"
+                  />
+                  <button type="button" class="password-toggle" @click="showPassword = !showPassword" tabindex="-1">
+                    <i :class="showPassword ? 'ri-eye-line' : 'ri-eye-off-line'"></i>
+                  </button>
+                </div>
+              </el-form-item>
+
+              <div class="form-options">
+                <label class="remember-me">
+                  <input type="checkbox" v-model="rememberMe" />
+                  <span class="checkmark"><i class="ri-check-line"></i></span>
+                  <span class="remember-text">记住账号</span>
+                </label>
+                <el-button type="text" class="forgot-link" @click="showForgotPassword">忘记密码？</el-button>
+              </div>
+
+              <el-form-item style="width:100%; margin-top: 24px;">
+                <button
+                  type="button"
+                  :disabled="loading"
+                  class="login-btn"
+                  @click="handleLogin"
+                >
+                  <span class="btn-content" :class="{ 'btn-loading': loading }">
+                    <i class="ri-login-circle-line btn-icon"></i>
+                    <span v-if="!loading">登 录</span>
+                    <span v-else>登录中</span>
+                  </span>
+                  <span class="btn-shimmer" v-if="!loading"></span>
+                </button>
+              </el-form-item>
+            </el-form>
+          </div>
+
+          <div class="login-form-footer">
+            <p>瑞吉外卖 © 2026</p>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- 忘记密码弹窗 -->
-    <el-dialog title="重置密码" :visible.sync="forgotVisible" width="420px" :close-on-click-modal="false">
+    <el-dialog title="重置密码" :visible.sync="forgotVisible" width="420px" :close-on-click-modal="false" custom-class="forgot-dialog">
       <el-form :model="forgotForm" :rules="forgotRules" ref="forgotForm" label-width="100px">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="forgotForm.username" placeholder="请输入用户名" maxlength="20"></el-input>
@@ -64,6 +136,11 @@
         <el-button type="primary" @click="submitForgotPassword" :loading="forgotLoading">确 定</el-button>
       </span>
     </el-dialog>
+
+    <!-- 主题切换 -->
+    <button type="button" class="theme-toggle" @click="toggleTheme" :title="isDark ? '切换浅色主题' : '切换深色主题'">
+      <i :class="isDark ? 'ri-sun-line' : 'ri-moon-line'"></i>
+    </button>
   </div>
 
   <!-- 开发环境版本，包含了有帮助的命令行警告 -->
@@ -86,11 +163,16 @@
       el: '#login-app',
       data() {
         return {
-          loginForm:{
+          loginForm: {
             username: '',
             password: ''
           },
           loading: false,
+          focusedField: '',
+          showPassword: false,
+          rememberMe: false,
+          mounted: false,
+          isDark: false,
           // 忘记密码
           forgotVisible: false,
           forgotLoading: false,
@@ -117,6 +199,23 @@
         },
       },
       created() {
+        // 读取主题偏好
+        const savedTheme = localStorage.getItem('login-theme')
+        this.isDark = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        this.applyTheme()
+        // 读取记住的账号
+        const rememberedUser = localStorage.getItem('login-username')
+        if (rememberedUser) {
+          this.loginForm.username = rememberedUser
+          this.rememberMe = true
+        }
+      },
+      mounted() {
+        // 触发入场动画
+        requestAnimationFrame(() => {
+          this.mounted = true
+        })
+        this.initCanvas()
       },
       methods: {
         // 修改点：将 validator 函数提升到 methods，使 loginRules 和 forgotRules 均可通过 this 访问
@@ -143,16 +242,36 @@
             callback()
           }
         },
+        applyTheme() {
+          document.documentElement.classList.toggle('dark-theme', this.isDark)
+          document.documentElement.classList.toggle('light-theme', !this.isDark)
+        },
+        toggleTheme() {
+          this.isDark = !this.isDark
+          localStorage.setItem('login-theme', this.isDark ? 'dark' : 'light')
+          this.applyTheme()
+        },
         async handleLogin() {
           this.$refs.loginForm.validate(async (valid) => {
             if (valid) {
               this.loading = true
-              let res = await loginApi(this.loginForm)
-              if (String(res.code) === '1') {//1表示登录成功
-                localStorage.setItem('userInfo',JSON.stringify(res.data))
-                window.location.href= '/backend/index.html'
+              // 记住账号
+              if (this.rememberMe) {
+                localStorage.setItem('login-username', this.loginForm.username)
               } else {
-                this.$message.error(res.msg)
+                localStorage.removeItem('login-username')
+              }
+              try {
+                let res = await loginApi(this.loginForm)
+                if (String(res.code) === '1') { // 1表示登录成功
+                  localStorage.setItem('userInfo', JSON.stringify(res.data))
+                  window.location.href = '/backend/index.html'
+                } else {
+                  this.$message.error(res.msg)
+                  this.loading = false
+                }
+              } catch (err) {
+                this.$message.error('登录请求失败：' + err)
                 this.loading = false
               }
             }
@@ -184,11 +303,93 @@
               }
             }
           })
+        },
+        initCanvas() {
+          const canvas = document.getElementById('login-canvas')
+          if (!canvas || !canvas.getContext) return
+
+          const ctx = canvas.getContext('2d')
+          let particles = []
+          let animationId = null
+          let dpr = window.devicePixelRatio || 1
+
+          const resize = () => {
+            canvas.width = window.innerWidth * dpr
+            canvas.height = window.innerHeight * dpr
+            canvas.style.width = window.innerWidth + 'px'
+            canvas.style.height = window.innerHeight + 'px'
+            ctx.scale(dpr, dpr)
+            this.createParticles(particles)
+          }
+
+          const draw = () => {
+            const w = window.innerWidth
+            const h = window.innerHeight
+            const isDark = this.isDark
+            ctx.clearRect(0, 0, w, h)
+
+            // 绘制连线
+            ctx.lineWidth = 0.6
+            for (let i = 0; i < particles.length; i++) {
+              const p1 = particles[i]
+              for (let j = i + 1; j < particles.length; j++) {
+                const p2 = particles[j]
+                const dx = p1.x - p2.x
+                const dy = p1.y - p2.y
+                const dist = Math.sqrt(dx * dx + dy * dy)
+                if (dist < 160) {
+                  const alpha = (1 - dist / 160) * (isDark ? 0.15 : 0.08)
+                  ctx.strokeStyle = isDark ? `rgba(255, 194, 0, ${alpha})` : `rgba(255, 194, 0, ${alpha})`
+                  ctx.beginPath()
+                  ctx.moveTo(p1.x, p1.y)
+                  ctx.lineTo(p2.x, p2.y)
+                  ctx.stroke()
+                }
+              }
+            }
+
+            // 绘制粒子
+            for (const p of particles) {
+              p.x += p.vx
+              p.y += p.vy
+              if (p.x < 0 || p.x > w) p.vx *= -1
+              if (p.y < 0 || p.y > h) p.vy *= -1
+
+              const alpha = isDark ? 0.6 : 0.35
+              ctx.fillStyle = `rgba(255, 194, 0, ${alpha})`
+              ctx.beginPath()
+              ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
+              ctx.fill()
+            }
+
+            animationId = requestAnimationFrame(draw)
+          }
+
+          resize()
+          draw()
+
+          window.addEventListener('resize', resize)
+
+          this.$once('hook:beforeDestroy', () => {
+            window.removeEventListener('resize', resize)
+            if (animationId) cancelAnimationFrame(animationId)
+          })
+        },
+        createParticles(particles) {
+          const count = Math.min(40, Math.floor((window.innerWidth * window.innerHeight) / 25000))
+          particles.length = 0
+          for (let i = 0; i < count; i++) {
+            particles.push({
+              x: Math.random() * window.innerWidth,
+              y: Math.random() * window.innerHeight,
+              vx: (Math.random() - 0.5) * 0.5,
+              vy: (Math.random() - 0.5) * 0.5,
+              radius: Math.random() * 2 + 1
+            })
+          }
         }
       }
     })
   </script>
 </body>
-
 </html>
-

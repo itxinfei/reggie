@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.dining.model.QueueRecord;
 
 /**
+ * <p>
  * 排队取号服务接口
- * 提供顾客取号、叫号、取消排队等功能
+ * </p>
+ * <p>提供顾客取号、叫号、取消排队等功能</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface QueueService extends IService<QueueRecord> {
 

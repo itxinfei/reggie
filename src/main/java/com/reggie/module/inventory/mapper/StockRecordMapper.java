@@ -5,10 +5,12 @@ import com.reggie.module.inventory.model.StockRecord;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 库存变动记录 Mapper
+ * <p>
+ * 库存变动记录 Mapper 接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Mapper
 public interface StockRecordMapper extends BaseMapper<StockRecord> {

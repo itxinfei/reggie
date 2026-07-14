@@ -6,10 +6,11 @@ import com.reggie.module.ai.model.AIChatResponse;
 import java.util.List;
 
 /**
- * AI Provider统一接口（策略模式）
- * 所有AI服务提供商需实现此接口
+ * <p>
+ * AI Provider统一接口（策略模式），所有AI服务提供商需实现此接口。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 public interface AIClient {

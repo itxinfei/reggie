@@ -1,42 +1,57 @@
 package com.reggie.module.member.model;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 用户持有优惠券实体类
+ * 用户持有优惠券
  *
  * @author reggie
  * @since 2026-07-09
  */
 @Data
+@TableName("coupon_user")
+@Schema(description = "用户持有优惠券")
 public class CouponUser implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
-    /** 主键ID */
+    @Schema(description = "用户优惠券ID", example = "1")
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
+    @Schema(description = "租户ID", example = "1")
     @TableField(fill = FieldFill.INSERT)
-    /** 租户ID */
     private Long tenantId;
 
-    /** 持有优惠券的会员ID */
+    @Schema(description = "会员ID", example = "1")
     private Long memberId;
-    /** 关联优惠券模板ID */
+
+    @Schema(description = "关联优惠券模板ID", example = "1")
     private Long templateId;
-    /** 优惠券码 */
+
+    @Schema(description = "优惠券码", example = "CPN20260709001")
     private String code;
-    /** 状态（unused未使用 used已使用 expired已过期） */
+
+    @Schema(description = "状态：unused=未使用，used=已使用，expired=已过期", example = "unused")
     private String status;
-    /** 使用时间 */
+
+    @Schema(description = "使用时间", example = "2026-07-10 12:00:00")
     private LocalDateTime usedTime;
-    /** 使用的订单ID */
+
+    @Schema(description = "使用订单ID", example = "1")
     private Long orderId;
-    /** 过期时间 */
+
+    @Schema(description = "过期时间", example = "2026-08-09 23:59:59")
     private LocalDateTime expireTime;
-    /** 创建时间 */
+
+    @Schema(description = "领取时间", example = "2026-07-09 10:00:00")
     private LocalDateTime createdTime;
 }

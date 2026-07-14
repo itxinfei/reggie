@@ -46,32 +46,34 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
     private RedisCacheUtil redisCacheUtil;
 
     /**
-     * 新增菜品，同时保存对应的口味数据
-     * @param dishDto
+     * 新增菜品及口味信息（事务保护）
+     *
+     * @param dishDto 菜品及口味DTO
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveWithFlavor(DishDto dishDto) {
         redisCacheUtil.doubleDeleteAllEntries("dishes");
 
-        //保存菜品的基本信息到菜品表dish
-        this.save(dishDto);
+        // 保存菜品基本信息
+        Dish dish = new Dish();
+        BeanUtils.copyProperties(dishDto, dish);
+        this.save(dish);
 
-        Long dishId = dishDto.getId();//菜品id
-
-        //菜品口味
+        // 保存菜品口味（事务保护）
         List<DishFlavor> flavors = dishDto.getFlavors();
         if (flavors != null && !flavors.isEmpty()) {
-            flavors.forEach(item -> item.setDishId(dishId));
-            //保存菜品口味数据到菜品口味表dish_flavor
+            flavors.forEach(flavor -> flavor.setDishId(dish.getId()));
             dishFlavorService.saveBatch(flavors);
         }
     }
 
     /**
-     * 根据id查询菜品信息和对应的口味信息
-     * @param id
-     * @return
+     * 根据ID查询菜品信息及关联的口味列表
+     *
+     * @param id 菜品ID
+     * @return 菜品及口味信息DTO
+     * @throws CustomException 菜品不存在时抛出
      */
     @Override
     public DishDto getByIdWithFlavor(Long id) {
@@ -115,9 +117,10 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
     }
 
     /**
-     * 更新菜品及口味信息
+     * 更新菜品及口味信息（事务保护）
+     * 先删除旧口味，再插入新口味
      *
-     * @param dishDto 菜品DTO
+     * @param dishDto 菜品及口味DTO
      */
     @Override
     @Transactional(rollbackFor = Exception.class)

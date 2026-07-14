@@ -5,11 +5,13 @@ import com.reggie.module.member.model.Member;
 import java.math.BigDecimal;
 
 /**
+ * <p>
  * 会员管理服务接口
- * 提供会员注册、余额扣减、积分增加、折扣计算等功能
+ * </p>
+ * <p>提供会员注册、余额扣减、积分增加、折扣计算等功能</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface MemberService extends IService<Member> {
 

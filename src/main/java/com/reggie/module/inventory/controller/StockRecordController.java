@@ -37,6 +37,13 @@ public class StockRecordController {
     @Autowired
     private StockRecordService stockRecordService;
 
+    /**
+     * 分页查询出入库记录
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param materialId 食材ID（可选）
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询出入库记录，支持按食材ID筛选")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -54,6 +61,11 @@ public class StockRecordController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 食材入库
+     * @param dto 入库请求
+     * @return 操作结果
+     */
     @PostMapping("/stockIn")
     @Operation(summary = "入库", description = "食材入库操作，增加库存数量")
     public R<String> stockIn(@Validated @RequestBody StockInDTO dto) {
@@ -62,6 +74,11 @@ public class StockRecordController {
         return R.success("入库成功");
     }
 
+    /**
+     * 食材出库
+     * @param dto 出库请求
+     * @return 操作结果
+     */
     @PostMapping("/stockOut")
     @Operation(summary = "出库", description = "食材出库操作，减少库存数量")
     public R<String> stockOut(@Validated @RequestBody StockOutDTO dto) {

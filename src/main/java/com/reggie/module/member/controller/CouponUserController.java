@@ -32,6 +32,13 @@ public class CouponUserController {
     @Autowired
     private CouponUserService couponUserService;
 
+    /**
+     * 分页查询用户优惠券列表
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param memberId 会员ID（可选）
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询用户优惠券列表，支持按会员ID筛选")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -46,6 +53,11 @@ public class CouponUserController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 查询指定会员的所有优惠券
+     * @param memberId 会员ID
+     * @return 优惠券列表
+     */
     @GetMapping("/my/{memberId}")
     @Operation(summary = "我的优惠券", description = "查询指定会员的所有优惠券")
     @Parameter(name = "memberId", description = "会员ID", required = true)

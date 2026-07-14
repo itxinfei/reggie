@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import javax.validation.constraints.*;
@@ -16,7 +17,8 @@ import java.time.LocalDateTime;
  * 菜品口味
  */
 @Data
-@Schema(description = "菜品口味实体")
+@TableName("dish_flavor")
+@Schema(description = "菜品口味")
 public class DishFlavor implements Serializable {
 
     private static final long serialVersionUID = 1L;

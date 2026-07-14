@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.ai.model.UserProfile;
 
 /**
+ * <p>
  * AI用户画像服务
- * 基于历史对话、点单、反馈数据构建用户长期记忆
+ * </p>
+ * <p>基于历史对话、点单、反馈数据构建用户长期记忆</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface UserProfileService extends IService<UserProfile> {
 

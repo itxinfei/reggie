@@ -10,25 +10,11 @@ import java.net.HttpURLConnection;
 import java.util.*;
 
 /**
- * 百度文心一言适配器
  * <p>
- * 支持百度 ERNIE Bot 系列模型（ERNE-Bot / ERNIE-Bot-turbo / ERNIE-Bot-4 等）。
+ * 百度文心一言适配器，支持百度 ERNIE Bot 系列模型。
  * </p>
  *
- * <p><b>百度 API 特点：</b></p>
- * <ul>
- *   <li>使用 OAuth 2.0 access_token 鉴权，拼接在 URL 查询参数中</li>
- *   <li>请求体使用 {@code prompt} 字段（拼接后的文本），而非 {@code messages} 数组</li>
- *   <li>使用 {@code max_output_tokens} 而非 {@code max_tokens}</li>
- *   <li>响应中使用 {@code result} 字段存放返回文本</li>
- * </ul>
- *
- * <p><b>注意：</b></p>
- * <p>百度 v2 版本 API 已支持 OpenAI 兼容的 /chat/completions 接口。
- * 如果使用新版 API，建议直接使用 {@link OpenAICompatibleAdapter}。
- * 本适配器针对旧版 ERNIE Bot API。</p>
- *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-10
  */
 @Slf4j

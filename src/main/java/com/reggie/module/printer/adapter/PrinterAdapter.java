@@ -5,10 +5,11 @@ import com.reggie.module.printer.model.PrinterConfig;
 import com.reggie.module.printer.model.PrinterStatus;
 
 /**
- * 打印机适配器接口（策略模式）
- * 定义与不同品牌票据打印机的交互规范
+ * <p>
+ * 打印机适配器接口（策略模式），定义与不同品牌票据打印机的交互规范。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 public interface PrinterAdapter {

@@ -105,6 +105,12 @@ public class SetmealController {
         //添加排序条件，根据更新时间降序排列
         queryWrapper.orderByDesc(Setmeal::getUpdateTime);
 
+        // 多租户过滤：显式限制当前租户数据
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(Setmeal::getTenantId, tenantId);
+        }
+
         setmealService.page(pageInfo,queryWrapper);
 
         BeanUtils.copyProperties(pageInfo, dtoPage, "records");
@@ -227,6 +233,12 @@ public class SetmealController {
         queryWrapper.like(setmeal.getName() != null && !setmeal.getName().trim().isEmpty(), Setmeal::getName, setmeal.getName());
         queryWrapper.orderByDesc(Setmeal::getUpdateTime);
 
+        // 多租户过滤：显式限制当前租户数据
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(Setmeal::getTenantId, tenantId);
+        }
+
         List<Setmeal> list = setmealService.list(queryWrapper);
 
         return R.success(list);
@@ -257,6 +269,10 @@ public class SetmealController {
     @Operation(summary = "筛选选项", description = "获取所有套餐名称，供搜索条件下拉框使用")
     public R<Map<String, List<String>>> options() {
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(Setmeal::getTenantId, tenantId);
+        }
         queryWrapper.orderByAsc(Setmeal::getName);
         List<Setmeal> list = setmealService.list(queryWrapper);
 

@@ -15,13 +15,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
- * AI模型适配器抽象基类
  * <p>
- * 封装通用的 HTTP 连接管理、错误处理、参数解析等逻辑。
- * 子类只需实现 {@link #getFormatId()}、{@link #getDisplayName()} 以及 {@link #doChat} 方法。
+ * AI模型适配器抽象基类，封装通用的HTTP连接管理、错误处理、参数解析等逻辑。
  * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-10
  */
 @Slf4j

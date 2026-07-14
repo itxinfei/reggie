@@ -36,6 +36,13 @@ public class MaterialController {
     @Autowired
     private MaterialService materialService;
 
+    /**
+     * 分页查询食材列表
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param name 食材名称（可选，模糊查询）
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询食材列表，支持按名称搜索")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -50,6 +57,11 @@ public class MaterialController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 新增食材
+     * @param material 食材信息
+     * @return 操作结果
+     */
     @PostMapping
     @Operation(summary = "新增食材", description = "创建新的食材信息")
     public R<String> save(@RequestBody Material material) {
@@ -57,6 +69,11 @@ public class MaterialController {
         return R.success("新增食材成功");
     }
 
+    /**
+     * 修改食材
+     * @param material 食材信息
+     * @return 操作结果
+     */
     @PutMapping
     @Operation(summary = "修改食材", description = "更新食材信息")
     public R<String> update(@RequestBody Material material) {
@@ -72,6 +89,11 @@ public class MaterialController {
         return R.success("删除食材成功");
     }
 
+    /**
+     * 根据ID查询食材
+     * @param id 食材ID
+     * @return 食材详情
+     */
     @GetMapping("/{id}")
     @Operation(summary = "根据id查询", description = "根据ID查询食材详情")
     @Parameter(name = "id", description = "食材ID", required = true)
@@ -83,6 +105,10 @@ public class MaterialController {
         return R.success(material);
     }
 
+    /**
+     * 查询所有启用的食材
+     * @return 食材列表
+     */
     @GetMapping("/list")
     @Operation(summary = "查询所有", description = "查询所有启用的食材列表")
     public R<List<Material>> list() {
@@ -92,6 +118,10 @@ public class MaterialController {
         return R.success(materialService.list(qw));
     }
 
+    /**
+     * 查询库存预警食材列表
+     * @return 低于预警阈值的食材列表
+     */
     @GetMapping("/warning")
     @Operation(summary = "库存预警列表", description = "查询库存低于预警阈值的食材列表")
     public R<List<Material>> warning() {

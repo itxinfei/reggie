@@ -10,37 +10,11 @@ import java.net.HttpURLConnection;
 import java.util.*;
 
 /**
- * OpenAI 兼容格式适配器
  * <p>
- * 支持所有实现了 OpenAI /v1/chat/completions 接口的模型，包括但不限于：
+ * OpenAI兼容格式适配器，支持所有实现了OpenAI /v1/chat/completions接口的模型。
  * </p>
- * <ul>
- *   <li>OpenAI GPT-3.5 / GPT-4 / GPT-4o</li>
- *   <li>DeepSeek (deepseek-chat, deepseek-reasoner)</li>
- *   <li>通义千问 Qwen (qwen-turbo, qwen-plus, qwen-max)</li>
- *   <li>智谱AI GLM (glm-4, glm-4-flash)</li>
- *   <li>Moonshot Kimi (moonshot-v1-8k, moonshot-v1-32k)</li>
- *   <li>零一万物 Yi (yi-large, yi-medium)</li>
- *   <li>MiniMax (abab6.5s-chat)</li>
- *   <li>百川 Baichuan (Baichuan4)</li>
- *   <li>SKylark / 字节豆包</li>
- *   <li>New API / One API 代理网关 (api.iamhc.cn 等)</li>
- *   <li>vLLM / LocalAI / Ollama 等自部署模型</li>
- * </ul>
  *
- * <p><b>请求格式：</b></p>
- * <pre>
- * POST {baseUrl}/chat/completions
- * Authorization: Bearer {apiKey}
- * { model, messages: [{role, content}], max_tokens, temperature }
- * </pre>
- *
- * <p><b>响应格式：</b></p>
- * <pre>
- * { choices: [{ message: { role, content } }], usage: { total_tokens } }
- * </pre>
- *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-10
  */
 @Slf4j

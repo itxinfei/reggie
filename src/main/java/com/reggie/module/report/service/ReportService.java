@@ -4,11 +4,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * <p>
  * 经营报表服务接口
- * 提供日报、菜品排行、时段分析、支付分析及报表导出等功能
+ * </p>
+ * <p>提供日报、菜品排行、时段分析、支付分析及报表导出等功能</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface ReportService {
 

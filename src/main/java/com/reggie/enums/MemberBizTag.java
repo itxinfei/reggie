@@ -3,9 +3,11 @@ package com.reggie.enums;
 import lombok.Getter;
 
 /**
- * 会员业务标签枚举
+ * <p>
+ * 会员业务标签枚举，用于会员画像和精准营销
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-10
  */
 @Getter

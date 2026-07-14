@@ -1,6 +1,8 @@
 package com.reggie.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -10,17 +12,19 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  * 订单明细
  */
 @Data
-@Schema(description = "订单明细实体")
+@Schema(description = "订单明细")
 public class OrderDetail implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     @Schema(description = "明细ID", example = "1")
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     @Schema(description = "商品名称", example = "鱼香肉丝", required = true)
@@ -52,4 +56,9 @@ public class OrderDetail implements Serializable {
 
     @Schema(description = "商品图片", example = "https://xxx.com/1.jpg")
     private String image;
+
+    @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
+    private Long tenantId;
+
 }

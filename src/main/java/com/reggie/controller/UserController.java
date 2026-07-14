@@ -235,6 +235,8 @@ public class UserController {
     @Operation(summary = "用户退出", description = "退出当前登录账号，清除会话信息")
     public R<String> loginout(HttpSession session) {
         session.removeAttribute("user");
+        session.removeAttribute("tenantId");
+        BaseContext.remove();
         return R.success("退出成功");
     }
 

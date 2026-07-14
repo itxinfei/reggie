@@ -41,6 +41,15 @@ public class CouponTemplateController {
     @Autowired
     private CouponTemplateService couponTemplateService;
 
+    /**
+     * 分页查询优惠券模板列表
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param name 优惠券名称（可选，模糊查询）
+     * @param type 优惠券类型（可选）
+     * @param status 状态（可选）
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询优惠券模板列表，支持按名称、类型、状态筛选，自动过滤当前租户数据")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
@@ -63,6 +72,11 @@ public class CouponTemplateController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 新增优惠券模板
+     * @param couponTemplate 优惠券模板信息
+     * @return 操作结果
+     */
     @PostMapping
     @Operation(summary = "新增优惠券", description = "创建新的优惠券模板")
     public R<String> save(@RequestBody CouponTemplate couponTemplate) {
@@ -73,6 +87,11 @@ public class CouponTemplateController {
         return R.success("新增优惠券成功");
     }
 
+    /**
+     * 修改优惠券模板
+     * @param couponTemplate 优惠券模板信息
+     * @return 操作结果
+     */
     @PutMapping
     @Operation(summary = "修改优惠券", description = "更新优惠券模板信息")
     public R<String> update(@RequestBody CouponTemplate couponTemplate) {
@@ -91,6 +110,11 @@ public class CouponTemplateController {
         return R.success("删除优惠券成功");
     }
 
+    /**
+     * 根据ID查询优惠券模板
+     * @param id 优惠券模板ID
+     * @return 模板详情
+     */
     @GetMapping("/{id}")
     @Operation(summary = "查询优惠券", description = "根据ID查询优惠券模板详情")
     @Parameter(name = "id", description = "优惠券模板ID", required = true)
@@ -102,6 +126,11 @@ public class CouponTemplateController {
         return R.error("没有查询到对应优惠券");
     }
 
+    /**
+     * 会员领取优惠券
+     * @param dto 领券请求
+     * @return 操作结果
+     */
     @PostMapping("/claim")
     @Operation(summary = "领取优惠券", description = "会员领取优惠券模板")
     public R<String> claim(@Valid @RequestBody ClaimCouponDTO dto) {

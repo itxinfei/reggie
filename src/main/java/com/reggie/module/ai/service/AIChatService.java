@@ -10,10 +10,12 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.List;
 
 /**
+ * <p>
  * AI聊天服务接口
+ * </p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface AIChatService extends IService<AIConversation> {
 

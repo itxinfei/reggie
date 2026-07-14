@@ -6,11 +6,13 @@ import com.reggie.module.inventory.model.StockCheck;
 import java.util.List;
 
 /**
+ * <p>
  * 库存盘点服务接口
- * 提供盘点单创建、盘点完成确认等功能
+ * </p>
+ * <p>提供盘点单创建、盘点完成确认等功能</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface StockCheckService extends IService<StockCheck> {
 

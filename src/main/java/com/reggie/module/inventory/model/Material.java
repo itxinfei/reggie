@@ -1,92 +1,68 @@
 package com.reggie.module.inventory.model;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 物料实体类
+ * 物料
  *
  * @author reggie
  * @since 2026-07-09
  */
 @Data
+@TableName("material")
+@Schema(description = "物料（食材/原料）")
 public class Material implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 正常状态
-     */
+    @Schema(description = "物料状态：1=正常，0=禁用")
     public static final int STATUS_NORMAL = 1;
-
-    /**
-     * 禁用状态
-     */
     public static final int STATUS_DISABLED = 0;
 
-    /**
-     * 主键ID
-     */
+    @Schema(description = "物料ID", example = "1")
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 租户ID
-     */
+    @Schema(description = "租户ID", example = "1")
     private Long tenantId;
 
-    /**
-     * 分类ID
-     */
+    @Schema(description = "物料分类ID", example = "1")
     private Long categoryId;
 
-    /**
-     * 物料名称
-     */
+    @Schema(description = "物料名称", example = "土豆", required = true)
     private String name;
 
-    /**
-     * 单位
-     */
+    @Schema(description = "单位", example = "斤")
     private String unit;
 
-    /**
-     * 库存数量
-     */
+    @Schema(description = "当前库存数量", example = "50.00")
     private BigDecimal stockQty;
 
-    /**
-     * 最小库存
-     */
+    @Schema(description = "最低库存预警阈值", example = "10.00")
     private BigDecimal minStock;
 
-    /**
-     * 单价
-     */
+    @Schema(description = "单价（元）", example = "3.50")
     private BigDecimal unitPrice;
 
-    /**
-     * 供应商ID
-     */
+    @Schema(description = "供应商ID", example = "1")
     private Long supplierId;
 
-    /**
-     * 条形码
-     */
+    @Schema(description = "条形码", example = "6901234567890")
     private String barcode;
 
-    /**
-     * 状态（1-正常，0-禁用）
-     */
+    @Schema(description = "状态：1=正常，0=禁用", example = "1")
     private Integer status;
 
-    /**
-     * 创建时间
-     */
+    @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
     private LocalDateTime createdTime;
 
-    /**
-     * 更新时间
-     */
+    @Schema(description = "更新时间", example = "2026-07-09 12:00:00")
     private LocalDateTime updatedTime;
 }

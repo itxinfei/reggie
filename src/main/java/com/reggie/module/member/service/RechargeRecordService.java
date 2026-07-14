@@ -5,11 +5,13 @@ import com.reggie.module.member.model.RechargeRecord;
 import java.math.BigDecimal;
 
 /**
+ * <p>
  * 充值记录服务接口
- * 管理会员余额充值记录
+ * </p>
+ * <p>管理会员余额充值记录</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface RechargeRecordService extends IService<RechargeRecord> {
 

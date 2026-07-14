@@ -24,10 +24,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 二维码工具类
- * 用于生成桌台二维码、菜品二维码等
+ * <p>
+ * 二维码工具类，用于生成桌台点餐二维码等场景。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

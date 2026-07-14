@@ -5,11 +5,13 @@ import com.reggie.module.payment.model.PaymentOrder;
 import java.math.BigDecimal;
 
 /**
+ * <p>
  * 支付订单服务接口
- * 提供支付订单创建、支付成功/失败回调处理等功能
+ * </p>
+ * <p>提供支付订单创建、支付成功/失败回调处理等功能</p>
  *
- * @author reggie
- * @since 2026-07-09
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 public interface PaymentOrderService extends IService<PaymentOrder> {
 

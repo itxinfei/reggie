@@ -16,25 +16,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 测试图片生成器（仅开发环境启用）
- * 启动时自动下载/生成测试菜品图片
+ * <p>
+ * 测试图片生成器（仅开发环境启用），启动时自动下载或生成测试菜品图片。
+ * </p>
  *
- * <p>重要提示：
- * <ul>
- *   <li>仅在开发环境（dev）自动运行</li>
- *   <li>首次启动自动下载真实图片</li>
- *   <li>后续启动检测到图片后直接跳过</li>
- *   <li>生产环境（prod）完全禁用</li>
- *   <li>用户上传图片后建议移除此类</li>
- * </ul>
- *
- * <p>配置项（application.yml）：
- * <ul>
- *   <li>reggie.image.download-real-images: 是否下载真实图片（默认 true）</li>
- *   <li>reggie.image.download-timeout: 下载超时时间（默认 10000ms）</li>
- * </ul>
- *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

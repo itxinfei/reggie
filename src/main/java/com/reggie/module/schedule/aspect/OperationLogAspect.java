@@ -21,10 +21,11 @@ import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 
 /**
- * 操作日志AOP切面
- * 自动记录Controller层的增删改操作
+ * <p>
+ * 操作日志AOP切面，自动记录Controller层的增删改操作。
+ * </p>
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j

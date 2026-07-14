@@ -1,55 +1,63 @@
 package com.reggie.module.dining.model;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 用餐桌台信息类
+ * 用餐桌台信息
  *
  * @author reggie
  * @since 2026-07-09
  */
 @Data
+@TableName("dining_table")
+@Schema(description = "用餐桌台")
 public class DiningTable implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
-    /** 主键ID */
+    @Schema(description = "桌台ID", example = "1")
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /** 租户ID */
+    @Schema(description = "租户ID", example = "1")
     private Long tenantId;
 
-    /** 区域ID */
+    @Schema(description = "区域ID", example = "1")
     private Long areaId;
 
-    /** 区域名称（非数据库字段，用于关联查询） */
+    @Schema(description = "区域名称（非数据库字段，用于关联查询）", example = "大厅")
     @TableField(exist = false)
     private String areaName;
 
-    /** 桌台名称/编号 */
+    @Schema(description = "桌台名称/编号", example = "A01")
     private String name;
 
-    /** 座位数 */
+    @Schema(description = "座位数", example = "4")
     private Integer seatCount;
 
-    /** 桌台状态：FREE-空闲，OCCUPIED-使用中，RESERVED-已预订 */
+    @Schema(description = "桌台状态：FREE=空闲，OCCUPIED=使用中，RESERVED=已预订", example = "FREE")
     private String status;
 
-    /** 最低消费金额 */
+    @Schema(description = "最低消费金额（元）", example = "50.00")
     private BigDecimal minAmount;
 
-    /** 桌台二维码URL */
+    @Schema(description = "桌台二维码URL", example = "https://xxx.com/qr/A01.png")
     private String qrCodeUrl;
 
-    /** 排序号 */
+    @Schema(description = "排序号（升序）", example = "1")
     private Integer sort;
 
-    /** 创建时间 */
+    @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
     private LocalDateTime createdTime;
 
-    /** 更新时间 */
+    @Schema(description = "更新时间", example = "2026-07-09 12:00:00")
     private LocalDateTime updatedTime;
 }
