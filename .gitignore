@@ -118,9 +118,9 @@ fresh.yaml
 CHANGELOG.md
 
 # ----------------------------------------------------------
-# Maven 包装器 (使用系统安装的 Maven 即可)
+# Maven 包装器 (仅保留 maven.config，忽略 wrapper JAR)
 # ----------------------------------------------------------
-.mvn/
+.mvn/wrapper/
 mvnw
 mvnw.cmd
 
