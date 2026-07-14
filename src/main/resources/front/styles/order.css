@@ -207,6 +207,52 @@
   border-color: var(--color-danger);
 }
 
+/* 修改点：评价按钮样式 */
+#order .divBody .btn .btnEval {
+  width: 124rem;
+  height: 36rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 19rem;
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
+  font-weight: 500;
+  text-align: center;
+  color: var(--color-primary-dark);
+  line-height: 36rem;
+  position: relative;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  background: #fff;
+}
+
+#order .divBody .btn .btnEval:active {
+  background: #fff8e1;
+  border-color: var(--color-primary-dark);
+}
+
+/* 修改点：分享按钮样式 */
+#order .divBody .btn .btnShare {
+  width: 124rem;
+  height: 36rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 19rem;
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
+  font-weight: 500;
+  text-align: center;
+  color: var(--color-text-secondary);
+  line-height: 36rem;
+  position: relative;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  background: #fff;
+}
+
+#order .divBody .btn .btnShare:active {
+  background: var(--bg-hover);
+  border-color: var(--color-primary);
+}
+
 #order .divNoData {
   width: 100%;
   height: calc(100% - var(--header-height) - 44rem);

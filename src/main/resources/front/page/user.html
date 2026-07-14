@@ -148,6 +148,12 @@
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
+                <div class="item" @click="toFrequentPage">
+                    <img src="./../images/orders.png"/>
+                    <span>常购清单</span>
+                    <i class="icon-arrow-right"></i>
+                </div>
+                <div class="divSplit"></div>
                 <div class="item" @click="toEvaluationPage">
                     <img src="./../images/orders.png"/>
                     <span>我的评价</span>
@@ -267,6 +273,9 @@
                 },
                 toOrderPage: function(){
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/order.html' })
+                },
+                toFrequentPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/frequent-orders.html' })
                 },
                 toEvaluationPage: function(){
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/my-evaluations.html' })

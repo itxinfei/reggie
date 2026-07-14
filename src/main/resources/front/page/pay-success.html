@@ -27,7 +27,12 @@
                 <div class="divSuccess">下单成功</div>
                 <div class="divDesc">预计{{finishTime}}到达</div>
                 <div class="divDesc1">后厨正在加紧制作中，请耐心等待~</div>
-                <div class="btnView" @click="toOrderPage">查看订单</div>
+                <div class="divActions">
+                    <div class="btnView" @click="toOrderPage">查看订单</div>
+                    <div class="btnShare" @click="shareOrder">
+                        <i class="ri-share-line"></i> 分享
+                    </div>
+                </div>
             </div>
         </div>
         <!-- 开发环境版本，包含了有帮助的命令行警告 -->
@@ -64,9 +69,30 @@
                 toMainPage(){
                     window.requestAnimationFrame(()=>{
                         window.location.replace('/front/index.html')
-                    })  
+                    })
                 },
-                
+                shareOrder(){
+                    const shareData = {
+                        title: '我在瑞吉外卖下单了',
+                        text: '美味生活，即刻送达！快来瑞吉外卖点餐吧～',
+                        url: window.location.origin + '/front/index.html'
+                    }
+                    if(navigator.share){
+                        navigator.share(shareData).catch(() => {})
+                    } else {
+                        const ta = document.createElement('textarea')
+                        ta.value = shareData.url
+                        document.body.appendChild(ta)
+                        ta.select()
+                        try {
+                            document.execCommand('copy')
+                            vant.Toast.success('链接已复制，快去分享吧')
+                        } catch(e) {
+                            vant.Toast.fail('分享失败，请手动复制链接')
+                        }
+                        document.body.removeChild(ta)
+                    }
+                }
             }
         })
         </script>

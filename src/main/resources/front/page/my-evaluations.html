@@ -23,6 +23,15 @@
             </div>
         </div>
 
+        <!-- 写评价入口 -->
+        <div class="write-eval-bar" v-if="canEvaluate && !submitVisible">
+            <div class="write-eval-info">
+                <i class="ri-edit-line"></i>
+                <span>您有未评价的订单，快去写评价吧</span>
+            </div>
+            <van-button type="primary" size="small" round @click="openSubmitModal">去评价</van-button>
+        </div>
+
         <!-- 评价列表 -->
         <div class="eval-list" v-if="evalList.length > 0">
             <div v-for="item in evalList" :key="item.id" class="eval-card">
@@ -134,6 +143,7 @@
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js"></script>
     <script src="../api/evaluation.js"></script>
+    <script src="./../api/order.js"></script>
     <script>
         new Vue({
             el: '#eval-app',
@@ -144,6 +154,7 @@
                     total: 0,
                     page: 1,
                     pageSize: 10,
+                    canEvaluate: false,
                     // 提交评价
                     submitVisible: false,
                     submitLoading: false,
@@ -156,6 +167,7 @@
             },
             created() {
                 this.loadData()
+                this.checkPendingEvaluation()
             },
             methods: {
                 async loadData() {
@@ -268,6 +280,27 @@
                 },
                 goToOrder() {
                     window.location.href = '/front/page/order.html'
+                },
+                // 检查是否有待评价订单
+                async checkPendingEvaluation() {
+                    try {
+                        const res = await orderPagingApi({ page: 1, pageSize: 5, status: 4 })
+                        if (res.code === 1 && res.data && res.data.records) {
+                            // 检查是否有已完成的订单但未评价
+                            const hasPending = res.data.records.some(order => {
+                                if (!order.orderDetails) return false
+                                return order.orderDetails.some(d => d.dishId)
+                            })
+                            this.canEvaluate = hasPending
+                        }
+                    } catch (e) {
+                        // 不影响页面展示
+                    }
+                },
+                // 打开评价提交弹窗
+                openSubmitModal() {
+                    this.submitData = { orderId: null, dishes: [] }
+                    this.submitVisible = true
                 }
             }
         })

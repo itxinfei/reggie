@@ -123,6 +123,24 @@ public class DeliveryController {
         return result ? R.success("库存同步成功") : R.error("库存同步失败");
     }
 
+    // ==================== 配送追踪 ====================
+
+    /**
+     * 根据平台订单号查询配送状态（供前端配送追踪页面使用）
+     *
+     * @param orderId 平台订单号
+     * @return 配送订单详情
+     */
+    @GetMapping("/tracking/{orderId}")
+    @Operation(summary = "查询配送追踪", description = "根据平台订单号查询配送订单详情，供前端追踪页面使用")
+    public R<DeliveryOrder> tracking(@PathVariable String orderId) {
+        DeliveryOrder order = deliveryService.getByPlatformOrderId(orderId);
+        if (order == null) {
+            return R.error("配送订单不存在");
+        }
+        return R.success(order);
+    }
+
     // ==================== 平台回调 ====================
 
     @PostMapping("/callback/{platform}")

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
+    <title>常购清单 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js"></script>
+    <link rel="stylesheet" href="../styles/index.css" />
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <style>
+        .frequent-container {
+            height: calc(100vh - var(--header-height));
+            overflow-y: auto;
+            background: var(--bg-page);
+        }
+
+        /* 快捷标题栏 */
+        .quick-header {
+            margin: 10rem 12rem;
+            padding: 14rem var(--spacing-md);
+            background: linear-gradient(135deg, #ffc200 0%, #ff9a00 100%);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-card);
+            display: flex;
+            align-items: center;
+            gap: 10rem;
+        }
+        .quick-header .qi-icon {
+            width: 44rem;
+            height: 44rem;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .quick-header .qi-icon i {
+            font-size: 22rem;
+            color: #fff;
+        }
+        .quick-header .qi-text {
+            flex: 1;
+        }
+        .quick-header .qi-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: #fff;
+            line-height: 24rem;
+        }
+        .quick-header .qi-desc {
+            font-size: var(--font-size-sm);
+            color: rgba(255,255,255,0.85);
+            line-height: 20rem;
+            margin-top: 2rem;
+        }
+
+        /* 分类标签 */
+        .category-tabs {
+            display: flex;
+            gap: 8rem;
+            padding: 0 12rem;
+            margin-bottom: 10rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .category-tabs::-webkit-scrollbar {
+            display: none;
+        }
+        .category-tab {
+            flex-shrink: 0;
+            padding: 6rem 16rem;
+            border-radius: 20rem;
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            background: var(--bg-card);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: 1px solid transparent;
+        }
+        .category-tab.active {
+            background: var(--color-primary);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* 菜品卡片 */
+        .dish-card {
+            margin: 0 12rem 10rem;
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            box-shadow: var(--shadow-card);
+            display: flex;
+            gap: 10rem;
+            padding: 10rem;
+            position: relative;
+        }
+        .dish-card .dish-img {
+            width: 90rem;
+            height: 90rem;
+            border-radius: var(--radius-sm);
+            object-fit: cover;
+            flex-shrink: 0;
+            background: #f5f5f5;
+        }
+        .dish-card .dish-img-placeholder {
+            width: 90rem;
+            height: 90rem;
+            border-radius: var(--radius-sm);
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .dish-card .dish-img-placeholder i {
+            font-size: 32rem;
+            color: #ddd;
+        }
+        .dish-card .dish-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-width: 0;
+        }
+        .dish-card .dish-name {
+            font-size: var(--font-size-md);
+            font-weight: 600;
+            color: var(--color-text-primary);
+            line-height: 22rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .dish-card .dish-meta {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-hint);
+            line-height: 18rem;
+        }
+        .dish-card .dish-meta .freq-badge {
+            display: inline-block;
+            background: #fff3e0;
+            color: var(--color-primary-dark);
+            padding: 1rem 6rem;
+            border-radius: 3rem;
+            font-size: 10rem;
+            margin-right: 6rem;
+        }
+        .dish-card .dish-price-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 4rem;
+        }
+        .dish-card .dish-price {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--color-price);
+            font-family: var(--font-family-number);
+        }
+        .dish-card .dish-price::before {
+            content: '¥';
+            font-size: var(--font-size-sm);
+            margin-right: 1rem;
+        }
+        .dish-card .reorder-btn {
+            padding: 6rem 16rem;
+            background: var(--color-primary-gradient);
+            color: #fff;
+            border: none;
+            border-radius: 16rem;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: opacity var(--transition-fast);
+        }
+        .dish-card .reorder-btn:active {
+            opacity: 0.8;
+        }
+        .dish-card .reorder-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* 分组标题 */
+        .group-title {
+            margin: 6rem 12rem 8rem;
+            font-size: var(--font-size-sm);
+            color: var(--color-text-hint);
+            line-height: 20rem;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 80rem 0;
+            color: var(--color-text-hint);
+        }
+        .empty-state i {
+            font-size: 60rem;
+            color: #ddd;
+        }
+        .empty-state p {
+            margin-top: 12rem;
+            font-size: var(--font-size-md);
+        }
+
+        /* 底部 */
+        .bottom-hint {
+            text-align: center;
+            padding: 10rem 0 20rem;
+            font-size: var(--font-size-sm);
+            color: var(--color-text-hint);
+        }
+    </style>
+</head>
+<body>
+    <div id="frequent" class="app">
+        <div v-if="pageLoading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <div class="divHead">
+            <div class="divTitle">
+                <i class="icon-back-arrow" @click="goBack"></i>常购清单
+            </div>
+        </div>
+
+        <div class="frequent-container">
+            <!-- 快捷说明 -->
+            <div class="quick-header">
+                <div class="qi-icon">
+                    <i class="ri-star-line"></i>
+                </div>
+                <div class="qi-text">
+                    <div class="qi-title">您的常购清单</div>
+                    <div class="qi-desc">快速复购您喜爱的菜品</div>
+                </div>
+            </div>
+
+            <!-- 分类标签 -->
+            <div class="category-tabs" v-if="categories.length > 1">
+                <div class="category-tab"
+                     v-for="cat in categories"
+                     :key="cat"
+                     :class="{active: activeCategory === cat}"
+                     @click="activeCategory = cat">
+                    {{ cat }}
+                </div>
+            </div>
+
+            <!-- 菜品列表 -->
+            <template v-if="filteredItems.length > 0">
+                <div class="group-title">按点餐频率排序</div>
+                <div class="dish-card" v-for="item in filteredItems" :key="item.key">
+                    <div class="dish-img-placeholder">
+                        <i class="ri-restaurant-line"></i>
+                    </div>
+                    <div class="dish-info">
+                        <div>
+                            <div class="dish-name">{{ item.name }}</div>
+                            <div class="dish-meta">
+                                <span class="freq-badge">点过{{ item.count }}次</span>
+                                <span>{{ item.lastOrderTime }}</span>
+                            </div>
+                        </div>
+                        <div class="dish-price-row">
+                            <div class="dish-price">{{ item.price }}</div>
+                            <button class="reorder-btn"
+                                    :disabled="submitting === item.key"
+                                    @click="reorder(item)">
+                                {{ submitting === item.key ? '添加中...' : '再来一单' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="bottom-hint">基于您的历史订单生成</div>
+            </template>
+
+            <!-- 空状态 -->
+            <div class="empty-state" v-else-if="!pageLoading && items.length === 0">
+                <i class="ri-shopping-bag-line"></i>
+                <p>暂无常购菜品</p>
+                <p style="margin-top:6rem;font-size:12rem;">去点餐后，这里会展示您的常购清单</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="./../js/vant.min.js"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js"></script>
+    <script src="./../api/order.js"></script>
+    <script src="./../api/frequent.js"></script>
+    <script>
+        new Vue({
+            el: '#frequent',
+            data() {
+                return {
+                    pageLoading: false,
+                    submitting: null,
+                    items: [],
+                    activeCategory: '全部',
+                    categories: ['全部']
+                };
+            },
+            computed: {
+                filteredItems() {
+                    if (this.activeCategory === '全部') return this.items;
+                    return this.items.filter(item => item.category === this.activeCategory);
+                }
+            },
+            created() {
+                this.initData();
+            },
+            methods: {
+                goBack() {
+                    window.requestAnimationFrame(() => {
+                        window.history.go(-1);
+                    });
+                },
+                async initData() {
+                    this.pageLoading = true;
+                    try {
+                        await this.loadOrderHistory();
+                    } catch (e) {
+                        vant.Toast.fail('加载失败，请稍后重试');
+                    } finally {
+                        this.pageLoading = false;
+                    }
+                },
+                async loadOrderHistory() {
+                    const allItems = [];
+                    const itemMap = new Map();
+                    const categorySet = new Set(['全部']);
+                    let page = 1;
+                    let hasMore = true;
+
+                    while (hasMore) {
+                        const res = await orderPagingApi({ page, pageSize: 10 });
+                        if (res.code !== 1 || !res.data || !res.data.records || res.data.records.length === 0) {
+                            hasMore = false;
+                            break;
+                        }
+                        const records = res.data.records;
+                        for (const order of records) {
+                            if (order.orderDetails) {
+                                for (const detail of order.orderDetails) {
+                                    const key = detail.dishId || detail.id;
+                                    const cat = detail.dishFlavor ? '套餐' : '菜品';
+                                    categorySet.add(cat);
+                                    if (itemMap.has(key)) {
+                                        const existing = itemMap.get(key);
+                                        existing.count += detail.number || 1;
+                                        if (order.orderTime && (!existing.lastOrderTime || order.orderTime > existing.lastOrderTime)) {
+                                            existing.lastOrderTime = order.orderTime;
+                                            existing.price = detail.amount;
+                                            existing.orderId = order.id;
+                                        }
+                                    } else {
+                                        itemMap.set(key, {
+                                            key: key,
+                                            name: detail.name,
+                                            price: detail.amount,
+                                            count: detail.number || 1,
+                                            category: cat,
+                                            lastOrderTime: order.orderTime,
+                                            orderId: order.id
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                        hasMore = page < (res.data.pages || 1);
+                        page++;
+                    }
+
+                    this.items = Array.from(itemMap.values())
+                        .sort((a, b) => b.count - a.count)
+                        .slice(0, 20);
+                    this.categories = Array.from(categorySet);
+                },
+                async reorder(item) {
+                    if (this.submitting) return;
+                    if (!item.orderId) {
+                        vant.Toast.fail('无法复购该菜品');
+                        return;
+                    }
+                    this.submitting = item.key;
+                    try {
+                        const res = await reorderAgain({ id: item.orderId });
+                        if (res.code === 1) {
+                            vant.Toast.success('已加入购物车');
+                        } else {
+                            vant.Toast.fail(res.msg || '复购失败');
+                        }
+                    } catch (e) {
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    } finally {
+                        this.submitting = null;
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

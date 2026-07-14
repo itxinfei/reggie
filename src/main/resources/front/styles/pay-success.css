@@ -91,3 +91,35 @@
 #pay_success .divContent .btnView:active {
   opacity: 0.8;
 }
+
+/* 分享按钮 */
+#pay_success .divActions {
+  display: flex;
+  align-items: center;
+  gap: 12rem;
+  margin-top: 20rem;
+}
+#pay_success .divActions .btnShare {
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+  height: 36rem;
+  padding: 0 20rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 18rem;
+  font-size: 15rem;
+  font-family: var(--font-family-body);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  line-height: 36rem;
+  cursor: pointer;
+  background: #fff;
+  transition: all var(--transition-normal);
+}
+#pay_success .divActions .btnShare:active {
+  background: var(--bg-hover);
+  border-color: var(--color-primary);
+}
+#pay_success .divActions .btnShare i {
+  font-size: 16rem;
+}

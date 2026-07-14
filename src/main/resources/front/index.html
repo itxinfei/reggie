@@ -29,6 +29,7 @@
           <div class="search-box" @click="onSearchClick">
             <i class="icon-search"></i>
             <span>搜索菜品、套餐</span>
+            <i class="ri-mic-line voice-icon" @click.stop="startVoiceSearch"></i>
           </div>
           <!-- 修改点：消息铃铛入口 + 未读角标 -->
           <div class="msg-bell" @click="toMessagePage" style="position:relative;margin-right:12px;cursor:pointer;">
@@ -674,6 +675,36 @@
                 const input = this.$refs.searchInput
                 if(input) input.focus()
               })
+            },
+            // 修改点：语音搜索
+            startVoiceSearch(){
+              var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+              if(!SpeechRecognition){
+                vant.Toast.fail('您的浏览器不支持语音搜索')
+                return
+              }
+              var recognition = new SpeechRecognition()
+              recognition.lang = 'zh-CN'
+              recognition.interimResults = false
+              recognition.maxAlternatives = 1
+              recognition.start()
+              this.searchShow = true
+              this.$nextTick(() => {
+                const input = this.$refs.searchInput
+                if(input) input.focus()
+              })
+              recognition.onresult = (event) => {
+                var transcript = event.results[0][0].transcript
+                this.searchKeyword = transcript
+                this.doSearch()
+              }
+              recognition.onerror = (event) => {
+                if(event.error === 'not-allowed'){
+                  vant.Toast.fail('请允许麦克风权限')
+                } else if(event.error !== 'aborted'){
+                  vant.Toast.fail('语音识别失败：' + event.error)
+                }
+              }
             },
             // 修改点：关闭搜索浮层
             closeSearch(){

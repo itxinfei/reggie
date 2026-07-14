@@ -78,6 +78,14 @@ public class DeliveryServiceImpl implements DeliveryService {
     }
 
     @Override
+    public DeliveryOrder getByPlatformOrderId(String platformOrderId) {
+        LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
+        qw.eq(DeliveryOrder::getPlatformOrderId, platformOrderId);
+        qw.eq(DeliveryOrder::getTenantId, BaseContext.getCurrentTenantId());
+        return deliveryOrderMapper.selectOne(qw);
+    }
+
+    @Override
     public Page<DeliveryOrder> pageOrders(int page, int pageSize, String platform, String status, String startDate, String endDate) {
         Page<DeliveryOrder> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();

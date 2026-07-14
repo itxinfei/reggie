@@ -357,3 +357,27 @@
   color: var(--color-text-hint);
   margin-top: 4px;
 }
+
+/* 写评价入口栏 */
+.write-eval-bar {
+  margin: 10px 12px;
+  padding: 12px;
+  background: #fffbf0;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.write-eval-bar .write-eval-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #ff9800;
+  line-height: 20px;
+}
+.write-eval-bar .write-eval-info i {
+  font-size: 18px;
+}

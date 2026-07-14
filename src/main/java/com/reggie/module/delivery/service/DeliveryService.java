@@ -91,6 +91,14 @@ public interface DeliveryService {
     boolean syncStock(String platform, Map<Long, Integer> stock);
 
     /**
+     * 根据平台订单号查询配送订单
+     *
+     * @param platformOrderId 平台订单号
+     * @return 配送订单信息
+     */
+    DeliveryOrder getByPlatformOrderId(String platformOrderId);
+
+    /**
      * 处理第三方平台回调（新订单通知、状态变更、退款通知）
      *
      * @param platform 平台类型

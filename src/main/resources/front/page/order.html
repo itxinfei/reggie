@@ -56,8 +56,13 @@
                         <div class="btn" v-if="order.status === 1">
                             <div class="btnCancel" @click="cancelOrder(order)">取消订单</div>
                         </div>
+                        <div class="btn" v-if="order.status === 2 || order.status === 3">
+                            <div class="btnAgain" @click="viewTracking(order)">配送追踪</div>
+                        </div>
                         <div class="btn" v-if="order.status === 4">
                             <div class="btnAgain" @click="addOrderAgain(order)">再来一单</div>
+                            <div class="btnEval" @click="evaluateOrder(order)">评价</div>
+                            <div class="btnShare" @click="shareOrder(order)">分享</div>
                         </div>
                     </van-cell>
                 </van-list>
@@ -196,6 +201,45 @@
                         }
                     } finally {
                         this.submitting = false
+                    }
+                },
+                // 修改点：分享订单
+                shareOrder(order){
+                    const shareData = {
+                        title: '我在瑞吉外卖的订单',
+                        text: '我在瑞吉外卖点了一单，你也来试试吧！',
+                        url: window.location.origin + '/front/index.html'
+                    }
+                    if(navigator.share){
+                        navigator.share(shareData).catch(() => {})
+                    } else {
+                        const ta = document.createElement('textarea')
+                        ta.value = shareData.url
+                        document.body.appendChild(ta)
+                        ta.select()
+                        try {
+                            document.execCommand('copy')
+                            vant.Toast.success('链接已复制')
+                        } catch(e) {
+                            vant.Toast.fail('分享失败')
+                        }
+                        document.body.removeChild(ta)
+                    }
+                },
+                // 修改点：评价订单
+                evaluateOrder(order){
+                    if(order && order.id){
+                        window.requestAnimationFrame(()=>{
+                            window.location.href = '/front/page/my-evaluations.html?orderId=' + order.id
+                        })
+                    }
+                },
+                // 修改点：配送追踪
+                viewTracking(order){
+                    if(order && order.number){
+                        window.requestAnimationFrame(()=>{
+                            window.location.href = '/front/page/tracking.html?orderId=' + order.number
+                        })
                     }
                 },
                 // 修改点：取消订单
