@@ -616,3 +616,133 @@
   line-height: 14rem;
   margin-top: -2rem;
 }
+
+/* 修改点：配送方式选择 */
+#add_order .divContent .delivery-mode {
+  background: #ffffff;
+  border-radius: 8rem;
+  margin-top: 10rem;
+  padding: 0;
+  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+#add_order .delivery-mode .mode-tabs {
+  display: flex;
+  border-bottom: 2px solid #efefef;
+}
+#add_order .delivery-mode .mode-tab {
+  flex: 1;
+  text-align: center;
+  height: 48rem;
+  line-height: 48rem;
+  font-size: 14rem;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+#add_order .delivery-mode .mode-tab.active {
+  color: #ffc200;
+  font-weight: 600;
+}
+#add_order .delivery-mode .mode-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rem;
+  height: 3rem;
+  background: #ffc200;
+  border-radius: 2rem;
+}
+#add_order .delivery-mode .mode-tab i {
+  margin-right: 4rem;
+  font-size: 16rem;
+}
+#add_order .divContent .delivery-mode .divFinishTime {
+  height: 50rem;
+  line-height: 50rem;
+  padding: 0 16rem;
+  font-size: 14rem;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#add_order .divContent .delivery-mode .divFinishTime:active {
+  background: #f9f9f9;
+}
+
+/* 预约配送弹窗 */
+#add_order .schedule-picker-popup {
+  background: #fff;
+  border-radius: 16rem 16rem 0 0;
+}
+#add_order .schedule-picker-body {
+  padding: 10rem 16rem 20rem;
+}
+#add_order .schedule-date-row {
+  margin-bottom: 12rem;
+}
+#add_order .schedule-label {
+  display: block;
+  font-size: 14rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8rem;
+}
+#add_order .schedule-time-row {
+  margin-bottom: 16rem;
+}
+#add_order .schedule-time-list {
+  display: flex;
+  gap: 8rem;
+  flex-wrap: wrap;
+}
+#add_order .schedule-time-item {
+  flex: 1;
+  min-width: 30%;
+  text-align: center;
+  padding: 10rem 6rem;
+  border: 2px solid #f0f0f0;
+  border-radius: 8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+#add_order .schedule-time-item.active {
+  border-color: #ffc200;
+  background: #fffbf0;
+}
+#add_order .schedule-time-item .slot-label {
+  font-size: 14rem;
+  font-weight: 600;
+  color: #333;
+  line-height: 20rem;
+}
+#add_order .schedule-time-item .slot-time {
+  font-size: 11rem;
+  color: #999;
+  line-height: 16rem;
+  margin-top: 2rem;
+}
+#add_order .schedule-time-item .tm-check {
+  position: absolute;
+  top: 4rem;
+  right: 6rem;
+  color: #ffc200;
+  font-size: 14rem;
+  font-weight: bold;
+}
+#add_order .schedule-confirm-btn {
+  margin-top: 10rem;
+  height: 44rem;
+  background: linear-gradient(135deg, #ffc200, #ffb300);
+  border: none;
+  color: #333;
+  font-weight: 600;
+  font-size: 16rem;
+}

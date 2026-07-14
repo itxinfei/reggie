@@ -37,17 +37,33 @@
                         <i class="icon-arrow-right"></i>
                     </div>
                     <div class="divSplit"></div>
-                    <!-- 修改点：送达时间可选择 -->
-                    <div class="divFinishTime" @click="showTimePicker = true">
-                        预计{{ selectedTimeLabel }}
-                        <i class="icon-arrow-right" style="font-size:12rem;vertical-align:middle;"></i>
+                    <!-- 修改点：配送方式选择（立即/预约） -->
+                    <div class="delivery-mode">
+                        <div class="mode-tabs">
+                            <div class="mode-tab" :class="{active: deliveryMode === 0}" @click="deliveryMode = 0">
+                                <i class="ri-run-line"></i> 立即配送
+                            </div>
+                            <div class="mode-tab" :class="{active: deliveryMode === 1}" @click="deliveryMode = 1">
+                                <i class="ri-calendar-line"></i> 预约配送
+                            </div>
+                        </div>
+                        <!-- 立即配送：选择时段 -->
+                        <div class="divFinishTime" v-if="deliveryMode === 0" @click="showTimePicker = true">
+                            预计{{ selectedTimeLabel }}
+                            <i class="icon-arrow-right" style="font-size:12rem;vertical-align:middle;"></i>
+                        </div>
+                        <!-- 预约配送：选择日期时间 -->
+                        <div class="divFinishTime" v-if="deliveryMode === 1" @click="showSchedulePicker = true">
+                            {{ scheduleLabel }}
+                            <i class="icon-arrow-right" style="font-size:12rem;vertical-align:middle;"></i>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 送达时间选择弹窗 -->
+                <!-- 送达时间选择弹窗（立即配送） -->
                 <van-popup v-model="showTimePicker" position="bottom" :style="{ height: '40%' }" :close-on-click-overlay="true" class="time-picker-popup">
                     <div class="time-picker-title">
-                        <span>选择送达时间</span>
+                        <span>选择送达时段</span>
                         <span class="time-picker-close" @click="showTimePicker = false">✕</span>
                     </div>
                     <div class="time-picker-list">
@@ -56,12 +72,48 @@
                             :key="idx"
                             class="time-picker-item"
                             :class="{active: selectedTimeIdx === idx}"
-                            @click="selectTime(idx)"
-                        >
+                            @click="selectTime(idx)">
                             <div class="tm-label">{{ t.label }}</div>
                             <div class="tm-time">{{ t.time }}</div>
                             <i class="tm-check" v-if="selectedTimeIdx === idx">✓</i>
                         </div>
+                    </div>
+                </van-popup>
+
+                <!-- 预约配送：日期时间选择弹窗 -->
+                <van-popup v-model="showSchedulePicker" position="bottom" :style="{ height: '50%' }" :close-on-click-overlay="true" class="schedule-picker-popup">
+                    <div class="time-picker-title">
+                        <span>选择预约送达时间</span>
+                        <span class="time-picker-close" @click="showSchedulePicker = false">✕</span>
+                    </div>
+                    <div class="schedule-picker-body">
+                        <div class="schedule-date-row">
+                            <span class="schedule-label">日期</span>
+                            <van-datetime-picker
+                                v-model="scheduleDate"
+                                type="date"
+                                :min-date="minScheduleDate"
+                                :max-date="maxScheduleDate"
+                                :formatter="dateFormatter"
+                                @confirm="onScheduleDateConfirm"
+                                @cancel="showSchedulePicker = false"
+                            />
+                        </div>
+                        <div class="schedule-time-row">
+                            <span class="schedule-label">时段</span>
+                            <div class="schedule-time-list">
+                                <div class="schedule-time-item"
+                                     v-for="slot in scheduleTimeSlots"
+                                     :key="slot.value"
+                                     :class="{active: selectedScheduleSlot === slot.value}"
+                                     @click="selectedScheduleSlot = slot.value">
+                                    <div class="slot-label">{{ slot.label }}</div>
+                                    <div class="slot-time">{{ slot.time }}</div>
+                                    <i class="tm-check" v-if="selectedScheduleSlot === slot.value">✓</i>
+                                </div>
+                            </div>
+                        </div>
+                        <van-button type="primary" block round class="schedule-confirm-btn" @click="confirmSchedule">确定</van-button>
                     </div>
                 </van-popup>
                 <div class="order">
@@ -186,7 +238,9 @@
                             { name: '满减券', discount: 10, condition: '满90可用', desc: '满90减10' }
                         ],
                         selectedCoupon: -1, // -1表示未使用优惠券
-                        // 送达时间选择
+                        // 配送方式：0=立即配送，1=预约配送
+                        deliveryMode: 0,
+                        // 送达时间选择（立即配送）
                         showTimePicker: false,
                         selectedTimeIdx: 0,
                         timeOptions: [
@@ -196,6 +250,16 @@
                             { label: '约50分钟', time: '' },
                             { label: '约60分钟', time: '' }
                         ],
+                        // 预约配送
+                        showSchedulePicker: false,
+                        scheduleDate: null,
+                        selectedScheduleSlot: 'LUNCH',
+                        scheduleTimeSlots: [
+                            { value: 'LUNCH', label: '午餐', time: '11:30-12:30' },
+                            { value: 'DINNER', label: '晚餐', time: '17:30-19:00' },
+                            { value: 'AFTERNOON', label: '下午茶', time: '14:00-16:00' },
+                            { value: 'MORNING', label: '早餐', time: '07:30-09:00' }
+                        ]
                     }
                 },
                 computed:{
@@ -220,6 +284,15 @@
                     },
                     // 预计送达时间
                     expectDeliveryTime(){
+                        if(this.deliveryMode === 1 && this.scheduleDate){
+                            const d = new Date(this.scheduleDate)
+                            const yyyy = d.getFullYear()
+                            const mm = String(d.getMonth() + 1).padStart(2, '0')
+                            const dd = String(d.getDate()).padStart(2, '0')
+                            const slot = this.scheduleTimeSlots.find(s => s.value === this.selectedScheduleSlot)
+                            const timeRange = slot ? slot.time : ''
+                            return yyyy + '-' + mm + '-' + dd + ' ' + timeRange
+                        }
                         return this.finishTime + ' ' + (this.selectedTimeIdx === 0 ? '尽快送达' : this.timeOptions[this.selectedTimeIdx].label)
                     },
                     // 修改点：计算优惠金额（需满足满减条件）
@@ -242,6 +315,7 @@
                     },
                     // 修改点：送达时间显示标签
                     selectedTimeLabel(){
+                        if(this.deliveryMode === 1) return this.scheduleLabel
                         if(this.selectedTimeIdx === 0){
                             return this.finishTime + ' 尽快送达'
                         }
@@ -250,6 +324,16 @@
                             return option.time + ' ' + option.label
                         }
                         return this.finishTime
+                    },
+                    // 预约配送：格式化显示标签
+                    scheduleLabel(){
+                        if(this.deliveryMode !== 1 || !this.scheduleDate) return '请选择预约时间'
+                        const d = new Date(this.scheduleDate)
+                        const month = d.getMonth() + 1
+                        const day = d.getDate()
+                        const slot = this.scheduleTimeSlots.find(s => s.value === this.selectedScheduleSlot)
+                        const slotText = slot ? slot.label : ''
+                        return month + '月' + day + '日 ' + slotText
                     },
                     // 修改点：完整地址拼接
                     addressFull(){
@@ -337,6 +421,43 @@
                     selectTime(idx){
                         this.selectedTimeIdx = idx
                         this.showTimePicker = false
+                    },
+                    // 修改点：预约配送相关方法
+                    minScheduleDate(){
+                        const now = new Date()
+                        return new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1)
+                    },
+                    maxScheduleDate(){
+                        const now = new Date()
+                        return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7)
+                    },
+                    dateFormatter(type, val){
+                        if(type === 'year') return val + '年'
+                        if(type === 'month') return val + '月'
+                        if(type === 'day') return val + '日'
+                        return val
+                    },
+                    onScheduleDateConfirm(val){
+                        this.scheduleDate = val
+                    },
+                    confirmSchedule(){
+                        if(!this.scheduleDate){
+                            vant.Toast.fail('请选择预约日期')
+                            return
+                        }
+                        if(!this.selectedScheduleSlot){
+                            vant.Toast.fail('请选择时段')
+                            return
+                        }
+                        // 验证预约日期不能是今天（除非时间还未过）
+                        const selected = new Date(this.scheduleDate)
+                        const today = new Date()
+                        if(selected.toDateString() === today.toDateString() && selected.getHours() < today.getHours()){
+                            vant.Toast.fail('预约时间不能早于当前时间')
+                            return
+                        }
+                        this.showSchedulePicker = false
+                        vant.Toast.success('预约时间已设置')
                     },
                     async goToPaySuccess(){
                         if(!this.cartData || this.cartData.length === 0){
