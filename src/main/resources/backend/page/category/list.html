@@ -216,7 +216,7 @@
         mounted() {
         },
         methods: {
-          <!-- 修改点：通用优化方案 — 下拉框本地缓存，避免每次打开都发请求 -->
+          // 修改点：通用优化方案 — 下拉框本地缓存，避免每次打开都发请求
           async loadFilterOptions() {
             // 如果已加载过数据，直接使用缓存
             if (this.filterOptions.names.length > 0) {
