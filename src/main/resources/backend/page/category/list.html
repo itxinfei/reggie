@@ -10,63 +10,34 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <style>
   </style>
 </head>
 <body>
   <div class="dashboard-container" id="category-app">
     <div class="container">
-      <!-- ========== 数据统计卡片 ========== -->
-      <!-- 修改点：卡片可点击筛选，点击后按分类类型过滤列表 -->
-      <div class="stats-cards">
-        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterByType('')">
-          <div class="stat-icon">📂</div>
-          <div class="stat-label">分类总数</div>
-          <div class="stat-value">{{ stats.totalCategories || 0 }}</div>
-        </div>
-        <div class="stat-card success clickable" :class="{ active: activeFilter === '1' }" @click="filterByType('1')">
-          <div class="stat-icon">🍽️</div>
-          <div class="stat-label">菜品分类</div>
-          <div class="stat-value">{{ stats.foodCategories || 0 }}</div>
-        </div>
-        <div class="stat-card warning clickable" :class="{ active: activeFilter === '2' }" @click="filterByType('2')">
-          <div class="stat-icon">🍱</div>
-          <div class="stat-label">套餐分类</div>
-          <div class="stat-value">{{ stats.comboCategories || 0 }}</div>
-        </div>
-        <div class="stat-card info">
-          <div class="stat-icon">🆕</div>
-          <div class="stat-label">今日新增</div>
-          <div class="stat-value">{{ stats.todayNew || 0 }}</div>
-        </div>
-      </div>
+      <!-- ========== 数据统计卡片（统一组件） ========== -->
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
-      <!-- 修改点：新增搜索框，支持按分类名称搜索 -->
-      <div class="tableBar">
-        <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框，选项从数据库加载 -->
-        <el-select v-model="searchName" placeholder="请选择分类名称" class="el-select--narrow-xs" clearable filterable size="small"
-          :loading="optionsLoading"
-          :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')"
-          @visible-change="onFilterDropdownVisible">
-          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
-        </el-select>
-        <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
-        <el-button size="small" class="btn-reset" @click="reset">重置</el-button>
-        <el-button
-          type="primary"
-          class="btn-add"
-          @click="addClass('class')"
-        >
-          + 新增菜品分类
-        </el-button>
-        <el-button
-          type="primary"
-          class="btn-add"
-          @click="addClass('meal')"
-        >
-          + 新增套餐分类
-        </el-button>
-      </div>
+      <!-- 修改点：使用 <table-bar> 统一组件替代手写 HTML -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @search="handleQuery"
+        @reset="reset"
+        @action="onTableAction">
+        <!-- 修改点：动态下拉框通过 search-extra 插槽注入（数据从 API 加载） -->
+        <template slot="search-extra">
+          <el-select v-model="searchName" placeholder="请选择分类名称" class="el-select--narrow-xs" clearable filterable size="small"
+            :loading="optionsLoading"
+            :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')"
+            @visible-change="loadFilterOptions">
+            <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+          </el-select>
+        </template>
+      </table-bar>
       <el-table
         v-loading="loading"
         :data="tableData"
@@ -153,11 +124,12 @@
         <el-form-item label="排序：" prop="sort">
           <el-input-number
             v-model="classData.sort"
-            :min="0"
+            :min="1"
             :max="9999"
-            placeholder="请输入排序"
+            placeholder="不填则自动分配"
             style="width: 293px;"
           ></el-input-number>
+          <span class="form-tip">不填则自动排列到最后</span>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -181,6 +153,7 @@
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
     <script src="../../api/category.js"></script>
+    <script src="../../js/components.js"></script>
     <script>
       new Vue({
         el: '#category-app',
@@ -192,6 +165,12 @@
             pageSize: 10,
             tableData: [],
             loading: false,
+            // 修改点：<table-bar> 组件配置
+            tableSearchItems: [],
+            tableActions: [
+              { key: 'addFood', text: '+ 新增菜品分类', type: 'primary' },
+              { key: 'addCombo', text: '+ 新增套餐分类', type: 'primary' }
+            ],
             type :'',
             // 修改点：搜索条件，与卡片筛选互斥
             searchName: '',
@@ -212,12 +191,24 @@
               'title': '添加菜品分类',
               'dialogVisible': false,
               'categoryId': '',
+              'id': '',             // 修改点：显式声明id字段，编辑时回填
               'name': '',
-              sort: ''
+              sort: null            // 修改点：null 让 el-input-number 正常工作，不填则后端自动分配
             }
           }
         },
-        computed: {},
+        computed: {
+          // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+          statsCards() {
+            var self = this
+            return [
+              { key: '', icon: '📂', label: '分类总数', value: self.stats.totalCategories || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+              { key: '1', icon: '🍽️', label: '菜品分类', value: self.stats.foodCategories || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
+              { key: '2', icon: '🍱', label: '套餐分类', value: self.stats.comboCategories || 0, color: 'warning', clickable: true, active: self.activeFilter === '2' },
+              { key: '新增', icon: '🆕', label: '今日新增', value: self.stats.todayNew || 0, color: 'info', clickable: false }
+            ]
+          }
+        },
         created() {
           this.loadFilterOptions()
           this.init()
@@ -225,8 +216,13 @@
         mounted() {
         },
         methods: {
-          // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
+          <!-- 修改点：通用优化方案 — 下拉框本地缓存，避免每次打开都发请求 -->
           async loadFilterOptions() {
+            // 如果已加载过数据，直接使用缓存
+            if (this.filterOptions.names.length > 0) {
+              this.optionsLoading = false
+              return
+            }
             this.optionsLoading = true
             this.optionsLoadError = false
             try {
@@ -238,7 +234,6 @@
                 this.$message.warning('加载分类选项失败：' + (res.msg || '接口返回异常'))
               }
             } catch (err) {
-              // 修改点：NOTLOGIN 错误已在全局拦截器处理（跳转登录页），无需重复提示
               if (err.message === 'NOTLOGIN') {
                 return
               }
@@ -278,30 +273,12 @@
 
             this.loading = false
           },
-          // 加载分类统计数据
+          // 修改点：加载分类统计数据——使用后端 /stats 接口，数据100%准确
           async loadCategoryStats() {
             try {
-              const res = await getCategoryPage({'page': 1, 'pageSize': 1000})
-              if (String(res.code) === '1') {
-                const records = res.data.records || []
-                const total = res.data.total || 0
-                // 修改点：后端 type 是 Integer，JSON 序列化为数字 1/2，不能用字符串 '1'/'2' 做 === 比较
-                const foodCount = records.filter(item => item.type === 1).length
-                const comboCount = records.filter(item => item.type === 2).length
-                // 修改点：计算今日新增分类数
-                const today = new Date().toISOString().slice(0, 10) // yyyy-MM-dd
-                const todayNew = records.filter(item => {
-                  return item.createTime && item.createTime.startsWith(today)
-                }).length
-                return {
-                  code: 1,
-                  data: {
-                    totalCategories: total,
-                    foodCategories: foodCount,
-                    comboCategories: comboCount,
-                    todayNew: todayNew
-                  }
-                }
+              const res = await getCategoryStats()
+              if (String(res.code) === '1' && res.data) {
+                return { code: 1, data: res.data }
               }
             } catch (err) {
               console.warn('加载分类统计数据失败:', err)
@@ -314,22 +291,22 @@
             this.page = 1;
             this.init();
           },
+          // 修改点：<table-bar> 组件 action 按钮事件处理
+          onTableAction(payload) {
+            if (payload.key === 'addFood') { this.addClass('class') }
+            else if (payload.key === 'addCombo') { this.addClass('meal') }
+          },
+          // 修改点：stat-cards 组件卡片点击事件（替代原 filterByType）
+          onCardClick(payload) {
+            this.activeFilter = payload.activeKey
+            this.searchName = ''
+            this.page = 1
+            this.init()
+          },
           // 重置搜索条件，恢复表格初始状态
           reset() {
             this.searchName = ''
             this.activeFilter = ''
-            this.page = 1
-            this.init()
-          },
-          // 修改点：stats-card 点击切换分类类型筛选（清空搜索条件避免冲突）
-          filterByType(type) {
-            if (this.activeFilter === type) {
-              this.activeFilter = ''  // 再次点击取消筛选
-            } else {
-              this.activeFilter = type
-            }
-            // 修改点：卡片筛选时清空搜索条件
-            this.searchName = ''
             this.page = 1
             this.init()
           },
@@ -344,7 +321,7 @@
             }
             this.action = 'add'
             this.classData.name = ''
-            this.classData.sort = ''
+            this.classData.sort = null  // 修改点：null 表示不填则后端自动分配排序号
             this.classData.dialogVisible = true
           },
           editHandle(dat) {
@@ -362,7 +339,7 @@
           },
           //删除
           deleteHandle(id) {
-            this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
+            this.$confirm('此操作将永久删除该分类, 是否继续?', '提示', {
               'confirmButtonText': '确定',
               'cancelButtonText': '取消',
               'type': 'warning'
@@ -379,57 +356,59 @@
               })
             })
           },
-          //数据提交
+          // 修改点：数据提交——校验逻辑简化，排序为空则后端自动分配
           submitForm(st) {
-              const classData = this.classData
-              const valid = (classData.name === 0 ||classData.name)  && (classData.sort === 0 || classData.sort)
-              if (this.action === 'add') {
-                if (valid) {
-                  const reg = /^\d+$/
-                  if (reg.test(classData.sort)) {
-                    addCategory({'name': classData.name,'type':this.type, sort: classData.sort}).then(res => {
-                      if (res.code === 1) {
-                        this.$message.success('分类添加成功！')
-                        if (!st) {
-                          this.classData.dialogVisible = false
-                        } else {
-                          this.classData.name = ''
-                          this.classData.sort = ''
-                        }
-                        this.handleQuery()
-                      } else {
-                        this.$message.error(res.msg || '操作失败')
-                      }
-                    }).catch(err => {
-                      this.$message.error('请求失败：' + err)
-                    })
-                  } else {
-                    this.$message.error('排序只能输入数字类型')
-                  }
-                  
-              } else {
-                  this.$message.error('请输入分类名称或排序')
+            const classData = this.classData
+            const name = (classData.name || '').trim()
+            if (!name) {
+              this.$message.error('请输入分类名称')
+              return
+            }
+            if (name.length > 14) {
+              this.$message.error('分类名称最多14个字符')
+              return
+            }
+            // 排序号可选，如果填了则必须是正整数
+            if (classData.sort !== null && classData.sort !== undefined && classData.sort !== '') {
+              if (!/^\d+$/.test(String(classData.sort))) {
+                this.$message.error('排序只能输入正整数')
+                return
               }
-            } else if (valid) {
-              const reg = /^\d+$/
-              if (reg.test(this.classData.sort)) {
-                // 修改点：编辑时也带上 type 字段
-                editCategory({'id':this.classData.id,'name': this.classData.name, 'type': this.type, sort: this.classData.sort}).then(res => {
-                  if (res.code === 1) {
-                    this.$message.success('分类修改成功！')
+            }
+            const params = { name: name, type: this.type }
+            if (classData.sort !== null && classData.sort !== undefined && classData.sort !== '') {
+              params.sort = classData.sort
+            }
+            if (this.action === 'add') {
+              addCategory(params).then(res => {
+                if (res.code === 1) {
+                  this.$message.success('分类添加成功！')
+                  if (!st) {
                     this.classData.dialogVisible = false
-                    this.handleQuery()
                   } else {
-                    this.$message.error(res.msg || '操作失败')
+                    this.classData.name = ''
+                    this.classData.sort = null
                   }
-                }).catch(err => {
-                  this.$message.error('请求失败：' + err)
-                })
-              } else {
-                this.$message.error('排序只能输入数字类型')
-              }
+                  this.handleQuery()
+                } else {
+                  this.$message.error(res.msg || '操作失败')
+                }
+              }).catch(err => {
+                this.$message.error('请求失败：' + err)
+              })
             } else {
-              this.$message.error('请输入分类名称或排序')
+              params.id = this.classData.id
+              editCategory(params).then(res => {
+                if (res.code === 1) {
+                  this.$message.success('分类修改成功！')
+                  this.classData.dialogVisible = false
+                  this.handleQuery()
+                } else {
+                  this.$message.error(res.msg || '操作失败')
+                }
+              }).catch(err => {
+                this.$message.error('请求失败：' + err)
+              })
             }
           },
           handleSizeChange (val) {
