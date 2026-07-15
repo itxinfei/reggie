@@ -106,7 +106,7 @@
             </div>
             <div class="ri-info">
               <div class="ri-name">{{ dish.name }}</div>
-              <div class="ri-price">¥{{ (dish.price || 0) / 100 }}</div>
+              <div class="ri-price">¥{{ Number(dish.price || 0).toFixed(2) }}</div>
             </div>
           </div>
         </div>
@@ -143,7 +143,7 @@
               <div class="di-desc" v-if="item.description">{{ item.description }}</div>
               <div class="di-sales">月售{{ item.saleNum || 0 }}<span v-if="item.saleNum > 50"> · 好评率98%</span></div>
               <div class="di-price-row">
-                <span class="di-price"><span class="di-symbol">¥</span>{{ (item.price/100).toFixed(2) }}</span>
+                <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price).toFixed(2) }}</span>
               </div>
             </div>
             <div class="di-action">
@@ -189,7 +189,7 @@
           </div>
         </div>
         <div class="divBottom">
-          <div><span class="spanMoney">￥</span>{{ (dialogFlavor.price/100).toFixed(2) }}</div>
+          <div><span class="spanMoney">￥</span>{{ Number(dialogFlavor.price).toFixed(2) }}</div>
           <div @click="dialogFlavorAddCart">加入购物车</div>
         </div>
         <div class="divFlavorClose" @click="dialogFlavor.show = false">
@@ -267,7 +267,7 @@
         </div>
         <div class="divNum">
           <div class="left">
-            <span>￥</span><span>{{ (detailsDialog.item.price/100).toFixed(2) }}</span>
+            <span>￥</span><span>{{ Number(detailsDialog.item.price).toFixed(2) }}</span>
           </div>
           <div class="right">
             <div class="divSubtract" v-if="detailsDialog.item.number > 0">
@@ -298,7 +298,7 @@
             <img :src="imgPath(item.image)" @error="imgError" class="meal-img">
             <div class="divSubTitle">{{ item.name + '(' + item.copies + '份)' }}
               <div class="divPrice">
-                <span>￥</span><span>{{ (item.price/100).toFixed(2) }}</span>
+                <span>￥</span><span>{{ Number(item.price).toFixed(2) }}</span>
               </div>
             </div>
             <div class="content">{{ item.description }}</div>
@@ -306,7 +306,7 @@
         </div>
         <div class="divNum">
           <div class="left">
-            <span>￥</span><span>{{ (setMealDialog.item.price/100).toFixed(2) }}</span>
+            <span>￥</span><span>{{ Number(setMealDialog.item.price).toFixed(2) }}</span>
           </div>
           <div class="right">
             <div class="divSubtract" v-if="setMealDialog.item.number > 0">
@@ -403,7 +403,7 @@
               <div class="di-desc" v-if="item.description">{{ item.description }}</div>
               <div class="di-sales">月售{{ item.saleNum || 0 }}</div>
               <div class="di-price-row">
-                <span class="di-price"><span class="di-symbol">¥</span>{{ (item.price/100).toFixed(2) }}</span>
+                <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price).toFixed(2) }}</span>
               </div>
             </div>
             <div class="di-action">
@@ -429,7 +429,7 @@
               <div class="di-desc" v-if="item.description">{{ item.description }}</div>
               <div class="di-sales">月售{{ item.saleNum || 0 }}</div>
               <div class="di-price-row">
-                <span class="di-price"><span class="di-symbol">¥</span>{{ (item.price/100).toFixed(2) }}</span>
+                <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price).toFixed(2) }}</span>
               </div>
             </div>
             <div class="di-action">
@@ -1064,7 +1064,7 @@
               // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
               try {
                 let params = {
-                  amount: parseFloat((item.price / 100).toFixed(2)), // 修改点：分转元 + toFixed，避免浮点误差
+                  amount: parseFloat(Number(item.price).toFixed(2)),
                   dishFlavor: item.dishFlavor,//口味  如果没有传undefined
                   dishId: undefined,//菜品id
                   setmealId: undefined,//套餐id

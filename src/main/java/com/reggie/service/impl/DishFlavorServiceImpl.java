@@ -1,17 +1,29 @@
 package com.reggie.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
 import com.reggie.entity.DishFlavor;
 import com.reggie.mapper.DishFlavorMapper;
 import com.reggie.service.DishFlavorService;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * 菜品口味服务实现类
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Service
-public class DishFlavorServiceImpl extends ServiceImpl<DishFlavorMapper,DishFlavor> implements DishFlavorService {
+public class DishFlavorServiceImpl extends ServiceImpl<DishFlavorMapper, DishFlavor> implements DishFlavorService {
+
+    @Override
+    public List<DishFlavor> listByDishId(Long dishId) {
+        return this.list(new LambdaQueryWrapper<DishFlavor>()
+                .eq(DishFlavor::getDishId, dishId)
+                .eq(DishFlavor::getTenantId, BaseContext.getCurrentTenantId())
+                .orderByAsc(DishFlavor::getId));
+    }
 }

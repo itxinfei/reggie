@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     /* ========== 基础重置 ========== */
@@ -269,73 +270,29 @@
   <div class="dashboard-container daily-container" id="report-daily-app">
     <div class="container">
 
-      <!-- ========== 工具栏：日期选择 + 导出按钮 ========== -->
-      <div class="tableBar">
-        <span class="toolbar-label">
-          <i class="el-icon-date" style="margin-right:4px;"></i>日期范围
-        </span>
+      <!-- 修改点：使用 <table-bar> 统一组件替代手写 tableBar -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @search="loadData"
+        @action="onTableAction">
+        <template slot="search-extra">
+          <el-date-picker
+            v-model="queryDate"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="yyyy-MM-dd"
+            :shortcuts="dateShortcuts"
+            @change="onDateChange"
+            size="small"
+          ></el-date-picker>
+        </template>
+      </table-bar>
 
-        <el-date-picker
-          v-model="queryDate"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          value-format="yyyy-MM-dd"
-          :shortcuts="dateShortcuts"
-          @change="onDateChange"
-        ></el-date-picker>
-
-        <el-button type="primary" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
-
-        <span class="toolbar-spacer"></span>
-
-        <!-- 导出按钮组 -->
-        <el-button-group>
-          <el-button
-            type="success"
-            icon="el-icon-download"
-            @click="handleExport('excel')"
-            :loading="exporting"
-            :disabled="exporting"
-          >导出 Excel</el-button>
-          <el-button
-            type="warning"
-            icon="el-icon-document"
-            @click="handleExport('pdf')"
-            :loading="exporting"
-            :disabled="exporting"
-          >导出 PDF</el-button>
-        </el-button-group>
-      </div>
-
-      <!-- ========== KPI 卡片 ========== -->
-      <div class="stats-cards">
-        <div class="stat-card primary">
-          <div class="stat-icon">📋</div>
-          <div class="stat-label">订单总数</div>
-          <div class="stat-value">{{ dailyData.totalOrders || 0 }}</div>
-          <div class="sub">全部状态订单</div>
-        </div>
-        <div class="stat-card success">
-          <div class="stat-icon">💰</div>
-          <div class="stat-label">营业额（元）</div>
-          <div class="stat-value">¥{{ formatMoney(dailyData.totalAmount) }}</div>
-          <div class="sub">已完成订单金额</div>
-        </div>
-        <div class="stat-card warning">
-          <div class="stat-icon">🏷️</div>
-          <div class="stat-label">客单价（元）</div>
-          <div class="stat-value">¥{{ formatMoney(dailyData.avgAmount) }}</div>
-          <div class="sub">人均消费</div>
-        </div>
-        <div class="stat-card danger">
-          <div class="stat-icon">📊</div>
-          <div class="stat-label">完成 / 取消</div>
-          <div class="stat-value">{{ dailyData.completedOrders || 0 }} / {{ dailyData.cancelledOrders || 0 }}</div>
-          <div class="sub">完成率 {{ completionRate }}%</div>
-        </div>
-      </div>
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- ========== 趋势图 + 分类销售 双图 ========== -->
       <!-- 修改点：图表容器增加 min-height 防止变形，统一 class 便于响应式 -->
@@ -442,6 +399,7 @@
   <script src="../../js/request.js"></script>
   <script src="../../api/export.js"></script>
   <script src="../../api/report.js"></script>
+  <script src="../../js/components.js"></script>
   <script>
     new Vue({
       el: '#report-daily-app',
@@ -517,6 +475,12 @@
                 picker.$emit('pick', [start, end]);
               }
             }
+          ],
+          // 修改点：<table-bar> 统一组件配置
+          tableSearchItems: [],
+          tableActions: [
+            { key: 'exportExcel', text: '导出 Excel', type: 'success' },
+            { key: 'exportPdf', text: '导出 PDF', type: 'warning' }
           ]
         }
       },
@@ -526,6 +490,16 @@
           const completed = this.dailyData.completedOrders || 0
           if (!total) return '0.0'
           return (completed / total * 100).toFixed(1)
+        },
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+          var self = this;
+          return [
+            { key: '订单', icon: '📋', label: '订单总数', value: self.dailyData.totalOrders || 0, color: 'primary' },
+            { key: '营业额', icon: '💰', label: '营业额（元）', value: '¥' + self.formatMoney(self.dailyData.totalAmount), color: 'success' },
+            { key: '客单价', icon: '🏷️', label: '客单价（元）', value: '¥' + self.formatMoney(self.dailyData.avgAmount), color: 'warning' },
+            { key: '完成率', icon: '📊', label: '完成 / 取消', value: (self.dailyData.completedOrders || 0) + ' / ' + (self.dailyData.cancelledOrders || 0), color: 'danger' }
+          ]
         }
       },
       created() {
@@ -561,6 +535,11 @@
         if (this.categoryChart) { try { this.categoryChart.dispose(); } catch(e) {} }
       },
       methods: {
+        // 修改点：<table-bar> 组件统一操作分发
+        onTableAction: function(payload) {
+          if (payload.key === 'exportExcel') { this.handleExport('excel'); }
+          else if (payload.key === 'exportPdf') { this.handleExport('pdf'); }
+        },
         // 格式化日期为 yyyy-MM-dd
         formatDateStr(date) {
           const y = date.getFullYear()

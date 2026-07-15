@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <style>
   </style>
 </head>
@@ -16,43 +17,24 @@
   <div class="dashboard-container" id="area-app">
     <div class="container">
       <!-- ========== 数据统计卡片 ========== -->
-      <div class="stats-cards">
-        <div class="stat-card primary">
-          <div class="stat-icon">📍</div>
-          <div class="stat-label">区域总数</div>
-          <div class="stat-value">{{ stats.totalAreas || 0 }}</div>
-        </div>
-        <div class="stat-card success">
-          <div class="stat-icon">🪑</div>
-          <div class="stat-label">桌台总数</div>
-          <div class="stat-value">{{ stats.totalTables || 0 }}</div>
-        </div>
-        <div class="stat-card warning">
-          <div class="stat-icon">👥</div>
-          <div class="stat-label">平均桌台/区域</div>
-          <div class="stat-value">{{ stats.avgTablesPerArea || 0 }}</div>
-        </div>
-        <div class="stat-card info">
-          <div class="stat-icon">🏢</div>
-          <div class="stat-label">最大容量区域</div>
-          <div class="stat-value" style="font-size: 20px">{{ stats.maxTablesArea || '-' }}</div>
-        </div>
-      </div>
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
-      <div class="tableBar">
-        <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框，选项从数据库加载 -->
-        <el-select v-model="input" placeholder="请选择区域名称" class="el-select--narrow-xs" clearable filterable size="small"
-          :loading="optionsLoading"
-          :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')"
-          @visible-change="onFilterDropdownVisible">
-          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
-        </el-select>
-        <el-button type="primary" class="btn-query" @click="handleQuery">查询</el-button>
-        <el-button class="btn-reset" @click="reset">重置</el-button>
-        <div class="tableLab">
-          <el-button type="primary" class="btn-add" @click="addHandle">+ 新增区域</el-button>
-        </div>
-      </div>
+      <!-- 修改点：使用 <table-bar> 统一组件替代手写 HTML -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @search="handleQuery"
+        @reset="reset"
+        @action="onTableAction">
+        <template slot="search-extra">
+          <el-select v-model="input" placeholder="请选择区域名称" class="el-select--narrow-xs" clearable filterable size="small"
+            :loading="optionsLoading"
+            :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')">
+            <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+          </el-select>
+        </template>
+      </table-bar>
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
         <el-table-column type="index" label="序号" width="50"></el-table-column>
         <el-table-column prop="name" label="区域名称"></el-table-column>
@@ -95,6 +77,7 @@
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../api/dining.js"></script>
+  <script src="../../js/components.js"></script>
   <script>
     new Vue({
       el: '#area-app',
@@ -106,13 +89,22 @@
           page: 1,
           pageSize: 10,
           tableData: [],
-          // 数据统计
+          // 统计数据
           stats: {
             totalAreas: 0,
             totalTables: 0,
             avgTablesPerArea: 0,
             maxTablesArea: '-'   // 修改点：桌台最多的区域名称
           },
+          // 修改点：<table-bar> 统一组件配置
+          tableSearchItems: [],
+          tableActions: [
+            { key: 'add', text: '+ 新增区域', type: 'primary' }
+          ],
+          // 筛选下拉框配置
+          filterOptions: { names: [] },
+          optionsLoading: false,
+          optionsLoadError: false,
           dialog: {
             title: '',
             visible: false
@@ -128,6 +120,18 @@
       created() {
         this.loadFilterOptions()
         this.init()
+      },
+      computed: {
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards() {
+          var self = this
+          return [
+            { key: '区域', icon: '📍', label: '区域总数', value: self.stats.totalAreas || 0, color: 'primary' },
+            { key: '桌台', icon: '🪑', label: '桌台总数', value: self.stats.totalTables || 0, color: 'success' },
+            { key: '平均', icon: '👥', label: '平均桌台/区域', value: self.stats.avgTablesPerArea || 0, color: 'warning' },
+            { key: '最大', icon: '🏢', label: '最大容量区域', value: self.stats.maxTablesArea || '-', color: 'info' }
+          ]
+        }
       },
       methods: {
         // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
@@ -225,6 +229,19 @@
         handleQuery() {
           this.page = 1
           this.init()
+        },
+        // 修改点：通用优化方案 — 下拉框可重试加载
+        onFilterDropdownVisible(flag) {
+          if (flag && this.optionsLoadError) {
+            this.optionsLoadError = false
+            this.loadFilterOptions()
+          }
+        },
+        // 修改点：<table-bar> 组件统一操作分发
+        onTableAction(payload) {
+          if (payload.key === 'add') {
+            this.addHandle()
+          }
         },
         reset() {
           this.input = ''

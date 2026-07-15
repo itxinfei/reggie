@@ -8,13 +8,9 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
-  <link rel="stylesheet" href="../../styles/components.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <style>
-    .stats-cards--col-3 {
-      grid-template-columns: repeat(5, 1fr);
-    }
-
     .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; padding: 4px 0; }
     .detail-item { display: flex; align-items: center; }
     .detail-item .d-label { width: 80px; font-size: 14px; color: #909399; flex-shrink: 0; }
@@ -32,39 +28,8 @@
 <body>
   <div class="dashboard-container" id="member-app">
     <div class="container">
-      <!-- ===== 统计卡片 ===== -->
-      <div class="stats-cards stats-cards--col-3">
-        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="onFilterClick('')">
-          <div class="stat-icon">👥</div>
-          <div class="stat-label">会员总数</div>
-          <div class="stat-value">{{ stats.totalMembers }}</div>
-          <div class="sub">全部会员</div>
-        </div>
-        <div class="stat-card warning clickable" :class="{ active: activeFilter === 'gold' }" @click="onFilterClick('gold')">
-          <div class="stat-icon">⭐</div>
-          <div class="stat-label">高级会员</div>
-          <div class="stat-value">{{ stats.highLevelCount }}</div>
-          <div class="sub">黄金及以上</div>
-        </div>
-        <div class="stat-card info clickable" :class="{ active: activeFilter === 'silver' }" @click="onFilterClick('silver')">
-          <div class="stat-icon">🥈</div>
-          <div class="stat-label">中级会员</div>
-          <div class="stat-value">{{ stats.midLevelCount }}</div>
-          <div class="sub">银卡级别</div>
-        </div>
-        <div class="stat-card danger clickable" :class="{ active: activeFilter === 'bronze' }" @click="onFilterClick('bronze')">
-          <div class="stat-icon">🆕</div>
-          <div class="stat-label">初级会员</div>
-          <div class="stat-value">{{ stats.lowLevelCount }}</div>
-          <div class="sub">青铜及以下</div>
-        </div>
-        <div class="stat-card success">
-          <div class="stat-icon">📈</div>
-          <div class="stat-label">本月新增</div>
-          <div class="stat-value">{{ stats.newMembersThisMonth }}</div>
-          <div class="sub">本月注册</div>
-        </div>
-      </div>
+      <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
       <!-- ===== 搜索栏 ===== -->
       <table-bar
@@ -179,7 +144,24 @@
         }
       },
       created: function() { this.init(); this.loadLevels() },
+      computed: {
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+          var self = this;
+          return [
+            { key: '', icon: '👥', label: '会员总数', value: self.stats.totalMembers, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'gold', icon: '⭐', label: '高级会员', value: self.stats.highLevelCount, color: 'warning', clickable: true, active: self.activeFilter === 'gold' },
+            { key: 'silver', icon: '🥈', label: '中级会员', value: self.stats.midLevelCount, color: 'info', clickable: true, active: self.activeFilter === 'silver' },
+            { key: 'bronze', icon: '🆕', label: '初级会员', value: self.stats.lowLevelCount, color: 'danger', clickable: true, active: self.activeFilter === 'bronze' },
+            { key: 'new', icon: '📈', label: '本月新增', value: self.stats.newMembersThisMonth, color: 'success' }
+          ]
+        }
+      },
       methods: {
+        // 修改点：<stat-cards> 组件统一卡片点击分发
+        onCardClick: function(payload) {
+          this.onFilterClick(payload.key)
+        },
         async init() {
           this.loading = true
           var params = { page: this.page, pageSize: this.pageSize, name: this.searchInput.name || undefined, phone: this.searchInput.phone || undefined, levelId: this.searchInput.levelId || undefined }

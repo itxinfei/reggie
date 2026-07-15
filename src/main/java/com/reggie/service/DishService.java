@@ -7,6 +7,7 @@ import com.reggie.entity.DishFlavor;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -19,11 +20,13 @@ import java.util.List;
 public interface DishService extends IService<Dish> {
 
     /**
-     * 新增菜品，同时插入菜品对应的口味数据，需要操作两张表：dish、dish_flavor
+     * 保存菜品及口味（事务保护）
+     * <p>内部做分类存在性校验、库存非负校验、库存为0自动停售</p>
      *
-     * @param dishDto 菜品及口味信息
+     * @param dish 菜品信息
+     * @param flavors 口味列表
      */
-    public void saveWithFlavor(DishDto dishDto);
+    void saveDish(Dish dish, List<DishFlavor> flavors);
 
     /**
      * 根据ID查询菜品信息和对应的口味信息
@@ -31,14 +34,14 @@ public interface DishService extends IService<Dish> {
      * @param id 菜品ID
      * @return 菜品及口味信息
      */
-    public DishDto getByIdWithFlavor(Long id);
+    DishDto getByIdWithFlavor(Long id);
 
     /**
      * 更新菜品信息，同时更新对应的口味信息
      *
      * @param dishDto 菜品及口味信息
      */
-    public void updateWithFlavor(DishDto dishDto);
+    void updateWithFlavor(DishDto dishDto);
 
     /**
      * 批量修改菜品起售停售状态
@@ -46,21 +49,13 @@ public interface DishService extends IService<Dish> {
      * @param status 目标状态（0停售 1起售）
      * @param ids 菜品ID列表
      */
-    public void updateStatus(Integer status, List<Long> ids);
-
-    /**
-     * 保存菜品及口味（事务保护）
-     *
-     * @param dish 菜品信息
-     * @param flavors 口味列表
-     */
-    public void saveDish(Dish dish, List<DishFlavor> flavors);
+    void updateStatus(Integer status, List<Long> ids);
 
     /**
      * 删除菜品及关联口味（事务保护），删除前校验套餐引用
      * @param ids 菜品ID列表
      */
-    public void deleteWithFlavorCheck(List<Long> ids);
+    void deleteWithFlavorCheck(List<Long> ids);
 
     // ==================== 库存管理 ====================
 
@@ -82,4 +77,18 @@ public interface DishService extends IService<Dish> {
      * 自动售罄处理：库存为0时自动停售，有库存时自动起售
      */
     void autoToggleSoldOut(Long dishId);
+
+    /**
+     * 获取菜品统计数据（轻量接口，只查count不拉取全量数据）
+     * @return 统计 Map（total/active/inactive/lowStock/soldOut）
+     */
+    Map<String, Object> getStats();
+
+    /**
+     * 更新菜品库存信息
+     * @param id 菜品ID
+     * @param stockQty 库存数量
+     * @param minStock 最低库存预警值
+     */
+    void updateStock(Long id, BigDecimal stockQty, BigDecimal minStock);
 }

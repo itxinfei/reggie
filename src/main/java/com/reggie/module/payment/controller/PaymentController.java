@@ -14,9 +14,7 @@ import com.reggie.module.payment.channel.PayResponse;
 import com.reggie.module.payment.channel.RefundRequest;
 import com.reggie.module.payment.channel.RefundResponse;
 import com.reggie.module.payment.model.PaymentOrder;
-import com.reggie.module.payment.model.RefundRecord;
 import static com.reggie.module.payment.model.PaymentOrder.STATUS_REFUND;
-import static com.reggie.module.payment.model.PaymentOrder.STATUS_SUCCESS;
 import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.payment.service.RefundRecordService;
 import com.reggie.service.DashboardService;
@@ -26,6 +24,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,7 +34,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -105,9 +103,12 @@ public class PaymentController {
             String tradeNo = params.get("out_trade_no");
             if (tradeNo != null) {
                 paymentOrderService.handlePaymentSuccess(tradeNo, response.getChannelTradeNo());
+            } else {
+                log.warn("支付回调缺少out_trade_no参数，channel={}, params={}", channel, params);
             }
             return R.success("回调处理成功");
         }
+        log.warn("支付回调处理失败：channel={}, errorMsg={}", channel, response.getErrorMsg());
         return R.error("回调处理失败");
     }
 
@@ -118,6 +119,7 @@ public class PaymentController {
      */
     @PostMapping("/refund")
     @Operation(summary = "申请退款", description = "申请退款并调用支付渠道处理退款流程")
+    @Transactional(rollbackFor = Exception.class)
     public R<String> refund(
             @Parameter(description = "退款请求参数", required = true) @Validated @RequestBody RefundRequestDTO dto) {
         PaymentOrder paymentOrder = paymentOrderService.getById(dto.getPaymentOrderId());
@@ -138,13 +140,8 @@ public class PaymentController {
         RefundResponse refundResponse = paymentChannel.refund(refundRequest);
 
         if (refundResponse.isSuccess()) {
-            RefundRecord record = new RefundRecord();
-            record.setPaymentOrderId(dto.getPaymentOrderId());
-            record.setRefundNo(generateRefundNo());
-            record.setAmount(dto.getAmount());
-            record.setReason(dto.getReason());
-            record.setStatus(STATUS_SUCCESS);
-            refundRecordService.save(record);
+            // 通过服务层创建退款记录（统一 tenantId 和 status）
+            refundRecordService.createRefund(dto.getPaymentOrderId(), dto.getAmount(), dto.getReason());
 
             paymentOrder.setStatus(STATUS_REFUND);
             paymentOrderService.updateById(paymentOrder);
@@ -161,6 +158,7 @@ public class PaymentController {
             clearDashboardCache();
             return R.success("退款成功");
         }
+        log.warn("退款失败: paymentOrderId={}, errorMsg={}", dto.getPaymentOrderId(), refundResponse.getErrorMsg());
         return R.error("退款失败: " + refundResponse.getErrorMsg());
     }
 
@@ -196,14 +194,14 @@ public class PaymentController {
         qw.eq(orderId != null, PaymentOrder::getOrderId, orderId);
         // 修改点：支持按支付渠道筛选
         qw.eq(channel != null && !channel.isEmpty(), PaymentOrder::getChannel, channel);
-        // 修改点：支持按支付状态筛选，兼容前端传 FAILED 或 FAIL
+        // 修改点：支持中文状态值，兼容前端传 FAILED/FAIL/中文
         if (status != null && !status.isEmpty()) {
-            if ("FAILED".equals(status)) {
-                qw.eq(PaymentOrder::getStatus, PaymentOrder.STATUS_FAIL);
-            } else if ("REFUNDED".equals(status)) {
-                qw.eq(PaymentOrder::getStatus, PaymentOrder.STATUS_REFUND);
-            } else {
-                qw.eq(PaymentOrder::getStatus, status);
+            switch (status) {
+                case "待支付": case "PENDING":   qw.eq(PaymentOrder::getStatus, PaymentOrder.STATUS_PENDING); break;
+                case "成功":   case "SUCCESS":   qw.eq(PaymentOrder::getStatus, PaymentOrder.STATUS_SUCCESS); break;
+                case "失败":   case "FAIL": case "FAILED": qw.eq(PaymentOrder::getStatus, PaymentOrder.STATUS_FAIL); break;
+                case "已退款": case "REFUND": case "REFUNDED": qw.eq(PaymentOrder::getStatus, PaymentOrder.STATUS_REFUND); break;
+                default:                        qw.eq(PaymentOrder::getStatus, status); break;
             }
         }
         // 修改点：支持按时间范围筛选（基于创建时间）
@@ -218,11 +216,6 @@ public class PaymentController {
         qw.orderByDesc(PaymentOrder::getCreatedTime);
         paymentOrderService.page(pageInfo, qw);
         return R.success(pageInfo);
-    }
-
-    private String generateRefundNo() {
-        return "RF" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-            + String.format("%04d", (int)(Math.random() * 10000));
     }
 
     /**

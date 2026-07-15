@@ -2,6 +2,7 @@ package com.reggie.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.dto.DishDto;
 import com.reggie.dto.dish.DishSaveDTO;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,6 +31,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -50,6 +54,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/dish")
 @Slf4j
 @Tag(name = "菜品管理", description = "菜品CRUD及口味管理接口")
+@Validated
 public class DishController {
     @Autowired
     private DishService dishService;
@@ -80,6 +85,9 @@ public class DishController {
         dish.setImage(dishSaveDTO.getImage());
         dish.setDescription(dishSaveDTO.getDescription());
         dish.setStatus(dishSaveDTO.getStatus());
+        dish.setSort(dishSaveDTO.getSort());
+        dish.setStockQty(dishSaveDTO.getStockQty());
+        dish.setMinStock(dishSaveDTO.getMinStock());
 
         // 提取口味列表（可能为空）
         List<DishFlavor> flavors = dishSaveDTO.getFlavors();
@@ -106,9 +114,11 @@ public class DishController {
     @Parameter(name = "name", description = "菜品名称（可选，模糊查询）")
     @Parameter(name = "status", description = "售卖状态（可选，'0'=停售 ,'1'=启售）")
     @Parameter(name = "categoryId", description = "菜品分类ID（可选）")
+    @Parameter(name = "code", description = "商品码（可选，模糊查询）")
     public R<Page<DishDto>> page(int page,int pageSize,String name,
                                   @RequestParam(required = false) String status,
-                                  @RequestParam(required = false) Long categoryId){
+                                  @RequestParam(required = false) Long categoryId,
+                                  @RequestParam(required = false) String code){
 
         //构造分页构造器对象
         Page<Dish> pageInfo = new Page<>(page,pageSize);
@@ -117,9 +127,15 @@ public class DishController {
         //条件构造器
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         //添加过滤条件
-        queryWrapper.like(name != null,Dish::getName,name);
+        queryWrapper.like(name != null && !name.isEmpty(), Dish::getName, name);
         queryWrapper.eq(status != null && !status.isEmpty(), Dish::getStatus, status);
         queryWrapper.eq(categoryId != null, Dish::getCategoryId, categoryId);
+        queryWrapper.like(code != null && !code.isEmpty(), Dish::getCode, code);
+        //多租户过滤
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(Dish::getTenantId, tenantId);
+        }
         //添加排序条件
         queryWrapper.orderByDesc(Dish::getUpdateTime);
 
@@ -158,9 +174,15 @@ public class DishController {
     @Operation(summary = "查询菜品详情", description = "根据ID查询菜品基本信息及关联口味信息")
     @Parameter(name = "id", description = "菜品ID", required = true)
     public R<DishDto> get(@PathVariable Long id){
-
         DishDto dishDto = dishService.getByIdWithFlavor(id);
-
+        if (dishDto == null) {
+            return R.error("菜品不存在");
+        }
+        // 租户校验：确保只能查询当前租户的菜品
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (dishDto.getTenantId() != null && !dishDto.getTenantId().equals(currentTenantId)) {
+            return R.error("菜品不存在");
+        }
         return R.success(dishDto);
     }
 
@@ -174,9 +196,16 @@ public class DishController {
     @Parameter(name = "dishDto", description = "菜品DTO（包含ID、基本信息及口味列表）", required = true)
     public R<String> update(@Valid @RequestBody DishDto dishDto){
         log.info("修改菜品：id={}, name={}", dishDto.getId(), dishDto.getName());
-
+        // 租户校验：确保只能修改当前租户的菜品
+        Dish existing = dishService.getById(dishDto.getId());
+        if (existing == null) {
+            return R.error("菜品不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (!currentTenantId.equals(existing.getTenantId())) {
+            return R.error("菜品不存在");
+        }
         dishService.updateWithFlavor(dishDto);
-
         return R.success("修改菜品成功");
     }
 
@@ -187,6 +216,16 @@ public class DishController {
         List<Long> idList = parseIds(ids);
         if (idList.isEmpty()) {
             return R.error("请选择要删除的菜品");
+        }
+        // 租户校验：确保只能删除当前租户的菜品
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        List<Dish> dishes = dishService.listByIds(idList);
+        List<Long> unauthorizedIds = dishes.stream()
+            .filter(d -> !currentTenantId.equals(d.getTenantId()))
+            .map(Dish::getId)
+            .collect(Collectors.toList());
+        if (!unauthorizedIds.isEmpty()) {
+            return R.error("以下菜品不属于当前租户，无法删除：ID=" + unauthorizedIds);
         }
         dishService.deleteWithFlavorCheck(idList);
         return R.success("删除成功");
@@ -208,20 +247,33 @@ public class DishController {
         if (idList.isEmpty()) {
             return R.error("请选择要操作的菜品");
         }
+        // 租户校验
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        List<Dish> dishes = dishService.listByIds(idList);
+        List<Long> unauthorizedIds = dishes.stream()
+            .filter(d -> !currentTenantId.equals(d.getTenantId()))
+            .map(Dish::getId)
+            .collect(Collectors.toList());
+        if (!unauthorizedIds.isEmpty()) {
+            return R.error("以下菜品不属于当前租户，无法操作：ID=" + unauthorizedIds);
+        }
         dishService.updateStatus(status, idList);
         return R.success("操作成功");
     }
 
     /**
      * 根据条件查询菜品列表
+     * 内部使用分页查询限制数据量（最多200条），防止全表扫描导致 OOM
      *
      * @param dish 菜品查询条件（categoryId分类ID）
      * @return 菜品列表
      */
     @GetMapping("/list")
-    @Operation(summary = "查询菜品列表", description = "根据条件查询在售菜品数据，自动过滤停售菜品")
-    @Parameter(name = "dish", description = "菜品查询条件（categoryId分类ID）")
+    @Operation(summary = "查询菜品列表", description = "根据条件查询在售菜品数据，自动过滤停售菜品，最多返回200条")
+    @Parameter(name = "dish", description = "菜品查询条件（categoryId分类ID、name名称模糊查询）")
     public R<List<DishDto>> list(Dish dish){
+        int maxPageSize = 200;
+
         //构造查询条件
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(dish.getCategoryId() != null ,Dish::getCategoryId,dish.getCategoryId());
@@ -238,7 +290,11 @@ public class DishController {
             queryWrapper.eq(Dish::getTenantId, tenantId);
         }
 
-        List<Dish> list = dishService.list(queryWrapper);
+        // 分页查询，防止全表扫描
+        Page<Dish> pageInfo = new Page<>(1, maxPageSize);
+        dishService.page(pageInfo, queryWrapper);
+
+        List<Dish> list = pageInfo.getRecords();
         if (list.isEmpty()) {
             return R.success(new ArrayList<>());
         }
@@ -275,14 +331,7 @@ public class DishController {
      * 兼容前端传递的格式：单个ID("1")、逗号分隔("1,2,3")、数组("1&ids=2")
      */
     private List<Long> parseIds(String ids) {
-        if (ids == null || ids.trim().isEmpty()) {
-            return Collections.emptyList();
-        }
-        return Arrays.stream(ids.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .map(Long::parseLong)
-                .collect(Collectors.toList());
+        return com.reggie.common.ControllerUtils.parseIds(ids);
     }
 
     /**
@@ -306,6 +355,45 @@ public class DishController {
         Map<String, List<String>> result = new HashMap<>();
         result.put("names", new ArrayList<>(nameSet));
         return R.success(result);
+    }
+
+    /**
+     * 获取菜品统计数据（轻量接口，仅COUNT查询，不拉取全量数据）
+     * @return 统计数据（total/active/inactive/lowStock/soldOut）
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "菜品统计", description = "获取菜品统计数据（总数、起售数、停售数、低库存数、售罄数），轻量COUNT查询")
+    public R<Map<String, Object>> stats() {
+        Map<String, Object> stats = dishService.getStats();
+        return R.success(stats);
+    }
+
+    /**
+     * 更新菜品库存
+     * @param id 菜品ID
+     * @param stockQty 库存数量
+     * @param minStock 最低库存预警值
+     * @return 操作结果
+     */
+    @PutMapping("/stock/{id}")
+    @Operation(summary = "更新菜品库存", description = "更新菜品的库存数量和最低库存预警值")
+    @Parameter(name = "id", description = "菜品ID", required = true)
+    @Parameter(name = "stockQty", description = "库存数量（不能小于0）", required = true)
+    @Parameter(name = "minStock", description = "最低库存预警值（不能小于0）", required = true)
+    public R<String> updateStock(@PathVariable Long id,
+                                  @RequestParam @NotNull(message = "库存数量不能为空") BigDecimal stockQty,
+                                  @RequestParam @NotNull(message = "最低库存不能为空") BigDecimal minStock) {
+        // 租户校验
+        Dish dish = dishService.getById(id);
+        if (dish == null) {
+            return R.error("菜品不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (!currentTenantId.equals(dish.getTenantId())) {
+            return R.error("菜品不存在");
+        }
+        dishService.updateStock(id, stockQty, minStock);
+        return R.success("库存更新成功");
     }
 
 }

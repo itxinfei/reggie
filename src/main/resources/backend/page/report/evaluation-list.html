@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <style>
     html, body { height: 100%; margin: 0; padding: 0; overflow-y: auto; overflow-x: hidden;
       background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
@@ -72,29 +73,8 @@
   <div class="eval-app-wrap" id="eval-app" v-loading="loading">
     <div class="container">
 
-      <!-- ========== 统计卡片 ========== -->
-      <div class="stats-cards">
-        <div class="stat-card primary clickable" :class="{ active: filterStatus === null }" @click="resetFilters">
-          <div class="stat-icon">📋</div>
-          <div class="stat-label">全部评价</div>
-          <div class="stat-value">{{ stats.total || 0 }}</div>
-        </div>
-        <div class="stat-card warning clickable" :class="{ active: filterStatus === 0 }" @click="filterByStatus(0)">
-          <div class="stat-icon">⏳</div>
-          <div class="stat-label">待审核</div>
-          <div class="stat-value">{{ stats.pending || 0 }}</div>
-        </div>
-        <div class="stat-card success clickable" :class="{ active: filterStatus === 1 }" @click="filterByStatus(1)">
-          <div class="stat-icon">✅</div>
-          <div class="stat-label">已通过</div>
-          <div class="stat-value">{{ stats.approved || 0 }}</div>
-        </div>
-        <div class="stat-card danger clickable" :class="{ active: filterStatus === 2 }" @click="filterByStatus(2)">
-          <div class="stat-icon">❌</div>
-          <div class="stat-label">已拒绝</div>
-          <div class="stat-value">{{ stats.rejected || 0 }}</div>
-        </div>
-      </div>
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
       <!-- ========== 筛选栏 ========== -->
       <div class="filter-bar">
@@ -257,6 +237,7 @@
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../api/evaluation.js"></script>
+  <script src="../../js/components.js"></script>
   <script>
     // 修改点：使用 IIFE 避免全局变量污染，重命名 Vue 方法避免与JS API函数名冲突
     (function() {
@@ -268,12 +249,26 @@
             filters: { dishName: '', starRating: null, status: null },
             filterOptions: { names: [] }, optionsLoading: false, optionsLoadError: false,
             filterStatus: null, stats: { total: 0, pending: 0, approved: 0, rejected: 0 },
+            // 修改点：activeFilter 用于 <stat-cards> 组件双向绑定
+            activeFilter: '',
             detailVisible: false, detailData: {}, detailImages: [],
             replyVisible: false, replyData: {}, replyContent: '', replyLoading: false,
             previewVisible: false, previewUrl: ''
           }
         },
         created: function() { this.loadFilterOptions(); this.loadData(); this.loadStats(); },
+        computed: {
+          // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+          statsCards: function() {
+            var self = this;
+            return [
+              { key: '', icon: '📋', label: '全部评价', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+              { key: '0', icon: '⏳', label: '待审核', value: self.stats.pending || 0, color: 'warning', clickable: true, active: self.activeFilter === '0' },
+              { key: '1', icon: '✅', label: '已通过', value: self.stats.approved || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
+              { key: '2', icon: '❌', label: '已拒绝', value: self.stats.rejected || 0, color: 'danger', clickable: true, active: self.activeFilter === '2' }
+            ]
+          }
+        },
         methods: {
           loadFilterOptions: function() {
             var self = this; self.optionsLoading = true; self.optionsLoadError = false;
@@ -325,8 +320,10 @@
             this.filters = { dishName: '', starRating: null, status: null };
             this.filterStatus = null; this.page = 1; this.loadData(); this.loadStats();
           },
-          filterByStatus: function(status) {
-            this.filters.status = this.filterStatus === status ? null : status;
+          // 修改点：<stat-cards> 组件统一卡片点击分发
+          onCardClick: function(payload) {
+            var key = payload.key;
+            this.filters.status = key === '' ? null : Number(key);
             this.filterStatus = this.filters.status;
             this.page = 1; this.loadData();
           },

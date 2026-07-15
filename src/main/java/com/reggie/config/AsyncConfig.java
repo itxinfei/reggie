@@ -40,6 +40,27 @@ public class AsyncConfig {
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(30);
+        // 传递ThreadLocal上下文，确保异步线程能获取BaseContext中的userId和tenantId
+        executor.setTaskDecorator(new org.springframework.core.task.TaskDecorator() {
+            @Override
+            public Runnable decorate(Runnable runnable) {
+                Long currentId = com.reggie.common.BaseContext.getCurrentId();
+                Long currentTenantId = com.reggie.common.BaseContext.getCurrentTenantId();
+                return () -> {
+                    try {
+                        if (currentId != null) {
+                            com.reggie.common.BaseContext.setCurrentId(currentId);
+                        }
+                        if (currentTenantId != null) {
+                            com.reggie.common.BaseContext.setCurrentTenantId(currentTenantId);
+                        }
+                        runnable.run();
+                    } finally {
+                        com.reggie.common.BaseContext.remove();
+                    }
+                };
+            }
+        });
         executor.initialize();
         log.info("[线程池] 缓存双删线程池初始化完成：core=2, max=5, queue=200");
         return executor;

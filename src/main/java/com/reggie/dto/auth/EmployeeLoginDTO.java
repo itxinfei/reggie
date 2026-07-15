@@ -20,7 +20,7 @@ public class EmployeeLoginDTO {
 
     @Schema(description = "用户名", required = true)
     @NotBlank(message = "用户名不能为空")
-    @Size(min = 4, max = 20, message = "用户名长度4-20位")
+    @Size(min = 1, max = 50, message = "用户名长度为1-50位")
     private String username;
 
     @Schema(description = "密码", required = true)

@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="../../styles/common.css" />
     <link rel="stylesheet" href="../../styles/page.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+    <link rel="stylesheet" href="../../styles/components.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
@@ -41,29 +42,8 @@
 <div id="app">
     <div class="dashboard-container">
         <div class="container">
-            <!-- ===== 统计卡片 ===== -->
-            <div class="stats-cards">
-                <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="onStatClick('')">
-                  <div class="stat-icon">&#127968;</div>
-                  <div class="stat-label">门店总数</div>
-                  <div class="stat-value">{{ stats.totalStores }}</div>
-                </div>
-                <div class="stat-card success clickable" :class="{ active: activeFilter === 'active' }" @click="onStatClick('active')">
-                  <div class="stat-icon">&#9989;</div>
-                  <div class="stat-label">已启用</div>
-                  <div class="stat-value">{{ stats.activeStores }}</div>
-                </div>
-                <div class="stat-card warning clickable" :class="{ active: activeFilter === 'inactive' }" @click="onStatClick('inactive')">
-                  <div class="stat-icon">&#9208;</div>
-                  <div class="stat-label">已停用</div>
-                  <div class="stat-value">{{ stats.inactiveStores }}</div>
-                </div>
-                <div class="stat-card info">
-                  <div class="stat-icon">&#128176;</div>
-                  <div class="stat-label">今日有营收门店</div>
-                  <div class="stat-value">{{ stats.todayTotalStores }}<span style="font-size:14px;font-weight:400;">家</span></div>
-                </div>
-            </div>
+            <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
+            <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
             <!-- ===== 高级搜索 + 操作按钮 ===== -->
             <div class="toolbar">
@@ -329,8 +309,9 @@
 <script src="../../plugins/axios/axios.min.js"></script>
 <script src="../../js/request.js"></script>
 <script src="../../api/store.js"></script>
+<script src="../../js/components.js"></script>
 <script>
-new Vue({
+  new Vue({
     el: '#app',
     data: {
         loading: false,
@@ -380,7 +361,17 @@ new Vue({
         syncResult: null
     },
     computed: {
-        dialogTitle: function() { return this.isCreate ? '新建门店' : '编辑门店'; }
+        dialogTitle: function() { return this.isCreate ? '新建门店' : '编辑门店'; },
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+            var self = this;
+            return [
+                { key: '', icon: '🏠', label: '门店总数', value: self.stats.totalStores, color: 'primary', clickable: true, active: self.activeFilter === '' },
+                { key: 'active', icon: '✅', label: '已启用', value: self.stats.activeStores, color: 'success', clickable: true, active: self.activeFilter === 'active' },
+                { key: 'inactive', icon: '⏸', label: '已停用', value: self.stats.inactiveStores, color: 'warning', clickable: true, active: self.activeFilter === 'inactive' },
+                { key: 'today', icon: '💰', label: '今日有营收门店', value: self.stats.todayTotalStores, color: 'info', unit: '家' }
+            ]
+        }
     },
     created: function() { this.loadData(); },
     methods: {
@@ -429,6 +420,12 @@ new Vue({
             }).catch(function() {});
         },
 
+        // 修改点：<stat-cards> 组件统一卡片点击分发
+        onCardClick: function(payload) {
+            this.activeFilter = this.activeFilter === payload.key ? '' : payload.key;
+            this.pagination.current = 1;
+            this.loadData();
+        },
         // ========== 搜索 ==========
         doSearch: function() {
             this.pagination.current = 1;
@@ -439,15 +436,6 @@ new Vue({
             this.search = { keyword: '', storeType: null, status: null };
             this.sort = { sortBy: 'createTime', sortOrder: 'desc' };
             this.activeFilter = '';
-            this.pagination.current = 1;
-            this.loadData();
-        },
-        onStatClick: function(key) {
-            if (this.activeFilter === key) {
-                this.activeFilter = '';
-            } else {
-                this.activeFilter = key;
-            }
             this.pagination.current = 1;
             this.loadData();
         },

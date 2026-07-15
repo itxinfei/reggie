@@ -16,6 +16,7 @@ import com.reggie.entity.SetmealDish;
 import com.reggie.entity.Setmeal;
 import com.reggie.entity.ShoppingCart;
 import com.reggie.entity.User;
+import com.reggie.enums.OrderStatus;
 import com.reggie.mapper.OrderMapper;
 import com.reggie.service.AddressBookService;
 import com.reggie.service.DishService;
@@ -307,15 +308,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
     /**
      * 根据订单明细回退菜品库存（取消/拒单时调用）
+     * @return 是否全部回退成功
      */
-    private void refundStockForOrderDetails(List<OrderDetail> orderDetails) {
+    private boolean refundStockForOrderDetails(List<OrderDetail> orderDetails) {
+        boolean allSuccess = true;
         for (OrderDetail detail : orderDetails) {
             int number = detail.getNumber() != null ? detail.getNumber() : 1;
             BigDecimal qty = new BigDecimal(number);
 
             // 单品菜品：增加库存
             if (detail.getDishId() != null) {
-                refundStockAtomic(detail.getDishId(), qty);
+                if (!refundStockAtomic(detail.getDishId(), qty)) {
+                    allSuccess = false;
+                }
             }
 
             // 套餐菜品：回退套餐内所有菜品的库存
@@ -325,23 +330,30 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
                 for (SetmealDish sd : setmealDishes) {
                     int copies = sd.getCopies() != null ? sd.getCopies() : 1;
-                    refundStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)));
+                    if (!refundStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)))) {
+                        allSuccess = false;
+                    }
                 }
             }
         }
+        return allSuccess;
     }
 
     /**
      * 遍历购物车中的菜品/套餐，回退对应库存（取消订单时调用）
+     * @return 是否全部回退成功
      */
-    private void refundStockForOrder(List<ShoppingCart> shoppingCarts) {
+    private boolean refundStockForOrder(List<ShoppingCart> shoppingCarts) {
+        boolean allSuccess = true;
         for (ShoppingCart item : shoppingCarts) {
             int number = item.getNumber() != null ? item.getNumber() : 1;
             BigDecimal qty = new BigDecimal(number);
 
             // 单品菜品：直接增加库存
             if (item.getDishId() != null) {
-                refundStockAtomic(item.getDishId(), qty);
+                if (!refundStockAtomic(item.getDishId(), qty)) {
+                    allSuccess = false;
+                }
             }
 
             // 套餐：回退套餐内所有菜品的库存
@@ -351,29 +363,39 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
                 for (SetmealDish sd : setmealDishes) {
                     int copies = sd.getCopies() != null ? sd.getCopies() : 1;
-                    refundStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)));
+                    if (!refundStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)))) {
+                        allSuccess = false;
+                    }
                 }
             }
         }
+        return allSuccess;
     }
 
     /**
      * 使用乐观锁原子增加菜品库存（取消/拒单时回退库存）
+     * @return 是否成功
      */
-    private void refundStockAtomic(Long dishId, BigDecimal qty) {
+    private boolean refundStockAtomic(Long dishId, BigDecimal qty) {
         if (dishId == null || qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
-            return;
+            return true;
         }
-        LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(Dish::getId, dishId);
-        updateWrapper.setSql("stock_qty = IFNULL(stock_qty, 0) + " + qty.toPlainString());
-        dishService.update(updateWrapper);
+        try {
+            LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(Dish::getId, dishId);
+            updateWrapper.setSql("stock_qty = IFNULL(stock_qty, 0) + " + qty.toPlainString());
+            dishService.update(updateWrapper);
 
-        // 补货后如果之前是停售状态且库存大于最低库存，自动恢复起售
-        if (dishService != null) {
-            dishService.autoToggleSoldOut(dishId);
+            // 补货后如果之前是停售状态且库存大于最低库存，自动恢复起售
+            if (dishService != null) {
+                dishService.autoToggleSoldOut(dishId);
+            }
+            log.info("[库存回退] 菜品ID={} 回退{}份", dishId, qty);
+            return true;
+        } catch (Exception e) {
+            log.error("[库存回退失败] 菜品ID={} 回退{}份失败: {}", dishId, qty, e.getMessage(), e);
+            return false;
         }
-        log.info("[库存回退] 菜品ID={} 回退{}份", dishId, qty);
     }
 
     /**
@@ -591,7 +613,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 existing.setNumber(existing.getNumber() + (d.getNumber() != null ? d.getNumber() : 0));
                 toUpdate.add(existing);
             } else {
-                // 不存在，新增
+                // 不存在，新增——从数据库查询最新价格，防止历史订单中的旧价格被复用
                 ShoppingCart cart = new ShoppingCart();
                 cart.setName(d.getName());
                 cart.setImage(d.getImage());
@@ -602,6 +624,24 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 cart.setNumber(d.getNumber());
                 cart.setAmount(d.getAmount());
                 cart.setCreateTime(LocalDateTime.now());
+
+                // 重新从数据库查询最新价格
+                if (d.getDishId() != null) {
+                    Dish dish = dishService.getById(d.getDishId());
+                    if (dish != null && dish.getPrice() != null) {
+                        cart.setAmount(dish.getPrice());
+                        cart.setName(dish.getName());
+                        cart.setImage(dish.getImage());
+                    }
+                } else if (d.getSetmealId() != null) {
+                    Setmeal setmeal = setmealService.getById(d.getSetmealId());
+                    if (setmeal != null && setmeal.getPrice() != null) {
+                        cart.setAmount(setmeal.getPrice());
+                        cart.setName(setmeal.getName());
+                        cart.setImage(setmeal.getImage());
+                    }
+                }
+
                 toAdd.add(cart);
             }
         }
@@ -636,6 +676,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      * 接单：待接单(2) → 配送中(3)
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void confirmOrder(Long id) {
         Orders order = this.getById(id);
         if (order == null) {
@@ -665,16 +706,22 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         order.setStatus(Orders.STATUS_CANCELLED);
         this.updateById(order);
 
-        // 拒单时回退库存
-        refundStockByOrderId(id);
-
-        log.warn("订单已拒单（库存已回退）: id={}, number={}", id, order.getNumber());
+        // 拒单时回退库存（部分失败也允许，补偿任务会重试）
+        boolean refundOk = refundStockByOrderId(id);
+        if (refundOk) {
+            order.setStockRefunded(1);
+            this.updateById(order);
+            log.warn("订单已拒单（库存已回退）: id={}, number={}", id, order.getNumber());
+        } else {
+            log.error("订单已拒单，但库存回退部分失败，补偿任务将重试: id={}, number={}", id, order.getNumber());
+        }
     }
 
     /**
      * 完成订单：配送中(3) → 已完成(4)
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void completeOrder(Long id) {
         Orders order = this.getById(id);
         if (order == null) {
@@ -713,28 +760,30 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
         this.updateById(order);
 
-        // 取消订单时回退库存
-        refundStockByOrderId(id);
-
-        log.warn("订单已取消（库存已回退）: id={}, number={}, reason={}", id, order.getNumber(), reason);
+        // 取消订单时回退库存（部分失败也允许，补偿任务会重试）
+        boolean refundOk = refundStockByOrderId(id);
+        if (refundOk) {
+            order.setStockRefunded(1);
+            this.updateById(order);
+            log.warn("订单已取消（库存已回退）: id={}, number={}, reason={}", id, order.getNumber(), reason);
+        } else {
+            log.error("订单已取消，但库存回退部分失败，补偿任务将重试: id={}, number={}, reason={}", id, order.getNumber(), reason);
+        }
     }
 
     /**
      * 根据订单ID回退库存
      * 查询订单明细，逐项回退菜品/套餐库存
+     * @return 是否全部回退成功
      */
-    private void refundStockByOrderId(Long orderId) {
-        try {
-            LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(OrderDetail::getOrderId, orderId);
-            List<OrderDetail> details = orderDetailService.list(wrapper);
-            if (details != null && !details.isEmpty()) {
-                refundStockForOrderDetails(details);
-            }
-        } catch (Exception e) {
-            // 库存回退失败不影响取消/拒单结果，记录日志告警
-            log.error("[库存回退] 订单ID={} 回退库存失败: {}", orderId, e.getMessage(), e);
+    private boolean refundStockByOrderId(Long orderId) {
+        LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderDetail::getOrderId, orderId);
+        List<OrderDetail> details = orderDetailService.list(wrapper);
+        if (details != null && !details.isEmpty()) {
+            return refundStockForOrderDetails(details);
         }
+        return true; // 无明细视为成功
     }
 
     /**
@@ -793,19 +842,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     /**
-     * 订单状态中文名称
+     * 订单状态中文名称（委托给 {@link OrderStatus} 枚举）
      */
     private String getStatusName(Integer status) {
         if (status == null) return "未知";
-        switch (status) {
-            case 1: return "待付款";
-            case 2: return "待接单";
-            case 3: return "配送中";
-            case 4: return "已完成";
-            case 5: return "已取消";
-            case 6: return "已退款";
-            default: return "其他(" + status + ")";
-        }
+        OrderStatus orderStatus = OrderStatus.fromCode(status);
+        return orderStatus != null ? orderStatus.getDesc() : "其他(" + status + ")";
     }
 
     // ==================== 幂等性保护 ====================

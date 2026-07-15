@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <style>
     #member-app  .notAdmin::after{
       border: 0 !important;
@@ -21,48 +22,24 @@
 <body>
   <div class="dashboard-container" id="member-app">
     <div class="container">
-      <!-- ========== 数据统计卡片 ========== -->
-      <!-- 修改点：卡片可点击筛选，点击后高亮并按对应状态过滤列表 -->
-      <div class="stats-cards">
-        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterBy('status', '')">
-          <div class="stat-icon">👥</div>
-          <div class="stat-label">员工总数</div>
-          <div class="stat-value">{{ stats.totalEmployees || 0 }}</div>
-        </div>
-        <div class="stat-card success clickable" :class="{ active: activeFilter === '1' }" @click="filterBy('status', '1')">
-          <div class="stat-icon">✅</div>
-          <div class="stat-label">在职员工</div>
-          <div class="stat-value">{{ stats.activeEmployees || 0 }}</div>
-        </div>
-        <div class="stat-card danger clickable" :class="{ active: activeFilter === '0' }" @click="filterBy('status', '0')">
-          <div class="stat-icon">🚫</div>
-          <div class="stat-label">已禁用</div>
-          <div class="stat-value">{{ stats.disabledEmployees || 0 }}</div>
-        </div>
-        <div class="stat-card info">
-          <div class="stat-icon">🆕</div>
-          <div class="stat-label">本月新入职</div>
-          <div class="stat-value">{{ stats.newThisMonth || 0 }}</div>
-        </div>
-      </div>
+      <!-- ========== 数据统计卡片（统一组件） ========== -->
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
-      <div class="tableBar">
-        <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框，选项从数据库加载 -->
-        <el-select v-model="input" placeholder="请选择员工姓名" class="el-select--narrow-xs" clearable filterable size="small"
-          :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">
-          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
-        </el-select>
-        <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
-        <el-button size="small" class="btn-reset" @click="reset">重置</el-button>
-        <el-button
-          type="primary"
-          class="btn-add"
-          @click="addMemberHandle('add')"
-        >
-          + 添加员工
-        </el-button>
-        <el-button type="success" size="small" class="btn-export" @click="exportEmployees('excel')" icon="el-icon-download">导出</el-button>
-      </div>
+      <!-- 修改点：使用 <table-bar> 统一组件替代手写 HTML -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @search="handleQuery"
+        @reset="reset"
+        @action="onTableAction">
+        <template slot="search-extra">
+          <el-select v-model="input" placeholder="请选择员工姓名" class="el-select--narrow-xs" clearable filterable size="small"
+            :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">
+            <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+          </el-select>
+        </template>
+      </table-bar>
       <el-table
         v-loading="loading"
         :data="tableData"
@@ -174,6 +151,7 @@
     <script src="../../api/member.js"></script>
     <script src="../../api/export.js"></script>
     <script src="../../js/validate.js"></script>
+    <script src="../../js/components.js"></script>
     <script>
       new Vue({
         el: '#member-app',
@@ -188,6 +166,12 @@
              page: 1,
              pageSize: 10,
              tableData : [],
+             // 修改点：<table-bar> 组件配置
+             tableSearchItems: [],
+             tableActions: [
+               { key: 'add', text: '+ 添加员工', type: 'primary' },
+               { key: 'export', text: '导出', type: 'success', icon: 'el-icon-download' }
+             ],
              id : '',
              status : '',
              user : '',
@@ -232,6 +216,16 @@
                 {required: true, validator: validID, trigger: 'blur'}
               ]
             }
+          },
+          // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+          statsCards() {
+            var self = this
+            return [
+              { key: '',  icon: '👥', label: '员工总数', value: self.stats.totalEmployees || 0, color: 'primary', clickable: true },
+              { key: '1', icon: '✅', label: '在职员工', value: self.stats.activeEmployees || 0, color: 'success', clickable: true },
+              { key: '0', icon: '🚫', label: '已禁用', value: self.stats.disabledEmployees || 0, color: 'danger', clickable: true },
+              { key: '新增', icon: '🆕', label: '本月新入职', value: self.stats.newThisMonth || 0, color: 'info', clickable: false }
+            ]
           }
         },
         created() {
@@ -342,6 +336,11 @@
             this.page = 1;
             this.init();
           },
+          // 修改点：<table-bar> 组件 action 按钮事件处理
+          onTableAction(payload) {
+            if (payload.key === 'add') { this.addMemberHandle('add') }
+            else if (payload.key === 'export') { this.exportEmployees('excel') }
+          },
           // 重置搜索条件，恢复表格初始状态
           reset() {
             this.input = ''
@@ -349,14 +348,9 @@
             this.page = 1
             this.init()
           },
-          // 修改点：stats-card 点击切换筛选状态（清空搜索框避免冲突）
-          filterBy(type, value) {
-            if (this.activeFilter === value) {
-              this.activeFilter = ''  // 再次点击取消筛选，显示全部
-            } else {
-              this.activeFilter = value
-            }
-            // 修改点：卡片筛选时清空搜索条件
+          // 修改点：stat-cards 组件卡片点击事件（替代原 filterBy）
+          onCardClick(payload) {
+            this.activeFilter = payload.activeKey
             this.input = ''
             this.page = 1
             this.init()

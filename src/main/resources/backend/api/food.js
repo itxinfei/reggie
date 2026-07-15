@@ -75,6 +75,12 @@ const commonDownload = (params) => {
   })
 }
 
+// 菜品统计（轻量接口，仅COUNT查询）
+const getDishStats = () => $axios({ url: '/dish/stats', method: 'get' })
+
+// 更新菜品库存
+const updateDishStock = (id, params) => $axios({ url: '/dish/stock/' + id, method: 'put', params })
+
 // 起售停售---批量起售停售接口
 const dishStatusByStatus = (params) => {
   return $axios({

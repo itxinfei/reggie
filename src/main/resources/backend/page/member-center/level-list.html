@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <style>
     .stats-cards--col-3 {
       grid-template-columns: repeat(4, 1fr);
@@ -36,33 +37,8 @@
 <body>
   <div class="dashboard-container" id="level-app">
     <div class="container">
-      <!-- ===== 统计卡片 ===== -->
-      <div class="stats-cards stats-cards--col-3">
-        <div class="stat-card primary">
-          <div class="stat-icon">🏅</div>
-          <div class="stat-label">等级总数</div>
-          <div class="stat-value">{{ stats.totalLevels || 0 }}</div>
-          <div class="sub">已配置等级</div>
-        </div>
-        <div class="stat-card success">
-          <div class="stat-icon">👑</div>
-          <div class="stat-label">最高等级</div>
-          <div class="stat-value" style="font-size: 18px;">{{ stats.highestLevel || '-' }}</div>
-          <div class="sub">积分要求最高</div>
-        </div>
-        <div class="stat-card warning">
-          <div class="stat-icon">🎯</div>
-          <div class="stat-label">入门门槛</div>
-          <div class="stat-value" style="font-size: 20px;">{{ stats.lowestPoints || 0 }}</div>
-          <div class="sub">最低积分要求</div>
-        </div>
-        <div class="stat-card info">
-          <div class="stat-icon">💯</div>
-          <div class="stat-label">平均折扣率</div>
-          <div class="stat-value" style="font-size: 20px;">{{ stats.avgDiscount || '-' }}</div>
-          <div class="sub">折前均价</div>
-        </div>
-      </div>
+      <!-- 修改点：使用 <stat-cards> 统一组件 -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- ===== 等级进阶 ===== -->
       <div class="progression-section" v-if="tableData.length > 0">
@@ -78,10 +54,12 @@
         </div>
       </div>
 
-      <!-- ===== 操作栏 ===== -->
-      <div class="tableBar">
-        <el-button type="primary" class="btn-add" @click="addHandle">+ 新增会员等级</el-button>
-      </div>
+      <!-- 修改点：使用 <table-bar> 统一组件 -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @action="onTableAction">
+      </table-bar>
 
       <!-- ===== 表格 ===== -->
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
@@ -156,11 +134,17 @@
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../api/member-center.js"></script>
+  <script src="../../js/components.js"></script>
   <script>
     new Vue({
       el: '#level-app',
       data: function() {
         return {
+          // 修改点：<table-bar> 统一组件配置
+          tableSearchItems: [],
+          tableActions: [
+            { key: 'add', text: '+ 新增会员等级', type: 'primary' }
+          ],
           loading: false, action: '', counts: 0, page: 1, pageSize: 10, tableData: [],
           stats: { totalLevels: 0, highestLevel: '-', lowestPoints: 0, avgDiscount: '-' },
           formData: { title: '新增会员等级', dialogVisible: false, id: '', name: '', minPoints: '', discount: '', sort: '' },
@@ -173,12 +157,26 @@
         }
       },
       computed: {
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+          var self = this;
+          return [
+            { key: 'total', icon: '🏅', label: '等级总数', value: self.stats.totalLevels || 0, color: 'primary' },
+            { key: 'highest', icon: '👑', label: '最高等级', value: self.stats.highestLevel || '-', color: 'success' },
+            { key: 'entry', icon: '🎯', label: '入门门槛', value: self.stats.lowestPoints || 0, color: 'warning' },
+            { key: 'avg', icon: '💯', label: '平均折扣率', value: self.stats.avgDiscount || '-', color: 'info' }
+          ]
+        },
         sortedLevels: function() {
           return this.tableData.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
         }
       },
       created: function() { this.init() },
       methods: {
+        // 修改点：<table-bar> 组件统一操作分发
+        onTableAction: function(payload) {
+          if (payload.key === 'add') { this.addHandle(); }
+        },
         async init() {
           this.loading = true
           try {

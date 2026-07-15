@@ -9,47 +9,29 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
 </head>
 <body>
   <div class="dashboard-container" id="stock-check-app">
     <div class="container">
-      <!-- ========== 数据统计卡片 ========== -->
-      <div class="stats-cards">
-        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterByStatus('')">
-          <div class="stat-icon">📋</div>
-          <div class="stat-label">盘点单总数</div>
-          <div class="stat-value">{{ stats.totalChecks || 0 }}</div>
-        </div>
-        <div class="stat-card warning clickable" :class="{ active: activeFilter === '0' }" @click="filterByStatus('0')">
-          <div class="stat-icon">⏳</div>
-          <div class="stat-label">进行中</div>
-          <div class="stat-value">{{ stats.pendingChecks || 0 }}</div>
-        </div>
-        <div class="stat-card success clickable" :class="{ active: activeFilter === '1' }" @click="filterByStatus('1')">
-          <div class="stat-icon">✅</div>
-          <div class="stat-label">已完成</div>
-          <div class="stat-value">{{ stats.completedChecks || 0 }}</div>
-        </div>
-        <div class="stat-card info">
-          <div class="stat-icon">⚠️</div>
-          <div class="stat-label">存在差异项</div>
-          <div class="stat-value">{{ stats.diffCount || 0 }}</div>
-        </div>
-      </div>
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
-      <!-- ========== 搜索筛选 + 操作按钮 ========== -->
-      <div class="tableBar">
-        <el-select v-model="input.status" placeholder="状态" class="el-select--narrow-xs" clearable @change="handleQuery">
-          <el-option label="进行中" value="0"></el-option>
-          <el-option label="已完成" value="1"></el-option>
-        </el-select>
-        <el-date-picker v-model="input.dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd" class="el-date-editor--md" @change="handleQuery"></el-date-picker>
-        <el-button type="primary" size="small" class="btn-query" @click="handleQuery">查询</el-button>
-        <el-button size="small" class="btn-reset" @click="reset">重置</el-button>
-        <div class="tableLab">
-          <el-button type="primary" size="small" class="btn-add" @click="addHandle">+ 新增盘点</el-button>
-        </div>
-      </div>
+      <!-- 修改点：使用 <table-bar> 统一组件替代手写 HTML -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @search="handleQuery"
+        @reset="reset"
+        @action="onTableAction">
+        <template slot="search-extra">
+          <el-select v-model="input.status" placeholder="状态" class="el-select--narrow-xs" clearable @change="handleQuery">
+            <el-option label="进行中" value="0"></el-option>
+            <el-option label="已完成" value="1"></el-option>
+          </el-select>
+          <el-date-picker v-model="input.dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd" class="el-date-editor--md" @change="handleQuery" size="small"></el-date-picker>
+        </template>
+      </table-bar>
 
       <!-- ========== 数据表格 ========== -->
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
@@ -140,6 +122,7 @@
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../api/inventory.js"></script>
+  <script src="../../js/components.js"></script>
   <script>
     new Vue({
       el: '#stock-check-app',
@@ -153,6 +136,11 @@
           // 统计
           stats: { totalChecks: 0, pendingChecks: 0, completedChecks: 0, diffCount: 0 },
           activeFilter: '',
+          // 修改点：<table-bar> 统一组件配置
+          tableSearchItems: [],
+          tableActions: [
+            { key: 'add', text: '+ 新增盘点', type: 'primary' }
+          ],
           input: { status: '', dateRange: '' },
           materialOptions: [],
           formData: {
@@ -165,7 +153,29 @@
       created() {
         this.init()
       },
+      computed: {
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+          var self = this;
+          return [
+            { key: '', icon: '📋', label: '盘点单总数', value: self.stats.totalChecks || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '0', icon: '⏳', label: '进行中', value: self.stats.pendingChecks || 0, color: 'warning', clickable: true, active: self.activeFilter === '0' },
+            { key: '1', icon: '✅', label: '已完成', value: self.stats.completedChecks || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
+            { key: 'diff', icon: '⚠️', label: '存在差异项', value: self.stats.diffCount || 0, color: 'info' }
+          ]
+        }
+      },
       methods: {
+        // 修改点：<stat-cards> 组件统一卡片点击分发
+        onCardClick: function(payload) {
+          this.activeFilter = this.activeFilter === payload.key ? '' : payload.key;
+          this.page = 1;
+          this.init();
+        },
+        // 修改点：<table-bar> 组件统一操作分发
+        onTableAction: function(payload) {
+          if (payload.key === 'add') { this.addHandle(); }
+        },
         async init() {
           const params = { page: this.page, pageSize: this.pageSize }
           if (this.input.status !== '') params.status = this.input.status
@@ -257,11 +267,7 @@
           this.page = 1
           this.init()
         },
-        filterByStatus(status) {
-          this.activeFilter = this.activeFilter === status ? '' : status
-          this.page = 1
-          this.init()
-        },
+        // filterByStatus 已迁移至 onCardClick
         addHandle() {
           this.formData.details = [{ materialId: '', actualQty: '' }]
           this.formData.dialogVisible = true

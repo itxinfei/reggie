@@ -1,5 +1,6 @@
 package com.reggie.dto.dish;
 
+import com.reggie.common.validation.EnumValue;
 import com.reggie.entity.DishFlavor;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -51,7 +52,19 @@ public class DishSaveDTO {
 
     @Schema(description = "状态 0:停售 1:起售", required = true)
     @NotNull(message = "菜品状态不能为空")
+    @EnumValue(values = {0, 1}, message = "菜品状态只能为 0（停售）或 1（起售）")
     private Integer status;
+
+    @Schema(description = "排序（升序）", example = "1")
+    private Integer sort;
+
+    @Schema(description = "当前库存数量", example = "100")
+    @DecimalMin(value = "0.0", inclusive = true, message = "库存数量不能小于0")
+    private java.math.BigDecimal stockQty;
+
+    @Schema(description = "最低库存预警阈值", example = "10")
+    @DecimalMin(value = "0.0", inclusive = true, message = "最低库存不能小于0")
+    private java.math.BigDecimal minStock;
 
     @Schema(description = "口味列表")
     private List<DishFlavor> flavors;

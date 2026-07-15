@@ -114,28 +114,29 @@ public class CommonController {
         //使用UUID重新生成文件名，防止文件名称重复造成文件覆盖
         String fileName = UUID.randomUUID().toString() + suffix;
 
-        // 保存到 images/dishes/ 子目录，与数据库中的路径格式一致
-        String subDir = "images" + File.separator + "dishes" + File.separator;
+        // 使用 UUID 生成文件名，保存到 images/dishes/ 子目录
+        String subDir = "images/dishes/";
+        String relativePath = subDir + fileName;
 
         // 打印调试信息
-        log.info("文件上传: originalFilename={}, size={} bytes, path={}", originalFilename, file.getSize(), basePath + subDir + fileName);
+        log.info("文件上传: originalFilename={}, size={} bytes, path={}", originalFilename, file.getSize(), basePath + relativePath);
         File dir = new File(basePath + subDir);
         if (!dir.exists()) {
             dir.mkdirs();
         }
 
         try {
-            file.transferTo(new File(basePath + subDir + fileName));
+            file.transferTo(new File(basePath + relativePath));
         } catch (IOException e) {
             log.error("文件上传失败", e);
             return R.error("文件上传失败");
         }
-        return R.success(subDir + fileName);
+        return R.success(relativePath);
     }
 
     /**
      * 文件下载
-     * @param name 文件名
+     * @param name 文件名（支持 / 或 \ 分隔符）
      * @param response HTTP响应对象
      */
     @GetMapping("/download")
@@ -144,8 +145,10 @@ public class CommonController {
     public void download(String name, HttpServletResponse response) {
         String filePath = null;
         try {
-            // 路径规范化：防止 .. 路径穿越攻击
-            String normalizedPath = name.replace("/", File.separator).replace("\\", File.separator);
+            // 先解码 URL 编码字符（浏览器会自动对反斜杠等字符编码）
+            String decodedName = java.net.URLDecoder.decode(name, java.nio.charset.StandardCharsets.UTF_8.name());
+            // 统一分隔符为 /
+            String normalizedPath = decodedName.replace("\\", "/");
             File baseDir = new File(basePath).getCanonicalFile();
             File targetFile = new File(baseDir, normalizedPath).getCanonicalFile();
 

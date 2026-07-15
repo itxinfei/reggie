@@ -29,7 +29,9 @@ public class DouyinAdapter implements DeliveryPlatform {
     public boolean acceptOrder(String platformOrderId) {
         log.info("[抖音] 自动接单: {}", platformOrderId);
         // TODO: 接入抖音开放平台时，替换为真实 HTTP 调用
-        // DouyinApiUtil.post("/api/delivery/order/accept", Map.of("orderId", platformOrderId));
+        // Map<String, Object> params = new HashMap<>();
+        // params.put("orderId", platformOrderId);
+        // DouyinApiUtil.post("/api/delivery/order/accept", params);
         return true;
     }
 

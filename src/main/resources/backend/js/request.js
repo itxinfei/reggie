@@ -31,6 +31,16 @@
     },
     error => {
       let { message } = error;
+      // 修改点：尝试从响应体中提取详细的错误信息
+      if (error.response && error.response.data) {
+        const respData = error.response.data;
+        // 后端统一响应格式：{ code: 0, msg: "..." }
+        if (respData.msg && respData.msg.startsWith('参数校验失败')) {
+          message = respData.msg;
+        } else if (respData.msg) {
+          message = respData.msg;
+        }
+      }
       if (message === "Network Error") {
         message = "后端接口连接异常";
       }

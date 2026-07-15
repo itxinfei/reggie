@@ -59,7 +59,7 @@ public class OrderController {
     @PostMapping("/submit")
     @Operation(summary = "提交订单", description = "用户下单，返回订单ID、订单号和金额供前端跳转支付")
     @Parameter(name = "orders", description = "订单信息（含幂等令牌idempotencyKey）", required = true)
-    public R<Map<String, Object>> submit(@RequestBody Orders orders){
+    public R<Map<String, Object>> submit(@Validated @RequestBody Orders orders){
         log.info("订单数据：手机号={}，地址={}",
             LogMaskUtils.maskPhone(orders.getPhone()),
             LogMaskUtils.maskAddress(orders.getAddress()));
@@ -121,8 +121,8 @@ public class OrderController {
         orders.setPayMethod(orderInfo.getPayMethod());
         orders.setCustomerCount(orderInfo.getCustomerCount());
 
-        // 幂等性校验
-        String idempotencyKey = orderInfo.getUserName() + "_" + orderInfo.getTableId() + "_" + System.currentTimeMillis();
+        // 幂等性校验：使用 UUID 防止重复提交
+        String idempotencyKey = "EATIN_" + java.util.UUID.randomUUID().toString();
         orders.setIdempotencyKey(idempotencyKey);
 
         orders.setTenantId(BaseContext.getCurrentTenantId());
@@ -233,8 +233,11 @@ public class OrderController {
      */
     @PostMapping("/again")
     @Operation(summary = "再来一单", description = "将订单商品重新添加到购物车")
-    @Parameter(name = "orders", description = "订单信息", required = true)
+    @Parameter(name = "orders", description = "订单信息（只需包含id）", required = true)
     public R<String> again(@RequestBody Orders orders) {
+        if (orders.getId() == null) {
+            return R.error("订单ID不能为空");
+        }
         Orders existing = orderService.getById(orders.getId());
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
@@ -252,8 +255,14 @@ public class OrderController {
      */
     @PutMapping
     @Operation(summary = "更新订单状态", description = "更新订单状态")
-    @Parameter(name = "orders", description = "订单状态信息", required = true)
+    @Parameter(name = "orders", description = "订单状态信息（含id和status）", required = true)
     public R<String> updateStatus(@RequestBody Orders orders) {
+        if (orders.getId() == null) {
+            return R.error("订单ID不能为空");
+        }
+        if (orders.getStatus() == null) {
+            return R.error("订单状态不能为空");
+        }
         Orders existing = orderService.getById(orders.getId());
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {

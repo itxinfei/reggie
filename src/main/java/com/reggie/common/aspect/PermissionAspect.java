@@ -1,6 +1,7 @@
 package com.reggie.common.aspect;
 
 import com.reggie.common.R;
+import com.reggie.common.BaseContext;
 import com.reggie.common.annotation.RequiresPermission;
 import com.reggie.module.sys.entity.Role;
 import com.reggie.module.sys.mapper.RoleMapper;
@@ -184,7 +185,7 @@ public class PermissionAspect {
      */
     private Set<String> loadPermissionsFromDb(Long employeeId, String roleKey) {
         try {
-            Role role = roleMapper.findByRoleKey(roleKey);
+            Role role = roleMapper.findByRoleKeyAndTenantId(BaseContext.getCurrentTenantId(), roleKey);
             if (role == null) {
                 log.warn("[权限加载] 未找到角色：roleKey={}, employeeId={}", roleKey, employeeId);
                 return Collections.emptySet();

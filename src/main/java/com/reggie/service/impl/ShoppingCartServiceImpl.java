@@ -51,7 +51,8 @@ public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, Sho
                          .setSql("number = number - 1");
             boolean updated = this.update(updateWrapper);
             if (updated) {
-                cartItem.setNumber(cartItem.getNumber() - 1);
+                // 重新查询最新数量
+                cartItem = this.getOne(wrapper);
                 return cartItem;
             }
             // 更新失败（数量已变为1），重新查询

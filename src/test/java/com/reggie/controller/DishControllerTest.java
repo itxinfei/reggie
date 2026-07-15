@@ -1,9 +1,13 @@
 package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
+import com.reggie.common.RedisCacheUtil;
 import com.reggie.dto.DishDto;
+import com.reggie.dto.dish.DishSaveDTO;
+import com.reggie.entity.Category;
 import com.reggie.entity.Dish;
 import com.reggie.entity.DishFlavor;
+import com.reggie.service.CategoryService;
 import com.reggie.service.DishFlavorService;
 import com.reggie.service.DishService;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -30,6 +35,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class DishControllerTest {
 
+    @MockBean
+    private RedisCacheUtil redisCacheUtil;
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -39,10 +47,21 @@ public class DishControllerTest {
     @Autowired
     private DishFlavorService dishFlavorService;
 
+    @Autowired
+    private CategoryService categoryService;
+
     @BeforeEach
     void setUp() {
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
+
+        // 确保测试分类存在（saveDish 需要校验分类存在性）
+        Category category = new Category();
+        category.setId(1L);
+        category.setName("测试分类");
+        category.setType(1);
+        category.setSort(1);
+        categoryService.save(category);
 
         Dish dish = new Dish();
         dish.setId(1L);
@@ -58,14 +77,17 @@ public class DishControllerTest {
 
     @Test
     void testSave() throws Exception {
-        DishDto dto = new DishDto();
+        DishSaveDTO dto = new DishSaveDTO();
         dto.setName("新菜品");
         dto.setCategoryId(1L);
         dto.setPrice(new BigDecimal("15.00"));
         dto.setCode("002");
         dto.setImage("new.jpg");
+        dto.setDescription("测试描述");
         dto.setStatus(1);
         dto.setSort(2);
+        dto.setStockQty(new BigDecimal("100"));
+        dto.setMinStock(new BigDecimal("10"));
 
         List<DishFlavor> flavors = new ArrayList<>();
         DishFlavor flavor = new DishFlavor();

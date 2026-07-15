@@ -593,7 +593,7 @@ public class RecommendServiceImpl implements RecommendService {
 
         try {
             String startTime = LocalDateTime.now().minusDays(days).toString();
-            List<Map<String, Object>> rows = browseHistoryMapper.countDailyTrend(startTime);
+            List<Map<String, Object>> rows = browseHistoryMapper.countDailyTrend(startTime, BaseContext.getCurrentTenantId());
 
             // 构建日期索引Map，方便按日期查找
             Map<String, Map<String, Object>> dateMap = new LinkedHashMap<>();

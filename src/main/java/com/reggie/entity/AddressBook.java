@@ -74,9 +74,11 @@ public class AddressBook implements Serializable {
     private String districtName;
 
     @Schema(description = "街道/乡镇级区划编号", example = "110105001")
+    @TableField(exist = false)
     private String streetCode;
 
     @Schema(description = "街道/乡镇级名称", example = "三里屯街道")
+    @TableField(exist = false)
     private String streetName;
 
     @Schema(description = "详细地址", example = "xxx路xxx号xxx小区", required = true)

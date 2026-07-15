@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="../../styles/common.css" />
     <link rel="stylesheet" href="../../styles/page.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+    <link rel="stylesheet" href="../../styles/components.css" />
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <style>
         /* ========== 概览图表 ========== */
@@ -61,37 +62,8 @@
 <body>
 <div class="dashboard-container" id="app">
     <div class="container">
-        <!-- ========== 修改点：活动概览统计（使用统一 stat-card 组件 + 真实DB数据） ========== -->
-        <div class="stats-cards">
-            <div class="stat-card stat-card--flex primary clickable" :class="{ active: searchStatus === null }" @click="quickFilter(null)">
-                <div class="stat-icon">📋</div>
-                <div class="stat-info">
-                    <div class="stat-value">{{ summary.total }}</div>
-                    <div class="stat-label">活动总数</div>
-                </div>
-            </div>
-            <div class="stat-card stat-card--flex success clickable" :class="{ active: searchStatus === 1 }" @click="quickFilter(1)">
-                <div class="stat-icon">▶</div>
-                <div class="stat-info">
-                    <div class="stat-value">{{ summary.active }}</div>
-                    <div class="stat-label">进行中</div>
-                </div>
-            </div>
-            <div class="stat-card stat-card--flex warning clickable" :class="{ active: searchStatus === 0 }" @click="quickFilter(0)">
-                <div class="stat-icon">📝</div>
-                <div class="stat-info">
-                    <div class="stat-value">{{ summary.draft }}</div>
-                    <div class="stat-label">草稿</div>
-                </div>
-            </div>
-            <div class="stat-card stat-card--flex info">
-                <div class="stat-icon">📨</div>
-                <div class="stat-info">
-                    <div class="stat-value">{{ summary.totalPushed }}</div>
-                    <div class="stat-label">推送消息数</div>
-                </div>
-            </div>
-        </div>
+        <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
+        <stat-cards :cards="statsCards" :active-key.sync="searchStatus" @card-click="onCardClick"></stat-cards>
 
         <!-- ========== 概览图表 ========== -->
         <div class="overview-charts">
@@ -111,34 +83,30 @@
             </div>
         </div>
 
-        <!-- ========== 搜索栏 ========== -->
-        <!-- 修改点：活动名称下拉框宽度200px，避免截断；状态/类型下拉框120px -->
-        <div class="tableBar">
-            <div class="search-area">
-                <el-select v-model="searchName" placeholder="选择活动名称" size="small" clearable filterable
-                  style="width:200px;"
-                  :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="loadData" @visible-change="onFilterDropdownVisible">
-                  <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
-                </el-select>
-                <el-select v-model="searchStatus" placeholder="状态筛选" size="small" clearable @change="loadData" style="width:120px;">
-                    <el-option label="草稿" :value="0" />
-                    <el-option label="进行中" :value="1" />
-                    <el-option label="已结束" :value="2" />
-                    <el-option label="已暂停" :value="3" />
-                </el-select>
-                <el-select v-model="searchType" placeholder="活动类型" size="small" clearable @change="loadData" style="width:120px;">
-                    <el-option v-for="(label, val) in typeMap" :key="val" :label="label" :value="Number(val)" />
-                </el-select>
-                <div class="search-actions">
-                    <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
-                    <el-button size="small" class="btn-reset" @click="resetSearch">重置</el-button>
-                    <el-button size="small" class="btn-refresh" icon="el-icon-refresh" @click="loadData">刷新</el-button>
-                </div>
-            </div>
-            <div class="action-group">
-                <el-button type="primary" size="small" class="btn-add" icon="el-icon-plus" @click="openDialog('create')">新建活动</el-button>
-            </div>
-        </div>
+        <!-- 修改点：使用 <table-bar> 统一组件 -->
+        <table-bar
+          :search-items="tableSearchItems"
+          :actions="tableActions"
+          @search="loadData"
+          @reset="resetSearch"
+          @action="onTableAction">
+          <template slot="search-extra">
+            <el-select v-model="searchName" placeholder="选择活动名称" size="small" clearable filterable
+              style="width:200px;"
+              :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="loadData" @visible-change="onFilterDropdownVisible">
+              <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+            </el-select>
+            <el-select v-model="searchStatus" placeholder="状态筛选" size="small" clearable @change="loadData" style="width:120px;">
+                <el-option label="草稿" :value="0" />
+                <el-option label="进行中" :value="1" />
+                <el-option label="已结束" :value="2" />
+                <el-option label="已暂停" :value="3" />
+            </el-select>
+            <el-select v-model="searchType" placeholder="活动类型" size="small" clearable @change="loadData" style="width:120px;">
+                <el-option v-for="(label, val) in typeMap" :key="val" :label="label" :value="Number(val)" />
+            </el-select>
+          </template>
+        </table-bar>
 
         <!-- ========== 表格 ========== -->
         <el-table :data="tableData" border stripe v-loading="loading" class="tableBox"
@@ -265,9 +233,12 @@
                 <span v-else style="font-size:11px;color:#909399;">格式: {"minAmount":80,"reduceAmount":10} | {"discountRate":0.85} | {"flashPrice":9.9,"flashStock":100}</span>
             </el-form-item>
             <el-form-item label="活动时间" required>
+                <!-- 修改点：添加快捷选项 + unlink-panels，优化时间选择体验 -->
                 <el-date-picker v-model="dateRange" type="datetimerange"
                     range-separator="至" start-placeholder="开始" end-placeholder="结束"
-                    value-format="yyyy-MM-dd HH:mm:ss" style="width:100%" />
+                    value-format="yyyy-MM-dd HH:mm:ss" format="yyyy-MM-dd HH:mm"
+                    unlink-panels :editable="false"
+                    :picker-options="datePickerOptions" style="width:100%" />
             </el-form-item>
             <el-row :gutter="16">
                 <el-col :span="12">
@@ -348,14 +319,12 @@
                     <div class="lbl">参与率</div>
                 </div>
             </div>
-            <el-descriptions :column="2" border size="small" style="margin-bottom:16px;">
-                <el-descriptions-item label="活动名称">{{ statsCampaign.name }}</el-descriptions-item>
-                <el-descriptions-item label="活动类型">{{ typeMap[statsCampaign.campaignType] }}</el-descriptions-item>
-                <el-descriptions-item label="参与上限">{{ statsCampaign.maxParticipants || '不限' }}</el-descriptions-item>
-                <el-descriptions-item label="活动状态">
-                    <el-tag :type="statusTagType(statsCampaign.status)" size="mini">{{ statusMap[statsCampaign.status] }}</el-tag>
-                </el-descriptions-item>
-            </el-descriptions>
+            <div class="info-box" style="border:1px solid #e4e7ed;border-radius:4px;margin-bottom:16px;">
+                <div class="item-box"><span class="label">活动名称：</span><span class="des">{{ statsCampaign.name }}</span></div>
+                <div class="item-box"><span class="label">活动类型：</span><span class="des">{{ typeMap[statsCampaign.campaignType] }}</span></div>
+                <div class="item-box"><span class="label">参与上限：</span><span class="des">{{ statsCampaign.maxParticipants || '不限' }}</span></div>
+                <div class="item-box"><span class="label">活动状态：</span><span class="des"><el-tag :type="statusTagType(statsCampaign.status)" size="mini">{{ statusMap[statsCampaign.status] }}</el-tag></span></div>
+            </div>
             <div class="chart-box" id="campaignStatsChart" style="height:280px;"></div>
         </div>
         <span slot="footer" class="dialog-footer">
@@ -369,14 +338,22 @@
 <script src="../../plugins/axios/axios.min.js"></script>
 <script src="../../js/request.js"></script>
 <script src="../../api/recommend.js"></script>
+<script src="../../js/components.js"></script>
 <script>
-new Vue({
+  new Vue({
     el: '#app',
     data: function() {
         return {
             loading: false, submitting: false, pushing: false,
             tableData: [], total: 0, currentPage: 1, pageSize: 10,
             searchName: '', searchStatus: null, searchType: null,
+            // 修改点：<stat-cards> 组件的 activeKey，与 searchStatus 映射
+            activeKey: '',
+            // 修改点：<table-bar> 统一组件配置
+            tableSearchItems: [],
+            tableActions: [
+                { key: 'add', text: '新建活动', type: 'primary' }
+            ],
             // 修改点：搜索下拉框动态选项
             filterOptions: { names: [] },
             optionsLoading: false,
@@ -396,6 +373,35 @@ new Vue({
             })(),
             dialogVisible: false, dialogTitle: '新建营销活动', dialogMode: 'create', editId: null, dateRange: [],
             rulePreset: '', ruleError: '',
+            // 修改点：活动时间选择器快捷选项，与通用组件保持一致
+            datePickerOptions: {
+                shortcuts: [{
+                    text: '今天',
+                    onClick: function (picker) {
+                        var s = new Date(); s.setHours(0,0,0,0); var e = new Date(); e.setHours(23,59,59,999)
+                        picker.$emit('pick', [s, e])
+                    }
+                }, {
+                    text: '最近7天',
+                    onClick: function (picker) {
+                        var e = new Date(); e.setHours(23,59,59,999); var s = new Date(); s.setDate(s.getDate()-6); s.setHours(0,0,0,0)
+                        picker.$emit('pick', [s, e])
+                    }
+                }, {
+                    text: '最近30天',
+                    onClick: function (picker) {
+                        var e = new Date(); e.setHours(23,59,59,999); var s = new Date(); s.setDate(s.getDate()-29); s.setHours(0,0,0,0)
+                        picker.$emit('pick', [s, e])
+                    }
+                }, {
+                    text: '本月',
+                    onClick: function (picker) {
+                        var n = new Date(); var s = new Date(n.getFullYear(), n.getMonth(), 1)
+                        var e = new Date(n.getFullYear(), n.getMonth()+1, 0); e.setHours(23,59,59,999)
+                        picker.$emit('pick', [s, e])
+                    }
+                }]
+            },
             pushDialogVisible: false, pushTargetCampaign: null,
             pushForm: { pushType: 1 }, pushPreview: [], pushEstimate: 0,
             couponTemplates: [],
@@ -425,6 +431,18 @@ new Vue({
         this.loadData();
         this.loadSummary();
         this.loadCouponTemplates();
+    },
+    computed: {
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+            var self = this;
+            return [
+                { key: '', icon: '📋', label: '活动总数', value: self.summary.total, color: 'primary', clickable: true, active: self.activeKey === '' },
+                { key: '1', icon: '▶', label: '进行中', value: self.summary.active, color: 'success', clickable: true, active: self.activeKey === '1' },
+                { key: '0', icon: '📝', label: '草稿', value: self.summary.draft, color: 'warning', clickable: true, active: self.activeKey === '0' },
+                { key: 'pushed', icon: '📨', label: '推送消息数', value: self.summary.totalPushed, color: 'info' }
+            ]
+        }
     },
     mounted: function() {
         this.initOverviewCharts();
@@ -607,6 +625,33 @@ new Vue({
         },
 
         /* ====== 选择与批量操作 ====== */
+        // 修改点：<stat-cards> 组件统一卡片点击分发（映射到 searchStatus）
+        onCardClick: function(payload) {
+            var key = payload.key;
+            if (key === '') {
+                // 点击"全部"卡片
+                if (this.activeKey === '') {
+                    this.activeKey = '';
+                    this.searchStatus = null;
+                } else {
+                    this.activeKey = '';
+                    this.searchStatus = null;
+                }
+            } else if (key === '1') {
+                this.searchStatus = this.activeKey === '1' ? null : 1;
+                this.activeKey = this.activeKey === '1' ? '' : '1';
+            } else if (key === '0') {
+                this.searchStatus = this.activeKey === '0' ? null : 0;
+                this.activeKey = this.activeKey === '0' ? '' : '0';
+            }
+            this.currentPage = 1;
+            this.loadData();
+            this.loadSummary();
+        },
+        // 修改点：<table-bar> 组件统一操作分发
+        onTableAction: function(payload) {
+            if (payload.key === 'add') { this.openDialog('create'); }
+        },
         resetSearch: function() {
           this.searchName = ''
           this.searchStatus = null

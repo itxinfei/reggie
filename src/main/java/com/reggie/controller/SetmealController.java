@@ -2,6 +2,7 @@ package com.reggie.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.dto.SetmealDto;
 import com.reggie.entity.Category;
@@ -93,7 +94,9 @@ public class SetmealController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "套餐名称（可选，模糊查询）")
     @Parameter(name = "status", description = "售卖状态（可选，'0'=停售 ,'1'=启售）")
-    public R<Page<SetmealDto>> page(int page,int pageSize,String name, @RequestParam(required = false) String status){
+    @Parameter(name = "code", description = "套餐编码（可选，模糊查询）")
+    public R<Page<SetmealDto>> page(int page,int pageSize,String name, @RequestParam(required = false) String status,
+                                    @RequestParam(required = false) String code){
         //分页构造器对象
         Page<Setmeal> pageInfo = new Page<>(page,pageSize);
         Page<SetmealDto> dtoPage = new Page<>();
@@ -102,16 +105,13 @@ public class SetmealController {
         //添加查询条件，根据name进行like模糊查询
         queryWrapper.like(name != null,Setmeal::getName,name);
         queryWrapper.eq(status != null && !status.isEmpty(), Setmeal::getStatus, status);
+        queryWrapper.like(code != null && !code.isEmpty(), Setmeal::getCode, code);
         //添加排序条件，根据更新时间降序排列
         queryWrapper.orderByDesc(Setmeal::getUpdateTime);
 
-        // 多租户过滤：显式限制当前租户数据
-        Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null) {
-            queryWrapper.eq(Setmeal::getTenantId, tenantId);
-        }
+        // 多租户过滤：MyBatis-Plus TenantLineInnerInterceptor 已自动处理
 
-        setmealService.page(pageInfo,queryWrapper);
+        setmealService.page(pageInfo, queryWrapper);
 
         BeanUtils.copyProperties(pageInfo, dtoPage, "records");
         List<Setmeal> records = pageInfo.getRecords();
@@ -147,6 +147,11 @@ public class SetmealController {
     @Parameter(name = "id", description = "套餐ID", required = true)
     public R<SetmealDto> get(@PathVariable Long id) {
         SetmealDto setmealDto = setmealService.getByIdWithDish(id);
+        // 租户校验：确保只能查询当前租户的套餐
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (setmealDto.getTenantId() != null && !setmealDto.getTenantId().equals(currentTenantId)) {
+            return R.error("套餐不存在");
+        }
         return R.success(setmealDto);
     }
 
@@ -160,6 +165,15 @@ public class SetmealController {
     @Operation(summary = "修改套餐", description = "更新套餐基本信息及关联菜品")
     @Parameter(name = "setmealDto", description = "套餐DTO（包含ID、基本信息及菜品列表）", required = true)
     public R<String> update(@Valid @RequestBody SetmealDto setmealDto) {
+        // 租户校验：确保只能修改当前租户的套餐
+        Setmeal existing = setmealService.getById(setmealDto.getId());
+        if (existing == null) {
+            return R.error("套餐不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (!currentTenantId.equals(existing.getTenantId())) {
+            return R.error("套餐不存在");
+        }
         setmealService.updateWithDish(setmealDto);
         return R.success("修改套餐成功");
     }
@@ -180,6 +194,16 @@ public class SetmealController {
         if (idList.isEmpty()) {
             return R.error("请选择要操作的套餐");
         }
+        // 租户校验
+        List<Setmeal> setmeals = setmealService.listByIds(idList);
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        List<Long> unauthorizedIds = setmeals.stream()
+            .filter(s -> !currentTenantId.equals(s.getTenantId()))
+            .map(Setmeal::getId)
+            .collect(Collectors.toList());
+        if (!unauthorizedIds.isEmpty()) {
+            return R.error("以下套餐不属于当前租户，无法操作：ID=" + unauthorizedIds);
+        }
         setmealService.updateStatus(status, idList);
         return R.success("操作成功");
     }
@@ -194,6 +218,16 @@ public class SetmealController {
     @Operation(summary = "查询套餐菜品", description = "查询套餐包含的菜品列表")
     @Parameter(name = "id", description = "套餐ID", required = true)
     public R<List<SetmealDish>> dish(@PathVariable Long id) {
+        // 租户校验：先查套餐确保归属当前租户
+        Setmeal setmeal = setmealService.getById(id);
+        if (setmeal == null) {
+            return R.error("套餐不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (!currentTenantId.equals(setmeal.getTenantId())) {
+            return R.error("套餐不存在");
+        }
+
         LambdaQueryWrapper<SetmealDish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(SetmealDish::getSetmealId, id);
         List<SetmealDish> list = setmealDishService.list(queryWrapper);
@@ -214,6 +248,16 @@ public class SetmealController {
         if (idList.isEmpty()) {
             return R.error("请选择要删除的套餐");
         }
+        // 租户校验：确保只能删除当前租户的套餐
+        List<Setmeal> setmeals = setmealService.listByIds(idList);
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        List<Long> unauthorizedIds = setmeals.stream()
+            .filter(s -> !currentTenantId.equals(s.getTenantId()))
+            .map(Setmeal::getId)
+            .collect(Collectors.toList());
+        if (!unauthorizedIds.isEmpty()) {
+            return R.error("以下套餐不属于当前租户，无法删除：ID=" + unauthorizedIds);
+        }
         setmealService.removeWithDish(idList);
         return R.success("套餐数据删除成功");
     }
@@ -233,11 +277,7 @@ public class SetmealController {
         queryWrapper.like(setmeal.getName() != null && !setmeal.getName().trim().isEmpty(), Setmeal::getName, setmeal.getName());
         queryWrapper.orderByDesc(Setmeal::getUpdateTime);
 
-        // 多租户过滤：显式限制当前租户数据
-        Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null) {
-            queryWrapper.eq(Setmeal::getTenantId, tenantId);
-        }
+        // 多租户过滤：MyBatis-Plus TenantLineInnerInterceptor 已自动处理
 
         List<Setmeal> list = setmealService.list(queryWrapper);
 
@@ -269,10 +309,7 @@ public class SetmealController {
     @Operation(summary = "筛选选项", description = "获取所有套餐名称，供搜索条件下拉框使用")
     public R<Map<String, List<String>>> options() {
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
-        Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null) {
-            queryWrapper.eq(Setmeal::getTenantId, tenantId);
-        }
+        // 多租户过滤：MyBatis-Plus TenantLineInnerInterceptor 已自动处理
         queryWrapper.orderByAsc(Setmeal::getName);
         List<Setmeal> list = setmealService.list(queryWrapper);
 

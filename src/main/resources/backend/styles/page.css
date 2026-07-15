@@ -327,6 +327,9 @@
   padding: 30px;
   border-radius: 4px;
   min-height: 500px;
+  /* 修改点：限制容器最大宽度，防止表单在大屏上铺满 */
+  max-width: 700px;
+  margin: 0 auto;
 }
 .addBrand-container .container .subBox {
   padding-top: 30px;
@@ -334,8 +337,9 @@
   border-top: solid 1px #f3f4f7;
 }
 
+/* 修改点：移除固定宽度 777px，改为自适应，与表单其他字段对齐 */
 .flavorBox {
-  width: 777px;
+  width: 100%;
 }
 .flavorBox .addBut {
   background: #ffc200;
@@ -410,8 +414,10 @@
   cursor: pointer;
 }
 
+/* 修改点：移除 .address 区域 777px 强制定宽，使 textarea 和按钮区与其他字段对齐 */
 .addBrand-container .address .el-form-item__content {
-  width: 777px !important;
+  width: 100% !important;
+  max-width: 500px;
 }
 
 .el-button--text {

@@ -1,7 +1,10 @@
 package com.reggie.module.printer.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.printer.model.PrinterLog;
+
+import java.util.List;
 
 /**
  * <p>

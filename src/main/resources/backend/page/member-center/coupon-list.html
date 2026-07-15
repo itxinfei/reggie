@@ -121,7 +121,7 @@
           pageSize: 10,
           tableData: [],
           // 统计数据
-          stats: { totalCoupons: 0, enabledCount: 0, disabledCount: 0 },
+          stats: { totalCoupons: 0, enabledCount: 0, disabledCount: 0, claimedCount: 0, usageRate: '0%' },
           activeFilter: '',
           // 搜索配置
           searchConfig: [
@@ -176,10 +176,10 @@
         statsCards: function() {
           var self = this
           return [
-            { key: '', icon: '🎫', label: '优惠券总数', value: self.stats.totalCoupons, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '', icon: '🎫', label: '优惠券模板', value: self.stats.totalCoupons, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: 'enabled', icon: '✅', label: '已启用', value: self.stats.enabledCount, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
             { key: 'disabled', icon: '⏸️', label: '已禁用', value: self.stats.disabledCount, color: 'warning', clickable: true, active: self.activeFilter === 'disabled' },
-            { key: 'exhausted', icon: '💨', label: '已领完', value: self.stats.exhaustedCount || 0, color: 'danger' }
+            { key: 'claimed', icon: '📤', label: '已领取 ' + (self.stats.claimedCount || 0) + ' 张', value: self.stats.usageRate || '0%', color: 'danger', clickable: false }
           ]
         }
       },
@@ -213,11 +213,26 @@
             var res = await couponTemplatePage({ page: 1, pageSize: 1000 })
             if (String(res.code) === '1') {
               var records = res.data.records || []
+              var enabledCount = records.filter(function(r) { return r.status === 1 }).length
+              var disabledCount = records.filter(function(r) { return r.status === 0 }).length
+              var exhaustedCount = records.filter(function(r) { return r.remainCount !== undefined && r.remainCount !== null && Number(r.remainCount) <= 0 }).length
+              // 计算总领取数和使用率
+              var totalClaimed = 0
+              var totalIssued = 0
+              records.forEach(function(r) {
+                if (r.totalCount && r.remainCount !== undefined && r.remainCount !== null) {
+                  totalIssued += Number(r.totalCount)
+                  totalClaimed += Number(r.totalCount) - Number(r.remainCount)
+                }
+              })
+              var usageRate = totalIssued > 0 ? ((totalClaimed / totalIssued) * 100).toFixed(1) + '%' : '0%'
               return { code: 1, data: {
                 totalCoupons: res.data.total || 0,
-                enabledCount: records.filter(function(r) { return r.status === 1 }).length,
-                disabledCount: records.filter(function(r) { return r.status === 0 }).length,
-                exhaustedCount: records.filter(function(r) { return r.remainCount !== undefined && r.remainCount !== null && Number(r.remainCount) <= 0 }).length
+                enabledCount: enabledCount,
+                disabledCount: disabledCount,
+                exhaustedCount: exhaustedCount,
+                claimedCount: totalClaimed,
+                usageRate: usageRate
               }}
             }
           } catch (err) { console.warn('加载优惠券统计失败:', err) }

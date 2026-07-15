@@ -43,6 +43,8 @@ public class LoginCheckFilter implements Filter{
     private static final String[] EXCLUDE_URLS = new String[]{
         "/employee/login",
         "/employee/logout",
+        // 修改点：放行忘记密码接口（匿名访问，无需登录）
+        "/employee/forgot-password",
         "/backend/**",
         "/front/**",
         "/common/**",
@@ -57,6 +59,13 @@ public class LoginCheckFilter implements Filter{
         // 修改点：放行静态资源目录，避免图片/上传文件被拦截导致死循环请求
         "/images/**",
         "/uploads/**",
+        // 放行C端菜单浏览（允许未登录用户查看菜品和套餐列表）
+        "/category/list",
+        "/category/options",
+        "/dish/list",
+        "/dish/options",
+        "/setmeal/list",
+        "/setmeal/options",
         // 放行API文档相关路径
         "/swagger-ui/**",
         "/swagger-ui.html",

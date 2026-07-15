@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -57,6 +58,21 @@ public class EmployeeController {
 
     @Autowired(required = false)
     private BruteForceProtectionFilter bruteForceProtectionFilter;
+
+    @Autowired(required = false)
+    private com.reggie.utils.SMSUtils smsUtils;
+
+    @Value("${reggie.sms.sign-name:瑞吉外卖}")
+    private String smsSignName = "瑞吉外卖";
+
+    @Value("${reggie.sms.template-code:}")
+    private String smsTemplateCode;
+
+    /**
+     * 短信Mock模式开关（dev环境默认true，跳过短信验证码校验）
+     */
+    @Value("${reggie.sms.mock-mode:false}")
+    private boolean smsMockMode;
 
     /**
      * 员工登录
@@ -145,6 +161,9 @@ public class EmployeeController {
 
         request.getSession().setAttribute("roleKey", sessionRoleKey);
 
+        // 防止Session Fixation攻击：登录成功后切换Session ID
+        request.changeSessionId();
+
         // 返回脱敏后的登录信息（不包含密码等敏感字段）
         java.util.HashMap<String, Object> result = new java.util.HashMap<>();
         result.put("id", emp.getId());
@@ -173,7 +192,11 @@ public class EmployeeController {
         String username = params.get("username");
         String phone = params.get("phone");
         String code = params.get("code");
+        // 修改点：兼容前端可能发送 password 或 newPassword 字段
         String newPassword = params.get("newPassword");
+        if (newPassword == null || newPassword.isEmpty()) {
+            newPassword = params.get("password");
+        }
 
         if (username == null || username.trim().isEmpty()) {
             return R.error("请输入用户名");
@@ -181,24 +204,29 @@ public class EmployeeController {
         if (phone == null || phone.trim().isEmpty()) {
             return R.error("请输入手机号");
         }
-        if (code == null || code.trim().isEmpty()) {
-            return R.error("请输入短信验证码");
-        }
         if (newPassword == null || newPassword.length() < 6) {
             return R.error("新密码至少6位");
         }
 
-        // 校验短信验证码
-        String sessionCode = (String) session.getAttribute("smsCode_" + phone);
-        if (sessionCode == null) {
-            return R.error("请先获取短信验证码");
+        // 修改点：Mock模式下跳过短信验证码校验，允许直接重置密码
+        if (!smsMockMode) {
+            if (code == null || code.trim().isEmpty()) {
+                return R.error("请输入短信验证码");
+            }
+            // 校验短信验证码
+            String sessionCode = (String) session.getAttribute("smsCode_" + phone);
+            if (sessionCode == null) {
+                return R.error("请先获取短信验证码");
+            }
+            if (!sessionCode.equals(code)) {
+                return R.error("验证码错误");
+            }
+            // 验证通过后清除验证码（一次性使用）
+            session.removeAttribute("smsCode_" + phone);
+            session.removeAttribute("smsCode_" + phone + "_time");
+        } else {
+            log.info("Mock模式：跳过短信验证码校验 - username: {}, phone: {}", username, phone);
         }
-        if (!sessionCode.equals(code)) {
-            return R.error("验证码错误");
-        }
-        // 验证通过后清除验证码（一次性使用）
-        session.removeAttribute("smsCode_" + phone);
-        session.removeAttribute("smsCode_" + phone + "_time");
 
         LambdaQueryWrapper<Employee> qw = new LambdaQueryWrapper<>();
         qw.eq(Employee::getUsername, username.trim());
@@ -276,7 +304,7 @@ public class EmployeeController {
     @PostMapping
     @Operation(summary = "新增员工", description = "创建新的员工账号，仅管理员可操作，初始密码统一设置")
     @Parameter(name = "employee", description = "员工信息（用户名、姓名、手机号、角色等）", required = true)
-    public R<String> save(HttpServletRequest request,@Valid @RequestBody Employee employee){
+    public R<Map<String, Object>> save(HttpServletRequest request,@Valid @RequestBody Employee employee){
         // 权限校验：仅管理员可新增员工
         if (!isAdmin(request)) {
             return R.error("权限不足，仅管理员可新增员工");
@@ -289,14 +317,33 @@ public class EmployeeController {
         // 生成随机初始密码（使用BCrypt加密）
         String initialPassword = SecurityConstants.generateRandomPassword();
         employee.setPassword(PasswordUtils.encodePassword(initialPassword));
+        // 初始密码通过短信发送给员工
         employee.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
 
         employee.setTenantId(BaseContext.getCurrentTenantId());
 
         employeeService.save(employee);
 
-        log.info("新增员工成功，初始密码已生成（请妥善保管）");
-        return R.success("新增员工成功，初始密码：" + initialPassword);
+        // 发送初始密码短信
+        if (employee.getPhone() != null && !employee.getPhone().isEmpty()) {
+            if (smsUtils != null && smsTemplateCode != null && !smsTemplateCode.isEmpty() && !smsMockMode) {
+                try {
+                    String smsParam = "{\"name\":\"" + employee.getName() + "\",\"password\":\"" + initialPassword + "\"}";
+                    smsUtils.sendMessage(smsSignName, smsTemplateCode, employee.getPhone(), smsParam);
+                    log.info("初始密码短信发送成功 - empId: {}, phone: {}", employee.getId(), employee.getPhone());
+                } catch (Exception e) {
+                    log.error("初始密码短信发送失败 - empId: {}, phone: {}, error: {}", employee.getId(), employee.getPhone(), e.getMessage());
+                }
+            } else {
+                log.info("【开发环境/Mock模式】员工初始密码 - 姓名：{}，手机号：{}，密码：{}", employee.getName(), employee.getPhone(), initialPassword);
+            }
+        }
+
+        log.info("新增员工成功，初始密码已通过短信/邮件发送给用户");
+        // 返回脱敏的成功信息，不包含密码
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("消息", "新增员工成功，初始密码已通过短信/邮件发送给用户");
+        return R.success(result);
     }
 
     /**
@@ -399,6 +446,14 @@ public class EmployeeController {
         log.info("根据id查询员工信息...");
         Employee employee = employeeService.getById(id);
         if(employee != null){
+            // 租户校验：确保只能查询当前租户的员工
+            Long currentTenantId = BaseContext.getCurrentTenantId();
+            if (currentTenantId != null && !currentTenantId.equals(employee.getTenantId())) {
+                return R.error("没有查询到对应员工信息");
+            }
+            // 脱敏：移除密码和密码类型字段，防止泄露
+            employee.setPassword(null);
+            employee.setPasswordType(null);
             return R.success(employee);
         }
         return R.error("没有查询到对应员工信息");

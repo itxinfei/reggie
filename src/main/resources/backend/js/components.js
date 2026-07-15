@@ -172,7 +172,59 @@ Vue.component('table-bar', {
     this.searchItems.forEach(function (item) {
       values[item.field] = item.type === 'date' || item.type === 'daterange' ? '' : ''
     })
-    return { searchValues: values }
+    return {
+      searchValues: values,
+      // 修改点：日期时间范围选择器的快捷选项，大幅提升筛选效率
+      pickerOptions: {
+        shortcuts: [{
+          text: '今天',
+          onClick: function (picker) {
+            var start = new Date(); start.setHours(0, 0, 0, 0)
+            var end = new Date(); end.setHours(23, 59, 59, 999)
+            picker.$emit('pick', [start, end])
+          }
+        }, {
+          text: '昨天',
+          onClick: function (picker) {
+            var start = new Date(); start.setDate(start.getDate() - 1); start.setHours(0, 0, 0, 0)
+            var end = new Date(); end.setDate(end.getDate() - 1); end.setHours(23, 59, 59, 999)
+            picker.$emit('pick', [start, end])
+          }
+        }, {
+          text: '最近7天',
+          onClick: function (picker) {
+            var end = new Date(); end.setHours(23, 59, 59, 999)
+            var start = new Date(); start.setDate(start.getDate() - 6); start.setHours(0, 0, 0, 0)
+            picker.$emit('pick', [start, end])
+          }
+        }, {
+          text: '最近30天',
+          onClick: function (picker) {
+            var end = new Date(); end.setHours(23, 59, 59, 999)
+            var start = new Date(); start.setDate(start.getDate() - 29); start.setHours(0, 0, 0, 0)
+            picker.$emit('pick', [start, end])
+          }
+        }, {
+          text: '本月',
+          onClick: function (picker) {
+            var now = new Date()
+            var start = new Date(now.getFullYear(), now.getMonth(), 1)
+            var end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+            end.setHours(23, 59, 59, 999)
+            picker.$emit('pick', [start, end])
+          }
+        }, {
+          text: '上月',
+          onClick: function (picker) {
+            var now = new Date()
+            var start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+            var end = new Date(now.getFullYear(), now.getMonth(), 0)
+            end.setHours(23, 59, 59, 999)
+            picker.$emit('pick', [start, end])
+          }
+        }]
+      }
+    }
   },
   template:
     '<div class="tableBar">' +
@@ -201,12 +253,16 @@ Vue.component('table-bar', {
           '>' +
           '  <el-option v-for="opt in (item.options || [])" :key="opt.value" :label="opt.label" :value="opt.value"></el-option>' +
           '</el-select>' +
-          // 日期范围选择器
+          // 日期范围选择器（修改点：添加 picker-options/unlink-panels/format/editable，优化时间选择体验）
           '<el-date-picker v-else-if="item.type === \'date\' || item.type === \'daterange\'" :key="\'search-\' + item.field"' +
           '  v-model="searchValues[item.field]"' +
           '  type="datetimerange"' +
           '  value-format="yyyy-MM-dd HH:mm:ss"' +
-          '  :placeholder="item.placeholder || \'选择日期\'"' +
+          '  format="yyyy-MM-dd HH:mm"' +
+          '  :editable="false"' +
+          '  unlink-panels' +
+          '  :picker-options="pickerOptions"' +
+          '  :placeholder="item.placeholder || \'选择日期范围\'"' +
           '  range-separator="至"' +
           '  start-placeholder="开始日期"' +
           '  end-placeholder="结束日期"' +
@@ -701,8 +757,11 @@ window.renderTableBar = function (config) {
       }
       html += '</el-select>'
     } else if (item.type === 'date') {
+      // 修改点：添加 unlink-panels/editable，与新版 table-bar 组件保持一致
       html += '<el-date-picker v-model="' + item.model + '" clearable value-format="yyyy-MM-dd HH:mm:ss"' +
-        ' type="datetimerange" placeholder="选择日期" range-separator="至"' +
+        ' type="datetimerange" format="yyyy-MM-dd HH:mm"' +
+        ' unlink-panels :editable="false"' +
+        ' placeholder="选择日期范围" range-separator="至"' +
         ' start-placeholder="开始日期" end-placeholder="结束日期"' +
         ' :default-time="[\'00:00:00\', \'23:59:59\']"' +
         ' style="width:' + width + ';margin-left:10px;" @change="' + onChange + '">' +

@@ -100,10 +100,10 @@ public class ShoppingCartController {
         ShoppingCart cartServiceOne = shoppingCartService.getOne(queryWrapper);
 
         if(cartServiceOne != null){
-            //如果已经存在，就在原来数量基础上加一（使用原子操作防止并发）
+            // 原子加 1 后重新查询最新数据（避免本地对象与 DB 不一致）
             int updated = shoppingCartService.addQuantityAtomically(cartServiceOne.getId(), 1);
             if (updated > 0) {
-                cartServiceOne.setNumber(cartServiceOne.getNumber() + 1);
+                cartServiceOne = shoppingCartService.getById(cartServiceOne.getId());
             } else {
                 // 并发冲突，重新查询
                 cartServiceOne = shoppingCartService.getById(cartServiceOne.getId());
@@ -165,7 +165,8 @@ public class ShoppingCartController {
         // 使用原子操作减一，防止并发竞态
         int affected = shoppingCartService.subQuantityAtomically(cartItem.getId());
         if (affected > 0) {
-            cartItem.setNumber(cartItem.getNumber() - 1);
+            // 重新查询最新数量
+            cartItem = shoppingCartService.getById(cartItem.getId());
             return R.success(cartItem);
         } else {
             // 数量已为1，删除后返回null

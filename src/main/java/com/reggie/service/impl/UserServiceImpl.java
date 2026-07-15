@@ -1,6 +1,9 @@
 package com.reggie.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
+import com.reggie.common.PasswordUtils;
 import com.reggie.entity.User;
 import com.reggie.mapper.UserMapper;
 import com.reggie.service.UserService;
@@ -9,9 +12,55 @@ import org.springframework.stereotype.Service;
 /**
  * 用户服务实现类
  *
- * @author reggie
+ * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Service
-public class UserServiceImpl extends ServiceImpl<UserMapper,User> implements UserService{
+public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
+
+    @Override
+    public User register(String phone) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        // 检查手机号是否已存在
+        User existUser = this.getByPhone(phone);
+        if (existUser != null) {
+            return existUser;
+        }
+        User user = new User();
+        user.setPhone(phone);
+        user.setTenantId(tenantId);
+        user.setStatus(1);
+        this.save(user);
+        return user;
+    }
+
+    @Override
+    public User getByPhone(String phone) {
+        return this.list(new LambdaQueryWrapper<User>()
+                .eq(User::getPhone, phone)
+                .eq(User::getTenantId, BaseContext.getCurrentTenantId())
+                .last("LIMIT 1"))
+                .stream().findFirst().orElse(null);
+    }
+
+    @Override
+    public void updateUserBaseInfo(User user) {
+        User updateEntity = new User();
+        if (user.getName() != null) {
+            updateEntity.setName(user.getName());
+        }
+        if (user.getSex() != null) {
+            updateEntity.setSex(user.getSex());
+        }
+        if (user.getIdNumber() != null) {
+            updateEntity.setIdNumber(user.getIdNumber());
+        }
+        if (user.getAvatar() != null) {
+            updateEntity.setAvatar(user.getAvatar());
+        }
+        if (user.getId() != null) {
+            updateEntity.setId(user.getId());
+            this.updateById(updateEntity);
+        }
+    }
 }

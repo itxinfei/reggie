@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.entity.*;
+import com.reggie.enums.OrderStatus;
 import com.reggie.module.export.util.ExportUtil;
 import com.reggie.service.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -407,19 +408,12 @@ public class ExportController {
     // ==================== 工具方法 ====================
 
     /**
-     * 订单状态中文名
+     * 订单状态中文名（委托给 {@link OrderStatus} 枚举）
      */
     private String getOrderStatusName(Integer status) {
         if (status == null) return "未知";
-        switch (status) {
-            case 1: return "待付款";
-            case 2: return "待接单";
-            case 3: return "已接单";
-            case 4: return "派送中";
-            case 5: return "已完成";
-            case 6: return "已取消";
-            default: return "其他";
-        }
+        OrderStatus orderStatus = OrderStatus.fromCode(status);
+        return orderStatus != null ? orderStatus.getDesc() : "其他";
     }
 
     /**

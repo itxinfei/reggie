@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     /* ========== 基础重置 ========== */
@@ -84,33 +85,8 @@
         <el-button type="success" size="small" icon="el-icon-download" @click="handleExport">导出 CSV</el-button>
       </div>
 
-      <!-- ========== KPI 卡片 ========== -->
-      <div class="stats-cards">
-        <div class="stat-card primary">
-          <div class="stat-icon">🍽</div>
-          <div class="stat-label">菜品总数</div>
-          <div class="stat-value">{{ stats.totalDishes || 0 }}</div>
-          <div class="sub">当前分类下菜品数</div>
-        </div>
-        <div class="stat-card success">
-          <div class="stat-icon">🏆</div>
-          <div class="stat-label">上榜菜品</div>
-          <div class="stat-value">{{ stats.topDishes || 0 }}</div>
-          <div class="sub">有销量的菜品</div>
-        </div>
-        <div class="stat-card warning">
-          <div class="stat-icon">📊</div>
-          <div class="stat-label">总销量（份）</div>
-          <div class="stat-value">{{ stats.totalSales || 0 }}</div>
-          <div class="sub">选定时间范围内</div>
-        </div>
-        <div class="stat-card info">
-          <div class="stat-icon">📈</div>
-          <div class="stat-label">平均销量</div>
-          <div class="stat-value">{{ stats.avgSales || 0 }}</div>
-          <div class="sub">份/菜品</div>
-        </div>
-      </div>
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- ========== 水平排行榜图 ========== -->
       <div class="chart-panel" style="margin-bottom:20px;">
@@ -152,6 +128,7 @@
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../api/report.js"></script>
+  <script src="../../js/components.js"></script>
   <script>
     new Vue({
       el: '#report-dish-app',
@@ -168,6 +145,16 @@
           var n = (this.tableData && this.tableData.length) || 0;
           if (n === 0) return 420;
           return Math.max(300, Math.min(600, n * 38 + 46));
+        },
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+          var self = this;
+          return [
+            { key: '菜品', icon: '🍽', label: '菜品总数', value: self.stats.totalDishes || 0, color: 'primary' },
+            { key: '上榜', icon: '🏆', label: '上榜菜品', value: self.stats.topDishes || 0, color: 'success' },
+            { key: '总销量', icon: '📊', label: '总销量（份）', value: self.stats.totalSales || 0, color: 'warning' },
+            { key: '平均', icon: '📈', label: '平均销量', value: self.stats.avgSales || 0, color: 'info' }
+          ]
         }
       },
       created: function() {

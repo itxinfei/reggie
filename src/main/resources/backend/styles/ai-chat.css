@@ -1,6 +1,6 @@
 /**
- * AI对话页面样式（从 assistant.html 提取）
- * 修改点：独立CSS文件便于维护和复用
+ * AI对话页面样式
+ * 修改点：紧凑单行头栏布局 — 合并 header / scene-selector / connection-bar 为一行
  * @author reggie
  * @since 2026-07-10
  */
@@ -8,11 +8,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
-/* ====== 整体布局 ====== */
+/* ========== 整体布局 ========== */
 .ai-layout {
     max-width: 1300px;
-    margin: 20px auto;
-    height: calc(100vh - 40px);
+    margin: 16px auto;
+    height: calc(100vh - 32px);
     display: flex;
     background: #fff;
     border-radius: 12px;
@@ -20,48 +20,31 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     overflow: hidden;
 }
 
-/* ====== 连接状态指示器（新增） ====== */
-.connection-bar {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 8px 24px;
-    background: #fafafa;
-    border-bottom: 1px solid #f0f0f0;
-    font-size: 12px;
-    color: #909399;
-    flex-shrink: 0;
-}
-.connection-bar .status-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    display: inline-block;
-    margin-right: 4px;
-}
-.connection-bar .status-dot.connected { background: #52c41a; }
-.connection-bar .status-dot.disconnected { background: #ff4d4f; }
-.connection-bar .status-dot.checking { background: #faad14; animation: pulse 1.5s infinite; }
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-}
-
-/* ====== 左侧边栏 ====== */
+/* ========== 左侧边栏 ========== */
 .ai-sidebar {
     width: 280px;
     min-width: 280px;
-    background: #fafafa;
-    border-right: 1px solid #f0f0f0;
+    background: #fafbfc;
+    border-right: 1px solid #e8eaed;
     display: flex;
     flex-direction: column;
-    transition: all 0.3s;
+    transition: all 0.25s ease;
 }
+/* 修改点：侧边栏收起状态 */
+.ai-sidebar:not(.open) {
+    width: 0;
+    min-width: 0;
+    overflow: hidden;
+    border-right: none;
+}
+
 .sidebar-header {
-    padding: 16px;
-    border-bottom: 1px solid #f0f0f0;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e8eaed;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
 }
 .sidebar-header h4 {
     font-size: 14px;
@@ -78,17 +61,16 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     cursor: pointer;
     transition: all 0.2s;
 }
-/* 修改点：AI 页面主题色统一为项目主色 #ffc200 */
 .sidebar-header .refresh-btn:hover { border-color: #ffc200; color: #ffc200; }
 
 .new-chat-btn {
-    margin: 12px 16px;
-    padding: 10px 0;
+    margin: 10px 14px;
+    padding: 9px 0;
     background: linear-gradient(135deg, #ffc200 0%, #fdd24c 100%);
     color: #fff;
     border: none;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -96,6 +78,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     align-items: center;
     justify-content: center;
     gap: 6px;
+    flex-shrink: 0;
 }
 .new-chat-btn:hover { opacity: 0.9; transform: translateY(-1px); }
 .new-chat-btn:disabled { background: #d9d9d9; cursor: not-allowed; transform: none; }
@@ -103,7 +86,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 .conv-list {
     flex: 1;
     overflow-y: auto;
-    padding: 0 8px 8px;
+    padding: 0 6px 8px;
 }
 .conv-list::-webkit-scrollbar { width: 4px; }
 .conv-list::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 2px; }
@@ -111,11 +94,11 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 .conv-item {
     display: flex;
     align-items: center;
-    padding: 10px 12px;
-    margin-bottom: 4px;
+    padding: 9px 10px;
+    margin-bottom: 2px;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s;
     position: relative;
     gap: 8px;
 }
@@ -123,11 +106,10 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 .conv-item.active { background: #e6f7ff; border: 1px solid #91d5ff; }
 
 .conv-icon {
-    width: 32px; height: 32px; border-radius: 8px;
+    width: 30px; height: 30px; border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 16px; flex-shrink: 0; background: #f0f0f0;
+    font-size: 15px; flex-shrink: 0; background: #f0f0f0;
 }
-
 .conv-info {
     flex: 1; min-width: 0; overflow: hidden;
 }
@@ -137,14 +119,14 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     line-height: 1.4;
 }
 .conv-meta {
-    font-size: 11px; color: #909399; margin-top: 2px;
+    font-size: 11px; color: #909399; margin-top: 1px;
     display: flex; gap: 8px;
 }
 .conv-delete {
-    width: 24px; height: 24px; border-radius: 50%;
+    width: 22px; height: 22px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 14px; color: #c0c4cc; cursor: pointer;
-    opacity: 0; transition: all 0.2s; flex-shrink: 0;
+    opacity: 0; transition: all 0.15s; flex-shrink: 0;
     border: none; background: transparent;
 }
 .conv-item:hover .conv-delete { opacity: 1; }
@@ -159,94 +141,142 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     color: #909399; font-size: 13px;
 }
 
-/* ====== 右侧主区域 ====== */
+/* ========== 右侧主区域 ========== */
 .ai-main {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-width: 0;
+    background: #fff;
 }
 
-/* 顶部栏 */
+/* ========== 紧凑单行头栏 ========== */
 .ai-header {
-    background: linear-gradient(135deg, #ffc200 0%, #fdd24c 100%);
-    color: #fff;
-    padding: 14px 24px;
     display: flex;
     align-items: center;
+    height: 48px;
+    padding: 0 16px;
+    background: #fff;
+    border-bottom: 1px solid #f0f0f0;
     gap: 12px;
     flex-shrink: 0;
+    flex-wrap: nowrap;
 }
-.ai-header .logo { font-size: 28px; }
-.ai-header h2 { font-size: 20px; font-weight: 600; margin: 0; }
-.ai-header .subtitle { font-size: 13px; opacity: 0.9; margin-left: auto; }
 
-/* 当前对话标题 */
+/* 侧边栏切换按钮 */
+.sidebar-toggle {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: none;
+    font-size: 18px; color: #606266;
+    cursor: pointer; border-radius: 6px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.sidebar-toggle:hover { background: #f0f0f0; color: #303133; }
+
+.header-logo {
+    font-size: 22px; flex-shrink: 0; line-height: 1;
+}
+
+.header-title {
+    font-size: 15px; font-weight: 600; color: #303133;
+    flex-shrink: 0; white-space: nowrap;
+}
+
 .current-conv-title {
-    font-size: 12px; color: rgba(255,255,255,0.8);
-    margin-left: 12px; max-width: 200px;
+    font-size: 12px; color: #909399;
+    max-width: 140px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex-shrink: 1;
 }
 
-/* 场景切换 */
-.scene-selector {
-    display: flex; gap: 8px; padding: 10px 24px;
-    background: #fafafa; border-bottom: 1px solid #f0f0f0;
-    flex-wrap: wrap; flex-shrink: 0;
+/* 场景标签组（头栏内联） */
+.header-scenes {
+    display: flex; gap: 4px; flex-shrink: 0;
+    margin-left: auto;
 }
-.scene-tag {
-    padding: 5px 14px; border-radius: 12px; font-size: 13px;
-    cursor: pointer; border: 1px solid #d9d9d9; background: #fff;
-    transition: all 0.2s; color: #303133; font-weight: 500;
+.header-scenes .scene-tag {
+    padding: 3px 12px; border-radius: 14px;
+    font-size: 12px; cursor: pointer;
+    border: 1px solid #e8e8e8; background: #fafafa;
+    transition: all 0.15s; color: #606266; font-weight: 500;
+    white-space: nowrap;
 }
-.scene-tag:hover { border-color: #ffc200; color: #ffc200; }
-.scene-tag.active { background: #ffc200; color: #fff; border-color: #ffc200; }
+.header-scenes .scene-tag:hover { border-color: #ffc200; color: #ffc200; }
+.header-scenes .scene-tag.active {
+    background: linear-gradient(135deg, #ffc200, #fdd24c);
+    color: #fff; border-color: transparent;
+    box-shadow: 0 1px 4px rgba(255,194,0,0.25);
+}
+
+/* 连接状态指示器（头栏内联） */
+.header-conn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 12px;
+    font-size: 11px; color: #909399;
+    background: #fafafa; border: 1px solid #f0f0f0;
+    flex-shrink: 0; white-space: nowrap; cursor: default;
+}
+.header-conn .conn-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.header-conn.connected .conn-dot { background: #52c41a; }
+.header-conn.checking .conn-dot { background: #faad14; animation: pulse 1.5s infinite; }
+.header-conn.disconnected .conn-dot { background: #ff4d4f; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
 
 /* 快捷卡片 */
 .quick-cards {
-    display: flex; flex-wrap: wrap; gap: 10px;
-    padding: 12px 24px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0;
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 10px 16px; border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
 }
 .quick-card {
-    padding: 8px 16px; background: #fafafa; border: 1px solid #e8e8e8;
-    border-radius: 8px; font-size: 13px; cursor: pointer;
-    transition: all 0.2s; color: #303133; font-weight: 500;
+    padding: 5px 14px; background: #fafafa; border: 1px solid #e8e8e8;
+    border-radius: 16px; font-size: 12px; cursor: pointer;
+    transition: all 0.15s; color: #606266;
 }
 .quick-card:hover { border-color: #1890ff; color: #1890ff; background: #e6f7ff; }
 
 /* 聊天区 */
 .chat-body {
-    flex: 1; overflow-y: auto; padding: 20px 24px;
-    display: flex; flex-direction: column; gap: 16px;
+    flex: 1; overflow-y: auto; padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 14px;
 }
 .chat-msg {
-    display: flex; gap: 12px; max-width: 85%;
-    animation: slideIn 0.3s ease;
+    display: flex; gap: 10px; max-width: 80%;
+    animation: slideIn 0.25s ease;
 }
 @keyframes slideIn {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
 }
 .chat-msg.assistant { align-self: flex-start; }
 .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
 
 .chat-avatar {
-    width: 40px; height: 40px; border-radius: 50%;
+    width: 36px; height: 36px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 20px; flex-shrink: 0;
+    font-size: 18px; flex-shrink: 0;
 }
 .chat-msg.assistant .chat-avatar { background: #e6f7ff; }
-.chat-msg.user .chat-avatar { background: #ffc200; color: #fff; }
+.chat-msg.user .chat-avatar { background: linear-gradient(135deg, #ffc200, #fdd24c); }
 
 .chat-bubble {
-    padding: 12px 18px; border-radius: 12px; font-size: 14px;
-    line-height: 1.8; word-break: break-word;
+    padding: 10px 16px; border-radius: 14px; font-size: 13px;
+    line-height: 1.7; word-break: break-word;
 }
 .chat-msg.assistant .chat-bubble {
     background: #f5f5f5; border-top-left-radius: 4px;
 }
 .chat-msg.user .chat-bubble {
-    background: #ffc200; color: #fff; border-top-right-radius: 4px;
+    background: linear-gradient(135deg, #ffc200, #fdd24c);
+    color: #333; border-top-right-radius: 4px;
 }
 
 /* 安全富文本 */
@@ -254,61 +284,59 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 .chat-bubble .msg-list { margin: 6px 0; padding-left: 20px; }
 .chat-bubble .msg-list li { margin: 3px 0; }
 .chat-bubble .msg-highlight {
-    background: #e6f7ff; color: #1890ff; padding: 2px 6px;
+    background: #fff3cd; color: #856404; padding: 2px 6px;
     border-radius: 4px; font-weight: 500;
 }
 
 /* 操作按钮组 */
-.action-btns {
-    display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
-}
 .action-btn {
-    padding: 6px 14px; border-radius: 6px; font-size: 13px;
-    border: 1px solid #d9d9d9; background: #fff; color: #303133;
-    cursor: pointer; transition: all 0.2s;
+    padding: 5px 12px; border-radius: 6px; font-size: 12px;
+    border: 1px solid #d9d9d9; background: #fff; color: #606266;
+    cursor: pointer; transition: all 0.15s;
 }
 .action-btn:hover { border-color: #ffc200; color: #ffc200; }
 .action-btn.primary { background: #ffc200; color: #fff; border-color: #ffc200; }
-/* 修改点：危险操作按钮统一使用项目红色 #f56c6c */
 .action-btn.danger { color: #f56c6c; border-color: #f56c6c; }
-.action-btn.danger:hover { background: #fef0f0; color: #f56c6c; border-color: #f56c6c; }
+.action-btn.danger:hover { background: #fef0f0; }
 
 /* 反馈栏 */
 .feedback-bar {
-    display: flex; gap: 8px; margin-top: 8px; padding-left: 4px;
+    display: flex; gap: 6px; margin-top: 6px; padding-left: 2px;
 }
 .feedback-btn {
-    padding: 3px 10px; border-radius: 12px; font-size: 12px;
-    border: 1px solid #d9d9d9; background: #fff; color: #606266;
-    cursor: pointer; transition: all 0.2s;
+    padding: 2px 8px; border-radius: 10px; font-size: 11px;
+    border: 1px solid #d9d9d9; background: #fff; color: #909399;
+    cursor: pointer; transition: all 0.15s;
 }
+.feedback-btn:hover { border-color: #a0a0a0; color: #606266; }
 .feedback-btn.active-good { border-color: #67c23a; color: #67c23a; background: #f0f9eb; }
 .feedback-btn.active-bad { border-color: #f56c6c; color: #f56c6c; background: #fef0f0; }
 
 /* 输入区 */
 .input-area {
-    display: flex; gap: 12px; padding: 16px 24px;
+    display: flex; gap: 10px; padding: 12px 16px;
     border-top: 1px solid #f0f0f0; background: #fff; flex-shrink: 0;
     align-items: center;
 }
 .input-area input {
-    flex: 1; border: 1px solid #d9d9d9; border-radius: 8px;
-    padding: 10px 16px; font-size: 14px; outline: none;
-    transition: border-color 0.2s;
+    flex: 1; border: 1px solid #e0e0e0; border-radius: 20px;
+    padding: 8px 18px; font-size: 13px; outline: none;
+    transition: all 0.15s; background: #fafafa;
 }
-.input-area input:focus { border-color: #ffc200; box-shadow: 0 0 0 2px rgba(64,158,255,0.1); }
+.input-area input:focus { border-color: #ffc200; background: #fff; box-shadow: 0 0 0 3px rgba(255,194,0,0.1); }
 .input-area input:disabled { background: #f5f5f5; }
 .send-btn {
-    padding: 10px 28px; background: #1890ff; color: #fff;
-    border: none; border-radius: 8px; font-size: 14px;
-    cursor: pointer; font-weight: 500; transition: all 0.2s;
+    padding: 8px 24px; background: linear-gradient(135deg, #ffc200, #fdd24c);
+    color: #333; border: none; border-radius: 20px;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
 }
-.send-btn:hover { background: #fdd24c; }
-.send-btn:disabled { background: #d9d9d9; cursor: not-allowed; }
+.send-btn:hover { opacity: 0.9; transform: scale(1.02); }
+.send-btn:disabled { background: #d9d9d9; color: #999; cursor: not-allowed; transform: none; }
 
 /* 加载动画 */
 .typing-dots {
-    display: flex; gap: 4px; padding: 4px 0;
+    display: flex; gap: 4px; padding: 2px 0;
 }
 .typing-dots span {
     width: 6px; height: 6px; border-radius: 50%; background: #bbb;
@@ -328,10 +356,11 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-/* 响应式 */
-@media (max-width: 768px) {
+/* ========== 响应式 ========== */
+@media (max-width: 900px) {
     .ai-layout { max-width: 100%; margin: 0; height: 100vh; border-radius: 0; }
-    .ai-sidebar { width: 0; min-width: 0; overflow: hidden; }
-    .ai-sidebar.open { width: 280px; min-width: 280px; }
+    .ai-sidebar { width: 0; min-width: 0; }
+    .ai-sidebar.open { width: 260px; min-width: 260px; position: absolute; top: 0; left: 0; bottom: 0; z-index: 10; }
+    .header-scenes { display: none; }
     .chat-msg { max-width: 92%; }
 }

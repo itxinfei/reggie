@@ -62,7 +62,7 @@
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="viewDetail(row)">查看详情</el-button>
-          <el-button v-if="row.status === 'SUCCESS'" type="text" size="small" class="btn-view" @click="openRefund(row)">退款</el-button>
+          <el-button v-if="row.status === '成功'" type="text" size="small" class="btn-view" @click="openRefund(row)">退款</el-button>
         </template>
       </crud-table>
     </div>
@@ -94,6 +94,9 @@
       @close="refundVisible = false"
     >
       <el-form label-width="100px">
+        <el-form-item label="支付订单号：">
+          <span>{{ refundForm.id }}</span>
+        </el-form-item>
         <el-form-item label="退款金额：">
           <el-input-number v-model="refundForm.amount" :precision="2" :min="0.01" :max="refundForm.maxAmount" :step="0.01"></el-input-number>
         </el-form-item>
@@ -130,8 +133,8 @@
               options: [{ label: '支付宝', value: 'ALIPAY' }, { label: '微信', value: 'WECHAT' }] },
             { type: 'select', field: 'status', placeholder: '支付状态', width: '130px',
               options: [
-                { label: '待支付', value: 'PENDING' }, { label: '成功', value: 'SUCCESS' },
-                { label: '失败', value: 'FAIL' }, { label: '已退款', value: 'REFUNDED' }
+                { label: '待支付', value: '待支付' }, { label: '成功', value: '成功' },
+                { label: '失败', value: '失败' }, { label: '已退款', value: '已退款' }
               ] },
             { type: 'date', field: 'orderTime', placeholder: '选择日期', width: '360px',
               beginField: 'beginTime', endField: 'endTime' }
@@ -158,10 +161,10 @@
         statsCards: function() {
           var self = this
           return [
-            { key: 'TODAY', icon: '💳', label: '今日支付订单', value: self.stats.todayPayments, color: 'primary', clickable: true, active: self.activeFilter === 'TODAY' },
-            { key: 'SUCCESS', icon: '✅', label: '支付成功', value: self.stats.successPayments, color: 'success', clickable: true, active: self.activeFilter === 'SUCCESS' },
-            { key: 'PENDING', icon: '⏳', label: '待支付', value: self.stats.pendingPayments, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
-            { key: 'FAIL', icon: '❌', label: '支付失败', value: self.stats.failedPayments, color: 'danger', clickable: true, active: self.activeFilter === 'FAIL' }
+            { key: '今日', icon: '💳', label: '今日支付订单', value: self.stats.todayPayments, color: 'primary', clickable: true, active: self.activeFilter === '今日' },
+            { key: '成功', icon: '✅', label: '支付成功', value: self.stats.successPayments, color: 'success', clickable: true, active: self.activeFilter === '成功' },
+            { key: '待支付', icon: '⏳', label: '待支付', value: self.stats.pendingPayments, color: 'warning', clickable: true, active: self.activeFilter === '待支付' },
+            { key: '失败', icon: '❌', label: '支付失败', value: self.stats.failedPayments, color: 'danger', clickable: true, active: self.activeFilter === '失败' }
           ]
         }
       },
@@ -199,9 +202,9 @@
               var records = allRes.data.records || []
               return { code: 1, data: {
                 todayPayments: (String(todayRes.code) === '1') ? (todayRes.data.total || 0) : 0,
-                successPayments: records.filter(function(r) { return r.status === 'SUCCESS' }).length,
-                pendingPayments: records.filter(function(r) { return r.status === 'PENDING' }).length,
-                failedPayments: records.filter(function(r) { return r.status === 'FAILED' || r.status === 'FAIL' }).length
+                successPayments: records.filter(function(r) { return r.status === '成功' || r.status === 'SUCCESS' }).length,
+                pendingPayments: records.filter(function(r) { return r.status === '待支付' || r.status === 'PENDING' }).length,
+                failedPayments: records.filter(function(r) { return r.status === '失败' || r.status === 'FAIL' }).length
               }}
             }
           } catch (err) { console.warn('加载支付统计数据失败:', err) }
@@ -210,19 +213,19 @@
         // stat-cards 点击
         onCardClick: function(payload) {
           var self = this
-          if (payload.key === 'TODAY') {
-            if (self.activeFilter === 'TODAY') {
+          if (payload.key === '今日') {
+            if (self.activeFilter === '今日') {
               self.activeFilter = ''
               self.lastSearch = {}
             } else {
-              self.activeFilter = 'TODAY'
+              self.activeFilter = '今日'
               var today = new Date()
               var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
               self.lastSearch = { beginTime: todayStr + ' 00:00:00', endTime: todayStr + ' 23:59:59' }
             }
-          } else if (payload.key === 'SUCCESS' || payload.key === 'PENDING' || payload.key === 'FAIL') {
+          } else if (payload.key === '成功' || payload.key === '待支付' || payload.key === '失败') {
             if (self.activeFilter === payload.key) { self.activeFilter = ''; self.lastSearch = {} }
-            else { self.activeFilter = payload.key; self.lastSearch = { status: payload.key === 'FAIL' ? 'FAIL' : payload.key } }
+            else { self.activeFilter = payload.key; self.lastSearch = { status: payload.key } }
           } else {
             self.activeFilter = ''
             self.lastSearch = {}
@@ -246,11 +249,13 @@
         onPageChange: function(payload) { this.page = payload.page; this.init() },
         onSizeChange: function(payload) { this.pageSize = payload.pageSize; this.init() },
         statusTagType: function(status) {
-          var map = { PENDING: 'warning', SUCCESS: 'success', FAIL: 'danger', REFUNDED: 'info' }
+          var map = { '待支付': 'warning', '成功': 'success', '失败': 'danger', '已退款': 'info',
+                       PENDING: 'warning', SUCCESS: 'success', FAIL: 'danger', REFUNDED: 'info', REFUND: 'info' }
           return map[status] || ''
         },
         statusLabel: function(status) {
-          var map = { PENDING: '待支付', SUCCESS: '成功', FAIL: '失败', REFUNDED: '已退款' }
+          var map = { '待支付': '待支付', '成功': '成功', '失败': '失败', '已退款': '已退款',
+                       PENDING: '待支付', SUCCESS: '成功', FAIL: '失败', REFUNDED: '已退款', REFUND: '已退款' }
           return map[status] || status
         },
         viewDetail: function(row) { this.detailForm = { ...row }; this.detailVisible = true },
@@ -266,10 +271,10 @@
           this.$confirm('确认退款 ￥' + self.refundForm.amount + '?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               paymentRefund({ id: self.refundForm.id, amount: self.refundForm.amount, reason: self.refundForm.reason }).then(function(res) {
-                if (res.code === 1) { self.$message.success('退款成功！'); self.refundVisible = false; self.init() }
-                else { self.$message.error(res.msg || '退款失败') }
-              }).catch(function(err) { self.$message.error('请求失败：' + err) })
-            })
+                if (res && res.code === 1) { self.$message.success('退款成功！'); self.refundVisible = false; self.init() }
+                else { self.$message.error(res ? res.msg : '退款失败') }
+              }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)) })
+            }).catch(function() { /* 用户取消确认 */ })
         }
       }
     })

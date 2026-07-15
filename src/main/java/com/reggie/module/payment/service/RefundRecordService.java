@@ -3,6 +3,9 @@ package com.reggie.module.payment.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.payment.model.RefundRecord;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 /**
  * <p>
  * 退款记录服务接口
@@ -23,13 +26,12 @@ public interface RefundRecordService extends IService<RefundRecord> {
     List<RefundRecord> listByOrderId(Long orderId);
 
     /**
-     * 创建退款申请
+     * 创建退款记录
      *
-     * @param orderId     订单ID
-     * @param amount      退款金额
-     * @param reason      退款原因
-     * @param operator    操作人
+     * @param paymentOrderId 支付订单ID
+     * @param amount         退款金额
+     * @param reason         退款原因
      * @return 退款记录
      */
-    RefundRecord createRefund(Long orderId, BigDecimal amount, String reason, String operator);
+    RefundRecord createRefund(Long paymentOrderId, BigDecimal amount, String reason);
 }

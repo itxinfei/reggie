@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     html, body { height: 100%; margin: 0; padding: 0; overflow-y: auto; overflow-x: hidden;
@@ -85,33 +86,8 @@
         <el-button type="success" size="small" icon="el-icon-download" @click="handleExport">导出 CSV</el-button>
       </div>
 
-      <!-- ========== KPI 卡片 ========== -->
-      <div class="stats-cards">
-        <div class="kpi-card primary">
-          <div class="kpi-icon-wrap">🕐</div>
-          <div class="kpi-label">时段数量</div>
-          <div class="kpi-value">{{ tableData.length || 0 }}</div>
-          <div class="kpi-sub">早市·午市·下午茶·晚市·夜市</div>
-        </div>
-        <div class="kpi-card success">
-          <div class="kpi-icon-wrap">📋</div>
-          <div class="kpi-label">总订单数</div>
-          <div class="kpi-value">{{ totalCount }}</div>
-          <div class="kpi-sub">选定时间范围汇总</div>
-        </div>
-        <div class="kpi-card warning">
-          <div class="kpi-icon-wrap">💰</div>
-          <div class="kpi-label">总营业额（元）</div>
-          <div class="kpi-value" style="font-size:22px;">¥{{ formatMoney(totalAmount) }}</div>
-          <div class="kpi-sub">所有时段合计</div>
-        </div>
-        <div class="kpi-card info">
-          <div class="kpi-icon-wrap">🔥</div>
-          <div class="kpi-label">高峰时段</div>
-          <div class="kpi-value" style="font-size:20px;">{{ peakSlot }}</div>
-          <div class="kpi-sub">订单量最高时段</div>
-        </div>
-      </div>
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 KPI 卡片 -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- ========== 时段分布图表 ========== -->
       <div class="chart-panel">
@@ -156,6 +132,7 @@
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../api/report.js"></script>
+  <script src="../../js/components.js"></script>
   <script>
     (function() {
       var COLORS = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#fc8452','#9a60b4'];
@@ -175,6 +152,16 @@
             if (!this.tableData.length) return '--';
             var p = this.tableData.reduce(function(m, r) { return (r.count || 0) > (m.count || 0) ? r : m; }, this.tableData[0]);
             return p.name || '--';
+          },
+          // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+          statsCards: function() {
+            var self = this;
+            return [
+              { key: '时段', icon: '🕐', label: '时段数量', value: self.tableData.length || 0, color: 'primary' },
+              { key: '订单', icon: '📋', label: '总订单数', value: self.totalCount, color: 'success' },
+              { key: '营业额', icon: '💰', label: '总营业额（元）', value: '¥' + self.formatMoney(self.totalAmount), color: 'warning' },
+              { key: '高峰', icon: '🔥', label: '高峰时段', value: self.peakSlot, color: 'info' }
+            ]
           }
         },
         created: function() {

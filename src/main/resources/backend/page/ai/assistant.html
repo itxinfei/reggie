@@ -54,30 +54,27 @@
 
         <!-- ========== 右侧主区域 ========== -->
         <div class="ai-main">
-            <!-- 顶部栏 -->
+            <!-- 修改点：紧凑单行头栏 — 集成侧边栏切换 + 标题 + 场景标签 + 连接状态 -->
             <div class="ai-header">
-                <span class="logo">🤖</span>
-                <h2>AI 经营分析助手</h2>
-                <span class="current-conv-title" v-if="currentConversation">
+                <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen" title="切换侧边栏">☰</button>
+                <span class="header-logo">🤖</span>
+                <span class="header-title">AI 经营分析助手</span>
+                <span class="current-conv-title" v-if="currentConversation" :title="currentConversation.title">
                     {{ currentConversation.title }}
                 </span>
-                <span class="subtitle">Powered by AI</span>
-            </div>
-
-            <!-- 场景切换 -->
-            <div class="scene-selector">
-                <span v-for="scene in scenes"
-                      :class="['scene-tag', { active: currentScene === scene.value }]"
-                      @click="switchScene(scene.value)">
-                    {{ scene.label }}
+                <div class="header-scenes">
+                    <span v-for="scene in scenes"
+                          :class="['scene-tag', { active: currentScene === scene.value }]"
+                          @click="switchScene(scene.value)">
+                        {{ scene.label }}
+                    </span>
+                </div>
+                <span class="header-conn" v-if="connectionStatus.model"
+                      :class="{ connected: connectionStatus.connected, checking: connectionStatus.checking, disconnected: !connectionStatus.connected && !connectionStatus.checking }"
+                      :title="connectionStatus.connected ? connectionStatus.model + ' 已连接' : (connectionStatus.checking ? '检测中...' : '未连接')">
+                    <span class="conn-dot"></span>
+                    {{ connectionStatus.model }}
                 </span>
-            </div>
-
-            <!-- 修改点：连接状态指示器，显示当前AI模型和连接状态 -->
-            <div class="connection-bar" v-if="connectionStatus.model">
-                <span :class="['status-dot', connectionStatus.connected ? 'connected' : (connectionStatus.checking ? 'checking' : 'disconnected')]"></span>
-                <span>{{ connectionStatus.model }}</span>
-                <span style="margin-left:auto;opacity:0.7;">{{ connectionStatus.connected ? '● 已连接' : (connectionStatus.checking ? '○ 检测中...' : '○ 未连接') }}</span>
             </div>
 
             <!-- 快捷卡片 -->

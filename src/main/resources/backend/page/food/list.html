@@ -69,7 +69,7 @@
         </template>
         <!-- 售价列 -->
         <template #col-price="{ row }">
-          <span>￥{{ row.price / 100 }}</span>
+          <span>￥{{ row.price }}</span>
         </template>
         <!-- 状态列 -->
         <template #col-status="{ row }">
@@ -90,6 +90,7 @@
           <el-button type="text" size="small" class="btn-view" @click="addFoodtype(row.id)">修改</el-button>
           <el-button type="text" size="small" class="btn-view" @click="statusHandle(row)">{{ row.status == '0' ? '启售' : '停售' }}</el-button>
           <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', row.id)">删除</el-button>
+          <el-button type="text" size="small" @click="editStock(row)">库存</el-button>
         </template>
       </crud-table>
     </div>
@@ -106,6 +107,9 @@
         <el-form-item label="菜品名称:" prop="name">
           <el-input v-model="dishForm.name" placeholder="请填写菜品名称" maxlength="20" />
         </el-form-item>
+        <el-form-item label="商品码:" prop="code">
+          <el-input v-model="dishForm.code" placeholder="请输入商品码（如条形码）" maxlength="64" />
+        </el-form-item>
         <el-form-item label="菜品分类:" prop="categoryId">
           <el-select v-model="dishForm.categoryId" placeholder="请选择菜品分类">
             <el-option v-for="item in dishList" :key="item.id" :label="item.name" :value="item.id" />
@@ -114,10 +118,20 @@
         <el-form-item label="菜品价格:" prop="price">
           <el-input v-model="dishForm.price" placeholder="请设置菜品价格" />
         </el-form-item>
+        <el-form-item label="排序:" prop="sort">
+          <el-input-number v-model="dishForm.sort" :min="0" :max="999" placeholder="排序值，越小越靠前" />
+        </el-form-item>
+        <el-form-item label="当前库存:">
+          <el-input-number v-model="dishForm.stockQty" :min="0" :precision="0" placeholder="不限库存则不填" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="最低库存预警:">
+          <el-input-number v-model="dishForm.minStock" :min="0" :precision="0" placeholder="库存低于此值时预警" style="width: 100%;" />
+        </el-form-item>
         <el-form-item label="菜品图片:" prop="image" class="uploadImg">
           <el-upload
             class="avatar-uploader"
             action="/common/upload"
+            name="file"
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
             :on-change="onChange"
@@ -162,6 +176,28 @@
         <el-button v-if="dishDialog.actionType == 'add'" type="primary" size="medium" class="continue" @click="submitDishForm('continue')">保存并继续添加</el-button>
       </div>
     </el-dialog>
+
+    <!-- 库存编辑弹窗 -->
+    <el-dialog title="编辑库存" :visible.sync="stockDialog.visible" width="450px" :close-on-click-modal="false">
+      <el-form :model="stockForm" label-width="120px">
+        <el-form-item label="菜品名称">
+          <span>{{ stockForm.name }}</span>
+        </el-form-item>
+        <el-form-item label="当前库存">
+          <span>{{ stockForm.stockQty }}</span>
+        </el-form-item>
+        <el-form-item label="库存数量">
+          <el-input v-model="stockForm.newStockQty" type="number" placeholder="请输入库存数量" />
+        </el-form-item>
+        <el-form-item label="最低库存预警">
+          <el-input v-model="stockForm.newMinStock" type="number" placeholder="请输入最低库存预警值" />
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="stockDialog.visible = false">取 消</el-button>
+        <el-button type="primary" @click="submitStockForm()">确 定</el-button>
+      </div>
+    </el-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -191,6 +227,7 @@
           // 搜索配置
           searchConfig: [
             { type: 'input', field: 'name', placeholder: '请输入菜品名称', width: '200px' },
+            { type: 'input', field: 'code', placeholder: '请输入商品码', width: '160px' },
             { type: 'select', field: 'categoryId', placeholder: '全部分类', width: '160px', options: [] }
           ],
           // 操作按钮配置
@@ -215,12 +252,15 @@
           lastSearch: {},
           // 弹窗相关
           dishDialog: { title: '添加菜品', visible: false, actionType: 'add', loading: false },
-          dishForm: { name: '', categoryId: '', price: '', image: '', imageUrl: '', description: '' },
+          dishForm: { name: '', code: '', categoryId: '', price: '', sort: 0, image: '', imageUrl: '', description: '', status: true },
           dishList: [],
           dishFlavors: [],
           dishFlavorsData: [],
           inputStyle: { 'flex': 1 },
-          index: 0
+          index: 0,
+          // 库存编辑
+          stockDialog: { visible: false },
+          stockForm: { id: '', name: '', stockQty: '', minStock: '', newStockQty: '', newMinStock: '' }
         }
       },
       computed: {
@@ -257,7 +297,7 @@
         async init() {
           this.loading = true
           var self = this
-          var params = { page: this.page, pageSize: this.pageSize, name: self.lastSearch.name || undefined, categoryId: self.lastSearch.categoryId || undefined }
+          var params = { page: this.page, pageSize: this.pageSize, name: self.lastSearch.name || undefined, code: self.lastSearch.code || undefined, categoryId: self.lastSearch.categoryId || undefined }
           if (self.activeFilter && self.activeFilter !== '') { params.status = self.activeFilter }
           var results = await Promise.all([getDishPage(params), self.loadDishStats()])
           var dishRes = results[0]
@@ -268,12 +308,14 @@
         },
         async loadDishStats() {
           try {
-            var results = await Promise.all([getDishPage({ page: 1, pageSize: 1 }), getDishPage({ page: 1, pageSize: 1000 })])
-            var totalRes = results[0]
-            var listRes = results[1]
-            if (String(totalRes.code) === '1') {
-              var records = listRes.data.records || []
-              return { code: 1, data: { totalDishes: totalRes.data.total || 0, activeDishes: records.filter(function(r) { return r.status === 1 }).length, inactiveDishes: records.filter(function(r) { return r.status === 0 }).length, deletedDishes: 0 } }
+            var res = await getDishStats()
+            if (String(res.code) === '1' && res.data) {
+              return { code: 1, data: {
+                totalDishes: res.data.total || 0,
+                activeDishes: res.data.activeDishes || 0,
+                inactiveDishes: res.data.inactiveDishes || 0,
+                deletedDishes: 0
+              }}
             }
           } catch (err) { console.warn('加载菜品统计数据失败:', err) }
           return { code: 0 }
@@ -332,7 +374,7 @@
             var res = await queryDishById(id)
             if (String(res.code) === '1') {
               var data = res.data
-              self.dishForm = { id: data.id, name: data.name, categoryId: data.categoryId, price: String(data.price / 100), image: data.image, imageUrl: '/common/download?name=' + data.image, description: data.description || '' }
+              self.dishForm = { id: data.id, name: data.name, code: data.code || '', categoryId: data.categoryId, price: String(data.price), sort: data.sort || 0, stockQty: data.stockQty != null ? String(data.stockQty) : '', minStock: data.minStock != null ? String(data.minStock) : '', image: data.image, imageUrl: '/common/download?name=' + data.image, description: data.description || '', status: String(data.status) === '1' }
               self.dishFlavors = data.flavors && data.flavors.map(function(obj) {
                 var parsedValue = []
                 if (obj.value) {
@@ -345,11 +387,33 @@
           } catch (err) { self.$message.error('请求失败：' + err) }
         },
         resetDishForm: function() {
-          this.dishForm = { name: '', categoryId: '', price: '', image: '', imageUrl: '', description: '' }
+          this.dishForm = { name: '', code: '', categoryId: '', price: '', sort: 0, stockQty: '', minStock: '', image: '', imageUrl: '', description: '', status: true }
           this.dishFlavors = []
           if (this.$refs.dishForm) { this.$refs.dishForm.resetFields() }
         },
         handleDialogClose: function() { this.dishDialog.visible = false; this.resetDishForm() },
+        // ========== 库存编辑 ==========
+        editStock: function(row) {
+          this.stockForm = {
+            id: row.id,
+            name: row.name,
+            stockQty: row.stockQty != null ? row.stockQty : 0,
+            minStock: row.minStock != null ? row.minStock : 0,
+            newStockQty: row.stockQty != null ? row.stockQty : 0,
+            newMinStock: row.minStock != null ? row.minStock : 0
+          }
+          this.stockDialog.visible = true
+        },
+        async submitStockForm() {
+          var self = this
+          var form = self.stockForm
+          if (form.newStockQty == null || form.newMinStock == null) { self.$message.warning('请填写完整的库存信息'); return }
+          try {
+            var res = await updateDishStock(form.id, { stockQty: form.newStockQty, minStock: form.newMinStock })
+            if (res.code === 1) { self.$message.success('库存更新成功'); self.stockDialog.visible = false; self.init() }
+            else { self.$message.error(res.msg || '库存更新失败') }
+          } catch (err) { self.$message.error('请求失败：' + err) }
+        },
         // 口味编辑方法
         addDialogFlavor: function() { this.dishFlavors.push({ name: '', value: [], inputVisible: false, inputValue: '' }) },
         delDialogFlavor: function(index) { this.dishFlavors.splice(index, 1) },
@@ -368,10 +432,19 @@
           var self = this
           this.$refs.dishForm.validate(function(valid) {
             if (!valid) return
-            var params = { ...self.dishForm }
-            params.price = params.price * 100
+            var params = {
+              name: self.dishForm.name,
+              code: self.dishForm.code,
+              categoryId: self.dishForm.categoryId,
+              price: self.dishForm.price,
+              sort: self.dishForm.sort || 0,
+              image: self.dishForm.image,
+              description: self.dishForm.description,
+              status: self.dishForm.status ? 1 : 0
+            }
             params.flavors = self.dishFlavors.map(function(obj) { return { name: obj.name, value: JSON.stringify(obj.value) } })
-            params.status = 1
+            if (self.dishForm.stockQty !== null && self.dishForm.stockQty !== undefined && self.dishForm.stockQty !== '') { params.stockQty = parseFloat(self.dishForm.stockQty) }
+            if (self.dishForm.minStock !== null && self.dishForm.minStock !== undefined && self.dishForm.minStock !== '') { params.minStock = parseFloat(self.dishForm.minStock) }
             if (!params.image) { self.$message.error('请上传菜品图片'); return }
             if (self.dishDialog.actionType === 'add') {
               addDish(params).then(function(res) {
@@ -380,6 +453,7 @@
                 else { self.$message.error(res.msg || '操作失败') }
               }).catch(function(err) { self.$message.error('请求失败：' + err) })
             } else {
+              params.id = self.dishForm.id
               editDish(params).then(function(res) {
                 if (res.code === 1) { self.$message.success('菜品修改成功！'); self.dishDialog.visible = false; self.init() }
                 else { self.$message.error(res.msg || '操作失败') }
@@ -402,7 +476,7 @@
         deleteHandle: function(type, id) {
           var self = this
           if (type === '批量' && id === null) { if (self.checkList.length === 0) { self.$message.error('请选择删除对象'); return } }
-          this.$confirm('确认删除该菜品, 是否继续?', '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消' })
+          this.$confirm('确认删除该菜品, 是否继续?', '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               deleteDish(type === '批量' ? self.checkList.join(',') : id).then(function(res) {
                 if (res.code === 1) { self.$message.success('删除成功！'); self.init() }

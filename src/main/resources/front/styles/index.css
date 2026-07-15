@@ -120,7 +120,14 @@ h4 {
 }
 
 p {
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ---- Vant 弹窗内容文字恢复 -- 全局 p 强制缩小，需单独恢复弹窗内文字 ---- */
+.van-dialog__message p {
+  font-size: 15px !important;
+  line-height: 1.7 !important;
 }
 
 em,

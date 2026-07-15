@@ -146,4 +146,8 @@ public class Orders implements Serializable {
 
     @Schema(description = "幂等令牌（防止重复下单）", example = "uuid-xxxx-xxxx")
     private String idempotencyKey;
+
+    @Schema(description = "库存是否已回退：0=否，1=是", example = "0")
+    @TableField("stock_refunded")
+    private Integer stockRefunded;
 }

@@ -6,10 +6,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.CustomException;
 import com.reggie.common.RedisCacheUtil;
 import com.reggie.dto.SetmealDto;
+import com.reggie.entity.Category;
 import com.reggie.entity.Setmeal;
 import com.reggie.entity.SetmealDish;
 import com.reggie.enums.DishStatus;
 import com.reggie.mapper.SetmealMapper;
+import com.reggie.service.CategoryService;
 import com.reggie.service.SetmealDishService;
 import com.reggie.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +25,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 套餐服务实现类
@@ -38,6 +41,10 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
     @Autowired
     private SetmealDishService setmealDishService;
 
+    /** 分类服务 */
+    @Autowired
+    private CategoryService categoryService;
+
     /** Redis缓存工具 */
     @Autowired
     private RedisCacheUtil redisCacheUtil;
@@ -51,6 +58,14 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveWithDish(SetmealDto setmealDto) {
+        // 校验分类是否存在
+        if (setmealDto.getCategoryId() != null) {
+            Category category = categoryService.getById(setmealDto.getCategoryId());
+            if (category == null) {
+                throw new CustomException("套餐分类不存在，请先创建分类");
+            }
+        }
+
         //保存套餐的基本信息，操作setmeal，执行insert操作
         this.save(setmealDto);
 
@@ -103,6 +118,12 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateWithDish(SetmealDto setmealDto) {
+        // 校验套餐是否存在
+        Setmeal existing = this.getById(setmealDto.getId());
+        if (existing == null) {
+            throw new CustomException("套餐不存在");
+        }
+
         this.updateById(setmealDto);
 
         LambdaQueryWrapper<SetmealDish> queryWrapper = new LambdaQueryWrapper<>();
@@ -127,30 +148,32 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
 
     /**
      * 删除套餐及关联菜品
-     * 先校验状态，再删除数据和缓存
+     * 逐条校验状态：售卖中的套餐拒绝删除，停售的套餐允许删除
+     *
+     * @param ids 套餐ID列表
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void removeWithDish(List<Long> ids) {
-        //select count(*) from setmeal where id in (1,2,3) and status = 1
-        //查询套餐状态，确定是否可用删除
-        LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.in(Setmeal::getId, ids);
-        queryWrapper.eq(Setmeal::getStatus, DishStatus.ENABLED.getValue());
+        // 逐条校验：查询传入ID中处于售卖状态的套餐
+        LambdaQueryWrapper<Setmeal> enabledQuery = new LambdaQueryWrapper<>();
+        enabledQuery.in(Setmeal::getId, ids)
+                    .eq(Setmeal::getStatus, DishStatus.ENABLED.getValue());
+        List<Setmeal> enabledSetmeals = this.list(enabledQuery);
 
-        int count = this.count(queryWrapper);
-        if(count > 0){
-            //如果不能删除，抛出一个业务异常
-            throw new CustomException("套餐正在售卖中，不能删除");
+        if (!enabledSetmeals.isEmpty()) {
+            List<String> enabledNames = enabledSetmeals.stream()
+                .map(Setmeal::getName)
+                .collect(Collectors.toList());
+            throw new CustomException("以下套餐正在售卖中，无法删除：" + String.join("、", enabledNames));
         }
 
-        //如果可以删除，先删除套餐表中的数据---setmeal
+        // 所有传入ID的套餐均为停售状态，允许删除
         this.removeByIds(ids);
 
-        //delete from setmeal_dish where setmeal_id in (1,2,3)
+        // delete from setmeal_dish where setmeal_id in (...)
         LambdaQueryWrapper<SetmealDish> lambdaQueryWrapper = new LambdaQueryWrapper<>();
-        lambdaQueryWrapper.in(SetmealDish::getSetmealId,ids);
-        //删除关系表中的数据----setmeal_dish
+        lambdaQueryWrapper.in(SetmealDish::getSetmealId, ids);
         setmealDishService.remove(lambdaQueryWrapper);
 
         // 事务提交后清除缓存

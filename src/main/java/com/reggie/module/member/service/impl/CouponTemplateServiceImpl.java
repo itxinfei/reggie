@@ -1,6 +1,7 @@
 package com.reggie.module.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.module.member.mapper.CouponTemplateMapper;
 import com.reggie.module.member.model.CouponTemplate;
@@ -35,13 +36,33 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
         if (template == null || template.getStatus() != 1) {
             return false;
         }
-        if (template.getRemainCount() <= 0) {
+
+        // SQL 原子扣减：remain_count = remain_count - 1，WHERE remain_count > 0 防止超发
+        LambdaUpdateWrapper<CouponTemplate> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(CouponTemplate::getId, templateId);
+        wrapper.gt(CouponTemplate::getRemainCount, 0);
+        wrapper.setSql("remain_count = remain_count - 1");
+        boolean deducted = update(wrapper);
+
+        if (!deducted) {
+            return false; // 库存不足，领取失败
+        }
+
+        // 检查是否已领取过（防重复领取）
+        LambdaQueryWrapper<CouponUser> existQw = new LambdaQueryWrapper<>();
+        existQw.eq(CouponUser::getMemberId, memberId);
+        existQw.eq(CouponUser::getTemplateId, templateId);
+        existQw.ne(CouponUser::getStatus, CouponStatus.EXPIRED.getValue());
+        if (couponUserService.count(existQw) > 0) {
+            // 已领取过，回滚已扣减的数量
+            LambdaUpdateWrapper<CouponTemplate> rollbackWrapper = new LambdaUpdateWrapper<>();
+            rollbackWrapper.eq(CouponTemplate::getId, templateId);
+            rollbackWrapper.setSql("remain_count = remain_count + 1");
+            update(rollbackWrapper);
             return false;
         }
 
-        template.setRemainCount(template.getRemainCount() - 1);
-        updateById(template);
-
+        // 创建用户优惠券记录
         CouponUser couponUser = new CouponUser();
         couponUser.setMemberId(memberId);
         couponUser.setTemplateId(templateId);

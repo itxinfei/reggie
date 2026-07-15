@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     /* ========== 采购管理专用样式 ========== */
@@ -22,49 +23,32 @@
 <body>
   <div class="dashboard-container" id="purchase-app">
     <div class="container">
-      <!-- 统计卡片 -->
-      <div class="stats-cards">
-        <div class="stat-card primary clickable" :class="{ active: cardFilter === '' }" @click="filterByStatus('')">
-          <div class="stat-icon">📦</div>
-          <div class="stat-label">采购单总数</div>
-          <div class="stat-value">{{ stats.totalOrders || 0 }}</div>
-        </div>
-        <div class="stat-card warning clickable" :class="{ active: cardFilter === 'DRAFT' }" @click="filterByStatus('DRAFT')">
-          <div class="stat-icon">📝</div>
-          <div class="stat-label">待审核</div>
-          <div class="stat-value">{{ stats.pendingApprove || 0 }}</div>
-        </div>
-        <div class="stat-card info clickable" :class="{ active: cardFilter === 'ORDERED' }" @click="filterByStatus('ORDERED')">
-          <div class="stat-icon">🚚</div>
-          <div class="stat-label">待收货</div>
-          <div class="stat-value">{{ stats.pendingReceive || 0 }}</div>
-        </div>
-        <div class="stat-card success">
-          <div class="stat-icon">💵</div>
-          <div class="stat-label">本月采购金额</div>
-          <div class="stat-value">¥{{ formatMoney(stats.monthAmount) }}</div>
-        </div>
-      </div>
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
+      <stat-cards :cards="statsCards" :active-key.sync="cardFilter" @card-click="onCardClick"></stat-cards>
 
       <!-- 采购趋势图 -->
       <div class="purchase-chart" id="purchaseTrendChart"></div>
 
-      <!-- 筛选与操作栏 -->
-      <div class="tableBar">
-        <el-select v-model="input.supplierId" placeholder="供应商" class="el-select--narrow" clearable @change="handleQuery">
-          <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
-        </el-select>
-        <el-select v-model="input.status" placeholder="状态" class="el-select--narrow-sm" clearable @change="handleQuery">
-          <el-option label="草稿" value="DRAFT"></el-option>
-          <el-option label="已下单" value="ORDERED"></el-option>
-          <el-option label="部分收货" value="PARTIAL"></el-option>
-          <el-option label="已收货" value="RECEIVED"></el-option>
-          <el-option label="已取消" value="CANCELLED"></el-option>
-        </el-select>
-        <el-button type="primary" class="btn-query" @click="handleQuery">查询</el-button>
-        <el-button class="btn-reset" @click="reset">重置</el-button>
-        <el-button type="primary" class="btn-add" @click="addHandle">+ 新增采购单</el-button>
-      </div>
+      <!-- 修改点：使用 <table-bar> 统一组件替代手写 HTML -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @search="handleQuery"
+        @reset="reset"
+        @action="onTableAction">
+        <template slot="search-extra">
+          <el-select v-model="input.supplierId" placeholder="供应商" class="el-select--narrow" clearable @change="handleQuery">
+            <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
+          </el-select>
+          <el-select v-model="input.status" placeholder="状态" class="el-select--narrow-sm" clearable @change="handleQuery">
+            <el-option label="草稿" value="DRAFT"></el-option>
+            <el-option label="已下单" value="ORDERED"></el-option>
+            <el-option label="部分收货" value="PARTIAL"></el-option>
+            <el-option label="已收货" value="RECEIVED"></el-option>
+            <el-option label="已取消" value="CANCELLED"></el-option>
+          </el-select>
+        </template>
+      </table-bar>
 
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
         <el-table-column type="expand">
@@ -148,6 +132,7 @@
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../api/inventory.js"></script>
+  <script src="../../js/components.js"></script>
   <script>
     new Vue({
       el: '#purchase-app',
@@ -156,6 +141,11 @@
           loading: false, counts: 0, page: 1, pageSize: 10, tableData: [],
           // 修改点：分离卡片筛选和下拉筛选，避免冲突
           cardFilter: '',
+          // 修改点：<table-bar> 统一组件配置
+          tableSearchItems: [],
+          tableActions: [
+            { key: 'add', text: '+ 新增采购单', type: 'primary' }
+          ],
           input: { supplierId: '', status: '' },
           supplierOptions: [], materialOptions: [],
           trendChart: null,
@@ -167,9 +157,32 @@
         }
       },
       created() { this.init() },
+      computed: {
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+          var self = this;
+          var s = self.stats || {};
+          return [
+            { key: '', icon: '📦', label: '采购单总数', value: s.totalOrders || 0, color: 'primary', clickable: true, active: self.cardFilter === '' },
+            { key: 'DRAFT', icon: '📝', label: '待审核', value: s.pendingApprove || 0, color: 'warning', clickable: true, active: self.cardFilter === 'DRAFT' },
+            { key: 'ORDERED', icon: '🚚', label: '待收货', value: s.pendingReceive || 0, color: 'info', clickable: true, active: self.cardFilter === 'ORDERED' },
+            { key: 'monthAmount', icon: '💵', label: '本月采购金额', value: '¥' + self.formatMoney(s.monthAmount), color: 'success' }
+          ]
+        }
+      },
       mounted() { window.addEventListener('resize', () => { if (this.trendChart) this.trendChart.resize() }) },
       beforeDestroy() { if (this.trendChart) this.trendChart.dispose() },
       methods: {
+        // 修改点：<stat-cards> 组件统一卡片点击分发
+        onCardClick: function(payload) {
+          this.cardFilter = this.cardFilter === payload.key ? '' : payload.key;
+          this.page = 1;
+          this.init();
+        },
+        // 修改点：<table-bar> 组件统一操作分发
+        onTableAction: function(payload) {
+          if (payload.key === 'add') { this.addHandle(); }
+        },
         async init() {
           this.loadSupplierOptions()
           // 加载统计

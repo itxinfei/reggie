@@ -166,15 +166,8 @@
           filterOptions: { platforms: [], statuses: [] },
           optionsLoading: false,
           optionsLoadError: false,
-          // 搜索配置
-          searchConfig: [
-            { type: 'select', field: 'platform', placeholder: '平台', width: '120px',
-              options: this.filterOptions ? this.filterOptions.platforms : [] },
-            { type: 'select', field: 'status', placeholder: '状态', width: '120px',
-              options: this.filterOptions ? this.filterOptions.statuses : [] },
-            { type: 'date', field: 'dateRange', placeholder: '选择日期', width: '300px',
-              beginField: 'startDate', endField: 'endDate' }
-          ],
+          // 搜索配置（选项由动态搜索栏提供）
+          searchConfig: [],
           // 操作按钮配置
           actionConfig: [
             { key: 'syncMenu', text: '同步菜品', type: 'primary' },
@@ -201,6 +194,8 @@
           cancelVisible: false,
           cancelLoading: false,
           cancelForm: {},
+          // 同步loading
+          syncLoading: false,
           // 状态映射表
           statusLabelMap: {
             'PENDING': '待接单', 'ACCEPTED': '已接单', 'PICKING': '取餐中',
@@ -342,6 +337,8 @@
         },
         // ==================== 同步操作 ====================
         async syncMenu() {
+          if (this.syncLoading) return
+          this.syncLoading = true
           try {
             var res = await deliverySyncMenu()
             if (String(res.code) === '1') this.$message.success('同步菜品成功')
@@ -349,9 +346,13 @@
           } catch (err) {
             if (err.message === 'NOTLOGIN') return
             this.$message.error('请求失败：' + err)
+          } finally {
+            this.syncLoading = false
           }
         },
         async syncStock() {
+          if (this.syncLoading) return
+          this.syncLoading = true
           try {
             var res = await deliverySyncStock()
             if (String(res.code) === '1') this.$message.success('同步库存成功')
@@ -359,6 +360,8 @@
           } catch (err) {
             if (err.message === 'NOTLOGIN') return
             this.$message.error('请求失败：' + err)
+          } finally {
+            this.syncLoading = false
           }
         },
         // ==================== 订单操作 ====================

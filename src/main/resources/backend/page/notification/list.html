@@ -7,20 +7,13 @@
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
     <link rel="stylesheet" href="../../styles/page.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+    <link rel="stylesheet" href="../../styles/components.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                background: #f0f2f5; color: #333; }
 
         .app-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-
-        /* 页头统计 */
-        .stat-icon.sms { background: #e6f7ff; color: #1890ff; }
-        .stat-icon.push { background: #f0f5ff; color: #722ed1; }
-        .stat-icon.success { background: #f6ffed; color: #52c41a; }
-        .stat-icon.fail { background: #fff2f0; color: #ff4d4f; }
-        .stat-value { font-size: 24px; font-weight: 700; color: #1a1a1a; }
-        .stat-label { font-size: 13px; color: #999; margin-top: 2px; }
 
         /* Tab */
         .tabs { display: flex; gap: 0; background: #fff; border-radius: 8px 8px 0 0; overflow: hidden;
@@ -127,37 +120,8 @@
 <body>
     <div id="app">
         <div class="app-container">
-            <!-- 统计卡片 -->
-            <div class="stats-cards stats-cards--flex">
-                <div class="stat-card stat-card--flex">
-                    <div class="stat-icon sms">📱</div>
-                    <div>
-                        <div class="stat-value">{{ stats.todaySms }}</div>
-                        <div class="stat-label">今日短信发送</div>
-                    </div>
-                </div>
-                <div class="stat-card stat-card--flex">
-                    <div class="stat-icon push">🔔</div>
-                    <div>
-                        <div class="stat-value">{{ stats.todayPush }}</div>
-                        <div class="stat-label">今日APP推送</div>
-                    </div>
-                </div>
-                <div class="stat-card stat-card--flex">
-                    <div class="stat-icon success">✅</div>
-                    <div>
-                        <div class="stat-value">{{ stats.todaySuccess }}</div>
-                        <div class="stat-label">发送成功</div>
-                    </div>
-                </div>
-                <div class="stat-card stat-card--flex">
-                    <div class="stat-icon fail">❌</div>
-                    <div>
-                        <div class="stat-value">{{ stats.todayFail }}</div>
-                        <div class="stat-label">发送失败</div>
-                    </div>
-                </div>
-            </div>
+            <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stats-cards -->
+            <stat-cards :cards="statsCards"></stat-cards>
 
             <!-- Mock模式提示 -->
             <div class="mock-banner" v-if="isMockMode">
@@ -588,6 +552,7 @@
     <script src="../../plugins/vue/vue.js"></script>
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
+    <script src="../../js/components.js"></script>
     <script src="../../api/notification.js"></script>
     <script>
         // 修改点：全新消息通知管理 - 支持用户选择器、短信发送、APP推送
@@ -636,6 +601,16 @@
             },
 
             computed: {
+                // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+                statsCards: function() {
+                    var self = this;
+                    return [
+                        { key: 'sms', icon: '📱', label: '今日短信发送', value: self.stats.todaySms || 0, color: 'primary' },
+                        { key: 'push', icon: '🔔', label: '今日APP推送', value: self.stats.todayPush || 0, color: 'info' },
+                        { key: 'success', icon: '✅', label: '发送成功', value: self.stats.todaySuccess || 0, color: 'success' },
+                        { key: 'fail', icon: '❌', label: '发送失败', value: self.stats.todayFail || 0, color: 'danger' }
+                    ]
+                },
                 selectedUsers: function() {
                     var self = this;
                     return self.users.filter(function(u) { return self.selectedIds.has(u.id); });

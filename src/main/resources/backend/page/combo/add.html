@@ -204,7 +204,7 @@
                       <el-table :data="dishTable" border class="tableBox">
                         <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
                         <el-table-column prop="price" label="原价" width="180">
-                          <template slot-scope="scope"> {{ Number(scope.row.price) / 100 }} </template>
+                          <template slot-scope="scope"> {{ Number(scope.row.price) }} </template>
                         </el-table-column>
                         <el-table-column prop="address" label="份数" align="center">
                           <template slot-scope="scope">
@@ -315,7 +315,7 @@
                       <div class="item">
                         <span class="item-name">{{ item.dishName }}</span>
                         <span>{{ item.status == 0 ? '停售' : '在售' }}</span>
-                        <span>{{ Number(item.price)/100 }}</span>
+                        <span>{{ Number(item.price) }}</span>
                       </div>
                     </el-checkbox>
                   </div>
@@ -334,7 +334,7 @@
                 class="item"
               >
                 <span>{{ item.dishName }}</span>
-                <span class="price">￥ {{ Number(item.price)/100 }} </span>
+                <span class="price">￥ {{ Number(item.price) }} </span>
                 <span
                   class="del"
                   @click="delCheck(ind)"
@@ -468,7 +468,7 @@
                   name: data.name,
                   categoryId: data.categoryId,
                   idType: data.categoryId,
-                  price: data.price / 100,
+                  price: String(data.price),
                   image: data.image,
                   description: data.description || '',
                   status: data.status == 1 || data.status === '1'
@@ -542,8 +542,6 @@
             this.$refs[formName].validate((valid) => {
               if (valid) {
                 let params = { ...this.ruleForm }
-                params.price *= 100
-                // 修改点：dishId 添加 fallback，兼容新旧数据
                 params.setmealDishes = this.dishTable.map((obj) => ({
                   copies: obj.copies,
                   dishId: obj.dishId || obj.id,

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <style>
     .chart-panels { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
     .chart-panel { flex: 1; min-width: 380px; background: #fff; border-radius: 14px;
@@ -27,33 +28,8 @@
 <body>
   <div class="dashboard-container" id="recharge-app">
     <div class="container">
-      <!-- ===== 统计卡片 ===== -->
-      <div class="stats-cards">
-        <div class="stat-card warning">
-          <div class="stat-icon">💰</div>
-          <div class="stat-label">累计充值总额</div>
-          <div class="stat-value">￥{{ fmtMoney(stats.totalAmount) }}</div>
-          <div class="sub">共 {{ stats.totalCount }} 笔充值记录</div>
-        </div>
-        <div class="stat-card success">
-          <div class="stat-icon">📅</div>
-          <div class="stat-label">今日充值</div>
-          <div class="stat-value">￥{{ fmtMoney(stats.todayAmount) }}</div>
-          <div class="sub">{{ stats.todayCount }} 笔交易</div>
-        </div>
-        <div class="stat-card primary">
-          <div class="stat-icon">📆</div>
-          <div class="stat-label">本月充值</div>
-          <div class="stat-value">￥{{ fmtMoney(stats.monthAmount) }}</div>
-          <div class="sub">{{ stats.monthCount }} 笔交易</div>
-        </div>
-        <div class="stat-card info">
-          <div class="stat-icon">📊</div>
-          <div class="stat-label">平均单笔充值</div>
-          <div class="stat-value">￥{{ fmtMoney(stats.avgAmount) }}</div>
-          <div class="sub">单笔均价</div>
-        </div>
-      </div>
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- ===== 图表区 ===== -->
       <div class="chart-panels">
@@ -126,6 +102,7 @@
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../api/member-center.js"></script>
+  <script src="../../js/components.js"></script>
   <script>
     new Vue({
       el: '#recharge-app',
@@ -140,9 +117,22 @@
           trendChart: null, paymentChart: null
         }
       },
+      computed: {
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+          var self = this;
+          return [
+            { key: '总额', icon: '💰', label: '累计充值总额', value: '￥' + self.fmtMoney(self.stats.totalAmount), color: 'warning' },
+            { key: '今日', icon: '📅', label: '今日充值', value: '￥' + self.fmtMoney(self.stats.todayAmount), color: 'success' },
+            { key: '本月', icon: '📆', label: '本月充值', value: '￥' + self.fmtMoney(self.stats.monthAmount), color: 'primary' },
+            { key: '平均', icon: '📊', label: '平均单笔充值', value: '￥' + self.fmtMoney(self.stats.avgAmount), color: 'info' }
+          ]
+        }
+      },
       created: function() { this.init() },
       mounted: function() { this.$nextTick(function() { this.initCharts() }) },
       methods: {
+        // 修改点：新增 fmtMoney 工具方法
         async init() {
           this.loading = true
           var params = { page: this.page, pageSize: this.pageSize, phone: this.input.phone || undefined, paymentMethod: this.input.paymentMethod || undefined }

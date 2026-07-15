@@ -82,7 +82,7 @@
         <div class="dish-info">
           <div class="dish-name">{{ dish.name }}</div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
-            <div class="dish-price">{{ (dish.price / 100).toFixed(2) }}</div>
+            <div class="dish-price">{{ Number(dish.price).toFixed(2) }}</div>
             <div style="font-size:11px;color:#909399;" v-if="dish.stockQty != null">库存{{ dish.stockQty }}</div>
           </div>
         </div>
@@ -110,7 +110,7 @@
       <div v-if="cart.length === 0" class="empty-cart">购物车是空的</div>
       <div v-for="item in cart" :key="item.dishId" class="cart-item">
         <div class="cart-item-name">{{ item.name }}</div>
-        <div class="cart-item-price">￥{{ (item.price / 100).toFixed(2) }}</div>
+        <div class="cart-item-price">￥{{ Number(item.price).toFixed(2) }}</div>
         <div class="qty-control">
           <button class="qty-btn" @click="changeQty(item, -1)" :disabled="item.qty <= 1">-</button>
           <span class="qty-num">{{ item.qty }}</span>
@@ -165,7 +165,7 @@
         return {
           tableId: null,
           tableInfo: null,
-          storeInfo: null,
+          storeInfo: {},
           dishes: [],
           categories: [],
           activeCategory: 0,
@@ -263,7 +263,7 @@
           return this.cart.reduce((sum, item) => sum + item.qty, 0)
         },
         cartAmount() {
-          return this.cart.reduce((sum, item) => sum + (item.price / 100) * item.qty, 0)
+          return this.cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0)
         },
         showCartDialog() {
           this.cartDialog.visible = true
@@ -294,7 +294,7 @@
                 name: item.name,
                 image: item.image,
                 number: item.qty,
-                amount: item.price / 100,
+                amount: Number(item.price)
                 dishFlavor: ''
               }
             })

@@ -5,6 +5,7 @@
     <title>智能推荐概览</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+    <link rel="stylesheet" href="../../styles/components.css" />
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -68,33 +69,8 @@
         </div>
     </div>
 
-    <!-- 算法状态卡片 -->
-    <div class="stats-cards">
-        <div class="stat-card primary">
-            <div class="trend-icon blue">🎯</div>
-            <div class="stat-label">推荐覆盖率</div>
-            <div class="stat-value">{{ stats.hybridRate || '--' }}<span style="font-size:14px;" v-if="stats.hybridRate">%</span></div>
-            <div class="sub">CF + Content + HotRank 混合</div>
-        </div>
-        <div class="stat-card success">
-            <div class="trend-icon green">👆</div>
-            <div class="stat-label">推荐点击率 (CTR)</div>
-            <div class="stat-value">{{ stats.clickRate || '--' }}<span style="font-size:14px;" v-if="stats.clickRate">%</span></div>
-            <div class="sub">近7天 <span class="trend-up" v-if="stats.ctrTrend > 0">↑ {{ stats.ctrTrend }}%</span></div>
-        </div>
-        <div class="stat-card warning">
-            <div class="trend-icon orange">🔄</div>
-            <div class="stat-label">推荐转化率</div>
-            <div class="stat-value">{{ stats.conversionRate || '--' }}<span style="font-size:14px;" v-if="stats.conversionRate">%</span></div>
-            <div class="sub">加购/点击比 <span class="trend-up" v-if="stats.cvrTrend > 0">↑ {{ stats.cvrTrend }}%</span></div>
-        </div>
-        <div class="stat-card info">
-            <div class="trend-icon purple">💰</div>
-            <div class="stat-label">推荐贡献GMV</div>
-            <div class="stat-value">¥{{ formatValue(stats.recommendGMV) }}</div>
-            <div class="sub">推荐入口产生的订单金额</div>
-        </div>
-    </div>
+    <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
+    <stat-cards :cards="statsCards"></stat-cards>
 
     <!-- 图表行 -->
     <div class="charts-row">
@@ -171,8 +147,9 @@
 <script src="../../plugins/axios/axios.min.js"></script>
 <script src="../../js/request.js"></script>
 <script src="../../api/recommend.js"></script>
+<script src="../../js/components.js"></script>
 <script>
-new Vue({
+  new Vue({
     el: '#app',
     data: {
         loadingAll: false,
@@ -187,6 +164,18 @@ new Vue({
         preferenceChart: null,
         algoChart: null,
         browseChart: null
+    },
+    computed: {
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards() {
+            var self = this;
+            return [
+                { key: '覆盖率', icon: '🎯', label: '推荐覆盖率', value: (self.stats.hybridRate != null ? self.stats.hybridRate + '%' : '--'), color: 'primary' },
+                { key: 'CTR', icon: '👆', label: '推荐点击率 (CTR)', value: (self.stats.clickRate != null ? self.stats.clickRate + '%' : '--'), color: 'success' },
+                { key: '转化率', icon: '🔄', label: '推荐转化率', value: (self.stats.conversionRate != null ? self.stats.conversionRate + '%' : '--'), color: 'warning' },
+                { key: 'GMV', icon: '💰', label: '推荐贡献GMV', value: '¥' + self.formatValue(self.stats.recommendGMV), color: 'info' }
+            ]
+        }
     },
     mounted() {
         this.$nextTick(() => {
@@ -419,13 +408,15 @@ new Vue({
         },
         formatPrice(price) {
             if (!price && price !== 0) return '0.00';
-            if (typeof price !== 'number') return String(price);
-            return (price / 100).toFixed(2);
+            if (typeof price !== 'number') price = Number(price)
+            if (isNaN(price)) return '0.00'
+            return price.toFixed(2);
         },
         formatValue(val) {
             if (val === null || val === undefined) return '--';
-            if (typeof val === 'number') return (val / 100).toFixed(2);
-            return String(val);
+            if (typeof val !== 'number') val = Number(val)
+            if (isNaN(val)) return '--'
+            return val.toFixed(2);
         }
     }
 });

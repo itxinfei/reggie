@@ -10,66 +10,36 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <style>
   </style>
 </head>
 <body>
   <div class="dashboard-container" id="user-app">
     <div class="container">
-      <!-- ========== 数据统计卡片 ========== -->
-      <!-- 修改点：卡片可点击筛选，点击后自动设置状态筛选项并查询 -->
-      <div class="stats-cards">
-        <div class="stat-card primary clickable" :class="{ active: activeFilter === '' }" @click="filterByStatus('')">
-          <div class="stat-icon">👥</div>
-          <div class="stat-label">用户总数</div>
-          <div class="stat-value">{{ stats.totalUsers || 0 }}</div>
-        </div>
-        <div class="stat-card success clickable" :class="{ active: activeFilter === 1 }" @click="filterByStatus(1)">
-          <div class="stat-icon">✅</div>
-          <div class="stat-label">正常用户</div>
-          <div class="stat-value">{{ stats.activeUsers || 0 }}</div>
-        </div>
-        <div class="stat-card warning clickable" :class="{ active: activeFilter === 0 }" @click="filterByStatus(0)">
-          <div class="stat-icon">🚫</div>
-          <div class="stat-label">已禁用</div>
-          <div class="stat-value">{{ stats.disabledUsers || 0 }}</div>
-        </div>
-        <div class="stat-card danger">
-          <div class="stat-icon">🆕</div>
-          <div class="stat-label">本月新增</div>
-          <div class="stat-value">{{ stats.newUsersThisMonth || 0 }}</div>
-        </div>
-      </div>
+      <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
-      <!-- 搜索项 -->
-      <div class="tableBar">
-        <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框，选项从数据库加载 -->
-        <el-select v-model="input.name" placeholder="请选择用户姓名" class="el-select--narrow-xs" clearable filterable size="small"
-          :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">
-          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
-        </el-select>
-        <el-select v-model="input.phone" placeholder="请选择手机号" class="el-select--narrow-xs" clearable filterable size="small"
-          :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">
-          <el-option v-for="p in filterOptions.phones" :key="p" :label="p" :value="p"></el-option>
-        </el-select>
-            class="el-input__icon el-icon-search"
-            style="cursor: pointer"
-            @click="handleQuery"
-          ></i>
-        </el-input>
-        <el-input
-          v-model="input.phone"
-          placeholder="请输入手机号"
-          clearable
-          @keyup.enter.native="handleQuery"
-        ></el-input>
-        <el-select v-model="input.status" placeholder="请选择状态" class="el-select--narrow" clearable @change="handleQuery">
-          <el-option label="正常" :value="1"></el-option>
-          <el-option label="禁用" :value="0"></el-option>
-        </el-select>
-        <el-button type="primary" class="btn-query" @click="handleQuery">查询</el-button>
-        <el-button class="btn-reset" @click="reset">重置</el-button>
-      </div>
+      <!-- 修改点：使用 <table-bar> 统一组件 -->
+      <table-bar
+        :search-items="tableSearchItems"
+        @search="handleQuery"
+        @reset="reset">
+        <template slot="search-extra">
+          <el-select v-model="input.name" placeholder="请选择用户姓名" class="el-select--narrow-xs" clearable filterable size="small"
+            :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">
+            <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+          </el-select>
+          <el-select v-model="input.phone" placeholder="请选择手机号" class="el-select--narrow-xs" clearable filterable size="small"
+            :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">
+            <el-option v-for="p in filterOptions.phones" :key="p" :label="p" :value="p"></el-option>
+          </el-select>
+          <el-select v-model="input.status" placeholder="请选择状态" class="el-select--narrow" clearable @change="handleQuery">
+            <el-option label="正常" :value="1"></el-option>
+            <el-option label="禁用" :value="0"></el-option>
+          </el-select>
+        </template>
+      </table-bar>
       <el-table
         v-loading="loading"
         :data="tableData"
@@ -93,11 +63,12 @@
             {{ scope.row.sex === '1' ? '男' : scope.row.sex === '0' ? '女' : '未知' }}
           </template>
         </el-table-column>
-        <el-table-column
-          prop="idNumber"
-          label="身份证号"
-          show-overflow-tooltip
-        ></el-table-column>
+        <el-table-column label="身份证号" show-overflow-tooltip>
+          <template slot-scope="scope">
+            <span v-if="scope.row.idNumber">{{ maskIdNumber(scope.row.idNumber) }}</span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="头像" align="center" width="80">
           <template slot-scope="scope">
             <el-image
@@ -170,6 +141,7 @@
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script>
     new Vue({
       el: '#user-app',
@@ -196,8 +168,11 @@
             disabledUsers: 0,
             newUsersThisMonth: 0
           },
-          // 修改点：当前激活的筛选器值，对应 stats-card
+          // 修改点：当前激活的筛选器值，对应 <stat-cards> 组件
           activeFilter: '',
+          // 修改点：<table-bar> 统一组件配置
+          tableSearchItems: [],
+          tableActions: [],
           // 状态切换对话框
           statusDialog: {
             visible: false,
@@ -214,7 +189,39 @@
       },
       mounted() {
       },
+      computed: {
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+          var self = this;
+          return [
+            { key: '', icon: '👥', label: '用户总数', value: self.stats.totalUsers || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '1', icon: '✅', label: '正常用户', value: self.stats.activeUsers || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
+            { key: '0', icon: '🚫', label: '已禁用', value: self.stats.disabledUsers || 0, color: 'warning', clickable: true, active: self.activeFilter === '0' },
+            { key: 'new', icon: '🆕', label: '本月新增', value: self.stats.newUsersThisMonth || 0, color: 'danger' }
+          ]
+        }
+      },
       methods: {
+        // 身份证号脱敏：保留前6位和后4位
+        maskIdNumber: function(idNumber) {
+          if (!idNumber || idNumber.length < 10) return idNumber
+          return idNumber.substring(0, 6) + '********' + idNumber.substring(idNumber.length - 4)
+        },
+        // 修改点：<stat-cards> 组件统一卡片点击分发
+        onCardClick: function(payload) {
+          var key = payload.key;
+          if (this.activeFilter === key) {
+            this.activeFilter = '';
+            this.input.status = null;
+          } else {
+            this.activeFilter = key;
+            this.input.status = key === '' ? null : Number(key);
+          }
+          this.input.name = '';
+          this.input.phone = '';
+          this.page = 1;
+          this.init();
+        },
         // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
         async loadFilterOptions() {
           this.optionsLoading = true
@@ -340,21 +347,7 @@
           this.page = 1
           this.init()
         },
-        // 修改点：stats-card 点击切换筛选状态（同步修改 search 区域的 status 下拉框，清空其他搜索）
-        filterByStatus(status) {
-          if (this.activeFilter === status) {
-            this.activeFilter = ''
-            this.input.status = null
-          } else {
-            this.activeFilter = status
-            this.input.status = status
-          }
-          // 修改点：卡片筛选时清空姓名/手机搜索条件
-          this.input.name = ''
-          this.input.phone = ''
-          this.page = 1
-          this.init()
-        },
+        // filterByStatus 已迁移至 onCardClick
 
         // 状态切换（禁用/启用）
         statusHandle(row) {

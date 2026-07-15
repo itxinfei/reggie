@@ -96,7 +96,7 @@
         :model="ruleForm"
         :rules="rules"
         :inline="false"
-        label-width="180px"
+        label-width="120px"
         class="demo-ruleForm"
       >
         <el-form-item
@@ -107,6 +107,16 @@
             v-model="ruleForm.name"
             placeholder="请填写菜品名称"
             maxlength="20"
+          />
+        </el-form-item>
+        <el-form-item
+          label="商品码:"
+          prop="code"
+        >
+          <el-input
+            v-model="ruleForm.code"
+            placeholder="请输入商品码"
+            maxlength="64"
           />
         </el-form-item>
         <el-form-item
@@ -128,6 +138,15 @@
             v-model="ruleForm.price"
             placeholder="请设置菜品价格"
           />
+        </el-form-item>
+        <el-form-item label="排序:">
+          <el-input-number v-model="ruleForm.sort" :min="0" :max="999" placeholder="越小越靠前" />
+        </el-form-item>
+        <el-form-item label="当前库存:">
+          <el-input v-model="ruleForm.stockQty" type="number" placeholder="库存数量，不填则不限库存" />
+        </el-form-item>
+        <el-form-item label="最低库存预警:">
+          <el-input v-model="ruleForm.minStock" type="number" placeholder="库存低于此值时提醒" />
         </el-form-item>
         <el-form-item label="口味做法配置:">
           <div class="flavorBox">
@@ -194,6 +213,7 @@
             <el-upload
               class="avatar-uploader"
               action="/common/upload"
+              name="file"
               :show-file-list="false"
               :on-success="handleAvatarSuccess"
               :on-change="onChange"
@@ -284,6 +304,9 @@
               'description': '',
               'dishFlavors': [],
               'status': true,
+              'sort': 0,
+              'stockQty': '',
+              'minStock': '',
               categoryId: ''
             },
             mak: false
@@ -341,7 +364,7 @@
             queryDishById(this.id).then(res => {
               if (String(res.code) === '1') {
                 this.ruleForm = { ...res.data }
-                this.ruleForm.price = String(res.data.price/100)
+                this.ruleForm.price = String(res.data.price)
                 this.ruleForm.status = String(res.data.status) === '1'
                 // 修改点：安全的 JSON.parse，兼容数据库中 value 为非 JSON 的情况
                 this.dishFlavors = res.data.flavors && res.data.flavors.map(obj => {
@@ -507,16 +530,26 @@
           submitForm(formName, st) {
             this.$refs[formName].validate((valid) => {
               if (valid) {
-                let params = {...this.ruleForm}
-                // params.flavors = this.dishFlavors
-                params.status = this.ruleForm.status ? 1 : 0
-                params.price *= 100
-                params.categoryId = this.ruleForm.categoryId
+                var params = {
+                  name: this.ruleForm.name,
+                  code: this.ruleForm.code,
+                  categoryId: this.ruleForm.categoryId,
+                  price: this.ruleForm.price,
+                  sort: this.ruleForm.sort || 0,
+                  image: this.ruleForm.image,
+                  description: this.ruleForm.description,
+                  status: this.ruleForm.status ? 1 : 0
+                }
                 params.flavors = this.dishFlavors.map(obj => ({ ...obj, value: JSON.stringify(obj.value) }))
-                delete params.dishFlavors
-                if(!this.imageUrl){
+                if (this.ruleForm.stockQty !== null && this.ruleForm.stockQty !== undefined && this.ruleForm.stockQty !== '') {
+                  params.stockQty = parseFloat(this.ruleForm.stockQty)
+                }
+                if (this.ruleForm.minStock !== null && this.ruleForm.minStock !== undefined && this.ruleForm.minStock !== '') {
+                  params.minStock = parseFloat(this.ruleForm.minStock)
+                }
+                if (!this.imageUrl) {
                   this.$message.error('请上传菜品图片')
-                  return 
+                  return
                 }
                 if (this.actionType === 'add') {
                   delete params.id
@@ -534,6 +567,9 @@
                           'id': '',
                           'price': '',
                           'code': '',
+                          'sort': 0,
+                          'stockQty': '',
+                          'minStock': '',
                           'image': '',
                           'description': '',
                           'dishFlavors': [],

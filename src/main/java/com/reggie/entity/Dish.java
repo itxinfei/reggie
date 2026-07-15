@@ -53,6 +53,7 @@ public class Dish implements Serializable {
     private String code;
 
     @Schema(description = "菜品图片", example = "https://xxx.com/1.jpg")
+    @NotBlank(message = "菜品图片不能为空")
     @Size(max = 200, message = "图片路径不能超过200个字符")
     private String image;
 

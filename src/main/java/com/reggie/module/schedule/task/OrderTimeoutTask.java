@@ -41,19 +41,32 @@ public class OrderTimeoutTask {
     @Autowired
     private ReportService reportService;
 
+    /** 订单超时检查间隔（毫秒）：5分钟 */
+    private static final long ORDER_TIMEOUT_CHECK_INTERVAL = 5 * 60 * 1000L;
+    /** 订单超时阈值（分钟）：30分钟未接单自动取消 */
+    private static final int ORDER_TIMEOUT_MINUTES = 30;
+    /** 库存预警检查间隔（毫秒）：1小时 */
+    private static final long INVENTORY_ALERT_CHECK_INTERVAL = 60 * 60 * 1000L;
+
     /**
      * 订单超时自动取消
      * 每5分钟执行一次，取消超过30分钟未接单的订单（status=2 待接单）
      */
-    @Scheduled(fixedRate = 5 * 60 * 1000)
+    @Scheduled(fixedRate = ORDER_TIMEOUT_CHECK_INTERVAL)
     public void cancelTimeoutOrders() {
         try {
             // 超时阈值：30分钟前
-            LocalDateTime timeoutThreshold = LocalDateTime.now().minusMinutes(30);
+            LocalDateTime timeoutThreshold = LocalDateTime.now().minusMinutes(ORDER_TIMEOUT_MINUTES);
 
             LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(Orders::getStatus, Orders.STATUS_ORDERED)
                    .lt(Orders::getOrderTime, timeoutThreshold);
+
+            // 按租户过滤，避免扫描其他租户的订单
+            Long tenantId = BaseContext.getCurrentTenantId();
+            if (tenantId != null) {
+                wrapper.eq(Orders::getTenantId, tenantId);
+            }
 
             List<Orders> timeoutOrders = orderService.list(wrapper);
             if (timeoutOrders.isEmpty()) {
@@ -62,15 +75,29 @@ public class OrderTimeoutTask {
 
             log.info("[定时任务] 发现{}个超时未接单订单，准备自动取消", timeoutOrders.size());
 
-            for (Orders order : timeoutOrders) {
+            // 按租户分组处理，确保每个租户的订单在正确的租户上下文中取消
+            java.util.Map<Long, java.util.List<Orders>> ordersByTenant = timeoutOrders.stream()
+                    .filter(o -> o.getTenantId() != null)
+                    .collect(java.util.stream.Collectors.groupingBy(Orders::getTenantId));
+
+            for (java.util.Map.Entry<Long, java.util.List<Orders>> entry : ordersByTenant.entrySet()) {
+                Long tenantId = entry.getKey();
+                java.util.List<Orders> tenantOrders = entry.getValue();
+                BaseContext.setCurrentTenantId(tenantId);
                 try {
-                    order.setStatus(Orders.STATUS_CANCELLED);
-                    order.setRemark("超时未接单，系统自动取消");
-                    orderService.updateById(order);
-                    log.warn("[定时任务] 订单超时自动取消: orderId={}, number={}, orderTime={}",
-                        order.getId(), order.getNumber(), order.getOrderTime());
-                } catch (Exception e) {
-                    log.error("[定时任务] 取消超时订单失败: orderId={}, error={}", order.getId(), e.getMessage());
+                    for (Orders order : tenantOrders) {
+                        try {
+                            // 使用 cancelOrder 统一处理：回退库存 + 标记 stockRefunded
+                            orderService.cancelOrder(order.getId(), "超时未接单，系统自动取消");
+                            log.warn("[定时任务] 订单超时自动取消（库存已回退）: orderId={}, number={}, orderTime={}, tenantId={}",
+                                order.getId(), order.getNumber(), order.getOrderTime(), tenantId);
+                        } catch (Exception e) {
+                            log.error("[定时任务] 取消超时订单失败: orderId={}, tenantId={}, error={}",
+                                order.getId(), tenantId, e.getMessage());
+                        }
+                    }
+                } finally {
+                    BaseContext.remove();
                 }
             }
         } catch (Exception e) {
@@ -104,7 +131,7 @@ public class OrderTimeoutTask {
      * 库存预警检查
      * 每小时执行一次，检查食材库存是否低于预警线
      */
-    @Scheduled(fixedRate = 60 * 60 * 1000)
+    @Scheduled(fixedRate = INVENTORY_ALERT_CHECK_INTERVAL)
     public void checkInventoryAlert() {
         try {
             LambdaQueryWrapper<Material> wrapper = new LambdaQueryWrapper<>();

@@ -14,7 +14,10 @@ class StatusEnumTest {
     @Test
     void testOrderStatus() {
         assertEquals(1, OrderStatus.PENDING_PAYMENT.getValue());
-        assertEquals(6, OrderStatus.CANCELLED.getValue());
+        assertEquals(5, OrderStatus.CANCELLED.getValue());
+        assertEquals(6, OrderStatus.REFUNDED.getValue());
+        assertEquals(OrderStatus.ORDERED, OrderStatus.fromCode(2));
+        assertEquals(OrderStatus.COMPLETED, OrderStatus.fromCode(4));
     }
 
     @Test

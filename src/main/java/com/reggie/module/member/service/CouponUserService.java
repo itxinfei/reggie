@@ -3,6 +3,8 @@ package com.reggie.module.member.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.member.model.CouponUser;
 
+import java.util.List;
+
 /**
  * <p>
  * 用户优惠券服务接口

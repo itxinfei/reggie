@@ -8,6 +8,7 @@ import com.reggie.common.CustomException;
 import com.reggie.entity.DishEvaluation;
 import com.reggie.mapper.DishEvaluationMapper;
 import com.reggie.service.DishEvaluationService;
+import org.apache.commons.text.StringEscapeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -165,7 +166,15 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
             evaluation.setStatus(0);
         }
 
-        // 设置租户ID（从当前上下文获取）
+        // XSS防护：对评价内容和菜品名称进行HTML转义
+        if (evaluation.getContent() != null) {
+            evaluation.setContent(StringEscapeUtils.escapeHtml4(evaluation.getContent()));
+        }
+        if (evaluation.getDishName() != null) {
+            evaluation.setDishName(StringEscapeUtils.escapeHtml4(evaluation.getDishName()));
+        }
+
+        // 设置租户ID（从当前上下文获取防
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户信息缺失");
@@ -217,6 +226,10 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
             throw new CustomException("该评价已回复，不能重复回复");
         }
 
+        // XSS防护：对商家回复内容进行HTML转义
+        if (replyContent != null) {
+            replyContent = StringEscapeUtils.escapeHtml4(replyContent);
+        }
         // 设置回复信息
         evaluation.setReplyContent(replyContent);
         evaluation.setReplyTime(LocalDateTime.now());

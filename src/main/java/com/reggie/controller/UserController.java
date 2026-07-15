@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import java.security.SecureRandom;
@@ -145,7 +146,7 @@ public class UserController {
      */
     @PostMapping("/login")
     @Operation(summary = "用户登录", description = "手机号+验证码登录，新用户自动注册，支持防暴力破解保护")
-    public R<User> login(@Valid @RequestBody UserLoginDTO dto, HttpSession session){
+    public R<User> login(HttpServletRequest request, @Valid @RequestBody UserLoginDTO dto, HttpSession session){
         String phone = dto.getPhone();
         String code = dto.getCode();
 
@@ -200,6 +201,8 @@ public class UserController {
         if (user.getTenantId() != null) {
             session.setAttribute("tenantId", user.getTenantId());
         }
+        // 防止Session Fixation攻击：登录成功后切换Session ID
+        request.changeSessionId();
         return R.success(user);
     }
 

@@ -8,27 +8,31 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
 </head>
 <body>
   <div class="dashboard-container" id="region-app">
     <div class="container">
-      <!-- 搜索栏 -->
-      <div class="tableBar">
-        <!-- 修改点：通用优化方案 — 文本输入框改为动态下拉框 -->
-        <el-select v-model="input.name" placeholder="选择地区名称" class="el-select--narrow-xs" clearable filterable size="small"
-          :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="handleQuery" @visible-change="onFilterDropdownVisible">
-          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
-        </el-select>
-        <el-select v-model="input.level" placeholder="层级" clearable class="el-select--wide-xs" @change="handleQuery">
-          <el-option label="全部" :value="null"></el-option>
-          <el-option label="省份" :value="1"></el-option>
-          <el-option label="城市" :value="2"></el-option>
-          <el-option label="区/县" :value="3"></el-option>
-        </el-select>
-        <el-button type="primary" class="btn-query" @click="handleQuery">查询</el-button>
-        <el-button class="btn-reset" @click="reset">重置</el-button>
-        <el-button type="primary" class="btn-add" @click="addHandle">+ 新增地区</el-button>
-      </div>
+      <!-- 修改点：使用 <table-bar> 统一组件 -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @search="handleQuery"
+        @reset="reset"
+        @action="onTableAction">
+        <template slot="search-extra">
+          <el-select v-model="input.name" placeholder="选择地区名称" class="el-select--narrow-xs" clearable filterable size="small"
+            :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="handleQuery" >
+            <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+          </el-select>
+          <el-select v-model="input.level" placeholder="层级" clearable class="el-select--wide-xs" @change="handleQuery">
+            <el-option label="全部" :value="null"></el-option>
+            <el-option label="省份" :value="1"></el-option>
+            <el-option label="城市" :value="2"></el-option>
+            <el-option label="区/县" :value="3"></el-option>
+          </el-select>
+        </template>
+      </table-bar>
 
       <!-- 数据表格 -->
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
@@ -96,7 +100,8 @@
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../api/region.js"></script>
-  <script>
+  <script src="../../js/components.js"></script>
+<script>
     new Vue({
       el: '#region-app',
       data() {
@@ -104,6 +109,11 @@
           input: { name: '', level: null },
           // 修改点：搜索下拉框动态选项（从数据库加载地区名称）
           filterOptions: { names: [] },
+          // 修改点：<table-bar> 统一组件配置
+          tableSearchItems: [],
+          tableActions: [
+            { key: 'add', text: '+ 新增地区', type: 'primary' }
+          ],
           optionsLoading: false,
           optionsLoadError: false,
           counts: 0,
@@ -133,6 +143,10 @@
         }
       },
       methods: {
+        // 修改点：<table-bar> 组件统一操作分发
+        onTableAction: function(payload) {
+          if (payload.key === 'add') { this.addHandle(); }
+        },
         // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
         async loadFilterOptions() {
           this.optionsLoading = true

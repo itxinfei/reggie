@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     /* ========== 现代化数据概览设计 ========== */
@@ -613,6 +614,7 @@
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
+          <el-button size="small" round icon="el-icon-refresh" @click="refreshData" :loading="loading">刷新</el-button>
           <el-tag size="small" :type="health.redisAvailable ? 'success' : 'danger'" effect="plain">
             Redis {{ health.redisAvailable ? '已启用' : '未启用' }}
           </el-tag>
@@ -781,6 +783,7 @@
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../api/inventory.js"></script>
+  <script src="../../js/components.js"></script>
 
   <script>
     new Vue({
@@ -1190,6 +1193,11 @@
           const maxCount = this.hotDishes[0].count || 1;
           const count = this.hotDishes[index].count || 0;
           return Math.max((count / maxCount * 100), 8) + '%';
+        },
+
+        // 手动刷新数据
+        refreshData() {
+          this.loadAllData();
         },
 
         // 格式化金额

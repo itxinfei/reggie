@@ -10,6 +10,9 @@ const getCategoryPage = (params) => {
   })
 }
 
+// 修改点：分类统计数据（后端直接查DB，准确无分页限制）
+const getCategoryStats = () => $axios({ url: '/category/stats', method: 'get' })
+
 // 编辑页面反查详情接口
 const queryCategoryById = (id) => {
   return $axios({

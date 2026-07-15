@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     html, body { height: 100%; margin: 0; padding: 0; overflow-y: auto; overflow-x: hidden;
@@ -75,34 +76,8 @@
   <div class="payment-page" id="report-payment-app" v-loading="loading">
     <div class="container">
 
-      <!-- 修改点：统计卡片移至 filter-bar 上方 -->
-      <!-- ========== KPI 卡片 ========== -->
-      <div class="stats-cards">
-        <div class="kpi-card primary">
-          <div class="kpi-icon-wrap">💳</div>
-          <div class="kpi-label">交易总笔数</div>
-          <div class="kpi-value">{{ totalCount }}</div>
-          <div class="kpi-sub">选定时间范围</div>
-        </div>
-        <div class="kpi-card success">
-          <div class="kpi-icon-wrap">💰</div>
-          <div class="kpi-label">交易总额（元）</div>
-          <div class="kpi-value" style="font-size:24px;">¥{{ formatMoney(totalAmount) }}</div>
-          <div class="kpi-sub">含所有支付渠道</div>
-        </div>
-        <div class="kpi-card warning">
-          <div class="kpi-icon-wrap">🏅</div>
-          <div class="kpi-label">最常用支付方式</div>
-          <div class="kpi-value" style="font-size:20px;">{{ topChannel }}</div>
-          <div class="kpi-sub">按交易笔数排名</div>
-        </div>
-        <div class="kpi-card info">
-          <div class="kpi-icon-wrap">📊</div>
-          <div class="kpi-label">支付渠道数</div>
-          <div class="kpi-value">{{ tableData.length || 0 }}</div>
-          <div class="kpi-sub">活跃渠道</div>
-        </div>
-      </div>
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 KPI 卡片 -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- ========== 工具栏 ========== -->
       <div class="filter-bar">
@@ -158,6 +133,7 @@
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../api/report.js"></script>
+  <script src="../../js/components.js"></script>
   <script>
     var CHANNEL_LABEL = { wechat: '微信支付', alipay: '支付宝', balance: '余额支付', other: '其他' };
     var CHANNEL_COLOR = { wechat: '#07C160', alipay: '#1677FF', balance: '#E6A23C', other: '#909399' };
@@ -178,6 +154,16 @@
             if (!this.tableData.length) return '--';
             var top = this.tableData.reduce(function(m, r) { return (r.transactionCount || 0) > (m.transactionCount || 0) ? r : m; }, this.tableData[0]);
             return CHANNEL_LABEL[top.key] || top.channel || '--';
+          },
+          // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+          statsCards: function() {
+            var self = this;
+            return [
+              { key: '笔数', icon: '💳', label: '交易总笔数', value: self.totalCount, color: 'primary' },
+              { key: '总额', icon: '💰', label: '交易总额（元）', value: '¥' + self.formatMoney(self.totalAmount), color: 'success' },
+              { key: '常用', icon: '🏅', label: '最常用支付方式', value: self.topChannel, color: 'warning' },
+              { key: '渠道', icon: '📊', label: '支付渠道数', value: self.tableData.length || 0, color: 'info' }
+            ]
           }
         },
         created: function() {
