@@ -4,23 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI智能点餐助手</title>
-    <!-- 修改点：修正静态资源路径（../../plugins/ → ../styles/, /front/ 目录实际位置） -->
     <link rel="stylesheet" href="../styles/vant.min.css">
     <link rel="stylesheet" href="../styles/index.css">
     <link rel="stylesheet" href="../styles/ai-assistant.css">
+    <link rel="stylesheet" href="../styles/ai-assistant-dark.css">
 </head>
 <body>
-    <div id="ai-app" class="ai-container">
+    <div id="ai-app" class="ai-container" :class="{ 'dark-mode': darkModeEnabled }">
         <!-- 顶部栏 -->
         <div class="ai-header">
             <div class="header-left">
-                <span class="status-dot"></span>
+                <span class="status-dot" :class="{ offline: !isOnline }"></span>
                 <span class="title">AI 智能点餐助手</span>
             </div>
             <div class="header-actions">
+                <span class="header-btn" @click="toggleDarkMode" title="暗色模式">🌙</span>
                 <span class="header-btn" @click="toggleSidebar" title="对话历史">☰</span>
                 <span class="header-btn" @click="close" title="关闭">✕</span>
             </div>
+        </div>
+
+        <!-- 网络状态提示条 -->
+        <div class="network-banner" :class="{ visible: !isOnline }">
+            <span>⚠️ 当前处于离线状态，请检查网络连接</span>
         </div>
 
         <!-- 对话管理侧边栏 -->
@@ -31,7 +37,6 @@
                 <button class="new-chat-btn" @click="newConversation">+ 新对话</button>
             </div>
             <div class="sidebar-list">
-                <!-- 修改点：加载中 -->
                 <div v-if="sidebarLoading" class="sidebar-loading">加载中...</div>
                 <div v-else-if="conversations.length === 0" class="empty-sidebar">
                     <div class="empty-icon">💬</div>
@@ -45,13 +50,12 @@
                     <span class="conv-delete" @click.stop="deleteConversation(conv.id)" title="删除">🗑️</span>
                 </div>
             </div>
-            <!-- 修改点：清空全部按钮 -->
             <div class="sidebar-footer" v-if="conversations.length > 0">
                 <button class="clear-all-btn" @click="clearAllConversations">🗑️ 清空全部对话</button>
             </div>
         </div>
 
-        <!-- 修改点：场景切换标签 -->
+        <!-- 场景切换标签 -->
         <div class="scene-tabs">
             <span v-for="scene in scenes"
                   :class="['scene-tab', { active: currentScene === scene.value }]"
@@ -60,15 +64,13 @@
             </span>
         </div>
 
-        <!-- 修改点：按场景动态快捷提示 -->
+        <!-- 快捷提示 -->
         <div class="quick-tips" v-if="messages.length <= 1">
-            <!-- 用户画像标签（基于历史偏好，仅点餐场景显示） -->
             <span v-for="tag in userProfileTags" :key="tag"
                   class="quick-tip profile-tag"
                   @click="sendQuickTip(tag)">
                 {{ tag }}
             </span>
-            <!-- 场景快捷提示 -->
             <span class="quick-tip" v-for="tip in currentQuickTips" :key="tip"
                   @click="sendQuickTip(tip)">
                 {{ tip }}
@@ -77,7 +79,23 @@
 
         <!-- 聊天区域 -->
         <div class="chat-area" ref="chatArea">
-            <!-- 修改点：按场景显示不同欢迎消息 -->
+            <!-- 骨架屏（消息少时显示） -->
+            <template v-if="messages.length === 0 && loading">
+                <div class="skeleton-row">
+                    <div class="skeleton-avatar"></div>
+                    <div class="skeleton-bubble skeleton-b1"></div>
+                </div>
+                <div class="skeleton-row">
+                    <div class="skeleton-avatar"></div>
+                    <div class="skeleton-bubble skeleton-b2"></div>
+                </div>
+                <div class="skeleton-row skeleton-reverse">
+                    <div class="skeleton-avatar"></div>
+                    <div class="skeleton-bubble skeleton-b3"></div>
+                </div>
+            </template>
+
+            <!-- 欢迎消息 -->
             <div class="chat-msg assistant" v-if="messages.length === 0">
                 <div class="chat-avatar">🤖</div>
                 <div class="chat-bubble">
@@ -110,11 +128,13 @@
 
             <!-- 对话消息 -->
             <template v-for="(msg, idx) in messages">
-                <div :class="'chat-msg ' + msg.role" :key="msg.id || idx">
-                    <div class="chat-avatar">{{ msg.role === 'assistant' ? '🤖' : '👤' }}</div>
+                <div :class="'chat-msg ' + msg.role" :key="msg.id || idx"
+                     @contextmenu.prevent="showMsgMenu($event, msg)"
+                     @longpress="showMsgMenu($event, msg)">
+                    <div class="chat-avatar">{{ msg.role === 'assistant' ? '🤖' : (userInfo ? (userAvatar || '👤') : '👤') }}</div>
                     <div class="msg-body">
                         <div class="chat-bubble" :class="{'streaming-cursor': msg.streaming}">
-                            <!-- 安全渲染：仅支持有限格式，杜绝 XSS -->
+                            <!-- 安全渲染 -->
                             <template v-if="msg.role === 'assistant'">
                                 <span v-for="(part, pIdx) in msg.renderedParts" :key="pIdx">
                                     <span v-if="part.type === 'text'" class="msg-line">{{ part.text }}</span>
@@ -131,6 +151,12 @@
                                 {{ msg.content }}
                             </template>
                         </div>
+                        <!-- 复制按钮 -->
+                        <div class="msg-actions" v-if="!msg.streaming">
+                            <button class="copy-btn" @click="copyMessage(msg)" :title="msg.copied ? '已复制' : '复制'">
+                                {{ msg.copied ? '✓' : '📋' }}
+                            </button>
+                        </div>
                         <!-- 推荐菜品卡片 -->
                         <div class="dish-recommendations" v-if="msg.dishes && msg.dishes.length > 0">
                             <div class="dish-card" v-for="dish in msg.dishes" :key="dish.dishId" @click="addToCart(dish)">
@@ -138,7 +164,7 @@
                                 <div class="dish-info">
                                     <div class="dish-name">{{ dish.name }}</div>
                                     <div class="dish-reason" v-if="dish.reason">{{ dish.reason }}</div>
-                                    <div class="dish-price">¥{{ (dish.price ? (dish.price / 100).toFixed(2) : '0.00') }}</div>
+                                    <div class="dish-price">¥{{ (dish.price ? Number(dish.price).toFixed(2) : '0.00') }}</div>
                                 </div>
                                 <button class="add-btn" @click.stop="addToCart(dish)">+</button>
                             </div>
@@ -158,7 +184,7 @@
                 </div>
             </template>
 
-            <!-- 加载中 -- 修改点：修复双头像bug，streaming消息与loading指示器互斥 -->
+            <!-- 加载中 -->
             <div class="chat-msg assistant" v-if="loading && !hasStreamingMessage">
                 <div class="chat-avatar">🤖</div>
                 <div class="chat-bubble">
@@ -174,20 +200,32 @@
             <button class="voice-btn" :class="{'recording': isRecording}" @click="toggleVoice" title="语音输入">
                 🎤
             </button>
-            <input
-                type="text"
+            <textarea
+                ref="inputArea"
                 v-model="inputText"
                 :placeholder="inputPlaceholder"
-                @keyup.enter="sendMessage"
+                @keydown.enter.exact.prevent="sendMessage"
+                @input="autoResizeInput"
                 :disabled="loading"
-            >
+                rows="1"
+                class="input-textarea"
+            ></textarea>
             <button class="send-btn" @click="sendMessage" :disabled="!inputText.trim() || loading">
                 ➤
             </button>
         </div>
+
+        <!-- 消息操作菜单 -->
+        <div class="msg-context-menu" :class="{visible: menuVisible}"
+             :style="{top: menuY + 'px', left: menuX + 'px'}"
+             v-if="menuTarget">
+            <div class="menu-item" @click="copyMenuTarget">📋 复制</div>
+            <div class="menu-item" @click="deleteMenuTarget" v-if="menuTarget.role === 'user'">🗑️ 删除</div>
+            <div class="menu-item menu-cancel" @click="menuVisible = false">取消</div>
+        </div>
     </div>
 
-    <!-- 修改点：修正JS资源路径，Vue/axios在backend/plugins下，Vant在front/js下 -->
+    <!-- Scripts -->
     <script src="/backend/plugins/vue/vue.js"></script>
     <script src="/backend/plugins/axios/axios.min.js"></script>
     <script src="../js/vant.min.js"></script>
@@ -198,68 +236,37 @@
         'use strict';
 
         // ==================== 工具函数 ====================
-
-        /** 安全的内容格式化 - 仅支持白名单标签，杜绝 XSS */
         function safeFormatContent(content) {
             if (!content) return [];
             if (typeof content !== 'string') return [{ type: 'text', text: String(content) }];
-
             var parts = [];
-            var remaining = content;
-
-            // 按行分割处理
-            var lines = remaining.split('\n');
+            var lines = content.split('\n');
             for (var li = 0; li < lines.length; li++) {
                 var line = lines[li];
-
-                if (li > 0) {
-                    parts.push({ type: 'text', text: '\n' });
-                }
-
-                // 处理加粗文本 **text**
+                if (li > 0) parts.push({ type: 'text', text: '\n' });
                 var boldRegex = /\*\*(.*?)\*\*/g;
                 var lastIndex = 0;
                 var match;
-
                 while ((match = boldRegex.exec(line)) !== null) {
-                    // 加粗前的普通文本
-                    if (match.index > lastIndex) {
-                        parts.push({ type: 'text', text: line.substring(lastIndex, match.index) });
-                    }
+                    if (match.index > lastIndex) parts.push({ type: 'text', text: line.substring(lastIndex, match.index) });
                     parts.push({ type: 'bold', text: match[1] });
                     lastIndex = match.index + match[0].length;
                 }
-                // 剩余文本
-                if (lastIndex < line.length) {
-                    parts.push({ type: 'text', text: line.substring(lastIndex) });
-                }
-
-                // 处理列表项 - 行首为 "- " 或 "· "
+                if (lastIndex < line.length) parts.push({ type: 'text', text: line.substring(lastIndex) });
                 if ((line.trim().startsWith('- ') || line.trim().startsWith('· ')) && parts.length > 0) {
-                    // 收集连续列表项
                     var listItems = [];
                     listItems.push(line.trim().replace(/^[-·]\s*/, ''));
-                    // 查找后续连续列表项
                     for (var ni = li + 1; ni < lines.length; ni++) {
                         var nextLine = lines[ni].trim();
-                        if (nextLine.startsWith('- ') || nextLine.startsWith('· ')) {
-                            listItems.push(nextLine.replace(/^[-·]\s*/, ''));
-                        } else {
-                            break;
-                        }
+                        if (nextLine.startsWith('- ') || nextLine.startsWith('· ')) listItems.push(nextLine.replace(/^[-·]\s*/, ''));
+                        else break;
                     }
                     parts.push({ type: 'list', items: listItems });
                     li += listItems.length - 1;
                     continue;
                 }
             }
-
-            // 如果没有特殊格式，直接返回纯文本
-            if (parts.length === 0) {
-                return [{ type: 'text', text: content }];
-            }
-
-            // 合并相邻的 text 类型
+            if (parts.length === 0) return [{ type: 'text', text: content }];
             var merged = [];
             for (var i = 0; i < parts.length; i++) {
                 if (i > 0 && parts[i].type === 'text' && merged[merged.length - 1].type === 'text') {
@@ -268,11 +275,9 @@
                     merged.push(parts[i]);
                 }
             }
-
             return merged;
         }
 
-        /** 格式化时间 */
         function formatTime(timestamp) {
             var now = new Date();
             var date = new Date(timestamp);
@@ -281,116 +286,248 @@
             if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
             if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
             if (diff < 172800000) return '昨天';
-            var month = (date.getMonth() + 1);
-            var day = date.getDate();
-            return month + '月' + day + '日';
+            return (date.getMonth() + 1) + '月' + date.getDate() + '日';
         }
 
-        // ==================== Vue 应用 ====================
+        function copyText(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                return navigator.clipboard.writeText(text).catch(function() {
+                    fallbackCopy(text);
+                });
+            }
+            fallbackCopy(text);
+            return Promise.resolve();
+        }
+
+        function fallbackCopy(text) {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch(e) {}
+            document.body.removeChild(ta);
+        }
+
+        // ==================== Vue App ====================
         new Vue({
             el: '#ai-app',
             data: {
                 inputText: '',
                 loading: false,
                 messages: [],
-                // 修改点：按场景动态快捷提示
-                quickTips: [],
-                // 修改点：场景切换
                 currentScene: 'order_assistant',
                 scenes: [
                     { label: '🍽️ 点餐推荐', value: 'order_assistant' },
                     { label: '📝 菜品描述', value: 'dish_desc' },
                     { label: '📢 营销文案', value: 'marketing' }
                 ],
-                // 修改点：按场景的快捷提示配置
                 quickTipsMap: {
-                    order_assistant: [
-                        '我想吃辣的', '推荐清淡的菜',
-                        '2个人，预算100', '有什么招牌菜',
-                        '适合小孩吃的', '帮我搭配一个套餐'
-                    ],
-                    dish_desc: [
-                        '红烧肉', '麻辣香锅',
-                        '清蒸鲈鱼', '宫保鸡丁'
-                    ],
-                    marketing: [
-                        '满减活动文案', '新店开业促销',
-                        '会员日专属优惠', '节假日活动方案'
-                    ]
+                    order_assistant: ['我想吃辣的', '推荐清淡的菜', '2个人，预算100', '有什么招牌菜', '适合小孩吃的', '帮我搭配一个套餐'],
+                    dish_desc: ['红烧肉', '麻辣香锅', '清蒸鲈鱼', '宫保鸡丁'],
+                    marketing: ['满减活动文案', '新店开业促销', '会员日专属优惠', '节假日活动方案']
                 },
-                // 对话管理
                 sidebarOpen: false,
                 sidebarLoading: false,
                 conversations: [],
                 currentConversationId: null,
-                // 请求控制
                 currentRequestId: 0,
-                // 语音
                 isRecording: false,
                 recognition: null,
-                // 用户上下文
                 userInfo: null,
+                userAvatar: '',
                 cartData: [],
-                // 用户画像标签（基于历史偏好动态生成）
                 userProfileTags: [],
-                // 输入占位
-                inputPlaceholder: '告诉小吉你想吃什么...'
+                inputPlaceholder: '告诉小吉你想吃什么...',
+                // 新增：网络状态
+                isOnline: navigator.onLine !== false,
+                // 新增：暗色模式
+                darkModeEnabled: false,
+                // 新增：消息操作菜单
+                menuVisible: false,
+                menuX: 0,
+                menuY: 0,
+                menuTarget: null
             },
-
             computed: {
-                // 修改点：根据当前场景计算快捷提示
                 currentQuickTips: function() {
                     return this.quickTipsMap[this.currentScene] || [];
                 },
-                // 修改点：检测是否已有流式消息，避免与loading指示器的chat-avatar重复
                 hasStreamingMessage: function() {
                     var self = this;
-                    return self.messages.some(function(m) {
-                        return m.role === 'assistant' && m.streaming === true;
-                    });
+                    return self.messages.some(function(m) { return m.role === 'assistant' && m.streaming === true; });
                 }
             },
-
             created: function() {
                 this.loadUserInfo();
-                // 修改点：先加载本地缓存，再异步从后端同步
                 this.loadConversations();
                 this.loadUserProfileTags();
-                // 如果有本地对话直接加载
+                this.loadDarkModePreference();
                 if (this.conversations.length === 0) {
                     this.newConversation(true);
                 } else {
                     this.switchConversation(this.conversations[0].id);
                 }
-                // 修改点：仅登录用户异步后端同步（未登录时API调用会触发request.js拦截器跳转登录页）
                 if (this.userInfo) {
                     this.syncConversationsFromBackend();
                 }
+                // 监听网络变化
+                var self = this;
+                window.addEventListener('online', function() { self.isOnline = true; });
+                window.addEventListener('offline', function() { self.isOnline = false; });
             },
-
             mounted: function() {
                 this.initVoice();
                 this.scrollToBottom();
-                // 注册 ESC 键监听，支持关闭侧边栏
                 this._handleEscKey = function(e) {
                     if ((e.key === 'Escape' || e.key === 'Esc') && this.sidebarOpen) {
                         this.toggleSidebar(false);
                     }
+                    if (e.key === 'Escape' && this.menuVisible) {
+                        this.menuVisible = false;
+                    }
                 }.bind(this);
                 document.addEventListener('keydown', this._handleEscKey);
+                // 点击其他地方关闭菜单
+                document.addEventListener('click', function() { this.menuVisible = false; }.bind(this));
+                // 侧边栏手势
+                this.initSwipeGesture();
             },
-
             beforeDestroy: function() {
-                // 移除 ESC 键监听
-                if (this._handleEscKey) {
-                    document.removeEventListener('keydown', this._handleEscKey);
-                }
+                if (this._handleEscKey) document.removeEventListener('keydown', this._handleEscKey);
             },
-
             methods: {
-                // ==================== 对话管理 ====================
+                // ==================== 网络检测 ====================
+                checkNetwork: function() {
+                    if (!this.isOnline) {
+                        vant.Notify({ type: 'warning', message: '当前处于离线状态，请检查网络', duration: 3000 });
+                        return false;
+                    }
+                    return true;
+                },
 
-                /** 创建新对话 */
+                // ==================== 暗色模式 ====================
+                loadDarkModePreference: function() {
+                    try {
+                        var saved = localStorage.getItem('ai_dark_mode');
+                        if (saved === 'true') {
+                            this.darkModeEnabled = true;
+                        } else if (saved === 'false') {
+                            this.darkModeEnabled = false;
+                        } else {
+                            // 跟随系统
+                            this.darkModeEnabled = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        }
+                    } catch(e) {}
+                },
+                toggleDarkMode: function() {
+                    this.darkModeEnabled = !this.darkModeEnabled;
+                    try { localStorage.setItem('ai_dark_mode', this.darkModeEnabled.toString()); } catch(e) {}
+                },
+
+                // ==================== 侧边栏手势 ====================
+                initSwipeGesture: function() {
+                    var startX = 0, startY = 0, moving = false;
+                    var self = this;
+                    var sidebar = document.querySelector('.conversation-sidebar');
+                    if (!sidebar) return;
+                    sidebar.addEventListener('touchstart', function(e) {
+                        startX = e.touches[0].clientX;
+                        startY = e.touches[0].clientY;
+                        moving = false;
+                    }, { passive: true });
+                    sidebar.addEventListener('touchmove', function(e) {
+                        var dx = e.touches[0].clientX - startX;
+                        var dy = Math.abs(e.touches[0].clientY - startY);
+                        if (dy > 10) return; // 垂直滚动优先
+                        if (Math.abs(dx) > 10) moving = true;
+                        if (moving && dx > 0 && self.sidebarOpen) {
+                            sidebar.style.transform = 'translateX(' + (-sidebar.offsetWidth + dx) + 'px)';
+                        }
+                    }, { passive: true });
+                    sidebar.addEventListener('touchend', function() {
+                        if (moving) {
+                            var sidebarEl = document.querySelector('.conversation-sidebar');
+                            if (sidebarEl) sidebarEl.style.transform = '';
+                            if (self.sidebarOpen) self.toggleSidebar(false);
+                        }
+                    });
+                    // 左边缘滑动唤出
+                    var overlay = document.querySelector('.sidebar-overlay');
+                    if (overlay) {
+                        overlay.addEventListener('touchstart', function(e) {
+                            startX = e.touches[0].clientX;
+                            startY = e.touches[0].clientY;
+                            moving = false;
+                        }, { passive: true });
+                        overlay.addEventListener('touchmove', function(e) {
+                            var dx = e.touches[0].clientX - startX;
+                            if (dx > 30 && !self.sidebarOpen) {
+                                self.toggleSidebar(true);
+                            }
+                        }, { passive: true });
+                    }
+                },
+
+                // ==================== 消息操作菜单 ====================
+                showMsgMenu: function(e, msg) {
+                    // 只在非移动端通过右键触发
+                    if (e.type === 'contextmenu' && e.button !== 2) return;
+                    // 移动端长按
+                    if (e.type === 'longpress') {
+                        e.preventDefault();
+                    }
+                    this.menuTarget = msg;
+                    this.menuVisible = true;
+                    var x = e.clientX || (e.touches && e.touches[0].clientX) || 100;
+                    var y = e.clientY || (e.touches && e.touches[0].clientY) || 100;
+                    this.menuX = Math.min(x, window.innerWidth - 160);
+                    this.menuY = Math.min(y, window.innerHeight - 120);
+                },
+                copyMenuTarget: function() {
+                    if (this.menuTarget) {
+                        this.copyMessage(this.menuTarget);
+                    }
+                    this.menuVisible = false;
+                },
+                deleteMenuTarget: function() {
+                    if (this.menuTarget) {
+                        var idx = this.messages.indexOf(this.menuTarget);
+                        if (idx >= 0) {
+                            this.messages.splice(idx, 1);
+                            this.saveConversations();
+                        }
+                    }
+                    this.menuVisible = false;
+                },
+
+                // ==================== 消息复制 ====================
+                copyMessage: function(msg) {
+                    var text = '';
+                    if (msg.role === 'assistant') {
+                        text = msg.content || '';
+                    } else {
+                        text = msg.content || '';
+                    }
+                    if (!text) return;
+                    copyText(text).then(function() {
+                        msg.copied = true;
+                        vant.Notify({ type: 'success', message: '已复制到剪贴板', duration: 1500 });
+                        setTimeout(function() { if (msg) msg.copied = false; }, 2000);
+                    });
+                },
+
+                // ==================== 输入框自适应高度 ====================
+                autoResizeInput: function() {
+                    var el = this.$refs.inputArea;
+                    if (!el) return;
+                    el.style.height = 'auto';
+                    var newHeight = Math.min(el.scrollHeight, 120);
+                    el.style.height = newHeight + 'px';
+                },
+
+                // ==================== 对话管理 ====================
                 newConversation: function(silent) {
                     var conv = {
                         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
@@ -399,7 +536,7 @@
                         scene: this.currentScene,
                         createdAt: Date.now(),
                         updatedAt: Date.now(),
-                        timeText: '刚刚'    // 修改点：初始化 timeText
+                        timeText: '刚刚'
                     };
                     this.conversations.unshift(conv);
                     this.currentConversationId = conv.id;
@@ -409,8 +546,6 @@
                         this.toggleSidebar(false);
                     }
                 },
-
-                /** 切换对话 */
                 switchConversation: function(id) {
                     if (this.loading) return;
                     var conv = this.conversations.find(function(c) { return c.id === id; });
@@ -420,8 +555,6 @@
                     this.toggleSidebar(false);
                     this.$nextTick(function() { this.scrollToBottom(); }.bind(this));
                 },
-
-                /** 删除对话 */
                 deleteConversation: function(id) {
                     var self = this;
                     vant.Dialog.confirm({
@@ -439,8 +572,6 @@
                         self.saveConversations();
                     }).catch(function() {});
                 },
-
-                /** 切换侧边栏 */
                 toggleSidebar: function(force) {
                     if (typeof force === 'boolean') {
                         this.sidebarOpen = force;
@@ -448,15 +579,13 @@
                         this.sidebarOpen = !this.sidebarOpen;
                     }
                 },
-
-                /** 保存对话到 localStorage */
                 saveConversations: function() {
                     try {
                         var currentConv = this.getCurrentConversation();
                         if (currentConv) {
                             currentConv.messages = this.messages.slice(0, 100);
                             currentConv.updatedAt = Date.now();
-                            currentConv.timeText = formatTime(Date.now());  // 修改点：更新 timeText
+                            currentConv.timeText = formatTime(Date.now());
                             if (this.messages.length > 0) {
                                 var firstUserMsg = this.messages.find(function(m) { return m.role === 'user'; });
                                 if (firstUserMsg) {
@@ -465,19 +594,14 @@
                             }
                         }
                         localStorage.setItem('ai_conversations', JSON.stringify(this.conversations.slice(0, 50)));
-                    } catch (e) {
-                        console.warn('保存对话失败:', e);
-                    }
+                    } catch (e) { console.warn('保存对话失败:', e); }
                 },
-
-                /** 从 localStorage 加载对话 */
                 loadConversations: function() {
                     try {
                         var raw = localStorage.getItem('ai_conversations');
                         if (raw) {
                             var data = JSON.parse(raw);
                             if (Array.isArray(data)) {
-                                // 修改点：为每个对话计算 timeText
                                 var self = this;
                                 this.conversations = data.slice(0, 50).map(function(c) {
                                     c.timeText = formatTime(c.updatedAt || c.createdAt || Date.now());
@@ -485,33 +609,22 @@
                                 });
                             }
                         }
-                    } catch (e) {
-                        this.conversations = [];
-                    }
+                    } catch (e) { this.conversations = []; }
                 },
-
-                /** 获取当前对话对象 */
                 getCurrentConversation: function() {
                     return this.conversations.find(function(c) { return c.id === this.currentConversationId; }.bind(this));
                 },
-
-                // 修改点：从后端 API 同步对话列表（不阻塞，静默更新）
                 syncConversationsFromBackend: function() {
                     var self = this;
                     if (typeof aiApi === 'undefined' || !aiApi.getConversations) return;
                     aiApi.getConversations(1, 50).then(function(res) {
                         var data = res.data || res;
-                        // 后端返回 R<T> 包装：code=1 时取 data
                         var backendList = (data && data.code === 1) ? data.data : data;
                         if (!Array.isArray(backendList) || backendList.length === 0) return;
-                        // 合并后端数据到本地（以后端为主，但不覆盖本地未保存的消息）
                         backendList.forEach(function(backendConv) {
                             var localIdx = -1;
                             for (var i = 0; i < self.conversations.length; i++) {
-                                if (self.conversations[i].id === backendConv.conversationId) {
-                                    localIdx = i;
-                                    break;
-                                }
+                                if (self.conversations[i].id === backendConv.conversationId) { localIdx = i; break; }
                             }
                             var conv = {
                                 id: backendConv.conversationId,
@@ -524,22 +637,16 @@
                                 messageCount: backendConv.messageCount || 0
                             };
                             if (localIdx >= 0) {
-                                // 保留本地消息数据
                                 conv.messages = self.conversations[localIdx].messages || [];
                                 self.conversations.splice(localIdx, 1, conv);
                             } else {
                                 self.conversations.push(conv);
                             }
                         });
-                        // 按更新时间排序
                         self.conversations.sort(function(a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
                         self.saveConversations();
-                    }).catch(function() {
-                        // 后端不可用时静默忽略，使用本地缓存
-                    });
+                    }).catch(function() {});
                 },
-
-                // 修改点：清空全部对话
                 clearAllConversations: function() {
                     var self = this;
                     vant.Dialog.confirm({
@@ -553,18 +660,13 @@
                         self.newConversation(true);
                     }).catch(function() {});
                 },
-
-                // 修改点：场景切换
                 switchScene: function(scene) {
                     if (this.currentScene === scene) return;
                     this.currentScene = scene;
-                    // 切换场景时创建新对话
                     this.saveConversations();
                     this.newConversation(true);
                     this.inputPlaceholder = this.getScenePlaceholder(scene);
                 },
-
-                // 修改点：获取场景提示语
                 getScenePlaceholder: function(scene) {
                     var map = {
                         order_assistant: '告诉小吉你想吃什么...',
@@ -575,148 +677,106 @@
                 },
 
                 // ==================== 用户上下文 ====================
-
-                /** 加载用户信息 */
                 loadUserInfo: function() {
                     try {
                         var userInfo = sessionStorage.getItem('userInfo') || localStorage.getItem('userInfo');
                         if (userInfo) {
                             this.userInfo = JSON.parse(userInfo);
+                            this.userAvatar = this.userInfo.avatar || '';
                         }
-                    } catch (e) { }
+                        var name = sessionStorage.getItem('userName');
+                        if (name) { this.userInfo = this.userInfo || {}; this.userInfo.name = name; }
+                        var avatar = sessionStorage.getItem('userAvatar');
+                        if (avatar) this.userAvatar = avatar;
+                    } catch (e) {}
                 },
-
-                /** 加载用户画像标签（基于历史偏好） */
                 loadUserProfileTags: function() {
                     var self = this;
                     try {
-                        // 优先从 localStorage 读取缓存的画像
                         var cached = localStorage.getItem('ai_profile_tags');
-                        if (cached) {
-                            try {
-                                self.userProfileTags = JSON.parse(cached);
-                            } catch(e) {}
-                        }
-                        // 修改点：仅登录用户异步从后端获取（未登录时API调用会触发拦截器跳转登录页）
+                        if (cached) { try { self.userProfileTags = JSON.parse(cached); } catch(e) {} }
                         if (!self.userInfo) return;
-                        // 异步从后端获取最新画像摘要
                         if (typeof aiApi !== 'undefined' && aiApi.getProfileSummary) {
                             aiApi.getProfileSummary().then(function(res) {
                                 var data = res.data || res;
                                 var result = (data && data.code === 1) ? data.data : data;
                                 if (result && result.tags && result.tags.length > 0) {
                                     self.userProfileTags = result.tags.slice(0, 5);
-                                    try {
-                                        localStorage.setItem('ai_profile_tags', JSON.stringify(self.userProfileTags));
-                                    } catch(e) {}
+                                    try { localStorage.setItem('ai_profile_tags', JSON.stringify(self.userProfileTags)); } catch(e) {}
                                 }
-                            }).catch(function() {
-                                // 修改点：后端不可用时静默忽略，使用缓存
-                            });
+                            }).catch(function() {});
                         }
-                    } catch (e) { }
+                    } catch (e) {}
                 },
-
-                /** 加载购物车数据（用于上下文） */
                 loadCartContext: function() {
                     var self = this;
                     try {
                         var cartData = sessionStorage.getItem('cartData');
-                        if (cartData) {
-                            self.cartData = JSON.parse(cartData);
-                        }
-                    } catch (e) { }
+                        if (cartData) self.cartData = JSON.parse(cartData);
+                    } catch (e) {}
                 },
-
-                /** 构建上下文信息 */
                 buildContext: function() {
                     var context = {};
                     if (this.userInfo) {
-                        context.user = {
-                            name: this.userInfo.name || '',
-                            phone: this.maskPhone(this.userInfo.phone || '')
-                        };
+                        context.user = { name: this.userInfo.name || '', phone: this.maskPhone(this.userInfo.phone || '') };
                     }
                     if (this.cartData && this.cartData.length > 0) {
                         context.cart = {
                             itemCount: this.cartData.length,
-                            totalAmount: this.cartData.reduce(function(sum, item) {
-                                return sum + (item.number || 0);
-                            }, 0),
-                            items: this.cartData.slice(0, 5).map(function(item) {
-                                return { name: item.name, quantity: item.number };
-                            })
+                            totalAmount: this.cartData.reduce(function(sum, item) { return sum + (item.number || 0); }, 0),
+                            items: this.cartData.slice(0, 5).map(function(item) { return { name: item.name, quantity: item.number }; })
                         };
                     }
                     return context;
                 },
-
-                /** 手机号脱敏 */
                 maskPhone: function(phone) {
                     if (!phone || phone.length !== 11) return phone || '';
                     return phone.substring(0, 3) + '****' + phone.substring(7);
                 },
 
                 // ==================== 消息发送 ====================
-
                 sendMessage: function() {
                     var text = this.inputText.trim();
                     if (!text || this.loading) return;
+                    // 网络检测
+                    if (!this.checkNetwork()) return;
 
-                    // 加载购物车上下文
                     this.loadCartContext();
-
-                    // 取消之前的请求
                     this.currentRequestId++;
-
                     var requestId = this.currentRequestId;
-                    var userMsg = {
-                        id: Date.now(),
-                        role: 'user',
-                        content: text,
-                        timestamp: Date.now()
-                    };
 
-                    // 创建助手消息占位
+                    var userMsg = {
+                        id: Date.now(), role: 'user', content: text,
+                        timestamp: Date.now(), copied: false
+                    };
                     var assistantMsg = {
-                        id: Date.now() + 1,
-                        role: 'assistant',
-                        content: '',
-                        renderedParts: [],
-                        streaming: true,
-                        showFeedback: false,
-                        feedback: null,
-                        error: false,
-                        retryData: null,
-                        timestamp: Date.now()
+                        id: Date.now() + 1, role: 'assistant',
+                        content: '', renderedParts: [], streaming: true,
+                        showFeedback: false, feedback: null, error: false,
+                        retryData: null, timestamp: Date.now(), copied: false,
+                        dishes: []
                     };
 
                     this.messages.push(userMsg);
                     this.messages.push(assistantMsg);
                     this.inputText = '';
+                    // 重置输入框高度
+                    var el = this.$refs.inputArea;
+                    if (el) el.style.height = 'auto';
                     this.loading = true;
                     this.scrollToBottom();
 
                     var self = this;
-                    var conversationId = self.currentConversationId;
-                    var userId = self.getUserId();
-                    var scene = self.currentScene;
-
-                    // 修改点：根据场景选择不同的 API
                     var apiCall;
-                    if (scene === 'order_assistant') {
-                        apiCall = aiApi.orderAssistant(text, userId, conversationId);
+                    if (this.currentScene === 'order_assistant') {
+                        apiCall = aiApi.orderAssistant(text, this.getUserId(), this.currentConversationId);
                     } else {
-                        // dish_desc / marketing 使用通用 chat 接口
-                        apiCall = aiApi.chat(text, scene, conversationId);
+                        apiCall = aiApi.chat(text, this.currentScene, this.currentConversationId);
                     }
 
                     apiCall.then(function(res) {
-                        // 检查是否是最新请求
                         if (requestId !== self.currentRequestId) return;
-
                         var data = res.data || res;
-                        // 解析 R<T> 包装：code=1 时取 data
                         var responseData = (data && data.code === 1) ? data.data : data;
                         assistantMsg.content = (responseData && responseData.content)
                             ? responseData.content
@@ -724,16 +784,12 @@
                         assistantMsg.streaming = false;
                         assistantMsg.showFeedback = true;
                         assistantMsg.renderedParts = safeFormatContent(assistantMsg.content);
-                        // 修改点：仅点餐场景显示菜品卡片
-                        assistantMsg.dishes = (scene === 'order_assistant' && responseData && responseData.dishes)
+                        assistantMsg.dishes = (self.currentScene === 'order_assistant' && responseData && responseData.dishes)
                             ? responseData.dishes : [];
-
-                        // 修改点：处理后端返回的 conversationId（自动创建的对话）
                         var meta = (responseData && responseData.data) || {};
                         if (meta.conversationId && !self.currentConversationId) {
                             self.currentConversationId = meta.conversationId;
                         }
-
                         self.scrollToBottom();
                         self.saveConversations();
                     }).catch(function(err) {
@@ -745,110 +801,70 @@
                         assistantMsg.renderedParts = [{ type: 'text', text: assistantMsg.content }];
                         self.scrollToBottom();
                     }).finally(function() {
-                        if (requestId === self.currentRequestId) {
-                            self.loading = false;
-                        }
+                        if (requestId === self.currentRequestId) self.loading = false;
                     });
                 },
-
-                /** 重新生成 */
                 retryMessage: function(msg) {
                     if (msg.retryData) {
-                        // 移除错误消息和之前的用户消息
                         var idx = this.messages.indexOf(msg);
-                        if (idx > 0) {
-                            this.messages.splice(idx - 1, 2);
-                        }
-                        // 重新发送
+                        if (idx > 0) this.messages.splice(idx - 1, 2);
                         this.inputText = msg.retryData.message;
                         this.sendMessage();
                     }
                 },
-
-                /** 发送快捷提示 */
                 sendQuickTip: function(tip) {
                     this.inputText = tip;
                     this.sendMessage();
                 },
 
-                // ==================== 推荐菜品操作 ====================
-
-                // 修改点：加入购物车——修复图片路径和菜品ID映射
+                // ==================== 推荐菜品 ====================
                 addToCart: function(dish) {
-                    // 修改点：统一处理图片路径
                     var imgUrl = dish.image || '';
                     if (!imgUrl && dish.imageUrl) imgUrl = dish.imageUrl;
-                    // 修改点：如果菜品ID缺省则降级处理
                     var dishId = dish.dishId || dish.id || 0;
-                    // 修改点：dish.price 单位是分，需转换为元
-                    var price = dish.price ? parseFloat((dish.price / 100).toFixed(2)) : 0;
+                    var price = dish.price ? parseFloat(Number(dish.price).toFixed(2)) : 0;
                     if (window.addDishToCart) {
-                        window.addDishToCart({
-                            id: dishId,
-                            name: dish.name,
-                            price: price,
-                            image: imgUrl,
-                            flavors: []
-                        });
+                        window.addDishToCart({ id: dishId, name: dish.name, price: price, image: imgUrl, flavors: [] });
                     } else {
                         vant.Notify({ type: 'success', message: '已添加「' + dish.name + '」到购物车' });
                     }
                 },
 
                 // ==================== 反馈 ====================
-
                 sendFeedback: function(msg, type) {
                     msg.feedback = type;
-                    // 向后端发送反馈（静默处理，不阻塞UI）
                     var self = this;
                     try {
-                        // 修改点：使用正确的 API 调用和参数
                         if (typeof aiApi !== 'undefined' && aiApi.recordFeedback) {
                             aiApi.recordFeedback({
-                                messageId: msg.id,
-                                feedbackType: type,
-                                scene: self.currentScene
+                                messageId: msg.id, feedbackType: type, scene: self.currentScene
                             }).catch(function() {});
                         }
-                    } catch (e) { }
+                    } catch (e) {}
                     this.saveConversations();
                 },
 
                 // ==================== 语音输入 ====================
-
                 initVoice: function() {
                     var self = this;
                     try {
-                        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                        if (!SpeechRecognition) return;
-
-                        this.recognition = new SpeechRecognition();
+                        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                        if (!SR) return;
+                        this.recognition = new SR();
                         this.recognition.lang = 'zh-CN';
                         this.recognition.interimResults = false;
                         this.recognition.maxAlternatives = 1;
-
                         this.recognition.onresult = function(event) {
-                            var transcript = event.results[0][0].transcript;
-                            self.inputText = transcript;
+                            self.inputText = event.results[0][0].transcript;
                             self.isRecording = false;
                         };
-
                         this.recognition.onerror = function(event) {
-                            console.warn('语音识别错误:', event.error);
                             self.isRecording = false;
-                            if (event.error === 'not-allowed') {
-                                vant.Notify({ type: 'warning', message: '请允许麦克风权限' });
-                            }
+                            if (event.error === 'not-allowed') vant.Notify({ type: 'warning', message: '请允许麦克风权限' });
                         };
-
-                        this.recognition.onend = function() {
-                            self.isRecording = false;
-                        };
-                    } catch (e) {
-                        console.warn('语音初始化失败:', e);
-                    }
+                        this.recognition.onend = function() { self.isRecording = false; };
+                    } catch (e) { console.warn('语音初始化失败:', e); }
                 },
-
                 toggleVoice: function() {
                     if (!this.recognition) {
                         vant.Notify({ type: 'warning', message: '您的浏览器不支持语音输入' });
@@ -865,37 +881,24 @@
                 },
 
                 // ==================== 工具方法 ====================
-
-                /** 获取用户ID */
                 getUserId: function() {
                     if (this.userInfo && this.userInfo.id) return this.userInfo.id;
                     var userId = sessionStorage.getItem('userId');
                     return userId ? parseInt(userId) : null;
                 },
-
-                /** 滚动到底部 */
                 scrollToBottom: function() {
                     var self = this;
                     this.$nextTick(function() {
                         var el = self.$refs.chatArea;
-                        if (el) {
-                            el.scrollTop = el.scrollHeight;
-                        }
+                        if (el) el.scrollTop = el.scrollHeight;
                     });
                 },
-
-                /* 修改点：修复死循环——加载失败时改用绝对路径兜底，并防重入 */
                 imgError: function(e) {
-                    // 如果已经指向兜底图片，不再重复替换（防止死循环）
                     if (e.target.src.indexOf('/front/images/noImg.png') >= 0) return;
                     e.target.src = '/front/images/noImg.png';
                 },
-
-                // 修改点：始终直接导航回首页，不依赖不可靠的 history.back()
                 close: function() {
                     this.saveConversations();
-                    // 使用 replace 避免 AI 助手页面留在浏览器后退栈中
-                    // 修改点：绝对路径而非相对路径，index.html 实际在 /front/ 根目录
                     window.location.replace('/front/index.html');
                 }
             }
