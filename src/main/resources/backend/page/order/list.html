@@ -10,6 +10,257 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <style>
+    /* ========== Order Detail Dialog Styles ========== */
+    /* 修改点：圆角 + 隐藏默认头部（使用自定义金色标题栏），与项目主色 #ffc200 统一 */
+    .order-detail-dialog {
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .order-detail-dialog .el-dialog__header {
+      padding: 0;
+      display: none;
+    }
+    .order-detail-dialog .el-dialog__body {
+      padding: 0;
+    }
+    .order-detail-wrap {
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* --- 顶部标题栏（品牌金色渐变，深色文字保证对比度） --- */
+    .od-header {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #ffd766 0%, #ffc200 100%);
+      color: #5c3d00;
+    }
+    .od-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .od-number {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .od-status-tag {
+      border: none;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .od-header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .od-time {
+      font-size: 12px;
+      color: #7a5a00;
+      opacity: 0.9;
+      white-space: nowrap;
+    }
+    /* 修改点：自定义关闭按钮（默认头部已隐藏，必须补充 X 按钮） */
+    .od-close-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: rgba(92, 61, 0, 0.08);
+      color: #5c3d00;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .od-close-btn:hover {
+      background: rgba(92, 61, 0, 0.18);
+      transform: rotate(90deg);
+    }
+
+    /* --- 通用区块卡片 --- */
+    .od-section {
+      margin: 16px 20px 0;
+      padding: 16px 18px;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #ebeef5;
+    }
+    .od-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #303133;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    /* 修改点：金色竖条作为区块标题图标，替代原本含义不明的星号 */
+    .od-section-title::before {
+      content: '';
+      width: 4px;
+      height: 14px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, #ffd766, #ffc200);
+    }
+    .od-item-count {
+      font-weight: 500;
+      margin-left: 2px;
+    }
+
+    /* --- 金额卡片 --- */
+    .od-amount-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 20px;
+      background: linear-gradient(135deg, #fff7e6 0%, #fff1d6 100%);
+      border: 1px solid #ffe2a8;
+    }
+    .od-amount-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #ffc200, #ff9f1a);
+      color: #fff;
+      font-size: 22px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .od-amount-meta {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .od-amount-label {
+      font-size: 12px;
+      color: #a07a2a;
+      margin-bottom: 2px;
+    }
+    .od-amount-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: #f56c6c;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+
+    /* --- 信息网格（1px 间隙模拟分隔线，避免末行边框错位） --- */
+    .od-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: #f0f2f5;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .od-info-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 11px 14px;
+      background: #fff;
+      min-height: 42px;
+    }
+    .od-info-item--full {
+      grid-column: 1 / -1;
+    }
+    .od-info-label {
+      font-size: 13px;
+      color: #909399;
+      width: 72px;
+      flex-shrink: 0;
+      line-height: 22px;
+    }
+    .od-info-value {
+      font-size: 13px;
+      color: #303133;
+      font-weight: 500;
+      line-height: 22px;
+      word-break: break-all;
+    }
+
+    /* --- 菜品明细表格 --- */
+    .od-items-table {
+      border: 1px solid #ebeef5;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .od-items-table .el-table__header th {
+      background: #f8f9fb;
+      font-weight: 600;
+    }
+    .od-item-name {
+      font-weight: 500;
+      color: #303133;
+    }
+    .od-item-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid #f0f0f0;
+    }
+    .od-item-no-img {
+      color: #c0c4cc;
+      font-size: 12px;
+    }
+    .od-qty {
+      font-weight: 500;
+      color: #606266;
+    }
+    .od-subtotal {
+      font-weight: 600;
+      color: #f56c6c;
+    }
+    .od-empty {
+      color: #c0c4cc;
+    }
+    .od-empty-tip {
+      text-align: center;
+      padding: 30px;
+      color: #c0c4cc;
+      font-size: 13px;
+    }
+
+    /* --- 底部按钮（统一 medium，遵循系统规范） --- */
+    .order-detail-dialog .dialog-footer {
+      text-align: right;
+      padding: 14px 20px 18px;
+    }
+
+    /* ========== 响应式适配 ========== */
+    @media (max-width: 720px) {
+      /* 修改点：窄屏下弹窗宽度随视口缩放，信息网格单列展示 */
+      .order-detail-dialog { width: 94vw !important; }
+      .od-info-grid { grid-template-columns: 1fr; }
+      .od-section { margin: 12px 14px 0; padding: 14px; }
+      .od-header { padding: 14px 16px; flex-wrap: wrap; }
+    }
+    @media (max-width: 420px) {
+      .od-amount-value { font-size: 22px; }
+      .od-number { font-size: 13px; }
+      .od-amount-icon { width: 40px; height: 40px; font-size: 19px; }
+    }
+  </style>
 </head>
 <body>
   <div class="dashboard-container" id="order-app" v-loading="loading">
@@ -61,55 +312,139 @@
       </crud-table>
     </div>
 
-    <!-- 查看弹框 -->
+    <!-- 订单详情弹窗 -->
     <el-dialog
-      title="订单详情"
+      title=""
       :visible.sync="dialogVisible"
-      width="600px"
+      width="680px"
       :close-on-click-modal="true"
       @closed="diaForm = {}"
+      custom-class="order-detail-dialog"
     >
-      <el-descriptions v-if="diaForm" :column="2" border size="small">
-        <el-descriptions-item label="订单号">{{ diaForm.number }}</el-descriptions-item>
-        <el-descriptions-item label="订单状态">
-          <el-tag :type="getOrderTagType(diaForm)" size="mini">{{ getOrderType(diaForm) }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="收货人">{{ diaForm.consignee }}</el-descriptions-item>
-        <el-descriptions-item label="联系电话">{{ diaForm.phone }}</el-descriptions-item>
-        <el-descriptions-item label="地址" :span="2">{{ diaForm.address }}</el-descriptions-item>
-        <el-descriptions-item label="支付金额">
-          <b style="color:#f56c6c">￥{{ diaForm.amount }}</b>
-        </el-descriptions-item>
-        <el-descriptions-item label="下单时间">{{ diaForm.orderTime }}</el-descriptions-item>
-      </el-descriptions>
-      <!-- 菜品明细 -->
-      <div v-if="diaForm.orderDetails && diaForm.orderDetails.length > 0" style="margin-top:16px;">
-        <div style="font-size:14px;font-weight:600;color:#303133;margin-bottom:12px;">菜品明细</div>
-        <el-table :data="diaForm.orderDetails" size="small" border style="width:100%;">
-          <el-table-column prop="name" label="菜品" min-width="120"></el-table-column>
-          <el-table-column prop="image" label="图片" width="60" align="center">
-            <template slot-scope="scope">
-              <el-image v-if="scope.row.image" :src="scope.row.image" style="width:40px;height:40px;border-radius:4px;" fit="cover"></el-image>
-              <span v-else style="color:#c0c4cc;">-</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="dishFlavor" label="口味" width="100" align="center">
-            <template slot-scope="scope">
-              <span v-if="scope.row.dishFlavor">{{ scope.row.dishFlavor }}</span>
-              <span v-else style="color:#c0c4cc;">-</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="number" label="数量" width="70" align="center"></el-table-column>
-          <el-table-column prop="amount" label="小计" width="100" align="right">
-            <template slot-scope="scope">
-              <span style="color:#f56c6c;font-weight:600;">￥{{ scope.row.amount }}</span>
-            </template>
-          </el-table-column>
-        </el-table>
+      <div v-if="diaForm" class="order-detail-wrap">
+        <!-- 顶部标题栏 -->
+        <div class="od-header">
+          <div class="od-header-left">
+            <span class="od-number">订单号：{{ diaForm.number }}</span>
+            <el-tag :type="getOrderTagType(diaForm)" size="small" effect="dark" class="od-status-tag">
+              {{ getOrderType(diaForm) }}
+            </el-tag>
+          </div>
+          <div class="od-header-right">
+            <span class="od-time">{{ diaForm.orderTime }}</span>
+            <button type="button" class="od-close-btn" @click="dialogVisible = false" aria-label="关闭">✕</button>
+          </div>
+        </div>
+
+        <!-- 金额卡片 -->
+        <div class="od-section od-amount-card">
+          <div class="od-amount-icon">&#165;</div>
+          <div class="od-amount-meta">
+            <div class="od-amount-label">订单金额（实收）</div>
+            <div class="od-amount-value">&#165;{{ formatMoney(diaForm.amount) }}</div>
+          </div>
+        </div>
+
+        <!-- 订单信息 -->
+        <div class="od-section">
+          <div class="od-section-title">订单信息</div>
+          <div class="od-info-grid">
+            <div class="od-info-item">
+              <span class="od-info-label">收货人</span>
+              <span class="od-info-value">{{ diaForm.consignee || '-' }}</span>
+            </div>
+            <div class="od-info-item">
+              <span class="od-info-label">联系电话</span>
+              <span class="od-info-value">{{ diaForm.phone || '-' }}</span>
+            </div>
+            <div class="od-info-item od-info-item--full">
+              <span class="od-info-label">收货地址</span>
+              <span class="od-info-value">{{ diaForm.address || '-' }}</span>
+            </div>
+            <div class="od-info-item">
+              <span class="od-info-label">支付方式</span>
+              <span class="od-info-value">{{ diaForm.payMethod ? (diaForm.payMethod == 1 ? '微信支付' : '支付宝') : '-' }}</span>
+            </div>
+            <div class="od-info-item">
+              <span class="od-info-label">下单时间</span>
+              <span class="od-info-value">{{ diaForm.orderTime || '-' }}</span>
+            </div>
+            <div class="od-info-item" v-if="diaForm.checkoutTime">
+              <span class="od-info-label">结账时间</span>
+              <span class="od-info-value">{{ diaForm.checkoutTime }}</span>
+            </div>
+            <div class="od-info-item" v-if="diaForm.source">
+              <span class="od-info-label">就餐方式</span>
+              <span class="od-info-value">{{ formatDiningType(diaForm.source) }}</span>
+            </div>
+            <div class="od-info-item" v-if="diaForm.tableName">
+              <span class="od-info-label">桌台</span>
+              <span class="od-info-value">{{ diaForm.tableName }}</span>
+            </div>
+            <div class="od-info-item od-info-item--full" v-if="diaForm.remark">
+              <span class="od-info-label">备注</span>
+              <span class="od-info-value">{{ diaForm.remark }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 菜品明细 -->
+        <div class="od-section">
+          <div class="od-section-title">
+            菜品明细
+            <el-tag size="mini" type="info" class="od-item-count" v-if="diaForm.orderDetails">
+              {{ diaForm.orderDetails.length }} 项
+            </el-tag>
+          </div>
+          <el-table
+            v-if="diaForm.orderDetails && diaForm.orderDetails.length > 0"
+            :data="diaForm.orderDetails"
+            size="small"
+            border
+            class="od-items-table"
+            :header-cell-style="tableHeaderStyle"
+            :cell-style="tableCellStyle"
+          >
+            <el-table-column label="#" type="index" width="45" align="center"></el-table-column>
+            <el-table-column prop="name" label="菜品名称" min-width="130">
+              <template slot-scope="scope">
+                <span class="od-item-name">{{ scope.row.name }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="image" label="图片" width="64" align="center">
+              <template slot-scope="scope">
+                <el-image
+                  v-if="scope.row.image"
+                  :src="scope.row.image"
+                  class="od-item-img"
+                  fit="cover"
+                  :preview-src-list="scope.row.image ? [scope.row.image] : []"
+                ></el-image>
+                <span v-else class="od-item-no-img">-</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="dishFlavor" label="口味" width="100" align="center">
+              <template slot-scope="scope">
+                <el-tag v-if="scope.row.dishFlavor" size="mini" type="info" effect="plain">{{ scope.row.dishFlavor }}</el-tag>
+                <span v-else class="od-empty">-</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="number" label="数量" width="70" align="center">
+              <template slot-scope="scope">
+                <span class="od-qty">x {{ scope.row.number }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="amount" label="小计" width="110" align="right">
+              <template slot-scope="scope">
+                <span class="od-subtotal">&#165;{{ Number(scope.row.amount).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-else class="od-empty-tip">暂无菜品明细</div>
+        </div>
       </div>
-      <div v-else style="margin-top:16px;text-align:center;padding:20px;color:#c0c4cc;font-size:13px;">暂无菜品明细</div>
       <span slot="footer" class="dialog-footer">
-        <el-button @click="dialogVisible = false">关 闭</el-button>
+        <el-button size="medium" icon="el-icon-close" @click="dialogVisible = false">关 闭</el-button>
       </span>
     </el-dialog>
 
@@ -295,6 +630,20 @@
         getOrderTagType: function(row) {
           var map = { 1: 'warning', 2: 'warning', 3: 'primary', 4: 'success', 5: 'info', 6: 'danger' }
           return map[row.status] || 'info'
+        },
+        // 就餐方式枚举转换（订单详情弹窗使用）
+        formatDiningType: function(val) {
+          if (!val) return '-'
+          var map = { TAKEOUT: '外卖配送', EAT_IN: '堂食扫码', QUEUE: '排队取餐', RESERVATION: '预订' }
+          return map[val] || val
+        },
+        // 订单详情表格：表头样式
+        tableHeaderStyle: function() {
+          return { background: '#f5f7fa', color: '#606266', fontWeight: '600', fontSize: '12px' }
+        },
+        // 订单详情表格：单元格样式
+        tableCellStyle: function() {
+          return { fontSize: '13px' }
         },
         goDetail: function(row) {
           this.dialogVisible = true

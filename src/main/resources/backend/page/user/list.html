@@ -34,10 +34,6 @@
             :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">
             <el-option v-for="p in filterOptions.phones" :key="p" :label="p" :value="p"></el-option>
           </el-select>
-          <el-select v-model="input.status" placeholder="请选择状态" class="el-select--narrow" clearable @change="handleQuery">
-            <el-option label="正常" :value="1"></el-option>
-            <el-option label="禁用" :value="0"></el-option>
-          </el-select>
         </template>
       </table-bar>
       <el-table
@@ -171,7 +167,13 @@
           // 修改点：当前激活的筛选器值，对应 <stat-cards> 组件
           activeFilter: '',
           // 修改点：<table-bar> 统一组件配置
-          tableSearchItems: [],
+          tableSearchItems: [
+            { type: 'select', field: 'status', placeholder: '用户状态', options: [
+              { label: '全部', value: '' },
+              { label: '正常', value: '1' },
+              { label: '禁用', value: '0' }
+            ], width: 130 }
+          ],
           tableActions: [],
           // 状态切换对话框
           statusDialog: {
@@ -278,15 +280,16 @@
           this.loading = false
         },
 
-        // 获取用户分页列表
+        // 获取用户分页列表（优先使用 lastSearch，回退到 input）
         async getUserPage() {
           try {
+            const s = this.lastSearch || {}
             const params = {
               page: this.page,
               pageSize: this.pageSize,
-              name: this.input.name || undefined,
-              phone: this.input.phone || undefined,
-              status: this.input.status != null ? this.input.status : undefined  // 修改点：适配null初始值
+              name: s.name || this.input.name || undefined,
+              phone: s.phone || this.input.phone || undefined,
+              status: s.status != null ? (s.status === '' ? undefined : Number(s.status)) : (this.input.status != null ? this.input.status : undefined)
             }
             const res = await $axios.get('/user/page', { params })
             return res
@@ -330,13 +333,15 @@
           return { code: 0 }
         },
 
-          // 查询
-        handleQuery() {
-          // 修改点：搜索时清空卡片筛选状态并复位状态下拉
+        // 查询（由 <table-bar> @search 触发，searchParams 包含 table-bar 管理的搜索条件）
+        handleQuery(searchParams) {
           this.activeFilter = ''
-          this.input.status = null
-          this.page = 1;
-          this.init();
+          this.page = 1
+          this.lastSearch = Object.assign({}, searchParams, {
+            name: this.input.name || undefined,
+            phone: this.input.phone || undefined
+          })
+          this.init()
         },
         // 重置搜索条件，恢复表格初始状态
         reset() {

@@ -1,0 +1,223 @@
+/* ============================================================
+ * 报表页通用组件样式
+ * 适用于 iframe 架构 + Vue 2 + Element UI 的无构建工具场景
+ *
+ * 组件对应：
+ *   <chart-panel>  → 本文件 .chart-panel
+ *   <kpi-card>     → 本文件 .kpi-card
+ *   <page-shell>   → 本文件 .page-shell
+ *
+ * 引入方式：
+ *   <link rel="stylesheet" href="../../styles/chart-panel.css" />
+ *
+ * @since 2026-07-16
+ * ============================================================ */
+
+/* ========== chart-panel — 图表面板 ========== */
+.chart-panel {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  transition: all 0.3s;
+}
+
+.chart-panel:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+/* 标题栏 */
+.chart-panel__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid #f0f2f5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chart-panel__icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* 内容区 */
+.chart-panel__body {
+  width: 100%;
+}
+
+
+/* ========== kpi-card — KPI 指标卡片 ========== */
+
+.kpi-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 22px 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 130px;
+}
+
+.kpi-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10);
+}
+
+/* 顶部渐变条 */
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient);
+  opacity: 0.85;
+}
+
+/* 背景装饰圆 */
+.kpi-card::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -25%;
+  width: 160px;
+  height: 160px;
+  background: var(--gradient);
+  border-radius: 50%;
+  opacity: 0.05;
+  transition: all 0.5s;
+}
+
+.kpi-card:hover::after {
+  transform: scale(1.15);
+  opacity: 0.08;
+}
+
+/* 图标 */
+.kpi-card__icon {
+  position: absolute;
+  right: 18px;
+  top: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--icon-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  transition: all 0.3s;
+}
+
+.kpi-card:hover .kpi-card__icon {
+  transform: rotate(5deg) scale(1.1);
+}
+
+/* 内容区 */
+.kpi-card__content {
+  position: relative;
+  z-index: 1;
+}
+
+.kpi-card__label {
+  font-size: 13px;
+  color: #909399;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.kpi-card__value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 4px;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.kpi-card__unit {
+  font-size: 14px;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.kpi-card__sub {
+  font-size: 12px;
+  color: #909399;
+}
+
+/* ===== 颜色主题 ===== */
+.kpi-card--primary  { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); --icon-bg: linear-gradient(135deg, rgba(64,158,255,0.1) 0%, rgba(102,177,255,0.14) 100%); }
+.kpi-card--success  { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); --icon-bg: linear-gradient(135deg, rgba(103,194,58,0.1) 0%, rgba(133,206,97,0.14) 100%); }
+.kpi-card--warning  { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); --icon-bg: linear-gradient(135deg, rgba(230,162,60,0.1) 0%, rgba(235,181,99,0.14) 100%); }
+.kpi-card--info     { --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%); --icon-bg: linear-gradient(135deg, rgba(144,147,153,0.1) 0%, rgba(166,169,173,0.14) 100%); }
+.kpi-card--danger   { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); --icon-bg: linear-gradient(135deg, rgba(245,108,108,0.1) 0%, rgba(247,137,137,0.14) 100%); }
+.kpi-card--purple   { --gradient: linear-gradient(135deg, #9c27b0 0%, #ce93d8 100%); --icon-bg: linear-gradient(135deg, rgba(156,39,176,0.1) 0%, rgba(206,147,216,0.14) 100%); }
+
+
+/* ========== page-shell — 报表页外壳 ========== */
+
+.page-shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-shell__header {
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f0f2f5;
+}
+
+.page-shell__toolbar {
+  margin-bottom: 20px;
+}
+
+.page-shell__cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.page-shell__cards--col-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.page-shell__content {
+  flex: 1;
+  min-width: 0;
+}
+
+
+/* ========== 响应式 ========== */
+
+@media (max-width: 1400px) {
+  .page-shell__cards,
+  .page-shell__cards--col-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .page-shell__cards,
+  .page-shell__cards--col-3 {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
