@@ -190,16 +190,11 @@
           } catch (err) { console.warn('加载配置统计失败:', err) }
           return { code: 0 }
         },
-        // stat-cards 点击
+        // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
-          var self = this
-          if (payload.key === '') {
-            self.activeFilter = ''
-          } else {
-            self.activeFilter = self.activeFilter === payload.key ? '' : payload.key
-          }
-          self.lastSearch = self.activeFilter ? this.buildFilterParams(self.activeFilter) : {}
-          self.page = 1
+          this.activeFilter = payload.activeKey
+          this.lastSearch = this.activeFilter ? this.buildFilterParams(this.activeFilter) : {}
+          this.page = 1
           this.init()
         },
         buildFilterParams(key) {

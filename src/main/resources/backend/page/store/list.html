@@ -420,11 +420,11 @@
             }).catch(function() {});
         },
 
-        // 修改点：<stat-cards> 组件统一卡片点击分发
+        // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
-            this.activeFilter = this.activeFilter === payload.key ? '' : payload.key;
-            this.pagination.current = 1;
-            this.loadData();
+            this.activeFilter = payload.activeKey
+            this.pagination.current = 1
+            this.loadData()
         },
         // ========== 搜索 ==========
         doSearch: function() {

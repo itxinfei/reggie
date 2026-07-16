@@ -173,11 +173,11 @@
       mounted() { window.addEventListener('resize', () => { if (this.trendChart) this.trendChart.resize() }) },
       beforeDestroy() { if (this.trendChart) this.trendChart.dispose() },
       methods: {
-        // 修改点：<stat-cards> 组件统一卡片点击分发
+        // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
-          this.cardFilter = this.cardFilter === payload.key ? '' : payload.key;
-          this.page = 1;
-          this.init();
+          this.cardFilter = payload.activeKey
+          this.page = 1
+          this.init()
         },
         // 修改点：<table-bar> 组件统一操作分发
         onTableAction: function(payload) {

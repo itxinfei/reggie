@@ -268,7 +268,7 @@
           if (payload.key === '') {
             self.activeFilter = ''
           } else {
-            self.activeFilter = self.activeFilter === payload.key ? '' : payload.key
+            self.activeFilter = payload.activeKey
           }
           self.lastSearch = self.activeFilter ? this.buildFilterParams(self.activeFilter) : {}
           self.page = 1

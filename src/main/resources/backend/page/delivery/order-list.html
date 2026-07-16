@@ -295,17 +295,12 @@
             this.loading = false
           }
         },
-        // stat-cards 点击筛选
+        // 修改点：stat-cards 点击筛选（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
           if (payload.key === 'PENDING' || payload.key === 'DELIVERING'
               || payload.key === 'DELIVERED' || payload.key === 'CANCELLED') {
-            if (this.activeFilter === payload.key) {
-              this.activeFilter = ''
-              this.lastSearch = {}
-            } else {
-              this.activeFilter = payload.key
-              this.lastSearch = { status: payload.key }
-            }
+            this.activeFilter = payload.activeKey
+            this.lastSearch = payload.activeKey ? { status: payload.activeKey } : {}
           }
           this.page = 1
           this.search()

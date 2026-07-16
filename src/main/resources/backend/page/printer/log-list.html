@@ -137,17 +137,12 @@
         }
       },
       methods: {
-        // 修改点：<stat-cards> 组件统一卡片点击分发
+        // 修改点：<stat-cards> 组件统一卡片点击分发（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
-          var key = payload.key;
-          if (this.activeFilter === key) {
-            this.activeFilter = '';
-            this.query.status = '';
-          } else {
-            this.activeFilter = key;
-            this.query.status = key === '' ? '' : Number(key);
-          }
-          this.search();
+          var key = payload.activeKey
+          this.activeFilter = key
+          this.query.status = key === '' ? '' : Number(key)
+          this.search()
         },
         async init() {
           this.loading = true

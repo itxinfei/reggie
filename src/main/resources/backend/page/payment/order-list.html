@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -11,10 +11,77 @@
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
   <style>
-    .info-box .item-box { display: flex; height: 20px; line-height: 20px; font-size: 14px; color: #666; margin-bottom: 14px; }
-    .info-box .item-box:last-child { margin-bottom: 0; }
-    .info-box .item-box .label { width: 100px; }
-    .info-box .item-box .des { flex: 1; color: #333; }
+    /* ========== Payment Detail Dialog ========== */
+    .pay-detail-dialog { border-radius: 12px; overflow: hidden; animation: none !important; }
+    .pay-detail-dialog .el-dialog__header { padding: 0; display: none; }
+    .pay-detail-dialog .el-dialog__body { padding: 0; }
+    .pay-detail-dialog .dialog-footer { text-align: right; padding: 14px 20px 18px; }
+    .pay-detail-dialog .el-dialog__headerbtn { z-index: 10; }
+
+    .pd-wrap { background: #fff; border-radius: 12px; overflow: hidden; }
+
+    /* Header bar */
+    .pd-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+    .pd-header-left { display: flex; align-items: center; gap: 12px; }
+    .pd-number { font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+    .pd-status-tag { border: none; font-weight: 600; }
+    .pd-header-right { font-size: 12px; opacity: 0.85; }
+
+    /* Amount highlight */
+    .pd-amount-card {
+      display: flex; align-items: center; gap: 14px;
+      margin: 16px 20px 0; padding: 20px 24px;
+      background: linear-gradient(135deg, #f0f4ff 0%, #e8ecf9 100%);
+      border: 1px solid #dce3f5; border-radius: 10px;
+    }
+    .pd-amount-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff; font-size: 22px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .pd-amount-label { font-size: 12px; color: #909399; margin-bottom: 2px; }
+    .pd-amount-value { font-size: 26px; font-weight: 800; color: #667eea; letter-spacing: -0.5px; }
+
+    /* Info grid */
+    .pd-info-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+      margin: 16px 20px 0;
+      border: 1px solid #ebeef5; border-radius: 8px; overflow: hidden;
+    }
+    .pd-info-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 11px 16px; background: #fff;
+      border-bottom: 1px solid #f5f7fa; min-height: 42px;
+    }
+    .pd-info-item:last-child, .pd-info-item:nth-last-child(2) { border-bottom: none; }
+    .pd-info-item--full { grid-column: 1 / -1; }
+    .pd-info-label { font-size: 13px; color: #909399; width: 90px; flex-shrink: 0; line-height: 22px; }
+    .pd-info-value { font-size: 13px; color: #303133; font-weight: 500; line-height: 22px; word-break: break-all; }
+
+    /* Trade numbers */
+    .pd-trade-section {
+      margin: 16px 20px 0; padding: 16px 18px;
+      background: #fafbfc; border: 1px solid #ebeef5; border-radius: 8px;
+    }
+    .pd-trade-title { font-size: 13px; font-weight: 700; color: #606266; margin-bottom: 10px; }
+    .pd-trade-row { display: flex; align-items: center; padding: 6px 0; font-size: 13px; }
+    .pd-trade-row .pd-trade-label { color: #909399; width: 110px; flex-shrink: 0; }
+    .pd-trade-row .pd-trade-val { color: #303133; font-weight: 500; font-family: monospace; }
+
+    /* Close button */
+    .pd-close-btn {
+      width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15);
+      color: #fff; border-radius: 8px; cursor: pointer; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .pd-close-btn:hover { background: rgba(255,255,255,0.3); transform: rotate(90deg); }
   </style>
 </head>
 <body>
@@ -55,35 +122,97 @@
           </el-tag>
         </template>
         <template #col-amount="{ row }">
-          <span>￥{{ row.amount }}</span>
+          <span style="font-weight:600;">&#165;{{ row.amount }}</span>
         </template>
         <template #col-status="{ row }">
           <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="viewDetail(row)">查看详情</el-button>
-          <el-button v-if="row.status === '成功'" type="text" size="small" class="btn-view" @click="openRefund(row)">退款</el-button>
+          <el-button v-if="row.status === 'SUCCESS'" type="text" size="small" class="btn-view" @click="openRefund(row)">退款</el-button>
         </template>
       </crud-table>
     </div>
 
-    <!-- 查看详情弹框 -->
-    <crud-dialog
-      title="支付详情"
+    <!-- 支付详情弹窗 -->
+    <el-dialog
+      title=""
       :visible.sync="detailVisible"
-      width="35%"
-      :show-submit="false"
-      submit-text="确 定"
+      width="640px"
+      :close-on-click-modal="true"
+      @closed="detailForm = {}"
+      custom-class="pay-detail-dialog"
     >
-      <div class="info-box">
-        <div class="item-box"><span class="label">交易流水号：</span><span class="des">{{ detailForm.id }}</span></div>
-        <div class="item-box"><span class="label">订单号：</span><span class="des">{{ detailForm.orderId }}</span></div>
-        <div class="item-box"><span class="label">支付渠道：</span><span class="des">{{ detailForm.channel === 'ALIPAY' ? '支付宝' : '微信' }}</span></div>
-        <div class="item-box"><span class="label">支付金额：</span><span class="des">￥{{ detailForm.amount }}</span></div>
-        <div class="item-box"><span class="label">支付状态：</span><span class="des">{{ statusLabel(detailForm.status) }}</span></div>
-        <div class="item-box"><span class="label">支付时间：</span><span class="des">{{ detailForm.paidTime }}</span></div>
+      <div v-if="detailForm" class="pd-wrap">
+        <!-- 顶部标题栏 -->
+        <div class="pd-header">
+          <div class="pd-header-left">
+            <span class="pd-number">支付订单 #{{ detailForm.id }}</span>
+            <el-tag :type="statusTagType(detailForm.status)" size="small" effect="dark" class="pd-status-tag">
+              {{ statusLabel(detailForm.status) }}
+            </el-tag>
+          </div>
+          <div class="pd-header-right">
+            <button class="pd-close-btn" @click="detailVisible = false">&times;</button>
+          </div>
+        </div>
+
+        <!-- 金额卡片 -->
+        <div class="pd-amount-card">
+          <div class="pd-amount-icon">&#165;</div>
+          <div>
+            <div class="pd-amount-label">支付金额</div>
+            <div class="pd-amount-value">&#165;{{ detailForm.amount }}</div>
+          </div>
+        </div>
+
+        <!-- 交易信息 -->
+        <div class="pd-trade-section">
+          <div class="pd-trade-title">交易信息</div>
+          <div class="pd-trade-row">
+            <span class="pd-trade-label">内部流水号</span>
+            <span class="pd-trade-val">{{ detailForm.tradeNo || '-' }}</span>
+          </div>
+          <div class="pd-trade-row">
+            <span class="pd-trade-label">渠道交易号</span>
+            <span class="pd-trade-val">{{ detailForm.channelTradeNo || '-' }}</span>
+          </div>
+          <div class="pd-trade-row">
+            <span class="pd-trade-label">支付渠道</span>
+            <span class="pd-trade-val">{{ detailForm.channel === 'ALIPAY' ? '支付宝' : detailForm.channel === 'WECHAT' ? '微信' : (detailForm.channel || '-') }}</span>
+          </div>
+          <div class="pd-trade-row">
+            <span class="pd-trade-label">关联订单号</span>
+            <span class="pd-trade-val">{{ detailForm.orderId || '-' }}</span>
+          </div>
+        </div>
+
+        <!-- 时间与状态 -->
+        <div class="pd-info-grid">
+          <div class="pd-info-item">
+            <span class="pd-info-label">支付状态</span>
+            <span class="pd-info-value">
+              <el-tag :type="statusTagType(detailForm.status)" size="small" effect="plain">{{ statusLabel(detailForm.status) }}</el-tag>
+            </span>
+          </div>
+          <div class="pd-info-item">
+            <span class="pd-info-label">支付时间</span>
+            <span class="pd-info-value">{{ detailForm.paidTime || '-' }}</span>
+          </div>
+          <div class="pd-info-item">
+            <span class="pd-info-label">渠道通知</span>
+            <span class="pd-info-value">{{ detailForm.notifyTime || '-' }}</span>
+          </div>
+          <div class="pd-info-item">
+            <span class="pd-info-label">创建时间</span>
+            <span class="pd-info-value">{{ detailForm.createdTime || '-' }}</span>
+          </div>
+        </div>
       </div>
-    </crud-dialog>
+      <span slot="footer" class="dialog-footer">
+        <el-button size="small" @click="detailVisible = false">关 闭</el-button>
+      </span>
+    </el-dialog>
 
     <!-- 退款弹框 -->
     <crud-dialog
@@ -114,6 +243,28 @@
   <script src="../../js/components.js"></script>
   <script src="../../api/payment.js"></script>
   <script>
+    // ========== 支付状态常量映射（统一来源） ==========
+    var PAYMENT_STATUS = {
+      PENDING:  '待支付', SUCCESS: '成功', FAIL: '失败',
+      REFUND: '已退款', REFUNDED: '已退款'
+    }
+    var PAYMENT_STATUS_TAG = {
+      PENDING: 'warning', SUCCESS: 'success', FAIL: 'danger',
+      REFUND: 'info', REFUNDED: 'info'
+    }
+    // 将 API 返回的英文状态统一转换为中文
+    function normalizePayment(row) {
+      if (!row) return row
+      var r = Object.assign({}, row)
+      if (r.status) {
+        var upper = r.status.toUpperCase()
+        r._statusLabel = PAYMENT_STATUS[upper] || r.status
+      } else {
+        r._statusLabel = '-'
+      }
+      return r
+    }
+
     new Vue({
       el: '#payment-app',
       data: function() {
@@ -126,13 +277,14 @@
           // 统计数据
           stats: { todayPayments: 0, successPayments: 0, pendingPayments: 0, failedPayments: 0 },
           activeFilter: '',
-          // 搜索配置
+          // 搜索配置（下拉框 value 使用中文，后端已兼容中文映射）
           searchConfig: [
             { type: 'input', field: 'orderId', placeholder: '请输入订单号', width: '200px' },
             { type: 'select', field: 'channel', placeholder: '支付渠道', width: '140px',
               options: [{ label: '支付宝', value: 'ALIPAY' }, { label: '微信', value: 'WECHAT' }] },
             { type: 'select', field: 'status', placeholder: '支付状态', width: '130px',
               options: [
+                { label: '全部', value: '' },
                 { label: '待支付', value: '待支付' }, { label: '成功', value: '成功' },
                 { label: '失败', value: '失败' }, { label: '已退款', value: '已退款' }
               ] },
@@ -141,12 +293,12 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'id', label: '交易流水号', minWidth: '120' },
+            { prop: 'id', label: '交易流水号', minWidth: '130' },
             { prop: 'orderId', label: '订单号', minWidth: '110' },
             { prop: 'channel', label: '支付渠道', slot: true, width: 100 },
-            { prop: 'amount', label: '支付金额', slot: true, width: 100 },
+            { prop: 'amount', label: '支付金额', slot: true, width: 110 },
             { prop: 'status', label: '支付状态', slot: true, width: 100 },
-            { prop: 'paidTime', label: '支付时间', minWidth: '120' }
+            { prop: 'paidTime', label: '支付时间', minWidth: '130' }
           ],
           // 缓存搜索参数
           lastSearch: {},
@@ -161,10 +313,10 @@
         statsCards: function() {
           var self = this
           return [
-            { key: '今日', icon: '💳', label: '今日支付订单', value: self.stats.todayPayments, color: 'primary', clickable: true, active: self.activeFilter === '今日' },
-            { key: '成功', icon: '✅', label: '支付成功', value: self.stats.successPayments, color: 'success', clickable: true, active: self.activeFilter === '成功' },
-            { key: '待支付', icon: '⏳', label: '待支付', value: self.stats.pendingPayments, color: 'warning', clickable: true, active: self.activeFilter === '待支付' },
-            { key: '失败', icon: '❌', label: '支付失败', value: self.stats.failedPayments, color: 'danger', clickable: true, active: self.activeFilter === '失败' }
+            { key: '今日', icon: '&#165;', label: '今日支付订单', value: self.stats.todayPayments, color: 'primary', clickable: true, active: self.activeFilter === '今日' },
+            { key: '成功', icon: '&#10003;', label: '支付成功', value: self.stats.successPayments, color: 'success', clickable: true, active: self.activeFilter === '成功' },
+            { key: '待支付', icon: '&#8987;', label: '待支付', value: self.stats.pendingPayments, color: 'warning', clickable: true, active: self.activeFilter === '待支付' },
+            { key: '失败', icon: '&#10007;', label: '支付失败', value: self.stats.failedPayments, color: 'danger', clickable: true, active: self.activeFilter === '失败' }
           ]
         }
       },
@@ -184,7 +336,10 @@
           var results = await Promise.all([paymentPage(params), self.loadPaymentStats()])
           var paymentRes = results[0]
           var statsRes = results[1]
-          if (String(paymentRes.code) === '1') { self.tableData = paymentRes.data.records || []; self.counts = paymentRes.data.total }
+          if (String(paymentRes.code) === '1') {
+            self.tableData = (paymentRes.data.records || []).map(function(r) { return normalizePayment(r) })
+            self.counts = paymentRes.data.total
+          }
           if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
           self.loading = false
         },
@@ -199,18 +354,18 @@
             var todayRes = results[0]
             var allRes = results[1]
             if (String(allRes.code) === '1') {
-              var records = allRes.data.records || []
+              var records = (allRes.data.records || []).map(function(r) { return normalizePayment(r) })
               return { code: 1, data: {
                 todayPayments: (String(todayRes.code) === '1') ? (todayRes.data.total || 0) : 0,
-                successPayments: records.filter(function(r) { return r.status === '成功' || r.status === 'SUCCESS' }).length,
-                pendingPayments: records.filter(function(r) { return r.status === '待支付' || r.status === 'PENDING' }).length,
-                failedPayments: records.filter(function(r) { return r.status === '失败' || r.status === 'FAIL' }).length
+                successPayments: records.filter(function(r) { return r.status === '成功' }).length,
+                pendingPayments: records.filter(function(r) { return r.status === '待支付' }).length,
+                failedPayments: records.filter(function(r) { return r.status === '失败' }).length
               }}
             }
           } catch (err) { console.warn('加载支付统计数据失败:', err) }
           return { code: 0 }
         },
-        // stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
+        // stat-cards 点击
         onCardClick: function(payload) {
           var self = this
           if (payload.activeKey === '今日') {
@@ -240,17 +395,20 @@
         },
         onPageChange: function(payload) { this.page = payload.page; this.init() },
         onSizeChange: function(payload) { this.pageSize = payload.pageSize; this.init() },
+        // 状态工具（统一使用常量映射）
         statusTagType: function(status) {
-          var map = { '待支付': 'warning', '成功': 'success', '失败': 'danger', '已退款': 'info',
-                       PENDING: 'warning', SUCCESS: 'success', FAIL: 'danger', REFUNDED: 'info', REFUND: 'info' }
-          return map[status] || ''
+          var raw = (status || '').toUpperCase()
+          return PAYMENT_STATUS_TAG[raw] || ''
         },
         statusLabel: function(status) {
-          var map = { '待支付': '待支付', '成功': '成功', '失败': '失败', '已退款': '已退款',
-                       PENDING: '待支付', SUCCESS: '成功', FAIL: '失败', REFUNDED: '已退款', REFUND: '已退款' }
-          return map[status] || status
+          var raw = (status || '').toUpperCase()
+          return PAYMENT_STATUS[raw] || (status || '-')
         },
-        viewDetail: function(row) { this.detailForm = { ...row }; this.detailVisible = true },
+        viewDetail: function(row) {
+          var normalized = normalizePayment(row)
+          this.detailForm = normalized
+          this.detailVisible = true
+        },
         openRefund: function(row) {
           this.refundForm = { id: row.id, amount: row.amount, maxAmount: row.amount, reason: '' }
           this.refundVisible = true
@@ -260,13 +418,13 @@
           if (!self.refundForm.amount || self.refundForm.amount <= 0) { self.$message.error('请输入有效的退款金额'); return }
           if (self.refundForm.amount > self.refundForm.maxAmount) { self.$message.error('退款金额不能超过支付金额'); return }
           if (!self.refundForm.reason) { self.$message.error('请输入退款原因'); return }
-          this.$confirm('确认退款 ￥' + self.refundForm.amount + '?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          this.$confirm('确认退款 &#165;' + self.refundForm.amount + '?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               paymentRefund({ id: self.refundForm.id, amount: self.refundForm.amount, reason: self.refundForm.reason }).then(function(res) {
                 if (res && res.code === 1) { self.$message.success('退款成功！'); self.refundVisible = false; self.init() }
                 else { self.$message.error(res ? res.msg : '退款失败') }
               }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)) })
-            }).catch(function() { /* 用户取消确认 */ })
+            }).catch(function() { /* user cancelled */ })
         }
       }
     })

@@ -166,11 +166,11 @@
         }
       },
       methods: {
-        // 修改点：<stat-cards> 组件统一卡片点击分发
+        // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
-          this.activeFilter = this.activeFilter === payload.key ? '' : payload.key;
-          this.page = 1;
-          this.init();
+          this.activeFilter = payload.activeKey
+          this.page = 1
+          this.init()
         },
         // 修改点：<table-bar> 组件统一操作分发
         onTableAction: function(payload) {

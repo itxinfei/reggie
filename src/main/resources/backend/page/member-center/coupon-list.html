@@ -245,10 +245,10 @@
             self.activeFilter = ''
             self.searchValues = { name: '', type: '', status: '' }
           } else if (payload.key === 'enabled') {
-            self.activeFilter = self.activeFilter === 'enabled' ? '' : 'enabled'
+            self.activeFilter = 'enabled'
             self.searchValues = { name: '', type: '', status: self.activeFilter ? '1' : '' }
           } else if (payload.key === 'disabled') {
-            self.activeFilter = self.activeFilter === 'disabled' ? '' : 'disabled'
+            self.activeFilter = 'disabled'
             self.searchValues = { name: '', type: '', status: self.activeFilter ? '0' : '' }
           }
           self.page = 1

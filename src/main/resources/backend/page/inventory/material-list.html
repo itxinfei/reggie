@@ -215,8 +215,8 @@
         methods: {
           // 修改点：<stat-cards> 组件统一卡片点击分发
           onCardClick: function(payload) {
-            var key = payload.key;
-            this.activeFilter = this.activeFilter === key ? '' : key;
+            var key = payload.activeKey;
+            this.activeFilter = key;
             // 卡片筛选时清空搜索输入
             this.input.name = '';
             this.input.categoryId = '';
