@@ -2,7 +2,9 @@ package com.reggie.module.printer.controller;
 
 import com.reggie.common.R;
 import com.reggie.module.printer.adapter.PrinterAdapterFactory;
+import com.reggie.module.printer.model.PrinterConfig;
 import com.reggie.module.printer.model.PrinterStatus;
+import com.reggie.module.printer.service.PrinterConfigService;
 import com.reggie.module.printer.service.PrinterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -40,6 +42,9 @@ public class PrinterController {
 
     @Autowired
     private PrinterAdapterFactory adapterFactory;
+
+    @Autowired
+    private PrinterConfigService printerConfigService;
 
     /**
      * 根据订单ID打印订单小票
@@ -83,6 +88,19 @@ public class PrinterController {
         log.info("查询打印机状态: id={}", id);
         PrinterStatus status = printerService.getPrinterStatus(id);
         return R.success(status);
+    }
+
+    /**
+     * 根据ID查询打印机配置
+     */
+    @GetMapping("/{id}")
+    @Operation(summary = "查询打印机", description = "根据ID查询打印机配置")
+    public R<PrinterConfig> getById(@PathVariable Long id) {
+        PrinterConfig config = printerConfigService.getById(id);
+        if (config != null) {
+            return R.success(config);
+        }
+        return R.error("没有查询到对应打印机");
     }
 
     /**

@@ -18,8 +18,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 会员等级管理控制器
@@ -39,15 +41,12 @@ public class MemberLevelController {
 
     /**
      * 分页查询会员等级列表
-     * @param page 页码
-     * @param pageSize 每页数量
-     * @return 分页结果
      */
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询会员等级列表，自动过滤当前租户数据")
-    @Parameter(name = "page", description = "页码", required = true, example = "1")
-    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
-    public R<Page<MemberLevel>> page(int page, int pageSize) {
+    public R<Page<MemberLevel>> page(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
         Page<MemberLevel> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<MemberLevel> qw = new LambdaQueryWrapper<>();
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -57,6 +56,21 @@ public class MemberLevelController {
         qw.orderByAsc(MemberLevel::getMinPoints);
         memberLevelService.page(pageInfo, qw);
         return R.success(pageInfo);
+    }
+
+    /**
+     * 所有会员等级列表
+     */
+    @GetMapping("/list")
+    @Operation(summary = "等级列表", description = "获取所有会员等级列表")
+    public R<List<MemberLevel>> list() {
+        LambdaQueryWrapper<MemberLevel> qw = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            qw.eq(MemberLevel::getTenantId, tenantId);
+        }
+        qw.orderByAsc(MemberLevel::getMinPoints);
+        return R.success(memberLevelService.list(qw));
     }
 
     /**

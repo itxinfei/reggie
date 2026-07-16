@@ -115,8 +115,13 @@ public class DashboardController {
     @Operation(summary = "系统健康", description = "获取各组件健康状态（Redis、数据库、JVM等）")
     public R<Map<String, Object>> health() {
         log.info("[Dashboard] 获取系统健康状态");
-        Map<String, Object> data = dashboardService.getSystemHealth();
-        return R.success(data);
+        try {
+            Map<String, Object> data = dashboardService.getSystemHealth();
+            return R.success(data);
+        } catch (Exception e) {
+            log.error("[Dashboard] 系统健康状态获取异常: {}", e.getMessage(), e);
+            return R.success(healthErrorPlaceholder(e));
+        }
     }
 
     /**

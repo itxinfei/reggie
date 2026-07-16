@@ -66,6 +66,11 @@ public class LoginCheckFilter implements Filter{
         "/dish/options",
         "/setmeal/list",
         "/setmeal/options",
+        // 放行推荐模块公开接口（未登录返回热门菜品）
+        "/recommend/dishes",
+        "/recommend/hot",
+        "/recommend/new-arrivals",
+        "/recommend/setmeals",
         // 放行API文档相关路径
         "/swagger-ui/**",
         "/swagger-ui.html",

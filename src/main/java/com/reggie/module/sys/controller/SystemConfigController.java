@@ -29,21 +29,6 @@ public class SystemConfigController {
     private SystemConfigService systemConfigService;
 
     /**
-     * 配置列表（分页）
-     */
-    @GetMapping("/page")
-    @Operation(summary = "配置分页查询", description = "分页查询系统配置")
-    public R<Page<SystemConfig>> page(
-            @Parameter(description = "页码") int page,
-            @Parameter(description = "每页条数") int pageSize,
-            @Parameter(description = "配置键") String configKey) {
-        Page<SystemConfig> pageInfo = new Page<>(page, pageSize);
-        // 简化查询，使用Service层方法
-        List<SystemConfig> all = systemConfigService.list();
-        return R.success(pageInfo);
-    }
-
-    /**
      * 所有配置列表
      */
     @GetMapping("/list")
@@ -54,7 +39,51 @@ public class SystemConfigController {
     }
 
     /**
-     * 获取单个配置
+     * 根路径 GET — 兼容前端直接访问 /sys/config
+     */
+    @GetMapping
+    @Operation(summary = "配置列表", description = "获取所有系统配置列表")
+    public R<List<SystemConfig>> rootList() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        return R.success(systemConfigService.listByTenantId(tenantId));
+    }
+
+    /**
+     * 根路径 PUT — 兼容前端 PUT /sys/config
+     */
+    @PutMapping
+    @Operation(summary = "批量更新配置", description = "批量更新系统配置项")
+    public R<String> rootBatchUpdate(@RequestBody List<SystemConfig> configs) {
+        if (configs != null && !configs.isEmpty()) {
+            for (SystemConfig config : configs) {
+                if (config.getConfigKey() != null) {
+                    systemConfigService.setConfig(
+                            BaseContext.getCurrentTenantId(),
+                            config.getConfigKey(),
+                            config.getConfigValue()
+                    );
+                }
+            }
+        }
+        return R.success("配置批量更新成功");
+    }
+
+    /**
+     * 配置列表（分页）— 兼容前端 GET /sys/config
+     */
+    @GetMapping("/page")
+    @Operation(summary = "配置分页查询", description = "分页查询系统配置")
+    public R<Page<SystemConfig>> page(
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "配置键") @RequestParam(required = false) String configKey) {
+        Page<SystemConfig> pageInfo = new Page<>(page, pageSize);
+        List<SystemConfig> all = systemConfigService.list();
+        return R.success(pageInfo);
+    }
+
+    /**
+     * 获取单个配置 — 兼容前端 GET /sys/config/{key}
      */
     @GetMapping("/{configKey}")
     @Operation(summary = "获取配置值", description = "根据配置键获取配置值")
@@ -76,9 +105,9 @@ public class SystemConfigController {
     }
 
     /**
-     * 修改配置
+     * 修改配置 — PUT /sys/config/{id}
      */
-    @PutMapping
+    @PutMapping("/{id}")
     @Operation(summary = "修改配置", description = "更新系统配置")
     public R<String> update(
             @Parameter(description = "配置信息") @Valid @RequestBody SystemConfig config) {

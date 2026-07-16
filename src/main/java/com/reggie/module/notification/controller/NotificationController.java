@@ -297,19 +297,14 @@ public class NotificationController {
 
     /**
      * 分页查询发送记录
-     * @param page 页码
-     * @param pageSize 每页条数
-     * @param bizType 业务类型
-     * @param status 状态
-     * @return 分页结果
      */
     @GetMapping("/record/page")
-    @Operation(summary = "分页查询发送记录", description = "分页查询通知发送记录，支持按业务类型和状态筛选")
+    @Operation(summary = "分页查询发送记录", description = "分页查询通知发送记录")
     public R<Page<NotificationRecord>> recordPage(
-            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
-            @Parameter(description = "业务类型（可选）") @RequestParam(required = false) String bizType,
-            @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status) {
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String bizType,
+            @RequestParam(required = false) Integer status) {
         Page<NotificationRecord> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<NotificationRecord> wrapper = new LambdaQueryWrapper<>();
         if (bizType != null && !bizType.isEmpty()) {

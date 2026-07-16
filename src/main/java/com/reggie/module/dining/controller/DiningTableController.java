@@ -6,6 +6,7 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.dto.ChangeTableStatusDTO;
 import com.reggie.module.dining.model.DiningTable;
+import com.reggie.module.dining.model.TableArea;
 import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.utils.QRCodeUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.util.List;
 
 /**
  * 堂食桌台管理控制器
@@ -43,6 +45,9 @@ public class DiningTableController {
 
     @Autowired
     private QRCodeUtil qrCodeUtil;
+
+    @Autowired
+    private com.reggie.module.dining.service.TableAreaService tableAreaService;
 
     /**
      * 分页查询桌台列表
@@ -122,6 +127,26 @@ public class DiningTableController {
         log.info("修改桌台状态: id={}, status={}", dto.getId(), dto.getStatus());
         diningTableService.changeStatus(dto.getId(), dto.getStatus());
         return R.success("修改状态成功");
+    }
+
+    /**
+     * 桌台列表（不分页）
+     */
+    @GetMapping("/list")
+    @Operation(summary = "桌台列表", description = "获取所有桌台列表")
+    public R<List<DiningTable>> list() {
+        LambdaQueryWrapper<DiningTable> qw = new LambdaQueryWrapper<>();
+        qw.orderByAsc(DiningTable::getSort);
+        List<DiningTable> list = diningTableService.list(qw);
+        for (DiningTable table : list) {
+            if (table.getAreaId() != null) {
+                TableArea area = tableAreaService.getById(table.getAreaId());
+                if (area != null) {
+                    table.setAreaName(area.getName());
+                }
+            }
+        }
+        return R.success(list);
     }
 
     /**

@@ -81,19 +81,19 @@ public class OrderTimeoutTask {
                     .collect(java.util.stream.Collectors.groupingBy(Orders::getTenantId));
 
             for (java.util.Map.Entry<Long, java.util.List<Orders>> entry : ordersByTenant.entrySet()) {
-                Long tenantId = entry.getKey();
+                Long tid = entry.getKey();
                 java.util.List<Orders> tenantOrders = entry.getValue();
-                BaseContext.setCurrentTenantId(tenantId);
+                BaseContext.setCurrentTenantId(tid);
                 try {
                     for (Orders order : tenantOrders) {
                         try {
                             // 使用 cancelOrder 统一处理：回退库存 + 标记 stockRefunded
                             orderService.cancelOrder(order.getId(), "超时未接单，系统自动取消");
                             log.warn("[定时任务] 订单超时自动取消（库存已回退）: orderId={}, number={}, orderTime={}, tenantId={}",
-                                order.getId(), order.getNumber(), order.getOrderTime(), tenantId);
+                                order.getId(), order.getNumber(), order.getOrderTime(), tid);
                         } catch (Exception e) {
                             log.error("[定时任务] 取消超时订单失败: orderId={}, tenantId={}, error={}",
-                                order.getId(), tenantId, e.getMessage());
+                                order.getId(), tid, e.getMessage());
                         }
                     }
                 } finally {

@@ -53,9 +53,9 @@ public class RoleController {
     @GetMapping("/page")
     @Operation(summary = "角色分页查询")
     public R<Page<Role>> page(
-            @Parameter(description = "页码") int page,
-            @Parameter(description = "每页条数") int pageSize,
-            @Parameter(description = "角色名称") String roleName) {
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "角色名称") @RequestParam(required = false) String roleName) {
         Page<Role> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
         if (roleName != null && !roleName.isEmpty()) {
