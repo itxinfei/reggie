@@ -16,6 +16,8 @@
     .order-detail-dialog {
       border-radius: 12px;
       overflow: hidden;
+      /* 修改点：去掉 el-dialog 默认的 zoom-in-center 缩放动画，避免打开时表格抖动 */
+      animation: none !important;
     }
     .order-detail-dialog .el-dialog__header {
       padding: 0;
@@ -23,6 +25,10 @@
     }
     .order-detail-dialog .el-dialog__body {
       padding: 0;
+    }
+    /* 关闭按钮始终可点击 */
+    .order-detail-dialog .el-dialog__headerbtn {
+      z-index: 10;
     }
     .order-detail-wrap {
       background: #fff;
@@ -645,12 +651,15 @@
         },
         goDetail: function(row) {
           this.dialogVisible = true
-          this.diaForm = { ...row, orderDetails: [] }
+          // 修改点：用当前行数据预填充 diaForm（表格已有完整字段），避免弹窗从空内容膨胀导致抖动
+          this.diaForm = { ...row }
+          // 异步获取完整订单详情（含 orderDetails 菜品明细），静默更新不触发额外重排
           var self = this
           $axios.get('/order/' + row.id).then(function(res) {
-            if (res && res.code === 1 && res.data) { self.diaForm = res.data }
-            else { self.diaForm = { ...row, orderDetails: [] } }
-          }).catch(function() { self.diaForm = { ...row, orderDetails: [] } })
+            if (res && res.code === 1 && res.data) {
+              self.diaForm = res.data
+            }
+          }).catch(function() {})
         },
         cancelOrder: function(row) {
           var self = this
