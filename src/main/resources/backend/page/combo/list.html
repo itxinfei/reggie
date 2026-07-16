@@ -370,13 +370,9 @@ new Vue({
     this.init()
   },
   methods: {
-    // 修改点：<stat-cards> 组件统一卡片点击分发
+    // 修改点：<stat-cards> 点击（payload.activeKey 为 .sync 更新后的值）
     onCardClick: function(payload) {
-      if (this.activeFilter === payload.key) {
-        this.activeFilter = ''
-      } else {
-        this.activeFilter = payload.key
-      }
+      this.activeFilter = payload.activeKey
       this.input = ''
       this.page = 1
       this.init()
