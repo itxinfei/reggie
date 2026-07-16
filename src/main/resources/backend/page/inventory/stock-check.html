@@ -10,14 +10,22 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <style>
+    .sub-table { margin: 0 16px; width: auto; }
+    .sub-table .el-table__body-wrapper { background: #fafbfc; }
+    .empty-expand { text-align: center; padding: 24px; color: #c0c4cc; font-size: 13px; }
+    .check-detail-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; padding-right: 4px; }
+    .detail-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px; background: #fafbfc; border-radius: 6px; border: 1px solid #ebeef5; }
+    .detail-row .el-input--narrow-md { width: 120px; }
+    .btn-remove { padding: 6px 12px; }
+    .btn-add-detail { align-self: flex-start; margin-top: 8px; }
+  </style>
 </head>
 <body>
   <div class="dashboard-container" id="stock-check-app">
     <div class="container">
-      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
-      <!-- 修改点：使用 <table-bar> 统一组件替代手写 HTML -->
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
@@ -25,15 +33,10 @@
         @reset="reset"
         @action="onTableAction">
         <template slot="search-extra">
-          <el-select v-model="input.status" placeholder="状态" class="el-select--narrow-xs" clearable @change="handleQuery">
-            <el-option label="进行中" value="0"></el-option>
-            <el-option label="已完成" value="1"></el-option>
-          </el-select>
           <el-date-picker v-model="input.dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd" class="el-date-editor--md" @change="handleQuery" size="small"></el-date-picker>
         </template>
       </table-bar>
 
-      <!-- ========== 数据表格 ========== -->
       <el-table v-loading="loading" :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
         <el-table-column type="expand">
           <template slot-scope="props">
@@ -41,9 +44,9 @@
               <el-table-column label="食材名称" min-width="140">
                 <template slot-scope="scope">{{ scope.row.materialName }}</template>
               </el-table-column>
-              <el-table-column prop="bookQty" label="账面数量" width="100" align="center" /></el-table-column>
-              <el-table-column prop="actualQty" label="实际数量" width="100" align="center" /></el-table-column>
-              <el-table-column label="差异" width="80" align="center">
+              <el-table-column prop="bookQty" label="账面数量" width="110" align="center" />
+              <el-table-column prop="actualQty" label="实际数量" width="110" align="center" />
+              <el-table-column label="差异" width="90" align="center">
                 <template slot-scope="scope">
                   <span :style="scope.row.diff < 0 ? 'color: #f56c6c; font-weight: 600' : scope.row.diff > 0 ? 'color: #67c23a; font-weight: 600' : 'color: #909399'">
                     {{ scope.row.diff }}
@@ -54,8 +57,10 @@
             <div v-else class="empty-expand">暂无明细数据</div>
           </template>
         </el-table-column>
-        <el-table-column prop="id" label="盘点单号" width="110" /></el-table-column>
-        <el-table-column prop="itemCount" label="盘点项数" width="100" align="center" /></el-table-column>
+        <el-table-column prop="id" label="盘点单号" width="120" />
+        <el-table-column prop="operator" label="操作员" width="100" align="center" />
+        <el-table-column prop="itemCount" label="盘点项数" width="100" align="center" />
+        <el-table-column prop="remark" label="备注" minWidth="120" showOverflowTooltip />
         <el-table-column label="盈亏金额" width="120" align="right">
           <template slot-scope="scope">
             <span :style="scope.row.profitLoss < 0 ? 'color: #f56c6c; font-weight: 600' : 'color: #303133'">
@@ -63,59 +68,63 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
+        <el-table-column label="状态" width="100" align="center">
           <template slot-scope="scope">
-            <el-tag :type="scope.row.status == '0' ? 'warning' : 'success'" size="small">
-              {{ scope.row.status == '0' ? '进行中' : '已完成' }}
+            <el-tag :type="scope.row.status === 'IN_PROGRESS' ? 'warning' : 'success'" size="small">
+              {{ scope.row.status === 'IN_PROGRESS' ? '进行中' : '已完成' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdTime" label="创建时间" width="170" /></el-table-column>
-        <el-table-column label="操作" width="120" align="center">
+        <el-table-column prop="createdTime" label="创建时间" width="170" />
+        <el-table-column label="操作" width="140" align="center">
           <template slot-scope="scope">
-            <el-button type="text" size="small" class="btn-view" @click="completeHandle(scope.row.id)" v-if="scope.row.status == '0'">完成盘点</el-button>
+            <el-button type="text" size="small" class="btn-complete" @click="enterCheck(scope.row)" v-if="scope.row.status === 'IN_PROGRESS'">录入数据</el-button>
           </template>
         </el-table-column>
       </el-table>
       <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" :current-page.sync="page" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
     </div>
 
-    <!-- 新增盘点对话框 -->
-    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="640px" :before-close="handleClose">
-      <el-form class="demo-form-inline" label-width="110px">
-        <el-form-item label="盘点明细：">
-          <div class="check-detail-list">
-            <div v-for="(item, index) in formData.details" :key="index" class="detail-row">
-              <el-select v-model="item.materialId" placeholder="请选择食材" style="width:180px" filterable>
-                <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id"></el-option>
-              </el-select>
-              <el-input v-model="item.actualQty" placeholder="实际数量" type="number" class="el-input--narrow-md" />
-              <el-button type="danger" size="small" class="btn-remove" @click="removeDetail(index)">删除</el-button>
-            </div>
-            <el-button type="primary" size="small" class="btn-add-detail" @click="addDetail">+ 添加盘点项</el-button>
-          </div>
+    <!-- 新增盘点对话框（操作人 + 备注） -->
+    <el-dialog title="新增盘点单" :visible.sync="formData.dialogVisible" class="el-dialog--md unified-dialog"
+      :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
+      <el-form class="demo-form-inline" label-width="100px">
+        <el-form-item label="操作人：" required>
+          <el-input v-model="formData.operator" placeholder="请输入操作人姓名" style="width:240px" />
+        </el-form-item>
+        <el-form-item label="备注：">
+          <el-input v-model="formData.remark" placeholder="盘点备注（可选）" />
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
         <el-button size="medium" @click="formData.dialogVisible = false">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitForm()">确 定</el-button>
+        <el-button type="primary" size="medium" @click="submitCreate()">确 定</el-button>
+      </span>
+    </el-dialog>
+
+    <!-- 录入盘点数据并完成对话框 -->
+    <el-dialog title="录入盘点数据" :visible.sync="entryDialogVisible" class="el-dialog--lg unified-dialog"
+      :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
+      <div v-if="entryMaterials.length === 0" style="text-align:center;padding:40px;color:#c0c4cc;">
+        暂无食材数据，请先添加盘点项
+      </div>
+      <el-form v-else label-width="120px" size="small">
+        <el-form-item label="盘点明细：">
+          <div class="check-detail-list">
+            <div v-for="(item, index) in entryForm.details" :key="item.id" class="detail-row">
+              <span style="width:160px;flex-shrink:0;font-weight:500;">{{ item.materialName }}</span>
+              <span style="color:#909399;font-size:12px;width:80px;">账面：{{ item.bookQty }}</span>
+              <el-input v-model="item.actualStock" placeholder="实际库存" type="number" style="width:120px" />
+            </div>
+          </div>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button size="medium" @click="entryDialogVisible = false">取 消</el-button>
+        <el-button type="primary" size="medium" @click="submitEntry()">保存并完成</el-button>
       </span>
     </el-dialog>
   </div>
-
-  <style>
-    /* 展开行子表格 */
-    .sub-table { margin: 0 16px; width: auto; }
-    .sub-table .el-table__body-wrapper { background: #fafbfc; }
-    .empty-expand { text-align: center; padding: 24px; color: #c0c4cc; font-size: 13px; }
-
-    /* 盘点明细列表 */
-    .check-detail-list { display: flex; flex-direction: column; gap: 8px; }
-    .detail-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .detail-row .el-input--narrow-md { width: 120px; }
-    .btn-remove { padding: 6px 12px; }
-    .btn-add-detail { align-self: flex-start; margin-top: 4px; }
-  </style>
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
@@ -133,128 +142,121 @@
           page: 1,
           pageSize: 10,
           tableData: [],
-          // 统计
           stats: { totalChecks: 0, pendingChecks: 0, completedChecks: 0, diffCount: 0 },
           activeFilter: '',
-          // 修改点：<table-bar> 统一组件配置
           tableSearchItems: [],
           tableActions: [
             { key: 'add', text: '+ 新增盘点', type: 'primary' }
           ],
           input: { status: '', dateRange: '' },
           materialOptions: [],
+          // 新增盘点单弹窗
           formData: {
-            title: '新增盘点',
             dialogVisible: false,
-            details: []
-          }
+            operator: '',
+            remark: ''
+          },
+          // 录入数据弹窗
+          entryDialogVisible: false,
+          entryCheckId: null,
+          entryMaterials: [],
+          entryForm: { details: [] }
         }
       },
       created() {
         this.init()
       },
       computed: {
-        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
           var self = this;
           return [
-            { key: '', icon: '📋', label: '盘点单总数', value: self.stats.totalChecks || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
-            { key: '0', icon: '⏳', label: '进行中', value: self.stats.pendingChecks || 0, color: 'warning', clickable: true, active: self.activeFilter === '0' },
-            { key: '1', icon: '✅', label: '已完成', value: self.stats.completedChecks || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
+            { key: '', icon: '📋', label: '盘点单总数', value: self.stats.totalChecks || 0, color: 'primary', active: self.activeFilter === '' },
+            { key: 'IN_PROGRESS', icon: '⏳', label: '进行中', value: self.stats.pendingChecks || 0, color: 'warning', active: self.activeFilter === 'IN_PROGRESS' },
+            { key: 'DONE', icon: '✅', label: '已完成', value: self.stats.completedChecks || 0, color: 'success', active: self.activeFilter === 'DONE' },
             { key: 'diff', icon: '⚠️', label: '存在差异项', value: self.stats.diffCount || 0, color: 'info' }
           ]
         }
       },
       methods: {
-        // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
           this.activeFilter = payload.activeKey
           this.page = 1
           this.init()
         },
-        // 修改点：<table-bar> 组件统一操作分发
         onTableAction: function(payload) {
           if (payload.key === 'add') { this.addHandle(); }
         },
         async init() {
-          const params = { page: this.page, pageSize: this.pageSize }
-          if (this.input.status !== '') params.status = this.input.status
+          var self = this
+          var params = { page: this.page, pageSize: this.pageSize }
+          if (this.input.status) params.status = this.input.status
           if (this.input.dateRange) {
             params.startDate = this.input.dateRange[0]
             params.endDate = this.input.dateRange[1]
           }
-          // 卡片筛选时仅按状态过滤
           if (this.activeFilter !== '') params.status = this.activeFilter
 
+          this.loading = true
           try {
-            const [pageRes, statsRes] = await Promise.all([
-              stockCheckPage(params),
-              this.loadStats()
-            ])
-
+            var pageRes = await stockCheckPage(params)
             if (String(pageRes.code) === '1') {
-              this.tableData = pageRes.data.records || []
-              this.counts = Number(pageRes.data.total) || 0
+              self.tableData = pageRes.data.records || []
+              self.counts = Number(pageRes.data.total) || 0
             } else {
-              this.$message.error(pageRes.msg || '操作失败')
+              self.$message.error(pageRes.msg || '操作失败')
             }
-
-            if (statsRes && String(statsRes.code) === '1') {
-              this.stats = statsRes.data || this.stats
-            }
+            self.loadStats()
           } catch (err) {
-            this.$message.error('请求失败：' + err)
+            self.$message.error('请求失败：' + err)
+          } finally {
+            self.loading = false
           }
         },
-        // 加载统计
         async loadStats() {
           try {
-            const res = await stockCheckPage({ page: 1, pageSize: 1000 })
-            if (String(res.code) === '1') {
-              const records = res.data.records || []
-              const total = res.data.total || 0
-              const pending = records.filter(function(r) { return r.status === '0' }).length
-              const completed = records.filter(function(r) { return r.status === '1' }).length
-              // 计算存在差异的单据数量
-              let diffCount = 0
-              records.forEach(function(r) {
-                if (r.details) {
-                  r.details.forEach(function(d) {
-                    if (d.diff !== 0 && d.diff != null) { diffCount++ }
-                  })
-                }
-              })
-              return {
-                code: 1,
-                data: {
-                  totalChecks: total,
-                  pendingChecks: pending,
-                  completedChecks: completed,
-                  diffCount: diffCount
+            var self = this
+            var totalRes = await stockCheckPage({ page: 1, pageSize: 1 })
+            var pendingRes = await stockCheckPage({ page: 1, pageSize: 1, status: 'IN_PROGRESS' })
+            var doneRes = await stockCheckPage({ page: 1, pageSize: 1, status: 'DONE' })
+            self.stats.totalChecks = (String(totalRes.code) === '1' && totalRes.data) ? (totalRes.data.total || 0) : 0
+            self.stats.pendingChecks = (String(pendingRes.code) === '1' && pendingRes.data) ? (pendingRes.data.total || 0) : 0
+            self.stats.completedChecks = (String(doneRes.code) === '1' && doneRes.data) ? (doneRes.data.total || 0) : 0
+            // diffCount: 查询已完成的盘点，检查是否有差异项
+            self.stats.diffCount = 0
+            try {
+              var diffRes = await stockCheckPage({ page: 1, pageSize: 100, status: 'DONE' })
+              if (String(diffRes.code) === '1' && diffRes.data && diffRes.data.records) {
+                var records = diffRes.data.records
+                for (var i = 0; i < records.length; i++) {
+                  var details = records[i].details
+                  if (details && details.some(function(d) { return d.diff != null && d.diff !== 0 })) {
+                    self.stats.diffCount++
+                  }
                 }
               }
-            }
-          } catch (err) {
-            console.warn('加载盘点统计失败:', err)
-          }
-          return { code: 0 }
+            } catch (e) { /* diffCount 查询失败不影响其他统计 */ }
+          } catch (e) { console.warn('加载盘点统计失败:', e) }
         },
         loadMaterialOptions() {
           if (this.materialOptions.length > 0) return
-          materialList().then(res => {
-            if (res.code === 1) this.materialOptions = res.data
+          var self = this
+          materialList().then(function(res) {
+            if (res.code === 1) self.materialOptions = res.data
           })
         },
         loadDetails(row) {
           if (!row.id || row.details) return
-          stockCheckPage({ page: 1, pageSize: 100, id: row.id }).then(res => {
-            if (res.code === 1 && res.data.records && res.data.records.length > 0) {
-              this.$set(row, 'details', res.data.records[0].details || [])
+          var self = this
+          stockCheckPage({ page: 1, pageSize: 100, id: row.id }).then(function(res) {
+            if (res.code === 1 && res.data && res.data.records && res.data.records.length > 0) {
+              var details = res.data.records[0].details || []
+              self.$set(row, 'details', details)
             } else {
-              this.$set(row, 'details', [])
+              self.$set(row, 'details', [])
             }
-          }).catch(err => {
-            this.$message.error('请求失败：' + err)
+          }).catch(function(err) {
+            self.$message.error('加载明细失败：' + err)
+            self.$set(row, 'details', [])
           })
         },
         handleQuery() {
@@ -267,66 +269,101 @@
           this.page = 1
           this.init()
         },
-        // filterByStatus 已迁移至 onCardClick
         addHandle() {
-          this.formData.details = [{ materialId: '', actualQty: '' }]
-          this.formData.dialogVisible = true
-          this.loadMaterialOptions()
+          this.formData = {
+            dialogVisible: true,
+            operator: '',
+            remark: ''
+          }
         },
-        handleClose() {
-          this.formData.dialogVisible = false
-        },
-        addDetail() {
-          this.formData.details.push({ materialId: '', actualQty: '' })
-        },
-        removeDetail(index) {
-          this.formData.details.splice(index, 1)
-        },
-        completeHandle(id) {
-          this.$confirm('确认完成该盘点单? 完成后将生成盈亏记录。', '提示', {
-            confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
-          }).then(() => {
-            completeStockCheck(id).then(res => {
-              if (res.code === 1) {
-                this.$message.success('盘点完成！')
-                this.init()
-              } else {
-                this.$message.error(res.msg || '操作失败')
-              }
-            }).catch(err => {
-              this.$message.error('请求失败：' + err)
-            })
-          }).catch(() => {})
-        },
-        submitForm() {
-          const fd = this.formData
-          if (!fd.details.length || !fd.details[0].materialId) {
-            this.$message.error('请添加至少一条盘点项')
+        submitCreate() {
+          var fd = this.formData
+          if (!fd.operator || !fd.operator.trim()) {
+            this.$message.error('请输入操作人')
             return
           }
-          // 过滤有效明细
-          const validDetails = fd.details.filter(function(d) { return d.materialId && d.actualQty !== '' })
-          if (validDetails.length === 0) {
-            this.$message.error('请填写盘点项的实际数量')
-            return
-          }
-          addStockCheck({ details: validDetails }).then(res => {
+          var self = this
+          addStockCheck({ operator: fd.operator.trim(), remark: (fd.remark || '').trim() }).then(function(res) {
             if (res.code === 1) {
-              this.$message.success('盘点创建成功！')
-              this.formData.dialogVisible = false
-              this.init()
+              self.$message.success('盘点单创建成功！')
+              self.formData.dialogVisible = false
+              // 创建后打开录入数据弹窗
+              self.openEntryDialog(res.data.id)
             } else {
-              this.$message.error(res.msg || '操作失败')
+              self.$message.error(res.msg || '创建失败')
             }
-          }).catch(err => {
-            this.$message.error('请求失败：' + err)
+          }).catch(function(err) {
+            self.$message.error('请求失败：' + err)
           })
         },
-        handleSizeChange(val) {
+        // 打开录入数据弹窗，加载食材列表供用户选择
+        enterCheck: function(row) {
+          this.openEntryDialog(row.id)
+        },
+        openEntryDialog: function(checkId) {
+          var self = this
+          this.entryCheckId = checkId
+          this.loadMaterialOptions()
+          // 加载食材列表，每条食材的账面数量从 Material.stockQty 读取
+          materialList().then(function(res) {
+            if (res.code === 1) {
+              var materials = res.data || []
+              self.entryMaterials = materials
+              self.entryForm = {
+                details: materials.map(function(m) {
+                  return {
+                    id: m.id,
+                    materialId: m.id,
+                    materialName: m.name,
+                    bookQty: (m.stockQty || 0),
+                    systemStock: (m.stockQty || 0),
+                    actualStock: ''
+                  }
+                })
+              }
+              self.entryDialogVisible = true
+            } else {
+              self.$message.error('加载食材列表失败')
+            }
+          }).catch(function(err) {
+            self.$message.error('请求失败：' + err)
+          })
+        },
+        submitEntry: function() {
+          var self = this
+          var items = this.entryForm.details.filter(function(d) {
+            return d.actualStock !== '' && d.actualStock !== null && d.actualStock !== undefined
+          }).map(function(d) {
+            return {
+              materialId: d.materialId,
+              systemStock: Number(d.systemStock || d.bookQty || 0),
+              actualStock: Number(d.actualStock)
+            }
+          })
+          if (items.length === 0) {
+            this.$message.warning('请至少填写一条盘点项的实际库存')
+            return
+          }
+          completeStockCheck(this.entryCheckId, { items: items }).then(function(res) {
+            if (res.code === 1) {
+              self.$message.success('盘点完成！')
+              self.entryDialogVisible = false
+              self.entryCheckId = null
+              self.entryMaterials = []
+              self.entryForm = { details: [] }
+              self.init()
+            } else {
+              self.$message.error(res.msg || '操作失败')
+            }
+          }).catch(function(err) {
+            self.$message.error('请求失败：' + err)
+          })
+        },
+        handleSizeChange: function(val) {
           this.pageSize = val
           this.init()
         },
-        handleCurrentChange(val) {
+        handleCurrentChange: function(val) {
           this.page = val
           this.init()
         }

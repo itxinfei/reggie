@@ -65,6 +65,11 @@ const notificationApi = {
         return $axios({ url: '/notification/record/' + id, method: 'get' });
     },
 
+    /** 修改点：今日发送记录聚合统计（SQL 聚合，替代前端 pageSize:999 拉全量） */
+    getRecordStats() {
+        return $axios({ url: '/notification/record/stats', method: 'get' });
+    },
+
     /** 获取业务类型枚举 */
     getBizTypes() {
         return $axios({ url: '/notification/biz-types', method: 'get' });

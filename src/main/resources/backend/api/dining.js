@@ -9,6 +9,8 @@ const deleteArea = (id) => $axios({ url: `/api/dining/area/${id}`, method: 'dele
 const getArea = (id) => $axios({ url: `/api/dining/area/${id}`, method: 'get' })
 
 const tablePage = (params) => $axios({ url: '/api/dining/table/page', method: 'get', params })
+// 修改点：桌台区域聚合统计（SQL 分组，替代前端 pageSize:999 拉全量分组）
+const tableAreaStats = () => $axios({ url: '/api/dining/table/area-stats', method: 'get' })
 const addTable = (params) => $axios({ url: '/api/dining/table', method: 'post', data: params })
 const updateTable = (params) => $axios({ url: '/api/dining/table', method: 'put', data: params })
 const deleteTable = (id) => $axios({ url: `/api/dining/table/${id}`, method: 'delete' })

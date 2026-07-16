@@ -99,7 +99,8 @@
     </crud-dialog>
 
     <!-- 权限分配弹窗 -->
-    <el-dialog title="权限分配" :visible.sync="permDialogVisible" width="600px" class="perm-tree-dialog">
+    <el-dialog title="权限分配" :visible.sync="permDialogVisible" class="el-dialog--md unified-dialog perm-tree-dialog"
+      :close-on-click-modal="false">
       <div style="margin-bottom: 12px; font-size: 13px; color: #606266;">
         当前角色：<strong>{{ currentRole?.roleName }}</strong>
         <span style="margin-left: 12px;">已选 <el-tag type="success" size="mini">{{ checkedPerms.length }}</el-tag> 项权限</span>
@@ -164,9 +165,9 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'roleName', label: '角色名称', width: 150 },
-            { prop: 'roleKey', label: '角色标识', width: 120, slot: true },
-            { prop: 'description', label: '描述', showOverflowTooltip: true },
+            { prop: 'roleName', label: '角色名称', width: 150, align: 'center' },
+            { prop: 'roleKey', label: '角色标识', width: 120, slot: true, align: 'center' },
+            { prop: 'description', label: '描述', showOverflowTooltip: true, align: 'center' },
             { prop: 'sort', label: '排序', width: 80, align: 'center' },
             { prop: 'status', label: '状态', width: 100, align: 'center', slot: true }
           ],
@@ -224,19 +225,19 @@
         },
         async loadRoleStats() {
           try {
-            var res = await sysApi.rolePage({ page: 1, pageSize: 1000 })
-            if (String(res.code) === '1') {
-              var records = res.data.records || []
-              var withPerms = 0
-              records.forEach(function(r) {
-                if (r.permissionIds && r.permissionIds.length > 0) withPerms++
-              })
-              return { code: 1, data: {
-                total: res.data.total || 0,
-                enabled: records.filter(function(r) { return r.status === 1 }).length,
-                disabled: records.filter(function(r) { return r.status === 0 }).length,
-                withPerms: withPerms
-              }}
+            // 修改点：改为调用后端 /sys/role/stats SQL 聚合接口，避免 pageSize:999 拉全量遍历 withPerms
+            var res = await sysApi.roleStats()
+            if (String(res.code) === '1' && res.data) {
+              var d = res.data
+              return {
+                code: 1,
+                data: {
+                  total: Number(d.total) || 0,
+                  enabled: Number(d.enabled) || 0,
+                  disabled: Number(d.disabled) || 0,
+                  withPerms: Number(d.withPerms) || 0
+                }
+              }
             }
           } catch (err) { console.warn('加载角色统计失败:', err) }
           return { code: 0 }

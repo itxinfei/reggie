@@ -194,7 +194,7 @@
     </crud-dialog>
 
     <!-- 二维码弹窗 -->
-    <el-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible" width="420px" center>
+    <el-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible" class="el-dialog--sm unified-dialog" :close-on-click-modal="true" center>
       <div class="qrcode-content">
         <div class="qrcode-title">桌台：{{ qrcodeDialog.tableName }}</div>
         <div class="qrcode-subtitle">编号：{{ qrcodeDialog.tableId }}</div>
@@ -288,10 +288,16 @@
           }).catch(function(err) { self.$message.error('加载失败：' + (err.message || err)) }).finally(function() { self.loading = false })
         },
         loadTableStats: function(params) {
-          return tablePage({ page: 1, pageSize: 1000, name: params.name, areaId: params.areaId, status: params.status }).then(function(res) {
-            if (String(res.code) === '1') {
-              var records = res.data.records || []
-              return { code: 1, data: { totalTables: res.data.total || 0, freeTables: records.filter(function(r) { return r.status === 'FREE' }).length, occupiedTables: records.filter(function(r) { return r.status === 'OCCUPIED' }).length, reservedTables: records.filter(function(r) { return r.status === 'RESERVED' }).length } }
+          // 修改点：改用 pageSize:1 多状态并发查询取 total，避免 pageSize:1000 拉全量导致统计截断
+          return Promise.all([
+            tablePage({ page: 1, pageSize: 1, name: params.name, areaId: params.areaId, status: params.status }),
+            tablePage({ page: 1, pageSize: 1, name: params.name, areaId: params.areaId, status: 'FREE' }),
+            tablePage({ page: 1, pageSize: 1, name: params.name, areaId: params.areaId, status: 'OCCUPIED' }),
+            tablePage({ page: 1, pageSize: 1, name: params.name, areaId: params.areaId, status: 'RESERVED' })
+          ]).then(function(results) {
+            var totalRes = results[0]; var freeRes = results[1]; var occRes = results[2]; var resRes = results[3]
+            if (String(totalRes.code) === '1') {
+              return { code: 1, data: { totalTables: totalRes.data.total || 0, freeTables: freeRes.data.total || 0, occupiedTables: occRes.data.total || 0, reservedTables: resRes.data.total || 0 } }
             }
             return { code: 0 }
           }).catch(function() { return { code: 0 } })

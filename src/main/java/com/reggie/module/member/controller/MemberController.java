@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.module.member.mapper.MemberMapper;
 import com.reggie.dto.DeductBalanceDTO;
 import com.reggie.dto.RechargeDTO;
 import com.reggie.module.member.model.CouponUser;
@@ -23,10 +24,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.Collections;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -47,13 +52,16 @@ public class MemberController {
     private final RechargeRecordService rechargeRecordService;
     private final MemberLevelService memberLevelService;
     private final CouponUserService couponUserService;
+    private final MemberMapper memberMapper;
 
     public MemberController(MemberService memberService, RechargeRecordService rechargeRecordService,
-                            MemberLevelService memberLevelService, CouponUserService couponUserService) {
+                            MemberLevelService memberLevelService, CouponUserService couponUserService,
+                            MemberMapper memberMapper) {
         this.memberService = memberService;
         this.rechargeRecordService = rechargeRecordService;
         this.memberLevelService = memberLevelService;
         this.couponUserService = couponUserService;
+        this.memberMapper = memberMapper;
     }
 
     /**
@@ -70,18 +78,64 @@ public class MemberController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "会员姓名（可选，模糊查询）")
     @Parameter(name = "phone", description = "手机号（可选，模糊查询）")
-    public R<Page<Member>> page(int page, int pageSize, String name, String phone) {
+    public R<Page<Member>> page(int page, int pageSize, String name, String phone,
+                                @RequestParam(required = false) Long levelId) {
         Page<Member> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<Member> qw = new LambdaQueryWrapper<>();
         qw.like(name != null && !name.isEmpty(), Member::getName, name);
         qw.like(phone != null && !phone.isEmpty(), Member::getPhone, phone);
+        qw.eq(levelId != null, Member::getLevelId, levelId);
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId != null) {
             qw.eq(Member::getTenantId, tenantId);
         }
         qw.orderByAsc(Member::getId);
         memberService.page(pageInfo, qw);
+        // 修改点：分页结果填充会员等级名称，供前端等级列展示
+        memberService.fillLevelName(pageInfo.getRecords());
         return R.success(pageInfo);
+    }
+
+    /**
+     * 会员统计看板（后端聚合，替代前端 pageSize=9999 拉全量后在浏览器计数）
+     * 返回：会员总数、本月新增数、各等级会员数明细（levelCountMap）、无等级会员数（noLevelCount）
+     * 前端据此结合等级积分门槛自行分级展示，避免传输全部会员数据。
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "会员统计", description = "统计会员总数、本月新增及各等级会员数量，后端聚合避免拉全量")
+    public R<Map<String, Object>> stats() {
+        // 租户隔离由 TenantLineInnerInterceptor 自动注入（memberService.count 与 countByLevel 原生 SQL 均生效）
+
+        // 1. 会员总数（租户隔离由 TenantLineInnerInterceptor 自动注入）
+        long totalMembers = memberService.count();
+
+        // 2. 本月新增
+        LocalDate now = LocalDate.now();
+        LocalDateTime monthStart = LocalDateTime.of(now.withDayOfMonth(1), LocalTime.MIN);
+        LocalDateTime monthEnd = LocalDateTime.of(now.withDayOfMonth(now.lengthOfMonth()), LocalTime.MAX);
+        long newMembersThisMonth = memberService.count(new LambdaQueryWrapper<Member>()
+                .ge(Member::getCreatedTime, monthStart)
+                .le(Member::getCreatedTime, monthEnd));
+
+        // 3. 按等级聚合（level_id 可能为 NULL，单独计入 noLevelCount）
+        Map<Long, Long> levelCountMap = new LinkedHashMap<>();
+        long noLevelCount = 0;
+        for (Map<String, Object> row : memberMapper.countByLevel()) {
+            Object lid = row.get("levelId");
+            long cnt = row.get("cnt") instanceof Number ? ((Number) row.get("cnt")).longValue() : 0L;
+            if (lid == null) {
+                noLevelCount = cnt;
+            } else {
+                levelCountMap.put(((Number) lid).longValue(), cnt);
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalMembers", totalMembers);
+        result.put("newMembersThisMonth", newMembersThisMonth);
+        result.put("levelCountMap", levelCountMap);
+        result.put("noLevelCount", noLevelCount);
+        return R.success(result);
     }
 
     /**
@@ -122,6 +176,8 @@ public class MemberController {
     public R<Member> getById(@PathVariable Long id) {
         Member member = memberService.getById(id);
         if (member != null) {
+            // 修改点：填充会员等级名称，供详情弹窗展示
+            memberService.fillLevelName(Collections.singletonList(member));
             return R.success(member);
         }
         return R.error("没有查询到对应会员");

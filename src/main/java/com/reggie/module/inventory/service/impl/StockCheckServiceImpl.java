@@ -1,5 +1,6 @@
 package com.reggie.module.inventory.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -64,7 +65,8 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         StockCheck sc = new StockCheck();
         sc.setTenantId(BaseContext.getCurrentTenantId());
         sc.setCheckNo("CK" + datePrefix + String.format("%03d", seq));
-        sc.setStatus(StockCheckStatus.DRAFT.getValue());
+        // 修改点：创建盘点单时设为"进行中"状态（原来的 DRAFT 未在 UI 中映射，导致无状态显示）
+        sc.setStatus(StockCheckStatus.IN_PROGRESS.getValue());
         sc.setOperator(operator);
         sc.setRemark(remark);
         sc.setProfitLoss(BigDecimal.ZERO);
@@ -128,7 +130,15 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         updateById(sc);
     }
 
-    @Override
+    public Page<StockCheck> page(Page<StockCheck> pageInfo, Wrapper<StockCheck> queryWrapper) {
+        Page<StockCheck> result = super.page(pageInfo, queryWrapper);
+        List<StockCheck> records = result.getRecords();
+        if (!CollectionUtils.isEmpty(records)) {
+            fillStockCheckInfo(records);
+        }
+        return result;
+    }
+
     public Page<StockCheck> page(Page<StockCheck> pageInfo) {
         Page<StockCheck> result = super.page(pageInfo);
         List<StockCheck> records = result.getRecords();
@@ -138,8 +148,7 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         return result;
     }
 
-    @Override
-    public List<StockCheck> list(LambdaQueryWrapper<StockCheck> queryWrapper) {
+    public List<StockCheck> list(Wrapper<StockCheck> queryWrapper) {
         List<StockCheck> list = super.list(queryWrapper);
         if (!CollectionUtils.isEmpty(list)) {
             fillStockCheckInfo(list);

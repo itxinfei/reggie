@@ -6,7 +6,6 @@
 .dashboard-container .container {
   background: #fff;
   position: relative;
-  z-index: 1;
   padding: 30px 28px;
   border-radius: 4px;
 }
@@ -712,22 +711,18 @@
 
 /* ========== 弹窗宽度规范 ========== */
 
-/* 小弹窗：简单表单（删除确认、快速编辑） */
-.dashboard-container .container .el-dialog--sm {
-  width: 420px;
-}
-/* 标准弹窗：常规表单（新增/编辑） */
-.dashboard-container .container .el-dialog--md {
-  width: 600px;
-}
-/* 大弹窗：复杂表单（打印配置、活动编辑） */
-.dashboard-container .container .el-dialog--lg {
-  width: 720px;
-}
-/* 全宽弹窗：表格选择、数据对比 */
-.dashboard-container .container .el-dialog--xl {
-  width: 900px;
-}
+/* 小弹窗：简单确认（删除、提示） */
+.dashboard-container .container .el-dialog--sm,
+.el-dialog--sm { width: 420px !important; }
+/* 中弹窗：详情展示 */
+.dashboard-container .container .el-dialog--md,
+.el-dialog--md { width: 560px !important; }
+/* 大弹窗：常规表单（新增/编辑） */
+.dashboard-container .container .el-dialog--lg,
+.el-dialog--lg { width: 720px !important; }
+/* 超大弹窗：复杂表单（订单详情、菜品编辑） */
+.dashboard-container .container .el-dialog--xl,
+.el-dialog--xl { width: 840px !important; }
 
 /* ========== 表格列宽规范 ========== */
 

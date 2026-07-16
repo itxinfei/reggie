@@ -3,12 +3,11 @@ package com.reggie.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
 import com.reggie.entity.Employee;
-import com.reggie.entity.OrderDetail;
 import com.reggie.entity.Orders;
 import com.reggie.entity.User;
+import com.reggie.mapper.OrderMapper;
 import com.reggie.service.DashboardService;
 import com.reggie.service.EmployeeService;
-import com.reggie.service.OrderDetailService;
 import com.reggie.service.OrderService;
 import com.reggie.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * 数据概览仪表盘服务实现
@@ -66,9 +65,9 @@ public class DashboardServiceImpl implements DashboardService {
     @Autowired
     private OrderService orderService;
 
-    /** 订单明细服务 */
+    /** 订单聚合 Mapper */
     @Autowired
-    private OrderDetailService orderDetailService;
+    private OrderMapper orderMapper;
 
     /** 用户服务 */
     @Autowired
@@ -158,28 +157,29 @@ public class DashboardServiceImpl implements DashboardService {
             LocalDateTime todayStart = LocalDate.now().atStartOfDay();
             LocalDateTime todayEnd = LocalDate.now().atTime(LocalTime.MAX);
 
-            // 查询今日订单
-            LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
-            qw.between(Orders::getOrderTime, todayStart, todayEnd);
-            List<Orders> todayOrders = orderService.list(qw);
-
-            int totalOrders = todayOrders.size();
+            // 修改点：改用 SQL 聚合，避免 list 全量载入今日订单到内存（消除 OOM 风险）
+            List<Map<String, Object>> orderStats = orderMapper.statOrderByStatus(todayStart, todayEnd);
+            int totalOrders = 0;
             int pendingOrders = 0;
             int completedOrders = 0;
             int cancelledOrders = 0;
             BigDecimal totalRevenue = BigDecimal.ZERO;
 
-            for (Orders o : todayOrders) {
-                BigDecimal amt = o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO;
-                totalRevenue = totalRevenue.add(amt);
-                if (o.getStatus() != null) {
-                    if (o.getStatus() == Orders.STATUS_PENDING_PAY || o.getStatus() == Orders.STATUS_ORDERED) {
-                        pendingOrders++;
-                    } else if (o.getStatus() == Orders.STATUS_COMPLETED) {
-                        completedOrders++;
-                    } else if (o.getStatus() == Orders.STATUS_CANCELLED) {
-                        cancelledOrders++;
-                    }
+            for (Map<String, Object> row : orderStats) {
+                int status = ((Number) row.get("status")).intValue();
+                long cnt = ((Number) row.get("cnt")).longValue();
+                BigDecimal amt = (BigDecimal) row.get("amt");
+                totalOrders += cnt;
+                if (status == Orders.STATUS_PENDING_PAY || status == Orders.STATUS_ORDERED) {
+                    pendingOrders += cnt;
+                } else if (status == Orders.STATUS_COMPLETED) {
+                    completedOrders += cnt;
+                } else if (status == Orders.STATUS_CANCELLED) {
+                    cancelledOrders += cnt;
+                }
+                // 已取消/已退款订单不计入营业额
+                if (status != Orders.STATUS_CANCELLED && status != Orders.STATUS_REFUNDED) {
+                    totalRevenue = totalRevenue.add(amt != null ? amt : BigDecimal.ZERO);
                 }
             }
 
@@ -282,27 +282,26 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             BaseContext.setCurrentTenantId(tenantId);
 
-            // 一次性查出近7天所有订单
+            // 修改点：改用 SQL 按日聚合，避免 list 全量载入近7天订单
             LocalDateTime rangeStart = LocalDate.now().minusDays(6).atStartOfDay();
             LocalDateTime rangeEnd   = LocalDate.now().atTime(LocalTime.MAX);
-            LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
-            qw.between(Orders::getOrderTime, rangeStart, rangeEnd);
-            List<Orders> allOrders = orderService.list(qw);
-
-            // 按日期分组聚合
-            Map<LocalDate, List<Orders>> byDate = allOrders.stream()
-                    .filter(o -> o.getOrderTime() != null)
-                    .collect(Collectors.groupingBy(o -> o.getOrderTime().toLocalDate()));
+            List<Map<String, Object>> dayStats = orderMapper.statOrderByDay(rangeStart, rangeEnd, Orders.STATUS_COMPLETED);
+            Map<LocalDate, Map<String, Object>> byDate = new LinkedHashMap<>();
+            for (Map<String, Object> row : dayStats) {
+                LocalDate day = ((Date) row.get("day")).toLocalDate();
+                long cnt = ((Number) row.get("cnt")).longValue();
+                BigDecimal amt = (BigDecimal) row.get("amt");
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("orderCount", (int) cnt);
+                m.put("revenue", amt != null ? amt : BigDecimal.ZERO);
+                byDate.put(day, m);
+            }
 
             for (int i = 6; i >= 0; i--) {
                 LocalDate date = LocalDate.now().minusDays(i);
-                List<Orders> dayOrders = byDate.getOrDefault(date, new ArrayList<>());
-                int count = dayOrders.size();
-                // 营业额只统计已完成订单
-                BigDecimal amount = dayOrders.stream()
-                        .filter(o -> o.getStatus() != null && o.getStatus() == Orders.STATUS_COMPLETED)
-                        .map(o -> o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                Map<String, Object> dayData = byDate.get(date);
+                int count = dayData != null ? (int) dayData.get("orderCount") : 0;
+                BigDecimal amount = dayData != null ? (BigDecimal) dayData.get("revenue") : BigDecimal.ZERO;
 
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("date", date.format(fmt));
@@ -393,20 +392,18 @@ public class DashboardServiceImpl implements DashboardService {
             LocalDateTime todayStart = LocalDate.now().atStartOfDay();
             LocalDateTime todayEnd = LocalDate.now().atTime(LocalTime.MAX);
 
-            LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
-            qw.between(Orders::getOrderTime, todayStart, todayEnd);
-            List<Orders> orders = orderService.list(qw);
-
+            // 修改点：改用 SQL 聚合，避免 list 全量载入今日订单到内存
+            List<Map<String, Object>> orderStats = orderMapper.statOrderByStatus(todayStart, todayEnd);
             int pendingPay = 0, ordered = 0, delivering = 0, completed = 0, cancelled = 0;
-
-            for (Orders o : orders) {
-                if (o.getStatus() == null) continue;
-                switch (o.getStatus()) {
-                    case Orders.STATUS_PENDING_PAY: pendingPay++; break;
-                    case Orders.STATUS_ORDERED: ordered++; break;
-                    case Orders.STATUS_DELIVERING: delivering++; break;
-                    case Orders.STATUS_COMPLETED: completed++; break;
-                    case Orders.STATUS_CANCELLED: cancelled++; break;
+            for (Map<String, Object> row : orderStats) {
+                int status = ((Number) row.get("status")).intValue();
+                long cnt = ((Number) row.get("cnt")).longValue();
+                switch (status) {
+                    case Orders.STATUS_PENDING_PAY: pendingPay += cnt; break;
+                    case Orders.STATUS_ORDERED: ordered += cnt; break;
+                    case Orders.STATUS_DELIVERING: delivering += cnt; break;
+                    case Orders.STATUS_COMPLETED: completed += cnt; break;
+                    case Orders.STATUS_CANCELLED: cancelled += cnt; break;
                     default: break;
                 }
             }
@@ -515,50 +512,19 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             BaseContext.setCurrentTenantId(tenantId);
 
-            // 获取今日所有订单ID
-            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
-            orderQw.between(Orders::getOrderTime,
-                    LocalDate.now().atStartOfDay(),
-                    LocalDate.now().atTime(LocalTime.MAX));
-            orderQw.select(Orders::getId);
-            List<Orders> todayOrders = orderService.list(orderQw);
-
-            if (todayOrders.isEmpty()) {
-                return new ArrayList<>();
+            // 修改点：改用 SQL 聚合，避免 list 全量载入今日订单及明细到内存
+            LocalDateTime start = LocalDate.now().atStartOfDay();
+            LocalDateTime end = LocalDate.now().atTime(LocalTime.MAX);
+            List<Map<String, Object>> dishStats = orderMapper.statHotDishes(start, end);
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Map<String, Object> row : dishStats) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("name", row.get("name"));
+                item.put("count", ((Number) row.get("cnt")).intValue());
+                item.put("cacheSource", "MySQL");
+                result.add(item);
             }
-
-            // 获取订单明细
-            List<Long> orderIds = todayOrders.stream()
-                    .map(Orders::getId)
-                    .collect(Collectors.toList());
-            if (orderIds.isEmpty()) {
-                return new ArrayList<>();
-            }
-            LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
-            detailQw.in(OrderDetail::getOrderId, orderIds);
-            List<OrderDetail> details = orderDetailService.list(detailQw);
-
-            // 按商品名称聚合数量
-            Map<String, Integer> dishCount = new LinkedHashMap<>();
-            for (OrderDetail d : details) {
-                if (d.getName() != null) {
-                    dishCount.merge(d.getName(),
-                            d.getNumber() != null ? d.getNumber() : 0,
-                            Integer::sum);
-                }
-            }
-
-            // 按销量降序排列
-            return dishCount.entrySet().stream()
-                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-                    .map(e -> {
-                        Map<String, Object> item = new LinkedHashMap<>();
-                        item.put("name", e.getKey());
-                        item.put("count", e.getValue());
-                        item.put("cacheSource", "MySQL");
-                        return item;
-                    })
-                    .collect(Collectors.toList());
+            return result;
         } finally {
             BaseContext.setCurrentTenantId(originalTenantId);
         }

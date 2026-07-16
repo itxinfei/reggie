@@ -634,6 +634,8 @@
             mounted: function() {
                 this.loadUsers(1);
                 this.checkMockMode();
+                // 修改点：页面初始化即加载统计，避免卡片始终显示 0
+                this.loadStats();
             },
 
             methods: {
@@ -868,24 +870,16 @@
                 // ==================== 统计 ====================
                 loadStats: function() {
                     var self = this;
-                    // 加载今日记录来计算统计
-                    notificationApi.getRecordPage({ page: 1, pageSize: 1000 }).then(function(res) {
+                    // 修改点：改为调用后端 /notification/record/stats SQL 聚合接口，避免 pageSize:999 拉全量后前端 forEach 计算
+                    notificationApi.getRecordStats().then(function(res) {
                         if (res && res.code === 1 && res.data) {
-                            var records = res.data.records || [];
-                            var today = new Date().toDateString();
-                            var smsCount = 0, pushCount = 0, successCount = 0, failCount = 0;
-
-                            records.forEach(function(r) {
-                                var d = new Date(r.createTime);
-                                if (d.toDateString() === today) {
-                                    if (r.channel === 1) smsCount += r.targetCount || 0;
-                                    if (r.channel === 2) pushCount += r.targetCount || 0;
-                                    successCount += r.successCount || 0;
-                                    failCount += r.failCount || 0;
-                                }
-                            });
-                            self.stats = { todaySms: smsCount, todayPush: pushCount,
-                                todaySuccess: successCount, todayFail: failCount };
+                            var d = res.data;
+                            self.stats = {
+                                todaySms: Number(d.todaySms) || 0,
+                                todayPush: Number(d.todayPush) || 0,
+                                todaySuccess: Number(d.todaySuccess) || 0,
+                                todayFail: Number(d.todayFail) || 0
+                            };
                         }
                     }).catch(function() {});
                 },

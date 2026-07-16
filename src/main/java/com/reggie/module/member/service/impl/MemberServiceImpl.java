@@ -1,6 +1,5 @@
 package com.reggie.module.member.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
@@ -17,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 会员服务实现
@@ -34,6 +35,29 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
     /** 积分记录服务 */
     @Autowired
     private PointsRecordService pointsRecordService;
+
+    /**
+     * 批量填充会员等级名称（levelName 为逻辑字段，不落库）
+     * 修改点：解决前端 row.levelName 恒为 undefined 导致等级列始终显示“普通会员”的问题，
+     * 由 Controller 在分页/详情查询后调用
+     * @param members 会员列表
+     */
+    public void fillLevelName(List<Member> members) {
+        if (members == null || members.isEmpty()) {
+            return;
+        }
+        Set<Long> levelIds = members.stream()
+                .map(Member::getLevelId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (levelIds.isEmpty()) {
+            return;
+        }
+        List<MemberLevel> levels = memberLevelService.listByIds(levelIds);
+        Map<Long, String> nameMap = levels.stream()
+                .collect(Collectors.toMap(MemberLevel::getId, MemberLevel::getName, (a, b) -> a));
+        members.forEach(m -> m.setLevelName(nameMap.get(m.getLevelId())));
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -59,13 +83,10 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             return false;
         }
-        // SQL 原子扣减：balance = balance - amount，WHERE balance >= amount 防止扣成负数
-        LambdaUpdateWrapper<Member> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(Member::getId, memberId);
-        wrapper.setSql("balance = balance - CAST(" + amount.toPlainString() + " AS DECIMAL(10,2)), updated_time = NOW()");
-        wrapper.apply("balance >= {0}", amount.toPlainString());
-        boolean success = update(wrapper);
-        return success;
+        // 修改点：改用参数化 @Update（deductBalanceById），消除 setSql 字符串拼接；
+        // 原子条件 balance >= #{amount} 由 SQL WHERE 保证，租户条件由 TenantLineInnerInterceptor 注入
+        int rows = baseMapper.deductBalanceById(memberId, amount);
+        return rows > 0;
     }
 
     @Override
@@ -75,11 +96,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
             return;
         }
 
-        // 原子更新积分（IFNULL 防止 points 为 NULL 时导致整条更新无效）
-        LambdaUpdateWrapper<Member> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(Member::getId, memberId);
-        wrapper.setSql("points = IFNULL(points, 0) + " + points + ", updated_time = NOW()");
-        update(wrapper);
+        // 修改点：改用参数化 @Update（incrementPointsById），消除 setSql 字符串拼接；
+        // IFNULL 防止 points 为 NULL 时整条更新无效
+        baseMapper.incrementPointsById(memberId, points);
 
         // 查询更新后的积分，用于等级判断
         Member member = getById(memberId);

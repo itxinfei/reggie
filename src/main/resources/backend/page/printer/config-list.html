@@ -56,47 +56,39 @@
           </el-select>
         </template>
       </table-bar>
-      <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
-        <el-table-column prop="name" label="名称"></el-table-column>
-        <el-table-column prop="brand" label="品牌"></el-table-column>
-        <el-table-column prop="type" label="连接类型"></el-table-column>
-        <el-table-column prop="ipAddress" label="IP地址"></el-table-column>
-        <el-table-column prop="port" label="端口"></el-table-column>
-        <el-table-column prop="paperSize" label="纸张大小"></el-table-column>
-        <el-table-column label="打印类型">
-          <template slot-scope="scope">
-            <el-tag v-for="(t, i) in getPrintTypeTags(scope.row.printTypes)" :key="i"
-              size="mini" :type="t.type" style="margin-right:4px;">{{ t.label }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态">
-          <template slot-scope="scope">
-            <el-tag :type="scope.row.status === 1 ? 'success' : 'info'">
-              {{ scope.row.status === 1 ? '启用' : '停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="240" align="center">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" class="btn-view" @click="showEdit(scope.row)">编辑</el-button>
-            <el-button type="text" size="small" class="btn-view" @click="handleTest(scope.row)">测试连接</el-button>
-            <el-button type="text" size="small" class="btn-delete" @click="handleDelete(scope.row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination
-        class="pageList"
+      <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
         :page-sizes="[10, 20, 30]"
-        :page-size="query.pageSize"
-        :current-page.sync="query.page"
-        layout="total, sizes, prev, pager, next, jumper"
         :total="counts"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-      ></el-pagination>
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="240"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-printTypes="{ row }">
+          <el-tag v-for="(t, i) in getPrintTypeTags(row.printTypes)" :key="i"
+            size="mini" :type="t.type" style="margin-right:4px;">{{ t.label }}</el-tag>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'info'">
+            {{ row.status === 1 ? '启用' : '停用' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="showEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="handleTest(row)">测试连接</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
     </div>
 
-    <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="720px" :before-close="cancel">
+    <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，默认 footer 提供"取消/确定" -->
+    <crud-dialog :title="dialog.title" :visible.sync="dialog.visible" size="lg" @submit="submit" @close="cancel">
       <el-form ref="form" :model="form" :rules="rules" label-width="120px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入打印机名称，如：前台收银机"></el-input>
@@ -166,11 +158,7 @@
           </el-radio-group>
         </el-form-item>
       </el-form>
-      <div slot="footer">
-        <el-button @click="cancel">取消</el-button>
-        <el-button type="primary" @click="submit">确定</el-button>
-      </div>
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -182,12 +170,12 @@
   <script>
     new Vue({
       el: '#printer-config-app',
+      // 修改点：引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
+      mixins: [window.ReggieListMixin],
       data() {
         return {
           loading: false,
           query: {
-            page: 1,
-            pageSize: 10,
             name: '',
             brand: '',
             type: '',
@@ -200,6 +188,17 @@
           tableSearchItems: [],
           tableActions: [
             { key: 'add', text: '+ 新增打印机', type: 'primary' }
+          ],
+          // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
+          columns: [
+            { prop: 'name', label: '名称', minWidth: 120 },
+            { prop: 'brand', label: '品牌', minWidth: 100 },
+            { prop: 'type', label: '连接类型', width: 100, align: 'center' },
+            { prop: 'ipAddress', label: 'IP地址', width: 120, align: 'center' },
+            { prop: 'port', label: '端口', width: 80, align: 'center' },
+            { prop: 'paperSize', label: '纸张大小', width: 90, align: 'center' },
+            { prop: 'printTypes', label: '打印类型', minWidth: 140, slot: true },
+            { prop: 'status', label: '状态', width: 80, align: 'center', slot: true }
           ],
           stats: {
             totalPrinters: 0,
@@ -249,7 +248,7 @@
       },
       created() {
         this.loadFilterOptions()
-        this.init()
+        this.fetchData()
       },
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
@@ -290,10 +289,10 @@
             this.optionsLoading = false
           }
         },
-        async init() {
+        async fetchData() {
           const params = {
-            page: this.query.page,
-            pageSize: this.query.pageSize,
+            page: this.page,
+            pageSize: this.pageSize,
             name: this.query.name || undefined,
             brand: this.query.brand || undefined,
             type: this.query.type || undefined,
@@ -320,26 +319,19 @@
           }
         },
         // 加载打印机统计数据
+        // 修改点：改为调用后端 /printer/config/stats SQL 聚合接口，避免 pageSize:1000 拉全量后 filter/Set 统计
         async loadPrinterStats() {
           try {
-            const res = await printerConfigPage({ page: 1, pageSize: 1000 })
-            if (String(res.code) === '1') {
-              const records = res.data.records || []
-              const total = res.data.total || 0
-              const activeCount = records.filter(item => item.status === 1).length
-              const inactiveCount = records.filter(item => item.status === 0).length
-              // 修改点：统计连接类型种类数
-              const types = new Set()
-              records.forEach(function(r) {
-                if (r.type) { types.add(r.type) }
-              })
+            const res = await printerConfigStats()
+            if (String(res.code) === '1' && res.data) {
+              const d = res.data
               return {
                 code: 1,
                 data: {
-                  totalPrinters: total,
-                  activePrinters: activeCount,
-                  inactivePrinters: inactiveCount,
-                  typeCount: types.size
+                  totalPrinters: Number(d.totalPrinters) || 0,
+                  activePrinters: Number(d.activePrinters) || 0,
+                  inactivePrinters: Number(d.inactivePrinters) || 0,
+                  typeCount: Number(d.typeCount) || 0
                 }
               }
             }
@@ -349,11 +341,11 @@
           return { code: 0 }
         },
         search() {
-          // 修改点：搜索时清空卡片筛选状态
-          this.activeFilter = ''
-          this.query.page = 1
-          this.init()
-        },
+        // 修改点：搜索时清空卡片筛选状态
+        this.activeFilter = ''
+        this.page = 1
+        this.fetchData()
+      },
         // 修改点：<table-bar> 组件 action 按钮事件处理
         onTableAction(payload) {
           if (payload.key === 'add') { this.showAdd() }
@@ -367,8 +359,8 @@
           this.query.name = ''
           this.query.brand = ''
           this.query.type = ''
-          this.query.page = 1
-          this.init()
+          this.page = 1
+          this.fetchData()
         },
         reset() {
           this.query.name = ''
@@ -508,14 +500,7 @@
           this.dialog.visible = false
           this.$refs.form.resetFields()
         },
-        handleSizeChange(val) {
-          this.query.pageSize = val
-          this.init()
-        },
-        handleCurrentChange(val) {
-          this.query.page = val
-          this.init()
-        },
+        // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
         getPrintTypeTags(printTypes) {
           if (!printTypes) return []
           const MAP = {

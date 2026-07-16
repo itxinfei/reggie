@@ -64,50 +64,37 @@
       </table-bar>
 
       <!-- ===== 表格 ===== -->
-      <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
-        <el-table-column prop="name" label="等级名称" min-width="120">
-          <template slot-scope="{row}">
-            <span style="font-weight:600;">{{ row.name }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="minPoints" label="所需积分" width="120" align="center">
-          <template slot-scope="{row}">
-            <span style="font-weight:600;color:#8b5cf6;">{{ row.minPoints }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="discount" label="折扣率" width="120" align="center">
-          <template slot-scope="{row}">
-            <el-tag :type="row.discount >= 0.9 ? 'info' : row.discount >= 0.8 ? 'warning' : 'danger'" size="small" effect="dark">
-              {{ row.discount != null ? (row.discount * 100).toFixed(0) + '%' : '-' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="sort" label="排序" width="80" align="center">
-          <template slot-scope="{row}">
-            <span>{{ row.sort != null ? row.sort : '-' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="160" align="center">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" class="btn-view" @click="editHandle(scope.row)">修改</el-button>
-            <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(scope.row.id)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination
-        class="pageList"
-        :page-sizes="[10, 20, 30, 40]"
+      <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
         :page-size="pageSize"
-        layout="total, sizes, prev, pager, next, jumper"
         :total="counts"
-        :current-page.sync="page"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-      ></el-pagination>
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="160"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-name="{ row }"><span style="font-weight:600;">{{ row.name }}</span></template>
+        <template #col-minPoints="{ row }"><span style="font-weight:600;color:#8b5cf6;">{{ row.minPoints }}</span></template>
+        <template #col-discount="{ row }">
+          <el-tag :type="row.discount >= 0.9 ? 'info' : row.discount >= 0.8 ? 'warning' : 'danger'" size="small" effect="dark">
+            {{ row.discount != null ? (row.discount * 100).toFixed(0) + '%' : '-' }}
+          </el-tag>
+        </template>
+        <template #col-sort="{ row }"><span>{{ row.sort != null ? row.sort : '-' }}</span></template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="editHandle(row)">修改</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
+        </template>
+      </crud-table>
     </div>
 
     <!-- ===== 弹窗 ===== -->
-    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="35%" :before-close="handleClose">
+    <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，默认 footer 提供"取消/确定" -->
+    <crud-dialog :title="formData.title" :visible.sync="formData.dialogVisible" size="lg" @submit="submitForm">
       <el-form label-width="120px" :model="formData" :rules="formRules" ref="levelForm">
         <el-form-item label="等级名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入等级名称" maxlength="20"></el-input>
@@ -124,11 +111,7 @@
           <el-input v-model.number="formData.sort" type="number" placeholder="数字越小越靠前" min="0"></el-input>
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="formData.dialogVisible = false">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitForm">确 定</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -140,6 +123,8 @@
   <script>
     new Vue({
       el: '#level-app',
+      // 修改点：引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
+      mixins: [window.ReggieListMixin],
       data: function() {
         return {
           // 修改点：<table-bar> 统一组件配置
@@ -148,6 +133,13 @@
           ],
           tableActions: [
             { key: 'add', text: '+ 新增会员等级', type: 'primary' }
+          ],
+          // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
+          columns: [
+            { prop: 'name', label: '等级名称', minWidth: 120, slot: true },
+            { prop: 'minPoints', label: '所需积分', width: 120, align: 'center', slot: true },
+            { prop: 'discount', label: '折扣率', width: 120, align: 'center', slot: true },
+            { prop: 'sort', label: '排序', width: 80, align: 'center', slot: true }
           ],
           loading: false, action: '', counts: 0, page: 1, pageSize: 10, tableData: [],
           stats: { totalLevels: 0, highestLevel: '-', lowestPoints: 0, avgDiscount: '-' },
@@ -175,37 +167,36 @@
           return this.tableData.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
         }
       },
-      created: function() { this.init() },
+      created: function() { this.fetchData() },
       methods: {
         // 修改点：<table-bar> 组件统一操作分发
         onTableAction: function(payload) {
           if (payload.key === 'add') { this.addHandle(); }
         },
-        async init() {
+        async fetchData() {
           this.loading = true
           var s = this.lastSearch || {}
           try {
-            var res = await levelPage({ page: this.page, pageSize: this.pageSize, name: s.name || undefined })
+            // 修改点：列表与统计并行加载；统计改用后端 /api/member/level/stats 聚合，
+            // 替代原仅基于当前页 records 计算（修复"仅当前页"口径偏差）
+            var [res, statsRes] = await Promise.all([
+              levelPage({ page: this.page, pageSize: this.pageSize, name: s.name || undefined }),
+              levelStats()
+            ])
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
               this.counts = res.data.total
-              this.calcStats(this.tableData)
             } else { this.$message.error(res.msg || '操作失败') }
+            if (String(statsRes.code) === '1' && statsRes.data) {
+              this.stats = {
+                totalLevels: Number(statsRes.data.totalLevels) || 0,
+                highestLevel: statsRes.data.highestLevel || '-',
+                lowestPoints: Number(statsRes.data.lowestPoints) || 0,
+                avgDiscount: statsRes.data.avgDiscount || '-'
+              }
+            }
           } catch(e) { this.$message.error('请求失败：' + e) }
           this.loading = false
-        },
-        calcStats: function(records) {
-          if (!records || records.length === 0) { this.stats = { totalLevels: 0, highestLevel: '-', lowestPoints: 0, avgDiscount: '-' }; return }
-          this.stats.totalLevels = this.counts || records.length
-          var highest = records.reduce(function(p, c) { return (c.minPoints != null && (p == null || c.minPoints > p.minPoints)) ? c : p }, null)
-          this.stats.highestLevel = highest ? highest.name : '-'
-          var lowest = records.reduce(function(p, c) {
-            if (c.minPoints != null && c.minPoints > 0) return (p == null || c.minPoints < p) ? c.minPoints : p
-            return p
-          }, null)
-          this.stats.lowestPoints = lowest || 0
-          var valid = records.filter(function(d) { return d.discount != null && d.discount > 0 })
-          this.stats.avgDiscount = valid.length > 0 ? (valid.reduce(function(s,d) { return s + (d.discount||0) }, 0) / valid.length * 100).toFixed(0) + '%' : '-'
         },
         getBarWidth: function(idx) {
           var max = this.sortedLevels.length || 1
@@ -219,13 +210,13 @@
         handleQuery: function(searchParams) {
           this.lastSearch = searchParams || {}
           this.page = 1
-          this.init()
+          this.fetchData()
         },
         // <table-bar> @reset 回调
         handleReset: function() {
           this.lastSearch = {}
           this.page = 1
-          this.init()
+          this.fetchData()
         },
         addHandle: function() {
           this.action = 'add'; this.formData.title = '新增会员等级'
@@ -270,9 +261,7 @@
               }).catch(function(e) { self.$message.error('请求失败：' + e) })
             })
         },
-        handleClose: function() { this.formData.dialogVisible = false },
-        handleSizeChange: function(v) { this.pageSize = v; this.init() },
-        handleCurrentChange: function(v) { this.page = v; this.init() }
+        // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
       }
     })
   </script>

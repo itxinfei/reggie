@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -30,9 +33,11 @@ public class CouponTemplate implements Serializable {
     private Long tenantId;
 
     @Schema(description = "模板名称", example = "新人满减券")
+    @NotBlank(message = "优惠券名称不能为空")
     private String name;
 
-    @Schema(description = "优惠券类型：1=满减券，2=折扣券，3=代金券", example = "1")
+    @Schema(description = "优惠券类型：FULL_REDUCTION=满减券，DISCOUNT=折扣券，NEW_MEMBER=新客券", example = "FULL_REDUCTION")
+    @NotBlank(message = "优惠券类型不能为空")
     private String type;
 
     @Schema(description = "满减条件金额（元），满减券必填", example = "50.00")
@@ -45,12 +50,16 @@ public class CouponTemplate implements Serializable {
     private BigDecimal discountRate;
 
     @Schema(description = "发放总数", example = "1000")
+    @NotNull(message = "发放总数不能为空")
+    @Min(value = 1, message = "发放总数必须大于0")
     private Integer totalCount;
 
     @Schema(description = "剩余可领数量", example = "500")
     private Integer remainCount;
 
     @Schema(description = "有效天数（领取后N天内有效）", example = "30")
+    @NotNull(message = "有效天数不能为空")
+    @Min(value = 1, message = "有效天数必须大于0")
     private Integer validDays;
 
     @Schema(description = "状态：0=禁用，1=启用", example = "1")

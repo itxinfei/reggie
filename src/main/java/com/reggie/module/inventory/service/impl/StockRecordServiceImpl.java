@@ -1,7 +1,9 @@
 package com.reggie.module.inventory.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
@@ -62,7 +64,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void stockOut(Long materialId, BigDecimal qty, BigDecimal bizId, String remark, String operator) {
+    public void stockOut(Long materialId, BigDecimal qty, Long bizId, String remark, String operator) {
         Material material = materialService.getById(materialId);
         if (material == null) {
             throw new CustomException("食材不存在");
@@ -99,7 +101,6 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         return result;
     }
 
-    @Override
     public Page<StockRecord> page(Page<StockRecord> pageInfo) {
         Page<StockRecord> result = super.page(pageInfo);
         List<StockRecord> records = result.getRecords();
@@ -110,7 +111,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     }
 
     @Override
-    public List<StockRecord> list(LambdaQueryWrapper<StockRecord> queryWrapper) {
+    public List<StockRecord> list(Wrapper<StockRecord> queryWrapper) {
         List<StockRecord> list = super.list(queryWrapper);
         if (!CollectionUtils.isEmpty(list)) {
             fillMaterialName(list);

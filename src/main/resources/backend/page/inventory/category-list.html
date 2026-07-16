@@ -31,26 +31,38 @@
         </template>
       </table-bar>
 
-      <!-- ========== 数据表格 ========== -->
-      <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
-        <el-table-column prop="name" label="分类名称" /></el-table-column>
-        <el-table-column prop="sort" label="排序" width="100" align="center" /></el-table-column>
-        <el-table-column label="食材数量" width="120" align="center">
-          <template slot-scope="scope">
-            <span style="color: #606266; font-weight: 500;">{{ scope.row.materialCount || 0 }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="160" align="center">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" class="btn-view" @click="editHandle(scope.row)">修改</el-button>
-            <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(scope.row.id)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" :current-page.sync="page" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
+      <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :page-sizes="[10,20,30,40]"
+        :total="counts"
+        :show-actions="true"
+        :actions-width="160"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-materialCount="{ row }">
+          <span style="color: #606266; font-weight: 500;">{{ row.materialCount || 0 }}</span>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="editHandle(row)">修改</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
+        </template>
+      </crud-table>
     </div>
 
-    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="480px" :before-close="handleClose">
+    <!-- 修改点：使用 <crud-dialog> 统一弹窗组件替代手写 el-dialog -->
+    <crud-dialog
+      :title="formData.title"
+      :visible.sync="formData.dialogVisible"
+      width="480px"
+      @submit="submitForm"
+      @close="handleClose"
+    >
       <el-form class="demo-form-inline" label-width="120px">
         <el-form-item label="分类名称：">
           <el-input v-model="formData.name" placeholder="请输入分类名称" maxlength="14" style="width: 240px;" />
@@ -59,11 +71,7 @@
           <el-input v-model="formData.sort" type="number" placeholder="数值越小越靠前" style="width: 240px;" />
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="formData.dialogVisible = false">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitForm()">确 定</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -82,6 +90,12 @@
           page: 1,
           pageSize: 10,
           tableData: [],
+          // 修改点：crud-table 列配置（替代手写 el-table-column）
+          columns: [
+            { prop: 'name', label: '分类名称', minWidth: 160, showOverflowTooltip: true },
+            { prop: 'sort', label: '排序', width: 100, align: 'center' },
+            { prop: 'materialCount', label: '食材数量', width: 120, align: 'center', slot: true }
+          ],
           stats: { totalCategories: 0 },
           // 搜索条件
           input: { name: '' },
@@ -104,7 +118,7 @@
         }
       },
       created() {
-        this.init()
+        this.fetchData()
         this.loadFilterOptions()
       },
       computed: {
@@ -120,7 +134,8 @@
         onTableAction: function(payload) {
           if (payload.key === 'add') { this.addHandle(); }
         },
-        async init() {
+        // 修改点：统一方法名 fetchData（供 crud-table 分页事件调用）
+        async fetchData() {
           const params = { page: this.page, pageSize: this.pageSize }
           if (this.input.name) params.name = this.input.name
 
@@ -173,12 +188,12 @@
         },
         handleQuery() {
           this.page = 1
-          this.init()
+          this.fetchData()
         },
         reset() {
           this.input.name = ''
           this.page = 1
-          this.init()
+          this.fetchData()
         },
         addHandle() {
           this.formData = {
@@ -225,7 +240,7 @@
             if (res.code === 1) {
               this.$message.success(this.formData.id ? '分类修改成功！' : '分类添加成功！')
               this.formData.dialogVisible = false
-              this.init()
+              this.fetchData()
             } else {
               this.$message.error(res.msg || '操作失败')
             }
@@ -244,7 +259,7 @@
                 if (this.tableData.length === 1 && this.page > 1) {
                   this.page--
                 }
-                this.init()
+                this.fetchData()
               } else {
                 this.$message.error(res.msg || '操作失败')
               }
@@ -253,13 +268,16 @@
             })
           })
         },
-        handleSizeChange(val) {
-          this.pageSize = val
-          this.init()
+        // 修改点：分页处理改为 crud-table 事件驱动（参考 supplier-list 已验证模式）
+        onPageChange({ page, pageSize }) {
+          this.page = page
+          this.pageSize = pageSize
+          this.fetchData()
         },
-        handleCurrentChange(val) {
-          this.page = val
-          this.init()
+        onSizeChange(val) {
+          this.pageSize = val
+          this.page = 1
+          this.fetchData()
         }
       }
     })

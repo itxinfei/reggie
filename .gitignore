@@ -136,3 +136,14 @@ docs/TestImageGenerator-最终版说明.md
 docs/项目完成度分析报告-2026-07-08.md
 
 /scripts/
+
+# ----------------------------------------------------------
+# 前端依赖与测试生成产物 (tests/ 为 Playwright E2E 套件)
+# ----------------------------------------------------------
+node_modules/
+tests/node_modules/
+tests/allure-results/
+tests/reports/
+tests/test-results/
+*.tsbuildinfo
+

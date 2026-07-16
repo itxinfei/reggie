@@ -262,13 +262,7 @@
           </div>
         </el-form>
       </div>
-      <el-dialog
-        title="添加菜品"
-        class="addDishList"
-        :visible.sync="dialogVisible"
-        width="60%"
-        :before-close="handleClose"
-      >
+      <el-dialog title="添加菜品" class="addDishList unified-dialog" :visible.sync="dialogVisible" :before-close="handleClose">
         <el-input
           v-model="value"
           class="seachDish search-input"

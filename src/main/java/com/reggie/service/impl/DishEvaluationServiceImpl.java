@@ -198,12 +198,13 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
      * @param id           评价ID
      * @param replyContent 回复内容
      * @param replyUserId  回复人ID
+     * @param tenantId     租户ID
      * @return 是否回复成功
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean replyEvaluation(Long id, String replyContent, Long replyUserId) {
-        log.info("商家回复评价：evaluationId={}, replyUserId={}", id, replyUserId);
+    public boolean replyEvaluation(Long id, String replyContent, Long replyUserId, Long tenantId) {
+        log.info("商家回复评价：evaluationId={}, replyUserId={}, tenantId={}", id, replyUserId, tenantId);
 
         DishEvaluation evaluation = this.getById(id);
         if (evaluation == null) {
@@ -211,7 +212,6 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         }
 
         // 多租户校验
-        Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null || !tenantId.equals(evaluation.getTenantId())) {
             throw new CustomException("无权操作该评价");
         }
@@ -348,5 +348,43 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
     @Override
     public int countByStatus(Long tenantId, Integer status) {
         return baseMapper.countByStatus(tenantId, status);
+    }
+
+    /**
+     * 删除自己的评价（仅限评价人本人删除未审核的评价）
+     *
+     * @param id       评价ID
+     * @param userId   当前用户ID
+     * @param tenantId 租户ID
+     * @return 是否删除成功
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteMyEvaluation(Long id, Long userId, Long tenantId) {
+        DishEvaluation evaluation = this.getById(id);
+        if (evaluation == null) {
+            throw new CustomException("评价不存在");
+        }
+
+        // 多租户校验
+        if (tenantId == null || !tenantId.equals(evaluation.getTenantId())) {
+            throw new CustomException("无权操作该评价");
+        }
+
+        // 仅评价人本人可删除
+        if (!evaluation.getUserId().equals(userId)) {
+            throw new CustomException("只能删除自己的评价");
+        }
+
+        // 仅未审核的评价可删除
+        if (evaluation.getStatus() != null && evaluation.getStatus() != 0) {
+            throw new CustomException("已审核的评价无法删除");
+        }
+
+        boolean result = this.removeById(id);
+        if (result) {
+            log.info("评价删除成功：evaluationId={}, userId={}", id, userId);
+        }
+        return result;
     }
 }

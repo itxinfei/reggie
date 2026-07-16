@@ -37,78 +37,59 @@
     </table-bar>
 
     <!-- ========== 数据表格 ========== -->
-    <el-table
-      v-loading="loading"
+    <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination，支持多选(@selection-change) -->
+    <crud-table
       :data="tableData"
-      stripe
-      border
-      class="tableBox"
-      @selection-change="handleSelectionChange"
-    >
-      <el-table-column type="selection" align="center" width="50"></el-table-column>
-      <el-table-column prop="name" label="套餐名称"></el-table-column>
-      <el-table-column prop="image" label="图片" align="center">
-        <template slot-scope="{ row }">
-          <el-image
-            style="width: auto; height: 40px; border: none; cursor: pointer; border-radius: 4px;"
-            :src="getImage(row.image)"
-            :preview-src-list="[`/common/download?name=${row.image}`]"
-          >
-            <div slot="error" class="image-slot">
-              <img src="./../../images/noImg.png" style="width: auto; height: 40px; border: none; border-radius: 4px;">
-            </div>
-          </el-image>
-        </template>
-      </el-table-column>
-      <el-table-column prop="categoryName" label="套餐分类"></el-table-column>
-      <el-table-column prop="price" label="套餐价">
-        <template slot-scope="scope">
-          <span>￥{{ scope.row.price }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="description" label="套餐描述" min-width="200">
-        <template slot-scope="scope">
-          <span :title="scope.row.description || ''" style="display:inline-block;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ scope.row.description || '-' }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="售卖状态" width="100" align="center">
-        <template slot-scope="scope">
-          <el-tag :type="scope.row.status == '0' ? 'info' : 'success'" size="small">
-            {{ scope.row.status == '0' ? '停售' : '启售' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="updateTime" label="最后操作时间"></el-table-column>
-      <el-table-column label="操作" align="center" width="200">
-        <template slot-scope="scope">
-          <el-button type="text" size="small" class="btn-view" @click="addSetMeal(scope.row.id)">修改</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="statusHandle(scope.row)">
-            {{ scope.row.status == '0' ? '启售' : '停售' }}
-          </el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', scope.row.id)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <!-- ========== 分页 ========== -->
-    <el-pagination
-      class="pageList"
-      :page-sizes="[10, 20, 30, 40]"
+      :columns="columns"
+      :page="page"
       :page-size="pageSize"
-      layout="total, sizes, prev, pager, next, jumper"
       :total="counts"
-      @size-change="handleSizeChange"
-      :current-page.sync="page"
-      @current-change="handleCurrentChange"
-    ></el-pagination>
+      :loading="loading"
+      :selection="true"
+      :show-actions="true"
+      :actions-width="200"
+      @selection-change="handleSelectionChange"
+      @page-change="onPageChange"
+      @size-change="onSizeChange"
+    >
+      <template #col-image="{ row }">
+        <el-image
+          style="width: auto; height: 40px; border: none; cursor: pointer; border-radius: 4px;"
+          :src="getImage(row.image)"
+          :preview-src-list="[`/common/download?name=${row.image}`]"
+        >
+          <div slot="error" class="image-slot">
+            <img src="./../../images/noImg.png" style="width: auto; height: 40px; border: none; border-radius: 4px;">
+          </div>
+        </el-image>
+      </template>
+      <template #col-price="{ row }">
+        <span>￥{{ row.price }}</span>
+      </template>
+      <template #col-description="{ row }">
+        <span :title="row.description || ''" style="display:inline-block;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ row.description || '-' }}</span>
+      </template>
+      <template #col-status="{ row }">
+        <el-tag :type="row.status == '0' ? 'info' : 'success'" size="small">
+          {{ row.status == '0' ? '停售' : '启售' }}
+        </el-tag>
+      </template>
+      <template #actions="{ row }">
+        <el-button type="text" size="small" class="btn-view" @click="addSetMeal(row.id)">修改</el-button>
+        <el-button type="text" size="small" class="btn-view" @click="statusHandle(row)">
+          {{ row.status == '0' ? '启售' : '停售' }}
+        </el-button>
+        <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', row.id)">删除</el-button>
+      </template>
+    </crud-table>
   </div>
 
   <!-- ========== 新增/修改套餐弹窗 ========== -->
-  <el-dialog
+  <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，footer 插槽保留"保存并继续添加" -->
+  <crud-dialog
     :title="comboDialog.title"
     :visible.sync="comboDialog.visible"
-    width="900px"
-    :before-close="handleDialogClose"
+    size="xl"
     :close-on-click-modal="false"
   >
     <el-form ref="comboForm" :model="comboForm" :rules="comboRules" label-width="120px">
@@ -166,20 +147,21 @@
         <el-input v-model="comboForm.description" type="textarea" :rows="3" placeholder="套餐描述，最长200字" maxlength="200" />
       </el-form-item>
     </el-form>
-    <div slot="footer" class="dialog-footer">
+    <template #footer>
       <el-button size="medium" @click="handleDialogClose">取 消</el-button>
       <el-button type="primary" size="medium" @click="submitComboForm()">确 定</el-button>
       <el-button v-if="comboDialog.actionType == 'add'" type="primary" size="medium" class="continue" @click="submitComboForm('continue')">保存并继续添加</el-button>
-    </div>
-  </el-dialog>
+    </template>
+  </crud-dialog>
 
   <!-- ========== 菜品选择弹窗 ========== -->
-  <el-dialog
+  <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，footer 插槽保留"取消/确定" -->
+  <crud-dialog
     title="添加菜品"
     class="dishSelectDialog"
     :visible.sync="dishSelectDialog.visible"
-    width="900px"
-    :before-close="handleDishSelectClose"
+    size="xl"
+    @close="handleDishSelectClose"
   >
     <el-input
       v-model="dishSearchKey"
@@ -241,11 +223,11 @@
       </div>
     </div>
 
-    <div slot="footer" class="dialog-footer">
+    <template #footer>
       <el-button size="medium" @click="handleDishSelectClose">取 消</el-button>
       <el-button type="primary" size="medium" @click="confirmDishSelection">确 定</el-button>
-    </div>
-  </el-dialog>
+    </template>
+  </crud-dialog>
 </div>
 
 <!-- JS 依赖 -->
@@ -260,6 +242,8 @@
 <script>
 new Vue({
   el: '#combo-app',
+  // 修改点：引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
+  mixins: [window.ReggieListMixin],
   data() {
     return {
       input: '',
@@ -290,6 +274,16 @@ new Vue({
         { key: 'batchOn', text: '批量启售', type: 'success' },
         { key: 'batchOff', text: '批量停售', type: 'warning' },
         { key: 'add', text: '+ 新建套餐', type: 'primary' }
+      ],
+      // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
+      columns: [
+        { prop: 'name', label: '套餐名称', minWidth: 120 },
+        { prop: 'image', label: '图片', width: 80, align: 'center', slot: true },
+        { prop: 'categoryName', label: '套餐分类', minWidth: 100 },
+        { prop: 'price', label: '套餐价', width: 100, align: 'center', slot: true },
+        { prop: 'description', label: '套餐描述', minWidth: 200, slot: true },
+        { prop: 'status', label: '售卖状态', width: 100, align: 'center', slot: true },
+        { prop: 'updateTime', label: '最后操作时间', minWidth: 160 }
       ],
       // 套餐弹窗
       comboDialog: {
@@ -367,7 +361,7 @@ new Vue({
   },
   created() {
     this.loadFilterOptions()
-    this.init()
+    this.fetchData()
   },
   methods: {
     // 修改点：<stat-cards> 点击（payload.activeKey 为 .sync 更新后的值）
@@ -375,7 +369,7 @@ new Vue({
       this.activeFilter = payload.activeKey
       this.input = ''
       this.page = 1
-      this.init()
+      this.fetchData()
     },
     // 修改点：<table-bar> 组件统一操作分发
     onTableAction: function(payload) {
@@ -413,7 +407,7 @@ new Vue({
       }
     },
     // ========== 数据加载 ==========
-    async init() {
+    async fetchData() {
       this.loading = true
       var params = {
         page: this.page,
@@ -441,13 +435,14 @@ new Vue({
     async loadComboStats() {
       try {
         var self = this
-        const [totalRes, listRes, catRes] = await Promise.all([
+        // 修改点：改用 pageSize:1 多状态并发查询取 total，避免 pageSize:1000 拉全量导致统计截断
+        const [totalRes, activeRes, inactiveRes, catRes] = await Promise.all([
           getSetmealPage({ page: 1, pageSize: 1 }),
-          getSetmealPage({ page: 1, pageSize: 1000 }),
+          getSetmealPage({ page: 1, pageSize: 1, status: 1 }),
+          getSetmealPage({ page: 1, pageSize: 1, status: 0 }),
           getCategoryList({ type: 2 })
         ])
         if (String(totalRes.code) === '1') {
-          var records = listRes.data.records || []
           var catCount = 0
           try {
             catCount = catRes ? (catRes.data || []).length : 0
@@ -456,8 +451,8 @@ new Vue({
           }
           this.stats = {
             totalCombos: totalRes.data.total || 0,
-            activeCombos: records.filter(function (r) { return r.status === 1 }).length,
-            inactiveCombos: records.filter(function (r) { return r.status === 0 }).length,
+            activeCombos: activeRes.data.total || 0,
+            inactiveCombos: inactiveRes.data.total || 0,
             comboCategories: catCount
           }
         }
@@ -474,32 +469,25 @@ new Vue({
     handleQuery() {
       this.activeFilter = ''
       this.page = 1
-      this.init()
+      this.fetchData()
     },
 
     reset() {
       this.input = ''
       this.activeFilter = ''
       this.page = 1
-      this.init()
+      this.fetchData()
     },
 
     // filterBy 已迁移至 onCardClick
 
     // ========== 分页 ==========
-    handleSizeChange(val) {
-      this.pageSize = val
-      this.init()
-    },
-
-    handleCurrentChange(val) {
-      this.page = val
-      this.init()
-    },
+    // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
 
     // ========== 多选 ==========
+    // 修改点：<crud-table> 多选事件 payload 为 { rows, ids, count }，直接取 ids
     handleSelectionChange(val) {
-      this.checkList = val.map(function (n) { return n.id })
+      this.checkList = val.ids || []
     },
 
     // ========== 删除 ==========

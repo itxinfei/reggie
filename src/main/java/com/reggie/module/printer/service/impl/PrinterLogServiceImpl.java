@@ -3,7 +3,6 @@ package com.reggie.module.printer.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.reggie.common.BaseContext;
 import com.reggie.module.printer.mapper.PrinterLogMapper;
 import com.reggie.module.printer.model.PrinterLog;
 import com.reggie.module.printer.service.PrinterLogService;
@@ -22,17 +21,17 @@ public class PrinterLogServiceImpl extends ServiceImpl<PrinterLogMapper, Printer
 
     @Override
     public List<PrinterLog> listByOrderId(Long orderId) {
+        // 修改点：删除冗余的手动 eq(tenantId)，由 TenantLineInnerInterceptor 统一处理
         return this.list(new LambdaQueryWrapper<PrinterLog>()
                 .eq(PrinterLog::getOrderId, orderId)
-                .eq(PrinterLog::getTenantId, BaseContext.getCurrentTenantId())
                 .orderByDesc(PrinterLog::getCreatedTime));
     }
 
     @Override
     public Page<PrinterLog> pageQuery(int page, int pageSize, Long printerId, Integer status) {
+        // 修改点：删除冗余的手动 eq(tenantId)，由 TenantLineInnerInterceptor 统一处理
         Page<PrinterLog> pageRequest = new Page<>(page, pageSize);
         LambdaQueryWrapper<PrinterLog> wrapper = new LambdaQueryWrapper<PrinterLog>()
-                .eq(PrinterLog::getTenantId, BaseContext.getCurrentTenantId())
                 .orderByDesc(PrinterLog::getCreatedTime);
         if (printerId != null) {
             wrapper.eq(PrinterLog::getPrinterId, printerId);

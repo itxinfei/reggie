@@ -38,74 +38,43 @@
           </el-select>
         </template>
       </table-bar>
-      <el-table
-        v-loading="loading"
+      <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination，columns 配置化，内置分页 -->
+      <crud-table
         :data="tableData"
-        stripe
-        border
-        class="tableBox"
-      >
-        <el-table-column
-          prop="name"
-          label="分类名称"
-        ></el-table-column>
-        <el-table-column
-          prop="type"
-          label="分类类型"
-        >
-          <template slot-scope="scope">
-            <span>{{ scope.row.type == '1' ? '菜品分类': '套餐分类' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column
-          prop="updateTime"
-          label="操作时间"
-        >
-        <template slot-scope="scope">
-         {{scope.row.updateTime}}
-        </template>
-        </el-table-column>
-        <el-table-column
-          prop="sort"
-          label="排序"
-        ></el-table-column>
-        <el-table-column
-          label="操作"
-          align="center"
-          width="120"
-        >
-          <template slot-scope="scope">
-            <el-button
-              type="text"
-              size="small"
-              class="btn-view"
-              @click="editHandle(scope.row)"
-            >修改</el-button>
-            <el-button
-              type="text"
-              size="small"
-              class="btn-delete"
-              @click="deleteHandle(scope.row.id)"
-            >删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination
-        class="pageList"
-        :page-sizes="[10, 20, 30, 40]"
+        :columns="columns"
+        :page="page"
         :page-size="pageSize"
-        layout="total, sizes, prev, pager, next, jumper"
         :total="counts"
-        :current-page.sync="page"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-      ></el-pagination>
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="120"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-type="{ row }">
+          <span>{{ row.type == '1' ? '菜品分类' : '套餐分类' }}</span>
+        </template>
+        <template #actions="{ row }">
+          <el-button
+            type="text"
+            size="small"
+            class="btn-view"
+            @click="editHandle(row)"
+          >修改</el-button>
+          <el-button
+            type="text"
+            size="small"
+            class="btn-delete"
+            @click="deleteHandle(row.id)"
+          >删除</el-button>
+        </template>
+      </crud-table>
     </div>
-    <el-dialog
+    <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，footer 插槽保留"保存并继续添加" -->
+    <crud-dialog
       :title="classData.title"
       :visible.sync="classData.dialogVisible"
-      width="560px"
-      :before-close="handleClose"
+      size="md"
       :close-on-click-modal="false"
     >
       <el-form
@@ -132,8 +101,8 @@
           <span class="form-tip">不填则自动排列到最后</span>
         </el-form-item>
       </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="handleClose">取 消</el-button>
+      <template #footer>
+        <el-button size="medium" @click="classData.dialogVisible = false">取 消</el-button>
         <el-button type="primary" size="medium" @click="submitForm()">确 定</el-button>
         <el-button
           v-if="action != 'edit'"
@@ -142,8 +111,8 @@
           class="continue"
           @click="submitForm('go')"
         > 保存并继续添加 </el-button>
-      </div>
-    </el-dialog>
+      </template>
+    </crud-dialog>
   </div>
     <!-- 开发环境版本，包含了有帮助的命令行警告 -->
     <script src="../../plugins/vue/vue.js"></script>
@@ -157,6 +126,8 @@
     <script>
       new Vue({
         el: '#category-app',
+        // 修改点：引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
+        mixins: [window.ReggieListMixin],
         data() {
           return {
             action: '',
@@ -187,6 +158,13 @@
             },
             // 修改点：当前激活的分类类型筛选器，空字符串=全部
             activeFilter: '',
+            // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
+            columns: [
+              { prop: 'name', label: '分类名称', minWidth: 140 },
+              { prop: 'type', label: '分类类型', width: 120, align: 'center', slot: true },
+              { prop: 'updateTime', label: '操作时间', minWidth: 160 },
+              { prop: 'sort', label: '排序', width: 80, align: 'center' }
+            ],
             classData: {
               'title': '添加菜品分类',
               'dialogVisible': false,
@@ -211,7 +189,7 @@
         },
         created() {
           this.loadFilterOptions()
-          this.init()
+          this.fetchData()
         },
         mounted() {
         },
@@ -244,7 +222,7 @@
               this.optionsLoading = false
             }
           },
-          async init () {
+          async fetchData() {
             this.loading = true
             // 修改点：传递类型筛选参数 + 名称搜索参数到后端
             var params = {'page': this.page, 'pageSize': this.pageSize}
@@ -289,7 +267,7 @@
             // 修改点：搜索时复位卡片筛选，避免冲突
             this.activeFilter = ''
             this.page = 1;
-            this.init();
+            this.fetchData();
           },
           // 修改点：<table-bar> 组件 action 按钮事件处理
           onTableAction(payload) {
@@ -301,14 +279,14 @@
             this.activeFilter = payload.activeKey
             this.searchName = ''
             this.page = 1
-            this.init()
+            this.fetchData()
           },
           // 重置搜索条件，恢复表格初始状态
           reset() {
             this.searchName = ''
             this.activeFilter = ''
             this.page = 1
-            this.init()
+            this.fetchData()
           },
            // 添加
           addClass(st) {
@@ -411,14 +389,7 @@
               })
             }
           },
-          handleSizeChange (val) {
-            this.pageSize = val
-            this.init()
-          },
-          handleCurrentChange (val) {
-            this.page = val
-            this.init()
-          }
+          // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
         }
       })
     </script>

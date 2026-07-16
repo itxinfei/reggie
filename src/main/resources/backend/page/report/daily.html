@@ -240,6 +240,9 @@
   <div class="dashboard-container daily-container" id="report-daily-app">
     <div class="container">
 
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
+      <stat-cards :cards="statsCards"></stat-cards>
+
       <!-- 修改点：使用 <table-bar> 统一组件替代手写 tableBar -->
       <table-bar
         :search-items="tableSearchItems"
@@ -261,9 +264,6 @@
           ></el-date-picker>
         </template>
       </table-bar>
-
-      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
-      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- ========== 趋势图 + 分类销售 双图 ========== -->
       <!-- 修改点：图表容器增加 min-height 防止变形，统一 class 便于响应式 -->

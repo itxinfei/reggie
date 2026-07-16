@@ -95,7 +95,9 @@
     </div>
 
     <!-- 新增采购单对话框 -->
-    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" width="680px" :before-close="handleClose">
+    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" class="el-dialog--lg unified-dialog"
+      :before-close="handleClose" :close-on-click-modal="false"
+      :append-to-body="true" :modal-append-to-body="true">
       <el-form class="demo-form-inline" label-width="100px">
         <el-form-item label="供应商：">
           <el-select v-model="formData.supplierId" placeholder="请选择" style="width:100%">
@@ -166,7 +168,7 @@
             { key: '', icon: '📦', label: '采购单总数', value: s.totalOrders || 0, color: 'primary', clickable: true, active: self.cardFilter === '' },
             { key: 'DRAFT', icon: '📝', label: '待审核', value: s.pendingApprove || 0, color: 'warning', clickable: true, active: self.cardFilter === 'DRAFT' },
             { key: 'ORDERED', icon: '🚚', label: '待收货', value: s.pendingReceive || 0, color: 'info', clickable: true, active: self.cardFilter === 'ORDERED' },
-            { key: 'monthAmount', icon: '💵', label: '本月采购金额', value: '¥' + self.formatMoney(s.monthAmount), color: 'success' }
+            { key: 'monthAmount', icon: '💵', label: '本月采购金额', value: '¥' + self.formatMoney(s.monthAmount), color: 'success', prefix: '' }
           ]
         }
       },

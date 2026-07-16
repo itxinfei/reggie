@@ -162,7 +162,7 @@ public class DishEvaluationController {
             return R.error("租户信息缺失");
         }
 
-        boolean result = dishEvaluationService.replyEvaluation(id, replyContent, BaseContext.getCurrentId());
+        boolean result = dishEvaluationService.replyEvaluation(id, replyContent, BaseContext.getCurrentId(), tenantId);
         if (result) {
             return R.success("回复成功");
         }
@@ -246,11 +246,6 @@ public class DishEvaluationController {
             return R.error("租户信息缺失");
         }
 
-        Page<DishEvaluation> result = dishEvaluationService.pageByDishId(
-                tenantId, null, page, pageSize);
-        // 待审核列表使用自定义方法查询，这里先用通用分页+状态过滤
-        // 实际通过 DishEvaluationService.listByDishId 无法直接分页，
-        // 因此使用LambdaQueryWrapper直接分页查询
         LambdaQueryWrapper<DishEvaluation> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(DishEvaluation::getTenantId, tenantId)
                 .eq(DishEvaluation::getStatus, 0)
@@ -291,5 +286,33 @@ public class DishEvaluationController {
         Page<DishEvaluation> result = dishEvaluationService.adminPage(
                 tenantId, dishName, status, starRating, page, pageSize);
         return R.success(result);
+    }
+
+    /**
+     * 删除自己的评价（仅未审核且本人评价可删）
+     *
+     * @param params 包含 id 的请求体
+     * @return 删除结果
+     */
+    @DeleteMapping
+    @Operation(summary = "删除自己的评价", description = "用户删除自己未审核的评价，需登录")
+    public R<String> deleteMyEvaluation(@RequestBody Map<String, Long> params) {
+        Long id = params.get("id");
+        if (id == null) {
+            return R.error("评价ID不能为空");
+        }
+
+        log.info("删除评价：evaluationId={}, userId={}", id, BaseContext.getCurrentId());
+
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("租户信息缺失");
+        }
+
+        boolean result = dishEvaluationService.deleteMyEvaluation(id, BaseContext.getCurrentId(), tenantId);
+        if (result) {
+            return R.success("删除成功");
+        }
+        return R.error("删除失败");
     }
 }

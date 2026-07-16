@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -56,9 +57,11 @@ public class RechargeRecordController {
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "phone", description = "会员手机号（可选，精确查询）")
-    public R<Map<String, Object>> page(int page, int pageSize, String phone) {
+    public R<Map<String, Object>> page(int page, int pageSize, String phone,
+                                       @RequestParam(required = false) String paymentMethod) {
         Page<RechargeRecord> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<RechargeRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(paymentMethod != null && !paymentMethod.isEmpty(), RechargeRecord::getPaymentMethod, paymentMethod);
 
         if (phone != null && !phone.isEmpty()) {
             LambdaQueryWrapper<Member> memberQw = new LambdaQueryWrapper<>();

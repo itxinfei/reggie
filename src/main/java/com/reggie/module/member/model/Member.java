@@ -1,6 +1,7 @@
 package com.reggie.module.member.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -34,6 +35,10 @@ public class Member implements Serializable {
 
     @Schema(description = "会员等级ID", example = "1")
     private Long levelId;
+
+    @Schema(description = "会员等级名称（逻辑字段，由 levelId 关联 member_level.name 填充，不落库）", example = "黄金会员")
+    @TableField(exist = false)
+    private String levelName;
 
     @Schema(description = "会员姓名", example = "张三")
     private String name;

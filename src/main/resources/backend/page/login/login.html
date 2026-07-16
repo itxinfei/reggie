@@ -97,8 +97,9 @@
     </div>
 
     <!-- 忘记密码弹窗 -->
-    <el-dialog title="重置密码" :visible.sync="fpShow" width="420px"
-               :close-on-click-modal="false" custom-class="fp-dialog" :append-to-body="true">
+    <el-dialog title="重置密码" :visible.sync="fpShow"
+               class="el-dialog--sm unified-dialog" custom-class="fp-dialog"
+               :close-on-click-modal="false" :append-to-body="true">
       <el-form :model="fpForm" :rules="fpRules" ref="fpFormRef" label-width="80px"
                @submit.native.prevent="doForgot">
         <el-form-item label="用户名" prop="username">
@@ -111,9 +112,9 @@
           <el-input v-model="fpForm.newPassword" type="password" placeholder="至少6位" maxlength="20"></el-input>
         </el-form-item>
       </el-form>
-      <span slot="footer">
-        <el-button @click="fpShow=false">取消</el-button>
-        <el-button type="primary" @click="doForgot" :loading="fpLoading">确定</el-button>
+      <span slot="footer" class="dialog-footer">
+        <el-button size="medium" @click="fpShow=false">取消</el-button>
+        <el-button type="primary" size="medium" @click="doForgot" :loading="fpLoading">确定</el-button>
       </span>
     </el-dialog>
 

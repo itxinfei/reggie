@@ -106,7 +106,7 @@
     </div>
 
     <!-- 购物车弹窗 -->
-    <el-dialog title="购物车" :visible.sync="cartDialog.visible" width="90%" max-width="420px" class="cart-dialog" :show-close="true">
+    <el-dialog title="购物车" :visible.sync="cartDialog.visible" class="el-dialog--sm unified-dialog cart-dialog" :show-close="true" :close-on-click-modal="true">
       <div v-if="cart.length === 0" class="empty-cart">购物车是空的</div>
       <div v-for="item in cart" :key="item.dishId" class="cart-item">
         <div class="cart-item-name">{{ item.name }}</div>
@@ -120,7 +120,8 @@
     </el-dialog>
 
     <!-- 提交订单弹窗 -->
-    <el-dialog title="确认订单" :visible.sync="submitDialog.visible" width="90%" max-width="420px" class="submit-dialog">
+    <el-dialog title="确认订单" :visible.sync="submitDialog.visible" class="el-dialog--sm unified-dialog submit-dialog"
+      :close-on-click-modal="false">
       <div style="padding: 10px 0;">
         <div style="font-size:14px;color:#606266;margin-bottom:12px;">
           🪑 桌台：<strong>{{ tableInfo?.name }}</strong>（可坐{{ tableInfo?.seatCount }}人）

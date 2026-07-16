@@ -1,5 +1,6 @@
 package com.reggie.module.inventory.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
@@ -128,8 +129,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         updateById(po);
     }
 
-    @Override
-    public List<PurchaseOrder> list(com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<PurchaseOrder> queryWrapper) {
+    public List<PurchaseOrder> list(Wrapper<PurchaseOrder> queryWrapper) {
         List<PurchaseOrder> list = super.list(queryWrapper);
         if (!org.springframework.util.CollectionUtils.isEmpty(list)) {
             fillSupplierName(list);

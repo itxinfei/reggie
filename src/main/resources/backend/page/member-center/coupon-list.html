@@ -87,6 +87,9 @@
         <el-form-item label="优惠金额：">
           <el-input v-model="formData.discountAmount" type="number" placeholder="请输入优惠金额"></el-input>
         </el-form-item>
+        <el-form-item label="折扣率：" v-if="formData.type === 'DISCOUNT'">
+          <el-input v-model="formData.discountRate" type="number" placeholder="如0.85表示8.5折"></el-input>
+        </el-form-item>
         <el-form-item label="总数量：">
           <el-input v-model="formData.totalCount" type="number" placeholder="请输入总数量"></el-input>
         </el-form-item>
@@ -144,14 +147,14 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'name', label: '优惠券名称' },
-            { prop: 'type', label: '类型', slot: true, width: 100 },
-            { prop: 'conditionAmount', label: '条件金额', width: 100 },
-            { prop: 'discountAmount', label: '优惠金额', width: 100 },
-            { prop: 'totalCount', label: '总数量', width: 90 },
-            { prop: 'remainCount', label: '剩余数量', width: 90 },
-            { prop: 'validDays', label: '有效期(天)', width: 100 },
-            { prop: 'status', label: '状态', slot: true, width: 80 }
+            { prop: 'name', label: '优惠券名称', align: 'center' },
+            { prop: 'type', label: '类型', slot: true, width: 100, align: 'center' },
+            { prop: 'conditionAmount', label: '条件金额', width: 100, align: 'center' },
+            { prop: 'discountAmount', label: '优惠金额', width: 100, align: 'center' },
+            { prop: 'totalCount', label: '总数量', width: 90, align: 'center' },
+            { prop: 'remainCount', label: '剩余数量', width: 90, align: 'center' },
+            { prop: 'validDays', label: '有效期(天)', width: 100, align: 'center' },
+            { prop: 'status', label: '状态', slot: true, width: 80, align: 'center' }
           ],
           // 弹窗表单
           formData: {
@@ -162,6 +165,7 @@
             type: '',
             conditionAmount: '',
             discountAmount: '',
+            discountRate: '',
             totalCount: '',
             validDays: '',
             status: 1
@@ -210,30 +214,10 @@
         },
         async loadCouponStats() {
           try {
-            var res = await couponTemplatePage({ page: 1, pageSize: 1000 })
+            // 修改点：改为调用后端聚合接口 /stats，避免 pageSize=1000 拉全量后在浏览器聚合
+            var res = await couponStats()
             if (String(res.code) === '1') {
-              var records = res.data.records || []
-              var enabledCount = records.filter(function(r) { return r.status === 1 }).length
-              var disabledCount = records.filter(function(r) { return r.status === 0 }).length
-              var exhaustedCount = records.filter(function(r) { return r.remainCount !== undefined && r.remainCount !== null && Number(r.remainCount) <= 0 }).length
-              // 计算总领取数和使用率
-              var totalClaimed = 0
-              var totalIssued = 0
-              records.forEach(function(r) {
-                if (r.totalCount && r.remainCount !== undefined && r.remainCount !== null) {
-                  totalIssued += Number(r.totalCount)
-                  totalClaimed += Number(r.totalCount) - Number(r.remainCount)
-                }
-              })
-              var usageRate = totalIssued > 0 ? ((totalClaimed / totalIssued) * 100).toFixed(1) + '%' : '0%'
-              return { code: 1, data: {
-                totalCoupons: res.data.total || 0,
-                enabledCount: enabledCount,
-                disabledCount: disabledCount,
-                exhaustedCount: exhaustedCount,
-                claimedCount: totalClaimed,
-                usageRate: usageRate
-              }}
+              return { code: 1, data: res.data || {} }
             }
           } catch (err) { console.warn('加载优惠券统计失败:', err) }
           return { code: 0 }
@@ -288,6 +272,7 @@
           this.formData.type = ''
           this.formData.conditionAmount = ''
           this.formData.discountAmount = ''
+          this.formData.discountRate = ''
           this.formData.totalCount = ''
           this.formData.validDays = ''
           this.formData.status = 1
@@ -301,17 +286,48 @@
           this.formData.type = row.type
           this.formData.conditionAmount = row.conditionAmount
           this.formData.discountAmount = row.discountAmount
+          this.formData.discountRate = row.discountRate
           this.formData.totalCount = row.totalCount
           this.formData.validDays = row.validDays
           this.formData.status = row.status
           this.formData.dialogVisible = true
         },
         submitForm() {
+          var self = this
+          // 修改点：前端表单校验，与后端 validateCoupon 保持一致，拦截非法提交
+          if (!this.formData.name || !this.formData.name.trim()) {
+            this.$message.error('请输入优惠券名称'); return
+          }
+          if (!this.formData.type) {
+            this.$message.error('请选择优惠券类型'); return
+          }
+          if (this.formData.type === 'FULL_REDUCTION') {
+            if (!this.formData.conditionAmount || Number(this.formData.conditionAmount) <= 0) {
+              this.$message.error('请输入有效的条件金额'); return
+            }
+            if (!this.formData.discountAmount || Number(this.formData.discountAmount) <= 0) {
+              this.$message.error('请输入有效的优惠金额'); return
+            }
+            if (Number(this.formData.discountAmount) >= Number(this.formData.conditionAmount)) {
+              this.$message.error('优惠金额必须小于条件金额'); return
+            }
+          } else if (this.formData.type === 'DISCOUNT') {
+            if (!this.formData.discountRate || Number(this.formData.discountRate) <= 0 || Number(this.formData.discountRate) >= 1) {
+              this.$message.error('折扣率必须在0~1之间（如0.85表示8.5折）'); return
+            }
+          }
+          if (!this.formData.totalCount || Number(this.formData.totalCount) <= 0) {
+            this.$message.error('请输入发放总数'); return
+          }
+          if (this.formData.validDays === '' || Number(this.formData.validDays) <= 0) {
+            this.$message.error('请输入有效天数'); return
+          }
           var data = {
             name: this.formData.name,
             type: this.formData.type,
-            conditionAmount: this.formData.conditionAmount,
-            discountAmount: this.formData.discountAmount,
+            conditionAmount: this.formData.conditionAmount || null,
+            discountAmount: this.formData.discountAmount || null,
+            discountRate: this.formData.discountRate || null,
             totalCount: this.formData.totalCount,
             validDays: this.formData.validDays,
             status: this.formData.status

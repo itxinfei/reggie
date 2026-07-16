@@ -9,6 +9,7 @@ import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 库存盘点
@@ -58,4 +59,8 @@ public class StockCheck implements Serializable {
     /** 盈亏金额（totalDiffAmount 的别名，兼容前端字段名） */
     @TableField(exist = false)
     private BigDecimal profitLoss;
+
+    /** 盘点明细列表（关联查询填充，数据库无此列） */
+    @TableField(exist = false)
+    private List<com.reggie.module.inventory.model.StockCheckDetail> details;
 }

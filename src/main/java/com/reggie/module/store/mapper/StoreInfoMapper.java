@@ -92,6 +92,24 @@ public interface StoreInfoMapper extends BaseMapper<StoreInfo> {
     Map<String, Object> searchStoreDetail(@Param("tenantId") Long tenantId);
 
     /**
+     * 门店统计聚合（总部视角）
+     * <p>单条 SQL 关联 tenant/store_daily_summary，替代前端 listAllStores 拉全量后 filter 统计，
+     * 消除 N+1（原逐店查询 store_daily_summary）与全量内存计算</p>
+     *
+     * @param today 今日日期（用于关联当日日报汇总）
+     * @return 聚合结果：totalStores/activeStores/inactiveStores/todayTotalStores
+     */
+    @Select("SELECT "
+            + "COUNT(*) AS totalStores, "
+            + "COALESCE(SUM(CASE WHEN t.status = 1 THEN 1 ELSE 0 END), 0) AS activeStores, "
+            + "COALESCE(SUM(CASE WHEN t.status = 0 THEN 1 ELSE 0 END), 0) AS inactiveStores, "
+            + "COALESCE(SUM(CASE WHEN sds.total_orders > 0 THEN 1 ELSE 0 END), 0) AS todayTotalStores "
+            + "FROM store_info si "
+            + "LEFT JOIN tenant t ON t.id = si.tenant_id "
+            + "LEFT JOIN store_daily_summary sds ON sds.tenant_id = si.tenant_id AND sds.summary_date = #{today}")
+    Map<String, Object> statStores(@Param("today") java.time.LocalDate today);
+
+    /**
      * 导出全部门店数据（不限制数量，受筛选条件影响）
      *
      * @param keyword 关键词

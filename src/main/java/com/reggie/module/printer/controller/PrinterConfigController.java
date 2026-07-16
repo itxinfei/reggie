@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.module.printer.mapper.PrinterConfigMapper;
 import com.reggie.module.printer.model.PrinterConfig;
 import com.reggie.module.printer.service.PrinterConfigService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,6 +46,9 @@ public class PrinterConfigController {
     @Autowired
     private PrinterConfigService printerConfigService;
 
+    @Autowired
+    private PrinterConfigMapper printerConfigMapper;
+
     /**
      * 分页查询打印机配置列表
      * @param page 页码
@@ -83,6 +87,23 @@ public class PrinterConfigController {
         queryWrapper.orderByAsc(PrinterConfig::getSort);
         printerConfigService.page(pageInfo, queryWrapper);
         return R.success(pageInfo);
+    }
+
+    /**
+     * 打印机配置统计
+     * <p>使用 SQL 聚合替代前端 pageSize:1000 拉全量后 filter/Set 统计，避免全表扫描</p>
+     *
+     * @return 打印机总数、启用数、停用数、连接类型种类数
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "打印机统计", description = "聚合统计打印机总数、启用数、停用数、连接类型种类数")
+    public R<Map<String, Object>> stats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> stats = printerConfigMapper.statPrinters(tenantId);
+        if (stats == null) {
+            stats = new HashMap<>();
+        }
+        return R.success(stats);
     }
 
     /**

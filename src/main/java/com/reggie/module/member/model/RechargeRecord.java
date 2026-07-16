@@ -38,7 +38,7 @@ public class RechargeRecord implements Serializable {
     @Schema(description = "赠送金额（元）", example = "20.00")
     private BigDecimal giftAmount;
 
-    @Schema(description = "支付方式：wechat=微信，alipay=支付宝", example = "wechat")
+    @Schema(description = "支付方式：WECHAT=微信，ALIPAY=支付宝，CASH=现金", example = "WECHAT")
     private String paymentMethod;
 
     @Schema(description = "充值时间", example = "2026-07-09 10:00:00")

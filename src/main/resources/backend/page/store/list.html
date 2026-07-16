@@ -160,7 +160,7 @@
     </div>
 
     <!-- ===== 新建/编辑门店对话框 ===== -->
-    <el-dialog :title="dialogTitle" :visible.sync="formDialogVisible" width="650px" @close="resetForm" :close-on-click-modal="false">
+    <el-dialog :title="dialogTitle" :visible.sync="formDialogVisible" class="el-dialog--lg unified-dialog" @close="resetForm" :close-on-click-modal="false">
         <el-form :model="form" ref="formRef" label-width="100px" size="small" :rules="formRules">
             <div class="form-section-title">基本信息</div>
             <el-row :gutter="16">
@@ -279,7 +279,8 @@
     </el-dialog>
 
     <!-- ===== 数据同步对话框 ===== -->
-    <el-dialog title="数据同步" :visible.sync="syncDialogVisible" width="520px" @close="syncResult=null">
+    <el-dialog title="数据同步" :visible.sync="syncDialogVisible" class="el-dialog--md unified-dialog"
+      :close-on-click-modal="true" @close="syncResult=null">
         <p style="margin-bottom:14px; color:#606266; font-size:13px;">
             将总部数据同步到 <b style="color:#303133;">{{ syncTargetName }}</b>
         </p>
@@ -298,7 +299,7 @@
         <p v-if="syncResult && syncResult.errors && syncResult.errors.length > 0"
            v-for="(err, i) in (syncResult.errors || [])" :key="i"
            style="font-size:12px; color:#f56c6c; margin-top:4px;">{{ err }}</p>
-        <span slot="footer">
+        <span slot="footer" class="dialog-footer">
             <el-button size="medium" @click="syncDialogVisible = false">关 闭</el-button>
         </span>
     </el-dialog>
@@ -408,14 +409,14 @@
         },
         updateStats: function() {
             var self = this;
-            // 用listAllStores获取所有门店做统计
-            storeApi.listStores().then(function(res) {
+            // 修改点：改为调用后端 /store/stats SQL 聚合接口，替代 listStores 拉全量后 filter 统计（消除 N+1 与全量内存计算）
+            storeApi.storeStats().then(function(res) {
                 if (res && res.code === 1 && res.data) {
-                    var list = res.data || [];
-                    self.stats.totalStores = list.length;
-                    self.stats.activeStores = list.filter(function(s) { return s.status === 1; }).length;
-                    self.stats.inactiveStores = list.filter(function(s) { return s.status === 0; }).length;
-                    self.stats.todayTotalStores = list.filter(function(s) { return (s.todayOrders || 0) > 0; }).length;
+                    var d = res.data;
+                    self.stats.totalStores = Number(d.totalStores) || 0;
+                    self.stats.activeStores = Number(d.activeStores) || 0;
+                    self.stats.inactiveStores = Number(d.inactiveStores) || 0;
+                    self.stats.todayTotalStores = Number(d.todayTotalStores) || 0;
                 }
             }).catch(function() {});
         },

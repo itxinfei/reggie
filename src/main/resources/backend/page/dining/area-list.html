@@ -35,33 +35,39 @@
           </el-select>
         </template>
       </table-bar>
-      <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
-        <el-table-column type="index" label="#" width="45" align="center"></el-table-column>
-        <el-table-column prop="name" label="区域名称" min-width="120" align="center">
-          <template slot-scope="{row}">
-            <span style="font-weight:500;">{{ row.name }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="sort" label="排序" width="75" align="center"></el-table-column>
-        <el-table-column label="操作" width="160" align="center" fixed="right">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" class="btn-view" @click="editHandle(scope.row)">修改</el-button>
-            <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(scope.row.id)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination
-        class="pageList"
-        :page-sizes="[10, 20, 30, 40]"
+      <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
         :page-size="pageSize"
-        layout="total, sizes, prev, pager, next, jumper"
         :total="counts"
-        @size-change="handleSizeChange"
-        :current-page.sync="page"
-        @current-change="handleCurrentChange"
-      ></el-pagination>
+        :loading="loading"
+        :show-index="true"
+        index-label="#"
+        :index-width="45"
+        :show-actions="true"
+        :actions-width="160"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-name="{ row }">
+          <span style="font-weight:500;">{{ row.name }}</span>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="editHandle(row)">修改</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
+        </template>
+      </crud-table>
     </div>
-    <el-dialog :title="dialog.title" :visible.sync="dialog.visible" width="420px" :before-close="handleClose">
+
+    <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog -->
+    <crud-dialog
+      :title="dialog.title"
+      :visible.sync="dialog.visible"
+      width="420px"
+      @submit="submitForm"
+    >
       <el-form ref="form" :model="form" label-width="100px">
         <el-form-item label="区域名称：">
           <el-input v-model="form.name" placeholder="请输入区域名称" maxlength="14" />
@@ -70,11 +76,7 @@
           <el-input v-model="form.sort" type="number" placeholder="请输入排序" />
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="handleClose">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitForm">确 定</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
   </div>
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
@@ -83,8 +85,10 @@
   <script src="../../api/dining.js"></script>
   <script src="../../js/components.js"></script>
   <script>
-    new Vue({
-      el: '#area-app',
+      new Vue({
+        el: '#area-app',
+        // 修改点：引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
+        mixins: [window.ReggieListMixin],
       data() {
         return {
           loading: false,
@@ -105,6 +109,11 @@
           tableActions: [
             { key: 'add', text: '+ 新增区域', type: 'primary' }
           ],
+          // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
+          columns: [
+            { prop: 'name', label: '区域名称', minWidth: 120, align: 'center', slot: true },
+            { prop: 'sort', label: '排序', width: 75, align: 'center' }
+          ],
           // 筛选下拉框配置
           filterOptions: { names: [] },
           optionsLoading: false,
@@ -123,7 +132,7 @@
       },
       created() {
         this.loadFilterOptions()
-        this.init()
+        this.fetchData()
       },
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
@@ -162,7 +171,7 @@
             this.optionsLoading = false
           }
         },
-        async init() {
+        async fetchData() {
           const params = {
             page: this.page,
             pageSize: this.pageSize,
@@ -191,30 +200,20 @@
         // 加载区域统计数据
         async loadAreaStats() {
           try {
-            const [areaRes, tableRes] = await Promise.all([
-              areaPage({ page: 1, pageSize: 1000 }),
-              tablePage({ page: 1, pageSize: 1000 })
+            // 修改点：区域总数用轻量 count 查询；桌台总数/最大容量区域改为后端 SQL 分组聚合，
+            // 替代 pageSize:999 拉全量后前端分组统计（避免全表扫描与截断风险）
+            const [areaRes, tableStatsRes] = await Promise.all([
+              areaPage({ page: 1, pageSize: 1 }),
+              tableAreaStats()
             ])
-
-            const totalAreas = areaRes.data?.total || 0
-            const totalTables = tableRes.data?.total || 0
-            const avg = totalAreas > 0 ? (totalTables / totalAreas).toFixed(1) : 0
-
-            // 修改点：按区域名称分组统计桌台数，找出最大容量区域
-            const tableRecords = tableRes.data?.records || []
-            const areaCountMap = {}
-            tableRecords.forEach(function(t) {
-              var name = t.areaName || '未知区域'
-              areaCountMap[name] = (areaCountMap[name] || 0) + 1
-            })
-            var maxArea = '-'
-            var maxCount = 0
-            Object.keys(areaCountMap).forEach(function(k) {
-              if (areaCountMap[k] > maxCount) {
-                maxCount = areaCountMap[k]
-                maxArea = k + '(' + maxCount + '桌)'
-              }
-            })
+            var totalAreas = (areaRes && areaRes.data) ? (areaRes.data.total || 0) : 0
+            var totalTables = 0
+            var maxTablesArea = '-'
+            if (String(tableStatsRes.code) === '1' && tableStatsRes.data) {
+              totalTables = Number(tableStatsRes.data.totalTables) || 0
+              maxTablesArea = tableStatsRes.data.maxTablesArea || '-'
+            }
+            var avg = totalAreas > 0 ? (totalTables / totalAreas).toFixed(1) : 0
 
             return {
               code: 1,
@@ -222,7 +221,7 @@
                 totalAreas: totalAreas,
                 totalTables: totalTables,
                 avgTablesPerArea: avg,
-                maxTablesArea: maxArea
+                maxTablesArea: maxTablesArea
               }
             }
           } catch (err) {
@@ -232,7 +231,7 @@
         },
         handleQuery() {
           this.page = 1
-          this.init()
+          this.fetchData()
         },
         // 修改点：通用优化方案 — 下拉框可重试加载
         onFilterDropdownVisible(flag) {
@@ -250,7 +249,7 @@
         reset() {
           this.input = ''
           this.page = 1
-          this.init()
+          this.fetchData()
         },
         addHandle() {
           this.action = 'add'
@@ -267,9 +266,6 @@
           this.form.name = row.name
           this.form.sort = row.sort
           this.dialog.visible = true
-        },
-        handleClose() {
-          this.dialog.visible = false
         },
         submitForm() {
           if (!this.form.name && this.form.name !== 0) {
@@ -328,14 +324,7 @@
             })
           })
         },
-        handleSizeChange(val) {
-          this.pageSize = val
-          this.init()
-        },
-        handleCurrentChange(val) {
-          this.page = val
-          this.init()
-        }
+        // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
       }
     })
   </script>

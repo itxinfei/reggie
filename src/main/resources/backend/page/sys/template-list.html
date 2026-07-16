@@ -195,12 +195,12 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'templateName', label: '模板名称', minWidth: 160 },
+            { prop: 'templateName', label: '模板名称', minWidth: 160, align: 'center' },
             { prop: 'bizType', label: '业务类型', width: 110, align: 'center', slot: true },
             { prop: 'channel', label: '渠道', width: 100, align: 'center', slot: true },
-            { prop: 'content', label: '内容预览', minWidth: 220, showOverflowTooltip: true },
+            { prop: 'content', label: '内容预览', minWidth: 220, showOverflowTooltip: true, align: 'center' },
             { prop: 'status', label: '状态', width: 80, align: 'center', slot: true },
-            { prop: 'updateTime', label: '更新时间', width: 160 }
+            { prop: 'updateTime', label: '更新时间', width: 160, align: 'center' }
           ],
           // 弹窗表单
           formData: {
@@ -250,18 +250,19 @@
         },
         async loadTemplateStats() {
           try {
-            var res = await sysApi.templatePage({ page: 1, pageSize: 1000 })
-            if (String(res.code) === '1') {
-              var records = res.data.records || []
-              var smsCount = 0
-              records.forEach(function(r) {
-                if (r.channel === 1 || r.channel === 3) smsCount++
-              })
+            // 修改点：改用 pageSize:1 多状态/渠道并发查询取 total，避免 pageSize:1000 拉全量导致统计截断
+            var r1 = await sysApi.templatePage({ page: 1, pageSize: 1 })
+            var r2 = await sysApi.templatePage({ page: 1, pageSize: 1, status: 1 })
+            var r3 = await sysApi.templatePage({ page: 1, pageSize: 1, status: 0 })
+            var r4 = await sysApi.templatePage({ page: 1, pageSize: 1, channel: 1 })
+            var r5 = await sysApi.templatePage({ page: 1, pageSize: 1, channel: 3 })
+            if (String(r1.code) === '1') {
+              var sms = (r4.data.total || 0) + (r5.data.total || 0)
               return { code: 1, data: {
-                total: res.data.total || 0,
-                enabled: records.filter(function(r) { return r.status === 1 }).length,
-                disabled: records.filter(function(r) { return r.status === 0 }).length,
-                sms: smsCount
+                total: r1.data.total || 0,
+                enabled: r2.data.total || 0,
+                disabled: r3.data.total || 0,
+                sms: sms
               }}
             }
           } catch (err) { console.warn('加载模板统计失败:', err) }

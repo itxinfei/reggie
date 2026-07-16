@@ -36,29 +36,27 @@
         </template>
       </table-bar>
 
-      <!-- ========== 数据表格 ========== -->
-      <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
-        <el-table-column label="食材名称" min-width="140">
-          <template slot-scope="scope">{{ scope.row.materialName }}</template>
-        </el-table-column>
-        <el-table-column label="类型" width="90" align="center">
-          <template slot-scope="scope">
-            <el-tag :type="scope.row.type == 'IN' ? 'success' : scope.row.type == 'OUT' ? 'danger' : 'info'" size="small">
-              {{ scope.row.type == 'IN' ? '入库' : scope.row.type == 'OUT' ? '出库' : '盘点' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="quantity" label="数量" width="100" align="center" /></el-table-column>
-        <el-table-column label="单价" width="100" align="right">
-          <template slot-scope="scope">￥{{ scope.row.unitPrice }}</template>
-        </el-table-column>
-        <el-table-column label="总金额" width="120" align="right">
-          <template slot-scope="scope">￥{{ scope.row.totalAmount }}</template>
-        </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip /></el-table-column>
-        <el-table-column prop="createdTime" label="操作时间" width="170" /></el-table-column>
-      </el-table>
-      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" :current-page.sync="page" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
+      <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :page-sizes="[10,20,30,40]"
+        :total="counts"
+        :show-actions="false"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-type="{ row }">
+          <el-tag :type="row.type == 'IN' ? 'success' : row.type == 'OUT' ? 'danger' : 'info'" size="small">
+            {{ row.type == 'IN' ? '入库' : row.type == 'OUT' ? '出库' : '盘点' }}
+          </el-tag>
+        </template>
+        <template #col-unitPrice="{ row }">￥{{ row.unitPrice }}</template>
+        <template #col-totalAmount="{ row }">￥{{ row.totalAmount }}</template>
+      </crud-table>
     </div>
   </div>
 
@@ -78,6 +76,16 @@
           page: 1,
           pageSize: 10,
           tableData: [],
+          // 修改点：crud-table 列配置（替代手写 el-table-column）
+          columns: [
+            { prop: 'materialName', label: '食材名称', minWidth: 140, showOverflowTooltip: true },
+            { prop: 'type', label: '类型', width: 90, align: 'center', slot: true },
+            { prop: 'quantity', label: '数量', width: 100, align: 'center' },
+            { prop: 'unitPrice', label: '单价', width: 100, align: 'right', slot: true },
+            { prop: 'totalAmount', label: '总金额', width: 120, align: 'right', slot: true },
+            { prop: 'remark', label: '备注', minWidth: 150, showOverflowTooltip: true },
+            { prop: 'createdTime', label: '操作时间', width: 170, align: 'center' }
+          ],
           // 统计
           stats: { totalRecords: 0, inCount: 0, outCount: 0, checkCount: 0 },
           // 修改点：<table-bar> 统一组件配置
@@ -88,7 +96,7 @@
         }
       },
       created() {
-        this.init()
+        this.fetchData()
         this.loadMaterialOptions()
       },
       computed: {
@@ -104,7 +112,8 @@
         }
       },
       methods: {
-        async init() {
+        // 修改点：统一方法名 fetchData（供 crud-table 分页事件调用）
+        async fetchData() {
           const params = { page: this.page, pageSize: this.pageSize }
           if (this.input.materialId) params.materialId = this.input.materialId
           if (this.input.type) params.type = this.input.type
@@ -131,22 +140,22 @@
           }
         },
         // 加载统计
+        // 修改点：使用 pageSize=1 × 4 轻量查询替代 pageSize=1000 拉全量再前端过滤，避免超过 1000 条时数据截断
         async loadStats() {
           try {
-            const res = await stockRecordPage({ page: 1, pageSize: 1000 })
-            if (String(res.code) === '1') {
-              const records = res.data.records || []
-              const inCount = records.filter(function(r) { return r.type === 'IN' }).length
-              const outCount = records.filter(function(r) { return r.type === 'OUT' }).length
-              const checkCount = records.filter(function(r) { return r.type === 'CHECK' }).length
-              return {
-                code: 1,
-                data: {
-                  totalRecords: res.data.total || 0,
-                  inCount: inCount,
-                  outCount: outCount,
-                  checkCount: checkCount
-                }
+            const [totalRes, inRes, outRes, checkRes] = await Promise.all([
+              stockRecordPage({ page: 1, pageSize: 1 }),
+              stockRecordPage({ page: 1, pageSize: 1, type: 'IN' }),
+              stockRecordPage({ page: 1, pageSize: 1, type: 'OUT' }),
+              stockRecordPage({ page: 1, pageSize: 1, type: 'CHECK' })
+            ])
+            return {
+              code: 1,
+              data: {
+                totalRecords: (String(totalRes.code) === '1') ? (totalRes.data.total || 0) : 0,
+                inCount: (String(inRes.code) === '1') ? (inRes.data.total || 0) : 0,
+                outCount: (String(outRes.code) === '1') ? (outRes.data.total || 0) : 0,
+                checkCount: (String(checkRes.code) === '1') ? (checkRes.data.total || 0) : 0
               }
             }
           } catch (err) {
@@ -162,22 +171,25 @@
         },
         handleQuery() {
           this.page = 1
-          this.init()
+          this.fetchData()
         },
         reset() {
           this.input.materialId = ''
           this.input.type = ''
           this.input.dateRange = ''
           this.page = 1
-          this.init()
+          this.fetchData()
         },
-        handleSizeChange(val) {
+        // 修改点：分页处理改为 crud-table 事件驱动（参考 supplier-list 已验证模式）
+        onPageChange({ page, pageSize }) {
+          this.page = page
+          this.pageSize = pageSize
+          this.fetchData()
+        },
+        onSizeChange(val) {
           this.pageSize = val
-          this.init()
-        },
-        handleCurrentChange(val) {
-          this.page = val
-          this.init()
+          this.page = 1
+          this.fetchData()
         }
       }
     })

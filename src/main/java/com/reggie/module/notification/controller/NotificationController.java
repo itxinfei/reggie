@@ -324,6 +324,26 @@ public class NotificationController {
     }
 
     /**
+     * 发送记录今日统计
+     * <p>使用 SQL 聚合替代前端 pageSize:999 拉全量后 forEach 计算，避免全表扫描</p>
+     *
+     * @return 今日短信数、推送数、成功数、失败数
+     */
+    @GetMapping("/record/stats")
+    @Operation(summary = "发送记录今日统计", description = "聚合统计当日各渠道发送次数及成功/失败数")
+    public R<Map<String, Object>> recordStats() {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDateTime start = today.atStartOfDay();
+        java.time.LocalDateTime end = today.atTime(java.time.LocalTime.MAX);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> stats = recordMapper.statBetween(start, end, tenantId);
+        if (stats == null) {
+            stats = new HashMap<>();
+        }
+        return R.success(stats);
+    }
+
+    /**
      * 获取发送记录详情
      * @param id 记录ID
      * @return 记录详情

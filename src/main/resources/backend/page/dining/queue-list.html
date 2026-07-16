@@ -114,11 +114,11 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'queueNo', label: '排队号' },
-            { prop: 'phone', label: '手机号' },
-            { prop: 'seatCount', label: '就餐人数', width: 90 },
-            { prop: 'status', label: '状态', slot: true, width: 100 },
-            { prop: 'createdTime', label: '取号时间' }
+            { prop: 'queueNo', label: '排队号', align: 'center' },
+            { prop: 'phone', label: '手机号', align: 'center' },
+            { prop: 'seatCount', label: '就餐人数', width: 90, align: 'center' },
+            { prop: 'status', label: '状态', slot: true, width: 100, align: 'center' },
+            { prop: 'createdTime', label: '取号时间', align: 'center' }
           ],
           // 取号弹窗
           dialog: { visible: false },
@@ -166,17 +166,21 @@
         },
         async loadQueueStats() {
           try {
-            var res = await queuePage({ page: 1, pageSize: 1000 })
-            if (String(res.code) === '1') {
-              var records = res.data.records || []
-              return { code: 1, data: {
-                totalQueues: res.data.total || 0,
-                waitingCount: records.filter(function(r) { return r.status === 'WAITING' }).length,
-                calledCount: records.filter(function(r) { return r.status === 'CALLED' }).length,
-                seatedCount: records.filter(function(r) { return r.status === 'SEATED' }).length,
-                cancelledCount: records.filter(function(r) { return r.status === 'CANCELLED' }).length
-              }}
-            }
+            // 修改点：使用 pageSize=1 × 5 轻量查询替代 pageSize=1000 拉全量，直接取 total 避免数据截断
+            var results = await Promise.all([
+              queuePage({ page: 1, pageSize: 1 }),
+              queuePage({ page: 1, pageSize: 1, status: 'WAITING' }),
+              queuePage({ page: 1, pageSize: 1, status: 'CALLED' }),
+              queuePage({ page: 1, pageSize: 1, status: 'SEATED' }),
+              queuePage({ page: 1, pageSize: 1, status: 'CANCELLED' })
+            ])
+            return { code: 1, data: {
+              totalQueues: (String(results[0].code) === '1') ? (results[0].data.total || 0) : 0,
+              waitingCount: (String(results[1].code) === '1') ? (results[1].data.total || 0) : 0,
+              calledCount: (String(results[2].code) === '1') ? (results[2].data.total || 0) : 0,
+              seatedCount: (String(results[3].code) === '1') ? (results[3].data.total || 0) : 0,
+              cancelledCount: (String(results[4].code) === '1') ? (results[4].data.total || 0) : 0
+            }}
           } catch (err) { console.warn('加载排队统计失败:', err) }
           return { code: 0 }
         },

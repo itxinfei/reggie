@@ -2,6 +2,7 @@ package com.reggie.module.member.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.member.model.CouponTemplate;
+import java.util.Map;
 
 /**
  * <p>
@@ -36,4 +37,11 @@ public interface CouponTemplateService extends IService<CouponTemplate> {
      * 批量清理过期优惠券
      */
     void expireCoupons();
+
+    /**
+     * 优惠券模板统计：总数、启用/禁用/已领完数量、累计发放/领取数、使用率
+     * 修改点：替代前端 pageSize=1000 拉全量后在浏览器聚合的统计方式，改为后端聚合
+     * @return 统计结果 Map
+     */
+    Map<String, Object> getStats();
 }

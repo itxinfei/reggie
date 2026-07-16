@@ -19,6 +19,13 @@ var storeApi = {
     },
 
     /**
+     * 修改点：门店统计聚合（SQL 聚合，替代前端 /store/list 拉全量 filter 统计）
+     */
+    storeStats: function() {
+        return $axios.get('/store/stats');
+    },
+
+    /**
      * 分页搜索门店列表（支持多条件筛选与排序）
      * @param {Object} params - { keyword, storeType, status, page, pageSize, sortBy, sortOrder }
      */

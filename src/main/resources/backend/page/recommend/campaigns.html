@@ -186,7 +186,8 @@
     </div>
 
     <!-- ========== 新建/编辑对话框 ========== -->
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="720px" @close="resetForm">
+    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" class="el-dialog--lg unified-dialog"
+      @close="resetForm" :close-on-click-modal="false">
         <el-form :model="form" :rules="rules" ref="campaignForm" label-width="90px" size="small">
             <el-row :gutter="16">
                 <el-col :span="14">
@@ -262,7 +263,8 @@
     </el-dialog>
 
     <!-- ========== 推送消息对话框 ========== -->
-    <el-dialog title="推送营销消息" :visible.sync="pushDialogVisible" width="600px">
+    <el-dialog title="推送营销消息" :visible.sync="pushDialogVisible" class="el-dialog--md unified-dialog"
+      :close-on-click-modal="false">
         <el-form label-width="90px" size="small">
             <el-form-item label="活动名称">
                 <el-tag type="primary">{{ pushTargetCampaign ? pushTargetCampaign.name : '' }}</el-tag>
@@ -300,7 +302,8 @@
     </el-dialog>
 
     <!-- ========== 活动统计对话框 ========== -->
-    <el-dialog title="活动效果统计" :visible.sync="statsDialogVisible" width="700px" @opened="onStatsDialogOpen">
+    <el-dialog title="活动效果统计" :visible.sync="statsDialogVisible" class="el-dialog--lg unified-dialog"
+      :close-on-click-modal="false" @opened="onStatsDialogOpen">
         <div v-if="statsCampaign">
             <!-- 修改点：使用数字卡片替代 descriptions -->
             <div class="stats-overview">

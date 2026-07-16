@@ -1414,6 +1414,77 @@ input[type="number"] {
   label-width: 120px;
 }
 
+/* =============================================
+   统一弹窗基础样式（所有 el-dialog 加 class="unified-dialog"）
+   ============================================= */
+
+/* 弹窗主体 */
+.unified-dialog {
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+  overflow: hidden;
+}
+.unified-dialog .el-dialog__header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f0f2f5;
+  margin-right: 0;
+}
+.unified-dialog .el-dialog__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  line-height: 1.4;
+}
+.unified-dialog .el-dialog__headerbtn {
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.unified-dialog .el-dialog__headerbtn:hover {
+  background: #f5f7fa;
+}
+.unified-dialog .el-dialog__headerbtn .el-dialog__close {
+  font-size: 16px;
+  color: #909399;
+  font-weight: 600;
+}
+.unified-dialog .el-dialog__headerbtn:hover .el-dialog__close {
+  color: #606266;
+}
+.unified-dialog .el-dialog__body {
+  padding: 20px 24px;
+  font-size: 14px;
+  color: #606266;
+  line-height: 1.6;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.unified-dialog .el-dialog__footer {
+  padding: 14px 24px;
+  border-top: 1px solid #f0f2f5;
+  text-align: right;
+}
+.unified-dialog .dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.unified-dialog .dialog-footer .el-button {
+  min-width: 80px;
+}
+
+/* 遮罩层 */
+.unified-dialog + .v-modal,
+.el-overlay.is-dialog {
+  background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
 .dialog-fade-enter-active {
   -webkit-animation: dialog-fade-in 0.3s;
   animation: dialog-fade-in 0.3s;

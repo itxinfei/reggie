@@ -19,6 +19,16 @@
     .timeslot-page { min-height: 100%; display: flex; flex-direction: column; }
     .timeslot-page .container { flex: 1; background: transparent; padding: 24px 32px 32px;
       min-width: 0; max-width: 1600px; margin: 0 auto; width: 100%; }
+
+    /* 工具栏 */
+    .tableBar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+      background: #fff; padding: 16px 24px; border-radius: 12px; margin-bottom: 20px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+      transition: all 0.3s; }
+    .tableBar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .tableBar .toolbar-label { font-size: 14px; color: #606266; font-weight: 500; flex-shrink: 0; }
+    .tableBar .toolbar-spacer { flex: 1; min-width: 0; }
+
     .timeslot-page .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .timeslot-page .chart-box { width: 100%; height: 380px; min-height: 300px; }
     @media (max-width: 1200px) { .timeslot-page .container { padding: 16px 20px 20px !important; }
@@ -31,20 +41,22 @@
   <div class="timeslot-page" id="report-timeslot-app" v-loading="loading">
     <div class="container">
 
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 KPI 卡片 -->
+      <stat-cards :cards="statsCards"></stat-cards>
+
       <!-- ========== 工具栏 ========== -->
       <div class="tableBar">
-        <span class="fl-label"><i class="el-icon-date" style="margin-right:4px;"></i>日期范围</span>
+        <span class="toolbar-label"><i class="el-icon-date" style="margin-right:4px;"></i>日期范围</span>
         <el-date-picker v-model="dateRange" clearable value-format="yyyy-MM-dd"
           type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
           size="small"></el-date-picker>
         <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
         <el-button size="small" class="btn-reset" icon="el-icon-refresh" @click="reset">重置</el-button>
-        <span class="fl-spacer"></span>
+        <span class="toolbar-spacer"></span>
         <el-button type="success" size="small" icon="el-icon-download" @click="handleExport">导出 CSV</el-button>
       </div>
 
-      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 KPI 卡片 -->
-      <stat-cards :cards="statsCards"></stat-cards>
+
 
       <!-- ========== 时段分布图表 ========== -->
       <chart-panel title="📊 时段订单与营业额分布">

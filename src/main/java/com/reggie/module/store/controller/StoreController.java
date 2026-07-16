@@ -257,6 +257,19 @@ public class StoreController {
     }
 
     /**
+     * 门店统计（总部视角）
+     * <p>使用 SQL 聚合替代前端 /store/list 拉全量后 filter 统计，消除 N+1 与全量内存计算</p>
+     *
+     * @return 门店总数、启用数、停用数、今日有营收门店数
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "门店统计", description = "聚合统计门店总数、启用数、停用数、今日有营收门店数")
+    public R<Map<String, Object>> stats() {
+        Map<String, Object> stats = storeService.getStoreStats();
+        return R.success(stats);
+    }
+
+    /**
      * 获取门店今日概况
      * @param tenantId 租户ID（可选）
      * @return 门店今日经营概况

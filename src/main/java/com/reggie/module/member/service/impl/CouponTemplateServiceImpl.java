@@ -13,7 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -100,5 +102,40 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
             cu.setStatus(CouponStatus.EXPIRED.getValue());
         }
         couponUserService.updateBatchById(expiredList);
+    }
+
+    @Override
+    public Map<String, Object> getStats() {
+        // 修改点：后端聚合替代前端 pageSize=1000 拉全量；仅查询所需三列，租户条件由拦截器自动注入
+        LambdaQueryWrapper<CouponTemplate> qw = new LambdaQueryWrapper<>();
+        qw.select(CouponTemplate::getStatus, CouponTemplate::getTotalCount, CouponTemplate::getRemainCount);
+        List<CouponTemplate> list = list(qw);
+
+        long totalCoupons = list.size();
+        long enabledCount = list.stream().filter(c -> c.getStatus() != null && c.getStatus() == 1).count();
+        long disabledCount = list.stream().filter(c -> c.getStatus() != null && c.getStatus() == 0).count();
+        long exhaustedCount = list.stream()
+                .filter(c -> c.getRemainCount() != null && c.getRemainCount() <= 0).count();
+        long totalIssued = list.stream()
+                .filter(c -> c.getTotalCount() != null)
+                .mapToLong(CouponTemplate::getTotalCount)
+                .sum();
+        long totalClaimed = list.stream().mapToLong(c -> {
+            int total = c.getTotalCount() != null ? c.getTotalCount() : 0;
+            int remain = c.getRemainCount() != null ? c.getRemainCount() : 0;
+            return Math.max(0, total - remain);
+        }).sum();
+        String usageRate = totalIssued > 0
+                ? String.format("%.1f%%", totalClaimed * 100.0 / totalIssued)
+                : "0%";
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalCoupons", totalCoupons);
+        result.put("enabledCount", enabledCount);
+        result.put("disabledCount", disabledCount);
+        result.put("exhaustedCount", exhaustedCount);
+        result.put("claimedCount", totalClaimed);
+        result.put("usageRate", usageRate);
+        return result;
     }
 }

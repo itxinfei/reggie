@@ -6,6 +6,7 @@ import com.reggie.common.R;
 import com.reggie.module.sys.entity.Permission;
 import com.reggie.module.sys.entity.Role;
 import com.reggie.module.sys.entity.RolePermission;
+import com.reggie.module.sys.mapper.RoleMapper;
 import com.reggie.module.sys.service.PermissionService;
 import com.reggie.module.sys.service.RoleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,6 +44,9 @@ public class RoleController {
     @Autowired
     private PermissionService permissionService;
 
+    @Autowired
+    private RoleMapper roleMapper;
+
     /**
      * 角色分页查询
      * @param page 页码
@@ -65,6 +69,22 @@ public class RoleController {
                .orderByDesc(Role::getSort);
         roleService.page(pageInfo, wrapper);
         return R.success(pageInfo);
+    }
+
+    /**
+     * 角色统计
+     * <p>使用 SQL 聚合替代前端 pageSize:999 拉全量遍历，避免全表扫描</p>
+     *
+     * @return 角色总数、启用数、禁用数、已分配权限数
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "角色统计", description = "聚合统计角色总数、启用数、禁用数、已分配权限角色数")
+    public R<Map<String, Object>> stats() {
+        Map<String, Object> stats = roleMapper.statRoles();
+        if (stats == null) {
+            stats = new HashMap<>();
+        }
+        return R.success(stats);
     }
 
     /**

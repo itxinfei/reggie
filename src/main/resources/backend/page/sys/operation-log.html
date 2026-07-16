@@ -97,14 +97,14 @@
           // 表格列配置
           columns: [
             { prop: 'id', label: 'ID', width: 80, align: 'center' },
-            { prop: 'operatorName', label: '操作人', width: 100, slot: true },
-            { prop: 'module', label: '操作模块', width: 120 },
+            { prop: 'operatorName', label: '操作人', width: 100, slot: true, align: 'center' },
+            { prop: 'module', label: '操作模块', width: 120, align: 'center' },
             { prop: 'operationType', label: '操作类型', width: 90, align: 'center', slot: true },
-            { prop: 'description', label: '操作描述', minWidth: 200, showOverflowTooltip: true },
-            { prop: 'requestUrl', label: '请求地址', width: 180, showOverflowTooltip: true },
+            { prop: 'description', label: '操作描述', minWidth: 200, showOverflowTooltip: true, align: 'center' },
+            { prop: 'requestUrl', label: '请求地址', width: 180, showOverflowTooltip: true, align: 'center' },
             { prop: 'requestMethod', label: '方法', width: 70, align: 'center', slot: true },
             { prop: 'isSuccess', label: '状态', width: 70, align: 'center', slot: true },
-            { prop: 'createTime', label: '操作时间', width: 160 }
+            { prop: 'createTime', label: '操作时间', width: 160, align: 'center' }
           ]
         }
       },
@@ -149,18 +149,21 @@
         },
         async loadStats() {
           try {
-            const [statsRes, logRes] = await Promise.all([
+            // 修改点：success/error 改用 pageSize:1 按 isSuccess 过滤取 total，避免 pageSize:999 拉全量导致统计截断
+            const [statsRes, successRes, errorRes] = await Promise.all([
               sysApi.logStats(),
-              sysApi.logPage({ page: 1, pageSize: 1000 })
+              sysApi.logPage({ page: 1, pageSize: 1, isSuccess: 1 }),
+              sysApi.logPage({ page: 1, pageSize: 1, isSuccess: 0 })
             ])
             var data = {}
-            if (statsRes && statsRes.code === 1) {
+            if (statsRes && String(statsRes.code) === '1') {
               data = Object.assign({}, data, statsRes.data || {})
             }
-            if (logRes && logRes.code === 1) {
-              var records = logRes.data.records || []
-              data.successCount = records.filter(function(r) { return r.isSuccess === 1 }).length
-              data.errorCount = records.filter(function(r) { return r.isSuccess === 0 }).length
+            if (successRes && String(successRes.code) === '1') {
+              data.successCount = successRes.data.total || 0
+            }
+            if (errorRes && String(errorRes.code) === '1') {
+              data.errorCount = errorRes.data.total || 0
             }
             return { code: 1, data: data }
           } catch (err) {

@@ -4,6 +4,10 @@ const sysApi = {
     rolePage(params) {
         return $axios.get('/sys/role/page', { params })
     },
+    // 修改点：角色聚合统计（SQL 聚合，替代前端 pageSize:999 拉全量遍历 withPerms）
+    roleStats() {
+        return $axios.get('/sys/role/stats')
+    },
     roleList() {
         return $axios.get('/sys/role/list')
     },

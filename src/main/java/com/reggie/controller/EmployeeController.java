@@ -386,6 +386,46 @@ public class EmployeeController {
     }
 
     /**
+     * 员工统计
+     * <p>使用 count() 聚合查询替代前端全量拉取，避免全表扫描与分页截断风险</p>
+     *
+     * @return 员工总数、正常数、已禁用数、本月新增数
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "员工统计", description = "获取员工总数、正常数、已禁用数、本月新增数")
+    public R<Map<String, Object>> stats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        LambdaQueryWrapper<Employee> totalQw = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<Employee> activeQw = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<Employee> disabledQw = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<Employee> newQw = new LambdaQueryWrapper<>();
+
+        // employee 表在租户忽略列表中，需手动添加租户过滤
+        if (tenantId != null) {
+            totalQw.eq(Employee::getTenantId, tenantId);
+            activeQw.eq(Employee::getTenantId, tenantId);
+            disabledQw.eq(Employee::getTenantId, tenantId);
+            newQw.eq(Employee::getTenantId, tenantId);
+        }
+
+        activeQw.eq(Employee::getStatus, UserStatus.ENABLED.getValue());
+        disabledQw.eq(Employee::getStatus, UserStatus.DISABLED.getValue());
+
+        // 本月新增：createTime >= 当月1日
+        java.time.LocalDateTime monthStart = java.time.LocalDate.now()
+                .withDayOfMonth(1).atStartOfDay();
+        newQw.ge(Employee::getCreateTime, monthStart);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalEmployees", employeeService.count(totalQw));
+        result.put("activeEmployees", employeeService.count(activeQw));
+        result.put("disabledEmployees", employeeService.count(disabledQw));
+        result.put("newThisMonth", employeeService.count(newQw));
+        return R.success(result);
+    }
+
+    /**
      * 根据id修改员工信息
      * @param request HTTP请求对象
      * @param employee 员工信息

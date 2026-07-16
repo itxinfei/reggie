@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -13,7 +13,6 @@
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
-    /* ========== 基础重置 ========== */
     html, body { height: 100%; margin: 0; padding: 0; overflow-y: auto; overflow-x: hidden;
       background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
@@ -21,63 +20,70 @@
     .dish-ranking-page .container { flex: 1; background: transparent; padding: 24px 32px 32px;
       min-width: 0; max-width: 1600px; margin: 0 auto; width: 100%; }
 
-    /* ========== KPI 卡片网格（components-stats-card.css 提供卡片样式） ========== */
-    .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    /* 工具栏 */
+    .tableBar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+      background: #fff; padding: 16px 24px; border-radius: 14px; margin-bottom: 20px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+      transition: box-shadow 0.3s; }
+    .tableBar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .tableBar .toolbar-label { font-size: 14px; color: #606266; font-weight: 500; flex-shrink: 0; }
+    .tableBar .toolbar-spacer { flex: 1; min-width: 0; }
 
-    /* ========== 排名样式 ========== */
-    .rank-badge { display: inline-block; width: 26px; height: 26px; line-height: 26px;
-      text-align: center; border-radius: 6px; font-size: 13px; font-weight: 700; }
-    .rank-badge.r1 { background: linear-gradient(135deg, #ff4d4f, #ff7875); color: #fff; }
-    .rank-badge.r2 { background: linear-gradient(135deg, #ff7a45, #ffa940); color: #fff; }
-    .rank-badge.r3 { background: linear-gradient(135deg, #ffa940, #ffc069); color: #fff; }
+    /* 图表并排 */
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 1200px) {
+      .dish-ranking-page .container { padding: 16px 20px 20px !important; }
+      .charts-row { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .dish-ranking-page .container { padding: 12px 16px 16px !important; }
+    }
+
+    /* 排名徽章 */
+    .rank-badge { display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+    .rank-badge.r1 { background: #ff4d4f; color: #fff; }
+    .rank-badge.r2 { background: #ff7a45; color: #fff; }
+    .rank-badge.r3 { background: #ffa940; color: #fff; }
     .rank-badge.rn { background: #f0f0f0; color: #909399; }
-
-    /* ========== 响应式 ========== */
-    @media (max-width: 1400px) { .stats-cards { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 1200px) { .container { padding: 20px 28px 28px !important; } }
-    @media (max-width: 768px) { .container { padding: 12px 16px 16px !important; }
-      .stats-cards { grid-template-columns: 1fr; gap: 12px; } }
   </style>
 </head>
 <body>
   <div class="dish-ranking-page" id="report-dish-app" v-loading="loading">
     <div class="container">
 
-      <!-- ========== 工具栏 ========== -->
+      <stat-cards :cards="statsCards"></stat-cards>
+
       <div class="tableBar">
-        <span class="fl-label"><i class="el-icon-date" style="margin-right:4px;"></i>日期范围</span>
+        <span class="toolbar-label"><i class="el-icon-date" style="margin-right:4px;"></i>日期范围</span>
         <el-date-picker v-model="dateRange" clearable value-format="yyyy-MM-dd"
           type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
           size="small"></el-date-picker>
-        <span class="fl-label" style="margin-left:8px;">数量</span>
+        <span class="toolbar-label" style="margin-left:8px;">数量</span>
         <el-input-number v-model="limit" :min="5" :max="50" :step="5"
-          size="small" controls-position="right" style="width:100px;">
-        </el-input-number>
-        <span class="fl-hint">条</span>
+          size="small" controls-position="right" style="width:100px;"></el-input-number>
+        <span class="toolbar-label">条</span>
         <el-select v-model="categoryFilter" placeholder="菜品分类" size="small" clearable
           @change="loadData" style="width:150px;">
           <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
         </el-select>
+        <span class="toolbar-spacer"></span>
         <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
         <el-button size="small" class="btn-reset" icon="el-icon-refresh" @click="reset">重置</el-button>
-        <span class="fl-spacer"></span>
         <el-button type="success" size="small" icon="el-icon-download" @click="handleExport">导出 CSV</el-button>
       </div>
 
-      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
-      <stat-cards :cards="statsCards"></stat-cards>
+      <!-- 图表并排 -->
+      <div class="charts-row">
+        <chart-panel :title="rankingTitle" icon="📊">
+          <div id="rankingChart" style="width:100%;height:340px;"></div>
+        </chart-panel>
+        <chart-panel title="Top 3 菜品销量趋势" icon="📈" v-show="tableData.length > 0">
+          <div id="trendLineChart" style="width:100%;height:340px;"></div>
+        </chart-panel>
+      </div>
 
-      <!-- ========== 水平排行榜图 ========== -->
-      <chart-panel title="菜品销量排行（Top {{ tableData.length }}）" icon="📊">
-        <div id="rankingChart" :style="{ height: rankingChartHeight + 'px' }" style="width:100%;"></div>
-      </chart-panel>
-
-      <!-- ========== Top3 趋势对比 ========== -->
-      <chart-panel title="Top 3 菜品销量趋势对比" icon="📈" v-show="tableData.length > 0">
-        <div id="trendLineChart" style="width:100%;height:320px;"></div>
-      </chart-panel>
-
-      <!-- ========== 数据表格 ========== -->
+      <!-- 数据表格 -->
       <el-table :data="tableData" stripe border class="tableBox" v-loading="loading">
         <el-table-column label="排名" width="80" align="center">
           <template slot-scope="{ $index }">
@@ -97,6 +103,7 @@
           </template>
         </el-table-column>
       </el-table>
+
     </div>
   </div>
 
@@ -119,12 +126,9 @@
         }
       },
       computed: {
-        rankingChartHeight: function() {
-          var n = (this.tableData && this.tableData.length) || 0;
-          if (n === 0) return 420;
-          return Math.max(300, Math.min(600, n * 38 + 46));
+        rankingTitle: function() {
+          return '菜品销量排行（Top ' + (this.tableData ? this.tableData.length : 0) + '）';
         },
-        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
           var self = this;
           return [
@@ -156,7 +160,6 @@
             if (self.trendChart && !self.trendChart.isDisposed()) self.trendChart.resize();
           };
           window.addEventListener('resize', self.resizeHandler);
-          // 修改点：延迟 resize 保障容器尺寸稳定
           setTimeout(function() {
             if (self.chart) self.chart.resize();
             if (self.trendChart) self.trendChart.resize();
@@ -234,7 +237,6 @@
                 textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
             }, true); return;
           }
-          // 修改点：使用 hexToRgba 替代不可靠的字符串替换
           var hexToRgba = function(hex, alpha) {
             var h = hex.replace('#','');
             if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
@@ -262,7 +264,6 @@
               borderColor: '#e4e7ed', borderWidth: 1, textStyle: { color: '#303133', fontSize: 13 } },
             legend: { data: (data.series || []).map(function(s) { return s.name; }),
               bottom: 8, textStyle: { fontSize: 12, color: '#606266' } },
-            // 修改点：增大 grid 空间
             grid: { left: 55, right: 30, top: 25, bottom: 52 },
             xAxis: { type: 'category', data: dates, boundaryGap: false,
               axisLine: { lineStyle: { color: '#e4e7ed' } }, axisTick: { show: false },

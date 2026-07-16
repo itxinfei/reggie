@@ -1,4 +1,6 @@
 const printerConfigPage = (params) => $axios({ url: '/printer/config/page', method: 'get', params })
+// 修改点：打印机配置聚合统计（SQL 聚合，替代前端 pageSize:1000 拉全量）
+const printerConfigStats = () => $axios({ url: '/printer/config/stats', method: 'get' })
 const printerConfigList = (params) => $axios({ url: '/printer/config/list', method: 'get', params })
 const addPrinterConfig = (params) => $axios({ url: '/printer/config', method: 'post', data: params })
 const updatePrinterConfig = (params) => $axios({ url: '/printer/config', method: 'put', data: params })

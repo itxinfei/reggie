@@ -93,13 +93,13 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'customerName', label: '客户姓名' },
-            { prop: 'phone', label: '手机号' },
-            { prop: 'tableName', label: '桌台' },
-            { prop: 'reservedTime', label: '预订时间', minWidth: '100' },
-            { prop: 'seatCount', label: '就餐人数', width: 90 },
-            { prop: 'status', label: '状态', slot: true, width: 90 },
-            { prop: 'remark', label: '备注', showOverflowTooltip: true }
+            { prop: 'customerName', label: '客户姓名', align: 'center' },
+            { prop: 'phone', label: '手机号', align: 'center' },
+            { prop: 'tableName', label: '桌台', align: 'center' },
+            { prop: 'reservedTime', label: '预订时间', minWidth: '100', align: 'center' },
+            { prop: 'seatCount', label: '就餐人数', width: 90, align: 'center' },
+            { prop: 'status', label: '状态', slot: true, width: 90, align: 'center' },
+            { prop: 'remark', label: '备注', showOverflowTooltip: true, align: 'center' }
           ],
           lastSearch: {}
         }
@@ -147,17 +147,21 @@
         },
         async loadReservationStats() {
           try {
-            var res = await reservationPage({ page: 1, pageSize: 1000 })
-            if (String(res.code) === '1') {
-              var records = res.data.records || []
-              return { code: 1, data: {
-                totalReservations: res.data.total || 0,
-                pendingCount: records.filter(function(r) { return r.status === 'PENDING' }).length,
-                confirmedCount: records.filter(function(r) { return r.status === 'CONFIRMED' }).length,
-                arrivedCount: records.filter(function(r) { return r.status === 'ARRIVED' }).length,
-                cancelledCount: records.filter(function(r) { return r.status === 'CANCELLED' }).length
-              }}
-            }
+            // 修改点：使用 pageSize=1 × 5 轻量查询替代 pageSize=1000 拉全量，直接取 total 避免数据截断
+            var results = await Promise.all([
+              reservationPage({ page: 1, pageSize: 1 }),
+              reservationPage({ page: 1, pageSize: 1, status: 'PENDING' }),
+              reservationPage({ page: 1, pageSize: 1, status: 'CONFIRMED' }),
+              reservationPage({ page: 1, pageSize: 1, status: 'ARRIVED' }),
+              reservationPage({ page: 1, pageSize: 1, status: 'CANCELLED' })
+            ])
+            return { code: 1, data: {
+              totalReservations: (String(results[0].code) === '1') ? (results[0].data.total || 0) : 0,
+              pendingCount: (String(results[1].code) === '1') ? (results[1].data.total || 0) : 0,
+              confirmedCount: (String(results[2].code) === '1') ? (results[2].data.total || 0) : 0,
+              arrivedCount: (String(results[3].code) === '1') ? (results[3].data.total || 0) : 0,
+              cancelledCount: (String(results[4].code) === '1') ? (results[4].data.total || 0) : 0
+            }}
           } catch (err) { console.warn('加载预约统计失败:', err) }
           return { code: 0 }
         },

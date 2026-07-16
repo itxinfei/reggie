@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
@@ -40,15 +41,20 @@ public class MaterialCategoryController {
      * 分页查询食材分类列表
      * @param page 页码
      * @param pageSize 每页数量
+     * @param name 分类名称（可选，模糊查询）
      * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "分页查询", description = "分页查询食材分类列表，按排序字段升序排列")
+    @Operation(summary = "分页查询", description = "分页查询食材分类列表，支持按名称搜索，按排序字段升序排列")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
-    public R<Page<MaterialCategory>> page(int page, int pageSize) {
+    @Parameter(name = "name", description = "分类名称（可选，模糊查询）")
+    public R<Page<MaterialCategory>> page(int page, int pageSize,
+                                          @RequestParam(required = false) String name) {
         Page<MaterialCategory> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<MaterialCategory> qw = new LambdaQueryWrapper<>();
+        // 修改点：添加按名称模糊搜索支持，修复前端 name 参数被后端静默丢弃的 Bug
+        qw.like(name != null && !name.isEmpty(), MaterialCategory::getName, name);
         qw.orderByAsc(MaterialCategory::getSort);
         materialCategoryService.page(pageInfo, qw);
         return R.success(pageInfo);

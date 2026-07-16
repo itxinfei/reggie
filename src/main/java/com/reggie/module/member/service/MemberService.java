@@ -3,6 +3,7 @@ package com.reggie.module.member.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.member.model.Member;
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * <p>
@@ -42,6 +43,12 @@ public interface MemberService extends IService<Member> {
      * @param bizId    关联业务ID
      */
     void addPoints(Long memberId, int points, String bizType, Long bizId);
+
+    /**
+     * 批量填充会员等级名称（逻辑字段 levelName，不落库）
+     * @param members 会员列表
+     */
+    void fillLevelName(List<Member> members);
 
     /**
      * 根据会员等级计算折扣后金额

@@ -619,10 +619,15 @@ Vue.component('crud-dialog', {
       type: Boolean,
       default: false
     },
-    /** 弹窗宽度 */
+    /** 弹窗宽度（支持 sm/md/lg/xl 别名，或直接写 600px 等值） */
+    size: {
+      type: String,
+      default: 'md'
+    },
+    /** 弹窗宽度（px，如 600px；优先级低于 size 别名） */
     width: {
       type: String,
-      default: '600px'
+      default: ''
     },
     /** 是否点击遮罩层关闭 */
     closeOnClickModal: {
@@ -658,6 +663,14 @@ Vue.component('crud-dialog', {
   data: function () {
     return { dialogVisible: this.visible }
   },
+  computed: {
+    /** 尺寸别名 → 标准像素宽度 */
+    resolvedWidth: function () {
+      var sizeMap = { sm: '420px', md: '560px', lg: '720px', xl: '840px' }
+      var s = (this.size || '').toLowerCase()
+      return this.width || sizeMap[s] || '560px'
+    }
+  },
   watch: {
     visible: function (val) {
       this.dialogVisible = val
@@ -665,10 +678,13 @@ Vue.component('crud-dialog', {
   },
   template:
     '<el-dialog' +
+    '  class="unified-dialog"' +
     '  :title="title"' +
     '  :visible.sync="dialogVisible"' +
-    '  :width="width"' +
+    '  :width="resolvedWidth"' +
     '  :close-on-click-modal="closeOnClickModal"' +
+    '  :append-to-body="true"' +
+    '  :modal-append-to-body="true"' +
     '  :before-close="handleClose"' +
     '>' +
       // 主体内容插槽
@@ -780,4 +796,106 @@ window.renderTableBar = function (config) {
 
   html += '</div>'
   return html
+}
+
+
+// ============================================================
+// 全局工具 Mixin：自动注入所有页面通用方法（格式化 / 状态 / 预览）
+// 仅含纯函数，不与任何组件内部方法重名，安全全局注入
+// 各页面可直接使用，无需再各自定义 formatMoney / 状态映射等
+// ============================================================
+Vue.mixin({
+  methods: {
+    /** 金额格式化：保留两位小数，空值返回 0.00 */
+    formatMoney: function (val) {
+      if (val === null || val === undefined || val === '') return '0.00'
+      var n = Number(val)
+      return isNaN(n) ? '0.00' : n.toFixed(2)
+    },
+    /** 日期格式化：截取 yyyy-MM-dd，空值返回 '-' */
+    formatDate: function (val) {
+      if (!val) return '-'
+      var s = String(val)
+      return s.length >= 10 ? s.substring(0, 10) : s
+    },
+    /** 时间格式化：原样返回，空值返回 '-' */
+    formatDateTime: function (val) {
+      return val ? String(val) : '-'
+    },
+    /** 状态中文：mapName 对应 ReggieStatus.register 注册的名称 */
+    rgStatusText: function (mapName, status) {
+      return window.ReggieStatus ? window.ReggieStatus.text(mapName, status) : ''
+    },
+    /** 状态标签类型：返回 Element tag type（warning/primary/...） */
+    rgStatusTag: function (mapName, status) {
+      return window.ReggieStatus ? window.ReggieStatus.tag(mapName, status) : 'info'
+    },
+    /** 构造 el-image 的 preview-src-list（避免各页重复拼接数组） */
+    rgPreview: function (url) {
+      return url ? [url] : []
+    }
+  }
+})
+
+
+// ============================================================
+// 状态枚举注册中心：消除各页重复定义 statusMap / typeMap 的问题
+// 用法（页面内）：
+//   window.ReggieStatus.register('order', textMap, tagMap)
+//   <el-tag :type="rgStatusTag('order', row.status)">{{ rgStatusText('order', row.status) }}</el-tag>
+// ============================================================
+window.ReggieStatus = {
+  _maps: {},
+  /** 注册某业务的状态映射，textMap: {status: 中文}, tagMap: {status: tagType} */
+  register: function (name, textMap, tagMap) {
+    this._maps[name] = { text: textMap || {}, tag: tagMap || {} }
+  },
+  /** 取状态中文，未注册或缺失返回 '' */
+  text: function (name, status) {
+    var m = this._maps[name]
+    return m && m.text[status] != null ? m.text[status] : ''
+  },
+  /** 取状态 tag 类型，未注册或缺失返回 'info' */
+  tag: function (name, status) {
+    var m = this._maps[name]
+    return m && m.tag[status] != null ? m.tag[status] : 'info'
+  }
+}
+// 预置：订单状态（与 order/list.html 既有映射一致，供订单/支付/配送页复用）
+window.ReggieStatus.register('order',
+  { 1: '待付款', 2: '待接单', 3: '配送中', 4: '已完成', 5: '已取消', 6: '已退款' },
+  { 1: 'warning', 2: 'warning', 3: 'primary', 4: 'success', 5: 'info', 6: 'danger' }
+)
+
+
+// ============================================================
+// 列表页通用 Mixin：消除分页样板（page/pageSize/counts + 翻页/改大小处理）
+// 用法（页面内）：
+//   new Vue({ mixins: [window.ReggieListMixin], methods: { fetchData() { /* 读 this.page/this.pageSize 请求 */ } } })
+//   <crud-table ... @page-change="onPageChange" @size-change="onSizeChange" />
+// ============================================================
+window.ReggieListMixin = {
+  data: function () {
+    return {
+      page: 1,
+      pageSize: 10,
+      counts: 0,
+      loading: false
+    }
+  },
+  methods: {
+    /** 页码变化（来自 crud-table 的 page-change 事件） */
+    onPageChange: function (payload) {
+      this.page = payload.page
+      if (typeof this.fetchData === 'function') this.fetchData()
+    },
+    /** 每页条数变化（来自 crud-table 的 size-change 事件）
+     *  修改点：crud-table emit 的是纯数字 val，而非 {pageSize: number}，需兼容两种格式 */
+    onSizeChange: function (payload) {
+      this.page = 1
+      // 修改点：兼容 crud-table 传纯数字和 table-bar 传对象两种情况
+      this.pageSize = (typeof payload === 'object' && payload != null) ? (payload.pageSize || payload) : payload
+      if (typeof this.fetchData === 'function') this.fetchData()
+    }
+  }
 }

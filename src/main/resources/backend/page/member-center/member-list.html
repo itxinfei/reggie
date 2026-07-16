@@ -70,7 +70,7 @@
     </div>
 
     <!-- ===== 详情弹窗 ===== -->
-    <crud-dialog title="会员详情" :visible.sync="detailDialogVisible" width="520px" :show-submit="false" cancel-text="关 闭">
+    <crud-dialog title="会员详情" :visible.sync="detailDialogVisible" size="md" :show-submit="false" cancel-text="关 闭">
       <div class="detail-grid">
         <div class="detail-item"><span class="d-label">会员名称：</span><span class="d-value">{{ detail.name }}</span></div>
         <div class="detail-item"><span class="d-label">手机号：</span><span class="d-value">{{ detail.phone }}</span></div>
@@ -84,7 +84,7 @@
     </crud-dialog>
 
     <!-- ===== 充值弹窗 ===== -->
-    <crud-dialog title="会员充值" :visible.sync="rechargeDialogVisible" width="480px" @submit="submitRecharge" @close="rechargeDialogVisible = false">
+    <crud-dialog title="会员充值" :visible.sync="rechargeDialogVisible" size="sm" @submit="submitRecharge" @close="rechargeDialogVisible = false">
       <el-form label-width="110px" size="medium">
         <el-form-item label="会员名称："><span style="font-weight:600;">{{ rechargeMember.name }}</span></el-form-item>
         <el-form-item label="手机号："><span>{{ rechargeMember.phone }}</span></el-form-item>
@@ -129,13 +129,13 @@
           stats: { totalMembers: 0, highLevelCount: 0, midLevelCount: 0, lowLevelCount: 0, newMembersThisMonth: 0 },
           activeFilter: '', levelOptions: [],
           columns: [
-            { prop: 'name', label: '会员名称' },
-            { prop: 'phone', label: '手机号' },
-            { prop: 'levelName', label: '会员等级', slot: true },
-            { prop: 'points', label: '积分' },
-            { prop: 'balance', label: '余额', slot: true },
-            { prop: 'totalConsumption', label: '累计消费', slot: true },
-            { prop: 'createdTime', label: '注册时间', width: 170 }
+            { prop: 'name', label: '会员名称', align: 'center' },
+            { prop: 'phone', label: '手机号', align: 'center' },
+            { prop: 'levelName', label: '会员等级', slot: true, align: 'center' },
+            { prop: 'points', label: '积分', align: 'center' },
+            { prop: 'balance', label: '余额', slot: true, align: 'center' },
+            { prop: 'totalConsumption', label: '累计消费', slot: true, align: 'center' },
+            { prop: 'createdTime', label: '注册时间', width: 170, align: 'center' }
           ],
           detailDialogVisible: false, detail: {},
           rechargeDialogVisible: false, rechargeMember: {},
@@ -179,27 +179,27 @@
         },
         async loadMemberStats() {
           try {
-            var res = await memberPage({ page: 1, pageSize: 9999 })
-            var levelRes = await levelPage({ page: 1, pageSize: 100 })
+            // 修改点：改为调用后端聚合接口 /stats，彻底移除原 pageSize:9999 拉全量会员再浏览器计数的做法；
+            // 仅保留等级积分门槛的分级逻辑（用 levelOptions + 后端返回的 levelCountMap 聚合计数）
+            var res = await memberStats()
             if (String(res.code) !== '1') return { code: 0 }
-            var records = res.data.records || [], total = res.data.total || 0
-            var levels = (levelRes.code === 1) ? (levelRes.data.records || []) : []
-            // 按积分门槛分类
+            var d = res.data || {}
+            var total = d.totalMembers || 0
+            var newThisMonth = d.newMembersThisMonth || 0
+            var levelCountMap = d.levelCountMap || {}
+            var noLevelCount = d.noLevelCount || 0
+            var levels = this.levelOptions || []
+            // 按积分门槛分类（分级阈值规则与原前端逻辑保持一致）
             var sortedLevels = levels.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
             var highMinPts = sortedLevels.length >= 3 ? sortedLevels[Math.floor(sortedLevels.length*0.6)].minPoints : 5000
             var midMinPts = sortedLevels.length >= 2 ? sortedLevels[Math.floor(sortedLevels.length*0.3)].minPoints : 1000
             var highLevelIds = sortedLevels.filter(function(l) { return (l.minPoints||0) >= highMinPts }).map(function(l) { return l.id })
             var midLevelIds = sortedLevels.filter(function(l) { var p=l.minPoints||0; return p >= midMinPts && p < highMinPts }).map(function(l) { return l.id })
             var lowLevelIds = sortedLevels.filter(function(l) { return (l.minPoints||0) < midMinPts }).map(function(l) { return l.id })
-            var highCount = records.filter(function(m) { return highLevelIds.indexOf(m.levelId)!==-1 }).length
-            var midCount = records.filter(function(m) { return midLevelIds.indexOf(m.levelId)!==-1 }).length
-            var lowCount = records.filter(function(m) { return lowLevelIds.indexOf(m.levelId)!==-1 || !m.levelId }).length
-            var now = new Date()
-            var newThisMonth = records.filter(function(m) {
-              if (!m.createdTime) return false
-              var d = new Date(m.createdTime)
-              return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear()
-            }).length
+            var sum = function(ids) { return ids.reduce(function(s, id) { return s + (levelCountMap[id] || 0) }, 0) }
+            var highCount = sum(highLevelIds)
+            var midCount = sum(midLevelIds)
+            var lowCount = sum(lowLevelIds) + noLevelCount
             return { code: 1, data: { totalMembers: total, highLevelCount: highCount, midLevelCount: midCount, lowLevelCount: lowCount, newMembersThisMonth: newThisMonth } }
           } catch(e) { return { code: 0 } }
         },

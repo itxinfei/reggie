@@ -131,4 +131,12 @@ public interface StoreService {
      * @return 汇总数据Map
      */
     Map<String, Object> getAggregatedDashboard();
+
+    /**
+     * 门店统计（总部视角，SQL 聚合）
+     * <p>替代前端 listAllStores 拉全量后 filter 统计</p>
+     *
+     * @return 统计Map：totalStores/activeStores/inactiveStores/todayTotalStores
+     */
+    Map<String, Object> getStoreStats();
 }

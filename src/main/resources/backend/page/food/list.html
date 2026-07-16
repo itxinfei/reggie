@@ -99,7 +99,7 @@
     <el-dialog
       :title="dishDialog.title"
       :visible.sync="dishDialog.visible"
-      width="800px"
+      class="el-dialog--xl unified-dialog"
       :before-close="handleDialogClose"
       :close-on-click-modal="false"
     >
@@ -170,15 +170,15 @@
           </div>
         </el-form-item>
       </el-form>
-      <div slot="footer" class="dialog-footer">
+      <span slot="footer" class="dialog-footer">
         <el-button size="medium" @click="handleDialogClose">取 消</el-button>
         <el-button type="primary" size="medium" @click="submitDishForm()">确 定</el-button>
-        <el-button v-if="dishDialog.actionType == 'add'" type="primary" size="medium" class="continue" @click="submitDishForm('continue')">保存并继续添加</el-button>
-      </div>
+        <el-button v-if="dishDialog.actionType == 'add'" type="primary" size="medium" @click="submitDishForm('continue')">保存并继续添加</el-button>
+      </span>
     </el-dialog>
 
     <!-- 库存编辑弹窗 -->
-    <el-dialog title="编辑库存" :visible.sync="stockDialog.visible" width="450px" :close-on-click-modal="false">
+    <el-dialog title="编辑库存" :visible.sync="stockDialog.visible" class="el-dialog--sm unified-dialog" :close-on-click-modal="false">
       <el-form :model="stockForm" label-width="120px">
         <el-form-item label="菜品名称">
           <span>{{ stockForm.name }}</span>
@@ -193,10 +193,10 @@
           <el-input v-model="stockForm.newMinStock" type="number" placeholder="请输入最低库存预警值" />
         </el-form-item>
       </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button @click="stockDialog.visible = false">取 消</el-button>
-        <el-button type="primary" @click="submitStockForm()">确 定</el-button>
-      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button size="medium" @click="stockDialog.visible = false">取 消</el-button>
+        <el-button type="primary" size="medium" @click="submitStockForm()">确 定</el-button>
+      </span>
     </el-dialog>
   </div>
 
@@ -240,13 +240,13 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'name', label: '菜品名称' },
+            { prop: 'name', label: '菜品名称', align: 'center' },
             { prop: 'image', label: '图片', slot: true, width: 80, align: 'center' },
-            { prop: 'categoryName', label: '菜品分类' },
-            { prop: 'price', label: '售价', slot: true, width: 100 },
-            { prop: 'status', label: '售卖状态', slot: true, width: 90 },
+            { prop: 'categoryName', label: '菜品分类', align: 'center' },
+            { prop: 'price', label: '售价', slot: true, width: 100, align: 'center' },
+            { prop: 'status', label: '售卖状态', slot: true, width: 90, align: 'center' },
             { prop: 'stock', label: '库存', slot: true, width: 100, align: 'center' },
-            { prop: 'updateTime', label: '最后操作时间' }
+            { prop: 'updateTime', label: '最后操作时间', align: 'center' }
           ],
           // 缓存搜索参数
           lastSearch: {},
@@ -308,15 +308,21 @@
         },
         async loadDishStats() {
           try {
-            var res = await getDishStats()
-            if (String(res.code) === '1' && res.data) {
-              return { code: 1, data: {
-                totalDishes: res.data.total || 0,
-                activeDishes: res.data.activeDishes || 0,
-                inactiveDishes: res.data.inactiveDishes || 0,
-                deletedDishes: 0
-              }}
-            }
+            // 修改点：并行查询各状态菜品总数，替代硬编码 deletedDishes=0
+            var results = await Promise.all([
+              getDishPage({ page: 1, pageSize: 1, status: '1' }),
+              getDishPage({ page: 1, pageSize: 1, status: '0' }),
+              getDishPage({ page: 1, pageSize: 1, isDeleted: 1 })
+            ])
+            var activeCount = (String(results[0].code) === '1') ? (results[0].data.total || 0) : 0
+            var inactiveCount = (String(results[1].code) === '1') ? (results[1].data.total || 0) : 0
+            var deletedCount = (String(results[2].code) === '1') ? (results[2].data.total || 0) : 0
+            return { code: 1, data: {
+              totalDishes: activeCount + inactiveCount,
+              activeDishes: activeCount,
+              inactiveDishes: inactiveCount,
+              deletedDishes: deletedCount
+            }}
           } catch (err) { console.warn('加载菜品统计数据失败:', err) }
           return { code: 0 }
         },

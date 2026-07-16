@@ -1,0 +1,852 @@
+{
+  "config": {
+    "argv": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "D:\\MyCode\\reggie\\tests\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--list"
+    ],
+    "configFile": "D:\\MyCode\\reggie\\tests\\playwright.config.ts",
+    "rootDir": "D:/MyCode/reggie/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "D:\\MyCode\\reggie\\tests\\utils\\global-setup.ts",
+    "globalTeardown": "D:\\MyCode\\reggie\\tests\\utils\\global-teardown.ts",
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "D:/MyCode/reggie/tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "admin-backend",
+        "name": "admin-backend",
+        "testDir": "D:/MyCode/reggie/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.spec.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "tests/reports/html-report",
+          "open": "never"
+        }
+      ],
+      [
+        "D:\\MyCode\\reggie\\tests\\node_modules\\allure-playwright\\dist\\cjs\\index.js",
+        {
+          "outputFolder": "allure-results"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "tests/reports/test-results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "tests/reports/junit-results.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.61.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "api.spec.ts",
+      "file": "api.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "API 独立测试",
+          "file": "api.spec.ts",
+          "line": 33,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-API-001: 员工登录 API",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1ea1b1599cbc08f16936-216ba582b6a8695701e0",
+              "file": "api.spec.ts",
+              "line": 51,
+              "column": 7
+            },
+            {
+              "title": "TC-API-002: 员工分页查询",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1ea1b1599cbc08f16936-89785b4922bb24b9ae27",
+              "file": "api.spec.ts",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "TC-API-003: 新增员工 API",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1ea1b1599cbc08f16936-caaddfd1c13d1a3f08b2",
+              "file": "api.spec.ts",
+              "line": 77,
+              "column": 7
+            },
+            {
+              "title": "TC-API-004: 分类列表查询",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1ea1b1599cbc08f16936-276d1a053ca5e1e55356",
+              "file": "api.spec.ts",
+              "line": 94,
+              "column": 7
+            },
+            {
+              "title": "TC-API-005: 菜品分页查询",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1ea1b1599cbc08f16936-a55936fc4ec6dd502af7",
+              "file": "api.spec.ts",
+              "line": 104,
+              "column": 7
+            },
+            {
+              "title": "TC-API-006: 订单分页查询",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1ea1b1599cbc08f16936-8d4e8ac222db9da0ec41",
+              "file": "api.spec.ts",
+              "line": 114,
+              "column": 7
+            },
+            {
+              "title": "TC-API-007: 未认证访问验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1ea1b1599cbc08f16936-657830d8facdc40e6a44",
+              "file": "api.spec.ts",
+              "line": 124,
+              "column": 7
+            },
+            {
+              "title": "TC-API-008: API 响应时间性能验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1ea1b1599cbc08f16936-732cd7bc484319730d6d",
+              "file": "api.spec.ts",
+              "line": 135,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "dish.spec.ts",
+      "file": "dish.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "菜品管理",
+          "file": "dish.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-DISH-001: 页面加载验证 API 响应",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0904b42d836127484296-bcf38deceed589a70cb0",
+              "file": "dish.spec.ts",
+              "line": 26,
+              "column": 7
+            },
+            {
+              "title": "TC-DISH-002: 页面 UI 结构验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0904b42d836127484296-0f6aa652ec4d87a8bcf4",
+              "file": "dish.spec.ts",
+              "line": 44,
+              "column": 7
+            },
+            {
+              "title": "TC-DISH-003: 搜索菜品验证 API",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0904b42d836127484296-abd7e458ddeb0ea68ac5",
+              "file": "dish.spec.ts",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "TC-DISH-004: 点击新建菜品按钮验证弹窗",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0904b42d836127484296-334dcecd504114b53214",
+              "file": "dish.spec.ts",
+              "line": 73,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "e2e.spec.ts",
+      "file": "e2e.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "端到端综合流程",
+          "file": "e2e.spec.ts",
+          "line": 14,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-E2E-001: 管理员完整业务流程",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b1c7859d981cc20c96be-b61656171e39ef456c01",
+              "file": "e2e.spec.ts",
+              "line": 23,
+              "column": 7
+            },
+            {
+              "title": "TC-E2E-002: API 全链路请求验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b1c7859d981cc20c96be-0c28b56af2535a4ce6a4",
+              "file": "e2e.spec.ts",
+              "line": 81,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "employee.spec.ts",
+      "file": "employee.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "员工管理",
+          "file": "employee.spec.ts",
+          "line": 14,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-EMP-001: 新增员工并验证 API 响应与 DOM 变化",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3c37713e1e72b903cb86-29af657f10feb96b0786",
+              "file": "employee.spec.ts",
+              "line": 31,
+              "column": 7
+            },
+            {
+              "title": "TC-EMP-002: 搜索员工并验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3c37713e1e72b903cb86-9ad9fb7a477d8ca3dedc",
+              "file": "employee.spec.ts",
+              "line": 69,
+              "column": 7
+            },
+            {
+              "title": "TC-EMP-003: 新增员工弹窗结构验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3c37713e1e72b903cb86-b559f25725a2064f4d7c",
+              "file": "employee.spec.ts",
+              "line": 88,
+              "column": 7
+            },
+            {
+              "title": "TC-EMP-004: 搜索验证 API 请求参数",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3c37713e1e72b903cb86-0586de187c6c3617b505",
+              "file": "employee.spec.ts",
+              "line": 112,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "front.spec.ts",
+      "file": "front.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "用户端 - 首页与菜品浏览",
+          "file": "front.spec.ts",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-FRONT-001: 首页加载并显示分类与推荐菜品",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "722661bd395480944426-665c72f45f4ae349e1b6",
+              "file": "front.spec.ts",
+              "line": 24,
+              "column": 7
+            },
+            {
+              "title": "TC-FRONT-002: 首页菜品列表 API 请求验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "722661bd395480944426-0c6297a1cf08314dbc8d",
+              "file": "front.spec.ts",
+              "line": 36,
+              "column": 7
+            },
+            {
+              "title": "TC-FRONT-003: 点击分类筛选菜品",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "722661bd395480944426-dba6d729358eab7ac18a",
+              "file": "front.spec.ts",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "TC-FRONT-004: 点击菜品查看详情",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "722661bd395480944426-525a2cbef89a0078dcc5",
+              "file": "front.spec.ts",
+              "line": 77,
+              "column": 7
+            },
+            {
+              "title": "TC-FRONT-005: 用户端页面关键元素检查",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "722661bd395480944426-84e5cf7fefa20d18de89",
+              "file": "front.spec.ts",
+              "line": 98,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "login.spec.ts",
+      "file": "login.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "登录功能",
+          "file": "login.spec.ts",
+          "line": 15,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-LOGIN-001: 管理员正确登录并跳转后台首页",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "41d3fd2474a19feb00a1-2a433073badae1d9caab",
+              "file": "login.spec.ts",
+              "line": 29,
+              "column": 7
+            },
+            {
+              "title": "TC-LOGIN-002: 错误密码登录失败",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "41d3fd2474a19feb00a1-6a4ec68a4f81ad798fcc",
+              "file": "login.spec.ts",
+              "line": 49,
+              "column": 7
+            },
+            {
+              "title": "TC-LOGIN-003: 空用户名登录",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "41d3fd2474a19feb00a1-007d1e38b5290ca14cea",
+              "file": "login.spec.ts",
+              "line": 71,
+              "column": 7
+            },
+            {
+              "title": "TC-LOGIN-004: 验证登录 API 请求参数",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "41d3fd2474a19feb00a1-8a376b5cb883b051426a",
+              "file": "login.spec.ts",
+              "line": 88,
+              "column": 7
+            },
+            {
+              "title": "TC-LOGIN-005: 登录后验证用户信息显示",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "41d3fd2474a19feb00a1-546abd93ec6eeedb8584",
+              "file": "login.spec.ts",
+              "line": 116,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "order.spec.ts",
+      "file": "order.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "订单管理",
+          "file": "order.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-ORDER-001: 订单列表加载验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "85d1357294a106dff78a-6bc98ab9d2542bb860c0",
+              "file": "order.spec.ts",
+              "line": 26,
+              "column": 7
+            },
+            {
+              "title": "TC-ORDER-002: 页面 UI 结构验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "85d1357294a106dff78a-59b1621117296b910aba",
+              "file": "order.spec.ts",
+              "line": 47,
+              "column": 7
+            },
+            {
+              "title": "TC-ORDER-003: 筛选订单验证 API",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "85d1357294a106dff78a-b1267f7a61b13b230b77",
+              "file": "order.spec.ts",
+              "line": 68,
+              "column": 7
+            },
+            {
+              "title": "TC-ORDER-004: 重置筛选条件",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin-backend",
+                  "projectName": "admin-backend",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "85d1357294a106dff78a-3cbc7d7c121fc793bb52",
+              "file": "order.spec.ts",
+              "line": 81,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-07-16T08:22:47.752Z",
+    "duration": 116.94599999999997,
+    "expected": 0,
+    "skipped": 32,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

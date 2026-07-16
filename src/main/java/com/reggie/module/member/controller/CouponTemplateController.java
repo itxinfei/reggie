@@ -3,6 +3,7 @@ package com.reggie.module.member.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.R;
 import com.reggie.dto.ClaimCouponDTO;
 import com.reggie.module.member.model.CouponTemplate;
@@ -23,7 +24,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * 优惠券模板管理控制器
@@ -33,6 +36,7 @@ import java.time.LocalDateTime;
  * @since 2026-07-09
  */
 @Slf4j
+@Validated
 @RestController
 @RequestMapping("/api/member/coupon-template")
 @Tag(name = "优惠券模板")
@@ -78,8 +82,9 @@ public class CouponTemplateController {
      * @return 操作结果
      */
     @PostMapping
-    @Operation(summary = "新增优惠券", description = "创建新的优惠券模板")
-    public R<String> save(@RequestBody CouponTemplate couponTemplate) {
+    @Operation(summary = "新增优惠券", description = "创建新的优惠券模板，校验名称/类型/金额合法性")
+    public R<String> save(@Valid @RequestBody CouponTemplate couponTemplate) {
+        validateCoupon(couponTemplate);
         log.info("新增优惠券模板: {}", couponTemplate.getName());
         couponTemplate.setCreatedTime(LocalDateTime.now());
         couponTemplate.setUpdatedTime(LocalDateTime.now());
@@ -93,8 +98,9 @@ public class CouponTemplateController {
      * @return 操作结果
      */
     @PutMapping
-    @Operation(summary = "修改优惠券", description = "更新优惠券模板信息")
-    public R<String> update(@RequestBody CouponTemplate couponTemplate) {
+    @Operation(summary = "修改优惠券", description = "更新优惠券模板信息，校验名称/类型/金额合法性")
+    public R<String> update(@Valid @RequestBody CouponTemplate couponTemplate) {
+        validateCoupon(couponTemplate);
         log.info("修改优惠券模板: {}", couponTemplate.getId());
         couponTemplate.setUpdatedTime(LocalDateTime.now());
         couponTemplateService.updateById(couponTemplate);
@@ -127,6 +133,16 @@ public class CouponTemplateController {
     }
 
     /**
+     * 优惠券模板统计
+     * @return 总数、启用/禁用/已领完数量、累计发放/领取数、使用率（后端聚合，避免前端拉全量）
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "优惠券统计", description = "统计优惠券模板总数、启用/禁用/已领完数量及领取使用率")
+    public R<Map<String, Object>> stats() {
+        return R.success(couponTemplateService.getStats());
+    }
+
+    /**
      * 会员领取优惠券
      * @param dto 领券请求
      * @return 操作结果
@@ -139,6 +155,34 @@ public class CouponTemplateController {
             return R.success("领取成功");
         }
         return R.error("领取失败，优惠券不可用或已领完");
+    }
+
+    /**
+     * 优惠券模板业务校验（按类型校验金额/折扣率合法性）
+     * 修改点：补充后端校验，防止空名称、非法类型、金额/折扣率不合法的数据入库
+     * @param t 优惠券模板
+     */
+    private void validateCoupon(CouponTemplate t) {
+        String type = t.getType();
+        if (!"FULL_REDUCTION".equals(type) && !"DISCOUNT".equals(type) && !"NEW_MEMBER".equals(type)) {
+            throw new CustomException("优惠券类型非法，仅支持 FULL_REDUCTION/DISCOUNT/NEW_MEMBER");
+        }
+        if ("FULL_REDUCTION".equals(type)) {
+            if (t.getConditionAmount() == null || t.getConditionAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new CustomException("满减券的条件金额必须大于0");
+            }
+            if (t.getDiscountAmount() == null || t.getDiscountAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new CustomException("满减券的优惠金额必须大于0");
+            }
+            if (t.getDiscountAmount().compareTo(t.getConditionAmount()) >= 0) {
+                throw new CustomException("满减券的优惠金额必须小于条件金额");
+            }
+        } else if ("DISCOUNT".equals(type)) {
+            if (t.getDiscountRate() == null || t.getDiscountRate().compareTo(BigDecimal.ZERO) <= 0
+                    || t.getDiscountRate().compareTo(BigDecimal.ONE) >= 0) {
+                throw new CustomException("折扣券的折扣率必须在0~1之间（如0.85表示8.5折）");
+            }
+        }
     }
 }
 

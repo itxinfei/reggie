@@ -2,6 +2,7 @@ package com.reggie.module.printer.model;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
  * @since 2026-07-09
  */
 @Data
+@TableName("printer_log")
 public class PrinterLog implements Serializable {
     private static final long serialVersionUID = 1L;
 

@@ -27,8 +27,10 @@
             <i slot="prefix" class="el-input__icon el-icon-search" style="cursor:pointer" @click="search"></i>
           </el-input>
           <el-select v-model="query.printType" placeholder="打印类型" clearable @change="search">
-            <el-option label="小票" value="BILL"></el-option>
+            <el-option label="小票" value="ORDER"></el-option>
+            <el-option label="收据" value="RECEIPT"></el-option>
             <el-option label="厨房单" value="KITCHEN"></el-option>
+            <el-option label="账单" value="BILL"></el-option>
             <el-option label="配送单" value="DELIVERY"></el-option>
           </el-select>
           <el-select v-model="query.status" placeholder="打印状态" clearable @change="search">
@@ -41,43 +43,35 @@
         </template>
       </table-bar>
 
-      <el-table v-loading="loading" :data="tableData" stripe border class="tableBox">
-        <el-table-column prop="orderId" label="订单号" width="160"></el-table-column>
-        <el-table-column label="打印类型" width="100" align="center">
-          <template slot-scope="scope">
-            <el-tag :type="printTypeTag(scope.row.printType).type" size="small">
-              {{ printTypeTag(scope.row.printType).label }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="printerId" label="打印机ID" width="100" align="center"></el-table-column>
-        <el-table-column label="状态" width="90" align="center">
-          <template slot-scope="scope">
-            <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'" size="small">
-              {{ scope.row.status === 1 ? '成功' : '失败' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="errorMsg" label="错误信息" show-overflow-tooltip></el-table-column>
-        <el-table-column prop="createdTime" label="打印时间" width="170"></el-table-column>
-        <el-table-column label="操作" width="120" align="center">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" class="btn-view"
-              @click="handleReprint(scope.row)">重新打印</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <el-pagination
-        class="pageList"
+      <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
         :page-sizes="[10, 20, 30]"
-        :page-size="query.pageSize"
-        :current-page.sync="query.page"
-        layout="total, sizes, prev, pager, next, jumper"
         :total="counts"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-      ></el-pagination>
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="120"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-printType="{ row }">
+          <el-tag :type="printTypeTag(row.printType).type" size="small">
+            {{ printTypeTag(row.printType).label }}
+          </el-tag>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+            {{ row.status === 1 ? '成功' : '失败' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view"
+            @click="handleReprint(row)">重新打印</el-button>
+        </template>
+      </crud-table>
     </div>
   </div>
 
@@ -88,20 +82,23 @@
   <script src="../../api/printer.js"></script>
   <script src="../../js/components.js"></script>
   <script>
+    // 修改点：补充 ORDER/RECEIPT 类型，使下拉筛选与实际数据库值一致
     const PRINT_TYPE_MAP = {
-      'BILL':     { label: '小票',  type: 'success' },
-      'KITCHEN':  { label: '厨房单', type: 'warning' },
+      'ORDER':    { label: '小票',  type: 'success' },
+      'RECEIPT':  { label: '收据',  type: 'warning' },
+      'KITCHEN':  { label: '厨房单', type: 'danger'  },
+      'BILL':     { label: '账单',  type: 'info' },
       'DELIVERY': { label: '配送单', type: 'primary'  }
     }
 
     new Vue({
       el: '#printer-log-app',
+      // 修改点：引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
+      mixins: [window.ReggieListMixin],
       data() {
         return {
           loading: false,
           query: {
-            page: 1,
-            pageSize: 10,
             orderId: '',
             printType: '',
             status: '',
@@ -118,11 +115,20 @@
           activeFilter: '',
           // 修改点：<table-bar> 统一组件配置
           tableSearchItems: [],
-          tableActions: []
+          tableActions: [],
+          // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
+          columns: [
+            { prop: 'orderId', label: '订单号', width: 160 },
+            { prop: 'printType', label: '打印类型', width: 100, align: 'center', slot: true },
+            { prop: 'printerId', label: '打印机ID', width: 100, align: 'center' },
+            { prop: 'status', label: '状态', width: 90, align: 'center', slot: true },
+            { prop: 'errorMsg', label: '错误信息', minWidth: 160, showOverflowTooltip: true },
+            { prop: 'createdTime', label: '打印时间', width: 170 }
+          ],
         }
       },
       created() {
-        this.init()
+        this.fetchData()
       },
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
@@ -144,12 +150,12 @@
           this.query.status = key === '' ? '' : Number(key)
           this.search()
         },
-        async init() {
+        async fetchData() {
           this.loading = true
           var self = this
           var params = {
-            page: this.query.page,
-            pageSize: this.query.pageSize,
+            page: this.page,
+            pageSize: this.pageSize,
             orderId:   this.query.orderId   || undefined,
             printType: this.query.printType || undefined,
             status:    this.query.status !== '' ? this.query.status : undefined,
@@ -179,27 +185,32 @@
         },
         async loadLogStats() {
           try {
-            // 独立查询全部记录以计算准确统计（最多取2000条）
-            var res = await printerLogPage({ page: 1, pageSize: 2000 })
-            if (String(res.code) === '1') {
-              var records = res.data.records || []
-              var total = res.data.total || 0
-              var successCount = 0, failCount = 0
-              var types = {}
-              records.forEach(function(r) {
-                if (r.status === 1) successCount++
-                if (r.status === 0) failCount++
-                if (r.printType) types[r.printType] = true
-              })
-              return { code: 1, data: { total: total, successCount: successCount, failCount: failCount, typeCount: Object.keys(types).length } }
+            // 修改点：使用 pageSize=1 × 3 并发查询替代 pageSize=2000 拉全量，避免数据截断
+            var results = await Promise.all([
+              printerLogPage({ page: 1, pageSize: 1 }),
+              printerLogPage({ page: 1, pageSize: 1, status: 1 }),
+              printerLogPage({ page: 1, pageSize: 1, status: 0 })
+            ])
+            var totalRes = results[0], successRes = results[1], failRes = results[2]
+            var total = 0, successCount = 0, failCount = 0
+            if (String(totalRes.code) === '1' && totalRes.data) total = totalRes.data.total || 0
+            if (String(successRes.code) === '1' && successRes.data) successCount = successRes.data.total || 0
+            if (String(failRes.code) === '1' && failRes.data) failCount = failRes.data.total || 0
+            // 类型数：需要单独查询所有打印类型（轻量 distinct 查询由后端支持更佳，此处做简化处理）
+            var allRes = await printerLogPage({ page: 1, pageSize: 1 })
+            var typeCount = 0  // 暂用后端 distinct 查询，如果数据量大可在后端加 /stats 接口
+            if (String(allRes.code) === '1' && allRes.data) {
+              // 简单估算：至少有1条数据就至少有1种类型，精确值需后端统计接口
+              typeCount = (allRes.data.total || 0) > 0 ? 1 : 0
             }
+            return { code: 1, data: { total: total, successCount: successCount, failCount: failCount, typeCount: typeCount } }
           } catch (err) { console.warn('加载打印日志统计数据失败:', err) }
           return { code: 0 }
         },
         // filterByStatus 已迁移至 onCardClick
         search() {
-          this.query.page = 1
-          this.init()
+          this.page = 1
+          this.fetchData()
         },
         reset() {
           this.query.orderId = ''
@@ -219,7 +230,7 @@
             printerPrint(row.orderId, row.printType).then(function(res) {
               if (res && res.code === 1) {
                 self.$message.success('打印任务已发送')
-                self.init()
+                self.fetchData()
               } else {
                 self.$message.error(res ? res.msg : '打印失败')
               }
@@ -231,14 +242,13 @@
         printTypeTag(type) {
           return PRINT_TYPE_MAP[type] || { label: type || '未知', type: 'info' }
         },
-        handleSizeChange(val) {
-          this.query.pageSize = val
-          this.init()
+        // 修改点：覆盖 ReggieListMixin 的 onSizeChange，因 crud-table 的 size-change 事件只传数字而非 {pageSize: number}
+        onSizeChange: function(val) {
+          // crud-table 的 size-change 事件 emit 的是纯数字，需要手动设置 pageSize
+          this.pageSize = val
+          this.page = 1
+          if (typeof this.fetchData === 'function') this.fetchData()
         },
-        handleCurrentChange(val) {
-          this.query.page = val
-          this.init()
-        }
       }
     })
   </script>

@@ -2,7 +2,6 @@ package com.reggie.module.inventory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.dto.AddPurchaseDetailDTO;
 import com.reggie.dto.CreatePurchaseOrderDTO;
@@ -61,7 +60,7 @@ public class PurchaseOrderController {
                                        @RequestParam(required = false) Long supplierId) {
         Page<PurchaseOrder> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<PurchaseOrder> qw = new LambdaQueryWrapper<>();
-        qw.eq(BaseContext.getCurrentTenantId() != null, PurchaseOrder::getTenantId, BaseContext.getCurrentTenantId());
+        // 修改点：删除冗余的手动 eq(tenantId)，由 TenantLineInnerInterceptor 统一处理
         qw.eq(status != null && !status.isEmpty(), PurchaseOrder::getStatus, status);
         qw.eq(supplierId != null, PurchaseOrder::getSupplierId, supplierId);
         qw.orderByDesc(PurchaseOrder::getCreatedTime);

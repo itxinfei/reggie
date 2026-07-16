@@ -1,6 +1,8 @@
 package com.reggie.module.inventory.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.module.inventory.mapper.MaterialCategoryMapper;
@@ -14,10 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.CollectionUtils;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -54,7 +53,21 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         return list;
     }
 
+    /**
+     * 重写双参分页方法，确保分页查询后填充分类名称和供应商名称
+     * <p>修改点：Controller 调用 materialService.page(pageInfo, qw) 时走此方法，
+     * 原来因未重写双参版本导致 fillCategoryAndSupplier 被绕过，分类名/供应商名始终为空</p>
+     */
     @Override
+    public <E extends IPage<Material>> E page(E page, Wrapper<Material> queryWrapper) {
+        E result = super.page(page, queryWrapper);
+        List<Material> records = result.getRecords();
+        if (!CollectionUtils.isEmpty(records)) {
+            fillCategoryAndSupplier(records);
+        }
+        return result;
+    }
+
     public Page<Material> page(Page<Material> pageInfo) {
         Page<Material> result = super.page(pageInfo);
         List<Material> records = result.getRecords();
@@ -65,7 +78,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
     }
 
     @Override
-    public List<Material> list(LambdaQueryWrapper<Material> queryWrapper) {
+    public List<Material> list(Wrapper<Material> queryWrapper) {
         List<Material> list = super.list(queryWrapper);
         if (!CollectionUtils.isEmpty(list)) {
             fillCategoryAndSupplier(list);

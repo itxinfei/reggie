@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  列表页标准模板（高复用骨架）
+  ------------------------------------------------------------
+  使用约定（后续所有后台列表页必须基于此模板开发）：
+    1. 头部样式引入保持 4 个 link（common / page / components / 按需 stats-card）
+    2. 统计卡片 → 用 <stat-cards>        （如本页不需要可删除）
+    3. 搜索 + 操作栏 → 用 <table-bar>     （searchItems / actions 配置化）
+    4. 数据表格 → 用 <crud-table>         （columns 配置 + #col-xxx / #actions 插槽）
+    5. 增删改弹窗 → 用 <crud-dialog>      （自带关闭/重置，底部按钮统一 medium）
+    6. 分页逻辑 → 引入 mixins: [window.ReggieListMixin]，实现 fetchData() 即可
+    7. 通用方法 → 直接用全局 formatMoney / formatDate / rgStatusText / rgStatusTag / rgPreview
+    8. 状态枚举 → 在脚本顶部 window.ReggieStatus.register('模块名', textMap, tagMap)
+  禁止：手写 <el-table>/<el-pagination>/<el-dialog> 重复实现上述能力
+  ============================================================
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>列表页模板 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/components.css" />
+  <!-- 如需统计卡片：<link rel="stylesheet" href="../../styles/components-stats-card.css" /> -->
+</head>
+<body>
+  <div class="dashboard-container" id="template-app">
+    <div class="container">
+
+      <!-- ① 统计卡片（按需）：cards 配置见 components.js 的 stat-cards -->
+      <!--
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick" />
+      -->
+
+      <!-- ② 搜索 + 操作栏：searchItems / actions 配置化，无需手写表单 -->
+      <table-bar
+        :search-items="searchItems"
+        :actions="actions"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      />
+
+      <!-- ③ 数据表格：columns 配置 + 插槽自定义 -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="160"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <!-- 自定义某列渲染：列配置需 slot: true -->
+        <template #col-status="{ row }">
+          <el-tag :type="rgStatusTag('demo', row.status)" size="small">{{ rgStatusText('demo', row.status) }}</el-tag>
+        </template>
+        <!-- 操作列：固定插槽名 #actions -->
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="onEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="onDelete(row.id)">删除</el-button>
+        </template>
+      </crud-table>
+    </div>
+
+    <!-- ④ 增改弹窗：crud-dialog 自带关闭/重置，底部取消/确定（确定触发 submit） -->
+    <crud-dialog
+      :title="form.title"
+      :visible.sync="form.visible"
+      width="600px"
+      :submit-loading="submitLoading"
+      @submit="onSubmit"
+    >
+      <el-form label-width="100px">
+        <!-- 替换为你的表单字段 -->
+        <el-form-item label="名称：">
+          <el-input v-model="form.name" placeholder="请输入名称" />
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <!-- <script src="../../api/xxx.js"></script>  接入你的 API -->
+  <script src="../../js/components.js"></script>
+<script>
+    // ⑤ 状态枚举注册（消除各页重复定义 statusMap/typeMap）
+    window.ReggieStatus.register('demo',
+      { 1: '启用', 0: '禁用' },
+      { 1: 'success', 0: 'info' }
+    )
+
+    new Vue({
+      el: '#template-app',
+      // ⑥ 列表页通用 Mixin：自动提供 page/pageSize/counts/loading 与翻页处理
+      mixins: [window.ReggieListMixin],
+      data() {
+        return {
+          // 搜索项配置（详见 components.js 的 table-bar）
+          searchItems: [
+            { type: 'input', field: 'name', placeholder: '请输入名称' },
+            { type: 'select', field: 'status', placeholder: '状态', options: [
+              { label: '启用', value: 1 }, { label: '禁用', value: 0 }
+            ] }
+          ],
+          // 操作按钮配置（详见 components.js 的 table-bar）
+          actions: [
+            { key: 'add', text: '+ 新增', type: 'primary' }
+          ],
+          // 列配置（详见 components.js 的 crud-table）
+          columns: [
+            { prop: 'id', label: 'ID', width: 80 },
+            { prop: 'name', label: '名称', minWidth: 140 },
+            { prop: 'status', label: '状态', width: 90, align: 'center', slot: true }
+          ],
+          tableData: [],
+          form: { title: '', id: undefined, name: '', visible: false },
+          submitLoading: false
+        }
+      },
+      created() {
+        this.fetchData()
+      },
+      methods: {
+        // ⑦ 数据请求：直接使用 Mixin 提供的 this.page / this.pageSize
+        //   删除下方 mock，替换为真实接口调用（如 await xxxPage(params)）
+        async fetchData() {
+          this.loading = true
+          // ===== 演示用 mock，上线请删除 =====
+          var self = this
+          setTimeout(function () {
+            var all = []
+            for (var i = 1; i <= 87; i++) {
+              all.push({ id: i, name: '示例项 ' + i, status: i % 2 })
+            }
+            var start = (self.page - 1) * self.pageSize
+            self.tableData = all.slice(start, start + self.pageSize)
+            self.counts = all.length
+            self.loading = false
+          }, 200)
+          // ===== mock 结束 =====
+        },
+        onSearch(params) {
+          this.page = 1
+          this.fetchData()
+        },
+        onReset() {
+          this.page = 1
+          this.fetchData()
+        },
+        onAction(payload) {
+          if (payload.key === 'add') this.onAdd()
+        },
+        onAdd() {
+          this.form = { title: '新增', id: undefined, name: '', visible: true }
+        },
+        onEdit(row) {
+          this.form = { title: '编辑', id: row.id, name: row.name, visible: true }
+        },
+        async onSubmit() {
+          this.submitLoading = true
+          try {
+            // await saveXxx(this.form)
+            this.$message.success('保存成功')
+            this.form.visible = false
+            this.fetchData()
+          } finally {
+            this.submitLoading = false
+          }
+        },
+        onDelete(id) {
+          this.$confirm('确认删除？', '提示', { type: 'warning' }).then(async () => {
+            // await deleteXxx(id)
+            this.$message.success('删除成功')
+            this.fetchData()
+          }).catch(function () {})
+        }
+      }
+    })
+  </script>
+</body>
+</html>

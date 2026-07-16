@@ -85,9 +85,10 @@ public interface DishEvaluationService extends IService<DishEvaluation> {
      * @param id           评价ID
      * @param replyContent 回复内容
      * @param replyUserId  回复人ID
+     * @param tenantId     租户ID
      * @return 是否回复成功
      */
-    boolean replyEvaluation(Long id, String replyContent, Long replyUserId);
+    boolean replyEvaluation(Long id, String replyContent, Long replyUserId, Long tenantId);
 
     /**
      * 更新评价审核状态
@@ -133,6 +134,16 @@ public interface DishEvaluationService extends IService<DishEvaluation> {
      * @return 评价列表
      */
     List<DishEvaluation> listByOrderId(Long tenantId, Long orderId);
+
+    /**
+     * 删除自己的评价（仅限评价人本人删除未审核的评价）
+     *
+     * @param id       评价ID
+     * @param userId   当前用户ID
+     * @param tenantId 租户ID
+     * @return 是否删除成功
+     */
+    boolean deleteMyEvaluation(Long id, Long userId, Long tenantId);
 
     /**
      * 统计指定状态的评价数量

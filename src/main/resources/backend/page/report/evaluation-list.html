@@ -178,7 +178,7 @@
 
     <!-- ========== 详情弹窗 ========== -->
     <el-dialog :title="'评价详情' + (detailData.dishName ? ' - ' + detailData.dishName : '')"
-      :visible.sync="detailVisible" width="560px" :before-close="closeDetail">
+      :visible.sync="detailVisible" class="el-dialog--md unified-dialog" :before-close="closeDetail">
       <div v-if="detailData.id">
         <div class="detail-section">
           <div class="detail-section-title">📋 基本信息</div>
@@ -206,14 +206,14 @@
           </div>
         </div>
       </div>
-      <span slot="footer">
+      <span slot="footer" class="dialog-footer">
         <el-button size="medium" @click="closeDetail">关 闭</el-button>
         <el-button v-if="detailData.status === 0" type="success" size="medium" @click="handleAudit(detailData, 1); closeDetail()">审 核 通 过</el-button>
       </span>
     </el-dialog>
 
     <!-- ========== 回复弹窗 ========== -->
-    <el-dialog title="回复评价" :visible.sync="replyVisible" width="500px" :before-close="closeReply">
+    <el-dialog title="回复评价" :visible.sync="replyVisible" class="el-dialog--sm unified-dialog" :before-close="closeReply">
       <div v-if="replyData.id" style="margin-bottom:12px;padding:14px;background:#f5f7fa;border-radius:10px;">
         <div style="font-weight:600;margin-bottom:4px;color:#303133;">{{ replyData.dishName || '' }} - {{ replyData.starRating }}★</div>
         <div style="color:#606266;font-size:13px;line-height:1.6;">{{ replyData.content || '' }}</div>
@@ -221,14 +221,14 @@
       <el-input v-model="replyContent" type="textarea" :rows="4"
         placeholder="请输入回复内容..." maxlength="500" show-word-limit>
       </el-input>
-      <span slot="footer">
+      <span slot="footer" class="dialog-footer">
         <el-button size="medium" @click="closeReply">取 消</el-button>
         <el-button type="primary" size="medium" @click="submitReply" :loading="replyLoading">确 定</el-button>
       </span>
     </el-dialog>
 
     <!-- ========== 图片预览 ========== -->
-    <el-dialog :visible.sync="previewVisible" width="auto" :show-close="true" center>
+    <el-dialog :visible.sync="previewVisible" class="unified-dialog el-dialog--md" :show-close="true" center>
       <img :src="previewUrl" class="image-preview" alt="预览图片" />
     </el-dialog>
   </div>

@@ -8,6 +8,7 @@ import com.reggie.dto.ChangeTableStatusDTO;
 import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.model.TableArea;
 import com.reggie.module.dining.service.DiningTableService;
+import com.reggie.module.dining.mapper.DiningTableMapper;
 import com.reggie.utils.QRCodeUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -25,7 +26,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 堂食桌台管理控制器
@@ -45,6 +48,9 @@ public class DiningTableController {
 
     @Autowired
     private QRCodeUtil qrCodeUtil;
+
+    @Autowired
+    private DiningTableMapper diningTableMapper;
 
     @Autowired
     private com.reggie.module.dining.service.TableAreaService tableAreaService;
@@ -147,6 +153,34 @@ public class DiningTableController {
             }
         }
         return R.success(list);
+    }
+
+    /**
+     * 桌台区域统计（区域管理页用）
+     * <p>使用 SQL 按区域分组聚合替代前端 pageSize:999 拉全量后前端分组，避免全表扫描</p>
+     *
+     * @return 桌台总数、最大容量区域（名称+桌数）
+     */
+    @GetMapping("/area-stats")
+    @Operation(summary = "桌台区域统计", description = "聚合统计桌台总数与最大容量区域")
+    public R<Map<String, Object>> areaStats() {
+        List<Map<String, Object>> rows = diningTableMapper.statByArea();
+        int totalTables = 0;
+        String maxArea = "-";
+        int maxCount = 0;
+        for (Map<String, Object> row : rows) {
+            int cnt = row.get("cnt") == null ? 0 : ((Number) row.get("cnt")).intValue();
+            totalTables += cnt;
+            if (cnt > maxCount) {
+                maxCount = cnt;
+                Object areaName = row.get("areaName");
+                maxArea = (areaName == null ? "未知区域" : String.valueOf(areaName)) + "(" + cnt + "桌)";
+            }
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalTables", totalTables);
+        result.put("maxTablesArea", maxArea);
+        return R.success(result);
     }
 
     /**
