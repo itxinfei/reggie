@@ -210,24 +210,16 @@
           } catch (err) { console.warn('加载支付统计数据失败:', err) }
           return { code: 0 }
         },
-        // stat-cards 点击
+        // stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
           var self = this
-          if (payload.key === '今日') {
-            if (self.activeFilter === '今日') {
-              self.activeFilter = ''
-              self.lastSearch = {}
-            } else {
-              self.activeFilter = '今日'
-              var today = new Date()
-              var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
-              self.lastSearch = { beginTime: todayStr + ' 00:00:00', endTime: todayStr + ' 23:59:59' }
-            }
-          } else if (payload.key === '成功' || payload.key === '待支付' || payload.key === '失败') {
-            if (self.activeFilter === payload.key) { self.activeFilter = ''; self.lastSearch = {} }
-            else { self.activeFilter = payload.key; self.lastSearch = { status: payload.key } }
+          if (payload.activeKey === '今日') {
+            var today = new Date()
+            var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
+            self.lastSearch = { beginTime: todayStr + ' 00:00:00', endTime: todayStr + ' 23:59:59' }
+          } else if (payload.activeKey === '成功' || payload.activeKey === '待支付' || payload.activeKey === '失败') {
+            self.lastSearch = { status: payload.activeKey }
           } else {
-            self.activeFilter = ''
             self.lastSearch = {}
           }
           self.page = 1

@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     /* ========== 基础重置 ========== */
@@ -69,36 +70,6 @@
     }
 
     /* ========== KPI 卡片（使用 components-stats-card.css 统一样式） ========== */
-
-    /* ========== 图表面板 ========== */
-    .chart-panel {
-      background: #fff;
-      border-radius: 14px;
-      padding: 24px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.8);
-      transition: all 0.3s;
-      margin-bottom: 20px;
-    }
-    .chart-panel:hover {
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-      transform: translateY(-2px);
-    }
-    .chart-panel .chart-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #303133;
-      margin-bottom: 20px;
-      padding-bottom: 14px;
-      border-bottom: 2px solid #f0f2f5;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .chart-box {
-      width: 100%;
-      height: 360px;
-    }
 
     /* ========== 导出记录折叠面板 ========== */
     .export-records-panel {
@@ -256,7 +227,6 @@
       .stats-cards { grid-template-columns: 1fr; gap: 12px; }
       .stat-card { padding: 18px; min-height: 110px; }
       .stat-card .stat-value { font-size: 26px; }
-      .chart-box { height: 300px; }
       .tableBar { flex-direction: column; align-items: stretch; }
       .tableBar .toolbar-spacer { display: none; }
     }
@@ -275,6 +245,7 @@
         :search-items="tableSearchItems"
         :actions="tableActions"
         @search="loadData"
+        @reset="onTableReset"
         @action="onTableAction">
         <template slot="search-extra">
           <el-date-picker
@@ -297,22 +268,22 @@
       <!-- ========== 趋势图 + 分类销售 双图 ========== -->
       <!-- 修改点：图表容器增加 min-height 防止变形，统一 class 便于响应式 -->
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;" class="daily-two-col">
-        <div class="chart-panel" style="margin-bottom:0;display:flex;flex-direction:column;">
-          <div class="chart-title">
-            <i class="el-icon-data-line" style="color:#409eff;"></i>
-            营收趋势
-            <span style="font-size:12px;color:#c0c4cc;font-weight:400;margin-left:4px;">（近7天）</span>
-          </div>
-          <div class="chart-box" id="trendChart" style="flex:1;min-height:360px;"></div>
-        </div>
-        <div class="chart-panel" style="margin-bottom:0;display:flex;flex-direction:column;">
-          <div class="chart-title">
-            <i class="el-icon-pie-chart" style="color:#e6a23c;"></i>
-            菜品分类销售占比
-            <span style="font-size:12px;color:#c0c4cc;font-weight:400;margin-left:4px;">（基于已选日期）</span>
-          </div>
-          <div class="chart-box" id="categoryChart" style="flex:1;min-height:360px;"></div>
-        </div>
+      <chart-panel style="margin-bottom:0;" padding="24px" marginBottom="0">
+        <template #title>
+          <i class="el-icon-data-line" style="color:#409eff;"></i>
+          营收趋势
+          <span style="font-size:12px;color:#c0c4cc;font-weight:400;margin-left:4px;">（近7天）</span>
+        </template>
+        <div style="flex:1;min-height:360px;" id="trendChart"></div>
+      </chart-panel>
+      <chart-panel style="margin-bottom:0;" padding="24px" marginBottom="0">
+        <template #title>
+          <i class="el-icon-pie-chart" style="color:#e6a23c;"></i>
+          菜品分类销售占比
+          <span style="font-size:12px;color:#c0c4cc;font-weight:400;margin-left:4px;">（基于已选日期）</span>
+        </template>
+        <div style="flex:1;min-height:360px;" id="categoryChart"></div>
+      </chart-panel>
       </div>
 
       <!-- ========== 导出记录折叠面板 ========== -->
@@ -400,6 +371,7 @@
   <script src="../../api/export.js"></script>
   <script src="../../api/report.js"></script>
   <script src="../../js/components.js"></script>
+  <script src="../../js/chart-panel.js"></script>
   <script>
     new Vue({
       el: '#report-daily-app',
@@ -548,7 +520,15 @@
           return y + '-' + m + '-' + d
         },
 
-        // 日期变更时自动查询
+        // table-bar @reset — 重置日期到今天
+        onTableReset: function() {
+          var today = new Date()
+          var y = today.getFullYear()
+          var m = String(today.getMonth() + 1).padStart(2, '0')
+          var d = String(today.getDate()).padStart(2, '0')
+          this.queryDate = [y + '-' + m + '-' + d, y + '-' + m + '-' + d]
+          this.loadData()
+        },
         onDateChange(val) {
           if (val && val.length === 2) {
             this.loadData()

@@ -210,19 +210,20 @@
           return idNumber.substring(0, 6) + '********' + idNumber.substring(idNumber.length - 4)
         },
         // 修改点：<stat-cards> 组件统一卡片点击分发
+        // <stat-cards> 点击（使用 payload.activeKey 判断，避免 .sync 导致的 toggle 反转）
         onCardClick: function(payload) {
-          var key = payload.key;
-          if (this.activeFilter === key) {
-            this.activeFilter = '';
-            this.input.status = null;
+          var s = this.lastSearch || {}
+          if (payload.activeKey !== '' && payload.activeKey != null) {
+            // 有激活卡片：按卡片 key 过滤
+            this.lastSearch = { status: payload.activeKey === '' ? undefined : Number(payload.activeKey) }
           } else {
-            this.activeFilter = key;
-            this.input.status = key === '' ? null : Number(key);
+            // 全部（无筛选）
+            this.lastSearch = {}
           }
-          this.input.name = '';
-          this.input.phone = '';
-          this.page = 1;
-          this.init();
+          this.input.name = ''
+          this.input.phone = ''
+          this.page = 1
+          this.init()
         },
         // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
         async loadFilterOptions() {

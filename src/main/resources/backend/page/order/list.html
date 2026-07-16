@@ -593,17 +593,15 @@
           if (val === null || val === undefined) return '0.00'
           return Number(val).toFixed(2)
         },
-        // stat-cards 点击
+        // stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
-          var self = this
-          if (payload.key === 'pending') {
-            self.activeFilter = self.activeFilter === 'pending' ? '' : 'pending'
-            if (self.activeFilter === 'pending') { self.lastSearch = {} }
-          } else if (payload.key === 'all') {
-            self.activeFilter = self.activeFilter === 'all' ? '' : 'all'
-            self.lastSearch = {}
+          if (payload.activeKey === 'pending') {
+            this.lastSearch = { status: 2 }
+          } else {
+            this.lastSearch = {}
           }
-          self.page = 1; self.init()
+          this.page = 1
+          this.init()
         },
         // table-bar 回调
         onSearch: function(searchParams) {

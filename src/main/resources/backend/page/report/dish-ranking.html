@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     /* ========== 基础重置 ========== */
@@ -20,28 +21,8 @@
     .dish-ranking-page .container { flex: 1; background: transparent; padding: 24px 32px 32px;
       min-width: 0; max-width: 1600px; margin: 0 auto; width: 100%; }
 
-    /* ========== 工具栏 ========== */
-    .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
-      background: #fff; padding: 16px 24px; border-radius: 14px; margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
-      transition: all 0.3s; }
-    .filter-bar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .filter-bar .fl-label { font-size: 14px; color: #606266; font-weight: 500; flex-shrink: 0; }
-    .filter-bar .fl-spacer { flex: 1; min-width: 0; }
-    .filter-bar .fl-hint { font-size: 12px; color: #c0c4cc; }
-
-    /* ========== KPI 卡片（使用 components-stats-card.css 统一样式） ========== */
+    /* ========== KPI 卡片网格（components-stats-card.css 提供卡片样式） ========== */
     .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-
-    /* ========== 图表面板 ========== */
-    .chart-panel { background: #fff; border-radius: 16px; padding: 24px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
-      transition: all 0.3s; margin-bottom: 20px; }
-    .chart-panel:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
-    .chart-panel .panel-title { font-size: 16px; font-weight: 600; color: #303133;
-      margin-bottom: 20px; padding-bottom: 14px; border-bottom: 2px solid #f0f2f5;
-      display: flex; align-items: center; gap: 8px; }
-    .chart-box { width: 100%; min-height: 300px; }
 
     /* ========== 排名样式 ========== */
     .rank-badge { display: inline-block; width: 26px; height: 26px; line-height: 26px;
@@ -55,9 +36,7 @@
     @media (max-width: 1400px) { .stats-cards { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 1200px) { .container { padding: 20px 28px 28px !important; } }
     @media (max-width: 768px) { .container { padding: 12px 16px 16px !important; }
-      .stats-cards { grid-template-columns: 1fr; gap: 12px; }
-      .stat-card { padding: 18px; min-height: 110px; } .stat-card .stat-value { font-size: 26px; }
-      .chart-box { min-height: 250px; } }
+      .stats-cards { grid-template-columns: 1fr; gap: 12px; } }
   </style>
 </head>
 <body>
@@ -65,7 +44,7 @@
     <div class="container">
 
       <!-- ========== 工具栏 ========== -->
-      <div class="filter-bar">
+      <div class="tableBar">
         <span class="fl-label"><i class="el-icon-date" style="margin-right:4px;"></i>日期范围</span>
         <el-date-picker v-model="dateRange" clearable value-format="yyyy-MM-dd"
           type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
@@ -89,16 +68,14 @@
       <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- ========== 水平排行榜图 ========== -->
-      <div class="chart-panel" style="margin-bottom:20px;">
-        <div class="panel-title">📊 菜品销量排行（Top {{ tableData.length }}）</div>
+      <chart-panel title="菜品销量排行（Top {{ tableData.length }}）" icon="📊">
         <div id="rankingChart" :style="{ height: rankingChartHeight + 'px' }" style="width:100%;"></div>
-      </div>
+      </chart-panel>
 
       <!-- ========== Top3 趋势对比 ========== -->
-      <div class="chart-panel" style="margin-bottom:20px;" v-show="tableData.length > 0">
-        <div class="panel-title">📈 Top 3 菜品销量趋势对比</div>
+      <chart-panel title="Top 3 菜品销量趋势对比" icon="📈" v-show="tableData.length > 0">
         <div id="trendLineChart" style="width:100%;height:320px;"></div>
-      </div>
+      </chart-panel>
 
       <!-- ========== 数据表格 ========== -->
       <el-table :data="tableData" stripe border class="tableBox" v-loading="loading">
@@ -129,6 +106,7 @@
   <script src="../../js/request.js"></script>
   <script src="../../api/report.js"></script>
   <script src="../../js/components.js"></script>
+  <script src="../../js/chart-panel.js"></script>
   <script>
     new Vue({
       el: '#report-dish-app',
