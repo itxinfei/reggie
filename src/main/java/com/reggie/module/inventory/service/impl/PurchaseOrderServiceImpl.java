@@ -45,6 +45,10 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
     @Autowired
     private MaterialService materialService;
 
+    /** 供应商服务 */
+    @Autowired
+    private com.reggie.module.inventory.service.SupplierService supplierService;
+
     @Override
     public PurchaseOrder createOrder(Long supplierId, String operator, String remark) {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -125,9 +129,76 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
     }
 
     @Override
+    public List<PurchaseOrder> list(com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<PurchaseOrder> queryWrapper) {
+        List<PurchaseOrder> list = super.list(queryWrapper);
+        if (!org.springframework.util.CollectionUtils.isEmpty(list)) {
+            fillSupplierName(list);
+        }
+        return list;
+    }
+
+    @Override
     public List<PurchaseOrderDetail> getDetailsByOrderId(Long orderId) {
-        return detailService.list(
+        List<PurchaseOrderDetail> details = detailService.list(
             new LambdaQueryWrapper<PurchaseOrderDetail>().eq(PurchaseOrderDetail::getPurchaseOrderId, orderId));
+        if (!org.springframework.util.CollectionUtils.isEmpty(details)) {
+            fillMaterialName(details);
+        }
+        return details;
+    }
+
+    /**
+     * 批量填充采购单的供应商名称
+     */
+    private void fillSupplierName(List<PurchaseOrder> orders) {
+        if (org.springframework.util.CollectionUtils.isEmpty(orders)) return;
+        java.util.List<Long> supplierIds = orders.stream()
+                .map(PurchaseOrder::getSupplierId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+        if (supplierIds.isEmpty()) return;
+
+        java.util.Map<Long, String> nameMap = supplierService.list(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.reggie.module.inventory.model.Supplier>()
+                        .in(com.reggie.module.inventory.model.Supplier::getId, supplierIds))
+                .stream().collect(java.util.stream.Collectors.toMap(
+                        com.reggie.module.inventory.model.Supplier::getId,
+                        com.reggie.module.inventory.model.Supplier::getName,
+                        (v1, v2) -> v1));
+
+        for (PurchaseOrder po : orders) {
+            if (po.getSupplierId() != null) {
+                po.setSupplierName(nameMap.get(po.getSupplierId()));
+            }
+        }
+    }
+
+    /**
+     * 批量填充采购明细的物料名称
+     */
+    private void fillMaterialName(List<PurchaseOrderDetail> details) {
+        if (org.springframework.util.CollectionUtils.isEmpty(details)) return;
+        java.util.List<Long> materialIds = details.stream()
+                .map(PurchaseOrderDetail::getMaterialId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+        if (materialIds.isEmpty()) return;
+
+        java.util.Map<Long, String> nameMap = materialService.list(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Material>()
+                        .in(Material::getId, materialIds))
+                .stream().collect(java.util.stream.Collectors.toMap(
+                        Material::getId,
+                        Material::getName,
+                        (v1, v2) -> v1));
+
+        for (PurchaseOrderDetail d : details) {
+            if (d.getMaterialId() != null) {
+                d.setMaterialName(nameMap.get(d.getMaterialId()));
+            }
+        }
     }
 
     @Override

@@ -15,8 +15,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 库存记录服务实现
@@ -47,6 +51,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         record.setMaterialId(materialId);
         record.setType(StockRecordType.IN.getValue());
         record.setQty(qty);
+        record.setQuantity(qty);
         record.setUnitPrice(unitPrice);
         record.setTotalAmount(unitPrice != null ? unitPrice.multiply(qty).setScale(2, RoundingMode.HALF_UP) : null);
         record.setBizId(bizId);
@@ -57,7 +62,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void stockOut(Long materialId, BigDecimal qty, Long bizId, String remark, String operator) {
+    public void stockOut(Long materialId, BigDecimal qty, BigDecimal bizId, String remark, String operator) {
         Material material = materialService.getById(materialId);
         if (material == null) {
             throw new CustomException("食材不存在");
@@ -73,6 +78,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         record.setMaterialId(materialId);
         record.setType(StockRecordType.OUT.getValue());
         record.setQty(qty);
+        record.setQuantity(qty);
         record.setBizId(bizId);
         record.setRemark(remark);
         record.setOperator(operator);
@@ -85,6 +91,62 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         LambdaQueryWrapper<StockRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(StockRecord::getMaterialId, materialId);
         qw.orderByDesc(StockRecord::getCreatedTime);
-        return page(pageInfo, qw);
+        Page<StockRecord> result = page(pageInfo, qw);
+        List<StockRecord> records = result.getRecords();
+        if (!CollectionUtils.isEmpty(records)) {
+            fillMaterialName(records);
+        }
+        return result;
+    }
+
+    @Override
+    public Page<StockRecord> page(Page<StockRecord> pageInfo) {
+        Page<StockRecord> result = super.page(pageInfo);
+        List<StockRecord> records = result.getRecords();
+        if (!CollectionUtils.isEmpty(records)) {
+            fillMaterialName(records);
+        }
+        return result;
+    }
+
+    @Override
+    public List<StockRecord> list(LambdaQueryWrapper<StockRecord> queryWrapper) {
+        List<StockRecord> list = super.list(queryWrapper);
+        if (!CollectionUtils.isEmpty(list)) {
+            fillMaterialName(list);
+        }
+        return list;
+    }
+
+    /**
+     * 批量填充库存记录的物料名称，并为 quantity 赋值（与 qty 一致）
+     */
+    private void fillMaterialName(List<StockRecord> records) {
+        if (CollectionUtils.isEmpty(records)) return;
+
+        // 同步 quantity = qty
+        for (StockRecord r : records) {
+            r.setQuantity(r.getQty());
+        }
+
+        List<Long> materialIds = records.stream()
+                .map(StockRecord::getMaterialId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        if (materialIds.isEmpty()) return;
+
+        Map<Long, String> nameMap = materialService.list(
+                new LambdaQueryWrapper<Material>().in(Material::getId, materialIds))
+                .stream().collect(Collectors.toMap(
+                        Material::getId,
+                        Material::getName,
+                        (v1, v2) -> v1));
+
+        for (StockRecord r : records) {
+            if (r.getMaterialId() != null) {
+                r.setMaterialName(nameMap.get(r.getMaterialId()));
+            }
+        }
     }
 }

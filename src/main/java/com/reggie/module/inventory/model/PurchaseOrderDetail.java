@@ -38,6 +38,12 @@ public class PurchaseOrderDetail implements Serializable {
     private Long materialId;
 
     /**
+     * 物料名称（关联查询填充，数据库无此列）
+     */
+    @TableField(exist = false)
+    private String materialName;
+
+    /**
      * 数量
      */
     private BigDecimal qty;

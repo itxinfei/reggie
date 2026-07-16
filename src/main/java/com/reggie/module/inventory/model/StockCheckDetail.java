@@ -1,6 +1,7 @@
 package com.reggie.module.inventory.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -34,6 +35,10 @@ public class StockCheckDetail implements Serializable {
     @Schema(description = "物料ID", example = "1")
     private Long materialId;
 
+    /** 物料名称（关联查询填充，数据库无此列） */
+    @TableField(exist = false)
+    private String materialName;
+
     @Schema(description = "账面数量", example = "50.00")
     private BigDecimal bookQty;
 
@@ -42,6 +47,10 @@ public class StockCheckDetail implements Serializable {
 
     @Schema(description = "差异数量（实际-账面）", example = "-2.00")
     private BigDecimal diffQty;
+
+    /** 差异数量别名，兼容前端 diff 字段名（数据库字段为 diffQty） */
+    @TableField(exist = false)
+    private BigDecimal diff;
 
     @Schema(description = "备注", example = "损耗2斤")
     private String remark;

@@ -1,6 +1,7 @@
 package com.reggie.module.inventory.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
@@ -20,11 +21,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 库存盘点服务实现
@@ -63,6 +67,7 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         sc.setStatus(StockCheckStatus.DRAFT.getValue());
         sc.setOperator(operator);
         sc.setRemark(remark);
+        sc.setProfitLoss(BigDecimal.ZERO);
         save(sc);
         return sc;
     }
@@ -101,6 +106,7 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
             detail.setBookQty(bookQty);
             detail.setActualQty(actualQty);
             detail.setDiffQty(diff);
+            detail.setDiff(diff);
             detail.setRemark(item.getRemark());
             stockCheckDetailMapper.insert(detail);
 
@@ -118,6 +124,90 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
 
         sc.setStatus(StockCheckStatus.DONE.getValue());
         sc.setTotalDiffAmount(totalDiff.setScale(2, RoundingMode.HALF_UP));
+        sc.setProfitLoss(totalDiff.setScale(2, RoundingMode.HALF_UP));
         updateById(sc);
+    }
+
+    @Override
+    public Page<StockCheck> page(Page<StockCheck> pageInfo) {
+        Page<StockCheck> result = super.page(pageInfo);
+        List<StockCheck> records = result.getRecords();
+        if (!CollectionUtils.isEmpty(records)) {
+            fillStockCheckInfo(records);
+        }
+        return result;
+    }
+
+    @Override
+    public List<StockCheck> list(LambdaQueryWrapper<StockCheck> queryWrapper) {
+        List<StockCheck> list = super.list(queryWrapper);
+        if (!CollectionUtils.isEmpty(list)) {
+            fillStockCheckInfo(list);
+        }
+        return list;
+    }
+
+    /**
+     * 填充盘点单的 itemCount、profitLoss，以及明细的 materialName 和 diff
+     */
+    private void fillStockCheckInfo(List<StockCheck> checks) {
+        if (CollectionUtils.isEmpty(checks)) return;
+
+        // 同步 profitLoss = totalDiffAmount
+        for (StockCheck sc : checks) {
+            if (sc.getProfitLoss() == null && sc.getTotalDiffAmount() != null) {
+                sc.setProfitLoss(sc.getTotalDiffAmount());
+            }
+        }
+
+        // 收集所有盘点单ID
+        List<Long> checkIds = checks.stream()
+                .map(StockCheck::getId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        if (checkIds.isEmpty()) return;
+
+        // 批量查询明细并填充 materialName
+        List<StockCheckDetail> allDetails = stockCheckDetailMapper.selectList(
+                new LambdaQueryWrapper<StockCheckDetail>().in(StockCheckDetail::getCheckId, checkIds));
+
+        // 同步 diff = diffQty
+        for (StockCheckDetail d : allDetails) {
+            d.setDiff(d.getDiffQty());
+        }
+
+        if (!CollectionUtils.isEmpty(allDetails)) {
+            List<Long> materialIds = allDetails.stream()
+                    .map(StockCheckDetail::getMaterialId)
+                    .filter(id -> id != null)
+                    .distinct()
+                    .collect(Collectors.toList());
+            if (!materialIds.isEmpty()) {
+                Map<Long, String> nameMap = materialService.list(
+                        new LambdaQueryWrapper<Material>().in(Material::getId, materialIds))
+                        .stream().collect(Collectors.toMap(
+                                Material::getId,
+                                Material::getName,
+                                (v1, v2) -> v1));
+
+                for (StockCheckDetail d : allDetails) {
+                    if (d.getMaterialId() != null) {
+                        d.setMaterialName(nameMap.get(d.getMaterialId()));
+                    }
+                }
+            }
+        }
+
+        // 按盘点单ID分组，设置 itemCount
+        Map<Long, List<StockCheckDetail>> detailMap = allDetails.stream()
+                .collect(Collectors.groupingBy(StockCheckDetail::getCheckId));
+
+        for (StockCheck sc : checks) {
+            List<StockCheckDetail> details = detailMap.get(sc.getId());
+            sc.setItemCount(details != null ? details.size() : 0);
+            // 将明细挂到对象上（供前端展开行使用）
+            sc.setDetails(details);
+        }
     }
 }

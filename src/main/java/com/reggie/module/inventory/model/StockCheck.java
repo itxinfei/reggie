@@ -1,6 +1,7 @@
 package com.reggie.module.inventory.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,7 +33,7 @@ public class StockCheck implements Serializable {
     @Schema(description = "盘点单号", example = "SC20260709001")
     private String checkNo;
 
-    @Schema(description = "状态：PENDING=盘点中，COMPLETED=已完成，CANCELLED=已取消", example = "PENDING")
+    @Schema(description = "状态：DRAFT=草稿，IN_PROGRESS=进行中，DONE=已完成，CANCELLED=已取消", example = "DRAFT")
     private String status;
 
     @Schema(description = "总差异金额（元）", example = "120.50")
@@ -49,4 +50,12 @@ public class StockCheck implements Serializable {
 
     @Schema(description = "更新时间", example = "2026-07-09 12:00:00")
     private LocalDateTime updatedTime;
+
+    /** 盘点项数（关联查询统计，数据库无此列） */
+    @TableField(exist = false)
+    private Integer itemCount;
+
+    /** 盈亏金额（totalDiffAmount 的别名，兼容前端字段名） */
+    @TableField(exist = false)
+    private BigDecimal profitLoss;
 }

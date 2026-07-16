@@ -1,6 +1,7 @@
 package com.reggie.module.inventory.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -55,4 +56,12 @@ public class StockRecord implements Serializable {
 
     @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
     private LocalDateTime createdTime;
+
+    /** 物料名称（关联查询填充，数据库无此列） */
+    @TableField(exist = false)
+    private String materialName;
+
+    /** 变动数量别名，兼容前端 quantity 字段名（数据库字段为 qty） */
+    @TableField(exist = false)
+    private BigDecimal quantity;
 }

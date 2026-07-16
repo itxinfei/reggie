@@ -152,7 +152,7 @@
                     <div class="hero-sub">跨门店经营数据汇总 · 实时监控各门店运营状况</div>
                 </div>
             </div>
-            <div class="hero-meta">
+            <div class="hero-meta" v-if="dashboard">
                 <div class="meta-item">
                     <div class="meta-value">{{ dashboard.totalStores || 0 }}</div>
                     <div class="meta-label">门店总数</div>
