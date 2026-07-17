@@ -1,7 +1,10 @@
 package com.reggie.module.notification.model;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import java.io.Serializable;
@@ -20,7 +23,12 @@ public class UserDevice implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /** 主键ID */
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
+
+    /** 租户ID */
+    @TableField(fill = FieldFill.INSERT)
+    private Long tenantId;
 
     /** 用户ID */
     private Long userId;
@@ -45,4 +53,8 @@ public class UserDevice implements Serializable {
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+
+    /** 逻辑删除：0=未删除，1=已删除 */
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 }

@@ -207,7 +207,7 @@
           this.submitLoading = true
           try {
             // await saveXxx(this.form)
-            this.$message.success('保存成功')
+            ReggieUI.success('保存成功')
             this.form.visible = false
             this.fetchData()
           } finally {
@@ -215,9 +215,9 @@
           }
         },
         onDelete(id) {
-          this.$confirm('确认删除？', '提示', { type: 'warning' }).then(async () => {
+          ReggieUI.confirm('确认删除？', '提示', { type: 'warning' }).then(async () => {
             // await deleteXxx(id)
-            this.$message.success('删除成功')
+            ReggieUI.success('删除成功')
             this.fetchData()
           }).catch(function () {})
         }

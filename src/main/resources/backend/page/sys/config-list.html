@@ -10,10 +10,18 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
   <div class="dashboard-container" id="config-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">系统配置</span>
+      </nav>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -60,11 +68,12 @@
       @submit="submitForm"
       @close="formData.dialogVisible = false"
     >
-      <el-form label-width="100px" size="small">
-        <el-form-item label="配置键" required>
+      <!-- 修改点：补全 ref/:model/:rules 与 prop，启用 Element 校验（原 required 无 prop 不生效） -->
+      <el-form ref="configForm" :model="formData" :rules="configRules" label-width="100px" size="small">
+        <el-form-item label="配置键" prop="configKey">
           <el-input v-model="formData.configKey" :disabled="!!formData.id" placeholder="如：store_name"></el-input>
         </el-form-item>
-        <el-form-item label="配置值" required>
+        <el-form-item label="配置值" prop="configValue">
           <el-input v-model="formData.configValue" placeholder="配置值"></el-input>
         </el-form-item>
         <el-form-item label="类型">
@@ -129,6 +138,11 @@
             title: '新增配置',
             dialogVisible: false,
             id: null, configKey: '', configValue: '', configType: 1, description: ''
+          },
+          // 修改点：配置表单校验规则（配合 el-form :rules + validate()）
+          configRules: {
+            configKey: [{ required: true, message: '请输入配置键', trigger: 'blur' }],
+            configValue: [{ required: true, message: '请输入配置值', trigger: 'blur' }]
           }
         }
       },
@@ -244,13 +258,14 @@
           this.formData = Object.assign({}, this.formData, { title: '编辑配置', dialogVisible: true }, JSON.parse(JSON.stringify(row)))
         },
         submitForm() {
-          if (!this.formData.configKey || this.formData.configValue === '') {
-            this.$message.warning('请填写配置键和配置值')
-            return
-          }
-          this.submitting = true
           var self = this
-          var api = this.formData.id ? sysApi.configUpdate(this.formData) : sysApi.configAdd(this.formData)
+          self.$refs.configForm.validate(function(valid) {
+            if (!valid) {
+              self.$message.warning('请完善表单必填项')
+              return
+            }
+            self.submitting = true
+          var api = self.formData.id ? sysApi.configUpdate(self.formData) : sysApi.configAdd(self.formData)
           api.then(function(res) {
             if (res && res.code === 1) {
               self.$message.success(res.msg || '操作成功')
@@ -259,12 +274,13 @@
             } else {
               self.$message.error(res ? res.msg : '操作失败')
             }
-          }).catch(function() { self.$message.error('操作失败') })
+            }).catch(function() { self.$message.error('操作失败') })
             .finally(function() { self.submitting = false })
+          })
         },
         deleteHandle(id) {
           var self = this
-          this.$confirm('确定删除该配置吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确定删除该配置吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               sysApi.configDelete(id).then(function(res) {
                 if (res && res.code === 1) {

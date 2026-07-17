@@ -1,8 +1,10 @@
 package com.reggie.module.inventory.model;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -47,9 +49,11 @@ public class StockCheck implements Serializable {
     private String remark;
 
     @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdTime;
 
     @Schema(description = "更新时间", example = "2026-07-09 12:00:00")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedTime;
 
     /** 盘点项数（关联查询统计，数据库无此列） */
@@ -63,4 +67,8 @@ public class StockCheck implements Serializable {
     /** 盘点明细列表（关联查询填充，数据库无此列） */
     @TableField(exist = false)
     private List<com.reggie.module.inventory.model.StockCheckDetail> details;
+
+    @Schema(description = "逻辑删除：0=未删除，1=已删除")
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 }

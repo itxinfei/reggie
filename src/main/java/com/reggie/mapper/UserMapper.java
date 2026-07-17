@@ -30,7 +30,7 @@ public interface UserMapper extends BaseMapper<User>{
      * @return 每个 tenantId 的 newUsers
      */
     @Select("SELECT tenant_id AS tenantId, COUNT(*) AS newUsers "
-            + "FROM user WHERE create_time >= #{start} AND create_time < #{end} "
+            + "FROM `user` WHERE create_time >= #{start} AND create_time < #{end} "
             + "GROUP BY tenant_id")
     List<Map<String, Object>> statNewUsersByTenant(@Param("start") LocalDateTime start,
                                                    @Param("end") LocalDateTime end);

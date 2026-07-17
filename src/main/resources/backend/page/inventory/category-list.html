@@ -10,10 +10,18 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
   <div class="dashboard-container" id="category-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">食材分类管理</span>
+      </nav>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
       <stat-cards :cards="statsCards"></stat-cards>
 
@@ -46,7 +54,7 @@
         @size-change="onSizeChange"
       >
         <template #col-materialCount="{ row }">
-          <span style="color: #606266; font-weight: 500;">{{ row.materialCount || 0 }}</span>
+          <span style="color: var(--el-text-regular); font-weight: 500;">{{ row.materialCount || 0 }}</span>
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="editHandle(row)">修改</el-button>
@@ -63,12 +71,14 @@
       @submit="submitForm"
       @close="handleClose"
     >
-      <el-form class="demo-form-inline" label-width="120px" size="small">
-        <el-form-item label="分类名称：">
-          <el-input v-model="formData.name" placeholder="请输入分类名称" maxlength="14" style="width: 240px;" />
+      <!-- 修改点：移除误导性死 class demo-form-inline；label-width 120→80（"分类名称/排序"短标签） -->
+      <!-- 修改点：补全 ref/:model/:rules，启用 Element 校验；移除 240px 魔数宽度，统一弹窗内 100% 自适应 -->
+      <el-form ref="categoryForm" :model="formData" :rules="categoryRules" label-width="80px" size="small">
+        <el-form-item label="分类名称：" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入分类名称" maxlength="14" />
         </el-form-item>
-        <el-form-item label="排序：">
-          <el-input v-model="formData.sort" type="number" placeholder="数值越小越靠前" style="width: 240px;" />
+        <el-form-item label="排序：" prop="sort">
+          <el-input v-model="formData.sort" type="number" placeholder="数值越小越靠前" />
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -114,6 +124,18 @@
             id: '',
             name: '',
             sort: ''
+          },
+          // 修改点：分类表单校验规则（配合 el-form :rules + validate()）
+          categoryRules: {
+            name: [{ required: true, whitespace: true, message: '请输入分类名称', trigger: 'blur' }],
+            sort: [
+              { required: true, message: '请输入排序', trigger: 'blur' },
+              { validator: function(rule, value, callback) {
+                  if (value === '' || value === null || value === undefined) { callback(); return }
+                  if (!/^\d+$/.test(String(value))) { callback(new Error('排序只能输入数字类型')); return }
+                  callback()
+                }, trigger: 'blur' }
+            ]
           }
         }
       },
@@ -149,7 +171,7 @@
             this.tableData = pageRes.data.records || []
             this.counts = Number(pageRes.data.total) || 0
           } else {
-            this.$message.error(pageRes.msg || '操作失败')
+            ReggieUI.error(pageRes.msg || '操作失败')
           }
 
           if (statsRes && String(statsRes.code) === '1') {
@@ -217,54 +239,48 @@
           this.formData.dialogVisible = false
         },
         submitForm() {
-          const fd = this.formData
-          if (!fd.name && fd.name !== 0) {
-            this.$message.error('请输入分类名称')
+          const self = this
+          let passed = false
+          self.$refs.categoryForm.validate(function(valid) { passed = valid })
+          if (!passed) {
+            self.$message.warning('请完善表单必填项')
             return
           }
-          if (fd.sort === '' && fd.sort !== 0) {
-            this.$message.error('请输入排序')
-            return
-          }
-          const reg = /^\d+$/
-          if (!reg.test(String(fd.sort))) {
-            this.$message.error('排序只能输入数字类型')
-            return
-          }
-          const action = this.formData.id ? updateMatCategory : addMatCategory
+          const fd = self.formData
+          const action = fd.id ? updateMatCategory : addMatCategory
           const params = this.formData.id
             ? { id: fd.id, name: fd.name, sort: fd.sort }
             : { name: fd.name, sort: fd.sort }
 
           action(params).then(res => {
             if (res.code === 1) {
-              this.$message.success(this.formData.id ? '分类修改成功！' : '分类添加成功！')
+              ReggieUI.success(this.formData.id ? '分类修改成功！' : '分类添加成功！')
               this.formData.dialogVisible = false
               this.fetchData()
             } else {
-              this.$message.error(res.msg || '操作失败')
+              ReggieUI.error(res.msg || '操作失败')
             }
           }).catch(err => {
-            this.$message.error('请求失败：' + err)
+            ReggieUI.error('请求失败：' + err)
           })
         },
         deleteHandle(id) {
-          this.$confirm('此操作将永久删除该分类, 是否继续?', '提示', {
+          ReggieUI.confirm('此操作将永久删除该分类, 是否继续?', '提示', {
             confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
           }).then(() => {
             deleteMatCategory(id).then(res => {
               if (res.code === 1) {
-                this.$message.success('删除成功！')
+                ReggieUI.success('删除成功！')
                 // 当前页删除后为空则回退
                 if (this.tableData.length === 1 && this.page > 1) {
                   this.page--
                 }
                 this.fetchData()
               } else {
-                this.$message.error(res.msg || '操作失败')
+                ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求失败：' + err)
+              ReggieUI.error('请求失败：' + err)
             })
           })
         },

@@ -11,10 +11,18 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
 <div class="dashboard-container" id="combo-app">
   <div class="container">
+    <!-- 面包屑导航 -->
+    <nav class="ds-breadcrumb" aria-label="面包屑导航">
+      <span class="ds-breadcrumb__item">首页</span>
+      <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+      <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">套餐管理</span>
+    </nav>
     <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
     <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -92,7 +100,7 @@
     size="xl"
     :close-on-click-modal="false"
   >
-    <el-form ref="comboForm" :model="comboForm" :rules="comboRules" label-width="120px">
+    <el-form ref="comboForm" :model="comboForm" :rules="comboRules" label-width="90px">
       <el-form-item label="套餐名称:" prop="name">
         <el-input v-model="comboForm.name" placeholder="请填写套餐名称" maxlength="20" />
       </el-form-item>
@@ -393,7 +401,7 @@ new Vue({
           this.filterOptions.names = res.data.names || []
         } else {
           this.optionsLoadError = true
-          this.$message.warning('加载套餐选项失败：' + (res.msg || '接口返回异常'))
+          ReggieUI.warning('加载套餐选项失败：' + (res.msg || '接口返回异常'))
         }
       } catch (err) {
         if (err.message === 'NOTLOGIN') {
@@ -401,7 +409,7 @@ new Vue({
         }
         this.optionsLoadError = true
         console.error('加载套餐选项失败:', err)
-        this.$message.error('加载筛选选项失败，请刷新页面重试')
+        ReggieUI.error('加载筛选选项失败，请刷新页面重试')
       } finally {
         this.optionsLoading = false
       }
@@ -494,24 +502,24 @@ new Vue({
     deleteHandle(type, id) {
       if (type === '批量' && id === null) {
         if (this.checkList.length === 0) {
-          this.$message.error('请选择删除对象')
+          ReggieUI.error('请选择删除对象')
           return
         }
       }
-      this.$confirm('确定删除该套餐, 是否继续?', '确定删除', {
+      ReggieUI.confirm('确定删除该套餐, 是否继续?', '确定删除', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
         deleteSetmeal(type === '批量' ? this.checkList.join(',') : id).then(res => {
           if (res.code === 1) {
-            this.$message.success('删除成功！')
+            ReggieUI.success('删除成功！')
             this.handleQuery()
           } else {
-            this.$message.error(res.msg || '操作失败')
+            ReggieUI.error(res.msg || '操作失败')
           }
         }).catch(err => {
-          this.$message.error('请求失败：' + err)
+          ReggieUI.error('请求失败：' + err)
         })
       })
     },
@@ -521,7 +529,7 @@ new Vue({
       var params = {}
       if (typeof row === 'string') {
         if (this.checkList.length === 0) {
-          this.$message.error('批量操作，请先勾选操作套餐！')
+          ReggieUI.error('批量操作，请先勾选操作套餐！')
           return false
         }
         params.ids = this.checkList.join(',')
@@ -530,20 +538,20 @@ new Vue({
         params.ids = row.id
         params.status = row.status ? '0' : '1'
       }
-      this.$confirm('确认更改该套餐状态?', '提示', {
+      ReggieUI.confirm('确认更改该套餐状态?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
         setmealStatusByStatus(params).then(res => {
           if (res.code === 1) {
-            this.$message.success('套餐状态已经更改成功！')
+            ReggieUI.success('套餐状态已经更改成功！')
             this.handleQuery()
           } else {
-            this.$message.error(res.msg || '操作失败')
+            ReggieUI.error(res.msg || '操作失败')
           }
         }).catch(err => {
-          this.$message.error('请求失败：' + err)
+          ReggieUI.error('请求失败：' + err)
         })
       })
     },
@@ -603,10 +611,10 @@ new Vue({
             }
           })
         } else {
-          this.$message.error(res.msg || '获取套餐信息失败')
+          ReggieUI.error(res.msg || '获取套餐信息失败')
         }
       } catch (err) {
-        this.$message.error('请求失败：' + err)
+        ReggieUI.error('请求失败：' + err)
       }
     },
 
@@ -687,12 +695,12 @@ new Vue({
         var suffix = file.name.split('.')[1]
         var size = file.size / 1024 / 1024 < 2
         if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) {
-          this.$message.error('上传图片只支持 png、jpeg、jpg 格式！')
+          ReggieUI.error('上传图片只支持 png、jpeg、jpg 格式！')
           this.$refs.comboUpload.clearFiles()
           return false
         }
         if (!size) {
-          this.$message.error('上传文件大小不能超过 2MB!')
+          ReggieUI.error('上传文件大小不能超过 2MB!')
           return false
         }
         return file
@@ -828,7 +836,7 @@ new Vue({
 
     confirmDishSelection() {
       if (this.selectedDishList.length === 0) {
-        this.$message.warning('请至少选择一道菜品')
+        ReggieUI.warning('请至少选择一道菜品')
         return
       }
       var existingIds = new Set(this.comboDishTable.map(function (item) { return item.dishId || item.id }))
@@ -844,7 +852,7 @@ new Vue({
         }
       })
       this.dishSelectDialog.visible = false
-      this.$message.success('添加成功！')
+      ReggieUI.success('添加成功！')
     },
 
     removeComboDish(index) {

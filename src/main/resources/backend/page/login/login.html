@@ -98,7 +98,7 @@
 
     <!-- 忘记密码弹窗 -->
     <el-dialog title="重置密码" :visible.sync="fpShow"
-               class="el-dialog--sm unified-dialog" custom-class="fp-dialog"
+               custom-class="el-dialog--sm unified-dialog fp-dialog"
                :close-on-click-modal="false" :append-to-body="true">
       <el-form :model="fpForm" :rules="fpRules" ref="fpFormRef" label-width="80px"
                @submit.native.prevent="doForgot">

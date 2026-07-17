@@ -11,12 +11,14 @@ import com.reggie.service.OrderService;
 import com.reggie.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -50,39 +52,54 @@ public class OrderTimeoutTask {
     @Autowired
     private TenantService tenantService;
 
+    @Autowired(required = false)
+    private RedisTemplate<String, Object> redisTemplate;
+
     /** 订单超时检查间隔（毫秒）：5分钟 */
     private static final long ORDER_TIMEOUT_CHECK_INTERVAL = 5 * 60 * 1000L;
     /** 订单超时阈值（分钟）：30分钟未接单自动取消 */
     private static final int ORDER_TIMEOUT_MINUTES = 30;
     /** 库存预警检查间隔（毫秒）：1小时 */
     private static final long INVENTORY_ALERT_CHECK_INTERVAL = 60 * 60 * 1000L;
+    /** 分布式锁过期时间（毫秒），应大于任务最大执行时间 */
+    private static final long LOCK_TTL_MS = 4 * 60 * 1000L; // 4分钟
 
     // ──────────────────────────────────────
     // 订单超时自动取消（每 5 分钟）
     // ──────────────────────────────────────
     @Scheduled(fixedRate = ORDER_TIMEOUT_CHECK_INTERVAL)
     public void cancelTimeoutOrders() {
-        List<Tenant> tenants = tenantService.listActiveTenants();
-        if (tenants.isEmpty()) {
+        // 分布式锁防止任务重叠
+        if (!tryLock("schedule:lock:order-timeout", LOCK_TTL_MS)) {
+            log.debug("[定时任务] 订单超时取消任务正在执行中，跳过本次");
             return;
         }
 
-        LocalDateTime timeoutThreshold = LocalDateTime.now().minusMinutes(ORDER_TIMEOUT_MINUTES);
-        int totalCancelled = 0;
-
-        for (Tenant tenant : tenants) {
-            BaseContext.setCurrentTenantId(tenant.getId());
-            try {
-                int count = cancelTimeoutOrdersForTenant(timeoutThreshold);
-                totalCancelled += count;
-            } finally {
-                BaseContext.remove();
+        try {
+            List<Tenant> tenants = tenantService.listActiveTenants();
+            if (tenants.isEmpty()) {
+                return;
             }
-        }
 
-        if (totalCancelled > 0) {
-            log.info("[定时任务] 订单超时取消完成，共处理 {} 个租户，取消 {} 个订单",
-                tenants.size(), totalCancelled);
+            LocalDateTime timeoutThreshold = LocalDateTime.now().minusMinutes(ORDER_TIMEOUT_MINUTES);
+            int totalCancelled = 0;
+
+            for (Tenant tenant : tenants) {
+                BaseContext.setCurrentTenantId(tenant.getId());
+                try {
+                    int count = cancelTimeoutOrdersForTenant(timeoutThreshold);
+                    totalCancelled += count;
+                } finally {
+                    BaseContext.remove();
+                }
+            }
+
+            if (totalCancelled > 0) {
+                log.info("[定时任务] 订单超时取消完成，共处理 {} 个租户，取消 {} 个订单",
+                    tenants.size(), totalCancelled);
+            }
+        } finally {
+            unlock("schedule:lock:order-timeout");
         }
     }
 
@@ -197,6 +214,49 @@ public class OrderTimeoutTask {
         if (alertCount > 0) {
             log.warn("[定时任务] 库存预警(tenantId={}): 共{}个食材库存不足。{}",
                 BaseContext.getCurrentTenantId(), alertCount, alertBuilder);
+        }
+    }
+
+    // ──────────────────────────────────────
+    // 分布式锁辅助方法
+    // ──────────────────────────────────────
+
+    /**
+     * 尝试获取分布式锁
+     * @param lockKey 锁Key
+     * @param ttlMs 锁过期时间（毫秒）
+     * @return true=获取成功，false=获取失败
+     */
+    private boolean tryLock(String lockKey, long ttlMs) {
+        if (redisTemplate == null) {
+            // Redis不可用时降级为无锁（记录告警）
+            log.warn("[定时任务] Redis不可用，无法获取分布式锁: {}", lockKey);
+            return true;
+        }
+        try {
+            // SET NX EX：原子操作，不存在才设置并过期
+            Boolean success = redisTemplate.opsForValue()
+                    .setIfAbsent(lockKey, "1", ttlMs, TimeUnit.MILLISECONDS);
+            return Boolean.TRUE.equals(success);
+        } catch (Exception e) {
+            log.error("[定时任务] 获取分布式锁失败: {}", lockKey, e);
+            // 获取锁异常时降级放行，避免因锁故障导致任务停止
+            return true;
+        }
+    }
+
+    /**
+     * 释放分布式锁
+     * @param lockKey 锁Key
+     */
+    private void unlock(String lockKey) {
+        if (redisTemplate == null) {
+            return;
+        }
+        try {
+            redisTemplate.delete(lockKey);
+        } catch (Exception e) {
+            log.error("[定时任务] 释放分布式锁失败: {}", lockKey, e);
         }
     }
 }

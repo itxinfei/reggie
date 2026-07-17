@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <style>
     #member-app  .notAdmin::after{
       border: 0 !important;
@@ -22,6 +24,12 @@
 <body>
   <div class="dashboard-container" id="member-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">员工管理</span>
+      </nav>
       <!-- ========== 数据统计卡片（统一组件） ========== -->
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
@@ -89,7 +97,7 @@
         ref="memberForm"
         :model="memberForm"
         :rules="memberRules"
-        label-width="120px"
+        label-width="90px"
       >
         <el-form-item label="账号:" prop="username">
           <el-input v-model="memberForm.username" placeholder="请输入账号" maxlength="20" style="width: 293px;" />
@@ -238,7 +246,7 @@
                 this.filterOptions.names = res.data.names || []
               } else {
                 this.optionsLoadError = true
-                this.$message.warning('加载员工选项失败：' + (res.msg || '接口返回异常'))
+                ReggieUI.warning('加载员工选项失败：' + (res.msg || '接口返回异常'))
               }
             } catch (err) {
               // 修改点：NOTLOGIN 错误已在全局拦截器处理（跳转登录页），无需重复提示
@@ -247,7 +255,7 @@
               }
               this.optionsLoadError = true
               console.error('加载员工选项失败:', err)
-              this.$message.error('加载筛选选项失败，请刷新页面重试')
+              ReggieUI.error('加载筛选选项失败，请刷新页面重试')
             } finally {
               this.optionsLoading = false
             }
@@ -351,10 +359,10 @@
                   idNumber: data.idNumber
                 }
               } else {
-                this.$message.error(res.msg || '获取员工信息失败')
+                ReggieUI.error(res.msg || '获取员工信息失败')
               }
             } catch (err) {
-              this.$message.error('请求失败：' + err)
+              ReggieUI.error('请求失败：' + err)
             }
           },
           // 重置表单
@@ -387,7 +395,7 @@
                 if (this.memberDialog.actionType === 'add') {
                   addEmployee(params).then(res => {
                     if (res.code === 1) {
-                      this.$message.success('员工添加成功！')
+                      ReggieUI.success('员工添加成功！')
                       this.memberDialog.visible = false
                       this.handleQuery()
                       if (st === 'continue') {
@@ -395,22 +403,22 @@
                         this.memberDialog.visible = true
                       }
                     } else {
-                      this.$message.error(res.msg || '操作失败')
+                      ReggieUI.error(res.msg || '操作失败')
                     }
                   }).catch(err => {
-                    this.$message.error('请求失败：' + err)
+                    ReggieUI.error('请求失败：' + err)
                   })
                 } else {
                   editEmployee(params).then(res => {
                     if (res.code === 1) {
-                      this.$message.success('员工信息修改成功！')
+                      ReggieUI.success('员工信息修改成功！')
                       this.memberDialog.visible = false
                       this.handleQuery()
                     } else {
-                      this.$message.error(res.msg || '操作失败')
+                      ReggieUI.error(res.msg || '操作失败')
                     }
                   }).catch(err => {
-                    this.$message.error('请求失败：' + err)
+                    ReggieUI.error('请求失败：' + err)
                   })
                 }
               }
@@ -420,18 +428,18 @@
           statusHandle (row) {
             this.id = row.id
             this.status = row.status
-            this.$confirm('确认调整该账号的状态?', '提示', {
+            ReggieUI.confirm('确认调整该账号的状态?', '提示', {
               'confirmButtonText': '确定',
               'cancelButtonText': '取消',
               'type': 'warning'
               }).then(() => {
               enableOrDisableEmployee({ 'id': this.id, 'status': this.status === '1' ? 0 : 1 }).then(res => {
                 if (String(res.code) === '1') {
-                  this.$message.success('账号状态更改成功！')
+                  ReggieUI.success('账号状态更改成功！')
                   this.handleQuery()
                 }
               }).catch(err => {
-                this.$message.error('请求失败：' + err)
+                ReggieUI.error('请求失败：' + err)
               })
             })
           },
@@ -443,9 +451,9 @@
                 ? exportApi.exportEmployeesExcel({})
                 : exportApi.exportEmployeesPdf({})
               exportApi.downloadFile(apiCall, '员工数据.' + ext)
-              this.$message.success('导出成功，文件已开始下载')
+              ReggieUI.success('导出成功，文件已开始下载')
             } catch (err) {
-              this.$message.error('导出失败：' + (err.message || err))
+              ReggieUI.error('导出失败：' + (err.message || err))
             }
           },
 

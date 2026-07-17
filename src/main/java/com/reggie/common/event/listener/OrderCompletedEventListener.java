@@ -29,7 +29,7 @@ public class OrderCompletedEventListener {
      * 处理订单完成事件
      */
     @EventListener
-    @Async("aiExecutor")
+    @Async("eventListenerExecutor")
     public void handleOrderCompleted(OrderCompletedEvent event) {
         Long orderId = event.getOrderId();
         Long tenantId = event.getTenantId();

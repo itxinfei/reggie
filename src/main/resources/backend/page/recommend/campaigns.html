@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="../../styles/page.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
     <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <style>
         /* ========== 概览图表 ========== */
@@ -19,15 +21,15 @@
             margin-bottom: 20px;
         }
         .chart-panel {
-            background: #fff; border-radius: 12px; padding: 18px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.04); border: 1px solid #f0f2f5;
+            background: var(--bg-surface); border-radius: 12px; padding: 18px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04); border: 1px solid var(--el-bg-page);
         }
         .chart-panel .chart-header {
             display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #ebeef5;
+            margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--el-border-light);
         }
-        .chart-panel .chart-title { font-size: 14px; font-weight: 600; color: #303133; }
-        .chart-panel .chart-subtitle { font-size: 12px; color: #909399; }
+        .chart-panel .chart-title { font-size: 14px; font-weight: 600; color: var(--el-text-primary); }
+        .chart-panel .chart-subtitle { font-size: 12px; color: var(--color-info); }
         .chart-box { width: 100%; height: 260px; }
 
         /* ========== 表格区域 ========== */
@@ -36,11 +38,11 @@
         /* ========== 推送预览列表 ========== */
         .push-preview {
             max-height: 200px; overflow-y: auto;
-            border: 1px solid #ebeef5; border-radius: 6px; padding: 8px; margin-top: 8px;
+            border: 1px solid var(--el-border-light); border-radius: 6px; padding: 8px; margin-top: 8px;
         }
         .push-preview .preview-item {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 7px 10px; font-size: 13px; border-bottom: 1px solid #f5f5f5;
+            padding: 7px 10px; font-size: 13px; border-bottom: 1px solid var(--el-bg-light);
         }
         .push-preview .preview-item:last-child { border-bottom: none; }
 
@@ -50,10 +52,10 @@
             margin-bottom: 16px; text-align: center;
         }
         .stats-overview .stat-item {
-            background: #fafafa; border-radius: 8px; padding: 14px 8px;
+            background: var(--el-bg-base); border-radius: 8px; padding: 14px 8px;
         }
-        .stats-overview .stat-item .num { font-size: 22px; font-weight: 700; color: #303133; }
-        .stats-overview .stat-item .lbl { font-size: 12px; color: #909399; margin-top: 4px; }
+        .stats-overview .stat-item .num { font-size: 22px; font-weight: 700; color: var(--el-text-primary); }
+        .stats-overview .stat-item .lbl { font-size: 12px; color: var(--color-info); margin-top: 4px; }
 
         @media (max-width: 1400px) {
             .overview-charts { grid-template-columns: 1fr; }
@@ -63,6 +65,13 @@
 <body>
 <div class="dashboard-container" id="app">
     <div class="container">
+
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">营销活动</span>
+      </nav>
         <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
         <stat-cards :cards="statsCards" :active-key.sync="searchStatus" @card-click="onCardClick"></stat-cards>
 
@@ -109,85 +118,66 @@
           </template>
         </table-bar>
 
-        <!-- ========== 表格 ========== -->
-        <el-table :data="tableData" border stripe v-loading="loading" class="tableBox"
-            @selection-change="onSelectionChange" style="width:100%;">
-            <el-table-column type="selection" width="45" />
-            <el-table-column prop="id" label="ID" width="60" align="center" />
-            <el-table-column prop="name" label="活动名称" min-width="140" show-overflow-tooltip>
-                <template slot-scope="scope">
-                    <span style="font-weight:500;">{{ scope.row.name }}</span>
-                </template>
-            </el-table-column>
-            <el-table-column label="类型" width="90" align="center">
-                <template slot-scope="scope">{{ typeMap[scope.row.campaignType] || '-' }}</template>
-            </el-table-column>
-            <el-table-column label="目标" width="100" align="center">
-                <template slot-scope="scope">{{ targetMap[scope.row.targetType] || '-' }}</template>
-            </el-table-column>
-            <el-table-column label="状态" width="100" align="center">
-                <template slot-scope="scope">
-                    <el-tag :type="statusTagType(scope.row.status)" size="small">
-                        {{ statusMap[scope.row.status] }}
-                    </el-tag>
-                </template>
-            </el-table-column>
-            <el-table-column label="活动时间" width="190">
-                <template slot-scope="scope">
-                    <span style="font-size:12px;color:#606266;">{{ scope.row.startTime || '-' }}</span>
-                    <br/>
-                    <span style="font-size:12px;color:#909399;">{{ scope.row.endTime || '-' }}</span>
-                </template>
-            </el-table-column>
-            <el-table-column label="参与/上限" width="120" align="center">
-                <template slot-scope="scope">
-                    <span style="color:#303133;">{{ scope.row.currentParticipants || 0 }}</span>
-                    <span style="color:#c0c4cc;"> / </span>
-                    <span>{{ scope.row.maxParticipants || '∞' }}</span>
-                    <el-progress v-if="scope.row.maxParticipants"
-                        :percentage="Math.round((scope.row.currentParticipants || 0) / scope.row.maxParticipants * 100)"
-                        :show-text="false" :stroke-width="4" class="status-progress" />
-                </template>
-            </el-table-column>
-            <!-- 修改点：操作列精简，180px 足够 -->
-            <el-table-column label="操作" width="200" align="center" fixed="right">
-                <template slot-scope="scope">
-                    <el-button type="text" size="small" class="btn-view" @click="openDialog('edit', scope.row)">编辑</el-button>
-                    <el-button type="text" size="small" v-if="scope.row.status === 0" @click="publishCampaign(scope.row)">发布</el-button>
-                    <el-button type="text" size="small" v-if="scope.row.status === 1" @click="pauseCampaign(scope.row)">暂停</el-button>
-                    <el-button type="text" size="small" class="btn-view" v-if="scope.row.status === 1" @click="openPushDialog(scope.row)">推送</el-button>
-                    <el-dropdown trigger="click" @command="(cmd) => handleRowCommand(cmd, scope.row)">
-                        <el-button type="text" size="small" class="text-info">更多</el-button>
-                        <el-dropdown-menu slot="dropdown">
-                            <el-dropdown-item command="stats" icon="el-icon-data-line">活动统计</el-dropdown-item>
-                            <el-dropdown-item command="delete" icon="el-icon-delete" style="color:#f56c6c;">删除</el-dropdown-item>
-                        </el-dropdown-menu>
-                    </el-dropdown>
-                </template>
-            </el-table-column>
-        </el-table>
+        <!-- ========== 表格（统一 crud-table 组件，替代手写 el-table + 独立分页） ========== -->
+        <crud-table
+            :data="tableData"
+            :columns="campaignColumns"
+            :page="currentPage"
+            :page-size="pageSize"
+            :total="total"
+            :loading="loading"
+            :stripe="true"
+            :border="true"
+            :selection="true"
+            :selection-width="45"
+            :actions-width="200"
+            :actions-align="'center'"
+            aria-label="营销活动列表"
+            @page-change="onPageChange"
+            @selection-change="onSelectionChange"
+        >
+            <template #col-name="{ row }"><span style="font-weight:500;">{{ row.name }}</span></template>
+            <template #col-type="{ row }">{{ typeMap[row.campaignType] || '-' }}</template>
+            <template #col-target="{ row }">{{ targetMap[row.targetType] || '-' }}</template>
+            <template #col-status="{ row }">
+                <el-tag :type="statusTagType(row.status)" size="small">{{ statusMap[row.status] }}</el-tag>
+            </template>
+            <template #col-time="{ row }">
+                <span style="font-size:12px;color:var(--el-text-regular);">{{ row.startTime || '-' }}</span><br/>
+                <span style="font-size:12px;color:var(--color-info);">{{ row.endTime || '-' }}</span>
+            </template>
+            <template #col-participants="{ row }">
+                <span style="color:var(--el-text-primary);">{{ row.currentParticipants || 0 }}</span>
+                <span style="color:var(--el-border-base);"> / </span>
+                <span>{{ row.maxParticipants || '∞' }}</span>
+                <el-progress v-if="row.maxParticipants"
+                    :percentage="Math.round((row.currentParticipants || 0) / row.maxParticipants * 100)"
+                    :show-text="false" :stroke-width="4" class="status-progress" />
+            </template>
+            <template #actions="{ row }">
+                <el-button type="text" size="small" class="btn-view" @click="openDialog('edit', row)">编辑</el-button>
+                <el-button type="text" size="small" v-if="row.status === 0" @click="publishCampaign(row)">发布</el-button>
+                <el-button type="text" size="small" v-if="row.status === 1" @click="pauseCampaign(row)">暂停</el-button>
+                <el-button type="text" size="small" class="btn-view" v-if="row.status === 1" @click="openPushDialog(row)">推送</el-button>
+                <el-dropdown trigger="click" @command="(cmd) => handleRowCommand(cmd, row)">
+                    <el-button type="text" size="small" class="text-info">更多</el-button>
+                    <el-dropdown-menu slot="dropdown">
+                        <el-dropdown-item command="stats" icon="el-icon-data-line">活动统计</el-dropdown-item>
+                        <el-dropdown-item command="delete" icon="el-icon-delete" style="color:var(--color-danger);">删除</el-dropdown-item>
+                    </el-dropdown-menu>
+                </el-dropdown>
+            </template>
+        </crud-table>
 
-        <!-- ========== 批量操作 + 分页 ========== -->
-        <!-- 修改点：使用flex布局使批量操作和分页在同行显示，左批量右分页 -->
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:16px;">
-            <div style="display:flex;gap:8px;">
-                <el-button size="small" :disabled="selectedRows.length === 0" @click="batchDelete">批量删除</el-button>
-                <el-button size="small" type="warning" :disabled="selectedRows.length === 0" @click="batchPause">批量暂停</el-button>
-            </div>
-            <el-pagination
-                :page-sizes="[10, 20, 30, 40]"
-                :page-size="pageSize"
-                layout="total, sizes, prev, pager, next, jumper"
-                :total="total"
-                @size-change="(v) => { pageSize = v; loadData(); }"
-                :current-page.sync="currentPage"
-                @current-change="loadData"
-            ></el-pagination>
+        <!-- ========== 批量操作（分页由 crud-table 内置接管） ========== -->
+        <div style="display:flex;gap:8px;margin-top:16px;">
+            <el-button size="small" :disabled="selectedRows.length === 0" @click="batchDelete">批量删除</el-button>
+            <el-button size="small" type="warning" :disabled="selectedRows.length === 0" @click="batchPause">批量暂停</el-button>
         </div>
     </div>
 
     <!-- ========== 新建/编辑对话框 ========== -->
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" class="el-dialog--lg unified-dialog"
+    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" custom-class="el-dialog--lg unified-dialog"
       @close="resetForm" :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
         <el-form :model="form" :rules="rules" ref="campaignForm" label-width="90px" size="small">
             <el-row :gutter="16">
@@ -231,10 +221,10 @@
                 </el-radio-group>
                 <el-input v-model="form.ruleJson" type="textarea" :rows="3"
                     :placeholder="rulePreset ? '' : 'JSON格式，如：{\"minAmount\":50,\"discountRate\":0.8}'" />
-                <div v-if="ruleError" style="font-size:11px;color:#f56c6c;margin-top:4px;">{{ ruleError }}</div>
-                <span v-else style="font-size:11px;color:#909399;">格式: {"minAmount":80,"reduceAmount":10} | {"discountRate":0.85} | {"flashPrice":9.9,"flashStock":100}</span>
+                <div v-if="ruleError" style="font-size:11px;color:var(--color-danger);margin-top:4px;">{{ ruleError }}</div>
+                <span v-else style="font-size:11px;color:var(--color-info);">格式: {"minAmount":80,"reduceAmount":10} | {"discountRate":0.85} | {"flashPrice":9.9,"flashStock":100}</span>
             </el-form-item>
-            <el-form-item label="活动时间" required>
+            <el-form-item label="活动时间">
                 <!-- 修改点：添加快捷选项 + unlink-panels，优化时间选择体验 -->
                 <el-date-picker v-model="dateRange" type="datetimerange"
                     range-separator="至" start-placeholder="开始" end-placeholder="结束"
@@ -264,7 +254,7 @@
     </el-dialog>
 
     <!-- ========== 推送消息对话框 ========== -->
-    <el-dialog title="推送营销消息" :visible.sync="pushDialogVisible" class="el-dialog--md unified-dialog"
+    <el-dialog title="推送营销消息" :visible.sync="pushDialogVisible" custom-class="el-dialog--md unified-dialog"
       :close-on-click-modal="false">
         <el-form label-width="90px" size="small">
             <el-form-item label="活动名称">
@@ -283,7 +273,7 @@
             </el-form-item>
             <el-form-item label="预计触达">
                 <el-tag type="info" size="small">{{ pushEstimate }} 位用户</el-tag>
-                <span style="font-size:12px;color:#909399;margin-left:8px;">系统自动匹配目标用户</span>
+                <span style="font-size:12px;color:var(--color-info);margin-left:8px;">系统自动匹配目标用户</span>
             </el-form-item>
             <el-form-item label="推送预览" v-if="pushPreview.length > 0">
                 <div class="push-preview">
@@ -303,7 +293,7 @@
     </el-dialog>
 
     <!-- ========== 活动统计对话框 ========== -->
-    <el-dialog title="活动效果统计" :visible.sync="statsDialogVisible" class="el-dialog--lg unified-dialog"
+    <el-dialog title="活动效果统计" :visible.sync="statsDialogVisible" custom-class="el-dialog--lg unified-dialog"
       :close-on-click-modal="false" @opened="onStatsDialogOpen">
         <div v-if="statsCampaign">
             <!-- 修改点：使用数字卡片替代 descriptions -->
@@ -323,7 +313,7 @@
                     <div class="lbl">参与率</div>
                 </div>
             </div>
-            <div class="info-box" style="border:1px solid #e4e7ed;border-radius:4px;margin-bottom:16px;">
+            <div class="info-box" style="border:1px solid var(--el-border-lighter2);border-radius:4px;margin-bottom:16px;">
                 <div class="item-box"><span class="label">活动名称：</span><span class="des">{{ statsCampaign.name }}</span></div>
                 <div class="item-box"><span class="label">活动类型：</span><span class="des">{{ typeMap[statsCampaign.campaignType] }}</span></div>
                 <div class="item-box"><span class="label">参与上限：</span><span class="des">{{ statsCampaign.maxParticipants || '不限' }}</span></div>
@@ -363,6 +353,16 @@
             optionsLoading: false,
             optionsLoadError: false,
             selectedRows: [],
+            // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
+            campaignColumns: [
+                { prop: 'id', label: 'ID', width: 60, align: 'center' },
+                { prop: 'name', label: '活动名称', minWidth: 140, slot: true },
+                { prop: 'type', label: '类型', width: 90, align: 'center', slot: true },
+                { prop: 'target', label: '目标', width: 100, align: 'center', slot: true },
+                { prop: 'status', label: '状态', width: 100, align: 'center', slot: true },
+                { prop: 'time', label: '活动时间', width: 190, slot: true },
+                { prop: 'participants', label: '参与/上限', width: 120, align: 'center', slot: true }
+            ],
             // 修改点：summary 包含4种状态 + 推送总数，全部来自后端真实统计
             summary: { total: 0, active: 0, draft: 0, ended: 0, paused: 0, totalParticipants: 0, totalPushed: 0 },
             // 修改点(2026-07-10)：新增 recentDates 用于图表的 X 轴
@@ -665,7 +665,14 @@
             this.loadData();
             this.loadSummary();
         },
-        onSelectionChange: function(rows) { this.selectedRows = rows; },
+        // 修改点：crud-table 的 selection-change 透传 {rows,ids,count}，兼容数组入参
+        onSelectionChange: function(payload) { this.selectedRows = payload.rows || payload; },
+        // 修改点：分页统一交由 crud-table 组件管理（@page-change 同时携带页码与每页条数）
+        onPageChange: function(p) {
+            this.currentPage = p.page;
+            if (p.pageSize) this.pageSize = p.pageSize;
+            this.loadData();
+        },
         batchDelete: function() {
             var self = this;
             if (self.selectedRows.length === 0) return;

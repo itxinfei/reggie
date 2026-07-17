@@ -10,23 +10,25 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <style>
     .stats-cards--col-3 {
       grid-template-columns: repeat(4, 1fr);
     }
 
-    .progression-section { background: #fff; border-radius: 14px; padding: 20px 24px; margin-bottom: 20px;
+    .progression-section { background: var(--bg-surface); border-radius: 14px; padding: 20px 24px; margin-bottom: 20px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-    .progression-title { font-size: 15px; font-weight: 600; color: #303133; margin-bottom: 16px;
+    .progression-title { font-size: 15px; font-weight: 600; color: var(--el-text-primary); margin-bottom: 16px;
       display: flex; align-items: center; gap: 8px; }
     .progression-bar { display: flex; align-items: flex-end; gap: 10px; padding: 10px 0; }
     .prog-item { flex: 1; text-align: center; position: relative; }
     .prog-icon { font-size: 18px; margin-bottom: 6px; }
-    .prog-bar-wrap { height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+    .prog-bar-wrap { height: 8px; background: var(--el-bg-lighter); border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
     .prog-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
-    .prog-name { font-size: 12px; color: #606266; font-weight: 500; white-space: nowrap; }
-    .prog-pts { font-size: 11px; color: #909399; }
-    .prog-discount { font-size: 11px; color: #10b981; font-weight: 600; }
+    .prog-name { font-size: 12px; color: var(--el-text-regular); font-weight: 500; white-space: nowrap; }
+    .prog-pts { font-size: 11px; color: var(--color-info); }
+    .prog-discount { font-size: 11px; color: var(--emerald); font-weight: 600; }
 
     @media (max-width: 900px) {
       .stat-card { min-width: 140px; flex: 1 1 calc(50% - 8px); }
@@ -37,6 +39,12 @@
 <body>
   <div class="dashboard-container" id="level-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">会员等级</span>
+      </nav>
       <!-- 修改点：使用 <stat-cards> 统一组件 -->
       <stat-cards :cards="statsCards"></stat-cards>
 
@@ -95,7 +103,7 @@
     <!-- ===== 弹窗 ===== -->
     <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，默认 footer 提供"取消/确定" -->
     <crud-dialog :title="formData.title" :visible.sync="formData.dialogVisible" size="lg" @submit="submitForm">
-      <el-form label-width="120px" :model="formData" :rules="formRules" ref="levelForm">
+      <el-form label-width="90px" :model="formData" :rules="formRules" ref="levelForm">
         <el-form-item label="等级名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入等级名称" maxlength="20"></el-input>
         </el-form-item>
@@ -186,7 +194,7 @@
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
               this.counts = res.data.total
-            } else { this.$message.error(res.msg || '操作失败') }
+            } else { ReggieUI.error(res.msg || '操作失败') }
             if (String(statsRes.code) === '1' && statsRes.data) {
               this.stats = {
                 totalLevels: Number(statsRes.data.totalLevels) || 0,
@@ -195,7 +203,7 @@
                 avgDiscount: statsRes.data.avgDiscount || '-'
               }
             }
-          } catch(e) { this.$message.error('请求失败：' + e) }
+          } catch(e) { ReggieUI.error('请求失败：' + e) }
           this.loading = false
         },
         getBarWidth: function(idx) {
@@ -253,7 +261,7 @@
         },
         deleteHandle: function(id) {
           var self = this
-          this.$confirm('此操作将永久删除该等级, 是否继续?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('此操作将永久删除该等级, 是否继续?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               deleteLevel(id).then(function(res) {
                 if (res.code === 1) { self.$message.success('删除成功！'); self.handleQuery() }

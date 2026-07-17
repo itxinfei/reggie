@@ -13,6 +13,9 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -85,7 +88,7 @@ public class CategoryControllerTest {
                 .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data").value("分类信息删除成功"));
+                .andExpect(jsonPath("$.data").value("分类删除成功"));
     }
 
     @Test
@@ -97,7 +100,7 @@ public class CategoryControllerTest {
                 .content("{\"id\":1,\"name\":\"修改后分类\",\"type\":1,\"sort\":1}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data").value("修改分类信息成功"));
+                .andExpect(jsonPath("$.data").value("分类修改成功"));
 
         org.junit.jupiter.api.Assertions.assertEquals("修改后分类", categoryService.getById(1L).getName());
     }

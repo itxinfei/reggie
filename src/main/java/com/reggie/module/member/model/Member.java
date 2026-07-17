@@ -1,14 +1,17 @@
 package com.reggie.module.member.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import javax.validation.constraints.Pattern;
 
 /**
  * 会员
@@ -44,6 +47,7 @@ public class Member implements Serializable {
     private String name;
 
     @Schema(description = "手机号", example = "13800138000")
+    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
 
     @Schema(description = "当前积分", example = "500")
@@ -59,8 +63,14 @@ public class Member implements Serializable {
     private Integer status;
 
     @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdTime;
 
     @Schema(description = "更新时间", example = "2026-07-09 12:00:00")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedTime;
+
+    @Schema(description = "是否删除：0=未删除，1=已删除", example = "0")
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 }

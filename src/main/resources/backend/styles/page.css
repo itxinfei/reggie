@@ -4,7 +4,7 @@
   overflow: visible;
 }
 .dashboard-container .container {
-  background: #fff;
+  background: var(--color-white);
   position: relative;
   padding: 30px 28px;
   border-radius: 4px;
@@ -103,100 +103,100 @@
   transform: translateY(-1px);
 }
 
-/* --- 查询按钮：项目主色 #ffc200 --- */
+/* --- 查询按钮：项目主色 var(--color-brand-500) --- */
 .dashboard-container .container .tableBar .btn-query {
-  background: #ffc200 !important;
+  background: var(--color-brand-500) !important;
   border: none !important;
-  color: #333 !important;
+  color: var(--legacy-333) !important;
   font-weight: 500;
 }
 .dashboard-container .container .tableBar .btn-query:hover {
-  background: #fdd24c !important;
-  color: #333 !important;
+  background: var(--color-brand-300) !important;
+  color: var(--legacy-333) !important;
 }
 .dashboard-container .container .tableBar .btn-query.is-loading {
-  background: #ffc200 !important;
+  background: var(--color-brand-500) !important;
 }
 
 /* --- 重置按钮：白底细边框（次要操作） --- */
 .dashboard-container .container .tableBar .btn-reset {
-  background: #fff;
-  border: 1px solid #dcdfe6;
-  color: #606266;
+  background: var(--color-white);
+  border: 1px solid var(--el-border-default);
+  color: var(--el-text-regular);
 }
 .dashboard-container .container .tableBar .btn-reset:hover {
-  color: #ffc200;
-  border-color: #fbe396;
-  background: #fffbf0;
+  color: var(--color-brand-500);
+  border-color: var(--legacy-fbe396);
+  background: var(--color-brand-50);
 }
 
 /* --- 新增按钮：绿色渐变（创建/添加） --- */
 .dashboard-container .container .tableBar .btn-add,
 .dashboard-container .container .tableBar .btn-action.el-button--success {
-  background: linear-gradient(135deg, #67c23a, #85ce61) !important;
+  background: linear-gradient(135deg, var(--color-success), var(--el-color-success-light)) !important;
   border: none !important;
-  color: #fff !important;
+  color: var(--color-white) !important;
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
 }
 .dashboard-container .container .tableBar .btn-add:hover,
 .dashboard-container .container .tableBar .btn-action.el-button--success:hover {
-  background: linear-gradient(135deg, #85ce61, #67c23a) !important;
+  background: linear-gradient(135deg, var(--el-color-success-light), var(--color-success)) !important;
   box-shadow: 0 4px 14px rgba(103, 194, 58, 0.45);
 }
 
 /* --- 删除按钮：红色渐变（危险操作） --- */
 .dashboard-container .container .tableBar .btn-delete,
 .dashboard-container .container .tableBar .btn-action.el-button--danger {
-  background: linear-gradient(135deg, #f56c6c, #f89898) !important;
+  background: linear-gradient(135deg, var(--color-danger), var(--legacy-f89898)) !important;
   border: none !important;
-  color: #fff !important;
+  color: var(--color-white) !important;
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(245, 108, 108, 0.3);
 }
 .dashboard-container .container .tableBar .btn-delete:hover,
 .dashboard-container .container .tableBar .btn-action.el-button--danger:hover {
-  background: linear-gradient(135deg, #f89898, #f56c6c) !important;
+  background: linear-gradient(135deg, var(--legacy-f89898), var(--color-danger)) !important;
   box-shadow: 0 4px 14px rgba(245, 108, 108, 0.45);
 }
 
 /* --- 导出按钮：橙色渐变（数据导出） --- */
 .dashboard-container .container .tableBar .btn-export,
 .dashboard-container .container .tableBar .btn-action.el-button--warning {
-  background: linear-gradient(135deg, #e6a23c, #eebe77) !important;
+  background: linear-gradient(135deg, var(--color-warning), var(--legacy-eebe77)) !important;
   border: none !important;
-  color: #fff !important;
+  color: var(--color-white) !important;
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(230, 162, 60, 0.3);
 }
 .dashboard-container .container .tableBar .btn-export:hover,
 .dashboard-container .container .tableBar .btn-action.el-button--warning:hover {
-  background: linear-gradient(135deg, #eebe77, #e6a23c) !important;
+  background: linear-gradient(135deg, var(--legacy-eebe77), var(--color-warning)) !important;
   box-shadow: 0 4px 14px rgba(230, 162, 60, 0.45);
 }
 
 /* --- 刷新按钮：信息灰边框（数据刷新） --- */
 .dashboard-container .container .tableBar .btn-refresh {
-  background: #fff;
-  border: 1px solid #c0c4cc;
-  color: #909399;
+  background: var(--color-white);
+  border: 1px solid var(--el-border-base);
+  color: var(--color-info);
 }
 .dashboard-container .container .tableBar .btn-refresh:hover {
-  color: #ffc200;
-  border-color: #fbe396;
-  background: #fffbf0;
+  color: var(--color-brand-500);
+  border-color: var(--legacy-fbe396);
+  background: var(--color-brand-50);
 }
 
 /* --- 预警按钮：橙色渐变（库存预警等） --- */
 .dashboard-container .container .tableBar .btn-warning-status {
-  background: linear-gradient(135deg, #e6a23c, #eebe77) !important;
+  background: linear-gradient(135deg, var(--color-warning), var(--legacy-eebe77)) !important;
   border: none !important;
-  color: #fff !important;
+  color: var(--color-white) !important;
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(230, 162, 60, 0.3);
 }
 .dashboard-container .container .tableBar .btn-warning-status:hover {
-  background: linear-gradient(135deg, #eebe77, #e6a23c) !important;
+  background: linear-gradient(135deg, var(--legacy-eebe77), var(--color-warning)) !important;
   box-shadow: 0 4px 14px rgba(230, 162, 60, 0.45);
 }
 
@@ -242,8 +242,8 @@
   display: inline-block;
   font-size: 14px;
   padding: 0 20px;
-  color: #818693;
-  border-right: solid 1px #d8dde3;
+  color: var(--text-legacy-muted);
+  border-right: solid 1px var(--el-border-soft);
 }
 
 .dashboard-container .container .tableLab .el-button {
@@ -254,7 +254,7 @@
 .dashboard-container .container .tableLab .el-button--text {
   padding: 0 20px;
   font-size: 14px;
-  color: #818693;
+  color: var(--text-legacy-muted);
   position: relative;
 }
 
@@ -264,15 +264,15 @@
   right: -6px;
   height: 14px;
   width: 0px;
-  border-right: solid 1px #ebeef5;
+  border-right: solid 1px var(--el-border-light);
 }
 
 .dashboard-container .container .tableLab .el-button--text.delBut {
-  color: #f56c6c;
+  color: var(--color-danger);
 }
 
 .dashboard-container .container .tableLab .el-button--text.blueBug {
-  color: #419eff;
+  color: var(--legacy-419eff);
 }
 
 .dashboard-container .container .tableLab .el-button--text.non::after {
@@ -286,18 +286,18 @@
 
 /* 添加 */
 .addBrand-container .avatar-uploader .el-upload {
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--antd-border);
   border-radius: 6px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
 }
 .addBrand-container .avatar-uploader .el-upload:hover {
-  border-color: #ffc200;
+  border-color: var(--color-brand-500);
 }
 .addBrand-container .avatar-uploader-icon {
   font-size: 28px;
-  color: #8c939d;
+  color: var(--legacy-8c939d);
   width: 200px;
   height: 160px;
   line-height: 160px;
@@ -322,7 +322,7 @@
 .addBrand-container .container {
   position: relative;
   z-index: 1;
-  background: #fff;
+  background: var(--color-white);
   padding: 30px;
   border-radius: 4px;
   min-height: 500px;
@@ -333,7 +333,7 @@
 .addBrand-container .container .subBox {
   padding-top: 30px;
   text-align: center;
-  border-top: solid 1px #f3f4f7;
+  border-top: solid 1px var(--el-bg-soft);
 }
 
 /* 修改点：移除固定宽度 777px，改为自适应，与表单其他字段对齐 */
@@ -341,24 +341,24 @@
   width: 100%;
 }
 .flavorBox .addBut {
-  background: #ffc200;
+  background: var(--color-brand-500);
   display: inline-block;
   padding: 0px 20px;
   border-radius: 3px;
   line-height: 40px;
   cursor: pointer;
   border-radius: 4px;
-  color: #333333;
+  color: var(--gray-333);
   font-weight: 500;
 }
 .flavorBox .flavor {
-  border: solid 1px #dfe2e8;
+  border: solid 1px var(--legacy-dfe2e8);
   border-radius: 3px;
   padding: 15px;
-  background: #fafafb;
+  background: var(--el-bg-white);
 }
 .flavorBox .flavor .title {
-  color: #606168;
+  color: var(--legacy-606168);
 }
 .flavorBox .flavor .cont .items {
   display: flex;
@@ -380,20 +380,20 @@
   flex-wrap: wrap;
   border-radius: 3px;
   min-height: 39px;
-  border: solid 1px #d8dde3;
-  background: #fff;
+  border: solid 1px var(--el-border-soft);
+  background: var(--color-white);
   padding: 0 5px;
 }
 .flavorBox .flavor .cont .items .labItems span {
   display: inline-block;
-  color: #f19c59;
+  color: var(--legacy-f19c59);
   margin: 5px;
   line-height: 26px;
   height: 26px;
   padding: 0 10px;
-  background: #fdf4eb;
+  background: var(--legacy-fdf4eb);
   border-radius: 3px;
-  border: solid 1px #fae2cd;
+  border: solid 1px var(--legacy-fae2cd);
 }
 .flavorBox .flavor .cont .items .labItems span i {
   cursor: pointer;
@@ -409,7 +409,7 @@
 .flavorBox .flavor .cont .items .delFlavor {
   display: inline-block;
   padding: 0 10px;
-  color: #f19c59;
+  color: var(--legacy-f19c59);
   cursor: pointer;
 }
 
@@ -463,8 +463,8 @@
 }
 
 .tableBox .el-table th {
-  background-color: #f5f7fa !important;
-  color: #333333 !important;
+  background-color: var(--el-bg-subtle) !important;
+  color: var(--gray-333) !important;
   font-weight: 600 !important;
   font-size: 14px !important;
 }
@@ -476,7 +476,7 @@
 
 /* 增强斑马纹对比度 */
 .tableBox .el-table--striped .el-table__body tr.el-table__row--striped td {
-  background-color: #fafafa !important;
+  background-color: var(--el-bg-base) !important;
 }
 
 /* 表格操作按钮间距 */
@@ -494,25 +494,25 @@
 /* 蓝色操作按钮 */
 .tableBox .el-button--text.blueBug,
 .btn-view {
-  color: #ffc200;
+  color: var(--color-brand-500);
   background-color: transparent;
 }
 
 .tableBox .el-button--text.blueBug:hover,
 .btn-view:hover {
-  background-color: #ECF5FF;
-  color: #ffc200;
+  background-color: var(--el-color-primary-lighter);
+  color: var(--color-brand-500);
 }
 
 /* 红色操作按钮 */
 .tableBox .el-button--text.delBut {
-  color: #F56C6C;
+  color: var(--color-danger);
   background-color: transparent;
 }
 
 .tableBox .el-button--text.delBut:hover {
-  background-color: #FEF0F0;
-  color: #F56C6C;
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
 }
 
 /* 通用操作按钮悬停效果 */
@@ -563,7 +563,7 @@
 .empty-tip {
   text-align: center;
   padding: 40px;
-  color: #909399;
+  color: var(--color-info);
   font-size: 14px;
 }
 
@@ -574,7 +574,7 @@
 
 /* 表格边框增强 */
 .tableBox {
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--el-border-light);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -602,7 +602,7 @@
 /* 视图切换器（桌台管理的表格/卡片切换） */
 .table-grid-toggle {
   display: flex;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--antd-border);
   border-radius: 4px;
   overflow: hidden;
   margin-left: 10px;
@@ -611,17 +611,17 @@
   padding: 6px 16px;
   cursor: pointer;
   font-size: 13px;
-  color: #606266;
-  background: #fff;
+  color: var(--el-text-regular);
+  background: var(--color-white);
   transition: all 0.3s;
   border: none;
 }
 .table-grid-toggle .toggle-btn.active {
-  background: #ffc200;
-  color: #fff;
+  background: var(--color-brand-500);
+  color: var(--color-white);
 }
 .table-grid-toggle .toggle-btn:hover:not(.active) {
-  color: #ffc200;
+  color: var(--color-brand-500);
 }
 
 /* ========== tableBar 各页面自定义宽度（弹性模式，优先收缩日期选择器） ========== */
@@ -724,30 +724,50 @@
 .dashboard-container .container .el-dialog--xl,
 .el-dialog--xl { width: 840px !important; }
 
-/* ========== 弹窗垂直居中（全局生效，2026-07-17 新增） ==========
- * 所有 el-dialog（crud-dialog 组件 + 手写 el-dialog）均自动水平+垂直居中。
+/* ========== 弹窗垂直居中（全局生效，revised 2026-07-17） ==========
+ * 所有 el-dialog 自动水平+垂直居中。
  * 原理：
- *   1. wrapper 设为 flex 容器 → dialog 水平居中
- *   2. dialog margin:auto → flex 中安全垂直居中（内容超高时 margin 塌缩为 0，
- *      dialog 顶部对齐 + wrapper overflow:auto 滚动，不会截断顶部）
- *   3. unified-dialog 限高 90vh + flex 列布局 → body 区域内部滚动
+ *   1. wrapper 设为 flex 容器 + align-items:center → 弹窗精确居中
+ *   2. dialog margin:0 → 清除 Element UI 默认 top 偏移，居中由 flex 接管
+ *   3. unified-dialog 限高 90vh + flex 列布局 → body 内部滚动
+ *   4. 非 unified-dialog 限高 85vh + overflow:auto → 安全兜底，不会截断
+ *
+ * 设计说明（为什么废弃 margin:auto 方案）：
+ *   旧方案用 margin:auto 在 flex 中垂直居中，依赖 :not([style*="display: none"])
+ *   选择器让 wrapper 变成 flex 容器。一旦选择器匹配失败（Element UI 版本差异或
+ *   内联 style 写法变化），wrapper 退回普通块容器，此时 margin:auto 的垂直方向
+ *   塌缩为 0 → 弹窗贴顶。
+ *   新方案用 align-items:center 控制垂直居中，与 margin 解耦；配合 max-height
+ *   限制，弹窗内容再高也不会截断（内部滚动）。
  * ============================================================ */
 
-/* wrapper：flex 容器，水平居中
- * 关键：仅在弹窗“可见”（无内联 display:none）时启用 flex。
+/* 修改点：wrapper flex 居中容器 — 加 !important 防覆盖，加 align-items:center 精确垂直居中
+ * 关键：仅在弹窗"可见"（无内联 display:none）时启用 flex。
  * Element 关闭弹窗时给 wrapper 注入 style="display:none" 来隐藏；
  * 若无条件写 display:flex，会让本该隐藏的弹窗变成全屏 flex 遮罩，
  * 覆盖并拦截页面数据。故用 :not([style*="display: none"]) 排除隐藏态。 */
 .el-dialog__wrapper:not([style*="display: none"]) {
-  display: flex;
+  display: flex !important;
   justify-content: center;
-  /* 不设 align-items，改用 dialog 的 margin:auto 实现安全垂直居中 */
+  align-items: center;
 }
 
-/* dialog：margin:auto 在 flex 容器中自动水平+垂直居中 */
-/* 覆盖 Element UI 默认 margin:100px auto 0 及 JS 动态 margin-top */
-.el-dialog {
-  margin: auto !important;
+/* 修改点：dialog margin 归零 — 覆盖 Element UI 默认 margin:100px auto 0
+ * 及 JS 动态 margin-top，居中完全由 wrapper flex 控制 */
+.el-dialog:not(.is-fullscreen) {
+  margin: 0 !important;
+}
+
+/* 修改点：非 unified-dialog 弹窗安全限高 — 内容超高时内部滚动，不截断 */
+.el-dialog:not(.unified-dialog):not(.is-fullscreen) {
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.el-dialog:not(.unified-dialog):not(.is-fullscreen) .el-dialog__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: none;
 }
 
 /* unified-dialog：限高 + flex 列布局，body 内部滚动 */
@@ -763,6 +783,16 @@
   flex: 1 1 auto;
   overflow-y: auto;
   max-height: none; /* 覆盖 common.css 原 60vh 限制，由 flex 布局自动管理高度 */
+}
+
+/* 修改点：弹窗表单提示文字（如"不填则自动排列到最后"）
+ * 设计：放在输入框下方独占一行，避免在窄弹窗内被挤成多行 */
+.form-tip {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-info);
+  line-height: 1.5;
 }
 .unified-dialog .el-dialog__footer {
   flex-shrink: 0;
@@ -782,7 +812,8 @@
   }
 }
 
-/* 响应式：手机（≤480px）弹窗近全屏 */
+/* 响应式：手机（≤480px）弹窗近全屏
+ * 修改点：margin 归零（居中由 wrapper flex 全局控制）；取消全屏弹窗宽度覆盖 */
 @media (max-width: 480px) {
   .el-dialog,
   .el-dialog--sm,
@@ -791,8 +822,10 @@
   .el-dialog--xl {
     width: 96% !important;
   }
-  .el-dialog {
-    margin: 8px auto !important;
+  /* 修改点：手机端弹窗顶部轻微偏移，避免居中时被虚拟键盘遮挡输入框 */
+  .el-dialog__wrapper:not([style*="display: none"]) {
+    align-items: flex-start;
+    padding-top: 2vh;
   }
   .unified-dialog {
     max-height: 94vh;
@@ -851,7 +884,7 @@
 
 .dashboard-container .container .el-form-item__label {
   font-weight: 500;
-  color: #606266;
+  color: var(--el-text-regular);
 }
 /* 标准表单 label 宽度 */
 .dashboard-container .container .el-form--label-width-sm .el-form-item__label {
@@ -899,38 +932,38 @@
 /* --- 语义按钮类（替代 inline style） --- */
 /* 查看/编辑 */
 .btn-view {
-  color: #ffc200;
+  color: var(--color-brand-500);
 }
 .btn-view:hover {
-  background: #fffbf0;
+  background: var(--color-brand-50);
 }
 /* 删除 */
 .btn-delete {
-  color: #f56c6c;
+  color: var(--color-danger);
 }
 .btn-delete:hover {
-  background: #fef0f0;
+  background: var(--color-danger-light);
 }
 /* 启用/通过 */
 .btn-success {
-  color: #67c23a;
+  color: var(--color-success);
 }
 .btn-success:hover {
-  background: #f0f9eb;
+  background: var(--color-success-light);
 }
 /* 禁用/拒绝 */
 .btn-warning {
-  color: #e6a23c;
+  color: var(--color-warning);
 }
 .btn-warning:hover {
-  background: #fdf6ec;
+  background: var(--color-warning-light);
 }
 /* 信息/详情 */
 .btn-info {
-  color: #909399;
+  color: var(--color-info);
 }
 .btn-info:hover {
-  background: #f4f4f5;
+  background: var(--color-info-light);
 }
 
 /* --- 按钮间距规范 --- */
@@ -948,7 +981,7 @@
 .dashboard-container .container .el-dialog .dialog-footer {
   text-align: right;
   padding-top: 16px;
-  border-top: 1px solid #f0f2f5;
+  border-top: 1px solid var(--el-bg-page);
 }
 .dashboard-container .container .el-dialog .dialog-footer .el-button {
   margin-left: 10px;
@@ -964,16 +997,16 @@
 .ml-auto { margin-left: auto !important; }
 
 /* --- 文本按钮颜色工具类（替代 inline style） --- */
-.text-danger { color: #f56c6c !important; }
-.text-danger:hover { background: #fef0f0 !important; }
-.text-warning { color: #e6a23c !important; }
-.text-warning:hover { background: #fdf6ec !important; }
-.text-success { color: #67c23a !important; }
-.text-success:hover { background: #f0f9eb !important; }
-.text-primary { color: #ffc200 !important; }
-.text-primary:hover { background: #fffbf0 !important; }
-.text-info { color: #909399 !important; }
-.text-info:hover { background: #f4f4f5 !important; }
+.text-danger { color: var(--color-danger) !important; }
+.text-danger:hover { background: var(--color-danger-light) !important; }
+.text-warning { color: var(--color-warning) !important; }
+.text-warning:hover { background: var(--color-warning-light) !important; }
+.text-success { color: var(--color-success) !important; }
+.text-success:hover { background: var(--color-success-light) !important; }
+.text-primary { color: var(--color-brand-500) !important; }
+.text-primary:hover { background: var(--color-brand-50) !important; }
+.text-info { color: var(--color-info) !important; }
+.text-info:hover { background: var(--color-info-light) !important; }
 
 /* ========== 统一按钮系统（非 Element UI 页面用） ========== */
 
@@ -1017,144 +1050,144 @@
 /* --- 颜色变体 --- */
 /* 主操作 - 蓝色 */
 .app-btn-primary {
-  background: #ffc200;
-  border-color: #ffc200;
-  color: #fff;
+  background: var(--color-brand-500);
+  border-color: var(--color-brand-500);
+  color: var(--color-white);
 }
 .app-btn-primary:hover:not(:disabled) {
-  background: #ffc200;
-  border-color: #ffc200;
+  background: var(--color-brand-500);
+  border-color: var(--color-brand-500);
 }
 .app-btn-primary:active:not(:disabled) {
-  background: #efb602;
-  border-color: #efb602;
+  background: var(--color-brand-600);
+  border-color: var(--color-brand-600);
 }
 
 /* 成功/确认 - 绿色 */
 .app-btn-success {
-  background: #67c23a;
-  border-color: #67c23a;
-  color: #fff;
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: var(--color-white);
 }
 .app-btn-success:hover:not(:disabled) {
-  background: #85ce61;
-  border-color: #85ce61;
+  background: var(--el-color-success-light);
+  border-color: var(--el-color-success-light);
 }
 .app-btn-success:active:not(:disabled) {
-  background: #5daf34;
-  border-color: #5daf34;
+  background: var(--el-color-success-dark);
+  border-color: var(--el-color-success-dark);
 }
 
 /* 危险/删除 - 红色 */
 .app-btn-danger {
-  background: #f56c6c;
-  border-color: #f56c6c;
-  color: #fff;
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: var(--color-white);
 }
 .app-btn-danger:hover:not(:disabled) {
-  background: #f78989;
-  border-color: #f78989;
+  background: var(--el-color-danger-light);
+  border-color: var(--el-color-danger-light);
 }
 .app-btn-danger:active:not(:disabled) {
-  background: #dd6161;
-  border-color: #dd6161;
+  background: var(--el-color-danger-dark);
+  border-color: var(--el-color-danger-dark);
 }
 
 /* 警告 - 橙色 */
 .app-btn-warning {
-  background: #e6a23c;
-  border-color: #e6a23c;
-  color: #fff;
+  background: var(--color-warning);
+  border-color: var(--color-warning);
+  color: var(--color-white);
 }
 .app-btn-warning:hover:not(:disabled) {
-  background: #ebb563;
-  border-color: #ebb563;
+  background: var(--el-color-warning-light);
+  border-color: var(--el-color-warning-light);
 }
 .app-btn-warning:active:not(:disabled) {
-  background: #cf9236;
-  border-color: #cf9236;
+  background: var(--legacy-cf9236);
+  border-color: var(--legacy-cf9236);
 }
 
 /* 信息 - 灰色 */
 .app-btn-info {
-  background: #909399;
-  border-color: #909399;
-  color: #fff;
+  background: var(--color-info);
+  border-color: var(--color-info);
+  color: var(--color-white);
 }
 .app-btn-info:hover:not(:disabled) {
-  background: #a6a9ad;
-  border-color: #a6a9ad;
+  background: var(--gray-a6);
+  border-color: var(--gray-a6);
 }
 .app-btn-info:active:not(:disabled) {
-  background: #82848a;
-  border-color: #82848a;
+  background: var(--el-text-muted);
+  border-color: var(--el-text-muted);
 }
 
 /* 默认/取消 - 白底边框 */
 .app-btn-default {
-  background: #fff;
-  border-color: #dcdfe6;
-  color: #606266;
+  background: var(--color-white);
+  border-color: var(--el-border-default);
+  color: var(--el-text-regular);
 }
 .app-btn-default:hover:not(:disabled) {
-  color: #ffc200;
-  border-color: #fbe396;
-  background: #fffbf0;
+  color: var(--color-brand-500);
+  border-color: var(--legacy-fbe396);
+  background: var(--color-brand-50);
 }
 .app-btn-default:active:not(:disabled) {
-  color: #efb602;
-  border-color: #efb602;
+  color: var(--color-brand-600);
+  border-color: var(--color-brand-600);
 }
 
 /* 文本按钮 - 无背景无边框 */
 .app-btn-text {
   background: transparent;
   border-color: transparent;
-  color: #606266;
+  color: var(--el-text-regular);
   padding: 4px 10px;
 }
 .app-btn-text:hover:not(:disabled) {
-  background: #f5f7fa;
-  color: #ffc200;
+  background: var(--el-bg-subtle);
+  color: var(--color-brand-500);
 }
 
 /* 导出 Excel 专用（独立于颜色体系） */
 .app-btn-excel {
-  background: #f0f9eb;
-  border-color: #b7eb8f;
-  color: #389e0d;
+  background: var(--color-success-light);
+  border-color: var(--antd-success-l);
+  color: var(--antd-success-d);
 }
 .app-btn-excel:hover:not(:disabled) {
-  background: #389e0d;
-  border-color: #389e0d;
-  color: #fff;
+  background: var(--antd-success-d);
+  border-color: var(--antd-success-d);
+  color: var(--color-white);
 }
 
 /* 导出 PDF 专用 */
 .app-btn-pdf {
-  background: #fef0f0;
-  border-color: #ffccc7;
-  color: #cf1322;
+  background: var(--color-danger-light);
+  border-color: var(--antd-error-l2);
+  color: var(--antd-error-d);
 }
 .app-btn-pdf:hover:not(:disabled) {
-  background: #cf1322;
-  border-color: #cf1322;
-  color: #fff;
+  background: var(--antd-error-d);
+  border-color: var(--antd-error-d);
+  color: var(--color-white);
 }
 
 /* 紫色按钮（通知管理 - APP推送专用） */
 .app-btn-purple {
-  background: #722ed1;
-  border-color: #722ed1;
-  color: #fff;
+  background: var(--antd-purple);
+  border-color: var(--antd-purple);
+  color: var(--color-white);
 }
 .app-btn-purple:hover:not(:disabled) {
-  background: #9254de;
-  border-color: #9254de;
+  background: var(--legacy-9254de);
+  border-color: var(--legacy-9254de);
 }
 .app-btn-purple:active:not(:disabled) {
-  background: #531dab;
-  border-color: #531dab;
+  background: var(--legacy-531dab);
+  border-color: var(--legacy-531dab);
 }
 
 /* --- 按钮组 --- */
@@ -1233,7 +1266,7 @@
 }
 .modal-container,
 .modal {
-  background: #fff;
+  background: var(--color-white);
   border-radius: 8px;
   width: 100%;
   max-width: 600px;
@@ -1245,7 +1278,7 @@
 }
 .modal-header {
   padding: 16px 20px;
-  border-bottom: 1px solid #ebeef5;
+  border-bottom: 1px solid var(--el-border-light);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1255,19 +1288,19 @@
   font-size: 16px;
   font-weight: 600;
   margin: 0;
-  color: #303133;
+  color: var(--el-text-primary);
 }
 .modal-close {
   cursor: pointer;
   font-size: 18px;
-  color: #909399;
+  color: var(--color-info);
   background: none;
   border: none;
   padding: 0;
   line-height: 1;
 }
 .modal-close:hover {
-  color: #303133;
+  color: var(--el-text-primary);
 }
 .modal-body {
   padding: 20px;
@@ -1276,7 +1309,7 @@
 }
 .modal-footer {
   padding: 12px 20px;
-  border-top: 1px solid #ebeef5;
+  border-top: 1px solid var(--el-border-light);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -1291,7 +1324,7 @@
   display: block;
   margin-bottom: 4px;
   font-size: 13px;
-  color: #606266;
+  color: var(--el-text-regular);
   font-weight: 500;
 }
 .form-group input,
@@ -1299,7 +1332,7 @@
 .form-group textarea {
   width: 100%;
   padding: 7px 10px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-default);
   border-radius: 4px;
   font-size: 13px;
   outline: none;
@@ -1308,7 +1341,7 @@
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  border-color: #ffc200;
+  border-color: var(--color-brand-500);
 }
 .form-group textarea {
   min-height: 80px;
@@ -1316,7 +1349,7 @@
 }
 .form-group .hint {
   font-size: 12px;
-  color: #909399;
+  color: var(--color-info);
   margin-top: 4px;
 }
 .form-row {
@@ -1489,7 +1522,7 @@
 /* 2.3 统一占位符颜色与字号 */
 .dashboard-container .container .tableBar .search-area .el-input__inner::placeholder,
 .dashboard-container .container .tableBar .search-area .el-select .el-input__inner::placeholder {
-  color: #c0c4cc;
+  color: var(--el-border-base);
   font-size: 13px;
 }
 

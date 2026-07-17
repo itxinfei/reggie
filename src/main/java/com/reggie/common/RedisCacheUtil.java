@@ -53,7 +53,7 @@ public class RedisCacheUtil {
      * 二删延时调度器
      * 修改点：使用 ScheduledExecutorService 替代 @Async + Thread.sleep
      */
-    private ScheduledExecutorService scheduledExecutor;
+    private volatile ScheduledExecutorService scheduledExecutor;
 
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;

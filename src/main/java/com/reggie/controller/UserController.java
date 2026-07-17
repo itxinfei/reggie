@@ -206,6 +206,8 @@ public class UserController {
         }
         // 防止Session Fixation攻击：登录成功后切换Session ID
         request.changeSessionId();
+        // 脱敏：返回前清除敏感字段
+        user.setIdNumber(null);
         return R.success(user);
     }
 
@@ -257,7 +259,7 @@ public class UserController {
      * @return 用户信息
      */
     @GetMapping("/info")
-    @Operation(summary = "获取当前登录用户信息", description = "返回当前登录用户的详细信息，需携带有效会话")
+    @Operation(summary = "获取当前登录用户信息", description = "返回当前登录用户的基本信息（已脱敏），需携带有效会话")
     public R<User> getCurrentUser(HttpSession session) {
         Long userId = (Long) session.getAttribute("user");
         if (userId == null) {
@@ -267,6 +269,8 @@ public class UserController {
         if (user == null) {
             return R.error("用户不存在");
         }
+        // 脱敏：返回前清除敏感字段
+        user.setIdNumber(null);
         return R.success(user);
     }
 

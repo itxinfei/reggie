@@ -5,24 +5,24 @@
 
 /* ---- CSS 变量 ---- */
 :root, html.light-theme {
-  --c-bg1:  #f0f2f8;
-  --c-bg2:  #e4e9f2;
+  --c-bg1:  var(--legacy-f0f2f8);
+  --c-bg2:  var(--legacy-e4e9f2);
   --c-card: rgba(255,255,255,.84);
   --c-card-bd: rgba(255,255,255,.55);
   --c-shadow: 0 8px 40px rgba(0,0,0,.07);
-  --c-t1:  #1a1d2e;
-  --c-t2:  #5a5f7a;
-  --c-t3:  #8b90a5;
-  --c-inp-bg: #f4f5fa;
-  --c-inp-bd: #e0e3ed;
-  --c-focus: #ff6b35;
+  --c-t1:  var(--legacy-1a1d2e);
+  --c-t2:  var(--legacy-5a5f7a);
+  --c-t3:  var(--legacy-8b90a5);
+  --c-inp-bg: var(--legacy-f4f5fa);
+  --c-inp-bd: var(--legacy-e0e3ed);
+  --c-focus: var(--legacy-ff6b35);
   --c-focus-g: rgba(255,107,53,.12);
-  --c-err:  #ef4444;
+  --c-err:  var(--legacy-ef4444);
   --c-err-g: rgba(239,68,68,.08);
-  --c-ok:   #22c55e;
-  --c-left1: #1a1d2e;
-  --c-left2: #2d1f3d;
-  --c-left-t: #fff;
+  --c-ok:   var(--legacy-22c55e);
+  --c-left1: var(--legacy-1a1d2e);
+  --c-left2: var(--legacy-2d1f3d);
+  --c-left-t: var(--color-white);
   --orb-a: rgba(255,107,53,.2);
   --orb-b: rgba(139,92,246,.16);
   --orb-c: rgba(34,197,94,.1);
@@ -30,24 +30,24 @@
 }
 
 html.dark-theme {
-  --c-bg1:  #0a0d17;
-  --c-bg2:  #121530;
+  --c-bg1:  var(--legacy-0a0d17);
+  --c-bg2:  var(--legacy-121530);
   --c-card: rgba(18,22,38,.86);
   --c-card-bd: rgba(255,255,255,.06);
   --c-shadow: 0 8px 40px rgba(0,0,0,.45);
-  --c-t1:  #f1f3f9;
-  --c-t2:  #a0a5ba;
-  --c-t3:  #6b7088;
+  --c-t1:  var(--legacy-f1f3f9);
+  --c-t2:  var(--legacy-a0a5ba);
+  --c-t3:  var(--legacy-6b7088);
   --c-inp-bg: rgba(15,18,30,.7);
   --c-inp-bd: rgba(255,255,255,.08);
-  --c-focus: #ff6b35;
+  --c-focus: var(--legacy-ff6b35);
   --c-focus-g: rgba(255,107,53,.2);
-  --c-err:  #f87171;
+  --c-err:  var(--legacy-f87171);
   --c-err-g: rgba(248,113,113,.12);
-  --c-ok:   #4ade80;
-  --c-left1: #0a0d17;
-  --c-left2: #1a1030;
-  --c-left-t: #fff;
+  --c-ok:   var(--legacy-4ade80);
+  --c-left1: var(--legacy-0a0d17);
+  --c-left2: var(--legacy-1a1030);
+  --c-left-t: var(--color-white);
   --orb-a: rgba(255,107,53,.16);
   --orb-b: rgba(139,92,246,.1);
   --orb-c: rgba(34,197,94,.06);
@@ -235,9 +235,9 @@ html.dark-theme .bg-grid {
 .brand-icon {
   width: 48px; height: 48px; display: flex;
   align-items: center; justify-content: center;
-  background: linear-gradient(135deg, rgba(255,107,53,.95), #ff8c5a);
+  background: linear-gradient(135deg, rgba(255,107,53,.95), var(--legacy-ff8c5a));
   border-radius: 14px;
-  font-size: 24px; color: #fff;
+  font-size: 24px; color: var(--color-white);
   box-shadow: 0 10px 30px rgba(255,107,53,.45);
 }
 
@@ -281,8 +281,8 @@ html.dark-theme .bg-grid {
 .card-badge {
   display: inline-flex; align-items: center; justify-content: center;
   width: 56px; height: 56px; border-radius: 16px;
-  background: linear-gradient(135deg, var(--c-focus), #ff8c5a);
-  color: #fff; font-size: 26px;
+  background: linear-gradient(135deg, var(--c-focus), var(--legacy-ff8c5a));
+  color: var(--color-white); font-size: 26px;
   margin-bottom: 22px;
   box-shadow: 0 10px 28px rgba(255,107,53,.38);
 }
@@ -385,8 +385,8 @@ html.dark-theme .bg-grid {
   position: relative;
   width: 100%; height: 50px;
   border: none; border-radius: 13px;
-  background: linear-gradient(135deg, var(--c-focus), #ff8c5a);
-  color: #fff; font-size: 16px; font-weight: 600;
+  background: linear-gradient(135deg, var(--c-focus), var(--legacy-ff8c5a));
+  color: var(--color-white); font-size: 16px; font-weight: 600;
   letter-spacing: 2px; cursor: pointer; overflow: hidden;
   box-shadow: 0 10px 28px rgba(255,107,53,.4);
   transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .3s, opacity .2s;
@@ -395,7 +395,7 @@ html.dark-theme .bg-grid {
 /* hover 渐变切换 */
 .btn-login::before {
   content: ''; position: absolute; inset: 0;
-  background: linear-gradient(135deg, #ff8c5a, var(--c-focus));
+  background: linear-gradient(135deg, var(--legacy-ff8c5a), var(--c-focus));
   opacity: 0; transition: opacity .35s;
 }
 .btn-login:hover:not(:disabled)::before { opacity: 1; }
@@ -426,7 +426,7 @@ html.dark-theme .bg-grid {
 .btn-dot {
   display: inline-block; width: 16px; height: 16px;
   border: 2px solid rgba(255,255,255,.3);
-  border-top-color: #fff;
+  border-top-color: var(--color-white);
   border-radius: 50%;
   animation: spin .7s linear infinite;
 }
@@ -502,7 +502,7 @@ html.dark-theme .bg-grid {
   background: var(--c-focus); border-color: var(--c-focus); border-radius: 10px;
 }
 .fp-dialog .el-button--primary:hover {
-  background: #ff8c5a; border-color: #ff8c5a;
+  background: var(--legacy-ff8c5a); border-color: var(--legacy-ff8c5a);
 }
 
 /* ================================================================
@@ -559,4 +559,4 @@ html.dark-theme .el-message {
 html.dark-theme .el-message--error {
   background: rgba(239,68,68,.12) !important; border-color: rgba(239,68,68,.3);
 }
-html.dark-theme .el-message--error .el-message__content { color: #fca5a5; }
+html.dark-theme .el-message--error .el-message__content { color: var(--legacy-fca5a5); }

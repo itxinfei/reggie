@@ -160,3 +160,231 @@
     --sidebar-width: 220px;
   }
 }
+
+/* ============================================================
+ * 遗留调色板令牌（Legacy Palette Tokens）
+ * ------------------------------------------------------------
+ * 目的：页面 <style> 中大量直接使用 Element UI / Ant Design 的
+ * 默认调色板（如 #409eff / #1890ff / #ff4d4f），违反"禁止硬编码、
+ * 令牌单一事实来源"规范，且两套库色混用导致视觉不一致。
+ * 此处将这些库色收敛为语义令牌，作为【统一接管点】：
+ *   - 后续若要整体换肤，只需改这里，无需逐页改。
+ *   - 命名前缀 --el-*（Element）/ --antd-*（Ant Design）/ --gray-*（通用灰）。
+ * 注意：仅做 1:1 重命名（色值完全等价），不改变任何视觉表现。
+ * ============================================================ */
+:root {
+  /* Element UI 文本 / 边框 / 背景 */
+  --el-text-primary:  #303133;
+  --el-text-regular:  #606266;
+  --el-text-secondary: #909399;   /* 同 --color-info */
+  --el-border-default: #dcdfe6;
+  --el-border-base:   #c0c4cc;
+  --el-border-light:  #ebeef5;
+  --el-border-lighter: #e8ecf1;
+  --el-border-lighter2: #e4e7ed;
+  --el-bg-subtle:     #f5f7fa;
+  --el-bg-page:       #f0f2f5;
+  --el-bg-ghost:      #fafbfc;
+  --el-bg-light:      #f5f5f5;
+  --el-bg-base:       #fafafa;
+  --el-bg-white:      #fafafb;
+  --el-color-primary: #409eff;
+  --el-color-primary-light: #c6e2ff;
+  --el-color-primary-lighter: #ecf5ff;
+  --el-color-success-light: #85ce61;
+  --el-color-warning-light: #ebb563;
+  --el-color-danger-light: #f78989;
+
+  /* Ant Design 主色板（部分报表/营销页使用） */
+  --antd-primary:    #1890ff;
+  --antd-error:      #ff4d4f;
+  --antd-error-d:    #cf1322;
+  --antd-error-l:    #ff7875;
+  --antd-error-l2:   #ffccc7;
+  --antd-error-bg:   #fff2f0;
+  --antd-warning:    #fa8c16;
+  --antd-warning-d:  #d48806;
+  --antd-warning-l:  #ffa940;
+  --antd-warning-l2: #ffc069;
+  --antd-warning-l3: #ffd84d;
+  --antd-warning-bg: #fff7e6;
+  --antd-warning-bg2: #fffbe6;
+  --antd-success:    #52c41a;
+  --antd-success-d:  #389e0d;
+  --antd-success-l:  #b7eb8f;
+  --antd-success-bg: #f6ffed;
+  --antd-info-bg:    #e6f7ff;
+  --antd-purple:     #722ed1;
+  --antd-orange:     #ff7a45;
+  --antd-border:     #d9d9d9;
+  --antd-border-light: #e8e8e8;
+
+  /* 通用灰阶（非 Element 标准，但页面高频出现） */
+  --gray-333: #333333;
+  --gray-555: #555555;
+  --gray-666: #666666;
+  --gray-999: #999999;
+  --gray-ccc: #cccccc;
+  --gray-a6:  #a6a9ad;
+  --text-legacy-muted: #818693;
+  --indigo:   #667eea;
+  --indigo-50: #f0f4ff;
+  --indigo-100: #e8ecf9;
+  --purple-legacy: #764ba2;
+  --purple-legacy2: #9c27b0;
+  --purple-50: #f3e5ff;
+  --emerald: #10b981;
+  --blue-50: #f5f9ff;
+  --blue-100: #dbeafe;
+  --blue-600: #2563eb;
+  --slate-200: #e2e8f0;
+  --slate-500: #64748b;
+  --amber-100: #fef3c7;
+  --amber-700: #d97706;
+  --orange-50: #fff3ea;
+  --orange-50b: #fff4e6;
+  --orange-100: #ffe1ca;
+  --orange-200: #fed7aa;
+  --orange-700: #c2410c;
+  --orange-700b: #e6420e;
+  --gold-legacy: #f7ba2a;
+  --el-bg-lighter: #f0f0f0;
+  --el-bg-lighter2: #f4f4f4;
+  --text-legacy-dark: #20232a;
+  --antd-warning-l2b: #ffe58f;
+  --indigo-50b: #f0f5ff;
+  --amber-800: #ad6800;
+}
+
+
+/* ============================================================
+ * 遗留 CSS 调色板（自动收敛，2026-07-17）
+ * 由 _tokenize_css.py 将 styles/*.css 残留硬编码 hex 1:1 收敛；
+ * 仅重命名、零视觉回归。长尾不透明色用 --legacy-<hex> 占位。
+ * ============================================================ */
+:root {
+
+  --color-white: #fff;
+  --color-black: #000;
+  --el-border-muted: #bac0cd;
+  --el-border-soft: #d8dde3;
+  --el-bg-soft: #f3f4f7;
+  --color-brand-400: #ffb302;
+  --color-brand-300: #fdd24c;
+  --color-brand-600: #efb602;
+  --color-brand-50: #fffbf0;
+  --color-warning-tint: #fff4ec;
+  --el-bg-primary-lighter: #f2f6fc;
+  --el-border-plain: #e4e4e4;
+  --el-color-success-dark: #5daf34;
+  --el-color-danger-dark: #dd6161;
+  --el-text-muted: #82848a;
+  --legacy-00f: #00f;
+  --legacy-0a0d17: #0a0d17;
+  --legacy-0f0: #0f0;
+  --legacy-0ff: #0ff;
+  --legacy-121530: #121530;
+  --legacy-13ce66: #13ce66;
+  --legacy-1a1030: #1a1030;
+  --legacy-1a1d2e: #1a1d2e;
+  --legacy-22c55e: #22c55e;
+  --legacy-2d1f3d: #2d1f3d;
+  --legacy-333: #333;
+  --legacy-419eff: #419eff;
+  --legacy-4ade80: #4ade80;
+  --legacy-52b818: #52b818;
+  --legacy-531dab: #531dab;
+  --legacy-5a5f7a: #5a5f7a;
+  --legacy-606168: #606168;
+  --legacy-666: #666;
+  --legacy-6b7088: #6b7088;
+  --legacy-72767b: #72767b;
+  --legacy-856404: #856404;
+  --legacy-8b90a5: #8b90a5;
+  --legacy-8c939d: #8c939d;
+  --legacy-91d5ff: #91d5ff;
+  --legacy-9254de: #9254de;
+  --legacy-999: #999;
+  --legacy-9da3b5: #9da3b5;
+  --legacy-a0a0a0: #a0a0a0;
+  --legacy-a0a5ba: #a0a5ba;
+  --legacy-a4da89: #a4da89;
+  --legacy-a9780a: #a9780a;
+  --legacy-b3e19d: #b3e19d;
+  --legacy-b4bccc: #b4bccc;
+  --legacy-b9b9b9: #b9b9b9;
+  --legacy-bbb: #bbb;
+  --legacy-bcbec2: #bcbec2;
+  --legacy-c0ccda: #c0ccda;
+  --legacy-c2e7b0: #c2e7b0;
+  --legacy-c8c9cc: #c8c9cc;
+  --legacy-ccc: #ccc;
+  --legacy-ce93d8: #ce93d8;
+  --legacy-cf9236: #cf9236;
+  --legacy-d1dbe5: #d1dbe5;
+  --legacy-d3d4d6: #d3d4d6;
+  --legacy-d3dce6: #d3dce6;
+  --legacy-d9ecff: #d9ecff;
+  --legacy-dcdcdc: #dcdcdc;
+  --legacy-dfe2e8: #dfe2e8;
+  --legacy-dfe4ed: #dfe4ed;
+  --legacy-e0e0e0: #e0e0e0;
+  --legacy-e0e3ed: #e0e3ed;
+  --legacy-e1f3d8: #e1f3d8;
+  --legacy-e4e9f2: #e4e9f2;
+  --legacy-e5e4e4: #e5e4e4;
+  --legacy-e6a102: #e6a102;
+  --legacy-e6e6e6: #e6e6e6;
+  --legacy-e6f1fe: #e6f1fe;
+  --legacy-e8eaed: #e8eaed;
+  --legacy-e9e9eb: #e9e9eb;
+  --legacy-ececec: #ececec;
+  --legacy-edf2fc: #edf2fc;
+  --legacy-eebe77: #eebe77;
+  --legacy-ef4444: #ef4444;
+  --legacy-f0f: #f0f;
+  --legacy-f0f2f8: #f0f2f8;
+  --legacy-f0f9ff: #f0f9ff;
+  --legacy-f19c59: #f19c59;
+  --legacy-f1f3f9: #f1f3f9;
+  --legacy-f2f8fe: #f2f8fe;
+  --legacy-f4f5fa: #f4f5fa;
+  --legacy-f6f1e0: #f6f1e0;
+  --legacy-f87171: #f87171;
+  --legacy-f89898: #f89898;
+  --legacy-f9a7a7: #f9a7a7;
+  --legacy-f9f0ff: #f9f0ff;
+  --legacy-faad14: #faad14;
+  --legacy-fab6b6: #fab6b6;
+  --legacy-fae2cd: #fae2cd;
+  --legacy-fbc4c4: #fbc4c4;
+  --legacy-fbe396: #fbe396;
+  --legacy-fbfbfa: #fbfbfa;
+  --legacy-fbfdff: #fbfdff;
+  --legacy-fca5a5: #fca5a5;
+  --legacy-fcfcf5: #fcfcf5;
+  --legacy-fcfcfc: #fcfcfc;
+  --legacy-fde2e2: #fde2e2;
+  --legacy-fdf4eb: #fdf4eb;
+  --legacy-fecaca: #fecaca;
+  --legacy-fef2f2: #fef2f2;
+  --legacy-ff0: #ff0;
+  --legacy-ff4d51: #ff4d51;
+  --legacy-ff6b35: #ff6b35;
+  --legacy-ff8c5a: #ff8c5a;
+  --legacy-ffbc8b: #ffbc8b;
+  --legacy-ffc235: #ffc235;
+  --legacy-ffc89e: #ffc89e;
+  --legacy-ffd167: #ffd167;
+  --legacy-ffd3b1: #ffd3b1;
+  --legacy-ffd981: #ffd981;
+  --legacy-ffda44: #ffda44;
+  --legacy-ffdec5: #ffdec5;
+  --legacy-ffe19a: #ffe19a;
+  --legacy-ffe9d8: #ffe9d8;
+  --legacy-fff0cc: #fff0cc;
+  --legacy-fff0e6: #fff0e6;
+  --legacy-fff0f0: #fff0f0;
+  --legacy-fff3cd: #fff3cd;
+  --legacy-fff6ef: #fff6ef;
+}

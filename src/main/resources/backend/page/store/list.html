@@ -9,32 +9,34 @@
     <link rel="stylesheet" href="../../styles/page.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
     <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
+        body { background: var(--el-bg-subtle); padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
         .dashboard-container { max-width: 1400px; margin: 0 auto; }
-        .container { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+        .container { background: var(--bg-surface); border-radius: 8px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
 
         /* 工具栏 */
-        .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid #ebeef5; margin-bottom: 16px; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--el-border-light); margin-bottom: 16px; }
         .toolbar .el-input, .toolbar .el-select { width: 180px; }
         .toolbar .spacer { flex: 1; }
 
         /* 表格 */
         .store-table { margin-top: 4px; }
         .store-table .cell-status { display: flex; align-items: center; gap: 6px; }
-        .tag-active { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; background: #f0f9eb; color: #67c23a; }
-        .tag-inactive { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; background: #fef0f0; color: #f56c6c; }
-        .amount-highlight { color: #e6a23c; font-weight: 600; }
-        .order-count { font-weight: 600; color: #409eff; }
+        .tag-active { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; background: var(--color-success-light); color: var(--color-success); }
+        .tag-inactive { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; background: var(--color-danger-light); color: var(--color-danger); }
+        .amount-highlight { color: var(--color-warning); font-weight: 600; }
+        .order-count { font-weight: 600; color: var(--el-color-primary); }
 
         /* 编辑弹窗 */
-        .form-section-title { font-size: 14px; font-weight: 600; color: #303133; margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px dashed #e4e7ed; }
+        .form-section-title { font-size: 14px; font-weight: 600; color: var(--el-text-primary); margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px dashed var(--el-border-lighter2); }
         .form-section-title:first-child { margin-top: 0; }
         .footer-actions { text-align: right; padding-top: 8px; }
 
         /* 空状态 */
-        .empty-wrap { text-align: center; padding: 60px 0; color: #909399; }
+        .empty-wrap { text-align: center; padding: 60px 0; color: var(--color-info); }
 
         .sync-section { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
     </style>
@@ -43,6 +45,12 @@
 <div id="app">
     <div class="dashboard-container">
         <div class="container">
+          <!-- 面包屑导航 -->
+          <nav class="ds-breadcrumb" aria-label="面包屑导航">
+            <span class="ds-breadcrumb__item">首页</span>
+            <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+            <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">门店管理</span>
+          </nav>
             <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
             <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -98,9 +106,9 @@
                     <el-table-column prop="address" label="地址" min-width="150" show-overflow-tooltip></el-table-column>
                     <el-table-column label="外卖/堂食" width="100" align="center">
                         <template slot-scope="{row}">
-                            <span :style="{color: row.isDeliveryEnabled == 1 ? '#67c23a' : '#c0c4cc'}">&#128666;</span>
+                            <span :style="{color: row.isDeliveryEnabled == 1 ? 'var(--color-success)' : 'var(--el-border-base)'}">&#128666;</span>
                             <span style="margin:0 2px;">/</span>
-                            <span :style="{color: row.isDineInEnabled == 1 ? '#409eff' : '#c0c4cc'}">&#127869;</span>
+                            <span :style="{color: row.isDineInEnabled == 1 ? 'var(--el-color-primary)' : 'var(--el-border-base)'}">&#127869;</span>
                         </template>
                     </el-table-column>
                     <el-table-column label="状态" width="80" align="center">
@@ -161,7 +169,7 @@
     </div>
 
     <!-- ===== 新建/编辑门店对话框 ===== -->
-    <el-dialog :title="dialogTitle" :visible.sync="formDialogVisible" class="el-dialog--lg unified-dialog" @close="resetForm" :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
+    <el-dialog :title="dialogTitle" :visible.sync="formDialogVisible" custom-class="el-dialog--lg unified-dialog" @close="resetForm" :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
         <el-form :model="form" ref="formRef" label-width="100px" size="small" :rules="formRules">
             <div class="form-section-title">基本信息</div>
             <el-row :gutter="16">
@@ -280,10 +288,10 @@
     </el-dialog>
 
     <!-- ===== 数据同步对话框 ===== -->
-    <el-dialog title="数据同步" :visible.sync="syncDialogVisible" class="el-dialog--md unified-dialog"
+    <el-dialog title="数据同步" :visible.sync="syncDialogVisible" custom-class="el-dialog--md unified-dialog"
       :close-on-click-modal="true" @close="syncResult=null">
-        <p style="margin-bottom:14px; color:#606266; font-size:13px;">
-            将总部数据同步到 <b style="color:#303133;">{{ syncTargetName }}</b>
+        <p style="margin-bottom:14px; color:var(--el-text-regular); font-size:13px;">
+            将总部数据同步到 <b style="color:var(--el-text-primary);">{{ syncTargetName }}</b>
         </p>
         <div class="sync-section">
             <el-button size="small" type="primary" @click="doSync('dishes')" :loading="syncing.dishes" icon="el-icon-sell">同步菜品</el-button>
@@ -299,7 +307,7 @@
         </el-alert>
         <p v-if="syncResult && syncResult.errors && syncResult.errors.length > 0"
            v-for="(err, i) in (syncResult.errors || [])" :key="i"
-           style="font-size:12px; color:#f56c6c; margin-top:4px;">{{ err }}</p>
+           style="font-size:12px; color:var(--color-danger); margin-top:4px;">{{ err }}</p>
         <span slot="footer" class="dialog-footer">
             <el-button size="medium" @click="syncDialogVisible = false">关 闭</el-button>
         </span>

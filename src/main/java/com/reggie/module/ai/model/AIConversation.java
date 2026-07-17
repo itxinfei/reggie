@@ -60,11 +60,11 @@ public class AIConversation implements Serializable {
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    @Schema(description = "创建人ID（非数据库字段，预留扩展）", example = "1")
-    @TableField(exist = false)
+    @Schema(description = "创建人ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
-    @Schema(description = "修改人ID（非数据库字段，预留扩展）", example = "1")
-    @TableField(exist = false)
+    @Schema(description = "修改人ID", example = "1")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 }

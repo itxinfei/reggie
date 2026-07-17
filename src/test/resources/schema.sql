@@ -221,6 +221,12 @@ CREATE TABLE order_detail (
   number int NOT NULL DEFAULT 1 COMMENT '数量',
   amount decimal(10,2) NOT NULL COMMENT '单价',
   image varchar(255) NULL DEFAULT NULL COMMENT '图片',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
+  create_time datetime NOT NULL COMMENT '创建时间',
+  update_time datetime NOT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '修改人',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '是否删除',
   PRIMARY KEY (id)
 );
 CREATE INDEX idx_order_detail_order ON order_detail(order_id);

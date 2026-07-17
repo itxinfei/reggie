@@ -2,6 +2,7 @@ package com.reggie.module.inventory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.R;
+import com.reggie.common.BaseContext;
 import com.reggie.module.inventory.model.PurchaseOrderDetail;
 import com.reggie.module.inventory.service.PurchaseOrderDetailService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,6 +36,11 @@ public class PurchaseOrderDetailController {
     @Operation(summary = "根据采购单id查询明细", description = "查询指定采购单的所有明细项")
     @Parameter(name = "orderId", description = "采购单ID", required = true)
     public R<List<PurchaseOrderDetail>> listByOrderId(@PathVariable Long orderId) {
+        // 多租户校验：确认采购单属于当前租户
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("未登录或登录已过期");
+        }
         LambdaQueryWrapper<PurchaseOrderDetail> qw = new LambdaQueryWrapper<>();
         qw.eq(PurchaseOrderDetail::getPurchaseOrderId, orderId);
         return R.success(purchaseOrderDetailService.list(qw));

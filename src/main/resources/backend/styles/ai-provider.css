@@ -7,8 +7,8 @@
 
 /* 激活供应商高亮卡片 */
 .active-provider-card {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
-    border: 2px solid #ffc200;
+    background: linear-gradient(135deg, var(--legacy-f0f9ff) 0%, var(--antd-info-bg) 100%);
+    border: 2px solid var(--color-brand-500);
     border-radius: 10px;
     padding: 20px 24px;
     margin-bottom: 24px;
@@ -20,8 +20,8 @@
     position: absolute;
     top: 0;
     right: 0;
-    background: #ffc200;
-    color: #fff;
+    background: var(--color-brand-500);
+    color: var(--color-white);
     font-size: 12px;
     padding: 4px 14px;
     border-radius: 0 10px 0 10px;
@@ -35,7 +35,7 @@
 .provider-icon-large {
     width: 56px; height: 56px;
     border-radius: 12px;
-    background: #fff;
+    background: var(--color-white);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -45,26 +45,26 @@
 }
 .provider-detail { flex: 1; }
 .provider-detail .name {
-    font-size: 18px; font-weight: 600; color: #303133;
+    font-size: 18px; font-weight: 600; color: var(--el-text-primary);
 }
 .provider-detail .model {
-    font-size: 14px; color: #606266; margin-top: 6px;
+    font-size: 14px; color: var(--el-text-regular); margin-top: 6px;
     font-weight: 500;
 }
 .provider-detail .url {
-    font-size: 13px; color: #909399; margin-top: 4px;
+    font-size: 13px; color: var(--color-info); margin-top: 4px;
     word-break: break-all;
 }
 
 /* 二级标题 */
 .section-title {
-    font-size: 16px; font-weight: 600; color: #303133;
+    font-size: 16px; font-weight: 600; color: var(--el-text-primary);
     margin-bottom: 16px; padding-bottom: 12px;
-    border-bottom: 1px solid #ebeef5;
+    border-bottom: 1px solid var(--el-border-light);
     display: flex; align-items: center; gap: 8px;
 }
 .section-title .count-tip {
-    font-size: 13px; font-weight: 400; color: #909399;
+    font-size: 13px; font-weight: 400; color: var(--color-info);
 }
 
 /* 供应商卡片网格 */
@@ -74,8 +74,8 @@
     gap: 16px;
 }
 .provider-card {
-    background: #fff;
-    border: 1px solid #e4e7ed;
+    background: var(--color-white);
+    border: 1px solid var(--el-border-lighter2);
     border-radius: 10px;
     padding: 18px 20px;
     transition: all 0.25s;
@@ -85,11 +85,11 @@
 .provider-card:hover {
     box-shadow: 0 4px 16px rgba(0,0,0,0.08);
     transform: translateY(-2px);
-    border-color: #c0c4cc;
+    border-color: var(--el-border-base);
 }
 .provider-card.active-card {
-    border-color: #ffc200;
-    background: #f0f9ff;
+    border-color: var(--color-brand-500);
+    background: var(--legacy-f0f9ff);
 }
 .provider-card.disabled-card {
     opacity: 0.55;
@@ -103,7 +103,7 @@
 .card-icon {
     width: 44px; height: 44px;
     border-radius: 10px;
-    background: #f5f7fa;
+    background: var(--el-bg-subtle);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -112,77 +112,77 @@
 }
 .card-info { flex: 1; min-width: 0; }
 .card-info .name {
-    font-size: 15px; font-weight: 600; color: #303133;
+    font-size: 15px; font-weight: 600; color: var(--el-text-primary);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .card-info .model-name {
-    font-size: 13px; color: #606266; margin-top: 4px;
+    font-size: 13px; color: var(--el-text-regular); margin-top: 4px;
 }
 .card-status {
     padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 500;
     flex-shrink: 0;
 }
-.card-status.active { background: #f0f9eb; color: #52b818; }
-.card-status.inactive { background: #f5f5f5; color: #909399; }
+.card-status.active { background: var(--color-success-light); color: var(--legacy-52b818); }
+.card-status.inactive { background: var(--el-bg-light); color: var(--color-info); }
 .card-desc {
-    font-size: 13px; color: #303133; line-height: 1.6; margin-bottom: 12px;
+    font-size: 13px; color: var(--el-text-primary); line-height: 1.6; margin-bottom: 12px;
     display: -webkit-box;
     -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden;
 }
 .card-meta {
     display: flex; align-items: center; gap: 14px;
-    font-size: 12px; color: #606266;
+    font-size: 12px; color: var(--el-text-regular);
 }
 .card-meta .meta-item { display: flex; align-items: center; gap: 4px; }
 .card-actions {
     display: flex; gap: 8px; margin-top: 14px;
-    padding-top: 14px; border-top: 1px solid #ebeef5;
+    padding-top: 14px; border-top: 1px solid var(--el-border-light);
 }
 .card-actions .el-button { flex: 1; }
 
 /* 预设图标颜色 */
-.icon-deepseek { background: #e6f7ff; }
-.icon-qwen { background: #fff0f0; }
-.icon-zhipu { background: #f0f9ff; }
-.icon-ernie { background: #f0f5ff; }
-.icon-baichuan { background: #fdf6ec; }
-.icon-moonshot { background: #f9f0ff; }
-.icon-minimax { background: #fff0e6; }
-.icon-360 { background: #f5f5f5; }
+.icon-deepseek { background: var(--antd-info-bg); }
+.icon-qwen { background: var(--legacy-fff0f0); }
+.icon-zhipu { background: var(--legacy-f0f9ff); }
+.icon-ernie { background: var(--indigo-50b); }
+.icon-baichuan { background: var(--color-warning-light); }
+.icon-moonshot { background: var(--legacy-f9f0ff); }
+.icon-minimax { background: var(--legacy-fff0e6); }
+.icon-360 { background: var(--el-bg-light); }
 
 /* 弹窗内表单可读性增强 */
 .dialog-form .el-form-item__label {
-    color: #303133; font-weight: 500;
+    color: var(--el-text-primary); font-weight: 500;
 }
-.dialog-form .el-input__inner { color: #303133; }
-.dialog-form .el-textarea__inner { color: #303133; }
+.dialog-form .el-input__inner { color: var(--el-text-primary); }
+.dialog-form .el-textarea__inner { color: var(--el-text-primary); }
 .dialog-form .key-hint {
-    font-size: 12px; color: #e6a23c; line-height: 1.8;
+    font-size: 12px; color: var(--color-warning); line-height: 1.8;
 }
 .dialog-form .field-tip {
-    font-size: 12px; color: #909399; margin-top: 2px;
+    font-size: 12px; color: var(--color-info); margin-top: 2px;
 }
 
 /* 修改点：模型列表面板样式（参考ChatBox/NextChat交互） */
 .model-list-panel {
     margin-top: 8px;
-    border: 1px solid #dcdfe6;
+    border: 1px solid var(--el-border-default);
     border-radius: 6px;
-    background: #fafafa;
+    background: var(--el-bg-base);
     overflow: hidden;
 }
 .model-list-header {
-    font-size: 12px; color: #606266;
-    padding: 8px 12px; background: #f0f2f5;
-    border-bottom: 1px solid #e4e7ed;
+    font-size: 12px; color: var(--el-text-regular);
+    padding: 8px 12px; background: var(--el-bg-page);
+    border-bottom: 1px solid var(--el-border-lighter2);
     display: flex; align-items: center; justify-content: space-between;
 }
 .model-list-clear {
-    color: #f56c6c; cursor: pointer; font-size: 12px;
+    color: var(--color-danger); cursor: pointer; font-size: 12px;
     padding: 2px 8px; border-radius: 3px;
 }
-.model-list-clear:hover { background: #fef0f0; }
+.model-list-clear:hover { background: var(--color-danger-light); }
 .model-list-items {
     padding: 8px 12px;
     display: flex; flex-wrap: wrap;
@@ -193,24 +193,24 @@
     display: inline-block;
     padding: 3px 10px;
     border-radius: 12px;
-    font-size: 12px; color: #606266;
-    background: #fff; border: 1px solid #dcdfe6;
+    font-size: 12px; color: var(--el-text-regular);
+    background: var(--color-white); border: 1px solid var(--el-border-default);
     cursor: pointer; transition: all 0.15s;
     white-space: nowrap;
 }
 .model-chip:hover {
-    border-color: #ffc200; color: #ffc200;
-    background: #fffbf0;
+    border-color: var(--color-brand-500); color: var(--color-brand-500);
+    background: var(--color-brand-50);
 }
 .model-chip.active {
-    border-color: #ffc200; color: #fff;
-    background: #ffc200;
+    border-color: var(--color-brand-500); color: var(--color-white);
+    background: var(--color-brand-500);
 }
 .model-fetch-error {
     margin-top: 6px; padding: 6px 10px;
-    background: #fef0f0; color: #f56c6c;
+    background: var(--color-danger-light); color: var(--color-danger);
     font-size: 12px; border-radius: 4px;
-    border: 1px solid #fde2e2;
+    border: 1px solid var(--legacy-fde2e2);
 }
 
 @media (max-width: 768px) {

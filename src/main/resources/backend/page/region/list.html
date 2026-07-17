@@ -9,10 +9,18 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
   <div class="dashboard-container" id="region-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">行政区划管理</span>
+      </nav>
       <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
       <table-bar
         :search-items="tableSearchItems"
@@ -68,8 +76,10 @@
       :submit-loading="submitLoading"
       @submit="submitForm"
     >
-      <el-form class="demo-form-inline" label-width="80px" size="small">
-        <el-form-item label="地区名称：">
+      <!-- 修改点：移除误导性死 class demo-form-inline（label-width 80 合适，保持不变） -->
+      <!-- 修改点：补全 ref/:model/:rules，启用 Element 校验（原仅手写 if 判断，属"假必填"不校验） -->
+      <el-form ref="regionForm" :model="formData" :rules="regionRules" label-width="80px" size="small">
+        <el-form-item label="地区名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入地区名称" maxlength="50" />
         </el-form-item>
         <el-form-item label="区划代码：">
@@ -125,6 +135,10 @@
             title: '', id: undefined, name: '', code: '', level: 1,
             parentId: null, sort: 0, dialogVisible: false
           },
+          // 修改点：地区表单校验规则（配合 el-form :rules + validate()）
+          regionRules: {
+            name: [{ required: true, whitespace: true, message: '请输入地区名称', trigger: 'blur' }]
+          },
           // 修改点：列配置（交给 <crud-table>，避免手写 <el-table-column> 重复）
           columns: [
             { prop: 'id', label: 'ID', width: 80 },
@@ -165,7 +179,7 @@
               this.filterOptions.names = res.data.names || []
             } else {
               this.optionsLoadError = true
-              this.$message.warning('加载地区选项失败：' + (res.msg || '接口返回异常'))
+              ReggieUI.warning('加载地区选项失败：' + (res.msg || '接口返回异常'))
             }
           } catch (err) {
             // 修改点：NOTLOGIN 错误已在全局拦截器处理（跳转登录页），无需重复提示
@@ -174,7 +188,7 @@
             }
             this.optionsLoadError = true
             console.error('加载地区选项失败:', err)
-            this.$message.error('加载筛选选项失败，请刷新页面重试')
+            ReggieUI.error('加载筛选选项失败，请刷新页面重试')
           } finally {
             this.optionsLoading = false
           }
@@ -238,46 +252,49 @@
         },
 
         async submitForm() {
-          if (!this.formData.name || !this.formData.name.trim()) {
-            this.$message.warning('请输入地区名称')
+          const self = this
+          let passed = false
+          self.$refs.regionForm.validate(function(valid) { passed = valid })
+          if (!passed) {
+            self.$message.warning('请完善表单必填项')
             return
           }
           const data = {
-            id: this.formData.id,
-            name: this.formData.name.trim(),
-            code: this.formData.code || null,
-            level: this.formData.level,
-            parentId: this.formData.level === 1 ? 0 : this.formData.parentId,
-            sort: this.formData.sort
+            id: self.formData.id,
+            name: self.formData.name.trim(),
+            code: self.formData.code || null,
+            level: self.formData.level,
+            parentId: self.formData.level === 1 ? 0 : self.formData.parentId,
+            sort: self.formData.sort
           }
-          this.submitLoading = true
+          self.submitLoading = true
           let res
           try {
-            if (this.formData.id) {
+            if (self.formData.id) {
               res = await editRegion(data)
             } else {
               res = await addRegion(data)
             }
             if (res.code === 1) {
-              this.$message.success(this.formData.id ? '修改成功' : '新增成功')
-              this.formData.dialogVisible = false
-              this.fetchData()
+              self.$message.success(self.formData.id ? '修改成功' : '新增成功')
+              self.formData.dialogVisible = false
+              self.fetchData()
             } else {
-              this.$message.error(res.msg || '操作失败')
+              self.$message.error(res.msg || '操作失败')
             }
           } finally {
-            this.submitLoading = false
+            self.submitLoading = false
           }
         },
 
         deleteHandle(id) {
-          this.$confirm('确认删除该地区吗？如有子级则无法删除。', '提示', { type: 'warning' }).then(async () => {
+          ReggieUI.confirm('确认删除该地区吗？如有子级则无法删除。', '提示', { type: 'warning' }).then(async () => {
             const res = await deleteRegion(id)
             if (res.code === 1) {
-              this.$message.success('删除成功')
+              ReggieUI.success('删除成功')
               this.fetchData()
             } else {
-              this.$message.error(res.msg || '删除失败')
+              ReggieUI.error(res.msg || '删除失败')
             }
           }).catch(() => {})
         }

@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     /* ========== 现代化数据概览设计 ========== */
@@ -21,8 +23,8 @@
       padding: 0;
       overflow-y: auto;
       overflow-x: hidden;
-      background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, var(--el-bg-subtle) 0%, var(--el-border-lighter) 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
     }
 
     /* 主容器 */
@@ -49,14 +51,14 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+      background: linear-gradient(135deg, rgba(255, 194, 0, 0.92) 0%, rgba(255, 170, 0, 0.92) 100%);
       backdrop-filter: blur(10px);
-      color: #fff;
+      color: var(--text-on-brand);
       padding: 14px 24px;
       border-radius: 16px;
       margin-bottom: 16px;
       font-size: 14px;
-      box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 8px 32px rgba(255, 194, 0, 0.28);
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
     .redis-status-bar .redis-indicator {
@@ -74,12 +76,12 @@
       animation: pulse 2s infinite;
     }
     .redis-status-bar .redis-dot.on {
-      background: #67c23a;
-      box-shadow: 0 0 12px #67c23a;
+      background: var(--color-success);
+      box-shadow: 0 0 12px var(--color-success);
     }
     .redis-status-bar .redis-dot.off {
-      background: #f56c6c;
-      box-shadow: 0 0 12px #f56c6c;
+      background: var(--color-danger);
+      box-shadow: 0 0 12px var(--color-danger);
     }
     @keyframes pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
@@ -105,6 +107,72 @@
       transform: translateY(-1px);
     }
 
+    /* ========== 页面标题栏（内联样式收敛为类，统一令牌） ========== */
+    .page-hero {
+      background: var(--bg-surface);
+      border-radius: var(--radius-xl);
+      padding: var(--space-4) var(--space-5);
+      margin-bottom: var(--space-3);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
+    .page-hero__icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, rgba(255, 194, 0, 0.1) 0%, rgba(255, 216, 77, 0.15) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .page-hero__title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
+      color: var(--text-primary);
+    }
+    .page-hero__subtitle {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+    .page-hero__actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+    }
+
+    /* ========== 库存预警条（内联样式收敛为类） ========== */
+    .inventory-alert {
+      margin-bottom: var(--space-3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      background: linear-gradient(135deg, var(--antd-warning-bg) 0%, var(--antd-warning-bg2) 100%);
+      border: 1px solid var(--antd-warning-l2b);
+      border-radius: var(--radius-lg);
+      padding: var(--space-3) var(--space-5);
+      flex-wrap: wrap;
+    }
+    .inventory-alert__title {
+      font-weight: var(--font-weight-bold);
+      color: var(--color-warning);
+      font-size: var(--font-size-md);
+    }
+    .inventory-alert__desc {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
     /* ========== KPI 卡片 - 4列整行显示（容器使用stats-cards统一规范） ========== */
     .stats-cards {
       display: grid;
@@ -114,7 +182,7 @@
     }
 
     .kpi-card {
-      background: #fff;
+      background: var(--bg-surface);
       border-radius: 14px;
       padding: 18px;
       min-height: 100px;
@@ -132,6 +200,7 @@
     .kpi-card:hover {
       transform: translateY(-6px);
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+      border-color: var(--color-brand-300);
     }
 
     /* 顶部渐变装饰条 */
@@ -188,7 +257,7 @@
     /* 标签 */
     .kpi-card .kpi-label {
       font-size: 14px;
-      color: #909399;
+      color: var(--text-secondary);
       margin-bottom: 8px;
       font-weight: 500;
       letter-spacing: 0.3px;
@@ -210,7 +279,7 @@
     /* 副信息 */
     .kpi-card .kpi-sub {
       font-size: 12px;
-      color: #909399;
+      color: var(--text-secondary);
       margin-top: 0;
       display: flex;
       align-items: center;
@@ -229,16 +298,16 @@
       font-weight: 600;
     }
     .kpi-trend.up {
-      background: #f0f9eb;
-      color: #67c23a;
+      background: var(--color-success-light);
+      color: var(--color-success);
     }
     .kpi-trend.down {
-      background: #fef0f0;
-      color: #f56c6c;
+      background: var(--color-danger-light);
+      color: var(--color-danger);
     }
     .kpi-trend.neutral {
-      background: #f4f4f5;
-      color: #909399;
+      background: var(--color-info-light);
+      color: var(--text-secondary);
     }
 
     /* 缓存标签 */
@@ -249,28 +318,28 @@
       border-radius: 4px;
       font-weight: 500;
     }
-    .cache-tag.redis { background: #f0f9eb; color: #67c23a; }
-    .cache-tag.mysql { background: #fdf6ec; color: #e6a23c; }
+    .cache-tag.redis { background: var(--color-success-light); color: var(--color-success); }
+    .cache-tag.mysql { background: var(--color-warning-light); color: var(--color-warning); }
 
     /* 主题配色 */
     .kpi-card.primary {
-      --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
-      --icon-bg: linear-gradient(135deg, rgba(64, 158, 255, 0.1) 0%, rgba(102, 177, 255, 0.15) 100%);
+      --gradient: linear-gradient(135deg, var(--color-brand-800) 0%, var(--color-brand-600) 100%);
+      --icon-bg: linear-gradient(135deg, rgba(255, 194, 0, 0.1) 0%, rgba(255, 216, 77, 0.15) 100%);
     }
     .kpi-card.success {
-      --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+      --gradient: linear-gradient(135deg, var(--color-success-dark) 0%, var(--color-success) 100%);
       --icon-bg: linear-gradient(135deg, rgba(103, 194, 58, 0.1) 0%, rgba(133, 206, 97, 0.15) 100%);
     }
     .kpi-card.warning {
-      --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
+      --gradient: linear-gradient(135deg, var(--color-warning-dark) 0%, var(--color-warning) 100%);
       --icon-bg: linear-gradient(135deg, rgba(230, 162, 60, 0.1) 0%, rgba(235, 181, 99, 0.15) 100%);
     }
     .kpi-card.danger {
-      --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
+      --gradient: linear-gradient(135deg, var(--color-danger-dark) 0%, var(--color-danger) 100%);
       --icon-bg: linear-gradient(135deg, rgba(245, 108, 108, 0.1) 0%, rgba(247, 137, 137, 0.15) 100%);
     }
     .kpi-card.info {
-      --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
+      --gradient: linear-gradient(135deg, var(--color-gray-600) 0%, var(--color-gray-400) 100%);
       --icon-bg: linear-gradient(135deg, rgba(144, 147, 153, 0.1) 0%, rgba(166, 169, 173, 0.15) 100%);
     }
 
@@ -283,7 +352,7 @@
     }
 
     .chart-panel {
-      background: #fff;
+      background: var(--bg-surface);
       border-radius: 16px;
       padding: 20px;
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
@@ -302,10 +371,10 @@
     .chart-panel .chart-title {
       font-size: 14px;
       font-weight: 600;
-      color: #303133;
+      color: var(--el-text-primary);
       margin-bottom: 14px;
       padding-bottom: 12px;
-      border-bottom: 2px solid #f0f2f5;
+      border-bottom: 2px solid var(--el-bg-page);
       flex-shrink: 0;
       display: flex;
       align-items: center;
@@ -326,7 +395,7 @@
     }
 
     .bottom-panel {
-      background: #fff;
+      background: var(--bg-surface);
       border-radius: 16px;
       padding: 20px;
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
@@ -343,10 +412,10 @@
     .bottom-panel .panel-title {
       font-size: 14px;
       font-weight: 600;
-      color: #303133;
+      color: var(--el-text-primary);
       margin-bottom: 14px;
       padding-bottom: 12px;
-      border-bottom: 2px solid #f0f2f5;
+      border-bottom: 2px solid var(--el-bg-page);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -357,11 +426,11 @@
       display: flex;
       align-items: center;
       padding: 10px 0;
-      border-bottom: 1px solid #f5f5f5;
+      border-bottom: 1px solid var(--el-bg-light);
       transition: all 0.2s;
     }
     .hot-dish-list .hot-dish-item:hover {
-      background: #fafbfc;
+      background: var(--el-bg-ghost);
       margin: 0 -12px;
       padding-left: 12px;
       padding-right: 12px;
@@ -383,10 +452,10 @@
       flex-shrink: 0;
       transition: all 0.2s;
     }
-    .hot-dish-rank.top-1 { background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%); color: #fff; }
-    .hot-dish-rank.top-2 { background: linear-gradient(135deg, #ff7a45 0%, #ffa940 100%); color: #fff; }
-    .hot-dish-rank.top-3 { background: linear-gradient(135deg, #ffa940 0%, #ffc069 100%); color: #fff; }
-    .hot-dish-rank.normal { background: #f0f0f0; color: #666; }
+    .hot-dish-rank.top-1 { background: linear-gradient(135deg, var(--antd-error) 0%, var(--antd-error-l) 100%); color: var(--bg-surface); }
+    .hot-dish-rank.top-2 { background: linear-gradient(135deg, var(--antd-orange) 0%, var(--antd-warning-l) 100%); color: var(--bg-surface); }
+    .hot-dish-rank.top-3 { background: linear-gradient(135deg, var(--antd-warning-l) 0%, var(--antd-warning-l2) 100%); color: var(--bg-surface); }
+    .hot-dish-rank.normal { background: var(--el-bg-lighter); color: var(--gray-666); }
 
     .hot-dish-list .hot-dish-item:hover .hot-dish-rank {
       transform: scale(1.1);
@@ -399,14 +468,14 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       min-width: 60px;
-      color: #303133;
+      color: var(--el-text-primary);
       font-weight: 500;
     }
 
     .hot-dish-count {
       font-size: 14px;
       font-weight: 600;
-      background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+      background: linear-gradient(135deg, var(--color-brand-500) 0%, var(--antd-warning-l3) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -417,7 +486,7 @@
     .hot-dish-bar {
       width: 100px;
       height: 8px;
-      background: #f0f2f5;
+      background: var(--el-bg-page);
       border-radius: 4px;
       margin-left: 16px;
       flex-shrink: 0;
@@ -425,7 +494,7 @@
     }
     .hot-dish-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, #409eff 0%, #66b1ff 100%);
+      background: linear-gradient(90deg, var(--color-brand-500) 0%, var(--antd-warning-l3) 100%);
       border-radius: 4px;
       transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -437,26 +506,26 @@
       gap: 10px;
     }
     .ops-metric {
-      background: #fafbfc;
+      background: var(--el-bg-ghost);
       border-radius: 10px;
       padding: 14px 12px;
-      border: 1px solid #f0f2f5;
+      border: 1px solid var(--el-bg-page);
       transition: all 0.2s;
     }
     .ops-metric:hover {
-      background: #f0f4ff;
-      border-color: #d9ecff;
+      background: var(--antd-warning-bg2);
+      border-color: var(--antd-warning-l2b);
     }
     .ops-metric-label {
       font-size: 12px;
-      color: #909399;
+      color: var(--text-secondary);
       margin-bottom: 4px;
       font-weight: 500;
     }
     .ops-metric-value {
       font-size: 20px;
       font-weight: 700;
-      color: #303133;
+      color: var(--el-text-primary);
       line-height: 1.2;
     }
     .ops-metric-compare {
@@ -466,16 +535,16 @@
       align-items: center;
       gap: 4px;
     }
-    .ops-metric-compare.up { color: #67c23a; }
-    .ops-metric-compare.down { color: #f56c6c; }
-    .ops-metric-compare.flat { color: #909399; }
+    .ops-metric-compare.up { color: var(--color-success); }
+    .ops-metric-compare.down { color: var(--color-danger); }
+    .ops-metric-compare.flat { color: var(--text-secondary); }
 
     .ops-progress {
       margin-top: 12px;
     }
     .ops-progress-bar {
       height: 8px;
-      background: #f0f2f5;
+      background: var(--el-bg-page);
       border-radius: 4px;
       overflow: hidden;
       margin-bottom: 4px;
@@ -487,7 +556,7 @@
     }
     .ops-progress-label {
       font-size: 12px;
-      color: #909399;
+      color: var(--text-secondary);
       display: flex;
       justify-content: space-between;
     }
@@ -496,7 +565,7 @@
     .ops-sys-bar {
       margin-top: 16px;
       padding-top: 14px;
-      border-top: 1px solid #f0f2f5;
+      border-top: 1px solid var(--el-bg-page);
       display: flex;
       align-items: center;
       gap: 16px;
@@ -507,7 +576,7 @@
       align-items: center;
       gap: 6px;
       font-size: 12px;
-      color: #909399;
+      color: var(--text-secondary);
     }
     .ops-sys-dot {
       width: 7px;
@@ -515,8 +584,26 @@
       border-radius: 50%;
       flex-shrink: 0;
     }
-    .ops-sys-dot.ok { background: #67c23a; }
-    .ops-sys-dot.err { background: #f56c6c; }
+    .ops-sys-dot.ok { background: var(--color-success); }
+    .ops-sys-dot.err { background: var(--color-danger); }
+
+    /* ========== 入场动效（细节打磨，遵循减弱动效偏好） ========== */
+    @keyframes ds-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .redis-status-bar { animation: ds-fade-in 0.4s ease both; }
+    .kpi-card { animation: ds-fade-in 0.5s ease both; }
+    .kpi-card:nth-child(1) { animation-delay: 0.04s; }
+    .kpi-card:nth-child(2) { animation-delay: 0.10s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.16s; }
+    .kpi-card:nth-child(4) { animation-delay: 0.22s; }
+    .chart-panel { animation: ds-fade-in 0.5s ease both; }
+    .chart-panel:nth-child(1) { animation-delay: 0.26s; }
+    .chart-panel:nth-child(2) { animation-delay: 0.32s; }
+    .bottom-panel { animation: ds-fade-in 0.5s ease both; }
+    .bottom-panel:nth-child(1) { animation-delay: 0.36s; }
+    .bottom-panel:nth-child(2) { animation-delay: 0.42s; }
 
     /* ========== 响应式设计 ========== */
     @media (max-width: 1200px) {
@@ -597,23 +684,26 @@
   </style>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="overview-container" id="dashboard-app" v-loading="loading">
-    <div class="container">
+    <div class="container" id="main-content" tabindex="-1">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">数据概览</span>
+      </nav>
 
       <!-- ========== 页面标题栏 ========== -->
-      <div class="page-hero" style="background:#fff;border-radius:16px;padding:16px 22px;margin-bottom:14px;
-        box-shadow:0 2px 16px rgba(0,0,0,0.06);border:1px solid rgba(255,255,255,0.8);
-        display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+      <div class="page-hero">
         <div style="display:flex;align-items:center;gap:12px;">
-          <div style="width:44px;height:44px;border-radius:12px;
-            background:linear-gradient(135deg,rgba(64,158,255,0.1) 0%,rgba(102,177,255,0.15) 100%);
-            display:flex;align-items:center;justify-content:center;font-size:22px;">📊</div>
+          <div class="page-hero__icon">📊</div>
           <div>
-            <div style="font-size:14px;font-weight:700;color:#303133;">数据概览</div>
-            <div style="font-size:12px;color:#909399;">实时监控核心经营指标 · 自动刷新</div>
+            <div class="page-hero__title">数据概览</div>
+            <div class="page-hero__subtitle">实时监控核心经营指标 · 自动刷新</div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;">
+        <div class="page-hero__actions">
           <el-button size="small" round icon="el-icon-refresh" @click="refreshData" :loading="loading">刷新</el-button>
           <el-tag size="small" :type="health.redisAvailable ? 'success' : 'danger'" effect="plain">
             Redis {{ health.redisAvailable ? '已启用' : '未启用' }}
@@ -656,7 +746,7 @@
         <div class="kpi-card info">
           <div class="kpi-icon-wrapper">👥</div>
           <div class="kpi-label">注册用户 / 在职员工</div>
-          <div class="kpi-value">{{ overview.totalUsers || 0 }} <span style="font-size:18px;color:#c0c4cc;">/</span> {{ overview.activeEmployees || 0 }}</div>
+          <div class="kpi-value">{{ overview.totalUsers || 0 }} <span style="font-size:18px;color:var(--el-border-base);">/</span> {{ overview.activeEmployees || 0 }}</div>
           <div class="kpi-sub">
             数据来源: {{ overview.cacheSource || 'MySQL' }} | 刷新于 {{ lastRefreshTime }}
           </div>
@@ -665,13 +755,12 @@
 
       <!-- ========== 库存预警提示 ========== -->
       <!-- 修改点：集成库存预警，显示低库存食材名称 -->
-      <div v-if="inventoryAlert && inventoryAlert.lowStockCount > 0" style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;
-        background:linear-gradient(135deg,#fff7e6 0%,#fffbe6 100%);border:1px solid #ffe58f;border-radius:14px;padding:12px 20px;">
+      <div v-if="inventoryAlert && inventoryAlert.lowStockCount > 0" class="inventory-alert">
         <div style="display:flex;align-items:center;gap:12px;">
           <span style="font-size:24px;">⚠️</span>
           <div>
-            <div style="font-weight:700;color:#e6a23c;font-size:15px;">库存预警：{{ inventoryAlert.lowStockCount }} 种食材库存不足</div>
-            <div style="font-size:12px;color:#909399;margin-top:2px;">
+            <div class="inventory-alert__title">库存预警：{{ inventoryAlert.lowStockCount }} 种食材库存不足</div>
+            <div class="inventory-alert__desc">
               <span v-for="(item, idx) in (inventoryAlert.lowStockItems || [])" :key="idx" style="margin-right:12px;">
                 {{ item.name }}({{ item.stockQty }}{{ item.unit }})
               </span>
@@ -685,11 +774,11 @@
       <div class="charts-row">
         <div class="chart-panel">
           <div class="chart-title">📈 近7日订单与营收趋势</div>
-          <div class="chart-box" id="trendChart"></div>
+          <div class="chart-box" id="trendChart" role="img" aria-label="近7日订单与营收趋势图表"></div>
         </div>
         <div class="chart-panel">
           <div class="chart-title">🍩 今日订单状态分布</div>
-          <div class="chart-box" id="statusChart"></div>
+          <div class="chart-box" id="statusChart" role="img" aria-label="今日订单状态分布环形图"></div>
         </div>
       </div>
 
@@ -707,7 +796,7 @@
               </div>
             </div>
           </div>
-          <div v-else style="text-align:center;padding:40px;color:#c0c4cc;">今日暂无订单</div>
+          <div v-else style="text-align:center;padding:40px;color:var(--el-border-base);">今日暂无订单</div>
         </div>
 
         <div class="bottom-panel">
@@ -719,7 +808,7 @@
               <div class="ops-metric-value">{{ overview.completionRate || 0 }}%</div>
               <div class="ops-progress">
                 <div class="ops-progress-bar">
-                  <div class="ops-progress-fill" :style="{ width: (overview.completionRate || 0) + '%', background: 'linear-gradient(90deg, #409eff, #66b1ff)' }"></div>
+                  <div class="ops-progress-fill" :style="{ width: (overview.completionRate || 0) + '%', background: 'linear-gradient(90deg, var(--color-brand-500), var(--antd-warning-l3))' }"></div>
                 </div>
                 <div class="ops-progress-label">
                   <span>已完成 {{ overview.completedOrders || 0 }}</span>
@@ -882,10 +971,10 @@
                 this.renderStatusChart();
               });
             } else {
-              this.$message.error(res.msg || '数据加载失败');
+              ReggieUI.error(res.msg || '数据加载失败');
             }
           } catch (err) {
-            this.$message.error('请求失败：' + (err.message || err));
+            ReggieUI.error('请求失败：' + (err.message || err));
           } finally {
             this.loading = false;
           }
@@ -963,7 +1052,7 @@
           const lineData = emptyData ? [0] : revenues;
 
           this.trendChart.setOption({
-            color: ['#5470c6', '#91cc75'],
+            color: ['#e6ae00', '#67c23a'],
             tooltip: {
               trigger: 'axis',
               axisPointer: { type: 'cross', crossStyle: { color: '#999' } },
@@ -1032,15 +1121,15 @@
                 itemStyle: {
                   borderRadius: [8, 8, 0, 0],
                   color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: '#6c9df8' },
-                    { offset: 0.5, color: '#5470c6' },
-                    { offset: 1, color: '#3b5fc0' }
+                    { offset: 0, color: '#ffd966' },
+                    { offset: 0.5, color: '#ffc200' },
+                    { offset: 1, color: '#e6ae00' }
                   ])
                 },
                 label: {
                   show: !emptyData,
                   position: 'top',
-                  color: '#5470c6',
+                  color: '#a67600',
                   fontSize: 12,
                   fontWeight: 600,
                   formatter: '{c}'
@@ -1048,8 +1137,8 @@
                 emphasis: {
                   itemStyle: {
                     color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                      { offset: 0, color: '#8ab4f8' },
-                      { offset: 1, color: '#5470c6' }
+                      { offset: 0, color: '#ffe699' },
+                      { offset: 1, color: '#ffc200' }
                     ])
                   }
                 }
@@ -1062,22 +1151,22 @@
                 smooth: true,
                 symbol: 'emptyCircle',
                 symbolSize: 10,
-                lineStyle: { color: '#91cc75', width: 3 },
+                lineStyle: { color: '#67c23a', width: 3 },
                 itemStyle: {
-                  color: '#91cc75',
+                  color: '#67c23a',
                   borderColor: '#fff',
                   borderWidth: 2
                 },
                 areaStyle: {
                   color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: 'rgba(145,204,117,0.3)' },
-                    { offset: 1, color: 'rgba(145,204,117,0.02)' }
+                    { offset: 0, color: 'rgba(103,194,58,0.3)' },
+                    { offset: 1, color: 'rgba(103,194,58,0.02)' }
                   ])
                 },
                 label: {
                   show: !emptyData,
                   position: 'top',
-                  color: '#91cc75',
+                  color: '#3a8b1f',
                   fontSize: 14,
                   fontWeight: 700,
                   formatter: function(p) { return '¥' + Number(p.value).toFixed(0); }
@@ -1100,8 +1189,8 @@
           }
           const statusData = [];
           const colorPalette = [
-            '#f56c6c', '#e6a23c', '#409eff', '#67c23a', '#c0c4cc',
-            '#fc8452', '#9a60b4', '#3ba272', '#ea7ccc', '#36a3f5'
+            '#ffc200', '#67c23a', '#e6a23c', '#f56c6c', '#909399',
+            '#722ed1', '#1890ff', '#13ce66', '#ff7a45', '#36a3f5'
           ];
 
           Object.keys(this.orderStatus).forEach(key => {

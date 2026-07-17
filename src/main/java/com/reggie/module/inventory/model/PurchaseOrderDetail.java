@@ -1,7 +1,11 @@
 package com.reggie.module.inventory.model;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.io.Serializable;
@@ -13,58 +17,44 @@ import java.io.Serializable;
  * @since 2026-07-09
  */
 @Data
+@TableName("purchase_order_detail")
 public class PurchaseOrderDetail implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键ID
-     */
+    /** 主键ID */
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
-    /**
-     * 租户ID
-     */
+    /** 租户ID */
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    /**
-     * 采购订单ID
-     */
+    /** 采购订单ID */
     private Long purchaseOrderId;
 
-    /**
-     * 物料ID
-     */
+    /** 物料ID */
     private Long materialId;
 
-    /**
-     * 物料名称（关联查询填充，数据库无此列）
-     */
+    /** 物料名称（关联查询填充，数据库无此列） */
     @TableField(exist = false)
     private String materialName;
 
-    /**
-     * 数量
-     */
+    /** 数量 */
     private BigDecimal qty;
 
-    /**
-     * 单价
-     */
+    /** 单价 */
     private BigDecimal unitPrice;
 
-    /**
-     * 金额
-     */
+    /** 金额 */
     private BigDecimal amount;
 
-    /**
-     * 收货数量
-     */
+    /** 收货数量 */
     private BigDecimal receivedQty;
 
-    /**
-     * 备注
-     */
+    /** 备注 */
     private String remark;
+
+    /** 逻辑删除：0=未删除，1=已删除 */
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 }

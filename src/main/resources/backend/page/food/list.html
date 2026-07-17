@@ -93,7 +93,7 @@
         </template>
         <!-- 库存列 -->
         <template #col-stock="{ row }">
-          <span :style="{ color: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? '#f56c6c' : '#303133', fontWeight: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? '600' : '400' }">
+          <span :style="{ color: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? 'var(--color-danger)' : 'var(--el-text-primary)', fontWeight: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? '600' : '400' }">
             {{ row.stockQty != null ? row.stockQty : '-' }}
           </span>
           <el-tag v-if="row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock && row.stockQty > 0" type="danger" size="mini" effect="plain" style="margin-left:4px;">低</el-tag>
@@ -199,17 +199,18 @@
       :close-on-click-modal="false"
       @submit="submitStockForm"
     >
-      <el-form :model="stockForm" label-width="80px" size="small">
+      <!-- 修改点：补全 ref/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
+      <el-form ref="stockEditForm" :model="stockForm" :rules="stockEditRules" label-width="80px" size="small">
         <el-form-item label="菜品名称">
           <span>{{ stockForm.name }}</span>
         </el-form-item>
         <el-form-item label="当前库存">
           <span>{{ stockForm.stockQty }}</span>
         </el-form-item>
-        <el-form-item label="库存数量">
+        <el-form-item label="库存数量" prop="newStockQty">
           <el-input v-model="stockForm.newStockQty" type="number" placeholder="请输入库存数量" />
         </el-form-item>
-        <el-form-item label="最低库存预警">
+        <el-form-item label="最低库存预警" prop="newMinStock">
           <el-input v-model="stockForm.newMinStock" type="number" placeholder="请输入最低库存预警值" />
         </el-form-item>
       </el-form>
@@ -276,7 +277,12 @@
           index: 0,
           // 库存编辑
           stockDialog: { visible: false },
-          stockForm: { id: '', name: '', stockQty: '', minStock: '', newStockQty: '', newMinStock: '' }
+          stockForm: { id: '', name: '', stockQty: '', minStock: '', newStockQty: '', newMinStock: '' },
+          // 修改点：库存编辑表单校验规则（配合 el-form :rules + validate()）
+          stockEditRules: {
+            newStockQty: [{ required: true, message: '请输入库存数量', trigger: 'blur' }],
+            newMinStock: [{ required: true, message: '请输入最低库存预警值', trigger: 'blur' }]
+          }
         }
       },
       computed: {
@@ -428,8 +434,13 @@
         },
         async submitStockForm() {
           var self = this
+          var passed = false
+          self.$refs.stockEditForm.validate(function(valid) { passed = valid })
+          if (!passed) {
+            self.$message.warning('请完善表单必填项')
+            return
+          }
           var form = self.stockForm
-          if (form.newStockQty == null || form.newMinStock == null) { self.$message.warning('请填写完整的库存信息'); return }
           try {
             var res = await updateDishStock(form.id, { stockQty: form.newStockQty, minStock: form.newMinStock })
             if (res.code === 1) { self.$message.success('库存更新成功'); self.stockDialog.visible = false; self.init() }
@@ -493,15 +504,15 @@
         onChange: function(file) {
           if (file) {
             var suffix = file.name.split('.')[1]; var size = file.size / 1024 / 1024 < 2
-            if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) { this.$message.error('上传图片只支持 png、jpeg、jpg 格式！'); this.$refs.upload.clearFiles(); return false }
-            if (!size) { this.$message.error('上传文件大小不能超过 2MB!'); return false }
+            if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) { ReggieUI.error('上传图片只支持 png、jpeg、jpg 格式！'); this.$refs.upload.clearFiles(); return false }
+            if (!size) { ReggieUI.error('上传文件大小不能超过 2MB!'); return false }
             return file
           }
         },
         deleteHandle: function(type, id) {
           var self = this
           if (type === '批量' && id === null) { if (self.checkList.length === 0) { self.$message.error('请选择删除对象'); return } }
-          this.$confirm('确认删除该菜品, 是否继续?', '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确认删除该菜品, 是否继续?', '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               deleteDish(type === '批量' ? self.checkList.join(',') : id).then(function(res) {
                 if (res.code === 1) { self.$message.success('删除成功！'); self.init() }
@@ -517,7 +528,7 @@
             params.id = self.checkList.join(','); params.status = row
           } else { params.id = row.id; params.status = row.status ? '0' : '1' }
           self.dishState = params
-          this.$confirm('确认更改该菜品状态?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确认更改该菜品状态?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               dishStatusByStatus(self.dishState).then(function(res) {
                 if (res.code === 1) { self.$message.success('菜品状态已经更改成功！'); self.init() }
@@ -530,8 +541,8 @@
             var ext = format === 'excel' ? 'xlsx' : 'pdf'
             var apiCall = format === 'excel' ? exportApi.exportDishesExcel({}) : exportApi.exportDishesPdf({})
             exportApi.downloadFile(apiCall, '菜品数据.' + ext)
-            this.$message.success('导出成功，文件已开始下载')
-          } catch (err) { this.$message.error('导出失败：' + (err.message || err)) }
+            ReggieUI.success('导出成功，文件已开始下载')
+          } catch (err) { ReggieUI.error('导出失败：' + (err.message || err)) }
         }
       }
     })

@@ -15,6 +15,9 @@ CREATE TABLE dining_area (
   sort int NULL DEFAULT 0 COMMENT '排序',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   updated_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
 
@@ -33,6 +36,9 @@ CREATE TABLE dining_table (
   sort int NULL DEFAULT 0 COMMENT '排序',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   updated_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
 
@@ -47,6 +53,9 @@ CREATE TABLE dining_queue (
   status varchar(20) NULL DEFAULT NULL COMMENT '状态 WAITING/CALLED/COMPLETED/CANCELLED',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   updated_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
 
@@ -64,5 +73,8 @@ CREATE TABLE dining_reservation (
   remark varchar(200) NULL DEFAULT NULL COMMENT '备注',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   updated_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );

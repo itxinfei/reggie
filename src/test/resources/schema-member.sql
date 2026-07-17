@@ -15,6 +15,10 @@ CREATE TABLE member_level (
   discount decimal(3,2) NULL DEFAULT 1.00 COMMENT '折扣率',
   sort int NULL DEFAULT NULL COMMENT '排序',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
 
@@ -31,6 +35,9 @@ CREATE TABLE member (
   status int NULL DEFAULT 1 COMMENT '状态',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   updated_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
 
@@ -48,6 +55,9 @@ CREATE TABLE coupon_template (
   status int NULL DEFAULT 1 COMMENT '状态',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   updated_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
 
@@ -62,6 +72,10 @@ CREATE TABLE coupon_user (
   order_id bigint NULL DEFAULT NULL COMMENT '使用订单ID',
   expire_time datetime NULL DEFAULT NULL COMMENT '过期时间',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
 
@@ -75,6 +89,10 @@ CREATE TABLE points_record (
   biz_id bigint NULL DEFAULT NULL COMMENT '关联业务ID',
   remark varchar(200) NULL DEFAULT NULL COMMENT '备注',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
 
@@ -86,5 +104,9 @@ CREATE TABLE recharge_record (
   gift_amount decimal(10,2) NULL DEFAULT 0.00 COMMENT '赠送金额',
   payment_method varchar(20) NULL DEFAULT NULL COMMENT '支付方式',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );

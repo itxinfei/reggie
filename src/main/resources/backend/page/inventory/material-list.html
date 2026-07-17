@@ -10,10 +10,18 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
   <div class="dashboard-container" id="material-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">食材管理</span>
+      </nav>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -73,8 +81,10 @@
       @submit="submitForm"
       @close="handleClose"
     >
-      <el-form class="demo-form-inline" label-width="120px">
-        <el-form-item label="食材名称：">
+      <!-- 修改点：移除误导性死 class demo-form-inline；label-width 120→90（"库存数量"等4字标签） -->
+      <!-- 修改点：补全 ref/:model/:rules，启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
+      <el-form ref="materialForm" :model="formData" :rules="materialRules" label-width="90px">
+        <el-form-item label="食材名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入食材名称" />
         </el-form-item>
         <el-form-item label="食材分类：">
@@ -196,6 +206,10 @@
               barcode: '',
               status: '1'
             },
+            // 修改点：食材表单校验规则（配合 el-form :rules + validate()）
+            materialRules: {
+              name: [{ required: true, whitespace: true, message: '请输入食材名称', trigger: 'blur' }]
+            },
             warningDialogVisible: false,
             warningData: []
           }
@@ -258,7 +272,7 @@
               this.tableData = materialRes.data.records
               this.counts = Number(materialRes.data.total)
             } else {
-              this.$message.error(materialRes.msg || '操作失败')
+              ReggieUI.error(materialRes.msg || '操作失败')
             }
 
             // 处理统计数据
@@ -376,20 +390,20 @@
             this.formData.dialogVisible = false
           },
           deleteHandle(id) {
-            this.$confirm('此操作将永久删除该食材, 是否继续?', '提示', {
+            ReggieUI.confirm('此操作将永久删除该食材, 是否继续?', '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
               type: 'warning'
             }).then(() => {
               deleteMaterial(id).then(res => {
                 if (res.code === 1) {
-                  this.$message.success('删除成功！')
+                  ReggieUI.success('删除成功！')
                   this.handleQuery()
                 } else {
-                  this.$message.error(res.msg || '操作失败')
+                  ReggieUI.error(res.msg || '操作失败')
                 }
               }).catch(err => {
-                this.$message.error('请求失败：' + err)
+                ReggieUI.error('请求失败：' + err)
               })
             })
           },
@@ -399,18 +413,21 @@
                 this.warningData = res.data
                 this.warningDialogVisible = true
               } else {
-                this.$message.error(res.msg || '操作失败')
+                ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(err => {
-              this.$message.error('请求失败：' + err)
+              ReggieUI.error('请求失败：' + err)
             })
           },
           submitForm() {
-            const fd = this.formData
-            if (!fd.name) {
-              this.$message.error('请输入食材名称')
+            const self = this
+            let passed = false
+            self.$refs.materialForm.validate(function(valid) { passed = valid })
+            if (!passed) {
+              self.$message.warning('请完善表单必填项')
               return
             }
+            const fd = self.formData
             const params = {
               name: fd.name,
               categoryId: fd.categoryId,
@@ -425,27 +442,27 @@
             if (this.action === 'add') {
               addMaterial(params).then(res => {
                 if (res.code === 1) {
-                  this.$message.success('添加成功！')
+                  ReggieUI.success('添加成功！')
                   this.formData.dialogVisible = false
                   this.handleQuery()
                 } else {
-                  this.$message.error(res.msg || '操作失败')
+                  ReggieUI.error(res.msg || '操作失败')
                 }
               }).catch(err => {
-                this.$message.error('请求失败：' + err)
+                ReggieUI.error('请求失败：' + err)
               })
             } else {
               params.id = fd.id
               updateMaterial(params).then(res => {
                 if (res.code === 1) {
-                  this.$message.success('修改成功！')
+                  ReggieUI.success('修改成功！')
                   this.formData.dialogVisible = false
                   this.handleQuery()
                 } else {
-                  this.$message.error(res.msg || '操作失败')
+                  ReggieUI.error(res.msg || '操作失败')
                 }
               }).catch(err => {
-                this.$message.error('请求失败：' + err)
+                ReggieUI.error('请求失败：' + err)
               })
             }
           },

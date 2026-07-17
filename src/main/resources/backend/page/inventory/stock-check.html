@@ -10,12 +10,14 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <style>
     .sub-table { margin: 8px 0; width: 100%; }
-    .sub-table .el-table__body-wrapper { background: #fafbfc; }
-    .empty-expand { text-align: center; padding: 24px; color: #c0c4cc; font-size: 13px; }
+    .sub-table .el-table__body-wrapper { background: var(--el-bg-ghost); }
+    .empty-expand { text-align: center; padding: 24px; color: var(--el-border-base); font-size: 13px; }
     .check-detail-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; padding-right: 4px; }
-    .detail-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px; background: #fafbfc; border-radius: 6px; border: 1px solid #ebeef5; }
+    .detail-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px; background: var(--el-bg-ghost); border-radius: 6px; border: 1px solid var(--el-border-light); }
     .detail-row .el-input--narrow-md { width: 120px; }
     .btn-remove { padding: 6px 12px; }
     .btn-add-detail { align-self: flex-start; margin-top: 8px; }
@@ -24,6 +26,12 @@
 <body>
   <div class="dashboard-container" id="stock-check-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">库存盘点</span>
+      </nav>
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
       <table-bar
@@ -62,7 +70,7 @@
             <el-table-column prop="actualQty" label="实际数量" width="110" align="center" />
             <el-table-column label="差异" width="90" align="center">
               <template slot-scope="scope">
-                <span :style="scope.row.diff < 0 ? 'color: #f56c6c; font-weight: 600' : scope.row.diff > 0 ? 'color: #67c23a; font-weight: 600' : 'color: #909399'">
+                <span :style="scope.row.diff < 0 ? 'color: var(--color-danger); font-weight: 600' : scope.row.diff > 0 ? 'color: var(--color-success); font-weight: 600' : 'color: var(--color-info)'">
                   {{ scope.row.diff }}
                 </span>
               </template>
@@ -71,7 +79,7 @@
           <div v-else class="empty-expand">暂无明细数据</div>
         </template>
         <template #col-profitLoss="{ row }">
-          <span :style="row.profitLoss < 0 ? 'color: #f56c6c; font-weight: 600' : 'color: #303133'">{{ row.profitLoss }}</span>
+          <span :style="row.profitLoss < 0 ? 'color: var(--color-danger); font-weight: 600' : 'color: var(--el-text-primary)'">{{ row.profitLoss }}</span>
         </template>
         <template #col-status="{ row }">
           <el-tag :type="row.status === 'IN_PROGRESS' ? 'warning' : 'success'" size="small">
@@ -85,10 +93,12 @@
     </div>
 
     <!-- 新增盘点对话框（操作人 + 备注） -->
-    <el-dialog title="新增盘点单" :visible.sync="formData.dialogVisible" class="el-dialog--md unified-dialog"
+    <el-dialog title="新增盘点单" :visible.sync="formData.dialogVisible" custom-class="el-dialog--md unified-dialog"
       :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
-      <el-form class="demo-form-inline" label-width="80px" size="small">
-        <el-form-item label="操作人：" required>
+      <!-- 修改点：移除误导性死 class demo-form-inline（label-width 80 合适，保持不变） -->
+      <!-- 修改点：补全 ref/:model/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
+      <el-form ref="createForm" :model="formData" :rules="createRules" label-width="80px" size="small">
+        <el-form-item label="操作人：" prop="operator">
           <el-input v-model="formData.operator" placeholder="请输入操作人姓名" style="width:240px" />
         </el-form-item>
         <el-form-item label="备注：">
@@ -102,17 +112,18 @@
     </el-dialog>
 
     <!-- 录入盘点数据并完成对话框 -->
-    <el-dialog title="录入盘点数据" :visible.sync="entryDialogVisible" class="el-dialog--lg unified-dialog"
+    <el-dialog title="录入盘点数据" :visible.sync="entryDialogVisible" custom-class="el-dialog--lg unified-dialog"
       :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
-      <div v-if="entryMaterials.length === 0" style="text-align:center;padding:40px;color:#c0c4cc;">
+      <div v-if="entryMaterials.length === 0" style="text-align:center;padding:40px;color:var(--el-border-base);">
         暂无食材数据，请先添加盘点项
       </div>
-      <el-form v-else label-width="120px" size="small">
+      <!-- 修改点：label-width 120→90（"盘点明细"4字标签） -->
+      <el-form v-else label-width="90px" size="small">
         <el-form-item label="盘点明细：">
           <div class="check-detail-list">
             <div v-for="(item, index) in entryForm.details" :key="item.id" class="detail-row">
               <span style="width:160px;flex-shrink:0;font-weight:500;">{{ item.materialName }}</span>
-              <span style="color:#909399;font-size:12px;width:80px;">账面：{{ item.bookQty }}</span>
+              <span style="color:var(--color-info);font-size:12px;width:80px;">账面：{{ item.bookQty }}</span>
               <el-input v-model="item.actualStock" placeholder="实际库存" type="number" style="width:120px" />
             </div>
           </div>
@@ -164,6 +175,10 @@
             dialogVisible: false,
             operator: '',
             remark: ''
+          },
+          // 修改点：盘点创建表单校验规则（配合 el-form :rules + validate()）
+          createRules: {
+            operator: [{ required: true, whitespace: true, message: '请输入操作人', trigger: 'blur' }]
           },
           // 录入数据弹窗
           entryDialogVisible: false,
@@ -286,12 +301,14 @@
           }
         },
         submitCreate() {
-          var fd = this.formData
-          if (!fd.operator || !fd.operator.trim()) {
-            this.$message.error('请输入操作人')
+          var self = this
+          var passed = false
+          self.$refs.createForm.validate(function(valid) { passed = valid })
+          if (!passed) {
+            self.$message.error('请输入操作人')
             return
           }
-          var self = this
+          var fd = self.formData
           addStockCheck({ operator: fd.operator.trim(), remark: (fd.remark || '').trim() }).then(function(res) {
             if (res.code === 1) {
               self.$message.success('盘点单创建成功！')
@@ -350,7 +367,7 @@
             }
           })
           if (items.length === 0) {
-            this.$message.warning('请至少填写一条盘点项的实际库存')
+            ReggieUI.warning('请至少填写一条盘点项的实际库存')
             return
           }
           completeStockCheck(this.entryCheckId, { items: items }).then(function(res) {

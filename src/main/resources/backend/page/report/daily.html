@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     /* ========== 基础重置 ========== */
@@ -20,7 +22,7 @@
       padding: 0;
       overflow-y: auto;
       overflow-x: hidden;
-      background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+      background: linear-gradient(135deg, var(--el-bg-subtle) 0%, var(--el-border-lighter) 100%);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
 
@@ -46,7 +48,7 @@
       align-items: center;
       flex-wrap: wrap;
       gap: 12px;
-      background: #fff;
+      background: var(--bg-surface);
       padding: 16px 24px;
       border-radius: 12px;
       margin-bottom: 20px;
@@ -59,7 +61,7 @@
     }
     .tableBar .toolbar-label {
       font-size: 14px;
-      color: #606266;
+      color: var(--el-text-regular);
       font-weight: 500;
       margin-right: 4px;
       flex-shrink: 0;
@@ -73,7 +75,7 @@
 
     /* ========== 导出记录折叠面板 ========== */
     .export-records-panel {
-      background: #fff;
+      background: var(--bg-surface);
       border-radius: 14px;
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
       border: 1px solid rgba(255, 255, 255, 0.8);
@@ -93,20 +95,20 @@
       user-select: none;
     }
     .export-records-panel .panel-header:hover {
-      background: #fafbfc;
+      background: var(--el-bg-ghost);
     }
     .export-records-panel .panel-title {
       font-size: 15px;
       font-weight: 600;
-      color: #303133;
+      color: var(--el-text-primary);
       flex: 1;
       display: flex;
       align-items: center;
       gap: 8px;
     }
     .export-records-panel .record-count-badge {
-      background: #409eff;
-      color: #fff;
+      background: var(--el-color-primary);
+      color: var(--bg-surface);
       font-size: 11px;
       padding: 2px 10px;
       border-radius: 10px;
@@ -114,7 +116,7 @@
     }
     .export-records-panel .expand-icon {
       transition: transform 0.3s;
-      color: #c0c4cc;
+      color: var(--el-border-base);
       font-size: 14px;
     }
     .export-records-panel .expand-icon.is-expanded {
@@ -132,27 +134,27 @@
       font-size: 13px;
     }
     .record-table thead th {
-      background: #fafbfc;
-      color: #909399;
+      background: var(--el-bg-ghost);
+      color: var(--color-info);
       font-weight: 600;
       font-size: 12px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       padding: 12px 16px;
       text-align: left;
-      border-bottom: 2px solid #f0f2f5;
+      border-bottom: 2px solid var(--el-bg-page);
     }
     .record-table tbody td {
       padding: 14px 16px;
-      border-bottom: 1px solid #f5f5f5;
-      color: #606266;
+      border-bottom: 1px solid var(--el-bg-light);
+      color: var(--el-text-regular);
       vertical-align: middle;
     }
     .record-table tbody tr {
       transition: all 0.2s;
     }
     .record-table tbody tr:hover {
-      background: #fafbfc;
+      background: var(--el-bg-ghost);
     }
     .record-table tbody tr:last-child td {
       border-bottom: none;
@@ -166,12 +168,12 @@
       font-weight: 600;
     }
     .format-tag.excel {
-      background: #ecf5ff;
-      color: #409eff;
+      background: var(--el-color-primary-lighter);
+      color: var(--el-color-primary);
     }
     .format-tag.pdf {
-      background: #fef0f0;
-      color: #f56c6c;
+      background: var(--color-danger-light);
+      color: var(--color-danger);
     }
     .status-tag {
       display: inline-flex;
@@ -183,12 +185,12 @@
       font-weight: 600;
     }
     .status-tag.success {
-      background: #f0f9eb;
-      color: #67c23a;
+      background: var(--color-success-light);
+      color: var(--color-success);
     }
     .status-tag.failed {
-      background: #fef0f0;
-      color: #f56c6c;
+      background: var(--color-danger-light);
+      color: var(--color-danger);
     }
     .status-dot {
       width: 6px;
@@ -196,12 +198,12 @@
       border-radius: 50%;
       display: inline-block;
     }
-    .status-dot.success { background: #67c23a; }
-    .status-dot.failed { background: #f56c6c; }
+    .status-dot.success { background: var(--color-success); }
+    .status-dot.failed { background: var(--color-danger); }
     .empty-state {
       text-align: center;
       padding: 40px 20px;
-      color: #c0c4cc;
+      color: var(--el-border-base);
     }
     .empty-state .empty-icon {
       font-size: 48px;
@@ -239,6 +241,12 @@
 <body>
   <div class="dashboard-container daily-container" id="report-daily-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">营业日报</span>
+      </nav>
 
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
       <stat-cards :cards="statsCards"></stat-cards>
@@ -270,17 +278,17 @@
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;" class="daily-two-col">
       <chart-panel style="margin-bottom:0;" padding="24px" marginBottom="0">
         <template #title>
-          <i class="el-icon-data-line" style="color:#409eff;"></i>
+          <i class="el-icon-data-line" style="color:var(--el-color-primary);"></i>
           营收趋势
-          <span style="font-size:12px;color:#c0c4cc;font-weight:400;margin-left:4px;">（近7天）</span>
+          <span style="font-size:12px;color:var(--el-border-base);font-weight:400;margin-left:4px;">（近7天）</span>
         </template>
         <div style="flex:1;min-height:360px;" id="trendChart"></div>
       </chart-panel>
       <chart-panel style="margin-bottom:0;" padding="24px" marginBottom="0">
         <template #title>
-          <i class="el-icon-pie-chart" style="color:#e6a23c;"></i>
+          <i class="el-icon-pie-chart" style="color:var(--color-warning);"></i>
           菜品分类销售占比
-          <span style="font-size:12px;color:#c0c4cc;font-weight:400;margin-left:4px;">（基于已选日期）</span>
+          <span style="font-size:12px;color:var(--el-border-base);font-weight:400;margin-left:4px;">（基于已选日期）</span>
         </template>
         <div style="flex:1;min-height:360px;" id="categoryChart"></div>
       </chart-panel>
@@ -290,7 +298,7 @@
       <div class="export-records-panel">
         <div class="panel-header" @click="toggleRecords">
           <div class="panel-title">
-            <i class="el-icon-s-order" style="color:#67c23a;"></i>
+            <i class="el-icon-s-order" style="color:var(--color-success);"></i>
             导出记录
             <span class="record-count-badge" v-if="exportRecords.length > 0">{{ exportRecords.length }}</span>
           </div>
@@ -345,11 +353,11 @@
                         type="text"
                         size="mini"
                         icon="el-icon-delete"
-                        style="color:#f56c6c;"
+                        style="color:var(--color-danger);"
                         @click="deleteRecord(index)"
                       >删除</el-button>
                     </template>
-                    <span v-else style="color:#c0c4cc;font-size:12px;">--</span>
+                    <span v-else style="color:var(--el-border-base);font-size:12px;">--</span>
                   </td>
                 </tr>
               </tbody>
@@ -538,7 +546,7 @@
         // 加载日报数据 + 趋势图
         async loadData() {
           if (!this.queryDate || this.queryDate.length < 2) {
-            this.$message.warning('请选择日期范围')
+            ReggieUI.warning('请选择日期范围')
             return
           }
           const [startDate, endDate] = this.queryDate
@@ -549,7 +557,7 @@
             if (String(dailyRes.code) === '1') {
               this.dailyData = dailyRes.data || {}
             } else {
-              this.$notify({
+              ReggieUI.notify({
                 title: '日报加载失败',
                 message: dailyRes.msg || '无法获取日报数据，请重试',
                 type: 'error',
@@ -575,7 +583,7 @@
               this.renderCategoryChart(null)
             }
           } catch (err) {
-            this.$notify({
+            ReggieUI.notify({
               title: '请求失败',
               message: err.message || String(err),
               type: 'error',
@@ -748,7 +756,7 @@
         // 导出处理
         async handleExport(format) {
           if (!this.queryDate || this.queryDate.length < 2) {
-            this.$message.warning('请先选择日期范围')
+            ReggieUI.warning('请先选择日期范围')
             return
           }
           const [startDate, endDate] = this.queryDate
@@ -794,13 +802,13 @@
             this.recordsExpanded = true
 
             // 右上角富文本通知
-            this.$notify({
+            ReggieUI.notify({
               title: '导出成功',
               dangerouslyUseHTMLString: true,
               message: '<div style="line-height:1.8;">'
-                + '<div><i class="el-icon-document" style="margin-right:6px;color:#409eff;"></i>文件：' + fileName + '</div>'
-                + '<div><i class="el-icon-coin" style="margin-right:6px;color:#67c23a;"></i>大小：' + sizeStr + '</div>'
-                + '<div><i class="el-icon-time" style="margin-right:6px;color:#e6a23c;"></i>时间：' + now + '</div>'
+                + '<div><i class="el-icon-document" style="margin-right:6px;color:var(--el-color-primary);"></i>文件：' + fileName + '</div>'
+                + '<div><i class="el-icon-coin" style="margin-right:6px;color:var(--color-success);"></i>大小：' + sizeStr + '</div>'
+                + '<div><i class="el-icon-time" style="margin-right:6px;color:var(--color-warning);"></i>时间：' + now + '</div>'
                 + '</div>',
               type: 'success',
               duration: 5000,
@@ -824,13 +832,13 @@
             this.recordsExpanded = true
 
             // 右上角错误通知
-            this.$notify({
+            ReggieUI.notify({
               title: '导出失败',
               dangerouslyUseHTMLString: true,
               message: '<div style="line-height:1.8;">'
-                + '<div><i class="el-icon-warning-outline" style="margin-right:6px;color:#f56c6c;"></i>格式：' + format.toUpperCase() + '</div>'
-                + '<div><i class="el-icon-info" style="margin-right:6px;color:#909399;"></i>原因：' + (err.message || String(err)) + '</div>'
-                + '<div style="color:#c0c4cc;font-size:12px;">时间：' + now + '</div>'
+                + '<div><i class="el-icon-warning-outline" style="margin-right:6px;color:var(--color-danger);"></i>格式：' + format.toUpperCase() + '</div>'
+                + '<div><i class="el-icon-info" style="margin-right:6px;color:var(--color-info);"></i>原因：' + (err.message || String(err)) + '</div>'
+                + '<div style="color:var(--el-border-base);font-size:12px;">时间：' + now + '</div>'
                 + '</div>',
               type: 'error',
               duration: 8000,
@@ -844,7 +852,7 @@
         // 重新下载
         reDownload(record) {
           if (!record.blob) {
-            this.$message.warning('文件数据已过期，请重新导出')
+            ReggieUI.warning('文件数据已过期，请重新导出')
             return
           }
           try {
@@ -859,15 +867,15 @@
               document.body.removeChild(a)
               window.URL.revokeObjectURL(url)
             }, 200)
-            this.$message.success('正在下载：' + record.fileName)
+            ReggieUI.success('正在下载：' + record.fileName)
           } catch (err) {
-            this.$message.error('下载失败：' + err.message)
+            ReggieUI.error('下载失败：' + err.message)
           }
         },
 
         // 删除导出记录
         deleteRecord(index) {
-          this.$confirm('确认删除该条导出记录？', '提示', {
+          ReggieUI.confirm('确认删除该条导出记录？', '提示', {
             confirmButtonText: '删除',
             cancelButtonText: '取消',
             type: 'warning'
@@ -882,7 +890,7 @@
               } catch (e) { /* ignore */ }
             }
             this.exportRecords.splice(index, 1)
-            this.$message.success('记录已删除')
+            ReggieUI.success('记录已删除')
           }).catch(() => {
             // 用户取消，不做处理
           })

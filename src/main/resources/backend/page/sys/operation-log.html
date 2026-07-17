@@ -10,10 +10,18 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
   <div class="dashboard-container" id="log-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">操作日志</span>
+      </nav>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -49,8 +57,8 @@
           <el-tag size="mini" effect="plain" :type="methodTag(row.requestMethod)">{{ row.requestMethod }}</el-tag>
         </template>
         <template #col-isSuccess="{ row }">
-          <i class="el-icon-circle-check" style="color:#52c41a;font-size:16px;" v-if="row.isSuccess === 1"></i>
-          <i class="el-icon-circle-close" style="color:#f56c6c;font-size:16px;" v-else-if="row.isSuccess === 0"></i>
+          <i class="el-icon-circle-check" style="color:var(--antd-success);font-size:16px;" v-if="row.isSuccess === 1"></i>
+          <i class="el-icon-circle-close" style="color:var(--color-danger);font-size:16px;" v-else-if="row.isSuccess === 0"></i>
           <span v-else>-</span>
         </template>
         <template #col-operatorName="{ row }">

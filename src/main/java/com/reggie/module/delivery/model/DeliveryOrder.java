@@ -1,7 +1,10 @@
 package com.reggie.module.delivery.model;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import java.io.Serializable;
@@ -21,9 +24,10 @@ public class DeliveryOrder implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /** 主键ID */
-    @TableId
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
     /** 租户ID */
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
     /** 平台订单号 */
     private String platformOrderId;
@@ -44,13 +48,19 @@ public class DeliveryOrder implements Serializable {
     /** 下单时间 */
     private LocalDateTime orderTime;
     /** 创建时间 */
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdTime;
     /** 更新时间 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedTime;
-    /** 创建人ID — 修改点：数据库字段为 create_user，须显式映射 */
-    @TableField("create_user")
+    /** 创建人ID */
+    @TableField("created_user")
     private Long createdUser;
-    /** 更新人ID — 修改点：数据库字段为 update_user，须显式映射 */
-    @TableField("update_user")
+    /** 更新人ID */
+    @TableField("updated_user")
     private Long updatedUser;
+
+    /** 逻辑删除：0=未删除，1=已删除 */
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 }

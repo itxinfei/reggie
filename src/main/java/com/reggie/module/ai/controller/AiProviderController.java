@@ -154,11 +154,16 @@ public class AiProviderController {
     }
 
     @GetMapping("/get/{id}")
-    @Operation(summary = "获取单个供应商", description = "获取指定供应商的完整配置（含API密钥，仅供编辑使用）")
+    @Operation(summary = "获取单个供应商", description = "获取指定供应商的配置（API密钥已脱敏）")
     public R<AiProviderConfig> getDetail(@PathVariable Long id) {
         AiProviderConfig config = providerConfigService.getById(id);
         if (config == null) {
             return R.error("供应商配置不存在");
+        }
+        // 脱敏：不返回完整 API 密钥
+        if (config.getApiKey() != null && config.getApiKey().length() > 8) {
+            config.setApiKey(config.getApiKey().substring(0, 4) + "****"
+                    + config.getApiKey().substring(config.getApiKey().length() - 4));
         }
         return R.success(config);
     }

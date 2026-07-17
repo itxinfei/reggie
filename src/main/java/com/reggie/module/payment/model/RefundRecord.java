@@ -2,6 +2,10 @@ package com.reggie.module.payment.model;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.IdType;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -14,11 +18,13 @@ import java.time.LocalDateTime;
  * @since 2026-07-09
  */
 @Data
+@TableName("refund_record")
 public class RefundRecord implements Serializable {
     /** 序列化版本UID */
     private static final long serialVersionUID = 1L;
 
     /** 主键ID */
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
     /** 支付订单ID */
     private Long paymentOrderId;
@@ -35,4 +41,10 @@ public class RefundRecord implements Serializable {
     /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdTime;
+    /** 更新时间 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedTime;
+    /** 是否删除：0=未删除，1=已删除 */
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 }

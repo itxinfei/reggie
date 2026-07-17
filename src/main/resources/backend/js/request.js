@@ -64,5 +64,76 @@
       return Promise.reject(error)
     }
   )
-  win.$axios = service
+  win.$axios = service;
+
+  /* ===== ReggieUI 统一交互反馈（挂载于 window.ReggieUI） =====
+     规范（前端二次审查 2026-07-17）：所有页面的 toast / loading / confirm /
+     notify 必须经由本模块，禁止在业务页混用 this.$message / ElMessage /
+     Notification 直写，确保提示样式与交互反馈一致、可统一管控。
+     优先走 Vue.prototype.$message 等原型方法，缺失时降级 window.ELEMENT。 */
+  (function (global) {
+    'use strict';
+    function getVue() {
+      return global.Vue || (global.top && global.top.Vue);
+    }
+    function callMethod(name, fallback) {
+      var Vue = getVue();
+      var args = Array.prototype.slice.call(arguments, 2);
+      if (Vue && Vue.prototype && typeof Vue.prototype[name] === 'function') {
+        return Vue.prototype[name].apply(Vue.prototype, args);
+      }
+      if (typeof fallback === 'function') {
+        return fallback.apply(null, args);
+      }
+      return null;
+    }
+    var ReggieUI = {
+      /** 兼容 Element $message 对象形式，如 ReggieUI.message({ type:'success', message:'x' }) */
+      message: function (options) {
+        var res = callMethod('$message', global.ELEMENT && global.ELEMENT.Message, options);
+        if (res === null && options && options.message) { global.alert(options.message); }
+      },
+      /** 轻提示：type 可取 success/warning/info/error；duration 毫秒 */
+      toast: function (message, type, duration) {
+        var res = callMethod('$message', global.ELEMENT && global.ELEMENT.Message, {
+          message: message,
+          type: type || 'info',
+          duration: (duration == null) ? 2000 : duration
+        });
+        if (res === null) { global.alert(message); }
+      },
+      success: function (m, d) { this.toast(m, 'success', d); },
+      error: function (m, d) { this.toast(m, 'error', d); },
+      warning: function (m, d) { this.toast(m, 'warning', d); },
+      info: function (m, d) { this.toast(m, 'info', d); },
+      /** 全屏加载态，返回带 close() 的句柄 */
+      loading: function (text) {
+        var opts = {
+          text: text || '加载中…',
+          fullscreen: true,
+          background: 'rgba(255, 255, 255, 0.7)'
+        };
+        var inst = callMethod('$loading', global.ELEMENT && global.ELEMENT.Loading && global.ELEMENT.Loading.service, opts);
+        if (inst) { return inst; }
+        return { close: function () {} };
+      },
+      /** 确认框：签名兼容 Element this.$confirm(message, title, options)，返回 Promise */
+      confirm: function (message, title, options) {
+        var opts = options || {};
+        if (opts.confirmButtonText == null) { opts.confirmButtonText = '确定'; }
+        if (opts.cancelButtonText == null) { opts.cancelButtonText = '取消'; }
+        if (opts.type == null) { opts.type = 'warning'; }
+        var fb = global.ELEMENT && global.ELEMENT.MessageBox && global.ELEMENT.MessageBox.confirm;
+        var p = callMethod('$confirm', fb, message, title || '提示', opts);
+        if (p) { return p; }
+        return global.confirm(message) ? Promise.resolve() : Promise.reject();
+      },
+      /** 通知（右上角）：签名兼容 Element this.$notify(options) */
+      notify: function (options) {
+        var res = callMethod('$notify', global.ELEMENT && global.ELEMENT.Notification, options);
+        if (res === null && options && options.message) { global.alert(options.message); }
+      }
+    };
+    global.ReggieUI = ReggieUI;
+  })(window);
 })(window);

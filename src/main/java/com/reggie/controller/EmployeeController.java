@@ -462,7 +462,7 @@ public class EmployeeController {
      * 修改员工状态（启用/禁用）
      */
     @PutMapping("/status")
-    @Operation(summary = "修改员工状态", description = "仅更新员工启用/禁用状态，不影响其他字段")
+    @Operation(summary = "修改员工状态", description = "仅更新员工启用/禁用状态，不影响其他字段，自动校验租户权限")
     public R<String> updateStatus(HttpServletRequest request, @RequestBody Map<String, Object> params) {
         if (!isAdmin(request)) {
             return R.error("权限不足");
@@ -471,6 +471,15 @@ public class EmployeeController {
         Integer status = params.get("status") != null ? Integer.valueOf(params.get("status").toString()) : null;
         if (id == null || status == null) {
             return R.error("参数错误");
+        }
+        // 租户校验：确保只能修改当前租户的员工
+        Employee target = employeeService.getById(id);
+        if (target == null) {
+            return R.error("员工不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(target.getTenantId())) {
+            return R.error("无权操作其他租户的员工");
         }
         Employee emp = new Employee();
         emp.setId(id);

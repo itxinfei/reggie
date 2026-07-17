@@ -73,10 +73,20 @@ public class PasswordUtils {
         if (PASSWORD_TYPE_MD5.equals(passwordType)) {
             String md5Hex = DigestUtils.md5DigestAsHex(rawPassword.getBytes(StandardCharsets.UTF_8));
             if (md5Hex.equals(encodedPassword)) {
+                // 检测到旧版MD5密码，升级到BCrypt
                 return encodePassword(rawPassword);
             }
             return null;
         }
         return null;
+    }
+
+    /**
+     * 检查密码类型是否安全（非MD5）
+     * @param passwordType 密码类型
+     * @return true=安全（BCrypt），false=不安全（MD5）
+     */
+    public static boolean isSecure(String passwordType) {
+        return PASSWORD_TYPE_BCRYPT.equals(passwordType);
     }
 }

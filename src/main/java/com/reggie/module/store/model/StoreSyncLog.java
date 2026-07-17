@@ -77,8 +77,26 @@ public class StoreSyncLog implements Serializable {
     private Long operatorId;
 
     /** 开始时间 */
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime startTime;
 
     /** 结束时间 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime endTime;
+
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
+
+    @TableField(fill = FieldFill.INSERT)
+    private Long createUser;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateUser;
+
+    /** 逻辑删除：0=未删除，1=已删除 */
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 }

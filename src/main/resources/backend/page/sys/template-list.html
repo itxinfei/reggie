@@ -10,13 +10,15 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <style>
     .content-preview {
-      background: #f5f7fa;
+      background: var(--el-bg-subtle);
       padding: 8px 12px;
       border-radius: 4px;
       font-size: 12px;
-      color: #606266;
+      color: var(--el-text-regular);
       font-family: 'Courier New', monospace;
       line-height: 1.6;
       max-height: 60px;
@@ -48,6 +50,12 @@
 <body>
   <div class="dashboard-container" id="template-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">通知模板</span>
+      </nav>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -112,11 +120,12 @@
       @submit="submitForm"
       @close="formData.dialogVisible = false"
     >
-      <el-form label-width="120px" size="small">
-        <el-form-item label="模板名称" required>
+      <!-- 修改点：补全 ref/:model/:rules 与 prop，启用 Element 校验（原 required 无 prop 不生效） -->
+      <el-form ref="templateForm" :model="formData" :rules="templateRules" label-width="90px" size="small">
+        <el-form-item label="模板名称" prop="templateName">
           <el-input v-model="formData.templateName" placeholder="如：订单确认通知"></el-input>
         </el-form-item>
-        <el-form-item label="业务类型" required>
+        <el-form-item label="业务类型" prop="bizType">
           <el-select v-model="formData.bizType" style="width:100%">
             <el-option label="订单通知" value="ORDER_NOTICE"></el-option>
             <el-option label="营销推送" value="PROMOTION"></el-option>
@@ -125,14 +134,14 @@
             <el-option label="工作通知" value="JOB_NOTICE"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="发送渠道" required>
+        <el-form-item label="发送渠道" prop="channel">
           <el-select v-model="formData.channel" style="width:100%">
             <el-option label="短信" :value="1"></el-option>
             <el-option label="APP推送" :value="2"></el-option>
             <el-option label="短信+APP推送" :value="3"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="模板内容" required>
+        <el-form-item label="模板内容" prop="content">
           <el-input v-model="formData.content" type="textarea" :rows="4"
             placeholder="尊敬的${userName}，您的订单${orderNo}已确认。"></el-input>
         </el-form-item>
@@ -208,6 +217,13 @@
             dialogVisible: false,
             id: null, templateName: '', bizType: 'ORDER_NOTICE', channel: 1,
             content: '', status: 1
+          },
+          // 修改点：模板表单校验规则（配合 el-form :rules + validate()）
+          templateRules: {
+            templateName: [{ required: true, message: '请输入模板名称', trigger: 'blur' }],
+            bizType: [{ required: true, message: '请选择业务类型', trigger: 'change' }],
+            channel: [{ required: true, message: '请选择发送渠道', trigger: 'change' }],
+            content: [{ required: true, message: '请输入模板内容', trigger: 'blur' }]
           }
         }
       },
@@ -336,13 +352,14 @@
           }
         },
         submitForm() {
-          if (!this.formData.templateName || !this.formData.content) {
-            this.$message.warning('请填写模板名称和内容')
-            return
-          }
-          this.submitting = true
           var self = this
-          var api = this.formData.id ? sysApi.templateUpdate(this.formData) : sysApi.templateAdd(this.formData)
+          self.$refs.templateForm.validate(function(valid) {
+            if (!valid) {
+              self.$message.warning('请完善表单必填项')
+              return
+            }
+            self.submitting = true
+          var api = self.formData.id ? sysApi.templateUpdate(self.formData) : sysApi.templateAdd(self.formData)
           api.then(function(res) {
             if (res && res.code === 1) {
               self.$message.success(res.msg || '操作成功')
@@ -351,8 +368,9 @@
             } else {
               self.$message.error(res ? res.msg : '操作失败')
             }
-          }).catch(function() { self.$message.error('操作失败') })
-            .finally(function() { self.submitting = false })
+            }).catch(function() { self.$message.error('操作失败') })
+              .finally(function() { self.submitting = false })
+          })
         },
         toggleStatus(row) {
           var self = this
@@ -366,7 +384,7 @@
         },
         deleteHandle(id) {
           var self = this
-          this.$confirm('确定删除该模板吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确定删除该模板吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               sysApi.templateDelete(id).then(function(res) {
                 if (res && res.code === 1) {

@@ -10,8 +10,10 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <style>
-    .perm-tree-dialog .el-tree { max-height: 400px; overflow-y: auto; border: 1px solid #ebeef5; border-radius: 4px; padding: 10px; }
+    .perm-tree-dialog .el-tree { max-height: 400px; overflow-y: auto; border: 1px solid var(--el-border-light); border-radius: 4px; padding: 10px; }
     .perm-tree-dialog .el-tree-node__content { height: 32px; }
     .perm-tree-dialog .el-tree-node__label { font-size: 13px; }
     .perm-header { display: flex; align-items: center; gap: 8px; }
@@ -21,6 +23,12 @@
 <body>
   <div class="dashboard-container" id="role-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">角色管理</span>
+      </nav>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -76,11 +84,12 @@
       @submit="submitForm"
       @close="formData.dialogVisible = false"
     >
-      <el-form label-width="100px" size="small">
-        <el-form-item label="角色名称" required>
+      <!-- 修改点：补全 ref/:model/:rules，启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
+      <el-form ref="roleForm" :model="formData" :rules="roleRules" label-width="100px" size="small">
+        <el-form-item label="角色名称" prop="roleName">
           <el-input v-model="formData.roleName" placeholder="如：店长"></el-input>
         </el-form-item>
-        <el-form-item label="角色标识" required>
+        <el-form-item label="角色标识" prop="roleKey">
           <el-input v-model="formData.roleKey" placeholder="如：manager（英文）"></el-input>
         </el-form-item>
         <el-form-item label="描述">
@@ -99,10 +108,10 @@
     </crud-dialog>
 
     <!-- 权限分配弹窗 -->
-    <el-dialog title="权限分配" :visible.sync="permDialogVisible" class="el-dialog--md unified-dialog perm-tree-dialog"
+    <el-dialog title="权限分配" :visible.sync="permDialogVisible" custom-class="el-dialog--md unified-dialog perm-tree-dialog"
       :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
-      <div style="margin-bottom: 12px; font-size: 13px; color: #606266;">
-        当前角色：<strong>{{ currentRole?.roleName }}</strong>
+      <div style="margin-bottom: 12px; font-size: 13px; color: var(--el-text-regular);">
+        当前角色：<strong>{{ currentRole ? currentRole.roleName : '' }}</strong>
         <span style="margin-left: 12px;">已选 <el-tag type="success" size="mini">{{ checkedPerms.length }}</el-tag> 项权限</span>
       </div>
       <el-tree
@@ -116,16 +125,16 @@
         @check-change="handleCheckChange">
         <template slot-scope="{ node, data }">
           <span class="perm-header">
-            <i class="el-icon-folder" v-if="data.children && data.children.length" style="color:#409eff;margin-right:4px;"></i>
-            <i class="el-icon-document" v-else style="color:#909399;margin-right:4px;"></i>
+            <i class="el-icon-folder" v-if="data.children && data.children.length" style="color:var(--el-color-primary);margin-right:4px;"></i>
+            <i class="el-icon-document" v-else style="color:var(--color-info);margin-right:4px;"></i>
             <span>{{ data.permissionName }}</span>
             <el-tag v-if="data.permissionKey" type="info" size="mini" effect="plain">{{ data.permissionKey }}</el-tag>
           </span>
         </template>
       </el-tree>
       <span slot="footer" class="dialog-footer">
-        <el-button @click="permDialogVisible = false">取 消</el-button>
-        <el-button type="primary" @click="submitPerms" :loading="permSubmitting">保存权限</el-button>
+        <el-button size="medium" @click="permDialogVisible = false">取 消</el-button>
+        <el-button type="primary" size="medium" @click="submitPerms" :loading="permSubmitting">保存权限</el-button>
       </span>
     </el-dialog>
   </div>
@@ -176,6 +185,11 @@
             title: '新增角色',
             dialogVisible: false,
             id: null, roleName: '', roleKey: '', description: '', sort: 0, status: 1
+          },
+          // 修改点：角色表单校验规则（配合 el-form :rules + validate()）
+          roleRules: {
+            roleName: [{ required: true, whitespace: true, message: '请输入角色名称', trigger: 'blur' }],
+            roleKey: [{ required: true, whitespace: true, message: '请输入角色标识', trigger: 'blur' }]
           },
           // 权限分配
           permDialogVisible: false,
@@ -315,13 +329,15 @@
           this.formData.dialogVisible = true
         },
         submitForm() {
-          if (!this.formData.roleName || !this.formData.roleKey) {
-            this.$message.warning('请填写角色名称和标识')
+          const self = this
+          let passed = false
+          self.$refs.roleForm.validate(function(valid) { passed = valid })
+          if (!passed) {
+            self.$message.warning('请填写角色名称和标识')
             return
           }
-          this.submitting = true
-          var self = this
-          var api = this.formData.id ? sysApi.roleUpdate(this.formData) : sysApi.roleAdd(this.formData)
+          self.submitting = true
+          var api = self.formData.id ? sysApi.roleUpdate(self.formData) : sysApi.roleAdd(self.formData)
           api.then(function(res) {
             if (res && res.code === 1) {
               self.$message.success(res.msg || '操作成功')
@@ -335,7 +351,7 @@
         },
         deleteHandle(id) {
           var self = this
-          this.$confirm('确定删除该角色吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确定删除该角色吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               sysApi.roleDelete(id).then(function(res) {
                 if (res && res.code === 1) {

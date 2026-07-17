@@ -3,6 +3,7 @@ package com.reggie.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequiresPermission;
 import com.reggie.entity.Region;
 import com.reggie.service.RegionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -100,6 +101,7 @@ public class RegionController {
      * 新增地区
      */
     @PostMapping
+    @RequiresPermission("region:add")
     @Operation(summary = "新增行政区划", description = "新增省市区行政区划数据")
     public R<String> save(
             @Parameter(name = "region", description = "行政区划信息", required = true)
@@ -113,6 +115,7 @@ public class RegionController {
      * 修改地区
      */
     @PutMapping
+    @RequiresPermission("region:edit")
     @Operation(summary = "修改行政区划", description = "修改行政区划信息")
     public R<String> update(
             @Parameter(name = "region", description = "行政区划信息", required = true)
@@ -127,6 +130,7 @@ public class RegionController {
      * 如果有子节点，不允许删除
      */
     @DeleteMapping("/{id}")
+    @RequiresPermission("region:delete")
     @Operation(summary = "删除行政区划", description = "删除行政区划，如果有子节点则不允许删除")
     public R<String> delete(
             @Parameter(name = "id", description = "行政区划ID", required = true)

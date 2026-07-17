@@ -42,17 +42,17 @@
 
 /* 修改点：统一按钮样式体系，去除操作列分隔线，旧版 blueBug/delBut 颜色与 btn-view/btn-delete 一致 */
 .crud-table-wrapper .tableBox .el-button--text.blueBug {
-  color: #ffc200;
+  color: var(--color-brand-500);
 }
 .crud-table-wrapper .tableBox .el-button--text.blueBug:hover {
-  background: #fffbf0;
+  background: var(--color-brand-50);
 }
 
 .crud-table-wrapper .tableBox .el-button--text.delBut {
-  color: #f56c6c;
+  color: var(--color-danger);
 }
 .crud-table-wrapper .tableBox .el-button--text.delBut:hover {
-  background: #fef0f0;
+  background: var(--color-danger-light);
 }
 
 /* ========== 表格内标签微调 ========== */
@@ -92,24 +92,24 @@
   width: 100% !important;
   height: 120px;
   line-height: 120px !important;
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--antd-border);
   border-radius: 6px;
-  background: #fafafa;
+  background: var(--el-bg-base);
   font-size: 28px;
-  color: #8c939d;
+  color: var(--legacy-8c939d);
 }
 .avatar-uploader .el-upload:hover .avatar-uploader-icon {
-  border-color: #409eff;
-  color: #409eff;
+  border-color: var(--color-brand-500);
+  color: var(--color-brand-500);
 }
 .avatar-uploader img.avatar {
   width: 120px;
   height: 120px;
   object-fit: cover;
   border-radius: 6px;
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--el-border-lighter2);
   padding: 4px;
-  background: #fff;
+  background: var(--color-white);
 }
 
 /* ========== 详情弹窗信息框 ========== */
@@ -123,7 +123,7 @@
   line-height: 20px;
   font-size: 14px;
   font-weight: 400;
-  color: #666666;
+  color: var(--gray-666);
   text-align: left;
   margin-bottom: 14px;
 }
@@ -139,24 +139,24 @@
 
 .info-box .item-box .des {
   flex: 1;
-  color: #333333;
+  color: var(--gray-333);
 }
 
-/* 操作列按钮颜色变体（统一为品牌金 #ffc200 的加深可读版本，保证白底对比度） */
+/* 操作列按钮颜色变体（统一为品牌金 var(--color-brand-500) 的加深可读版本，保证白底对比度） */
 .el-button--text.btn-view {
-  color: #c99200;
+  color: var(--color-brand-700);
 }
 .el-button--text.btn-view:hover {
-  color: #a9780a;
-  background: #fffbf0;
+  color: var(--legacy-a9780a);
+  background: var(--color-brand-50);
 }
 
 .el-button--text.btn-delete {
-  color: #f56c6c;
+  color: var(--color-danger);
 }
 
 .el-button--text.btn-warning {
-  color: #e6a23c;
+  color: var(--color-warning);
 }
 
 /* ========== 响应式 ========== */
@@ -168,12 +168,12 @@
 
 /* ========== 菜品弹窗（food/list.html） ========== */
 /* 口味编辑样式：统一原 list.html 内联 .flavorBox-dialog 系列（M3 去内联），
-   index 徽标改品牌金 #ffc200（原 #409eff off-brand，修复 M4） */
-.flavorBox-dialog { border: 1px solid #ebeef5; border-radius: 8px; padding: 12px; background: #fafbfc; }
-.flavor-empty-dialog { text-align: center; padding: 16px; color: #c0c4cc; }
-.flavor-item-dialog { border: 1px solid #e4e7ed; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
+   index 徽标改品牌金 var(--color-brand-500)（原 var(--el-color-primary) off-brand，修复 M4） */
+.flavorBox-dialog { border: 1px solid var(--el-border-light); border-radius: 8px; padding: 12px; background: var(--el-bg-ghost); }
+.flavor-empty-dialog { text-align: center; padding: 16px; color: var(--el-border-base); }
+.flavor-item-dialog { border: 1px solid var(--el-border-lighter2); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: var(--color-white); }
 .flavor-header-dialog { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.flavor-header-dialog .flavor-index { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #ffc200; color: #fff; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+.flavor-header-dialog .flavor-index { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--color-brand-500); color: var(--color-white); font-size: 11px; font-weight: 600; flex-shrink: 0; }
 .flavor-tags-dialog { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding-left: 30px; }
 
 /* 菜品新增/编辑弹窗（xl 840px）内表单占满宽度，避免右侧留白（M6） */

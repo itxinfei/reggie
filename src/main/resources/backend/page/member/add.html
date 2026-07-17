@@ -9,17 +9,24 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
   <div class="addBrand-container" id="member-add-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">员工管理</span>
+      </nav>
       <el-form
         ref="ruleForm"
         :model="ruleForm"
         :rules="rules"
         :inline="false"
-        label-width="120px"
-        class="demo-ruleForm"
+        label-width="90px"
       >
         <el-form-item label="账号:" prop="username">
           <el-input v-model="ruleForm.username" placeholder="请输入账号" maxlength="20"/>
@@ -153,7 +160,7 @@
                   username: data.username
                 }
               } else {
-                this.$message.error(res.msg || '操作失败')
+                ReggieUI.error(res.msg || '操作失败')
               }
             })
           },
@@ -167,7 +174,7 @@
                   }
                   addEmployee(params).then(res => {
                     if (res.code === 1) {
-                      this.$message.success('员工添加成功！')
+                      ReggieUI.success('员工添加成功！')
                       if (!st) {
                         this.goBack()
                       } else {
@@ -182,10 +189,10 @@
                         }
                       }
                     } else {
-                      this.$message.error(res.msg || '操作失败')
+                      ReggieUI.error(res.msg || '操作失败')
                     }
                   }).catch(err => {
-                    this.$message.error('请求失败：' + err)
+                    ReggieUI.error('请求失败：' + err)
                   })
                 } else {
                   const params = {
@@ -194,13 +201,13 @@
                   }
                   editEmployee(params).then(res => {
                     if (res.code === 1) {
-                      this.$message.success('员工信息修改成功！')
+                      ReggieUI.success('员工信息修改成功！')
                       this.goBack()
                     } else {
-                      this.$message.error(res.msg || '操作失败')
+                      ReggieUI.error(res.msg || '操作失败')
                     }
                   }).catch(err => {
-                    this.$message.error('请求失败：' + err)
+                    ReggieUI.error('请求失败：' + err)
                   })
                 }
               } else {

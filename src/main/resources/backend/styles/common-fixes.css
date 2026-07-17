@@ -1,0 +1,858 @@
+/* ============================================
+   Checkbox 修复：消除选中时的动画漂移
+   原因：cubic-bezier(0.71, -0.46, 0.29, 1.46)
+   弹性曲线的负控制点产生 overshoot，导致视觉
+   抖动；同时 transform 延迟 0.05s 与颜色动画不
+   同步，加剧漂移感。
+   修复：使用线性过渡，统一时序
+   ============================================ */
+.el-checkbox__inner {
+  display: inline-block;
+  position: relative;
+  border: 1px solid var(--el-border-soft);
+  border-radius: 2px;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  background-color: var(--color-white);
+  z-index: 1;
+  transition: none;
+  transform: none !important;
+}
+.el-checkbox__input.is-checked .el-checkbox__inner::after {
+  transition: none !important;
+  transform: none !important;
+}
+.el-checkbox__inner::after {
+  -webkit-box-sizing: content-box;
+  box-sizing: content-box;
+  content: "";
+  border: 1px solid var(--color-white);
+  border-left: 0;
+  border-top: 0;
+  height: 7px;
+  left: 4px;
+  position: absolute;
+  top: 1px;
+  width: 3px;
+  transition: none !important;
+  transform: none !important;
+  transform-origin: unset !important;
+}
+.el-checkbox__inner:hover {
+  border-color: var(--color-brand-500);
+}
+.el-checkbox__original {
+  opacity: 0;
+  outline: 0;
+  position: absolute;
+  margin: 0;
+  width: 0;
+  height: 0;
+  z-index: -1;
+}
+.el-checkbox-button,
+.el-checkbox-button__inner {
+  display: inline-block;
+  position: relative;
+}
+.el-checkbox__label {
+  display: inline-block;
+  padding-left: 10px;
+  line-height: 19px;
+  font-size: 14px;
+}
+.el-checkbox:last-of-type {
+  margin-right: 0;
+}
+.el-checkbox-button__inner {
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  background: var(--color-white);
+  border: 1px solid var(--el-border-soft);
+  border-left: 0;
+  color: var(--text-legacy-muted);
+  -webkit-appearance: none;
+  text-align: center;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  outline: 0;
+  margin: 0;
+  -webkit-transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  padding: 12px 20px;
+  font-size: 14px;
+  border-radius: 0;
+}
+.el-checkbox-button__inner.is-round {
+  padding: 12px 20px;
+}
+.el-checkbox-button__inner:hover {
+  color: var(--color-brand-500);
+}
+.el-checkbox-button__inner [class*="el-icon-"] {
+  line-height: 0.9;
+}
+.el-radio,
+.el-radio__input {
+  line-height: 1;
+  outline: 0;
+  white-space: nowrap;
+}
+.el-checkbox-button__inner [class*="el-icon-"] + span {
+  margin-left: 5px;
+}
+.el-checkbox-button__original {
+  opacity: 0;
+  outline: 0;
+  position: absolute;
+  margin: 0;
+  z-index: -1;
+}
+.el-radio,
+.el-radio__inner,
+.el-radio__input {
+  position: relative;
+  display: inline-block;
+}
+.el-checkbox-button.is-checked .el-checkbox-button__inner {
+  color: var(--color-white);
+  background-color: var(--color-brand-500);
+  border-color: var(--color-brand-500);
+  -webkit-box-shadow: -1px 0 0 0 var(--legacy-ffbc8b);
+  box-shadow: -1px 0 0 0 var(--legacy-ffbc8b);
+}
+.el-checkbox-button.is-checked:first-child .el-checkbox-button__inner {
+  border-left-color: var(--color-brand-500);
+}
+.el-checkbox-button.is-disabled .el-checkbox-button__inner {
+  color: var(--el-border-muted);
+  cursor: not-allowed;
+  background-image: none;
+  background-color: var(--color-white);
+  border-color: var(--el-border-light);
+  -webkit-box-shadow: none;
+  box-shadow: none;
+}
+.el-checkbox-button.is-disabled:first-child .el-checkbox-button__inner {
+  border-left-color: var(--el-border-light);
+}
+.el-checkbox-button:first-child .el-checkbox-button__inner {
+  border-left: 1px solid var(--el-border-soft);
+  border-radius: 4px 0 0 4px;
+  -webkit-box-shadow: none !important;
+  box-shadow: none !important;
+}
+.el-checkbox-button.is-focus .el-checkbox-button__inner {
+  border-color: var(--color-brand-500);
+}
+.el-checkbox-button:last-child .el-checkbox-button__inner {
+  border-radius: 0 4px 4px 0;
+}
+.el-checkbox-button--medium .el-checkbox-button__inner {
+  padding: 10px 20px;
+  font-size: 14px;
+  border-radius: 0;
+}
+.el-checkbox-button--medium .el-checkbox-button__inner.is-round {
+  padding: 10px 20px;
+}
+.el-checkbox-button--small .el-checkbox-button__inner {
+  padding: 9px 15px;
+  font-size: 12px;
+  border-radius: 0;
+}
+.el-checkbox-button--small .el-checkbox-button__inner.is-round {
+  padding: 9px 15px;
+}
+.el-checkbox-button--mini .el-checkbox-button__inner {
+  padding: 7px 15px;
+  font-size: 12px;
+  border-radius: 0;
+}
+.el-checkbox-button--mini .el-checkbox-button__inner.is-round {
+  padding: 7px 15px;
+}
+.el-checkbox-group {
+  font-size: 0;
+}
+.el-radio,
+.el-radio--medium.is-bordered .el-radio__label {
+  font-size: 14px;
+}
+.el-radio {
+  color: var(--text-legacy-muted);
+  cursor: pointer;
+  margin-right: 30px;
+}
+.el-cascader-node > .el-radio,
+.el-radio:last-child {
+  margin-right: 0;
+}
+.el-radio.is-bordered {
+  padding: 12px 20px 0 10px;
+  border-radius: 4px;
+  border: 1px solid var(--el-border-soft);
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  height: 40px;
+}
+.el-radio.is-bordered.is-checked {
+  border-color: var(--color-brand-500);
+}
+.el-radio.is-bordered.is-disabled {
+  cursor: not-allowed;
+  border-color: var(--el-border-light);
+}
+.el-radio__input.is-disabled .el-radio__inner,
+.el-radio__input.is-disabled.is-checked .el-radio__inner {
+  background-color: var(--el-bg-soft);
+  border-color: var(--el-border-lighter2);
+}
+.el-radio.is-bordered + .el-radio.is-bordered {
+  margin-left: 10px;
+}
+.el-radio--medium.is-bordered {
+  padding: 10px 20px 0 10px;
+  border-radius: 4px;
+  height: 36px;
+}
+.el-radio--mini.is-bordered .el-radio__label,
+.el-radio--small.is-bordered .el-radio__label {
+  font-size: 12px;
+}
+.el-radio--medium.is-bordered .el-radio__inner {
+  height: 14px;
+  width: 14px;
+}
+.el-radio--small.is-bordered {
+  padding: 8px 15px 0 10px;
+  border-radius: 3px;
+  height: 32px;
+}
+.el-radio--small.is-bordered .el-radio__inner {
+  height: 12px;
+  width: 12px;
+}
+.el-radio--mini.is-bordered {
+  padding: 6px 15px 0 10px;
+  border-radius: 3px;
+  height: 28px;
+}
+.el-radio--mini.is-bordered .el-radio__inner {
+  height: 12px;
+  width: 12px;
+}
+.el-radio__input {
+  cursor: pointer;
+  vertical-align: middle;
+}
+.el-radio__input.is-disabled .el-radio__inner {
+  cursor: not-allowed;
+}
+.el-radio__input.is-disabled .el-radio__inner::after {
+  cursor: not-allowed;
+  background-color: var(--el-bg-soft);
+}
+.el-radio__input.is-disabled .el-radio__inner + .el-radio__label {
+  cursor: not-allowed;
+}
+.el-radio__input.is-disabled.is-checked .el-radio__inner::after {
+  background-color: var(--el-border-muted);
+}
+.el-radio__input.is-disabled + span.el-radio__label {
+  color: var(--el-border-muted);
+  cursor: not-allowed;
+}
+.el-radio__input.is-checked .el-radio__inner {
+  border-color: var(--color-brand-500);
+  background: var(--color-brand-500);
+}
+.el-radio__input.is-checked .el-radio__inner::after {
+  -webkit-transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
+}
+.el-radio__input.is-checked + .el-radio__label {
+  color: var(--color-brand-500);
+}
+.el-radio__input.is-focus .el-radio__inner {
+  border-color: var(--color-brand-500);
+}
+.el-radio__inner {
+  border: 1px solid var(--el-border-soft);
+  border-radius: 100%;
+  width: 14px;
+  height: 14px;
+  background-color: var(--color-white);
+  cursor: pointer;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.el-radio__inner:hover {
+  border-color: var(--color-brand-500);
+}
+.el-radio__inner::after {
+  width: 4px;
+  height: 4px;
+  border-radius: 100%;
+  background-color: var(--color-white);
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  -webkit-transform: translate(-50%, -50%) scale(0);
+  transform: translate(-50%, -50%) scale(0);
+  -webkit-transition: -webkit-transform 0.15s ease-in;
+  transition: -webkit-transform 0.15s ease-in;
+  transition: transform 0.15s ease-in;
+  transition: transform 0.15s ease-in, -webkit-transform 0.15s ease-in;
+}
+.el-radio__original {
+  opacity: 0;
+  outline: 0;
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+}
+.el-radio:focus:not(.is-focus):not(:active):not(.is-disabled) .el-radio__inner {
+  -webkit-box-shadow: 0 0 2px 2px var(--color-brand-500);
+  box-shadow: 0 0 2px 2px var(--color-brand-500);
+}
+.el-radio__label {
+  font-size: 14px;
+  padding-left: 10px;
+}
+.el-scrollbar {
+  overflow: hidden;
+  position: relative;
+}
+.el-scrollbar:active > .el-scrollbar__bar,
+.el-scrollbar:focus > .el-scrollbar__bar,
+.el-scrollbar:hover > .el-scrollbar__bar {
+  opacity: 1;
+  -webkit-transition: opacity 340ms ease-out;
+  transition: opacity 340ms ease-out;
+}
+.el-scrollbar__wrap {
+  overflow: scroll;
+  height: 100%;
+}
+.el-scrollbar__wrap--hidden-default::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.el-scrollbar__thumb {
+  position: relative;
+  display: block;
+  width: 0;
+  height: 0;
+  cursor: pointer;
+  border-radius: inherit;
+  background-color: rgba(144, 147, 153, 0.3);
+  -webkit-transition: 0.3s background-color;
+  transition: 0.3s background-color;
+}
+.el-scrollbar__thumb:hover {
+  background-color: rgba(144, 147, 153, 0.5);
+}
+.el-scrollbar__bar {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  z-index: 1;
+  border-radius: 4px;
+  opacity: 0;
+  -webkit-transition: opacity 120ms ease-out;
+  transition: opacity 120ms ease-out;
+}
+.el-scrollbar__bar.is-vertical {
+  width: 6px;
+  top: 2px;
+}
+.el-scrollbar__bar.is-vertical > div {
+  width: 100%;
+}
+.el-scrollbar__bar.is-horizontal {
+  height: 6px;
+  left: 2px;
+}
+.el-scrollbar__bar.is-horizontal > div {
+  height: 100%;
+}
+.el-cascader-panel {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.el-cascader-node,
+.el-drawer {
+  display: -webkit-box;
+  display: -ms-flexbox;
+}
+.el-cascader-panel.is-bordered {
+  border: 1px solid var(--el-border-lighter2);
+  border-radius: 4px;
+}
+.el-cascader-menu {
+  min-width: 180px;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  color: var(--text-legacy-muted);
+  border-right: solid 1px var(--el-border-lighter2);
+}
+.el-cascader-menu:last-child {
+  border-right: none;
+}
+.el-cascader-menu:last-child .el-cascader-node {
+  padding-right: 20px;
+}
+.el-cascader-menu__wrap {
+  height: 204px;
+}
+.el-cascader-menu__list {
+  position: relative;
+  min-height: 100%;
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.el-avatar,
+.el-drawer {
+  -webkit-box-sizing: border-box;
+  overflow: hidden;
+}
+.el-cascader-menu__hover-zone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.el-cascader-menu__empty-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--el-border-muted);
+}
+.el-cascader-node {
+  position: relative;
+  display: flex;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  padding: 0 30px 0 20px;
+  height: 34px;
+  line-height: 34px;
+  outline: 0;
+}
+.el-cascader-node.is-selectable.in-active-path {
+  color: var(--text-legacy-muted);
+}
+.el-cascader-node.in-active-path,
+.el-cascader-node.is-active,
+.el-cascader-node.is-selectable.in-checked-path {
+  color: var(--color-brand-500);
+  font-weight: 700;
+}
+.el-cascader-node:not(.is-disabled) {
+  cursor: pointer;
+}
+.el-cascader-node:not(.is-disabled):focus,
+.el-cascader-node:not(.is-disabled):hover {
+  background: var(--el-bg-soft);
+}
+.el-cascader-node.is-disabled {
+  color: var(--el-border-muted);
+  cursor: not-allowed;
+}
+.el-cascader-node__prefix {
+  position: absolute;
+  left: 10px;
+}
+.el-cascader-node__postfix {
+  position: absolute;
+  right: 10px;
+}
+.el-cascader-node__label {
+  -webkit-box-flex: 1;
+  -ms-flex: 1;
+  flex: 1;
+  padding: 0 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.el-cascader-node > .el-radio .el-radio__label {
+  padding-left: 0;
+}
+.el-avatar {
+  display: inline-block;
+  box-sizing: border-box;
+  text-align: center;
+  color: var(--color-white);
+  background: var(--el-border-base);
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+  font-size: 14px;
+}
+.el-avatar > img {
+  display: block;
+  height: 100%;
+  vertical-align: middle;
+}
+.el-avatar--circle {
+  border-radius: 50%;
+}
+.el-avatar--square {
+  border-radius: 4px;
+}
+.el-avatar--icon {
+  font-size: 18px;
+}
+.el-avatar--large {
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+}
+.el-avatar--medium {
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+}
+.el-avatar--small {
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+}
+.el-drawer.btt,
+.el-drawer.ttb,
+.el-drawer__container {
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+.el-drawer.ltr,
+.el-drawer.rtl,
+.el-drawer__container {
+  top: 0;
+  bottom: 0;
+  height: 100%;
+}
+@-webkit-keyframes el-drawer-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes el-drawer-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@-webkit-keyframes rtl-drawer-in {
+  0% {
+    -webkit-transform: translate(100%, 0);
+    transform: translate(100%, 0);
+  }
+  100% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+}
+@keyframes rtl-drawer-in {
+  0% {
+    -webkit-transform: translate(100%, 0);
+    transform: translate(100%, 0);
+  }
+  100% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+}
+@-webkit-keyframes rtl-drawer-out {
+  0% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+  100% {
+    -webkit-transform: translate(100%, 0);
+    transform: translate(100%, 0);
+  }
+}
+@keyframes rtl-drawer-out {
+  0% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+  100% {
+    -webkit-transform: translate(100%, 0);
+    transform: translate(100%, 0);
+  }
+}
+@-webkit-keyframes ltr-drawer-in {
+  0% {
+    -webkit-transform: translate(-100%, 0);
+    transform: translate(-100%, 0);
+  }
+  100% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+}
+@keyframes ltr-drawer-in {
+  0% {
+    -webkit-transform: translate(-100%, 0);
+    transform: translate(-100%, 0);
+  }
+  100% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+}
+@-webkit-keyframes ltr-drawer-out {
+  0% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+  100% {
+    -webkit-transform: translate(-100%, 0);
+    transform: translate(-100%, 0);
+  }
+}
+@keyframes ltr-drawer-out {
+  0% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+  100% {
+    -webkit-transform: translate(-100%, 0);
+    transform: translate(-100%, 0);
+  }
+}
+@-webkit-keyframes ttb-drawer-in {
+  0% {
+    -webkit-transform: translate(0, -100%);
+    transform: translate(0, -100%);
+  }
+  100% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+}
+@keyframes ttb-drawer-in {
+  0% {
+    -webkit-transform: translate(0, -100%);
+    transform: translate(0, -100%);
+  }
+  100% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+}
+@-webkit-keyframes ttb-drawer-out {
+  0% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+  100% {
+    -webkit-transform: translate(0, -100%);
+    transform: translate(0, -100%);
+  }
+}
+@keyframes ttb-drawer-out {
+  0% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+  100% {
+    -webkit-transform: translate(0, -100%);
+    transform: translate(0, -100%);
+  }
+}
+@-webkit-keyframes btt-drawer-in {
+  0% {
+    -webkit-transform: translate(0, 100%);
+    transform: translate(0, 100%);
+  }
+  100% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+}
+@keyframes btt-drawer-in {
+  0% {
+    -webkit-transform: translate(0, 100%);
+    transform: translate(0, 100%);
+  }
+  100% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+}
+@-webkit-keyframes btt-drawer-out {
+  0% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+  100% {
+    -webkit-transform: translate(0, 100%);
+    transform: translate(0, 100%);
+  }
+}
+@keyframes btt-drawer-out {
+  0% {
+    -webkit-transform: translate(0, 0);
+    transform: translate(0, 0);
+  }
+  100% {
+    -webkit-transform: translate(0, 100%);
+    transform: translate(0, 100%);
+  }
+}
+.el-drawer {
+  position: absolute;
+  box-sizing: border-box;
+  background-color: var(--color-white);
+  display: flex;
+  -webkit-box-orient: vertical;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  -webkit-box-shadow: 0 8px 10px -5px rgba(0, 0, 0, 0.2),
+    0 16px 24px 2px rgba(0, 0, 0, 0.14), 0 6px 30px 5px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 10px -5px rgba(0, 0, 0, 0.2),
+    0 16px 24px 2px rgba(0, 0, 0, 0.14), 0 6px 30px 5px rgba(0, 0, 0, 0.12);
+}
+.el-drawer.rtl {
+  -webkit-animation: rtl-drawer-out 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  animation: rtl-drawer-out 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  right: 0;
+}
+.el-drawer__open .el-drawer.rtl {
+  -webkit-animation: rtl-drawer-in 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  animation: rtl-drawer-in 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+}
+.el-drawer.ltr {
+  -webkit-animation: ltr-drawer-out 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  animation: ltr-drawer-out 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  left: 0;
+}
+.el-drawer__open .el-drawer.ltr {
+  -webkit-animation: ltr-drawer-in 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  animation: ltr-drawer-in 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+}
+.el-drawer.ttb {
+  -webkit-animation: ttb-drawer-out 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  animation: ttb-drawer-out 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  top: 0;
+}
+.el-drawer__open .el-drawer.ttb {
+  -webkit-animation: ttb-drawer-in 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  animation: ttb-drawer-in 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+}
+.el-drawer.btt {
+  -webkit-animation: btt-drawer-out 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  animation: btt-drawer-out 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  bottom: 0;
+}
+.el-drawer__open .el-drawer.btt {
+  -webkit-animation: btt-drawer-in 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  animation: btt-drawer-in 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+}
+.el-drawer__header {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  color: var(--legacy-72767b);
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  margin-bottom: 32px;
+  padding: 20px 20px 0;
+}
+.el-drawer__header > :first-child {
+  -webkit-box-flex: 1;
+  -ms-flex: 1;
+  flex: 1;
+}
+.el-drawer__title {
+  margin: 0;
+  -webkit-box-flex: 1;
+  -ms-flex: 1;
+  flex: 1;
+  line-height: inherit;
+  font-size: 1rem;
+}
+.el-drawer__close-btn {
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: inherit;
+  background-color: transparent;
+}
+.el-drawer__body {
+  -webkit-box-flex: 1;
+  -ms-flex: 1;
+  flex: 1;
+}
+.el-drawer__body > * {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.el-drawer__container {
+  position: relative;
+}
+.el-drawer-fade-enter-active {
+  -webkit-animation: el-drawer-fade-in 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+  animation: el-drawer-fade-in 225ms cubic-bezier(0, 0, 0.2, 1) 0s;
+}
+.el-drawer-fade-leave-active {
+  animation: el-drawer-fade-in 225ms cubic-bezier(0, 0, 0.2, 1) 0s reverse;
+}
+
+/* 弹框样式处理 */
+.el-dialog {
+  min-width: 568px !important;
+  border-radius: 8px !important;
+}
+
+.el-dialog__header {
+  padding: 20px 30px;
+  background: var(--legacy-fbfbfa);
+  border-radius: 8px 8px 0px 0px;
+  border-bottom: 1px solid var(--legacy-e5e4e4);
+}
+
+.el-dialog__header .el-dialog__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gray-333);
+}
+
+.el-dialog__body {
+  padding: 43px 90px 21px;
+}
+
+.el-dialog__footer {
+  padding: 0px 30px 30px;
+}

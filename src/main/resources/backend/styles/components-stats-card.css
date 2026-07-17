@@ -26,14 +26,14 @@
 
 /* ========== 卡片基础（经典变体） ========== */
 .stat-card {
-  background: #fff;
+  background: var(--color-white);
   border-radius: 12px;
   padding: 20px 24px;
   position: relative;
   overflow: hidden;
   transition: all 0.3s;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f0f2f5;
+  border: 1px solid var(--el-bg-page);
 }
 
 .stat-card:hover {
@@ -65,7 +65,7 @@
 .stat-card .stat-label,
 .stat-card .label {
   font-size: 13px;
-  color: #909399;
+  color: var(--color-info);
   margin-bottom: 8px;
   font-weight: 500;
 }
@@ -84,7 +84,7 @@
 /* 辅助信息行 */
 .stat-card .sub {
   font-size: 12px;
-  color: #c0c4cc;
+  color: var(--el-border-base);
   margin-top: 6px;
   display: flex;
   align-items: center;
@@ -92,17 +92,17 @@
 }
 
 /* ========== 颜色主题 ========== */
-.stat-card.primary  { --gradient: linear-gradient(135deg, #ffc200 0%, #fdd24c 100%); }
-.stat-card.success  { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
-.stat-card.warning  { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
-.stat-card.danger   { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); }
-.stat-card.info     { --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%); }
+.stat-card.primary  { --gradient: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-300) 100%); }
+.stat-card.success  { --gradient: linear-gradient(135deg, var(--color-success) 0%, var(--el-color-success-light) 100%); }
+.stat-card.warning  { --gradient: linear-gradient(135deg, var(--color-warning) 0%, var(--el-color-warning-light) 100%); }
+.stat-card.danger   { --gradient: linear-gradient(135deg, var(--color-danger) 0%, var(--el-color-danger-light) 100%); }
+.stat-card.info     { --gradient: linear-gradient(135deg, var(--color-info) 0%, var(--gray-a6) 100%); }
 
 /* 别名（兼容使用 blue/green/orange/purple 命名的页面） */
-.stat-card.blue     { --gradient: linear-gradient(135deg, #ffc200 0%, #fdd24c 100%); }
-.stat-card.green    { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); }
-.stat-card.orange   { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); }
-.stat-card.purple   { --gradient: linear-gradient(135deg, #9c27b0 0%, #ce93d8 100%); }
+.stat-card.blue     { --gradient: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-300) 100%); }
+.stat-card.green    { --gradient: linear-gradient(135deg, var(--color-success) 0%, var(--el-color-success-light) 100%); }
+.stat-card.orange   { --gradient: linear-gradient(135deg, var(--color-warning) 0%, var(--el-color-warning-light) 100%); }
+.stat-card.purple   { --gradient: linear-gradient(135deg, var(--purple-legacy2) 0%, var(--legacy-ce93d8) 100%); }
 
 /* 趋势图标（推荐概览等页面右上角浮标） */
 .stat-card .trend-icon {
@@ -117,10 +117,10 @@
   justify-content: center;
   font-size: 20px;
 }
-.stat-card .trend-icon.blue   { background: rgba(255, 194, 0, 0.1); color: #ffc200; }
-.stat-card .trend-icon.green  { background: rgba(103, 194, 58, 0.1); color: #67c23a; }
-.stat-card .trend-icon.orange { background: rgba(230, 162, 60, 0.1); color: #e6a23c; }
-.stat-card .trend-icon.purple { background: rgba(156, 39, 176, 0.1); color: #9c27b0; }
+.stat-card .trend-icon.blue   { background: rgba(255, 194, 0, 0.1); color: var(--color-brand-500); }
+.stat-card .trend-icon.green  { background: rgba(103, 194, 58, 0.1); color: var(--color-success); }
+.stat-card .trend-icon.orange { background: rgba(230, 162, 60, 0.1); color: var(--color-warning); }
+.stat-card .trend-icon.purple { background: rgba(156, 39, 176, 0.1); color: var(--purple-legacy2); }
 
 /* ========== 可点击卡片（筛选用） ========== */
 .stat-card.clickable {
@@ -129,7 +129,7 @@
 }
 
 .stat-card.clickable.active {
-  border-color: #ffc200;
+  border-color: var(--color-brand-500);
   box-shadow: 0 0 0 2px rgba(255, 194, 0, 0.15);
 }
 
@@ -155,11 +155,11 @@
 }
 
 /* 颜色背景（桌台变体用纯色背景而非渐变文字） */
-.stat-card--flex.primary .stat-icon { background: rgba(255, 194, 0, 0.1); color: #ffc200; }
-.stat-card--flex.success .stat-icon { background: rgba(103, 194, 58, 0.1); color: #67c23a; }
-.stat-card--flex.warning .stat-icon { background: rgba(230, 162, 60, 0.1); color: #e6a23c; }
-.stat-card--flex.danger  .stat-icon { background: rgba(245, 108, 108, 0.1); color: #f56c6c; }
-.stat-card--flex.info    .stat-icon { background: rgba(144, 147, 153, 0.1); color: #909399; }
+.stat-card--flex.primary .stat-icon { background: rgba(255, 194, 0, 0.1); color: var(--color-brand-500); }
+.stat-card--flex.success .stat-icon { background: rgba(103, 194, 58, 0.1); color: var(--color-success); }
+.stat-card--flex.warning .stat-icon { background: rgba(230, 162, 60, 0.1); color: var(--color-warning); }
+.stat-card--flex.danger  .stat-icon { background: rgba(245, 108, 108, 0.1); color: var(--color-danger); }
+.stat-card--flex.info    .stat-icon { background: rgba(144, 147, 153, 0.1); color: var(--color-info); }
 
 /* 桌台变体：数值用纯色 */
 .stat-card--flex .stat-value {
@@ -169,11 +169,11 @@
   -webkit-text-fill-color: unset;
   background-clip: unset;
 }
-.stat-card--flex.primary .stat-value { color: #ffc200; }
-.stat-card--flex.success .stat-value { color: #67c23a; }
-.stat-card--flex.warning .stat-value { color: #e6a23c; }
-.stat-card--flex.danger  .stat-value { color: #f56c6c; }
-.stat-card--flex.info    .stat-value { color: #909399; }
+.stat-card--flex.primary .stat-value { color: var(--color-brand-500); }
+.stat-card--flex.success .stat-value { color: var(--color-success); }
+.stat-card--flex.warning .stat-value { color: var(--color-warning); }
+.stat-card--flex.danger  .stat-value { color: var(--color-danger); }
+.stat-card--flex.info    .stat-value { color: var(--color-info); }
 
 /* 桌台变体信息区 */
 .stat-card--flex .stat-info {

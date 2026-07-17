@@ -16,6 +16,9 @@ CREATE TABLE payment_order (
   notify_time datetime NULL DEFAULT NULL COMMENT '通知时间',
   created_time datetime NOT NULL COMMENT '创建时间',
   updated_time datetime NOT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
 
@@ -28,6 +31,10 @@ CREATE TABLE refund_record (
   reason varchar(200) NULL DEFAULT NULL COMMENT '退款原因',
   status varchar(20) NOT NULL COMMENT '退款状态',
   created_time datetime NOT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
 

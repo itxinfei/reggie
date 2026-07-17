@@ -89,7 +89,9 @@ public class VerifyCodeUtils {
         // 降级到本地内存 + 告警（集群部署时此降级不可靠）
         localCache.put(key, new CodeEntry(verifyCode));
         if (redisTemplate == null) {
-            log.warn("[验证码] Redis 不可用，使用本地内存缓存(集群环境验证码不可靠！): key={}", key);
+            log.warn("[验证码] ⚠️ Redis 不可用，使用本地内存缓存(集群环境验证码不可靠！): key={}", key);
+        } else {
+            log.warn("[验证码] ⚠️ Redis 保存失败，降级到本地内存(集群环境验证码不可靠！): key={}", key);
         }
     }
 

@@ -1,5 +1,7 @@
 package com.reggie.common;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * 基础上下文工具类
  * 使用ThreadLocal存储当前用户ID和租户ID
@@ -7,6 +9,7 @@ package com.reggie.common;
  * @author reggie
  * @since 2026-07-09
  */
+@Slf4j
 public class BaseContext {
     /**
      * 当前用户ID存储
@@ -42,6 +45,9 @@ public class BaseContext {
      * @param tenantId 租户ID
      */
     public static void setCurrentTenantId(Long tenantId) {
+        if (tenantId == null) {
+            log.warn("租户ID为null，请检查登录逻辑");
+        }
         TENANT_THREAD_LOCAL.set(tenantId);
     }
 

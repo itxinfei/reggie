@@ -6,7 +6,7 @@
  */
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+body { background: var(--el-bg-page); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
 /* ========== 整体布局 ========== */
 .ai-layout {
@@ -14,7 +14,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     margin: 16px auto;
     height: calc(100vh - 32px);
     display: flex;
-    background: #fff;
+    background: var(--color-white);
     border-radius: 12px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     overflow: hidden;
@@ -24,8 +24,8 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 .ai-sidebar {
     width: 280px;
     min-width: 280px;
-    background: #fafbfc;
-    border-right: 1px solid #e8eaed;
+    background: var(--el-bg-ghost);
+    border-right: 1px solid var(--legacy-e8eaed);
     display: flex;
     flex-direction: column;
     transition: all 0.25s ease;
@@ -40,7 +40,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 
 .sidebar-header {
     padding: 14px 16px;
-    border-bottom: 1px solid #e8eaed;
+    border-bottom: 1px solid var(--legacy-e8eaed);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -49,25 +49,25 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 .sidebar-header h4 {
     font-size: 14px;
     font-weight: 600;
-    color: #303133;
+    color: var(--el-text-primary);
 }
 .sidebar-header .refresh-btn {
     padding: 4px 10px;
     font-size: 12px;
-    border: 1px solid #d9d9d9;
+    border: 1px solid var(--antd-border);
     border-radius: 6px;
-    background: #fff;
-    color: #606266;
+    background: var(--color-white);
+    color: var(--el-text-regular);
     cursor: pointer;
     transition: all 0.2s;
 }
-.sidebar-header .refresh-btn:hover { border-color: #ffc200; color: #ffc200; }
+.sidebar-header .refresh-btn:hover { border-color: var(--color-brand-500); color: var(--color-brand-500); }
 
 .new-chat-btn {
     margin: 10px 14px;
     padding: 9px 0;
-    background: linear-gradient(135deg, #ffc200 0%, #fdd24c 100%);
-    color: #fff;
+    background: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-300) 100%);
+    color: var(--color-white);
     border: none;
     border-radius: 8px;
     font-size: 13px;
@@ -81,7 +81,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     flex-shrink: 0;
 }
 .new-chat-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-.new-chat-btn:disabled { background: #d9d9d9; cursor: not-allowed; transform: none; }
+.new-chat-btn:disabled { background: var(--antd-border); cursor: not-allowed; transform: none; }
 
 .conv-list {
     flex: 1;
@@ -89,7 +89,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     padding: 0 6px 8px;
 }
 .conv-list::-webkit-scrollbar { width: 4px; }
-.conv-list::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 2px; }
+.conv-list::-webkit-scrollbar-thumb { background: var(--antd-border); border-radius: 2px; }
 
 .conv-item {
     display: flex;
@@ -102,43 +102,43 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     position: relative;
     gap: 8px;
 }
-.conv-item:hover { background: #e6f7ff; }
-.conv-item.active { background: #e6f7ff; border: 1px solid #91d5ff; }
+.conv-item:hover { background: var(--antd-info-bg); }
+.conv-item.active { background: var(--antd-info-bg); border: 1px solid var(--legacy-91d5ff); }
 
 .conv-icon {
     width: 30px; height: 30px; border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 15px; flex-shrink: 0; background: #f0f0f0;
+    font-size: 15px; flex-shrink: 0; background: var(--el-bg-lighter);
 }
 .conv-info {
     flex: 1; min-width: 0; overflow: hidden;
 }
 .conv-title {
-    font-size: 13px; font-weight: 500; color: #303133;
+    font-size: 13px; font-weight: 500; color: var(--el-text-primary);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     line-height: 1.4;
 }
 .conv-meta {
-    font-size: 11px; color: #909399; margin-top: 1px;
+    font-size: 11px; color: var(--color-info); margin-top: 1px;
     display: flex; gap: 8px;
 }
 .conv-delete {
     width: 22px; height: 22px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px; color: #c0c4cc; cursor: pointer;
+    font-size: 14px; color: var(--el-border-base); cursor: pointer;
     opacity: 0; transition: all 0.15s; flex-shrink: 0;
     border: none; background: transparent;
 }
 .conv-item:hover .conv-delete { opacity: 1; }
-.conv-delete:hover { color: #f56c6c; background: #fef0f0; }
+.conv-delete:hover { color: var(--color-danger); background: var(--color-danger-light); }
 
 .sidebar-empty {
     flex: 1; display: flex; align-items: center; justify-content: center;
-    color: #c0c4cc; font-size: 13px; text-align: center; padding: 20px;
+    color: var(--el-border-base); font-size: 13px; text-align: center; padding: 20px;
 }
 .sidebar-loading {
     flex: 1; display: flex; align-items: center; justify-content: center;
-    color: #909399; font-size: 13px;
+    color: var(--color-info); font-size: 13px;
 }
 
 /* ========== 右侧主区域 ========== */
@@ -147,7 +147,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     display: flex;
     flex-direction: column;
     min-width: 0;
-    background: #fff;
+    background: var(--color-white);
 }
 
 /* ========== 紧凑单行头栏 ========== */
@@ -156,8 +156,8 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     align-items: center;
     height: 48px;
     padding: 0 16px;
-    background: #fff;
-    border-bottom: 1px solid #f0f0f0;
+    background: var(--color-white);
+    border-bottom: 1px solid var(--el-bg-lighter);
     gap: 12px;
     flex-shrink: 0;
     flex-wrap: nowrap;
@@ -168,24 +168,24 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     width: 32px; height: 32px;
     display: flex; align-items: center; justify-content: center;
     border: none; background: none;
-    font-size: 18px; color: #606266;
+    font-size: 18px; color: var(--el-text-regular);
     cursor: pointer; border-radius: 6px;
     transition: all 0.15s;
     flex-shrink: 0;
 }
-.sidebar-toggle:hover { background: #f0f0f0; color: #303133; }
+.sidebar-toggle:hover { background: var(--el-bg-lighter); color: var(--el-text-primary); }
 
 .header-logo {
     font-size: 22px; flex-shrink: 0; line-height: 1;
 }
 
 .header-title {
-    font-size: 15px; font-weight: 600; color: #303133;
+    font-size: 15px; font-weight: 600; color: var(--el-text-primary);
     flex-shrink: 0; white-space: nowrap;
 }
 
 .current-conv-title {
-    font-size: 12px; color: #909399;
+    font-size: 12px; color: var(--color-info);
     max-width: 140px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     flex-shrink: 1;
@@ -199,14 +199,14 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 .header-scenes .scene-tag {
     padding: 3px 12px; border-radius: 14px;
     font-size: 12px; cursor: pointer;
-    border: 1px solid #e8e8e8; background: #fafafa;
-    transition: all 0.15s; color: #606266; font-weight: 500;
+    border: 1px solid var(--antd-border-light); background: var(--el-bg-base);
+    transition: all 0.15s; color: var(--el-text-regular); font-weight: 500;
     white-space: nowrap;
 }
-.header-scenes .scene-tag:hover { border-color: #ffc200; color: #ffc200; }
+.header-scenes .scene-tag:hover { border-color: var(--color-brand-500); color: var(--color-brand-500); }
 .header-scenes .scene-tag.active {
-    background: linear-gradient(135deg, #ffc200, #fdd24c);
-    color: #fff; border-color: transparent;
+    background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-300));
+    color: var(--color-white); border-color: transparent;
     box-shadow: 0 1px 4px rgba(255,194,0,0.25);
 }
 
@@ -214,16 +214,16 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 .header-conn {
     display: flex; align-items: center; gap: 5px;
     padding: 3px 10px; border-radius: 12px;
-    font-size: 11px; color: #909399;
-    background: #fafafa; border: 1px solid #f0f0f0;
+    font-size: 11px; color: var(--color-info);
+    background: var(--el-bg-base); border: 1px solid var(--el-bg-lighter);
     flex-shrink: 0; white-space: nowrap; cursor: default;
 }
 .header-conn .conn-dot {
     width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
 }
-.header-conn.connected .conn-dot { background: #52c41a; }
-.header-conn.checking .conn-dot { background: #faad14; animation: pulse 1.5s infinite; }
-.header-conn.disconnected .conn-dot { background: #ff4d4f; }
+.header-conn.connected .conn-dot { background: var(--antd-success); }
+.header-conn.checking .conn-dot { background: var(--legacy-faad14); animation: pulse 1.5s infinite; }
+.header-conn.disconnected .conn-dot { background: var(--antd-error); }
 
 @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -233,15 +233,15 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 /* 快捷卡片 */
 .quick-cards {
     display: flex; flex-wrap: wrap; gap: 8px;
-    padding: 10px 16px; border-bottom: 1px solid #f0f0f0;
+    padding: 10px 16px; border-bottom: 1px solid var(--el-bg-lighter);
     flex-shrink: 0;
 }
 .quick-card {
-    padding: 5px 14px; background: #fafafa; border: 1px solid #e8e8e8;
+    padding: 5px 14px; background: var(--el-bg-base); border: 1px solid var(--antd-border-light);
     border-radius: 16px; font-size: 12px; cursor: pointer;
-    transition: all 0.15s; color: #606266;
+    transition: all 0.15s; color: var(--el-text-regular);
 }
-.quick-card:hover { border-color: #1890ff; color: #1890ff; background: #e6f7ff; }
+.quick-card:hover { border-color: var(--antd-primary); color: var(--antd-primary); background: var(--antd-info-bg); }
 
 /* 聊天区 */
 .chat-body {
@@ -264,19 +264,19 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     display: flex; align-items: center; justify-content: center;
     font-size: 18px; flex-shrink: 0;
 }
-.chat-msg.assistant .chat-avatar { background: #e6f7ff; }
-.chat-msg.user .chat-avatar { background: linear-gradient(135deg, #ffc200, #fdd24c); }
+.chat-msg.assistant .chat-avatar { background: var(--antd-info-bg); }
+.chat-msg.user .chat-avatar { background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-300)); }
 
 .chat-bubble {
     padding: 10px 16px; border-radius: 14px; font-size: 13px;
     line-height: 1.7; word-break: break-word;
 }
 .chat-msg.assistant .chat-bubble {
-    background: #f5f5f5; border-top-left-radius: 4px;
+    background: var(--el-bg-light); border-top-left-radius: 4px;
 }
 .chat-msg.user .chat-bubble {
-    background: linear-gradient(135deg, #ffc200, #fdd24c);
-    color: #333; border-top-right-radius: 4px;
+    background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-300));
+    color: var(--legacy-333); border-top-right-radius: 4px;
 }
 
 /* 安全富文本 */
@@ -284,20 +284,20 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 .chat-bubble .msg-list { margin: 6px 0; padding-left: 20px; }
 .chat-bubble .msg-list li { margin: 3px 0; }
 .chat-bubble .msg-highlight {
-    background: #fff3cd; color: #856404; padding: 2px 6px;
+    background: var(--legacy-fff3cd); color: var(--legacy-856404); padding: 2px 6px;
     border-radius: 4px; font-weight: 500;
 }
 
 /* 操作按钮组 */
 .action-btn {
     padding: 5px 12px; border-radius: 6px; font-size: 12px;
-    border: 1px solid #d9d9d9; background: #fff; color: #606266;
+    border: 1px solid var(--antd-border); background: var(--color-white); color: var(--el-text-regular);
     cursor: pointer; transition: all 0.15s;
 }
-.action-btn:hover { border-color: #ffc200; color: #ffc200; }
-.action-btn.primary { background: #ffc200; color: #fff; border-color: #ffc200; }
-.action-btn.danger { color: #f56c6c; border-color: #f56c6c; }
-.action-btn.danger:hover { background: #fef0f0; }
+.action-btn:hover { border-color: var(--color-brand-500); color: var(--color-brand-500); }
+.action-btn.primary { background: var(--color-brand-500); color: var(--color-white); border-color: var(--color-brand-500); }
+.action-btn.danger { color: var(--color-danger); border-color: var(--color-danger); }
+.action-btn.danger:hover { background: var(--color-danger-light); }
 
 /* 反馈栏 */
 .feedback-bar {
@@ -305,41 +305,41 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 }
 .feedback-btn {
     padding: 2px 8px; border-radius: 10px; font-size: 11px;
-    border: 1px solid #d9d9d9; background: #fff; color: #909399;
+    border: 1px solid var(--antd-border); background: var(--color-white); color: var(--color-info);
     cursor: pointer; transition: all 0.15s;
 }
-.feedback-btn:hover { border-color: #a0a0a0; color: #606266; }
-.feedback-btn.active-good { border-color: #67c23a; color: #67c23a; background: #f0f9eb; }
-.feedback-btn.active-bad { border-color: #f56c6c; color: #f56c6c; background: #fef0f0; }
+.feedback-btn:hover { border-color: var(--legacy-a0a0a0); color: var(--el-text-regular); }
+.feedback-btn.active-good { border-color: var(--color-success); color: var(--color-success); background: var(--color-success-light); }
+.feedback-btn.active-bad { border-color: var(--color-danger); color: var(--color-danger); background: var(--color-danger-light); }
 
 /* 输入区 */
 .input-area {
     display: flex; gap: 10px; padding: 12px 16px;
-    border-top: 1px solid #f0f0f0; background: #fff; flex-shrink: 0;
+    border-top: 1px solid var(--el-bg-lighter); background: var(--color-white); flex-shrink: 0;
     align-items: center;
 }
 .input-area input {
-    flex: 1; border: 1px solid #e0e0e0; border-radius: 20px;
+    flex: 1; border: 1px solid var(--legacy-e0e0e0); border-radius: 20px;
     padding: 8px 18px; font-size: 13px; outline: none;
-    transition: all 0.15s; background: #fafafa;
+    transition: all 0.15s; background: var(--el-bg-base);
 }
-.input-area input:focus { border-color: #ffc200; background: #fff; box-shadow: 0 0 0 3px rgba(255,194,0,0.1); }
-.input-area input:disabled { background: #f5f5f5; }
+.input-area input:focus { border-color: var(--color-brand-500); background: var(--color-white); box-shadow: 0 0 0 3px rgba(255,194,0,0.1); }
+.input-area input:disabled { background: var(--el-bg-light); }
 .send-btn {
-    padding: 8px 24px; background: linear-gradient(135deg, #ffc200, #fdd24c);
-    color: #333; border: none; border-radius: 20px;
+    padding: 8px 24px; background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-300));
+    color: var(--legacy-333); border: none; border-radius: 20px;
     font-size: 13px; font-weight: 600;
     cursor: pointer; transition: all 0.15s; white-space: nowrap;
 }
 .send-btn:hover { opacity: 0.9; transform: scale(1.02); }
-.send-btn:disabled { background: #d9d9d9; color: #999; cursor: not-allowed; transform: none; }
+.send-btn:disabled { background: var(--antd-border); color: var(--legacy-999); cursor: not-allowed; transform: none; }
 
 /* 加载动画 */
 .typing-dots {
     display: flex; gap: 4px; padding: 2px 0;
 }
 .typing-dots span {
-    width: 6px; height: 6px; border-radius: 50%; background: #bbb;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--legacy-bbb);
     animation: dotBounce 1.4s infinite;
 }
 .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
@@ -351,7 +351,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 
 /* 流式光标 */
 .streaming-cursor::after {
-    content: '▋'; color: #ffc200; animation: blink 0.8s infinite;
+    content: '▋'; color: var(--color-brand-500); animation: blink 0.8s infinite;
     margin-left: 2px;
 }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }

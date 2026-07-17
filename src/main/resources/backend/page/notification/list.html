@@ -8,118 +8,126 @@
     <link rel="stylesheet" href="../../styles/page.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
     <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-               background: #f0f2f5; color: #333; }
+               background: var(--el-bg-page); color: var(--gray-333); }
 
         .app-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
         /* Tab */
-        .tabs { display: flex; gap: 0; background: #fff; border-radius: 8px 8px 0 0; overflow: hidden;
-                border-bottom: 1px solid #e8e8e8; }
-        .tab-btn { padding: 12px 24px; cursor: pointer; border: none; background: #fff; font-size: 14px;
-                   color: #666; border-bottom: 2px solid transparent; transition: all 0.2s; position: relative; }
-        .tab-btn.active { color: #1890ff; border-bottom-color: #1890ff; font-weight: 600; }
-        .tab-btn:hover { color: #1890ff; }
-        .tab-content { display: none; background: #fff; border-radius: 0 0 8px 8px; padding: 20px;
+        .tabs { display: flex; gap: 0; background: var(--bg-surface); border-radius: 8px 8px 0 0; overflow: hidden;
+                border-bottom: 1px solid var(--antd-border-light); }
+        .tab-btn { padding: 12px 24px; cursor: pointer; border: none; background: var(--bg-surface); font-size: 14px;
+                   color: var(--gray-666); border-bottom: 2px solid transparent; transition: all 0.2s; position: relative; }
+        .tab-btn.active { color: var(--antd-primary); border-bottom-color: var(--antd-primary); font-weight: 600; }
+        .tab-btn:hover { color: var(--antd-primary); }
+        .tab-content { display: none; background: var(--bg-surface); border-radius: 0 0 8px 8px; padding: 20px;
                        box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
         .tab-content.active { display: block; }
 
         /* 用户选择区 */
         .user-select-panel { display: flex; gap: 16px; min-height: 400px; }
-        .user-select-left { flex: 1; border: 1px solid #e8e8e8; border-radius: 6px; overflow: hidden;
+        .user-select-left { flex: 1; border: 1px solid var(--antd-border-light); border-radius: 6px; overflow: hidden;
                             display: flex; flex-direction: column; }
-        .user-select-right { width: 380px; border: 1px solid #e8e8e8; border-radius: 6px;
+        .user-select-right { width: 380px; border: 1px solid var(--antd-border-light); border-radius: 6px;
                              display: flex; flex-direction: column; }
 
-        .panel-header { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; background: #fafafa;
-                        font-size: 13px; font-weight: 600; color: #555; display: flex;
+        .panel-header { padding: 10px 14px; border-bottom: 1px solid var(--el-bg-lighter); background: var(--el-bg-base);
+                        font-size: 13px; font-weight: 600; color: var(--gray-555); display: flex;
                         justify-content: space-between; align-items: center; }
         .panel-body { flex: 1; overflow-y: auto; padding: 8px 0; }
 
         /* 搜索栏 */
-        .search-bar { padding: 8px 12px; display: flex; gap: 8px; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; }
-        .search-bar input, .search-bar select { padding: 5px 10px; border: 1px solid #d9d9d9;
+        .search-bar { padding: 8px 12px; display: flex; gap: 8px; border-bottom: 1px solid var(--el-bg-lighter); flex-wrap: wrap; }
+        .search-bar input, .search-bar select { padding: 5px 10px; border: 1px solid var(--antd-border);
                 border-radius: 4px; font-size: 13px; }
         .search-bar input { width: 140px; }
         .search-bar select { width: 100px; }
 
         /* 用户列表 */
         .user-list-table { width: 100%; border-collapse: collapse; }
-        .user-list-table th { background: #fafafa; padding: 8px 10px; text-align: left; font-size: 12px;
-                               font-weight: 600; color: #666; border-bottom: 1px solid #e8e8e8;
+        .user-list-table th { background: var(--el-bg-base); padding: 8px 10px; text-align: left; font-size: 12px;
+                               font-weight: 600; color: var(--gray-666); border-bottom: 1px solid var(--antd-border-light);
                                position: sticky; top: 0; z-index: 1; }
-        .user-list-table td { padding: 7px 10px; font-size: 13px; border-bottom: 1px solid #f5f5f5; }
-        .user-list-table tr:hover td { background: #f5f9ff; }
-        .user-list-table tr.selected td { background: #e6f7ff; }
+        .user-list-table td { padding: 7px 10px; font-size: 13px; border-bottom: 1px solid var(--el-bg-light); }
+        .user-list-table tr:hover td { background: var(--blue-50); }
+        .user-list-table tr.selected td { background: var(--antd-info-bg); }
         .user-list-table input[type="checkbox"] { cursor: pointer; }
 
-        .user-pagination { padding: 8px 12px; border-top: 1px solid #f0f0f0; display: flex;
+        .user-pagination { padding: 8px 12px; border-top: 1px solid var(--el-bg-lighter); display: flex;
                            justify-content: center; align-items: center; gap: 6px; font-size: 12px; }
-        .user-pagination button { padding: 3px 10px; border: 1px solid #d9d9d9; background: #fff;
+        .user-pagination button { padding: 3px 10px; border: 1px solid var(--antd-border); background: var(--bg-surface);
                                    border-radius: 3px; cursor: pointer; font-size: 12px; }
         .user-pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
 
         /* 已选用户列表 */
         .selected-users { flex: 1; overflow-y: auto; padding: 4px 0; }
         .selected-user-item { display: flex; align-items: center; justify-content: space-between;
-                padding: 6px 12px; font-size: 13px; border-bottom: 1px solid #f5f5f5; }
-        .selected-user-item .remove-btn { color: #ff4d4f; cursor: pointer; font-size: 14px;
+                padding: 6px 12px; font-size: 13px; border-bottom: 1px solid var(--el-bg-light); }
+        .selected-user-item .remove-btn { color: var(--antd-error); cursor: pointer; font-size: 14px;
                                            background: none; border: none; padding: 2px 6px; }
-        .selected-user-item .remove-btn:hover { background: #fff2f0; border-radius: 3px; }
+        .selected-user-item .remove-btn:hover { background: var(--antd-error-bg); border-radius: 3px; }
 
         /* 消息编辑区 */
-        .msg-compose { padding: 12px; border-top: 1px solid #e8e8e8; }
+        .msg-compose { padding: 12px; border-top: 1px solid var(--antd-border-light); }
         .msg-compose textarea, .msg-compose input { width: 100%; padding: 7px 10px;
-                border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; resize: vertical; }
+                border: 1px solid var(--antd-border); border-radius: 4px; font-size: 13px; resize: vertical; }
         .msg-compose textarea { min-height: 60px; }
-        .msg-compose .field-label { font-size: 12px; color: #999; margin-bottom: 3px; display: block; }
+        .msg-compose .field-label { font-size: 12px; color: var(--gray-999); margin-bottom: 3px; display: block; }
 
         /* 发送结果弹窗 */
         .send-result { margin-top: 12px; padding: 12px 16px; border-radius: 6px; font-size: 13px; }
-        .send-result.success { background: #f6ffed; border: 1px solid #b7eb8f; color: #389e0d; }
-        .send-result.partial { background: #fffbe6; border: 1px solid #ffe58f; color: #d48806; }
-        .send-result.error { background: #fff2f0; border: 1px solid #ffccc7; color: #cf1322; }
-        .send-result .close-result { float: right; cursor: pointer; color: #999; font-size: 16px;
+        .send-result.success { background: var(--antd-success-bg); border: 1px solid var(--antd-success-l); color: var(--antd-success-d); }
+        .send-result.partial { background: var(--antd-warning-bg2); border: 1px solid var(--antd-warning-l2b); color: var(--antd-warning-d); }
+        .send-result.error { background: var(--antd-error-bg); border: 1px solid var(--antd-error-l2); color: var(--antd-error-d); }
+        .send-result .close-result { float: right; cursor: pointer; color: var(--gray-999); font-size: 16px;
                                        background: none; border: none; line-height: 1; }
 
         /* 记录列表 */
         table { width: 100%; border-collapse: collapse; }
-        th { background: #fafafa; padding: 10px 12px; text-align: left; font-size: 13px; font-weight: 600;
-             color: #555; border-bottom: 2px solid #e8e8e8; white-space: nowrap; }
-        td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
-        tr:hover td { background: #f5f9ff; }
+        th { background: var(--el-bg-base); padding: 10px 12px; text-align: left; font-size: 13px; font-weight: 600;
+             color: var(--gray-555); border-bottom: 2px solid var(--antd-border-light); white-space: nowrap; }
+        td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid var(--el-bg-lighter); }
+        tr:hover td { background: var(--blue-50); }
 
         .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
-        .status-on { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
-        .status-off { background: #fff2f0; color: #ff4d4f; border: 1px solid #ffccc7; }
+        .status-on { background: var(--antd-success-bg); color: var(--antd-success); border: 1px solid var(--antd-success-l); }
+        .status-off { background: var(--antd-error-bg); color: var(--antd-error); border: 1px solid var(--antd-error-l2); }
 
         .channel-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-        .channel-sms { background: #e6f7ff; color: #1890ff; }
-        .channel-push { background: #f0f5ff; color: #722ed1; }
-        .channel-both { background: #fff7e6; color: #fa8c16; }
+        .channel-sms { background: var(--antd-info-bg); color: var(--antd-primary); }
+        .channel-push { background: var(--indigo-50b); color: var(--antd-purple); }
+        .channel-both { background: var(--antd-warning-bg); color: var(--antd-warning); }
 
         .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 8px;
                       margin-top: 16px; font-size: 13px; }
-        .pagination button { padding: 4px 12px; border: 1px solid #d9d9d9; background: #fff;
+        .pagination button { padding: 4px 12px; border: 1px solid var(--antd-border); background: var(--bg-surface);
                             border-radius: 4px; cursor: pointer; }
         .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .pagination span { color: #666; }
+        .pagination span { color: var(--gray-666); }
 
-        .empty-state { text-align: center; padding: 40px; color: #999; }
+        .empty-state { text-align: center; padding: 40px; color: var(--gray-999); }
 
         .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
-        .toolbar select, .toolbar input { padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px;
+        .toolbar select, .toolbar input { padding: 6px 12px; border: 1px solid var(--antd-border); border-radius: 4px;
                 font-size: 13px; }
 
-        .mock-banner { background: #fffbe6; border: 1px solid #ffe58f; border-radius: 6px; padding: 8px 14px;
-                       margin-bottom: 16px; font-size: 13px; color: #ad6800; display: flex; align-items: center; gap: 6px; }
+        .mock-banner { background: var(--antd-warning-bg2); border: 1px solid var(--antd-warning-l2b); border-radius: 6px; padding: 8px 14px;
+                       margin-bottom: 16px; font-size: 13px; color: var(--amber-800); display: flex; align-items: center; gap: 6px; }
     </style>
 </head>
 <body>
     <div id="app">
         <div class="app-container">
+          <!-- 面包屑导航 -->
+          <nav class="ds-breadcrumb" aria-label="面包屑导航">
+            <span class="ds-breadcrumb__item">首页</span>
+            <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+            <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">消息通知管理</span>
+          </nav>
             <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stats-cards -->
             <stat-cards :cards="statsCards"></stat-cards>
 
@@ -143,7 +151,7 @@
                     <div class="user-select-left">
                         <div class="panel-header">
                             <span>选择接收用户</span>
-                            <span style="font-weight:400;color:#999;">共 {{ userTotal }} 个用户</span>
+                            <span style="font-weight:400;color:var(--gray-999);">共 {{ userTotal }} 个用户</span>
                         </div>
                         <div class="search-bar">
                             <input type="text" v-model="userSearch.name" placeholder="姓名搜索"
@@ -207,7 +215,7 @@
                         </div>
                         <div class="selected-users">
                             <div class="selected-user-item" v-for="su in selectedUsers" :key="su.id">
-                                <span>{{ su.name || '未设置' }} <span style="color:#999;">{{ su.phone }}</span></span>
+                                <span>{{ su.name || '未设置' }} <span style="color:var(--gray-999);">{{ su.phone }}</span></span>
                                 <button class="remove-btn" @click="removeSelected(su.id)">✕</button>
                             </div>
                             <div class="empty-state" v-if="selectedUsers.length === 0" style="padding:30px;">
@@ -236,7 +244,7 @@
                                 <button class="close-result" @click="smsForm.result = null">&times;</button>
                                 <strong>发送完成！</strong>
                                 成功: {{ smsForm.result.successCount }} | 失败: {{ smsForm.result.failCount }}
-                                <div v-if="smsForm.result.failReason" style="color:#cf1322;margin-top:4px;font-size:12px;">
+                                <div v-if="smsForm.result.failReason" style="color:var(--antd-error-d);margin-top:4px;font-size:12px;">
                                     {{ smsForm.result.failReason }}
                                 </div>
                             </div>
@@ -251,7 +259,7 @@
                     <div class="user-select-left">
                         <div class="panel-header">
                             <span>选择推送用户</span>
-                            <span style="font-weight:400;color:#999;">共 {{ pushUserTotal }} 个用户</span>
+                            <span style="font-weight:400;color:var(--gray-999);">共 {{ pushUserTotal }} 个用户</span>
                         </div>
                         <div class="search-bar">
                             <input type="text" v-model="pushUserSearch.name" placeholder="姓名搜索"
@@ -314,7 +322,7 @@
                         </div>
                         <div class="selected-users">
                             <div class="selected-user-item" v-for="su in pushSelectedUsers" :key="su.id">
-                                <span>{{ su.name || '未设置' }} <span style="color:#999;">ID: {{ su.id }}</span></span>
+                                <span>{{ su.name || '未设置' }} <span style="color:var(--gray-999);">ID: {{ su.id }}</span></span>
                                 <button class="remove-btn" @click="removePushSelected(su.id)">✕</button>
                             </div>
                             <div class="empty-state" v-if="pushSelectedUsers.length === 0" style="padding:30px;">
@@ -393,8 +401,8 @@
                                 {{ r.content || '-' }}
                             </td>
                             <td>{{ r.targetCount }}</td>
-                            <td style="color:#52c41a">{{ r.successCount }}</td>
-                            <td style="color:#ff4d4f">{{ r.failCount }}</td>
+                            <td style="color:var(--antd-success)">{{ r.successCount }}</td>
+                            <td style="color:var(--antd-error)">{{ r.failCount }}</td>
                             <td>
                                 <span :class="{ 'status-sending': r.status===0||r.status===1,
                                     'status-success': r.status===2, 'status-fail': r.status===3,

@@ -10,10 +10,18 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
   <div class="dashboard-container" id="coupon-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">优惠券管理</span>
+      </nav>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -70,30 +78,31 @@
       @submit="submitForm"
       @close="handleClose"
     >
-      <el-form label-width="80px" size="small">
-        <el-form-item label="优惠券名称：">
+      <!-- 修改点：补全 ref/:model/:rules 启用 Element 校验（复杂条件校验仍保留在 submitForm） -->
+      <el-form ref="couponForm" :model="formData" :rules="couponRules" label-width="80px" size="small">
+        <el-form-item label="优惠券名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入优惠券名称" maxlength="30"></el-input>
         </el-form-item>
-        <el-form-item label="优惠券类型：">
+        <el-form-item label="优惠券类型：" prop="type">
           <el-select v-model="formData.type" placeholder="请选择类型" style="width: 100%">
             <el-option label="满减" value="FULL_REDUCTION"></el-option>
             <el-option label="折扣" value="DISCOUNT"></el-option>
             <el-option label="新客" value="NEW_MEMBER"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="条件金额：">
+        <el-form-item label="条件金额：" prop="conditionAmount">
           <el-input v-model="formData.conditionAmount" type="number" placeholder="请输入条件金额"></el-input>
         </el-form-item>
-        <el-form-item label="优惠金额：">
+        <el-form-item label="优惠金额：" prop="discountAmount">
           <el-input v-model="formData.discountAmount" type="number" placeholder="请输入优惠金额"></el-input>
         </el-form-item>
-        <el-form-item label="折扣率：" v-if="formData.type === 'DISCOUNT'">
+        <el-form-item label="折扣率：" prop="discountRate" v-if="formData.type === 'DISCOUNT'">
           <el-input v-model="formData.discountRate" type="number" placeholder="如0.85表示8.5折"></el-input>
         </el-form-item>
-        <el-form-item label="总数量：">
+        <el-form-item label="总数量：" prop="totalCount">
           <el-input v-model="formData.totalCount" type="number" placeholder="请输入总数量"></el-input>
         </el-form-item>
-        <el-form-item label="有效期(天)：">
+        <el-form-item label="有效期(天)：" prop="validDays">
           <el-input v-model="formData.validDays" type="number" placeholder="请输入有效期天数"></el-input>
         </el-form-item>
         <el-form-item label="状态：">
@@ -170,6 +179,13 @@
             validDays: '',
             status: 1
           },
+          // 修改点：优惠券表单校验规则（基础必填，配合 el-form :rules + validate()）
+          couponRules: {
+            name: [{ required: true, whitespace: true, message: '请输入优惠券名称', trigger: 'blur' }],
+            type: [{ required: true, message: '请选择优惠券类型', trigger: 'change' }],
+            totalCount: [{ required: true, message: '请输入发放总数', trigger: 'blur' }],
+            validDays: [{ required: true, message: '请输入有效天数', trigger: 'blur' }]
+          },
           searchValues: {}
         }
       },
@@ -205,7 +221,7 @@
             this.tableData = couponRes.data.records || []
             this.counts = couponRes.data.total
           } else {
-            this.$message.error(couponRes.msg || '操作失败')
+            ReggieUI.error(couponRes.msg || '操作失败')
           }
           if (statsRes && String(statsRes.code) === '1') {
             this.stats = statsRes.data || this.stats
@@ -294,33 +310,39 @@
         },
         submitForm() {
           var self = this
+          var passed = false
+          self.$refs.couponForm.validate(function(valid) { passed = valid })
+          if (!passed) {
+            self.$message.warning('请完善表单必填项')
+            return
+          }
           // 修改点：前端表单校验，与后端 validateCoupon 保持一致，拦截非法提交
-          if (!this.formData.name || !this.formData.name.trim()) {
-            this.$message.error('请输入优惠券名称'); return
+          if (!self.formData.name || !self.formData.name.trim()) {
+            self.$message.error('请输入优惠券名称'); return
           }
           if (!this.formData.type) {
-            this.$message.error('请选择优惠券类型'); return
+            ReggieUI.error('请选择优惠券类型'); return
           }
           if (this.formData.type === 'FULL_REDUCTION') {
             if (!this.formData.conditionAmount || Number(this.formData.conditionAmount) <= 0) {
-              this.$message.error('请输入有效的条件金额'); return
+              ReggieUI.error('请输入有效的条件金额'); return
             }
             if (!this.formData.discountAmount || Number(this.formData.discountAmount) <= 0) {
-              this.$message.error('请输入有效的优惠金额'); return
+              ReggieUI.error('请输入有效的优惠金额'); return
             }
             if (Number(this.formData.discountAmount) >= Number(this.formData.conditionAmount)) {
-              this.$message.error('优惠金额必须小于条件金额'); return
+              ReggieUI.error('优惠金额必须小于条件金额'); return
             }
           } else if (this.formData.type === 'DISCOUNT') {
             if (!this.formData.discountRate || Number(this.formData.discountRate) <= 0 || Number(this.formData.discountRate) >= 1) {
-              this.$message.error('折扣率必须在0~1之间（如0.85表示8.5折）'); return
+              ReggieUI.error('折扣率必须在0~1之间（如0.85表示8.5折）'); return
             }
           }
           if (!this.formData.totalCount || Number(this.formData.totalCount) <= 0) {
-            this.$message.error('请输入发放总数'); return
+            ReggieUI.error('请输入发放总数'); return
           }
           if (this.formData.validDays === '' || Number(this.formData.validDays) <= 0) {
-            this.$message.error('请输入有效天数'); return
+            ReggieUI.error('请输入有效天数'); return
           }
           var data = {
             name: this.formData.name,
@@ -358,7 +380,7 @@
         },
         deleteHandle(id) {
           var self = this
-          this.$confirm('此操作将永久删除该优惠券, 是否继续?', '提示', {
+          ReggieUI.confirm('此操作将永久删除该优惠券, 是否继续?', '提示', {
             confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
           }).then(function() {
             deleteCouponTemplate(id).then(res => {

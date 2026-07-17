@@ -30,19 +30,12 @@ public class MybatisPlusConfig {
      * - tenant: 租户表本身不需要 tenant_id
      * - employee: 在 EmployeeController 中手动添加了租户过滤
      * - shopping_cart: 暂无 tenant_id 列，通过 userId 关联隔离
-     * - order_detail: 暂无 tenant_id 列，通过 orderId 关联隔离
      * - ai_provider_config: 系统级AI大模型配置表，暂无 tenant_id 列，不需要租户隔离
      */
     private static final Set<String> IGNORE_TABLES = new HashSet<>(Arrays.asList(
-        "tenant", "employee", "shopping_cart", "order_detail", "ai_provider_config", "dish_evaluation"
+        "tenant", "employee", "shopping_cart", "ai_provider_config", "dish_evaluation"
     ));
 
-    /**
-     * 配置MyBatis-Plus拦截器
-     * 包含多租户拦截器和分页拦截器
-     *
-     * @return MyBatis-Plus拦截器
-     */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor(){
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();

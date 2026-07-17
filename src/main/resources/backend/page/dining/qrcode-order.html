@@ -106,7 +106,7 @@
     </div>
 
     <!-- 购物车弹窗 -->
-    <el-dialog title="购物车" :visible.sync="cartDialog.visible" class="el-dialog--sm unified-dialog cart-dialog" :show-close="true" :close-on-click-modal="true" :append-to-body="true" :modal-append-to-body="true">
+    <el-dialog title="购物车" :visible.sync="cartDialog.visible" custom-class="el-dialog--sm unified-dialog cart-dialog" :show-close="true" :close-on-click-modal="true" :append-to-body="true" :modal-append-to-body="true">
       <div v-if="cart.length === 0" class="empty-cart">购物车是空的</div>
       <div v-for="item in cart" :key="item.dishId" class="cart-item">
         <div class="cart-item-name">{{ item.name }}</div>
@@ -120,11 +120,11 @@
     </el-dialog>
 
     <!-- 提交订单弹窗 -->
-    <el-dialog title="确认订单" :visible.sync="submitDialog.visible" class="el-dialog--sm unified-dialog submit-dialog"
+    <el-dialog title="确认订单" :visible.sync="submitDialog.visible" custom-class="el-dialog--sm unified-dialog submit-dialog"
       :close-on-click-modal="false">
       <div style="padding: 10px 0;">
         <div style="font-size:14px;color:#606266;margin-bottom:12px;">
-          🪑 桌台：<strong>{{ tableInfo?.name }}</strong>（可坐{{ tableInfo?.seatCount }}人）
+          🪑 桌台：<strong>{{ tableInfo ? tableInfo.name : '' }}</strong>（可坐{{ tableInfo ? tableInfo.seatCount : '' }}人）
         </div>
         <div style="font-size:14px;color:#606266;margin-bottom:12px;">
           共 <strong>{{ cartTotal() }}</strong> 件商品
@@ -146,8 +146,8 @@
         </div>
       </div>
       <span slot="footer" class="dialog-footer">
-        <el-button @click="submitDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="confirmSubmit" :loading="submitting">提交订单</el-button>
+        <el-button size="medium" @click="submitDialog.visible = false">取消</el-button>
+        <el-button type="primary" size="medium" @click="confirmSubmit" :loading="submitting">提交订单</el-button>
       </span>
     </el-dialog>
   </div>
@@ -192,7 +192,7 @@
           this.loadTableInfo()
         } else {
           this.loading = false
-          this.$message.error('无效的桌台二维码')
+          ReggieUI.error('无效的桌台二维码')
         }
       },
       methods: {
@@ -232,13 +232,13 @@
         },
         addToCart(dish) {
           if (dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)) {
-            this.$message.warning('该菜品已售罄')
+            ReggieUI.warning('该菜品已售罄')
             return
           }
           var existing = this.cart.find(item => item.dishId === dish.id)
           if (existing) {
             if (existing.qty >= (dish.stockQty || 999)) {
-              this.$message.warning('库存不足')
+              ReggieUI.warning('库存不足')
               return
             }
             existing.qty++
@@ -271,18 +271,18 @@
         },
         submitOrder() {
           if (this.cart.length === 0) {
-            this.$message.warning('请先选择菜品')
+            ReggieUI.warning('请先选择菜品')
             return
           }
           this.submitDialog.visible = true
         },
         async confirmSubmit() {
           if (!this.submitForm.contactName.trim()) {
-            this.$message.warning('请输入联系人姓名')
+            ReggieUI.warning('请输入联系人姓名')
             return
           }
           if (!this.submitForm.contactPhone.trim()) {
-            this.$message.warning('请输入手机号')
+            ReggieUI.warning('请输入手机号')
             return
           }
           this.submitting = true
@@ -295,7 +295,7 @@
                 name: item.name,
                 image: item.image,
                 number: item.qty,
-                amount: Number(item.price)
+                amount: Number(item.price),
                 dishFlavor: ''
               }
             })
@@ -315,16 +315,16 @@
             })
 
             if (res && res.code === 1) {
-              this.$message.success('下单成功！订单号：' + (res.data?.number || ''))
+              ReggieUI.success('下单成功！订单号：' + (res.data ? res.data.number : ''))
               this.cart = []
               this.submitDialog.visible = false
               // 刷新桌台状态
               this.loadTableInfo()
             } else {
-              this.$message.error(res?.msg || '下单失败')
+              ReggieUI.error((res ? res.msg : '') || '下单失败')
             }
           } catch (err) {
-            this.$message.error('下单失败：' + err)
+            ReggieUI.error('下单失败：' + err)
           }
           this.submitting = false
         }

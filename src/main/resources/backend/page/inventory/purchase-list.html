@@ -10,10 +10,12 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     /* ========== 采购管理专用样式 ========== */
-    .purchase-chart { background: #fff; border-radius: 14px; padding: 20px 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px; height: 340px; }
+    .purchase-chart { background: var(--bg-surface); border-radius: 14px; padding: 20px 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px; height: 340px; }
     .detail-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
     @media (max-width: 1200px) {
       .stats-cards { grid-template-columns: repeat(2, 1fr); }
@@ -23,6 +25,12 @@
 <body>
   <div class="dashboard-container" id="purchase-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">采购入库</span>
+      </nav>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
       <stat-cards :cards="statsCards" :active-key.sync="cardFilter" @card-click="onCardClick"></stat-cards>
 
@@ -80,7 +88,7 @@
               <template slot-scope="scope">￥{{ scope.row.amount }}</template>
             </el-table-column>
           </el-table>
-          <div v-else style="text-align:center;padding:16px;color:#c0c4cc;">暂无明细数据</div>
+          <div v-else style="text-align:center;padding:16px;color:var(--el-border-base);">暂无明细数据</div>
         </template>
         <template #col-totalAmount="{ row }">￥{{ (row.totalAmount || 0).toString() }}</template>
         <template #col-status="{ row }">
@@ -95,10 +103,11 @@
     </div>
 
     <!-- 新增采购单对话框 -->
-    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" class="el-dialog--lg unified-dialog"
+    <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" custom-class="el-dialog--lg unified-dialog"
       @close="handleClose" :close-on-click-modal="false"
       :show-close="true" :append-to-body="true" :modal-append-to-body="true">
-      <el-form class="demo-form-inline" label-width="100px">
+      <!-- 修改点：移除误导性死 class demo-form-inline（label-width 100 可接受，保持不变） -->
+      <el-form label-width="100px">
         <el-form-item label="供应商：">
           <el-select v-model="formData.supplierId" placeholder="请选择" style="width:100%">
             <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
@@ -164,6 +173,11 @@
             title: '新增采购单', dialogVisible: false,
             supplierId: '', operator: '', remark: '',
             details: [{ materialId: '', qty: '', unitPrice: '' }]
+          },
+          // 修改点：采购表单校验规则（配合 el-form :rules + validate()）
+          purchaseRules: {
+            supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
+            operator: [{ required: true, whitespace: true, message: '请输入操作员', trigger: 'blur' }]
           }
         }
       },
@@ -228,7 +242,7 @@
                 this.stats.totalOrders = this.counts
               }
             }
-          } catch (err) { this.$message.error('请求失败：' + (err.message || err)) }
+          } catch (err) { ReggieUI.error('请求失败：' + (err.message || err)) }
 
           // 加载趋势图
           this.$nextTick(() => this.renderTrendChart())
@@ -238,7 +252,7 @@
           if (!dom) return
           // 修改点：echarts 依赖外部 CDN，加载失败时给出占位提示而非 340px 空白块（避免误判为布局问题）
           if (typeof echarts === 'undefined') {
-            dom.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#c0c4cc;font-size:13px;">图表组件加载失败，请检查网络后刷新</div>'
+            dom.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--el-border-base);font-size:13px;">图表组件加载失败，请检查网络后刷新</div>'
             return
           }
           if (!this.trendChart) this.trendChart = echarts.init(dom)
@@ -278,7 +292,7 @@
           if (!row.id || row.details) return
           purchaseDetailList(row.id).then(res => {
             if (res.code === 1) this.$set(row, 'details', res.data || [])
-          }).catch(err => { this.$message.error('请求失败：' + err) })
+          }).catch(err => { ReggieUI.error('请求失败：' + err) })
         },
         handleQuery() { this.page = 1; this.init() },
         reset() { this.input.supplierId = ''; this.input.status = ''; this.cardFilter = ''; this.page = 1; this.init() },
@@ -295,40 +309,45 @@
         removeDetail(index) { this.formData.details.splice(index, 1) },
         // 修改点：审核采购单
         approveHandle(row) {
-          this.$confirm('确认审核通过该采购单? 审核后将进入待收货状态。', '提示', {
+          ReggieUI.confirm('确认审核通过该采购单? 审核后将进入待收货状态。', '提示', {
             confirmButtonText: '确定', cancelButtonText: '取消', type: 'info'
           }).then(() => {
             approvePurchase(row.id).then(res => {
-              if (res.code === 1) { this.$message.success('审核通过！'); this.handleQuery() }
-              else this.$message.error(res.msg || '操作失败')
-            }).catch(err => { this.$message.error('请求失败：' + err) })
+              if (res.code === 1) { ReggieUI.success('审核通过！'); this.handleQuery() }
+              else ReggieUI.error(res.msg || '操作失败')
+            }).catch(err => { ReggieUI.error('请求失败：' + err) })
           }).catch(() => {})
         },
         receiveHandle(row) {
-          this.$confirm('确认收货该采购单? 收货后将自动入库增加库存。', '提示', {
+          ReggieUI.confirm('确认收货该采购单? 收货后将自动入库增加库存。', '提示', {
             confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
           }).then(() => {
             receivePurchase(row.id).then(res => {
-              if (res.code === 1) { this.$message.success('收货成功！库存已更新'); this.handleQuery() }
-              else this.$message.error(res.msg || '操作失败')
-            }).catch(err => { this.$message.error('请求失败：' + err) })
+              if (res.code === 1) { ReggieUI.success('收货成功！库存已更新'); this.handleQuery() }
+              else ReggieUI.error(res.msg || '操作失败')
+            }).catch(err => { ReggieUI.error('请求失败：' + err) })
           }).catch(() => {})
         },
         cancelHandle(row) {
-          this.$confirm('确认取消该采购单?', '提示', {
+          ReggieUI.confirm('确认取消该采购单?', '提示', {
             confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
           }).then(() => {
             cancelPurchase(row.id).then(res => {
-              if (res.code === 1) { this.$message.success('取消成功！'); this.handleQuery() }
-              else this.$message.error(res.msg || '操作失败')
-            }).catch(err => { this.$message.error('请求失败：' + err) })
+              if (res.code === 1) { ReggieUI.success('取消成功！'); this.handleQuery() }
+              else ReggieUI.error(res.msg || '操作失败')
+            }).catch(err => { ReggieUI.error('请求失败：' + err) })
           }).catch(() => {})
         },
         submitForm() {
-          const fd = this.formData
-          if (!fd.supplierId) { this.$message.error('请选择供应商'); return }
-          if (!fd.operator) { this.$message.error('请输入操作员'); return }
-          if (!fd.details.length || !fd.details[0].materialId) { this.$message.error('请添加至少一条采购明细'); return }
+          const self = this
+          let passed = false
+          self.$refs.purchaseForm.validate(function(valid) { passed = valid })
+          if (!passed) {
+            self.$message.warning('请完善表单必填项')
+            return
+          }
+          const fd = self.formData
+          if (!fd.details.length || !fd.details[0].materialId) { self.$message.error('请添加至少一条采购明细'); return }
           // 创建采购单
           addPurchase({ supplierId: fd.supplierId, operator: fd.operator, remark: fd.remark }).then(res => {
             if (res.code === 1) {
@@ -337,12 +356,12 @@
                 addPurchaseDetail({ orderId: orderId, materialId: d.materialId, qty: Number(d.qty), unitPrice: Number(d.unitPrice) })
               )
               Promise.all(detailPromises).then(() => {
-                this.$message.success('采购单创建成功！')
+                ReggieUI.success('采购单创建成功！')
                 this.formData.dialogVisible = false
                 this.handleQuery()
-              }).catch(err => { this.$message.error('添加明细出错：' + err) })
-            } else this.$message.error(res.msg || '创建失败')
-          }).catch(err => { this.$message.error('请求失败：' + err) })
+              }).catch(err => { ReggieUI.error('添加明细出错：' + err) })
+            } else ReggieUI.error(res.msg || '创建失败')
+          }).catch(err => { ReggieUI.error('请求失败：' + err) })
         },
         statusType(status) {
           const map = { DRAFT: 'info', ORDERED: 'warning', PARTIAL: '', RECEIVED: 'success', CANCELLED: 'danger' }

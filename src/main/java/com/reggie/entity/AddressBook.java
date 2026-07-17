@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
@@ -46,7 +48,8 @@ public class AddressBook implements Serializable {
     private String phone;
 
     @Schema(description = "性别：0=女，1=男", example = "1")
-    @Size(max = 5, message = "性别格式不正确")
+    @Min(value = 0, message = "性别值不正确")
+    @Max(value = 1, message = "性别值不正确")
     private Integer sex;
 
     @Schema(description = "省级区划编号", example = "110000", required = true)

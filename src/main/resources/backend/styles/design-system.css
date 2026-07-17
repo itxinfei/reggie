@@ -262,3 +262,77 @@
   .ds-hide-sm { display: none !important; }
   .ds-page-header__title { font-size: var(--font-size-xl); }
 }
+
+/* ========== 9. 中屏 / 大屏响应式断点工具类（补齐 ≤768 之外） ========== */
+/* 原则：默认显示，到达断点切换；与 .ds-show-sm/.ds-hide-sm 一致的使用方式 */
+.ds-show-md { display: none !important; }   /* ≤1024px 才显示 */
+.ds-show-lg { display: none !important; }   /* ≤1280px 才显示 */
+.ds-hide-md { display: initial !important; }
+.ds-hide-lg { display: initial !important; }
+
+/* 大屏微调（1280px 以下）：容器收窄，避免内容贴边 */
+@media (max-width: 1280px) {
+  .ds-show-lg { display: initial !important; }
+  .ds-hide-lg { display: none !important; }
+  .dashboard-container { padding: var(--space-4); }
+  .dashboard-container .container { padding: var(--space-5); }
+}
+
+/* 中屏（1024px 以下，平板/小桌面）：统计卡两列、页头堆叠 */
+@media (max-width: 1024px) {
+  .ds-show-md { display: initial !important; }
+  .ds-hide-md { display: none !important; }
+  .ds-page-header__title { font-size: var(--font-size-2xl); }
+  .ds-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* ========== 10. 页面根容器 / iframe 横向溢出防护 ========== */
+/* 已知坏味道：页面写死 min-width + overflow-x:hidden 掩盖溢出（内容被裁切）。
+   修复：用 .ds-page 作为根容器，子元素允许收缩，配合 .ds-overflow-safe 替代 overflow-x:hidden */
+.ds-page { min-width: 0; }
+.ds-page > * { min-width: 0; }                 /* 防止子元素定宽撑破 iframe */
+.ds-overflow-safe { overflow: visible; min-width: 0; }
+
+/* ========== 11. 空状态 / 加载态（统一反馈，替代各页重复定义） ========== */
+.ds-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12) var(--space-4);
+  color: var(--text-secondary);
+  text-align: center;
+}
+.ds-empty__icon { font-size: var(--font-size-4xl); color: var(--color-gray-300); }
+.ds-empty__text { font-size: var(--font-size-base); }
+.ds-empty__hint { font-size: var(--font-size-sm); color: var(--text-muted); }
+.ds-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-12) var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* ========== 12. 表格数字 / 金额对齐（统一视觉，消除各页不一致） ========== */
+.ds-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;   /* 等宽数字，右对齐不跳动 */
+}
+.ds-money {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+/* ========== 13. 卡片网格（自适应列数，替代各页写死 calc 栅格） ========== */
+.ds-card-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+@media (max-width: 768px) { .ds-card-grid { grid-template-columns: 1fr; } }

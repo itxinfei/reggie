@@ -7,49 +7,51 @@
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
     <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #f5f7fa; padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
+        body { background: var(--el-bg-subtle); padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
         .page-header { margin-bottom: 20px; }
-        .page-header h2 { font-size: 20px; color: #303133; }
-        .page-header p { font-size: 13px; color: #909399; margin-top: 4px; }
+        .page-header h2 { font-size: 20px; color: var(--el-text-primary); }
+        .page-header p { font-size: 13px; color: var(--color-info); margin-top: 4px; }
         .page-header .header-actions { float: right; margin-top: -24px; display: flex; gap: 8px; }
 
         /* 图表行 */
         .charts-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
-        .chart-panel { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
-        .panel-title { font-size: 15px; font-weight: 600; color: #303133; margin-bottom: 16px;
-            padding-bottom: 12px; border-bottom: 1px solid #ebeef5; display: flex; align-items: center; gap: 8px; }
-        .panel-title .el-icon { color: #409eff; }
+        .chart-panel { background: var(--bg-surface); border-radius: 10px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+        .panel-title { font-size: 15px; font-weight: 600; color: var(--el-text-primary); margin-bottom: 16px;
+            padding-bottom: 12px; border-bottom: 1px solid var(--el-border-light); display: flex; align-items: center; gap: 8px; }
+        .panel-title .el-icon { color: var(--el-color-primary); }
         .chart-box { width: 100%; height: 300px; }
 
         /* 热门排行 */
-        .hot-section { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+        .hot-section { background: var(--bg-surface); border-radius: 10px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
         .dish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-        .dish-card { border: 1px solid #ebeef5; border-radius: 8px; overflow: hidden; cursor: pointer; transition: all 0.2s; }
+        .dish-card { border: 1px solid var(--el-border-light); border-radius: 8px; overflow: hidden; cursor: pointer; transition: all 0.2s; }
         .dish-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }
-        .dish-img { width: 100%; height: 120px; object-fit: cover; background: #f5f7fa; }
+        .dish-img { width: 100%; height: 120px; object-fit: cover; background: var(--el-bg-subtle); }
         .dish-body { padding: 10px 12px; }
-        .dish-name { font-size: 14px; font-weight: 500; color: #303133; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .dish-price { font-size: 15px; font-weight: 600; color: #e6420e; margin-top: 4px; }
-        .dish-desc { font-size: 12px; color: #909399; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .dish-sales { font-size: 11px; color: #67c23a; margin-top: 4px; }
+        .dish-name { font-size: 14px; font-weight: 500; color: var(--el-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dish-price { font-size: 15px; font-weight: 600; color: var(--orange-700b); margin-top: 4px; }
+        .dish-desc { font-size: 12px; color: var(--color-info); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dish-sales { font-size: 11px; color: var(--color-success); margin-top: 4px; }
         .rank-badge { position: absolute; top: 0; left: 0; padding: 2px 8px; font-size: 11px; font-weight: 700;
             border-radius: 0 0 6px 0; z-index: 1; }
-        .rank-badge.r1 { background: #ff4d4f; color: #fff; }
-        .rank-badge.r2 { background: #ff7a45; color: #fff; }
-        .rank-badge.r3 { background: #ffa940; color: #fff; }
+        .rank-badge.r1 { background: var(--antd-error); color: var(--bg-surface); }
+        .rank-badge.r2 { background: var(--antd-orange); color: var(--bg-surface); }
+        .rank-badge.r3 { background: var(--antd-warning-l); color: var(--bg-surface); }
 
         .loading-wrap { text-align: center; padding: 60px 0; }
-        .loading-wrap p { color: #909399; margin-top: 12px; }
+        .loading-wrap p { color: var(--color-info); margin-top: 12px; }
 
         /* 推荐算法标签 */
         .algo-tags { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-        .algo-tag { padding: 4px 12px; border-radius: 20px; font-size: 12px; border: 1px solid #e4e7ed;
-            cursor: pointer; transition: all 0.2s; color: #606266; }
-        .algo-tag.active { background: #409eff; color: #fff; border-color: #409eff; }
-        .algo-tag:hover:not(.active) { border-color: #409eff; color: #409eff; }
+        .algo-tag { padding: 4px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--el-border-lighter2);
+            cursor: pointer; transition: all 0.2s; color: var(--el-text-regular); }
+        .algo-tag.active { background: var(--el-color-primary); color: var(--bg-surface); border-color: var(--el-color-primary); }
+        .algo-tag:hover:not(.active) { border-color: var(--el-color-primary); color: var(--el-color-primary); }
 
         @media (max-width: 1200px) {
             .stats-cards { grid-template-columns: repeat(2, 1fr); }
@@ -62,6 +64,12 @@
 </head>
 <body>
 <div id="app">
+  <!-- 面包屑导航 -->
+  <nav class="ds-breadcrumb" aria-label="面包屑导航">
+    <span class="ds-breadcrumb__item">首页</span>
+    <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+    <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">智能推荐概览</span>
+  </nav>
     <div class="page-header">
         <h2>智能推荐概览</h2>
         <p>基于协同过滤、内容推荐和热门融合的混合推荐算法引擎，实时分析用户偏好</p>
@@ -111,7 +119,7 @@
     <!-- 热门排行 -->
     <div class="hot-section">
         <div class="panel-title">
-            <i class="el-icon-star-on" style="color:#e6a23c;"></i> 今日热门菜品排行
+            <i class="el-icon-star-on" style="color:var(--color-warning);"></i> 今日热门菜品排行
             <el-button type="primary" size="small" @click="refreshHotRank" :loading="loadingHot">刷新排行</el-button>
         </div>
         <div class="algo-tags">
@@ -133,11 +141,11 @@
             </div>
         </div>
         <div v-else class="loading-wrap">
-            <i class="el-icon-loading" style="font-size:32px; color:#909399;"></i>
+            <i class="el-icon-loading" style="font-size:32px; color:var(--color-info);"></i>
             <p>加载热门数据中...</p>
         </div>
         <div v-if="!loadingHot && hotDishes.length === 0" class="loading-wrap">
-            <i class="el-icon-document" style="font-size:32px; color:#c0c4cc;"></i>
+            <i class="el-icon-document" style="font-size:32px; color:var(--el-border-base);"></i>
             <p>暂无数据，请先确保有订单和浏览数据</p>
         </div>
     </div>
@@ -401,7 +409,7 @@
         },
         refreshHotRank() {
             this.loadHotRank();
-            this.$message.success('热门排行已刷新');
+            ReggieUI.success('热门排行已刷新');
         },
         getImageUrl(image) {
             if (!image) return '';

@@ -38,7 +38,7 @@ public class ShoppingCartControllerTest {
     @Test
     void testAddDish() throws Exception {
         mockMvc.perform(post("/shoppingCart/add")
-                .sessionAttr("user", 1L)
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"dishId\":1,\"name\":\"测试菜品\",\"number\":1,\"amount\":10.00,\"image\":\"test.jpg\"}"))
                 .andExpect(status().isOk())
@@ -59,7 +59,7 @@ public class ShoppingCartControllerTest {
         shoppingCartService.save(cart);
 
         mockMvc.perform(post("/shoppingCart/add")
-                .sessionAttr("user", 1L)
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"dishId\":1,\"name\":\"测试菜品\",\"number\":1,\"amount\":10.00,\"image\":\"test.jpg\"}"))
                 .andExpect(status().isOk())
@@ -70,7 +70,7 @@ public class ShoppingCartControllerTest {
     @Test
     void testAddSetmeal() throws Exception {
         mockMvc.perform(post("/shoppingCart/add")
-                .sessionAttr("user", 1L)
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"setmealId\":1,\"name\":\"测试套餐\",\"number\":1,\"amount\":50.00,\"image\":\"setmeal.jpg\"}"))
                 .andExpect(status().isOk())
@@ -91,7 +91,7 @@ public class ShoppingCartControllerTest {
         shoppingCartService.save(cart);
 
         mockMvc.perform(get("/shoppingCart/list")
-                .sessionAttr("user", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data[0].name").value("测试菜品"))
@@ -101,7 +101,7 @@ public class ShoppingCartControllerTest {
     @Test
     void testListEmpty() throws Exception {
         mockMvc.perform(get("/shoppingCart/list")
-                .sessionAttr("user", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.length()").value(0));
@@ -121,7 +121,7 @@ public class ShoppingCartControllerTest {
         mockMvc.perform(post("/shoppingCart/sub")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"dishId\":2}")
-                .sessionAttr("user", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.number").value(2));
@@ -141,7 +141,7 @@ public class ShoppingCartControllerTest {
         mockMvc.perform(post("/shoppingCart/sub")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"dishId\":3}")
-                .sessionAttr("user", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }
@@ -158,7 +158,7 @@ public class ShoppingCartControllerTest {
         shoppingCartService.save(cart);
 
         mockMvc.perform(delete("/shoppingCart/clean")
-                .sessionAttr("user", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("清空购物车成功"));

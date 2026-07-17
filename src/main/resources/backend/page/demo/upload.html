@@ -9,10 +9,18 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
    <div class="addBrand-container" id="food-add-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">文件上传演示</span>
+      </nav>
         <el-upload class="avatar-uploader"
                 action="/common/upload"
                 :show-file-list="false"
@@ -30,6 +38,7 @@
     <script src="../../plugins/element-ui/index.js"></script>
     <!-- 引入axios -->
     <script src="../../plugins/axios/axios.min.js"></script>
+    <script src="../../js/request.js"></script>
     <script src="../../js/index.js"></script>
     <script>
       new Vue({
@@ -48,12 +57,12 @@
               const suffix = file.name.split('.')[1]
               const size = file.size / 1024 / 1024 < 2
               if(['png','jpeg','jpg'].indexOf(suffix) < 0){
-                this.$message.error('上传图片只支持 png、jpeg、jpg 格式！')
+                ReggieUI.error('上传图片只支持 png、jpeg、jpg 格式！')
                 this.$refs.upload.clearFiles()
                 return false
               }
               if(!size){
-                this.$message.error('上传文件大小不能超过 2MB!')
+                ReggieUI.error('上传文件大小不能超过 2MB!')
                 return false
               }
               return file

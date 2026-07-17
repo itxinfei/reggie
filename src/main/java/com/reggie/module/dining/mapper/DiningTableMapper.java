@@ -26,7 +26,7 @@ public interface DiningTableMapper extends BaseMapper<DiningTable> {
      * @return 每个区域的 areaId/areaName/cnt
      */
     @Select("SELECT dt.area_id AS areaId, ta.name AS areaName, COUNT(*) AS cnt "
-            + "FROM dining_table dt LEFT JOIN table_area ta ON ta.id = dt.area_id "
+            + "FROM dining_table dt LEFT JOIN dining_area ta ON ta.id = dt.area_id "
             + "WHERE 1=1 GROUP BY dt.area_id, ta.name")
     List<Map<String, Object>> statByArea();
 }

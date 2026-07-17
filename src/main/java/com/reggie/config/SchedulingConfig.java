@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * <p>
@@ -21,11 +22,12 @@ import java.util.concurrent.Executors;
 @Configuration
 public class SchedulingConfig implements SchedulingConfigurer {
 
+    private static final AtomicInteger THREAD_COUNTER = new AtomicInteger(0);
+
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
         taskRegistrar.setScheduler(Executors.newScheduledThreadPool(3, r -> {
-            Thread t = new Thread(r);
-            t.setName("scheduled-task-");
+            Thread t = new Thread(r, "scheduled-task-" + THREAD_COUNTER.incrementAndGet());
             t.setUncaughtExceptionHandler((thread, ex) ->
                 log.error("[定时任务] 线程异常终止: {}", thread.getName(), ex)
             );

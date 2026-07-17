@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -54,4 +55,8 @@ public class CouponUser implements Serializable {
 
     @Schema(description = "领取时间", example = "2026-07-09 10:00:00")
     private LocalDateTime createdTime;
+
+    /** 逻辑删除标识 0:未删除 1:已删除 */
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 }

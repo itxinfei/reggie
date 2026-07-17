@@ -3,6 +3,7 @@ package com.reggie.module.notification.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequiresPermission;
 import com.reggie.common.BaseContext;
 import com.reggie.module.notification.mapper.NotificationRecordMapper;
 import com.reggie.module.notification.mapper.NotificationTemplateMapper;
@@ -195,6 +196,7 @@ public class NotificationController {
      */
     @PostMapping("/send")
     @Operation(summary = "发送通知", description = "通用通知发送接口，支持多渠道发送")
+    @RequiresPermission("notification:send")
     public R<NotificationRecord> sendNotification(
             @Parameter(description = "通知参数（bizType/channel/targets/params/sendTime）", required = true) @RequestBody Map<String, Object> body) {
         String bizType = (String) body.get("bizType");
@@ -219,11 +221,15 @@ public class NotificationController {
         }
 
         if (sendTime != null && sendTime.isAfter(java.time.LocalDateTime.now())) {
-            // 查找匹配的启用模板获取templateId
+            // 查找匹配的启用模板获取templateId（多租户隔离）
             LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(NotificationTemplate::getBizType, bizType)
-                   .eq(NotificationTemplate::getStatus, 1)
-                   .last("LIMIT 1");
+                   .eq(NotificationTemplate::getStatus, 1);
+            Long tenantId = BaseContext.getCurrentTenantId();
+            if (tenantId != null) {
+                wrapper.eq(NotificationTemplate::getTenantId, tenantId);
+            }
+            wrapper.last("LIMIT 1");
             NotificationTemplate template = templateMapper.selectOne(wrapper);
             if (template == null) {
                 return R.error("未找到业务类型[" + bizType + "]的启用模板");
@@ -247,6 +253,7 @@ public class NotificationController {
      */
     @PostMapping("/batch-send")
     @Operation(summary = "批量发送通知", description = "批量发送通知消息")
+    @RequiresPermission("notification:send")
     public R<NotificationRecord> batchSend(
             @Parameter(description = "发送参数（templateId/channel/targetType/targets/params/sendTime）", required = true) @RequestBody Map<String, Object> body) {
         Long templateId = Long.valueOf(body.get("templateId").toString());
@@ -415,6 +422,7 @@ public class NotificationController {
      */
     @PostMapping("/send-simple")
     @Operation(summary = "简易消息发送", description = "直接发送消息内容，无需模板（支持推送/短信/站内信）")
+    @RequiresPermission("notification:send")
     public R<NotificationRecord> sendSimpleMessage(
             @Parameter(description = "消息参数（channel/targets/content/title）", required = true) @RequestBody Map<String, Object> body) {
         Integer channel = (Integer) body.getOrDefault("channel", 1);

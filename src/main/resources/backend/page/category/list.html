@@ -11,12 +11,20 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <style>
   </style>
 </head>
 <body>
   <div class="dashboard-container" id="category-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">分类管理</span>
+      </nav>
       <!-- ========== 数据统计卡片（统一组件） ========== -->
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
@@ -77,18 +85,23 @@
       size="md"
       :close-on-click-modal="false"
     >
+      <!-- 修改点：1) demo-form-inline 移除（已是 no-op，误导性命名） -->
+      <!-- 修改点：2) el-input 加宽度约束 293px（匹配规范） -->
+      <!-- 修改点：3) 增加 :rules 表单校验，提交前调 validate() -->    
+      <!-- 修改点：label-width 从 120px 缩到 80px，"分类名称/排序"短标签不需要那么宽，减少左侧留白 -->
       <el-form
-        class="demo-form-inline"
-        label-width="120px"
+        label-width="80px"
         size="small"
         :model="classData"
         ref="categoryForm"
+        :rules="formRules"
       >
         <el-form-item label="分类名称：" prop="name">
           <el-input
             v-model="classData.name"
             placeholder="请输入分类名称"
             maxlength="14"
+            style="width: 293px;"
           />
         </el-form-item>
         <el-form-item label="排序：" prop="sort">
@@ -173,6 +186,14 @@
               'id': '',             // 修改点：显式声明id字段，编辑时回填
               'name': '',
               sort: null            // 修改点：null 让 el-input-number 正常工作，不填则后端自动分配
+            },
+            // 修改点：表单校验规则（Element UI el-form :rules）
+            // 注意：sort 无需 rules — 可选字段，el-input-number 已有 :min/:max 范围限制
+            formRules: {
+              name: [
+                { required: true, message: '请输入分类名称', trigger: 'blur' },
+                { max: 14, message: '分类名称最多14个字符', trigger: 'blur' }
+              ]
             }
           }
         },
@@ -210,7 +231,7 @@
                 this.filterOptions.names = res.data.names || []
               } else {
                 this.optionsLoadError = true
-                this.$message.warning('加载分类选项失败：' + (res.msg || '接口返回异常'))
+                ReggieUI.warning('加载分类选项失败：' + (res.msg || '接口返回异常'))
               }
             } catch (err) {
               if (err.message === 'NOTLOGIN') {
@@ -218,7 +239,7 @@
               }
               this.optionsLoadError = true
               console.error('加载分类选项失败:', err)
-              this.$message.error('加载筛选选项失败，请刷新页面重试')
+              ReggieUI.error('加载筛选选项失败，请刷新页面重试')
             } finally {
               this.optionsLoading = false
             }
@@ -242,7 +263,7 @@
               this.tableData = categoryRes.data.records
               this.counts = Number(categoryRes.data.total)
             } else {
-              this.$message.error(categoryRes.msg || '操作失败')
+              ReggieUI.error(categoryRes.msg || '操作失败')
             }
 
             // 处理统计数据
@@ -302,6 +323,10 @@
             this.classData.name = ''
             this.classData.sort = null  // 修改点：null 表示不填则后端自动分配排序号
             this.classData.dialogVisible = true
+            // 修改点：清除上次残留的表单校验状态
+            this.$nextTick(() => {
+              this.$refs.categoryForm && this.$refs.categoryForm.clearValidate()
+            })
           },
           editHandle(dat) {
             this.classData.title = '修改分类'
@@ -311,6 +336,10 @@
             this.classData.id = dat.id
             this.type = dat.type
             this.classData.dialogVisible = true
+            // 修改点：清除上次残留的表单校验状态
+            this.$nextTick(() => {
+              this.$refs.categoryForm && this.$refs.categoryForm.clearValidate()
+            })
           },
           // 关闭弹窗
           handleClose(st) {
@@ -318,77 +347,69 @@
           },
           //删除
           deleteHandle(id) {
-            this.$confirm('此操作将永久删除该分类, 是否继续?', '提示', {
+            ReggieUI.confirm('此操作将永久删除该分类, 是否继续?', '提示', {
               'confirmButtonText': '确定',
               'cancelButtonText': '取消',
               'type': 'warning'
             }).then(() => {
               deleCategory(id).then(res => {
                 if (res.code === 1) {
-                  this.$message.success('删除成功！')
+                  ReggieUI.success('删除成功！')
                   this.handleQuery()
                 } else {
-                  this.$message.error(res.msg || '操作失败')
+                  ReggieUI.error(res.msg || '操作失败')
                 }
               }).catch(err => {
-                this.$message.error('请求失败：' + err)
+                ReggieUI.error('请求失败：' + err)
               })
             })
           },
-          // 修改点：数据提交——校验逻辑简化，排序为空则后端自动分配
+          // 修改点：数据提交——用 el-form validate() 替代手动 toast 校验，错误直接 inline 显示在字段下方
           submitForm(st) {
-            const classData = this.classData
-            const name = (classData.name || '').trim()
-            if (!name) {
-              this.$message.error('请输入分类名称')
-              return
-            }
-            if (name.length > 14) {
-              this.$message.error('分类名称最多14个字符')
-              return
-            }
-            // 排序号可选，如果填了则必须是正整数
-            if (classData.sort !== null && classData.sort !== undefined && classData.sort !== '') {
-              if (!/^\d+$/.test(String(classData.sort))) {
-                this.$message.error('排序只能输入正整数')
-                return
+            this.$refs.categoryForm.validate().then((valid) => {
+              if (!valid) return
+              const classData = this.classData
+              const name = (classData.name || '').trim()
+              const params = { name: name, type: this.type }
+              if (classData.sort !== null && classData.sort !== undefined && classData.sort !== '') {
+                params.sort = classData.sort
               }
-            }
-            const params = { name: name, type: this.type }
-            if (classData.sort !== null && classData.sort !== undefined && classData.sort !== '') {
-              params.sort = classData.sort
-            }
-            if (this.action === 'add') {
-              addCategory(params).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('分类添加成功！')
-                  if (!st) {
-                    this.classData.dialogVisible = false
+              if (this.action === 'add') {
+                addCategory(params).then(res => {
+                  if (res.code === 1) {
+                    ReggieUI.success('分类添加成功！')
+                    if (!st) {
+                      this.classData.dialogVisible = false
+                    } else {
+                      this.classData.name = ''
+                      this.classData.sort = null
+                      // 修改点：重置表单校验状态，避免"保存并继续"后残留红色错误提示
+                      this.$refs.categoryForm.resetFields()
+                    }
+                    this.handleQuery()
                   } else {
-                    this.classData.name = ''
-                    this.classData.sort = null
+                    ReggieUI.error(res.msg || '操作失败')
                   }
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            } else {
-              params.id = this.classData.id
-              editCategory(params).then(res => {
-                if (res.code === 1) {
-                  this.$message.success('分类修改成功！')
-                  this.classData.dialogVisible = false
-                  this.handleQuery()
-                } else {
-                  this.$message.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                this.$message.error('请求失败：' + err)
-              })
-            }
+                }).catch(err => {
+                  ReggieUI.error('请求失败：' + err)
+                })
+              } else {
+                params.id = this.classData.id
+                editCategory(params).then(res => {
+                  if (res.code === 1) {
+                    ReggieUI.success('分类修改成功！')
+                    this.classData.dialogVisible = false
+                    this.handleQuery()
+                  } else {
+                    ReggieUI.error(res.msg || '操作失败')
+                  }
+                }).catch(err => {
+                  ReggieUI.error('请求失败：' + err)
+                })
+              }
+            }).catch(() => {
+              // validate 失败时 Element UI 已自动在字段下方显示红色错误提示
+            })
           },
           // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
         }

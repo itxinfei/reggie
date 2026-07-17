@@ -12,6 +12,7 @@ target/
 *.war
 *.ear
 *.out
+compile-errors*.txt
 
 # ----------------------------------------------------------
 # 数据库文件 —— 严禁上传至 Gitee！
@@ -147,3 +148,5 @@ tests/reports/
 tests/test-results/
 *.tsbuildinfo
 
+/scripts/
+/.mvn/

@@ -10,25 +10,27 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <style>
     /* ========== 统一弹窗内区块样式（与 unified-dialog 协调） ========== */
     .od-body > .el-descriptions { margin-bottom: 18px; }
     .od-body > .el-steps { margin-bottom: 20px; }
     .od-section-label {
-      font-size: 14px; font-weight: 600; color: #303133;
+      font-size: 14px; font-weight: 600; color: var(--el-text-primary);
       margin: 20px 0 10px; padding-left: 8px;
-      border-left: 3px solid #ffc200;
+      border-left: 3px solid var(--color-brand-500);
     }
     .od-section-label:first-child { margin-top: 0; }
     .od-amount { margin-bottom: 18px; }
     .od-amount-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; }
     .od-amount-total {
       display: flex; justify-content: space-between; align-items: baseline;
-      padding-top: 10px; margin-top: 8px; border-top: 1px dashed #dcdfe6;
+      padding-top: 10px; margin-top: 8px; border-top: 1px dashed var(--el-border-default);
     }
-    .od-amount-total span:last-child { font-size: 22px; font-weight: 700; color: #f56c6c; }
+    .od-amount-total span:last-child { font-size: 22px; font-weight: 700; color: var(--color-danger); }
     .od-items-title {
-      font-size: 14px; font-weight: 600; color: #303133;
+      font-size: 14px; font-weight: 600; color: var(--el-text-primary);
       margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
     }
     .od-collapse-body { padding: 8px 0; }
@@ -38,6 +40,12 @@
 <body>
   <div class="dashboard-container" id="order-app" v-loading="loading">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">订单明细</span>
+      </nav>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -89,7 +97,7 @@
     <el-dialog
       title="订单详情"
       :visible.sync="dialogVisible"
-      class="el-dialog--xl unified-dialog"
+      custom-class="el-dialog--xl unified-dialog"
       :close-on-click-modal="true"
       :append-to-body="true"
       :modal-append-to-body="true"
@@ -152,7 +160,7 @@
           <el-collapse-item v-for="(item, idx) in diaForm.orderDetails" :key="idx" :name="idx">
             <template slot="title">
               <span style="font-weight: 500;">{{ item.name }}</span>
-              <span style="margin-left: auto; padding-right: 12px; color: #f56c6c; font-weight: 600;">
+              <span style="margin-left: auto; padding-right: 12px; color: var(--color-danger); font-weight: 600;">
                 ￥{{ Number(item.amount).toFixed(2) }}
               </span>
             </template>
@@ -166,7 +174,7 @@
             </div>
           </el-collapse-item>
         </el-collapse>
-        <div v-else style="color: #c0c4cc; font-size: 13px; text-align: center; padding: 20px 0;">暂无菜品明细</div>
+        <div v-else style="color: var(--el-border-base); font-size: 13px; text-align: center; padding: 20px 0;">暂无菜品明细</div>
       </div>
       <span slot="footer" class="dialog-footer">
         <el-button size="medium" @click="dialogVisible = false">关 闭</el-button>
@@ -188,7 +196,7 @@
           <span class="label" style="width:80px;">订单号：</span><span class="des">{{ refundForm.number }}</span>
         </div>
         <div class="item-box" style="margin-bottom:14px;">
-          <span class="label" style="width:80px;">订单金额：</span><span class="des" style="color:#f56c6c;font-weight:600;">￥{{ refundForm.amount }}</span>
+          <span class="label" style="width:80px;">订单金额：</span><span class="des" style="color:var(--color-danger);font-weight:600;">￥{{ refundForm.amount }}</span>
         </div>
         <div class="item-box" style="margin-bottom:14px;">
           <span class="label" style="width:80px;">退款金额：</span>
@@ -404,7 +412,7 @@
         },
         cancelOrder: function(row) {
           var self = this
-          this.$confirm('确认取消该订单？', '提示', { confirmButtonText: '确定', cancelButtonText: '再想想', type: 'warning' })
+          ReggieUI.confirm('确认取消该订单？', '提示', { confirmButtonText: '确定', cancelButtonText: '再想想', type: 'warning' })
             .then(function() {
               editOrderDetail({ id: row.id, status: 5 }).then(function(res) {
                 if (res && res.code === 1) { self.$message.success('订单已取消'); self.init() }
@@ -414,7 +422,7 @@
         },
         cancelOrDeliveryOrComplete: function(status, id) {
           var self = this
-          this.$confirm('确认更改该订单状态?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确认更改该订单状态?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               editOrderDetail({ status: status, id: id }).then(function(res) {
                 if (res.code === 1) { self.$message.success(status === 3 ? '订单已派送' : '订单已完成'); self.init() }
@@ -458,8 +466,8 @@
             var ext = format === 'excel' ? 'xlsx' : 'pdf'
             var apiCall = format === 'excel' ? exportApi.exportOrdersExcel(params) : exportApi.exportOrdersPdf(params)
             await exportApi.downloadFile(apiCall, '订单数据.' + ext)
-            this.$message.success('导出成功，文件已开始下载')
-          } catch (err) { this.$message.error('导出失败：' + (err.message || err)) }
+            ReggieUI.success('导出成功，文件已开始下载')
+          } catch (err) { ReggieUI.error('导出失败：' + (err.message || err)) }
         }
       }
     })

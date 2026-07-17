@@ -9,10 +9,18 @@
     <link rel="stylesheet" href="../../styles/page.css" />
     <!-- 修改点：样式已提取至独立CSS文件 -->
     <link rel="stylesheet" href="../../styles/ai-provider.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
 <div class="dashboard-container" id="provider-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">AI模型配置</span>
+      </nav>
 
         <!-- 当前激活供应商 -->
         <div class="active-provider-card" v-if="activeProvider">
@@ -35,7 +43,7 @@
             </div>
         </div>
         <div class="active-provider-card" v-else style="text-align:center;padding:40px;">
-            <p style="color:#606266;font-size:14px;margin:0;">
+            <p style="color:var(--el-text-regular);font-size:14px;margin:0;">
                 暂无激活的 AI 模型，请在下方选择一个供应商并点击「激活」
             </p>
             <el-button type="primary" size="small" @click="initPresets" style="margin-top:14px;">
@@ -99,21 +107,22 @@
     </div>
 
     <!-- 添加/编辑弹窗 -->
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" class="el-dialog--md unified-dialog"
+    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" custom-class="el-dialog--md unified-dialog"
                :show-close="true" :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
-        <el-form :model="form" label-width="100px" size="small" class="dialog-form">
-            <el-form-item label="供应商名称" required>
+        <!-- 修改点：补全 ref/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
+        <el-form ref="providerForm" :model="form" :rules="providerRules" label-width="100px" size="small" class="dialog-form">
+            <el-form-item label="供应商名称" prop="providerName">
                 <el-input v-model="form.providerName" placeholder="如：DeepSeek、通义千问" />
             </el-form-item>
-            <el-form-item label="供应商编码" required>
+            <el-form-item label="供应商编码" prop="providerCode">
                 <el-input v-model="form.providerCode"
                     placeholder="deepseek / qwen / zhipu / ernie..." />
                 <div class="field-tip">唯一标识，建议使用英文小写，如 deepseek、qwen</div>
             </el-form-item>
-            <el-form-item label="API 地址" required>
+            <el-form-item label="API 地址" prop="baseUrl">
                 <el-input v-model="form.baseUrl" placeholder="https://api.deepseek.com/v1" />
             </el-form-item>
-            <el-form-item label="模型名称" required>
+            <el-form-item label="模型名称" prop="modelName">
                 <!-- 修改点：模型名称支持手动输入 + 一键拉取API模型列表（参考ChatBox/NextChat体验） -->
                 <div style="display:flex;gap:8px;width:100%;">
                     <el-input v-model="form.modelName" placeholder="deepseek-chat / qwen-turbo / glm-4"
@@ -145,7 +154,7 @@
                     ⚠ {{ modelFetchError }}
                 </div>
             </el-form-item>
-            <el-form-item label="API 密钥" required>
+            <el-form-item label="API 密钥" prop="apiKey">
                 <el-input v-model="form.apiKey" type="password"
                     :placeholder="form._hasExistingKey ? '密钥已设置，如需更换请输入新密钥' : 'sk-...'"
                     show-word-limit show-password />
@@ -231,6 +240,13 @@
                 maxTokens: 2048,
                 temperature: 0.7,
                 remark: ''
+            },
+            // 修改点：AI 供应商表单校验规则（配合 el-form :rules + validate()）
+            providerRules: {
+                providerName: [{ required: true, whitespace: true, message: '请输入供应商名称', trigger: 'blur' }],
+                providerCode: [{ required: true, whitespace: true, message: '请输入供应商编码', trigger: 'blur' }],
+                baseUrl: [{ required: true, whitespace: true, message: '请输入 API 地址', trigger: 'blur' }],
+                modelName: [{ required: true, whitespace: true, message: '请输入模型名称', trigger: 'blur' }]
             }
         },
 
@@ -266,7 +282,7 @@
 
             activateProvider: function(id) {
                 var self = this;
-                this.$confirm('切换模型后，AI 将立即使用新模型。确定继续吗？', '切换确认', {
+                ReggieUI.confirm('切换模型后，AI 将立即使用新模型。确定继续吗？', '切换确认', {
                     confirmButtonText: '确定切换',
                     type: 'warning'
                 }).then(function() {
@@ -288,7 +304,7 @@
                 var provider = this.providers.find(function(p) { return p.id === id; });
                 if (!provider) return;
 
-                var loadingMsg = this.$message({
+                var loadingMsg = ReggieUI.message({
                     type: 'info',
                     message: '正在测试 ' + provider.providerName + ' 连接...',
                     duration: 0,
@@ -325,7 +341,7 @@
 
             deleteProvider: function(id) {
                 var self = this;
-                this.$confirm('确定删除此模型配置吗？此操作不可恢复。', '删除确认', {
+                ReggieUI.confirm('确定删除此模型配置吗？此操作不可恢复。', '删除确认', {
                     confirmButtonText: '确定删除',
                     type: 'warning'
                 }).then(function() {
@@ -379,14 +395,19 @@
             },
 
             submitForm: function() {
-                if (!this.form.providerName) { this.$message.warning('请输入供应商名称'); return; }
-                if (!this.form.providerCode) { this.$message.warning('请输入供应商编码'); return; }
-                if (!this.form.baseUrl) { this.$message.warning('请输入 API 地址'); return; }
-                if (!this.form.modelName) { this.$message.warning('请输入模型名称'); return; }
-                if (!this.form.id && !this.form.apiKey) { this.$message.warning('请输入 API 密钥'); return; }
-
                 var self = this;
-                this.submitting = true;
+                var passed = false;
+                self.$refs.providerForm.validate(function(valid) { passed = valid; });
+                if (!passed) {
+                    self.$message.warning('请完善表单必填项');
+                    return;
+                }
+                if (!self.form.id && !self.form.apiKey) {
+                    self.$message.warning('请输入 API 密钥');
+                    return;
+                }
+
+                self.submitting = true;
 
                 var payload = JSON.parse(JSON.stringify(self.form));
                 if (self.form.id && self.form._hasExistingKey && !self.form.apiKey) {
@@ -423,7 +444,7 @@
 
             initPresets: function() {
                 var self = this;
-                this.$confirm(
+                ReggieUI.confirm(
                     '将自动添加 DeepSeek、通义千问、智谱AI、文心一言、百川、月之暗面、MiniMax、360 等 8 个预设模型配置。继续吗？',
                     '初始化预设',
                     { confirmButtonText: '确定初始化', type: 'info' }
@@ -445,7 +466,7 @@
             fetchModelList: function() {
                 var self = this;
                 if (!this.form.baseUrl || !this.form.apiKey) {
-                    this.$message.warning('请先填写 API 地址和 API 密钥');
+                    ReggieUI.warning('请先填写 API 地址和 API 密钥');
                     return;
                 }
                 this.fetchingModels = true;

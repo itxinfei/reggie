@@ -4,10 +4,14 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -48,6 +52,8 @@ public class DishEvaluation implements Serializable {
     private String dishName;
 
     @Schema(description = "评分（1-5分）", example = "5")
+    @Min(value = 1, message = "评分不能低于1分")
+    @Max(value = 5, message = "评分不能高于5分")
     private Integer starRating;
 
     @Schema(description = "评价内容", example = "味道很好，分量足")
@@ -80,4 +86,8 @@ public class DishEvaluation implements Serializable {
     @Schema(description = "修改人ID")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
+
+    @Schema(description = "逻辑删除：0=未删除，1=已删除")
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 }

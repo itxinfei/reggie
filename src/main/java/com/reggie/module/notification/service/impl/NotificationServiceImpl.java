@@ -97,11 +97,15 @@ public class NotificationServiceImpl implements NotificationService {
             return null;
         }
 
-        // 查找匹配的启用模板
+        // 查找匹配的启用模板（多租户隔离）
         LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(NotificationTemplate::getBizType, bizType)
-               .eq(NotificationTemplate::getStatus, 1)
-               .last("LIMIT 1");
+               .eq(NotificationTemplate::getStatus, 1);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            wrapper.eq(NotificationTemplate::getTenantId, tenantId);
+        }
+        wrapper.last("LIMIT 1");
         NotificationTemplate template = templateMapper.selectOne(wrapper);
         if (template == null) {
             log.warn("未找到业务类型[{}]的启用模板", bizType);
@@ -155,6 +159,11 @@ public class NotificationServiceImpl implements NotificationService {
         NotificationTemplate template = templateMapper.selectById(templateId);
         if (template == null) {
             throw new IllegalArgumentException("模板不存在: " + templateId);
+        }
+        // 多租户校验：确保模板属于当前租户
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null && !tenantId.equals(template.getTenantId())) {
+            throw new IllegalArgumentException("无权使用其他租户的模板");
         }
 
         String content = renderTemplate(template.getContent(), params);
@@ -615,11 +624,15 @@ public class NotificationServiceImpl implements NotificationService {
             return null;
         }
 
-        // 查找启用的模板
+        // 查找启用的模板（多租户隔离）
         LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(NotificationTemplate::getBizType, bizType)
-               .eq(NotificationTemplate::getStatus, 1)
-               .last("LIMIT 1");
+               .eq(NotificationTemplate::getStatus, 1);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            wrapper.eq(NotificationTemplate::getTenantId, tenantId);
+        }
+        wrapper.last("LIMIT 1");
         NotificationTemplate template = templateMapper.selectOne(wrapper);
         if (template == null) {
             log.warn("未找到业务类型[{}]的启用模板", bizType);

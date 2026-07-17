@@ -10,10 +10,18 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
   <div class="dashboard-container" id="reservation-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">预约管理</span>
+      </nav>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -138,7 +146,7 @@
             this.tableData = resvRes.data.records || []
             this.counts = resvRes.data.total
           } else {
-            this.$message.error(resvRes.msg || '操作失败')
+            ReggieUI.error(resvRes.msg || '操作失败')
           }
           if (statsRes && String(statsRes.code) === '1') {
             this.stats = statsRes.data || this.stats
@@ -194,7 +202,7 @@
         },
         confirmHandle(id) {
           var self = this
-          this.$confirm('确认该预订?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确认该预订?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               confirmReservation(id).then(res => {
                 if (res.code === 1) { self.$message.success('已确认！'); self.init() }
@@ -204,7 +212,7 @@
         },
         arriveHandle(id) {
           var self = this
-          this.$confirm('确认该客户已到店?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确认该客户已到店?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               arriveReservation(id).then(res => {
                 if (res.code === 1) { self.$message.success('已到店！'); self.init() }
@@ -214,7 +222,7 @@
         },
         cancelHandle(id) {
           var self = this
-          this.$confirm('确认取消该预订?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确认取消该预订?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               cancelReservation(id).then(res => {
                 if (res.code === 1) { self.$message.success('已取消！'); self.init() }

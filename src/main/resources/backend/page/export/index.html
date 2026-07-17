@@ -6,20 +6,22 @@
     <title>数据导出 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../styles/common.css" />
     <link rel="stylesheet" href="../../styles/page.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #f0f2f5; color: #303133; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        body { background: var(--el-bg-page); color: var(--el-text-primary); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 
         .page-header { margin-bottom: 24px; }
         .page-header h2 { font-size: 20px; font-weight: 600; }
-        .page-header p { font-size: 13px; color: #909399; margin-top: 4px; }
+        .page-header p { font-size: 13px; color: var(--color-info); margin-top: 4px; }
 
         /* 卡片网格 */
         .export-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 
         .export-card {
-            background: #fff; border-radius: 8px; padding: 24px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #ebeef5;
+            background: var(--bg-surface); border-radius: 8px; padding: 24px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid var(--el-border-light);
             transition: box-shadow 0.2s;
         }
         .export-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
@@ -30,34 +32,34 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 20px; flex-shrink: 0;
         }
-        .icon-order { background: #ecf5ff; color: #409eff; }
-        .icon-dish  { background: #fff4e6; color: #e6a23c; }
-        .icon-emp   { background: #f0f9eb; color: #67c23a; }
-        .icon-report{ background: #f3e5ff; color: #9c27b0; }
+        .icon-order { background: var(--el-color-primary-lighter); color: var(--el-color-primary); }
+        .icon-dish  { background: var(--orange-50b); color: var(--color-warning); }
+        .icon-emp   { background: var(--color-success-light); color: var(--color-success); }
+        .icon-report{ background: var(--purple-50); color: var(--purple-legacy2); }
 
         .card-title { font-size: 15px; font-weight: 600; }
-        .card-desc  { font-size: 12px; color: #909399; margin-top: 2px; }
+        .card-desc  { font-size: 12px; color: var(--color-info); margin-top: 2px; }
 
         /* 筛选区 */
-        .filter-section { margin-bottom: 16px; padding: 12px; background: #fafbfc; border-radius: 6px; }
+        .filter-section { margin-bottom: 16px; padding: 12px; background: var(--el-bg-ghost); border-radius: 6px; }
         .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
         .filter-row:last-child { margin-bottom: 0; }
-        .filter-label { font-size: 13px; color: #606266; white-space: nowrap; min-width: 50px; }
+        .filter-label { font-size: 13px; color: var(--el-text-regular); white-space: nowrap; min-width: 50px; }
 
         .filter-row input, .filter-row select {
-            padding: 6px 10px; border: 1px solid #dcdfe6; border-radius: 4px;
+            padding: 6px 10px; border: 1px solid var(--el-border-default); border-radius: 4px;
             font-size: 13px; outline: none; transition: border-color 0.2s;
         }
-        .filter-row input:focus, .filter-row select:focus { border-color: #409eff; }
+        .filter-row input:focus, .filter-row select:focus { border-color: var(--el-color-primary); }
 
         .quick-range { display: flex; gap: 4px; }
         .quick-range span {
             padding: 4px 10px; font-size: 12px; border-radius: 4px;
-            background: #fff; border: 1px solid #dcdfe6; cursor: pointer;
-            transition: all 0.2s; color: #606266;
+            background: var(--bg-surface); border: 1px solid var(--el-border-default); cursor: pointer;
+            transition: all 0.2s; color: var(--el-text-regular);
         }
-        .quick-range span:hover { color: #409eff; border-color: #409eff; }
-        .quick-range span.active { background: #409eff; color: #fff; border-color: #409eff; }
+        .quick-range span:hover { color: var(--el-color-primary); border-color: var(--el-color-primary); }
+        .quick-range span.active { background: var(--el-color-primary); color: var(--bg-surface); border-color: var(--el-color-primary); }
 
         /* 按钮行 */
         .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -76,36 +78,36 @@
 
         /* 导出记录 */
         .history-section { margin-top: 24px; }
-        .history-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #606266; }
-        .history-list { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; }
+        .history-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--el-text-regular); }
+        .history-list { background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--el-border-light); }
         .history-item {
             display: flex; align-items: center; padding: 12px 20px;
-            border-bottom: 1px solid #f0f0f0; font-size: 13px;
+            border-bottom: 1px solid var(--el-bg-lighter); font-size: 13px;
         }
         .history-item:last-child { border-bottom: none; }
         .history-icon { font-size: 18px; margin-right: 12px; }
         .history-info { flex: 1; }
-        .history-name { font-weight: 500; color: #303133; }
-        .history-meta { font-size: 12px; color: #909399; margin-top: 2px; }
-        .history-size { font-size: 12px; color: #67c23a; margin-left: 12px; white-space: nowrap; }
+        .history-name { font-weight: 500; color: var(--el-text-primary); }
+        .history-meta { font-size: 12px; color: var(--color-info); margin-top: 2px; }
+        .history-size { font-size: 12px; color: var(--color-success); margin-left: 12px; white-space: nowrap; }
         .history-status {
             padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 500;
         }
-        .history-status.success { background: #f0f9eb; color: #67c23a; }
-        .history-status.fail { background: #fef0f0; color: #f56c6c; }
+        .history-status.success { background: var(--color-success-light); color: var(--color-success); }
+        .history-status.fail { background: var(--color-danger-light); color: var(--color-danger); }
 
-        .empty-history { text-align: center; padding: 40px; color: #c0c4cc; font-size: 13px; }
+        .empty-history { text-align: center; padding: 40px; color: var(--el-border-base); font-size: 13px; }
 
         /* Toast */
         .toast {
             position: fixed; top: 20px; right: 20px; padding: 14px 24px; border-radius: 6px;
-            color: #fff; font-size: 14px; z-index: 9999; max-width: 400px;
+            color: var(--bg-surface); font-size: 14px; z-index: 9999; max-width: 400px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.15); animation: slideIn 0.3s;
             display: none;
         }
-        .toast-success { background: #67c23a; }
-        .toast-error { background: #f56c6c; }
-        .toast-info { background: #409eff; }
+        .toast-success { background: var(--color-success); }
+        .toast-error { background: var(--color-danger); }
+        .toast-info { background: var(--el-color-primary); }
 
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
@@ -122,6 +124,12 @@
 </head>
 <body>
     <div id="app">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">数据导出</span>
+      </nav>
         <div class="page-header">
             <h2>数据导出</h2>
             <p>支持将业务数据导出为 Excel(.xlsx) 和 PDF 格式，文件自动包含导出时间戳</p>
@@ -141,7 +149,7 @@
                     <div class="filter-row">
                         <span class="filter-label">日期范围</span>
                         <input type="date" v-model="orderFilter.startDate" />
-                        <span style="color:#c0c4cc;">至</span>
+                        <span style="color:var(--el-border-base);">至</span>
                         <input type="date" v-model="orderFilter.endDate" />
                         <div class="quick-range">
                             <span :class="{active: orderRange === 'today'}" @click="setOrderRange('today')">今天</span>
@@ -179,7 +187,7 @@
                 <div class="filter-section">
                     <div class="filter-row">
                         <span class="filter-label">数据范围</span>
-                        <span style="font-size:13px;color:#909399;">全部在售菜品（含停售）</span>
+                        <span style="font-size:13px;color:var(--color-info);">全部在售菜品（含停售）</span>
                     </div>
                 </div>
                 <div class="btn-row">
@@ -200,7 +208,7 @@
                 <div class="filter-section">
                     <div class="filter-row">
                         <span class="filter-label">数据范围</span>
-                        <span style="font-size:13px;color:#909399;">全部员工数据</span>
+                        <span style="font-size:13px;color:var(--color-info);">全部员工数据</span>
                     </div>
                 </div>
                 <div class="btn-row">
@@ -222,7 +230,7 @@
                     <div class="filter-row">
                         <span class="filter-label">日期范围</span>
                         <input type="date" v-model="reportFilter.startDate" />
-                        <span style="color:#c0c4cc;">至</span>
+                        <span style="color:var(--el-border-base);">至</span>
                         <input type="date" v-model="reportFilter.endDate" />
                         <div class="quick-range">
                             <span :class="{active: reportRange === 'today'}" @click="setReportRange('today')">今天</span>
@@ -241,7 +249,7 @@
         <!-- 导出记录 -->
         <div class="history-section">
             <div class="history-title" style="display:flex;justify-content:space-between;align-items:center;">
-                <span>&#128197; 导出记录 <span style="font-size:12px;color:#c0c4cc;font-weight:400;">（最近 {{ history.length }} 条）</span></span>
+                <span>&#128197; 导出记录 <span style="font-size:12px;color:var(--el-border-base);font-weight:400;">（最近 {{ history.length }} 条）</span></span>
                 <button v-if="history.length > 0" @click="clearHistory" class="app-btn app-btn-danger app-btn-sm">清空记录</button>
             </div>
             <div class="history-list" v-if="history.length > 0">

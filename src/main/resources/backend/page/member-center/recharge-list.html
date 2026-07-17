@@ -10,14 +10,16 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <style>
     .chart-panels { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
-    .chart-panel { flex: 1; min-width: 380px; background: #fff; border-radius: 14px;
+    .chart-panel { flex: 1; min-width: 380px; background: var(--bg-surface); border-radius: 14px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.06); padding: 18px 20px; }
-    .chart-panel .panel-title { font-size: 15px; font-weight: 600; color: #303133; margin-bottom: 12px;
-      padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; }
+    .chart-panel .panel-title { font-size: 15px; font-weight: 600; color: var(--el-text-primary); margin-bottom: 12px;
+      padding-bottom: 10px; border-bottom: 1px solid var(--el-bg-lighter); }
     .chart-box { width: 100%; height: 300px; }
-    .filter-bar { background: #fff; border-radius: 12px; padding: 14px 20px; margin-bottom: 16px;
+    .filter-bar { background: var(--bg-surface); border-radius: 12px; padding: 14px 20px; margin-bottom: 16px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .filter-bar .el-select { width: 150px; }
     @media (max-width: 900px) {
@@ -28,6 +30,12 @@
 <body>
   <div class="dashboard-container" id="recharge-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">充值记录</span>
+      </nav>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
       <stat-cards :cards="statsCards"></stat-cards>
 
@@ -76,7 +84,7 @@
           <span style="color:#f59e0b;font-weight:700;font-size:15px;">￥{{ row.amount }}</span>
         </template>
         <template #col-giftAmount="{ row }">
-          <span :style="{color: Number(row.giftAmount)>0?'#10b981':'#909399', fontWeight: Number(row.giftAmount)>0?'600':'400' }">
+          <span :style="{color: Number(row.giftAmount)>0?'var(--emerald)':'var(--color-info)', fontWeight: Number(row.giftAmount)>0?'600':'400' }">
             ￥{{ row.giftAmount || '0.00' }}
           </span>
         </template>
@@ -109,8 +117,7 @@
           tableData: [],
           stats: { totalAmount: 0, totalCount: 0, todayAmount: 0, todayCount: 0,
             monthAmount: 0, monthCount: 0, avgAmount: 0, paymentDistribution: [], trend: [] },
-          trendChart: null, paymentChart: null
-        },
+          trendChart: null, paymentChart: null,
         // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
         columns: [
           { prop: 'memberName', label: '会员名称', minWidth: 120 },
@@ -120,7 +127,8 @@
           { prop: 'paymentMethod', label: '支付方式', width: 110, align: 'center', slot: true },
           { prop: 'createdTime', label: '充值时间', minWidth: 170 }
         ]
-      },
+      }
+    },
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
@@ -154,12 +162,12 @@
             if (String(pageRes.code) === '1') {
               this.tableData = pageRes.data.records || []
               this.counts = pageRes.data.total
-            } else { this.$message.error(pageRes.msg || '操作失败') }
+            } else { ReggieUI.error(pageRes.msg || '操作失败') }
             if (statsRes && String(statsRes.code) === '1') {
               this.stats = statsRes.data
               this.$nextTick(function() { this.renderCharts() })
             }
-          } catch(e) { this.$message.error('请求失败：' + e) }
+          } catch(e) { ReggieUI.error('请求失败：' + e) }
           this.loading = false
         },
         initCharts: function() {

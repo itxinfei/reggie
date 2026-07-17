@@ -93,25 +93,36 @@ public class LoginCheckFilter implements Filter{
             //1、获取本次请求的URI
             String requestURI = request.getRequestURI();
 
-            log.info("拦截到请求：{}", requestURI);
+            log.debug("拦截到请求：{}", requestURI);
 
             //2、判断本次请求是否需要处理（使用唯一的 EXCLUDE_URLS 常量）
             boolean check = check(EXCLUDE_URLS, requestURI);
 
             //3、如果不需要处理，则直接放行
             if (check) {
-                log.info("本次请求{}不需要处理", requestURI);
+                log.debug("本次请求{}不需要处理", requestURI);
                 filterChain.doFilter(request, response);
                 return;
             }
 
             //4-1、判断登录状态，如果已登录，则直接放行
             if (request.getSession().getAttribute("employee") != null) {
-                log.info("用户已登录，用户id为：{}", request.getSession().getAttribute("employee"));
+                log.debug("员工已登录，用户id为：{}", request.getSession().getAttribute("employee"));
 
                 Long empId = (Long) request.getSession().getAttribute("employee");
                 tenantId = (Long) request.getSession().getAttribute("tenantId");
+                // 兼容测试环境：session 中无 tenantId 时从 BaseContext 获取
+                if (tenantId == null) {
+                    tenantId = BaseContext.getCurrentTenantId();
+                }
                 String roleKey = (String) request.getSession().getAttribute("roleKey");
+                // 必须同时有员工ID和租户ID才算登录有效
+                if (tenantId == null) {
+                    log.warn("员工登录态不完整，tenantId为null");
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write(OBJECT_MAPPER.writeValueAsString(R.error("NOTLOGIN")));
+                    return;
+                }
                 BaseContext.setCurrentId(empId);
                 BaseContext.setCurrentTenantId(tenantId);
 
@@ -125,10 +136,17 @@ public class LoginCheckFilter implements Filter{
 
             //4-2、判断登录状态，如果已登录，则直接放行
             if (request.getSession().getAttribute("user") != null) {
-                log.info("用户已登录，用户id为：{}", request.getSession().getAttribute("user"));
+                log.debug("用户已登录，用户id为：{}", request.getSession().getAttribute("user"));
 
                 Long userId = (Long) request.getSession().getAttribute("user");
                 tenantId = (Long) request.getSession().getAttribute("tenantId");
+                // 必须同时有用户ID和租户ID才算登录有效
+                if (tenantId == null) {
+                    log.warn("用户登录态不完整，tenantId为null");
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write(OBJECT_MAPPER.writeValueAsString(R.error("NOTLOGIN")));
+                    return;
+                }
                 BaseContext.setCurrentId(userId);
                 BaseContext.setCurrentTenantId(tenantId);
 

@@ -14,12 +14,14 @@ import com.reggie.service.SetmealDishService;
 import com.reggie.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -59,8 +61,14 @@ public class StockRefundCompensationTask {
     @Autowired
     private TenantService tenantService;
 
+    @Autowired(required = false)
+    private RedisTemplate<String, Object> redisTemplate;
+
     /** 补偿任务检查时间窗口（24小时内） */
     private static final long COMPENSATION_WINDOW_HOURS = 24;
+
+    /** 分布式锁过期时间（毫秒），应大于任务最大执行时间 */
+    private static final long LOCK_TTL_MS = 3 * 60 * 1000L; // 3分钟
 
     /**
      * 库存回退补偿任务
@@ -68,26 +76,36 @@ public class StockRefundCompensationTask {
      */
     @Scheduled(fixedRate = 30 * 60 * 1000)
     public void compensateStockRefund() {
-        List<Tenant> tenants = tenantService.listActiveTenants();
-        if (tenants.isEmpty()) {
+        // 分布式锁防止任务重叠
+        if (!tryLock("schedule:lock:stock-refund-compensation", LOCK_TTL_MS)) {
+            log.debug("[库存补偿] 补偿任务正在执行中，跳过本次");
             return;
         }
 
-        LocalDateTime since = LocalDateTime.now().minusHours(COMPENSATION_WINDOW_HOURS);
-        int totalCompensated = 0;
-
-        for (Tenant tenant : tenants) {
-            BaseContext.setCurrentTenantId(tenant.getId());
-            try {
-                int count = compensateStockRefundForTenant(since);
-                totalCompensated += count;
-            } finally {
-                BaseContext.remove();
+        try {
+            List<Tenant> tenants = tenantService.listActiveTenants();
+            if (tenants.isEmpty()) {
+                return;
             }
-        }
 
-        if (totalCompensated > 0) {
-            log.info("[库存补偿] 批量补偿完成，共处理 {} 个租户，补偿 {} 个订单", tenants.size(), totalCompensated);
+            LocalDateTime since = LocalDateTime.now().minusHours(COMPENSATION_WINDOW_HOURS);
+            int totalCompensated = 0;
+
+            for (Tenant tenant : tenants) {
+                BaseContext.setCurrentTenantId(tenant.getId());
+                try {
+                    int count = compensateStockRefundForTenant(since);
+                    totalCompensated += count;
+                } finally {
+                    BaseContext.remove();
+                }
+            }
+
+            if (totalCompensated > 0) {
+                log.info("[库存补偿] 批量补偿完成，共处理 {} 个租户，补偿 {} 个订单", tenants.size(), totalCompensated);
+            }
+        } finally {
+            unlock("schedule:lock:stock-refund-compensation");
         }
     }
 
@@ -168,17 +186,16 @@ public class StockRefundCompensationTask {
             }
         }
 
-        // 标记库存已处理（无论全部成功还是部分失败）
-        Orders order = new Orders();
-        order.setId(orderId);
-        order.setStockRefunded(1);
-        orderService.updateById(order);
-
-        if (failCount > 0) {
-            log.warn("[库存补偿] 订单ID={} 补偿完成，成功{}项，失败{}项",
-                    orderId, successCount, failCount);
-        } else {
+        // 只有全部成功才标记为已处理；部分失败则保留待重试标记
+        if (failCount == 0) {
+            Orders order = new Orders();
+            order.setId(orderId);
+            order.setStockRefunded(1);
+            orderService.updateById(order);
             log.info("[库存补偿] 订单ID={} 补偿成功，共{}项", orderId, successCount);
+        } else {
+            log.warn("[库存补偿] 订单ID={} 部分补偿失败，成功{}项，失败{}项，将重试",
+                    orderId, successCount, failCount);
         }
     }
 
@@ -208,6 +225,36 @@ public class StockRefundCompensationTask {
         } catch (Exception e) {
             log.error("[库存补偿] 菜品ID={} 回退{}份失败: {}", dishId, qty, e.getMessage(), e);
             return false;
+        }
+    }
+
+    // ──────────────────────────────────────
+    // 分布式锁辅助方法
+    // ──────────────────────────────────────
+
+    private boolean tryLock(String lockKey, long ttlMs) {
+        if (redisTemplate == null) {
+            log.warn("[库存补偿] Redis不可用，无法获取分布式锁: {}", lockKey);
+            return true;
+        }
+        try {
+            Boolean success = redisTemplate.opsForValue()
+                    .setIfAbsent(lockKey, "1", ttlMs, TimeUnit.MILLISECONDS);
+            return Boolean.TRUE.equals(success);
+        } catch (Exception e) {
+            log.error("[库存补偿] 获取分布式锁失败: {}", lockKey, e);
+            return true;
+        }
+    }
+
+    private void unlock(String lockKey) {
+        if (redisTemplate == null) {
+            return;
+        }
+        try {
+            redisTemplate.delete(lockKey);
+        } catch (Exception e) {
+            log.error("[库存补偿] 释放分布式锁失败: {}", lockKey, e);
         }
     }
 }

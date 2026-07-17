@@ -11,12 +11,20 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <style>
   </style>
 </head>
 <body>
   <div class="dashboard-container" id="user-app">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">用户管理</span>
+      </nav>
       <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -215,7 +223,7 @@
               this.filterOptions.phones = res.data.phones || []
             } else {
               this.optionsLoadError = true
-              this.$message.warning('加载用户选项失败：' + (res.msg || '接口返回异常'))
+              ReggieUI.warning('加载用户选项失败：' + (res.msg || '接口返回异常'))
             }
           } catch (err) {
             // 修改点：NOTLOGIN 错误已在全局拦截器处理（跳转登录页），无需重复提示
@@ -224,7 +232,7 @@
             }
             this.optionsLoadError = true
             console.error('加载用户选项失败:', err)
-            this.$message.error('加载筛选选项失败，请刷新页面重试')
+            ReggieUI.error('加载筛选选项失败，请刷新页面重试')
           } finally {
             this.optionsLoading = false
           }
@@ -249,7 +257,7 @@
             this.tableData = userRes.data.records || []
             this.counts = userRes.data.total
           } else {
-            this.$message.error(userRes.msg || '查询失败')
+            ReggieUI.error(userRes.msg || '查询失败')
           }
 
           // 处理统计数据
@@ -274,7 +282,7 @@
             const res = await $axios.get('/user/page', { params })
             return res
           } catch (err) {
-            this.$message.error('请求失败：' + err)
+            ReggieUI.error('请求失败：' + err)
             return { code: 0, msg: '请求失败' }
           }
         },
@@ -333,14 +341,14 @@
               }
             })
             if (String(res.code) === '1') {
-              this.$message.success(res.msg || '操作成功')
+              ReggieUI.success(res.msg || '操作成功')
               this.handleStatusClose()
               this.fetchData()
             } else {
-              this.$message.error(res.msg || '操作失败')
+              ReggieUI.error(res.msg || '操作失败')
             }
           } catch (err) {
-            this.$message.error('请求失败：' + err)
+            ReggieUI.error('请求失败：' + err)
           }
         },
 
@@ -353,7 +361,7 @@
 
         // 删除用户
         deleteHandle(id) {
-          this.$confirm('确认删除该用户吗？', '提示', {
+          ReggieUI.confirm('确认删除该用户吗？', '提示', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
             type: 'warning'
@@ -363,13 +371,13 @@
                 params: { id }
               })
               if (String(res.code) === '1') {
-                this.$message.success('删除成功')
+                ReggieUI.success('删除成功')
                 this.fetchData()
               } else {
-                this.$message.error(res.msg || '删除失败')
+                ReggieUI.error(res.msg || '删除失败')
               }
             } catch (err) {
-              this.$message.error('请求失败：' + err)
+              ReggieUI.error('请求失败：' + err)
             }
           }).catch(() => {})
         },

@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileInputStream;
@@ -52,28 +53,32 @@ public class CommonController {
     @PostConstruct
     public void init() {
         if (configPath != null && !configPath.isEmpty()) {
-            // 使用配置文件指定的路径
             basePath = configPath;
         } else {
-            // 优先使用项目根目录（兼容开发和部署环境）
             String userDir = System.getProperty("user.dir");
-
-            // 检查是否在 target/classes 目录下运行（IDE 开发模式）
             if (userDir.contains("target") && userDir.endsWith("classes")) {
-                // 回退到项目根目录
                 userDir = new File(userDir).getParentFile().getParent();
             }
-
             basePath = new File(userDir, "uploads").getAbsolutePath() + File.separator;
         }
 
-        // 确保目录存在
         File dir = new File(basePath);
         if (!dir.exists()) {
             dir.mkdirs();
         }
 
-        log.info("文件上传目录: {}", basePath);
+        log.info("文件上传目录初始化完成: {}", basePath);
+    }
+
+    /**
+     * 检查登录态（文件上传/下载需要登录）
+     */
+    private R<String> checkLogin(HttpServletRequest request) {
+        if (request.getSession().getAttribute("employee") == null
+                && request.getSession().getAttribute("user") == null) {
+            return R.error("NOTLOGIN");
+        }
+        return null; // 已登录
     }
 
     /**
@@ -82,9 +87,14 @@ public class CommonController {
      * @return 上传后的文件路径
      */
     @PostMapping("/upload")
-    @Operation(summary = "文件上传", description = "上传图片文件（支持jpg、jpeg、png、gif，最大5MB）")
+    @Operation(summary = "文件上传", description = "上传图片文件（支持jpg、jpeg、png、gif，最大5MB），需要登录")
     @Parameter(name = "file", description = "上传的文件", required = true)
-    public R<String> upload(MultipartFile file) {
+    public R<String> upload(MultipartFile file, HttpServletRequest request) {
+        // 登录态校验
+        R<String> loginCheck = checkLogin(request);
+        if (loginCheck != null) {
+            return loginCheck;
+        }
         // 1. 校验文件是否为空
         if (file.isEmpty()) {
             return R.error("上传文件不能为空");
@@ -140,9 +150,21 @@ public class CommonController {
      * @param response HTTP响应对象
      */
     @GetMapping("/download")
-    @Operation(summary = "文件下载", description = "下载图片文件")
+    @Operation(summary = "文件下载", description = "下载图片文件，需要登录")
     @Parameter(name = "name", description = "文件名", required = true)
-    public void download(String name, HttpServletResponse response) {
+    public void download(String name, HttpServletResponse response, HttpServletRequest request) {
+        // 登录态校验
+        if (request.getSession().getAttribute("employee") == null
+                && request.getSession().getAttribute("user") == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
+            try {
+                response.getWriter().write("{\"code\":0,\"msg\":\"NOTLOGIN\"}");
+            } catch (IOException e) {
+                log.error("发送登录校验响应失败", e);
+            }
+            return;
+        }
         String filePath = null;
         try {
             // 先解码 URL 编码字符（浏览器会自动对反斜杠等字符编码）

@@ -11,10 +11,18 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
 <div class="dashboard-container" id="supplier-app">
   <div class="container">
+    <!-- 面包屑导航 -->
+    <nav class="ds-breadcrumb" aria-label="面包屑导航">
+      <span class="ds-breadcrumb__item">首页</span>
+      <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+      <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">供应商管理</span>
+    </nav>
 
     <!-- ============================================================
      组件1：stat-cards — 统计卡片
@@ -224,7 +232,7 @@
               this.tableData = pageRes.data.records || []
               this.counts = Number(pageRes.data.total)
             } else {
-              this.$message.error(pageRes.msg || '加载数据失败')
+              ReggieUI.error(pageRes.msg || '加载数据失败')
             }
 
             // 从 total 字段直接获取统计数量，无需拉取全量数据再前端过滤
@@ -235,7 +243,7 @@
               newCount: '0'  // 本月新增无法通过 pageSize=1 查询，需要单独接口支持，暂设为 0
             }
           } catch (err) {
-            this.$message.error('请求失败：' + err)
+            ReggieUI.error('请求失败：' + err)
           }
 
           this.loading = false
@@ -323,7 +331,7 @@
         submitForm() {
           var fd = this.formData
           if (!fd.name) {
-            this.$message.error('请输入供应商名称')
+            ReggieUI.error('请输入供应商名称')
             return
           }
           this.doSave()
@@ -360,7 +368,7 @@
 
         handleDelete(id) {
           var self = this
-          this.$confirm('此操作将永久删除该供应商, 是否继续?', '提示', {
+          ReggieUI.confirm('此操作将永久删除该供应商, 是否继续?', '提示', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
             type: 'warning'

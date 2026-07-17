@@ -15,7 +15,7 @@
 
 /* ========== chart-panel — 图表面板 ========== */
 .chart-panel {
-  background: #fff;
+  background: var(--color-white);
   border-radius: 16px;
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.8);
@@ -31,10 +31,10 @@
 .chart-panel__title {
   font-size: 16px;
   font-weight: 600;
-  color: #303133;
+  color: var(--el-text-primary);
   margin-bottom: 20px;
   padding-bottom: 14px;
-  border-bottom: 2px solid #f0f2f5;
+  border-bottom: 2px solid var(--el-bg-page);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -54,7 +54,7 @@
 /* ========== kpi-card — KPI 指标卡片 ========== */
 
 .kpi-card {
-  background: #fff;
+  background: var(--color-white);
   border-radius: 14px;
   padding: 22px 24px;
   position: relative;
@@ -132,7 +132,7 @@
 
 .kpi-card__label {
   font-size: 13px;
-  color: #909399;
+  color: var(--color-info);
   margin-bottom: 6px;
   font-weight: 500;
 }
@@ -156,16 +156,16 @@
 
 .kpi-card__sub {
   font-size: 12px;
-  color: #909399;
+  color: var(--color-info);
 }
 
 /* ===== 颜色主题 ===== */
-.kpi-card--primary  { --gradient: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); --icon-bg: linear-gradient(135deg, rgba(64,158,255,0.1) 0%, rgba(102,177,255,0.14) 100%); }
-.kpi-card--success  { --gradient: linear-gradient(135deg, #67c23a 0%, #85ce61 100%); --icon-bg: linear-gradient(135deg, rgba(103,194,58,0.1) 0%, rgba(133,206,97,0.14) 100%); }
-.kpi-card--warning  { --gradient: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%); --icon-bg: linear-gradient(135deg, rgba(230,162,60,0.1) 0%, rgba(235,181,99,0.14) 100%); }
-.kpi-card--info     { --gradient: linear-gradient(135deg, #909399 0%, #a6a9ad 100%); --icon-bg: linear-gradient(135deg, rgba(144,147,153,0.1) 0%, rgba(166,169,173,0.14) 100%); }
-.kpi-card--danger   { --gradient: linear-gradient(135deg, #f56c6c 0%, #f78989 100%); --icon-bg: linear-gradient(135deg, rgba(245,108,108,0.1) 0%, rgba(247,137,137,0.14) 100%); }
-.kpi-card--purple   { --gradient: linear-gradient(135deg, #9c27b0 0%, #ce93d8 100%); --icon-bg: linear-gradient(135deg, rgba(156,39,176,0.1) 0%, rgba(206,147,216,0.14) 100%); }
+.kpi-card--primary  { --gradient: linear-gradient(135deg, var(--color-brand-500) 0%, var(--antd-warning-l3) 100%); --icon-bg: linear-gradient(135deg, rgba(255,194,0,0.1) 0%, rgba(255,216,77,0.14) 100%); }
+.kpi-card--success  { --gradient: linear-gradient(135deg, var(--color-success) 0%, var(--el-color-success-light) 100%); --icon-bg: linear-gradient(135deg, rgba(103,194,58,0.1) 0%, rgba(133,206,97,0.14) 100%); }
+.kpi-card--warning  { --gradient: linear-gradient(135deg, var(--color-warning) 0%, var(--el-color-warning-light) 100%); --icon-bg: linear-gradient(135deg, rgba(230,162,60,0.1) 0%, rgba(235,181,99,0.14) 100%); }
+.kpi-card--info     { --gradient: linear-gradient(135deg, var(--color-info) 0%, var(--gray-a6) 100%); --icon-bg: linear-gradient(135deg, rgba(144,147,153,0.1) 0%, rgba(166,169,173,0.14) 100%); }
+.kpi-card--danger   { --gradient: linear-gradient(135deg, var(--color-danger) 0%, var(--el-color-danger-light) 100%); --icon-bg: linear-gradient(135deg, rgba(245,108,108,0.1) 0%, rgba(247,137,137,0.14) 100%); }
+.kpi-card--purple   { --gradient: linear-gradient(135deg, var(--purple-legacy2) 0%, var(--legacy-ce93d8) 100%); --icon-bg: linear-gradient(135deg, rgba(156,39,176,0.1) 0%, rgba(206,147,216,0.14) 100%); }
 
 
 /* ========== page-shell — 报表页外壳 ========== */
@@ -179,10 +179,10 @@
 .page-shell__header {
   font-size: 20px;
   font-weight: 600;
-  color: #303133;
+  color: var(--el-text-primary);
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 2px solid #f0f2f5;
+  border-bottom: 2px solid var(--el-bg-page);
 }
 
 .page-shell__toolbar {

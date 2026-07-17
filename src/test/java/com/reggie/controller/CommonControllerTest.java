@@ -46,7 +46,9 @@ public class CommonControllerTest {
         );
 
         mockMvc.perform(multipart("/common/upload")
-                .file(file))
+                .file(file)
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.containsString("images")));
@@ -62,7 +64,9 @@ public class CommonControllerTest {
         );
 
         mockMvc.perform(multipart("/common/upload")
-                .file(file))
+                .file(file)
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("上传文件不能为空"));
@@ -78,7 +82,9 @@ public class CommonControllerTest {
         );
 
         mockMvc.perform(multipart("/common/upload")
-                .file(file))
+                .file(file)
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("文件类型不支持，仅支持jpg、jpeg、png、gif格式"));
@@ -94,7 +100,9 @@ public class CommonControllerTest {
         );
 
         mockMvc.perform(multipart("/common/upload")
-                .file(file))
+                .file(file)
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.containsString("images")));
@@ -111,7 +119,9 @@ public class CommonControllerTest {
         );
 
         String responseContent = mockMvc.perform(multipart("/common/upload")
-                .file(file))
+                .file(file)
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andReturn()

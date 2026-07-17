@@ -31,7 +31,7 @@ public class OrderCancelledEventListener {
      * 异步执行，不阻塞订单取消主流程
      */
     @EventListener
-    @Async("aiExecutor")
+    @Async("eventListenerExecutor")
     public void handleOrderCancelled(OrderCancelledEvent event) {
         Long orderId = event.getOrderId();
         Long tenantId = event.getTenantId();

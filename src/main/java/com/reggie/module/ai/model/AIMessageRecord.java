@@ -54,4 +54,16 @@ public class AIMessageRecord {
     /** 租户ID */
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    /** 更新时间 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
+
+    /** 创建人ID */
+    @TableField(fill = FieldFill.INSERT)
+    private Long createUser;
+
+    /** 更新人ID */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateUser;
 }

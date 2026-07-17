@@ -117,38 +117,70 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
         int generatedCount = 0;
         LocalDateTime now = LocalDateTime.now();
 
+        // 1. 批量查询租户下所有活跃会员
         LambdaQueryWrapper<Member> memberQw = new LambdaQueryWrapper<>();
         memberQw.eq(Member::getTenantId, tenantId);
         memberQw.eq(Member::getStatus, 1);
         List<Member> members = memberService.list(memberQw);
+        if (members.isEmpty()) {
+            return 0;
+        }
 
+        // 2. 批量查询所有活跃会员的订单（避免N+1）
+        List<Long> userIds = members.stream()
+                .map(Member::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        LocalDateTime ninetyDaysAgo = now.minusDays(90);
+        LocalDateTime thirtyDaysAgo = now.minusDays(30);
+
+        Map<Long, List<Orders>> recentOrdersByUser = Collections.emptyMap();
+        Map<Long, List<Orders>> allOrdersByUser = Collections.emptyMap();
+        Map<Long, BigDecimal> totalConsumptionByUser = Collections.emptyMap();
+
+        if (!userIds.isEmpty()) {
+            // 批量查询近90天订单（排除取消/退款）
+            LambdaQueryWrapper<Orders> recentQw = new LambdaQueryWrapper<>();
+            recentQw.eq(Orders::getTenantId, tenantId);
+            recentQw.in(Orders::getUserId, userIds);
+            recentQw.ge(Orders::getOrderTime, ninetyDaysAgo);
+            recentQw.ne(Orders::getStatus, Orders.STATUS_CANCELLED);
+            recentQw.ne(Orders::getStatus, Orders.STATUS_REFUNDED);
+            List<Orders> recentOrders = orderMapper.selectList(recentQw);
+            recentOrdersByUser = recentOrders.stream()
+                    .collect(Collectors.groupingBy(Orders::getUserId));
+
+            // 批量查询所有有效订单
+            LambdaQueryWrapper<Orders> allQw = new LambdaQueryWrapper<>();
+            allQw.eq(Orders::getTenantId, tenantId);
+            allQw.in(Orders::getUserId, userIds);
+            allQw.ne(Orders::getStatus, Orders.STATUS_CANCELLED);
+            allQw.ne(Orders::getStatus, Orders.STATUS_REFUNDED);
+            List<Orders> allOrders = orderMapper.selectList(allQw);
+            allOrdersByUser = allOrders.stream()
+                    .collect(Collectors.groupingBy(Orders::getUserId));
+
+            // 预计算每个用户的总消费
+            totalConsumptionByUser = allOrdersByUser.entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> e.getValue().stream()
+                                    .map(Orders::getAmount)
+                                    .filter(Objects::nonNull)
+                                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    ));
+        }
+
+        // 3. 遍历会员，使用预查询的数据生成标签
         for (Member member : members) {
             Long memberId = member.getId();
             Long userId = member.getUserId();
+            if (userId == null) continue;
 
-            // 查询近90天内的订单
-            LocalDateTime ninetyDaysAgo = now.minusDays(90);
-            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
-            orderQw.eq(Orders::getUserId, userId);
-            orderQw.ge(Orders::getOrderTime, ninetyDaysAgo);
-            orderQw.ne(Orders::getStatus, Orders.STATUS_CANCELLED);
-            orderQw.ne(Orders::getStatus, Orders.STATUS_REFUNDED);
-            List<Orders> recentOrders = orderMapper.selectList(orderQw);
-
-            // 查询所有订单（用于总消费）
-            LambdaQueryWrapper<Orders> allOrderQw = new LambdaQueryWrapper<>();
-            allOrderQw.eq(Orders::getUserId, userId);
-            allOrderQw.ne(Orders::getStatus, Orders.STATUS_CANCELLED);
-            allOrderQw.ne(Orders::getStatus, Orders.STATUS_REFUNDED);
-            List<Orders> allOrders = orderMapper.selectList(allOrderQw);
-
-            BigDecimal totalConsumption = allOrders.stream()
-                    .map(Orders::getAmount)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            // 近30天订单数
-            LocalDateTime thirtyDaysAgo = now.minusDays(30);
+            List<Orders> recentOrders = recentOrdersByUser.getOrDefault(userId, Collections.emptyList());
+            List<Orders> allOrders = allOrdersByUser.getOrDefault(userId, Collections.emptyList());
+            BigDecimal totalConsumption = totalConsumptionByUser.getOrDefault(userId, BigDecimal.ZERO);
             long recentOrderCount = recentOrders.stream()
                     .filter(o -> o.getOrderTime() != null && o.getOrderTime().isAfter(thirtyDaysAgo))
                     .count();

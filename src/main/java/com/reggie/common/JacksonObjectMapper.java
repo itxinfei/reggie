@@ -43,27 +43,34 @@ public class JacksonObjectMapper extends ObjectMapper {
     public static final String DEFAULT_TIME_FORMAT = "HH:mm:ss";
 
     /**
+     * 日期时间格式化器（线程安全，可复用于序列化/反序列化）
+     */
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(DEFAULT_DATE_TIME_FORMAT);
+
+    /**
+     * 时间格式化器（线程安全）
+     */
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern(DEFAULT_TIME_FORMAT);
+
+    /**
      * 构造方法
      */
     public JacksonObjectMapper() {
         super();
-        //收到未知属性时不报异常
+        //反序列化时，未知属性不报异常
         this.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
-
-        //反序列化时，属性不存在的兼容处理
-        this.getDeserializationConfig().withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
 
         SimpleModule simpleModule = new SimpleModule()
-                .addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(DateTimeFormatter.ofPattern(DEFAULT_DATE_TIME_FORMAT)))
+                .addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(DATE_TIME_FORMATTER))
                 .addDeserializer(LocalDate.class, new LocalDateDeserializer(DateTimeFormatter.ofPattern(DEFAULT_DATE_FORMAT)))
-                .addDeserializer(LocalTime.class, new LocalTimeDeserializer(DateTimeFormatter.ofPattern(DEFAULT_TIME_FORMAT)))
+                .addDeserializer(LocalTime.class, new LocalTimeDeserializer(TIME_FORMATTER))
 
                 .addSerializer(BigInteger.class, ToStringSerializer.instance)
                 .addSerializer(Long.class, ToStringSerializer.instance)
-                .addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern(DEFAULT_DATE_TIME_FORMAT)))
+                .addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DATE_TIME_FORMATTER))
                 .addSerializer(LocalDate.class, new LocalDateSerializer(DateTimeFormatter.ofPattern(DEFAULT_DATE_FORMAT)))
-                .addSerializer(LocalTime.class, new LocalTimeSerializer(DateTimeFormatter.ofPattern(DEFAULT_TIME_FORMAT)));
+                .addSerializer(LocalTime.class, new LocalTimeSerializer(TIME_FORMATTER));
 
         //注册功能模块 例如，可以添加自定义序列化器和反序列化器
         this.registerModule(simpleModule);

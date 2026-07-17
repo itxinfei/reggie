@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <style>
     /* ========== Payment Detail Dialog ========== */
     .pay-detail-dialog { border-radius: 12px; overflow: hidden; animation: none !important; }
@@ -18,14 +20,14 @@
     .pay-detail-dialog .dialog-footer { text-align: right; padding: 14px 20px 18px; }
     .pay-detail-dialog .el-dialog__headerbtn { z-index: 10; }
 
-    .pd-wrap { background: #fff; border-radius: 12px; overflow: hidden; }
+    .pd-wrap { background: var(--bg-surface); border-radius: 12px; overflow: hidden; }
 
     /* Header bar */
     .pd-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 18px 24px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #fff;
+      background: linear-gradient(135deg, var(--indigo) 0%, var(--purple-legacy) 100%);
+      color: var(--bg-surface);
     }
     .pd-header-left { display: flex; align-items: center; gap: 12px; }
     .pd-number { font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
@@ -36,48 +38,48 @@
     .pd-amount-card {
       display: flex; align-items: center; gap: 14px;
       margin: 16px 20px 0; padding: 20px 24px;
-      background: linear-gradient(135deg, #f0f4ff 0%, #e8ecf9 100%);
-      border: 1px solid #dce3f5; border-radius: 10px;
+      background: linear-gradient(135deg, var(--indigo-50) 0%, var(--indigo-100) 100%);
+      border: 1px solid var(--indigo-100); border-radius: 10px;
     }
     .pd-amount-icon {
       width: 48px; height: 48px; border-radius: 14px;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: #fff; font-size: 22px; font-weight: 700;
+      background: linear-gradient(135deg, var(--indigo), var(--purple-legacy));
+      color: var(--bg-surface); font-size: 22px; font-weight: 700;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .pd-amount-label { font-size: 12px; color: #909399; margin-bottom: 2px; }
-    .pd-amount-value { font-size: 26px; font-weight: 800; color: #667eea; letter-spacing: -0.5px; }
+    .pd-amount-label { font-size: 12px; color: var(--color-info); margin-bottom: 2px; }
+    .pd-amount-value { font-size: 26px; font-weight: 800; color: var(--indigo); letter-spacing: -0.5px; }
 
     /* Info grid */
     .pd-info-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 0;
       margin: 16px 20px 0;
-      border: 1px solid #ebeef5; border-radius: 8px; overflow: hidden;
+      border: 1px solid var(--el-border-light); border-radius: 8px; overflow: hidden;
     }
     .pd-info-item {
       display: flex; align-items: flex-start; gap: 10px;
-      padding: 11px 16px; background: #fff;
-      border-bottom: 1px solid #f5f7fa; min-height: 42px;
+      padding: 11px 16px; background: var(--bg-surface);
+      border-bottom: 1px solid var(--el-bg-subtle); min-height: 42px;
     }
     .pd-info-item:last-child, .pd-info-item:nth-last-child(2) { border-bottom: none; }
     .pd-info-item--full { grid-column: 1 / -1; }
-    .pd-info-label { font-size: 13px; color: #909399; width: 90px; flex-shrink: 0; line-height: 22px; }
-    .pd-info-value { font-size: 13px; color: #303133; font-weight: 500; line-height: 22px; word-break: break-all; }
+    .pd-info-label { font-size: 13px; color: var(--color-info); width: 90px; flex-shrink: 0; line-height: 22px; }
+    .pd-info-value { font-size: 13px; color: var(--el-text-primary); font-weight: 500; line-height: 22px; word-break: break-all; }
 
     /* Trade numbers */
     .pd-trade-section {
       margin: 16px 20px 0; padding: 16px 18px;
-      background: #fafbfc; border: 1px solid #ebeef5; border-radius: 8px;
+      background: var(--el-bg-ghost); border: 1px solid var(--el-border-light); border-radius: 8px;
     }
-    .pd-trade-title { font-size: 13px; font-weight: 700; color: #606266; margin-bottom: 10px; }
+    .pd-trade-title { font-size: 13px; font-weight: 700; color: var(--el-text-regular); margin-bottom: 10px; }
     .pd-trade-row { display: flex; align-items: center; padding: 6px 0; font-size: 13px; }
-    .pd-trade-row .pd-trade-label { color: #909399; width: 110px; flex-shrink: 0; }
-    .pd-trade-row .pd-trade-val { color: #303133; font-weight: 500; font-family: monospace; }
+    .pd-trade-row .pd-trade-label { color: var(--color-info); width: 110px; flex-shrink: 0; }
+    .pd-trade-row .pd-trade-val { color: var(--el-text-primary); font-weight: 500; font-family: monospace; }
 
     /* Close button */
     .pd-close-btn {
       width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15);
-      color: #fff; border-radius: 8px; cursor: pointer; font-size: 18px;
+      color: var(--bg-surface); border-radius: 8px; cursor: pointer; font-size: 18px;
       display: flex; align-items: center; justify-content: center;
       transition: background 0.2s, transform 0.2s;
     }
@@ -87,6 +89,12 @@
 <body>
   <div class="dashboard-container" id="payment-app" v-loading="loading">
     <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">支付管理</span>
+      </nav>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -138,7 +146,7 @@
     <el-dialog
       title="支付详情"
       :visible.sync="detailVisible"
-      class="el-dialog--md unified-dialog"
+      custom-class="el-dialog--md unified-dialog"
       :close-on-click-modal="true"
       :append-to-body="true"
       :modal-append-to-body="true"
@@ -430,7 +438,7 @@
           if (!self.refundForm.amount || self.refundForm.amount <= 0) { self.$message.error('请输入有效的退款金额'); return }
           if (self.refundForm.amount > self.refundForm.maxAmount) { self.$message.error('退款金额不能超过支付金额'); return }
           if (!self.refundForm.reason) { self.$message.error('请输入退款原因'); return }
-          this.$confirm('确认退款 &#165;' + self.refundForm.amount + '?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确认退款 &#165;' + self.refundForm.amount + '?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               // 修改点：id → paymentOrderId，与后端 RefundRequestDTO 字段对齐
               paymentRefund({ paymentOrderId: self.refundForm.id, amount: self.refundForm.amount, reason: self.refundForm.reason }).then(function(res) {

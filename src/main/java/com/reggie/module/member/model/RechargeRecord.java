@@ -1,7 +1,10 @@
 package com.reggie.module.member.model;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -42,5 +45,14 @@ public class RechargeRecord implements Serializable {
     private String paymentMethod;
 
     @Schema(description = "充值时间", example = "2026-07-09 10:00:00")
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdTime;
+
+    @Schema(description = "更新时间", example = "2026-07-09 12:00:00")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedTime;
+
+    @Schema(description = "是否删除：0=未删除，1=已删除", example = "0")
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 }

@@ -733,7 +733,7 @@ Vue.component('crud-dialog', {
   },
   template:
     '<el-dialog' +
-    '  :class="dialogClass"' +
+    '  :custom-class="dialogClass"' +
     '  :title="title"' +
     '  :visible.sync="visible"' +
     '  :width="resolvedWidth"' +
