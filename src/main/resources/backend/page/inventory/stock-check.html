@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
   <style>
-    .sub-table { margin: 0 16px; width: auto; }
+    .sub-table { margin: 8px 0; width: 100%; }
     .sub-table .el-table__body-wrapper { background: #fafbfc; }
     .empty-expand { text-align: center; padding: 24px; color: #c0c4cc; font-size: 13px; }
     .check-detail-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; padding-right: 4px; }
@@ -37,58 +37,57 @@
         </template>
       </table-bar>
 
-      <el-table v-loading="loading" :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
-        <el-table-column type="expand">
-          <template slot-scope="props">
-            <el-table :data="props.row.details" stripe class="tableBox sub-table" v-if="props.row.details && props.row.details.length">
-              <el-table-column label="食材名称" min-width="140">
-                <template slot-scope="scope">{{ scope.row.materialName }}</template>
-              </el-table-column>
-              <el-table-column prop="bookQty" label="账面数量" width="110" align="center" />
-              <el-table-column prop="actualQty" label="实际数量" width="110" align="center" />
-              <el-table-column label="差异" width="90" align="center">
-                <template slot-scope="scope">
-                  <span :style="scope.row.diff < 0 ? 'color: #f56c6c; font-weight: 600' : scope.row.diff > 0 ? 'color: #67c23a; font-weight: 600' : 'color: #909399'">
-                    {{ scope.row.diff }}
-                  </span>
-                </template>
-              </el-table-column>
-            </el-table>
-            <div v-else class="empty-expand">暂无明细数据</div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="id" label="盘点单号" width="120" />
-        <el-table-column prop="operator" label="操作员" width="100" align="center" />
-        <el-table-column prop="itemCount" label="盘点项数" width="100" align="center" />
-        <el-table-column prop="remark" label="备注" minWidth="120" showOverflowTooltip />
-        <el-table-column label="盈亏金额" width="120" align="right">
-          <template slot-scope="scope">
-            <span :style="scope.row.profitLoss < 0 ? 'color: #f56c6c; font-weight: 600' : 'color: #303133'">
-              {{ scope.row.profitLoss }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="100" align="center">
-          <template slot-scope="scope">
-            <el-tag :type="scope.row.status === 'IN_PROGRESS' ? 'warning' : 'success'" size="small">
-              {{ scope.row.status === 'IN_PROGRESS' ? '进行中' : '已完成' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createdTime" label="创建时间" width="170" />
-        <el-table-column label="操作" width="140" align="center">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" class="btn-complete" @click="enterCheck(scope.row)" v-if="scope.row.status === 'IN_PROGRESS'">录入数据</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" :current-page.sync="page" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
+      <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination（与库存流水页一致，修复表格样式不一致） -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :page-sizes="[10,20,30,40]"
+        :total="counts"
+        :expand="true"
+        row-key="id"
+        :show-actions="true"
+        :actions-width="140"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        @expand-change="loadDetails">
+        <template #expand="{ row }">
+          <el-table :data="row.details" stripe class="tableBox sub-table" v-if="row.details && row.details.length">
+            <el-table-column label="食材名称" min-width="140">
+              <template slot-scope="scope">{{ scope.row.materialName }}</template>
+            </el-table-column>
+            <el-table-column prop="bookQty" label="账面数量" width="110" align="center" />
+            <el-table-column prop="actualQty" label="实际数量" width="110" align="center" />
+            <el-table-column label="差异" width="90" align="center">
+              <template slot-scope="scope">
+                <span :style="scope.row.diff < 0 ? 'color: #f56c6c; font-weight: 600' : scope.row.diff > 0 ? 'color: #67c23a; font-weight: 600' : 'color: #909399'">
+                  {{ scope.row.diff }}
+                </span>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-else class="empty-expand">暂无明细数据</div>
+        </template>
+        <template #col-profitLoss="{ row }">
+          <span :style="row.profitLoss < 0 ? 'color: #f56c6c; font-weight: 600' : 'color: #303133'">{{ row.profitLoss }}</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 'IN_PROGRESS' ? 'warning' : 'success'" size="small">
+            {{ row.status === 'IN_PROGRESS' ? '进行中' : '已完成' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-complete" @click="enterCheck(row)" v-if="row.status === 'IN_PROGRESS'">录入数据</el-button>
+        </template>
+      </crud-table>
     </div>
 
     <!-- 新增盘点对话框（操作人 + 备注） -->
     <el-dialog title="新增盘点单" :visible.sync="formData.dialogVisible" class="el-dialog--md unified-dialog"
       :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
-      <el-form class="demo-form-inline" label-width="100px">
+      <el-form class="demo-form-inline" label-width="80px" size="small">
         <el-form-item label="操作人：" required>
           <el-input v-model="formData.operator" placeholder="请输入操作人姓名" style="width:240px" />
         </el-form-item>
@@ -144,6 +143,16 @@
           tableData: [],
           stats: { totalChecks: 0, pendingChecks: 0, completedChecks: 0, diffCount: 0 },
           activeFilter: '',
+          // 修改点：crud-table 列配置（替代手写 el-table-column）
+          columns: [
+            { prop: 'id', label: '盘点单号', width: 120 },
+            { prop: 'operator', label: '操作员', width: 100, align: 'center' },
+            { prop: 'itemCount', label: '盘点项数', width: 100, align: 'center' },
+            { prop: 'remark', label: '备注', minWidth: 120, showOverflowTooltip: true },
+            { prop: 'profitLoss', label: '盈亏金额', width: 120, align: 'right', slot: true },
+            { prop: 'status', label: '状态', width: 100, align: 'center', slot: true },
+            { prop: 'createdTime', label: '创建时间', width: 170 }
+          ],
           tableSearchItems: [],
           tableActions: [
             { key: 'add', text: '+ 新增盘点', type: 'primary' }
@@ -359,12 +368,15 @@
             self.$message.error('请求失败：' + err)
           })
         },
-        handleSizeChange: function(val) {
-          this.pageSize = val
+        // 修改点：分页处理改为 crud-table 事件驱动（与库存流水页一致）
+        onPageChange: function(payload) {
+          this.page = payload.page
+          this.pageSize = payload.pageSize
           this.init()
         },
-        handleCurrentChange: function(val) {
-          this.page = val
+        onSizeChange: function(val) {
+          this.pageSize = val
+          this.page = 1
           this.init()
         }
       }

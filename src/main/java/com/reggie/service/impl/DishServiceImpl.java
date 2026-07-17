@@ -49,10 +49,6 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
     @Autowired
     private CategoryService categoryService;
 
-    /** Redis缓存工具 */
-    @Autowired
-    private RedisCacheUtil redisCacheUtil;
-
     /**
      * 根据ID查询菜品信息及关联的口味列表
      *
@@ -89,8 +85,6 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveDish(Dish dish, List<DishFlavor> flavors) {
-        redisCacheUtil.doubleDeleteAllEntries("dishes");
-
         // 校验分类是否存在
         if (dish.getCategoryId() != null) {
             Category category = categoryService.getById(dish.getCategoryId());
@@ -136,7 +130,6 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
         if (existing == null) {
             throw new CustomException("菜品不存在");
         }
-        redisCacheUtil.doubleDelete("dishes", dishDto.getId());
 
         // 校验库存非负
         if (dishDto.getStockQty() != null && dishDto.getStockQty().compareTo(BigDecimal.ZERO) < 0) {
@@ -176,8 +169,6 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Integer status, List<Long> ids) {
-        redisCacheUtil.doubleDeleteAllEntries("dishes");
-
         LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.in(ids != null, Dish::getId, ids);
         updateWrapper.set(Dish::getStatus, status);
@@ -191,7 +182,6 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteWithFlavorCheck(List<Long> ids) {
-        redisCacheUtil.doubleDeleteAllEntries("dishes");
         if (ids == null || ids.isEmpty()) {
             throw new CustomException("请选择要删除的菜品");
         }
@@ -240,15 +230,10 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
         if (dishId == null || qty == null || qty.compareTo(java.math.BigDecimal.ZERO) <= 0) {
             return;
         }
-        redisCacheUtil.doubleDelete("dishes", dishId);
 
         // 使用乐观锁原子扣减：WHERE stock_qty >= ? 防止超卖
-        LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(Dish::getId, dishId);
-        updateWrapper.ge(Dish::getStockQty, qty);
-        updateWrapper.setSql("stock_qty = stock_qty - " + qty.toPlainString());
-
-        boolean success = this.update(updateWrapper);
+        int affected = getBaseMapper().deductStock(dishId, qty);
+        boolean success = affected > 0;
         if (!success) {
             // 查询当前库存用于错误提示
             Dish dish = this.getById(dishId);
@@ -273,7 +258,6 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
         if (dishId == null || qty == null || qty.compareTo(java.math.BigDecimal.ZERO) <= 0) {
             return;
         }
-        redisCacheUtil.doubleDelete("dishes", dishId);
 
         // 先查询当前菜品信息
         Dish dish = this.getById(dishId);
@@ -303,7 +287,6 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
     @Override
     public void autoToggleSoldOut(Long dishId) {
         if (dishId == null) return;
-        redisCacheUtil.doubleDelete("dishes", dishId);
 
         Dish dish = this.getById(dishId);
         if (dish == null) return;
@@ -378,8 +361,6 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
      */
     @Override
     public void updateStock(Long id, java.math.BigDecimal stockQty, java.math.BigDecimal minStock) {
-        redisCacheUtil.doubleDelete("dishes", id);
-
         // 校验库存非负
         if (stockQty != null && stockQty.compareTo(BigDecimal.ZERO) < 0) {
             throw new CustomException("库存数量不能小于0");

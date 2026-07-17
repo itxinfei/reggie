@@ -69,9 +69,8 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
             throw new CustomException("当前分类下关联了" + setmealCount + "个套餐，不能删除");
         }
 
-        // 修改点：先删DB成功，再清缓存
+        // 修改点：先删DB成功
         super.removeById(id);
-        redisCacheUtil.doubleDeleteAllEntries("categories");
     }
 
     /**
@@ -100,11 +99,8 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
             resolveSortConflict(entity.getType(), entity.getSort(), null);
         }
 
-        // 修改点：先写DB成功，再清缓存
+        // 修改点：先写DB成功
         boolean result = super.save(entity);
-        if (result) {
-            redisCacheUtil.doubleDeleteAllEntries("categories");
-        }
         return result;
     }
 
@@ -183,15 +179,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
      * @param excludeId  排除的分类ID（编辑时跳过自身）
      */
     private void resolveSortConflict(Integer type, int targetSort, Long excludeId) {
-        LambdaUpdateWrapper<Category> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.setSql("sort = sort + 1");
-        updateWrapper.eq(Category::getType, type);
-        updateWrapper.ge(Category::getSort, targetSort);
-        if (excludeId != null) {
-            updateWrapper.ne(Category::getId, excludeId);
-        }
-
-        boolean success = this.update(updateWrapper);
-        log.info("排序号冲突处理完成：type={}, targetSort={}, 影响{}条记录", type, targetSort, success ? "N" : "0");
+        int affected = getBaseMapper().incrementSortByType(type, targetSort, excludeId);
+        log.info("排序号冲突处理完成：type={}, targetSort={}, 影响{}条记录", type, targetSort, affected);
     }
 }

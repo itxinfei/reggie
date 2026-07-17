@@ -4,27 +4,9 @@
    ============================================================ */
 
 /* ----------------------------------------------------------
-   1. CSS 变量
+   1. CSS 变量（统一引用设计令牌源 tokens.css，避免 shell 与子页令牌分叉）
    ---------------------------------------------------------- */
-:root {
-  --sidebar-width: 200px;
-  --sidebar-collapsed-width: 60px;
-  --sidebar-bg-start: #1b1c2d;
-  --sidebar-bg-end: #202235;
-  --sidebar-item-gap: 4px;
-  --sidebar-item-radius: 8px;
-  --topbar-height: 56px;
-  --accent-color: #ffc200;
-  --accent-hover: #ffda44;
-  --text-primary: #1f2937;
-  --text-secondary: #6b7280;
-  --text-muted: #9ca3af;
-  --border-subtle: #f3f4f6;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
-  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-smooth: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-}
+@import './tokens.css';
 
 /* ----------------------------------------------------------
    2. 全局重置

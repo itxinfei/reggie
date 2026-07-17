@@ -178,7 +178,8 @@
 
     <!-- ========== 详情弹窗 ========== -->
     <el-dialog :title="'评价详情' + (detailData.dishName ? ' - ' + detailData.dishName : '')"
-      :visible.sync="detailVisible" class="el-dialog--md unified-dialog" :before-close="closeDetail">
+      :visible.sync="detailVisible" class="el-dialog--md unified-dialog"
+      :show-close="true" :append-to-body="true" :modal-append-to-body="true">
       <div v-if="detailData.id">
         <div class="detail-section">
           <div class="detail-section-title">📋 基本信息</div>
@@ -213,7 +214,7 @@
     </el-dialog>
 
     <!-- ========== 回复弹窗 ========== -->
-    <el-dialog title="回复评价" :visible.sync="replyVisible" class="el-dialog--sm unified-dialog" :before-close="closeReply">
+    <el-dialog title="回复评价" :visible.sync="replyVisible" class="el-dialog--sm unified-dialog" :show-close="true" :append-to-body="true" :modal-append-to-body="true">
       <div v-if="replyData.id" style="margin-bottom:12px;padding:14px;background:#f5f7fa;border-radius:10px;">
         <div style="font-weight:600;margin-bottom:4px;color:#303133;">{{ replyData.dishName || '' }} - {{ replyData.starRating }}★</div>
         <div style="color:#606266;font-size:13px;line-height:1.6;">{{ replyData.content || '' }}</div>
@@ -228,7 +229,7 @@
     </el-dialog>
 
     <!-- ========== 图片预览 ========== -->
-    <el-dialog :visible.sync="previewVisible" class="unified-dialog el-dialog--md" :show-close="true" center>
+    <el-dialog :visible.sync="previewVisible" class="unified-dialog el-dialog--md" :show-close="true" center :append-to-body="true" :modal-append-to-body="true">
       <img :src="previewUrl" class="image-preview" alt="预览图片" />
     </el-dialog>
   </div>

@@ -289,8 +289,12 @@ public class EmployeeController {
     @PostMapping("/logout")
     @Operation(summary = "员工退出", description = "退出当前登录账号，清除Session和租户上下文")
     public R<String> logout(HttpServletRequest request){
-        request.getSession().removeAttribute("employee");
-        request.getSession().removeAttribute("tenantId");
+        // 必须 invalidate 整个 Session，仅 removeAttribute 不会使 Session ID 失效
+        try {
+            request.getSession().invalidate();
+        } catch (IllegalStateException e) {
+            log.warn("[登出] Session 已失效或不存在", e);
+        }
         BaseContext.remove(); // 清理 ThreadLocal，防止租户信息泄露
         return R.success("退出成功");
     }
@@ -335,7 +339,8 @@ public class EmployeeController {
                     log.error("初始密码短信发送失败 - empId: {}, phone: {}, error: {}", employee.getId(), employee.getPhone(), e.getMessage());
                 }
             } else {
-                log.info("【开发环境/Mock模式】员工初始密码 - 姓名：{}，手机号：{}，密码：{}", employee.getName(), employee.getPhone(), initialPassword);
+                log.info("【开发环境/Mock模式】员工初始密码已生成 - 姓名：{}，手机号：{}，密码长度：{}",
+                    employee.getName(), employee.getPhone(), initialPassword.length());
             }
         }
 

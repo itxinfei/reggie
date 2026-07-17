@@ -165,3 +165,21 @@
     font-size: 13px;
   }
 }
+
+/* ========== 菜品弹窗（food/list.html） ========== */
+/* 口味编辑样式：统一原 list.html 内联 .flavorBox-dialog 系列（M3 去内联），
+   index 徽标改品牌金 #ffc200（原 #409eff off-brand，修复 M4） */
+.flavorBox-dialog { border: 1px solid #ebeef5; border-radius: 8px; padding: 12px; background: #fafbfc; }
+.flavor-empty-dialog { text-align: center; padding: 16px; color: #c0c4cc; }
+.flavor-item-dialog { border: 1px solid #e4e7ed; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
+.flavor-header-dialog { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.flavor-header-dialog .flavor-index { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #ffc200; color: #fff; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+.flavor-tags-dialog { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding-left: 30px; }
+
+/* 菜品新增/编辑弹窗（xl 840px）内表单占满宽度，避免右侧留白（M6） */
+.dish-dialog .el-form .el-input,
+.dish-dialog .el-form .el-select,
+.dish-dialog .el-form .el-input-number { width: 100%; }
+
+/* 菜品图片列：保持原始比例，避免 Element 固定 40px 宽导致变形（M8） */
+.cell-img { width: auto; height: 40px; border: none; border-radius: 4px; cursor: pointer; }

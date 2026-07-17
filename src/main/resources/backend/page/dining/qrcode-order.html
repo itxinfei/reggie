@@ -76,7 +76,7 @@
     <div class="dish-list" v-if="!loading">
       <div class="dish-card" v-for="dish in filteredDishes" :key="dish.id" :class="{'sold-out': dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)}" @click="addToCart(dish)">
         <div style="position:relative;">
-          <img :src="getImage(dish.image)" class="dish-img" />
+          <img :src="getImage(dish.image)" class="dish-img" :alt="dish.name || '菜品图片'" />
           <div v-if="dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)" class="sold-out-tag"></div>
         </div>
         <div class="dish-info">
@@ -106,7 +106,7 @@
     </div>
 
     <!-- 购物车弹窗 -->
-    <el-dialog title="购物车" :visible.sync="cartDialog.visible" class="el-dialog--sm unified-dialog cart-dialog" :show-close="true" :close-on-click-modal="true">
+    <el-dialog title="购物车" :visible.sync="cartDialog.visible" class="el-dialog--sm unified-dialog cart-dialog" :show-close="true" :close-on-click-modal="true" :append-to-body="true" :modal-append-to-body="true">
       <div v-if="cart.length === 0" class="empty-cart">购物车是空的</div>
       <div v-for="item in cart" :key="item.dishId" class="cart-item">
         <div class="cart-item-name">{{ item.name }}</div>

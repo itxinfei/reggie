@@ -23,7 +23,11 @@
       if (code === 0 && res.data.msg === 'NOTLOGIN') {
         localStorage.removeItem('userInfo')
         // 修改点：后端页面在iframe中加载，须用window.top导航顶层窗口到登录页
-        window.top.location.href = '/backend/page/login/login.html'
+        try {
+          window.top.location.href = '/backend/page/login/login.html'
+        } catch (e) {
+          window.location.href = '/backend/page/login/login.html'
+        }
         return Promise.reject(new Error('NOTLOGIN'))  // 修改点：阻止Promise继续进入then回调
       } else {
         return res.data
@@ -35,7 +39,7 @@
       if (error.response && error.response.data) {
         const respData = error.response.data;
         // 后端统一响应格式：{ code: 0, msg: "..." }
-        if (respData.msg && respData.msg.startsWith('参数校验失败')) {
+        if (respData.msg && typeof respData.msg === 'string' && respData.msg.startsWith('参数校验失败')) {
           message = respData.msg;
         } else if (respData.msg) {
           message = respData.msg;
@@ -50,11 +54,13 @@
       else if (message.includes("Request failed with status code")) {
         message = "系统接口" + message.substring(message.length - 3) + "异常";
       }
-      window.ELEMENT.Message({
-        message: message,
-        type: 'error',
-        duration: 5 * 1000
-      })
+      if (window.ELEMENT && window.ELEMENT.Message) {
+        window.ELEMENT.Message({
+          message: message,
+          type: 'error',
+          duration: 5 * 1000
+        })
+      }
       return Promise.reject(error)
     }
   )

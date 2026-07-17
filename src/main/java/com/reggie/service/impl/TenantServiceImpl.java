@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpSession;
+import java.util.List;
 
 /**
  * 租户服务实现类
@@ -85,5 +86,16 @@ public class TenantServiceImpl extends ServiceImpl<TenantMapper, Tenant> impleme
      */
     public void saveVerifyCode(String phone, String verifyCode, HttpSession session) {
         verifyCodeUtils.saveVerifyCode(phone, verifyCode, session);
+    }
+
+    /**
+     * 查询所有活跃租户（状态=1 正常）
+     * 供定时任务等多租户批处理场景使用
+     */
+    @Override
+    public List<Tenant> listActiveTenants() {
+        return this.lambdaQuery()
+                .eq(Tenant::getStatus, 1)
+                .list();
     }
 }

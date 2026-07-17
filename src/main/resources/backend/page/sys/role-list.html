@@ -100,7 +100,7 @@
 
     <!-- 权限分配弹窗 -->
     <el-dialog title="权限分配" :visible.sync="permDialogVisible" class="el-dialog--md unified-dialog perm-tree-dialog"
-      :close-on-click-modal="false">
+      :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
       <div style="margin-bottom: 12px; font-size: 13px; color: #606266;">
         当前角色：<strong>{{ currentRole?.roleName }}</strong>
         <span style="margin-left: 12px;">已选 <el-tag type="success" size="mini">{{ checkedPerms.length }}</el-tag> 项权限</span>

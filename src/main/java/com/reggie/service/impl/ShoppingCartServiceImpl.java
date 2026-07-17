@@ -45,12 +45,8 @@ public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, Sho
 
         if (cartItem.getNumber() > 1) {
             // 使用原子操作更新数量，防止并发问题
-            LambdaUpdateWrapper<ShoppingCart> updateWrapper = new LambdaUpdateWrapper<>();
-            updateWrapper.eq(ShoppingCart::getId, cartItem.getId())
-                         .gt(ShoppingCart::getNumber, 1)
-                         .setSql("number = number - 1");
-            boolean updated = this.update(updateWrapper);
-            if (updated) {
+            int updated = getBaseMapper().subQuantity(cartItem.getId());
+            if (updated > 0) {
                 // 重新查询最新数量
                 cartItem = this.getOne(wrapper);
                 return cartItem;
@@ -82,12 +78,7 @@ public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, Sho
         if (itemId == null) {
             return 0;
         }
-        // 原子更新：只有 number > 1 时才减 1
-        LambdaUpdateWrapper<ShoppingCart> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(ShoppingCart::getId, itemId)
-                     .gt(ShoppingCart::getNumber, 1)
-                     .setSql("number = number - 1");
-        return this.update(updateWrapper) ? 1 : 0;
+        return getBaseMapper().subQuantity(itemId);
     }
 
     /**
@@ -104,9 +95,6 @@ public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, Sho
         if (itemId == null || increment <= 0) {
             return 0;
         }
-        LambdaUpdateWrapper<ShoppingCart> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(ShoppingCart::getId, itemId)
-                     .setSql("number = number + " + increment);
-        return this.update(updateWrapper) ? 1 : 0;
+        return getBaseMapper().addQuantity(itemId, increment);
     }
 }

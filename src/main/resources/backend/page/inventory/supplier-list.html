@@ -87,7 +87,7 @@
     @submit="submitForm"
     @close="resetForm"
   >
-    <el-form ref="supplierForm" :model="formData" label-width="120px">
+    <el-form ref="supplierForm" :model="formData" label-width="80px">
       <el-form-item label="供应商名称：" prop="name" :rules="[{required: true, message: '请输入供应商名称', trigger: 'blur'}]">
         <el-input v-model="formData.name" placeholder="请输入供应商名称" maxlength="50" />
       </el-form-item>

@@ -724,6 +724,85 @@
 .dashboard-container .container .el-dialog--xl,
 .el-dialog--xl { width: 840px !important; }
 
+/* ========== 弹窗垂直居中（全局生效，2026-07-17 新增） ==========
+ * 所有 el-dialog（crud-dialog 组件 + 手写 el-dialog）均自动水平+垂直居中。
+ * 原理：
+ *   1. wrapper 设为 flex 容器 → dialog 水平居中
+ *   2. dialog margin:auto → flex 中安全垂直居中（内容超高时 margin 塌缩为 0，
+ *      dialog 顶部对齐 + wrapper overflow:auto 滚动，不会截断顶部）
+ *   3. unified-dialog 限高 90vh + flex 列布局 → body 区域内部滚动
+ * ============================================================ */
+
+/* wrapper：flex 容器，水平居中
+ * 关键：仅在弹窗“可见”（无内联 display:none）时启用 flex。
+ * Element 关闭弹窗时给 wrapper 注入 style="display:none" 来隐藏；
+ * 若无条件写 display:flex，会让本该隐藏的弹窗变成全屏 flex 遮罩，
+ * 覆盖并拦截页面数据。故用 :not([style*="display: none"]) 排除隐藏态。 */
+.el-dialog__wrapper:not([style*="display: none"]) {
+  display: flex;
+  justify-content: center;
+  /* 不设 align-items，改用 dialog 的 margin:auto 实现安全垂直居中 */
+}
+
+/* dialog：margin:auto 在 flex 容器中自动水平+垂直居中 */
+/* 覆盖 Element UI 默认 margin:100px auto 0 及 JS 动态 margin-top */
+.el-dialog {
+  margin: auto !important;
+}
+
+/* unified-dialog：限高 + flex 列布局，body 内部滚动 */
+.unified-dialog {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.unified-dialog .el-dialog__header {
+  flex-shrink: 0;
+}
+.unified-dialog .el-dialog__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: none; /* 覆盖 common.css 原 60vh 限制，由 flex 布局自动管理高度 */
+}
+.unified-dialog .el-dialog__footer {
+  flex-shrink: 0;
+}
+
+/* 响应式：平板（≤768px）弹窗宽度自适应 */
+@media (max-width: 768px) {
+  .el-dialog,
+  .el-dialog--sm,
+  .el-dialog--md,
+  .el-dialog--lg,
+  .el-dialog--xl {
+    width: 92% !important;
+  }
+  .unified-dialog {
+    max-height: 88vh;
+  }
+}
+
+/* 响应式：手机（≤480px）弹窗近全屏 */
+@media (max-width: 480px) {
+  .el-dialog,
+  .el-dialog--sm,
+  .el-dialog--md,
+  .el-dialog--lg,
+  .el-dialog--xl {
+    width: 96% !important;
+  }
+  .el-dialog {
+    margin: 8px auto !important;
+  }
+  .unified-dialog {
+    max-height: 94vh;
+    border-radius: 6px !important;
+  }
+  .unified-dialog .el-dialog__body {
+    padding: 16px;
+  }
+}
+
 /* ========== 表格列宽规范 ========== */
 
 /* 操作列统一宽度 */

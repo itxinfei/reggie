@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8"/>
-    <title>门店管理</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>门店管理 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
     <link rel="stylesheet" href="../../styles/common.css" />
     <link rel="stylesheet" href="../../styles/page.css" />
@@ -160,7 +161,7 @@
     </div>
 
     <!-- ===== 新建/编辑门店对话框 ===== -->
-    <el-dialog :title="dialogTitle" :visible.sync="formDialogVisible" class="el-dialog--lg unified-dialog" @close="resetForm" :close-on-click-modal="false">
+    <el-dialog :title="dialogTitle" :visible.sync="formDialogVisible" class="el-dialog--lg unified-dialog" @close="resetForm" :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
         <el-form :model="form" ref="formRef" label-width="100px" size="small" :rules="formRules">
             <div class="form-section-title">基本信息</div>
             <el-row :gutter="16">
@@ -393,7 +394,7 @@
             if (self.activeFilter === 'active') { params.status = 1; }
             else if (self.activeFilter === 'inactive') { params.status = 0; }
 
-            storeApi.pageStores(params).then(function(res) {
+            pageStores(params).then(function(res) {
                 if (res && res.code === 1 && res.data) {
                     self.tableData = res.data.records || [];
                     self.pagination.total = res.data.total || 0;
@@ -410,7 +411,7 @@
         updateStats: function() {
             var self = this;
             // 修改点：改为调用后端 /store/stats SQL 聚合接口，替代 listStores 拉全量后 filter 统计（消除 N+1 与全量内存计算）
-            storeApi.storeStats().then(function(res) {
+            storeStats().then(function(res) {
                 if (res && res.code === 1 && res.data) {
                     var d = res.data;
                     self.stats.totalStores = Number(d.totalStores) || 0;
@@ -480,7 +481,7 @@
             self.$confirm('确认' + label + '已选的 ' + ids.length + ' 个门店吗？', '提示', {
                 confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
             }).then(function() {
-                storeApi.batchUpdateStatus(ids, status).then(function(res) {
+                batchUpdateStatus(ids, status).then(function(res) {
                     if (res && res.code === 1) {
                         var result = res.data;
                         self.$message.success(label + '成功：' + result.successCount + '/' + result.total);
@@ -499,7 +500,7 @@
                 status: self.search.status
             };
             self.$message({ message: '正在导出，请稍候...', type: 'info', duration: 2000 });
-            storeApi.exportStores(params).then(function(res) {
+            exportStores(params).then(function(res) {
                 var blob = new Blob([res], { type: 'text/csv;charset=utf-8' });
                 var url = window.URL.createObjectURL(blob);
                 var a = document.createElement('a');
@@ -516,7 +517,7 @@
         // ========== 单行操作 ==========
         toggleSingleStatus: function(row) {
             var self = this;
-            storeApi.updateStatus(row.tenantId, row.status).then(function(res) {
+            updateStatus(row.tenantId, row.status).then(function(res) {
                 if (res && res.code === 1) {
                     self.$message.success('状态已更新');
                 }
@@ -524,7 +525,7 @@
         },
         switchToStore: function(row) {
             var self = this;
-            storeApi.switchStore(row.tenantId).then(function(res) {
+            switchStore(row.tenantId).then(function(res) {
                 if (res && res.code === 1) {
                     self.$message.success('已切换到门店：' + row.storeName);
                     self.loadData();
@@ -537,7 +538,7 @@
             var self = this;
             self.isCreate = false;
             self.editTenantId = row.tenantId;
-            storeApi.getStoreDetail(row.tenantId).then(function(res) {
+            getStoreDetail(row.tenantId).then(function(res) {
                 if (res && res.code === 1 && res.data) {
                     var d = res.data;
                     self.form = {
@@ -614,9 +615,9 @@
                 if (self.isCreate) {
                     payload.adminUsername = self.form.adminUsername;
                     payload.adminPassword = self.form.adminPassword;
-                    apiCall = storeApi.createStore(payload);
+                    apiCall = createStore(payload);
                 } else {
-                    apiCall = storeApi.updateStore(self.editTenantId, payload);
+                    apiCall = updateStore(self.editTenantId, payload);
                 }
 
                 apiCall.then(function(res) {
@@ -645,9 +646,9 @@
             var sourceTenantId = null;
             if (self.tableData.length > 0) sourceTenantId = self.tableData[0].tenantId;
             var apiMap = {
-                dishes: storeApi.syncDishes({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, dishIds: null, operatorId: 1 }),
-                categories: storeApi.syncCategories({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, operatorId: 1 }),
-                setmeals: storeApi.syncSetmeals({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, setmealIds: null, operatorId: 1 })
+                dishes: syncDishes({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, dishIds: null, operatorId: 1 }),
+                categories: syncCategories({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, operatorId: 1 }),
+                setmeals: syncSetmeals({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, setmealIds: null, operatorId: 1 })
             };
             var apiCall = apiMap[type];
             if (!apiCall) return;
@@ -686,3 +687,4 @@
 </script>
 </body>
 </html>
+

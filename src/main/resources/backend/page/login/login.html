@@ -71,7 +71,7 @@
                           @focus="focus='p'" @blur="focus=''"
                           @keyup.enter.native="doLogin" />
                 <button type="button" class="inp-eye" :aria-label="seePass?'隐藏密码':'显示密码'"
-                        @click="seePass=!seePass" tabindex="-1">
+                        @click="seePass=!seePass">
                   <i :class="seePass ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
                 </button>
               </div>

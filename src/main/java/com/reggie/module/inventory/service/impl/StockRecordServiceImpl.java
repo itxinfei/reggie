@@ -2,6 +2,7 @@ package com.reggie.module.inventory.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -103,6 +104,20 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
 
     public Page<StockRecord> page(Page<StockRecord> pageInfo) {
         Page<StockRecord> result = super.page(pageInfo);
+        List<StockRecord> records = result.getRecords();
+        if (!CollectionUtils.isEmpty(records)) {
+            fillMaterialName(records);
+        }
+        return result;
+    }
+
+    /**
+     * 重写带条件分页（Controller 实际调用此重载），在父类分页结果上回填物料名称与 quantity
+     * 注意：IService.page 为泛型方法 <E extends IPage<T>>，子类必须以相同泛型签名重写，否则擦除冲突。
+     */
+    @Override
+    public <E extends IPage<StockRecord>> E page(E page, Wrapper<StockRecord> queryWrapper) {
+        E result = super.page(page, queryWrapper);
         List<StockRecord> records = result.getRecords();
         if (!CollectionUtils.isEmpty(records)) {
             fillMaterialName(records);

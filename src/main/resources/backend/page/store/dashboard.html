@@ -265,7 +265,7 @@
     methods: {
         loadDashboard() {
             this.loading = true;
-            storeApi.getDashboardOverview().then(res => {
+            getDashboardOverview().then(res => {
                 if (res.code === 1) {
                     this.dashboard = res.data;
                     this.$nextTick(() => { this.renderBarChart(); });
@@ -359,3 +359,4 @@
 </script>
 </body>
 </html>
+

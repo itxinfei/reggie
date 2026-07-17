@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.common.event.OrderCancelledEvent;
+import com.reggie.common.event.OrderCompletedEvent;
 import com.reggie.dto.OrderDto;
 import com.reggie.entity.AddressBook;
 import com.reggie.entity.Dish;
@@ -31,6 +33,7 @@ import com.reggie.module.dining.service.DiningTableService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -95,6 +98,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      */
     @Autowired(required = false)
     private DiningTableService diningTableService;
+
+    /**
+     * 事件发布器
+     */
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     /**
      * 用户下单（从购物车生成订单）
@@ -381,10 +390,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             return true;
         }
         try {
-            LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
-            updateWrapper.eq(Dish::getId, dishId);
-            updateWrapper.setSql("stock_qty = IFNULL(stock_qty, 0) + " + qty.toPlainString());
-            dishService.update(updateWrapper);
+            dishService.addStock(dishId, qty);
 
             // 补货后如果之前是停售状态且库存大于最低库存，自动恢复起售
             if (dishService != null) {
@@ -459,18 +465,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         if (dishId == null || qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
-        LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(Dish::getId, dishId);
-        updateWrapper.ge(Dish::getStockQty, qty);
-        updateWrapper.setSql("stock_qty = stock_qty - " + qty.toPlainString());
-
-        boolean success = dishService.update(updateWrapper);
-        if (!success) {
-            Dish dish = dishService.getById(dishId);
-            String name = dish != null ? dish.getName() : "ID=" + dishId;
-            BigDecimal currentStock = dish != null && dish.getStockQty() != null ? dish.getStockQty() : BigDecimal.ZERO;
-            throw new CustomException("菜品「" + name + "」库存不足，当前库存：" + currentStock + "，需要扣减：" + qty);
-        }
+        dishService.deductStock(dishId, qty);
 
         // 扣减成功后检查是否需要自动停售
         if (dishService != null) {
@@ -734,6 +729,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         order.setCheckoutTime(LocalDateTime.now());
         this.updateById(order);
         log.info("订单已完成: id={}, number={}", id, order.getNumber());
+
+        // 发布订单完成事件（推荐、积分等模块异步响应）
+        eventPublisher.publishEvent(new OrderCompletedEvent(this, id, order.getTenantId()));
     }
 
     /**
@@ -769,6 +767,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         } else {
             log.error("订单已取消，但库存回退部分失败，补偿任务将重试: id={}, number={}, reason={}", id, order.getNumber(), reason);
         }
+
+        // 发布订单取消事件（通知、推荐等模块异步响应）
+        eventPublisher.publishEvent(new OrderCancelledEvent(this, id, order.getTenantId(), reason));
     }
 
     /**

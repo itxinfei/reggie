@@ -194,7 +194,7 @@
     </crud-dialog>
 
     <!-- 二维码弹窗 -->
-    <el-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible" class="el-dialog--sm unified-dialog" :close-on-click-modal="true" center>
+    <el-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible" class="el-dialog--sm unified-dialog" :close-on-click-modal="true" center :append-to-body="true" :modal-append-to-body="true">
       <div class="qrcode-content">
         <div class="qrcode-title">桌台：{{ qrcodeDialog.tableName }}</div>
         <div class="qrcode-subtitle">编号：{{ qrcodeDialog.tableId }}</div>

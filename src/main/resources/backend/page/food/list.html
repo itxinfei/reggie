@@ -10,20 +10,33 @@
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <style>
     body { overflow-x: visible; }
-    /* 弹窗口味编辑样式 */
-    .flavorBox-dialog { border: 1px solid #ebeef5; border-radius: 8px; padding: 12px; background: #fafbfc; }
-    .flavor-empty-dialog { text-align: center; padding: 16px; color: #c0c4cc; }
-    .flavor-item-dialog { border: 1px solid #e4e7ed; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
-    .flavor-header-dialog { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .flavor-header-dialog .flavor-index { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #409eff; color: #fff; font-size: 11px; font-weight: 600; flex-shrink: 0; }
-    .flavor-tags-dialog { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding-left: 30px; }
   </style>
 </head>
 <body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
   <div class="dashboard-container" id="food-app">
-    <div class="container">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">菜品管理</span>
+      </nav>
+
+      <!-- 页头 -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">菜品管理</h1>
+          <p class="ds-page-header__subtitle">菜品的新增、编辑、库存与上下架管理</p>
+        </div>
+      </header>
+
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -52,18 +65,19 @@
         :total="counts"
         :selection="true"
         :show-actions="true"
-        :actions-width="200"
+        :actions-width="250"
         @page-change="onPageChange"
         @size-change="onSizeChange"
         @selection-change="onSelection"
+        aria-label="菜品列表"
       >
         <!-- 图片列 -->
         <template #col-image="{ row }">
-          <el-image style="width:auto;height:40px;border:none;cursor:pointer;border-radius:4px;"
+          <el-image class="cell-img"
             :src="getImage(row.image)"
             :preview-src-list="[getImage(row.image)]">
             <div slot="error" class="image-slot">
-              <img src="./../../images/noImg.png" style="width:auto;height:40px;border:none;border-radius:4px;">
+              <img src="./../../images/noImg.png" class="cell-img">
             </div>
           </el-image>
         </template>
@@ -93,17 +107,17 @@
           <el-button type="text" size="small" @click="editStock(row)">库存</el-button>
         </template>
       </crud-table>
-    </div>
+    </main>
 
-    <!-- 新增/修改菜品弹窗（自定义底栏含"保存并继续添加"） -->
-    <el-dialog
+    <!-- 新增/修改菜品弹窗（统一 crud-dialog 组件，M2） -->
+    <crud-dialog
+      :size="'xl'"
       :title="dishDialog.title"
       :visible.sync="dishDialog.visible"
-      class="el-dialog--xl unified-dialog"
-      :before-close="handleDialogClose"
       :close-on-click-modal="false"
+      custom-class="dish-dialog"
     >
-      <el-form ref="dishForm" :model="dishForm" :rules="dishRules" label-width="120px">
+      <el-form ref="dishForm" :model="dishForm" :rules="dishRules" label-width="100px" size="small">
         <el-form-item label="菜品名称:" prop="name">
           <el-input v-model="dishForm.name" placeholder="请填写菜品名称" maxlength="20" />
         </el-form-item>
@@ -115,7 +129,7 @@
             <el-option v-for="item in dishList" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="菜品价格:" prop="price">
+        <el-form-item label="菜品价格:" prop="price" size="small">
           <el-input v-model="dishForm.price" placeholder="请设置菜品价格" />
         </el-form-item>
         <el-form-item label="排序:" prop="sort">
@@ -170,16 +184,22 @@
           </div>
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
+      <div slot="footer" class="dialog-footer">
         <el-button size="medium" @click="handleDialogClose">取 消</el-button>
         <el-button type="primary" size="medium" @click="submitDishForm()">确 定</el-button>
         <el-button v-if="dishDialog.actionType == 'add'" type="primary" size="medium" @click="submitDishForm('continue')">保存并继续添加</el-button>
-      </span>
-    </el-dialog>
+      </div>
+    </crud-dialog>
 
-    <!-- 库存编辑弹窗 -->
-    <el-dialog title="编辑库存" :visible.sync="stockDialog.visible" class="el-dialog--sm unified-dialog" :close-on-click-modal="false">
-      <el-form :model="stockForm" label-width="120px">
+    <!-- 库存编辑弹窗（统一 crud-dialog 组件，M2） -->
+    <crud-dialog
+      :size="'sm'"
+      title="编辑库存"
+      :visible.sync="stockDialog.visible"
+      :close-on-click-modal="false"
+      @submit="submitStockForm"
+    >
+      <el-form :model="stockForm" label-width="80px" size="small">
         <el-form-item label="菜品名称">
           <span>{{ stockForm.name }}</span>
         </el-form-item>
@@ -193,11 +213,7 @@
           <el-input v-model="stockForm.newMinStock" type="number" placeholder="请输入最低库存预警值" />
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="stockDialog.visible = false">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitStockForm()">确 定</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -240,13 +256,13 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'name', label: '菜品名称', align: 'center' },
+            { prop: 'name', label: '菜品名称', align: 'left' },
             { prop: 'image', label: '图片', slot: true, width: 80, align: 'center' },
             { prop: 'categoryName', label: '菜品分类', align: 'center' },
             { prop: 'price', label: '售价', slot: true, width: 100, align: 'center' },
             { prop: 'status', label: '售卖状态', slot: true, width: 90, align: 'center' },
             { prop: 'stock', label: '库存', slot: true, width: 100, align: 'center' },
-            { prop: 'updateTime', label: '最后操作时间', align: 'center' }
+            { prop: 'updateTime', label: '最后操作时间', align: 'center', minWidth: 150 }
           ],
           // 缓存搜索参数
           lastSearch: {},
@@ -454,9 +470,12 @@
             if (!params.image) { self.$message.error('请上传菜品图片'); return }
             if (self.dishDialog.actionType === 'add') {
               addDish(params).then(function(res) {
-                if (res.code === 1) { self.$message.success('菜品添加成功！'); self.dishDialog.visible = false; self.init()
-                if (st === 'continue') { self.resetDishForm(); self.dishDialog.visible = true } }
-                else { self.$message.error(res.msg || '操作失败') }
+                if (res.code === 1) {
+                  self.$message.success('菜品添加成功！')
+                  self.dishDialog.visible = false
+                  self.init()
+                  if (st === 'continue') { self.resetDishForm(); self.dishDialog.visible = true }
+                } else { self.$message.error(res.msg || '操作失败') }
               }).catch(function(err) { self.$message.error('请求失败：' + err) })
             } else {
               params.id = self.dishForm.id

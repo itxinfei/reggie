@@ -59,10 +59,16 @@ Vue.component('stat-cards', {
     '<div class="stats-cards">' +
       '<div v-for="card in cards" :key="card.key || card.label"' +
         ' :class="cardClasses(card)"' +
-        ' @click="onCardClick(card)">' +
+        ' :tabindex="card.clickable ? 0 : null"' +
+        ' :role="card.clickable ? \'button\' : null"' +
+        ' :aria-pressed="card.clickable ? isActive(card) : null"' +
+        ' :aria-label="card.clickable ? (card.label + \'：\' + (card.value != null ? card.value : 0) + (card.unit || \'\') + \'，点击切换筛选\') : null"' +
+        ' @click="onCardClick(card)"' +
+        ' @keydown.enter.prevent="onCardClick(card)"' +
+        ' @keydown.space.prevent="onCardClick(card)">' +
         // flex 模式：图标 + 信息左右布局（使用 .stat-icon 与 components-stats-card.css 一致）
         '<template v-if="card.flex">' +
-          '<div class="stat-icon"><span v-html="card.icon"></span></div>' +
+          '<div class="stat-icon"><span v-text="card.icon"></span></div>' +
           '<div class="stat-info">' +
             '<div class="stat-label">{{ card.label }}</div>' +
             '<div class="stat-value">' +
@@ -73,7 +79,7 @@ Vue.component('stat-cards', {
         '</template>' +
         // 普通模式：图标 + 标签 + 数值纵向布局
         '<template v-else>' +
-          '<div class="stat-icon"><span v-html="card.icon"></span></div>' +
+          '<div class="stat-icon"><span v-text="card.icon"></span></div>' +
           '<div class="stat-label">{{ card.label }}</div>' +
           '<div class="stat-value">' +
             '{{ card.value != null ? card.value : 0 }}' +
@@ -99,6 +105,9 @@ Vue.component('stat-cards', {
         'info': card.color === 'info',
         'purple': card.color === 'purple'
       }
+    },
+    isActive: function (card) {
+      return !!(card.clickable && (card.active || this.activeKey === card.key))
     },
     onCardClick: function (card) {
       if (card.clickable) {
@@ -169,8 +178,9 @@ Vue.component('table-bar', {
   },
   data: function () {
     var values = {}
-    this.searchItems.forEach(function (item) {
-      values[item.field] = item.type === 'date' || item.type === 'daterange' ? '' : ''
+    var items = this.searchItems || []
+    items.forEach(function (item) {
+      values[item.field] = ''
     })
     return {
       searchValues: values,
@@ -229,7 +239,7 @@ Vue.component('table-bar', {
   template:
     '<div class="tableBar">' +
       // 搜索区域：所有搜索控件 + 查询/重置按钮
-      '<div class="search-area">' +
+      '<div class="search-area" role="search" aria-label="搜索筛选">' +
         '<template v-for="item in searchItems">' +
           // 文本输入框
           '<el-input v-if="item.type === \'input\'" :key="\'search-\' + item.field"' +
@@ -489,10 +499,33 @@ Vue.component('crud-table', {
     emptyText: {
       type: String,
       default: '暂无数据'
+    },
+    /** 表格区域无障碍标签（role=region，配合页内 aria-label 透传） */
+    ariaLabel: {
+      type: String,
+      default: ''
+    },
+    /**
+     * 是否开启展开行（type="expand"）。默认关闭，对既有页面零影响。
+     * 开启后可通过具名插槽 #expand 自定义展开内容，并监听 expand-change 事件。
+     */
+    expand: {
+      type: Boolean,
+      default: false
+    },
+    /** 展开列宽度 */
+    expandWidth: {
+      type: Number,
+      default: 48
+    },
+    /** 行数据的 Key（同 el-table 的 row-key），展开行/保留状态时需要 */
+    rowKey: {
+      type: String,
+      default: ''
     }
   },
   template:
-    '<div class="crud-table-wrapper">' +
+    '<div class="crud-table-wrapper" role="region" :aria-label="ariaLabel || \'数据列表\'">' +
       // ===== 表格 =====
       '<el-table' +
       '  ref="elTable"' +
@@ -500,13 +533,23 @@ Vue.component('crud-table', {
       '  :stripe="stripe"' +
       '  :border="border"' +
       '  :size="size"' +
+      '  :row-key="rowKey || undefined"' +
       '  :max-height="maxHeight"' +
       '  :default-sort="{prop: \'updateTime\', order: \'descending\'}"' +
       '  v-loading="loading"' +
       '  class="tableBox"' +
       '  @selection-change="onSelectionChange"' +
       '  @sort-change="onSortChange"' +
+      '  @expand-change="onExpandChange"' +
       '>' +
+      // 展开行（可选）
+      '<el-table-column v-if="expand" type="expand" :width="expandWidth">' +
+        '<template slot-scope="props">' +
+          '<slot name="expand" :row="props.row" :$index="props.$index">' +
+            '<div style="padding:16px;color:#c0c4cc;">暂无展开内容</div>' +
+          '</slot>' +
+        '</template>' +
+      '</el-table-column>' +
       // 多选列
       '<el-table-column v-if="selection" type="selection" align="center" :width="selectionWidth"></el-table-column>' +
       // 行号列
@@ -592,6 +635,10 @@ Vue.component('crud-table', {
     onSortChange: function (sortInfo) {
       this.$emit('sort-change', sortInfo)
     },
+    /** 展开行变化：透传给父页面（用于懒加载明细） */
+    onExpandChange: function (row, expandedRows) {
+      this.$emit('expand-change', row, expandedRows)
+    },
     onSizeChange: function (val) {
       this.currentPage = 1
       this.$emit('size-change', val)
@@ -658,34 +705,43 @@ Vue.component('crud-dialog', {
     showCancel: {
       type: Boolean,
       default: true
+    },
+    /** 自定义额外 class（追加在 unified-dialog 之后，用于特殊场景样式覆盖） */
+    customClass: {
+      type: String,
+      default: ''
     }
   },
-  data: function () {
-    return { dialogVisible: this.visible }
-  },
   computed: {
-    /** 尺寸别名 → 标准像素宽度 */
+    /** 尺寸别名 → 标准像素宽度（当自定义 width 时优先使用 width） */
     resolvedWidth: function () {
       var sizeMap = { sm: '420px', md: '560px', lg: '720px', xl: '840px' }
       var s = (this.size || '').toLowerCase()
       return this.width || sizeMap[s] || '560px'
-    }
-  },
-  watch: {
-    visible: function (val) {
-      this.dialogVisible = val
+    },
+    /** 弹窗 class：unified-dialog + 尺寸别名（仅当未自定义 width 时）+ 自定义 class */
+    dialogClass: function () {
+      var cls = 'unified-dialog'
+      if (!this.width) {
+        cls += ' el-dialog--' + (this.size || 'md')
+      }
+      if (this.customClass) {
+        cls += ' ' + this.customClass
+      }
+      return cls
     }
   },
   template:
     '<el-dialog' +
-    '  class="unified-dialog"' +
+    '  :class="dialogClass"' +
     '  :title="title"' +
-    '  :visible.sync="dialogVisible"' +
+    '  :visible.sync="visible"' +
     '  :width="resolvedWidth"' +
     '  :close-on-click-modal="closeOnClickModal"' +
+    '  :close-on-press-escape="true"' +
+    '  :destroy-on-close="true"' +
     '  :append-to-body="true"' +
     '  :modal-append-to-body="true"' +
-    '  :before-close="handleClose"' +
     '>' +
       // 主体内容插槽
       '<slot></slot>' +

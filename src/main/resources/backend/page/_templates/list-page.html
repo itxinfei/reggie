@@ -1,18 +1,29 @@
 <!DOCTYPE html>
 <!--
   ============================================================
-  列表页标准模板（高复用骨架）
+  列表页标准模板（企业级设计系统示范）
   ------------------------------------------------------------
-  使用约定（后续所有后台列表页必须基于此模板开发）：
-    1. 头部样式引入保持 4 个 link（common / page / components / 按需 stats-card）
-    2. 统计卡片 → 用 <stat-cards>        （如本页不需要可删除）
-    3. 搜索 + 操作栏 → 用 <table-bar>     （searchItems / actions 配置化）
-    4. 数据表格 → 用 <crud-table>         （columns 配置 + #col-xxx / #actions 插槽）
-    5. 增删改弹窗 → 用 <crud-dialog>      （自带关闭/重置，底部按钮统一 medium）
-    6. 分页逻辑 → 引入 mixins: [window.ReggieListMixin]，实现 fetchData() 即可
-    7. 通用方法 → 直接用全局 formatMoney / formatDate / rgStatusText / rgStatusTag / rgPreview
-    8. 状态枚举 → 在脚本顶部 window.ReggieStatus.register('模块名', textMap, tagMap)
-  禁止：手写 <el-table>/<el-pagination>/<el-dialog> 重复实现上述能力
+  本模板体现前端规范（详见 docs/frontend/DESIGN_SYSTEM.md 与 CODE_STANDARDS.md）：
+
+  【样式引入顺序】common → page → components → tokens → design-system（→ stats-card 按需）
+    - tokens.css：全站设计令牌（颜色/间距/字号/圆角/阴影/层级）
+    - design-system.css：基于令牌的 a11y 基础设施、布局原语、卡片、面包屑、品牌按钮
+
+  【语义与无障碍（a11y）】
+    - <a class="skip-link"> 跳转到主内容（WCAG 2.4.1）
+    - <main role="main" aria-labelledby> 主内容地标
+    - <nav aria-label="面包屑导航"> 面包屑
+    - <h1> 页面唯一主标题（ds-page-header__title）
+    - 弹窗/表格由组件层保证 role/aria（crud-dialog/table-bar/crud-table）
+
+  【组件契约（禁止手写重复实现）】
+    1. 统计卡片 → <stat-cards>
+    2. 搜索+操作栏 → <table-bar>（searchItems/actions 配置化）
+    3. 数据表格+分页 → <crud-table>（columns 配置 + 插槽）
+    4. 增删改弹窗 → <crud-dialog>
+    5. 分页逻辑 → mixins:[window.ReggieListMixin]，实现 fetchData()
+    6. 通用方法 → formatMoney/formatDate/rgStatusText/rgStatusTag/rgPreview
+    7. 状态枚举 → window.ReggieStatus.register('模块', textMap, tagMap)
   ============================================================
 -->
 <html lang="zh-CN">
@@ -25,11 +36,35 @@
   <link rel="stylesheet" href="../../styles/common.css" />
   <link rel="stylesheet" href="../../styles/page.css" />
   <link rel="stylesheet" href="../../styles/components.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/design-system.css" />
   <!-- 如需统计卡片：<link rel="stylesheet" href="../../styles/components-stats-card.css" /> -->
 </head>
 <body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
   <div class="dashboard-container" id="template-app">
-    <div class="container">
+    <!-- 主内容地标 + 设计系统 page 结构 -->
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+
+      <!-- 面包屑导航 -->
+      <nav class="ds-breadcrumb" aria-label="面包屑导航">
+        <span class="ds-breadcrumb__item">首页</span>
+        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
+        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">列表管理</span>
+      </nav>
+
+      <!-- 页头：标题 + 副标题 + 页级操作 -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">列表管理</h1>
+          <p class="ds-page-header__subtitle">示例列表页（使用 stat-cards / table-bar / crud-table / crud-dialog）</p>
+        </div>
+        <div class="ds-page-header__actions">
+          <!-- 页级主操作可放此处；常规增删改仍走 table-bar -->
+        </div>
+      </header>
 
       <!-- ① 统计卡片（按需）：cards 配置见 components.js 的 stat-cards -->
       <!--
@@ -55,6 +90,7 @@
         :loading="loading"
         :show-actions="true"
         :actions-width="160"
+        aria-label="数据列表"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -68,7 +104,7 @@
           <el-button type="text" size="small" class="btn-delete" @click="onDelete(row.id)">删除</el-button>
         </template>
       </crud-table>
-    </div>
+    </main>
 
     <!-- ④ 增改弹窗：crud-dialog 自带关闭/重置，底部取消/确定（确定触发 submit） -->
     <crud-dialog

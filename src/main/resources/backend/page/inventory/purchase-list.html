@@ -50,54 +50,54 @@
         </template>
       </table-bar>
 
-      <el-table v-loading="loading" :data="tableData" stripe border class="tableBox" row-key="id" @expand-change="loadDetails">
-        <el-table-column type="expand">
-          <template slot-scope="props">
-            <el-table :data="props.row.details" stripe class="tableBox" v-if="props.row.details && props.row.details.length">
-              <el-table-column prop="materialName" label="食材名称" />
-              <el-table-column prop="qty" label="数量" />
-              <el-table-column label="单价">
-                <template slot-scope="scope">￥{{ scope.row.unitPrice }}</template>
-              </el-table-column>
-              <el-table-column label="已收货">
-                <template slot-scope="scope">{{ scope.row.receivedQty || 0 }}</template>
-              </el-table-column>
-              <el-table-column label="小计">
-                <template slot-scope="scope">￥{{ scope.row.amount }}</template>
-              </el-table-column>
-            </el-table>
-            <div v-else style="text-align:center;padding:16px;color:#c0c4cc;">暂无明细数据</div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="orderNo" label="采购单号" width="160" />
-        <el-table-column label="供应商">
-          <template slot-scope="scope">{{ scope.row.supplierName }}</template>
-        </el-table-column>
-        <el-table-column label="总金额">
-          <template slot-scope="scope">￥{{ (scope.row.totalAmount || 0).toString() }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="100">
-          <template slot-scope="scope">
-            <el-tag :type="statusType(scope.row.status)" size="small">{{ statusLabel(scope.row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="operator" label="操作员" width="100" />
-        <el-table-column prop="createdTime" label="创建时间" width="160" />
-        <el-table-column label="操作" width="220" align="center">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" class="btn-view" @click="approveHandle(scope.row)" v-if="scope.row.status === 'DRAFT'">审核</el-button>
-            <el-button type="text" size="small" class="btn-view" @click="receiveHandle(scope.row)" v-if="scope.row.status === 'ORDERED' || scope.row.status === 'PARTIAL'">收货</el-button>
-            <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(scope.row)" v-if="scope.row.status === 'DRAFT' || scope.row.status === 'ORDERED'">取消</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination class="pageList" :page-sizes="[10,20,30,40]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="counts" :current-page.sync="page" @size-change="handleSizeChange" @current-change="handleCurrentChange"></el-pagination>
+      <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination（与库存流水页一致，修复表格样式不一致） -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :page-sizes="[10,20,30,40]"
+        :total="counts"
+        :expand="true"
+        row-key="id"
+        :show-actions="true"
+        :actions-width="220"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        @expand-change="loadDetails">
+        <template #expand="{ row }">
+          <el-table :data="row.details" stripe class="tableBox" v-if="row.details && row.details.length">
+            <el-table-column prop="materialName" label="食材名称" min-width="140" show-overflow-tooltip />
+            <el-table-column prop="qty" label="数量" />
+            <el-table-column label="单价">
+              <template slot-scope="scope">￥{{ scope.row.unitPrice }}</template>
+            </el-table-column>
+            <el-table-column label="已收货">
+              <template slot-scope="scope">{{ scope.row.receivedQty || 0 }}</template>
+            </el-table-column>
+            <el-table-column label="小计">
+              <template slot-scope="scope">￥{{ scope.row.amount }}</template>
+            </el-table-column>
+          </el-table>
+          <div v-else style="text-align:center;padding:16px;color:#c0c4cc;">暂无明细数据</div>
+        </template>
+        <template #col-totalAmount="{ row }">￥{{ (row.totalAmount || 0).toString() }}</template>
+        <template #col-status="{ row }">
+          <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="approveHandle(row)" v-if="row.status === 'DRAFT'">审核</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="receiveHandle(row)" v-if="row.status === 'ORDERED' || row.status === 'PARTIAL'">收货</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(row)" v-if="row.status === 'DRAFT' || row.status === 'ORDERED'">取消</el-button>
+        </template>
+      </crud-table>
     </div>
 
     <!-- 新增采购单对话框 -->
     <el-dialog :title="formData.title" :visible.sync="formData.dialogVisible" class="el-dialog--lg unified-dialog"
-      :before-close="handleClose" :close-on-click-modal="false"
-      :append-to-body="true" :modal-append-to-body="true">
+      @close="handleClose" :close-on-click-modal="false"
+      :show-close="true" :append-to-body="true" :modal-append-to-body="true">
       <el-form class="demo-form-inline" label-width="100px">
         <el-form-item label="供应商：">
           <el-select v-model="formData.supplierId" placeholder="请选择" style="width:100%">
@@ -143,6 +143,15 @@
           loading: false, counts: 0, page: 1, pageSize: 10, tableData: [],
           // 修改点：分离卡片筛选和下拉筛选，避免冲突
           cardFilter: '',
+          // 修改点：crud-table 列配置（替代手写 el-table-column）
+          columns: [
+            { prop: 'orderNo', label: '采购单号', width: 160 },
+            { prop: 'supplierName', label: '供应商', minWidth: 120 },
+            { prop: 'totalAmount', label: '总金额', minWidth: 120, align: 'right', slot: true },
+            { prop: 'status', label: '状态', width: 100, align: 'center', slot: true },
+            { prop: 'operator', label: '操作员', width: 100, align: 'center' },
+            { prop: 'createdTime', label: '创建时间', width: 160 }
+          ],
           // 修改点：<table-bar> 统一组件配置
           tableSearchItems: [],
           tableActions: [
@@ -225,9 +234,13 @@
           this.$nextTick(() => this.renderTrendChart())
         },
         async renderTrendChart() {
-          if (typeof echarts === 'undefined') return
           const dom = document.getElementById('purchaseTrendChart')
           if (!dom) return
+          // 修改点：echarts 依赖外部 CDN，加载失败时给出占位提示而非 340px 空白块（避免误判为布局问题）
+          if (typeof echarts === 'undefined') {
+            dom.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#c0c4cc;font-size:13px;">图表组件加载失败，请检查网络后刷新</div>'
+            return
+          }
           if (!this.trendChart) this.trendChart = echarts.init(dom)
           try {
             const res = await inventoryPurchaseTrend()
@@ -343,8 +356,9 @@
           if (val === null || val === undefined) return '0.00'
           return Number(val).toFixed(2)
         },
-        handleSizeChange(val) { this.pageSize = val; this.init() },
-        handleCurrentChange(val) { this.page = val; this.init() }
+        // 修改点：分页处理改为 crud-table 事件驱动（与库存流水页一致）
+        onPageChange(payload) { this.page = payload.page; this.pageSize = payload.pageSize; this.init() },
+        onSizeChange(val) { this.pageSize = val; this.page = 1; this.init() }
       }
     })
   </script>

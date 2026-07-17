@@ -2,26 +2,11 @@
 
 body {
   height: 100%;
-  /* 修改点：移除 min-width: 1200px 强制宽度；改用 1024px 作为最小阅读宽度以兼容 1024×768 设备，避免窄屏下内部页面被横向裁剪 */
-  min-width: 1024px;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica Neue,
     Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
   margin: 0;
-}
-
-/* 响应式支持 — 修改点：不再设置最小宽度，让 body 跟随窗口自适应 */
-@media screen and (max-width: 1366px) {
-  body {
-    min-width: 1024px;
-  }
-}
-
-@media screen and (max-width: 1280px) {
-  body {
-    min-width: 1024px;
-  }
 }
 
 html {

@@ -60,7 +60,7 @@
         ref="crudTable"
         :data="tableData"
         :columns="columns"
-        :loading="false"
+        :loading="loading"
         :page="page"
         :page-size="pageSize"
         :total="counts"
@@ -91,6 +91,8 @@
       :visible.sync="dialogVisible"
       class="el-dialog--xl unified-dialog"
       :close-on-click-modal="true"
+      :append-to-body="true"
+      :modal-append-to-body="true"
       @closed="diaForm = {}"
     >
       <div v-if="diaForm">

@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>营销活动管理 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
     <link rel="stylesheet" href="../../styles/common.css" />
@@ -187,7 +188,7 @@
 
     <!-- ========== 新建/编辑对话框 ========== -->
     <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" class="el-dialog--lg unified-dialog"
-      @close="resetForm" :close-on-click-modal="false">
+      @close="resetForm" :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
         <el-form :model="form" :rules="rules" ref="campaignForm" label-width="90px" size="small">
             <el-row :gutter="16">
                 <el-col :span="14">

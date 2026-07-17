@@ -10,6 +10,8 @@ import com.reggie.entity.User;
 import com.reggie.service.UserService;
 import com.reggie.utils.SMSUtils;
 import com.reggie.common.BruteForceProtectionFilter;
+import com.reggie.common.RateLimit;
+import com.reggie.common.RateLimitType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -144,6 +146,7 @@ public class UserController {
      * @param session HTTP会话
      * @return 用户信息
      */
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.IP)
     @PostMapping("/login")
     @Operation(summary = "用户登录", description = "手机号+验证码登录，新用户自动注册，支持防暴力破解保护")
     public R<User> login(HttpServletRequest request, @Valid @RequestBody UserLoginDTO dto, HttpSession session){
@@ -237,8 +240,12 @@ public class UserController {
     @PostMapping("/loginout")
     @Operation(summary = "用户退出", description = "退出当前登录账号，清除会话信息")
     public R<String> loginout(HttpSession session) {
-        session.removeAttribute("user");
-        session.removeAttribute("tenantId");
+        // 必须 invalidate 整个 Session，仅 removeAttribute 不会使 Session ID 失效
+        try {
+            session.invalidate();
+        } catch (IllegalStateException e) {
+            log.warn("[登出] Session 已失效或不存在", e);
+        }
         BaseContext.remove();
         return R.success("退出成功");
     }

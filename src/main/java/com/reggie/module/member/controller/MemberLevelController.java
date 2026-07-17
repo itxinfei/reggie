@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * 会员等级管理控制器
@@ -175,7 +177,7 @@ public class MemberLevelController {
         result.put("lowestPoints", lowest);
 
         java.util.List<MemberLevel> valid = levels.stream()
-                .filter(l -> l.getDiscount() != null && l.getDiscount() > 0)
+                .filter(l -> l.getDiscount() != null && l.getDiscount().compareTo(java.math.BigDecimal.ZERO) > 0)
                 .collect(java.util.stream.Collectors.toList());
         if (valid.isEmpty()) {
             result.put("avgDiscount", "-");

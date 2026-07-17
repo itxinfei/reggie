@@ -1,0 +1,264 @@
+/* ============================================================
+ * 设计系统基础层（Design System Base）
+ * ------------------------------------------------------------
+ * 依赖：tokens.css（必须在本文件之前加载）
+ * 引入：<link rel="stylesheet" href="../../styles/design-system.css" />
+ * 内容：
+ *   1. 无障碍基础设施（聚焦环 / sr-only / skip-link / 减弱动效）
+ *   2. 页面表面统一（.dashboard-container .container → token 化卡片）
+ *   3. 布局原语（BEM：ds-page-header / ds-stack / ds-cluster / ds-gap-*）
+ *   4. 卡片与区块标题
+ *   5. 面包屑导航
+ *   6. 文字按钮（.ds-link / .ds-link--danger）
+ *   7. 品牌色按钮对齐（Element UI .el-button--* 改用 token，主色=金）
+ *   8. 响应式工具类
+ * 命名规范：新增类统一 BEM（block__element--modifier）或 ds- 前缀工具类
+ * 禁止：本文件之外硬编码 --color-*/--space-* 之外的色值（见 CODE_STANDARDS.md）
+ * ============================================================ */
+
+/* ========== 1. 无障碍（a11y）基础设施 ========== */
+
+/* 键盘聚焦可见环（WCAG 2.4.7）：键盘用户可见，鼠标点击不显示 */
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+/* 鼠标聚焦时不显示默认 outline（仅保留 focus-visible） */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 屏幕阅读器专用（视觉隐藏，仍可被朗读） */
+.sr-only,
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 跳转到主内容（WCAG 2.4.1）：聚焦时可见 */
+.skip-link {
+  position: absolute;
+  left: var(--space-4);
+  top: -48px;
+  z-index: var(--z-tooltip);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-brand-500);
+  color: var(--text-on-brand);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: top var(--transition-fast);
+}
+.skip-link:focus {
+  top: var(--space-4);
+  color: var(--text-on-brand);
+}
+
+/* 尊重用户的减弱动效偏好（WCAG 2.3.3） */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ========== 2. 页面表面统一（token 化卡片容器） ========== */
+.dashboard-container .container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-6) var(--space-6);
+}
+
+/* ========== 3. 布局原语（BEM / ds- 前缀） ========== */
+
+/* 页头：标题 + 操作区，自动换行并在窄屏堆叠 */
+.ds-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+.ds-page-header__titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.ds-page-header__title {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--text-primary);
+}
+.ds-page-header__subtitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+.ds-page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* 纵向堆叠（gap 默认 16px） */
+.ds-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.ds-stack--sm { gap: var(--space-2); }
+.ds-stack--lg { gap: var(--space-6); }
+
+/* 横向簇（自动换行） */
+.ds-cluster {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* 间距工具（仅 flex/grid 容器生效） */
+.ds-gap-1 { gap: var(--space-1); }
+.ds-gap-2 { gap: var(--space-2); }
+.ds-gap-3 { gap: var(--space-3); }
+.ds-gap-4 { gap: var(--space-4); }
+.ds-gap-5 { gap: var(--space-5); }
+.ds-gap-6 { gap: var(--space-6); }
+
+/* ========== 4. 卡片与区块标题 ========== */
+.ds-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-5);
+}
+.ds-card--flush { padding: 0; }      /* 表格类无内边距 */
+.ds-card--hover { transition: box-shadow var(--transition-base), transform var(--transition-base); }
+.ds-card--hover:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.ds-section-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+/* ========== 5. 面包屑导航（a11y：nav[aria-label]） ========== */
+.ds-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+.ds-breadcrumb__item { color: var(--text-secondary); }
+.ds-breadcrumb__item--link {
+  cursor: pointer;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  transition: color var(--transition-fast);
+}
+.ds-breadcrumb__item--link:hover { color: var(--color-brand-600); }
+.ds-breadcrumb__item--current {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+.ds-breadcrumb__sep {
+  color: var(--color-gray-300);
+  font-size: var(--font-size-xs);
+  user-select: none;
+}
+
+/* ========== 6. 文字按钮（替代裸露 .btn-view/.btn-delete，统一规范） ========== */
+.ds-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  background: transparent;
+  color: var(--color-brand-700);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+.ds-link:hover { background: var(--color-brand-50); color: var(--color-brand-800); }
+.ds-link:disabled, .ds-link.is-disabled { color: var(--color-gray-300); cursor: not-allowed; }
+.ds-link--danger { color: var(--color-danger-dark); }
+.ds-link--danger:hover { background: var(--color-danger-light); color: var(--color-danger-dark); }
+
+/* ========== 7. 品牌色按钮对齐（Element UI → token，主色=金） ========== */
+/* 主按钮：金色底 + 深色字（满足金色背景上 WCAG AA 对比度） */
+.el-button--primary {
+  background-color: var(--color-brand-500);
+  border-color: var(--color-brand-500);
+  color: var(--text-on-brand);
+}
+.el-button--primary:hover,
+.el-button--primary:focus {
+  background-color: var(--color-brand-400);
+  border-color: var(--color-brand-400);
+  color: var(--text-on-brand);
+}
+.el-button--primary:active {
+  background-color: var(--color-brand-600);
+  border-color: var(--color-brand-600);
+  color: var(--text-on-brand);
+}
+.el-button--primary.is-disabled,
+.el-button--primary.is-disabled:hover {
+  background-color: var(--color-brand-200);
+  border-color: var(--color-brand-200);
+  color: var(--color-brand-800);
+}
+/* 语义按钮对齐 token（与 Element 默认调色板一致，集中管理） */
+.el-button--success { background-color: var(--color-success); border-color: var(--color-success); }
+.el-button--success:active { background-color: var(--color-success-dark); border-color: var(--color-success-dark); }
+.el-button--warning { background-color: var(--color-warning); border-color: var(--color-warning); }
+.el-button--warning:active { background-color: var(--color-warning-dark); border-color: var(--color-warning-dark); }
+.el-button--danger  { background-color: var(--color-danger);  border-color: var(--color-danger); }
+.el-button--danger:active  { background-color: var(--color-danger-dark);  border-color: var(--color-danger-dark); }
+
+/* ========== 8. 响应式工具类 ========== */
+/* 默认隐藏，≤768px 显示 */
+.ds-show-sm { display: none !important; }
+/* 默认显示，≤768px 隐藏 */
+.ds-hide-sm { display: initial !important; }
+
+@media (max-width: 768px) {
+  .dashboard-container { padding: var(--space-3); }
+  .dashboard-container .container { padding: var(--space-4); border-radius: var(--radius-md); }
+  .ds-page-header { flex-direction: column; align-items: stretch; }
+  .ds-page-header__actions { width: 100%; }
+  .ds-show-sm { display: initial !important; }
+  .ds-hide-sm { display: none !important; }
+  .ds-page-header__title { font-size: var(--font-size-xl); }
+}

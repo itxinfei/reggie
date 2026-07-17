@@ -3,7 +3,9 @@ package com.reggie.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.entity.Employee;
 import com.reggie.entity.Tenant;
+
 import javax.servlet.http.HttpSession;
+import java.util.List;
 
 /**
  * <p>
@@ -33,4 +35,10 @@ public interface TenantService extends IService<Tenant> {
      * @param session HttpSession
      */
     void saveVerifyCode(String phone, String verifyCode, HttpSession session);
+
+    /**
+     * 查询所有活跃租户列表（供定时任务等多租户批处理场景使用）
+     * @return 活跃租户列表
+     */
+    List<Tenant> listActiveTenants();
 }

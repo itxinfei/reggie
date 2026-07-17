@@ -1,16 +1,17 @@
 package com.reggie.module.schedule.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.reggie.common.BaseContext;
+import com.reggie.entity.Dish;
 import com.reggie.entity.OrderDetail;
 import com.reggie.entity.Orders;
-import com.reggie.entity.Dish;
 import com.reggie.entity.SetmealDish;
-import com.reggie.mapper.DishMapper;
+import com.reggie.entity.Tenant;
 import com.reggie.service.DishService;
 import com.reggie.service.OrderDetailService;
 import com.reggie.service.OrderService;
 import com.reggie.service.SetmealDishService;
+import com.reggie.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -52,46 +53,73 @@ public class StockRefundCompensationTask {
     @Autowired
     private DishService dishService;
 
-    /** 菜品Mapper（用于库存补偿更新） */
+    /** 菜品服务（用于库存补偿） */
+
+    /** 租户服务（用于获取活跃租户列表） */
     @Autowired
-    private DishMapper dishMapper;
+    private TenantService tenantService;
 
     /** 补偿任务检查时间窗口（24小时内） */
     private static final long COMPENSATION_WINDOW_HOURS = 24;
 
     /**
      * 库存回退补偿任务
-     * 每 30 分钟执行一次，扫描取消/拒单订单中库存未成功回退的记录
+     * 每 30 分钟执行一次，遍历所有活跃租户，扫描取消/拒单订单中库存未成功回退的记录
      */
     @Scheduled(fixedRate = 30 * 60 * 1000)
     public void compensateStockRefund() {
-        try {
-            LocalDateTime since = LocalDateTime.now().minusHours(COMPENSATION_WINDOW_HOURS);
-
-            // 查询已取消/拒单但库存未成功回退的订单
-            LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
-            wrapper.in(Orders::getStatus, Orders.STATUS_CANCELLED, Orders.STATUS_REFUNDED);
-            wrapper.eq(Orders::getStockRefunded, 0); // 0 = 回退失败或未尝试
-            wrapper.ge(Orders::getUpdateTime, since);
-            wrapper.orderByDesc(Orders::getUpdateTime);
-
-            List<Orders> orders = orderService.list(wrapper);
-            if (orders.isEmpty()) {
-                return;
-            }
-
-            log.warn("[库存补偿] 发现 {} 个订单需要补偿回退库存", orders.size());
-
-            for (Orders order : orders) {
-                try {
-                    compensateOrderStock(order.getId());
-                } catch (Exception e) {
-                    log.error("[库存补偿] 订单ID={} 补偿失败: {}", order.getId(), e.getMessage(), e);
-                }
-            }
-        } catch (Exception e) {
-            log.error("[库存补偿] 执行补偿任务异常", e);
+        List<Tenant> tenants = tenantService.listActiveTenants();
+        if (tenants.isEmpty()) {
+            return;
         }
+
+        LocalDateTime since = LocalDateTime.now().minusHours(COMPENSATION_WINDOW_HOURS);
+        int totalCompensated = 0;
+
+        for (Tenant tenant : tenants) {
+            BaseContext.setCurrentTenantId(tenant.getId());
+            try {
+                int count = compensateStockRefundForTenant(since);
+                totalCompensated += count;
+            } finally {
+                BaseContext.remove();
+            }
+        }
+
+        if (totalCompensated > 0) {
+            log.info("[库存补偿] 批量补偿完成，共处理 {} 个租户，补偿 {} 个订单", tenants.size(), totalCompensated);
+        }
+    }
+
+    /**
+     * 为单个租户执行库存回退补偿
+     */
+    private int compensateStockRefundForTenant(LocalDateTime since) {
+        LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(Orders::getStatus, Orders.STATUS_CANCELLED, Orders.STATUS_REFUNDED);
+        wrapper.eq(Orders::getStockRefunded, 0);
+        wrapper.ge(Orders::getUpdateTime, since);
+        wrapper.eq(Orders::getTenantId, BaseContext.getCurrentTenantId());
+        wrapper.orderByDesc(Orders::getUpdateTime);
+
+        List<Orders> orders = orderService.list(wrapper);
+        if (orders.isEmpty()) {
+            return 0;
+        }
+
+        log.warn("[库存补偿] 租户 {} 发现 {} 个订单需要补偿回退库存",
+            BaseContext.getCurrentTenantId(), orders.size());
+
+        int compensated = 0;
+        for (Orders order : orders) {
+            try {
+                compensateOrderStock(order.getId());
+                compensated++;
+            } catch (Exception e) {
+                log.error("[库存补偿] 订单ID={} 补偿失败: {}", order.getId(), e.getMessage(), e);
+            }
+        }
+        return compensated;
     }
 
     /**
@@ -167,10 +195,7 @@ public class StockRefundCompensationTask {
             return true;
         }
         try {
-            LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
-            updateWrapper.eq(Dish::getId, dishId);
-            updateWrapper.setSql("stock_qty = IFNULL(stock_qty, 0) + " + qty.toPlainString());
-            dishMapper.update(null, updateWrapper);
+            dishService.addStock(dishId, qty);
 
             // 回退后检查是否需要自动恢复起售
             try {
