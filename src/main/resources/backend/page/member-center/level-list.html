@@ -145,8 +145,8 @@
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
             { prop: 'name', label: '等级名称', minWidth: 120, slot: true },
-            { prop: 'minPoints', label: '所需积分', width: 120, align: 'center', slot: true },
-            { prop: 'discount', label: '折扣率', width: 120, align: 'center', slot: true },
+            { prop: 'minPoints', label: '所需积分', width: 120, align: 'center', slot: true, type: 'number' },
+            { prop: 'discount', label: '折扣率', width: 120, align: 'center', slot: true, type: 'number' },
             { prop: 'sort', label: '排序', width: 80, align: 'center', slot: true }
           ],
           loading: false, action: '', counts: 0, page: 1, pageSize: 10, tableData: [],

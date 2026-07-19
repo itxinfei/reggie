@@ -121,9 +121,9 @@
             // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
             timeSlotColumns: [
               { prop: 'name', label: '时段', width: 120, align: 'center' },
-              { prop: 'count', label: '订单数', width: 120, align: 'center' },
+              { prop: 'count', label: '订单数', width: 120, align: 'center', type: 'number' },
               { prop: 'ratio', label: '占比', width: 120, align: 'center', slot: true },
-              { prop: 'amount', label: '营业额（元）', width: 150, align: 'center', slot: true },
+              { prop: 'amount', label: '营业额（元）', width: 150, align: 'center', slot: true, type: 'money' },
               { prop: 'heat', label: '时段热度', minWidth: 200, align: 'center', slot: true }
             ],
             barChart: null, pieChart: null, heatmapChart: null,

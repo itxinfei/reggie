@@ -88,9 +88,9 @@
           columns: [
             { prop: 'materialName', label: '食材名称', minWidth: 140, showOverflowTooltip: true },
             { prop: 'type', label: '类型', width: 90, align: 'center', slot: true },
-            { prop: 'quantity', label: '数量', width: 100, align: 'center' },
-            { prop: 'unitPrice', label: '单价', width: 100, align: 'right', slot: true },
-            { prop: 'totalAmount', label: '总金额', width: 120, align: 'right', slot: true },
+            { prop: 'quantity', label: '数量', width: 100, align: 'center', type: 'number' },
+            { prop: 'unitPrice', label: '单价', width: 100, align: 'right', slot: true, type: 'money' },
+            { prop: 'totalAmount', label: '总金额', width: 120, align: 'right', slot: true, type: 'money' },
             { prop: 'remark', label: '备注', minWidth: 150, showOverflowTooltip: true },
             { prop: 'createdTime', label: '操作时间', width: 170, align: 'center' }
           ],
