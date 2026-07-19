@@ -384,7 +384,7 @@ Vue.component('crud-table', {
     },
     /**
      * 列配置数组
-     * 每项：{ prop, label, width, minWidth, align, fixed, sortable, slot, formatter, showOverflowTooltip }
+     * 每项：{ prop, label, width, minWidth, align, fixed, sortable, slot, formatter, showOverflowTooltip, type, className }
      *   - prop:     字段名
      *   - label:    列头文字
      *   - width:    列宽（如 180 或 '180px'）
@@ -395,6 +395,8 @@ Vue.component('crud-table', {
      *   - slot:     是否使用插槽渲染（true 时通过 #col-{prop} 自定义）
      *   - formatter: 格式化函数 (value, row, col) => string
      *   - showOverflowTooltip: 溢出省略提示
+     *   - type:     单元格语义类型，'money'|'number' 时自动右对齐 + tabular-nums 等宽数字（金额列推荐 'money'）
+     *   - className: 透传到该列的自定义 class-name（与 type 叠加，不冲突）
      */
     columns: {
       type: Array,
@@ -562,7 +564,8 @@ Vue.component('crud-table', {
       '  :label="col.label"' +
       '  :width="col.width"' +
       '  :min-width="col.minWidth"' +
-      '  :align="col.align || \'left\'"' +
+      '  :align="col.type ? \'right\' : (col.align || \'left\')"' +
+      '  :class-name="col.type === \'money\' ? \'ds-money\' : (col.type === \'number\' ? \'ds-num\' : (col.className || \'\'))"' +
       '  :fixed="col.fixed"' +
       '  :sortable="col.sortable ? \'custom\' : false"' +
       '  :show-overflow-tooltip="!!col.showOverflowTooltip"' +
