@@ -53,6 +53,7 @@
       gap: 12px;
       background: linear-gradient(135deg, rgba(255, 194, 0, 0.92) 0%, rgba(255, 170, 0, 0.92) 100%);
       backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       color: var(--text-on-brand);
       padding: 14px 24px;
       border-radius: 16px;
@@ -339,7 +340,7 @@
       --icon-bg: linear-gradient(135deg, rgba(245, 108, 108, 0.1) 0%, rgba(247, 137, 137, 0.15) 100%);
     }
     .kpi-card.info {
-      --gradient: linear-gradient(135deg, var(--color-gray-600) 0%, var(--color-gray-400) 100%);
+      --gradient: linear-gradient(135deg, var(--color-gray-600) 0%, var(--color-gray-500) 100%);
       --icon-bg: linear-gradient(135deg, rgba(144, 147, 153, 0.1) 0%, rgba(166, 169, 173, 0.15) 100%);
     }
 
@@ -746,7 +747,7 @@
         <div class="kpi-card info">
           <div class="kpi-icon-wrapper">👥</div>
           <div class="kpi-label">注册用户 / 在职员工</div>
-          <div class="kpi-value">{{ overview.totalUsers || 0 }} <span style="font-size:18px;color:var(--el-border-base);">/</span> {{ overview.activeEmployees || 0 }}</div>
+          <div class="kpi-value">{{ overview.totalUsers || 0 }} <span style="font-size:18px;color:var(--el-border-base);-webkit-text-fill-color:var(--el-border-base);">/</span> {{ overview.activeEmployees || 0 }}</div>
           <div class="kpi-sub">
             数据来源: {{ overview.cacheSource || 'MySQL' }} | 刷新于 {{ lastRefreshTime }}
           </div>
@@ -1034,6 +1035,15 @@
           return typeof echarts !== 'undefined';
         },
 
+        // 读取设计令牌（CSS 变量），使图表文本/坐标轴色值与全站令牌体系一致
+        cssVar(name) {
+          try {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+          } catch (e) {
+            return '';
+          }
+        },
+
         // 渲染趋势图（柱状 + 折线混合，双Y轴）
         renderTrendChart() {
           if (!this.echartsReady()) return;
@@ -1055,11 +1065,11 @@
             color: ['#e6ae00', '#67c23a'],
             tooltip: {
               trigger: 'axis',
-              axisPointer: { type: 'cross', crossStyle: { color: '#999' } },
+              axisPointer: { type: 'cross', crossStyle: { color: this.cssVar('--gray-999') || '#999' } },
               backgroundColor: 'rgba(255,255,255,0.96)',
-              borderColor: '#e4e7ed',
+              borderColor: this.cssVar('--el-border-lighter2') || '#e4e7ed',
               borderWidth: 1,
-              textStyle: { color: '#303133', fontSize: 13 },
+              textStyle: { color: this.cssVar('--el-text-primary') || '#303133', fontSize: 13 },
               formatter: function(params) {
                 let html = '<strong>' + params[0].axisValue + '</strong><br/>';
                 params.forEach(function(p) {
@@ -1076,7 +1086,7 @@
               bottom: 8,
               itemWidth: 14,
               itemHeight: 14,
-              textStyle: { color: '#606266', fontSize: 13 }
+              textStyle: { color: this.cssVar('--el-text-regular') || '#606266', fontSize: 13 }
             },
             grid: {
               left: 55,
@@ -1087,16 +1097,16 @@
             xAxis: {
               type: 'category',
               data: xData,
-              axisLine: { lineStyle: { color: '#e4e7ed' } },
+              axisLine: { lineStyle: { color: this.cssVar('--el-border-lighter2') || '#e4e7ed' } },
               axisTick: { show: false },
-              axisLabel: { color: '#909399', fontSize: 12 }
+              axisLabel: { color: this.cssVar('--el-text-secondary') || '#909399', fontSize: 12 }
             },
             yAxis: [
               {
                 type: 'value',
                 name: '订单量(单)',
-                nameTextStyle: { color: '#909399', fontSize: 12, padding: [0, 40, 0, 0] },
-                axisLabel: { color: '#909399', fontSize: 12 },
+                nameTextStyle: { color: this.cssVar('--el-text-secondary') || '#909399', fontSize: 12, padding: [0, 40, 0, 0] },
+                axisLabel: { color: this.cssVar('--el-text-secondary') || '#909399', fontSize: 12 },
                 splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } },
                 axisLine: { show: false },
                 axisTick: { show: false }
@@ -1104,8 +1114,8 @@
               {
                 type: 'value',
                 name: '营业额(元)',
-                nameTextStyle: { color: '#909399', fontSize: 12, padding: [0, 0, 0, 40] },
-                axisLabel: { color: '#909399', fontSize: 12, formatter: '¥{value}' },
+                nameTextStyle: { color: this.cssVar('--el-text-secondary') || '#909399', fontSize: 12, padding: [0, 0, 0, 40] },
+                axisLabel: { color: this.cssVar('--el-text-secondary') || '#909399', fontSize: 12, formatter: '¥{value}' },
                 splitLine: { show: false },
                 axisLine: { show: false },
                 axisTick: { show: false }
@@ -1204,7 +1214,7 @@
 
           var isEmpty = statusData.length === 0;
           if (isEmpty) {
-            statusData.push({ name: '暂无数据', value: 1, itemStyle: { color: '#e4e7ed' } });
+            statusData.push({ name: '暂无数据', value: 1, itemStyle: { color: this.cssVar('--el-border-lighter2') || '#e4e7ed' } });
           }
 
           this.statusChart.setOption({
@@ -1212,9 +1222,9 @@
             tooltip: {
               trigger: 'item',
               backgroundColor: 'rgba(255,255,255,0.96)',
-              borderColor: '#e4e7ed',
+              borderColor: this.cssVar('--el-border-lighter2') || '#e4e7ed',
               borderWidth: 1,
-              textStyle: { color: '#303133', fontSize: 13 },
+              textStyle: { color: this.cssVar('--el-text-primary') || '#303133', fontSize: 13 },
               formatter: function(p) {
                 return '<b>' + p.name + '</b><br/>' + p.marker
                   + ' 订单数：<b>' + p.value + '</b> 单'
@@ -1227,7 +1237,7 @@
               itemWidth: 10,
               itemHeight: 10,
               itemGap: 20,
-              textStyle: { color: '#606266', fontSize: 12, padding: [2, 0, 0, 0] }
+              textStyle: { color: this.cssVar('--el-text-regular') || '#606266', fontSize: 12, padding: [2, 0, 0, 0] }
             },
             series: [{
               type: 'pie',
@@ -1243,7 +1253,7 @@
                 show: !isEmpty,
                 position: 'outside',
                 formatter: '{b}\n{d}%',
-                color: '#606266',
+                color: this.cssVar('--el-text-regular') || '#606266',
                 fontSize: 13,
                 lineHeight: 18
               },
@@ -1251,7 +1261,7 @@
                 show: !isEmpty,
                 length: 25,
                 length2: 20,
-                lineStyle: { color: '#c0c4cc' }
+                lineStyle: { color: this.cssVar('--el-border-base') || '#c0c4cc' }
               },
               emphasis: {
                 scaleSize: 12,

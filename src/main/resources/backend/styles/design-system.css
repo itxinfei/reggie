@@ -246,6 +246,10 @@
 .el-button--warning:active { background-color: var(--color-warning-dark); border-color: var(--color-warning-dark); }
 .el-button--danger  { background-color: var(--color-danger);  border-color: var(--color-danger); }
 .el-button--danger:active  { background-color: var(--color-danger-dark);  border-color: var(--color-danger-dark); }
+/* 状态标签 primary 对齐品牌金（与按钮主色一致，集中管理避免散落蓝） */
+.el-tag--primary { background-color: var(--color-brand-50); border-color: var(--color-brand-200); color: var(--color-brand-700); }
+.el-tag--primary .el-tag__close { color: var(--color-brand-700); }
+.el-tag--primary .el-tag__close:hover { background-color: var(--color-brand-500); color: var(--text-on-brand); }
 
 /* ========== 8. 响应式工具类 ========== */
 /* 默认隐藏，≤768px 显示 */
