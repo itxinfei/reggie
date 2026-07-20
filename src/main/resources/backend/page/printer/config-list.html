@@ -201,11 +201,14 @@
           columns: [
             { prop: 'name', label: '名称', minWidth: 120 },
             { prop: 'brand', label: '品牌', minWidth: 100 },
+            { prop: 'storeId', label: '门店ID', width: 80, align: 'center', type: 'number' },
+            { prop: 'deviceId', label: '设备ID', width: 100, align: 'center' },
             { prop: 'type', label: '连接类型', width: 100, align: 'center' },
             { prop: 'ipAddress', label: 'IP地址', width: 120, align: 'center' },
             { prop: 'port', label: '端口', width: 80, align: 'center' },
             { prop: 'paperSize', label: '纸张大小', width: 90, align: 'center' },
             { prop: 'printTypes', label: '打印类型', minWidth: 140, slot: true },
+            { prop: 'systemPrinterName', label: '系统打印机', minWidth: 140 },
             { prop: 'status', label: '状态', width: 80, align: 'center', slot: true }
           ],
           stats: {
@@ -256,7 +259,7 @@
       },
       created() {
         this.loadFilterOptions()
-        this.fetchData()
+        this.fetchData(true)
       },
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
@@ -297,7 +300,7 @@
             this.optionsLoading = false
           }
         },
-        async fetchData() {
+        async fetchData(reloadStats = true) {
           const params = {
             page: this.page,
             pageSize: this.pageSize,
@@ -307,11 +310,11 @@
             status: this.query.status !== '' ? this.query.status : undefined
           }
 
-          // 并行加载打印机列表和统计数据
-          const [printerRes, statsRes] = await Promise.all([
-            printerConfigPage(params),
-            this.loadPrinterStats()
-          ])
+          // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+          const requests = [printerConfigPage(params)]
+          if (reloadStats) { requests.push(this.loadPrinterStats()) }
+          const results = await Promise.all(requests)
+          const printerRes = results[0]
 
           // 处理打印机列表数据
           if (String(printerRes.code) === '1') {
@@ -321,9 +324,12 @@
             ReggieUI.error(printerRes.msg || '操作失败')
           }
 
-          // 处理统计数据
-          if (statsRes && String(statsRes.code) === '1') {
-            this.stats = statsRes.data || this.stats
+          if (reloadStats) {
+            const statsRes = results[1]
+            // 处理统计数据
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
+            }
           }
         },
         // 加载打印机统计数据
@@ -352,7 +358,7 @@
         // 修改点：搜索时清空卡片筛选状态
         this.activeFilter = ''
         this.page = 1
-        this.fetchData()
+        this.fetchData(false)
       },
         // 修改点：<table-bar> 组件 action 按钮事件处理
         onTableAction(payload) {
@@ -368,7 +374,7 @@
           this.query.brand = ''
           this.query.type = ''
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         },
         reset() {
           this.query.name = ''

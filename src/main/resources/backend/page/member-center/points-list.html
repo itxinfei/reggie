@@ -149,7 +149,7 @@
           ]
         }
       },
-      created: function() { this.fetchData() },
+      created: function() { this.fetchData(true) },
       mounted: function() { this.$nextTick(function() { this.initCharts() }) },
       // 修改点：页面销毁时移除 resize 监听并释放图表实例，避免监听器与内存泄漏
       beforeDestroy: function() {
@@ -160,19 +160,25 @@
         if (this.pieChart) { this.pieChart.dispose(); this.pieChart = null }
       },
       methods: {
-        async fetchData() {
+        // 修改点：F9 性能 — 列表查询与全局统计分离，reloadStats=true 才重算
+        async fetchData(reloadStats = true) {
           this.loading = true
           var params = { page: this.page, pageSize: this.pageSize, phone: this.input.phone || undefined, type: this.input.type || undefined }
           try {
-            var results = await Promise.all([pointsPage(params), pointsStats()])
-            var pageRes = results[0], statsRes = results[1]
+            var requests = [pointsPage(params)]
+            if (reloadStats) { requests.push(pointsStats()) }
+            var results = await Promise.all(requests)
+            var pageRes = results[0]
             if (String(pageRes.code) === '1') {
               this.tableData = pageRes.data.records || []
               this.counts = pageRes.data.total
             } else { ReggieUI.error(pageRes.msg || '操作失败') }
-            if (statsRes && String(statsRes.code) === '1') {
-              this.stats = statsRes.data
-              this.$nextTick(function() { this.renderCharts() })
+            if (reloadStats) {
+              var statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1') {
+                this.stats = statsRes.data
+                this.$nextTick(function() { this.renderCharts() })
+              }
             }
           } catch(e) { ReggieUI.error('请求失败：' + e) }
           this.loading = false
@@ -228,10 +234,20 @@
           }
         },
         fmtNum: function(n) { return (n || 0).toLocaleString() },
-        setType: function(t) { this.input.type = t; this.page = 1; this.fetchData() },
-        handleQuery: function() { this.page = 1; this.fetchData() },
-        reset: function() { this.input = { phone: '', type: '' }; this.page = 1; this.fetchData() },
-        // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
+        setType: function(t) { this.input.type = t; this.page = 1; this.fetchData(false) },
+        handleQuery: function() { this.page = 1; this.fetchData(false) },
+        reset: function() { this.input = { phone: '', type: '' }; this.page = 1; this.fetchData(false) },
+        // 修改点：F9 性能 — 覆盖 ReggieListMixin 分页方法，翻页不重算全局统计
+        onPageChange: function(payload) {
+          this.page = payload.page
+          this.pageSize = payload.pageSize
+          if (typeof this.fetchData === 'function') this.fetchData(false)
+        },
+        onSizeChange: function(val) {
+          this.page = 1
+          this.pageSize = (typeof val === 'object' && val != null) ? (val.pageSize || val) : val
+          if (typeof this.fetchData === 'function') this.fetchData(false)
+        },
       }
     })
   </script>

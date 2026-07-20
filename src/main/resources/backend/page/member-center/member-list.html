@@ -140,7 +140,9 @@
           columns: [
             { prop: 'name', label: '会员名称', align: 'center' },
             { prop: 'phone', label: '手机号', align: 'center' },
+            { prop: 'levelId', label: '等级ID', width: 80, align: 'center', type: 'number' },
             { prop: 'levelName', label: '会员等级', slot: true, align: 'center' },
+            { prop: 'status', label: '状态', width: 80, align: 'center', slot: true },
             { prop: 'points', label: '积分', align: 'center', type: 'number' },
             { prop: 'balance', label: '余额', slot: true, align: 'center', type: 'money' },
             { prop: 'totalConsumption', label: '累计消费', slot: true, align: 'center', type: 'money' },
@@ -159,7 +161,7 @@
           searchInput: { name: '', phone: '', levelId: '' }
         }
       },
-      created: function() { this.init(); this.loadLevels() },
+      created: function() { this.init(true); this.loadLevels() },
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
@@ -178,18 +180,24 @@
         onCardClick: function(payload) {
           this.onFilterClick(payload.key)
         },
-        async init() {
+        async init(reloadStats = true) {
           this.loading = true
           var params = { page: this.page, pageSize: this.pageSize, name: this.searchInput.name || undefined, phone: this.searchInput.phone || undefined, levelId: this.searchInput.levelId || undefined }
           var self = this
           try {
-            var results = await Promise.all([memberPage(params), self.loadMemberStats()])
-            var memberRes = results[0], statsRes = results[1]
+            // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+            var requests = [memberPage(params)]
+            if (reloadStats) { requests.push(self.loadMemberStats()) }
+            var results = await Promise.all(requests)
+            var memberRes = results[0]
             if (String(memberRes.code) === '1') {
               self.tableData = memberRes.data.records || []
               self.counts = memberRes.data.total
             }
-            if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+            if (reloadStats) {
+              var statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+            }
           } catch(e) { self.$message.error('请求失败：' + e) }
           this.loading = false
         },
@@ -248,12 +256,12 @@
             var bronze = this.levelOptions.find(function(l) { return l.name && (l.name.indexOf('青铜')!==-1||l.name.indexOf('普通')!==-1) })
             this.searchInput.levelId = bronze ? bronze.id : ''
           }
-          this.page = 1; this.init()
+          this.page = 1; this.init(false)
         },
-        onSearch: function(p) { this.activeFilter = ''; this.searchInput = { name: p.name || '', phone: p.phone || '', levelId: p.levelId || '' }; this.page = 1; this.init() },
-        onReset: function() { this.activeFilter = ''; this.searchInput = { name: '', phone: '', levelId: '' }; this.page = 1; this.init() },
-        onPageChange: function(p) { this.page = p.page; this.init() },
-        onSizeChange: function(p) { this.pageSize = p.pageSize; this.init() },
+        onSearch: function(p) { this.activeFilter = ''; this.searchInput = { name: p.name || '', phone: p.phone || '', levelId: p.levelId || '' }; this.page = 1; this.init(false) },
+        onReset: function() { this.activeFilter = ''; this.searchInput = { name: '', phone: '', levelId: '' }; this.page = 1; this.init(false) },
+        onPageChange: function(p) { this.page = p.page; this.init(false) },
+        onSizeChange: function(p) { this.pageSize = (p && p.pageSize !== undefined) ? p.pageSize : p; this.page = 1; this.init(false) },
         viewDetail: function(row) {
           var self = this
           getMember(row.id).then(function(res) {
@@ -272,7 +280,7 @@
           }
           if (!self.rechargeForm.amount || self.rechargeForm.amount <= 0) { self.$message.error('请输入有效的充值金额'); return }
           memberRecharge({ memberId: self.rechargeMember.id, amount: self.rechargeForm.amount, giftAmount: self.rechargeForm.giftAmount || 0, paymentMethod: self.rechargeForm.paymentMethod }).then(function(res) {
-            if (res.code === 1) { self.$message.success('充值成功！'); self.rechargeDialogVisible = false; self.init() }
+            if (res.code === 1) { self.$message.success('充值成功！'); self.rechargeDialogVisible = false; self.init(true) }
             else { self.$message.error(res.msg || '操作失败') }
           }).catch(function(e) { self.$message.error('请求失败：' + e) })
         }

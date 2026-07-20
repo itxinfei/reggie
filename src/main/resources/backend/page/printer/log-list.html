@@ -136,7 +136,7 @@
         }
       },
       created() {
-        this.fetchData()
+        this.fetchData(true)
       },
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
@@ -158,7 +158,8 @@
           this.query.status = key === '' ? '' : Number(key)
           this.search()
         },
-        async fetchData() {
+        // 修改点：F9 性能 — 列表查询与全局统计分离，reloadStats=true 才重算
+        async fetchData(reloadStats = true) {
           this.loading = true
           var self = this
           var params = {
@@ -171,10 +172,9 @@
             endTime:   this.query.dateRange && this.query.dateRange[1] ? this.query.dateRange[1] : undefined
           }
           try {
-            var results = await Promise.all([
-              printerLogPage(params),
-              self.loadLogStats()
-            ])
+          var requests = [printerLogPage(params)]
+          if (reloadStats) { requests.push(self.loadLogStats()) }
+          var results = await Promise.all(requests)
             var logRes = results[0]
             var statsRes = results[1]
             if (String(logRes.code) === '1') {
@@ -183,8 +183,11 @@
             } else {
               self.$message.error(logRes.msg || '操作失败')
             }
-            if (statsRes && String(statsRes.code) === '1') {
-              self.stats = statsRes.data || self.stats
+            if (reloadStats) {
+              var statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1') {
+                self.stats = statsRes.data || self.stats
+              }
             }
           } catch (err) {
             self.$message.error('请求失败：' + (err.message || err))
@@ -218,7 +221,7 @@
         // filterByStatus 已迁移至 onCardClick
         search() {
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         },
         reset() {
           this.query.orderId = ''
@@ -238,7 +241,7 @@
             printerPrint(row.orderId, row.printType).then(function(res) {
               if (res && res.code === 1) {
                 self.$message.success('打印任务已发送')
-                self.fetchData()
+                self.fetchData(false)
               } else {
                 self.$message.error(res ? res.msg : '打印失败')
               }
@@ -250,12 +253,18 @@
         printTypeTag(type) {
           return PRINT_TYPE_MAP[type] || { label: type || '未知', type: 'info' }
         },
-        // 修改点：覆盖 ReggieListMixin 的 onSizeChange，因 crud-table 的 size-change 事件只传数字而非 {pageSize: number}
+        // 修改点：覆盖 ReggieListMixin 的 onPageChange，传 false 避免翻页时重算全局统计
+        onPageChange: function(payload) {
+          this.page = payload.page
+          this.pageSize = payload.pageSize
+          if (typeof this.fetchData === 'function') this.fetchData(false)
+        },
+        // 修改点：覆盖 ReggieListMixin 的 onSizeChange，因 crud-table 的 size-change 事件只传数字而非 {pageSize: number}；翻页不重算统计
         onSizeChange: function(val) {
           // crud-table 的 size-change 事件 emit 的是纯数字，需要手动设置 pageSize
           this.pageSize = val
           this.page = 1
-          if (typeof this.fetchData === 'function') this.fetchData()
+          if (typeof this.fetchData === 'function') this.fetchData(false)
         },
       }
     })

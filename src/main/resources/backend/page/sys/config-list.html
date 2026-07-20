@@ -147,7 +147,7 @@
         }
       },
       created() {
-        this.init()
+        this.init(true)
       },
       computed: {
         statsCards: function() {
@@ -163,7 +163,7 @@
         }
       },
       methods: {
-        async init() {
+        async init(reloadStats = true) {
           this.loading = true
           var ls = this.lastSearch || {}
           var params = {
@@ -171,7 +171,9 @@
             configType: ls.configType || undefined,
             keyword: ls.keyword || undefined
           }
-          var results = await Promise.all([sysApi.configList(), this.loadConfigStats()])
+          var requests = [sysApi.configList()]
+          if (reloadStats) { requests.push(this.loadConfigStats()) }
+          var results = await Promise.all(requests)
           var listRes = results[0]
           var statsRes = results[1]
           if (listRes && listRes.code === 1) {
@@ -184,7 +186,7 @@
               return Object.assign({}, item, { _editing: false })
             })
           }
-          if (statsRes && statsRes.code === 1) {
+          if (reloadStats && statsRes && statsRes.code === 1) {
             this.stats = Object.assign({}, this.stats, statsRes.data || {})
           }
           this.loading = false
@@ -209,7 +211,7 @@
           this.activeFilter = payload.activeKey
           this.lastSearch = this.activeFilter ? this.buildFilterParams(this.activeFilter) : {}
           this.page = 1
-          this.init()
+          this.init(false)
         },
         buildFilterParams(key) {
           var map = { type1: '1', type2: '2', type3: '3' }
@@ -220,26 +222,26 @@
           this.activeFilter = ''
           this.lastSearch = searchParams
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onReset() {
           this.activeFilter = ''
           this.lastSearch = {}
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onAction(payload) {
           if (payload.key === 'add') this.openDialog()
-          if (payload.key === 'refresh') this.init()
+          if (payload.key === 'refresh') this.init(true)
         },
         onPageChange(payload) {
           this.page = payload.page
-          this.init()
+          this.init(false)
         },
         onSizeChange(payload) {
-          this.pageSize = payload.pageSize
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.page = 1
-          this.init()
+          this.init(false)
         },
         typeName(type) {
           var map = { 1: '功能开关', 2: '运营参数', 3: '显示设置', 4: '其他' }

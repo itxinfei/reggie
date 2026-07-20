@@ -84,16 +84,20 @@ public class StoreSyncLog implements Serializable {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime endTime;
 
-    @TableField(fill = FieldFill.INSERT)
+    /** 创建时间（数据库无此列，逻辑字段） */
+    @TableField(exist = false)
     private LocalDateTime createTime;
 
-    @TableField(fill = FieldFill.INSERT_UPDATE)
+    /** 更新时间（数据库无此列，逻辑字段） */
+    @TableField(exist = false)
     private LocalDateTime updateTime;
 
-    @TableField(fill = FieldFill.INSERT)
+    /** 创建人ID（数据库无此列，逻辑字段） */
+    @TableField(exist = false)
     private Long createUser;
 
-    @TableField(fill = FieldFill.INSERT_UPDATE)
+    /** 更新人ID（数据库无此列，逻辑字段） */
+    @TableField(exist = false)
     private Long updateUser;
 
     /** 逻辑删除：0=未删除，1=已删除 */

@@ -202,7 +202,6 @@
       created() {
         this.loadData()
         this.loadRoleOptions()
-        this.loadStats()
       },
       computed: {
         statsCards: function() {
@@ -216,7 +215,8 @@
         }
       },
       methods: {
-        async init() {
+        // 修改点：F9 性能 — 全局角色统计不随翻页重算，仅 reloadStats 时纳入 Promise.all
+        async init(reloadStats = true) {
           this.loading = true
           var ls = this.lastSearch || {}
           var params = {
@@ -225,15 +225,19 @@
             roleName: ls.roleName || undefined,
             status: ls.status || undefined
           }
-          var results = await Promise.all([sysApi.rolePage(params), this.loadRoleStats()])
+          var requests = [sysApi.rolePage(params)]
+          if (reloadStats) { requests.push(this.loadRoleStats()) }
+          var results = await Promise.all(requests)
           var roleRes = results[0]
-          var statsRes = results[1]
           if (roleRes && roleRes.code === 1) {
             this.tableData = roleRes.data.records || []
             this.counts = roleRes.data.total || 0
           }
-          if (statsRes && statsRes.code === 1) {
-            this.stats = Object.assign({}, this.stats, statsRes.data || {})
+          if (reloadStats) {
+            var statsRes = results[1]
+            if (statsRes && statsRes.code === 1) {
+              this.stats = Object.assign({}, this.stats, statsRes.data || {})
+            }
           }
           this.loading = false
         },
@@ -275,7 +279,7 @@
           }
         },
         loadData() {
-          this.init()
+          this.init(true)
         },
         // stat-cards 点击
         onCardClick: function(payload) {
@@ -287,7 +291,7 @@
           }
           self.lastSearch = self.activeFilter ? this.buildFilterParams(self.activeFilter) : {}
           self.page = 1
-          this.init()
+          this.init(false)
         },
         buildFilterParams(key) {
           if (key === 'enabled') return { status: '1' }
@@ -299,24 +303,24 @@
           this.activeFilter = ''
           this.lastSearch = searchParams
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onReset() {
           this.activeFilter = ''
           this.lastSearch = {}
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onAction(payload) {
           if (payload.key === 'add') this.openDialog()
         },
         onPageChange(payload) {
           this.page = payload.page
-          this.init()
+          this.init(false)
         },
         onSizeChange(payload) {
-          this.pageSize = payload.pageSize
-          this.init()
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.init(false)
         },
         openDialog(row) {
           if (row) {

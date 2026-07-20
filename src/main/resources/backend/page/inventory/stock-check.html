@@ -66,8 +66,10 @@
             <el-table-column label="食材名称" min-width="140">
               <template slot-scope="scope">{{ scope.row.materialName }}</template>
             </el-table-column>
+            <el-table-column prop="materialId" label="食材ID" width="80" align="center" />
             <el-table-column prop="bookQty" label="账面数量" width="110" align="center" />
             <el-table-column prop="actualQty" label="实际数量" width="110" align="center" />
+            <el-table-column prop="diffQty" label="差异数量" width="100" align="center" />
             <el-table-column label="差异" width="90" align="center">
               <template slot-scope="scope">
                 <span :style="scope.row.diff < 0 ? 'color: var(--color-danger); font-weight: 600' : scope.row.diff > 0 ? 'color: var(--color-success); font-weight: 600' : 'color: var(--color-info)'">
@@ -75,6 +77,7 @@
                 </span>
               </template>
             </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
           </el-table>
           <div v-else class="empty-expand">暂无明细数据</div>
         </template>
@@ -156,11 +159,12 @@
           activeFilter: '',
           // 修改点：crud-table 列配置（替代手写 el-table-column）
           columns: [
-            { prop: 'id', label: '盘点单号', width: 120 },
+            { prop: 'checkNo', label: '盘点单号', width: 160 },
             { prop: 'operator', label: '操作员', width: 100, align: 'center' },
             { prop: 'itemCount', label: '盘点项数', width: 100, align: 'center' },
-            { prop: 'remark', label: '备注', minWidth: 120, showOverflowTooltip: true },
+            { prop: 'totalDiffAmount', label: '总差异金额', width: 120, align: 'right', slot: true, type: 'money' },
             { prop: 'profitLoss', label: '盈亏金额', width: 120, align: 'right', slot: true, type: 'money' },
+            { prop: 'remark', label: '备注', minWidth: 120, showOverflowTooltip: true },
             { prop: 'status', label: '状态', width: 100, align: 'center', slot: true },
             { prop: 'createdTime', label: '创建时间', width: 170 }
           ],
@@ -188,7 +192,7 @@
         }
       },
       created() {
-        this.init()
+        this.init(true)
       },
       computed: {
         statsCards: function() {
@@ -205,12 +209,12 @@
         onCardClick: function(payload) {
           this.activeFilter = payload.activeKey
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onTableAction: function(payload) {
           if (payload.key === 'add') { this.addHandle(); }
         },
-        async init() {
+        async init(reloadStats = true) {
           var self = this
           var params = { page: this.page, pageSize: this.pageSize }
           if (this.input.status) params.status = this.input.status
@@ -229,7 +233,7 @@
             } else {
               self.$message.error(pageRes.msg || '操作失败')
             }
-            self.loadStats()
+            if (reloadStats) { self.loadStats() }
           } catch (err) {
             self.$message.error('请求失败：' + err)
           } finally {
@@ -285,13 +289,13 @@
         },
         handleQuery() {
           this.page = 1
-          this.init()
+          this.init(false)
         },
         reset() {
           this.input.status = ''
           this.input.dateRange = ''
           this.page = 1
-          this.init()
+          this.init(false)
         },
         addHandle() {
           this.formData = {
@@ -377,7 +381,7 @@
               self.entryCheckId = null
               self.entryMaterials = []
               self.entryForm = { details: [] }
-              self.init()
+              self.init(true)
             } else {
               self.$message.error(res.msg || '操作失败')
             }
@@ -389,12 +393,12 @@
         onPageChange: function(payload) {
           this.page = payload.page
           this.pageSize = payload.pageSize
-          this.init()
+          this.init(false)
         },
         onSizeChange: function(val) {
           this.pageSize = val
           this.page = 1
-          this.init()
+          this.init(false)
         }
       }
     })

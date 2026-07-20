@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="../../styles/components.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/design-system.css" />
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="../../plugins/echarts/echarts.min.js"></script>
     <style>
         /* ========== 概览图表 ========== */
         .overview-charts {
@@ -183,7 +183,7 @@
             <el-row :gutter="16">
                 <el-col :span="14">
                     <el-form-item label="活动名称" prop="name">
-                        <el-input v-model="form.name" placeholder="请输入活动名称" maxlength="100" show-word-limit />
+                        <el-input v-model="form.name" placeholder="请输入活动名称" maxlength="50" show-word-limit />
                     </el-form-item>
                 </el-col>
                 <el-col :span="10">

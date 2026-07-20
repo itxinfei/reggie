@@ -59,7 +59,7 @@ public class SupplierController {
         qw.like(name != null && !name.isEmpty(), Supplier::getName, name);
         // 修改点：添加按状态筛选支持，修复前端 status 参数被后端静默丢弃的 Bug
         qw.eq(status != null, Supplier::getStatus, status);
-        qw.orderByDesc(Supplier::getUpdatedTime);
+        qw.orderByDesc(Supplier::getUpdateTime);
         supplierService.page(pageInfo, qw);
         return R.success(pageInfo);
     }

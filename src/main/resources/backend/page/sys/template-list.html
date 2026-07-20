@@ -205,9 +205,13 @@
           // 表格列配置
           columns: [
             { prop: 'templateName', label: '模板名称', minWidth: 160, align: 'center' },
+            { prop: 'templateCode', label: '外部编码', width: 130, align: 'center' },
             { prop: 'bizType', label: '业务类型', width: 110, align: 'center', slot: true },
             { prop: 'channel', label: '渠道', width: 100, align: 'center', slot: true },
+            { prop: 'title', label: '推送标题', minWidth: 130, align: 'center' },
             { prop: 'content', label: '内容预览', minWidth: 220, showOverflowTooltip: true, align: 'center' },
+            { prop: 'signName', label: '短信签名', width: 100, align: 'center' },
+            { prop: 'remark', label: '备注', minWidth: 130, showOverflowTooltip: true },
             { prop: 'status', label: '状态', width: 80, align: 'center', slot: true },
             { prop: 'updateTime', label: '更新时间', width: 160, align: 'center' }
           ],
@@ -228,7 +232,7 @@
         }
       },
       created() {
-        this.init()
+        this.init(true)
       },
       computed: {
         statsCards: function() {
@@ -242,7 +246,7 @@
         }
       },
       methods: {
-        async init() {
+        async init(reloadStats = true) {
           this.loading = true
           var ls = this.lastSearch || {}
           var params = {
@@ -252,14 +256,16 @@
             channel: ls.channel || undefined,
             status: ls.status || undefined
           }
-          var results = await Promise.all([sysApi.templatePage(params), this.loadTemplateStats()])
+          var requests = [sysApi.templatePage(params)]
+          if (reloadStats) { requests.push(this.loadTemplateStats()) }
+          var results = await Promise.all(requests)
           var tplRes = results[0]
           var statsRes = results[1]
           if (tplRes && tplRes.code === 1) {
             this.tableData = tplRes.data.records || []
             this.counts = tplRes.data.total || 0
           }
-          if (statsRes && statsRes.code === 1) {
+          if (reloadStats && statsRes && statsRes.code === 1) {
             this.stats = Object.assign({}, this.stats, statsRes.data || {})
           }
           this.loading = false
@@ -289,7 +295,7 @@
           this.activeFilter = payload.activeKey
           this.lastSearch = this.activeFilter ? this.buildFilterParams(this.activeFilter) : {}
           this.page = 1
-          this.init()
+          this.init(false)
         },
         buildFilterParams(key) {
           if (key === 'enabled') return { status: '1' }
@@ -301,24 +307,24 @@
           this.activeFilter = ''
           this.lastSearch = searchParams
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onReset() {
           this.activeFilter = ''
           this.lastSearch = {}
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onAction(payload) {
           if (payload.key === 'add') this.openDialog()
         },
         onPageChange(payload) {
           this.page = payload.page
-          this.init()
+          this.init(false)
         },
         onSizeChange(payload) {
-          this.pageSize = payload.pageSize
-          this.init()
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.init(false)
         },
         bizTypeName(type) {
           var map = { 'ORDER_NOTICE': '订单通知', 'PROMOTION': '营销推送', 'VERIFY_CODE': '验证码', 'SYSTEM': '系统通知', 'JOB_NOTICE': '工作通知' }

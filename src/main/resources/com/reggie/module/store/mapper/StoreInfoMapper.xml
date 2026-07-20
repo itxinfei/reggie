@@ -48,7 +48,7 @@
             si.delivery_fee,
             COALESCE(ds.total_orders, 0) AS today_orders,
             COALESCE(ds.actual_amount, 0.00) AS today_amount,
-            t.create_time
+            DATE_FORMAT(t.create_time, '%Y-%m-%d %H:%i:%s') AS create_time
         FROM store_info si
         INNER JOIN tenant t ON si.tenant_id = t.id
         LEFT JOIN store_daily_summary ds ON si.tenant_id = ds.tenant_id
@@ -135,7 +135,7 @@
             si.delivery_fee,
             COALESCE(ds.total_orders, 0) AS today_orders,
             COALESCE(ds.actual_amount, 0.00) AS today_amount,
-            t.create_time
+            DATE_FORMAT(t.create_time, '%Y-%m-%d %H:%i:%s') AS create_time
         FROM store_info si
         INNER JOIN tenant t ON si.tenant_id = t.id
         LEFT JOIN store_daily_summary ds ON si.tenant_id = ds.tenant_id
@@ -166,7 +166,7 @@
             si.delivery_fee,
             COALESCE(ds.total_orders, 0) AS today_orders,
             COALESCE(ds.actual_amount, 0.00) AS today_amount,
-            t.create_time
+            DATE_FORMAT(t.create_time, '%Y-%m-%d %H:%i:%s') AS create_time
         FROM store_info si
         INNER JOIN tenant t ON si.tenant_id = t.id
         LEFT JOIN store_daily_summary ds ON si.tenant_id = ds.tenant_id

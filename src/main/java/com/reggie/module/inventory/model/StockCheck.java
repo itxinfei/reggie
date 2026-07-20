@@ -49,12 +49,12 @@ public class StockCheck implements Serializable {
     private String remark;
 
     @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
-    @TableField(fill = FieldFill.INSERT)
+    @TableField(value = "created_time", fill = FieldFill.INSERT)
     private LocalDateTime createdTime;
 
     @Schema(description = "更新时间", example = "2026-07-09 12:00:00")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedTime;
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
 
     /** 盘点项数（关联查询统计，数据库无此列） */
     @TableField(exist = false)

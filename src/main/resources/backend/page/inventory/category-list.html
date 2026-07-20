@@ -140,7 +140,7 @@
         }
       },
       created() {
-        this.fetchData()
+        this.fetchData(true)
         this.loadFilterOptions()
       },
       computed: {
@@ -156,16 +156,16 @@
         onTableAction: function(payload) {
           if (payload.key === 'add') { this.addHandle(); }
         },
-        // 修改点：统一方法名 fetchData（供 crud-table 分页事件调用）
-        async fetchData() {
+          // 修改点：统一方法名 fetchData（供 crud-table 分页事件调用）；reloadStats=true 才重算全局统计
+          async fetchData(reloadStats = true) {
           const params = { page: this.page, pageSize: this.pageSize }
           if (this.input.name) params.name = this.input.name
 
-          // 并行加载列表和统计
-          const [pageRes, statsRes] = await Promise.all([
-            matCategoryPage(params),
-            this.loadStats()
-          ])
+          // 修改点：F9 性能 — 列表只查当前页，全局统计仅 reloadStats 时重算
+          var requests = [matCategoryPage(params)]
+          if (reloadStats) { requests.push(this.loadStats()) }
+          var results = await Promise.all(requests)
+          var pageRes = results[0]
 
           if (String(pageRes.code) === '1') {
             this.tableData = pageRes.data.records || []
@@ -174,8 +174,11 @@
             ReggieUI.error(pageRes.msg || '操作失败')
           }
 
-          if (statsRes && String(statsRes.code) === '1') {
-            this.stats = statsRes.data || this.stats
+          if (reloadStats) {
+            var statsRes = results[1]
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
+            }
           }
         },
         // 加载分类下拉选项
@@ -210,12 +213,12 @@
         },
         handleQuery() {
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         },
         reset() {
           this.input.name = ''
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         },
         addHandle() {
           this.formData = {
@@ -256,7 +259,7 @@
             if (res.code === 1) {
               ReggieUI.success(this.formData.id ? '分类修改成功！' : '分类添加成功！')
               this.formData.dialogVisible = false
-              this.fetchData()
+              this.fetchData(true)
             } else {
               ReggieUI.error(res.msg || '操作失败')
             }
@@ -275,7 +278,7 @@
                 if (this.tableData.length === 1 && this.page > 1) {
                   this.page--
                 }
-                this.fetchData()
+                this.fetchData(true)
               } else {
                 ReggieUI.error(res.msg || '操作失败')
               }
@@ -288,12 +291,12 @@
         onPageChange({ page, pageSize }) {
           this.page = page
           this.pageSize = pageSize
-          this.fetchData()
+          this.fetchData(false)
         },
         onSizeChange(val) {
           this.pageSize = val
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         }
       }
     })

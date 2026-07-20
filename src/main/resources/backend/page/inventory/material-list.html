@@ -215,7 +215,7 @@
           }
         },
         created() {
-          this.fetchData()
+          this.fetchData(true)
           this.loadOptions()
           this.loadFilterOptions()
         },
@@ -240,26 +240,26 @@
             this.input.name = '';
             this.input.categoryId = '';
             this.page = 1;
-            this.fetchData();
+            this.fetchData(false);
           },
           // 修改点：<table-bar> 组件统一操作分发
           onTableAction: function(payload) {
             if (payload.key === 'add') { this.addHandle(); }
             else if (payload.key === 'warning') { this.warningHandle(); }
           },
-          // 修改点：统一方法名 fetchData（供 crud-table 分页事件调用）
-          async fetchData() {
+          // 修改点：统一方法名 fetchData（供 crud-table 分页事件调用）；reloadStats=true 才重算全局统计
+          async fetchData(reloadStats = true) {
             const params = { page: this.page, pageSize: this.pageSize }
             if (this.input.name) params.name = this.input.name
             if (this.input.categoryId) params.categoryId = this.input.categoryId
             // 修改点：传递状态筛选参数到后端
             if (this.activeFilter && this.activeFilter !== 'low') params.status = this.activeFilter
 
-            // 并行加载食材列表和统计数据
-            const [materialRes, statsRes] = await Promise.all([
-              materialPage(params),
-              this.loadMaterialStats()
-            ])
+            // 修改点：F9 性能 — 列表只查当前页，全局统计仅 reloadStats 时重算
+            var requests = [materialPage(params)]
+            if (reloadStats) { requests.push(this.loadMaterialStats()) }
+            var results = await Promise.all(requests)
+            var materialRes = results[0]
             // 修改点：库存预警在前端过滤
             if (materialRes && materialRes.data && materialRes.data.records && this.activeFilter === 'low') {
               var records = materialRes.data.records
@@ -275,9 +275,12 @@
               ReggieUI.error(materialRes.msg || '操作失败')
             }
 
-            // 处理统计数据
-            if (statsRes && String(statsRes.code) === '1') {
-              this.stats = statsRes.data || this.stats
+            // 处理统计数据（仅 reloadStats 时）
+            if (reloadStats) {
+              var statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1') {
+                this.stats = statsRes.data || this.stats
+              }
             }
           },
           // 加载食材统计数据
@@ -345,14 +348,14 @@
             // 修改点：搜索时清空卡片筛选状态
             this.activeFilter = ''
             this.page = 1
-            this.fetchData()
+            this.fetchData(false)
           },
           reset() {
             this.input.name = ''
             this.input.categoryId = ''
             this.activeFilter = ''
             this.page = 1
-            this.fetchData()
+            this.fetchData(false)
           },
           // 修改点：stats-card 点击切换筛选状态 — 已迁移至 onCardClick，保留兼容
           // filterBy 已由 onCardClick 替代
@@ -398,7 +401,9 @@
               deleteMaterial(id).then(res => {
                 if (res.code === 1) {
                   ReggieUI.success('删除成功！')
-                  this.handleQuery()
+                  this.activeFilter = ''
+                  this.page = 1
+                  this.fetchData(true)
                 } else {
                   ReggieUI.error(res.msg || '操作失败')
                 }
@@ -470,12 +475,12 @@
           onPageChange({ page, pageSize }) {
             this.page = page
             this.pageSize = pageSize
-            this.fetchData()
+            this.fetchData(false)
           },
           onSizeChange(val) {
             this.pageSize = val
             this.page = 1
-            this.fetchData()
+            this.fetchData(false)
           }
         }
       })

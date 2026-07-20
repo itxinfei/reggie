@@ -60,6 +60,27 @@ public class RegionController {
     }
 
     /**
+     * 按层级查询全部行政区划
+     * <p>用于后台新增/编辑地区时，上级地区下拉框的候选数据。
+     * 此前前端使用 pageSize:1000 分页拉全量存在数据截断风险，改为后端按层级聚合返回。</p>
+     */
+    @GetMapping("/by-level")
+    @Operation(summary = "按层级查询行政区划", description = "返回指定层级的所有行政区划，供上级地区下拉框使用")
+    public R<List<Region>> listByLevel(
+            @Parameter(name = "level", description = "行政区划级别（1省 2市 3区）", required = true)
+            @RequestParam(required = false) Integer level) {
+        // 防御空参：层级未传时不查库，直接返回空列表
+        if (level == null) {
+            return R.success(new ArrayList<>());
+        }
+        LambdaQueryWrapper<Region> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Region::getLevel, level);
+        wrapper.orderByAsc(Region::getSort).orderByAsc(Region::getName);
+        List<Region> list = regionService.list(wrapper);
+        return R.success(list);
+    }
+
+    /**
      * 分页查询（后台管理使用）
      */
     @GetMapping("/page")

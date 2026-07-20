@@ -226,9 +226,10 @@
         async loadParentOptions(level) {
           // 2级城市需要选省份，3级区县需要选城市
           const parentLevel = level - 1
-          const res = await regionPage({ page: 1, pageSize: 1000, level: parentLevel })
+          // 修改点：改为调用后端 /region/by-level 聚合接口（按层级返回全部），不再用 pageSize:1000 拉全量导致截断
+          const res = await regionByLevel(parentLevel)
           if (res.code === 1) {
-            this.parentOptions = res.data.records || []
+            this.parentOptions = res.data || []
           }
         },
 

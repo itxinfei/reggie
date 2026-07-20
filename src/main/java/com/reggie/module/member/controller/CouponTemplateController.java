@@ -87,7 +87,7 @@ public class CouponTemplateController {
         validateCoupon(couponTemplate);
         log.info("新增优惠券模板: {}", couponTemplate.getName());
         couponTemplate.setCreatedTime(LocalDateTime.now());
-        couponTemplate.setUpdatedTime(LocalDateTime.now());
+        couponTemplate.setUpdateTime(LocalDateTime.now());
         couponTemplateService.save(couponTemplate);
         return R.success("新增优惠券成功");
     }
@@ -102,7 +102,7 @@ public class CouponTemplateController {
     public R<String> update(@Valid @RequestBody CouponTemplate couponTemplate) {
         validateCoupon(couponTemplate);
         log.info("修改优惠券模板: {}", couponTemplate.getId());
-        couponTemplate.setUpdatedTime(LocalDateTime.now());
+        couponTemplate.setUpdateTime(LocalDateTime.now());
         couponTemplateService.updateById(couponTemplate);
         return R.success("修改优惠券成功");
     }

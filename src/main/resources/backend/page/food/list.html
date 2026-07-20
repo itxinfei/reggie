@@ -81,9 +81,9 @@
             </div>
           </el-image>
         </template>
-        <!-- 售价列 -->
+        <!-- 售价列（修改点：F10 用 formatMoney 统一两位小数显示） -->
         <template #col-price="{ row }">
-          <span>￥{{ row.price }}</span>
+          <span>￥{{ formatMoney(row.price) }}</span>
         </template>
         <!-- 状态列 -->
         <template #col-status="{ row }">
@@ -257,13 +257,15 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'name', label: '菜品名称', align: 'left' },
-            { prop: 'image', label: '图片', slot: true, width: 80, align: 'center' },
-            { prop: 'categoryName', label: '菜品分类', align: 'center' },
-            { prop: 'price', label: '售价', slot: true, width: 100, align: 'center', type: 'money' },
-            { prop: 'status', label: '售卖状态', slot: true, width: 90, align: 'center' },
-            { prop: 'stock', label: '库存', slot: true, width: 100, align: 'center', type: 'number' },
-            { prop: 'updateTime', label: '最后操作时间', align: 'center', minWidth: 150 }
+            { prop: 'name', label: '菜品名称', minWidth: 120 },
+            { prop: 'code', label: '商品码', width: 130, align: 'center' },
+            { prop: 'categoryName', label: '菜品分类', width: 110, align: 'center' },
+            { prop: 'price', label: '售价', slot: true, width: 90, align: 'right', type: 'money' },
+            { prop: 'description', label: '描述', minWidth: 160, showOverflowTooltip: true },
+            { prop: 'sort', label: '排序', width: 70, align: 'center', type: 'number' },
+            { prop: 'status', label: '售卖状态', slot: true, width: 100, align: 'center' },
+            { prop: 'stock', label: '库存', slot: true, width: 90, align: 'center', type: 'number' },
+            { prop: 'updateTime', label: '最后操作时间', minWidth: 160 }
           ],
           // 缓存搜索参数
           lastSearch: {},
@@ -313,24 +315,29 @@
           }
         }
       },
-      created: function() { this.init() },
+      created: function() { this.init(); this.loadDishStats() },
       mounted: function() { this.loadCategoryOptions() },
       methods: {
+        // 修改点：F9 性能——列表只查当前页数据，统计为全局聚合由 loadDishStats 独立加载，不随翻页/筛选重算
         async init() {
           this.loading = true
           var self = this
           var params = { page: this.page, pageSize: this.pageSize, name: self.lastSearch.name || undefined, code: self.lastSearch.code || undefined, categoryId: self.lastSearch.categoryId || undefined }
           if (self.activeFilter && self.activeFilter !== '') { params.status = self.activeFilter }
-          var results = await Promise.all([getDishPage(params), self.loadDishStats()])
-          var dishRes = results[0]
-          var statsRes = results[1]
-          if (String(dishRes.code) === '1') { self.tableData = dishRes.data.records || []; self.counts = dishRes.data.total }
-          if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+          try {
+            var dishRes = await getDishPage(params)
+            if (String(dishRes.code) === '1') { self.tableData = dishRes.data.records || []; self.counts = dishRes.data.total }
+          } catch (err) { console.error('加载菜品列表失败:', err) }
           self.loading = false
+        },
+        // 修改点：F9 列表 + 统计一起刷新（仅在增删改/上下架等会改变全局计数的操作后调用）
+        refreshAll: function() {
+          this.init()
+          this.loadDishStats()
         },
         async loadDishStats() {
           try {
-            // 修改点：并行查询各状态菜品总数，替代硬编码 deletedDishes=0
+            // 修改点：并行查询各状态菜品总数，替代硬编码 deletedDishes=0；结果自赋值，调用方无需再取返回值
             var results = await Promise.all([
               getDishPage({ page: 1, pageSize: 1, status: '1' }),
               getDishPage({ page: 1, pageSize: 1, status: '0' }),
@@ -339,12 +346,14 @@
             var activeCount = (String(results[0].code) === '1') ? (results[0].data.total || 0) : 0
             var inactiveCount = (String(results[1].code) === '1') ? (results[1].data.total || 0) : 0
             var deletedCount = (String(results[2].code) === '1') ? (results[2].data.total || 0) : 0
-            return { code: 1, data: {
+            var stats = {
               totalDishes: activeCount + inactiveCount,
               activeDishes: activeCount,
               inactiveDishes: inactiveCount,
               deletedDishes: deletedCount
-            }}
+            }
+            this.stats = stats
+            return { code: 1, data: stats }
           } catch (err) { console.warn('加载菜品统计数据失败:', err) }
           return { code: 0 }
         },
@@ -388,7 +397,7 @@
           }
         },
         onPageChange: function(payload) { this.page = payload.page; this.init() },
-        onSizeChange: function(payload) { this.pageSize = payload.pageSize; this.init() },
+        onSizeChange: function(payload) { this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload; this.page = 1; this.init() },
         onSelection: function(payload) { this.checkList = payload.ids || [] },
         // ========== 菜品弹窗 ==========
         addFoodtype: function(st) {
@@ -443,7 +452,7 @@
           var form = self.stockForm
           try {
             var res = await updateDishStock(form.id, { stockQty: form.newStockQty, minStock: form.newMinStock })
-            if (res.code === 1) { self.$message.success('库存更新成功'); self.stockDialog.visible = false; self.init() }
+            if (res.code === 1) { self.$message.success('库存更新成功'); self.stockDialog.visible = false; self.refreshAll() }
             else { self.$message.error(res.msg || '库存更新失败') }
           } catch (err) { self.$message.error('请求失败：' + err) }
         },
@@ -484,14 +493,14 @@
                 if (res.code === 1) {
                   self.$message.success('菜品添加成功！')
                   self.dishDialog.visible = false
-                  self.init()
+                  self.refreshAll()
                   if (st === 'continue') { self.resetDishForm(); self.dishDialog.visible = true }
                 } else { self.$message.error(res.msg || '操作失败') }
               }).catch(function(err) { self.$message.error('请求失败：' + err) })
             } else {
               params.id = self.dishForm.id
               editDish(params).then(function(res) {
-                if (res.code === 1) { self.$message.success('菜品修改成功！'); self.dishDialog.visible = false; self.init() }
+                if (res.code === 1) { self.$message.success('菜品修改成功！'); self.dishDialog.visible = false; self.refreshAll() }
                 else { self.$message.error(res.msg || '操作失败') }
               }).catch(function(err) { self.$message.error('请求失败：' + err) })
             }
@@ -515,7 +524,7 @@
           ReggieUI.confirm('确认删除该菜品, 是否继续?', '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               deleteDish(type === '批量' ? self.checkList.join(',') : id).then(function(res) {
-                if (res.code === 1) { self.$message.success('删除成功！'); self.init() }
+                if (res.code === 1) { self.$message.success('删除成功！'); self.refreshAll() }
                 else { self.$message.error(res.msg || '操作失败') }
               }).catch(function(err) { self.$message.error('请求失败：' + err) })
             })
@@ -531,7 +540,7 @@
           ReggieUI.confirm('确认更改该菜品状态?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               dishStatusByStatus(self.dishState).then(function(res) {
-                if (res.code === 1) { self.$message.success('菜品状态已经更改成功！'); self.init() }
+                if (res.code === 1) { self.$message.success('菜品状态已经更改成功！'); self.refreshAll() }
                 else { self.$message.error(res.msg || '操作失败') }
               }).catch(function(err) { self.$message.error('请求失败：' + err) })
             })

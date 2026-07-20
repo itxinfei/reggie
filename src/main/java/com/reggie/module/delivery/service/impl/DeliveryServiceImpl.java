@@ -132,7 +132,7 @@ public class DeliveryServiceImpl implements DeliveryService {
         boolean success = dp.acceptOrder(platformOrderId);
         if (success) {
             order.setStatus(DeliveryOrderStatus.ACCEPTED.getValue());
-            order.setUpdatedTime(LocalDateTime.now());
+            order.setUpdateTime(LocalDateTime.now());
             deliveryOrderMapper.updateById(order);
         }
         return success;
@@ -171,7 +171,7 @@ public class DeliveryServiceImpl implements DeliveryService {
         }
 
         order.setStatus(status);
-        order.setUpdatedTime(LocalDateTime.now());
+        order.setUpdateTime(LocalDateTime.now());
         deliveryOrderMapper.updateById(order);
         log.info("订单状态更新: id={}, {} -> {}, 备注: {}", id, currentStatus, status, remark);
         return true;
@@ -356,7 +356,7 @@ public class DeliveryServiceImpl implements DeliveryService {
         newOrder.setStatus(DeliveryOrderStatus.PENDING.getValue());
         newOrder.setOrderTime(LocalDateTime.now());
         newOrder.setCreatedTime(LocalDateTime.now());
-        newOrder.setUpdatedTime(LocalDateTime.now());
+        newOrder.setUpdateTime(LocalDateTime.now());
 
         deliveryOrderMapper.insert(newOrder);
         log.info("新订单入库: platform={}, platformOrderId={}", platform, newOrder.getPlatformOrderId());
@@ -368,7 +368,7 @@ public class DeliveryServiceImpl implements DeliveryService {
      */
     private void updateOrderStatusCallback(DeliveryOrder order, String status) {
         order.setStatus(status);
-        order.setUpdatedTime(LocalDateTime.now());
+        order.setUpdateTime(LocalDateTime.now());
         deliveryOrderMapper.updateById(order);
         log.info("回调更新订单状态: platformOrderId={} -> {}", order.getPlatformOrderId(), status);
     }

@@ -211,7 +211,7 @@
         },
         created() {
           this.loadFilterOptions()
-          this.fetchData()
+          this.fetchData(true)
         },
         mounted() {
         },
@@ -244,35 +244,38 @@
               this.optionsLoading = false
             }
           },
-          async fetchData() {
-            this.loading = true
-            // 修改点：传递类型筛选参数 + 名称搜索参数到后端
-            var params = {'page': this.page, 'pageSize': this.pageSize}
-            if (this.activeFilter) { params.type = this.activeFilter }
-            // 修改点：搜索名称去除首尾空格后传递，空字符串不传
-            var name = (this.searchName || '').trim()
-            if (name) { params.name = name }
-            // 并行加载分类列表和统计数据
-            const [categoryRes, statsRes] = await Promise.all([
-              getCategoryPage(params),
-              this.loadCategoryStats()
-            ])
+        async fetchData(reloadStats = true) {
+          this.loading = true
+          // 修改点：传递类型筛选参数 + 名称搜索参数到后端
+          var params = {'page': this.page, 'pageSize': this.pageSize}
+          if (this.activeFilter) { params.type = this.activeFilter }
+          // 修改点：搜索名称去除首尾空格后传递，空字符串不传
+          var name = (this.searchName || '').trim()
+          if (name) { params.name = name }
+          // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+          var requests = [getCategoryPage(params)]
+          if (reloadStats) { requests.push(this.loadCategoryStats()) }
+          var results = await Promise.all(requests)
+          var categoryRes = results[0]
 
-            // 处理分类列表数据
-            if (String(categoryRes.code) === '1') {
-              this.tableData = categoryRes.data.records
-              this.counts = Number(categoryRes.data.total)
-            } else {
-              ReggieUI.error(categoryRes.msg || '操作失败')
-            }
+          // 处理分类列表数据
+          if (String(categoryRes.code) === '1') {
+            this.tableData = categoryRes.data.records
+            this.counts = Number(categoryRes.data.total)
+          } else {
+            ReggieUI.error(categoryRes.msg || '操作失败')
+          }
 
+          if (reloadStats) {
+            var statsRes = results[1]
             // 处理统计数据
             if (statsRes && String(statsRes.code) === '1') {
               this.stats = statsRes.data || this.stats
             }
+          }
 
-            this.loading = false
-          },
+          this.loading = false
+        },
           // 修改点：加载分类统计数据——使用后端 /stats 接口，数据100%准确
           async loadCategoryStats() {
             try {
@@ -289,7 +292,7 @@
             // 修改点：搜索时复位卡片筛选，避免冲突
             this.activeFilter = ''
             this.page = 1;
-            this.fetchData();
+            this.fetchData(false);
           },
           // 修改点：<table-bar> 组件 action 按钮事件处理
           onTableAction(payload) {
@@ -301,14 +304,14 @@
             this.activeFilter = payload.activeKey
             this.searchName = ''
             this.page = 1
-            this.fetchData()
+            this.fetchData(false)
           },
           // 重置搜索条件，恢复表格初始状态
           reset() {
             this.searchName = ''
             this.activeFilter = ''
             this.page = 1
-            this.fetchData()
+            this.fetchData(false)
           },
            // 添加
           addClass(st) {

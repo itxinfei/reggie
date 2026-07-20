@@ -105,19 +105,23 @@
           // 表格列配置
           columns: [
             { prop: 'id', label: 'ID', width: 80, align: 'center' },
+            { prop: 'operatorId', label: '操作人ID', width: 90, align: 'center', type: 'number' },
+            { prop: 'operatorIp', label: '操作IP', width: 130, align: 'center' },
             { prop: 'operatorName', label: '操作人', width: 100, slot: true, align: 'center' },
             { prop: 'module', label: '操作模块', width: 120, align: 'center' },
             { prop: 'operationType', label: '操作类型', width: 90, align: 'center', slot: true },
-            { prop: 'description', label: '操作描述', minWidth: 200, showOverflowTooltip: true, align: 'center' },
+            { prop: 'description', label: '操作描述', minWidth: 180, showOverflowTooltip: true, align: 'center' },
             { prop: 'requestUrl', label: '请求地址', width: 180, showOverflowTooltip: true, align: 'center' },
             { prop: 'requestMethod', label: '方法', width: 70, align: 'center', slot: true },
+            { prop: 'duration', label: '耗时(ms)', width: 90, align: 'center', type: 'number' },
             { prop: 'isSuccess', label: '状态', width: 70, align: 'center', slot: true },
+            { prop: 'errorMsg', label: '错误信息', minWidth: 160, showOverflowTooltip: true, align: 'center' },
             { prop: 'createTime', label: '操作时间', width: 160, align: 'center' }
           ]
         }
       },
       created() {
-        this.init()
+        this.init(true)
       },
       computed: {
         statsCards: function() {
@@ -131,7 +135,8 @@
         }
       },
       methods: {
-        async init() {
+        // 修改点：F9 性能 — 全局操作日志统计不随翻页重算，仅 reloadStats 时纳入 Promise.all
+        async init(reloadStats = true) {
           this.loading = true
           var ls = this.lastSearch || {}
           var params = {
@@ -143,15 +148,19 @@
             beginTime: ls.beginTime || undefined,
             endTime: ls.endTime || undefined
           }
-          var results = await Promise.all([sysApi.logPage(params), this.loadStats()])
+          var requests = [sysApi.logPage(params)]
+          if (reloadStats) { requests.push(this.loadStats()) }
+          var results = await Promise.all(requests)
           var logRes = results[0]
-          var statsRes = results[1]
           if (logRes && logRes.code === 1) {
             this.tableData = logRes.data.records || []
             this.counts = logRes.data.total || 0
           }
-          if (statsRes && statsRes.code === 1) {
-            this.stats = Object.assign({}, this.stats, statsRes.data || {})
+          if (reloadStats) {
+            var statsRes = results[1]
+            if (statsRes && statsRes.code === 1) {
+              this.stats = Object.assign({}, this.stats, statsRes.data || {})
+            }
           }
           this.loading = false
         },
@@ -189,7 +198,7 @@
           }
           self.lastSearch = self.activeFilter ? this.buildFilterParams(self.activeFilter) : {}
           self.page = 1
-          this.init()
+          this.init(false)
         },
         buildFilterParams(key) {
           if (key === 'success') return { isSuccess: '1' }
@@ -201,21 +210,21 @@
           this.activeFilter = ''
           this.lastSearch = searchParams
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onReset() {
           this.activeFilter = ''
           this.lastSearch = {}
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onPageChange(payload) {
           this.page = payload.page
-          this.init()
+          this.init(false)
         },
         onSizeChange(payload) {
-          this.pageSize = payload.pageSize
-          this.init()
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.init(false)
         },
         opTypeTag(type) {
           var map = { 'INSERT': 'success', 'UPDATE': 'warning', 'DELETE': 'danger', 'OTHER': 'info' }

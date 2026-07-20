@@ -369,7 +369,7 @@ new Vue({
   },
   created() {
     this.loadFilterOptions()
-    this.fetchData()
+    this.fetchData(true)
   },
   methods: {
     // 修改点：<stat-cards> 点击（payload.activeKey 为 .sync 更新后的值）
@@ -377,7 +377,7 @@ new Vue({
       this.activeFilter = payload.activeKey
       this.input = ''
       this.page = 1
-      this.fetchData()
+      this.fetchData(false)
     },
     // 修改点：<table-bar> 组件统一操作分发
     onTableAction: function(payload) {
@@ -415,7 +415,7 @@ new Vue({
       }
     },
     // ========== 数据加载 ==========
-    async fetchData() {
+    async fetchData(reloadStats = true) {
       this.loading = true
       var params = {
         page: this.page,
@@ -425,11 +425,9 @@ new Vue({
       if (this.activeFilter) {
         params.status = this.activeFilter
       }
-      // 并行加载套餐列表 + 统计数据
-      const [comboRes] = await Promise.all([
-        getSetmealPage(params),
-        this.loadComboStats()
-      ])
+      // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+      const comboRes = await getSetmealPage(params)
+      if (reloadStats) { await this.loadComboStats() }
       if (String(comboRes.code) === '1') {
         this.tableData = comboRes.data.records || []
         this.counts = comboRes.data.total
@@ -477,14 +475,14 @@ new Vue({
     handleQuery() {
       this.activeFilter = ''
       this.page = 1
-      this.fetchData()
+      this.fetchData(false)
     },
 
     reset() {
       this.input = ''
       this.activeFilter = ''
       this.page = 1
-      this.fetchData()
+      this.fetchData(false)
     },
 
     // filterBy 已迁移至 onCardClick

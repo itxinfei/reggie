@@ -30,7 +30,7 @@ public interface MemberMapper extends BaseMapper<Member> {
      * @param amount 扣减金额（正数）
      * @return 受影响行数，0 表示余额不足或会员不存在
      */
-    @Update("UPDATE member SET balance = balance - #{amount}, updated_time = NOW() " +
+    @Update("UPDATE member SET balance = balance - #{amount}, update_time = NOW() " +
             "WHERE id = #{id} AND balance >= #{amount}")
     int deductBalanceById(@Param("id") Long id, @Param("amount") BigDecimal amount);
 
@@ -41,7 +41,7 @@ public interface MemberMapper extends BaseMapper<Member> {
      * @param points 增加积分数（正数）
      * @return 受影响行数
      */
-    @Update("UPDATE member SET points = IFNULL(points, 0) + #{points}, updated_time = NOW() " +
+    @Update("UPDATE member SET points = IFNULL(points, 0) + #{points}, update_time = NOW() " +
             "WHERE id = #{id}")
     int incrementPointsById(@Param("id") Long id, @Param("points") int points);
 

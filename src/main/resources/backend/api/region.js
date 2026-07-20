@@ -10,6 +10,9 @@ const regionChildren = (parentId) => $axios({ url: '/region/children', method: '
 // 分页查询
 const regionPage = (params) => $axios({ url: '/region/page', method: 'get', params })
 
+// 修改点：按层级查询全部区域，替代前端 pageSize:1000 拉全量（避免数据截断 + 遵守进销存规范）
+const regionByLevel = (level) => $axios({ url: '/region/by-level', method: 'get', params: { level } })
+
 // 详情
 const queryRegionById = (id) => $axios({ url: `/region/${id}`, method: 'get' })
 

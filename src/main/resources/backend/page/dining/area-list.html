@@ -153,7 +153,7 @@
       },
       created() {
         this.loadFilterOptions()
-        this.fetchData()
+        this.fetchData(true)
       },
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
@@ -192,18 +192,18 @@
             this.optionsLoading = false
           }
         },
-        async fetchData() {
+        async fetchData(reloadStats = true) {
           const params = {
             page: this.page,
             pageSize: this.pageSize,
             name: this.input || undefined
           }
 
-          // 并行加载区域列表和统计数据
-          const [areaRes, statsRes] = await Promise.all([
-            areaPage(params),
-            this.loadAreaStats()
-          ])
+          // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+          const requests = [areaPage(params)]
+          if (reloadStats) { requests.push(this.loadAreaStats()) }
+          const results = await Promise.all(requests)
+          const areaRes = results[0]
 
           // 处理区域列表数据
           if (String(areaRes.code) === '1') {
@@ -213,9 +213,12 @@
             ReggieUI.error(areaRes.msg || '操作失败')
           }
 
-          // 处理统计数据
-          if (statsRes && String(statsRes.code) === '1') {
-            this.stats = statsRes.data || this.stats
+          if (reloadStats) {
+            const statsRes = results[1]
+            // 处理统计数据
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
+            }
           }
         },
         // 加载区域统计数据
@@ -252,7 +255,7 @@
         },
         handleQuery() {
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         },
         // 修改点：通用优化方案 — 下拉框可重试加载
         onFilterDropdownVisible(flag) {
@@ -270,7 +273,7 @@
         reset() {
           this.input = ''
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         },
         addHandle() {
           this.action = 'add'

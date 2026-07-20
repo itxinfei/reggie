@@ -113,7 +113,7 @@
         }
       },
       created() {
-        this.init()
+        this.init(true)
       },
       computed: {
         statsCards: function() {
@@ -127,7 +127,7 @@
         }
       },
       methods: {
-        async init() {
+        async init(reloadStats = true) {
           this.loading = true
           var ls = this.lastSearch || {}
           var params = {
@@ -139,17 +139,22 @@
             beginTime: ls.beginTime || undefined,
             endTime: ls.endTime || undefined
           }
-          var results = await Promise.all([reservationPage(params), this.loadReservationStats()])
+          // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+          var requests = [reservationPage(params)]
+          if (reloadStats) { requests.push(this.loadReservationStats()) }
+          var results = await Promise.all(requests)
           var resvRes = results[0]
-          var statsRes = results[1]
           if (String(resvRes.code) === '1') {
             this.tableData = resvRes.data.records || []
             this.counts = resvRes.data.total
           } else {
             ReggieUI.error(resvRes.msg || '操作失败')
           }
-          if (statsRes && String(statsRes.code) === '1') {
-            this.stats = statsRes.data || this.stats
+          if (reloadStats) {
+            var statsRes = results[1]
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
+            }
           }
           this.loading = false
         },
@@ -178,27 +183,27 @@
           this.activeFilter = payload.activeKey
           this.lastSearch = this.activeFilter ? { status: this.activeFilter } : {}
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onSearch(searchParams) {
           this.activeFilter = ''
           this.lastSearch = searchParams
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onReset() {
           this.activeFilter = ''
           this.lastSearch = {}
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onPageChange(payload) {
           this.page = payload.page
-          this.init()
+          this.init(false)
         },
         onSizeChange(payload) {
-          this.pageSize = payload.pageSize
-          this.init()
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.init(false)
         },
         confirmHandle(id) {
           var self = this

@@ -175,32 +175,34 @@
           return this.tableData.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
         }
       },
-      created: function() { this.fetchData() },
+      created: function() { this.fetchData(true) },
       methods: {
         // 修改点：<table-bar> 组件统一操作分发
         onTableAction: function(payload) {
           if (payload.key === 'add') { this.addHandle(); }
         },
-        async fetchData() {
+        async fetchData(reloadStats = true) {
           this.loading = true
           var s = this.lastSearch || {}
           try {
-            // 修改点：列表与统计并行加载；统计改用后端 /api/member/level/stats 聚合，
-            // 替代原仅基于当前页 records 计算（修复"仅当前页"口径偏差）
-            var [res, statsRes] = await Promise.all([
-              levelPage({ page: this.page, pageSize: this.pageSize, name: s.name || undefined }),
-              levelStats()
-            ])
+            // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+            var requests = [levelPage({ page: this.page, pageSize: this.pageSize, name: s.name || undefined })]
+            if (reloadStats) { requests.push(levelStats()) }
+            var results = await Promise.all(requests)
+            var res = results[0]
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
               this.counts = res.data.total
             } else { ReggieUI.error(res.msg || '操作失败') }
-            if (String(statsRes.code) === '1' && statsRes.data) {
-              this.stats = {
-                totalLevels: Number(statsRes.data.totalLevels) || 0,
-                highestLevel: statsRes.data.highestLevel || '-',
-                lowestPoints: Number(statsRes.data.lowestPoints) || 0,
-                avgDiscount: statsRes.data.avgDiscount || '-'
+            if (reloadStats) {
+              var statsRes = results[1]
+              if (String(statsRes.code) === '1' && statsRes.data) {
+                this.stats = {
+                  totalLevels: Number(statsRes.data.totalLevels) || 0,
+                  highestLevel: statsRes.data.highestLevel || '-',
+                  lowestPoints: Number(statsRes.data.lowestPoints) || 0,
+                  avgDiscount: statsRes.data.avgDiscount || '-'
+                }
               }
             }
           } catch(e) { ReggieUI.error('请求失败：' + e) }
@@ -218,13 +220,13 @@
         handleQuery: function(searchParams) {
           this.lastSearch = searchParams || {}
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         },
         // <table-bar> @reset 回调
         handleReset: function() {
           this.lastSearch = {}
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         },
         addHandle: function() {
           this.action = 'add'; this.formData.title = '新增会员等级'

@@ -116,7 +116,7 @@ public class PrinterConfigController {
     public R<String> save(@RequestBody PrinterConfig printerConfig) {
         log.info("新增打印机配置: {}", printerConfig.getName());
         printerConfig.setCreatedTime(LocalDateTime.now());
-        printerConfig.setUpdatedTime(LocalDateTime.now());
+        printerConfig.setUpdateTime(LocalDateTime.now());
         printerConfigService.save(printerConfig);
         return R.success("新增打印机配置成功");
     }
@@ -130,7 +130,7 @@ public class PrinterConfigController {
     @Operation(summary = "修改配置", description = "更新打印机配置信息")
     public R<String> update(@RequestBody PrinterConfig printerConfig) {
         log.info("修改打印机配置: {}", printerConfig.getId());
-        printerConfig.setUpdatedTime(LocalDateTime.now());
+        printerConfig.setUpdateTime(LocalDateTime.now());
         printerConfigService.updateById(printerConfig);
         return R.success("修改打印机配置成功");
     }

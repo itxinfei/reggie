@@ -64,12 +64,12 @@ public class Material implements Serializable {
     private Integer status;
 
     @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createdTime;
+    @TableField(value = "created_time", fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
 
     @Schema(description = "更新时间", example = "2026-07-09 12:00:00")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedTime;
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
 
     /** 物料分类名称（关联查询填充，数据库无此列） */
     @TableField(exist = false)

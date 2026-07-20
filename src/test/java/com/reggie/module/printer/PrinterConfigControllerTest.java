@@ -57,7 +57,7 @@ public class PrinterConfigControllerTest {
         config.setPrintType("BILL");
         config.setStatus(1);
         config.setCreatedTime(LocalDateTime.now());
-        config.setUpdatedTime(LocalDateTime.now());
+        config.setUpdateTime(LocalDateTime.now());
         printerConfigService.save(config);
 
         mockMvc.perform(get("/printer/config/1"))
@@ -83,7 +83,7 @@ public class PrinterConfigControllerTest {
         config.setPrintType("BILL");
         config.setStatus(1);
         config.setCreatedTime(LocalDateTime.now());
-        config.setUpdatedTime(LocalDateTime.now());
+        config.setUpdateTime(LocalDateTime.now());
         printerConfigService.save(config);
 
         String json = "{\"id\":1,\"name\":\"更新后的打印机\",\"type\":\"TCP\",\"printType\":\"KITCHEN\",\"status\":1}";
@@ -107,7 +107,7 @@ public class PrinterConfigControllerTest {
         config.setPrintType("BILL");
         config.setStatus(1);
         config.setCreatedTime(LocalDateTime.now());
-        config.setUpdatedTime(LocalDateTime.now());
+        config.setUpdateTime(LocalDateTime.now());
         printerConfigService.save(config);
 
         mockMvc.perform(delete("/printer/config/1"))
@@ -129,7 +129,7 @@ public class PrinterConfigControllerTest {
             pc.setStatus(1);
             pc.setSort(i);
             pc.setCreatedTime(LocalDateTime.now());
-            pc.setUpdatedTime(LocalDateTime.now());
+            pc.setUpdateTime(LocalDateTime.now());
             printerConfigService.save(pc);
         }
 
@@ -152,7 +152,7 @@ public class PrinterConfigControllerTest {
         config1.setStatus(1);
         config1.setSort(1);
         config1.setCreatedTime(LocalDateTime.now());
-        config1.setUpdatedTime(LocalDateTime.now());
+        config1.setUpdateTime(LocalDateTime.now());
         printerConfigService.save(config1);
 
         PrinterConfig config2 = new PrinterConfig();
@@ -164,7 +164,7 @@ public class PrinterConfigControllerTest {
         config2.setStatus(1);
         config2.setSort(2);
         config2.setCreatedTime(LocalDateTime.now());
-        config2.setUpdatedTime(LocalDateTime.now());
+        config2.setUpdateTime(LocalDateTime.now());
         printerConfigService.save(config2);
 
         mockMvc.perform(get("/printer/config/list")

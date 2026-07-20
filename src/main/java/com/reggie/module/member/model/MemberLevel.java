@@ -50,7 +50,7 @@ public class MemberLevel implements Serializable {
 
     @Schema(description = "更新时间", example = "2026-07-09 12:00:00")
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedTime;
+    private LocalDateTime updateTime;
 
     @Schema(description = "是否删除：0=未删除，1=已删除", example = "0")
     @TableLogic(value = "0", delval = "1")

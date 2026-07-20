@@ -7,14 +7,14 @@ DROP TABLE IF EXISTS dining_table;
 DROP TABLE IF EXISTS dining_area;
 
 -- TableArea entity (@TableName("dining_area"))
--- Columns: id, tenantId, name, sort, createdTime, updatedTime
+-- Columns: id, tenantId, name, sort, createdTime, updateTime
 CREATE TABLE dining_area (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   name varchar(50) NULL DEFAULT NULL COMMENT '区域名称',
   sort int NULL DEFAULT 0 COMMENT '排序',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
-  updated_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
   update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
@@ -22,7 +22,7 @@ CREATE TABLE dining_area (
 );
 
 -- DiningTable entity (table name from class: dining_table)
--- Columns: id, tenantId, areaId, name, seatCount, status, minAmount, qrCodeUrl, sort, createdTime, updatedTime
+-- Columns: id, tenantId, areaId, name, seatCount, status, minAmount, qrCodeUrl, sort, createdTime, updateTime
 -- areaName is @TableField(exist=false), not persisted
 CREATE TABLE dining_table (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -34,8 +34,8 @@ CREATE TABLE dining_table (
   min_amount decimal(10,2) NULL DEFAULT NULL COMMENT '最低消费',
   qr_code_url varchar(255) NULL DEFAULT NULL COMMENT '二维码URL',
   sort int NULL DEFAULT 0 COMMENT '排序',
-  created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
-  updated_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
   update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
@@ -43,7 +43,7 @@ CREATE TABLE dining_table (
 );
 
 -- QueueRecord entity (@TableName("dining_queue"))
--- Columns: id, tenantId, queueNo, phone, seatCount, status, createdTime, updatedTime
+-- Columns: id, tenantId, queueNo, phone, seatCount, status, createdTime, updateTime
 CREATE TABLE dining_queue (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
@@ -52,7 +52,7 @@ CREATE TABLE dining_queue (
   seat_count int NULL DEFAULT NULL COMMENT '人数',
   status varchar(20) NULL DEFAULT NULL COMMENT '状态 WAITING/CALLED/COMPLETED/CANCELLED',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
-  updated_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
   update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
@@ -60,7 +60,7 @@ CREATE TABLE dining_queue (
 );
 
 -- Reservation entity (@TableName("dining_reservation"))
--- Columns: id, tenantId, tableId, customerName, phone, reservedTime, seatCount, status, remark, createdTime, updatedTime
+-- Columns: id, tenantId, tableId, customerName, phone, reservedTime, seatCount, status, remark, createdTime, updateTime
 CREATE TABLE dining_reservation (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
@@ -72,7 +72,7 @@ CREATE TABLE dining_reservation (
   status varchar(20) NULL DEFAULT NULL COMMENT '状态 PENDING/CONFIRMED/CANCELLED/ARRIVED',
   remark varchar(200) NULL DEFAULT NULL COMMENT '备注',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
-  updated_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
   update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',

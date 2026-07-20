@@ -64,7 +64,7 @@ public class MaterialController {
         qw.eq(categoryId != null, Material::getCategoryId, categoryId);
         // 修改点：添加状态筛选支持，修复前端 status 参数被后端静默丢弃的 Bug
         qw.eq(status != null && !status.isEmpty(), Material::getStatus, status);
-        qw.orderByDesc(Material::getUpdatedTime);
+        qw.orderByDesc(Material::getUpdateTime);
         materialService.page(pageInfo, qw);
         return R.success(pageInfo);
     }

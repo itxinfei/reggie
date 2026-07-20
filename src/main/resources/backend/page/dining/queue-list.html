@@ -144,7 +144,7 @@
         }
       },
       created() {
-        this.init()
+        this.init(true)
       },
       computed: {
         statsCards: function() {
@@ -158,7 +158,7 @@
         }
       },
       methods: {
-        async init() {
+        async init(reloadStats = true) {
           this.loading = true
           var ls = this.lastSearch || {}
           var params = {
@@ -167,17 +167,22 @@
             phone: ls.phone || undefined,
             status: ls.status || undefined
           }
-          var results = await Promise.all([queuePage(params), this.loadQueueStats()])
+          // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+          var requests = [queuePage(params)]
+          if (reloadStats) { requests.push(this.loadQueueStats()) }
+          var results = await Promise.all(requests)
           var queueRes = results[0]
-          var statsRes = results[1]
           if (String(queueRes.code) === '1') {
             this.tableData = queueRes.data.records || []
             this.counts = queueRes.data.total
           } else {
             ReggieUI.error(queueRes.msg || '操作失败')
           }
-          if (statsRes && String(statsRes.code) === '1') {
-            this.stats = statsRes.data || this.stats
+          if (reloadStats) {
+            var statsRes = results[1]
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
+            }
           }
           this.loading = false
         },
@@ -206,19 +211,19 @@
           this.activeFilter = payload.activeKey
           this.lastSearch = this.activeFilter ? { status: this.activeFilter } : {}
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onSearch(searchParams) {
           this.activeFilter = ''
           this.lastSearch = searchParams
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onReset() {
           this.activeFilter = ''
           this.lastSearch = {}
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onAction(payload) {
           if (payload.key === 'take') {
@@ -229,11 +234,11 @@
         },
         onPageChange(payload) {
           this.page = payload.page
-          this.init()
+          this.init(false)
         },
         onSizeChange(payload) {
-          this.pageSize = payload.pageSize
-          this.init()
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.init(false)
         },
         submitTake() {
           const self = this

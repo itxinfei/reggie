@@ -23,7 +23,7 @@ public interface DishMapper extends BaseMapper<Dish> {
      * 原子扣减菜品库存：stock_qty = stock_qty - #{qty}，WHERE stock_qty >= #{qty} 防止扣成负数
      * 修改点：参数化 @Update 替代 LambdaUpdateWrapper.setSql 字符串拼接
      */
-    @Update("UPDATE dish SET stock_qty = stock_qty - #{qty}, updated_time = NOW() " +
+    @Update("UPDATE dish SET stock_qty = stock_qty - #{qty}, update_time = NOW() " +
             "WHERE id = #{id} AND stock_qty >= #{qty}")
     int deductStock(@Param("id") Long id, @Param("qty") BigDecimal qty);
 
@@ -31,7 +31,7 @@ public interface DishMapper extends BaseMapper<Dish> {
      * 原子增加菜品库存：stock_qty = IFNULL(stock_qty, 0) + #{qty}
      * 修改点：参数化 @Update 替代字符串拼接，用于取消订单/补偿时回退库存
      */
-    @Update("UPDATE dish SET stock_qty = IFNULL(stock_qty, 0) + #{qty}, updated_time = NOW() " +
+    @Update("UPDATE dish SET stock_qty = IFNULL(stock_qty, 0) + #{qty}, update_time = NOW() " +
             "WHERE id = #{id}")
     int addStock(@Param("id") Long id, @Param("qty") BigDecimal qty);
 }

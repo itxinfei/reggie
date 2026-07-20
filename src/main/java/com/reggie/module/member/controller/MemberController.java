@@ -160,7 +160,7 @@ public class MemberController {
     @Operation(summary = "修改会员", description = "更新会员基本信息")
     public R<String> update(@RequestBody Member member) {
         log.info("修改会员: {}", member.getId());
-        member.setUpdatedTime(LocalDateTime.now());
+        member.setUpdateTime(LocalDateTime.now());
         memberService.updateById(member);
         return R.success("修改会员成功");
     }

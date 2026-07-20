@@ -331,14 +331,14 @@ Vue.component('table-bar', {
       this.searchItems.forEach(function (item) {
         var val = self.searchValues[item.field]
         if (val !== '' && val !== null && val !== undefined) {
-          // 日期范围特殊处理：拆分为 beginTime/endTime
-          if ((item.type === 'date' || item.type === 'daterange') && Array.isArray(val) && val.length === 2) {
-            var beginField = item.beginField || (item.field + 'Begin')
-            var endField = item.endField || (item.field + 'End')
-            params[beginField] = val[0]
-            params[endField] = val[1]
-          } else if ((item.type === 'date' || item.type === 'daterange') && Array.isArray(val) && val.length === 0) {
-            // 日期清空：不传
+          // 日期范围特殊处理：拆分为 beginTime/endTime（F3：仅处理长度 2，长度 0/1 均视为无效不传）
+          if ((item.type === 'date' || item.type === 'daterange') && Array.isArray(val)) {
+            if (val.length === 2) {
+              var beginField = item.beginField || (item.field + 'Begin')
+              var endField = item.endField || (item.field + 'End')
+              params[beginField] = val[0]
+              params[endField] = val[1]
+            }
           } else {
             params[item.field] = val
           }
@@ -524,6 +524,16 @@ Vue.component('crud-table', {
     rowKey: {
       type: String,
       default: ''
+    },
+    /** 修改点：F2 行主键字段名（默认 'id'），避免批量操作强耦合 row.id */
+    rowIdKey: {
+      type: String,
+      default: 'id'
+    },
+    /** 修改点：F4 默认排序（默认 null 不排序，避免硬编码 updateTime 触发意外服务端排序请求） */
+    defaultSort: {
+      type: Object,
+      default: null
     }
   },
   template:
@@ -537,7 +547,7 @@ Vue.component('crud-table', {
       '  :size="size"' +
       '  :row-key="rowKey || undefined"' +
       '  :max-height="maxHeight"' +
-      '  :default-sort="{prop: \'updateTime\', order: \'descending\'}"' +
+      '  :default-sort="defaultSort || undefined"' +
       '  v-loading="loading"' +
       '  class="tableBox"' +
       '  @selection-change="onSelectionChange"' +
@@ -565,7 +575,7 @@ Vue.component('crud-table', {
       '  :width="col.width"' +
       '  :min-width="col.minWidth"' +
       '  :align="col.type ? \'right\' : (col.align || \'left\')"' +
-      '  :class-name="col.type === \'money\' ? \'ds-money\' : (col.type === \'number\' ? \'ds-num\' : (col.className || \'\'))"' +
+      '  :class-name="(col.type === \'money\' ? \'ds-money\' : (col.type === \'number\' ? \'ds-num\' : \'\')) + (col.className ? \' \' + col.className : \'\')"' +
       '  :fixed="col.fixed"' +
       '  :sortable="col.sortable ? \'custom\' : false"' +
       '  :show-overflow-tooltip="!!col.showOverflowTooltip"' +
@@ -573,10 +583,10 @@ Vue.component('crud-table', {
         // 修改点：合并为单一 template，避免 v-if/v-else 多片段在 el-table-column 中渲染异常
         '<template slot-scope="scope">' +
           '<slot v-if="col.slot" :name="\'col-\' + col.prop" :row="scope.row" :col="col" :$index="scope.$index">' +
-            '<span v-if="col.formatter">{{ col.formatter(scope.row[col.prop], scope.row, col) }}</span>' +
+            '<span v-if="typeof col.formatter === \'function\'">{{ col.formatter(scope.row[col.prop], scope.row, col) }}</span>' +
             '<span v-else>{{ scope.row[col.prop] }}</span>' +
           '</slot>' +
-          '<span v-else-if="col.formatter">{{ col.formatter(scope.row[col.prop], scope.row, col) }}</span>' +
+          '<span v-else-if="typeof col.formatter === \'function\'">{{ col.formatter(scope.row[col.prop], scope.row, col) }}</span>' +
           '<span v-else>{{ scope.row[col.prop] }}</span>' +
         '</template>' +
       '</el-table-column>' +
@@ -631,8 +641,10 @@ Vue.component('crud-table', {
     },
     // ---- 内部事件处理 ----
     onSelectionChange: function (val) {
+      var self = this
+      var idKey = self.rowIdKey || 'id'
       this.selectedRows = val
-      var ids = val.map(function (row) { return row.id })
+      var ids = val.map(function (row) { return row[idKey] })
       this.$emit('selection-change', { rows: val, ids: ids, count: val.length })
     },
     onSortChange: function (sortInfo) {
@@ -776,6 +788,17 @@ Vue.component('crud-dialog', {
 // ============================================================
 // 兼容旧版：保留 window 上的渲染函数（已有页面无需修改）
 // ============================================================
+// 修改点：F6 转义展示文本，防止配置值注入 HTML（代码表达式 onClick/model 等属受信配置不转义）
+function escapeHtml(s) {
+  if (s === null || s === undefined) return ''
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 window.renderStatCards = function (cards) {
   return cards.map(function (card) {
     var cardClass = 'stat-card'
@@ -798,9 +821,9 @@ window.renderStatCards = function (cards) {
     }
 
     return '<div class="' + cardClass + '"' + attrs + '>' +
-      '<div class="stat-icon">' + (card.icon || '') + '</div>' +
-      '<div class="stat-label">' + (card.label || '') + '</div>' +
-      '<div class="stat-value">' + (card.value != null ? card.value : 0) + '</div>' +
+      '<div class="stat-icon">' + escapeHtml(card.icon) + '</div>' +
+      '<div class="stat-label">' + escapeHtml(card.label) + '</div>' +
+      '<div class="stat-value">' + escapeHtml(card.value != null ? card.value : 0) + '</div>' +
       '</div>'
   }).join('')
 }
@@ -818,16 +841,16 @@ window.renderTableBar = function (config) {
     var onChange = item.onChange || 'handleQuery'
 
     if (item.type === 'input') {
-      html += '<el-input v-model="' + item.model + '" placeholder="' + (item.placeholder || '') +
+      html += '<el-input v-model="' + item.model + '" placeholder="' + escapeHtml(item.placeholder) +
         '" style="width:' + width + '" clearable @keyup.enter.native="' + onEnter + '">' +
         '<i slot="prefix" class="el-input__icon el-icon-search" style="cursor:pointer" @click="' + onClick + '"></i>' +
         '</el-input>'
     } else if (item.type === 'select') {
-      html += '<el-select v-model="' + item.model + '" placeholder="' + (item.placeholder || '') +
+      html += '<el-select v-model="' + item.model + '" placeholder="' + escapeHtml(item.placeholder) +
         '" style="width:' + width + ';margin-left:10px;" clearable @change="' + onChange + '">'
       if (item.options && item.options.length) {
         item.options.forEach(function (opt) {
-          html += '<el-option label="' + (opt.label || '') + '" value="' + (opt.value != null ? opt.value : '') + '"></el-option>'
+          html += '<el-option label="' + escapeHtml(opt.label) + '" value="' + escapeHtml(opt.value != null ? opt.value : '') + '"></el-option>'
         })
       }
       html += '</el-select>'
@@ -847,8 +870,8 @@ window.renderTableBar = function (config) {
   if (actions.length > 0) {
     html += '<div class="tableLab">'
     actions.forEach(function (action) {
-      var iconAttr = action.icon ? ' icon="' + action.icon + '"' : ''
-      html += '<el-button type="' + (action.type || 'primary') + '" size="small" @click="' + action.onClick + '"' + iconAttr + '>' + (action.text || '') + '</el-button>'
+      var iconAttr = action.icon ? ' icon="' + escapeHtml(action.icon) + '"' : ''
+      html += '<el-button type="' + (action.type || 'primary') + '" size="small" @click="' + action.onClick + '"' + iconAttr + '>' + escapeHtml(action.text) + '</el-button>'
     })
     html += '</div>'
   }
@@ -859,40 +882,50 @@ window.renderTableBar = function (config) {
 
 
 // ============================================================
-// 全局工具 Mixin：自动注入所有页面通用方法（格式化 / 状态 / 预览）
-// 仅含纯函数，不与任何组件内部方法重名，安全全局注入
-// 各页面可直接使用，无需再各自定义 formatMoney / 状态映射等
+// 全局工具：单一来源集中在 window.RgFormat，新代码可直接引用
+// （如 window.RgFormat.formatMoney），无需依赖全局 mixin
 // ============================================================
+window.RgFormat = {
+  /** 金额格式化：保留两位小数，空值返回 0.00 */
+  formatMoney: function (val) {
+    if (val === null || val === undefined || val === '') return '0.00'
+    var n = Number(val)
+    return isNaN(n) ? '0.00' : n.toFixed(2)
+  },
+  /** 日期格式化：截取 yyyy-MM-dd，空值返回 '-' */
+  formatDate: function (val) {
+    if (!val) return '-'
+    var s = String(val)
+    return s.length >= 10 ? s.substring(0, 10) : s
+  },
+  /** 时间格式化：原样返回，空值返回 '-' */
+  formatDateTime: function (val) {
+    return val ? String(val) : '-'
+  },
+  /** 状态中文：mapName 对应 ReggieStatus.register 注册的名称 */
+  rgStatusText: function (mapName, status) {
+    return window.ReggieStatus ? window.ReggieStatus.text(mapName, status) : ''
+  },
+  /** 状态标签类型：返回 Element tag type（warning/primary/...） */
+  rgStatusTag: function (mapName, status) {
+    return window.ReggieStatus ? window.ReggieStatus.tag(mapName, status) : 'info'
+  },
+  /** 构造 el-image 的 preview-src-list（避免各页重复拼接数组） */
+  rgPreview: function (url) {
+    return url ? [url] : []
+  }
+}
+
+// 修改点：F7 全局 mixin 委托到 window.RgFormat（保持 51 页 this.formatXxx 兼容，
+// 同时统一逻辑来源，后续可逐步迁移到 window.RgFormat 并移除此 mixin 以降低全局污染）
 Vue.mixin({
   methods: {
-    /** 金额格式化：保留两位小数，空值返回 0.00 */
-    formatMoney: function (val) {
-      if (val === null || val === undefined || val === '') return '0.00'
-      var n = Number(val)
-      return isNaN(n) ? '0.00' : n.toFixed(2)
-    },
-    /** 日期格式化：截取 yyyy-MM-dd，空值返回 '-' */
-    formatDate: function (val) {
-      if (!val) return '-'
-      var s = String(val)
-      return s.length >= 10 ? s.substring(0, 10) : s
-    },
-    /** 时间格式化：原样返回，空值返回 '-' */
-    formatDateTime: function (val) {
-      return val ? String(val) : '-'
-    },
-    /** 状态中文：mapName 对应 ReggieStatus.register 注册的名称 */
-    rgStatusText: function (mapName, status) {
-      return window.ReggieStatus ? window.ReggieStatus.text(mapName, status) : ''
-    },
-    /** 状态标签类型：返回 Element tag type（warning/primary/...） */
-    rgStatusTag: function (mapName, status) {
-      return window.ReggieStatus ? window.ReggieStatus.tag(mapName, status) : 'info'
-    },
-    /** 构造 el-image 的 preview-src-list（避免各页重复拼接数组） */
-    rgPreview: function (url) {
-      return url ? [url] : []
-    }
+    formatMoney: function (val) { return window.RgFormat.formatMoney(val) },
+    formatDate: function (val) { return window.RgFormat.formatDate(val) },
+    formatDateTime: function (val) { return window.RgFormat.formatDateTime(val) },
+    rgStatusText: function (mapName, status) { return window.RgFormat.rgStatusText(mapName, status) },
+    rgStatusTag: function (mapName, status) { return window.RgFormat.rgStatusTag(mapName, status) },
+    rgPreview: function (url) { return window.RgFormat.rgPreview(url) }
   }
 })
 

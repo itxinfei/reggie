@@ -223,7 +223,7 @@
         },
         created() {
           this.loadFilterOptions()
-          this.fetchData()
+          this.fetchData(true)
           try {
             const userInfo = localStorage.getItem('userInfo')
             if (userInfo) {
@@ -266,32 +266,35 @@
                   this.loadFilterOptions()
               }
           },
-          async fetchData() {
-            // 修改点：传递 activeFilter 状态参数到后端
-            const params = {
-              page: this.page,
-              pageSize: this.pageSize,
-              name: this.input ? this.input : undefined
-            }
-            if (this.activeFilter) { params.status = this.activeFilter }
+        async fetchData(reloadStats = true) {
+          // 修改点：传递 activeFilter 状态参数到后端
+          const params = {
+            page: this.page,
+            pageSize: this.pageSize,
+            name: this.input ? this.input : undefined
+          }
+          if (this.activeFilter) { params.status = this.activeFilter }
 
-            // 并行加载员工列表和统计数据
-            const [memberRes, statsRes] = await Promise.all([
-              getMemberList(params),
-              this.loadMemberStats()
-            ])
+          // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+          const requests = [getMemberList(params)]
+          if (reloadStats) { requests.push(this.loadMemberStats()) }
+          const results = await Promise.all(requests)
+          const memberRes = results[0]
 
-            // 处理员工列表数据
-            if (String(memberRes.code) === '1') {
-              this.tableData = memberRes.data.records || []
-              this.counts = memberRes.data.total
-            }
+          // 处理员工列表数据
+          if (String(memberRes.code) === '1') {
+            this.tableData = memberRes.data.records || []
+            this.counts = memberRes.data.total
+          }
 
+          if (reloadStats) {
+            const statsRes = results[1]
             // 处理统计数据
             if (statsRes && String(statsRes.code) === '1') {
               this.stats = statsRes.data || this.stats
             }
-          },
+          }
+        },
           // 加载员工统计数据
           // 修改点：改为调用后端 /employee/stats 聚合接口（count 查询），避免 pageSize:1000 全量拉取与截断风险
           async loadMemberStats() {
@@ -309,7 +312,7 @@
             // 修改点：搜索时清空卡片筛选状态
             this.activeFilter = ''
             this.page = 1;
-            this.fetchData();
+            this.fetchData(false);
           },
           // 修改点：<table-bar> 组件 action 按钮事件处理
           onTableAction(payload) {
@@ -321,14 +324,14 @@
             this.input = ''
             this.activeFilter = ''
             this.page = 1
-            this.fetchData()
+            this.fetchData(false)
           },
           // 修改点：stat-cards 组件卡片点击事件（替代原 filterBy）
           onCardClick(payload) {
             this.activeFilter = payload.activeKey
             this.input = ''
             this.page = 1
-            this.fetchData()
+            this.fetchData(false)
           },
           // 打开员工弹窗
           addMemberHandle (st) {

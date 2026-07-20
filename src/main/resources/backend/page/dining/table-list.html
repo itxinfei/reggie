@@ -299,15 +299,22 @@
       },
       created: function() { this.init(); this.loadAreaList() },
       methods: {
-        init: function() {
+        // 修改点：F9 性能 — 列表与全局统计分离，reloadStats=true 才重算（默认 true，分页传 false）
+        init: function(reloadStats) {
+          if (reloadStats === undefined) reloadStats = true
           var self = this
           var params = { page: this.page, pageSize: this.pageSize,
             name: self.lastSearch.name || undefined, areaId: self.lastSearch.areaId || undefined, status: self.lastSearch.status || undefined }
           self.loading = true
-          Promise.all([tablePage(params), self.loadTableStats(params)]).then(function(results) {
-            var tableRes = results[0]; var statsRes = results[1]
+          var requests = [tablePage(params)]
+          if (reloadStats) { requests.push(self.loadTableStats(params)) }
+          Promise.all(requests).then(function(results) {
+            var tableRes = results[0]
             if (String(tableRes.code) === '1') { self.tableData = tableRes.data.records || []; self.counts = tableRes.data.total || 0 }
-            if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+            if (reloadStats) {
+              var statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+            }
           }).catch(function(err) { self.$message.error('加载失败：' + (err.message || err)) }).finally(function() { self.loading = false })
         },
         loadTableStats: function(params) {
@@ -414,13 +421,13 @@
               }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)) })
             })
         },
-        handleSizeChange: function(val) { this.pageSize = val; this.init() },
-        handleCurrentChange: function(val) { this.page = val; this.init() },
+        handleSizeChange: function(val) { this.pageSize = val; this.init(false) },
+        handleCurrentChange: function(val) { this.page = val; this.init(false) },
         // 修改点：表格视图分页交由 crud-table 统一管理（@page-change 同时携带页码与每页条数）
         onCrudPageChange: function(p) {
           this.page = p.page
           if (p.pageSize) this.pageSize = p.pageSize
-          this.init()
+          this.init(false)
         }
       }
     })

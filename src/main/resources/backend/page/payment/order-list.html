@@ -324,16 +324,17 @@
         statsCards: function() {
           var self = this
           return [
-            { key: '今日', icon: '&#165;', label: '今日支付订单', value: self.stats.todayPayments, color: 'primary', clickable: true, active: self.activeFilter === '今日' },
-            { key: '成功', icon: '&#10003;', label: '支付成功', value: self.stats.successPayments, color: 'success', clickable: true, active: self.activeFilter === '成功' },
-            { key: '待支付', icon: '&#8987;', label: '待支付', value: self.stats.pendingPayments, color: 'warning', clickable: true, active: self.activeFilter === '待支付' },
-            { key: '失败', icon: '&#10007;', label: '支付失败', value: self.stats.failedPayments, color: 'danger', clickable: true, active: self.activeFilter === '失败' }
+            { key: '今日', icon: '💰', label: '今日支付订单', value: self.stats.todayPayments, color: 'primary', clickable: true, active: self.activeFilter === '今日' },
+            { key: '成功', icon: '✅', label: '支付成功', value: self.stats.successPayments, color: 'success', clickable: true, active: self.activeFilter === '成功' },
+            { key: '待支付', icon: '⏳', label: '待支付', value: self.stats.pendingPayments, color: 'warning', clickable: true, active: self.activeFilter === '待支付' },
+            { key: '失败', icon: '❌', label: '支付失败', value: self.stats.failedPayments, color: 'danger', clickable: true, active: self.activeFilter === '失败' }
           ]
         }
       },
       created: function() { this.init() },
       methods: {
-        async init() {
+        // 修改点：F9 性能 — 列表与全局统计分离，reloadStats=true 才重算（分页传 false）
+        async init(reloadStats = true) {
           this.loading = true
           var self = this
           var params = {
@@ -344,14 +345,18 @@
             beginTime: self.lastSearch.beginTime || undefined,
             endTime: self.lastSearch.endTime || undefined
           }
-          var results = await Promise.all([paymentPage(params), self.loadPaymentStats()])
+          var requests = [paymentPage(params)]
+          if (reloadStats) { requests.push(self.loadPaymentStats()) }
+          var results = await Promise.all(requests)
           var paymentRes = results[0]
-          var statsRes = results[1]
           if (String(paymentRes.code) === '1') {
             self.tableData = (paymentRes.data.records || []).map(function(r) { return normalizePayment(r) })
             self.counts = paymentRes.data.total
           }
-          if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+          if (reloadStats) {
+            var statsRes = results[1]
+            if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+          }
           self.loading = false
         },
         async loadPaymentStats() {
@@ -402,8 +407,8 @@
           this.page = 1
           this.init()
         },
-        onPageChange: function(payload) { this.page = payload.page; this.init() },
-        onSizeChange: function(payload) { this.pageSize = payload.pageSize; this.init() },
+        onPageChange: function(payload) { this.page = payload.page; this.init(false) },
+        onSizeChange: function(payload) { this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload; this.page = 1; this.init(false) },
         // 修改点：statusTagType 支持中英文双输入（normalizePayment 后 status 已转中文）
         statusTagType: function(status) {
           if (!status) return ''
@@ -438,7 +443,7 @@
           if (!self.refundForm.amount || self.refundForm.amount <= 0) { self.$message.error('请输入有效的退款金额'); return }
           if (self.refundForm.amount > self.refundForm.maxAmount) { self.$message.error('退款金额不能超过支付金额'); return }
           if (!self.refundForm.reason) { self.$message.error('请输入退款原因'); return }
-          ReggieUI.confirm('确认退款 &#165;' + self.refundForm.amount + '?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确认退款 ¥' + self.refundForm.amount + '?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               // 修改点：id → paymentOrderId，与后端 RefundRequestDTO 字段对齐
               paymentRefund({ paymentOrderId: self.refundForm.id, amount: self.refundForm.amount, reason: self.refundForm.reason }).then(function(res) {

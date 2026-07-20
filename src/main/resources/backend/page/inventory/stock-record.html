@@ -91,6 +91,8 @@
             { prop: 'quantity', label: '数量', width: 100, align: 'center', type: 'number' },
             { prop: 'unitPrice', label: '单价', width: 100, align: 'right', slot: true, type: 'money' },
             { prop: 'totalAmount', label: '总金额', width: 120, align: 'right', slot: true, type: 'money' },
+            { prop: 'bizId', label: '关联业务', width: 100, align: 'center' },
+            { prop: 'operator', label: '操作员', width: 100, align: 'center' },
             { prop: 'remark', label: '备注', minWidth: 150, showOverflowTooltip: true },
             { prop: 'createdTime', label: '操作时间', width: 170, align: 'center' }
           ],
@@ -104,7 +106,7 @@
         }
       },
       created() {
-        this.fetchData()
+        this.fetchData(true)
         this.loadMaterialOptions()
       },
       computed: {
@@ -120,8 +122,8 @@
         }
       },
       methods: {
-        // 修改点：统一方法名 fetchData（供 crud-table 分页事件调用）
-        async fetchData() {
+        // 修改点：统一方法名 fetchData（供 crud-table 分页事件调用）；reloadStats=true 才重算全局统计
+        async fetchData(reloadStats = true) {
           const params = { page: this.page, pageSize: this.pageSize }
           if (this.input.materialId) params.materialId = this.input.materialId
           if (this.input.type) params.type = this.input.type
@@ -130,11 +132,11 @@
             params.endDate = this.input.dateRange[1]
           }
 
-          // 并行加载列表和统计
-          const [pageRes, statsRes] = await Promise.all([
-            stockRecordPage(params),
-            this.loadStats()
-          ])
+          // 修改点：F9 性能 — 列表只查当前页，全局统计仅 reloadStats 时重算
+          var requests = [stockRecordPage(params)]
+          if (reloadStats) { requests.push(this.loadStats()) }
+          var results = await Promise.all(requests)
+          var pageRes = results[0]
 
           if (String(pageRes.code) === '1') {
             this.tableData = pageRes.data.records || []
@@ -143,8 +145,11 @@
             ReggieUI.error(pageRes.msg || '操作失败')
           }
 
-          if (statsRes && String(statsRes.code) === '1') {
-            this.stats = statsRes.data || this.stats
+          if (reloadStats) {
+            var statsRes = results[1]
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
+            }
           }
         },
         // 加载统计
@@ -179,25 +184,25 @@
         },
         handleQuery() {
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         },
         reset() {
           this.input.materialId = ''
           this.input.type = ''
           this.input.dateRange = ''
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         },
         // 修改点：分页处理改为 crud-table 事件驱动（参考 supplier-list 已验证模式）
         onPageChange({ page, pageSize }) {
           this.page = page
           this.pageSize = pageSize
-          this.fetchData()
+          this.fetchData(false)
         },
         onSizeChange(val) {
           this.pageSize = val
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         }
       }
     })

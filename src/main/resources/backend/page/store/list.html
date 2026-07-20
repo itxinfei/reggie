@@ -93,25 +93,25 @@
                     :default-sort="{prop: 'createTime', order: 'descending'}"
                     style="width:100%">
                     <el-table-column type="selection" width="45" fixed="left"></el-table-column>
-                    <el-table-column label="序号" type="index" width="55" align="center"></el-table-column>
-                    <el-table-column prop="storeName" label="门店名称" min-width="150" sortable="custom">
+                    <el-table-column label="序号" type="index" width="46" align="center"></el-table-column>
+                    <el-table-column prop="storeName" label="门店名称" min-width="110" sortable="custom" show-overflow-tooltip>
                         <template slot-scope="{row}">
                             <el-tag :type="storeTypeTag(row.storeType)" size="mini" effect="plain">{{ storeTypeName(row.storeType) }}</el-tag>
                             <span style="margin-left:6px; font-weight:500;">{{ row.storeName }}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="storeCode" label="门店编码" width="110" sortable="custom"></el-table-column>
-                    <el-table-column prop="contactPerson" label="联系人" width="90"></el-table-column>
-                    <el-table-column prop="contactPhone" label="联系电话" width="120"></el-table-column>
-                    <el-table-column prop="address" label="地址" min-width="150" show-overflow-tooltip></el-table-column>
-                    <el-table-column label="外卖/堂食" width="100" align="center">
+                    <el-table-column prop="storeCode" label="门店编码" width="88" sortable="custom" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="contactPerson" label="联系人" width="74" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="contactPhone" label="联系电话" width="100" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="address" label="地址" min-width="110" show-overflow-tooltip></el-table-column>
+                    <el-table-column label="外卖/堂食" width="80" align="center">
                         <template slot-scope="{row}">
                             <span :style="{color: row.isDeliveryEnabled == 1 ? 'var(--color-success)' : 'var(--el-border-base)'}">&#128666;</span>
                             <span style="margin:0 2px;">/</span>
                             <span :style="{color: row.isDineInEnabled == 1 ? 'var(--el-color-primary)' : 'var(--el-border-base)'}">&#127869;</span>
                         </template>
                     </el-table-column>
-                    <el-table-column label="状态" width="80" align="center">
+                    <el-table-column label="状态" width="60" align="center">
                         <template slot-scope="{row}">
                             <el-switch
                                 v-model="row.status"
@@ -123,20 +123,30 @@
                             </el-switch>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="todayOrders" label="今日订单" width="90" align="center" sortable="custom">
+                    <el-table-column prop="todayOrders" label="今日订单" width="70" align="center" sortable="custom">
                         <template slot-scope="{row}">
                             <span class="order-count">{{ row.todayOrders || 0 }}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="todayAmount" label="今日营收" width="110" align="right" sortable="custom">
+                    <el-table-column prop="todayAmount" label="今日营收" width="90" align="right" sortable="custom">
                         <template slot-scope="{row}">
                             <span class="amount-highlight">&yen;{{ fmtAmount(row.todayAmount) }}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="createTime" label="创建时间" width="160" sortable="custom">
-                        <template slot-scope="{row}">{{ row.createTime ? row.createTime.substring(0,10) : '' }}</template>
+                    <el-table-column label="数据完善度" width="128" sortable="custom" prop="dataCompleteRate">
+                        <template slot-scope="{row}">
+                            <el-progress
+                                :percentage="toNumber(row.dataCompleteRate)"
+                                :stroke-width="14"
+                                :text-inside="true"
+                                :color="progressColor(row.dataCompleteRate)">
+                            </el-progress>
+                        </template>
                     </el-table-column>
-                    <el-table-column label="操作" width="200" fixed="right" align="center">
+                    <el-table-column prop="createTime" label="创建时间" width="126" sortable="custom">
+                        <template slot-scope="{row}">{{ formatDate(row.createTime) }}</template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="178" fixed="right" align="center">
                         <template slot-scope="{row}">
                             <el-button type="text" size="mini" icon="el-icon-edit" @click="openEditDialog(row)">编辑</el-button>
                             <el-button type="text" size="mini" icon="el-icon-switch-button" @click="switchToStore(row)">切换</el-button>
@@ -149,10 +159,10 @@
                 <el-pagination
                     v-if="pagination.total > 0"
                     style="margin-top:16px; text-align:right;"
-                    :current-page="pagination.current"
+                    :current-page="Number(pagination.current)"
                     :page-sizes="[10, 20, 50, 100]"
-                    :page-size="pagination.size"
-                    :total="pagination.total"
+                    :page-size="Number(pagination.size)"
+                    :total="Number(pagination.total)"
                     layout="total, sizes, prev, pager, next, jumper"
                     @size-change="onPageSizeChange"
                     @current-change="onPageChange">
@@ -305,9 +315,10 @@
             :closable="false"
             style="margin-top:14px;">
         </el-alert>
-        <p v-if="syncResult && syncResult.errors && syncResult.errors.length > 0"
-           v-for="(err, i) in (syncResult.errors || [])" :key="i"
-           style="font-size:12px; color:var(--color-danger); margin-top:4px;">{{ err }}</p>
+        <template v-if="syncResult && syncResult.errors && syncResult.errors.length > 0">
+          <p v-for="(err, i) in syncResult.errors" :key="i"
+             style="font-size:12px; color:var(--color-danger); margin-top:4px;">{{ err }}</p>
+        </template>
         <span slot="footer" class="dialog-footer">
             <el-button size="medium" @click="syncDialogVisible = false">关 闭</el-button>
         </span>
@@ -383,10 +394,11 @@
             ]
         }
     },
-    created: function() { this.loadData(); },
+    created: function() { this.loadData(true); },
     methods: {
         // ========== 数据加载 ==========
-        loadData: function() {
+        loadData: function(reloadStats) {
+            if (reloadStats === undefined) { reloadStats = true; }
             var self = this;
             self.loading = true;
             var params = {
@@ -404,13 +416,18 @@
 
             pageStores(params).then(function(res) {
                 if (res && res.code === 1 && res.data) {
-                    self.tableData = res.data.records || [];
-                    self.pagination.total = res.data.total || 0;
-                    self.pagination.pages = res.data.pages || 0;
-                    self.pagination.current = res.data.current || 1;
-                    self.pagination.size = res.data.size || 10;
-                    // 计算统计
-                    self.updateStats();
+                    self.tableData = (res.data.records || []).map(function(r) {
+                        // 修改点：前端补全"数据完善度"百分比（0-100 整数），供 el-progress 展示
+                        r.dataCompleteRate = self.calcCompleteRate(r);
+                        return r;
+                    });
+                    // 修改点：分页字段强制 Number，避免后端返回字符串导致 ElPagination 类型校验失败
+                    self.pagination.total = Number(res.data.total) || 0;
+                    self.pagination.pages = Number(res.data.pages) || 0;
+                    self.pagination.current = Number(res.data.current) || 1;
+                    self.pagination.size = Number(res.data.size) || 10;
+                    // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+                    if (reloadStats) { self.updateStats(); }
                 }
             }).catch(function(err) {
                 self.$message.error('加载门店数据失败');
@@ -434,20 +451,20 @@
         onCardClick: function(payload) {
             this.activeFilter = payload.activeKey
             this.pagination.current = 1
-            this.loadData()
+            this.loadData(false)
         },
         // ========== 搜索 ==========
         doSearch: function() {
             this.pagination.current = 1;
             this.activeFilter = '';
-            this.loadData();
+            this.loadData(false);
         },
         resetSearch: function() {
             this.search = { keyword: '', storeType: null, status: null };
             this.sort = { sortBy: 'createTime', sortOrder: 'desc' };
             this.activeFilter = '';
             this.pagination.current = 1;
-            this.loadData();
+            this.loadData(false);
         },
 
         // ========== 排序 ==========
@@ -458,18 +475,18 @@
             } else {
                 this.sort = { sortBy: 'createTime', sortOrder: 'desc' };
             }
-            this.loadData();
+            this.loadData(false);
         },
 
         // ========== 分页 ==========
         onPageChange: function(page) {
             this.pagination.current = page;
-            this.loadData();
+            this.loadData(false);
         },
         onPageSizeChange: function(size) {
             this.pagination.size = size;
             this.pagination.current = 1;
-            this.loadData();
+            this.loadData(false);
         },
 
         // ========== 选择 ==========
@@ -683,6 +700,48 @@
             if (val === null || val === undefined) return '0.00';
             if (typeof val === 'number') return val.toFixed(2);
             return Number(val).toFixed(2);
+        },
+        // 修改点：统一类型转换工具，解决组件属性类型校验失败问题
+        // 将任意值（字符串/数字/空）转换为 Number；ElProgress.percentage 必须 Number
+        toNumber: function(val) {
+            var n = Number(val);
+            if (isNaN(n)) return 0;
+            return n;
+        },
+        // 修改点：创建时间安全格式化，兼容后端返回的多种形态
+        // 后端 LocalDateTime(t.create_time) 经 Jackson 序列化可能为：字符串 / 时间戳数字 / 数组([年,月,日,...]) / 对象
+        // 直接调用 substring 在非字符串形态下会抛 "row.createTime.substring is not a function"，此处统一转换
+        formatDate: function(val) {
+            if (val === null || val === undefined || val === '') return '';
+            if (typeof val === 'string') return val.substring(0, 10);
+            if (typeof val === 'number') return new Date(val).toISOString().substring(0, 10);
+            if (Array.isArray(val)) {
+                var p = function(n) { return (Number(n) < 10 ? '0' : '') + Number(n); };
+                if (val.length >= 3) return val[0] + '-' + p(val[1]) + '-' + p(val[2]);
+                return '';
+            }
+            return String(val).substring(0, 10);
+        },
+        // 修改点：el-progress 颜色随完善度变化（绿/橙/灰）
+        progressColor: function(val) {
+            var n = this.toNumber(val);
+            if (n >= 80) return '#67C23A';
+            if (n >= 50) return '#E6A23C';
+            return '#909399';
+        },
+        // 修改点：根据字段填写情况计算数据完善度（0-100 整数），驱动 el-progress
+        calcCompleteRate: function(row) {
+            var fields = [
+                row.storeName, row.storeCode, row.contactPerson, row.contactPhone,
+                row.address, row.businessHours, row.deliveryRadius,
+                row.minDeliveryAmount, row.deliveryFee,
+                row.isDeliveryEnabled, row.isDineInEnabled
+            ];
+            var filled = 0;
+            for (var i = 0; i < fields.length; i++) {
+                if (fields[i] !== null && fields[i] !== undefined && fields[i] !== '') filled++;
+            }
+            return Math.round((filled / fields.length) * 100);
         },
         parseBusinessHours: function(val) {
             if (!val) return null;

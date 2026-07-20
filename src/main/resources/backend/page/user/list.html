@@ -175,6 +175,8 @@
       created() {
         this.loadFilterOptions()
         this.fetchData()
+        // 修改点：F9 — 全局统计仅初始化加载一次，避免翻页/筛选重复请求
+        this.loadUserStats()
       },
       mounted() {
       },
@@ -246,26 +248,25 @@
         // 初始化加载
         async fetchData() {
           this.loading = true
-          // 并行加载用户列表和统计数据
-          const [userRes, statsRes] = await Promise.all([
-            this.getUserPage(),
-            this.loadUserStats()
-          ])
-
-          // 处理用户列表数据
-          if (String(userRes.code) === '1') {
-            this.tableData = userRes.data.records || []
-            this.counts = userRes.data.total
-          } else {
-            ReggieUI.error(userRes.msg || '查询失败')
+          try {
+            // 修改点：F9 性能 — 列表查询与全局统计分离，此处仅加载分页列表
+            const userRes = await this.getUserPage()
+            if (String(userRes.code) === '1') {
+              this.tableData = userRes.data.records || []
+              this.counts = userRes.data.total
+            } else {
+              ReggieUI.error(userRes.msg || '查询失败')
+            }
+          } catch (err) {
+            ReggieUI.error('请求失败：' + err)
+          } finally {
+            this.loading = false
           }
+        },
 
-          // 处理统计数据
-          if (statsRes && String(statsRes.code) === '1') {
-            this.stats = statsRes.data || this.stats
-          }
-
-          this.loading = false
+        // 修改点：F9 性能 — 列表 + 全局统计一起刷新，仅用于数据突变（启用/禁用、删除）后
+        async refreshAll() {
+          await Promise.all([this.fetchData(), this.loadUserStats()])
         },
 
         // 获取用户分页列表（优先使用 lastSearch，回退到 input）
@@ -343,7 +344,7 @@
             if (String(res.code) === '1') {
               ReggieUI.success(res.msg || '操作成功')
               this.handleStatusClose()
-              this.fetchData()
+              this.refreshAll()
             } else {
               ReggieUI.error(res.msg || '操作失败')
             }
@@ -372,7 +373,7 @@
               })
               if (String(res.code) === '1') {
                 ReggieUI.success('删除成功')
-                this.fetchData()
+                this.refreshAll()
               } else {
                 ReggieUI.error(res.msg || '删除失败')
               }

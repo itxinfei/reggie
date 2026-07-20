@@ -8,8 +8,10 @@
   <link rel="shortcut icon" href="../../favicon.ico">
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/common.css">
+  <!-- 修改点：补设计令牌（全站后台页均已加载，登录页此前漏链，导致 login.css 内 var(--color-brand-500)/var(--color-white) 等令牌 undefined、配色错乱） -->
+  <link rel="stylesheet" href="../../styles/tokens.css">
   <link rel="stylesheet" href="../../styles/login.css">
-  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet" />
+  <link href="../../plugins/remixicon/remixicon.css" rel="stylesheet" />
 </head>
 
 <body class="login-page">
