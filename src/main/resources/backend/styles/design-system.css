@@ -164,34 +164,63 @@
   color: var(--text-primary);
 }
 
-/* ========== 5. 面包屑导航（a11y：nav[aria-label]） ========== */
-.ds-breadcrumb {
+/* ========== 5. 面包屑导航 ========== */
+.breadcrumb {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-size-sm);
-  color: var(--text-muted);
-  margin-bottom: var(--space-3);
+  gap: 6px;
+  padding: 6px 0 var(--space-4) 0;
+  margin-bottom: var(--space-6);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  border-bottom: 1px solid var(--border-subtle);
   flex-wrap: wrap;
 }
-.ds-breadcrumb__item { color: var(--text-secondary); }
-.ds-breadcrumb__item--link {
-  cursor: pointer;
+
+/* 通行：索引页 .crumb-item / 静态页 .breadcrumb__item 统一 */
+.crumb-item,
+.breadcrumb__item {
   color: var(--text-secondary);
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast), background var(--transition-fast);
+  cursor: default;
+  padding: 2px 8px;
+  margin: -2px -8px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
 }
-.ds-breadcrumb__item--link:hover { color: var(--color-brand-600); }
-.ds-breadcrumb__item--current {
+
+/* 可点击项 */
+.crumb-item.clickable,
+a.breadcrumb__item,
+.breadcrumb__item[href] {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.crumb-item.clickable:hover,
+a.breadcrumb__item:hover,
+.breadcrumb__item[href]:hover {
+  color: var(--color-brand-700);
+  background: var(--color-brand-50);
+}
+
+/* 当前项 */
+.crumb-current,
+.breadcrumb__item--current {
   color: var(--text-primary);
   font-weight: var(--font-weight-semibold);
+  padding: 2px 8px;
+  margin: -2px -8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
 }
-.ds-breadcrumb__sep {
+
+/* 分隔符 */
+.crumb-sep,
+.breadcrumb__sep {
   color: var(--color-gray-300);
   font-size: var(--font-size-xs);
+  margin: 0 2px;
   user-select: none;
 }
 

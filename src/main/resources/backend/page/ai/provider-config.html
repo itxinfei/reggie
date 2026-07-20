@@ -7,20 +7,15 @@
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
     <link rel="stylesheet" href="../../styles/common.css" />
     <link rel="stylesheet" href="../../styles/page.css" />
-    <!-- 修改点：样式已提取至独立CSS文件 -->
+    <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+    <link rel="stylesheet" href="../../styles/components.css" />
+    <link rel="stylesheet" href="../../styles/tokens.css" />
+    <link rel="stylesheet" href="../../styles/design-system.css" />
     <link rel="stylesheet" href="../../styles/ai-provider.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/design-system.css" />
 </head>
 <body>
 <div class="dashboard-container" id="provider-app">
     <div class="container">
-      <!-- 面包屑导航 -->
-      <nav class="ds-breadcrumb" aria-label="面包屑导航">
-        <span class="ds-breadcrumb__item">首页</span>
-        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
-        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">AI模型配置</span>
-      </nav>
 
         <!-- 当前激活供应商 -->
         <div class="active-provider-card" v-if="activeProvider">

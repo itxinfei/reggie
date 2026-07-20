@@ -45,12 +45,6 @@
 <div id="app">
     <div class="dashboard-container">
         <div class="container">
-          <!-- 面包屑导航 -->
-          <nav class="ds-breadcrumb" aria-label="面包屑导航">
-            <span class="ds-breadcrumb__item">首页</span>
-            <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
-            <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">门店管理</span>
-          </nav>
             <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
             <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -146,7 +140,7 @@
                     <el-table-column prop="createTime" label="创建时间" width="126" sortable="custom">
                         <template slot-scope="{row}">{{ formatDate(row.createTime) }}</template>
                     </el-table-column>
-                    <el-table-column label="操作" width="178" fixed="right" align="center">
+                    <el-table-column label="操作" width="178" align="center">
                         <template slot-scope="{row}">
                             <el-button type="text" size="mini" icon="el-icon-edit" @click="openEditDialog(row)">编辑</el-button>
                             <el-button type="text" size="mini" icon="el-icon-switch-button" @click="switchToStore(row)">切换</el-button>

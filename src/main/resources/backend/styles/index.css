@@ -435,6 +435,49 @@ html, body {
   flex-shrink: 0;
 }
 
+/* ---------- 顶栏面包屑覆写（design-system.css 的页面级样式在此不适用） ---------- */
+.topbar .breadcrumb {
+  margin-bottom: 0;
+  padding: 0;
+  border-bottom: none;
+  font-size: 14px;
+}
+
+.topbar .crumb-item,
+.topbar .crumb-current {
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  transition: color 0.2s, background 0.2s;
+  cursor: default;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.topbar .crumb-current {
+  color: var(--text-primary);
+  font-weight: 600;
+  background: var(--bg-subtle);
+}
+
+.topbar .crumb-item.clickable {
+  cursor: pointer;
+}
+
+.topbar .crumb-item.clickable:hover {
+  color: #c99200;
+  background: #fffbeb;
+}
+
+.topbar .crumb-sep {
+  color: var(--color-gray-300);
+  font-size: 12px;
+  line-height: 1;
+  user-select: none;
+  margin: 0 2px;
+}
+
 /* ---------- 汉堡按钮 ---------- */
 .hamburger-btn {
   display: flex;

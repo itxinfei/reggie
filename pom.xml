@@ -206,7 +206,7 @@
                         <configuration>
                             <rules>
                                 <requireJavaVersion>
-                                    <version>[1.8,)</version>
+                                    <version>[1.8,1.8]</version>
                                     <message>
                                         本项目强制要求 JDK 1.8，检测到当前 JDK 版本为 ${java.version}。
                                         请使用 JDK 1.8 进行编译和运行。
@@ -245,6 +245,29 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.4.1</version>
+            </plugin>
+
+            <!-- Animal Sniffer：字节码级别检查是否使用了 JDK 8 不存在的 API（如 String.isBlank()、List.of() 等） -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>animal-sniffer-maven-plugin</artifactId>
+                <version>1.22</version>
+                <executions>
+                    <execution>
+                        <id>check-jdk8-compatibility</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <phase>verify</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <signature>
+                        <groupId>org.codehaus.mojo.signature</groupId>
+                        <artifactId>java18</artifactId>
+                        <version>1.0</version>
+                    </signature>
+                </configuration>
             </plugin>
 
             <!-- JaCoCo 测试覆盖率 -->

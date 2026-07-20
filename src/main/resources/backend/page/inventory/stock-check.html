@@ -26,12 +26,6 @@
 <body>
   <div class="dashboard-container" id="stock-check-app">
     <div class="container">
-      <!-- 面包屑导航 -->
-      <nav class="ds-breadcrumb" aria-label="面包屑导航">
-        <span class="ds-breadcrumb__item">首页</span>
-        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
-        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">库存盘点</span>
-      </nav>
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
       <table-bar

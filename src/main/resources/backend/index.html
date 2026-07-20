@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="plugins/element-ui/index.css" />
     <link rel="stylesheet" href="styles/common.css" />
     <link rel="stylesheet" href="styles/index.css" />
+    <link rel="stylesheet" href="styles/design-system.css" />
     <!-- Remix Icon v4.6 — 2700+ 免费商用图标，替代原 iconfont（仅7个图标） -->
     <link href="plugins/remixicon/remixicon.css" rel="stylesheet" />
     <style>
@@ -23,6 +24,52 @@
       .app-main .divTmp{
         width: 100%;
         height: 100%;
+      }
+      /* 修改点：顶栏面包屑直接内嵌，避免外部 CSS 缓存/未加载导致样式不生效 */
+      .topbar .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 0;
+        padding: 0;
+        border: none;
+        font-size: 14px;
+        line-height: 1;
+      }
+      .topbar .crumb-item,
+      .topbar .crumb-current {
+        display: inline-flex;
+        align-items: center;
+        margin: 0;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 14px;
+        line-height: 1;
+        transition: all 0.2s ease;
+      }
+      .topbar .crumb-item {
+        color: #6b7280;
+        cursor: default;
+      }
+      .topbar .crumb-item.clickable {
+        cursor: pointer;
+      }
+      .topbar .crumb-item.clickable:hover {
+        color: #b45309;
+        background: #fef3c7;
+        box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      }
+      .topbar .crumb-current {
+        color: #1f2937;
+        font-weight: 600;
+        background: #f3f4f6;
+      }
+      .topbar .crumb-sep {
+        color: #d1d5db;
+        font-size: 12px;
+        line-height: 1;
+        user-select: none;
+        margin: 0 2px;
       }
     </style>
   </head>
@@ -291,8 +338,10 @@
                 item.children && item.children.some(sub => sub.id === this.menuActived)
               )
               if (currentItem && currentItem.children && currentItem.children.length > 0) {
-                const firstChild = currentItem.children[0]
-                this.menuHandle(firstChild, false)
+                // 修改点：定位当前活跃子项，而非总是跳 children[0]（如"菜品管理"→点父级不再跳到"分类管理"）
+                const activeChild = currentItem.children.find(sub => sub.id === this.menuActived)
+                                    || currentItem.children[0]
+                this.menuHandle(activeChild, false)
               }
             }
           },

@@ -66,12 +66,6 @@
 <div class="dashboard-container" id="app">
     <div class="container">
 
-      <!-- 面包屑导航 -->
-      <nav class="ds-breadcrumb" aria-label="面包屑导航">
-        <span class="ds-breadcrumb__item">首页</span>
-        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
-        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">营销活动</span>
-      </nav>
         <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
         <stat-cards :cards="statsCards" :active-key.sync="searchStatus" @card-click="onCardClick"></stat-cards>
 

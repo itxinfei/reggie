@@ -10,8 +10,9 @@
     <link rel="stylesheet" href="../../styles/page.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
     <link rel="stylesheet" href="../../styles/components.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/design-system.css" />
+    <link rel="stylesheet" href="../../styles/tokens.css" />
+    <link rel="stylesheet" href="../../styles/design-system.css" />
+    <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
     <script src="../../plugins/echarts/echarts.min.js"></script>
     <style>
         /* ========== 基础重置 ========== */
@@ -26,27 +27,6 @@
             flex: 1; background: transparent; padding: 24px 32px 32px;
             min-width: 0; max-width: 1600px; margin: 0 auto; width: 100%;
         }
-
-        /* ========== 页面标题栏 ========== */
-        .page-hero {
-            background: var(--bg-surface); border-radius: 16px; padding: 24px 28px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
-            display: flex; align-items: center; justify-content: space-between;
-            flex-wrap: wrap; gap: 16px;
-        }
-        .page-hero .hero-left { display: flex; align-items: center; gap: 14px; }
-        .page-hero .hero-icon {
-            width: 48px; height: 48px; border-radius: 14px;
-            background: linear-gradient(135deg, rgba(64,158,255,0.1) 0%, rgba(102,177,255,0.15) 100%);
-            display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0;
-        }
-        .page-hero .hero-title { font-size: 20px; font-weight: 700; color: var(--el-text-primary); }
-        .page-hero .hero-sub { font-size: 13px; color: var(--color-info); margin-top: 2px; }
-        .page-hero .hero-meta { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-        .page-hero .meta-item { text-align: center; }
-        .page-hero .meta-value { font-size: 24px; font-weight: 700; color: var(--el-text-primary); }
-        .page-hero .meta-label { font-size: 12px; color: var(--color-info); margin-top: 2px; }
 
         /* ========== KPI 卡片（使用 components-stats-card.css 统一样式） ========== */
         .stats-cards {
@@ -68,10 +48,11 @@
         .chart-panel:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
         .chart-panel .panel-title {
             font-size: 16px; font-weight: 600; color: var(--el-text-primary);
-            margin-bottom: 20px; padding-bottom: 16px;
+            margin-bottom: 8px; padding-bottom: 16px;
             border-bottom: 2px solid var(--el-bg-page); flex-shrink: 0;
             display: flex; align-items: center; gap: 8px;
         }
+        .panel-sub { font-size: 12px; color: var(--color-info); margin: -8px 0 12px; }
         .chart-box { width: 100%; min-height: 400px; flex: 1; }
 
         /* ========== 门店排行 ========== */
@@ -99,9 +80,9 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 14px; font-weight: 700; flex-shrink: 0;
         }
-        .rank-num.r1 { background: linear-gradient(135deg, var(--antd-error), var(--antd-error-l)); color: var(--bg-surface); }
-        .rank-num.r2 { background: linear-gradient(135deg, var(--antd-orange), var(--antd-warning-l)); color: var(--bg-surface); }
-        .rank-num.r3 { background: linear-gradient(135deg, var(--antd-warning-l), var(--antd-warning-l2)); color: var(--bg-surface); }
+        .rank-num.r1 { background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-600)); color: var(--text-on-brand); }
+        .rank-num.r2 { background: linear-gradient(135deg, #c7ccd6, #aeb4c0); color: #fff; }
+        .rank-num.r3 { background: linear-gradient(135deg, #d8a06a, #c98a4e); color: #fff; }
         .rank-num.rn { background: var(--el-bg-light); color: var(--color-info); }
         .rank-info { flex: 1; min-width: 0; }
         .rank-name { font-size: 14px; font-weight: 600; color: var(--el-text-primary); display: flex; align-items: center; gap: 8px; }
@@ -110,10 +91,11 @@
             padding: 2px 8px; border-radius: 4px; font-weight: 500;
         }
         .rank-bar-wrap { width: 120px; height: 8px; background: var(--el-bg-page); border-radius: 4px; overflow: hidden; flex-shrink: 0; }
-        .rank-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+        .rank-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); background: var(--color-brand-500); }
         .rank-stats { text-align: right; flex-shrink: 0; min-width: 80px; }
         .rank-orders { font-size: 16px; font-weight: 700; color: var(--el-text-primary); }
         .rank-amount { font-size: 13px; color: var(--color-danger); font-weight: 600; }
+        .rank-list { list-style: none; padding: 0; margin: 0; max-height: 372px; overflow-y: auto; }
 
         /* ========== 空状态 ========== */
         .empty-state {
@@ -123,6 +105,12 @@
         .empty-state .empty-icon { font-size: 56px; margin-bottom: 16px; opacity: 0.45; }
         .empty-state .empty-text { font-size: 15px; margin-bottom: 8px; }
         .empty-state .empty-hint { font-size: 12px; opacity: 0.7; }
+
+        /* ========== 排行页脚 ========== */
+        .ranking-footer {
+            margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--el-bg-light);
+            font-size: 12px; color: var(--color-info); text-align: center;
+        }
 
         /* ========== 响应式 ========== */
         @media (max-width: 1200px) {
@@ -144,33 +132,6 @@
 <body>
 <div class="store-dashboard" id="store-dash-app" v-loading="loading">
     <div class="container">
-      <!-- 面包屑导航 -->
-      <nav class="ds-breadcrumb" aria-label="面包屑导航">
-        <span class="ds-breadcrumb__item">首页</span>
-        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
-        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">总部控制台</span>
-      </nav>
-
-        <!-- ========== 页面标题栏 ========== -->
-        <div class="page-hero">
-            <div class="hero-left">
-                <div class="hero-icon">🏢</div>
-                <div>
-                    <div class="hero-title">总部控制台</div>
-                    <div class="hero-sub">跨门店经营数据汇总 · 实时监控各门店运营状况</div>
-                </div>
-            </div>
-            <div class="hero-meta" v-if="dashboard">
-                <div class="meta-item">
-                    <div class="meta-value">{{ dashboard.totalStores || 0 }}</div>
-                    <div class="meta-label">门店总数</div>
-                </div>
-                <div class="meta-item">
-                    <div class="meta-value">¥{{ formatAmount(dashboard.todayTotalAmount) }}</div>
-                    <div class="meta-label">今日总营收</div>
-                </div>
-            </div>
-        </div>
 
         <!-- ========== KPI 指标卡片 ========== -->
         <div class="stats-cards" v-if="dashboard">
@@ -189,8 +150,8 @@
             <div class="stat-card warning">
                 <div class="stat-icon">💰</div>
                 <div class="stat-label">今日总营收</div>
-                <div class="stat-value">¥{{ formatAmount(dashboard.todayTotalAmount) }}</div>
-                <div class="sub">客单价 ¥{{ formatAmount(dashboard.avgOrderAmount) }}</div>
+                <div class="stat-value">¥{{ formatMoney(dashboard.todayTotalAmount) }}</div>
+                <div class="sub">客单价 ¥{{ formatMoney(dashboard.avgOrderAmount) }}</div>
             </div>
             <div class="stat-card info">
                 <div class="stat-icon">👤</div>
@@ -205,6 +166,7 @@
             <!-- 门店营收柱状图 -->
             <div class="chart-panel">
                 <div class="panel-title">📊 各门店营收对比（今日）</div>
+                <div class="panel-sub">仅展示订单量前 10 名门店 · 完整榜单见右侧排行</div>
                 <div class="chart-box" id="storeBarChart"></div>
             </div>
 
@@ -224,16 +186,15 @@
                                 </div>
                             </div>
                             <div class="rank-bar-wrap">
-                                <div class="rank-bar-fill"
-                                    :style="{ width: rankBarWidth(idx), background: idx === 0 ? 'var(--antd-error)' : idx === 1 ? 'var(--antd-orange)' : idx === 2 ? 'var(--antd-warning-l)' : 'var(--el-color-primary)' }">
-                                </div>
+                                <div class="rank-bar-fill" :style="{ width: rankBarWidth(idx) }"></div>
                             </div>
                             <div class="rank-stats">
                                 <div class="rank-orders">{{ store.todayOrders || 0 }} 单</div>
-                                <div class="rank-amount">¥{{ formatAmount(store.todayAmount) }}</div>
+                                <div class="rank-amount">¥{{ formatMoney(store.todayAmount) }}</div>
                             </div>
                         </li>
                     </ul>
+                    <div class="ranking-footer">共 {{ dashboard.storeRanking.length }} 家门店 · 按今日订单量排序</div>
                 </div>
                 <div v-else class="empty-state">
                     <div class="empty-icon">📭</div>
@@ -259,9 +220,14 @@
         loading: false,
         dashboard: null,
         barChart: null,
-        resizeHandler: null
+        resizeHandler: null,
+        lastUpdated: null,
+        brandColor: '#ffc200', // 与 --color-brand-500 一致
+        topN: 10 // 柱状图仅展示订单量前 N 名，避免门店过多时拥挤
     },
-    created() { this.loadDashboard(); },
+    created() {
+        this.loadDashboard();
+    },
     mounted() {
         this.resizeHandler = () => { if (this.barChart) this.barChart.resize(); };
         window.addEventListener('resize', this.resizeHandler);
@@ -272,22 +238,23 @@
     },
     methods: {
         loadDashboard() {
-            this.loading = true;
+            var self = this;
             getDashboardOverview().then(res => {
                 if (res.code === 1) {
-                    this.dashboard = res.data;
-                    this.$nextTick(() => { this.renderBarChart(); });
+                    self.dashboard = res.data;
+                    self.lastUpdated = new Date();
+                    self.$nextTick(() => { self.renderBarChart(); });
                 } else {
                     ReggieUI.error(res.msg || '加载数据失败');
                 }
             }).catch(err => {
                 ReggieUI.error('加载失败：' + (err.message || '网络异常'));
-            }).finally(() => { this.loading = false; });
+            }).finally(() => { self.loading = false; });
         },
         renderBarChart() {
             var self = this;
             if (!self.dashboard || !self.dashboard.storeRanking) return;
-            var stores = self.dashboard.storeRanking.slice(0, 10);
+            var stores = self.dashboard.storeRanking.slice(0, self.topN);
             var dom = document.getElementById('storeBarChart');
             if (!dom) return;
             if (!this.barChart) this.barChart = echarts.init(dom);
@@ -295,7 +262,16 @@
             var names = hasData ? stores.map(function(s) { return s.storeName; }) : ['暂无数据'];
             var orders = hasData ? stores.map(function(s) { return s.todayOrders || 0; }) : [0];
             var amounts = hasData ? stores.map(function(s) { return s.todayAmount || 0; }) : [0];
-            var colors = ['#ff4d4f', '#ff7a45', '#ffa940', '#5470c6', '#91cc75', '#73c0de', '#9a60b4', '#fc8452', '#ea7ccc', '#36a3f5'];
+            // 修改点：协调配色（品牌金为主 + 蓝/青/绿/紫/橙辅），避免前几根红橙像报错
+            var colors = ['#ffc200', '#5470c6', '#73c0de', '#91cc75', '#9a60b4',
+                          '#fc8452', '#36a3f5', '#ea7ccc', '#3ba272', '#ee6666'];
+
+            // 门店名过长时截断，避免 x 轴标签溢出重叠
+            function truncate(name) {
+                if (!name) return '';
+                return name.length > 6 ? name.substring(0, 6) + '…' : name;
+            }
+            var labels = names.map(truncate);
 
             this.barChart.setOption({
                 color: colors,
@@ -313,12 +289,15 @@
                     }
                 },
                 legend: { data: ['订单数', '营收'], bottom: 8, textStyle: { color: '#606266', fontSize: 13 } },
-                grid: { left: 55, right: 55, top: 20, bottom: 48 },
+                grid: { left: 55, right: 55, top: 20, bottom: 56 },
                 xAxis: {
-                    type: 'category', data: names,
+                    type: 'category', data: labels,
                     axisLine: { lineStyle: { color: '#e4e7ed' } },
                     axisTick: { show: false },
-                    axisLabel: { color: '#909399', fontSize: 11, rotate: names.length > 5 ? 15 : 0 }
+                    axisLabel: {
+                        color: '#909399', fontSize: 11,
+                        interval: 0, rotate: labels.length > 6 ? 25 : 0
+                    }
                 },
                 yAxis: [
                     { type: 'value', name: '订单量(单)', nameTextStyle: { color: '#909399', fontSize: 12 },
@@ -342,10 +321,10 @@
                     {
                         name: '营收', type: 'line', yAxisIndex: 1, data: amounts,
                         smooth: true, symbol: 'emptyCircle', symbolSize: 8,
-                        lineStyle: { color: '#fac858', width: 3 },
-                        itemStyle: { color: '#fac858', borderColor: '#fff', borderWidth: 2 },
+                        lineStyle: { color: '#ffc200', width: 3 },
+                        itemStyle: { color: '#ffc200', borderColor: '#fff', borderWidth: 2 },
                         label: {
-                            show: hasData, position: 'top', fontSize: 12, fontWeight: 700, color: '#e6a23c',
+                            show: hasData, position: 'top', fontSize: 12, fontWeight: 700, color: '#c99200',
                             formatter: function(p) { return '¥' + Number(p.value).toFixed(0); }
                         }
                     }
@@ -358,9 +337,11 @@
             var orders = this.dashboard.storeRanking[idx].todayOrders || 0;
             return Math.max((orders / maxOrders * 100), 8) + '%';
         },
-        formatAmount(amount) {
-            if (!amount) return '0.00';
-            return typeof amount === 'number' ? amount.toFixed(2) : Number(amount).toFixed(2);
+        // 修改点：复用全局 RgFormat.formatMoney（components.js 已挂载），不再重复实现 formatAmount
+        formatMoney(val) {
+            return (window.RgFormat && window.RgFormat.formatMoney)
+                ? window.RgFormat.formatMoney(val)
+                : (Number(val || 0).toFixed(2));
         }
     }
 });

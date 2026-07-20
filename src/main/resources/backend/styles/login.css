@@ -13,8 +13,8 @@
   --c-t1:  var(--legacy-1a1d2e);
   --c-t2:  var(--legacy-5a5f7a);
   --c-t3:  var(--legacy-8b90a5);
-  --c-inp-bg: var(--legacy-f4f5fa);
-  --c-inp-bd: var(--legacy-e0e3ed);
+  --c-inp-bg: var(--color-white);
+  --c-inp-bd: var(--color-gray-300);
   --c-focus: var(--color-brand-500);
   --c-focus-2: var(--color-brand-300);
   --c-focus-g: rgba(255,194,0,.16);
@@ -39,8 +39,8 @@ html.dark-theme {
   --c-t1:  var(--legacy-f1f3f9);
   --c-t2:  var(--legacy-a0a5ba);
   --c-t3:  var(--legacy-6b7088);
-  --c-inp-bg: rgba(15,18,30,.7);
-  --c-inp-bd: rgba(255,255,255,.08);
+  --c-inp-bg: rgba(22,26,38,.8);
+  --c-inp-bd: rgba(255,255,255,.14);
   --c-focus: var(--color-brand-500);
   --c-focus-2: var(--color-brand-300);
   --c-focus-g: rgba(255,194,0,.2);
@@ -167,7 +167,9 @@ html.dark-theme .bg-grid {
 #login-app {
   position: relative; z-index: 1;
   display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; padding: 24px;
+  min-height: 100vh;
+  padding: max(24px, env(safe-area-inset-top)) 24px 24px;
+  padding-top: calc(24px + env(safe-area-inset-top));
 }
 
 .login-shell {
@@ -313,15 +315,24 @@ html.dark-theme .bg-grid {
   border: 1.5px solid var(--c-inp-bd);
   border-radius: 13px;
   background: var(--c-inp-bg);
-  transition: border-color .25s, box-shadow .25s, transform .2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), inset 0 1px 2px rgba(0,0,0,.02);
+  transition: border-color .25s, box-shadow .25s, transform .2s, background .25s;
   overflow: hidden;
+}
+.inp-wrap:hover:not(.on):not(.bad) {
+  border-color: var(--color-gray-400);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06), inset 0 1px 2px rgba(0,0,0,.02);
 }
 .inp-wrap.on {
   border-color: var(--c-focus);
-  box-shadow: var(--c-focus-g);
+  box-shadow: 0 0 0 3px var(--c-focus-g), 0 2px 6px rgba(0,0,0,.06);
   transform: translateY(-1px);
+  background: var(--color-white);
 }
-.inp-wrap.ok { border-color: color-mix(in srgb, var(--c-focus) 50%, var(--c-inp-bd)); }
+.inp-wrap.ok {
+  border-color: var(--color-gray-400);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
 .inp-wrap.bad {
   border-color: var(--c-err);
   box-shadow: 0 0 0 3px var(--c-err-g);
@@ -459,7 +470,9 @@ html.dark-theme .bg-grid {
 
 /* ---- 主题按钮 ---- */
 .theme-btn {
-  position: fixed; top: 22px; right: 22px;
+  position: fixed;
+  top: calc(22px + env(safe-area-inset-top));
+  right: calc(22px + env(safe-area-inset-right));
   width: 42px; height: 42px; border-radius: 50%;
   border: 1px solid var(--c-inp-bd);
   background: var(--c-card);
@@ -512,7 +525,7 @@ html.dark-theme .bg-grid {
    响应式
    ================================================================ */
 @media (max-width: 800px) {
-  #login-app { padding: 16px; align-items: flex-start; padding-top: 72px; }
+  #login-app { padding: 16px; align-items: flex-start; padding-top: calc(72px + env(safe-area-inset-top)); }
   .login-shell { flex-direction: column; max-width: 420px; min-height: auto; }
   .shell-left { padding: 28px 28px; min-height: 140px; }
   .left-heading { font-size: 22px; }
@@ -525,11 +538,11 @@ html.dark-theme .bg-grid {
   .card-top { margin-bottom: 28px; }
   .card-badge { width: 48px; height: 48px; font-size: 22px; margin-bottom: 16px; }
   .card-h2 { font-size: 20px; }
-  .theme-btn { top: 12px; right: 12px; width: 36px; height: 36px; font-size: 17px; }
+  .theme-btn { top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); width: 36px; height: 36px; font-size: 17px; }
 }
 
 @media (max-width: 480px) {
-  #login-app { padding: 10px; padding-top: 48px; }
+  #login-app { padding: 10px; padding-top: calc(48px + env(safe-area-inset-top)); }
   .login-shell { border-radius: 14px; }
   .shell-left { padding: 20px; min-height: 100px; }
   .shell-right { padding: 20px 22px; }

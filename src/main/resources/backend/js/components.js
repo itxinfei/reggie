@@ -591,7 +591,7 @@ Vue.component('crud-table', {
         '</template>' +
       '</el-table-column>' +
       // 操作列
-      '<el-table-column v-if="showActions" :label="actionsLabel" :width="actionsWidth" :align="actionsAlign" fixed="right">' +
+      '<el-table-column v-if="showActions" :label="actionsLabel" :width="actionsWidth" :align="actionsAlign">' +
         '<template slot-scope="scope">' +
           '<slot name="actions" :row="scope.row" :$index="scope.$index" :size="size"></slot>' +
         '</template>' +

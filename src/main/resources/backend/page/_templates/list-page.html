@@ -12,7 +12,7 @@
   【语义与无障碍（a11y）】
     - <a class="skip-link"> 跳转到主内容（WCAG 2.4.1）
     - <main role="main" aria-labelledby> 主内容地标
-    - <nav aria-label="面包屑导航"> 面包屑
+    - <nav> 面包屑
     - <h1> 页面唯一主标题（ds-page-header__title）
     - 弹窗/表格由组件层保证 role/aria（crud-dialog/table-bar/crud-table）
 
@@ -48,12 +48,6 @@
     <!-- 主内容地标 + 设计系统 page 结构 -->
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
 
-      <!-- 面包屑导航 -->
-      <nav class="ds-breadcrumb" aria-label="面包屑导航">
-        <span class="ds-breadcrumb__item">首页</span>
-        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
-        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">列表管理</span>
-      </nav>
 
       <!-- 页头：标题 + 副标题 + 页级操作 -->
       <header class="ds-page-header">

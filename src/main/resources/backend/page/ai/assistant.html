@@ -5,55 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 经营分析助手 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css">
-    <link rel="stylesheet" href="../../styles/common.css">
-    <link rel="stylesheet" href="../../styles/page.css">
-    <link rel="stylesheet" href="../../styles/ai-chat.css">
+    <link rel="stylesheet" href="../../styles/common.css" />
+    <link rel="stylesheet" href="../../styles/page.css" />
+    <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+    <link rel="stylesheet" href="../../styles/components.css" />
+    <link rel="stylesheet" href="../../styles/tokens.css" />
+    <link rel="stylesheet" href="../../styles/design-system.css" />
+    <link rel="stylesheet" href="../../styles/ai-chat.css" />
 </head>
 <body>
-    <div id="ai-app" class="ai-layout">
-        <!-- ========== 左侧边栏：对话历史 ========== -->
-        <div class="ai-sidebar" :class="{ open: sidebarOpen }">
-            <div class="sidebar-header">
-                <h4>💬 对话历史</h4>
-                <button class="refresh-btn" @click="loadConversations" :disabled="sidebarLoading">
-                    {{ sidebarLoading ? '刷新中...' : '🔄 刷新' }}
+    <div class="dashboard-container" id="ai-app">
+        <div class="container ai-chat-layout">
+            <!-- 左侧边栏：对话历史 -->
+            <div class="ai-sidebar" :class="{ open: sidebarOpen }">
+                <div class="sidebar-header">
+                    <h4>💬 对话历史</h4>
+                    <button class="refresh-btn" @click="loadConversations" :disabled="sidebarLoading">
+                        {{ sidebarLoading ? '刷新中...' : '🔄 刷新' }}
+                    </button>
+                </div>
+
+                <button class="new-chat-btn" @click="createNewConversation" :disabled="loading">
+                    ✨ 新建对话
                 </button>
-            </div>
 
-            <button class="new-chat-btn" @click="createNewConversation" :disabled="loading">
-                ✨ 新建对话
-            </button>
-
-            <!-- 对话列表 -->
-            <div class="conv-list" v-if="conversations.length > 0">
-                <div v-for="conv in conversations" :key="conv.conversationId"
-                     :class="['conv-item', { active: currentConversationId === conv.conversationId }]"
-                     @click="selectConversation(conv)">
-                    <div class="conv-icon">{{ getSceneIcon(conv.scene) }}</div>
-                    <div class="conv-info">
-                        <div class="conv-title">{{ conv.title || '新对话' }}</div>
-                        <div class="conv-meta">
-                            <span>{{ conv.messageCount || 0 }}条</span>
-                            <span>{{ formatConvTime(conv.updateTime || conv.createTime) }}</span>
+                <!-- 对话列表 -->
+                <div class="conv-list" v-if="conversations.length > 0">
+                    <div v-for="conv in conversations" :key="conv.conversationId"
+                         :class="['conv-item', { active: currentConversationId === conv.conversationId }]"
+                         @click="selectConversation(conv)">
+                        <div class="conv-icon">{{ getSceneIcon(conv.scene) }}</div>
+                        <div class="conv-info">
+                            <div class="conv-title">{{ conv.title || '新对话' }}</div>
+                            <div class="conv-meta">
+                                <span>{{ conv.messageCount || 0 }}条</span>
+                                <span>{{ formatConvTime(conv.updateTime || conv.createTime) }}</span>
+                            </div>
                         </div>
+                        <button class="conv-delete" @click.stop="handleDeleteConv(conv)" title="删除对话">×</button>
                     </div>
-                    <button class="conv-delete" @click.stop="handleDeleteConv(conv)" title="删除对话">×</button>
+                </div>
+
+                <!-- 无对话 -->
+                <div class="sidebar-empty" v-else-if="!sidebarLoading">
+                    暂无对话历史<br>点击"新建对话"开始
+                </div>
+
+                <!-- 加载中 -->
+                <div class="sidebar-loading" v-if="sidebarLoading && conversations.length === 0">
+                    加载中...
                 </div>
             </div>
 
-            <!-- 无对话 -->
-            <div class="sidebar-empty" v-else-if="!sidebarLoading">
-                暂无对话历史<br>点击"新建对话"开始
-            </div>
-
-            <!-- 加载中 -->
-            <div class="sidebar-loading" v-if="sidebarLoading && conversations.length === 0">
-                加载中...
-            </div>
-        </div>
-
-        <!-- ========== 右侧主区域 ========== -->
-        <div class="ai-main">
+            <!-- 右侧主区域 -->
+            <div class="ai-main">
             <!-- 修改点：紧凑单行头栏 — 集成侧边栏切换 + 标题 + 场景标签 + 连接状态 -->
             <div class="ai-header">
                 <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen" title="切换侧边栏">☰</button>

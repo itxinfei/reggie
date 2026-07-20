@@ -108,48 +108,6 @@
       transform: translateY(-1px);
     }
 
-    /* ========== 页面标题栏（内联样式收敛为类，统一令牌） ========== */
-    .page-hero {
-      background: var(--bg-surface);
-      border-radius: var(--radius-xl);
-      padding: var(--space-4) var(--space-5);
-      margin-bottom: var(--space-3);
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--border-subtle);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: var(--space-3);
-    }
-    .page-hero__icon {
-      width: 44px;
-      height: 44px;
-      border-radius: var(--radius-md);
-      background: linear-gradient(135deg, rgba(255, 194, 0, 0.1) 0%, rgba(255, 216, 77, 0.15) 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      flex-shrink: 0;
-    }
-    .page-hero__title {
-      font-size: var(--font-size-lg);
-      font-weight: var(--font-weight-bold);
-      color: var(--text-primary);
-    }
-    .page-hero__subtitle {
-      font-size: var(--font-size-xs);
-      color: var(--text-secondary);
-      margin-top: 2px;
-    }
-    .page-hero__actions {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      flex-wrap: wrap;
-    }
-
     /* ========== 库存预警条（内联样式收敛为类） ========== */
     .inventory-alert {
       margin-bottom: var(--space-3);
@@ -688,32 +646,6 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="overview-container" id="dashboard-app" v-loading="loading">
     <div class="container" id="main-content" tabindex="-1">
-      <!-- 面包屑导航 -->
-      <nav class="ds-breadcrumb" aria-label="面包屑导航">
-        <span class="ds-breadcrumb__item">首页</span>
-        <span class="ds-breadcrumb__sep" aria-hidden="true">/</span>
-        <span class="ds-breadcrumb__item ds-breadcrumb__item--current" aria-current="page">数据概览</span>
-      </nav>
-
-      <!-- ========== 页面标题栏 ========== -->
-      <div class="page-hero">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div class="page-hero__icon">📊</div>
-          <div>
-            <div class="page-hero__title">数据概览</div>
-            <div class="page-hero__subtitle">实时监控核心经营指标 · 自动刷新</div>
-          </div>
-        </div>
-        <div class="page-hero__actions">
-          <el-button size="small" round icon="el-icon-refresh" @click="refreshData" :loading="loading">刷新</el-button>
-          <el-tag size="small" :type="health.redisAvailable ? 'success' : 'danger'" effect="plain">
-            Redis {{ health.redisAvailable ? '已启用' : '未启用' }}
-          </el-tag>
-          <el-tag size="small" :type="health.dbAvailable ? 'success' : 'danger'" effect="plain">
-            DB {{ health.dbAvailable ? '已连接' : '未连接' }}
-          </el-tag>
-        </div>
-      </div>
 
       <!-- ========== KPI 指标卡片 ========== -->
       <div class="stats-cards">
@@ -749,7 +681,7 @@
           <div class="kpi-label">注册用户 / 在职员工</div>
           <div class="kpi-value">{{ overview.totalUsers || 0 }} <span style="font-size:18px;color:var(--el-border-base);-webkit-text-fill-color:var(--el-border-base);">/</span> {{ overview.activeEmployees || 0 }}</div>
           <div class="kpi-sub">
-            数据来源: {{ overview.cacheSource || 'MySQL' }} | 刷新于 {{ lastRefreshTime }}
+            数据来源: {{ overview.cacheSource || 'MySQL' }}
           </div>
         </div>
       </div>
@@ -899,7 +831,6 @@
           },
           trendChart: null,
           statusChart: null,
-          refreshTimer: null,
           _resizeHandler: null,
           // 修改点：昨日对比数据
           yesterdayOrders: 0,
@@ -907,16 +838,11 @@
           orderTrendClass: 'neutral',
           orderTrendText: '--',
           revenueTrendClass: 'neutral',
-          revenueTrendText: '--',
-          lastRefreshTime: '--'
+          revenueTrendText: '--'
         }
       },
       created() {
         this.loadAllData();
-        // 每60秒自动刷新
-        this.refreshTimer = setInterval(() => {
-          this.loadAllData();
-        }, 60000);
       },
       mounted() {
         // 修改点：监听窗口resize，自适应调整ECharts大小（iframe内必须）
@@ -926,9 +852,6 @@
         window.addEventListener('resize', this._resizeHandler);
       },
       beforeDestroy() {
-        if (this.refreshTimer) {
-          clearInterval(this.refreshTimer);
-        }
         // 修改点：解绑resize事件
         if (this._resizeHandler) {
           window.removeEventListener('resize', this._resizeHandler);
@@ -959,12 +882,6 @@
 
               // 修改点：计算昨日对比
               this.calcYesterdayCompare();
-              // 修改点：记录刷新时间
-              var now = new Date();
-              this.lastRefreshTime = ('0' + now.getHours()).slice(-2) + ':'
-                + ('0' + now.getMinutes()).slice(-2) + ':'
-                + ('0' + now.getSeconds()).slice(-2);
-
               this.loadInventoryAlert();
 
               this.$nextTick(() => {
@@ -1292,11 +1209,6 @@
           const maxCount = this.hotDishes[0].count || 1;
           const count = this.hotDishes[index].count || 0;
           return Math.max((count / maxCount * 100), 8) + '%';
-        },
-
-        // 手动刷新数据
-        refreshData() {
-          this.loadAllData();
         },
 
         // 格式化金额
