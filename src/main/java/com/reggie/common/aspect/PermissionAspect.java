@@ -12,7 +12,9 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -56,7 +58,8 @@ public class PermissionAspect {
     /**
      * 超级管理员角色标识（直接放行）
      */
-    private static final String ADMIN_ROLE_KEY = "admin";
+    // 修改点：与 EmployeeController.resolveRoleKey 对齐，登录管理员角色标识已改为 SUPER_ADMIN
+    private static final String ADMIN_ROLE_KEY = "SUPER_ADMIN";
 
     @Around("@annotation(com.reggie.common.annotation.RequiresPermission)")
     public Object checkPermission(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -226,6 +229,46 @@ public class PermissionAspect {
             log.info("[权限缓存] 已清除员工权限缓存：employeeId={}", employeeId);
         } catch (Exception e) {
             log.warn("[权限缓存] 清除缓存失败：employeeId={}", employeeId, e);
+        }
+    }
+
+    /**
+     * 清除所有员工权限缓存
+     * <p>修改点：角色权限发生变更（分配/删除角色）后调用，
+     * 由于无法快速定位拥有该角色的员工，统一清理全部员工权限缓存，
+     * 使其在下一次访问时按最新权限重新加载。</p>
+     */
+    public void clearAllEmployeePermissionCache() {
+        if (redisTemplate == null) {
+            return;
+        }
+        try {
+            String pattern = PERMISSION_PREFIX + "*";
+            Set<String> keys = redisTemplate.execute(
+                (org.springframework.data.redis.core.RedisCallback<Set<String>>) connection -> {
+                    Set<String> result = new HashSet<>();
+                    ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
+                    Cursor<byte[]> cursor = connection.scan(options);
+                    try {
+                        while (cursor.hasNext()) {
+                            result.add(new String(cursor.next()));
+                        }
+                    } finally {
+                        try {
+                            cursor.close();
+                        } catch (Exception ignored) {
+                            // cursor close silently
+                        }
+                    }
+                    return result;
+                }
+            );
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+                log.info("[权限缓存] 已清除全部员工权限缓存，共{}条", keys.size());
+            }
+        } catch (Exception e) {
+            log.warn("[权限缓存] 清除全部员工权限缓存失败：{}", e.getMessage());
         }
     }
 }

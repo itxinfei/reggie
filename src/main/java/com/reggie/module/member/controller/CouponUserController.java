@@ -1,4 +1,5 @@
 package com.reggie.module.member.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 用户优惠券管理控制器
@@ -44,8 +46,8 @@ public class CouponUserController {
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "memberId", description = "会员ID（可选）")
-    public R<Page<CouponUser>> page(int page, int pageSize, Long memberId) {
-        Page<CouponUser> pageInfo = new Page<>(page, pageSize);
+    public R<Page<CouponUser>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, Long memberId) {
+        Page<CouponUser> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<CouponUser> qw = new LambdaQueryWrapper<>();
         qw.eq(memberId != null, CouponUser::getMemberId, memberId);
         qw.orderByDesc(CouponUser::getCreatedTime);

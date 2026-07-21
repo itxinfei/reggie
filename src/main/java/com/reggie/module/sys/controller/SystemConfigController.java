@@ -1,8 +1,11 @@
 package com.reggie.module.sys.controller;
+import com.reggie.common.utils.PageUtils;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequiresAdmin;
 import com.reggie.module.sys.entity.SystemConfig;
 import com.reggie.module.sys.service.SystemConfigService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,11 +18,13 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 系统配置管理Controller
  */
 @Slf4j
+@RequiresAdmin
 @RestController
 @RequestMapping("/sys/config")
 @Tag(name = "系统管理-系统配置", description = "系统配置CRUD接口")
@@ -77,8 +82,14 @@ public class SystemConfigController {
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "配置键") @RequestParam(required = false) String configKey) {
-        Page<SystemConfig> pageInfo = new Page<>(page, pageSize);
-        List<SystemConfig> all = systemConfigService.list();
+        // 修改点：原实现新建 pageInfo 后未执行分页查询，直接返回空页；此处补充分页与关键字筛选
+        Page<SystemConfig> pageInfo = PageUtils.of(page, pageSize);
+        LambdaQueryWrapper<SystemConfig> wrapper = new LambdaQueryWrapper<>();
+        if (configKey != null && !configKey.trim().isEmpty()) {
+            wrapper.like(SystemConfig::getConfigKey, configKey.trim());
+        }
+        wrapper.orderByDesc(SystemConfig::getUpdateTime);
+        systemConfigService.page(pageInfo, wrapper);
         return R.success(pageInfo);
     }
 

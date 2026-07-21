@@ -1,4 +1,5 @@
 package com.reggie.module.notification.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.*;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * <p>
@@ -58,7 +60,7 @@ public class NotificationController {
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "业务类型（可选）") @RequestParam(required = false) String bizType) {
-        Page<NotificationTemplate> pageInfo = new Page<>(page, pageSize);
+        Page<NotificationTemplate> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
         if (bizType != null && !bizType.isEmpty()) {
             wrapper.eq(NotificationTemplate::getBizType, bizType);
@@ -282,6 +284,7 @@ public class NotificationController {
      */
     @PostMapping("/send-all")
     @Operation(summary = "全量推送", description = "向所有用户发送通知")
+    @RequiresPermission("notification:send")
     public R<NotificationRecord> sendToAllUsers(
             @Parameter(description = "推送参数（bizType/channel/params）", required = true) @RequestBody Map<String, Object> body) {
         String bizType = (String) body.get("bizType");
@@ -312,7 +315,7 @@ public class NotificationController {
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) String bizType,
             @RequestParam(required = false) Integer status) {
-        Page<NotificationRecord> pageInfo = new Page<>(page, pageSize);
+        Page<NotificationRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<NotificationRecord> wrapper = new LambdaQueryWrapper<>();
         if (bizType != null && !bizType.isEmpty()) {
             wrapper.eq(NotificationRecord::getBizType, bizType);
@@ -381,12 +384,19 @@ public class NotificationController {
     @PostMapping("/device/register")
     @Operation(summary = "注册设备Token", description = "注册/更新用户设备推送Token")
     public R<String> registerDevice(
-            @Parameter(description = "设备信息（userId/platform/deviceToken）", required = true) @RequestBody Map<String, Object> body) {
-        Long userId = Long.valueOf(body.get("userId").toString());
+            @Parameter(description = "设备信息（platform/deviceToken）", required = true) @RequestBody Map<String, Object> body) {
+        // 修改点：以登录会话身份为准绑定设备，杜绝伪造他人 userId 的越权注册（IDOR）
+        Long sessionUserId = BaseContext.getCurrentId();
+        if (sessionUserId == null) {
+            return R.error("请先登录");
+        }
         String platform = (String) body.get("platform");
         String deviceToken = (String) body.get("deviceToken");
+        if (platform == null || platform.trim().isEmpty() || deviceToken == null || deviceToken.trim().isEmpty()) {
+            return R.error("平台与设备Token不能为空");
+        }
 
-        notificationService.registerDevice(userId, platform, deviceToken);
+        notificationService.registerDevice(sessionUserId, platform, deviceToken);
         return R.success("设备注册成功");
     }
 

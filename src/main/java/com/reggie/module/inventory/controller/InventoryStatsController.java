@@ -2,6 +2,7 @@ package com.reggie.module.inventory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.inventory.mapper.MaterialMapper;
 import com.reggie.module.inventory.mapper.PurchaseOrderMapper;
 import com.reggie.module.inventory.mapper.StockRecordMapper;
@@ -32,6 +33,7 @@ import java.util.*;
  * @since 2026-07-11
  */
 @Slf4j
+@RequireEmployee
 @RestController
 @RequestMapping("/api/inventory/stats")
 @Tag(name = "进销存统计", description = "进销存模块数据统计API")

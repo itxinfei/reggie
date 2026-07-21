@@ -1,4 +1,5 @@
 package com.reggie.module.member.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -57,9 +58,9 @@ public class RechargeRecordController {
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "phone", description = "会员手机号（可选，精确查询）")
-    public R<Map<String, Object>> page(int page, int pageSize, String phone,
+    public R<Map<String, Object>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, String phone,
                                        @RequestParam(required = false) String paymentMethod) {
-        Page<RechargeRecord> pageInfo = new Page<>(page, pageSize);
+        Page<RechargeRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<RechargeRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(paymentMethod != null && !paymentMethod.isEmpty(), RechargeRecord::getPaymentMethod, paymentMethod);
 

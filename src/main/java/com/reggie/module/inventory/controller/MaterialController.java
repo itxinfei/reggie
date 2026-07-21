@@ -1,8 +1,10 @@
 package com.reggie.module.inventory.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.inventory.model.Material;
 import com.reggie.module.inventory.service.MaterialService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +31,7 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Slf4j
+@RequireEmployee
 @RestController
 @RequestMapping("/api/inventory/material")
 @Tag(name = "食材管理")
@@ -53,11 +56,11 @@ public class MaterialController {
     @Parameter(name = "name", description = "食材名称（可选，模糊查询）")
     @Parameter(name = "categoryId", description = "分类ID（可选）")
     @Parameter(name = "status", description = "状态（可选）：0-禁用，1-启用")
-    public R<Page<Material>> page(int page, int pageSize,
+    public R<Page<Material>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                    @RequestParam(required = false) String name,
                                    @RequestParam(required = false) Long categoryId,
                                    @RequestParam(required = false) String status) {
-        Page<Material> pageInfo = new Page<>(page, pageSize);
+        Page<Material> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Material> qw = new LambdaQueryWrapper<>();
         qw.like(name != null && !name.isEmpty(), Material::getName, name);
         // 修改点：添加分类筛选支持，修复前端 categoryId 参数被后端静默丢弃的 Bug

@@ -8,6 +8,7 @@ import com.reggie.module.ai.model.AIMessageRecord;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -87,4 +88,16 @@ public interface AIChatService extends IService<AIConversation> {
      * 记录用户反馈
      */
     void recordFeedback(Long messageId, String feedbackType, Long userId);
+
+    // ==================== 上下文记忆 ====================
+
+    /**
+     * 获取对话上下文统计信息
+     */
+    Map<String, Object> getContextStats(String conversationId);
+
+    /**
+     * 重置对话上下文（清除缓存，保留历史记录）
+     */
+    void resetContext(String conversationId);
 }

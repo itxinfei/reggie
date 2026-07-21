@@ -1,4 +1,5 @@
 package com.reggie.module.member.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 会员标签控制器
@@ -206,7 +208,7 @@ public class MemberTagController {
         memberQw.in(Member::getId, memberIds);
         memberQw.orderByDesc(Member::getCreatedTime);
 
-        Page<Member> pageInfo = new Page<>(page, pageSize);
+        Page<Member> pageInfo = PageUtils.of(page, pageSize);
         memberService.page(pageInfo, memberQw);
         return R.success(pageInfo);
     }

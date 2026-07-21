@@ -1,8 +1,10 @@
 package com.reggie.module.inventory.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.inventory.model.Supplier;
 import com.reggie.module.inventory.service.SupplierService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +31,7 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Slf4j
+@RequireEmployee
 @RestController
 @RequestMapping("/api/inventory/supplier")
 @Tag(name = "供应商管理")
@@ -51,10 +54,10 @@ public class SupplierController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "供应商名称（可选，模糊查询）")
     @Parameter(name = "status", description = "状态（可选）：0-禁用，1-启用")
-    public R<Page<Supplier>> page(int page, int pageSize,
+    public R<Page<Supplier>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                    @RequestParam(required = false) String name,
                                    @RequestParam(required = false) Integer status) {
-        Page<Supplier> pageInfo = new Page<>(page, pageSize);
+        Page<Supplier> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Supplier> qw = new LambdaQueryWrapper<>();
         qw.like(name != null && !name.isEmpty(), Supplier::getName, name);
         // 修改点：添加按状态筛选支持，修复前端 status 参数被后端静默丢弃的 Bug

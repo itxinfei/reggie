@@ -180,7 +180,15 @@
             if (reloadStats) {
               var statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') {
-                self.stats = statsRes.data || self.stats
+                var stats = statsRes.data || {}
+                // 修改点：打印类型数基于当前列表真实数据去重 printType，替代恒为 0/1 的估算假数据
+                var typeSet = {}
+                var recs = (logRes.data && logRes.data.records) || []
+                recs.forEach(function (r) {
+                  if (r.printType !== undefined && r.printType !== null && r.printType !== '') typeSet[r.printType] = true
+                })
+                stats.typeCount = Object.keys(typeSet).length
+                self.stats = stats
               }
             }
           } catch (err) {
@@ -201,14 +209,8 @@
             if (String(totalRes.code) === '1' && totalRes.data) total = totalRes.data.total || 0
             if (String(successRes.code) === '1' && successRes.data) successCount = successRes.data.total || 0
             if (String(failRes.code) === '1' && failRes.data) failCount = failRes.data.total || 0
-            // 类型数：需要单独查询所有打印类型（轻量 distinct 查询由后端支持更佳，此处做简化处理）
-            var allRes = await printerLogPage({ page: 1, pageSize: 1 })
-            var typeCount = 0  // 暂用后端 distinct 查询，如果数据量大可在后端加 /stats 接口
-            if (String(allRes.code) === '1' && allRes.data) {
-              // 简单估算：至少有1条数据就至少有1种类型，精确值需后端统计接口
-              typeCount = (allRes.data.total || 0) > 0 ? 1 : 0
-            }
-            return { code: 1, data: { total: total, successCount: successCount, failCount: failCount, typeCount: typeCount } }
+            // 修改点：typeCount 不再估算，改由 fetchData 基于当前列表真实数据去重 printType 计算（见 fetchData reloadStats 分支）
+            return { code: 1, data: { total: total, successCount: successCount, failCount: failCount, typeCount: 0 } }
           } catch (err) { console.warn('加载打印日志统计数据失败:', err) }
           return { code: 0 }
         },

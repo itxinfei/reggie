@@ -1,4 +1,5 @@
 package com.reggie.module.sys.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -6,7 +7,10 @@ import com.reggie.common.R;
 import com.reggie.module.sys.entity.Permission;
 import com.reggie.module.sys.entity.Role;
 import com.reggie.module.sys.entity.RolePermission;
+import com.reggie.common.annotation.RequiresAdmin;
+import com.reggie.common.aspect.PermissionAspect;
 import com.reggie.module.sys.mapper.RoleMapper;
+import com.reggie.module.sys.mapper.RolePermissionMapper;
 import com.reggie.module.sys.service.PermissionService;
 import com.reggie.module.sys.service.RoleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * <p>
@@ -33,6 +38,7 @@ import java.util.Set;
  * @since 2026-07-09
  */
 @Slf4j
+@RequiresAdmin
 @RestController
 @RequestMapping("/sys/role")
 @Tag(name = "系统管理-角色管理", description = "角色CRUD及权限分配接口")
@@ -47,6 +53,12 @@ public class RoleController {
     @Autowired
     private RoleMapper roleMapper;
 
+    @Autowired
+    private RolePermissionMapper rolePermissionMapper;
+
+    @Autowired
+    private PermissionAspect permissionAspect;
+
     /**
      * 角色分页查询
      * @param page 页码
@@ -60,7 +72,7 @@ public class RoleController {
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "角色名称") @RequestParam(required = false) String roleName) {
-        Page<Role> pageInfo = new Page<>(page, pageSize);
+        Page<Role> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
         if (roleName != null && !roleName.isEmpty()) {
             wrapper.like(Role::getRoleName, roleName);
@@ -134,13 +146,19 @@ public class RoleController {
      * @return 操作结果
      */
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除角色", description = "逻辑删除指定角色")
+    @Operation(summary = "删除角色", description = "逻辑删除指定角色并清理角色-权限关联")
     public R<String> delete(@Parameter(description = "角色ID") @PathVariable Long id) {
+        // 修改点：逻辑删除角色的同时清理 role_permission 关联，避免产生孤儿数据
+        rolePermissionMapper.delete(
+            new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, id));
         Role role = roleService.getById(id);
         if (role != null) {
             role.setIsDeleted(1);
             roleService.updateById(role);
         }
+        // 角色权限变更，清除角色与员工权限缓存
+        permissionService.clearPermissionCache(id);
+        permissionAspect.clearAllEmployeePermissionCache();
         return R.success("角色删除成功");
     }
 
@@ -170,9 +188,9 @@ public class RoleController {
         List<Long> permissionIds = body.get("permissionIds");
         roleService.assignPermissions(id, permissionIds);
 
-        // 清除权限缓存
-        String cacheKey = "sys:permissions:" + id;
-        // Redis template would clear here if available
+        // 修改点：权限分配后真正清除缓存，确保新权限立即生效
+        permissionService.clearPermissionCache(id);
+        permissionAspect.clearAllEmployeePermissionCache();
 
         log.info("[角色权限] 角色{} 重新分配了{}个权限", id,
                 permissionIds != null ? permissionIds.size() : 0);

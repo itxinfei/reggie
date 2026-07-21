@@ -1,8 +1,10 @@
 package com.reggie.module.inventory.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.CompleteStockCheckDTO;
 import com.reggie.dto.CreateStockCheckDTO;
 import com.reggie.module.inventory.model.StockCheck;
@@ -35,6 +37,7 @@ import java.time.LocalTime;
  * @since 2026-07-09
  */
 @Slf4j
+@RequireEmployee
 @RestController
 @RequestMapping("/api/inventory/stock-check")
 @Tag(name = "盘点管理")
@@ -59,11 +62,11 @@ public class StockCheckController {
     @Parameter(name = "status", description = "状态（可选）：DRAFT-草稿，IN_PROGRESS-进行中，DONE-已完成")
     @Parameter(name = "startDate", description = "开始日期（可选）")
     @Parameter(name = "endDate", description = "结束日期（可选）")
-    public R<Page<StockCheck>> page(int page, int pageSize,
+    public R<Page<StockCheck>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String startDate,
                                      @RequestParam(required = false) String endDate) {
-        Page<StockCheck> pageInfo = new Page<>(page, pageSize);
+        Page<StockCheck> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<StockCheck> qw = new LambdaQueryWrapper<>();
         // 修改点：删除冗余的手动 eq(tenantId)，由 TenantLineInnerInterceptor 统一处理
         qw.eq(status != null && !status.isEmpty(), StockCheck::getStatus, status);

@@ -8,8 +8,7 @@
         <link rel="icon" href="./../images/favico.ico">
         <script src="./../js/base.js"></script>
         <link rel="stylesheet" href="../styles/vant.min.css"/>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" />
-        <!-- Fallback: local icons when CDN is unavailable -->
+        <!-- 修改点：本地图标替代CDN remixicon，零外部依赖 -->
         <link rel="stylesheet" href="../styles/remixicon-fallback.css" />
         <link rel="stylesheet" href="../styles/index.css" />
         <link rel="stylesheet" href="./../styles/login.css" />
@@ -20,10 +19,10 @@
             <div v-if="loading" class="loading-overlay">
                 <div class="loading-spinner"></div>
             </div>
-            <!-- 品牌区 - 美团风格：食物主题插画 -->
+            <!-- 品牌区 - 精简版：小logo + 名字 + 标语 -->
             <div class="brandArea">
                 <div class="brandIcon">
-                    <svg viewBox="0 0 72 72" width="72" height="72">
+                    <svg viewBox="0 0 72 72" width="56" height="56">
                         <!-- 碗体 -->
                         <ellipse cx="36" cy="38" rx="28" ry="22" fill="#FFC200"/>
                         <ellipse cx="36" cy="38" rx="28" ry="22" fill="url(#bowlGrad)"/>
@@ -60,14 +59,20 @@
                 <div class="brandSlogan">美味生活，即刻送达</div>
             </div>
 
+            <!-- 修改点：新增登录标题，明确告知用户当前页用途 -->
+            <div class="loginHeading">手机号登录</div>
+
             <!-- 表单卡片 -->
             <div class="divContainer">
                 <div class="inputItem">
-                    <!-- 修改点：el-input 替换为原生input -->
-                    <div class="input-wrapper">
+                    <!-- 修改点：新增校验状态class：valid/error，实时视觉反馈 -->
+                    <div class="input-wrapper" :class="{ 'is-valid': phoneValid, 'is-error': phoneError }">
                         <i class="inputIcon ri-user-3-line input-prefix"></i>
-                        <input type="tel" class="code-input" placeholder="请输入手机号码" v-model="form.phone" maxlength="11" ref="phoneInput">
+                        <input type="tel" class="code-input" placeholder="请输入手机号码" v-model="form.phone" maxlength="11" ref="phoneInput" @input="onPhoneInput">
+                        <i v-if="phoneValid" class="validIcon ri-check-line"></i>
                     </div>
+                    <!-- 修改点：行内校验提示，不占布局空间 -->
+                    <div class="inputHint" v-if="phoneError">请输入正确的11位手机号码</div>
                 </div>
                 <div class="divSplit"></div>
                 <div class="inputItem codeItem">
@@ -97,19 +102,18 @@
                 {{ loading ? '登录中...' : '登录' }}
             </button>
 
-            <!-- 修改点：协议勾选框 + 查看全文链接 -->
-            <div class="agreementRow">
-                <label class="agreementCheckbox" @click="toggleAgreement">
+            <!-- 修改点：整行可点击切换勾选，不限于小圆点 -->
+            <div class="agreementRow" @click="toggleAgreement">
+                <label class="agreementCheckbox" @click.stop>
                     <span class="checkIcon" :class="{checked: agreed}">
-                        <!-- 修改点：el-icon-check 替换为CSS勾选图标 -->
                         <span v-if="agreed" class="check-mark">✓</span>
                     </span>
                 </label>
                 <span class="agreementText">
                     已阅读并同意
-                    <span class="agreementLink" @click="showAgreement('user')">《用户协议》</span>
+                    <span class="agreementLink" @click.stop="showAgreement('user')">《用户协议》</span>
                     和
-                    <span class="agreementLink" @click="showAgreement('privacy')">《隐私政策》</span>
+                    <span class="agreementLink" @click.stop="showAgreement('privacy')">《隐私政策》</span>
                 </span>
             </div>
 
@@ -251,13 +255,24 @@
                     // 修改点：新增协议弹窗相关数据
                     dialogVisible: false,
                     dialogTitle: '',
-                    dialogType: '' // 'user' | 'privacy'
+                    dialogType: '', // 'user' | 'privacy'
+                    // 修改点：追踪用户是否已操作过手机号输入框，控制行内校验提示时机
+                    phoneTouched: false
                 }
             },
             computed:{
                 // 修改点：登录按钮可用条件：手机号+验证码+同意协议
                 canLogin(){
                     return this.form.phone && this.form.code && this.agreed
+                },
+                // 修改点：手机号格式校验（实时，用于绿色勾显隐）
+                phoneValid(){
+                    const regex = /^1[3-9]\d{9}$/;
+                    return regex.test(this.form.phone)
+                },
+                // 修改点：仅当用户操作过且格式不对时显示行内错误
+                phoneError(){
+                    return this.phoneTouched && this.form.phone.length >= 11 && !this.phoneValid
                 }
             },
             created(){},
@@ -274,9 +289,15 @@
                 }
             },
             methods:{
+                // 修改点：手机号输入时清除错误提示、标记已操作
+                onPhoneInput(){
+                    this.msgFlag = false
+                    if(!this.phoneTouched) this.phoneTouched = true
+                },
                 // 修改点：等待API响应后再倒计时，避免请求失败仍倒计时
                 async getCode(){
                     this.form.code = ''
+                    this.phoneTouched = true
                     const regex = /^1[3-9]\d{9}$/;
                     if (!regex.test(this.form.phone)) {
                         this.msgFlag = true

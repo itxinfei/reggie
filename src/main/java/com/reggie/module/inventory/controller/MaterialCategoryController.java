@@ -1,8 +1,10 @@
 package com.reggie.module.inventory.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.inventory.model.MaterialCategory;
 import com.reggie.module.inventory.service.MaterialCategoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +31,7 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Slf4j
+@RequireEmployee
 @RestController
 @RequestMapping("/api/inventory/material-category")
 @Tag(name = "食材分类管理")
@@ -49,9 +52,9 @@ public class MaterialCategoryController {
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "分类名称（可选，模糊查询）")
-    public R<Page<MaterialCategory>> page(int page, int pageSize,
+    public R<Page<MaterialCategory>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                           @RequestParam(required = false) String name) {
-        Page<MaterialCategory> pageInfo = new Page<>(page, pageSize);
+        Page<MaterialCategory> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<MaterialCategory> qw = new LambdaQueryWrapper<>();
         // 修改点：添加按名称模糊搜索支持，修复前端 name 参数被后端静默丢弃的 Bug
         qw.like(name != null && !name.isEmpty(), MaterialCategory::getName, name);

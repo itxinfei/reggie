@@ -140,6 +140,13 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
+        <!-- 修改点：Spring Boot DevTools 开发热部署（常用开发组件，optional 避免传递依赖） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Swagger/OpenAPI 3（与Spring Boot 2.4.x兼容的版本） -->
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -206,7 +213,9 @@
                         <configuration>
                             <rules>
                                 <requireJavaVersion>
-                                    <version>[1.8,1.8]</version>
+                                    <!-- 修改点：原 [1.8,1.8] 在 JDK 1.8.0_xxx 会误报失败；
+                                         改为 [1.8,1.9) 允许 1.8 各更新版本，同时仍拦截 JDK 9+ -->
+                                    <version>[1.8,1.9)</version>
                                     <message>
                                         本项目强制要求 JDK 1.8，检测到当前 JDK 版本为 ${java.version}。
                                         请使用 JDK 1.8 进行编译和运行。

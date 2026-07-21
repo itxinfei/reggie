@@ -1,4 +1,6 @@
 package com.reggie.module.payment.controller;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -117,6 +119,7 @@ public class PaymentController {
      * @param dto 退款请求参数
      * @return 退款结果
      */
+    @RequireEmployee
     @PostMapping("/refund")
     @Operation(summary = "申请退款", description = "申请退款并调用支付渠道处理退款流程")
     @Transactional(rollbackFor = Exception.class)
@@ -125,6 +128,13 @@ public class PaymentController {
         PaymentOrder paymentOrder = paymentOrderService.getById(dto.getPaymentOrderId());
         if (paymentOrder == null) {
             return R.error("支付订单不存在");
+        }
+        // 修改点：租户归属校验，防止跨租户退款（兜底租户拦截器在 tenantId 为 null 时跳过过滤的极端情况）
+        Long refundTenantId = BaseContext.getCurrentTenantId();
+        if (refundTenantId != null && !refundTenantId.equals(paymentOrder.getTenantId())) {
+            log.warn("退款越权拦截：employee 尝试退款非本租户支付订单 paymentOrderId={}, orderTenant={}, curTenant={}",
+                    dto.getPaymentOrderId(), paymentOrder.getTenantId(), refundTenantId);
+            return R.error("无权操作其他租户的支付订单");
         }
 
         // 金额校验：退款金额不能大于支付订单金额
@@ -176,9 +186,15 @@ public class PaymentController {
         if (po == null) {
             return R.error("支付订单不存在");
         }
+        // 修改点：租户归属校验，确保只能查询本租户支付订单（兜底租户拦截器在 tenantId 为 null 时跳过过滤）
+        Long queryTenantId = BaseContext.getCurrentTenantId();
+        if (queryTenantId != null && !queryTenantId.equals(po.getTenantId())) {
+            return R.error("无权查询其他租户的支付订单");
+        }
         return R.success(po);
     }
 
+    @RequireEmployee
     @GetMapping("/page")
     @Operation(summary = "分页查询支付订单", description = "分页查询支付订单列表，支持按订单ID、渠道、状态、时间范围筛选")
     public R<Page<PaymentOrder>> page(
@@ -189,7 +205,7 @@ public class PaymentController {
             @Parameter(description = "支付状态：PENDING-待支付, SUCCESS-成功, FAIL-失败, REFUND-已退款") String status,
             @Parameter(description = "开始时间（yyyy-MM-dd HH:mm:ss）") String beginTime,
             @Parameter(description = "结束时间（yyyy-MM-dd HH:mm:ss）") String endTime) {
-        Page<PaymentOrder> pageInfo = new Page<>(page, pageSize);
+        Page<PaymentOrder> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<PaymentOrder> qw = new LambdaQueryWrapper<>();
         qw.eq(orderId != null, PaymentOrder::getOrderId, orderId);
         // 修改点：支持按支付渠道筛选

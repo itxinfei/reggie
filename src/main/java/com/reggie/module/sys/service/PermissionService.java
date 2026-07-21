@@ -54,4 +54,11 @@ public interface PermissionService {
      * @return 菜单权限树
      */
     List<Map<String, Object>> getMenuTree(Long roleId);
+
+    /**
+     * 清除指定角色的权限缓存
+     *
+     * @param roleId 角色ID
+     */
+    void clearPermissionCache(Long roleId);
 }

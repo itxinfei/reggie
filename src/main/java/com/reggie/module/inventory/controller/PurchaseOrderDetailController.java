@@ -2,6 +2,7 @@ package com.reggie.module.inventory.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.common.BaseContext;
 import com.reggie.module.inventory.model.PurchaseOrderDetail;
 import com.reggie.module.inventory.service.PurchaseOrderDetailService;
@@ -24,6 +25,7 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Slf4j
+@RequireEmployee
 @RestController
 @RequestMapping("/api/inventory/purchase-order-detail")
 @Tag(name = "采购单明细")

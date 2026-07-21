@@ -1,4 +1,6 @@
 package com.reggie.controller;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -284,7 +286,8 @@ public class UserController {
      * @param status 状态：0禁用 1正常
      * @return 分页结果
      */
-    @GetMapping("/page")
+    @RequireEmployee
+        @GetMapping("/page")
     @Operation(summary = "用户分页查询", description = "分页查询用户列表，支持按姓名、手机号模糊搜索和状态筛选，自动过滤当前租户数据")
     public R<Page<User>> page(
             @Parameter(name = "page", description = "页码", required = true, example = "1") int page,
@@ -296,7 +299,7 @@ public class UserController {
         log.info("用户分页查询：page={}, pageSize={}, name={}, phone={}, status={}",
             page, pageSize, name, phone, status);
 
-        Page<User> pageInfo = new Page<>(page, pageSize);
+        Page<User> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.like(name != null && !name.isEmpty(), User::getName, name)
                     .like(phone != null && !phone.isEmpty(), User::getPhone, phone)
@@ -320,7 +323,8 @@ public class UserController {
      * @param status 状态：0禁用 1正常
      * @return 操作结果
      */
-    @PutMapping("/status")
+    @RequireEmployee
+        @PutMapping("/status")
     @Operation(summary = "修改用户状态", description = "启用或禁用指定用户账号，自动校验租户权限")
     public R<String> updateStatus(
             @Parameter(name = "id", description = "用户ID", required = true) Long id,
@@ -350,7 +354,8 @@ public class UserController {
      *
      * @return 统计信息
      */
-    @GetMapping("/stats")
+    @RequireEmployee
+        @GetMapping("/stats")
     @Operation(summary = "用户统计", description = "获取用户总数、正常数、已禁用数、本月新增数")
     public R<Map<String, Object>> stats() {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -389,6 +394,7 @@ public class UserController {
      * @param id 用户ID
      * @return 操作结果
      */
+    @RequireEmployee
     @DeleteMapping
     @Operation(summary = "删除用户", description = "删除指定用户，自动校验租户权限")
     public R<String> delete(@Parameter(name = "id", description = "用户ID", required = true) Long id) {

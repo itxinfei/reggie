@@ -1,8 +1,10 @@
 package com.reggie.module.inventory.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.AddPurchaseDetailDTO;
 import com.reggie.dto.CreatePurchaseOrderDTO;
 import com.reggie.module.inventory.model.PurchaseOrder;
@@ -33,6 +35,7 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Slf4j
+@RequireEmployee
 @RestController
 @RequestMapping("/api/inventory/purchase-order")
 @Tag(name = "采购单管理")
@@ -55,10 +58,10 @@ public class PurchaseOrderController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "status", description = "状态（可选）：PENDING-待审核, APPROVED-已审核, RECEIVED-已收货, CANCELLED-已取消")
     @Parameter(name = "supplierId", description = "供应商ID（可选）")
-    public R<Page<PurchaseOrder>> page(int page, int pageSize,
+    public R<Page<PurchaseOrder>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                        @RequestParam(required = false) String status,
                                        @RequestParam(required = false) Long supplierId) {
-        Page<PurchaseOrder> pageInfo = new Page<>(page, pageSize);
+        Page<PurchaseOrder> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<PurchaseOrder> qw = new LambdaQueryWrapper<>();
         // 修改点：删除冗余的手动 eq(tenantId)，由 TenantLineInnerInterceptor 统一处理
         qw.eq(status != null && !status.isEmpty(), PurchaseOrder::getStatus, status);

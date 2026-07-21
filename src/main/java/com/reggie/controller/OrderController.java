@@ -1,4 +1,6 @@
 package com.reggie.controller;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
@@ -180,6 +182,7 @@ public class OrderController {
      * @return 分页结果
      */
     @GetMapping("/page")
+    @RequireEmployee
     @Operation(summary = "订单分页查询", description = "后台分页查询订单列表")
     @Parameter(name = "page", description = "页码", required = true)
     @Parameter(name = "pageSize", description = "每页数量", required = true)
@@ -187,9 +190,9 @@ public class OrderController {
     @Parameter(name = "beginTime", description = "开始时间（可选）")
     @Parameter(name = "endTime", description = "结束时间（可选）")
     @Parameter(name = "status", description = "订单状态（可选，1=待付款,2=待接单/处理中,3=已接单/派送中,4=已完成,5=已取消,6=已退款）")
-    public R<Page<Orders>> page(int page, int pageSize, String number, String beginTime, String endTime, @RequestParam(required = false) Integer status) {
+    public R<Page<Orders>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, String number, String beginTime, String endTime, @RequestParam(required = false) Integer status) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext
-        Page<Orders> pageInfo = orderService.orderPage(page, pageSize, number, beginTime, endTime, status);
+        Page<Orders> pageInfo = orderService.orderPage(page, PageUtils.cap(pageSize), number, beginTime, endTime, status);
         return R.success(pageInfo);
     }
 
@@ -219,10 +222,10 @@ public class OrderController {
     @Parameter(name = "page", description = "页码", required = true)
     @Parameter(name = "pageSize", description = "每页数量", required = true)
     @Parameter(name = "status", description = "订单状态（可选：1待付款 2待接单/处理中 3已接单/派送中 4已完成 5已取消 6已退款，不传则查全部）")
-    public R<?> userPage(int page, int pageSize,
+    public R<?> userPage(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                          @RequestParam(required = false) Integer status) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext
-        return R.success(orderService.userPage(page, pageSize, status));
+        return R.success(orderService.userPage(page, PageUtils.cap(pageSize), status));
     }
 
     /**
@@ -254,6 +257,7 @@ public class OrderController {
      * @return 操作结果
      */
     @PutMapping
+    @RequireEmployee
     @Operation(summary = "更新订单状态", description = "更新订单状态")
     @Parameter(name = "orders", description = "订单状态信息（含id和status）", required = true)
     public R<String> updateStatus(@RequestBody Orders orders) {
@@ -280,6 +284,7 @@ public class OrderController {
      * 接单：待接单(2) → 配送中(3)
      */
     @PutMapping("/confirm")
+    @RequireEmployee
     @Operation(summary = "接单", description = "后台确认接单，订单状态从待接单变为配送中")
     @Parameter(name = "id", description = "订单ID", required = true)
     public R<String> confirm(@RequestParam Long id) {
@@ -291,6 +296,7 @@ public class OrderController {
      * 拒单：待接单(2) → 已取消(5)
      */
     @PutMapping("/reject")
+    @RequireEmployee
     @Operation(summary = "拒单", description = "后台拒单，订单状态变为已取消")
     @Parameter(name = "id", description = "订单ID", required = true)
     public R<String> reject(@RequestParam Long id) {
@@ -302,6 +308,7 @@ public class OrderController {
      * 完成订单：配送中(3) → 已完成(4)
      */
     @PutMapping("/complete")
+    @RequireEmployee
     @Operation(summary = "完成订单", description = "标记订单为已完成")
     @Parameter(name = "id", description = "订单ID", required = true)
     public R<String> complete(@RequestParam Long id) {
@@ -313,6 +320,7 @@ public class OrderController {
      * 取消订单：非完成/取消状态 → 已取消(5)
      */
     @PutMapping("/cancel")
+    @RequireEmployee
     @Operation(summary = "取消订单", description = "取消订单，需填写取消原因")
     @Parameter(name = "id", description = "订单ID", required = true)
     @Parameter(name = "reason", description = "取消原因", required = false)
@@ -325,6 +333,7 @@ public class OrderController {
      * 订单统计：今日各状态订单数量、营业额
      */
     @GetMapping("/statistics")
+    @RequireEmployee
     @Operation(summary = "订单统计", description = "获取当前租户的订单统计数据，包含各状态数量和今日营业额")
     public R<Map<String, Object>> statistics() {
         Map<String, Object> stats = orderService.getOrderStatistics();

@@ -1,6 +1,8 @@
 package com.reggie.module.store.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequiresAdmin;
 import com.reggie.entity.Tenant;
 import com.reggie.module.store.model.StoreInfo;
 import com.reggie.module.store.model.StoreSearchDTO;
@@ -24,6 +26,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 门店管理控制器
@@ -34,6 +37,7 @@ import java.util.Map;
  * @since 2026-07-09
  */
 @Slf4j
+@RequiresAdmin
 @RestController
 @RequestMapping("/store")
 @Tag(name = "门店管理", description = "门店CRUD、数据同步、商品管理及导出接口")
@@ -364,7 +368,7 @@ public class StoreController {
             @RequestParam Long sourceTenantId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
-        List<Map<String, Object>> logs = storeSyncService.getSyncLogs(sourceTenantId, page, pageSize);
+        List<Map<String, Object>> logs = storeSyncService.getSyncLogs(sourceTenantId, page, PageUtils.cap(pageSize));
         return R.success(logs);
     }
 

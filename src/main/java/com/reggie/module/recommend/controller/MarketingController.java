@@ -1,4 +1,5 @@
 package com.reggie.module.recommend.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.*;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * <p>
@@ -50,7 +52,7 @@ public class MarketingController {
             @Parameter(description = "活动名称（可选）") @RequestParam(required = false) String name,
             @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status,
             @Parameter(description = "活动类型（可选）") @RequestParam(required = false) Integer campaignType) {
-        Page<MarketingCampaign> result = marketingCampaignService.pageCampaigns(page, pageSize, name, status, campaignType);
+        Page<MarketingCampaign> result = marketingCampaignService.pageCampaigns(page, PageUtils.cap(pageSize), name, status, campaignType);
         return R.success(result);
     }
 

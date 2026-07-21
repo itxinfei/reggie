@@ -6,7 +6,11 @@ import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -161,6 +165,108 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
         } catch (Exception e) {
             log.error("AI响应[{} / {}]解析异常", config.getProviderCode(), FORMAT_ID, e);
             return errorResponse("AI服务返回异常（" + config.getProviderName() + "）：" + e.getMessage(), config);
+        }
+    }
+
+    @Override
+    public boolean supportsStreaming() {
+        return true;
+    }
+
+    @Override
+    public String chatStream(List<AIMessage> messages, int maxTokens, double temperature,
+                             AiProviderConfig config, StreamCallback callback) throws Exception {
+        HttpURLConnection conn = null;
+        StringBuilder fullContent = new StringBuilder();
+        try {
+            String baseUrl = normalizeBaseUrl(config.getBaseUrl());
+            String apiUrl = baseUrl + "/chat/completions";
+
+            // 启用流式输出
+            Map<String, String> headers = new LinkedHashMap<>();
+            headers.put("Authorization", "Bearer " + config.getApiKey());
+            conn = createConnection(apiUrl, config, headers);
+
+            Map<String, Object> requestBody = new LinkedHashMap<>();
+            requestBody.put("model", config.getModelName());
+
+            List<Map<String, String>> msgList = new ArrayList<>();
+            for (AIMessage msg : messages) {
+                Map<String, String> m = new LinkedHashMap<>();
+                m.put("role", msg.getRole());
+                m.put("content", msg.getContent());
+                msgList.add(m);
+            }
+            requestBody.put("messages", msgList);
+            requestBody.put("max_tokens", resolveMaxTokens(maxTokens, config));
+            requestBody.put("temperature", resolveTemperature(temperature, config));
+            requestBody.put("stream", true);
+
+            String jsonBody = getObjectMapper().writeValueAsString(requestBody);
+            log.info("AI流式请求[{} / {}]: url={}, model={}, messages={}",
+                    config.getProviderCode(), FORMAT_ID, apiUrl, config.getModelName(), msgList.size());
+
+            sendRequestBody(conn, jsonBody);
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode != 200) {
+                String errorBody = readErrorBody(conn);
+                log.error("AI流式请求失败: code={}, error={}", responseCode, truncate(errorBody, 500));
+                callback.onToken("AI服务请求失败：" + responseCode, true);
+                return null;
+            }
+
+            // 逐行读取 SSE 流（JDK 1.8 兼容：分开 try-with-resources）
+            InputStream is = conn.getInputStream();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+            try {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    line = line.trim();
+                    if (line.isEmpty() || line.startsWith(":")) continue;
+
+                    if (line.startsWith("data: ")) {
+                        String data = line.substring(6);
+                        if ("[DONE]".equals(data)) continue;
+
+                        try {
+                            JsonNode root = getObjectMapper().readTree(data);
+                            JsonNode choices = root.get("choices");
+                            if (choices != null && choices.isArray() && choices.size() > 0) {
+                                JsonNode delta = choices.get(0).get("delta");
+                                if (delta != null) {
+                                    String token = delta.path("content").asText("");
+                                    if (!token.isEmpty()) {
+                                        fullContent.append(token);
+                                        callback.onToken(token, false);
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            log.debug("SSE行解析跳过: {}", truncate(line, 100));
+                        }
+                    }
+                }
+            } finally {
+                reader.close();
+            }
+
+            if (fullContent.length() > 0) {
+                log.info("AI流式响应[{} / {}]: totalLength={}",
+                        config.getProviderCode(), FORMAT_ID, fullContent.length());
+                callback.onToken("", true);
+                return fullContent.toString();
+            }
+            callback.onToken("模型返回了空响应", true);
+            return null;
+        } catch (Exception e) {
+            log.error("AI流式请求[{}]异常", config.getProviderCode(), e);
+            callback.onToken("流式输出异常：" + e.getMessage(), true);
+            return null;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 package com.reggie.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -19,6 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 行政区划管理
@@ -94,7 +96,7 @@ public class RegionController {
             @RequestParam(required = false) String name,
             @Parameter(name = "level", description = "行政区划级别（1省 2市 3区）")
             @RequestParam(required = false) Integer level) {
-        Page<Region> pageInfo = new Page<>(page, pageSize);
+        Page<Region> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Region> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(name != null && !name.isEmpty(), Region::getName, name);
         wrapper.eq(level != null, Region::getLevel, level);

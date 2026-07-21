@@ -1,4 +1,6 @@
 package com.reggie.controller;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -66,6 +68,7 @@ public class SetmealController {
      * @param setmealDto 套餐信息（包含基本信息及菜品列表）
      * @return 操作结果
      */
+    @RequireEmployee
     @PostMapping
     @Operation(summary = "新增套餐", description = "创建新的套餐及关联菜品，支持多菜品组合")
     @Parameter(name = "setmealDto", description = "套餐信息DTO（名称、分类、价格、描述、状态、菜品列表）", required = true)
@@ -88,17 +91,18 @@ public class SetmealController {
      * @param name 套餐名称（可选，模糊查询）
      * @return 分页结果
      */
-    @GetMapping("/page")
+    @RequireEmployee
+        @GetMapping("/page")
     @Operation(summary = "套餐分页查询", description = "分页查询套餐列表，支持按名称模糊搜索和状态筛选，自动关联分类名称")
     @Parameter(name = "page", description = "页码，从1开始", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "套餐名称（可选，模糊查询）")
     @Parameter(name = "status", description = "售卖状态（可选，'0'=停售 ,'1'=启售）")
     @Parameter(name = "code", description = "套餐编码（可选，模糊查询）")
-    public R<Page<SetmealDto>> page(int page,int pageSize,String name, @RequestParam(required = false) String status,
+    public R<Page<SetmealDto>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,String name, @RequestParam(required = false) String status,
                                     @RequestParam(required = false) String code){
         //分页构造器对象
-        Page<Setmeal> pageInfo = new Page<>(page,pageSize);
+        Page<Setmeal> pageInfo = PageUtils.of(page,pageSize);
         Page<SetmealDto> dtoPage = new Page<>();
 
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
@@ -161,6 +165,7 @@ public class SetmealController {
      * @param setmealDto 套餐DTO（包含ID、基本信息及菜品列表）
      * @return 操作结果
      */
+    @RequireEmployee
     @PutMapping
     @Operation(summary = "修改套餐", description = "更新套餐基本信息及关联菜品")
     @Parameter(name = "setmealDto", description = "套餐DTO（包含ID、基本信息及菜品列表）", required = true)
@@ -185,7 +190,8 @@ public class SetmealController {
      * @param ids 套餐ID列表，逗号分隔（如 1,2,3）
      * @return 操作结果
      */
-    @PostMapping("/status/{status}")
+    @RequireEmployee
+        @PostMapping("/status/{status}")
     @Operation(summary = "更新套餐状态", description = "批量更新套餐售卖状态（起售/停售）")
     @Parameter(name = "status", description = "状态值：1-起售，0-停售", required = true)
     @Parameter(name = "ids", description = "套餐ID列表，逗号分隔（如 1,2,3）", required = true)
@@ -239,6 +245,7 @@ public class SetmealController {
      * @param ids 套餐ID列表（逗号分隔字符串）
      * @return 操作结果
      */
+    @RequireEmployee
     @DeleteMapping
     @Operation(summary = "删除套餐", description = "批量删除套餐及关联菜品数据")
     @Parameter(name = "ids", description = "套餐ID列表，逗号分隔（如 1,2,3）", required = true)

@@ -1,4 +1,5 @@
 package com.reggie.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 订单明细管理
@@ -50,7 +52,7 @@ public class OrderDetailController {
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "订单ID") @RequestParam(required = false) Long orderId) {
-        Page<OrderDetail> pageInfo = new Page<>(page, pageSize);
+        Page<OrderDetail> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<OrderDetail> qw = new LambdaQueryWrapper<>();
         if (orderId != null) {
             qw.eq(OrderDetail::getOrderId, orderId);

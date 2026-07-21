@@ -1,4 +1,5 @@
 package com.reggie.module.dining.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -29,6 +30,7 @@ import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 堂食桌台管理控制器
@@ -65,8 +67,8 @@ public class DiningTableController {
     @Operation(summary = "分页查询", description = "分页查询桌台列表，自动关联区域信息")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
-    public R<Page<DiningTable>> page(int page, int pageSize) {
-        Page<DiningTable> pageInfo = diningTableService.pageWithArea(page, pageSize);
+    public R<Page<DiningTable>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize) {
+        Page<DiningTable> pageInfo = diningTableService.pageWithArea(page, PageUtils.cap(pageSize));
         return R.success(pageInfo);
     }
 

@@ -1,4 +1,5 @@
 package com.reggie.module.member.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -27,6 +28,7 @@ import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 优惠券模板管理控制器
@@ -61,8 +63,8 @@ public class CouponTemplateController {
     @Parameter(name = "name", description = "优惠券名称（可选，模糊查询）")
     @Parameter(name = "type", description = "优惠券类型（可选，FULL_REDUCTION/DISCOUNT/NEW_MEMBER）")
     @Parameter(name = "status", description = "状态（可选，0禁用 1启用）")
-    public R<Page<CouponTemplate>> page(int page, int pageSize, String name, String type, Integer status) {
-        Page<CouponTemplate> pageInfo = new Page<>(page, pageSize);
+    public R<Page<CouponTemplate>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, String name, String type, Integer status) {
+        Page<CouponTemplate> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<CouponTemplate> qw = new LambdaQueryWrapper<>();
         qw.like(name != null && !name.isEmpty(), CouponTemplate::getName, name);
         qw.eq(type != null && !type.isEmpty(), CouponTemplate::getType, type);

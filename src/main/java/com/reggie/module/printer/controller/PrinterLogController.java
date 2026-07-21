@@ -1,4 +1,5 @@
 package com.reggie.module.printer.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -57,7 +58,7 @@ public class PrinterLogController {
             @Parameter(description = "开始日期（可选）") @RequestParam(required = false) String beginTime,
             @Parameter(description = "结束日期（可选）") @RequestParam(required = false) String endTime) {
 
-        Page<PrinterLog> pageInfo = new Page<>(page, pageSize);
+        Page<PrinterLog> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<PrinterLog> qw = new LambdaQueryWrapper<>();
         qw.eq(orderId != null, PrinterLog::getOrderId, orderId);
         qw.eq(StringUtils.isNotBlank(printType), PrinterLog::getPrintType, printType);

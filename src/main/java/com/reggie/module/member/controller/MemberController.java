@@ -1,6 +1,9 @@
 package com.reggie.module.member.controller;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
@@ -32,6 +35,7 @@ import java.util.Collections;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import javax.validation.Valid;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -73,14 +77,15 @@ public class MemberController {
      * @return 分页结果
      */
     @GetMapping("/page")
+    @RequireEmployee
     @Operation(summary = "分页查询", description = "分页查询会员列表，支持按姓名、手机号搜索，自动过滤当前租户数据")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "会员姓名（可选，模糊查询）")
     @Parameter(name = "phone", description = "手机号（可选，模糊查询）")
-    public R<Page<Member>> page(int page, int pageSize, String name, String phone,
+    public R<Page<Member>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, String name, String phone,
                                 @RequestParam(required = false) Long levelId) {
-        Page<Member> pageInfo = new Page<>(page, pageSize);
+        Page<Member> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Member> qw = new LambdaQueryWrapper<>();
         qw.like(name != null && !name.isEmpty(), Member::getName, name);
         qw.like(phone != null && !phone.isEmpty(), Member::getPhone, phone);
@@ -102,6 +107,7 @@ public class MemberController {
      * 前端据此结合等级积分门槛自行分级展示，避免传输全部会员数据。
      */
     @GetMapping("/stats")
+    @RequireEmployee
     @Operation(summary = "会员统计", description = "统计会员总数、本月新增及各等级会员数量，后端聚合避免拉全量")
     public R<Map<String, Object>> stats() {
         // 租户隔离由 TenantLineInnerInterceptor 自动注入（memberService.count 与 countByLevel 原生 SQL 均生效）
@@ -144,8 +150,9 @@ public class MemberController {
      * @return 会员信息
      */
     @PostMapping
+    @RequireEmployee
     @Operation(summary = "新增会员", description = "根据手机号注册新会员，自动生成会员卡号")
-    public R<Member> save(@RequestBody Member member) {
+    public R<Member> save(@Valid @RequestBody Member member) {
         log.info("新增会员: {}", member.getPhone());
         Member result = memberService.registerByPhone(member.getPhone(), member.getName());
         return R.success(result);
@@ -157,11 +164,38 @@ public class MemberController {
      * @return 操作结果
      */
     @PutMapping
+    @RequireEmployee
     @Operation(summary = "修改会员", description = "更新会员基本信息")
-    public R<String> update(@RequestBody Member member) {
+    public R<String> update(@Valid @RequestBody Member member) {
+        if (member.getId() == null) {
+            return R.error("会员ID不能为空");
+        }
+        // 修改点：先加载已存在记录并校验租户归属，防止跨租户越权改写
+        Member existing = memberService.getById(member.getId());
+        if (existing == null) {
+            return R.error("会员不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(existing.getTenantId())) {
+            return R.error("无权操作其他租户的会员");
+        }
+
+        // 修改点：白名单字段更新，禁止越权改写 balance/points/levelId/tenantId 等资金与权限字段
+        LambdaUpdateWrapper<Member> uw = new LambdaUpdateWrapper<>();
+        uw.eq(Member::getId, member.getId());
+        if (member.getName() != null) {
+            uw.set(Member::getName, member.getName());
+        }
+        if (member.getPhone() != null) {
+            uw.set(Member::getPhone, member.getPhone());
+        }
+        if (member.getStatus() != null) {
+            uw.set(Member::getStatus, member.getStatus());
+        }
+        uw.set(Member::getUpdateTime, LocalDateTime.now());
+
         log.info("修改会员: {}", member.getId());
-        member.setUpdateTime(LocalDateTime.now());
-        memberService.updateById(member);
+        memberService.update(uw);
         return R.success("修改会员成功");
     }
 
@@ -171,6 +205,7 @@ public class MemberController {
      * @return 会员详情
      */
     @GetMapping("/{id}")
+    @RequireEmployee
     @Operation(summary = "查询会员", description = "根据ID查询会员详情")
     @Parameter(name = "id", description = "会员ID", required = true)
     public R<Member> getById(@PathVariable Long id) {
@@ -189,6 +224,7 @@ public class MemberController {
      * @return 操作结果
      */
     @PostMapping("/recharge")
+    @RequireEmployee
     @Operation(summary = "会员充值", description = "为会员账户充值，支持赠送金额")
     public R<String> recharge(@Validated @RequestBody RechargeDTO dto) {
         rechargeRecordService.recharge(dto.getMemberId(), dto.getAmount(), dto.getGiftAmount(), dto.getPaymentMethod());
@@ -202,6 +238,7 @@ public class MemberController {
      * @return 操作结果
      */
     @PostMapping("/deduct-balance")
+    @RequireEmployee
     @Operation(summary = "扣减余额", description = "扣减会员账户余额（用于订单抵扣等）")
     public R<String> deductBalance(@Validated @RequestBody DeductBalanceDTO dto) {
         boolean ok = memberService.deductBalance(dto.getMemberId(), dto.getAmount());

@@ -1,6 +1,8 @@
 package com.reggie.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.BruteForceProtectionFilter;
@@ -258,8 +260,12 @@ public class EmployeeController {
      * 1=admin(超级管理员), 2=manager(店长/普通员工)
      */
     private String resolveRoleKey(Integer role) {
-        if (role == null) return "manager";
-        return role == 1 ? "admin" : "manager";
+        // 修改点：登录角色标识需与 role 表的 role_key 保持一致（SUPER_ADMIN / STORE_MANAGER）。
+        // 原实现返回 admin/manager，而 role 表实际存的是 SUPER_ADMIN/STORE_MANAGER，
+        // 导致 PermissionAspect.loadPermissionsFromDb 通过 roleKey 查不到角色，
+        // RBAC 实际失效（非管理员永远无权限）。现对齐为数据库角色标识。
+        if (role == null) return "STORE_MANAGER";
+        return role == 1 ? "SUPER_ADMIN" : "STORE_MANAGER";
     }
 
     /**
@@ -364,11 +370,11 @@ public class EmployeeController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "员工姓名（可选，模糊查询）")
     @Parameter(name = "status", description = "账号状态（可选，1=正常 ,0=禁用）")
-    public R<Page<Employee>> page(int page,int pageSize,String name, @RequestParam(required = false) Integer status){
+    public R<Page<Employee>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,String name, @RequestParam(required = false) Integer status){
         log.info("page = {},pageSize = {},name = {}" ,page,pageSize,name);
 
         //构造分页构造器
-        Page<Employee> pageInfo = new Page<>(page, pageSize);
+        Page<Employee> pageInfo = PageUtils.of(page, pageSize);
 
         //构造条件构造器
         LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper<>();
@@ -439,22 +445,52 @@ public class EmployeeController {
     @PutMapping
     @Operation(summary = "修改员工信息", description = "根据ID更新员工信息，仅管理员可操作")
     @Parameter(name = "employee", description = "员工信息（包含ID）", required = true)
-    public R<String> update(HttpServletRequest request,@RequestBody Employee employee){
+    public R<String> update(HttpServletRequest request, @Valid @RequestBody Employee employee) {
         // 权限校验：仅管理员可修改员工信息
         if (!isAdmin(request)) {
             return R.error("权限不足，仅管理员可修改员工信息");
         }
+        if (employee.getId() == null) {
+            return R.error("员工ID不能为空");
+        }
 
-        // 安全检查：禁止通过此接口修改密码和密码类型
-        employee.setPassword(null);
-        employee.setPasswordType(null);
+        // 修改点：先加载已存在记录并校验租户归属，防止跨租户越权改写
+        Employee existing = employeeService.getById(employee.getId());
+        if (existing == null) {
+            return R.error("员工不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(existing.getTenantId())) {
+            return R.error("无权操作其他租户的员工");
+        }
+
+        // 修改点：白名单字段更新，禁止通过此接口越权改写 role/tenantId/password 等敏感字段
+        LambdaUpdateWrapper<Employee> uw = new LambdaUpdateWrapper<>();
+        uw.eq(Employee::getId, employee.getId());
+        if (employee.getName() != null) {
+            uw.set(Employee::getName, employee.getName());
+        }
+        if (employee.getUsername() != null) {
+            uw.set(Employee::getUsername, employee.getUsername());
+        }
+        if (employee.getPhone() != null) {
+            uw.set(Employee::getPhone, employee.getPhone());
+        }
+        if (employee.getIdNumber() != null) {
+            uw.set(Employee::getIdNumber, employee.getIdNumber());
+        }
+        if (employee.getSex() != null) {
+            uw.set(Employee::getSex, employee.getSex());
+        }
+        if (employee.getStatus() != null) {
+            uw.set(Employee::getStatus, employee.getStatus());
+        }
 
         log.info("修改员工信息，手机号={}，身份证号={}",
             LogMaskUtils.maskPhone(employee.getPhone()),
             LogMaskUtils.maskIdCard(employee.getIdNumber()));
 
-        employeeService.updateById(employee);
-
+        employeeService.update(uw);
         return R.success("员工信息修改成功");
     }
 

@@ -48,13 +48,11 @@ public class PermissionServiceImpl implements PermissionService {
             return Collections.emptyList();
         }
 
-        // 使用MyBatis-Plus的in查询，避免SQL注入风险
-        List<Permission> result = permissionMapper.selectList(
-            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Permission>()
-                .inSql(Permission::getId, "SELECT permission_id FROM role_permission WHERE role_id IN (?)")
-                .eq(Permission::getStatus, 1)
-                .orderByAsc(Permission::getSort)
-        );
+        // 修改点：改为调用 PermissionMapper.listByRoleIds 关联查询。
+        // 原 inSql("... WHERE role_id IN (?)") 中的 ? 为字面量、从未被绑定，会导致
+        // PreparedStatement 参数缺失异常；且 permission/role_permission 无 tenant_id 列，
+        // 使用 MP selectList 会被 TenantLineInnerInterceptor 追加 tenant_id 过滤而报错。
+        List<Permission> result = permissionMapper.listByRoleIds(roleIds);
         return result != null ? result : Collections.emptyList();
     }
 

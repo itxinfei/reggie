@@ -214,12 +214,21 @@
           else if (this.activeStatus === 'inactive') params.status = '0'
 
           try {
-            // 修改点：F9 性能 — 全局统计（总数/启用/禁用）与分页无关，仅 reloadStats 时重算
+            // 修改点：F9 性能 — 全局统计（总数/启用/禁用/本月新增）与分页无关，仅 reloadStats 时重算
+            // 本月新增：按本月起止时间区间查询真实 total，避免写死为 0 的假数据
+            var now = new Date()
+            var y = now.getFullYear()
+            var m = String(now.getMonth() + 1).padStart(2, '0')
+            var lastDay = new Date(y, now.getMonth() + 1, 0).getDate()
+            var monthStart = y + '-' + m + '-01 00:00:00'
+            var monthEnd = y + '-' + m + '-' + String(lastDay).padStart(2, '0') + ' 23:59:59'
+
             var requests = [supplierPage(params)]
             if (reloadStats) {
               requests.push(supplierPage({ page: 1, pageSize: 1 }))
               requests.push(supplierPage({ page: 1, pageSize: 1, status: '1' }))
               requests.push(supplierPage({ page: 1, pageSize: 1, status: '0' }))
+              requests.push(supplierPage({ page: 1, pageSize: 1, beginTime: monthStart, endTime: monthEnd }))
             }
             var results = await Promise.all(requests)
             var pageRes = results[0]
@@ -233,12 +242,12 @@
 
             // 从 total 字段直接获取统计数量，无需拉取全量数据再前端过滤
             if (reloadStats) {
-              var totalRes = results[1], activeRes = results[2], disabledRes = results[3]
+              var totalRes = results[1], activeRes = results[2], disabledRes = results[3], newRes = results[4]
               this.statsData = {
                 totalCount: (String(totalRes.code) === '1' && totalRes.data) ? String(totalRes.data.total || 0) : '0',
                 activeCount: (String(activeRes.code) === '1' && activeRes.data) ? String(activeRes.data.total || 0) : '0',
                 disabledCount: (String(disabledRes.code) === '1' && disabledRes.data) ? String(disabledRes.data.total || 0) : '0',
-                newCount: '0'  // 本月新增无法通过 pageSize=1 查询，需要单独接口支持，暂设为 0
+                newCount: (String(newRes.code) === '1' && newRes.data) ? String(newRes.data.total || 0) : '0'
               }
             }
           } catch (err) {

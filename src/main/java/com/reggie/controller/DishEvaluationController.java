@@ -1,4 +1,5 @@
 package com.reggie.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -21,6 +22,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 菜品评价管理控制器
@@ -251,7 +253,7 @@ public class DishEvaluationController {
                 .eq(DishEvaluation::getStatus, 0)
                 .orderByDesc(DishEvaluation::getCreateTime);
 
-        Page<DishEvaluation> pageObj = new Page<>(page, pageSize);
+        Page<DishEvaluation> pageObj = PageUtils.of(page, pageSize);
         Page<DishEvaluation> evaluations = dishEvaluationService.page(pageObj, queryWrapper);
         return R.success(evaluations);
     }
@@ -276,7 +278,7 @@ public class DishEvaluationController {
             @Parameter(name = "pageSize", description = "每页条数") @RequestParam(defaultValue = "10") Integer pageSize) {
 
         log.info("[Evaluation] 管理端评价查询：dishName={}, status={}, starRating={}, page={}, pageSize={}",
-                dishName, status, starRating, page, pageSize);
+                dishName, status, starRating, page, PageUtils.cap(pageSize));
 
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -284,7 +286,7 @@ public class DishEvaluationController {
         }
 
         Page<DishEvaluation> result = dishEvaluationService.adminPage(
-                tenantId, dishName, status, starRating, page, pageSize);
+                tenantId, dishName, status, starRating, page, PageUtils.cap(pageSize));
         return R.success(result);
     }
 

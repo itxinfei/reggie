@@ -1,4 +1,5 @@
 package com.reggie.module.member.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -55,7 +56,7 @@ public class MemberLevelController {
     public R<Page<MemberLevel>> page(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
-        Page<MemberLevel> pageInfo = new Page<>(page, pageSize);
+        Page<MemberLevel> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<MemberLevel> qw = new LambdaQueryWrapper<>();
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId != null) {

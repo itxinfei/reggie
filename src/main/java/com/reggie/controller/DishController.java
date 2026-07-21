@@ -1,4 +1,6 @@
 package com.reggie.controller;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -70,6 +72,7 @@ public class DishController {
      * @param dishSaveDTO 菜品信息（包含基本信息及口味）
      * @return 操作结果
      */
+    @RequireEmployee
     @PostMapping
     @Operation(summary = "新增菜品", description = "保存菜品基本信息及口味信息，支持多规格口味配置")
     @Parameter(name = "dishSaveDTO", description = "菜品信息DTO（名称、分类、价格、编码、图片、描述、状态、口味列表）", required = true)
@@ -107,7 +110,8 @@ public class DishController {
      * @param categoryId 菜品分类ID（可选）
      * @return 分页结果
      */
-    @GetMapping("/page")
+    @RequireEmployee
+        @GetMapping("/page")
     @Operation(summary = "菜品分页查询", description = "分页查询菜品列表，支持按名称模糊搜索、状态筛选和分类筛选，自动关联分类名称")
     @Parameter(name = "page", description = "页码，从1开始", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
@@ -115,13 +119,13 @@ public class DishController {
     @Parameter(name = "status", description = "售卖状态（可选，'0'=停售 ,'1'=启售）")
     @Parameter(name = "categoryId", description = "菜品分类ID（可选）")
     @Parameter(name = "code", description = "商品码（可选，模糊查询）")
-    public R<Page<DishDto>> page(int page,int pageSize,String name,
+    public R<Page<DishDto>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,String name,
                                   @RequestParam(required = false) String status,
                                   @RequestParam(required = false) Long categoryId,
                                   @RequestParam(required = false) String code){
 
         //构造分页构造器对象
-        Page<Dish> pageInfo = new Page<>(page,pageSize);
+        Page<Dish> pageInfo = PageUtils.of(page,pageSize);
         Page<DishDto> dishDtoPage = new Page<>();
 
         //条件构造器
@@ -191,6 +195,7 @@ public class DishController {
      * @param dishDto 菜品信息
      * @return 操作结果
      */
+    @RequireEmployee
     @PutMapping
     @Operation(summary = "修改菜品", description = "更新菜品基本信息及口味信息")
     @Parameter(name = "dishDto", description = "菜品DTO（包含ID、基本信息及口味列表）", required = true)
@@ -209,6 +214,7 @@ public class DishController {
         return R.success("修改菜品成功");
     }
 
+    @RequireEmployee
     @DeleteMapping
     @Operation(summary = "删除菜品", description = "批量删除菜品及关联口味数据，自动校验套餐引用")
     @Parameter(name = "ids", description = "菜品ID列表，逗号分隔（如 1,2,3）", required = true)
@@ -238,7 +244,8 @@ public class DishController {
      * @param ids 菜品ID列表，逗号分隔（如 1,2,3）
      * @return 操作结果
      */
-    @PostMapping("/status/{status}")
+    @RequireEmployee
+        @PostMapping("/status/{status}")
     @Operation(summary = "更新菜品状态", description = "批量更新菜品售卖状态（起售/停售）")
     @Parameter(name = "status", description = "状态值：1-起售，0-停售", required = true)
     @Parameter(name = "ids", description = "菜品ID列表，逗号分隔（如 1,2,3）", required = true)
@@ -361,7 +368,8 @@ public class DishController {
      * 获取菜品统计数据（轻量接口，仅COUNT查询，不拉取全量数据）
      * @return 统计数据（total/active/inactive/lowStock/soldOut）
      */
-    @GetMapping("/stats")
+    @RequireEmployee
+        @GetMapping("/stats")
     @Operation(summary = "菜品统计", description = "获取菜品统计数据（总数、起售数、停售数、低库存数、售罄数），轻量COUNT查询")
     public R<Map<String, Object>> stats() {
         Map<String, Object> stats = dishService.getStats();
@@ -375,7 +383,8 @@ public class DishController {
      * @param minStock 最低库存预警值
      * @return 操作结果
      */
-    @PutMapping("/stock/{id}")
+    @RequireEmployee
+        @PutMapping("/stock/{id}")
     @Operation(summary = "更新菜品库存", description = "更新菜品的库存数量和最低库存预警值")
     @Parameter(name = "id", description = "菜品ID", required = true)
     @Parameter(name = "stockQty", description = "库存数量（不能小于0）", required = true)

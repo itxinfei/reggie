@@ -5,12 +5,22 @@
  * @since 2026-07-10
  */
 
-/* ========== 整体布局（container 作为 flex 容器） ========== */
+/* ========== 整体布局（dashboard-container > container 作为 flex 容器） ========== */
+
+/* dashboard-container 撑满视口（减去自身 padding） */
+.dashboard-container {
+  height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+/* container 填充 dashboard-container */
 .dashboard-container .container.ai-chat-layout {
+  flex: 1;
   display: flex;
   padding: 0;
   overflow: hidden;
-  min-height: 520px;
+  min-height: 0; /* 允许 flex 子项缩小 */
 }
 
 /* ========== 左侧边栏 ========== */

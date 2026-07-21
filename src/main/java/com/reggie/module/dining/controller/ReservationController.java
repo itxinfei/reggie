@@ -1,4 +1,5 @@
 package com.reggie.module.dining.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -61,12 +62,12 @@ public class ReservationController {
     @Parameter(name = "customerName", description = "客户姓名（可选，模糊搜索）")
     @Parameter(name = "phone", description = "手机号（可选，模糊搜索）")
     @Parameter(name = "reservedDate", description = "预订日期（可选，格式yyyy-MM-dd）")
-    public R<Page<Reservation>> page(int page, int pageSize,
+    public R<Page<Reservation>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String customerName,
                                      @RequestParam(required = false) String phone,
                                      @RequestParam(required = false) String reservedDate) {
-        Page<Reservation> pageInfo = new Page<>(page, pageSize);
+        Page<Reservation> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Reservation> qw = new LambdaQueryWrapper<>();
         qw.eq(status != null && !status.isEmpty(), Reservation::getStatus, status);
         qw.like(customerName != null && !customerName.isEmpty(), Reservation::getCustomerName, customerName);

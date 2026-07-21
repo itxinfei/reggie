@@ -1,11 +1,12 @@
 package com.reggie.module.ai.controller;
+import com.reggie.common.utils.PageUtils;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
-import com.reggie.module.ai.model.AIChatRequest;
-import com.reggie.module.ai.model.AIChatResponse;
-import com.reggie.module.ai.model.AIConversation;
-import com.reggie.module.ai.model.AIMessageRecord;
+import com.reggie.module.ai.mapper.AIConversationMapper;
+import com.reggie.module.ai.model.*;
 import com.reggie.module.ai.service.AIChatService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * <p>
@@ -224,7 +226,7 @@ public class AIChatController {
     public R<List<AIConversation>> getConversations(@RequestParam(defaultValue = "1") int page,
                                                      @RequestParam(defaultValue = "20") int pageSize) {
         Long userId = BaseContext.getCurrentId();
-        List<AIConversation> conversations = aiChatService.getUserConversations(userId, page, pageSize);
+        List<AIConversation> conversations = aiChatService.getUserConversations(userId, page, PageUtils.cap(pageSize));
         return R.success(conversations);
     }
 
@@ -331,4 +333,93 @@ public class AIChatController {
 
         return R.success(result);
     }
+
+    // ==================== 对话管理增强 ====================
+
+    /**
+     * 搜索对话（按标题关键词）
+     * @param keyword    搜索关键词
+     * @param page       页码
+     * @param pageSize   每页数量
+     * @return 匹配的对话列表
+     */
+    @GetMapping("/conversations/search")
+    @Operation(summary = "搜索对话", description = "按标题关键词搜索对话")
+    public R<List<AIConversation>> searchConversations(@RequestParam String keyword,
+                                                       @RequestParam(defaultValue = "1") int page,
+                                                       @RequestParam(defaultValue = "20") int pageSize) {
+        Long userId = BaseContext.getCurrentId();
+        LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AIConversation::getUserId, userId)
+                .eq(AIConversation::getIsDeleted, 0)
+                .and(keyword != null && !keyword.isEmpty(), w -> w
+                        .like(AIConversation::getTitle, keyword)
+                        .or()
+                        .like(AIConversation::getScene, keyword))
+                .orderByDesc(AIConversation::getUpdateTime);
+        Page<AIConversation> pageObj = PageUtils.of(page, pageSize);
+        conversationMapper.selectPage(pageObj, wrapper);
+        return R.success(pageObj.getRecords());
+    }
+
+    /**
+     * 重置对话上下文（清除缓存，保留历史记录）
+     * @param conversationId 对话ID
+     * @return 操作结果
+     */
+    @PostMapping("/conversations/{conversationId}/reset")
+    @Operation(summary = "重置对话上下文", description = "清除对话的上下文缓存，保留历史消息记录")
+    public R<String> resetConversationContext(@PathVariable String conversationId) {
+        Long userId = BaseContext.getCurrentId();
+        // 验证所有权
+        LambdaQueryWrapper<AIConversation> convWrapper = new LambdaQueryWrapper<>();
+        convWrapper.select(AIConversation::getUserId)
+                .eq(AIConversation::getConversationId, conversationId)
+                .eq(AIConversation::getIsDeleted, 0);
+        AIConversation conv = conversationMapper.selectOne(convWrapper);
+        if (conv == null || !userId.equals(conv.getUserId())) {
+            return R.error("对话不存在或无权访问");
+        }
+        aiChatService.resetContext(conversationId);
+        return R.success("上下文已重置，历史消息已保留");
+    }
+
+    /**
+     * 获取对话上下文统计信息
+     * @param conversationId 对话ID
+     * @return 统计信息
+     */
+    @GetMapping("/conversations/{conversationId}/context-stats")
+    @Operation(summary = "上下文统计", description = "获取对话的上下文使用情况统计")
+    public R<Map<String, Object>> getContextStats(@PathVariable String conversationId) {
+        Map<String, Object> stats = aiChatService.getContextStats(conversationId);
+        return R.success(stats);
+    }
+
+    // ==================== AI 服务状态 ====================
+
+    /**
+     * 获取 AI 服务运行状态（含熔断器信息）
+     */
+    @GetMapping("/status")
+    @Operation(summary = "AI服务状态", description = "返回当前供应商、熔断器状态等")
+    public R<Map<String, Object>> getStatus() {
+        Map<String, Object> status = new HashMap<>();
+        AiProviderConfig activeConfig = aiProviderManager.getActiveConfig();
+        if (activeConfig != null) {
+            status.put("provider", activeConfig.getProviderName());
+            status.put("model", activeConfig.getModelName());
+            status.put("format", activeConfig.getApiFormat());
+        } else {
+            status.put("provider", "未配置");
+            status.put("model", "N/A");
+        }
+        status.put("circuitBreaker", aiProviderManager.getCircuitBreakerStats());
+        return R.success(status);
+    }
+
+    // ==================== 依赖注入 ====================
+
+    @Resource
+    private AIConversationMapper conversationMapper;
 }

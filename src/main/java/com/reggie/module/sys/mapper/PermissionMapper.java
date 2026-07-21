@@ -47,4 +47,21 @@ public interface PermissionMapper extends BaseMapper<Permission> {
             "WHERE rp.role_id = #{roleId} AND p.status = 1 " +
             "ORDER BY p.sort ASC, p.id ASC")
     List<Permission> listByRoleId(@Param("roleId") Long roleId);
+
+    /**
+     * 根据多个角色ID查询权限列表（关联 role_permission）
+     * <p>修改点：替代原 PermissionServiceImpl 中参数未被绑定的 inSql 写法，支持多角色去重聚合</p>
+     *
+     * @param roleIds 角色ID列表
+     * @return 权限列表
+     */
+    @Select("<script>"
+            + "SELECT p.* FROM permission p "
+            + "INNER JOIN role_permission rp ON p.id = rp.permission_id "
+            + "WHERE rp.role_id IN "
+            + "<foreach collection='roleIds' item='rid' open='(' separator=',' close=')'>#{rid}</foreach> "
+            + "AND p.status = 1 "
+            + "ORDER BY p.sort ASC, p.id ASC"
+            + "</script>")
+    List<Permission> listByRoleIds(@Param("roleIds") List<Long> roleIds);
 }

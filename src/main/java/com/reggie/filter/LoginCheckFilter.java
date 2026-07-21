@@ -79,7 +79,10 @@ public class LoginCheckFilter implements Filter{
         "/v3/api-docs",
         "/swagger-resources/**",
         "/webjars/**",
-        "/doc.html"
+        "/doc.html",
+        // 修改点：放行 Spring Boot Actuator 监控端点（含 /actuator/health），
+        // 否则 IDEA 的运行面板/Actuator 端点无法匿名检索 health 数据
+        "/actuator/**"
     };
 
     @Override

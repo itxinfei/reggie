@@ -288,6 +288,7 @@
           try {
             const res = await $axios.get('/user/stats')
             if (String(res.code) === '1') {
+              this.stats = res.data
               return res
             }
           } catch (err) {

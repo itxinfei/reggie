@@ -1,8 +1,10 @@
 package com.reggie.module.inventory.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.StockInDTO;
 import com.reggie.dto.StockOutDTO;
 import com.reggie.module.inventory.model.StockRecord;
@@ -32,6 +34,7 @@ import java.time.LocalTime;
  * @since 2026-07-09
  */
 @Slf4j
+@RequireEmployee
 @RestController
 @RequestMapping("/api/inventory/stock-record")
 @Tag(name = "出入库记录")
@@ -58,13 +61,13 @@ public class StockRecordController {
     @Parameter(name = "type", description = "类型（可选）：IN-入库，OUT-出库，CHECK-盘点")
     @Parameter(name = "startDate", description = "开始日期（可选）")
     @Parameter(name = "endDate", description = "结束日期（可选）")
-    public R<Page<StockRecord>> page(int page, int pageSize,
+    public R<Page<StockRecord>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                       @RequestParam(required = false) Long materialId,
                                       @RequestParam(required = false) String type,
                                       @RequestParam(required = false) String startDate,
                                       @RequestParam(required = false) String endDate) {
         // 修改点：统一使用 LambdaQueryWrapper 支持所有筛选条件，而非分流到 pageByMaterial
-        Page<StockRecord> pageInfo = new Page<>(page, pageSize);
+        Page<StockRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<StockRecord> qw = new LambdaQueryWrapper<>();
         // 修改点：删除冗余的手动 eq(tenantId)，由 TenantLineInnerInterceptor 统一处理
         qw.eq(materialId != null, StockRecord::getMaterialId, materialId);

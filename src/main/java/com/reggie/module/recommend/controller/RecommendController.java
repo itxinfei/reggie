@@ -1,4 +1,5 @@
 package com.reggie.module.recommend.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.reggie.common.R;
 import com.reggie.entity.User;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import java.util.*;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 智能推荐控制器
@@ -275,7 +277,7 @@ public class RecommendController {
             return R.error("请先登录");
         }
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<Map<String, Object>> result =
-                marketingCampaignService.getMessages(userId, page, pageSize);
+                marketingCampaignService.getMessages(userId, page, PageUtils.cap(pageSize));
         return R.success(result);
     }
 

@@ -1,4 +1,5 @@
 package com.reggie.module.delivery.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
@@ -80,7 +81,7 @@ public class DeliveryController {
             @Parameter(description = "状态（可选）") @RequestParam(required = false) String status,
             @Parameter(description = "开始日期（可选）") @RequestParam(required = false) String startDate,
             @Parameter(description = "结束日期（可选）") @RequestParam(required = false) String endDate) {
-        Page<DeliveryOrder> pageInfo = deliveryService.pageOrders(page, pageSize, platform, status, startDate, endDate);
+        Page<DeliveryOrder> pageInfo = deliveryService.pageOrders(page, PageUtils.cap(pageSize), platform, status, startDate, endDate);
         return R.success(pageInfo);
     }
 

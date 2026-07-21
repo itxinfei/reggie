@@ -1,10 +1,12 @@
 package com.reggie.module.ai.provider;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.reggie.module.ai.adapter.AiModelAdapter.StreamCallback;
 import com.reggie.module.ai.adapter.AiModelAdapter;
 import com.reggie.module.ai.adapter.AnthropicAdapter;
 import com.reggie.module.ai.adapter.BaiduAdapter;
 import com.reggie.module.ai.adapter.OpenAICompatibleAdapter;
+import com.reggie.module.ai.service.CircuitBreakerService;
 import com.reggie.module.ai.config.AIConfigProperties;
 import com.reggie.module.ai.mapper.AiProviderConfigMapper;
 import com.reggie.module.ai.model.AIChatResponse;
@@ -37,6 +39,10 @@ public class AiProviderManager implements AIClient {
 
     @Resource
     private AIConfigProperties aiConfig;
+
+    /** 熔断降级服务 */
+    @Resource
+    private CircuitBreakerService circuitBreakerService;
 
     // ==================== 适配器注册表 ====================
 
@@ -213,8 +219,95 @@ public class AiProviderManager implements AIClient {
         log.info("使用适配器 [{}] 处理请求: provider={}, model={}",
                 adapter.getFormatId(), config.getProviderCode(), config.getModelName());
 
-        // 委托给对应适配器
-        return adapter.chat(messages, maxTokens, temperature, config);
+        // 委托给对应适配器（带熔断保护）
+        String providerCode = config.getProviderCode();
+        return circuitBreakerService.execute(providerCode,
+                () -> adapter.chat(messages, maxTokens, temperature, config),
+                (code, reason) -> AIChatResponse.builder()
+                        .content("【AI服务暂时不可用】" + reason + "（" + config.getProviderName() + "），请稍后重试。")
+                        .model(config.getModelName())
+                        .build()
+        );
+    }
+
+    /**
+     * SSE 流式对话：优先使用适配器的流式能力，降级为非流式
+     * <p>带熔断保护，熔断时直接降级。</p>
+     */
+    public String streamChat(List<AIMessage> messages, int maxTokens, double temperature,
+                             StreamCallback callback) {
+        AiProviderConfig config = getActiveConfig();
+
+        if (messages == null || messages.isEmpty()) {
+            callback.onToken("消息列表为空，无法发起对话", true);
+            return null;
+        }
+        if (config == null) {
+            callback.onToken("AI功能未配置，请前往后台管理设置", true);
+            return null;
+        }
+
+        String apiFormat = config.getApiFormat();
+        if (apiFormat == null || apiFormat.isEmpty()) {
+            apiFormat = OpenAICompatibleAdapter.FORMAT_ID;
+        }
+        apiFormat = apiFormat.toLowerCase();
+
+        AiModelAdapter adapter = adapterRegistry.get(apiFormat);
+        if (adapter == null) {
+            callback.onToken("不支持的API格式：" + apiFormat, true);
+            return null;
+        }
+
+        String providerCode = config.getProviderCode();
+        return circuitBreakerService.execute(providerCode,
+                () -> doStream(messages, maxTokens, temperature, config, adapter, callback),
+                (code, reason) -> {
+                    callback.onToken("【服务暂时不可用】" + reason, true);
+                    return null;
+                }
+        );
+    }
+
+    /**
+     * 执行实际流式逻辑（被熔断保护包裹）
+     */
+    private String doStream(List<AIMessage> messages, int maxTokens, double temperature,
+                            AiProviderConfig config, AiModelAdapter adapter, StreamCallback callback)
+            throws Exception {
+        if (adapter.supportsStreaming()) {
+            try {
+                return adapter.chatStream(messages, maxTokens, temperature, config, callback);
+            } catch (Exception e) {
+                log.warn("真流式失败，降级为分块流式: provider={}", config.getProviderCode(), e);
+            }
+        }
+
+        // 降级：非流式 + 分块发送
+        AIChatResponse response = adapter.chat(messages, maxTokens, temperature, config);
+        if (response != null && response.getContent() != null) {
+            String content = response.getContent();
+            String[] chunks = splitIntoChunks(content, 20);
+            for (int i = 0; i < chunks.length; i++) {
+                callback.onToken(chunks[i], i == chunks.length - 1);
+                try { Thread.sleep(30); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+            }
+            return content;
+        }
+        return null;
+    }
+
+    private String[] splitIntoChunks(String text, int chunkSize) {
+        if (text == null || text.isEmpty()) return new String[0];
+        int len = text.length();
+        int chunks = (int) Math.ceil((double) len / chunkSize);
+        String[] result = new String[chunks];
+        for (int i = 0; i < chunks; i++) {
+            int start = i * chunkSize;
+            int end = Math.min(start + chunkSize, len);
+            result[i] = text.substring(start, end);
+        }
+        return result;
     }
 
     @Override
@@ -285,5 +378,12 @@ public class AiProviderManager implements AIClient {
             result.putIfAbsent(adapter.getFormatId(), adapter.getDisplayName());
         }
         return result;
+    }
+
+    /**
+     * 获取熔断器统计信息
+     */
+    public Map<String, Object> getCircuitBreakerStats() {
+        return circuitBreakerService.getStats();
     }
 }

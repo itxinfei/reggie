@@ -1,4 +1,5 @@
 package com.reggie.module.dining.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -54,10 +55,10 @@ public class QueueController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "status", description = "状态（可选）：WAITING-等待中, CALLED-已叫号, SEATED-已入座, CANCELLED-已取消")
     @Parameter(name = "phone", description = "手机号（可选，模糊搜索）")
-    public R<Page<QueueRecord>> page(int page, int pageSize,
+    public R<Page<QueueRecord>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String phone) {
-        Page<QueueRecord> pageInfo = new Page<>(page, pageSize);
+        Page<QueueRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(status != null && !status.isEmpty(), QueueRecord::getStatus, status);
         qw.like(phone != null && !phone.isEmpty(), QueueRecord::getPhone, phone);

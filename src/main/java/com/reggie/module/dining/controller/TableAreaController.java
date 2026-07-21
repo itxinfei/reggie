@@ -1,4 +1,5 @@
 package com.reggie.module.dining.controller;
+import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -25,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 堂食区域管理控制器
@@ -52,8 +54,8 @@ public class TableAreaController {
     @Operation(summary = "分页查询", description = "分页查询桌台区域列表")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
-    public R<Page<TableArea>> page(int page, int pageSize) {
-        Page<TableArea> pageInfo = new Page<>(page, pageSize);
+    public R<Page<TableArea>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize) {
+        Page<TableArea> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<TableArea> qw = new LambdaQueryWrapper<>();
         qw.orderByAsc(TableArea::getSort);
         tableAreaService.page(pageInfo, qw);
