@@ -95,6 +95,19 @@ public class DiningTableController {
     @Operation(summary = "修改桌台", description = "更新桌台基本信息")
     public R<String> update(@RequestBody DiningTable table) {
         log.info("修改桌台: {}", table.getId());
+        // 租户归属校验：按 id + tenantId 查询，确认桌台归属当前租户
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        LambdaQueryWrapper<DiningTable> checkWrapper = new LambdaQueryWrapper<>();
+        checkWrapper.eq(DiningTable::getId, table.getId())
+                    .eq(DiningTable::getTenantId, tenantId);
+        if (diningTableService.count(checkWrapper) == 0) {
+            return R.error("桌台不存在或无权操作");
+        }
+        // 防止通过请求体篡改租户ID
+        table.setTenantId(tenantId);
         diningTableService.updateById(table);
         return R.success("修改桌台成功");
     }
@@ -104,6 +117,17 @@ public class DiningTableController {
     @Parameter(name = "id", description = "桌台ID", required = true)
     public R<String> delete(@PathVariable Long id) {
         log.info("删除桌台: {}", id);
+        // 租户归属校验：按 id + tenantId 查询，确认桌台归属当前租户
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        LambdaQueryWrapper<DiningTable> checkWrapper = new LambdaQueryWrapper<>();
+        checkWrapper.eq(DiningTable::getId, id)
+                    .eq(DiningTable::getTenantId, tenantId);
+        if (diningTableService.count(checkWrapper) == 0) {
+            return R.error("桌台不存在或无权操作");
+        }
         diningTableService.removeById(id);
         return R.success("删除桌台成功");
     }
@@ -117,7 +141,15 @@ public class DiningTableController {
     @Operation(summary = "根据id查询桌台", description = "根据ID查询桌台详情")
     @Parameter(name = "id", description = "桌台ID", required = true)
     public R<DiningTable> getById(@PathVariable Long id) {
-        DiningTable table = diningTableService.getById(id);
+        // 租户归属校验：按 id + tenantId 条件查询，防止跨租户 IDOR
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        LambdaQueryWrapper<DiningTable> qw = new LambdaQueryWrapper<>();
+        qw.eq(DiningTable::getId, id)
+          .eq(DiningTable::getTenantId, tenantId);
+        DiningTable table = diningTableService.getOne(qw);
         if (table != null) {
             return R.success(table);
         }
@@ -144,13 +176,31 @@ public class DiningTableController {
     @Operation(summary = "桌台列表", description = "获取所有桌台列表")
     public R<List<DiningTable>> list() {
         LambdaQueryWrapper<DiningTable> qw = new LambdaQueryWrapper<>();
+        // 强制租户过滤，防止跨租户数据泄露
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        qw.eq(DiningTable::getTenantId, tenantId);
         qw.orderByAsc(DiningTable::getSort);
         List<DiningTable> list = diningTableService.list(qw);
-        for (DiningTable table : list) {
-            if (table.getAreaId() != null) {
-                TableArea area = tableAreaService.getById(table.getAreaId());
-                if (area != null) {
-                    table.setAreaName(area.getName());
+        // 批量填充区域名称，避免 N+1 查询
+        if (list != null && !list.isEmpty()) {
+            java.util.Set<Long> areaIds = new java.util.HashSet<>();
+            for (DiningTable table : list) {
+                if (table.getAreaId() != null) {
+                    areaIds.add(table.getAreaId());
+                }
+            }
+            Map<Long, String> areaNameMap = new HashMap<>();
+            if (!areaIds.isEmpty()) {
+                for (TableArea area : tableAreaService.listByIds(areaIds)) {
+                    areaNameMap.put(area.getId(), area.getName());
+                }
+            }
+            for (DiningTable table : list) {
+                if (table.getAreaId() != null) {
+                    table.setAreaName(areaNameMap.get(table.getAreaId()));
                 }
             }
         }

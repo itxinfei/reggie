@@ -59,6 +59,7 @@ public class MaterialController {
     public R<Page<Material>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                    @RequestParam(required = false) String name,
                                    @RequestParam(required = false) Long categoryId,
+                                   @Parameter(description = "S t a t u s")
                                    @RequestParam(required = false) String status) {
         Page<Material> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Material> qw = new LambdaQueryWrapper<>();
@@ -143,4 +144,5 @@ public class MaterialController {
         return R.success(materialService.checkWarning());
     }
 }
+
 

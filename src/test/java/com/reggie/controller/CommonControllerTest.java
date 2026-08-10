@@ -140,10 +140,12 @@ public class CommonControllerTest {
 
     @Test
     void testDownloadNonExistingFile() throws Exception {
-        // 下载不存在的文件，应该返回占位图
+        // 下载不存在的文件，已登录状态下应返回 SVG 占位图
         mockMvc.perform(get("/common/download")
-                .param("name", "non-existing-file.jpg"))
+                .param("name", "non-existing-file.jpg")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().contentType("image/svg+xml"));
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().contentTypeCompatibleWith("image/svg+xml"));
     }
 }

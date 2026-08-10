@@ -7,6 +7,7 @@ import com.reggie.module.printer.mapper.PrinterLogMapper;
 import com.reggie.module.printer.model.PrinterLog;
 import com.reggie.module.printer.service.PrinterLogService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class PrinterLogServiceImpl extends ServiceImpl<PrinterLogMapper, PrinterLog> implements PrinterLogService {
 
     @Override
@@ -42,3 +44,4 @@ public class PrinterLogServiceImpl extends ServiceImpl<PrinterLogMapper, Printer
         return this.page(pageRequest, wrapper);
     }
 }
+

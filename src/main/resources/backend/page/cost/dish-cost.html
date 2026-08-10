@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>菜品成本管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/main.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      background: var(--el-bg-subtle);
+    }
+    .container {
+      padding: 24px 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .tableBar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--bg-surface);
+      padding: 16px 24px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    }
+    .tableBar .toolbar-label {
+      font-size: 14px;
+      color: var(--el-text-regular);
+      font-weight: 500;
+    }
+    .tableBar .toolbar-spacer {
+      flex: 1;
+    }
+    .table-card {
+      background: var(--bg-surface);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    }
+    .profit-rate {
+      font-weight: 600;
+    }
+    .profit-rate.high {
+      color: var(--el-color-success);
+    }
+    .profit-rate.medium {
+      color: var(--el-color-warning);
+    }
+    .profit-rate.low {
+      color: var(--el-color-danger);
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="container">
+    <!-- 工具栏 -->
+    <div class="tableBar">
+      <span class="toolbar-label">菜品名称：</span>
+      <el-input v-model="searchName" placeholder="请输入菜品名称" clearable style="width: 200px;"></el-input>
+      <el-button type="primary" icon="el-icon-search" aria-label="搜索" @click="fetchData">查询</el-button>
+      <el-button icon="el-icon-refresh" aria-label="重置" @click="resetSearch">重置</el-button>
+      <div class="toolbar-spacer"></div>
+      <el-button type="primary" icon="el-icon-plus" aria-label="新增" @click="handleAdd">新增菜品成本</el-button>
+      <el-button type="success" icon="el-icon-download" @click="handleExport">导出</el-button>
+    </div>
+
+    <!-- 表格 -->
+    <div class="table-card">
+      <el-table aria-label="数据表格"
+        :data="filteredTableData"
+        border
+        stripe
+        style="width: 100%"
+        v-loading="loading">
+        <el-table aria-label="数据表格"-column prop="dishName" label="菜品名称" min-width="150"></el-table-column>
+        <el-table aria-label="数据表格"-column prop="materialCost" label="食材成本" width="120" align="right">
+          <template slot-scope="scope">
+            ¥{{ formatMoney(scope.row.materialCost) }}
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="laborCost" label="人工成本" width="120" align="right">
+          <template slot-scope="scope">
+            ¥{{ formatMoney(scope.row.laborCost) }}
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="otherCost" label="其他成本" width="120" align="right">
+          <template slot-scope="scope">
+            ¥{{ formatMoney(scope.row.otherCost) }}
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="totalCost" label="总成本" width="120" align="right">
+          <template slot-scope="scope">
+            <strong>¥{{ formatMoney(scope.row.totalCost) }}</strong>
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="salePrice" label="售价" width="120" align="right">
+          <template slot-scope="scope">
+            ¥{{ formatMoney(scope.row.salePrice) }}
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="profitRate" label="毛利率" width="120" align="center">
+          <template slot-scope="scope">
+            <span class="profit-rate" :class="getProfitRateClass(scope.row.profitRate)">
+              {{ scope.row.profitRate }}%
+            </span>
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="remark" label="备注" min-width="150" show-overflow-tooltip></el-table-column>
+        <el-table aria-label="数据表格"-column label="操作" width="180" fixed="right">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-button type="text" size="small" style="color: var(--el-color-danger);" @click="handleDelete(scope.row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <!-- 新增/编辑对话框 -->
+    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="600px">
+      <el-form :model="formData" :rules="formRules" ref="costForm" label-width="100px">
+        <el-form-item label="菜品" prop="dishId">
+          <el-select
+            v-model="formData.dishId"
+            filterable
+            remote
+            :remote-method="searchDishes"
+            :loading="dishLoading"
+            placeholder="请选择菜品"
+            @change="handleDishChange"
+            style="width: 100%;">
+            <el-option
+              v-for="item in dishOptions"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id">
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="食材成本" prop="materialCost">
+          <el-input-number v-model="formData.materialCost" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="人工成本" prop="laborCost">
+          <el-input-number v-model="formData.laborCost" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="其他成本" prop="otherCost">
+          <el-input-number v-model="formData.otherCost" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="售价" prop="salePrice">
+          <el-input-number v-model="formData.salePrice" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="formData.remark" type="textarea" :rows="3" placeholder="请输入备注"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/common.js"></script>
+  <script src="../../api/cost.js"></script>
+  <script src="../../api/food.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          loading: false,
+          searchName: '',
+          tableData: [],
+          dialogVisible: false,
+          dialogTitle: '新增菜品成本',
+          submitLoading: false,
+          formData: {
+            id: null,
+            dishId: null,
+            dishName: '',
+            materialCost: 0,
+            laborCost: 0,
+            otherCost: 0,
+            salePrice: 0,
+            remark: ''
+          },
+          formRules: {
+            dishId: [{ required: true, message: '请选择菜品', trigger: 'change' }],
+            materialCost: [{ required: true, message: '请输入食材成本', trigger: 'blur' }],
+            salePrice: [{ required: true, message: '请输入售价', trigger: 'blur' }]
+          },
+          dishOptions: [],
+          dishLoading: false
+        }
+      },
+      computed: {
+        filteredTableData() {
+          if (!this.searchName) {
+            return this.tableData
+          }
+          return this.tableData.filter(item => 
+            item.dishName && item.dishName.includes(this.searchName)
+          )
+        }
+      },
+      created() {
+        this.fetchData()
+      },
+      methods: {
+        formatMoney(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        getProfitRateClass(rate) {
+          if (rate >= 30) return 'high'
+          if (rate >= 10) return 'medium'
+          return 'low'
+        },
+        async fetchData() {
+          this.loading = true
+          try {
+            const res = await getDishCostList()
+            if (res.code === 1) {
+              this.tableData = res.data || []
+            }
+          } catch (err) {
+            console.error('获取菜品成本列表失败', err)
+            this.$message.error('获取数据失败')
+          } finally {
+            this.loading = false
+          }
+        },
+        resetSearch() {
+          this.searchName = ''
+          this.fetchData()
+        },
+        async searchDishes(query) {
+          if (query !== '') {
+            this.dishLoading = true
+            try {
+              const res = await getDishList({ name: query })
+              if (res.code === 1) {
+                this.dishOptions = res.data || []
+              }
+            } catch (err) {
+              console.error('搜索菜品失败', err)
+            } finally {
+              this.dishLoading = false
+            }
+          } else {
+            this.dishOptions = []
+          }
+        },
+        handleDishChange(dishId) {
+          const dish = this.dishOptions.find(item => item.id === dishId)
+          if (dish) {
+            this.formData.dishName = dish.name
+          }
+        },
+        handleAdd() {
+          this.dialogTitle = '新增菜品成本'
+          this.formData = {
+            id: null,
+            dishId: null,
+            dishName: '',
+            materialCost: 0,
+            laborCost: 0,
+            otherCost: 0,
+            salePrice: 0,
+            remark: ''
+          }
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.costForm && this.$refs.costForm.clearValidate()
+          })
+        },
+        handleEdit(row) {
+          this.dialogTitle = '编辑菜品成本'
+          this.formData = { ...row }
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.costForm && this.$refs.costForm.clearValidate()
+          })
+        },
+        async handleDelete(row) {
+          try {
+            await this.$confirm('确定要删除该菜品成本吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            
+            const res = await deleteDishCost(row.id)
+            if (res.code === 1) {
+              this.$message.success('删除成功')
+              this.fetchData()
+            } else {
+              this.$message.error(res.msg || '删除失败')
+            }
+          } catch (err) {
+            if (err !== 'cancel') {
+              console.error('删除失败', err)
+              this.$message.error('删除失败')
+            }
+          }
+        },
+        handleSubmit() {
+          this.$refs.costForm.validate(async (valid) => {
+            if (!valid) return
+            
+            this.submitLoading = true
+            try {
+              let res
+              if (this.formData.id) {
+                res = await updateDishCost(this.formData)
+              } else {
+                res = await saveDishCost(this.formData)
+              }
+              
+              if (res.code === 1) {
+                this.$message.success(this.formData.id ? '更新成功' : '新增成功')
+                this.dialogVisible = false
+                this.fetchData()
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            } catch (err) {
+              console.error('提交失败', err)
+              this.$message.error('操作失败')
+            } finally {
+              this.submitLoading = false
+            }
+          })
+        },
+        handleExport() {
+          this.$message.info('导出功能开发中...')
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+

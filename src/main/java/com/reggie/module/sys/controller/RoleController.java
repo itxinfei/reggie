@@ -69,6 +69,7 @@ public class RoleController {
     @GetMapping("/page")
     @Operation(summary = "角色分页查询")
     public R<Page<Role>> page(
+            @Parameter(description = "P a g e")
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "角色名称") @RequestParam(required = false) String roleName) {
@@ -147,6 +148,7 @@ public class RoleController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除角色", description = "逻辑删除指定角色并清理角色-权限关联")
+    @Parameter(description = "I d")
     public R<String> delete(@Parameter(description = "角色ID") @PathVariable Long id) {
         // 修改点：逻辑删除角色的同时清理 role_permission 关联，避免产生孤儿数据
         rolePermissionMapper.delete(
@@ -169,6 +171,7 @@ public class RoleController {
      */
     @GetMapping("/{id}/permissions")
     @Operation(summary = "查询角色权限", description = "获取指定角色已分配的权限ID列表")
+    @Parameter(description = "I d")
     public R<List<Long>> getPermissions(@Parameter(description = "角色ID") @PathVariable Long id) {
         List<Long> permIds = roleService.getPermissionIds(id);
         return R.success(permIds);
@@ -183,6 +186,7 @@ public class RoleController {
     @PutMapping("/{id}/permissions")
     @Operation(summary = "分配角色权限", description = "为角色批量分配权限")
     public R<String> assignPermissions(
+            @Parameter(description = "I d")
             @Parameter(description = "角色ID") @PathVariable Long id,
             @Parameter(description = "权限ID列表") @RequestBody Map<String, List<Long>> body) {
         List<Long> permissionIds = body.get("permissionIds");
@@ -227,3 +231,4 @@ public class RoleController {
         return R.success(result);
     }
 }
+

@@ -8,6 +8,7 @@ import com.reggie.entity.ShoppingCart;
 import com.reggie.mapper.ShoppingCartMapper;
 import com.reggie.service.ShoppingCartService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 购物车服务实现类
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
  * @since 2026-07-09
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, ShoppingCart> implements ShoppingCartService {
 
     /**
@@ -98,3 +100,5 @@ public class ShoppingCartServiceImpl extends ServiceImpl<ShoppingCartMapper, Sho
         return getBaseMapper().addQuantity(itemId, increment);
     }
 }
+
+

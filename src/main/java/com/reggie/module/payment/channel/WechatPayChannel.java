@@ -78,4 +78,31 @@ public class WechatPayChannel implements PaymentChannel {
         response.setChannelTradeNo(params.get("trade_no"));
         return response;
     }
+
+    /**
+     * 校验微信支付回调签名。
+     * <p>
+     * STUB 实现：仅校验必要参数（out_trade_no、sign）存在性。生产环境必须替换为
+     * {@code WxPayUtil.verifyNotifySign} 配合微信支付 API 密钥进行真实签名校验，
+     * 严禁保留此恒真逻辑上线。
+     * </p>
+     *
+     * @param params 回调参数
+     * @return true=必要参数齐全（待替换为真实签名校验）；false=参数缺失
+     */
+    @Override
+    public boolean verifyNotifySign(Map<String, String> params) {
+        if (params == null) {
+            return false;
+        }
+        String outTradeNo = params.get("out_trade_no");
+        String sign = params.get("sign");
+        if (outTradeNo == null || outTradeNo.trim().isEmpty() || sign == null || sign.trim().isEmpty()) {
+            log.warn("WechatPay 回调签名校验失败：缺少 out_trade_no 或 sign 参数，params={}", params);
+            return false;
+        }
+        // TODO(生产环境必须替换): 使用 WxPayUtil.verifyNotifySign 进行真实签名校验
+        log.warn("WechatPay 回调签名校验为 STUB 实现，仅校验参数存在性，生产环境必须替换为真实签名校验");
+        return true;
+    }
 }

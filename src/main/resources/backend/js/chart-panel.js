@@ -32,7 +32,7 @@ Vue.component('chart-panel', {
       type: String,
       default: ''
     },
-    /** 标题前缀图标（emoji 或 HTML） */
+    /** 标题前缀图标（emoji 或文本） */
     icon: {
       type: String,
       default: ''
@@ -52,7 +52,7 @@ Vue.component('chart-panel', {
     '<div class="chart-panel" :style="{ padding: padding, marginBottom: marginBottom }">' +
       '<div v-if="title || $slots.title" class="chart-panel__title">' +
         '<slot name="title">' +
-          '<span v-if="icon" class="chart-panel__icon" v-html="icon"></span>' +
+          '<span v-if="icon" class="chart-panel__icon" v-text="icon"></span>' +
           '<span>{{ title }}</span>' +
         '</slot>' +
       '</div>' +
@@ -88,7 +88,7 @@ Vue.component('kpi-card', {
       type: String,
       default: ''
     },
-    /** 图标（emoji 或 HTML 字符串） */
+    /** 图标（emoji 或文本） */
     icon: {
       type: String,
       default: ''
@@ -122,7 +122,7 @@ Vue.component('kpi-card', {
   },
   template:
     '<div :class="cardClass" :style="customStyle">' +
-      '<div v-if="icon" class="kpi-card__icon" v-html="icon"></div>' +
+      '<div v-if="icon" class="kpi-card__icon" v-text="icon"></div>' +
       '<div class="kpi-card__content">' +
         '<div class="kpi-card__label">{{ label }}</div>' +
         '<div class="kpi-card__value">' +

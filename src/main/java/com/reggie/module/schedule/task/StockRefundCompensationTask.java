@@ -149,6 +149,12 @@ public class StockRefundCompensationTask {
         wrapper.eq(OrderDetail::getOrderId, orderId);
         List<OrderDetail> details = orderDetailService.list(wrapper);
         if (details == null || details.isEmpty()) {
+            // 空明细订单无需回退库存，直接标记为已处理，避免重复扫描
+            Orders order = new Orders();
+            order.setId(orderId);
+            order.setStockRefunded(1);
+            orderService.updateById(order);
+            log.info("[库存补偿] 订单ID={} 无明细，直接标记已处理", orderId);
             return;
         }
 
@@ -234,16 +240,18 @@ public class StockRefundCompensationTask {
 
     private boolean tryLock(String lockKey, long ttlMs) {
         if (redisTemplate == null) {
-            log.warn("[库存补偿] Redis不可用，无法获取分布式锁: {}", lockKey);
-            return true;
+            // fail-closed：写操作类定时任务在 Redis 不可用时跳过本次执行，避免多实例重复补偿
+            log.warn("[库存补偿] Redis不可用，跳过本次执行（分布式锁获取失败）: {}", lockKey);
+            return false;
         }
         try {
             Boolean success = redisTemplate.opsForValue()
                     .setIfAbsent(lockKey, "1", ttlMs, TimeUnit.MILLISECONDS);
             return Boolean.TRUE.equals(success);
         } catch (Exception e) {
-            log.error("[库存补偿] 获取分布式锁失败: {}", lockKey, e);
-            return true;
+            // fail-closed：获取锁异常时跳过本次执行，避免多实例重复补偿
+            log.error("[库存补偿] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
+            return false;
         }
     }
 

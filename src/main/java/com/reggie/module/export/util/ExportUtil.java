@@ -22,7 +22,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
@@ -96,10 +96,13 @@ public final class ExportUtil {
 
     /**
      * 生成Excel字节数组
+     * #12 改用 SXSSFWorkbook 流式写入（滑动窗口100行），避免全量数据驻留内存导致 OOM
      */
     private static byte[] generateExcel(LinkedHashMap<String, String> columns,
                                         List<Map<String, Object>> dataList) {
-        try (Workbook workbook = new XSSFWorkbook()) {
+        // SXSSFWorkbook(100): 滑动窗口保留100行在内存，超出部分刷新到磁盘临时文件
+        SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+        try {
             Sheet sheet = workbook.createSheet("导出数据");
 
             // 创建样式
@@ -127,12 +130,13 @@ public final class ExportUtil {
                 }
             }
 
-            // 自适应列宽
+            // SXSSF 流式模式下 autoSizeColumn 无法访问已刷新的行，改用按表头长度估算固定列宽
             for (int i = 0; i < headerKeys.size(); i++) {
-                sheet.autoSizeColumn(i, true);
-                int width = sheet.getColumnWidth(i);
-                // 限制最大宽度避免过长
-                sheet.setColumnWidth(i, Math.min(width + 2048, 40 * 256));
+                String headerName = columns.get(headerKeys.get(i));
+                int charLen = headerName != null ? headerName.length() : 10;
+                // 每中文字符约2个字符宽度，最小10、最大40个字符宽度（1单位=1/256字符宽）
+                int width = Math.min(Math.max(charLen * 2 + 4, 12), 40) * 256;
+                sheet.setColumnWidth(i, width);
             }
 
             // 冻结首行
@@ -145,6 +149,14 @@ public final class ExportUtil {
         } catch (IOException e) {
             log.error("生成Excel失败", e);
             throw new RuntimeException("生成Excel文件失败", e);
+        } finally {
+            // 清理磁盘临时文件，防止泄漏
+            workbook.dispose();
+            try {
+                workbook.close();
+            } catch (IOException e) {
+                log.warn("关闭SXSSFWorkbook失败", e);
+            }
         }
     }
 

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>折扣活动管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/main.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      background: var(--el-bg-subtle);
+    }
+    .container {
+      padding: 24px 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .tableBar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--bg-surface);
+      padding: 16px 24px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    }
+    .tableBar .toolbar-label {
+      font-size: 14px;
+      color: var(--el-text-regular);
+      font-weight: 500;
+    }
+    .tableBar .toolbar-spacer {
+      flex: 1;
+    }
+    .table-card {
+      background: var(--bg-surface);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    }
+    .scope-tag {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .scope-tag.all {
+      background: var(--el-color-primary-lighter);
+      color: var(--el-color-primary);
+    }
+    .scope-tag.category {
+      background: var(--el-color-success-lighter);
+      color: var(--el-color-success);
+    }
+    .scope-tag.dish {
+      background: var(--el-color-warning-lighter);
+      color: var(--el-color-warning);
+    }
+    .scope-tag.setmeal {
+      background: var(--el-color-info-lighter);
+      color: var(--el-color-info);
+    }
+    .status-tag {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .status-tag.active {
+      background: var(--el-color-success-lighter);
+      color: var(--el-color-success);
+    }
+    .status-tag.disabled {
+      background: var(--el-color-danger-lighter);
+      color: var(--el-color-danger);
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="container">
+    <!-- 工具栏 -->
+    <div class="tableBar">
+      <span class="toolbar-label">活动ID：</span>
+      <el-input v-model="searchCampaignId" placeholder="请输入活动ID" clearable style="width: 150px;"></el-input>
+      <el-button type="primary" icon="el-icon-search" aria-label="搜索" @click="fetchData">查询</el-button>
+      <el-button icon="el-icon-refresh" aria-label="重置" @click="resetSearch">重置</el-button>
+      <div class="toolbar-spacer"></div>
+      <el-button type="primary" icon="el-icon-plus" aria-label="新增" @click="handleAdd">新增折扣规则</el-button>
+    </div>
+
+    <!-- 表格 -->
+    <div class="table-card">
+      <el-table aria-label="数据表格"
+        :data="tableData"
+        border
+        stripe
+        style="width: 100%"
+        v-loading="loading">
+        <el-table aria-label="数据表格"-column prop="id" label="ID" width="80"></el-table-column>
+        <el-table aria-label="数据表格"-column prop="campaignId" label="活动ID" width="100"></el-table-column>
+        <el-table aria-label="数据表格"-column prop="ruleName" label="规则名称" min-width="150"></el-table-column>
+        <el-table aria-label="数据表格"-column prop="scope" label="折扣范围" width="120" align="center">
+          <template slot-scope="scope">
+            <span class="scope-tag" :class="getScopeClass(scope.row.scope)">
+              {{ getScopeText(scope.row.scope) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="discountRate" label="折扣率" width="120" align="center">
+          <template slot-scope="scope">
+            <strong>{{ (scope.row.discountRate * 10).toFixed(1) }}折</strong>
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="maxDiscountAmount" label="最大优惠" width="120" align="right">
+          <template slot-scope="scope">
+            {{ scope.row.maxDiscountAmount ? '¥' + formatMoney(scope.row.maxDiscountAmount) : '不限' }}
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="minConsumption" label="最低消费" width="120" align="right">
+          <template slot-scope="scope">
+            {{ scope.row.minConsumption ? '¥' + formatMoney(scope.row.minConsumption) : '不限' }}
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="perUserLimit" label="每人限用" width="100" align="center">
+          <template slot-scope="scope">
+            {{ scope.row.perUserLimit || '不限' }}
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="status" label="状态" width="100" align="center">
+          <template slot-scope="scope">
+            <span class="status-tag" :class="scope.row.status === 1 ? 'active' : 'disabled'">
+              {{ scope.row.status === 1 ? '启用' : '禁用' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column label="操作" width="180" fixed="right">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-button type="text" size="small" @click="handleToggleStatus(scope.row)">
+              {{ scope.row.status === 1 ? '禁用' : '启用' }}
+            </el-button>
+            <el-button type="text" size="small" style="color: var(--el-color-danger);" @click="handleDelete(scope.row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <!-- 新增/编辑对话框 -->
+    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="600px">
+      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px">
+        <el-form-item label="活动ID" prop="campaignId">
+          <el-input-number v-model="formData.campaignId" :min="1" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="规则名称" prop="ruleName">
+          <el-input v-model="formData.ruleName" placeholder="请输入规则名称"></el-input>
+        </el-form-item>
+        <el-form-item label="折扣范围" prop="scope">
+          <el-select v-model="formData.scope" placeholder="请选择折扣范围" style="width: 100%;">
+            <el-option label="全场" :value="1"></el-option>
+            <el-option label="指定分类" :value="2"></el-option>
+            <el-option label="指定菜品" :value="3"></el-option>
+            <el-option label="指定套餐" :value="4"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="formData.scope === 2" label="适用分类">
+          <el-select v-model="formData.categoryId" placeholder="请选择分类" filterable style="width: 100%;">
+            <el-option v-for="item in categoryOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="formData.scope === 3" label="适用菜品">
+          <el-select v-model="formData.dishId" placeholder="请选择菜品" filterable style="width: 100%;">
+            <el-option v-for="item in dishOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="formData.scope === 4" label="适用套餐">
+          <el-select v-model="formData.setmealId" placeholder="请选择套餐" filterable style="width: 100%;">
+            <el-option v-for="item in setmealOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="折扣率" prop="discountRate">
+          <el-input-number v-model="formData.discountRate" :precision="4" :min="0.01" :max="0.99" style="width: 100%;"></el-input-number>
+          <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">
+            请输入折扣率，如8折请输入0.8
+          </div>
+        </el-form-item>
+        <el-form-item label="最大优惠金额">
+          <el-input-number v-model="formData.maxDiscountAmount" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+          <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">0表示不限制</div>
+        </el-form-item>
+        <el-form-item label="最低消费金额">
+          <el-input-number v-model="formData.minConsumption" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+          <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">0表示不限制</div>
+        </el-form-item>
+        <el-form-item label="每人限用次数">
+          <el-input-number v-model="formData.perUserLimit" :min="0" style="width: 100%;"></el-input-number>
+          <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">0表示不限制</div>
+        </el-form-item>
+        <el-form-item label="排序">
+          <el-input-number v-model="formData.sortOrder" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="formData.status" :active-value="1" :inactive-value="0"></el-switch>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/common.js"></script>
+  <script src="../../api/marketing.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          loading: false,
+          searchCampaignId: '',
+          tableData: [],
+          dialogVisible: false,
+          dialogTitle: '新增折扣规则',
+          submitLoading: false,
+          formData: {
+            id: null,
+            campaignId: null,
+            ruleName: '',
+            scope: 1,
+            discountRate: 0.8,
+            maxDiscountAmount: null,
+            minConsumption: null,
+            categoryId: null,
+            dishId: null,
+            setmealId: null,
+            perUserLimit: 0,
+            sortOrder: 0,
+            status: 1
+          },
+          formRules: {
+            campaignId: [{ required: true, message: '请输入活动ID', trigger: 'blur' }],
+            ruleName: [{ required: true, message: '请输入规则名称', trigger: 'blur' }],
+            scope: [{ required: true, message: '请选择折扣范围', trigger: 'change' }],
+            discountRate: [{ required: true, message: '请输入折扣率', trigger: 'blur' }]
+          },
+          categoryOptions: [],
+          dishOptions: [],
+          setmealOptions: []
+        }
+      },
+      created() {
+        this.fetchData()
+      },
+      methods: {
+        formatMoney(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        getScopeClass(scope) {
+          const map = { 1: 'all', 2: 'category', 3: 'dish', 4: 'setmeal' }
+          return map[scope] || 'all'
+        },
+        getScopeText(scope) {
+          const map = { 1: '全场', 2: '指定分类', 3: '指定菜品', 4: '指定套餐' }
+          return map[scope] || '未知'
+        },
+        async fetchData() {
+          this.loading = true
+          try {
+            const params = {}
+            if (this.searchCampaignId) {
+              params.campaignId = this.searchCampaignId
+            }
+            const res = await getDiscountRules(params)
+            if (res.code === 1) {
+              this.tableData = res.data || []
+            }
+          } catch (err) {
+            console.error('获取折扣规则列表失败', err)
+            this.$message.error('获取数据失败')
+          } finally {
+            this.loading = false
+          }
+        },
+        resetSearch() {
+          this.searchCampaignId = ''
+          this.fetchData()
+        },
+        handleAdd() {
+          this.dialogTitle = '新增折扣规则'
+          this.formData = {
+            id: null,
+            campaignId: null,
+            ruleName: '',
+            scope: 1,
+            discountRate: 0.8,
+            maxDiscountAmount: null,
+            minConsumption: null,
+            categoryId: null,
+            dishId: null,
+            setmealId: null,
+            perUserLimit: 0,
+            sortOrder: 0,
+            status: 1
+          }
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          })
+        },
+        handleEdit(row) {
+          this.dialogTitle = '编辑折扣规则'
+          this.formData = { ...row }
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          })
+        },
+        async handleToggleStatus(row) {
+          try {
+            const newStatus = row.status === 1 ? 0 : 1
+            const res = await updateDiscountRule({ ...row, status: newStatus })
+            if (res.code === 1) {
+              this.$message.success(newStatus === 1 ? '已启用' : '已禁用')
+              this.fetchData()
+            } else {
+              this.$message.error(res.msg || '操作失败')
+            }
+          } catch (err) {
+            console.error('操作失败', err)
+            this.$message.error('操作失败')
+          }
+        },
+        async handleDelete(row) {
+          try {
+            await this.$confirm('确定要删除该折扣规则吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            
+            const res = await deleteDiscountRule(row.id)
+            if (res.code === 1) {
+              this.$message.success('删除成功')
+              this.fetchData()
+            } else {
+              this.$message.error(res.msg || '删除失败')
+            }
+          } catch (err) {
+            if (err !== 'cancel') {
+              console.error('删除失败', err)
+              this.$message.error('删除失败')
+            }
+          }
+        },
+        handleSubmit() {
+          this.$refs.ruleForm.validate(async (valid) => {
+            if (!valid) return
+            
+            this.submitLoading = true
+            try {
+              let res
+              if (this.formData.id) {
+                res = await updateDiscountRule(this.formData)
+              } else {
+                res = await saveDiscountRule(this.formData)
+              }
+              
+              if (res.code === 1) {
+                this.$message.success(this.formData.id ? '更新成功' : '新增成功')
+                this.dialogVisible = false
+                this.fetchData()
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            } catch (err) {
+              console.error('提交失败', err)
+              this.$message.error('操作失败')
+            } finally {
+              this.submitLoading = false
+            }
+          })
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+

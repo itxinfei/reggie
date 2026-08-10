@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  */
 @Slf4j
 @RestController
-@RequestMapping("/orderDetail")
+@RequestMapping("/order-detail")
 @Tag(name = "订单明细", description = "订单明细查询接口")
 public class OrderDetailController {
 
@@ -49,6 +49,7 @@ public class OrderDetailController {
     @GetMapping("/page")
     @Operation(summary = "订单明细分页", description = "分页查询订单明细列表")
     public R<Page<OrderDetail>> page(
+            @Parameter(description = "P a g e")
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "订单ID") @RequestParam(required = false) Long orderId) {
@@ -62,3 +63,4 @@ public class OrderDetailController {
         return R.success(pageInfo);
     }
 }
+

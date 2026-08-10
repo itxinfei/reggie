@@ -1,4 +1,5 @@
 package com.reggie.controller;
+import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.common.utils.PageUtils;
 
@@ -73,6 +74,7 @@ public class DishController {
      * @return 操作结果
      */
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @PostMapping
     @Operation(summary = "新增菜品", description = "保存菜品基本信息及口味信息，支持多规格口味配置")
     @Parameter(name = "dishSaveDTO", description = "菜品信息DTO（名称、分类、价格、编码、图片、描述、状态、口味列表）", required = true)
@@ -119,9 +121,10 @@ public class DishController {
     @Parameter(name = "status", description = "售卖状态（可选，'0'=停售 ,'1'=启售）")
     @Parameter(name = "categoryId", description = "菜品分类ID（可选）")
     @Parameter(name = "code", description = "商品码（可选，模糊查询）")
-    public R<Page<DishDto>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,String name,
+    public R<Page<DishDto>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String name,
                                   @RequestParam(required = false) String status,
                                   @RequestParam(required = false) Long categoryId,
+                                  @Parameter(description = "code")
                                   @RequestParam(required = false) String code){
 
         //构造分页构造器对象
@@ -196,6 +199,7 @@ public class DishController {
      * @return 操作结果
      */
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @PutMapping
     @Operation(summary = "修改菜品", description = "更新菜品基本信息及口味信息")
     @Parameter(name = "dishDto", description = "菜品DTO（包含ID、基本信息及口味列表）", required = true)
@@ -215,6 +219,7 @@ public class DishController {
     }
 
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @DeleteMapping
     @Operation(summary = "删除菜品", description = "批量删除菜品及关联口味数据，自动校验套餐引用")
     @Parameter(name = "ids", description = "菜品ID列表，逗号分隔（如 1,2,3）", required = true)
@@ -245,7 +250,8 @@ public class DishController {
      * @return 操作结果
      */
     @RequireEmployee
-        @PostMapping("/status/{status}")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @PostMapping("/status/{status}")
     @Operation(summary = "更新菜品状态", description = "批量更新菜品售卖状态（起售/停售）")
     @Parameter(name = "status", description = "状态值：1-起售，0-停售", required = true)
     @Parameter(name = "ids", description = "菜品ID列表，逗号分隔（如 1,2,3）", required = true)
@@ -300,6 +306,10 @@ public class DishController {
         // 分页查询，防止全表扫描
         Page<Dish> pageInfo = new Page<>(1, maxPageSize);
         dishService.page(pageInfo, queryWrapper);
+        // 达到上限时记录警告，避免静默截断
+        if (pageInfo.getTotal() > maxPageSize) {
+            log.warn("[dish/list] 查询结果共 {} 条，超过上限 {} 条，已截断返回；建议按分类或分页查询", pageInfo.getTotal(), maxPageSize);
+        }
 
         List<Dish> list = pageInfo.getRecords();
         if (list.isEmpty()) {
@@ -406,3 +416,4 @@ public class DishController {
     }
 
 }
+

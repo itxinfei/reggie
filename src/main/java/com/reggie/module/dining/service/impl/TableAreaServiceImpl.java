@@ -9,6 +9,7 @@ import com.reggie.module.dining.mapper.TableAreaMapper;
 import com.reggie.module.dining.model.TableArea;
 import com.reggie.module.dining.service.TableAreaService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 桌台区域服务实现
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
  * @since 2026-07-09
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class TableAreaServiceImpl extends ServiceImpl<TableAreaMapper, TableArea> implements TableAreaService {
 
     @Override
@@ -37,3 +39,4 @@ public class TableAreaServiceImpl extends ServiceImpl<TableAreaMapper, TableArea
                 .stream().findFirst().orElse(null);
     }
 }
+

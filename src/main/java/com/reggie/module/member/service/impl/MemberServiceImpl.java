@@ -1,5 +1,6 @@
 package com.reggie.module.member.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -118,8 +120,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         // 检查是否升级等级
         MemberLevel newLevel = memberLevelService.findLevelByPoints(member.getPoints());
         if (newLevel != null && (member.getLevelId() == null || !member.getLevelId().equals(newLevel.getId()))) {
-            member.setLevelId(newLevel.getId());
-            updateById(member);
+            // 修改点：升级等级只更新 level_id 字段，绝不整体写回（updateById 会用内存中的旧
+            // balance/points 覆盖并发写入，导致余额/积分丢失更新）
+            LambdaUpdateWrapper<Member> levelUpdate = new LambdaUpdateWrapper<>();
+            levelUpdate.eq(Member::getId, memberId)
+                    .set(Member::getLevelId, newLevel.getId())
+                    .set(Member::getUpdateTime, LocalDateTime.now());
+            update(levelUpdate);
         }
     }
 

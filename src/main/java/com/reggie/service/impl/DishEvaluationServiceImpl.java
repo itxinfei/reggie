@@ -6,10 +6,15 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.entity.DishEvaluation;
+import com.reggie.entity.OrderDetail;
+import com.reggie.entity.Orders;
 import com.reggie.mapper.DishEvaluationMapper;
+import com.reggie.mapper.OrderDetailMapper;
 import com.reggie.service.DishEvaluationService;
+import com.reggie.service.OrderService;
 import org.apache.commons.text.StringEscapeUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +32,12 @@ import java.util.Map;
 @Slf4j
 public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper, DishEvaluation>
         implements DishEvaluationService {
+
+    @Autowired
+    private OrderService orderService;
+
+    @Autowired
+    private OrderDetailMapper orderDetailMapper;
 
     /**
      * 最小评分
@@ -149,6 +160,59 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         log.info("新增菜品评价：userId={}, dishId={}, starRating={}",
                 evaluation.getUserId(), evaluation.getDishId(), evaluation.getStarRating());
 
+        Long userId = evaluation.getUserId();
+        Long orderId = evaluation.getOrderId();
+        Long dishId = evaluation.getDishId();
+
+        // 校验用户ID
+        if (userId == null) {
+            throw new CustomException("用户信息缺失");
+        }
+
+        // 校验订单ID
+        if (orderId == null) {
+            throw new CustomException("订单ID不能为空");
+        }
+
+        // 校验菜品ID
+        if (dishId == null) {
+            throw new CustomException("菜品ID不能为空");
+        }
+
+        // 查询订单信息，校验订单存在性和归属
+        Orders order = orderService.getById(orderId);
+        if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+
+        // 校验订单归属（当前用户必须是订单的下单用户）
+        if (!userId.equals(order.getUserId())) {
+            throw new CustomException("无权评价该订单");
+        }
+
+        // 校验订单状态（必须是已完成状态才能评价）
+        if (order.getStatus() == null || order.getStatus() != Orders.STATUS_COMPLETED) {
+            throw new CustomException("订单未完成，无法评价");
+        }
+
+        // 校验菜品是否属于该订单
+        LambdaQueryWrapper<OrderDetail> detailWrapper = new LambdaQueryWrapper<>();
+        detailWrapper.eq(OrderDetail::getOrderId, orderId)
+                .eq(OrderDetail::getDishId, dishId)
+                .eq(OrderDetail::getIsDeleted, 0);
+        OrderDetail orderDetail = orderDetailMapper.selectOne(detailWrapper);
+        if (orderDetail == null) {
+            throw new CustomException("该菜品不属于此订单");
+        }
+
+        // 校验是否已评价过该菜品（防止重复评价）
+        LambdaQueryWrapper<DishEvaluation> evalWrapper = new LambdaQueryWrapper<>();
+        evalWrapper.eq(DishEvaluation::getOrderId, orderId)
+                .eq(DishEvaluation::getDishId, dishId);
+        if (this.count(evalWrapper) > 0) {
+            throw new CustomException("该菜品已评价过，不能重复评价");
+        }
+
         // 校验评分范围
         Integer starRating = evaluation.getStarRating();
         if (starRating == null || starRating < MIN_STAR_RATING || starRating > MAX_STAR_RATING) {
@@ -174,7 +238,7 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
             evaluation.setDishName(StringEscapeUtils.escapeHtml4(evaluation.getDishName()));
         }
 
-        // 设置租户ID（从当前上下文获取防
+        // 设置租户ID（从当前上下文获取）
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户信息缺失");

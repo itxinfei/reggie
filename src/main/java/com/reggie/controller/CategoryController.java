@@ -1,4 +1,5 @@
 package com.reggie.controller;
+import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.common.utils.PageUtils;
 
@@ -9,6 +10,7 @@ import com.reggie.entity.Category;
 import com.reggie.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -49,6 +51,7 @@ public class CategoryController {
      * <p>修改点：清除前端传入的id，防止注入；名称trim处理</p>
      */
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @PostMapping
     @Operation(summary = "新增分类", description = "创建新的菜品或套餐分类，排序号不填则自动分配")
     public R<String> save(@Valid @RequestBody Category category) {
@@ -69,8 +72,11 @@ public class CategoryController {
     @RequireEmployee
         @GetMapping("/page")
     @Operation(summary = "分类分页查询", description = "分页查询分类列表，支持按类型、名称筛选，按排序字段升序排列")
+    @Parameter(description = "P a g e")
     public R<Page<Category>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
+                                  @Parameter(description = "Type")
                                   @RequestParam(required = false) String type,
+                                  @Parameter(description = "Name")
                                   @RequestParam(required = false) String name) {
         Page<Category> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();
@@ -86,8 +92,10 @@ public class CategoryController {
      * 根据id删除分类
      */
     @RequireEmployee
-        @DeleteMapping("/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @DeleteMapping("/{id}")
     @Operation(summary = "删除分类", description = "根据ID删除分类，删除前校验是否关联了菜品或套餐")
+    @Parameter(description = "I d")
     public R<String> delete(@PathVariable Long id) {
         log.info("删除分类，id={}", id);
         categoryService.remove(id);
@@ -99,6 +107,7 @@ public class CategoryController {
      * <p>修改点：Service层已校验存在性、禁止改type、名称唯一性、排序冲突处理</p>
      */
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @PutMapping
     @Operation(summary = "修改分类", description = "根据ID更新分类名称或排序，不允许修改分类类型")
     public R<String> update(@Valid @RequestBody Category category) {
@@ -115,6 +124,7 @@ public class CategoryController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "查询分类详情", description = "根据ID查询分类信息")
+    @Parameter(description = "I d")
     public R<Category> get(@PathVariable Long id) {
         Category category = categoryService.getById(id);
         if (category == null) {
@@ -204,3 +214,6 @@ public class CategoryController {
         return R.success(result);
     }
 }
+
+
+

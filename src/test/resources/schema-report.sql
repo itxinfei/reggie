@@ -32,6 +32,7 @@ CREATE TABLE orders (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '是否删除',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等键',
+  stock_refunded int NULL DEFAULT 0 COMMENT '已退库存数量',
   PRIMARY KEY (id)
 );
 
@@ -47,7 +48,9 @@ CREATE TABLE order_detail (
   image varchar(255) NULL DEFAULT NULL COMMENT '图片',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
   create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );

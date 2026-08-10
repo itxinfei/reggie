@@ -3,6 +3,7 @@ import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.dto.CreateReservationDTO;
 import com.reggie.module.dining.model.Reservation;
@@ -65,10 +66,18 @@ public class ReservationController {
     public R<Page<Reservation>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String customerName,
+                                     @Parameter(description = "P h o n e")
                                      @RequestParam(required = false) String phone,
+                                     @Parameter(description = "R e s e r v e d D a t e")
                                      @RequestParam(required = false) String reservedDate) {
         Page<Reservation> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Reservation> qw = new LambdaQueryWrapper<>();
+        // 强制租户过滤，防止跨租户数据泄露
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        qw.eq(Reservation::getTenantId, tenantId);
         qw.eq(status != null && !status.isEmpty(), Reservation::getStatus, status);
         qw.like(customerName != null && !customerName.isEmpty(), Reservation::getCustomerName, customerName);
         qw.like(phone != null && !phone.isEmpty(), Reservation::getPhone, phone);
@@ -138,4 +147,5 @@ public class ReservationController {
         return R.success("到店成功");
     }
 }
+
 

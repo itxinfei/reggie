@@ -15,6 +15,7 @@ import com.reggie.service.OrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -35,7 +36,14 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * Report service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class ReportServiceImpl implements ReportService {
 
     /** 时段数量 */
@@ -361,24 +369,40 @@ public class ReportServiceImpl implements ReportService {
         record.put("fileName", fileName);
         record.put("fileSize", fileSize);
         record.put("status", status);
+        // 记录当前租户ID，查询/清除时按租户隔离，避免跨租户泄露
+        record.put("tenantId", BaseContext.getCurrentTenantId());
         exportHistory.add(record);
-        log.info("记录导出历史: dateRange={}, format={}, fileName={}, fileSize={}bytes, status={}",
-                dateRange, format, fileName, fileSize, status);
+        log.info("记录导出历史: dateRange={}, format={}, fileName={}, fileSize={}bytes, status={}, tenantId={}",
+                dateRange, format, fileName, fileSize, status, BaseContext.getCurrentTenantId());
     }
 
     @Override
     public List<Map<String, Object>> getExportHistory() {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
         synchronized (exportHistory) {
-            return new ArrayList<>(exportHistory);
+            // 仅返回当前租户的导出记录，fail-closed：无租户上下文时返回空列表
+            if (currentTenantId == null) {
+                return new ArrayList<>();
+            }
+            return exportHistory.stream()
+                    .filter(r -> currentTenantId.equals(r.get("tenantId")))
+                    .collect(Collectors.toList());
         }
     }
 
     @Override
     public void clearExportHistory() {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
         synchronized (exportHistory) {
-            int size = exportHistory.size();
-            exportHistory.clear();
-            log.info("清除导出历史记录，共清除 {} 条", size);
+            // 仅清除当前租户的导出记录，fail-closed：无租户上下文时不执行清除
+            if (currentTenantId == null) {
+                log.warn("清除导出历史记录失败：当前租户上下文为空，拒绝操作");
+                return;
+            }
+            int before = exportHistory.size();
+            exportHistory.removeIf(r -> currentTenantId.equals(r.get("tenantId")));
+            int removed = before - exportHistory.size();
+            log.info("清除导出历史记录，共清除 {} 条（租户 {}）", removed, currentTenantId);
         }
     }
 
@@ -395,10 +419,10 @@ public class ReportServiceImpl implements ReportService {
             LocalDate start = LocalDate.parse(startDate);
             LocalDate end = LocalDate.parse(endDate);
 
-            // 查询日期范围内已完成的订单（status=4或5）
+            // 查询日期范围内已完成的订单（仅 status=4，已取消订单不计入复购率）
             LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
             orderQw.between(Orders::getOrderTime, start.atStartOfDay(), end.atTime(LocalTime.MAX));
-            orderQw.in(Orders::getStatus, Arrays.asList(Orders.STATUS_COMPLETED, Orders.STATUS_CANCELLED));
+            orderQw.in(Orders::getStatus, Orders.STATUS_COMPLETED);
             orderQw.select(Orders::getId, Orders::getUserId, Orders::getOrderTime);
             List<Orders> orders = orderService.list(orderQw);
 
@@ -795,7 +819,7 @@ public class ReportServiceImpl implements ReportService {
             LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
             orderQw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
                     LocalDate.parse(endDate).atTime(LocalTime.MAX));
-            orderQw.in(Orders::getStatus, Arrays.asList(Orders.STATUS_COMPLETED, Orders.STATUS_CANCELLED));
+            orderQw.in(Orders::getStatus, Orders.STATUS_COMPLETED);
             orderQw.select(Orders::getId);
             List<Orders> orders = orderService.list(orderQw);
             if (orders.isEmpty()) {
@@ -886,7 +910,7 @@ public class ReportServiceImpl implements ReportService {
             LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
             orderQw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
                     LocalDate.parse(endDate).atTime(LocalTime.MAX));
-            orderQw.in(Orders::getStatus, Arrays.asList(Orders.STATUS_COMPLETED, Orders.STATUS_CANCELLED));
+            orderQw.in(Orders::getStatus, Orders.STATUS_COMPLETED);
             orderQw.select(Orders::getUserId, Orders::getOrderTime);
             List<Orders> orders = orderService.list(orderQw);
             if (orders.isEmpty()) {
@@ -943,3 +967,5 @@ public class ReportServiceImpl implements ReportService {
         return result;
     }
 }
+
+

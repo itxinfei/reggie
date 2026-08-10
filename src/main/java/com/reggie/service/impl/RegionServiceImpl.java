@@ -6,6 +6,7 @@ import com.reggie.entity.Region;
 import com.reggie.mapper.RegionMapper;
 import com.reggie.service.RegionService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -16,6 +17,7 @@ import java.util.ArrayList;
  * @since 2026-07-09
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> implements RegionService {
 
     /**
@@ -71,3 +73,4 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
         parent.setChildren(children.isEmpty() ? null : children);
     }
 }
+

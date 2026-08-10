@@ -106,6 +106,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     private ApplicationEventPublisher eventPublisher;
 
     /**
+     * Redis 模板（可选，用于下单幂等性 SETNX 抢占，防止 check-then-act 竞态）
+     */
+    @Autowired(required = false)
+    private org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
+
+    /**
      * 用户下单（从购物车生成订单）
      * 流程：查询购物车 → 验证用户和地址 → 生成订单和明细 → 扣减库存 → 清空购物车 → 触发打印
      *
@@ -186,15 +192,49 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 + (addressBook.getDistrictName() == null ? "" : addressBook.getDistrictName())
                 + (addressBook.getDetail() == null ? "" : addressBook.getDetail()));
         //向订单表插入数据，一条数据
-        this.save(orders);
+        // 修复 check-then-act 竞态：用 Redis SETNX 原子抢占幂等令牌，防止并发重复下单
+        String idempotencyKey = orders.getIdempotencyKey();
+        String lockKey = "order:idem:" + idempotencyKey;
+        boolean lockAcquired = false;
+        if (redisTemplate != null && idempotencyKey != null && !idempotencyKey.trim().isEmpty()) {
+            Boolean ok = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", 30, java.util.concurrent.TimeUnit.MINUTES);
+            lockAcquired = ok != null && ok;
+            if (!lockAcquired) {
+                // 并发请求或已下单：查询既有订单并回填，避免重复落库
+                Orders existing = checkIdempotency(idempotencyKey);
+                if (existing != null) {
+                    orders.setId(existing.getId());
+                    orders.setNumber(existing.getNumber());
+                    orders.setAmount(existing.getAmount());
+                    orders.setStatus(existing.getStatus());
+                    return;
+                }
+                // 锁存在但订单未落库（并发处理中），拒绝重复提交
+                throw new CustomException("订单正在处理中，请勿重复提交");
+            }
+        }
 
-        //向订单明细表插入数据，多条数据
-        orderDetailService.saveBatch(orderDetails);
+        try {
+            this.save(orders);
 
-        this.deductStockForOrder(shoppingCarts);
+            //向订单明细表插入数据，多条数据
+            orderDetailService.saveBatch(orderDetails);
 
-        //清空购物车数据
-        shoppingCartService.remove(wrapper);
+            this.deductStockForOrder(shoppingCarts);
+
+            //清空购物车数据
+            shoppingCartService.remove(wrapper);
+        } catch (RuntimeException e) {
+            // 落库失败时释放锁，允许用户重试（锁成功保留则作为去重记录由 TTL 过期）
+            if (lockAcquired && redisTemplate != null) {
+                try {
+                    redisTemplate.delete(lockKey);
+                } catch (Exception ignored) {
+                    // 释放锁失败不影响异常抛出
+                }
+            }
+            throw e;
+        }
 
         // 自动触发打印（异步，不影响下单主流程）
         if (printerService != null) {
@@ -315,146 +355,96 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
     }
 
+    // ==================== 库存扣减/回退公共方法 ====================
+
     /**
-     * 根据订单明细回退菜品库存（取消/拒单时调用）
-     * @return 是否全部回退成功
+     * 库存操作函数式接口
+     * @return 操作是否成功
+     */
+    @FunctionalInterface
+    private interface StockOperation {
+        boolean apply(Long dishId, BigDecimal qty);
+    }
+
+    /**
+     * 处理菜品/套餐的库存操作（扣减或回退）
+     * 统一处理单品菜品和套餐内所有菜品的库存变更，消除重复代码
+     *
+     * @param dishId     单品菜品ID（可为null）
+     * @param setmealId  套餐ID（可为null）
+     * @param quantity   数量
+     * @param operation  库存操作（扣减或回退）
+     * @return 操作是否全部成功
+     */
+    private boolean processStockForItems(Long dishId, Long setmealId, BigDecimal quantity, StockOperation operation) {
+        boolean success = true;
+
+        // 单品菜品
+        if (dishId != null) {
+            if (!operation.apply(dishId, quantity)) {
+                success = false;
+            }
+        }
+
+        // 套餐：处理套餐内所有菜品
+        if (setmealId != null) {
+            LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
+            sdWrapper.eq(SetmealDish::getSetmealId, setmealId);
+            List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
+            for (SetmealDish sd : setmealDishes) {
+                int copies = sd.getCopies() != null ? sd.getCopies() : 1;
+                if (!operation.apply(sd.getDishId(), quantity.multiply(new BigDecimal(copies)))) {
+                    success = false;
+                }
+            }
+        }
+
+        return success;
+    }
+
+    /**
+     * 扣减库存操作（购物车维度）
+     */
+    private void deductStockForOrder(List<ShoppingCart> shoppingCarts) {
+        for (ShoppingCart item : shoppingCarts) {
+            int number = item.getNumber() != null ? item.getNumber() : 1;
+            BigDecimal qty = new BigDecimal(number);
+            processStockForItems(item.getDishId(), item.getSetmealId(), qty, this::deductStockAtomicVoid);
+        }
+    }
+
+    /**
+     * 扣减库存操作（订单明细维度）
+     */
+    private void deductStockForOrderDetails(List<OrderDetail> orderDetails) {
+        for (OrderDetail detail : orderDetails) {
+            int number = detail.getNumber() != null ? detail.getNumber() : 1;
+            BigDecimal qty = new BigDecimal(number);
+            processStockForItems(detail.getDishId(), detail.getSetmealId(), qty, this::deductStockAtomicVoid);
+        }
+    }
+
+    /**
+     * 回退库存操作（订单明细维度）
      */
     private boolean refundStockForOrderDetails(List<OrderDetail> orderDetails) {
         boolean allSuccess = true;
         for (OrderDetail detail : orderDetails) {
             int number = detail.getNumber() != null ? detail.getNumber() : 1;
             BigDecimal qty = new BigDecimal(number);
-
-            // 单品菜品：增加库存
-            if (detail.getDishId() != null) {
-                if (!refundStockAtomic(detail.getDishId(), qty)) {
-                    allSuccess = false;
-                }
-            }
-
-            // 套餐菜品：回退套餐内所有菜品的库存
-            if (detail.getSetmealId() != null) {
-                LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
-                sdWrapper.eq(SetmealDish::getSetmealId, detail.getSetmealId());
-                List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
-                for (SetmealDish sd : setmealDishes) {
-                    int copies = sd.getCopies() != null ? sd.getCopies() : 1;
-                    if (!refundStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)))) {
-                        allSuccess = false;
-                    }
-                }
+            if (!processStockForItems(detail.getDishId(), detail.getSetmealId(), qty, this::refundStockAtomic)) {
+                allSuccess = false;
             }
         }
         return allSuccess;
     }
 
     /**
-     * 遍历购物车中的菜品/套餐，回退对应库存（取消订单时调用）
-     * @return 是否全部回退成功
+     * 扣减库存原子操作（void 版本，失败时抛异常）
      */
-    private boolean refundStockForOrder(List<ShoppingCart> shoppingCarts) {
-        boolean allSuccess = true;
-        for (ShoppingCart item : shoppingCarts) {
-            int number = item.getNumber() != null ? item.getNumber() : 1;
-            BigDecimal qty = new BigDecimal(number);
-
-            // 单品菜品：直接增加库存
-            if (item.getDishId() != null) {
-                if (!refundStockAtomic(item.getDishId(), qty)) {
-                    allSuccess = false;
-                }
-            }
-
-            // 套餐：回退套餐内所有菜品的库存
-            if (item.getSetmealId() != null) {
-                LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
-                sdWrapper.eq(SetmealDish::getSetmealId, item.getSetmealId());
-                List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
-                for (SetmealDish sd : setmealDishes) {
-                    int copies = sd.getCopies() != null ? sd.getCopies() : 1;
-                    if (!refundStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)))) {
-                        allSuccess = false;
-                    }
-                }
-            }
-        }
-        return allSuccess;
-    }
-
-    /**
-     * 使用乐观锁原子增加菜品库存（取消/拒单时回退库存）
-     * @return 是否成功
-     */
-    private boolean refundStockAtomic(Long dishId, BigDecimal qty) {
-        if (dishId == null || qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
-            return true;
-        }
-        try {
-            dishService.addStock(dishId, qty);
-
-            // 补货后如果之前是停售状态且库存大于最低库存，自动恢复起售
-            if (dishService != null) {
-                dishService.autoToggleSoldOut(dishId);
-            }
-            log.info("[库存回退] 菜品ID={} 回退{}份", dishId, qty);
-            return true;
-        } catch (Exception e) {
-            log.error("[库存回退失败] 菜品ID={} 回退{}份失败: {}", dishId, qty, e.getMessage(), e);
-            return false;
-        }
-    }
-
-    /**
-     * 遍历购物车中的菜品/套餐，扣减对应库存（乐观锁原子操作）
-     * 库存不足时抛出异常，触发事务回滚
-     */
-    private void deductStockForOrder(List<ShoppingCart> shoppingCarts) {
-        for (ShoppingCart item : shoppingCarts) {
-            int number = item.getNumber() != null ? item.getNumber() : 1;
-            BigDecimal qty = new BigDecimal(number);
-
-            // 单品菜品：直接扣减
-            if (item.getDishId() != null) {
-                deductStockAtomic(item.getDishId(), qty);
-            }
-
-            // 套餐：扣减套餐内所有菜品的库存
-            if (item.getSetmealId() != null) {
-                LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
-                sdWrapper.eq(SetmealDish::getSetmealId, item.getSetmealId());
-                List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
-                for (SetmealDish sd : setmealDishes) {
-                    int copies = sd.getCopies() != null ? sd.getCopies() : 1;
-                    deductStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)));
-                }
-            }
-        }
-    }
-
-    /**
-     * 根据订单明细扣减菜品库存（乐观锁原子操作）
-     */
-    private void deductStockForOrderDetails(List<OrderDetail> orderDetails) {
-        for (OrderDetail detail : orderDetails) {
-            int number = detail.getNumber() != null ? detail.getNumber() : 1;
-            BigDecimal qty = new BigDecimal(number);
-
-            // 单品菜品：乐观锁原子扣减
-            if (detail.getDishId() != null) {
-                deductStockAtomic(detail.getDishId(), qty);
-            }
-
-            // 套餐菜品：扣减套餐内所有菜品的库存
-            if (detail.getSetmealId() != null) {
-                LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
-                sdWrapper.eq(SetmealDish::getSetmealId, detail.getSetmealId());
-                List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
-                for (SetmealDish sd : setmealDishes) {
-                    int copies = sd.getCopies() != null ? sd.getCopies() : 1;
-                    deductStockAtomic(sd.getDishId(), qty.multiply(new BigDecimal(copies)));
-                }
-            }
-        }
+    private boolean deductStockAtomicVoid(Long dishId, BigDecimal qty) {
+        deductStockAtomic(dishId, qty);
+        return true;
     }
 
     /**
@@ -466,10 +456,25 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             return;
         }
         dishService.deductStock(dishId, qty);
+        dishService.autoToggleSoldOut(dishId);
+    }
 
-        // 扣减成功后检查是否需要自动停售
-        if (dishService != null) {
+    /**
+     * 回退库存原子操作（boolean 版本，失败时记录日志但不抛异常）
+     * @return 是否成功
+     */
+    private boolean refundStockAtomic(Long dishId, BigDecimal qty) {
+        if (dishId == null || qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
+            return true;
+        }
+        try {
+            dishService.addStock(dishId, qty);
             dishService.autoToggleSoldOut(dishId);
+            log.info("[库存回退] 菜品ID={} 回退{}份", dishId, qty);
+            return true;
+        } catch (Exception e) {
+            log.error("[库存回退失败] 菜品ID={} 回退{}份失败: {}", dishId, qty, e.getMessage(), e);
+            return false;
         }
     }
 
@@ -604,8 +609,23 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
             ShoppingCart existing = existingMap.get(key);
             if (existing != null) {
-                // 已存在，累加数量
+                // 已存在，累加数量，并刷新为最新价格（修复 toUpdate 分支未刷新价格，防止历史购物车项沿用旧价）
                 existing.setNumber(existing.getNumber() + (d.getNumber() != null ? d.getNumber() : 0));
+                if (d.getDishId() != null) {
+                    Dish dish = dishService.getById(d.getDishId());
+                    if (dish != null && dish.getPrice() != null) {
+                        existing.setAmount(dish.getPrice());
+                        existing.setName(dish.getName());
+                        existing.setImage(dish.getImage());
+                    }
+                } else if (d.getSetmealId() != null) {
+                    Setmeal setmeal = setmealService.getById(d.getSetmealId());
+                    if (setmeal != null && setmeal.getPrice() != null) {
+                        existing.setAmount(setmeal.getPrice());
+                        existing.setName(setmeal.getName());
+                        existing.setImage(setmeal.getImage());
+                    }
+                }
                 toUpdate.add(existing);
             } else {
                 // 不存在，新增——从数据库查询最新价格，防止历史订单中的旧价格被复用
@@ -658,10 +678,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Integer status, Long id) {
-        Orders orders = this.getById(id);
-        if (orders != null) {
-            orders.setStatus(status);
-            this.updateById(orders);
+        if (status == null || id == null) {
+            throw new CustomException("参数缺失，无法更新订单状态");
+        }
+        // 修复状态机跳跃：按目标状态复用合法流转方法，禁止任意跳转
+        if (Objects.equals(status, Orders.STATUS_DELIVERING)) {
+            confirmOrder(id);
+        } else if (Objects.equals(status, Orders.STATUS_COMPLETED)) {
+            completeOrder(id);
+        } else if (Objects.equals(status, Orders.STATUS_CANCELLED)) {
+            cancelOrder(id, null);
+        } else {
+            throw new CustomException("非法的目标状态：" + getStatusName(status)
+                    + "，仅支持流转为配送中(3)/已完成(4)/已取消(5)，请通过专用接口操作");
         }
     }
 
@@ -828,16 +857,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                         .eq(Orders::getStatus, Orders.STATUS_CANCELLED);
         stats.put("cancelledOrders", this.count(cancelledWrapper));
 
-        // 今日营业额（已完成订单）
-        LambdaQueryWrapper<Orders> revenueWrapper = new LambdaQueryWrapper<>();
-        revenueWrapper.eq(Orders::getTenantId, tenantId)
-                      .eq(Orders::getStatus, Orders.STATUS_COMPLETED)
-                      .ge(Orders::getOrderTime, todayStart);
-        List<Orders> completedOrders = this.list(revenueWrapper);
-        java.math.BigDecimal totalRevenue = completedOrders.stream()
-            .map(o -> o.getAmount() != null ? o.getAmount() : java.math.BigDecimal.ZERO)
-            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-        stats.put("todayRevenue", totalRevenue);
+        // 今日营业额（已完成订单）——聚合查询，避免全量加载内存求和
+        java.math.BigDecimal totalRevenue = getBaseMapper().sumAmount(tenantId, Orders.STATUS_COMPLETED, todayStart);
+        stats.put("todayRevenue", totalRevenue != null ? totalRevenue : java.math.BigDecimal.ZERO);
 
         return stats;
     }

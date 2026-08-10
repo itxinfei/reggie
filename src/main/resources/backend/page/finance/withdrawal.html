@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>提现管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/main.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      background: var(--el-bg-subtle);
+    }
+    .container {
+      padding: 24px 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .tableBar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--bg-surface);
+      padding: 16px 24px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    }
+    .tableBar .toolbar-label {
+      font-size: 14px;
+      color: var(--el-text-regular);
+      font-weight: 500;
+    }
+    .tableBar .toolbar-spacer {
+      flex: 1;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .stats-card {
+      background: var(--bg-surface);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      text-align: center;
+    }
+    .stats-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--el-color-primary);
+      margin-bottom: 8px;
+    }
+    .stats-value.warning {
+      color: var(--el-color-warning);
+    }
+    .stats-value.success {
+      color: var(--el-color-success);
+    }
+    .stats-label {
+      font-size: 14px;
+      color: var(--el-text-secondary);
+    }
+    .table-card {
+      background: var(--bg-surface);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    }
+    .status-tag {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .status-tag.pending {
+      background: var(--el-color-warning-lighter);
+      color: var(--el-color-warning);
+    }
+    .status-tag.approved {
+      background: var(--el-color-primary-lighter);
+      color: var(--el-color-primary);
+    }
+    .status-tag.paid {
+      background: var(--el-color-success-lighter);
+      color: var(--el-color-success);
+    }
+    .status-tag.rejected {
+      background: var(--el-color-danger-lighter);
+      color: var(--el-color-danger);
+    }
+    .status-tag.cancelled {
+      background: var(--el-color-info-lighter);
+      color: var(--el-color-info);
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="container">
+    <!-- 工具栏 -->
+    <div class="tableBar">
+      <span class="toolbar-label">状态：</span>
+      <el-select v-model="searchStatus" placeholder="全部状态" clearable style="width: 120px;">
+        <el-option label="待审核" :value="0"></el-option>
+        <el-option label="审核通过" :value="1"></el-option>
+        <el-option label="已打款" :value="2"></el-option>
+        <el-option label="已拒绝" :value="3"></el-option>
+        <el-option label="已取消" :value="4"></el-option>
+      </el-select>
+      <el-button type="primary" icon="el-icon-search" aria-label="搜索" @click="fetchData">查询</el-button>
+      <el-button icon="el-icon-refresh" aria-label="重置" @click="resetSearch">重置</el-button>
+      <div class="toolbar-spacer"></div>
+      <el-button type="primary" icon="el-icon-plus" aria-label="新增" @click="handleAdd">申请提现</el-button>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="stats-row">
+      <div class="stats-card">
+        <div class="stats-value">{{ statistics.totalApplications || 0 }}</div>
+        <div class="stats-label">总申请数</div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-value warning">{{ statistics.pendingCount || 0 }}</div>
+        <div class="stats-label">待审核</div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-value success">{{ statistics.paidCount || 0 }}</div>
+        <div class="stats-label">已打款</div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-value">¥{{ formatMoney(statistics.totalWithdrawal) }}</div>
+        <div class="stats-label">总提现金额</div>
+      </div>
+    </div>
+
+    <!-- 表格 -->
+    <div class="table-card">
+      <el-table aria-label="数据表格"
+        :data="tableData"
+        border
+        stripe
+        style="width: 100%"
+        v-loading="loading">
+        <el-table aria-label="数据表格"-column prop="applicationNo" label="申请编号" width="180"></el-table-column>
+        <el-table aria-label="数据表格"-column prop="applicantName" label="申请人" width="100"></el-table-column>
+        <el-table aria-label="数据表格"-column prop="amount" label="提现金额" width="120" align="right">
+          <template slot-scope="scope">
+            <strong>¥{{ formatMoney(scope.row.amount) }}</strong>
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="withdrawMethod" label="提现方式" width="100" align="center">
+          <template slot-scope="scope">
+            {{ getWithdrawMethodText(scope.row.withdrawMethod) }}
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="receiveAccount" label="收款账户" min-width="150" show-overflow-tooltip></el-table-column>
+        <el-table aria-label="数据表格"-column prop="status" label="状态" width="100" align="center">
+          <template slot-scope="scope">
+            <span class="status-tag" :class="getStatusClass(scope.row.status)">
+              {{ getStatusText(scope.row.status) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="createTime" label="申请时间" width="180"></el-table-column>
+        <el-table aria-label="数据表格"-column label="操作" width="200" fixed="right">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" @click="handleView(scope.row)">查看</el-button>
+            <el-button v-if="scope.row.status === 0" type="text" size="small" @click="handleReview(scope.row)">审核</el-button>
+            <el-button v-if="scope.row.status === 1" type="text" size="small" style="color: var(--el-color-success);" @click="handlePayment(scope.row)">打款</el-button>
+            <el-button v-if="scope.row.status === 0" type="text" size="small" style="color: var(--el-color-warning);" @click="handleCancel(scope.row)">取消</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <!-- 申请对话框 -->
+    <el-dialog title="申请提现" :visible.sync="addDialogVisible" width="500px">
+      <el-form :model="addForm" :rules="addRules" ref="addForm" label-width="100px">
+        <el-form-item label="提现金额" prop="amount">
+          <el-input-number v-model="addForm.amount" :precision="2" :min="1" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="提现方式" prop="withdrawMethod">
+          <el-radio-group v-model="addForm.withdrawMethod">
+            <el-radio :label="1">银行卡</el-radio>
+            <el-radio :label="2">支付宝</el-radio>
+            <el-radio :label="3">微信</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="收款账户" prop="receiveAccount">
+          <el-input v-model="addForm.receiveAccount" placeholder="请输入收款账户"></el-input>
+        </el-form-item>
+        <el-form-item label="收款人" prop="receiveName">
+          <el-input v-model="addForm.receiveName" placeholder="请输入收款人姓名"></el-input>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="addForm.remark" type="textarea" :rows="2"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="addDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handleAddSubmit" :loading="submitLoading">提 交</el-button>
+      </span>
+    </el-dialog>
+
+    <!-- 审核对话框 -->
+    <el-dialog title="审核提现申请" :visible.sync="reviewDialogVisible" width="500px">
+      <el-form :model="reviewForm" label-width="100px">
+        <el-form-item label="申请编号">
+          <span>{{ reviewForm.applicationNo }}</span>
+        </el-form-item>
+        <el-form-item label="提现金额">
+          <span>¥{{ formatMoney(reviewForm.amount) }}</span>
+        </el-form-item>
+        <el-form-item label="审核结果">
+          <el-radio-group v-model="reviewForm.status">
+            <el-radio :label="1">通过</el-radio>
+            <el-radio :label="3">拒绝</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="审核备注">
+          <el-input v-model="reviewForm.remark" type="textarea" :rows="2"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="reviewDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handleReviewSubmit" :loading="submitLoading">确 定</el-button>
+      </span>
+    </el-dialog>
+
+    <!-- 打款对话框 -->
+    <el-dialog title="确认打款" :visible.sync="paymentDialogVisible" width="500px">
+      <el-form :model="paymentForm" label-width="100px">
+        <el-form-item label="申请编号">
+          <span>{{ paymentForm.applicationNo }}</span>
+        </el-form-item>
+        <el-form-item label="提现金额">
+          <span>¥{{ formatMoney(paymentForm.amount) }}</span>
+        </el-form-item>
+        <el-form-item label="打款流水号" prop="paymentNo">
+          <el-input v-model="paymentForm.paymentNo" placeholder="请输入打款流水号"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="paymentDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handlePaymentSubmit" :loading="submitLoading">确 认 打 款</el-button>
+      </span>
+    </el-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/common.js"></script>
+  <script src="../../api/finance.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          loading: false,
+          searchStatus: null,
+          tableData: [],
+          statistics: {},
+          submitLoading: false,
+          
+          // Add dialog
+          addDialogVisible: false,
+          addForm: {
+            amount: 100,
+            withdrawMethod: 1,
+            receiveAccount: '',
+            receiveName: '',
+            remark: ''
+          },
+          addRules: {
+            amount: [{ required: true, message: 'Please enter amount', trigger: 'blur' }],
+            withdrawMethod: [{ required: true, message: 'Please select method', trigger: 'change' }],
+            receiveAccount: [{ required: true, message: 'Please enter account', trigger: 'blur' }],
+            receiveName: [{ required: true, message: 'Please enter name', trigger: 'blur' }]
+          },
+          
+          // Review dialog
+          reviewDialogVisible: false,
+          reviewForm: {
+            id: null,
+            applicationNo: '',
+            amount: 0,
+            status: 1,
+            remark: ''
+          },
+          
+          // Payment dialog
+          paymentDialogVisible: false,
+          paymentForm: {
+            id: null,
+            applicationNo: '',
+            amount: 0,
+            paymentNo: ''
+          }
+        }
+      },
+      created() {
+        this.fetchData()
+        this.fetchStatistics()
+      },
+      methods: {
+        formatMoney(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        getWithdrawMethodText(method) {
+          const map = { 1: '银行卡', 2: '支付宝', 3: '微信' }
+          return map[method] || '未知'
+        },
+        getStatusClass(status) {
+          const map = { 0: 'pending', 1: 'approved', 2: 'paid', 3: 'rejected', 4: 'cancelled' }
+          return map[status] || 'pending'
+        },
+        getStatusText(status) {
+          const map = { 0: '待审核', 1: '审核通过', 2: '已打款', 3: '已拒绝', 4: '已取消' }
+          return map[status] || '未知'
+        },
+        async fetchData() {
+          this.loading = true
+          try {
+            const params = {}
+            if (this.searchStatus !== null && this.searchStatus !== '') {
+              params.status = this.searchStatus
+            }
+            const res = await getWithdrawalList(params)
+            if (res.code === 1) {
+              this.tableData = res.data || []
+            }
+          } catch (err) {
+            console.error('Failed to fetch data', err)
+            this.$message.error('Failed to fetch data')
+          } finally {
+            this.loading = false
+          }
+        },
+        async fetchStatistics() {
+          try {
+            const res = await getWithdrawalStatistics()
+            if (res.code === 1) {
+              this.statistics = res.data || {}
+            }
+          } catch (err) {
+            console.error('Failed to fetch statistics', err)
+          }
+        },
+        resetSearch() {
+          this.searchStatus = null
+          this.fetchData()
+        },
+        handleAdd() {
+          this.addForm = {
+            amount: 100,
+            withdrawMethod: 1,
+            receiveAccount: '',
+            receiveName: '',
+            remark: ''
+          }
+          this.addDialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.addForm && this.$refs.addForm.clearValidate()
+          })
+        },
+        handleAddSubmit() {
+          this.$refs.addForm.validate(async (valid) => {
+            if (!valid) return
+            
+            this.submitLoading = true
+            try {
+              const res = await createWithdrawal(this.addForm)
+              if (res.code === 1) {
+                this.$message.success('Application submitted')
+                this.addDialogVisible = false
+                this.fetchData()
+                this.fetchStatistics()
+              } else {
+                this.$message.error(res.msg || 'Submission failed')
+              }
+            } catch (err) {
+              console.error('Submit failed', err)
+              this.$message.error('Submission failed')
+            } finally {
+              this.submitLoading = false
+            }
+          })
+        },
+        handleView(row) {
+          this.$alert(
+            `<div>
+              <p><strong>申请编号：</strong>${row.applicationNo}</p>
+              <p><strong>申请人：</strong>${row.applicantName}</p>
+              <p><strong>提现金额：</strong>¥${this.formatMoney(row.amount)}</p>
+              <p><strong>提现方式：</strong>${this.getWithdrawMethodText(row.withdrawMethod)}</p>
+              <p><strong>收款账户：</strong>${row.receiveAccount}</p>
+              <p><strong>状态：</strong>${this.getStatusText(row.status)}</p>
+              <p><strong>申请时间：</strong>${row.createTime}</p>
+              ${row.reviewRemark ? `<p><strong>审核备注：</strong>${row.reviewRemark}</p>` : ''}
+            </div>`,
+            '申请详情',
+            { dangerouslyUseHTMLString: true }
+          )
+        },
+        handleReview(row) {
+          this.reviewForm = {
+            id: row.id,
+            applicationNo: row.applicationNo,
+            amount: row.amount,
+            status: 1,
+            remark: ''
+          }
+          this.reviewDialogVisible = true
+        },
+        async handleReviewSubmit() {
+          this.submitLoading = true
+          try {
+            const res = await reviewWithdrawal(this.reviewForm.id, {
+              status: this.reviewForm.status,
+              remark: this.reviewForm.remark
+            })
+            if (res.code === 1) {
+              this.$message.success('Review completed')
+              this.reviewDialogVisible = false
+              this.fetchData()
+              this.fetchStatistics()
+            } else {
+              this.$message.error(res.msg || 'Review failed')
+            }
+          } catch (err) {
+            console.error('Review failed', err)
+            this.$message.error('Review failed')
+          } finally {
+            this.submitLoading = false
+          }
+        },
+        handlePayment(row) {
+          this.paymentForm = {
+            id: row.id,
+            applicationNo: row.applicationNo,
+            amount: row.amount,
+            paymentNo: ''
+          }
+          this.paymentDialogVisible = true
+        },
+        async handlePaymentSubmit() {
+          if (!this.paymentForm.paymentNo) {
+            this.$message.warning('Please enter payment number')
+            return
+          }
+          
+          this.submitLoading = true
+          try {
+            const res = await processWithdrawalPayment(this.paymentForm.id, {
+              paymentNo: this.paymentForm.paymentNo
+            })
+            if (res.code === 1) {
+              this.$message.success('Payment processed')
+              this.paymentDialogVisible = false
+              this.fetchData()
+              this.fetchStatistics()
+            } else {
+              this.$message.error(res.msg || 'Payment failed')
+            }
+          } catch (err) {
+            console.error('Payment failed', err)
+            this.$message.error('Payment failed')
+          } finally {
+            this.submitLoading = false
+          }
+        },
+        async handleCancel(row) {
+          try {
+            await this.$confirm('Are you sure to cancel this application?', 'Confirm', {
+              confirmButtonText: 'Yes',
+              cancelButtonText: 'No',
+              type: 'warning'
+            })
+            
+            const res = await cancelWithdrawal(row.id)
+            if (res.code === 1) {
+              this.$message.success('Cancelled')
+              this.fetchData()
+              this.fetchStatistics()
+            } else {
+              this.$message.error(res.msg || 'Cancellation failed')
+            }
+          } catch (err) {
+            if (err !== 'cancel') {
+              console.error('Cancel failed', err)
+              this.$message.error('Cancellation failed')
+            }
+          }
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+

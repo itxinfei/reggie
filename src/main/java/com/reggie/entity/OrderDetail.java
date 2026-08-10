@@ -41,6 +41,9 @@ public class OrderDetail implements Serializable {
     @Schema(description = "口味", example = "微辣")
     private String dishFlavor;
 
+    @Schema(description = "菜品备注", example = "少放辣")
+    private String remark;
+
     @Schema(description = "数量", example = "1", required = true)
     @NotNull(message = "商品数量不能为空")
     @Min(value = 1, message = "商品数量必须大于0")

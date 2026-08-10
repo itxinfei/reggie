@@ -34,6 +34,12 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * MarketingCampaign service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignMapper, MarketingCampaign>
         implements MarketingCampaignService {
@@ -527,3 +533,4 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         return "活跃用户推荐";
     }
 }
+

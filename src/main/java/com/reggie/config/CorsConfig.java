@@ -40,8 +40,11 @@ public class CorsConfig {
             "Authorization",
             "X-Requested-With",
             "Accept",
-            "Origin"
+            "Origin",
+            "X-CSRF-Token"
         ));
+        // 允许前端读取响应头中的 CSRF Token
+        config.setExposedHeaders(Arrays.asList("X-CSRF-Token"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 

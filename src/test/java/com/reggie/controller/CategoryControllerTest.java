@@ -77,13 +77,13 @@ public class CategoryControllerTest {
     @Test
     void testDelete() throws Exception {
         Category cat2 = new Category();
-        cat2.setId(10L);
         cat2.setName("待删除分类");
         cat2.setType(1);
         cat2.setSort(10);
         categoryService.save(cat2);
+        long generatedId = cat2.getId();
 
-        mockMvc.perform(delete("/category/10")
+        mockMvc.perform(delete("/category/" + generatedId)
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())

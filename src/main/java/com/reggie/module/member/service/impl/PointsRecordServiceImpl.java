@@ -9,6 +9,7 @@ import com.reggie.module.member.mapper.PointsRecordMapper;
 import com.reggie.module.member.model.PointsRecord;
 import com.reggie.module.member.service.PointsRecordService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -19,6 +20,7 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class PointsRecordServiceImpl extends ServiceImpl<PointsRecordMapper, PointsRecord> implements PointsRecordService {
 
     @Override
@@ -41,3 +43,4 @@ public class PointsRecordServiceImpl extends ServiceImpl<PointsRecordMapper, Poi
                 .sum();
     }
 }
+

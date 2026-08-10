@@ -15,6 +15,7 @@ import com.reggie.module.inventory.service.MaterialService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,14 @@ import static com.reggie.module.inventory.model.Material.STATUS_NORMAL;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * Material service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> implements MaterialService {
 
     @Autowired
@@ -133,3 +141,5 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         }
     }
 }
+
+

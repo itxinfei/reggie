@@ -6,7 +6,12 @@ import com.aliyuncs.dysmsapi.model.v20170525.SendSmsRequest;
 import com.aliyuncs.dysmsapi.model.v20170525.SendSmsResponse;
 import com.aliyuncs.exceptions.ClientException;
 import com.aliyuncs.profile.DefaultProfile;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * <p>
@@ -33,6 +38,11 @@ public final class SMSUtils {
      * 阿里云AccessKey Secret（从配置注入，使用volatile保证线程可见性）
      */
     private static volatile String accessKeySecret;
+
+    /**
+     * JSON序列化工具（线程安全，复用实例）
+     */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
      * 初始化短信凭证（由SmsConfig或启动时调用）
@@ -68,7 +78,15 @@ public final class SMSUtils {
 		request.setPhoneNumbers(phoneNumbers);
 		request.setSignName(signName);
 		request.setTemplateCode(templateCode);
-		request.setTemplateParam("{\"code\":\""+param+"\"}");
+		// 使用 Jackson 序列化模板参数，避免字符串拼接导致的 JSON 注入风险
+		Map<String, String> templateParams = new HashMap<>();
+		templateParams.put("code", param);
+		try {
+			request.setTemplateParam(OBJECT_MAPPER.writeValueAsString(templateParams));
+		} catch (JsonProcessingException e) {
+			log.error("短信模板参数JSON序列化失败，phone={}, param={}", phoneNumbers, param, e);
+			throw new RuntimeException("短信参数序列化失败: " + e.getMessage(), e);
+		}
 		try {
 			SendSmsResponse response = client.getAcsResponse(request);
 			if ("OK".equals(response.getCode())) {

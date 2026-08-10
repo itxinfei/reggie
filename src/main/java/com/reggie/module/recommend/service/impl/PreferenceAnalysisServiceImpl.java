@@ -28,6 +28,12 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * PreferenceAnalysis service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService {
 
@@ -365,3 +371,4 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
         userPreferenceMapper.delete(wrapper);
     }
 }
+

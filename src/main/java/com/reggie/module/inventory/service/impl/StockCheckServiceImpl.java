@@ -2,11 +2,13 @@ package com.reggie.module.inventory.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.dto.StockCheckItemDTO;
+import com.reggie.module.inventory.mapper.MaterialMapper;
 import com.reggie.module.inventory.mapper.StockCheckDetailMapper;
 import com.reggie.module.inventory.mapper.StockCheckMapper;
 import com.reggie.module.inventory.model.Material;
@@ -38,6 +40,12 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * StockCheck service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCheck> implements StockCheckService {
 
@@ -52,6 +60,10 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
     /** 盘点明细Mapper */
     @Autowired
     private StockCheckDetailMapper stockCheckDetailMapper;
+
+    /** 食材Mapper（用于原子盘点调整库存） */
+    @Autowired
+    private MaterialMapper materialMapper;
 
     @Override
     public StockCheck createCheck(String operator, String remark) {
@@ -99,8 +111,11 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
             BigDecimal diff = actualQty.subtract(bookQty);
             totalDiff = totalDiff.add(diff.multiply(material.getUnitPrice() != null ? material.getUnitPrice() : BigDecimal.ZERO));
 
-            material.setStockQty(actualQty);
-            materialService.updateById(material);
+            // 修改点：原子设置库存为实际盘点数量，消除 read-modify-write（updateById 整体写回覆盖并发字段）
+            int adjRows = materialMapper.adjustStockTo(materialId, actualQty);
+            if (adjRows == 0) {
+                throw new CustomException("食材不存在: " + materialId);
+            }
 
             StockCheckDetail detail = new StockCheckDetail();
             detail.setCheckId(checkId);
@@ -124,10 +139,19 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
             stockRecordService.save(record);
         }
 
-        sc.setStatus(StockCheckStatus.DONE.getValue());
-        sc.setTotalDiffAmount(totalDiff.setScale(2, RoundingMode.HALF_UP));
-        sc.setProfitLoss(totalDiff.setScale(2, RoundingMode.HALF_UP));
-        updateById(sc);
+        // 修改点：CAS 状态更新——仅当状态仍为 DRAFT/IN_PROGRESS 时才置为 DONE，
+        // 返回 0 表示已被他人完成，抛异常回滚整个事务（含库存调整/明细插入）
+        BigDecimal finalDiff = totalDiff.setScale(2, RoundingMode.HALF_UP);
+        LambdaUpdateWrapper<StockCheck> casUpdate = new LambdaUpdateWrapper<>();
+        casUpdate.eq(StockCheck::getId, checkId)
+                .in(StockCheck::getStatus, StockCheckStatus.DRAFT.getValue(), StockCheckStatus.IN_PROGRESS.getValue())
+                .set(StockCheck::getStatus, StockCheckStatus.DONE.getValue())
+                .set(StockCheck::getTotalDiffAmount, finalDiff)
+                .set(StockCheck::getProfitLoss, finalDiff);
+        int updated = baseMapper.update(null, casUpdate);
+        if (updated == 0) {
+            throw new CustomException("盘点单已被他人完成或状态已变更");
+        }
     }
 
     public Page<StockCheck> page(Page<StockCheck> pageInfo, Wrapper<StockCheck> queryWrapper) {
@@ -220,3 +244,4 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         }
     }
 }
+

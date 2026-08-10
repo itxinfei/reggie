@@ -176,6 +176,12 @@
           <div class="app-main" v-loading="loading">
             <div class="divTmp" v-show="loading"></div>
             <!-- 修改点：移除 height="auto"（浏览器不识别），添加 scrolling="yes" 让 iframe 内部页面自行滚动；高度由 JS 控制为 window.innerHeight - 56（视口 - 顶栏） -->
+            <!-- 修改点：添加 sandbox 属性限制iframe权限，防止恶意页面执行敏感操作
+                 allow-same-origin: 允许同域访问（因为iframe加载的是同域页面）
+                 allow-scripts: 允许执行脚本（页面需要Vue等JS运行）
+                 allow-forms: 允许提交表单
+                 allow-popups: 允许弹出窗口（如下载）
+                 注意：不添加 allow-top-navigation，防止iframe内页面跳转顶层窗口绕过登录校验 -->
             <iframe
               id="cIframe"
               class="c_iframe"
@@ -184,6 +190,7 @@
               width="100%"
               scrolling="yes"
               frameborder="0"
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
               v-show="!loading"
             ></iframe>
           </div>

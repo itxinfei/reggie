@@ -56,8 +56,14 @@ public class OrderControllerTest {
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 
-        jdbcTemplate.update("INSERT INTO user (id, name, phone, status, create_time) VALUES (?, ?, ?, ?, ?)",
-                1L, "测试用户", "13800138000", 1, java.time.LocalDateTime.now());
+        jdbcTemplate.update("INSERT INTO user (id, name, phone, status, create_time, tenant_id) VALUES (?, ?, ?, ?, ?, ?)",
+                1L, "测试用户", "13800138000", 1, java.time.LocalDateTime.now(), 1L);
+
+        // 插入分类和菜品（submit 会查询菜品并扣减库存，dish 表不在租户忽略列表中，需设置 tenant_id）
+        jdbcTemplate.update("INSERT INTO category (id, name, type, sort, create_time, update_time, create_user, update_user, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                1L, "测试分类", 1, 1, java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 1L);
+        jdbcTemplate.update("INSERT INTO dish (id, category_id, name, price, status, stock_qty, create_time, update_time, create_user, update_user, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                1L, 1L, "测试菜品", new BigDecimal("10.00"), 1, new BigDecimal("100"), java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 1L);
 
         AddressBook address = new AddressBook();
         address.setId(1L);
@@ -85,13 +91,17 @@ public class OrderControllerTest {
 
     @Test
     void testSubmit() throws Exception {
+        // 控制器返回 Map（id/number/amount/status/duplicate），不再是纯字符串
         mockMvc.perform(post("/order/submit")
                 .sessionAttr("user", 1L)
+                .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"addressBookId\":1}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data").value("下单成功"));
+                .andExpect(jsonPath("$.data.id").exists())
+                .andExpect(jsonPath("$.data.number").exists())
+                .andExpect(jsonPath("$.data.duplicate").value(false));
     }
 
     @Test
@@ -100,6 +110,7 @@ public class OrderControllerTest {
 
         mockMvc.perform(post("/order/submit")
                 .sessionAttr("user", 1L)
+                .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"addressBookId\":1}"))
                 .andExpect(status().isOk())
@@ -161,7 +172,8 @@ public class OrderControllerTest {
         orderService.save(order);
 
         mockMvc.perform(get("/order/list")
-                .sessionAttr("user", 1L))
+                .sessionAttr("user", 1L)
+                .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data[0].number").value("2024010"));
@@ -208,6 +220,7 @@ public class OrderControllerTest {
 
         mockMvc.perform(post("/order/again")
                 .sessionAttr("user", 1L)
+                .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":40}"))
                 .andExpect(status().isOk())

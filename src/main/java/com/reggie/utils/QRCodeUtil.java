@@ -92,7 +92,8 @@ public class QRCodeUtil {
             // 保存到本地（如果配置了上传路径）
             if (uploadPath != null && !uploadPath.isEmpty()) {
                 String relativePath = "qrcode/table_" + tableId + ".png";
-                File outputFile = new File(uploadPath + relativePath);
+                // 使用 File(parent, child) 构造方法，自动处理路径分隔符，避免拼接错误
+                File outputFile = new File(uploadPath, relativePath);
                 File dir = outputFile.getParentFile();
 
                 if (!dir.exists()) {

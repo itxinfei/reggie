@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * @since 2026-07-14
  */
 @RestController
-@RequestMapping("/dish_flavor")
+@RequestMapping("/dish-flavor")
 @Slf4j
 @Tag(name = "菜品口味管理", description = "菜品口味独立CRUD接口")
 public class DishFlavorController {
@@ -139,3 +139,4 @@ public class DishFlavorController {
         return currentTenantId != null && currentTenantId.equals(dish.getTenantId());
     }
 }
+

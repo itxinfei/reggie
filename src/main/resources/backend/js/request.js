@@ -9,19 +9,83 @@
   })
   // request拦截器
   // 修改点：移除手动GET参数拼接代码，axios原生支持params序列化，无需手动处理
+  // 修改点：自动携带CSRF Token（从Cookie或SessionStorage获取）
   service.interceptors.request.use(config => {
+    // 为POST/PUT/DELETE请求添加CSRF Token
+    var method = (config.method || 'get').toLowerCase();
+    if (method === 'post' || method === 'put' || method === 'delete') {
+      var csrfToken = getCsrfToken();
+      if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
+      }
+    }
     return config
   }, error => {
       return Promise.reject(error)
   })
 
+  /**
+   * 获取CSRF Token
+   * 优先从Cookie获取，其次从SessionStorage获取
+   */
+  function getCsrfToken() {
+    // 尝试从Cookie获取
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+      var cookie = cookies[i].trim();
+      if (cookie.startsWith('csrfToken=')) {
+        return cookie.substring('csrfToken='.length);
+      }
+    }
+    // 尝试从SessionStorage获取
+    try {
+      return sessionStorage.getItem('csrfToken');
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * 保存CSRF Token到Cookie和SessionStorage
+   */
+  function saveCsrfToken(token) {
+    if (!token) return;
+    try {
+      // 保存到SessionStorage
+      sessionStorage.setItem('csrfToken', token);
+      // 保存到Cookie（有效期30分钟，与后端同步）
+      var expires = new Date(Date.now() + 30 * 60 * 1000).toUTCString();
+      document.cookie = 'csrfToken=' + encodeURIComponent(token) + '; expires=' + expires + '; path=/; SameSite=Strict';
+    } catch (e) {
+      console.warn('保存CSRF Token失败', e);
+    }
+  }
+
+  /**
+   * 清除CSRF Token
+   */
+  function clearCsrfToken() {
+    try {
+      sessionStorage.removeItem('csrfToken');
+      document.cookie = 'csrfToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    } catch (e) {
+      console.warn('清除CSRF Token失败', e);
+    }
+  }
+
   // 响应拦截器
   service.interceptors.response.use(res => {
+      // 修改点：保存后端返回的CSRF Token
+      var csrfToken = res.headers['x-csrf-token'];
+      if (csrfToken) {
+        saveCsrfToken(csrfToken);
+      }
       // 修改点：统一code判断，code===0为业务失败，code===1为成功
       const code = res.data ? res.data.code : undefined;
       // NOTLOGIN状态码处理：返回登录页面
       if (code === 0 && res.data.msg === 'NOTLOGIN') {
         localStorage.removeItem('userInfo')
+        clearCsrfToken();
         // 修改点：后端页面在iframe中加载，须用window.top导航顶层窗口到登录页
         try {
           window.top.location.href = '/backend/page/login/login.html'

@@ -6,6 +6,7 @@ import com.reggie.module.member.mapper.MemberLevelMapper;
 import com.reggie.module.member.model.MemberLevel;
 import com.reggie.module.member.service.MemberLevelService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 会员等级服务实现
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
  * @since 2026-07-09
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class MemberLevelServiceImpl extends ServiceImpl<MemberLevelMapper, MemberLevel> implements MemberLevelService {
 
     @Override
@@ -33,3 +35,4 @@ public class MemberLevelServiceImpl extends ServiceImpl<MemberLevelMapper, Membe
         return getOne(qw);
     }
 }
+

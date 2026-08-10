@@ -8,6 +8,7 @@ import com.reggie.entity.User;
 import com.reggie.mapper.UserMapper;
 import com.reggie.service.UserService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 用户服务实现类
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
  * @since 2026-07-09
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     @Override
@@ -64,3 +66,5 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
     }
 }
+
+

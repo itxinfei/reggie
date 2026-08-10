@@ -7,6 +7,7 @@ import com.reggie.entity.AddressBook;
 import com.reggie.mapper.AddressBookMapper;
 import com.reggie.service.AddressBookService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class AddressBookServiceImpl extends ServiceImpl<AddressBookMapper, AddressBook> implements AddressBookService {
 
     @Override
@@ -61,3 +63,5 @@ public class AddressBookServiceImpl extends ServiceImpl<AddressBookMapper, Addre
                 .stream().findFirst().orElse(null);
     }
 }
+
+

@@ -95,6 +95,7 @@ public class PrinterController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "查询打印机", description = "根据ID查询打印机配置")
+    @Parameter(description = "I d")
     public R<PrinterConfig> getById(@PathVariable Long id) {
         PrinterConfig config = printerConfigService.getById(id);
         if (config != null) {
@@ -125,3 +126,4 @@ public class PrinterController {
         return R.success(result);
     }
 }
+

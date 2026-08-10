@@ -45,6 +45,7 @@ public class EmployeeControllerTest {
         employee.setPhone("13800138000");
         employee.setStatus(1);
         employee.setSex("1");
+        employee.setRole(1);
         employee.setTenantId(1L);
         employeeService.save(employee);
     }
@@ -110,7 +111,7 @@ public class EmployeeControllerTest {
                 .content("{\"username\":\"newemp\",\"name\":\"新员工\",\"phone\":\"13700137000\",\"sex\":\"0\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data").value("新增员工成功"));
+                .andExpect(jsonPath("$.data.消息").value("新增员工成功，初始密码已通过短信/邮件发送给用户"));
     }
 
     @Test

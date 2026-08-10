@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -6,12 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>桌台管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/common.css" />
-  <link rel="stylesheet" href="../../styles/page.css" />
-  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
-  <link rel="stylesheet" href="../../styles/components.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/design-system.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     /* 卡片视图切换 */
     .table-grid-toggle { display: flex; align-items: center; gap: 8px; }
@@ -51,8 +46,20 @@
   </style>
 </head>
 <body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
   <div class="dashboard-container" id="table-app">
-    <div class="container">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 页头：标题 + 副标题 + 页级操作 -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">桌台管理</h1>
+          <p class="ds-page-header__subtitle">管理餐厅桌台和二维码点餐</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
+
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -162,7 +169,7 @@
         :current-page.sync="page"
         @current-change="handleCurrentChange"
       ></el-pagination>
-    </div>
+    </main>
 
     <!-- 新增/编辑弹窗 -->
     <crud-dialog
@@ -224,6 +231,8 @@
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../api/dining.js"></script>
   <script>
@@ -428,3 +437,6 @@
   </script>
 </body>
 </html>
+
+
+

@@ -10,6 +10,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -25,6 +27,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    /** 提取唯一约束冲突中重复值的正则（MySQL: Duplicate entry 'xxx' for key ...） */
+    private static final Pattern DUPLICATE_ENTRY_PATTERN = Pattern.compile("Duplicate entry '([^']*)'");
+
     /**
      * 处理SQL完整性约束违反异常
      *
@@ -35,10 +40,12 @@ public class GlobalExceptionHandler {
     public R<String> exceptionHandler(SQLIntegrityConstraintViolationException ex){
         log.error("SQL integrity violation", ex);
 
-        if(ex.getMessage().contains("Duplicate entry")){
-            String[] split = ex.getMessage().split(" ");
-            String msg = split[2] + "已存在";
-            return R.error(msg);
+        // 先判空，避免 getMessage() 为 null 导致 NPE；用正则提取重复值，避免固定下标越界
+        String message = ex.getMessage();
+        if (message != null && message.contains("Duplicate entry")) {
+            Matcher matcher = DUPLICATE_ENTRY_PATTERN.matcher(message);
+            String duplicateValue = matcher.find() ? matcher.group(1) : "";
+            return R.error(duplicateValue + "已存在");
         }
 
         return R.error("未知错误");

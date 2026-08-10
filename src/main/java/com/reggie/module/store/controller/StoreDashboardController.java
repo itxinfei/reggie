@@ -1,6 +1,7 @@
 package com.reggie.module.store.controller;
 
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequiresAdmin;
 import com.reggie.module.store.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +21,7 @@ import java.util.Map;
  * @since 2026-07-09
  */
 @Slf4j
+@RequiresAdmin
 @RestController
 @RequestMapping("/store/dashboard")
 @Tag(name = "总部控制台", description = "跨门店经营数据汇总与排行接口")

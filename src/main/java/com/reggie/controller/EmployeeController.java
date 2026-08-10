@@ -94,7 +94,7 @@ public class EmployeeController {
                 || bruteForceProtectionFilter.isAccountLocked(loginDTO.getUsername()))) {
             log.warn("账号已被锁定 - 用户名：{}",
                 LogMaskUtils.maskUsername(loginDTO.getUsername()));
-            return R.error("登录失败次数过多，请5分钟后重试");
+            return R.error("登录失败次数过多，请15分钟后重试");
         }
 
         //1、根据页面提交的用户名username查询数据库
@@ -312,6 +312,7 @@ public class EmployeeController {
      * @return 操作结果
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增员工", description = "创建新的员工账号，仅管理员可操作，初始密码统一设置")
     @Parameter(name = "employee", description = "员工信息（用户名、姓名、手机号、角色等）", required = true)
     public R<Map<String, Object>> save(HttpServletRequest request,@Valid @RequestBody Employee employee){
@@ -370,7 +371,7 @@ public class EmployeeController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "员工姓名（可选，模糊查询）")
     @Parameter(name = "status", description = "账号状态（可选，1=正常 ,0=禁用）")
-    public R<Page<Employee>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,String name, @RequestParam(required = false) Integer status){
+    public R<Page<Employee>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String name, @RequestParam(required = false) Integer status){
         log.info("page = {},pageSize = {},name = {}" ,page,pageSize,name);
 
         //构造分页构造器
@@ -392,6 +393,16 @@ public class EmployeeController {
 
         //执行查询
         employeeService.page(pageInfo,queryWrapper);
+
+        // 脱敏：移除密码、手机号、身份证等敏感字段
+        if (pageInfo.getRecords() != null) {
+            for (Employee emp : pageInfo.getRecords()) {
+                emp.setPassword(null);
+                emp.setPasswordType(null);
+                emp.setPhone(emp.getPhone() != null ? maskPhone(emp.getPhone()) : null);
+                emp.setIdNumber(null);
+            }
+        }
 
         return R.success(pageInfo);
     }
@@ -443,6 +454,7 @@ public class EmployeeController {
      * @return 操作结果
      */
     @PutMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改员工信息", description = "根据ID更新员工信息，仅管理员可操作")
     @Parameter(name = "employee", description = "员工信息（包含ID）", required = true)
     public R<String> update(HttpServletRequest request, @Valid @RequestBody Employee employee) {
@@ -498,6 +510,7 @@ public class EmployeeController {
      * 修改员工状态（启用/禁用）
      */
     @PutMapping("/status")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改员工状态", description = "仅更新员工启用/禁用状态，不影响其他字段，自动校验租户权限")
     public R<String> updateStatus(HttpServletRequest request, @RequestBody Map<String, Object> params) {
         if (!isAdmin(request)) {
@@ -541,9 +554,11 @@ public class EmployeeController {
             if (currentTenantId != null && !currentTenantId.equals(employee.getTenantId())) {
                 return R.error("没有查询到对应员工信息");
             }
-            // 脱敏：移除密码和密码类型字段，防止泄露
+            // 脱敏：移除密码、手机号、身份证等敏感字段
             employee.setPassword(null);
             employee.setPasswordType(null);
+            employee.setPhone(employee.getPhone() != null ? maskPhone(employee.getPhone()) : null);
+            employee.setIdNumber(null);
             return R.success(employee);
         }
         return R.error("没有查询到对应员工信息");
@@ -556,6 +571,7 @@ public class EmployeeController {
      * @return 操作结果
      */
     @DeleteMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除员工", description = "批量删除员工，仅管理员可操作，不允许删除自己")
     @Parameter(name = "ids", description = "员工ID列表", required = true)
     public R<String> delete(HttpServletRequest request, @RequestParam List<Long> ids) {
@@ -566,8 +582,19 @@ public class EmployeeController {
         if (ids.contains(currentEmpId)) {
             return R.error("不允许删除当前登录账号");
         }
+        // 租户校验（employee 在 IGNORE_TABLES 中不自动过滤）：按租户+ID限定删除范围，fail-closed
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId == null) {
+            return R.error("租户信息缺失，无法删除");
+        }
         log.info("删除员工：ids={}", ids);
-        employeeService.removeByIds(ids);
+        LambdaUpdateWrapper<Employee> deleteWrapper = new LambdaUpdateWrapper<>();
+        deleteWrapper.in(Employee::getId, ids)
+                     .eq(Employee::getTenantId, currentTenantId);
+        boolean removed = employeeService.remove(deleteWrapper);
+        if (!removed) {
+            return R.error("删除失败：员工不存在或不属于当前租户");
+        }
         return R.success("删除成功");
     }
 
@@ -578,6 +605,7 @@ public class EmployeeController {
      * @return 操作结果
      */
     @PutMapping("/password")
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     @Operation(summary = "修改密码", description = "修改当前登录员工的密码，需验证旧密码")
     public R<String> updatePassword(HttpServletRequest request, @RequestBody Map<String, String> params) {
         String oldPassword = params.get("oldPassword");

@@ -80,9 +80,9 @@ public class LogMaskUtils {
 
         String result = json;
         // 脱敏手机号
-        result = result.replaceAll("(\\\\d{3})\\\\d{4}(\\\\d{4})", "$1****$2");
+        result = result.replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2");
         // 脱敏身份证号（18位）
-        result = result.replaceAll("(\\\\d{6})\\\\d{8}(\\\\d{4})", "$1********$2");
+        result = result.replaceAll("(\\d{6})\\d{8}(\\d{4})", "$1********$2");
         // 脱敏地址（较长字符串的后半部分）
         result = maskLongStrings(result);
 

@@ -1,6 +1,7 @@
 package com.reggie.common;
 
 import com.reggie.common.BaseContext;
+import com.reggie.utils.SpringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -175,7 +176,8 @@ public class RateLimitAspect {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
             HttpServletRequest request = attributes.getRequest();
-            return request.getRemoteAddr();
+            String ip = SpringUtils.getClientIp(request);
+            return (ip != null && !ip.isEmpty()) ? ip : "unknown";
         }
         return "unknown";
     }

@@ -69,6 +69,7 @@ public class ReportController {
     public R<List<Map<String, Object>>> dishRanking(
             @RequestParam String startDate,
             @RequestParam String endDate,
+            @Parameter(description = "Limit")
             @RequestParam(defaultValue = "10") int limit) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> data = reportService.getDishRanking(startDate, endDate, limit, tenantId);
@@ -122,7 +123,9 @@ public class ReportController {
     @GetMapping("/category-sales")
     @Operation(summary = "菜品分类销售占比", description = "获取各菜品分类的销售数量和占比，数据来源：order_detail + dish + category 联表统计")
     public R<List<Map<String, Object>>> categorySales(
+            @Parameter(description = "Start date")
             @RequestParam String startDate,
+            @Parameter(description = "End date")
             @RequestParam String endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> data = reportService.getCategorySales(startDate, endDate, tenantId);
@@ -138,8 +141,11 @@ public class ReportController {
      */
     @GetMapping("/dish-trend")
     @Operation(summary = "菜品销量趋势", description = "获取指定菜品在日期范围内的每日销量趋势，数据来源：order_detail + orders 真实统计")
+    @Parameter(description = "N a m e s")
     public R<Map<String, Object>> dishTrend(@RequestParam String names,
+                                              @Parameter(description = "Start date")
                                               @RequestParam String startDate,
+                                              @Parameter(description = "End date")
                                               @RequestParam String endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         String[] nameArr = names.split(",");
@@ -160,7 +166,9 @@ public class ReportController {
      */
     @GetMapping("/payment/trend")
     @Operation(summary = "支付金额趋势", description = "获取各支付渠道每日金额趋势，数据来源：orders 表真实统计")
+    @Parameter(description = "S t a r t D a t e")
     public R<Map<String, Object>> paymentTrend(@RequestParam String startDate,
+                                                @Parameter(description = "End date")
                                                 @RequestParam String endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> data = reportService.getPaymentTrend(startDate, endDate, tenantId);
@@ -175,7 +183,9 @@ public class ReportController {
      */
     @GetMapping("/time-slot/heatmap")
     @Operation(summary = "时段热力图", description = "获取工作日×时段的客流量热力图数据，数据来源：orders 表真实统计")
+    @Parameter(description = "S t a r t D a t e")
     public R<Map<String, Object>> timeSlotHeatmap(@RequestParam String startDate,
+                                                    @Parameter(description = "End date")
                                                     @RequestParam String endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> data = reportService.getTimeSlotHeatmap(startDate, endDate, tenantId);
@@ -192,8 +202,11 @@ public class ReportController {
     @GetMapping("/repurchase-rate")
     @Operation(summary = "复购率统计", description = "获取指定时间范围内的复购率趋势，支持按日/周/月/年分组")
     public R<Map<String, Object>> repurchaseRate(
+            @Parameter(description = "Period")
             @RequestParam(defaultValue = "day") String period,
+            @Parameter(description = "Start date")
             @RequestParam String startDate,
+            @Parameter(description = "End date")
             @RequestParam String endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> data = reportService.getRepurchaseRate(period, startDate, endDate, tenantId);
@@ -210,8 +223,11 @@ public class ReportController {
     @GetMapping("/repurchase-rate/dish")
     @Operation(summary = "菜品复购率排行", description = "获取各菜品的复购率排行，数据来源：order_detail + orders 联表统计")
     public R<Map<String, Object>> repurchaseRateByDish(
+            @Parameter(description = "Start date")
             @RequestParam String startDate,
+            @Parameter(description = "End date")
             @RequestParam String endDate,
+            @Parameter(description = "Limit")
             @RequestParam(defaultValue = "10") int limit) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> data = reportService.getRepurchaseRateByDish(startDate, endDate, limit, tenantId);
@@ -227,7 +243,9 @@ public class ReportController {
     @GetMapping("/cohort")
     @Operation(summary = "同期群分析", description = "按首次消费月份分组，分析各用户群的复购率表现")
     public R<Map<String, Object>> cohortAnalysis(
+            @Parameter(description = "Start date")
             @RequestParam String startDate,
+            @Parameter(description = "End date")
             @RequestParam String endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> data = reportService.getCohortAnalysis(startDate, endDate, tenantId);
@@ -249,6 +267,7 @@ public class ReportController {
     public ResponseEntity<?> exportReport(
             @RequestParam String startDate,
             @RequestParam String endDate,
+            @Parameter(description = "Format")
             @RequestParam(defaultValue = "excel") String format) {
 
         try {
@@ -296,3 +315,5 @@ public class ReportController {
         return R.success("导出历史记录已清除");
     }
 }
+
+

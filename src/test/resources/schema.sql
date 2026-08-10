@@ -197,6 +197,7 @@ CREATE TABLE orders (
   reservation_id bigint NULL DEFAULT NULL COMMENT '预订记录ID',
   customer_count int NULL DEFAULT NULL COMMENT '用餐人数',
   idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等键',
+  stock_refunded int NULL DEFAULT 0 COMMENT '已退库存数量',
   create_time datetime NOT NULL COMMENT '创建时间',
   update_time datetime NOT NULL COMMENT '更新时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建人',
@@ -242,6 +243,7 @@ CREATE TABLE shopping_cart (
   number int NOT NULL DEFAULT 1 COMMENT '数量',
   amount decimal(10,2) NOT NULL COMMENT '单价',
   image varchar(255) NULL DEFAULT NULL COMMENT '图片',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
   create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (id)
 );

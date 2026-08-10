@@ -10,6 +10,7 @@ import com.reggie.enums.CouponStatus;
 import com.reggie.module.member.service.CouponTemplateService;
 import com.reggie.module.member.service.CouponUserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -50,21 +51,9 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
             return false; // 库存不足，领取失败
         }
 
-        // 检查是否已领取过（防重复领取）
-        LambdaQueryWrapper<CouponUser> existQw = new LambdaQueryWrapper<>();
-        existQw.eq(CouponUser::getMemberId, memberId);
-        existQw.eq(CouponUser::getTemplateId, templateId);
-        existQw.ne(CouponUser::getStatus, CouponStatus.EXPIRED.getValue());
-        if (couponUserService.count(existQw) > 0) {
-            // 已领取过，回滚已扣减的数量
-            LambdaUpdateWrapper<CouponTemplate> rollbackWrapper = new LambdaUpdateWrapper<>();
-            rollbackWrapper.eq(CouponTemplate::getId, templateId);
-            rollbackWrapper.setSql("remain_count = remain_count + 1");
-            update(rollbackWrapper);
-            return false;
-        }
-
-        // 创建用户优惠券记录
+        // 修改点：移除 check-then-act 防重复校验（并发下存在 TOCTOU 漏洞），
+        // 改为依赖 coupon_user 表的 uk_member_template 唯一索引保证幂等；
+        // 插入冲突时捕获 DuplicateKeyException，回滚 remain_count 并返回 false
         CouponUser couponUser = new CouponUser();
         couponUser.setMemberId(memberId);
         couponUser.setTemplateId(templateId);
@@ -73,7 +62,16 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
         if (template.getValidDays() != null) {
             couponUser.setExpireTime(LocalDateTime.now().plusDays(template.getValidDays()));
         }
-        couponUserService.save(couponUser);
+        try {
+            couponUserService.save(couponUser);
+        } catch (DuplicateKeyException e) {
+            // 已领取过（唯一索引冲突），回滚已扣减的库存
+            LambdaUpdateWrapper<CouponTemplate> rollbackWrapper = new LambdaUpdateWrapper<>();
+            rollbackWrapper.eq(CouponTemplate::getId, templateId);
+            rollbackWrapper.setSql("remain_count = remain_count + 1");
+            update(rollbackWrapper);
+            return false;
+        }
         return true;
     }
 

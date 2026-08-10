@@ -122,6 +122,7 @@ public class AiProviderController {
     @DeleteMapping("/delete/{id}")
     @Operation(summary = "删除供应商", description = "软删除AI供应商配置，不能删除当前激活的供应商")
     public R<String> delete(
+            @Parameter(description = "I d")
             @Parameter(description = "供应商配置ID", required = true) @PathVariable Long id) {
         AiProviderConfig config = providerConfigService.getById(id);
         if (config != null && Boolean.TRUE.equals(config.getIsActive())) {
@@ -133,6 +134,7 @@ public class AiProviderController {
 
     @PostMapping("/activate/{id}")
     @Operation(summary = "切换供应商", description = "激活指定供应商（切换后AI将使用该供应商）")
+    @Parameter(description = "I d")
     public R<String> activate(@PathVariable Long id) {
         AiProviderConfig target = providerConfigService.getById(id);
         if (target == null) {
@@ -155,6 +157,7 @@ public class AiProviderController {
 
     @GetMapping("/get/{id}")
     @Operation(summary = "获取单个供应商", description = "获取指定供应商的配置（API密钥已脱敏）")
+    @Parameter(description = "I d")
     public R<AiProviderConfig> getDetail(@PathVariable Long id) {
         AiProviderConfig config = providerConfigService.getById(id);
         if (config == null) {
@@ -170,6 +173,7 @@ public class AiProviderController {
 
     @GetMapping("/test/{id}")
     @Operation(summary = "测试连通性", description = "测试指定AI供应商的连接是否正常")
+    @Parameter(description = "I d")
     public R<Map<String, String>> test(@PathVariable Long id) {
         String result = providerConfigService.testProvider(id);
         Map<String, String> resp = new HashMap<>();
@@ -391,3 +395,4 @@ public class AiProviderController {
         return list;
     }
 }
+

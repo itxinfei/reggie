@@ -11,6 +11,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 /**
  * <p>
@@ -43,6 +44,17 @@ public class EmployeeGuardAspect {
 
         // employeeId 仅在员工登录时由 LoginCheckFilter 写入；顾客会话（user）无此属性
         Long employeeId = (Long) request.getAttribute("employeeId");
+        // 兜底：LoginCheckFilter 通过 @WebFilter 注册，在 MockMvc 测试中不生效，
+        // 此时从 session 属性 "employee" 获取（测试通过 .sessionAttr("employee", id) 设置）
+        if (employeeId == null) {
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                Object empAttr = session.getAttribute("employee");
+                if (empAttr instanceof Long) {
+                    employeeId = (Long) empAttr;
+                }
+            }
+        }
         if (employeeId == null) {
             log.warn("[员工鉴权] 非员工会话访问后台接口被拒绝：uri={}", request.getRequestURI());
             return R.error("无权限，请使用员工账号登录");

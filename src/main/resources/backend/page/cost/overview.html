@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>成本核算 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css" />
+  <script src="../../plugins/echarts/echarts.min.js"></script>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: linear-gradient(135deg, var(--el-bg-subtle) 0%, var(--el-border-lighter) 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .cost-container {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .cost-container .container {
+      flex: 1;
+      background: transparent;
+      padding: 24px 32px 32px;
+      min-width: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .tableBar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--bg-surface);
+      padding: 16px 24px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .chart-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .chart-card {
+      background: var(--bg-surface);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+    .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--el-text-primary);
+      margin-bottom: 16px;
+    }
+    .chart-container {
+      height: 300px;
+    }
+    .alert-list {
+      background: var(--bg-surface);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+    .alert-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--el-border-lighter);
+    }
+    .alert-item:last-child {
+      border-bottom: none;
+    }
+    .alert-level {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 12px;
+    }
+    .alert-level.critical {
+      background: var(--el-color-danger-lighter);
+      color: var(--el-color-danger);
+    }
+    .alert-level.warning {
+      background: var(--el-color-warning-lighter);
+      color: var(--el-color-warning);
+    }
+    .alert-level.info {
+      background: var(--el-color-info-lighter);
+      color: var(--el-color-info);
+    }
+    .alert-level.normal {
+      background: var(--el-color-success-lighter);
+      color: var(--el-color-success);
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="cost-container">
+    <div class="container">
+      <!-- 工具栏 -->
+      <div class="tableBar">
+        <span class="toolbar-label">日期范围：</span>
+        <el-date-picker
+          v-model="dateRange"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          value-format="yyyy-MM-dd"
+          style="width: 300px;">
+        </el-date-picker>
+        <el-button type="primary" icon="el-icon-search" aria-label="搜索" @click="fetchData">查询</el-button>
+        <el-button icon="el-icon-refresh" aria-label="重置" @click="resetQuery">重置</el-button>
+        <div class="toolbar-spacer"></div>
+        <el-button type="success" icon="el-icon-download" @click="exportReport">导出报表</el-button>
+      </div>
+
+      <!-- 统计卡片 -->
+      <div class="stats-row">
+        <div class="stats-card">
+          <div class="stats-card-icon" style="background: var(--el-color-primary-lighter);">
+            <i class="el-icon-money" style="color: var(--el-color-primary);"></i>
+          </div>
+          <div class="stats-card-content">
+            <div class="stats-card-value">{{ formatMoney(summary.totalCost) }}</div>
+            <div class="stats-card-label">总成本</div>
+          </div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card-icon" style="background: var(--el-color-success-lighter);">
+            <i class="el-icon-food" style="color: var(--el-color-success);"></i>
+          </div>
+          <div class="stats-card-content">
+            <div class="stats-card-value">{{ formatMoney(summary.materialCost) }}</div>
+            <div class="stats-card-label">食材成本</div>
+          </div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card-icon" style="background: var(--el-color-warning-lighter);">
+            <i class="el-icon-user" style="color: var(--el-color-warning);"></i>
+          </div>
+          <div class="stats-card-content">
+            <div class="stats-card-value">{{ formatMoney(summary.laborCost) }}</div>
+            <div class="stats-card-label">人工成本</div>
+          </div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card-icon" style="background: var(--el-color-info-lighter);">
+            <i class="el-icon-more" style="color: var(--el-color-info);"></i>
+          </div>
+          <div class="stats-card-content">
+            <div class="stats-card-value">{{ formatMoney(summary.otherCost) }}</div>
+            <div class="stats-card-label">其他成本</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 图表行 -->
+      <div class="chart-row">
+        <!-- 成本趋势图 -->
+        <div class="chart-card">
+          <div class="chart-title">成本趋势分析</div>
+          <div id="trendChart" class="chart-container"></div>
+        </div>
+        <!-- 成本结构图 -->
+        <div class="chart-card">
+          <div class="chart-title">成本结构分析</div>
+          <div id="structureChart" class="chart-container"></div>
+        </div>
+      </div>
+
+      <!-- 菜品成本排行和预警 -->
+      <div class="chart-row">
+        <!-- 菜品成本排行 -->
+        <div class="chart-card">
+          <div class="chart-title">菜品成本排行 Top10</div>
+          <div id="rankingChart" class="chart-container"></div>
+        </div>
+        <!-- 成本预警 -->
+        <div class="alert-list">
+          <div class="chart-title">成本预警</div>
+          <div v-if="alerts.length === 0" style="text-align: center; color: var(--el-text-secondary); padding: 40px 0;">
+            暂无预警信息
+          </div>
+          <div v-for="(item, index) in alerts" :key="index" class="alert-item">
+            <span class="alert-level" :class="getAlertClass(item.alertLevel)">{{ item.alertLevel }}</span>
+            <span style="flex: 1;">{{ item.dishName }}</span>
+            <span style="color: var(--el-text-secondary);">毛利率：{{ item.profitRate }}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/common.js"></script>
+  <script src="../../api/cost.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          dateRange: [],
+          summary: {
+            totalCost: 0,
+            materialCost: 0,
+            laborCost: 0,
+            otherCost: 0
+          },
+          trendData: {
+            dates: [],
+            materialCosts: [],
+            laborCosts: [],
+            otherCosts: [],
+            totalCosts: []
+          },
+          structureData: [],
+          rankingData: [],
+          alerts: [],
+          trendChart: null,
+          structureChart: null,
+          rankingChart: null
+        }
+      },
+      created() {
+        // 默认查询最近7天
+        const end = new Date()
+        const start = new Date()
+        start.setTime(start.getTime() - 7 * 24 * 3600 * 1000)
+        this.dateRange = [
+          this.formatDate(start),
+          this.formatDate(end)
+        ]
+      },
+      mounted() {
+        this.initCharts()
+        this.fetchData()
+      },
+      methods: {
+        formatDate(date) {
+          const year = date.getFullYear()
+          const month = String(date.getMonth() + 1).padStart(2, '0')
+          const day = String(date.getDate()).padStart(2, '0')
+          return `${year}-${month}-${day}`
+        },
+        formatMoney(value) {
+          if (!value && value !== 0) return '¥0.00'
+          return '¥' + Number(value).toFixed(2)
+        },
+        getAlertClass(level) {
+          const map = {
+            '严重': 'critical',
+            '警告': 'warning',
+            '注意': 'info',
+            '正常': 'normal'
+          }
+          return map[level] || 'normal'
+        },
+        initCharts() {
+          this.trendChart = echarts.init(document.getElementById('trendChart'))
+          this.structureChart = echarts.init(document.getElementById('structureChart'))
+          this.rankingChart = echarts.init(document.getElementById('rankingChart'))
+          
+          window.addEventListener('resize', () => {
+            this.trendChart && this.trendChart.resize()
+            this.structureChart && this.structureChart.resize()
+            this.rankingChart && this.rankingChart.resize()
+          })
+        },
+        async fetchData() {
+          if (!this.dateRange || this.dateRange.length !== 2) {
+            this.$message.warning('请选择日期范围')
+            return
+          }
+          
+          const startDate = this.dateRange[0]
+          const endDate = this.dateRange[1]
+          
+          try {
+            // 并行请求数据
+            const [summaryRes, trendRes, structureRes, rankingRes, alertRes] = await Promise.all([
+              getCostSummary({ startDate, endDate }),
+              getCostTrend({ startDate, endDate }),
+              getCostStructure({ startDate, endDate }),
+              getDishCostRanking({ limit: 10 }),
+              getCostAlert({ threshold: 20 })
+            ])
+            
+            if (summaryRes.code === 1) {
+              this.summary = summaryRes.data
+            }
+            
+            if (trendRes.code === 1) {
+              this.trendData = trendRes.data
+              this.updateTrendChart()
+            }
+            
+            if (structureRes.code === 1) {
+              this.structureData = structureRes.data.structure || []
+              this.updateStructureChart()
+            }
+            
+            if (rankingRes.code === 1) {
+              this.rankingData = rankingRes.data || []
+              this.updateRankingChart()
+            }
+            
+            if (alertRes.code === 1) {
+              this.alerts = alertRes.data || []
+            }
+          } catch (err) {
+            console.error('获取成本数据失败', err)
+            this.$message.error('获取数据失败')
+          }
+        },
+        updateTrendChart() {
+          const option = {
+            tooltip: {
+              trigger: 'axis'
+            },
+            legend: {
+              data: ['食材成本', '人工成本', '其他成本', '总成本']
+            },
+            grid: {
+              left: '3%',
+              right: '4%',
+              bottom: '3%',
+              containLabel: true
+            },
+            xAxis: {
+              type: 'category',
+              boundaryGap: false,
+              data: this.trendData.dates
+            },
+            yAxis: {
+              type: 'value',
+              axisLabel: {
+                formatter: '¥{value}'
+              }
+            },
+            series: [
+              {
+                name: '食材成本',
+                type: 'line',
+                stack: 'Total',
+                data: this.trendData.materialCosts,
+                areaStyle: {},
+                itemStyle: { color: '#67C23A' }
+              },
+              {
+                name: '人工成本',
+                type: 'line',
+                stack: 'Total',
+                data: this.trendData.laborCosts,
+                areaStyle: {},
+                itemStyle: { color: '#E6A23C' }
+              },
+              {
+                name: '其他成本',
+                type: 'line',
+                stack: 'Total',
+                data: this.trendData.otherCosts,
+                areaStyle: {},
+                itemStyle: { color: '#909399' }
+              },
+              {
+                name: '总成本',
+                type: 'line',
+                data: this.trendData.totalCosts,
+                itemStyle: { color: '#409EFF' },
+                lineStyle: { width: 3 }
+              }
+            ]
+          }
+          this.trendChart.setOption(option)
+        },
+        updateStructureChart() {
+          const option = {
+            tooltip: {
+              trigger: 'item',
+              formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            legend: {
+              orient: 'vertical',
+              left: 'left'
+            },
+            series: [
+              {
+                name: '成本结构',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                avoidLabelOverlap: false,
+                itemStyle: {
+                  borderRadius: 10,
+                  borderColor: '#fff',
+                  borderWidth: 2
+                },
+                label: {
+                  show: false,
+                  position: 'center'
+                },
+                emphasis: {
+                  label: {
+                    show: true,
+                    fontSize: '20',
+                    fontWeight: 'bold'
+                  }
+                },
+                labelLine: {
+                  show: false
+                },
+                data: this.structureData.map(item => ({
+                  value: item.value,
+                  name: item.name
+                }))
+              }
+            ]
+          }
+          this.structureChart.setOption(option)
+        },
+        updateRankingChart() {
+          const option = {
+            tooltip: {
+              trigger: 'axis',
+              axisPointer: {
+                type: 'shadow'
+              }
+            },
+            grid: {
+              left: '3%',
+              right: '4%',
+              bottom: '3%',
+              containLabel: true
+            },
+            xAxis: {
+              type: 'value',
+              axisLabel: {
+                formatter: '¥{value}'
+              }
+            },
+            yAxis: {
+              type: 'category',
+              data: this.rankingData.map(item => item.dishName).reverse(),
+              axisLabel: {
+                width: 100,
+                overflow: 'truncate'
+              }
+            },
+            series: [
+              {
+                name: '总成本',
+                type: 'bar',
+                data: this.rankingData.map(item => item.totalCost).reverse(),
+                itemStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                    { offset: 0, color: '#409EFF' },
+                    { offset: 1, color: '#67C23A' }
+                  ])
+                }
+              }
+            ]
+          }
+          this.rankingChart.setOption(option)
+        },
+        resetQuery() {
+          const end = new Date()
+          const start = new Date()
+          start.setTime(start.getTime() - 7 * 24 * 3600 * 1000)
+          this.dateRange = [
+            this.formatDate(start),
+            this.formatDate(end)
+          ]
+          this.fetchData()
+        },
+        exportReport() {
+          this.$message.info('导出功能开发中...')
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+

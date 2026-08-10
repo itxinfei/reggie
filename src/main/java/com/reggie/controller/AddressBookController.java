@@ -34,7 +34,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/addressBook")
+@RequestMapping("/address-book")
 @Tag(name = "地址簿管理", description = "用户地址簿CRUD接口")
 public class AddressBookController {
 
@@ -223,3 +223,4 @@ public class AddressBookController {
         return R.success(addressBookService.list(queryWrapper));
     }
 }
+

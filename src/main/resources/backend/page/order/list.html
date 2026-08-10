@@ -6,74 +6,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>订单明细 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/common.css" />
-  <link rel="stylesheet" href="../../styles/page.css" />
-  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
-  <link rel="stylesheet" href="../../styles/components.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/design-system.css" />
-  <style>
-    /* ========== 统一弹窗·订单详情两栏布局 ========== */
-    .od-body { display: flex; flex-direction: column; }
-    /* 顶部定位条：订单号 + 状态（最显眼，一眼定位） */
-    .od-header { display: flex; align-items: center; justify-content: space-between;
-      gap: var(--space-3); padding-bottom: var(--space-3); margin-bottom: var(--space-3);
-      border-bottom: 1px solid var(--border-subtle); }
-    .od-header-main { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; }
-    .od-header-label { font-size: var(--font-size-xs); color: var(--text-secondary); flex-shrink: 0; }
-    .od-header-no { font-size: 18px; font-weight: var(--font-weight-semibold); color: var(--text-primary);
-      font-variant-numeric: tabular-nums; letter-spacing: .3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .od-header-status { flex-shrink: 0; }
-    .od-steps { margin-bottom: var(--space-4); }
-    /* 两栏网格：左主（商品）右辅（信息+金额） */
-    .od-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px;
-      gap: var(--space-4); align-items: start; }
-    .od-col--main { min-width: 0; }
-    .od-col--side { display: flex; flex-direction: column; gap: var(--space-3); }
-    /* 左栏·商品明细（内部滚动，避免整窗滚动） */
-    .od-section-label { font-size: 14px; font-weight: 600; color: var(--el-text-primary);
-      margin: 0 0 10px; padding-left: 8px; border-left: 3px solid var(--color-brand-500); }
-    .od-items { display: flex; flex-direction: column; gap: var(--space-2);
-      max-height: 46vh; overflow-y: auto; padding-right: 4px; }
-    .od-item { display: flex; align-items: center; gap: var(--space-3);
-      padding: var(--space-3); background: var(--bg-subtle);
-      border: 1px solid var(--border-subtle); border-radius: var(--radius-md); }
-    .od-item-img { width: 48px; height: 48px; border-radius: var(--radius-sm); flex-shrink: 0;
-      object-fit: cover; background: var(--el-bg-subtle); }
-    .od-item-img--ph { display: flex; align-items: center; justify-content: center;
-      color: var(--text-muted); font-size: 20px; }
-    .od-item-body { flex: 1; min-width: 0; }
-    .od-item-name { font-size: var(--font-size-base); font-weight: var(--font-weight-medium);
-      color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .od-item-meta { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-1);
-      font-size: var(--font-size-xs); color: var(--text-secondary); }
-    .od-item-amount { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold);
-      color: var(--text-primary); font-variant-numeric: tabular-nums; flex-shrink: 0; }
-    .od-empty { color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px 0; }
-    /* 右栏·卡片 */
-    .od-card { background: var(--bg-subtle); border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md); padding: var(--space-3); }
-    .od-card--amount { border-color: var(--color-brand-500); }
-    .od-card-title { font-size: 13px; font-weight: var(--font-weight-semibold); color: var(--text-primary);
-      margin-bottom: var(--space-2); padding-left: 8px; border-left: 3px solid var(--color-brand-500); }
-    /* 金额汇总 */
-    .od-amount-row { display: flex; justify-content: space-between; padding: 6px 0;
-      font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-    .od-amount-total { display: flex; justify-content: space-between; align-items: baseline;
-      padding-top: 10px; margin-top: 6px; border-top: 1px dashed var(--el-border-default); }
-    .od-amount-total span:first-child { font-size: var(--font-size-sm); color: var(--text-secondary); }
-    .od-amount-total span:last-child { font-size: 22px; font-weight: 700; color: var(--color-danger);
-      font-variant-numeric: tabular-nums; }
-    /* 键值信息 */
-    .od-kv { display: flex; gap: var(--space-2); padding: 5px 0; font-size: 13px; line-height: 1.5; }
-    .od-kv > span:first-child { flex-shrink: 0; width: 64px; color: var(--text-secondary); }
-    .od-kv > span:last-child { flex: 1; min-width: 0; color: var(--text-primary); word-break: break-all; }
-
-  </style>
+  <link rel="stylesheet" href="../../styles/main.css" />
+  
 </head>
 <body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
   <div class="dashboard-container" id="order-app" v-loading="loading">
-    <div class="container">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 页头：标题 + 副标题 + 页级操作 -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">订单管理</h1>
+          <p class="ds-page-header__subtitle">查看和管理所有订单</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
+
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -125,7 +75,7 @@
           <el-button v-if="row.status === 2 || row.status === 3" type="text" class="btn-warning" @click="cancelOrder(row)">取消</el-button>
         </template>
       </crud-table>
-    </div>
+    </main>
 
     <!-- 订单详情弹窗 -->
     <el-dialog
@@ -268,6 +218,8 @@
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../api/order.js"></script>
   <script src="../../api/payment.js"></script>
@@ -526,5 +478,10 @@
   </script>
 </body>
 </html>
+
+
+
+
+
 
 

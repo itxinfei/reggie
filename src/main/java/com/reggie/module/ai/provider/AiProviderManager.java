@@ -1,5 +1,6 @@
 package com.reggie.module.ai.provider;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.module.ai.adapter.AiModelAdapter.StreamCallback;
 import com.reggie.module.ai.adapter.AiModelAdapter;
@@ -211,7 +212,7 @@ public class AiProviderManager implements AIClient {
                     config.getProviderCode(), apiFormat, adapterRegistry.keySet());
             return AIChatResponse.builder()
                     .content("不支持的API格式「" + apiFormat
-                            + "」，支持的格式: " + String.join(", ", adapterRegistry.keySet()))
+                            + "」，支持的格式: " + StrUtil.join(", ", adapterRegistry.keySet()))
                     .model(config.getModelName())
                     .build();
         }

@@ -7,7 +7,7 @@
   <title>登录 - 瑞吉外卖管理端</title>
   <link rel="shortcut icon" href="../../favicon.ico">
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/common.css">
+    <link rel="stylesheet" href="../../styles/main.css" />
   <!-- 修改点：补设计令牌（全站后台页均已加载，登录页此前漏链，导致 login.css 内 var(--color-brand-500)/var(--color-white) 等令牌 undefined、配色错乱） -->
   <link rel="stylesheet" href="../../styles/tokens.css">
   <link rel="stylesheet" href="../../styles/login.css">
@@ -131,6 +131,8 @@
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
   <script src="../../js/validate.js"></script>
   <script src="../../api/login.js"></script>
 
@@ -215,7 +217,15 @@
 
             loginApi(self.form).then(function(res) {
               if (String(res.code) === '1') {
-                localStorage.setItem('userInfo', JSON.stringify(res.data))
+                // 修改点：只存储非敏感的用户基本信息，避免localStorage泄露完整用户信息
+                // 不存储密码、手机号、身份证等敏感字段
+                // 修改点：使用后端返回的role字段判断权限，避免硬编码admin字符串
+                var safeUserInfo = {
+                  username: res.data.username || '',
+                  name: res.data.name || '',
+                  isAdmin: (res.data.role === 1)
+                }
+                localStorage.setItem('userInfo', JSON.stringify(safeUserInfo))
                 window.location.href = '/backend/index.html'
               } else {
                 self.$message.error(res.msg || '登录失败')
@@ -256,3 +266,6 @@
   </script>
 </body>
 </html>
+
+
+

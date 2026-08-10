@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -22,7 +23,14 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * Permission service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class PermissionServiceImpl implements PermissionService {
 
     @Autowired
@@ -218,3 +226,6 @@ public class PermissionServiceImpl implements PermissionService {
         return tree;
     }
 }
+
+
+

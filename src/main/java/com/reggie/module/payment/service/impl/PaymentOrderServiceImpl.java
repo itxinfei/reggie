@@ -28,6 +28,12 @@ import static com.reggie.module.payment.model.PaymentOrder.*;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * PaymentOrder service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, PaymentOrder> implements PaymentOrderService {
 
@@ -38,6 +44,21 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PaymentOrder createPaymentOrder(Long orderId, String channel, BigDecimal amount) {
+        // 重复支付检查：同一订单已存在 SUCCESS 支付单则拒绝
+        int successCount = baseMapper.countByOrderIdAndStatuses(orderId, "'" + STATUS_SUCCESS + "'");
+        if (successCount > 0) {
+            throw new CustomException("该订单已支付成功，请勿重复支付");
+        }
+        // 存在 PENDING 支付单则复用返回，避免重复创建支付单和重复调用渠道
+        PaymentOrder existPending = lambdaQuery()
+                .eq(PaymentOrder::getOrderId, orderId)
+                .eq(PaymentOrder::getStatus, STATUS_PENDING)
+                .one();
+        if (existPending != null) {
+            log.info("复用待支付订单: tradeNo={}, orderId={}", existPending.getTradeNo(), orderId);
+            return existPending;
+        }
+
         PaymentOrder po = new PaymentOrder();
         po.setOrderId(orderId);
         po.setTenantId(BaseContext.getCurrentTenantId());
@@ -51,63 +72,69 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     }
 
     @Override
+    public PaymentOrder selectByTradeNoIgnoreTenant(String tradeNo) {
+        return baseMapper.selectByTradeNoIgnoreTenant(tradeNo);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void handlePaymentSuccess(String tradeNo, String channelTradeNo) {
-        PaymentOrder po = lambdaQuery().eq(PaymentOrder::getTradeNo, tradeNo).one();
-        if (po == null) {
-            log.warn("支付回调处理失败：支付订单不存在，tradeNo={}", tradeNo);
-            throw new CustomException("支付订单不存在，tradeNo=" + tradeNo);
-        }
-        // 幂等保护：已成功的订单不再重复处理
-        if (STATUS_SUCCESS.equals(po.getStatus())) {
-            log.info("支付回调幂等：订单已处理过，跳过 tradeNo={}", tradeNo);
+        // 原子更新：仅当状态为 PENDING 时更新为 SUCCESS，解决回调 read-then-write 竞态（幂等）
+        int affected = baseMapper.casUpdateStatus(tradeNo, STATUS_PENDING, STATUS_SUCCESS,
+                channelTradeNo, LocalDateTime.now());
+        if (affected == 0) {
+            // 状态已非 PENDING（已成功/已失败/已退款），幂等跳过
+            log.info("支付回调幂等跳过：支付单状态已非PENDING，tradeNo={}", tradeNo);
             return;
         }
-        po.setStatus(STATUS_SUCCESS);
-        po.setChannelTradeNo(channelTradeNo);
-        po.setPaidTime(LocalDateTime.now());
-        updateById(po);
+        log.info("支付成功: tradeNo={}, channelTradeNo={}", tradeNo, channelTradeNo);
 
-        // 联动更新业务订单状态：待付款(1) → 待接单(2)
+        // 联动更新业务订单状态：仅当订单为待付款(1)时才更新为待接单(2)，避免覆盖已取消/已完成订单（状态机校验）
+        PaymentOrder po = baseMapper.selectByTradeNoIgnoreTenant(tradeNo);
+        if (po == null) {
+            return;
+        }
         Orders order = orderService.getById(po.getOrderId());
         if (order != null && order.getStatus() != null) {
-            if (!Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
-                log.warn("支付成功联动更新异常：订单状态不是待付款，orderId={}, currentStatus={}",
+            if (Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
+                order.setStatus(Orders.STATUS_ORDERED);
+                order.setCheckoutTime(LocalDateTime.now());
+                orderService.updateById(order);
+                log.info("支付成功联动更新订单: orderId={}, orderStatus=待接单", po.getOrderId());
+            } else {
+                log.warn("支付成功但订单状态非待付款，跳过联动更新: orderId={}, currentStatus={}",
                         po.getOrderId(), order.getStatus());
             }
-            order.setStatus(Orders.STATUS_ORDERED);
-            order.setCheckoutTime(LocalDateTime.now());
-            orderService.updateById(order);
-            log.info("支付成功联动更新订单: orderId={}, orderStatus=待接单", po.getOrderId());
         }
-
-        log.info("支付成功: tradeNo={}, channelTradeNo={}", tradeNo, channelTradeNo);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void handlePaymentFail(String tradeNo, String errorMsg) {
-        PaymentOrder po = lambdaQuery().eq(PaymentOrder::getTradeNo, tradeNo).one();
-        if (po == null) {
-            log.warn("支付失败处理失败：支付订单不存在，tradeNo={}", tradeNo);
-            throw new CustomException("支付订单不存在，tradeNo=" + tradeNo);
+        // 原子更新：仅当状态为 PENDING 时更新为 FAIL（幂等）
+        int affected = baseMapper.casUpdateStatus(tradeNo, STATUS_PENDING, STATUS_FAIL,
+                null, LocalDateTime.now());
+        if (affected == 0) {
+            log.info("支付失败回调幂等跳过：支付单状态已非PENDING，tradeNo={}", tradeNo);
+            return;
         }
-        po.setStatus(STATUS_FAIL);
-        updateById(po);
+        log.warn("支付失败: tradeNo={}, errorMsg={}", tradeNo, errorMsg);
 
-        // 联动更新业务订单状态为已取消
+        PaymentOrder po = baseMapper.selectByTradeNoIgnoreTenant(tradeNo);
+        if (po == null) {
+            return;
+        }
+        // 仅当订单为待付款时才联动取消，避免覆盖已配送/已完成订单（状态机校验）
         Orders order = orderService.getById(po.getOrderId());
-        if (order != null && order.getStatus() != null) {
-            if (!Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
-                log.warn("支付失败联动取消异常：订单状态不是待付款，orderId={}, currentStatus={}",
-                        po.getOrderId(), order.getStatus());
-            }
+        if (order != null && order.getStatus() != null
+                && Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
             order.setStatus(Orders.STATUS_CANCELLED);
             orderService.updateById(order);
             log.warn("支付失败联动取消订单: orderId={}, reason={}", po.getOrderId(), errorMsg);
+        } else if (order != null) {
+            log.warn("支付失败但订单状态非待付款，跳过联动取消: orderId={}, currentStatus={}",
+                    po.getOrderId(), order.getStatus());
         }
-
-        log.warn("支付失败: tradeNo={}, errorMsg={}", tradeNo, errorMsg);
     }
 
     private String generateTradeNo() {
@@ -116,3 +143,4 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
             + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
     }
 }
+

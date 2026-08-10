@@ -34,4 +34,19 @@ public interface RefundRecordService extends IService<RefundRecord> {
      * @return 退款记录
      */
     RefundRecord createRefund(Long paymentOrderId, BigDecimal amount, String reason);
+
+    /**
+     * 更新退款记录状态为成功（渠道退款成功后调用，修复原先记录永远停留在 PENDING 的问题）。
+     *
+     * @param refundNo 退款流水号
+     */
+    void markRefundSuccess(String refundNo);
+
+    /**
+     * 查询某支付单已成功退款的总金额（用于退款累计超额校验）。
+     *
+     * @param paymentOrderId 支付单ID
+     * @return 已退款总额
+     */
+    BigDecimal sumRefundedAmount(Long paymentOrderId);
 }

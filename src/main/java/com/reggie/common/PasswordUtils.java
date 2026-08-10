@@ -1,5 +1,6 @@
 package com.reggie.common;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.util.DigestUtils;
 
@@ -12,6 +13,7 @@ import java.nio.charset.StandardCharsets;
  * @author reggie
  * @since 2026-07-09
  */
+@Slf4j
 public class PasswordUtils {
 
     /**
@@ -45,6 +47,10 @@ public class PasswordUtils {
      * @return 是否匹配
      */
     public static boolean matches(String rawPassword, String encodedPassword) {
+        if (encodedPassword == null || encodedPassword.isEmpty()) {
+            log.warn("密码校验失败：encodedPassword 为空，无法进行 BCrypt 比对");
+            return false;
+        }
         return BCrypt.checkpw(rawPassword, encodedPassword);
     }
 

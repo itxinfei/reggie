@@ -39,6 +39,7 @@ public class MobileOrderControllerTest {
     @BeforeEach
     void setUp() {
         BaseContext.setCurrentId(1L);
+        BaseContext.setCurrentTenantId(1L);
     }
 
     @Test

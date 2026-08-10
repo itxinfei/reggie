@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>无障碍访问和性能优化示例 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+<body>
+  <div id="app">
+    <div class="dashboard-container">
+      <div class="container">
+        <h1>无障碍访问和性能优化示例</h1>
+        
+        <!-- 表格示例 -->
+        <h2>表格示例（带无障碍属性）</h2>
+        <el-table aria-label="数据表格" 
+          ref="sampleTable"
+          :data="tableData" 
+          border 
+          stripe
+          aria-label="示例表格">
+          <el-table aria-label="数据表格"-column prop="id" label="ID" width="80"></el-table-column>
+          <el-table aria-label="数据表格"-column prop="name" label="名称" width="120"></el-table-column>
+          <el-table aria-label="数据表格"-column prop="value" label="值"></el-table-column>
+        </el-table>
+        
+        <!-- 表单示例 -->
+        <h2>表单示例（带无障碍属性）</h2>
+        <el-form 
+          ref="sampleForm"
+          :model="formData" 
+          :rules="formRules" 
+          label-width="100px"
+          aria-label="示例表单">
+          <el-form-item label="名称" prop="name">
+            <el-input 
+              v-model="formData.name" 
+              placeholder="请输入名称"
+              aria-required="true"></el-input>
+          </el-form-item>
+          <el-form-item label="描述" prop="description">
+            <el-input 
+              v-model="formData.description" 
+              type="textarea" 
+              placeholder="请输入描述"
+              aria-label="描述输入框"></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleSubmit" aria-label="提交表单">提交</el-button>
+            <el-button @click="handleReset" aria-label="重置表单">重置</el-button>
+          </el-form-item>
+        </el-form>
+        
+        <!-- 搜索示例 -->
+        <h2>搜索示例（带防抖）</h2>
+        <div class="toolbar">
+          <el-input 
+            v-model="searchKeyword" 
+            placeholder="请输入搜索关键词"
+            @input="handleSearch"
+            aria-label="搜索输入框"
+            role="searchbox"></el-input>
+          <el-button type="primary" @click="handleSearchClick" aria-label="搜索按钮">搜索</el-button>
+        </div>
+        
+        <!-- 图片懒加载示例 -->
+        <h2>图片懒加载示例</h2>
+        <div class="image-container">
+          <img 
+            v-for="(image, index) in images" 
+            :key="index"
+            :data-src="image.url"
+            :alt="image.alt"
+            class="lazy-image"
+            role="img">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          tableData: [
+            { id: 1, name: '示例1', value: '值1' },
+            { id: 2, name: '示例2', value: '值2' },
+            { id: 3, name: '示例3', value: '值3' }
+          ],
+          formData: {
+            name: '',
+            description: ''
+          },
+          formRules: {
+            name: [{ required: true, message: '请输入名称', trigger: 'blur' }]
+          },
+          searchKeyword: '',
+          images: [
+            { url: 'https://via.placeholder.com/300x200?text=Image1', alt: '示例图片1' },
+            { url: 'https://via.placeholder.com/300x200?text=Image2', alt: '示例图片2' },
+            { url: 'https://via.placeholder.com/300x200?text=Image3', alt: '示例图片3' }
+          ]
+        }
+      },
+      mounted() {
+        // 初始化无障碍访问
+        this.initAccessibility()
+        
+        // 初始化图片懒加载
+        this.initLazyLoad()
+      },
+      methods: {
+        initAccessibility() {
+          // 为表格添加无障碍属性
+          const table = this.$refs.sampleTable?.$el
+          if (table) {
+            AccessibilityUtils.addTableAccessibility(table, '示例表格')
+          }
+          
+          // 为表单添加无障碍属性
+          const form = this.$refs.sampleForm?.$el
+          if (form) {
+            AccessibilityUtils.addFormAccessibility(form, '示例表单')
+          }
+        },
+        
+        initLazyLoad() {
+          // 初始化图片懒加载
+          this.$nextTick(() => {
+            PerformanceUtils.lazyLoadImages('.lazy-image')
+          })
+        },
+        
+        // 使用防抖的搜索方法
+        handleSearch: PerformanceUtils.debounce(function() {
+          console.log('搜索:', this.searchKeyword)
+          // 执行搜索逻辑
+        }, 300),
+        
+        handleSearchClick() {
+          console.log('点击搜索:', this.searchKeyword)
+        },
+        
+        handleSubmit() {
+          this.$refs.sampleForm.validate((valid) => {
+            if (valid) {
+              this.$message.success('提交成功')
+            }
+          })
+        },
+        
+        handleReset() {
+          this.$refs.sampleForm.resetFields()
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+

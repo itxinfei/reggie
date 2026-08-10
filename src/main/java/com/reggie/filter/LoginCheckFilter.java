@@ -14,6 +14,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 
 /**
@@ -41,37 +42,47 @@ public class LoginCheckFilter implements Filter{
 
     /** 不需要处理的请求路径（唯一来源，避免重复维护） */
     private static final String[] EXCLUDE_URLS = new String[]{
+        // 登录/登出/忘记密码接口（匿名访问）
         "/employee/login",
         "/employee/logout",
-        // 修改点：放行忘记密码接口（匿名访问，无需登录）
         "/employee/forgot-password",
-        "/backend/**",
-        "/front/**",
-        "/common/**",
         "/user/sendMsg",
         "/user/login",
+        "/user/loginout",
         "/tenant/register",
-        // 修改点：放行公开的商家信息接口（首页匿名访问）
+        // 公开的商家信息接口（首页匿名访问）
         "/restaurant/info",
         "/restaurant/status",
-        // 放行AI模块的公开API（健康检查允许匿名访问）
+        // AI模块健康检查（匿名访问）
         "/api/ai/health",
-        // 修改点：放行静态资源目录，避免图片/上传文件被拦截导致死循环请求
-        "/images/**",
-        "/uploads/**",
-        // 放行C端菜单浏览（允许未登录用户查看菜品和套餐列表）
+        // 公开菜品/套餐接口（C端菜单浏览）
         "/category/list",
         "/category/options",
         "/dish/list",
         "/dish/options",
         "/setmeal/list",
         "/setmeal/options",
-        // 放行推荐模块公开接口（未登录返回热门菜品）
+        // 推荐模块公开接口
         "/recommend/dishes",
         "/recommend/hot",
         "/recommend/new-arrivals",
         "/recommend/setmeals",
-        // 放行API文档相关路径
+        // 静态资源目录（图片、上传文件）
+        "/images/**",
+        "/uploads/**",
+        // 登录页面（前端静态资源）
+        "/backend/page/login/**",
+        "/backend/plugins/**",
+        "/backend/styles/**",
+        "/backend/js/request.js",
+        "/backend/js/common.js",
+        "/backend/api/login.js",
+        "/front/page/login.html",
+        "/front/plugins/**",
+        "/front/styles/**",
+        "/front/js/request.js",
+        "/front/js/common.js",
+        // API文档相关路径
         "/swagger-ui/**",
         "/swagger-ui.html",
         "/swagger-ui/",
@@ -80,9 +91,11 @@ public class LoginCheckFilter implements Filter{
         "/swagger-resources/**",
         "/webjars/**",
         "/doc.html",
-        // 修改点：放行 Spring Boot Actuator 监控端点（含 /actuator/health），
-        // 否则 IDEA 的运行面板/Actuator 端点无法匿名检索 health 数据
-        "/actuator/**"
+        // Spring Boot Actuator 监控端点
+        "/actuator/**",
+        // 公共资源接口（文件上传预览）
+        "/common/download",
+        "/common/download/**"
     };
 
     @Override
@@ -109,16 +122,18 @@ public class LoginCheckFilter implements Filter{
             }
 
             //4-1、判断登录状态，如果已登录，则直接放行
-            if (request.getSession().getAttribute("employee") != null) {
-                log.debug("员工已登录，用户id为：{}", request.getSession().getAttribute("employee"));
+            HttpSession session = request.getSession(false);
 
-                Long empId = (Long) request.getSession().getAttribute("employee");
-                tenantId = (Long) request.getSession().getAttribute("tenantId");
+            if (session != null && session.getAttribute("employee") != null) {
+                log.debug("员工已登录，用户id为：{}", session.getAttribute("employee"));
+
+                Long empId = (Long) session.getAttribute("employee");
+                tenantId = (Long) session.getAttribute("tenantId");
                 // 兼容测试环境：session 中无 tenantId 时从 BaseContext 获取
                 if (tenantId == null) {
                     tenantId = BaseContext.getCurrentTenantId();
                 }
-                String roleKey = (String) request.getSession().getAttribute("roleKey");
+                String roleKey = (String) session.getAttribute("roleKey");
                 // 必须同时有员工ID和租户ID才算登录有效
                 if (tenantId == null) {
                     log.warn("员工登录态不完整，tenantId为null");
@@ -138,11 +153,11 @@ public class LoginCheckFilter implements Filter{
             }
 
             //4-2、判断登录状态，如果已登录，则直接放行
-            if (request.getSession().getAttribute("user") != null) {
-                log.debug("用户已登录，用户id为：{}", request.getSession().getAttribute("user"));
+            if (session != null && session.getAttribute("user") != null) {
+                log.debug("用户已登录，用户id为：{}", session.getAttribute("user"));
 
-                Long userId = (Long) request.getSession().getAttribute("user");
-                tenantId = (Long) request.getSession().getAttribute("tenantId");
+                Long userId = (Long) session.getAttribute("user");
+                tenantId = (Long) session.getAttribute("tenantId");
                 // 必须同时有用户ID和租户ID才算登录有效
                 if (tenantId == null) {
                     log.warn("用户登录态不完整，tenantId为null");

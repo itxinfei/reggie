@@ -1,4 +1,5 @@
 package com.reggie.controller;
+import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.common.utils.PageUtils;
 
@@ -69,6 +70,7 @@ public class SetmealController {
      * @return 操作结果
      */
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @PostMapping
     @Operation(summary = "新增套餐", description = "创建新的套餐及关联菜品，支持多菜品组合")
     @Parameter(name = "setmealDto", description = "套餐信息DTO（名称、分类、价格、描述、状态、菜品列表）", required = true)
@@ -99,7 +101,7 @@ public class SetmealController {
     @Parameter(name = "name", description = "套餐名称（可选，模糊查询）")
     @Parameter(name = "status", description = "售卖状态（可选，'0'=停售 ,'1'=启售）")
     @Parameter(name = "code", description = "套餐编码（可选，模糊查询）")
-    public R<Page<SetmealDto>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,String name, @RequestParam(required = false) String status,
+    public R<Page<SetmealDto>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String name, @RequestParam(required = false) String status,
                                     @RequestParam(required = false) String code){
         //分页构造器对象
         Page<Setmeal> pageInfo = PageUtils.of(page,pageSize);
@@ -166,6 +168,7 @@ public class SetmealController {
      * @return 操作结果
      */
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @PutMapping
     @Operation(summary = "修改套餐", description = "更新套餐基本信息及关联菜品")
     @Parameter(name = "setmealDto", description = "套餐DTO（包含ID、基本信息及菜品列表）", required = true)
@@ -191,7 +194,8 @@ public class SetmealController {
      * @return 操作结果
      */
     @RequireEmployee
-        @PostMapping("/status/{status}")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @PostMapping("/status/{status}")
     @Operation(summary = "更新套餐状态", description = "批量更新套餐售卖状态（起售/停售）")
     @Parameter(name = "status", description = "状态值：1-起售，0-停售", required = true)
     @Parameter(name = "ids", description = "套餐ID列表，逗号分隔（如 1,2,3）", required = true)
@@ -246,6 +250,7 @@ public class SetmealController {
      * @return 操作结果
      */
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @DeleteMapping
     @Operation(summary = "删除套餐", description = "批量删除套餐及关联菜品数据")
     @Parameter(name = "ids", description = "套餐ID列表，逗号分隔（如 1,2,3）", required = true)
@@ -286,9 +291,15 @@ public class SetmealController {
 
         // 多租户过滤：MyBatis-Plus TenantLineInnerInterceptor 已自动处理
 
-        List<Setmeal> list = setmealService.list(queryWrapper);
+        // 分页上限保护，防止全表扫描导致 OOM
+        int maxPageSize = 200;
+        Page<Setmeal> pageInfo = new Page<>(1, maxPageSize);
+        setmealService.page(pageInfo, queryWrapper);
+        if (pageInfo.getTotal() > maxPageSize) {
+            log.warn("[setmeal/list] 查询结果共 {} 条，超过上限 {} 条，已截断返回", pageInfo.getTotal(), maxPageSize);
+        }
 
-        return R.success(list);
+        return R.success(pageInfo.getRecords());
     }
 
     /**

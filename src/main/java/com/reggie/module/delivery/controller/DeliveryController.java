@@ -54,6 +54,7 @@ public class DeliveryController {
      */
     @GetMapping("/orders/{id}")
     @Operation(summary = "查询外卖订单详情", description = "根据主键ID查询配送订单完整信息")
+    @Parameter(description = "I d")
     public R<DeliveryOrder> getOrderDetail(@PathVariable Long id) {
         DeliveryOrder order = deliveryService.getById(String.valueOf(id));
         if (order == null) {
@@ -75,6 +76,7 @@ public class DeliveryController {
     @GetMapping("/orders")
     @Operation(summary = "分页查询外卖订单", description = "分页查询外卖平台订单，支持按平台、状态、时间范围筛选")
     public R<Page<DeliveryOrder>> pageOrders(
+            @Parameter(description = "P a g e")
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "外卖平台（可选）") @RequestParam(required = false) String platform,
@@ -109,6 +111,7 @@ public class DeliveryController {
     @PutMapping("/status")
     @Operation(summary = "更新配送状态", description = "更新配送订单状态，支持完整生命周期：接单->取餐->配送->送达->取消")
     public R<String> updateStatus(
+            @Parameter(description = "I d")
             @Parameter(description = "订单ID", required = true) @RequestParam @NotNull(message = "订单ID不能为空") Long id,
             @Parameter(description = "目标状态", required = true) @RequestParam @NotBlank(message = "目标状态不能为空") String status,
             @Parameter(description = "备注（可选）") @RequestParam(required = false) String remark) {
@@ -126,6 +129,7 @@ public class DeliveryController {
     @GetMapping("/options")
     @Operation(summary = "筛选选项", description = "返回平台列表和状态选项，供前端下拉框使用")
     public R<Map<String, Object>> getFilterOptions(
+            @Parameter(description = "P l a t f o r m")
             @Parameter(description = "外卖平台（可选）") @RequestParam(required = false) String platform) {
         Map<String, Object> options = deliveryService.getFilterOptions(platform);
         return R.success(options);
@@ -141,6 +145,7 @@ public class DeliveryController {
     @GetMapping("/stats")
     @Operation(summary = "配送统计", description = "获取今日订单数、各状态数量、金额汇总等配送统计数据")
     public R<Map<String, Object>> getStats(
+            @Parameter(description = "P l a t f o r m")
             @Parameter(description = "外卖平台（可选）") @RequestParam(required = false) String platform,
             @Parameter(description = "开始日期（可选）") @RequestParam(required = false) String startDate,
             @Parameter(description = "结束日期（可选）") @RequestParam(required = false) String endDate) {
@@ -184,6 +189,7 @@ public class DeliveryController {
      */
     @GetMapping("/tracking/{orderId}")
     @Operation(summary = "查询配送追踪", description = "根据平台订单号查询配送订单详情，供前端追踪页面使用")
+    @Parameter(description = "O r d e r I d")
     public R<DeliveryOrder> tracking(@PathVariable String orderId) {
         DeliveryOrder order = deliveryService.getByPlatformOrderId(orderId);
         if (order == null) {
@@ -203,9 +209,13 @@ public class DeliveryController {
     @PostMapping("/callback/{platform}")
     @Operation(summary = "平台回调通知", description = "接收外卖平台回调：新订单通知、状态变更、取消通知")
     public R<String> callback(
+            @Parameter(description = "P l a t f o r m")
             @Parameter(description = "外卖平台标识", required = true) @PathVariable String platform,
             @Parameter(description = "回调参数") @RequestBody Map<String, String> params) {
         String result = deliveryService.handleCallback(platform, params);
         return "success".equals(result) ? R.success(result) : R.error(result);
     }
 }
+
+
+

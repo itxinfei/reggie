@@ -19,6 +19,7 @@ import com.reggie.module.recommend.service.PreferenceAnalysisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
@@ -33,7 +34,14 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * UserProfile service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserProfile> implements UserProfileService {
 
     /** 用户画像Mapper */
@@ -458,3 +466,6 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
         }
     }
 }
+
+
+

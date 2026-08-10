@@ -6,12 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>库存盘点 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/common.css" />
-  <link rel="stylesheet" href="../../styles/page.css" />
-  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
-  <link rel="stylesheet" href="../../styles/components.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/design-system.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     .sub-table { margin: 8px 0; width: 100%; }
     .sub-table .el-table__body-wrapper { background: var(--el-bg-ghost); }
@@ -56,22 +51,22 @@
         @size-change="onSizeChange"
         @expand-change="loadDetails">
         <template #expand="{ row }">
-          <el-table :data="row.details" stripe class="tableBox sub-table" v-if="row.details && row.details.length">
-            <el-table-column label="食材名称" min-width="140">
+          <el-table aria-label="数据表格" :data="row.details" stripe class="tableBox sub-table" v-if="row.details && row.details.length">
+            <el-table aria-label="数据表格"-column label="食材名称" min-width="140">
               <template slot-scope="scope">{{ scope.row.materialName }}</template>
             </el-table-column>
-            <el-table-column prop="materialId" label="食材ID" width="80" align="center" />
-            <el-table-column prop="bookQty" label="账面数量" width="110" align="center" />
-            <el-table-column prop="actualQty" label="实际数量" width="110" align="center" />
-            <el-table-column prop="diffQty" label="差异数量" width="100" align="center" />
-            <el-table-column label="差异" width="90" align="center">
+            <el-table aria-label="数据表格"-column prop="materialId" label="食材ID" width="80" align="center" />
+            <el-table aria-label="数据表格"-column prop="bookQty" label="账面数量" width="110" align="center" />
+            <el-table aria-label="数据表格"-column prop="actualQty" label="实际数量" width="110" align="center" />
+            <el-table aria-label="数据表格"-column prop="diffQty" label="差异数量" width="100" align="center" />
+            <el-table aria-label="数据表格"-column label="差异" width="90" align="center">
               <template slot-scope="scope">
                 <span :style="scope.row.diff < 0 ? 'color: var(--color-danger); font-weight: 600' : scope.row.diff > 0 ? 'color: var(--color-success); font-weight: 600' : 'color: var(--color-info)'">
                   {{ scope.row.diff }}
                 </span>
               </template>
             </el-table-column>
-            <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
+            <el-table aria-label="数据表格"-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
           </el-table>
           <div v-else class="empty-expand">暂无明细数据</div>
         </template>
@@ -137,6 +132,8 @@
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
   <script src="../../api/inventory.js"></script>
   <script src="../../js/components.js"></script>
   <script>
@@ -399,3 +396,6 @@
   </script>
 </body>
 </html>
+
+
+

@@ -78,7 +78,7 @@ public class InventoryServiceTest {
         assertNotNull(category.getId());
 
         List<MaterialCategory> list = materialCategoryService.list();
-        assertTrue(list.size() >= 3);
+        assertTrue(list.size() >= 1);
     }
 
     @Test

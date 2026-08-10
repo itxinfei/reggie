@@ -259,23 +259,24 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
             return;
         }
 
-        // 先查询当前菜品信息
+        // 修复 read-modify-write 竞态：调用 DishMapper 原子方法 addStock
+        // SQL: UPDATE dish SET stock_qty = IFNULL(stock_qty,0) + #{qty} WHERE id = #{id}
+        int affected = getBaseMapper().addStock(dishId, qty);
+        if (affected <= 0) {
+            return; // 菜品不存在
+        }
+
+        // 补货后若处于停售状态且库存已达标，独立恢复起售（状态机维护，与库存原子更新解耦）
         Dish dish = this.getById(dishId);
         if (dish == null) return;
-
-        BigDecimal newStock = (dish.getStockQty() != null ? dish.getStockQty() : BigDecimal.ZERO).add(qty);
-
-        // 使用原子更新
-        LambdaUpdateWrapper<Dish> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(Dish::getId, dishId);
-        updateWrapper.set(Dish::getStockQty, newStock);
-        // 补货后如果之前是停售状态且库存大于最低库存，自动恢复起售
+        BigDecimal newStock = dish.getStockQty() != null ? dish.getStockQty() : BigDecimal.ZERO;
         if (dish.getStatus() != null && dish.getStatus() == 0
                 && dish.getMinStock() != null && newStock.compareTo(dish.getMinStock()) >= 0) {
-            updateWrapper.set(Dish::getStatus, 1);
+            LambdaUpdateWrapper<Dish> statusWrapper = new LambdaUpdateWrapper<>();
+            statusWrapper.eq(Dish::getId, dishId).set(Dish::getStatus, 1);
+            this.update(statusWrapper);
             log.info("[库存] 菜品「{}」补货至{}，恢复起售", dish.getName(), newStock);
         }
-        this.update(updateWrapper);
         log.info("[库存补货] 菜品{} 补货{}份，当前库存{}", dish.getName(), qty, newStock);
     }
 

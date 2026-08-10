@@ -8,6 +8,7 @@ import com.reggie.module.inventory.model.Supplier;
 import com.reggie.module.inventory.service.SupplierService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -18,7 +19,14 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * Supplier service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class SupplierServiceImpl extends ServiceImpl<SupplierMapper, Supplier> implements SupplierService {
 
     /**
@@ -48,3 +56,5 @@ public class SupplierServiceImpl extends ServiceImpl<SupplierMapper, Supplier> i
                 .orderByAsc(Supplier::getId));
     }
 }
+
+

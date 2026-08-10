@@ -210,6 +210,7 @@ public class UserController {
         request.changeSessionId();
         // 脱敏：返回前清除敏感字段
         user.setIdNumber(null);
+        user.setPhone(user.getPhone() != null ? maskPhone(user.getPhone()) : null);
         return R.success(user);
     }
 
@@ -273,6 +274,7 @@ public class UserController {
         }
         // 脱敏：返回前清除敏感字段
         user.setIdNumber(null);
+        user.setPhone(user.getPhone() != null ? maskPhone(user.getPhone()) : null);
         return R.success(user);
     }
 
@@ -313,6 +315,15 @@ public class UserController {
         }
 
         userService.page(pageInfo, queryWrapper);
+
+        // 脱敏：移除手机号、身份证等敏感字段
+        if (pageInfo.getRecords() != null) {
+            for (User u : pageInfo.getRecords()) {
+                u.setIdNumber(null);
+                u.setPhone(u.getPhone() != null ? maskPhone(u.getPhone()) : null);
+            }
+        }
+
         return R.success(pageInfo);
     }
 
@@ -324,7 +335,8 @@ public class UserController {
      * @return 操作结果
      */
     @RequireEmployee
-        @PutMapping("/status")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @PutMapping("/status")
     @Operation(summary = "修改用户状态", description = "启用或禁用指定用户账号，自动校验租户权限")
     public R<String> updateStatus(
             @Parameter(name = "id", description = "用户ID", required = true) Long id,
@@ -395,6 +407,7 @@ public class UserController {
      * @return 操作结果
      */
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @DeleteMapping
     @Operation(summary = "删除用户", description = "删除指定用户，自动校验租户权限")
     public R<String> delete(@Parameter(name = "id", description = "用户ID", required = true) Long id) {
@@ -438,6 +451,18 @@ public class UserController {
         result.put("names", new ArrayList<>(nameSet));
         result.put("phones", new ArrayList<>(phoneSet));
         return R.success(result);
+    }
+
+    /**
+     * 手机号脱敏
+     * @param phone 原始手机号
+     * @return 脱敏后的手机号（如 138****1234）
+     */
+    private String maskPhone(String phone) {
+        if (phone == null || phone.length() < 7) {
+            return phone;
+        }
+        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
     }
 
 }

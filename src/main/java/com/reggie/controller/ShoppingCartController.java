@@ -32,7 +32,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/shoppingCart")
+@RequestMapping("/shopping-cart")
 @Tag(name = "购物车管理", description = "购物车CRUD接口")
 public class ShoppingCartController {
 
@@ -192,3 +192,4 @@ public class ShoppingCartController {
         return R.success("清空购物车成功");
     }
 }
+

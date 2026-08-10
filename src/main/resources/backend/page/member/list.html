@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -7,12 +7,7 @@
   <title>员工管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/common.css" />
-  <link rel="stylesheet" href="../../styles/page.css" />
-  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
-  <link rel="stylesheet" href="../../styles/components.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/design-system.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     #member-app  .notAdmin::after{
       border: 0 !important;
@@ -22,8 +17,19 @@
   </style>
 </head>
 <body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
   <div class="dashboard-container" id="member-app">
-    <div class="container">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 页头：标题 + 副标题 + 页级操作 -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">员工管理</h1>
+          <p class="ds-page-header__subtitle">管理系统员工账号和权限</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- ========== 数据统计卡片（统一组件） ========== -->
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
@@ -66,18 +72,18 @@
             size="small"
             class="btn-view"
             @click="addMemberHandle(row.id)"
-            :class="{notAdmin:user !== 'admin'}"
+            :class="{notAdmin:!isAdmin}"
           >编辑</el-button>
           <el-button
             type="text"
             size="small"
             class="btn-delete"
             @click="statusHandle(row)"
-            v-if="user === 'admin'"
+            v-if="isAdmin"
           >{{ row.status == '1' ? '禁用' : '启用' }}</el-button>
         </template>
       </crud-table>
-    </div>
+    </main>
 
     <!-- 新增/修改员工弹窗 -->
     <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，footer 插槽保留"保存并继续添加" -->
@@ -126,6 +132,8 @@
     <!-- 引入axios -->
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
     <script src="../../api/member.js"></script>
     <script src="../../api/export.js"></script>
     <script src="../../js/validate.js"></script>
@@ -161,7 +169,7 @@
           ],
              id : '',
              status : '',
-             user : '',
+             isAdmin : false,
              // 数据统计
              stats: {
                totalEmployees: 0,
@@ -221,7 +229,7 @@
           try {
             const userInfo = localStorage.getItem('userInfo')
             if (userInfo) {
-              this.user = JSON.parse(userInfo).username
+              this.isAdmin = JSON.parse(userInfo).isAdmin || false
             }
           } catch (e) {
             console.warn('解析用户信息失败:', e)
@@ -460,4 +468,7 @@
     </script>
 </body>
 </html>
+
+
+
 

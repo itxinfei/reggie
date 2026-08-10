@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>配送范围管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/main.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      background: var(--el-bg-subtle);
+    }
+    .container {
+      padding: 24px 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .tableBar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--bg-surface);
+      padding: 16px 24px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    }
+    .tableBar .toolbar-spacer {
+      flex: 1;
+    }
+    .table-card {
+      background: var(--bg-surface);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    }
+    .range-type-tag {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .range-type-tag.circle {
+      background: var(--el-color-primary-lighter);
+      color: var(--el-color-primary);
+    }
+    .range-type-tag.polygon {
+      background: var(--el-color-success-lighter);
+      color: var(--el-color-success);
+    }
+    .fee-type-tag {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .fee-type-tag.fixed {
+      background: var(--el-color-warning-lighter);
+      color: var(--el-color-warning);
+    }
+    .fee-type-tag.step {
+      background: var(--el-color-info-lighter);
+      color: var(--el-color-info);
+    }
+    .fee-type-tag.dynamic {
+      background: var(--el-color-danger-lighter);
+      color: var(--el-color-danger);
+    }
+    .status-tag {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .status-tag.active {
+      background: var(--el-color-success-lighter);
+      color: var(--el-color-success);
+    }
+    .status-tag.disabled {
+      background: var(--el-color-danger-lighter);
+      color: var(--el-color-danger);
+    }
+    .fee-info {
+      font-size: 12px;
+      color: var(--el-text-secondary);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="container">
+    <!-- 工具栏 -->
+    <div class="tableBar">
+      <el-button type="primary" icon="el-icon-plus" aria-label="新增" @click="handleAdd">新增配送范围规则</el-button>
+      <div class="toolbar-spacer"></div>
+      <el-button icon="el-icon-refresh" aria-label="重置" @click="fetchData">刷新</el-button>
+    </div>
+
+    <!-- 表格 -->
+    <div class="table-card">
+      <el-table aria-label="数据表格"
+        :data="tableData"
+        border
+        stripe
+        style="width: 100%"
+        v-loading="loading">
+        <el-table aria-label="数据表格"-column prop="id" label="ID" width="80"></el-table-column>
+        <el-table aria-label="数据表格"-column prop="ruleName" label="规则名称" min-width="150"></el-table-column>
+        <el-table aria-label="数据表格"-column prop="rangeType" label="范围类型" width="120" align="center">
+          <template slot-scope="scope">
+            <span class="range-type-tag" :class="scope.row.rangeType === 1 ? 'circle' : 'polygon'">
+              {{ scope.row.rangeType === 1 ? '圆形' : '多边形' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column label="范围参数" min-width="200">
+          <template slot-scope="scope">
+            <div v-if="scope.row.rangeType === 1">
+              <div>半径：{{ scope.row.radius }}米</div>
+              <div class="fee-info">中心：{{ scope.row.centerLatitude }}, {{ scope.row.centerLongitude }}</div>
+            </div>
+            <div v-else>
+              <div>多边形范围</div>
+              <div class="fee-info">坐标点数量：{{ getPolygonPointCount(scope.row.polygonPoints) }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="feeType" label="配送费类型" width="120" align="center">
+          <template slot-scope="scope">
+            <span class="fee-type-tag" :class="getFeeTypeClass(scope.row.feeType)">
+              {{ getFeeTypeText(scope.row.feeType) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column label="配送费信息" min-width="200">
+          <template slot-scope="scope">
+            <div v-if="scope.row.feeType === 1">
+              固定：¥{{ formatMoney(scope.row.baseFee) }}
+            </div>
+            <div v-else-if="scope.row.feeType === 2">
+              阶梯计费
+            </div>
+            <div v-else>
+              基础：¥{{ formatMoney(scope.row.baseFee) }} + {{ scope.row.feePerKm }}元/公里
+            </div>
+            <div class="fee-info" v-if="scope.row.freeThreshold">
+              满¥{{ formatMoney(scope.row.freeThreshold) }}免配送费
+            </div>
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column prop="status" label="状态" width="100" align="center">
+          <template slot-scope="scope">
+            <span class="status-tag" :class="scope.row.status === 1 ? 'active' : 'disabled'">
+              {{ scope.row.status === 1 ? '启用' : '禁用' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table aria-label="数据表格"-column label="操作" width="250" fixed="right">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-button type="text" size="small" @click="handleFeeStep(scope.row)">阶梯规则</el-button>
+            <el-button type="text" size="small" @click="handleToggleStatus(scope.row)">
+              {{ scope.row.status === 1 ? '禁用' : '启用' }}
+            </el-button>
+            <el-button type="text" size="small" style="color: var(--el-color-danger);" @click="handleDelete(scope.row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <!-- 新增/编辑对话框 -->
+    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="700px">
+      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px">
+        <el-form-item label="规则名称" prop="ruleName">
+          <el-input v-model="formData.ruleName" placeholder="请输入规则名称"></el-input>
+        </el-form-item>
+        <el-form-item label="范围类型" prop="rangeType">
+          <el-radio-group v-model="formData.rangeType">
+            <el-radio :label="1">圆形范围</el-radio>
+            <el-radio :label="2">多边形范围</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        
+        <!-- 圆形范围参数 -->
+        <template v-if="formData.rangeType === 1">
+          <el-form-item label="中心经度" prop="centerLongitude">
+            <el-input-number v-model="formData.centerLongitude" :precision="8" :step="0.0001" style="width: 100%;"></el-input-number>
+          </el-form-item>
+          <el-form-item label="中心纬度" prop="centerLatitude">
+            <el-input-number v-model="formData.centerLatitude" :precision="8" :step="0.0001" style="width: 100%;"></el-input-number>
+          </el-form-item>
+          <el-form-item label="半径（米）" prop="radius">
+            <el-input-number v-model="formData.radius" :min="100" :max="50000" style="width: 100%;"></el-input-number>
+          </el-form-item>
+        </template>
+        
+        <!-- 多边形范围参数 -->
+        <template v-if="formData.rangeType === 2">
+          <el-form-item label="多边形坐标" prop="polygonPoints">
+            <el-input v-model="formData.polygonPoints" type="textarea" :rows="4" 
+              placeholder="请输入坐标点JSON，格式：[[lon1,lat1],[lon2,lat2],...]"></el-input>
+            <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">
+              至少需要3个坐标点，首尾点会自动闭合
+            </div>
+          </el-form-item>
+        </template>
+
+        <el-divider content-position="left">配送费设置</el-divider>
+        
+        <el-form-item label="配送费类型" prop="feeType">
+          <el-radio-group v-model="formData.feeType">
+            <el-radio :label="1">固定配送费</el-radio>
+            <el-radio :label="2">距离阶梯</el-radio>
+            <el-radio :label="3">基础费+距离费</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        
+        <el-form-item v-if="formData.feeType === 1 || formData.feeType === 3" label="基础配送费">
+          <el-input-number v-model="formData.baseFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        
+        <el-form-item v-if="formData.feeType === 3" label="每公里费用">
+          <el-input-number v-model="formData.feePerKm" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        
+        <el-form-item label="最低配送费">
+          <el-input-number v-model="formData.minFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+          <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">0表示不限制</div>
+        </el-form-item>
+        
+        <el-form-item label="最高配送费">
+          <el-input-number v-model="formData.maxFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+          <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">0表示不限制</div>
+        </el-form-item>
+        
+        <el-form-item label="免费配送门槛">
+          <el-input-number v-model="formData.freeThreshold" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+          <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">订单金额达到此值免配送费，0表示不启用</div>
+        </el-form-item>
+
+        <el-form-item label="排序">
+          <el-input-number v-model="formData.sortOrder" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="formData.status" :active-value="1" :inactive-value="0"></el-switch>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="formData.remark" type="textarea" :rows="2" placeholder="请输入备注"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确 定</el-button>
+      </span>
+    </el-dialog>
+
+    <!-- 阶梯规则对话框 -->
+    <el-dialog title="配送费阶梯规则" :visible.sync="feeStepVisible" width="800px">
+      <div style="margin-bottom: 16px;">
+        <el-button type="primary" size="small" icon="el-icon-plus" @click="handleAddFeeStep">新增阶梯</el-button>
+      </div>
+      <el-table aria-label="数据表格" :data="feeSteps" border stripe style="width: 100%">
+        <el-table aria-label="数据表格"-column prop="startDistance" label="起始距离(米)" width="120"></el-table-column>
+        <el-table aria-label="数据表格"-column prop="endDistance" label="结束距离(米)" width="120"></el-table-column>
+        <el-table aria-label="数据表格"-column prop="fee" label="配送费(元)" width="100"></el-table-column>
+        <el-table aria-label="数据表格"-column prop="incrementDistance" label="递增距离(米)" width="120"></el-table-column>
+        <el-table aria-label="数据表格"-column prop="incrementFee" label="递增费用(元)" width="120"></el-table-column>
+        <el-table aria-label="数据表格"-column label="操作" width="150">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" @click="handleEditFeeStep(scope.row)">编辑</el-button>
+            <el-button type="text" size="small" style="color: var(--el-color-danger);" @click="handleDeleteFeeStep(scope.row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
+    <!-- 阶梯规则编辑对话框 -->
+    <el-dialog :title="feeStepDialogTitle" :visible.sync="feeStepEditVisible" width="500px">
+      <el-form :model="feeStepForm" ref="feeStepForm" label-width="100px">
+        <el-form-item label="起始距离">
+          <el-input-number v-model="feeStepForm.startDistance" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="结束距离">
+          <el-input-number v-model="feeStepForm.endDistance" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="配送费">
+          <el-input-number v-model="feeStepForm.fee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="递增距离">
+          <el-input-number v-model="feeStepForm.incrementDistance" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="递增费用">
+          <el-input-number v-model="feeStepForm.incrementFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="feeStepEditVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handleFeeStepSubmit">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/common.js"></script>
+  <script src="../../api/delivery-enhanced.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          loading: false,
+          tableData: [],
+          dialogVisible: false,
+          dialogTitle: '新增配送范围规则',
+          submitLoading: false,
+          formData: {
+            id: null,
+            ruleName: '',
+            rangeType: 1,
+            centerLongitude: null,
+            centerLatitude: null,
+            radius: 3000,
+            polygonPoints: '',
+            feeType: 1,
+            baseFee: 5,
+            feePerKm: 1,
+            minFee: 3,
+            maxFee: 20,
+            freeThreshold: 30,
+            sortOrder: 0,
+            status: 1,
+            remark: ''
+          },
+          formRules: {
+            ruleName: [{ required: true, message: '请输入规则名称', trigger: 'blur' }],
+            rangeType: [{ required: true, message: '请选择范围类型', trigger: 'change' }],
+            feeType: [{ required: true, message: '请选择配送费类型', trigger: 'change' }]
+          },
+          feeStepVisible: false,
+          feeStepEditVisible: false,
+          feeStepDialogTitle: '新增阶梯规则',
+          currentRuleId: null,
+          feeSteps: [],
+          feeStepForm: {
+            id: null,
+            ruleId: null,
+            startDistance: 0,
+            endDistance: 1000,
+            fee: 3,
+            incrementDistance: 500,
+            incrementFee: 1
+          }
+        }
+      },
+      created() {
+        this.fetchData()
+      },
+      methods: {
+        formatMoney(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        getPolygonPointCount(points) {
+          if (!points) return 0
+          try {
+            const arr = JSON.parse(points)
+            return Array.isArray(arr) ? arr.length : 0
+          } catch (e) {
+            return 0
+          }
+        },
+        getFeeTypeClass(type) {
+          const map = { 1: 'fixed', 2: 'step', 3: 'dynamic' }
+          return map[type] || 'fixed'
+        },
+        getFeeTypeText(type) {
+          const map = { 1: '固定', 2: '阶梯', 3: '动态' }
+          return map[type] || '未知'
+        },
+        async fetchData() {
+          this.loading = true
+          try {
+            const res = await getRangeRules()
+            if (res.code === 1) {
+              this.tableData = res.data || []
+            }
+          } catch (err) {
+            console.error('获取配送范围规则失败', err)
+            this.$message.error('获取数据失败')
+          } finally {
+            this.loading = false
+          }
+        },
+        handleAdd() {
+          this.dialogTitle = '新增配送范围规则'
+          this.formData = {
+            id: null,
+            ruleName: '',
+            rangeType: 1,
+            centerLongitude: null,
+            centerLatitude: null,
+            radius: 3000,
+            polygonPoints: '',
+            feeType: 1,
+            baseFee: 5,
+            feePerKm: 1,
+            minFee: 3,
+            maxFee: 20,
+            freeThreshold: 30,
+            sortOrder: 0,
+            status: 1,
+            remark: ''
+          }
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          })
+        },
+        handleEdit(row) {
+          this.dialogTitle = '编辑配送范围规则'
+          this.formData = { ...row }
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          })
+        },
+        async handleToggleStatus(row) {
+          try {
+            const newStatus = row.status === 1 ? 0 : 1
+            const res = await updateRangeRule({ ...row, status: newStatus })
+            if (res.code === 1) {
+              this.$message.success(newStatus === 1 ? '已启用' : '已禁用')
+              this.fetchData()
+            } else {
+              this.$message.error(res.msg || '操作失败')
+            }
+          } catch (err) {
+            console.error('操作失败', err)
+            this.$message.error('操作失败')
+          }
+        },
+        async handleDelete(row) {
+          try {
+            await this.$confirm('确定要删除该配送范围规则吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            
+            const res = await deleteRangeRule(row.id)
+            if (res.code === 1) {
+              this.$message.success('删除成功')
+              this.fetchData()
+            } else {
+              this.$message.error(res.msg || '删除失败')
+            }
+          } catch (err) {
+            if (err !== 'cancel') {
+              console.error('删除失败', err)
+              this.$message.error('删除失败')
+            }
+          }
+        },
+        handleSubmit() {
+          this.$refs.ruleForm.validate(async (valid) => {
+            if (!valid) return
+            
+            this.submitLoading = true
+            try {
+              let res
+              if (this.formData.id) {
+                res = await updateRangeRule(this.formData)
+              } else {
+                res = await saveRangeRule(this.formData)
+              }
+              
+              if (res.code === 1) {
+                this.$message.success(this.formData.id ? '更新成功' : '新增成功')
+                this.dialogVisible = false
+                this.fetchData()
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            } catch (err) {
+              console.error('提交失败', err)
+              this.$message.error('操作失败')
+            } finally {
+              this.submitLoading = false
+            }
+          })
+        },
+        async handleFeeStep(row) {
+          this.currentRuleId = row.id
+          this.feeStepVisible = true
+          await this.fetchFeeSteps()
+        },
+        async fetchFeeSteps() {
+          try {
+            const res = await getFeeSteps({ ruleId: this.currentRuleId })
+            if (res.code === 1) {
+              this.feeSteps = res.data || []
+            }
+          } catch (err) {
+            console.error('获取阶梯规则失败', err)
+          }
+        },
+        handleAddFeeStep() {
+          this.feeStepDialogTitle = '新增阶梯规则'
+          this.feeStepForm = {
+            id: null,
+            ruleId: this.currentRuleId,
+            startDistance: 0,
+            endDistance: 1000,
+            fee: 3,
+            incrementDistance: 500,
+            incrementFee: 1
+          }
+          this.feeStepEditVisible = true
+        },
+        handleEditFeeStep(row) {
+          this.feeStepDialogTitle = '编辑阶梯规则'
+          this.feeStepForm = { ...row }
+          this.feeStepEditVisible = true
+        },
+        async handleDeleteFeeStep(row) {
+          try {
+            await this.$confirm('确定要删除该阶梯规则吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            
+            const res = await deleteFeeStep(row.id)
+            if (res.code === 1) {
+              this.$message.success('删除成功')
+              await this.fetchFeeSteps()
+            } else {
+              this.$message.error(res.msg || '删除失败')
+            }
+          } catch (err) {
+            if (err !== 'cancel') {
+              console.error('删除失败', err)
+              this.$message.error('删除失败')
+            }
+          }
+        },
+        async handleFeeStepSubmit() {
+          try {
+            let res
+            if (this.feeStepForm.id) {
+              res = await updateFeeStep(this.feeStepForm)
+            } else {
+              res = await saveFeeStep(this.feeStepForm)
+            }
+            
+            if (res.code === 1) {
+              this.$message.success(this.feeStepForm.id ? '更新成功' : '新增成功')
+              this.feeStepEditVisible = false
+              await this.fetchFeeSteps()
+            } else {
+              this.$message.error(res.msg || '操作失败')
+            }
+          } catch (err) {
+            console.error('提交失败', err)
+            this.$message.error('操作失败')
+          }
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+

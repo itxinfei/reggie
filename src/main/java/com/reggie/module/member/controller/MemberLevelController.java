@@ -54,7 +54,9 @@ public class MemberLevelController {
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询会员等级列表，自动过滤当前租户数据")
     public R<Page<MemberLevel>> page(
+            @Parameter(description = "P a g e")
             @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "P a g e S i z e")
             @RequestParam(defaultValue = "10") int pageSize) {
         Page<MemberLevel> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<MemberLevel> qw = new LambdaQueryWrapper<>();
@@ -192,4 +194,5 @@ public class MemberLevelController {
         return R.success(result);
     }
 }
+
 

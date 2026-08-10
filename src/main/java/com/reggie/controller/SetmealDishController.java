@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * @since 2026-07-14
  */
 @RestController
-@RequestMapping("/setmeal_dish")
+@RequestMapping("/setmeal-dish")
 @Slf4j
 @Tag(name = "套餐菜品关联管理", description = "套餐与菜品关联关系的独立CRUD接口")
 public class SetmealDishController {
@@ -162,12 +162,19 @@ public class SetmealDishController {
                 idList.add(Long.parseLong(idStr));
             }
         }
-        // 批量校验租户归属
+        // 批量校验租户归属（fail-closed）
         if (!idList.isEmpty()) {
             Long currentTenantId = BaseContext.getCurrentTenantId();
+            if (currentTenantId == null) {
+                return R.error("租户信息缺失，无法删除");
+            }
             List<SetmealDish> records = setmealDishService.listByIds(idList);
             List<Long> unauthorizedIds = records.stream()
-                .filter(r -> !currentTenantId.equals(getSetmealTenantId(r.getSetmealId())))
+                .filter(r -> {
+                    Long setmealTenantId = getSetmealTenantId(r.getSetmealId());
+                    // 关联套餐不存在（孤儿关联）允许删除；存在但租户不匹配则拒绝
+                    return setmealTenantId != null && !currentTenantId.equals(setmealTenantId);
+                })
                 .map(SetmealDish::getId)
                 .collect(Collectors.toList());
             if (!unauthorizedIds.isEmpty()) {
@@ -232,3 +239,4 @@ public class SetmealDishController {
         return currentTenantId != null && currentTenantId.equals(dish.getTenantId());
     }
 }
+

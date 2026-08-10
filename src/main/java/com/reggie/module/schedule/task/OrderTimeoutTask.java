@@ -229,9 +229,9 @@ public class OrderTimeoutTask {
      */
     private boolean tryLock(String lockKey, long ttlMs) {
         if (redisTemplate == null) {
-            // Redis不可用时降级为无锁（记录告警）
-            log.warn("[定时任务] Redis不可用，无法获取分布式锁: {}", lockKey);
-            return true;
+            // fail-closed：写操作类定时任务在 Redis 不可用时跳过本次执行，避免多实例重复取消订单
+            log.warn("[定时任务] Redis不可用，跳过本次执行（分布式锁获取失败）: {}", lockKey);
+            return false;
         }
         try {
             // SET NX EX：原子操作，不存在才设置并过期
@@ -239,9 +239,9 @@ public class OrderTimeoutTask {
                     .setIfAbsent(lockKey, "1", ttlMs, TimeUnit.MILLISECONDS);
             return Boolean.TRUE.equals(success);
         } catch (Exception e) {
-            log.error("[定时任务] 获取分布式锁失败: {}", lockKey, e);
-            // 获取锁异常时降级放行，避免因锁故障导致任务停止
-            return true;
+            // fail-closed：获取锁异常时跳过本次执行，避免多实例重复取消订单
+            log.error("[定时任务] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
+            return false;
         }
     }
 

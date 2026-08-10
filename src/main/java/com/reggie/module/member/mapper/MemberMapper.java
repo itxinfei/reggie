@@ -46,6 +46,19 @@ public interface MemberMapper extends BaseMapper<Member> {
     int incrementPointsById(@Param("id") Long id, @Param("points") int points);
 
     /**
+     * 原子增加会员余额：balance = balance + #{amount} + IFNULL(#{giftAmount}, 0)
+     * 修改点：用于充值场景，消除 read-modify-write 并发丢失更新。
+     * tenant_id 由 TenantLineInnerInterceptor 自动注入，无需手动拼接。
+     * @param id 会员ID
+     * @param amount 充值金额（正数）
+     * @param giftAmount 赠送金额（可为 null）
+     * @return 受影响行数，0 表示会员不存在
+     */
+    @Update("UPDATE member SET balance = balance + #{amount} + IFNULL(#{giftAmount}, 0), update_time = NOW() " +
+            "WHERE id = #{id}")
+    int addBalance(@Param("id") Long id, @Param("amount") BigDecimal amount, @Param("giftAmount") BigDecimal giftAmount);
+
+    /**
      * 按会员等级统计会员数量：返回 level_id -> 数量 的明细
      * 修改点：用于会员统计看板，替代前端 pageSize=9999 拉全量后在浏览器按等级计数。
      * tenant_id 由 TenantLineInnerInterceptor 自动注入（原生 @Select 同样生效），无需手动拼接。

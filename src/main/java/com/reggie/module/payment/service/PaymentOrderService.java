@@ -40,4 +40,12 @@ public interface PaymentOrderService extends IService<PaymentOrder> {
      * @param errorMsg 错误信息
      */
     void handlePaymentFail(String tradeNo, String errorMsg);
+
+    /**
+     * 支付回调专用：按交易号查询支付订单（忽略租户拦截，调用方需自行处理租户上下文）。
+     *
+     * @param tradeNo 交易号
+     * @return 支付订单
+     */
+    PaymentOrder selectByTradeNoIgnoreTenant(String tradeNo);
 }

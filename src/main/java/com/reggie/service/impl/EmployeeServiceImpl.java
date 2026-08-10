@@ -8,6 +8,7 @@ import com.reggie.entity.Employee;
 import com.reggie.mapper.EmployeeMapper;
 import com.reggie.service.EmployeeService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 员工服务实现类
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
  * @since 2026-07-09
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class EmployeeServiceImpl extends ServiceImpl<EmployeeMapper, Employee> implements EmployeeService {
 
     @Override
@@ -46,3 +48,4 @@ public class EmployeeServiceImpl extends ServiceImpl<EmployeeMapper, Employee> i
         return employee;
     }
 }
+

@@ -9,6 +9,7 @@ import com.reggie.module.notification.model.NotificationTemplate;
 import com.reggie.module.notification.service.NotificationTemplateService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,7 +23,14 @@ import java.util.List;
  * @since 2026-07-20
  */
 @Slf4j
+/**
+ * NotificationTemplate service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class NotificationTemplateServiceImpl
         extends ServiceImpl<NotificationTemplateMapper, NotificationTemplate>
         implements NotificationTemplateService {
@@ -91,3 +99,6 @@ public class NotificationTemplateServiceImpl
         log.info("[通知模板] 逻辑删除模板：id={}", id);
     }
 }
+
+
+

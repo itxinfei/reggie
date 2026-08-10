@@ -23,7 +23,7 @@ CREATE TABLE delivery_order (
   order_time datetime NULL DEFAULT NULL COMMENT '下单时间',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
-  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  created_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
   update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
@@ -40,7 +40,7 @@ CREATE TABLE delivery_track (
   remark varchar(200) NULL DEFAULT NULL COMMENT '备注',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
-  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  created_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
   update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)

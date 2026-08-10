@@ -9,10 +9,38 @@
   })
   // request拦截器
   service.interceptors.request.use(config => {
+    // 为POST/PUT/DELETE请求添加CSRF Token
+    var method = (config.method || 'get').toLowerCase();
+    if (method === 'post' || method === 'put' || method === 'delete') {
+      var csrfToken = getCsrfToken();
+      if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
+      }
+    }
     return config
   }, error => {
       return Promise.reject(error)
   })
+
+  /**
+   * 获取CSRF Token
+   */
+  function getCsrfToken() {
+    // 尝试从Cookie获取
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+      var cookie = cookies[i].trim();
+      if (cookie.startsWith('csrfToken=')) {
+        return cookie.substring('csrfToken='.length);
+      }
+    }
+    // 尝试从SessionStorage获取
+    try {
+      return sessionStorage.getItem('csrfToken');
+    } catch (e) {
+      return null;
+    }
+  }
 
   // 响应拦截器
   service.interceptors.response.use(res => {

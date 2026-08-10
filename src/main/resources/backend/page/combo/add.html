@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -7,10 +7,7 @@
     <title>套餐管理 - 瑞吉外卖管理端</title>
     <!-- 引入样式 -->
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-    <link rel="stylesheet" href="../../styles/common.css" />
-    <link rel="stylesheet" href="../../styles/page.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/design-system.css" />
+    <link rel="stylesheet" href="../../styles/main.css" />
     <style>
       .addDish .el-input {
         width: 130px;
@@ -202,12 +199,12 @@
                   <div v-if="dishTable.length != 0" class="content">
                     <div class="addBut addBut-mb" @click="openAddDish">+ 添加菜品</div>
                     <div class="table">
-                      <el-table :data="dishTable" border class="tableBox">
-                        <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
-                        <el-table-column prop="price" label="原价" width="180">
+                      <el-table aria-label="数据表格" :data="dishTable" border class="tableBox">
+                        <el-table aria-label="数据表格"-column prop="name" label="名称" width="180" align="center"></el-table-column>
+                        <el-table aria-label="数据表格"-column prop="price" label="原价" width="180">
                           <template slot-scope="scope"> {{ Number(scope.row.price) }} </template>
                         </el-table-column>
-                        <el-table-column prop="address" label="份数" align="center">
+                        <el-table aria-label="数据表格"-column prop="address" label="份数" align="center">
                           <template slot-scope="scope">
                             <el-input-number
                               v-model="scope.row.copies"
@@ -218,7 +215,7 @@
                             ></el-input-number>
                           </template>
                         </el-table-column>
-                        <el-table-column prop="address" label="操作" width="180px;" align="center">
+                        <el-table aria-label="数据表格"-column prop="address" label="操作" width="180px;" align="center">
                           <template slot-scope="scope">
                             <el-button type="text" size="small" @click="delDishHandle(scope.$index)"> 删除 </el-button>
                           </template>
@@ -357,6 +354,8 @@
     <!-- 引入axios -->
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
     <script src="../../api/combo.js"></script>
     <script src="../../js/validate.js"></script>
     <script src="../../js/index.js"></script>
@@ -719,4 +718,7 @@
     </script>
   </body>
 </html>
+
+
+
 

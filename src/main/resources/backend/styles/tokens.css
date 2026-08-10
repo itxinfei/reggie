@@ -384,3 +384,226 @@
   --legacy-fff3cd: #fff3cd;
   --legacy-fff6ef: #fff6ef;
 }
+
+/* ============================================================
+ * 视觉设计增强变量
+ * ============================================================ */
+
+/* ========== 渐变色 ========== */
+:root {
+  /* 品牌渐变 */
+  --gradient-brand: linear-gradient(135deg, var(--color-brand-400) 0%, var(--color-brand-600) 100%);
+  --gradient-brand-light: linear-gradient(135deg, var(--color-brand-100) 0%, var(--color-brand-200) 100%);
+  
+  /* 状态渐变 */
+  --gradient-success: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+  --gradient-warning: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
+  --gradient-danger: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
+  --gradient-info: linear-gradient(135deg, #909399 0%, #b1b3b8 100%);
+  
+  /* 背景渐变 */
+  --gradient-bg-primary: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+  --gradient-bg-secondary: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
+  --gradient-bg-dark: linear-gradient(135deg, #304156 0%, #1f2d3d 100%);
+}
+
+/* ========== 动画和过渡 ========== */
+:root {
+  /* 过渡时间 */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s ease;
+  --transition-slower: 0.4s ease;
+  
+  /* 过渡属性 */
+  --transition-all: all var(--transition-base);
+  --transition-color: color var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
+  --transition-transform: transform var(--transition-base);
+  --transition-opacity: opacity var(--transition-base);
+  
+  /* 动画 */
+  --animation-fade-in: fadeIn 0.3s ease-in-out;
+  --animation-slide-up: slideUp 0.3s ease-out;
+  --animation-slide-down: slideDown 0.3s ease-out;
+  --animation-scale-in: scaleIn 0.2s ease-out;
+}
+
+/* ========== 透明度 ========== */
+:root {
+  --opacity-disabled: 0.5;
+  --opacity-hover: 0.8;
+  --opacity-active: 0.9;
+  --opacity-overlay: 0.5;
+  --opacity-backdrop: 0.7;
+}
+
+/* ========== 层级 ========== */
+:root {
+  --zindex-dropdown: 1000;
+  --zindex-sticky: 1020;
+  --zindex-fixed: 1030;
+  --zindex-modal-backdrop: 1040;
+  --zindex-modal: 1050;
+  --zindex-popover: 1060;
+  --zindex-tooltip: 1070;
+  --zindex-toast: 1080;
+}
+
+/* ========== 文本样式 ========== */
+:root {
+  /* 文本装饰 */
+  --text-decoration-underline: underline;
+  --text-decoration-line-through: line-through;
+  --text-decoration-none: none;
+  
+  /* 文本转换 */
+  --text-transform-uppercase: uppercase;
+  --text-transform-lowercase: lowercase;
+  --text-transform-capitalize: capitalize;
+  --text-transform-none: none;
+  
+  /* 文本溢出 */
+  --text-overflow-ellipsis: ellipsis;
+  --text-overflow-clip: clip;
+  
+  /* 文本对齐 */
+  --text-align-left: left;
+  --text-align-center: center;
+  --text-align-right: right;
+  --text-align-justify: justify;
+}
+
+/* ========== 边框样式 ========== */
+:root {
+  /* 边框样式 */
+  --border-style-solid: solid;
+  --border-style-dashed: dashed;
+  --border-style-dotted: dotted;
+  --border-style-none: none;
+  
+  /* 边框宽度 */
+  --border-width-thin: 1px;
+  --border-width-medium: 2px;
+  --border-width-thick: 3px;
+  
+  /* 边框颜色 */
+  --border-color-light: var(--el-border-lighter);
+  --border-color-base: var(--el-border-base);
+  --border-color-dark: var(--el-border-dark);
+  --border-color-brand: var(--color-brand-500);
+}
+
+/* ========== 光标样式 ========== */
+:root {
+  --cursor-pointer: pointer;
+  --cursor-default: default;
+  --cursor-not-allowed: not-allowed;
+  --cursor-grab: grab;
+  --cursor-grabbing: grabbing;
+  --cursor-text: text;
+  --cursor-move: move;
+}
+
+/* ========== 溢出处理 ========== */
+:root {
+  --overflow-visible: visible;
+  --overflow-hidden: hidden;
+  --overflow-scroll: scroll;
+  --overflow-auto: auto;
+}
+
+/* ========== 盒模型 ========== */
+:root {
+  --box-sizing-border-box: border-box;
+  --box-sizing-content-box: content-box;
+}
+
+/* ========== 显示模式 ========== */
+:root {
+  --display-block: block;
+  --display-inline: inline;
+  --display-inline-block: inline-block;
+  --display-flex: flex;
+  --display-inline-flex: inline-flex;
+  --display-grid: grid;
+  --display-inline-grid: inline-grid;
+  --display-none: none;
+}
+
+/* ========== 定位 ========== */
+:root {
+  --position-static: static;
+  --position-relative: relative;
+  --position-absolute: absolute;
+  --position-fixed: fixed;
+  --position-sticky: sticky;
+}
+
+/* ========== 弹性布局 ========== */
+:root {
+  /* flex-direction */
+  --flex-direction-row: row;
+  --flex-direction-row-reverse: row-reverse;
+  --flex-direction-column: column;
+  --flex-direction-column-reverse: column-reverse;
+  
+  /* flex-wrap */
+  --flex-wrap-nowrap: nowrap;
+  --flex-wrap-wrap: wrap;
+  --flex-wrap-wrap-reverse: wrap-reverse;
+  
+  /* justify-content */
+  --justify-content-flex-start: flex-start;
+  --justify-content-flex-end: flex-end;
+  --justify-content-center: center;
+  --justify-content-space-between: space-between;
+  --justify-content-space-around: space-around;
+  --justify-content-space-evenly: space-evenly;
+  
+  /* align-items */
+  --align-items-flex-start: flex-start;
+  --align-items-flex-end: flex-end;
+  --align-items-center: center;
+  --align-items-stretch: stretch;
+  --align-items-baseline: baseline;
+  
+  /* align-self */
+  --align-self-auto: auto;
+  --align-self-flex-start: flex-start;
+  --align-self-flex-end: flex-end;
+  --align-self-center: center;
+  --align-self-stretch: stretch;
+}
+
+/* ========== 网格布局 ========== */
+:root {
+  /* grid-template-columns */
+  --grid-template-columns-1: repeat(1, 1fr);
+  --grid-template-columns-2: repeat(2, 1fr);
+  --grid-template-columns-3: repeat(3, 1fr);
+  --grid-template-columns-4: repeat(4, 1fr);
+  --grid-template-columns-auto: repeat(auto-fill, minmax(250px, 1fr));
+  
+  /* grid-template-rows */
+  --grid-template-rows-1: repeat(1, 1fr);
+  --grid-template-rows-2: repeat(2, 1fr);
+  --grid-template-rows-3: repeat(3, 1fr);
+  --grid-template-rows-auto: repeat(auto-fill, minmax(200px, 1fr));
+  
+  /* gap */
+  --gap-xs: var(--space-1);
+  --gap-sm: var(--space-2);
+  --gap-md: var(--space-3);
+  --gap-lg: var(--space-4);
+  --gap-xl: var(--space-5);
+}
+
+/* ========== 响应式断点 ========== */
+:root {
+  --breakpoint-xs: 480px;
+  --breakpoint-sm: 576px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1200px;
+  --breakpoint-xxl: 1600px;
+}

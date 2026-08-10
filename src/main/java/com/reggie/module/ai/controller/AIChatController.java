@@ -10,6 +10,7 @@ import com.reggie.module.ai.model.*;
 import com.reggie.module.ai.service.AIChatService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -92,7 +93,9 @@ public class AIChatController {
      */
     @GetMapping("/chat/stream")
     @Operation(summary = "AI流式对话", description = "SSE流式输出，逐字显示AI回复")
+    @Parameter(description = "M e s s a g e")
     public SseEmitter chatStream(@RequestParam String message, @RequestParam(required = false) String scene,
+                                  @Parameter(description = "conversationId")
                                   @RequestParam(required = false) String conversationId) {
         Long userId = BaseContext.getCurrentId();
         log.info("AI流式对话: userId={}, scene={}, messageLength={}", userId, scene, message.length());
@@ -114,14 +117,15 @@ public class AIChatController {
 
     /**
      * 智能点餐推荐（简化接口，非流式）
-     * @param params 请求参数（message、userId、conversationId）
+     * @param params 请求参数（message、conversationId）
      * @return AI推荐结果
      */
     @PostMapping("/order-assistant")
     @Operation(summary = "智能点餐助手", description = "用户用自然语言描述需求，AI推荐最合适的菜品")
     public R<AIChatResponse> orderAssistant(@RequestBody Map<String, Object> params) {
         String message = (String) params.getOrDefault("message", "");
-        Long userId = params.containsKey("userId") ? Long.valueOf(params.get("userId").toString()) : null;
+        // #10 安全修复：删除客户端 userId 入参，统一从登录上下文获取，防止越权 IDOR
+        Long userId = BaseContext.getCurrentId();
         String conversationId = params.containsKey("conversationId") ? (String) params.get("conversationId") : null;
 
         log.info("智能点餐请求: userId={}, messageLength={}", userId, message.length());
@@ -151,7 +155,9 @@ public class AIChatController {
      */
     @GetMapping("/order-assistant/stream")
     @Operation(summary = "智能点餐助手（流式）", description = "SSE流式输出推荐结果")
+    @Parameter(description = "M e s s a g e")
     public SseEmitter orderAssistantStream(@RequestParam String message,
+                                            @Parameter(description = "conversationId")
                                             @RequestParam(required = false) String conversationId) {
         Long userId = BaseContext.getCurrentId();
         log.info("智能点餐流式: userId={}, messageLength={}", userId, message.length());
@@ -223,7 +229,9 @@ public class AIChatController {
      */
     @GetMapping("/conversations")
     @Operation(summary = "获取对话列表", description = "获取当前用户的AI对话历史列表")
+    @Parameter(description = "P a g e")
     public R<List<AIConversation>> getConversations(@RequestParam(defaultValue = "1") int page,
+                                                     @Parameter(description = "Page size")
                                                      @RequestParam(defaultValue = "20") int pageSize) {
         Long userId = BaseContext.getCurrentId();
         List<AIConversation> conversations = aiChatService.getUserConversations(userId, page, PageUtils.cap(pageSize));
@@ -237,6 +245,7 @@ public class AIChatController {
      */
     @GetMapping("/conversations/{conversationId}")
     @Operation(summary = "获取对话详情", description = "获取指定对话的消息历史")
+    @Parameter(description = "C o n v e r s a t i o n I d")
     public R<List<AIMessageRecord>> getConversationDetail(@PathVariable String conversationId) {
         List<AIMessageRecord> messages = aiChatService.getConversationMessages(conversationId);
         return R.success(messages);
@@ -264,6 +273,7 @@ public class AIChatController {
      */
     @DeleteMapping("/conversations/{conversationId}")
     @Operation(summary = "删除对话", description = "软删除指定对话")
+    @Parameter(description = "C o n v e r s a t i o n I d")
     public R<String> deleteConversation(@PathVariable String conversationId) {
         Long userId = BaseContext.getCurrentId();
         aiChatService.deleteConversation(conversationId, userId);
@@ -345,8 +355,11 @@ public class AIChatController {
      */
     @GetMapping("/conversations/search")
     @Operation(summary = "搜索对话", description = "按标题关键词搜索对话")
+    @Parameter(description = "K e y w o r d")
     public R<List<AIConversation>> searchConversations(@RequestParam String keyword,
+                                                       @Parameter(description = "Page number")
                                                        @RequestParam(defaultValue = "1") int page,
+                                                       @Parameter(description = "Page size")
                                                        @RequestParam(defaultValue = "20") int pageSize) {
         Long userId = BaseContext.getCurrentId();
         LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
@@ -369,6 +382,7 @@ public class AIChatController {
      */
     @PostMapping("/conversations/{conversationId}/reset")
     @Operation(summary = "重置对话上下文", description = "清除对话的上下文缓存，保留历史消息记录")
+    @Parameter(description = "C o n v e r s a t i o n I d")
     public R<String> resetConversationContext(@PathVariable String conversationId) {
         Long userId = BaseContext.getCurrentId();
         // 验证所有权
@@ -391,6 +405,7 @@ public class AIChatController {
      */
     @GetMapping("/conversations/{conversationId}/context-stats")
     @Operation(summary = "上下文统计", description = "获取对话的上下文使用情况统计")
+    @Parameter(description = "C o n v e r s a t i o n I d")
     public R<Map<String, Object>> getContextStats(@PathVariable String conversationId) {
         Map<String, Object> stats = aiChatService.getContextStats(conversationId);
         return R.success(stats);
@@ -423,3 +438,6 @@ public class AIChatController {
     @Resource
     private AIConversationMapper conversationMapper;
 }
+
+
+

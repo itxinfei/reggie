@@ -192,21 +192,27 @@ public class CommonController {
                 return;
             }
 
-            // 根据文件扩展名设置Content-Type
-            String extension = name.substring(name.lastIndexOf(".") + 1).toLowerCase();
-            switch (extension) {
-                case "jpg":
-                case "jpeg":
-                    response.setContentType("image/jpeg");
-                    break;
-                case "png":
-                    response.setContentType("image/png");
-                    break;
-                case "gif":
-                    response.setContentType("image/gif");
-                    break;
-                default:
-                    response.setContentType("application/octet-stream");
+            // 根据文件扩展名设置Content-Type（使用解码后的文件名提取扩展名，避免 URL 编码干扰）
+            int dotIdx = decodedName.lastIndexOf(".");
+            if (dotIdx < 0 || dotIdx == decodedName.length() - 1) {
+                // 无扩展名或以点号结尾，按二进制流处理
+                response.setContentType("application/octet-stream");
+            } else {
+                String extension = decodedName.substring(dotIdx + 1).toLowerCase();
+                switch (extension) {
+                    case "jpg":
+                    case "jpeg":
+                        response.setContentType("image/jpeg");
+                        break;
+                    case "png":
+                        response.setContentType("image/png");
+                        break;
+                    case "gif":
+                        response.setContentType("image/gif");
+                        break;
+                    default:
+                        response.setContentType("application/octet-stream");
+                }
             }
 
             try (FileInputStream fileInputStream = new FileInputStream(targetFile);

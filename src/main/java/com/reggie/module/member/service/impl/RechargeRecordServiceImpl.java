@@ -2,6 +2,7 @@ package com.reggie.module.member.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.CustomException;
+import com.reggie.module.member.mapper.MemberMapper;
 import com.reggie.module.member.mapper.RechargeRecordMapper;
 import com.reggie.module.member.model.Member;
 import com.reggie.module.member.model.RechargeRecord;
@@ -25,16 +26,24 @@ public class RechargeRecordServiceImpl extends ServiceImpl<RechargeRecordMapper,
     @Autowired
     private MemberService memberService;
 
+    /** 会员Mapper（用于原子加余额） */
+    @Autowired
+    private MemberMapper memberMapper;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void recharge(Long memberId, BigDecimal amount, BigDecimal giftAmount, String paymentMethod) {
+        // 修改点：原子加余额（balance = balance + amount + IFNULL(giftAmount, 0)），
+        // 消除 read-modify-write 并发丢失更新；先校验会员存在性
         Member member = memberService.getById(memberId);
         if (member == null) {
             throw new CustomException("会员不存在");
         }
 
-        member.setBalance(member.getBalance().add(amount).add(giftAmount != null ? giftAmount : BigDecimal.ZERO));
-        memberService.updateById(member);
+        int rows = memberMapper.addBalance(memberId, amount, giftAmount);
+        if (rows == 0) {
+            throw new CustomException("会员不存在");
+        }
 
         RechargeRecord record = new RechargeRecord();
         record.setMemberId(memberId);

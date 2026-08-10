@@ -16,7 +16,6 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -245,86 +244,6 @@ public class BruteForceProtectionFilter implements Filter {
             log.error("检查账号锁定状态异常：{}", e.getMessage());
             return false;
         }
-    }
-
-    /**
-     * 记录登录失败（供 Controller 调用，基于 HttpSession）
-     *
-     * @param session HTTP 会话
-     */
-    public void recordLoginFailure(HttpSession session) {
-        if (!enabled || session == null) {
-            return;
-        }
-        // 从 session 中提取用户标识
-        // LoginCheckFilter 存储格式: "employee"=员工ID, "user"=用户ID
-        Object empId = session.getAttribute("employee");
-        Object userId = session.getAttribute("user");
-        String identifier = empId != null ? empId.toString()
-                             : (userId != null ? userId.toString() : null);
-        if (identifier != null) {
-            recordFailedAttempt(identifier);
-        }
-    }
-
-    /**
-     * 重置登录失败计数（供 Controller 调用，登录成功后调用）
-     *
-     * @param session HTTP 会话
-     */
-    public void resetLoginAttempts(HttpSession session) {
-        if (!enabled || session == null) {
-            return;
-        }
-        Object empId = session.getAttribute("employee");
-        Object userId = session.getAttribute("user");
-        String identifier = empId != null ? empId.toString()
-                             : (userId != null ? userId.toString() : null);
-        if (identifier != null) {
-            resetFailedAttempts(identifier);
-        }
-    }
-
-    /**
-     * 获取登录失败次数（供 Controller 查询剩余重试次数，基于 HttpSession）
-     *
-     * @param session HTTP 会话
-     * @return 失败次数，Redis 不可用时返回 0
-     */
-    public int getFailedAttempts(HttpSession session) {
-        if (!enabled || session == null) {
-            return 0;
-        }
-        Object empId = session.getAttribute("employee");
-        Object userId = session.getAttribute("user");
-        String identifier = empId != null ? empId.toString()
-                             : (userId != null ? userId.toString() : null);
-        if (identifier == null) {
-            return 0;
-        }
-        return getFailedAttemptCount(identifier);
-    }
-
-    /**
-     * 检查是否被锁定（供 Controller 查询，基于 HttpSession）
-     *
-     * @param session HTTP 会话
-     * @return true=已锁定，false=未锁定
-     */
-    public boolean isAccountLocked(HttpSession session) {
-        if (!enabled || session == null) {
-            return false;
-        }
-        Object empId = session.getAttribute("employee");
-        Object userId = session.getAttribute("user");
-
-        if (empId != null) {
-            return isLocked(empId.toString());
-        }
-        if (userId != null) {
-            return isLocked(userId.toString());
-        }
-        return false;
     }
 
     /**

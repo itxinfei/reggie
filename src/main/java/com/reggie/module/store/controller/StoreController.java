@@ -1,6 +1,7 @@
 package com.reggie.module.store.controller;
 import com.reggie.common.utils.PageUtils;
 
+import cn.hutool.core.util.StrUtil;
 import com.reggie.common.R;
 import com.reggie.common.annotation.RequiresAdmin;
 import com.reggie.entity.Tenant;
@@ -247,7 +248,7 @@ public class StoreController {
                 String todayAmount = nvl(row.get("todayAmount"));
                 String createTime = row.get("createTime") != null ? row.get("createTime").toString() : "";
 
-                writer.write(String.join(",", escapeCsv(storeName), escapeCsv(storeCode),
+                writer.write(StrUtil.join(",", escapeCsv(storeName), escapeCsv(storeCode),
                         escapeCsv(storeType), escapeCsv(status), escapeCsv(contactPerson),
                         escapeCsv(contactPhone), escapeCsv(address), escapeCsv(businessHours),
                         isDelivery, isDineIn, deliveryRadius, minAmount, deliveryFee,
@@ -367,6 +368,7 @@ public class StoreController {
     public R<List<Map<String, Object>>> syncLogs(
             @RequestParam Long sourceTenantId,
             @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "P a g e S i z e")
             @RequestParam(defaultValue = "10") int pageSize) {
         List<Map<String, Object>> logs = storeSyncService.getSyncLogs(sourceTenantId, page, PageUtils.cap(pageSize));
         return R.success(logs);
@@ -406,3 +408,4 @@ public class StoreController {
         }
     }
 }
+

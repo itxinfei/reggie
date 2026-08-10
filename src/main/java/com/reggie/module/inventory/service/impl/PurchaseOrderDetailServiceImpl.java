@@ -8,6 +8,7 @@ import com.reggie.module.inventory.model.PurchaseOrderDetail;
 import com.reggie.module.inventory.service.PurchaseOrderDetailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -18,7 +19,14 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * PurchaseOrderDetail service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class PurchaseOrderDetailServiceImpl extends ServiceImpl<PurchaseOrderDetailMapper, PurchaseOrderDetail> implements PurchaseOrderDetailService {
 
     @Override
@@ -29,3 +37,5 @@ public class PurchaseOrderDetailServiceImpl extends ServiceImpl<PurchaseOrderDet
                 .orderByAsc(PurchaseOrderDetail::getId));
     }
 }
+
+

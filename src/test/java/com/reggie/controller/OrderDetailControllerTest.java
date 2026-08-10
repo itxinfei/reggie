@@ -67,20 +67,20 @@ public class OrderDetailControllerTest {
 
     @Test
     void testGetOrderDetailWithDifferentId() throws Exception {
-        // 创建另一个测试订单明细
+        // 创建另一个测试订单明细（IdType.AUTO，实际 id 由数据库生成）
         OrderDetail orderDetail = new OrderDetail();
-        orderDetail.setId(2L);
         orderDetail.setName("另一个测试菜品");
         orderDetail.setDishId(2L);
         orderDetail.setNumber(1);
         orderDetail.setAmount(new java.math.BigDecimal("15.00"));
         orderDetail.setOrderId(1L);
         orderDetailService.save(orderDetail);
+        Long actualId = orderDetail.getId();
 
-        mockMvc.perform(get("/orderDetail/2"))
+        mockMvc.perform(get("/orderDetail/" + actualId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data.id").value(2))
+                .andExpect(jsonPath("$.data.id").value(actualId.intValue()))
                 .andExpect(jsonPath("$.data.name").value("另一个测试菜品"));
     }
 }

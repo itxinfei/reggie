@@ -16,6 +16,8 @@
                background: var(--el-bg-page); color: var(--gray-333); }
 
         .app-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .ds-page-header__title { color: var(--text-primary); }
+        .ds-page-header__subtitle { color: var(--text-secondary); }
 
         /* Tab */
         .tabs { display: flex; gap: 0; background: var(--bg-surface); border-radius: 8px 8px 0 0; overflow: hidden;
@@ -120,8 +122,20 @@
     </style>
 </head>
 <body>
+    <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+    <a href="#main-content" class="skip-link">跳转到主内容</a>
+
     <div id="app">
-        <div class="app-container">
+        <main class="app-container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+            <!-- 页头：标题 + 副标题 + 页级操作 -->
+            <header class="ds-page-header">
+                <div class="ds-page-header__titles">
+                    <h1 class="ds-page-header__title" id="page-title">消息通知管理</h1>
+                    <p class="ds-page-header__subtitle">管理系统通知和消息推送</p>
+                </div>
+                <div class="ds-page-header__actions"></div>
+            </header>
+
             <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stats-cards -->
             <stat-cards :cards="statsCards"></stat-cards>
 
@@ -554,6 +568,8 @@
     <script src="../../plugins/vue/vue.js"></script>
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
     <script src="../../js/components.js"></script>
     <script src="../../api/notification.js"></script>
     <script>
@@ -1016,3 +1032,4 @@
     </script>
 </body>
 </html>
+

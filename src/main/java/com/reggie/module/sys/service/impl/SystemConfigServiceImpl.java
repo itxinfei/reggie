@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -21,7 +22,14 @@ import java.util.stream.Collectors;
  * 优先取租户级配置，其次取全局配置（tenant_id IS NULL）
  */
 @Slf4j
+/**
+ * SystemConfig service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class SystemConfigServiceImpl extends com.baomidou.mybatisplus.extension.service.impl.ServiceImpl<SystemConfigMapper, SystemConfig>
         implements SystemConfigService {
 
@@ -98,3 +106,6 @@ public class SystemConfigServiceImpl extends com.baomidou.mybatisplus.extension.
         return result;
     }
 }
+
+
+

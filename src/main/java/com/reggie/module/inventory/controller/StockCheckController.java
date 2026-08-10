@@ -65,6 +65,7 @@ public class StockCheckController {
     public R<Page<StockCheck>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String startDate,
+                                     @Parameter(description = "E n d D a t e")
                                      @RequestParam(required = false) String endDate) {
         Page<StockCheck> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<StockCheck> qw = new LambdaQueryWrapper<>();
@@ -110,4 +111,5 @@ public class StockCheckController {
         return R.success("盘点完成");
     }
 }
+
 

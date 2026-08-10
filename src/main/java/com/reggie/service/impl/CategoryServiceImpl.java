@@ -27,6 +27,12 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * Category service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> implements CategoryService {
 
@@ -99,9 +105,13 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
             resolveSortConflict(entity.getType(), entity.getSort(), null);
         }
 
-        // 修改点：先写DB成功
-        boolean result = super.save(entity);
-        return result;
+        // 修改点：先写DB成功；并发竞态由唯一索引兜底，转友好提示
+        try {
+            boolean result = super.save(entity);
+            return result;
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            throw new CustomException("该分类名称已存在（并发冲突），请刷新后重试");
+        }
     }
 
     /**
@@ -145,8 +155,13 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
             resolveSortConflict(entity.getType(), entity.getSort(), entity.getId());
         }
 
-        // 修改点：先写DB成功，再清缓存
-        boolean result = super.updateById(entity);
+        // 修改点：先写DB成功，再清缓存；并发竞态由唯一索引兜底，转友好提示
+        boolean result;
+        try {
+            result = super.updateById(entity);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            throw new CustomException("该分类名称已存在（并发冲突），请修改名称");
+        }
         if (result) {
             redisCacheUtil.doubleDeleteAllEntries("categories");
         }
@@ -183,3 +198,4 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         log.info("排序号冲突处理完成：type={}, targetSort={}, 影响{}条记录", type, targetSort, affected);
     }
 }
+

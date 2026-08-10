@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -25,7 +26,14 @@ import java.util.concurrent.TimeUnit;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * Queue service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> implements QueueService {
 
     /** 日期格式化器 */
@@ -156,3 +164,6 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
         }
     }
 }
+
+
+

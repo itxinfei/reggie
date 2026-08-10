@@ -39,4 +39,17 @@ public interface PaymentChannel {
      * @return 支付响应
      */
     PayResponse handleNotify(Map<String, String> params);
+
+    /**
+     * 校验支付回调通知签名（防回调伪造）。
+     * <p>
+     * 回调接口为外部无登录态请求，必须先校验签名再处理业务，禁止直接信任回调参数。
+     * 生产环境必须使用渠道官方 SDK 的签名校验（如支付宝 {@code AlipaySignature.rsaCheckV1}、
+     * 微信 {@code WxPayUtil.verifyNotifySign}）配合平台公钥/密钥，严禁返回恒真。
+     * </p>
+     *
+     * @param params 回调参数
+     * @return true=签名校验通过；false=校验失败，调用方应拒绝处理
+     */
+    boolean verifyNotifySign(Map<String, String> params);
 }

@@ -6,11 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>行政区划管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/common.css" />
-  <link rel="stylesheet" href="../../styles/page.css" />
-  <link rel="stylesheet" href="../../styles/components.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/design-system.css" />
+    <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
   <div class="dashboard-container" id="region-app">
@@ -102,6 +98,8 @@
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
   <script src="../../api/region.js"></script>
   <script src="../../js/components.js"></script>
 <script>
@@ -133,7 +131,7 @@
           regionRules: {
             name: [{ required: true, whitespace: true, message: '请输入地区名称', trigger: 'blur' }]
           },
-          // 修改点：列配置（交给 <crud-table>，避免手写 <el-table-column> 重复）
+          // 修改点：列配置（交给 <crud-table>，避免手写 <el-table aria-label="数据表格"-column> 重复）
           columns: [
             { prop: 'id', label: 'ID', width: 80 },
             { prop: 'name', label: '地区名称', minWidth: 140 },
@@ -298,3 +296,6 @@
   </script>
 </body>
 </html>
+
+
+

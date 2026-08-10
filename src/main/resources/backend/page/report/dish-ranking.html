@@ -6,13 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>菜品排行 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/common.css" />
-  <link rel="stylesheet" href="../../styles/page.css" />
-  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
-  <link rel="stylesheet" href="../../styles/components.css" />
+    <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/design-system.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
     html, body { height: 100%; margin: 0; padding: 0; overflow-y: auto; overflow-x: hidden;
@@ -51,8 +46,19 @@
   </style>
 </head>
 <body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
   <div class="dish-ranking-page" id="report-dish-app" v-loading="loading">
-    <div class="container">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 页头：标题 + 副标题 + 页级操作 -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">菜品排行</h1>
+          <p class="ds-page-header__subtitle">查看菜品销量排行和热门菜品</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
 
 
       <stat-cards :cards="statsCards"></stat-cards>
@@ -116,6 +122,8 @@
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
   <script src="../../api/report.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../js/chart-panel.js"></script>
@@ -364,3 +372,6 @@
   </script>
 </body>
 </html>
+
+
+

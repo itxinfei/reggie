@@ -79,6 +79,7 @@ public class SystemConfigController {
     @GetMapping("/page")
     @Operation(summary = "配置分页查询", description = "分页查询系统配置")
     public R<Page<SystemConfig>> page(
+            @Parameter(description = "P a g e")
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "配置键") @RequestParam(required = false) String configKey) {
@@ -99,6 +100,7 @@ public class SystemConfigController {
     @GetMapping("/{configKey}")
     @Operation(summary = "获取配置值", description = "根据配置键获取配置值")
     public R<String> getConfig(
+            @Parameter(description = "C o n f i g K e y")
             @Parameter(description = "配置键") @PathVariable String configKey) {
         String value = systemConfigService.getConfig(configKey);
         return R.success(value);
@@ -153,8 +155,10 @@ public class SystemConfigController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除配置", description = "删除指定系统配置")
     public R<String> delete(
+            @Parameter(description = "I d")
             @Parameter(description = "配置ID") @PathVariable Long id) {
         systemConfigService.removeById(id);
         return R.success("配置删除成功");
     }
 }
+

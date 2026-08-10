@@ -74,7 +74,15 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     @Override
     public DeliveryOrder getById(String id) {
-        return deliveryOrderMapper.selectById(id);
+        // 修复 IDOR：按 id + tenantId 条件查询，防止跨租户访问
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return null;
+        }
+        LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
+        qw.eq(DeliveryOrder::getId, id)
+          .eq(DeliveryOrder::getTenantId, tenantId);
+        return deliveryOrderMapper.selectOne(qw);
     }
 
     @Override
@@ -114,18 +122,28 @@ public class DeliveryServiceImpl implements DeliveryService {
         DeliveryPlatform dp = factory.getPlatform(platform);
         if (dp == null) return false;
 
+        // fail-closed：强制租户校验，防止跨租户接单
         Long tenantId = BaseContext.getCurrentTenantId();
-        // 先查询订单信息（携带 tenantId 过滤条件，防止跨租户接单）
+        if (tenantId == null) {
+            log.warn("接单失败：租户上下文缺失");
+            return false;
+        }
         LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
         qw.eq(DeliveryOrder::getPlatform, platform);
         qw.eq(DeliveryOrder::getPlatformOrderId, platformOrderId);
-        if (tenantId != null) {
-            qw.eq(DeliveryOrder::getTenantId, tenantId);
-        }
+        qw.eq(DeliveryOrder::getTenantId, tenantId);
         DeliveryOrder order = deliveryOrderMapper.selectOne(qw);
 
         if (order == null) {
             log.warn("订单不存在: platform={}, platformOrderId={}", platform, platformOrderId);
+            return false;
+        }
+
+        // #46 状态机校验：仅当当前状态为 PENDING 时允许接单，禁止对终态/中间态订单接单
+        String currentStatus = order.getStatus();
+        Set<String> allowed = ALLOWED_TRANSITIONS.get(currentStatus);
+        if (allowed == null || !allowed.contains(DeliveryOrderStatus.ACCEPTED.getValue())) {
+            log.warn("接单失败，订单当前状态不允许接单: platformOrderId={}, currentStatus={}", platformOrderId, currentStatus);
             return false;
         }
 
@@ -147,9 +165,9 @@ public class DeliveryServiceImpl implements DeliveryService {
             return false;
         }
 
-        // 租户校验
+        // 租户校验（fail-closed）
         Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null && !tenantId.equals(order.getTenantId())) {
+        if (tenantId == null || !tenantId.equals(order.getTenantId())) {
             log.warn("跨租户操作拒绝: id={}, currentTenant={}, orderTenant={}", id, tenantId, order.getTenantId());
             return false;
         }
@@ -206,10 +224,23 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     @Override
     public Map<String, Object> getDeliveryStats(String platform, String startDate, String endDate) {
+        // fail-closed：强制租户校验
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> stats = new HashMap<>();
+        if (tenantId == null) {
+            stats.put("todayOrders", 0L);
+            stats.put("pendingCount", 0L);
+            stats.put("acceptedCount", 0L);
+            stats.put("pickingCount", 0L);
+            stats.put("deliveringCount", 0L);
+            stats.put("completedCount", 0L);
+            stats.put("cancelledCount", 0L);
+            stats.put("totalCount", 0L);
+            stats.put("totalAmount", BigDecimal.ZERO);
+            return stats;
+        }
 
-        // 今日订单数
+        // 今日订单数（selectCount 不加载全量数据到内存，无 OOM 风险）
         String todayStr = LocalDate.now().toString();
         LambdaQueryWrapper<DeliveryOrder> todayQw = new LambdaQueryWrapper<>();
         todayQw.eq(DeliveryOrder::getTenantId, tenantId);
@@ -221,36 +252,28 @@ public class DeliveryServiceImpl implements DeliveryService {
         long todayOrders = deliveryOrderMapper.selectCount(todayQw);
         stats.put("todayOrders", todayOrders);
 
-        // 各状态数量 + 金额汇总
-        LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
-        qw.eq(DeliveryOrder::getTenantId, tenantId);
-        if (StringUtils.isNotBlank(platform)) {
-            qw.eq(DeliveryOrder::getPlatform, platform);
-        }
-        if (StringUtils.isNotBlank(startDate)) {
-            qw.ge(DeliveryOrder::getOrderTime, startDate);
-        }
-        if (StringUtils.isNotBlank(endDate)) {
-            qw.le(DeliveryOrder::getOrderTime, LocalDate.parse(endDate).atTime(LocalTime.MAX));
-        }
-        List<DeliveryOrder> allOrders = deliveryOrderMapper.selectList(qw);
+        // #71 使用聚合 SQL 替代全量 selectList + 内存遍历，防止 OOM
+        String endDateParam = endDate != null ? LocalDate.parse(endDate).atTime(LocalTime.MAX).toString() : null;
+        List<Map<String, Object>> aggRows = deliveryOrderMapper.selectStatsByStatus(tenantId, platform, startDate, endDateParam);
 
         long pendingCount = 0, acceptedCount = 0, pickingCount = 0;
         long deliveringCount = 0, completedCount = 0, cancelledCount = 0;
+        long totalCount = 0;
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        for (DeliveryOrder o : allOrders) {
-            String s = o.getStatus();
-            if (DeliveryOrderStatus.PENDING.getValue().equals(s)) pendingCount++;
-            else if (DeliveryOrderStatus.ACCEPTED.getValue().equals(s)) acceptedCount++;
-            else if (DeliveryOrderStatus.PICKING.getValue().equals(s)) pickingCount++;
-            else if (DeliveryOrderStatus.DELIVERING.getValue().equals(s)) deliveringCount++;
-            else if (DeliveryOrderStatus.DELIVERED.getValue().equals(s)) completedCount++;
-            else if (DeliveryOrderStatus.CANCELLED.getValue().equals(s)) cancelledCount++;
+        for (Map<String, Object> row : aggRows) {
+            String s = String.valueOf(row.get("status"));
+            long cnt = row.get("cnt") == null ? 0 : ((Number) row.get("cnt")).longValue();
+            BigDecimal total = row.get("total") == null ? BigDecimal.ZERO : new BigDecimal(row.get("total").toString());
+            totalCount += cnt;
+            totalAmount = totalAmount.add(total);
 
-            if (o.getAmount() != null) {
-                totalAmount = totalAmount.add(o.getAmount());
-            }
+            if (DeliveryOrderStatus.PENDING.getValue().equals(s)) pendingCount = cnt;
+            else if (DeliveryOrderStatus.ACCEPTED.getValue().equals(s)) acceptedCount = cnt;
+            else if (DeliveryOrderStatus.PICKING.getValue().equals(s)) pickingCount = cnt;
+            else if (DeliveryOrderStatus.DELIVERING.getValue().equals(s)) deliveringCount = cnt;
+            else if (DeliveryOrderStatus.DELIVERED.getValue().equals(s)) completedCount = cnt;
+            else if (DeliveryOrderStatus.CANCELLED.getValue().equals(s)) cancelledCount = cnt;
         }
 
         stats.put("pendingCount", pendingCount);
@@ -259,7 +282,7 @@ public class DeliveryServiceImpl implements DeliveryService {
         stats.put("deliveringCount", deliveringCount);
         stats.put("completedCount", completedCount);
         stats.put("cancelledCount", cancelledCount);
-        stats.put("totalCount", allOrders.size());
+        stats.put("totalCount", totalCount);
         stats.put("totalAmount", totalAmount);
         return stats;
     }
@@ -287,64 +310,97 @@ public class DeliveryServiceImpl implements DeliveryService {
             return "error: unknown platform";
         }
 
+        // #8 签名校验：回调是外部请求无登录态，必须校验签名防伪造
+        if (!dp.verifyCallback(params)) {
+            log.warn("回调签名校验失败: platform={}", platform);
+            throw new com.reggie.common.CustomException("回调签名校验失败");
+        }
+
         String type = params.getOrDefault("type", "");
         String platformOrderId = params.getOrDefault("platformOrderId", "");
         String status = params.getOrDefault("status", "");
 
         log.info("收到[{}]平台回调: type={}, platformOrderId={}, status={}", platform, type, platformOrderId, status);
 
-        // 查询本地订单
-        Long tenantId = BaseContext.getCurrentTenantId();
-        LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
-        qw.eq(DeliveryOrder::getPlatform, platform);
-        qw.eq(DeliveryOrder::getPlatformOrderId, platformOrderId);
-        if (tenantId != null) {
-            qw.eq(DeliveryOrder::getTenantId, tenantId);
+        // #9 回调无登录态，BaseContext.getTenantId() 恒为 null。
+        // 改用跨租户查询：按 platform + platformOrderId 全局定位订单，再用订单的 tenantId 操作。
+        DeliveryOrder order = deliveryOrderMapper.selectByPlatformOrderCrossTenant(platform, platformOrderId);
+
+        // 为后续 updateById/insert 设置租户上下文（回调线程结束后在 finally 清理）
+        Long callbackTenantId = null;
+        if (order != null) {
+            callbackTenantId = order.getTenantId();
+        } else if ("new_order".equals(type)) {
+            // 新订单回调：从回调参数获取 tenantId（平台账号映射到租户）
+            String tenantIdStr = params.getOrDefault("tenantId", "");
+            if (!tenantIdStr.isEmpty()) {
+                try {
+                    callbackTenantId = Long.valueOf(tenantIdStr);
+                } catch (NumberFormatException e) {
+                    log.warn("回调 tenantId 格式错误: {}", tenantIdStr);
+                }
+            }
         }
-        DeliveryOrder order = deliveryOrderMapper.selectOne(qw);
 
-        switch (type) {
-            case "new_order":
-                // 新订单通知：保存/更新订单
-                return handleNewOrderCallback(order, platform, params);
+        try {
+            if (callbackTenantId != null) {
+                BaseContext.setCurrentTenantId(callbackTenantId);
+            }
 
-            case "status_update":
-                // 状态变更通知
-                if (order == null) {
-                    log.warn("回调订单不存在: platform={}, platformOrderId={}", platform, platformOrderId);
-                    return "error: order not found";
-                }
-                updateOrderStatusCallback(order, status);
-                return "success";
+            switch (type) {
+                case "new_order":
+                    // 新订单通知：保存/更新订单
+                    return handleNewOrderCallback(order, platform, params, callbackTenantId);
 
-            case "cancel":
-                // 取消通知（用户或平台主动取消）
-                if (order == null) {
-                    log.warn("回调订单不存在: platform={}, platformOrderId={}", platform, platformOrderId);
-                    return "error: order not found";
-                }
-                String cancelReason = params.getOrDefault("reason", "平台用户取消");
-                updateOrderStatusCallback(order, DeliveryOrderStatus.CANCELLED.getValue());
-                log.info("平台取消订单: platformOrderId={}, reason={}", platformOrderId, cancelReason);
-                return "success";
+                case "status_update":
+                    // 状态变更通知
+                    if (order == null) {
+                        log.warn("回调订单不存在: platform={}, platformOrderId={}", platform, platformOrderId);
+                        return "error: order not found";
+                    }
+                    updateOrderStatusCallback(order, status);
+                    return "success";
 
-            default:
-                log.info("未处理的回调类型: type={}, params={}", type, params);
-                return "ignored";
+                case "cancel":
+                    // 取消通知（用户或平台主动取消）
+                    if (order == null) {
+                        log.warn("回调订单不存在: platform={}, platformOrderId={}", platform, platformOrderId);
+                        return "error: order not found";
+                    }
+                    String cancelReason = params.getOrDefault("reason", "平台用户取消");
+                    updateOrderStatusCallback(order, DeliveryOrderStatus.CANCELLED.getValue());
+                    log.info("平台取消订单: platformOrderId={}, reason={}", platformOrderId, cancelReason);
+                    return "success";
+
+                default:
+                    log.info("未处理的回调类型: type={}, params={}", type, params);
+                    return "ignored";
+            }
+        } finally {
+            // 清理回调线程的租户上下文，防止线程复用导致串租户
+            if (callbackTenantId != null) {
+                BaseContext.setCurrentTenantId(null);
+            }
         }
     }
 
     /**
      * 处理新订单回调：如果本地无记录则插入，已存在则跳过（幂等）
+     * #9 tenantId 从回调参数获取，不依赖 BaseContext
      */
-    private String handleNewOrderCallback(DeliveryOrder existOrder, String platform, Map<String, String> params) {
+    private String handleNewOrderCallback(DeliveryOrder existOrder, String platform, Map<String, String> params, Long tenantId) {
         if (existOrder != null) {
             log.info("订单已存在（幂等跳过）: platformOrderId={}", params.get("platformOrderId"));
             return "success";
         }
 
+        if (tenantId == null) {
+            log.error("新订单回调缺少有效 tenantId: platformOrderId={}", params.get("platformOrderId"));
+            return "error: missing tenantId";
+        }
+
         DeliveryOrder newOrder = new DeliveryOrder();
-        newOrder.setTenantId(BaseContext.getCurrentTenantId());
+        newOrder.setTenantId(tenantId);
         newOrder.setPlatform(platform);
         newOrder.setPlatformOrderId(params.getOrDefault("platformOrderId", ""));
         newOrder.setDishSummary(params.getOrDefault("dishSummary", ""));
@@ -359,14 +415,27 @@ public class DeliveryServiceImpl implements DeliveryService {
         newOrder.setUpdateTime(LocalDateTime.now());
 
         deliveryOrderMapper.insert(newOrder);
-        log.info("新订单入库: platform={}, platformOrderId={}", platform, newOrder.getPlatformOrderId());
+        log.info("新订单入库: platform={}, platformOrderId={}, tenantId={}", platform, newOrder.getPlatformOrderId(), tenantId);
         return "success";
     }
 
     /**
-     * 根据回调更新订单状态（允许任意方向的状态流转，因为平台状态是权威来源）
+     * 根据回调更新订单状态
+     * #8 状态机校验：禁止从终态（DELIVERED/CANCELLED）回退，防止绕过状态机
      */
     private void updateOrderStatusCallback(DeliveryOrder order, String status) {
+        String currentStatus = order.getStatus();
+        // 终态不允许再流转（DELIVERED 和 CANCELLED）
+        if (DeliveryOrderStatus.DELIVERED.getValue().equals(currentStatus)
+                || DeliveryOrderStatus.CANCELLED.getValue().equals(currentStatus)) {
+            log.warn("回调状态流转被拒绝（终态不可变更）: platformOrderId={}, currentStatus={}, targetStatus={}",
+                    order.getPlatformOrderId(), currentStatus, status);
+            return;
+        }
+        // 相同状态无需更新
+        if (currentStatus != null && currentStatus.equals(status)) {
+            return;
+        }
         order.setStatus(status);
         order.setUpdateTime(LocalDateTime.now());
         deliveryOrderMapper.updateById(order);

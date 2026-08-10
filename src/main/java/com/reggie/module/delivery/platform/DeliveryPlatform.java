@@ -41,4 +41,16 @@ public interface DeliveryPlatform {
      * @return 是否同步成功
      */
     boolean syncStock(Map<Long, Integer> stock);
+
+    /**
+     * 校验平台回调签名（防伪造回调）。
+     * 默认实现返回 true（不校验），各平台适配器应按平台签名规则覆写。
+     * 回调是外部请求无登录态，必须通过签名校验防止伪造。
+     *
+     * @param params 回调参数（含签名、时间戳等）
+     * @return true=签名合法，false=签名不匹配
+     */
+    default boolean verifyCallback(Map<String, String> params) {
+        return true;
+    }
 }

@@ -68,7 +68,10 @@ Vue.component('stat-cards', {
         ' @keydown.space.prevent="onCardClick(card)">' +
         // flex 模式：图标 + 信息左右布局（使用 .stat-icon 与 components-stats-card.css 一致）
         '<template v-if="card.flex">' +
-          '<div class="stat-icon"><span v-text="card.icon"></span></div>' +
+          '<div class="stat-icon">' +
+            '<i v-if="isIconClass(card.icon)" :class="card.icon" aria-hidden="true"></i>' +
+            '<span v-else v-text="card.icon"></span>' +
+          '</div>' +
           '<div class="stat-info">' +
             '<div class="stat-label">{{ card.label }}</div>' +
             '<div class="stat-value">' +
@@ -79,7 +82,10 @@ Vue.component('stat-cards', {
         '</template>' +
         // 普通模式：图标 + 标签 + 数值纵向布局
         '<template v-else>' +
-          '<div class="stat-icon"><span v-text="card.icon"></span></div>' +
+          '<div class="stat-icon">' +
+            '<i v-if="isIconClass(card.icon)" :class="card.icon" aria-hidden="true"></i>' +
+            '<span v-else v-text="card.icon"></span>' +
+          '</div>' +
           '<div class="stat-label">{{ card.label }}</div>' +
           '<div class="stat-value">' +
             '{{ card.value != null ? card.value : 0 }}' +
@@ -92,6 +98,13 @@ Vue.component('stat-cards', {
       '</div>' +
     '</div>',
   methods: {
+    /**
+     * 判断 icon 是否为 RemixIcon class（以 ri- 开头）
+     * 是则使用 <i> 标签渲染，否则作为 emoji 文本渲染
+     */
+    isIconClass: function(icon) {
+      return typeof icon === 'string' && /^(ri-|el-icon-)/.test(icon);
+    },
     cardClasses: function (card) {
       return {
         'stat-card': true,

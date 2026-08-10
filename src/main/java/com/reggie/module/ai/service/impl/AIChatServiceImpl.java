@@ -41,6 +41,12 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * AIChat service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 @SuppressWarnings("unchecked")
 public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConversation> implements AIChatService {
@@ -122,6 +128,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
         saveUserMessage(request);
         final AiProviderConfig providerConfig = aiProviderManager.getActiveConfig();
+        final Long tenantId = BaseContext.getCurrentTenantId();
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -151,7 +158,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                                 // 解析推荐菜品（点餐场景）
                                 List<AIRecommendedDish> dishes = null;
                                 if ("order_assistant".equals(scene)) {
-                                    dishes = parseRecommendedDishes(content);
+                                    dishes = parseRecommendedDishes(content, tenantId);
                                     parsedDishes[0] = dishes;
                                     content = cleanJsonFromContent(content);
                                 }
@@ -272,7 +279,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         AIChatResponse response = aiProviderManager.chat(messages, maxTokens, temperature);
 
         if ("order_assistant".equals(request.getScene()) && response != null && response.getContent() != null) {
-            List<AIRecommendedDish> dishes = parseRecommendedDishes(response.getContent());
+            List<AIRecommendedDish> dishes = parseRecommendedDishes(response.getContent(), BaseContext.getCurrentTenantId());
             response.setDishes(dishes);
             // 清理content中的JSON部分，只保留人类可读的文本
             response.setContent(cleanJsonFromContent(response.getContent()));
@@ -371,6 +378,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AIConversation::getUserId, userId)
                 .eq(AIConversation::getIsDeleted, 0)
+                .eq(AIConversation::getTenantId, BaseContext.getCurrentTenantId())
                 .orderByDesc(AIConversation::getUpdateTime);
         Page<AIConversation> pageObj = new Page<>(page, pageSize);
         conversationMapper.selectPage(pageObj, wrapper);
@@ -389,7 +397,8 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         LambdaQueryWrapper<AIConversation> convWrapper = new LambdaQueryWrapper<>();
         convWrapper.select(AIConversation::getUserId)
                 .eq(AIConversation::getConversationId, conversationId)
-                .eq(AIConversation::getIsDeleted, 0);
+                .eq(AIConversation::getIsDeleted, 0)
+                .eq(AIConversation::getTenantId, BaseContext.getCurrentTenantId());
         AIConversation conv = conversationMapper.selectOne(convWrapper);
         if (conv == null || !currentUserId.equals(conv.getUserId())) {
             return Collections.emptyList();
@@ -422,7 +431,8 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AIConversation::getConversationId, conversationId)
                 .eq(AIConversation::getUserId, userId)
-                .eq(AIConversation::getIsDeleted, 0);
+                .eq(AIConversation::getIsDeleted, 0)
+                .eq(AIConversation::getTenantId, BaseContext.getCurrentTenantId());
         AIConversation conv = conversationMapper.selectOne(wrapper);
         if (conv != null) {
             conv.setIsDeleted(1);
@@ -452,7 +462,11 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     @Override
     public void recordFeedback(Long messageId, String feedbackType, Long userId) {
         if (messageId == null) return;
-        AIMessageRecord record = messageRecordMapper.selectById(messageId);
+        // 修改点：按 id + tenantId 查询校验归属，防止跨租户篡改反馈
+        LambdaQueryWrapper<AIMessageRecord> fbWrapper = new LambdaQueryWrapper<>();
+        fbWrapper.eq(AIMessageRecord::getId, messageId)
+                .eq(AIMessageRecord::getTenantId, BaseContext.getCurrentTenantId());
+        AIMessageRecord record = messageRecordMapper.selectOne(fbWrapper);
         if (record != null && (record.getUserId() == null || record.getUserId().equals(userId))) {
             record.setFeedback(feedbackType);
             messageRecordMapper.updateById(record);
@@ -580,7 +594,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         return context;
     }
 
-    private List<AIRecommendedDish> parseRecommendedDishes(String aiContent) {
+    private List<AIRecommendedDish> parseRecommendedDishes(String aiContent, Long tenantId) {
         List<AIRecommendedDish> result = new ArrayList<>();
         try {
             String jsonStr = extractJson(aiContent);
@@ -599,7 +613,12 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                         }
                     }
                     if (!dishIds.isEmpty()) {
-                        Map<Long, Dish> dishMap = dishMapper.selectBatchIds(dishIds).stream()
+                        LambdaQueryWrapper<Dish> dishWrapper = new LambdaQueryWrapper<>();
+                        dishWrapper.in(Dish::getId, dishIds);
+                        if (tenantId != null) {
+                            dishWrapper.eq(Dish::getTenantId, tenantId);
+                        }
+                        Map<Long, Dish> dishMap = dishMapper.selectList(dishWrapper).stream()
                                 .collect(Collectors.toMap(Dish::getId, Function.identity()));
                         for (Long dishId : dishIds) {
                             Dish dish = dishMap.get(dishId);
@@ -748,6 +767,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         LambdaQueryWrapper<AIMessageRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AIMessageRecord::getConversationId, conversationId)
                 .eq(AIMessageRecord::getIsDeleted, 0)
+                .eq(AIMessageRecord::getTenantId, BaseContext.getCurrentTenantId())
                 .orderByDesc(AIMessageRecord::getCreateTime);
         Page<AIMessageRecord> pageObj = new Page<>(1, MAX_HISTORY_MESSAGES);
         messageRecordMapper.selectPage(pageObj, wrapper);
@@ -919,3 +939,4 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         conversationContextService.clearContext(conversationId);
     }
 }
+

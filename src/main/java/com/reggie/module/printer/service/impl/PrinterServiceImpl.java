@@ -18,6 +18,7 @@ import com.reggie.module.printer.service.PrinterService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,7 +30,14 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * Printer service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class PrinterServiceImpl implements PrinterService {
 
     /** 订单服务 */
@@ -66,7 +74,7 @@ public class PrinterServiceImpl implements PrinterService {
         // 查询所有启用的打印机，支持 printTypes 包含当前 printType
         LambdaQueryWrapper<PrinterConfig> qw = new LambdaQueryWrapper<>();
         qw.eq(PrinterConfig::getStatus, 1);
-        qw.apply("FIND_IN_SET({0}, print_types)", printType);
+        qw.apply("CONCAT(',', print_types, ',') LIKE CONCAT('%,', {0}, ',%')", printType);
         List<PrinterConfig> printers = printerConfigService.list(qw);
         if (printers.isEmpty()) {
             log.warn("未找到已启用的打印机，类型: {}", printType);
@@ -112,3 +120,6 @@ public class PrinterServiceImpl implements PrinterService {
         return printerDeviceManager.queryStatus(config);
     }
 }
+
+
+

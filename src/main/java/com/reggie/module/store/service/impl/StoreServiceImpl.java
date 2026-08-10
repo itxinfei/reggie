@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.PasswordUtils;
 import com.reggie.entity.*;
 import com.reggie.module.store.mapper.*;
@@ -30,6 +31,12 @@ import java.util.*;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * Store service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 public class StoreServiceImpl implements StoreService {
 
@@ -249,25 +256,57 @@ public class StoreServiceImpl implements StoreService {
     public Map<String, Object> switchStore(Long targetTenantId) {
         if (targetTenantId == null) return Collections.emptyMap();
 
+        // 越权校验：以当前员工的“归属门店”为基准判断权限
+        Long currentUserId = BaseContext.getCurrentId();
+        Long homeTenantId = null;
+        if (currentUserId != null) {
+            Employee currentEmployee = employeeService.getById(currentUserId);
+            if (currentEmployee != null && currentEmployee.getTenantId() != null) {
+                homeTenantId = currentEmployee.getTenantId();
+            }
+        }
+        // 兜底：取不到员工归属门店时使用当前上下文租户
+        if (homeTenantId == null) {
+            homeTenantId = BaseContext.getCurrentTenantId();
+        }
+
+        StoreInfo targetStore = storeInfoMapper.findByTenantId(targetTenantId);
+        if (targetStore == null) {
+            throw new CustomException("目标门店不存在，无法切换");
+        }
+
+        // 仅允许切换到自身门店或总店管理员切换到下属分店；分店管理员禁止切换到非所属门店
+        if (!targetTenantId.equals(homeTenantId)) {
+            StoreInfo homeStore = storeInfoMapper.findByTenantId(homeTenantId);
+            boolean isHeadquarters = homeStore != null
+                    && (homeStore.getParentTenantId() == null
+                            || StoreInfo.TYPE_HEADQUARTER == homeStore.getStoreType());
+            boolean isSubordinateBranch = isHeadquarters
+                    && homeTenantId.equals(targetStore.getParentTenantId());
+            if (!isSubordinateBranch) {
+                throw new CustomException("无权切换到该门店：仅总店管理员可切换到下属分店");
+            }
+        }
+
         // 设置新门店上下文
         BaseContext.setCurrentTenantId(targetTenantId);
 
-        StoreInfo storeInfo = storeInfoMapper.findByTenantId(targetTenantId);
         Tenant tenant = tenantService.getById(targetTenantId);
 
         Map<String, Object> result = new LinkedHashMap<>();
-        if (storeInfo != null) {
+        if (targetStore != null) {
             result.put("tenantId", targetTenantId);
-            result.put("storeCode", storeInfo.getStoreCode());
-            result.put("storeType", storeInfo.getStoreType());
-            result.put("businessHours", storeInfo.getBusinessHours());
+            result.put("storeCode", targetStore.getStoreCode());
+            result.put("storeType", targetStore.getStoreType());
+            result.put("businessHours", targetStore.getBusinessHours());
         }
         if (tenant != null) {
             result.put("storeName", tenant.getName());
             result.put("status", tenant.getStatus());
         }
 
-        log.info("[门店切换] 当前门店切换至: tenantId={}", targetTenantId);
+        log.info("[门店切换] 当前门店切换至: tenantId={}, 操作人={}, 归属门店={}",
+                targetTenantId, currentUserId, homeTenantId);
         return result;
     }
 
@@ -468,3 +507,4 @@ public class StoreServiceImpl implements StoreService {
         return summaryMapper.selectOne(wrapper);
     }
 }
+

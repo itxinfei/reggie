@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>收银台 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/main.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      background: var(--el-bg-subtle);
+    }
+    .cashier-container {
+      padding: 24px 32px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .cashier-header {
+      background: var(--bg-surface);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    }
+    .cashier-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--el-text-primary);
+      margin-bottom: 16px;
+    }
+    .cashier-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .stat-item {
+      text-align: center;
+      padding: 16px;
+      background: var(--el-bg-page);
+      border-radius: 8px;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--el-color-primary);
+      margin-bottom: 8px;
+    }
+    .stat-label {
+      font-size: 14px;
+      color: var(--el-text-secondary);
+    }
+    .cashier-main {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 20px;
+    }
+    .order-panel {
+      background: var(--bg-surface);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    }
+    .panel-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--el-text-primary);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--el-border-lighter);
+    }
+    .order-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .order-item {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      margin-bottom: 8px;
+      background: var(--el-bg-page);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .order-item:hover {
+      background: var(--el-color-primary-lighter);
+    }
+    .order-item.active {
+      background: var(--el-color-primary-lighter);
+      border: 1px solid var(--el-color-primary);
+    }
+    .order-info {
+      flex: 1;
+    }
+    .order-number {
+      font-weight: 600;
+      color: var(--el-text-primary);
+      margin-bottom: 4px;
+    }
+    .order-time {
+      font-size: 12px;
+      color: var(--el-text-secondary);
+    }
+    .order-amount {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--el-color-danger);
+    }
+    .payment-panel {
+      background: var(--bg-surface);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    }
+    .payment-summary {
+      margin-bottom: 20px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--el-border-lighter);
+    }
+    .summary-row:last-child {
+      border-bottom: none;
+    }
+    .summary-label {
+      color: var(--el-text-secondary);
+    }
+    .summary-value {
+      font-weight: 600;
+      color: var(--el-text-primary);
+    }
+    .summary-value.total {
+      font-size: 20px;
+      color: var(--el-color-danger);
+    }
+    .payment-methods {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .payment-method {
+      padding: 16px;
+      text-align: center;
+      border: 2px solid var(--el-border-lighter);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .payment-method:hover {
+      border-color: var(--el-color-primary);
+    }
+    .payment-method.active {
+      border-color: var(--el-color-primary);
+      background: var(--el-color-primary-lighter);
+    }
+    .payment-method i {
+      font-size: 24px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .payment-method span {
+      font-size: 14px;
+    }
+    .amount-input {
+      margin-bottom: 20px;
+    }
+    .amount-input label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .amount-input .el-input-number {
+      width: 100%;
+    }
+    .change-amount {
+      text-align: center;
+      padding: 16px;
+      background: var(--el-color-success-lighter);
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .change-label {
+      font-size: 14px;
+      color: var(--el-text-secondary);
+      margin-bottom: 4px;
+    }
+    .change-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--el-color-success);
+    }
+    .submit-btn {
+      width: 100%;
+      height: 50px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="cashier-container">
+    <!-- 头部统计 -->
+    <div class="cashier-header">
+      <div class="cashier-title">收银台</div>
+      <div class="cashier-stats">
+        <div class="stat-item">
+          <div class="stat-value">{{ todayStats.totalCount }}</div>
+          <div class="stat-label">今日订单</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">¥{{ formatMoney(todayStats.totalAmount) }}</div>
+          <div class="stat-label">今日收入</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">¥{{ formatMoney(todayStats.avgAmount) }}</div>
+          <div class="stat-label">客单价</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">{{ currentTime }}</div>
+          <div class="stat-label">当前时间</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主要内容区 -->
+    <div class="cashier-main">
+      <!-- 订单面板 -->
+      <div class="order-panel">
+        <div class="panel-title">
+          <i class="el-icon-document"></i>
+          待结账订单
+        </div>
+        <div class="order-list">
+          <div v-if="pendingOrders.length === 0" style="text-align: center; padding: 40px; color: var(--el-text-secondary);">
+            暂无待结账订单
+          </div>
+          <div
+            v-for="(order, index) in pendingOrders"
+            :key="order.id"
+            class="order-item"
+            :class="{ active: selectedOrder && selectedOrder.id === order.id }"
+            @click="selectOrder(order)">
+            <div class="order-info">
+              <div class="order-number">{{ order.number }}</div>
+              <div class="order-time">{{ order.orderTime }}</div>
+            </div>
+            <div class="order-amount">¥{{ formatMoney(order.amount) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 支付面板 -->
+      <div class="payment-panel">
+        <div class="panel-title">
+          <i class="el-icon-money"></i>
+          结账信息
+        </div>
+
+        <!-- 订单摘要 -->
+        <div class="payment-summary" v-if="selectedOrder">
+          <div class="summary-row">
+            <span class="summary-label">订单号</span>
+            <span class="summary-value">{{ selectedOrder.number }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">下单时间</span>
+            <span class="summary-value">{{ selectedOrder.orderTime }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">订单金额</span>
+            <span class="summary-value total">¥{{ formatMoney(selectedOrder.amount) }}</span>
+          </div>
+        </div>
+        <div v-else style="text-align: center; padding: 40px; color: var(--el-text-secondary);">
+          请先选择订单
+        </div>
+
+        <!-- 支付方式 -->
+        <div v-if="selectedOrder">
+          <div style="margin-bottom: 12px; font-weight: 500;">支付方式</div>
+          <div class="payment-methods">
+            <div
+              class="payment-method"
+              :class="{ active: payType === 1 }"
+              @click="payType = 1">
+              <i class="el-icon-money" style="color: var(--el-color-success);"></i>
+              <span>现金</span>
+            </div>
+            <div
+              class="payment-method"
+              :class="{ active: payType === 2 }"
+              @click="payType = 2">
+              <i class="el-icon-chat-dot-round" style="color: var(--el-color-success);"></i>
+              <span>微信</span>
+            </div>
+            <div
+              class="payment-method"
+              :class="{ active: payType === 3 }"
+              @click="payType = 3">
+              <i class="el-icon-s-platform" style="color: var(--el-color-primary);"></i>
+              <span>支付宝</span>
+            </div>
+            <div
+              class="payment-method"
+              :class="{ active: payType === 4 }"
+              @click="payType = 4">
+              <i class="el-icon-bank-card" style="color: var(--el-color-warning);"></i>
+              <span>银行卡</span>
+            </div>
+          </div>
+
+          <!-- 现金支付输入 -->
+          <div v-if="payType === 1" class="amount-input">
+            <label>实收金额</label>
+            <el-input-number
+              v-model="actualAmount"
+              :precision="2"
+              :min="selectedOrder.amount"
+              :step="10"
+              placeholder="请输入实收金额">
+            </el-input-number>
+          </div>
+
+          <!-- 找零显示 -->
+          <div v-if="payType === 1 && actualAmount > selectedOrder.amount" class="change-amount">
+            <div class="change-label">找零</div>
+            <div class="change-value">¥{{ formatMoney(actualAmount - selectedOrder.amount) }}</div>
+          </div>
+
+          <!-- 备注 -->
+          <div style="margin-bottom: 20px;">
+            <el-input v-model="remark" type="textarea" :rows="2" placeholder="备注（可选）"></el-input>
+          </div>
+
+          <!-- 提交按钮 -->
+          <el-button
+            type="primary"
+            class="submit-btn"
+            :loading="submitLoading"
+            @click="handlePayment">
+            <i class="el-icon-check"></i>
+            确认收款 ¥{{ formatMoney(selectedOrder.amount) }}
+          </el-button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/common.js"></script>
+  <script src="../../api/cashier.js"></script>
+  <script src="../../api/order.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          currentTime: '',
+          todayStats: {
+            totalCount: 0,
+            totalAmount: 0,
+            avgAmount: 0
+          },
+          pendingOrders: [],
+          selectedOrder: null,
+          payType: 1,
+          actualAmount: 0,
+          remark: '',
+          submitLoading: false,
+          timeTimer: null
+        }
+      },
+      created() {
+        this.updateTime()
+        this.timeTimer = setInterval(this.updateTime, 1000)
+        this.fetchData()
+      },
+      beforeDestroy() {
+        if (this.timeTimer) {
+          clearInterval(this.timeTimer)
+        }
+      },
+      methods: {
+        updateTime() {
+          const now = new Date()
+          const hours = String(now.getHours()).padStart(2, '0')
+          const minutes = String(now.getMinutes()).padStart(2, '0')
+          const seconds = String(now.getSeconds()).padStart(2, '0')
+          this.currentTime = `${hours}:${minutes}:${seconds}`
+        },
+        formatMoney(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        async fetchData() {
+          try {
+            // 获取今日统计
+            const today = new Date()
+            const startDate = today.toISOString().split('T')[0] + ' 00:00:00'
+            const endDate = today.toISOString().split('T')[0] + ' 23:59:59'
+            
+            const statsRes = await getCashierStatistics({ startDate, endDate })
+            if (statsRes.code === 1) {
+              this.todayStats = statsRes.data
+            }
+
+            // 获取待结账订单（状态为待付款的订单）
+            const ordersRes = await getOrderList({ status: 1 })
+            if (ordersRes.code === 1) {
+              this.pendingOrders = ordersRes.data || []
+            }
+          } catch (err) {
+            console.error('获取数据失败', err)
+          }
+        },
+        selectOrder(order) {
+          this.selectedOrder = order
+          this.actualAmount = order.amount
+          this.payType = 1
+          this.remark = ''
+        },
+        async handlePayment() {
+          if (!this.selectedOrder) {
+            this.$message.warning('请先选择订单')
+            return
+          }
+
+          this.submitLoading = true
+          try {
+            const params = {
+              orderId: this.selectedOrder.id,
+              orderNumber: this.selectedOrder.number,
+              amount: this.selectedOrder.amount,
+              actualAmount: this.payType === 1 ? this.actualAmount : this.selectedOrder.amount,
+              remark: this.remark
+            }
+
+            const res = await cashPayment(params)
+            if (res.code === 1) {
+              this.$message.success('收款成功')
+              this.selectedOrder = null
+              this.actualAmount = 0
+              this.remark = ''
+              this.fetchData()
+            } else {
+              this.$message.error(res.msg || '收款失败')
+            }
+          } catch (err) {
+            console.error('收款失败', err)
+            this.$message.error('收款失败')
+          } finally {
+            this.submitLoading = false
+          }
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+

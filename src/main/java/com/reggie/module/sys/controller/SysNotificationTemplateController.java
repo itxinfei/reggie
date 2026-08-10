@@ -73,6 +73,7 @@ public class SysNotificationTemplateController {
     @GetMapping("/{id}")
     @Operation(summary = "模板详情", description = "获取通知模板的详细信息")
     public R<NotificationTemplate> detail(
+            @Parameter(description = "I d")
             @Parameter(description = "模板ID") @PathVariable Long id) {
         return R.success(templateService.getTemplate(id));
     }
@@ -112,6 +113,7 @@ public class SysNotificationTemplateController {
     @PutMapping("/{id}/toggle")
     @Operation(summary = "切换模板状态", description = "启用或停用通知模板")
     public R<String> toggle(
+            @Parameter(description = "I d")
             @Parameter(description = "模板ID") @PathVariable Long id,
             @Parameter(description = "状态：1启用 0停用") @RequestParam Integer status) {
         templateService.toggleStatus(id, status);
@@ -126,8 +128,10 @@ public class SysNotificationTemplateController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除模板", description = "逻辑删除通知模板")
     public R<String> delete(
+            @Parameter(description = "I d")
             @Parameter(description = "模板ID") @PathVariable Long id) {
         templateService.removeTemplate(id);
         return R.success("模板删除成功");
     }
 }
+

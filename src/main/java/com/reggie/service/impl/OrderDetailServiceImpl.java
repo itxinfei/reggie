@@ -7,6 +7,7 @@ import com.reggie.entity.OrderDetail;
 import com.reggie.mapper.OrderDetailMapper;
 import com.reggie.service.OrderDetailService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class OrderDetailServiceImpl extends ServiceImpl<OrderDetailMapper, OrderDetail> implements OrderDetailService {
 
     @Override
@@ -27,3 +29,4 @@ public class OrderDetailServiceImpl extends ServiceImpl<OrderDetailMapper, Order
                 .orderByAsc(OrderDetail::getId));
     }
 }
+

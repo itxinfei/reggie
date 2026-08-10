@@ -2,9 +2,11 @@ package com.reggie.module.inventory.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.module.inventory.mapper.PurchaseOrderDetailMapper;
 import com.reggie.module.inventory.mapper.PurchaseOrderMapper;
 import com.reggie.module.inventory.model.Material;
 import com.reggie.module.inventory.model.PurchaseOrder;
@@ -31,6 +33,12 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * PurchaseOrder service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, PurchaseOrder> implements PurchaseOrderService {
 
@@ -49,6 +57,10 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
     /** 供应商服务 */
     @Autowired
     private com.reggie.module.inventory.service.SupplierService supplierService;
+
+    /** 采购单明细Mapper（用于原子收货 CAS） */
+    @Autowired
+    private PurchaseOrderDetailMapper purchaseOrderDetailMapper;
 
     @Override
     public PurchaseOrder createOrder(Long supplierId, String operator, String remark) {
@@ -108,25 +120,39 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
 
         List<PurchaseOrderDetail> details = detailService.list(
             new LambdaQueryWrapper<PurchaseOrderDetail>().eq(PurchaseOrderDetail::getPurchaseOrderId, orderId));
-        boolean allReceived = true;
+
+        // 修改点：明细收货用原子 CAS（received_qty<qty 才更新），据返回行数判断是否真正入库，
+        // 消除并发重复收货导致库存翻倍
         for (PurchaseOrderDetail detail : details) {
-            BigDecimal toReceive = detail.getQty().subtract(detail.getReceivedQty());
-            if (toReceive.compareTo(BigDecimal.ZERO) > 0) {
-                stockRecordService.stockIn(detail.getMaterialId(), toReceive,
-                    detail.getUnitPrice(), orderId, "采购入库", po.getOperator());
-                detail.setReceivedQty(detail.getQty());
-                detailService.updateById(detail);
-            } else {
-                allReceived = false;
+            int rows = purchaseOrderDetailMapper.receiveFully(detail.getId(), detail.getQty());
+            if (rows > 0) {
+                // 首次收货成功——按未收数量入库（已收数量从内存快照取，CAS 保证仅一个线程入库）
+                BigDecimal alreadyReceived = detail.getReceivedQty() != null ? detail.getReceivedQty() : BigDecimal.ZERO;
+                BigDecimal toReceive = detail.getQty().subtract(alreadyReceived);
+                if (toReceive.compareTo(BigDecimal.ZERO) > 0) {
+                    stockRecordService.stockIn(detail.getMaterialId(), toReceive,
+                        detail.getUnitPrice(), orderId, "采购入库", po.getOperator());
+                }
             }
+            // rows == 0 表示该明细已被他人收货，跳过入库
         }
 
-        po.setStatus(allReceived ? PurchaseOrderStatus.RECEIVED.getValue() : PurchaseOrderStatus.PARTIAL.getValue());
-        po.setTotalAmount(details.stream()
+        BigDecimal totalAmount = details.stream()
             .map(d -> d.getAmount() != null ? d.getAmount() : BigDecimal.ZERO)
             .reduce(BigDecimal.ZERO, BigDecimal::add)
-            .setScale(2, RoundingMode.HALF_UP));
-        updateById(po);
+            .setScale(2, RoundingMode.HALF_UP);
+
+        // 修改点：CAS 状态更新——仅当状态仍为 ORDERED/PARTIAL 时才置为 RECEIVED，
+        // 返回 0 表示已被他人收货完成或状态已变更，抛异常回滚整个事务（含库存入库）
+        LambdaUpdateWrapper<PurchaseOrder> casUpdate = new LambdaUpdateWrapper<>();
+        casUpdate.eq(PurchaseOrder::getId, orderId)
+            .in(PurchaseOrder::getStatus, PurchaseOrderStatus.ORDERED.getValue(), PurchaseOrderStatus.PARTIAL.getValue())
+            .set(PurchaseOrder::getStatus, PurchaseOrderStatus.RECEIVED.getValue())
+            .set(PurchaseOrder::getTotalAmount, totalAmount);
+        int updated = baseMapper.update(null, casUpdate);
+        if (updated == 0) {
+            throw new CustomException("采购单已被他人收货或状态已变更");
+        }
     }
 
     public List<PurchaseOrder> list(Wrapper<PurchaseOrder> queryWrapper) {
@@ -229,3 +255,4 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         updateById(po);
     }
 }
+

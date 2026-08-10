@@ -77,6 +77,7 @@ public class ExportController {
     @GetMapping("/orders/excel")
     @Operation(summary = "导出订单Excel", description = "导出订单数据为Excel文件，支持按日期范围和订单状态筛选")
     public ResponseEntity<?> exportOrdersExcel(
+            @Parameter(description = "S t a r t D a t e")
             @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
             @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
@@ -114,6 +115,7 @@ public class ExportController {
     @GetMapping("/orders/pdf")
     @Operation(summary = "导出订单PDF", description = "导出订单数据为PDF报表，支持按日期范围和订单状态筛选")
     public ResponseEntity<?> exportOrdersPdf(
+            @Parameter(description = "S t a r t D a t e")
             @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
             @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
@@ -161,6 +163,7 @@ public class ExportController {
     @GetMapping("/dishes/excel")
     @Operation(summary = "导出菜品Excel", description = "导出菜品数据为Excel文件，支持按分类筛选")
     public ResponseEntity<?> exportDishesExcel(
+            @Parameter(description = "C a t e g o r y I d")
             @Parameter(description = "分类ID（可选）") @RequestParam(required = false) Long categoryId) {
 
         try {
@@ -190,6 +193,7 @@ public class ExportController {
     @GetMapping("/dishes/pdf")
     @Operation(summary = "导出菜品PDF", description = "导出菜品数据为PDF报表，支持按分类筛选")
     public ResponseEntity<?> exportDishesPdf(
+            @Parameter(description = "C a t e g o r y I d")
             @Parameter(description = "分类ID（可选）") @RequestParam(required = false) Long categoryId) {
 
         try {
@@ -282,11 +286,12 @@ public class ExportController {
      */
     private List<Orders> queryOrders(LocalDate startDate, LocalDate endDate, Integer status) {
         LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
-        // 显式添加租户过滤，确保导出数据隔离
+        // #11 fail-closed：强制租户过滤，无租户上下文拒绝导出
         Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null) {
-            wrapper.eq(Orders::getTenantId, tenantId);
+        if (tenantId == null) {
+            throw new com.reggie.common.CustomException("无导出权限，租户上下文缺失");
         }
+        wrapper.eq(Orders::getTenantId, tenantId);
         if (startDate != null) {
             wrapper.ge(Orders::getOrderTime, LocalDateTime.of(startDate, LocalTime.MIN));
         }
@@ -297,6 +302,8 @@ public class ExportController {
             wrapper.eq(Orders::getStatus, status);
         }
         wrapper.orderByDesc(Orders::getOrderTime);
+        // #12 限制最大导出行数，防止全量加载 OOM
+        wrapper.last("LIMIT 100000");
         return orderService.list(wrapper);
     }
 
@@ -305,11 +312,12 @@ public class ExportController {
      */
     private List<Dish> queryDishes(Long categoryId) {
         LambdaQueryWrapper<Dish> wrapper = new LambdaQueryWrapper<>();
-        // 显式添加租户过滤
+        // #11 fail-closed：强制租户过滤
         Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null) {
-            wrapper.eq(Dish::getTenantId, tenantId);
+        if (tenantId == null) {
+            throw new com.reggie.common.CustomException("无导出权限，租户上下文缺失");
         }
+        wrapper.eq(Dish::getTenantId, tenantId);
         wrapper.eq(Dish::getIsDeleted, 0);
         if (categoryId != null) {
             wrapper.eq(Dish::getCategoryId, categoryId);
@@ -365,10 +373,12 @@ public class ExportController {
 
         Map<Long, String> categoryMap = new HashMap<>();
         LambdaQueryWrapper<Category> categoryWrapper = new LambdaQueryWrapper<>();
+        // #11 fail-closed：强制租户过滤
         Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null) {
-            categoryWrapper.eq(Category::getTenantId, tenantId);
+        if (tenantId == null) {
+            throw new com.reggie.common.CustomException("无导出权限，租户上下文缺失");
         }
+        categoryWrapper.eq(Category::getTenantId, tenantId);
         categoryWrapper.orderByAsc(Category::getSort);
         for (Category c : categoryService.list(categoryWrapper)) {
             categoryMap.put(c.getId(), c.getName());
@@ -420,12 +430,14 @@ public class ExportController {
     /**
      * 为employee查询手动添加tenant_id过滤
      * employee表在MybatisPlusConfig忽略列表中，必须手动隔离
+     * #11 fail-closed：无租户上下文直接抛异常拒绝导出
      */
     private void addTenantFilter(LambdaQueryWrapper<Employee> wrapper) {
         Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null) {
-            wrapper.eq(Employee::getTenantId, tenantId);
+        if (tenantId == null) {
+            throw new com.reggie.common.CustomException("无导出权限，租户上下文缺失");
         }
+        wrapper.eq(Employee::getTenantId, tenantId);
     }
 
     // ==================== 响应构建方法 ====================
@@ -460,3 +472,6 @@ public class ExportController {
         return new ResponseEntity<>(R.error(message), headers, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
+
+
+

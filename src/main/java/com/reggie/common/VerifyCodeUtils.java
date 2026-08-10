@@ -3,6 +3,7 @@ package com.reggie.common;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpSession;
@@ -200,5 +201,23 @@ public class VerifyCodeUtils {
 
         // 清除本地缓存
         localCache.remove(key);
+    }
+
+    /**
+     * 定时清理本地缓存中过期的验证码条目，避免内存泄漏（OOM）
+     * 每分钟执行一次（@EnableScheduling 已在 ReggieApplication 启用）
+     */
+    @Scheduled(fixedRate = 60000)
+    public void cleanExpiredLocalCache() {
+        if (localCache.isEmpty()) {
+            return;
+        }
+        int before = localCache.size();
+        // ConcurrentHashMap.entrySet().removeIf 线程安全，基于弱一致性迭代器
+        localCache.entrySet().removeIf(entry -> entry.getValue().isExpired());
+        int removed = before - localCache.size();
+        if (removed > 0) {
+            log.debug("[验证码] 定时清理本地缓存：移除 {} 条过期条目，剩余 {}", removed, localCache.size());
+        }
     }
 }

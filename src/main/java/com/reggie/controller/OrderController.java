@@ -1,4 +1,6 @@
 package com.reggie.controller;
+import com.reggie.common.RateLimit;
+import com.reggie.common.RateLimitType;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.common.utils.PageUtils;
 
@@ -21,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -61,7 +64,7 @@ public class OrderController {
     @PostMapping("/submit")
     @Operation(summary = "提交订单", description = "用户下单，返回订单ID、订单号和金额供前端跳转支付")
     @Parameter(name = "orders", description = "订单信息（含幂等令牌idempotencyKey）", required = true)
-    public R<Map<String, Object>> submit(@Validated @RequestBody Orders orders){
+    public R<Map<String, Object>> submit(@RequestBody Orders orders){
         log.info("订单数据：手机号={}，地址={}",
             LogMaskUtils.maskPhone(orders.getPhone()),
             LogMaskUtils.maskAddress(orders.getAddress()));
@@ -157,7 +160,7 @@ public class OrderController {
             return R.error("订单不存在");
         }
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (currentTenantId != null && !currentTenantId.equals(orders.getTenantId())) {
+        if (currentTenantId == null || !Objects.equals(currentTenantId, orders.getTenantId())) {
             return R.error("订单不属于当前租户");
         }
         orderService.backfillUserInfo(orders);
@@ -190,9 +193,15 @@ public class OrderController {
     @Parameter(name = "beginTime", description = "开始时间（可选）")
     @Parameter(name = "endTime", description = "结束时间（可选）")
     @Parameter(name = "status", description = "订单状态（可选，1=待付款,2=待接单/处理中,3=已接单/派送中,4=已完成,5=已取消,6=已退款）")
-    public R<Page<Orders>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, String number, String beginTime, String endTime, @RequestParam(required = false) Integer status) {
+    public R<Page<Orders>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String number, @RequestParam(required = false) String beginTime, @RequestParam(required = false) String endTime, @RequestParam(required = false) Integer status) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext
         Page<Orders> pageInfo = orderService.orderPage(page, PageUtils.cap(pageSize), number, beginTime, endTime, status);
+        // 脱敏：列表页手机号脱敏，保护用户隐私
+        if (pageInfo.getRecords() != null) {
+            for (Orders order : pageInfo.getRecords()) {
+                order.setPhone(order.getPhone() != null ? LogMaskUtils.maskPhone(order.getPhone()) : null);
+            }
+        }
         return R.success(pageInfo);
     }
 
@@ -243,7 +252,7 @@ public class OrderController {
         }
         Orders existing = orderService.getById(orders.getId());
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
+        if (existing == null || currentTenantId == null || !Objects.equals(currentTenantId, existing.getTenantId())) {
             return R.error("订单不存在或不属于当前租户");
         }
         orderService.again(orders.getId());
@@ -269,7 +278,7 @@ public class OrderController {
         }
         Orders existing = orderService.getById(orders.getId());
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
+        if (existing == null || currentTenantId == null || !Objects.equals(currentTenantId, existing.getTenantId())) {
             return R.error("订单不存在或不属于当前租户");
         }
         orderService.updateStatus(orders.getStatus(), orders.getId());
@@ -285,6 +294,7 @@ public class OrderController {
      */
     @PutMapping("/confirm")
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 20, type = RateLimitType.USER)
     @Operation(summary = "接单", description = "后台确认接单，订单状态从待接单变为配送中")
     @Parameter(name = "id", description = "订单ID", required = true)
     public R<String> confirm(@RequestParam Long id) {
@@ -297,6 +307,7 @@ public class OrderController {
      */
     @PutMapping("/reject")
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 20, type = RateLimitType.USER)
     @Operation(summary = "拒单", description = "后台拒单，订单状态变为已取消")
     @Parameter(name = "id", description = "订单ID", required = true)
     public R<String> reject(@RequestParam Long id) {
@@ -309,6 +320,7 @@ public class OrderController {
      */
     @PutMapping("/complete")
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 20, type = RateLimitType.USER)
     @Operation(summary = "完成订单", description = "标记订单为已完成")
     @Parameter(name = "id", description = "订单ID", required = true)
     public R<String> complete(@RequestParam Long id) {
@@ -321,6 +333,7 @@ public class OrderController {
      */
     @PutMapping("/cancel")
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 20, type = RateLimitType.USER)
     @Operation(summary = "取消订单", description = "取消订单，需填写取消原因")
     @Parameter(name = "id", description = "订单ID", required = true)
     @Parameter(name = "reason", description = "取消原因", required = false)

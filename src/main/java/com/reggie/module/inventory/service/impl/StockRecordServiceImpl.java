@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.module.inventory.mapper.MaterialMapper;
 import com.reggie.module.inventory.mapper.StockRecordMapper;
 import com.reggie.module.inventory.model.Material;
 import com.reggie.module.inventory.model.StockRecord;
@@ -32,6 +33,12 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * StockRecord service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, StockRecord> implements StockRecordService {
 
@@ -39,15 +46,21 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     @Autowired
     private MaterialService materialService;
 
+    /** 食材Mapper（用于原子库存增减） */
+    @Autowired
+    private MaterialMapper materialMapper;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void stockIn(Long materialId, BigDecimal qty, BigDecimal unitPrice, Long bizId, String remark, String operator) {
-        Material material = materialService.getById(materialId);
-        if (material == null) {
+        if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CustomException("入库数量必须大于0");
+        }
+        // 修改点：原子增加库存，消除 read-check-write 并发丢失更新
+        int rows = materialMapper.addStock(materialId, qty);
+        if (rows == 0) {
             throw new CustomException("食材不存在");
         }
-        material.setStockQty(material.getStockQty().add(qty));
-        materialService.updateById(material);
 
         StockRecord record = new StockRecord();
         record.setTenantId(BaseContext.getCurrentTenantId());
@@ -66,15 +79,15 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void stockOut(Long materialId, BigDecimal qty, Long bizId, String remark, String operator) {
-        Material material = materialService.getById(materialId);
-        if (material == null) {
-            throw new CustomException("食材不存在");
+        if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CustomException("出库数量必须大于0");
         }
-        if (material.getStockQty().compareTo(qty) < 0) {
+        // 修改点：原子扣减库存（WHERE stock_qty >= #{qty} 由 SQL 保证），消除 read-check-write 超卖
+        int rows = materialMapper.deductStock(materialId, qty);
+        if (rows == 0) {
+            // 0 行表示食材不存在或库存不足，统一提示库存不足
             throw new CustomException("库存不足");
         }
-        material.setStockQty(material.getStockQty().subtract(qty));
-        materialService.updateById(material);
 
         StockRecord record = new StockRecord();
         record.setTenantId(BaseContext.getCurrentTenantId());
@@ -166,3 +179,4 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         }
     }
 }
+

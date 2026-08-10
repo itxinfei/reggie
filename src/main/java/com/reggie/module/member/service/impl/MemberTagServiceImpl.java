@@ -30,6 +30,12 @@ import java.util.stream.Collectors;
  * @since 2026-07-10
  */
 @Slf4j
+/**
+ * MemberTag service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag> implements MemberTagService {
 
@@ -243,3 +249,4 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
         return addTag(tenantId, memberId, tagName, bizTag, tagColor);
     }
 }
+

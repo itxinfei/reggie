@@ -35,6 +35,12 @@ import java.util.Map;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * AiProviderConfig service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMapper, AiProviderConfig> implements AiProviderConfigService {
 
@@ -514,3 +520,4 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
         }
     }
 }
+

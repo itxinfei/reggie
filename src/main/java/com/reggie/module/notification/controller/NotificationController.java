@@ -4,6 +4,8 @@ import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.RateLimitType;
 import com.reggie.common.annotation.RequiresPermission;
 import com.reggie.common.BaseContext;
 import com.reggie.module.notification.mapper.NotificationRecordMapper;
@@ -45,6 +47,9 @@ public class NotificationController {
     @Resource
     private NotificationRecordMapper recordMapper;
 
+    /** 批量发送目标数量上限，防止一次性投递过大任务压垮下游短信/推送通道 */
+    private static final int MAX_BATCH_TARGETS = 1000;
+
     // ==================== 模板管理 ====================
 
     /**
@@ -57,6 +62,7 @@ public class NotificationController {
     @GetMapping("/template/page")
     @Operation(summary = "分页查询模板", description = "分页查询通知模板列表，支持按业务类型筛选")
     public R<Page<NotificationTemplate>> templatePage(
+            @Parameter(description = "P a g e")
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "业务类型（可选）") @RequestParam(required = false) String bizType) {
@@ -83,6 +89,7 @@ public class NotificationController {
     @GetMapping("/template/{id}")
     @Operation(summary = "查询模板详情", description = "根据ID查询通知模板详情")
     public R<NotificationTemplate> templateDetail(
+            @Parameter(description = "I d")
             @Parameter(description = "模板ID", required = true) @PathVariable Long id) {
         NotificationTemplate template = templateMapper.selectById(id);
         if (template != null) {
@@ -150,6 +157,7 @@ public class NotificationController {
     @PutMapping("/template/{id}/status/{status}")
     @Operation(summary = "启用/停用模板", description = "切换通知模板的启用状态")
     public R<String> toggleTemplate(
+            @Parameter(description = "I d")
             @Parameter(description = "模板ID", required = true) @PathVariable Long id,
             @Parameter(description = "状态：1启用 0停用", required = true) @PathVariable Integer status) {
         NotificationTemplate template = templateMapper.selectById(id);
@@ -174,6 +182,7 @@ public class NotificationController {
     @DeleteMapping("/template/{id}")
     @Operation(summary = "删除通知模板", description = "删除指定的通知模板")
     public R<String> deleteTemplate(
+            @Parameter(description = "I d")
             @Parameter(description = "模板ID", required = true) @PathVariable Long id) {
         NotificationTemplate template = templateMapper.selectById(id);
         if (template == null) {
@@ -199,6 +208,7 @@ public class NotificationController {
     @PostMapping("/send")
     @Operation(summary = "发送通知", description = "通用通知发送接口，支持多渠道发送")
     @RequiresPermission("notification:send")
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     public R<NotificationRecord> sendNotification(
             @Parameter(description = "通知参数（bizType/channel/targets/params/sendTime）", required = true) @RequestBody Map<String, Object> body) {
         String bizType = (String) body.get("bizType");
@@ -256,9 +266,20 @@ public class NotificationController {
     @PostMapping("/batch-send")
     @Operation(summary = "批量发送通知", description = "批量发送通知消息")
     @RequiresPermission("notification:send")
+    @RateLimit(maxRequestsPerSecond = 3, type = RateLimitType.USER)
     public R<NotificationRecord> batchSend(
             @Parameter(description = "发送参数（templateId/channel/targetType/targets/params/sendTime）", required = true) @RequestBody Map<String, Object> body) {
-        Long templateId = Long.valueOf(body.get("templateId").toString());
+        // 入口校验：templateId 非空，避免 toString() 触发 NPE
+        Object templateIdRaw = body.get("templateId");
+        if (templateIdRaw == null) {
+            return R.error("模板ID不能为空");
+        }
+        Long templateId;
+        try {
+            templateId = Long.valueOf(templateIdRaw.toString());
+        } catch (NumberFormatException e) {
+            return R.error("模板ID格式非法");
+        }
         Integer channel = (Integer) body.getOrDefault("channel", 1);
         Integer targetType = (Integer) body.getOrDefault("targetType", 1);
         @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
@@ -267,9 +288,22 @@ public class NotificationController {
         Map<String, String> params = (Map<String, String>) body.get("params");
         String sendTimeStr = (String) body.get("sendTime");
 
+        // 入口校验：targets 非空且不超上限，防止 NPE 与下游过载
+        if (targets == null || targets.isEmpty()) {
+            return R.error("目标用户列表不能为空");
+        }
+        if (targets.size() > MAX_BATCH_TARGETS) {
+            return R.error("单次批量发送目标数量不能超过" + MAX_BATCH_TARGETS + "条");
+        }
+
         java.time.LocalDateTime sendTime = null;
         if (sendTimeStr != null && !sendTimeStr.isEmpty()) {
-            sendTime = java.time.LocalDateTime.parse(sendTimeStr);
+            try {
+                sendTime = java.time.LocalDateTime.parse(sendTimeStr);
+            } catch (Exception e) {
+                log.warn("sendTime解析失败: {}", sendTimeStr, e);
+                return R.error("定时发送时间格式非法");
+            }
         }
 
         NotificationRecord record = notificationService.batchSend(
@@ -285,6 +319,7 @@ public class NotificationController {
     @PostMapping("/send-all")
     @Operation(summary = "全量推送", description = "向所有用户发送通知")
     @RequiresPermission("notification:send")
+    @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.GLOBAL)
     public R<NotificationRecord> sendToAllUsers(
             @Parameter(description = "推送参数（bizType/channel/params）", required = true) @RequestBody Map<String, Object> body) {
         String bizType = (String) body.get("bizType");
@@ -311,9 +346,13 @@ public class NotificationController {
     @GetMapping("/record/page")
     @Operation(summary = "分页查询发送记录", description = "分页查询通知发送记录")
     public R<Page<NotificationRecord>> recordPage(
+            @Parameter(description = "P a g e")
             @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "P a g e S i z e")
             @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "B i z T y p e")
             @RequestParam(required = false) String bizType,
+            @Parameter(description = "S t a t u s")
             @RequestParam(required = false) Integer status) {
         Page<NotificationRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<NotificationRecord> wrapper = new LambdaQueryWrapper<>();
@@ -361,6 +400,7 @@ public class NotificationController {
     @GetMapping("/record/{id}")
     @Operation(summary = "查询发送记录详情", description = "根据ID查询通知发送记录详情")
     public R<NotificationRecord> recordDetail(
+            @Parameter(description = "I d")
             @Parameter(description = "记录ID", required = true) @PathVariable Long id) {
         NotificationRecord record = recordMapper.selectById(id);
         if (record != null) {
@@ -433,6 +473,7 @@ public class NotificationController {
     @PostMapping("/send-simple")
     @Operation(summary = "简易消息发送", description = "直接发送消息内容，无需模板（支持推送/短信/站内信）")
     @RequiresPermission("notification:send")
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     public R<NotificationRecord> sendSimpleMessage(
             @Parameter(description = "消息参数（channel/targets/content/title）", required = true) @RequestBody Map<String, Object> body) {
         Integer channel = (Integer) body.getOrDefault("channel", 1);
@@ -467,3 +508,5 @@ public class NotificationController {
         return R.success(info);
     }
 }
+
+

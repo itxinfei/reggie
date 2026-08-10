@@ -7,6 +7,7 @@ import com.reggie.module.store.mapper.*;
 import com.reggie.module.store.model.*;
 import com.reggie.module.store.service.StoreSyncService;
 import com.reggie.service.*;
+import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,7 +25,14 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * StoreSync service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class StoreSyncServiceImpl implements StoreSyncService {
 
     /** 同步日志Mapper */
@@ -51,11 +59,10 @@ public class StoreSyncServiceImpl implements StoreSyncService {
     private SetmealDishService setmealDishService;
 
     @Override
-    @Transactional
     public Map<String, Object> syncDishes(Long sourceTenantId, Long targetTenantId,
                                            List<Long> dishIds, Long operatorId) {
         Map<String, Object> result = new LinkedHashMap<>();
-        StoreSyncLog log = createSyncLog(sourceTenantId, targetTenantId,
+        StoreSyncLog syncLog = createSyncLog(sourceTenantId, targetTenantId,
                 StoreSyncLog.SYNC_TYPE_DISH, operatorId);
 
         int synced = 0;
@@ -110,9 +117,9 @@ public class StoreSyncServiceImpl implements StoreSyncService {
             result.put("failed", failed);
             result.put("errors", errors);
 
-            updateSyncLog(log, StoreSyncLog.STATUS_SUCCESS, synced, failed, errors);
+            updateSyncLog(syncLog, StoreSyncLog.STATUS_SUCCESS, synced, failed, errors);
         } catch (Exception e) {
-            updateSyncLog(log, StoreSyncLog.STATUS_FAILED, synced, failed,
+            updateSyncLog(syncLog, StoreSyncLog.STATUS_FAILED, synced, failed,
                     Collections.singletonList(e.getMessage()));
             result.put("synced", 0);
             result.put("failed", 1);
@@ -123,10 +130,9 @@ public class StoreSyncServiceImpl implements StoreSyncService {
     }
 
     @Override
-    @Transactional
     public Map<String, Object> syncCategories(Long sourceTenantId, Long targetTenantId, Long operatorId) {
         Map<String, Object> result = new LinkedHashMap<>();
-        StoreSyncLog log = createSyncLog(sourceTenantId, targetTenantId,
+        StoreSyncLog syncLog = createSyncLog(sourceTenantId, targetTenantId,
                 StoreSyncLog.SYNC_TYPE_CATEGORY, operatorId);
 
         int synced = 0;
@@ -156,9 +162,9 @@ public class StoreSyncServiceImpl implements StoreSyncService {
 
             result.put("synced", synced);
             result.put("failed", failed);
-            updateSyncLog(log, StoreSyncLog.STATUS_SUCCESS, synced, failed, errors);
+            updateSyncLog(syncLog, StoreSyncLog.STATUS_SUCCESS, synced, failed, errors);
         } catch (Exception e) {
-            updateSyncLog(log, StoreSyncLog.STATUS_FAILED, 0, 1,
+            updateSyncLog(syncLog, StoreSyncLog.STATUS_FAILED, 0, 1,
                     Collections.singletonList(e.getMessage()));
         }
 
@@ -166,11 +172,10 @@ public class StoreSyncServiceImpl implements StoreSyncService {
     }
 
     @Override
-    @Transactional
     public Map<String, Object> syncSetmeals(Long sourceTenantId, Long targetTenantId,
                                              List<Long> setmealIds, Long operatorId) {
         Map<String, Object> result = new LinkedHashMap<>();
-        StoreSyncLog log = createSyncLog(sourceTenantId, targetTenantId,
+        StoreSyncLog syncLog = createSyncLog(sourceTenantId, targetTenantId,
                 StoreSyncLog.SYNC_TYPE_SETMEAL, operatorId);
 
         int synced = 0;
@@ -223,9 +228,9 @@ public class StoreSyncServiceImpl implements StoreSyncService {
 
             result.put("synced", synced);
             result.put("failed", failed);
-            updateSyncLog(log, StoreSyncLog.STATUS_SUCCESS, synced, failed, errors);
+            updateSyncLog(syncLog, StoreSyncLog.STATUS_SUCCESS, synced, failed, errors);
         } catch (Exception e) {
-            updateSyncLog(log, StoreSyncLog.STATUS_FAILED, 0, 1,
+            updateSyncLog(syncLog, StoreSyncLog.STATUS_FAILED, 0, 1,
                     Collections.singletonList(e.getMessage()));
         }
 
@@ -239,9 +244,9 @@ public class StoreSyncServiceImpl implements StoreSyncService {
         result.put("failed", 0);
         result.put("message", "优惠券同步功能开发中");
 
-        StoreSyncLog log = createSyncLog(sourceTenantId, targetTenantId,
+        StoreSyncLog syncLog = createSyncLog(sourceTenantId, targetTenantId,
                 StoreSyncLog.SYNC_TYPE_COUPON, operatorId);
-        updateSyncLog(log, StoreSyncLog.STATUS_SUCCESS, 0, 0, Collections.emptyList());
+        updateSyncLog(syncLog, StoreSyncLog.STATUS_SUCCESS, 0, 0, Collections.emptyList());
 
         return result;
     }
@@ -271,27 +276,30 @@ public class StoreSyncServiceImpl implements StoreSyncService {
 
     private StoreSyncLog createSyncLog(Long sourceTenantId, Long targetTenantId,
                                         Integer syncType, Long operatorId) {
-        StoreSyncLog log = new StoreSyncLog();
-        log.setSourceTenantId(sourceTenantId);
-        log.setTargetTenantId(targetTenantId);
-        log.setSyncType(syncType);
-        log.setSyncMode(StoreSyncLog.SYNC_MODE_FULL);
-        log.setSyncStatus(StoreSyncLog.STATUS_IN_PROGRESS);
-        log.setOperatorId(operatorId);
-        log.setStartTime(LocalDateTime.now());
-        syncLogMapper.insert(log);
-        return log;
+        StoreSyncLog syncLog = new StoreSyncLog();
+        syncLog.setSourceTenantId(sourceTenantId);
+        syncLog.setTargetTenantId(targetTenantId);
+        syncLog.setSyncType(syncType);
+        syncLog.setSyncMode(StoreSyncLog.SYNC_MODE_FULL);
+        syncLog.setSyncStatus(StoreSyncLog.STATUS_IN_PROGRESS);
+        syncLog.setOperatorId(operatorId);
+        syncLog.setStartTime(LocalDateTime.now());
+        syncLogMapper.insert(syncLog);
+        return syncLog;
     }
 
-    private void updateSyncLog(StoreSyncLog log, Integer status, int syncCount,
+    private void updateSyncLog(StoreSyncLog syncLog, Integer status, int syncCount,
                                 int failCount, List<String> errors) {
-        log.setSyncStatus(status);
-        log.setSyncCount(syncCount);
-        log.setFailCount(failCount);
-        log.setEndTime(LocalDateTime.now());
+        syncLog.setSyncStatus(status);
+        syncLog.setSyncCount(syncCount);
+        syncLog.setFailCount(failCount);
+        syncLog.setEndTime(LocalDateTime.now());
         if (!errors.isEmpty()) {
-            log.setErrorDetail(String.join("; ", errors));
+            syncLog.setErrorDetail(StrUtil.join("; ", errors));
         }
-        syncLogMapper.updateById(log);
+        syncLogMapper.updateById(syncLog);
     }
 }
+
+
+

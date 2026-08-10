@@ -1,5 +1,6 @@
 package com.reggie.mapper;
 
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.reggie.entity.Orders;
 import org.apache.ibatis.annotations.Mapper;
@@ -67,4 +68,15 @@ public interface OrderMapper extends BaseMapper<Orders> {
     List<Map<String, Object>> statTodayByTenant(@Param("start") LocalDateTime start,
                                                 @Param("end") LocalDateTime end,
                                                 @Param("completed") int completed);
+
+    /**
+     * 聚合指定租户、状态、起始时间之后的订单金额总和（替代全量加载内存求和）
+     * 使用 @InterceptorIgnore 避免租户拦截器重复追加 tenant_id 条件，由参数自行过滤
+     */
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT COALESCE(SUM(amount), 0) FROM orders "
+            + "WHERE tenant_id = #{tenantId} AND status = #{status} AND order_time >= #{startTime}")
+    BigDecimal sumAmount(@Param("tenantId") Long tenantId,
+                         @Param("status") int status,
+                         @Param("startTime") LocalDateTime startTime);
 }

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -6,12 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>菜品管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/common.css" />
-  <link rel="stylesheet" href="../../styles/page.css" />
-  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
-  <link rel="stylesheet" href="../../styles/components.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/design-system.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     body { overflow-x: visible; }
   </style>
@@ -206,6 +201,8 @@
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../api/food.js"></script>
   <script src="../../api/export.js"></script>
@@ -274,14 +271,14 @@
       },
       computed: {
         statsCards: function() {
-          var self = this
-          return [
-            { key: '', icon: '🍽️', label: '菜品总数', value: self.stats.totalDishes, color: 'primary', clickable: true, active: self.activeFilter === '' },
-            { key: '1', icon: '✅', label: '已启售', value: self.stats.activeDishes, color: 'success', clickable: true, active: self.activeFilter === '1' },
-            { key: '0', icon: '⏸️', label: '已停售', value: self.stats.inactiveDishes, color: 'warning', clickable: true, active: self.activeFilter === '0' },
-            { key: 'deleted', icon: '🗑️', label: '已删除', value: self.stats.deletedDishes, color: 'danger', clickable: true, active: self.activeFilter === 'deleted' }
-          ]
-        },
+        var self = this
+        return [
+          { key: '', icon: 'ri-restaurant-line', label: '菜品总数', value: self.stats.totalDishes, color: 'primary', clickable: true, active: self.activeFilter === '' },
+          { key: '1', icon: 'ri-checkbox-circle-line', label: '已启售', value: self.stats.activeDishes, color: 'success', clickable: true, active: self.activeFilter === '1' },
+          { key: '0', icon: 'ri-pause-circle-line', label: '已停售', value: self.stats.inactiveDishes, color: 'warning', clickable: true, active: self.activeFilter === '0' },
+          { key: 'deleted', icon: 'ri-delete-bin-line', label: '已删除', value: self.stats.deletedDishes, color: 'danger', clickable: true, active: self.activeFilter === 'deleted' }
+        ]
+      },
         dishRules: function() {
           var self = this
           return {
@@ -543,3 +540,6 @@
   </script>
 </body>
 </html>
+
+
+

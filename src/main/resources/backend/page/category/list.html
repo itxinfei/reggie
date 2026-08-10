@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -7,18 +7,25 @@
   <title>分类管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/common.css" />
-  <link rel="stylesheet" href="../../styles/page.css" />
-  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
-  <link rel="stylesheet" href="../../styles/components.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/design-system.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
   <style>
   </style>
 </head>
 <body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
   <div class="dashboard-container" id="category-app">
-    <div class="container">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 页头：标题 + 副标题 + 页级操作 -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">分类管理</h1>
+          <p class="ds-page-header__subtitle">管理菜品分类和套餐分类</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
+
       <!-- ========== 数据统计卡片（统一组件） ========== -->
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
@@ -71,7 +78,7 @@
           >删除</el-button>
         </template>
       </crud-table>
-    </div>
+    </main>
     <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，footer 插槽保留"保存并继续添加" -->
     <crud-dialog
       :title="classData.title"
@@ -129,6 +136,8 @@
     <!-- 引入axios -->
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
     <script src="../../api/category.js"></script>
     <script src="../../js/components.js"></script>
     <script>
@@ -196,10 +205,10 @@
           statsCards() {
             var self = this
             return [
-              { key: '', icon: '📂', label: '分类总数', value: self.stats.totalCategories || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
-              { key: '1', icon: '🍽️', label: '菜品分类', value: self.stats.foodCategories || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
-              { key: '2', icon: '🍱', label: '套餐分类', value: self.stats.comboCategories || 0, color: 'warning', clickable: true, active: self.activeFilter === '2' },
-              { key: '新增', icon: '🆕', label: '今日新增', value: self.stats.todayNew || 0, color: 'info', clickable: false }
+              { key: '', icon: 'ri-folders-line', label: '分类总数', value: self.stats.totalCategories || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+              { key: '1', icon: 'ri-restaurant-line', label: '菜品分类', value: self.stats.foodCategories || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
+              { key: '2', icon: 'ri-box-3-line', label: '套餐分类', value: self.stats.comboCategories || 0, color: 'warning', clickable: true, active: self.activeFilter === '2' },
+              { key: '新增', icon: 'ri-add-circle-line', label: '今日新增', value: self.stats.todayNew || 0, color: 'info', clickable: false }
             ]
           }
         },
@@ -414,4 +423,7 @@
     </script>
 </body>
 </html>
+
+
+
 

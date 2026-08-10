@@ -64,7 +64,9 @@ public class StockRecordController {
     public R<Page<StockRecord>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                       @RequestParam(required = false) Long materialId,
                                       @RequestParam(required = false) String type,
+                                      @Parameter(description = "S t a r t D a t e")
                                       @RequestParam(required = false) String startDate,
+                                      @Parameter(description = "E n d D a t e")
                                       @RequestParam(required = false) String endDate) {
         // 修改点：统一使用 LambdaQueryWrapper 支持所有筛选条件，而非分流到 pageByMaterial
         Page<StockRecord> pageInfo = PageUtils.of(page, pageSize);
@@ -113,4 +115,5 @@ public class StockRecordController {
         return R.success("出库成功");
     }
 }
+
 

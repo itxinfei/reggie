@@ -71,6 +71,7 @@ public class PrinterConfigController {
     public R<Page<PrinterConfig>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, String name,
             @RequestParam(required = false) String brand,
             @RequestParam(required = false) String type,
+            @Parameter(description = "S t a t u s")
             @RequestParam(required = false) Integer status) {
         Page<PrinterConfig> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<PrinterConfig> queryWrapper = new LambdaQueryWrapper<>();
@@ -173,7 +174,8 @@ public class PrinterConfigController {
         LambdaQueryWrapper<PrinterConfig> queryWrapper = new LambdaQueryWrapper<>();
         // printTypes 字段存储逗号分隔值，使用 FIND_IN_SET 匹配
         if (printType != null && !printType.isEmpty()) {
-            queryWrapper.apply("FIND_IN_SET({0}, print_types)", printType);
+            // 兼容 H2（不支持 FIND_IN_SET）：用 CONCAT+LIKE 模拟逗号分隔集合匹配
+            queryWrapper.apply("CONCAT(',', print_types, ',') LIKE CONCAT('%,', {0}, ',%')", printType);
         }
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId != null) {
@@ -218,4 +220,5 @@ public class PrinterConfigController {
         return R.success(result);
     }
 }
+
 

@@ -10,6 +10,7 @@ import com.reggie.mapper.OperationLogMapper;
 import com.reggie.module.schedule.service.OperationLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,7 +23,14 @@ import java.util.Map;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * OperationLog service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, OperationLog> implements OperationLogService {
 
     @Override
@@ -102,19 +110,13 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
     @Override
     public int cleanExpiredLogs(int retentionDays) {
         LocalDateTime expireTime = LocalDateTime.now().minusDays(retentionDays);
-        LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
-        wrapper.lt(OperationLog::getCreateTime, expireTime)
-               .eq(OperationLog::getIsDeleted, 0);
-        List<OperationLog> expiredLogs = this.list(wrapper);
-
-        int count = 0;
-        for (OperationLog log : expiredLogs) {
-            log.setIsDeleted(1);
-            this.updateById(log);
-            count++;
-        }
+        // 改为单条批量 UPDATE（跨租户系统维护），替代原先逐条更新，解决 N+1 性能问题与 fail-closed 空集问题
+        int count = baseMapper.cleanExpiredLogsBatch(expireTime);
 
         log.info("[定时任务] 清理过期操作日志: 清理{}条，保留{}天", count, retentionDays);
         return count;
     }
 }
+
+
+

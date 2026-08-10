@@ -22,6 +22,12 @@ import java.util.stream.Collectors;
  * 角色服务实现
  */
 @Slf4j
+/**
+ * Role service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements RoleService {
 
@@ -93,3 +99,4 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         }).collect(Collectors.toList());
     }
 }
+

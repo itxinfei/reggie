@@ -13,10 +13,12 @@ import com.reggie.module.recommend.service.RecommendService;
 import com.reggie.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -37,6 +39,12 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
+/**
+ * Recommend service implementation
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
 @Service
 public class RecommendServiceImpl implements RecommendService {
 
@@ -46,8 +54,9 @@ public class RecommendServiceImpl implements RecommendService {
     private static final int CF_MIN_USERS = 5;
     /** 推荐结果多样性因子（越高越多随机性） */
     private static final double DIVERSITY_FACTOR = 0.2;
-    /** 异步任务线程池 */
-    private static final ExecutorService ASYNC_EXECUTOR = Executors.newFixedThreadPool(4);
+    /** 异步任务线程池（Spring 管理，应用关闭时优雅停机；替代原静态 FixedThreadPool） */
+    @Resource(name = "recommendExecutor")
+    private ThreadPoolTaskExecutor ASYNC_EXECUTOR;
 
     /** 用户偏好标签Mapper */
     @Autowired
@@ -167,10 +176,11 @@ public class RecommendServiceImpl implements RecommendService {
         List<Map<String, Object>> topCategories = browseHistoryMapper.findTopViewedDishes(userId, 3);
         List<Long> setmealIds;
         if (!topCategories.isEmpty()) {
-            // 基于用户偏好推荐套餐
+            // 基于用户偏好推荐套餐：按分类数向上取整分配配额，避免整数除法截断导致数量不足
             setmealIds = new ArrayList<>();
+            int perCategory = (int) Math.ceil((double) limit / topCategories.size());
             for (Map<String, Object> cat : topCategories) {
-                List<Long> ids = findSetmealsByCategory((Long) cat.get("target_id"), limit / topCategories.size());
+                List<Long> ids = findSetmealsByCategory((Long) cat.get("target_id"), perCategory);
                 setmealIds.addAll(ids);
             }
         } else {
@@ -326,21 +336,23 @@ public class RecommendServiceImpl implements RecommendService {
         if (tenantId != null) {
             orderWrapper.eq(Orders::getTenantId, tenantId);
         }
+        orderWrapper.select(Orders::getId);
         List<Orders> recentOrders = orderService.list(orderWrapper);
+        if (recentOrders.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        // 收集所有OrderDetail
+        // 批量查询所有订单明细，消除逐单 N+1
+        List<Long> orderIds = recentOrders.stream().map(Orders::getId).collect(Collectors.toList());
         Map<Long, Long> dishOrderCount = new HashMap<>();
-        Set<Long> processedOrderIds = new HashSet<>();
-        for (Orders order : recentOrders) {
-            if (processedOrderIds.contains(order.getId())) continue;
-            processedOrderIds.add(order.getId());
-            LambdaQueryWrapper<OrderDetail> detailWrapper = new LambdaQueryWrapper<>();
-            detailWrapper.eq(OrderDetail::getOrderId, order.getId());
-            List<OrderDetail> details = orderDetailService.list(detailWrapper);
-            for (OrderDetail detail : details) {
-                if (detail.getDishId() != null) {
-                    dishOrderCount.merge(detail.getDishId(), 1L, Long::sum);
-                }
+        LambdaQueryWrapper<OrderDetail> detailWrapper = new LambdaQueryWrapper<>();
+        detailWrapper.in(OrderDetail::getOrderId, orderIds);
+        detailWrapper.isNotNull(OrderDetail::getDishId);
+        detailWrapper.select(OrderDetail::getDishId, OrderDetail::getOrderId);
+        List<OrderDetail> details = orderDetailService.list(detailWrapper);
+        for (OrderDetail detail : details) {
+            if (detail.getDishId() != null) {
+                dishOrderCount.merge(detail.getDishId(), 1L, Long::sum);
             }
         }
 
@@ -768,20 +780,36 @@ public class RecommendServiceImpl implements RecommendService {
      * 查找相似用户（购买过相同菜品的其他用户）
      */
     private List<Long> findSimilarUsers(Long userId, Set<Long> userDishIds, int minUsers) {
-        // 通过order_detail查找购买了相同菜品的其他用户
+        if (userDishIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        // 批量查询购买了相同菜品的订单明细，消除逐菜品 N+1
+        LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(OrderDetail::getDishId, userDishIds);
+        wrapper.select(OrderDetail::getOrderId);
+        List<OrderDetail> details = orderDetailService.list(wrapper);
+        if (details.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 批量查询相关订单获取 userId，消除逐单 getById N+1
+        Set<Long> orderIds = details.stream().map(OrderDetail::getOrderId).collect(Collectors.toSet());
+        LambdaQueryWrapper<Orders> orderWrapper = new LambdaQueryWrapper<>();
+        orderWrapper.in(Orders::getId, orderIds);
+        orderWrapper.select(Orders::getId, Orders::getUserId);
+        List<Orders> orders = orderService.list(orderWrapper);
+        Map<Long, Long> orderUserMap = new HashMap<>();
+        for (Orders order : orders) {
+            if (order.getUserId() != null) {
+                orderUserMap.put(order.getId(), order.getUserId());
+            }
+        }
+
         Map<Long, Integer> userSimilarity = new HashMap<>();
-
-        for (Long dishId : userDishIds) {
-            LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(OrderDetail::getDishId, dishId);
-            List<OrderDetail> details = orderDetailService.list(wrapper);
-
-            for (OrderDetail detail : details) {
-                // 通过orderId找到userId
-                Orders order = orderService.getById(detail.getOrderId());
-                if (order != null && !order.getUserId().equals(userId)) {
-                    userSimilarity.merge(order.getUserId(), 1, Integer::sum);
-                }
+        for (OrderDetail detail : details) {
+            Long orderUserId = orderUserMap.get(detail.getOrderId());
+            if (orderUserId != null && !orderUserId.equals(userId)) {
+                userSimilarity.merge(orderUserId, 1, Integer::sum);
             }
         }
 
@@ -800,17 +828,24 @@ public class RecommendServiceImpl implements RecommendService {
     private Set<Long> getUserPurchasedDishIds(Long userId) {
         LambdaQueryWrapper<Orders> orderWrapper = new LambdaQueryWrapper<>();
         orderWrapper.eq(Orders::getUserId, userId);
+        orderWrapper.select(Orders::getId);
         List<Orders> userOrders = orderService.list(orderWrapper);
+        if (userOrders.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        // 批量查询所有订单明细，消除逐单 N+1
+        List<Long> orderIds = userOrders.stream().map(Orders::getId).collect(Collectors.toList());
+        LambdaQueryWrapper<OrderDetail> detailWrapper = new LambdaQueryWrapper<>();
+        detailWrapper.in(OrderDetail::getOrderId, orderIds);
+        detailWrapper.isNotNull(OrderDetail::getDishId);
+        detailWrapper.select(OrderDetail::getDishId);
+        List<OrderDetail> details = orderDetailService.list(detailWrapper);
 
         Set<Long> dishIds = new HashSet<>();
-        for (Orders order : userOrders) {
-            LambdaQueryWrapper<OrderDetail> detailWrapper = new LambdaQueryWrapper<>();
-            detailWrapper.eq(OrderDetail::getOrderId, order.getId());
-            List<OrderDetail> details = orderDetailService.list(detailWrapper);
-            for (OrderDetail detail : details) {
-                if (detail.getDishId() != null) {
-                    dishIds.add(detail.getDishId());
-                }
+        for (OrderDetail detail : details) {
+            if (detail.getDishId() != null) {
+                dishIds.add(detail.getDishId());
             }
         }
         return dishIds;
@@ -960,3 +995,4 @@ public class RecommendServiceImpl implements RecommendService {
                 .collect(Collectors.toList());
     }
 }
+

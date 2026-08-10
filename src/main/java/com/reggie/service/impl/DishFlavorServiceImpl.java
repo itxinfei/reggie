@@ -7,6 +7,7 @@ import com.reggie.entity.DishFlavor;
 import com.reggie.mapper.DishFlavorMapper;
 import com.reggie.service.DishFlavorService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class DishFlavorServiceImpl extends ServiceImpl<DishFlavorMapper, DishFlavor> implements DishFlavorService {
 
     @Override
@@ -27,3 +29,4 @@ public class DishFlavorServiceImpl extends ServiceImpl<DishFlavorMapper, DishFla
                 .orderByAsc(DishFlavor::getId));
     }
 }
+
