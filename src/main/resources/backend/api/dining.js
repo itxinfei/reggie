@@ -21,7 +21,7 @@ const tableInfo = (id) => $axios({ url: `/api/dining/table/${id}`, method: 'get'
 
 const queuePage = (params) => $axios({ url: '/api/dining/queue/page', method: 'get', params })
 const queueTake = (params) => $axios({ url: '/api/dining/queue/take', method: 'post', data: params })
-const queueCall = () => $axios({ url: '/api/dining/queue/call', method: 'put' })
+const queueCall = (params) => $axios({ url: '/api/dining/queue/call', method: 'put', data: params })
 const queueCancel = (id) => $axios({ url: `/api/dining/queue/cancel/${id}`, method: 'put' })
 
 const reservationPage = (params) => $axios({ url: '/api/dining/reservation/page', method: 'get', params })
@@ -29,3 +29,5 @@ const addReservation = (params) => $axios({ url: '/api/dining/reservation', meth
 const confirmReservation = (id) => $axios({ url: `/api/dining/reservation/confirm/${id}`, method: 'put' })
 const cancelReservation = (id) => $axios({ url: `/api/dining/reservation/cancel/${id}`, method: 'put' })
 const arriveReservation = (id) => $axios({ url: `/api/dining/reservation/arrive/${id}`, method: 'put' })
+
+

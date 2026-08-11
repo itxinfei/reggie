@@ -253,6 +253,13 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         FullReductionRule bestFrRule = null;
         for (FullReductionRule rule : allFrRules) {
             if (orderAmount.compareTo(rule.getMinAmount()) >= 0) {
+                // 检查每人限用次数
+                if (rule.getPerUserLimit() != null && rule.getPerUserLimit() > 0) {
+                    int usageCount = getUserUsageCount(rule.getCampaignId(), rule.getId(), userId, tenantId);
+                    if (usageCount >= rule.getPerUserLimit()) {
+                        continue;
+                    }
+                }
                 BigDecimal discount = BigDecimal.ZERO;
                 if (rule.getDiscountType() == FullReductionRule.TYPE_REDUCE_AMOUNT) {
                     discount = rule.getDiscountValue();

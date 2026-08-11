@@ -8,6 +8,7 @@ import com.reggie.enums.ReservationStatus;
 import com.reggie.enums.DiningTableStatus;
 import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.module.dining.service.ReservationService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
  * @author reggie
  * @since 2026-07-09
  */
+@Slf4j
 @Service
 public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reservation> implements ReservationService {
 
@@ -42,9 +44,14 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void confirmReservation(Long id) {
         Reservation r = getById(id);
         if (r != null) {
+            // 确认预订时锁定桌台：FREE → RESERVED
+            if (r.getTableId() != null) {
+                diningTableService.changeStatus(r.getTableId(), DiningTableStatus.RESERVED.getValue());
+            }
             r.setStatus(ReservationStatus.CONFIRMED.getValue());
             updateById(r);
         }
@@ -67,7 +74,12 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
             r.setStatus(ReservationStatus.ARRIVED.getValue());
             updateById(r);
             if (r.getTableId() != null) {
-                diningTableService.changeStatus(r.getTableId(), DiningTableStatus.OCCUPIED.getValue());
+                try {
+                    diningTableService.changeStatus(r.getTableId(), DiningTableStatus.OCCUPIED.getValue());
+                } catch (Exception e) {
+                    // 桌台状态变更失败不回滚预订状态，仅记录日志
+                    log.warn("[预订到店] 桌台状态变更失败，不回滚预订状态: tableId={}, error={}", r.getTableId(), e.getMessage());
+                }
             }
         }
     }

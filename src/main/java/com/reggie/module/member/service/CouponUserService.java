@@ -23,7 +23,7 @@ public interface CouponUserService extends IService<CouponUser> {
      * @param status 使用状态（可选）
      * @return 优惠券列表
      */
-    List<CouponUser> listByUserId(Long userId, Integer status);
+    List<CouponUser> listByUserId(Long userId, String status);
 
     /**
      * 批量更新优惠券状态
@@ -31,5 +31,5 @@ public interface CouponUserService extends IService<CouponUser> {
      * @param couponIds 优惠券用户记录ID列表
      * @param status    目标状态
      */
-    void batchUpdateStatus(List<Long> couponIds, Integer status);
+    void batchUpdateStatus(List<Long> couponIds, String status);
 }

@@ -1,6 +1,10 @@
 package com.reggie.controller;
 
 import com.reggie.common.R;
+import com.reggie.common.BaseContext;
+import com.reggie.module.store.mapper.StoreInfoMapper;
+import com.reggie.module.store.model.StoreInfo;
+import org.springframework.beans.factory.annotation.Autowired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +27,10 @@ import java.util.Map;
 @Tag(name = "商家信息", description = "获取商家基本信息、配送参数等")
 public class RestaurantController {
 
+    @Autowired(required = false)
+    private StoreInfoMapper storeInfoMapper;
+
+
     /**
      * 获取商家基本信息和配送参数
      * @return 商家运营信息（评分、销量、配送费等）
@@ -30,6 +38,21 @@ public class RestaurantController {
     @GetMapping("/info")
     @Operation(summary = "获取商家信息", description = "返回商家评分、销量、配送费等基本运营信息")
     public R<Map<String, Object>> info() {
+
+        // 从数据库读取营业时间
+        String businessHours = "09:00-22:00"; // 默认值
+        try {
+            Long tenantId = BaseContext.getCurrentTenantId();
+            if (tenantId != null && storeInfoMapper != null) {
+                StoreInfo storeInfo = storeInfoMapper.findByTenantId(tenantId);
+                if (storeInfo != null && storeInfo.getBusinessHours() != null && !storeInfo.getBusinessHours().isEmpty()) {
+                    businessHours = storeInfo.getBusinessHours();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("读取营业时间失败，使用默认值: {}", e.getMessage());
+        }
+
         Map<String, Object> info = new HashMap<>();
         // 商家基本信息
         info.put("name", "瑞吉外卖");
@@ -47,7 +70,7 @@ public class RestaurantController {
         info.put("minOrder", 15);
 
         // 营业状态
-        info.put("businessHours", "09:00-22:00");
+        info.put("businessHours", businessHours);
         info.put("notice", "欢迎光临！本店精选新鲜食材，用心烹饪每一道菜品");
 
         // 优惠券信息（前端可据此动态展示优惠栏）

@@ -78,42 +78,38 @@ public class ReportServiceImpl implements ReportService {
         LocalDateTime start = reportDate.atStartOfDay();
         LocalDateTime end = reportDate.atTime(LocalTime.MAX);
 
-        Long originalTenantId = BaseContext.getCurrentTenantId();
-        try {
-            BaseContext.setCurrentTenantId(tenantId);
-
-            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
-            orderQw.between(Orders::getOrderTime, start, end);
-            List<Orders> orders = orderService.list(orderQw);
-
-            int totalOrders = 0;
-            int completedOrders = 0;
-            int cancelledOrders = 0;
-            // 营业额只统计已完成订单，避免将未支付/已取消订单计入
-            BigDecimal totalAmount = BigDecimal.ZERO;
-
-            for (Orders o : orders) {
-                totalOrders++;
-                if (o.getStatus() != null && o.getStatus() == Orders.STATUS_COMPLETED) {
-                    completedOrders++;
-                    totalAmount = totalAmount.add(o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO);
-                }
-                if (o.getStatus() != null && o.getStatus() == Orders.STATUS_CANCELLED) cancelledOrders++;
-            }
-
-            BigDecimal avgAmount = completedOrders > 0
-                    ? totalAmount.divide(BigDecimal.valueOf(completedOrders), 2, RoundingMode.HALF_UP)
-                    : BigDecimal.ZERO;
-
-            result.put("totalOrders", totalOrders);
-            result.put("totalAmount", totalAmount);
-            result.put("completedOrders", completedOrders);
-            result.put("cancelledOrders", cancelledOrders);
-            result.put("avgAmount", avgAmount);
-            return result;
-        } finally {
-            BaseContext.setCurrentTenantId(originalTenantId);
+        LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+        orderQw.between(Orders::getOrderTime, start, end);
+        if (tenantId != null) {
+            orderQw.eq(Orders::getTenantId, tenantId);
         }
+        List<Orders> orders = orderService.list(orderQw);
+
+        int totalOrders = 0;
+        int completedOrders = 0;
+        int cancelledOrders = 0;
+        // 营业额只统计已完成订单，避免将未支付/已取消订单计入
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
+        for (Orders o : orders) {
+            totalOrders++;
+            if (o.getStatus() != null && o.getStatus() == Orders.STATUS_COMPLETED) {
+                completedOrders++;
+                totalAmount = totalAmount.add(o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO);
+            }
+            if (o.getStatus() != null && o.getStatus() == Orders.STATUS_CANCELLED) cancelledOrders++;
+        }
+
+        BigDecimal avgAmount = completedOrders > 0
+                ? totalAmount.divide(BigDecimal.valueOf(completedOrders), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        result.put("totalOrders", totalOrders);
+        result.put("totalAmount", totalAmount);
+        result.put("completedOrders", completedOrders);
+        result.put("cancelledOrders", cancelledOrders);
+        result.put("avgAmount", avgAmount);
+        return result;
     }
 
     @Override
@@ -372,6 +368,12 @@ public class ReportServiceImpl implements ReportService {
         // 记录当前租户ID，查询/清除时按租户隔离，避免跨租户泄露
         record.put("tenantId", BaseContext.getCurrentTenantId());
         exportHistory.add(record);
+        // 容量上限：保留最近100条记录，防止内存溢出
+        synchronized (exportHistory) {
+            while (exportHistory.size() > 100) {
+                exportHistory.remove(0);
+            }
+        }
         log.info("记录导出历史: dateRange={}, format={}, fileName={}, fileSize={}bytes, status={}, tenantId={}",
                 dateRange, format, fileName, fileSize, status, BaseContext.getCurrentTenantId());
     }

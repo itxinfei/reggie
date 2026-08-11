@@ -770,11 +770,11 @@
                     var phones = self.selectedUsers.map(function(u) { return u.phone; }).filter(function(p) { return p; });
 
                     if (phones.length === 0) {
-                        alert('所选用户没有手机号，无法发送短信');
+                        self.$message.warning('所选用户没有手机号，无法发送短信');
                         return;
                     }
                     if (!self.smsForm.content.trim()) {
-                        alert('请输入短信内容');
+                        self.$message.warning('请输入短信内容');
                         return;
                     }
 
@@ -825,15 +825,15 @@
                 doSendPush: function() {
                     var self = this;
                     if (self.pushSelectedUsers.length === 0) {
-                        alert('请选择推送用户');
+                        self.$message.warning('请选择推送用户');
                         return;
                     }
                     if (!self.pushForm.title.trim()) {
-                        alert('请输入推送标题');
+                        self.$message.warning('请输入推送标题');
                         return;
                     }
                     if (!self.pushForm.content.trim()) {
-                        alert('请输入推送内容');
+                        self.$message.warning('请输入推送内容');
                         return;
                     }
 
@@ -947,7 +947,7 @@
                     var self = this;
                     var form = self.templateModal.form;
                     if (!form.templateName || !form.content) {
-                        alert('模板名称和内容不能为空');
+                        self.$message.warning('模板名称和内容不能为空');
                         return;
                     }
                     var apiCall = self.templateModal.isEdit
@@ -958,11 +958,11 @@
                             self.closeTemplateModal();
                             self.loadTemplates(self.templatePage);
                         } else {
-                            alert(res ? res.msg : '保存失败');
+                            self.$message.error(res ? res.msg : '保存失败');
                         }
                     }).catch(function(err) {
                         console.error('保存模板异常:', err);
-                        alert('保存失败，请检查网络连接');
+                        self.$message.error('保存失败，请检查网络连接');
                     });
                 },
 
@@ -978,15 +978,20 @@
                 },
 
                 deleteTemplate: function(id) {
-                    if (!confirm('确定删除该模板吗？')) return;
                     var self = this;
-                    notificationApi.deleteTemplate(id).then(function(res) {
-                        if (res && res.code === 1) {
-                            self.loadTemplates(self.templatePage);
-                        }
-                    }).catch(function(err) {
-                        console.error('删除模板异常:', err);
-                    });
+                    self.$confirm('确定删除该模板吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(function() {
+                        notificationApi.deleteTemplate(id).then(function(res) {
+                            if (res && res.code === 1) {
+                                self.loadTemplates(self.templatePage);
+                            }
+                        }).catch(function(err) {
+                            console.error('删除模板异常:', err);
+                        });
+                    }).catch(function() {});
                 },
 
                 // ==================== 工具方法 ====================
@@ -1032,4 +1037,14 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
 

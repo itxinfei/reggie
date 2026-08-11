@@ -321,6 +321,7 @@
                     return self.messages.some(function(m) {
                         return m.role === 'assistant' && m.streaming === true;
                     });
+                    }).catch(function() {});
                 },
                 /** 当前选中的对话对象 */
                 currentConversation: function() {
@@ -423,27 +424,30 @@
                 /** 删除对话 */
                 handleDeleteConv: function(conv) {
                     var self = this;
-                    if (!confirm('确定要删除对话"' + (conv.title || '新对话') + '"吗？删除后不可恢复。')) {
-                        return;
-                    }
-                    aiBackendApi.deleteConversation(conv.conversationId).then(function() {
-                        // 从列表中移除
-                        self.conversations = self.conversations.filter(function(c) {
-                            return c.conversationId !== conv.conversationId;
-                        });
-                        // 如果删除的是当前对话
-                        if (self.currentConversationId === conv.conversationId) {
-                            self.currentConversationId = null;
-                            self.messages = [];
-                            // 自动选中第一条
-                            if (self.conversations.length > 0) {
-                                self.selectConversation(self.conversations[0]);
+                    self.$confirm('确定要删除对话"' + (conv.title || '新对话') + '"吗？删除后不可恢复。', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(function() {
+                        aiBackendApi.deleteConversation(conv.conversationId).then(function() {
+                            // 从列表中移除
+                            self.conversations = self.conversations.filter(function(c) {
+                                return c.conversationId !== conv.conversationId;
+                            });
+                            // 如果删除的是当前对话
+                            if (self.currentConversationId === conv.conversationId) {
+                                self.currentConversationId = null;
+                                self.messages = [];
+                                // 自动选中第一条
+                                if (self.conversations.length > 0) {
+                                    self.selectConversation(self.conversations[0]);
+                                }
                             }
-                        }
-                    }).catch(function(err) {
-                        console.error('删除对话失败:', err);
-                        alert('删除失败，请重试');
-                    });
+                        }).catch(function(err) {
+                            console.error('删除对话失败:', err);
+                            self.$message.error('删除失败，请重试');
+                        });
+                    }).catch(function() {});
                 },
 
                 /** 获取场景图标 */

@@ -37,7 +37,7 @@ public class ShoppingCartControllerTest {
 
     @Test
     void testAddDish() throws Exception {
-        mockMvc.perform(post("/shoppingCart/add")
+        mockMvc.perform(post("/shopping-cart/add")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"dishId\":1,\"name\":\"测试菜品\",\"number\":1,\"amount\":10.00,\"image\":\"test.jpg\"}"))
@@ -58,7 +58,7 @@ public class ShoppingCartControllerTest {
         cart.setImage("test.jpg");
         shoppingCartService.save(cart);
 
-        mockMvc.perform(post("/shoppingCart/add")
+        mockMvc.perform(post("/shopping-cart/add")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"dishId\":1,\"name\":\"测试菜品\",\"number\":1,\"amount\":10.00,\"image\":\"test.jpg\"}"))
@@ -69,7 +69,7 @@ public class ShoppingCartControllerTest {
 
     @Test
     void testAddSetmeal() throws Exception {
-        mockMvc.perform(post("/shoppingCart/add")
+        mockMvc.perform(post("/shopping-cart/add")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"setmealId\":1,\"name\":\"测试套餐\",\"number\":1,\"amount\":50.00,\"image\":\"setmeal.jpg\"}"))
@@ -90,7 +90,7 @@ public class ShoppingCartControllerTest {
         cart.setImage("test.jpg");
         shoppingCartService.save(cart);
 
-        mockMvc.perform(get("/shoppingCart/list")
+        mockMvc.perform(get("/shopping-cart/list")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -100,7 +100,7 @@ public class ShoppingCartControllerTest {
 
     @Test
     void testListEmpty() throws Exception {
-        mockMvc.perform(get("/shoppingCart/list")
+        mockMvc.perform(get("/shopping-cart/list")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -118,7 +118,7 @@ public class ShoppingCartControllerTest {
         cart.setAmount(new BigDecimal("10.00"));
         shoppingCartService.save(cart);
 
-        mockMvc.perform(post("/shoppingCart/sub")
+        mockMvc.perform(post("/shopping-cart/sub")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"dishId\":2}")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
@@ -138,7 +138,7 @@ public class ShoppingCartControllerTest {
         cart.setAmount(new BigDecimal("5.00"));
         shoppingCartService.save(cart);
 
-        mockMvc.perform(post("/shoppingCart/sub")
+        mockMvc.perform(post("/shopping-cart/sub")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"dishId\":3}")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
@@ -157,7 +157,7 @@ public class ShoppingCartControllerTest {
         cart.setAmount(new BigDecimal("8.00"));
         shoppingCartService.save(cart);
 
-        mockMvc.perform(delete("/shoppingCart/clean")
+        mockMvc.perform(delete("/shopping-cart/clean")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -166,3 +166,4 @@ public class ShoppingCartControllerTest {
         org.junit.jupiter.api.Assertions.assertTrue(shoppingCartService.list().isEmpty());
     }
 }
+

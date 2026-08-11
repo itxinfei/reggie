@@ -142,12 +142,10 @@
         
         // 使用防抖的搜索方法
         handleSearch: PerformanceUtils.debounce(function() {
-          console.log('搜索:', this.searchKeyword)
           // 执行搜索逻辑
         }, 300),
         
         handleSearchClick() {
-          console.log('点击搜索:', this.searchKeyword)
         },
         
         handleSubmit() {

@@ -101,44 +101,44 @@
         stripe
         style="width: 100%"
         v-loading="loading">
-        <el-table aria-label="数据表格"-column prop="id" label="ID" width="80"></el-table-column>
-        <el-table aria-label="数据表格"-column prop="campaignId" label="活动ID" width="100"></el-table-column>
-        <el-table aria-label="数据表格"-column prop="ruleName" label="规则名称" min-width="150"></el-table-column>
-        <el-table aria-label="数据表格"-column prop="scope" label="折扣范围" width="120" align="center">
+        <el-table-column prop="id" label="ID" width="80"></el-table-column>
+        <el-table-column prop="campaignId" label="活动ID" width="100"></el-table-column>
+        <el-table-column prop="ruleName" label="规则名称" min-width="150"></el-table-column>
+        <el-table-column prop="scope" label="折扣范围" width="120" align="center">
           <template slot-scope="scope">
             <span class="scope-tag" :class="getScopeClass(scope.row.scope)">
               {{ getScopeText(scope.row.scope) }}
             </span>
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="discountRate" label="折扣率" width="120" align="center">
+        <el-table-column prop="discountRate" label="折扣率" width="120" align="center">
           <template slot-scope="scope">
             <strong>{{ (scope.row.discountRate * 10).toFixed(1) }}折</strong>
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="maxDiscountAmount" label="最大优惠" width="120" align="right">
+        <el-table-column prop="maxDiscountAmount" label="最大优惠" width="120" align="right">
           <template slot-scope="scope">
             {{ scope.row.maxDiscountAmount ? '¥' + formatMoney(scope.row.maxDiscountAmount) : '不限' }}
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="minConsumption" label="最低消费" width="120" align="right">
+        <el-table-column prop="minConsumption" label="最低消费" width="120" align="right">
           <template slot-scope="scope">
             {{ scope.row.minConsumption ? '¥' + formatMoney(scope.row.minConsumption) : '不限' }}
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="perUserLimit" label="每人限用" width="100" align="center">
+        <el-table-column prop="perUserLimit" label="每人限用" width="100" align="center">
           <template slot-scope="scope">
             {{ scope.row.perUserLimit || '不限' }}
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="status" label="状态" width="100" align="center">
+        <el-table-column prop="status" label="状态" width="100" align="center">
           <template slot-scope="scope">
             <span class="status-tag" :class="scope.row.status === 1 ? 'active' : 'disabled'">
               {{ scope.row.status === 1 ? '启用' : '禁用' }}
             </span>
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template slot-scope="scope">
             <el-button type="text" size="small" @click="handleEdit(scope.row)">编辑</el-button>
             <el-button type="text" size="small" @click="handleToggleStatus(scope.row)">
@@ -396,6 +396,7 @@
   </script>
 </body>
 </html>
+
 
 
 

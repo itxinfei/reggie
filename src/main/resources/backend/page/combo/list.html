@@ -8,6 +8,11 @@
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+  <style>
+    /* 提取的内联样式类 */
+    .combo-img-btn { width: auto; height: 40px; border: none; cursor: pointer; border-radius: 4px; }
+    .text-ellipsis { display: inline-block; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -63,12 +68,12 @@
     >
       <template #col-image="{ row }">
         <el-image
-          style="width: auto; height: 40px; border: none; cursor: pointer; border-radius: 4px;"
+          class="combo-img-btn"
           :src="getImage(row.image)"
           :preview-src-list="[`/common/download?name=${row.image}`]"
         >
           <div slot="error" class="image-slot">
-            <img src="./../../images/noImg.png" style="width: auto; height: 40px; border: none; border-radius: 4px;">
+            <img src="./../../images/noImg.png" class="combo-img-btn">
           </div>
         </el-image>
       </template>
@@ -76,7 +81,7 @@
         <span>￥{{ row.price }}</span>
       </template>
       <template #col-description="{ row }">
-        <span :title="row.description || ''" style="display:inline-block;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ row.description || '-' }}</span>
+        <span :title="row.description || ''" class="text-ellipsis">{{ row.description || '-' }}</span>
       </template>
       <template #col-status="{ row }">
         <el-tag :type="row.status == '0' ? 'info' : 'success'" size="small">

@@ -356,16 +356,30 @@ public class RecommendServiceImpl implements RecommendService {
             }
         }
 
-        // 按销量排序，过滤已下架/不属于当前门店的菜品
-        return dishOrderCount.entrySet().stream()
+        // 按销量排序，批量查询菜品消除 N+1
+        List<Map.Entry<Long, Long>> topEntries = dishOrderCount.entrySet().stream()
                 .sorted(Map.Entry.<Long, Long>comparingByValue().reversed())
-                .limit(limit * 2) // 多取一些，过滤后仍够limit个
+                .limit(limit * 2)
+                .collect(Collectors.toList());
+
+        List<Long> candidateDishIds = topEntries.stream()
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+        Map<Long, Dish> dishMap = new HashMap<>();
+        if (!candidateDishIds.isEmpty()) {
+            LambdaQueryWrapper<Dish> dishQw = new LambdaQueryWrapper<>();
+            dishQw.in(Dish::getId, candidateDishIds);
+            dishQw.eq(Dish::getStatus, 1);
+            if (tenantId != null) {
+                dishQw.eq(Dish::getTenantId, tenantId);
+            }
+            dishService.list(dishQw).forEach(d -> dishMap.put(d.getId(), d));
+        }
+
+        return topEntries.stream()
                 .map(e -> {
-                    Dish dish = dishService.getById(e.getKey());
-                    if (dish == null || dish.getStatus() != 1) {
-                        return null;
-                    }
-                    if (tenantId != null && !tenantId.equals(dish.getTenantId())) {
+                    Dish dish = dishMap.get(e.getKey());
+                    if (dish == null) {
                         return null;
                     }
                     Map<String, Object> map = dishToMap(dish);

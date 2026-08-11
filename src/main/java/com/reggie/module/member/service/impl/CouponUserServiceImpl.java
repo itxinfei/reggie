@@ -23,19 +23,19 @@ import java.util.List;
 public class CouponUserServiceImpl extends ServiceImpl<CouponUserMapper, CouponUser> implements CouponUserService {
 
     @Override
-    public List<CouponUser> listByUserId(Long userId, Integer status) {
+    public List<CouponUser> listByUserId(Long userId, String status) {
         LambdaQueryWrapper<CouponUser> wrapper = new LambdaQueryWrapper<CouponUser>()
                 .eq(CouponUser::getMemberId, userId)
                 .eq(CouponUser::getTenantId, BaseContext.getCurrentTenantId())
                 .orderByDesc(CouponUser::getCreatedTime);
-        if (status != null) {
+        if (status != null && !status.isEmpty()) {
             wrapper.eq(CouponUser::getStatus, status);
         }
         return this.list(wrapper);
     }
 
     @Override
-    public void batchUpdateStatus(List<Long> couponIds, Integer status) {
+    public void batchUpdateStatus(List<Long> couponIds, String status) {
         if (couponIds == null || couponIds.isEmpty()) {
             return;
         }

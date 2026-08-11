@@ -142,25 +142,44 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
 
     @Override
     public QueueRecord callNext(Integer seatCount) {
-        LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
-        qw.eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue());
-        if (seatCount != null) qw.eq(QueueRecord::getSeatCount, seatCount);
-        qw.orderByAsc(QueueRecord::getCreatedTime);
-        qw.last("LIMIT 1");
-        QueueRecord record = getOne(qw);
-        if (record != null) {
-            record.setStatus(QueueRecordStatus.CALLED.getValue());
-            updateById(record);
+        int maxRetry = 50;
+        for (int i = 0; i < maxRetry; i++) {
+            LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
+            qw.eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue());
+            if (seatCount != null) qw.eq(QueueRecord::getSeatCount, seatCount);
+            qw.orderByAsc(QueueRecord::getCreatedTime);
+            qw.last("LIMIT 1");
+            QueueRecord record = getOne(qw);
+            if (record == null) {
+                return null;
+            }
+            // CAS 更新：仅当状态仍为 WAITING 时才更新为 CALLED
+            boolean success = lambdaUpdate()
+                    .eq(QueueRecord::getId, record.getId())
+                    .eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
+                    .set(QueueRecord::getStatus, QueueRecordStatus.CALLED.getValue())
+                    .update();
+            if (success) {
+                record.setStatus(QueueRecordStatus.CALLED.getValue());
+                return record;
+            }
+            // CAS 失败，其他线程已修改该记录，重试下一条
+            log.warn("[排队叫号] CAS更新失败，重试第{}次: id={}", i + 1, record.getId());
         }
-        return record;
+        log.warn("[排队叫号] 达到最大重试次数{}，未能成功叫号", maxRetry);
+        return null;
     }
 
     @Override
     public void cancelQueue(Long id) {
-        QueueRecord record = getById(id);
-        if (record != null) {
-            record.setStatus(QueueRecordStatus.CANCELLED.getValue());
-            updateById(record);
+        // CAS 更新：仅当状态为 WAITING 时才允许取消，防止并发重复操作
+        boolean success = lambdaUpdate()
+                .eq(QueueRecord::getId, id)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
+                .set(QueueRecord::getStatus, QueueRecordStatus.CANCELLED.getValue())
+                .update();
+        if (!success) {
+            log.warn("[排队取消] 取消失败，当前状态非WAITING或记录不存在: id={}", id);
         }
     }
 }

@@ -353,6 +353,31 @@ public class OrderController {
         return R.success(stats);
     }
 
+
+    /**
+     * 用户取消订单
+     * @param id 订单ID
+     * @return 操作结果
+     */
+    @PutMapping("/userCancel")
+    @Operation(summary = "用户取消订单", description = "用户主动取消待付款/待接单状态的订单")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<String> userCancel(@RequestParam Long id) {
+        Orders existing = orderService.getById(id);
+        if (existing == null) {
+            return R.error("订单不存在");
+        }
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId == null || !Objects.equals(currentUserId, existing.getUserId())) {
+            return R.error("无权操作此订单");
+        }
+        if (!Objects.equals(existing.getStatus(), Orders.STATUS_PENDING_PAY)
+            && !Objects.equals(existing.getStatus(), Orders.STATUS_ORDERED)) {
+            return R.error("当前状态不允许取消，如需退款请联系客服");
+        }
+        orderService.cancelOrder(id, "用户主动取消");
+        return R.success("订单已取消");
+    }
     /**
      * 清除 Dashboard 缓存（在订单创建或状态变更后调用，确保概览数据实时准确）
      */

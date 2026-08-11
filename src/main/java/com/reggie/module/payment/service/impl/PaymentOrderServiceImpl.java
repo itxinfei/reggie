@@ -94,6 +94,8 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
         if (po == null) {
             return;
         }
+        // 回填租户上下文，确保后续业务订单查询走正确的租户隔离
+        BaseContext.setCurrentTenantId(po.getTenantId());
         Orders order = orderService.getById(po.getOrderId());
         if (order != null && order.getStatus() != null) {
             if (Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
@@ -124,6 +126,8 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
         if (po == null) {
             return;
         }
+        // 回填租户上下文，确保后续业务订单查询走正确的租户隔离
+        BaseContext.setCurrentTenantId(po.getTenantId());
         // 仅当订单为待付款时才联动取消，避免覆盖已配送/已完成订单（状态机校验）
         Orders order = orderService.getById(po.getOrderId());
         if (order != null && order.getStatus() != null
