@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>食材成本报表 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
@@ -33,7 +34,7 @@
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
     }
     .tableBar .toolbar-label {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       color: var(--el-text-regular);
       font-weight: 500;
     }
@@ -56,7 +57,7 @@
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
     }
     .chart-title {
-      font-size: 16px;
+      font-size:var(--font-size-lg);
       font-weight: 600;
       color: var(--el-text-primary);
       margin-bottom: 16px;
@@ -74,6 +75,14 @@
 </head>
 <body>
   <div id="app" class="container">
+    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+    <header class="ds-page-header">
+      <div class="ds-page-header__titles">
+        <h1 class="ds-page-header__title" id="page-title">食材成本报表</h1>
+        <p class="ds-page-header__subtitle">核算食材成本与损耗</p>
+      </div>
+      <div class="ds-page-header__actions"></div>
+    </header>
     <!-- 工具栏 -->
     <div class="tableBar">
       <span class="toolbar-label">日期范围：</span>
@@ -148,24 +157,24 @@
     <div class="table-card">
       <div class="chart-title">菜品食材成本排行</div>
       <el-table aria-label="数据表格" :data="rankingData" border stripe style="width: 100%" v-loading="loading">
-        <el-table aria-label="数据表格"-column type="index" label="排名" width="80"></el-table-column>
-        <el-table aria-label="数据表格"-column prop="dishName" label="菜品名称" min-width="150"></el-table-column>
-        <el-table aria-label="数据表格"-column prop="materialCost" label="食材成本" width="120" align="right">
+        <el-table-column type="index" label="排名" width="80"></el-table-column>
+        <el-table-column prop="dishName" label="菜品名称" min-width="150"></el-table-column>
+        <el-table-column prop="materialCost" label="食材成本" width="120" align="right">
           <template slot-scope="scope">
             ¥{{ formatMoney(scope.row.materialCost) }}
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="totalCost" label="总成本" width="120" align="right">
+        <el-table-column prop="totalCost" label="总成本" width="120" align="right">
           <template slot-scope="scope">
             ¥{{ formatMoney(scope.row.totalCost) }}
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="salePrice" label="售价" width="120" align="right">
+        <el-table-column prop="salePrice" label="售价" width="120" align="right">
           <template slot-scope="scope">
             ¥{{ formatMoney(scope.row.salePrice) }}
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="profitRate" label="毛利率" width="100" align="center">
+        <el-table-column prop="profitRate" label="毛利率" width="100" align="center">
           <template slot-scope="scope">
             <span :style="{ color: scope.row.profitRate >= 30 ? 'var(--el-color-success)' : scope.row.profitRate >= 10 ? 'var(--el-color-warning)' : 'var(--el-color-danger)' }">
               {{ scope.row.profitRate }}%
@@ -179,6 +188,7 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../js/common.js"></script>
@@ -242,7 +252,7 @@
         },
         async fetchData() {
           if (!this.dateRange || this.dateRange.length !== 2) {
-            this.$message.warning('请选择日期范围')
+            ReggieUI.warning('请选择日期范围')
             return
           }
           
@@ -272,7 +282,7 @@
             }
           } catch (err) {
             console.error('Failed to fetch data', err)
-            this.$message.error('获取数据失败')
+            ReggieUI.error('获取数据失败')
           } finally {
             this.loading = false
           }
@@ -307,14 +317,14 @@
                 name: '食材成本',
                 type: 'line',
                 data: this.trendData.costs,
-                itemStyle: { color: '#E6A23C' },
+                itemStyle: { color: RgPalette.warning },
                 areaStyle: { opacity: 0.3 }
               },
               {
                 name: '营业额',
                 type: 'line',
                 data: this.trendData.revenues,
-                itemStyle: { color: '#67C23A' },
+                itemStyle: { color: RgPalette.success },
                 areaStyle: { opacity: 0.3 }
               }
             ]
@@ -348,7 +358,7 @@
                 name: '成本率',
                 type: 'line',
                 data: this.trendData.rates,
-                itemStyle: { color: '#F56C6C' },
+                itemStyle: { color: RgPalette.danger },
                 areaStyle: { opacity: 0.3 },
                 markLine: {
                   data: [

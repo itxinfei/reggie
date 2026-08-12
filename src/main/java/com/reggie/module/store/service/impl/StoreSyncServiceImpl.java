@@ -2,11 +2,31 @@ package com.reggie.module.store.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.reggie.entity.*;
+import com.reggie.module.dish.model.DishFlavor;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.category.model.Category;
+import com.reggie.module.setmeal.model.SetmealDish;
+import com.reggie.module.setmeal.model.Setmeal;
+import com.reggie.module.dish.service.DishFlavorService;
+import com.reggie.module.dish.service.DishService;
+import com.reggie.module.category.service.CategoryService;
+import com.reggie.module.setmeal.service.SetmealDishService;
+import com.reggie.module.setmeal.service.SetmealService;
 import com.reggie.module.store.mapper.*;
 import com.reggie.module.store.model.*;
 import com.reggie.module.store.service.StoreSyncService;
-import com.reggie.service.*;
+import com.reggie.module.dish.model.DishFlavor;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.category.model.Category;
+import com.reggie.module.setmeal.model.SetmealDish;
+import com.reggie.module.setmeal.model.Setmeal;
+import com.reggie.module.dish.service.DishFlavorService;
+import com.reggie.module.dish.service.DishService;
+import com.reggie.module.category.service.CategoryService;
+import com.reggie.module.setmeal.service.SetmealDishService;
+import com.reggie.module.setmeal.service.SetmealService;
+import com.reggie.module.category.model.Category;
+import com.reggie.module.category.service.CategoryService;
 import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,9 +59,6 @@ public class StoreSyncServiceImpl implements StoreSyncService {
     @Autowired
     private StoreSyncLogMapper syncLogMapper;
     /** 门店信息Mapper */
-    @Autowired
-    private StoreInfoMapper storeInfoMapper;
-
     /** 菜品服务 */
     @Autowired
     private DishService dishService;
@@ -300,6 +317,13 @@ public class StoreSyncServiceImpl implements StoreSyncService {
         syncLogMapper.updateById(syncLog);
     }
 }
+
+
+
+
+
+
+
 
 
 

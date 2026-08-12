@@ -17,6 +17,9 @@
 /* ========== crud-table 容器 ========== */
 .crud-table-wrapper {
   width: 100%;
+  min-width: 0;                 /* 避免 flex 父容器被宽表撑破 */
+  overflow-x: auto;             /* 宽表窄屏横向滚动兜底（m3） */
+  -webkit-overflow-scrolling: touch;
 }
 
 .crud-table-wrapper .tableBox {
@@ -24,9 +27,68 @@
   margin-bottom: 0;
 }
 
+/* 宽表场景：允许表格按内容自然撑宽，滚动由容器接管 */
+.crud-table-wrapper .tableBox .el-table__body-wrapper {
+  overflow-x: auto;
+}
+
 .crud-table-wrapper .tableBox .el-image img {
   width: 40px;
   border-radius: 5px;
+}
+
+/* ========== crud-table 加载骨架屏（Element UI 2.15 无 el-skeleton，纯 CSS 脉冲实现） ========== */
+.crud-table-wrapper .ds-skeleton-table {
+  border: 1px solid var(--el-border-lighter2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+.crud-table-wrapper .ds-skeleton-row {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--el-border-lighter);
+}
+.crud-table-wrapper .ds-skeleton-row:last-child {
+  border-bottom: none;
+}
+.crud-table-wrapper .ds-skeleton-cell {
+  flex: 1;
+  min-width: 0;
+  padding: 0 8px;
+}
+.crud-table-wrapper .ds-skeleton-bar {
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--el-bg-lighter);
+  animation: ds-skeleton-pulse 1.2s ease-in-out infinite;
+}
+@keyframes ds-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ========== 空状态（友好提示，引导用户操作） ========== */
+.crud-table-wrapper .ds-table-empty {
+  padding: 48px 0 40px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.crud-table-wrapper .ds-table-empty i {
+  font-size: 52px;
+  color: var(--color-gray-300);
+  display: block;
+}
+.crud-table-wrapper .ds-table-empty p {
+  margin-top: 12px;
+  font-size: var(--font-size-base);
+  color: var(--text-muted);
+}
+.crud-table-wrapper .ds-table-empty .ds-table-empty__hint {
+  margin-top: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
 }
 
 /* 分页区域 */
@@ -143,6 +205,13 @@
 }
 
 /* 操作列按钮颜色变体（统一为品牌金 var(--color-brand-500) 的加深可读版本，保证白底对比度） */
+/* 通用：文字按钮过渡与 hover 背景反馈统一 */
+.crud-table-wrapper .tableBox .el-button--text {
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  margin: 0 2px;
+}
 .el-button--text.btn-view {
   color: var(--color-brand-700);
 }
@@ -154,9 +223,99 @@
 .el-button--text.btn-delete {
   color: var(--color-danger);
 }
+.el-button--text.btn-delete:hover {
+  color: var(--color-danger-dark);
+  background: var(--color-danger-light);
+}
 
 .el-button--text.btn-warning {
   color: var(--color-warning);
+}
+.el-button--text.btn-warning:hover {
+  color: var(--color-warning-dark);
+  background: var(--color-warning-light);
+}
+
+/* ========== 表格行视觉统一（hover / 斑马纹 / 选中行，走标准令牌替代 legacy 近白色） ========== */
+.crud-table-wrapper .tableBox .el-table__body tr {
+  transition: background-color var(--transition-base);
+}
+.crud-table-wrapper .tableBox .el-table--striped .el-table__body tr.el-table__row--striped td {
+  background-color: var(--bg-subtle);
+}
+/* 行 hover 柔和品牌高亮，提示“可交互、可定位” */
+.crud-table-wrapper .tableBox .el-table__body tr.hover-row > td {
+  background-color: var(--color-brand-50);
+}
+/* 当前选中行（点击行）更明显的品牌强调，方便用户确认操作对象 */
+.crud-table-wrapper .tableBox .el-table__body tr.current-row > td,
+.crud-table-wrapper .tableBox .el-table__body tr.el-table__row--striped.current-row td {
+  background-color: var(--color-brand-100);
+}
+
+/* ========== 表格密度统一（行高 / 字号 / 表头，36 个列表页视觉一致） ========== */
+/* 修复：.tableBox 与 .el-table 是同一元素（class="el-table tableBox"），原后代选择器 .tableBox .el-table td 永远不匹配，改为复合选择器 */
+.crud-table-wrapper .tableBox.el-table td,
+.crud-table-wrapper .tableBox.el-table th {
+  padding: 13px 0;
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+}
+/* 表头：底色 + 底部品牌强调线，强化“表头 / 数据”层级辨识度 */
+.crud-table-wrapper .tableBox.el-table th {
+  padding: 12px 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  border-bottom: 2px solid var(--color-brand-300);
+}
+/* 金额/数字列右对齐（表头与单元格一致，money/number 由 col.type 驱动） */
+.crud-table-wrapper .tableBox.el-table td.is-right,
+.crud-table-wrapper .tableBox.el-table th.is-right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* 修改点：补全表头/单元格对齐类，让 header-align 与 align 同步生效（Element 默认 th 为 left，需显式 center） */
+.crud-table-wrapper .tableBox.el-table td.is-center,
+.crud-table-wrapper .tableBox.el-table th.is-center {
+  text-align: center;
+}
+.crud-table-wrapper .tableBox.el-table td.is-left,
+.crud-table-wrapper .tableBox.el-table th.is-left {
+  text-align: left;
+}
+/* 表格单元格内文本垂直居中 + 溢出省略 */
+.crud-table-wrapper .tableBox.el-table td .cell {
+  line-height: 1.5;
+}
+/* 单元格左右留白（8px），兼顾紧凑与透气；固定列同步，避免操作按钮被挤压。
+   修复：原选择器 .tableBox .el-table 误用后代选择器（.tableBox 与 .el-table 是同一元素），改为复合选择器 .tableBox.el-table */
+.crud-table-wrapper .tableBox.el-table .cell,
+.crud-table-wrapper .tableBox.el-table .el-table__fixed-right .cell,
+.crud-table-wrapper .tableBox.el-table .el-table__fixed-left .cell {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+/* 操作列按钮：不换行 + 横向间距 + 分隔，提升可点性与可读性
+   修复：原选择器 .tableBox .el-table 误用后代选择器，改为复合选择器 .tableBox.el-table */
+.crud-table-wrapper .tableBox.el-table .crud-actions-col .cell {
+  white-space: nowrap !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+/* 操作按钮 hover 弱化反馈，提示“可点击” */
+.crud-table-wrapper .tableBox.el-table .crud-actions-col .el-button {
+  transition: color var(--transition-fast), opacity var(--transition-fast);
+}
+.crud-table-wrapper .tableBox.el-table .crud-actions-col .el-button:hover {
+  opacity: var(--opacity-hover);
+}
+/* 表格行高（视觉密度统一） */
+.crud-table-wrapper .tableBox .el-table__row {
+  height: 48px;
 }
 
 /* ========== 响应式 ========== */
@@ -183,3 +342,6 @@
 
 /* 菜品图片列：保持原始比例，避免 Element 固定 40px 宽导致变形（M8） */
 .cell-img { width: auto; height: 40px; border: none; border-radius: 4px; cursor: pointer; }
+
+
+

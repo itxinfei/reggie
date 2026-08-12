@@ -7,6 +7,7 @@
   <title>员工管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
@@ -69,6 +70,7 @@
             </el-button>
             <el-button
               type="primary"
+              :loading="submitting"
               @click="submitForm('ruleForm', false)"
             >
               保存
@@ -77,6 +79,7 @@
               v-if="actionType == 'add'"
               type="primary"
               class="continue"
+              :loading="submitting"
               @click="submitForm('ruleForm', true)"
             >
               保存并继续添加
@@ -93,6 +96,7 @@
     <!-- 引入axios -->
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
     <script src="../../api/member.js"></script>
@@ -105,6 +109,7 @@
           return {
             id: '',
             actionType : '',
+            submitting: false, // 提交防重：请求期间锁定保存按钮
             ruleForm : {
                 'name': '',
                 'phone': '',
@@ -158,14 +163,17 @@
             })
           },
           submitForm (formName, st) {
+            if (this.submitting) return // 提交防重
             this.$refs[formName].validate((valid) => {
               if (valid) {
+                this.submitting = true
                 if (this.actionType === 'add') {
                   const params = {
                     ...this.ruleForm,
                     sex: this.ruleForm.sex === '女' ? '0' : '1'
                   }
                   addEmployee(params).then(res => {
+                    this.submitting = false
                     if (res.code === 1) {
                       ReggieUI.success('员工添加成功！')
                       if (!st) {
@@ -176,7 +184,7 @@
                           'name': '',
                           'phone': '',
                           // 'password': '',
-                          // 'rePassword': '',/
+                          // 'rePassword': '',
                           'sex': '男',
                           'idNumber': ''
                         }
@@ -185,6 +193,7 @@
                       ReggieUI.error(res.msg || '操作失败')
                     }
                   }).catch(err => {
+                    this.submitting = false
                     ReggieUI.error('请求失败：' + err)
                   })
                 } else {
@@ -193,6 +202,7 @@
                     sex: this.ruleForm.sex === '女' ? '0' : '1'
                   }
                   editEmployee(params).then(res => {
+                    this.submitting = false
                     if (res.code === 1) {
                       ReggieUI.success('员工信息修改成功！')
                       this.goBack()
@@ -200,6 +210,7 @@
                       ReggieUI.error(res.msg || '操作失败')
                     }
                   }).catch(err => {
+                    this.submitting = false
                     ReggieUI.error('请求失败：' + err)
                   })
                 }

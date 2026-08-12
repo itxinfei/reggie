@@ -1,0 +1,18 @@
+package com.reggie.module.auth.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.reggie.module.auth.model.Employee;
+import org.apache.ibatis.annotations.Mapper;
+
+/**
+ * <p>
+ * 员工 Mapper 接口
+ * </p>
+ *
+ * @author 心飞为你飞
+ * @since 2024-01-01
+ */
+@Mapper
+public interface EmployeeMapper extends BaseMapper<Employee>{
+}
+

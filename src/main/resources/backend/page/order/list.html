@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>订单明细 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   
 </head>
@@ -51,7 +52,7 @@
         :page-size="pageSize"
         :total="counts"
         :show-actions="true"
-        :actions-width="240"
+        :actions-width="200"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -78,15 +79,14 @@
     </main>
 
     <!-- 订单详情弹窗 -->
-    <el-dialog
+    <crud-dialog
       title="订单详情"
-      aria-label="订单详情"
       :visible.sync="dialogVisible"
-      custom-class="el-dialog--xl unified-dialog"
+      size="xl"
+      :show-submit="false"
+      cancel-text="关 闭"
       :close-on-click-modal="true"
-      :append-to-body="true"
-      :modal-append-to-body="true"
-      @closed="diaForm = {}"
+      @close="diaForm = {}"
     >
       <div v-if="diaForm" class="od-body">
         <!-- 顶部定位条：订单号 + 状态（最显眼） -->
@@ -170,10 +170,7 @@
           </aside>
         </div>
       </div>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="dialogVisible = false">关 闭</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- 退款弹框 -->
     <crud-dialog
@@ -250,17 +247,15 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'number', label: '订单号', minWidth: '110' },
-            { prop: 'status', label: '订单状态', slot: true, width: 100 },
-            { prop: 'payMethod', label: '支付方式', width: 100, align: 'center', slot: true },
-            { prop: 'source', label: '就餐方式', width: 100, align: 'center', slot: true },
-            { prop: 'tableName', label: '桌台', width: 80, align: 'center' },
-            { prop: 'userName', label: '用户' },
-            { prop: 'phone', label: '手机号' },
-            { prop: 'address', label: '地址', showOverflowTooltip: true },
-            { prop: 'orderTime', label: '下单时间', minWidth: '100' },
-            { prop: 'checkoutTime', label: '结账时间', minWidth: '100' },
-            { prop: 'amount', label: '实收金额', slot: true, width: 100, type: 'money' }
+            { prop: 'number', label: '订单号', width: 130, showOverflowTooltip: true },
+            { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
+            { prop: 'userName', label: '用户', width: 80, align: 'center' },
+            { prop: 'phone', label: '手机号', width: 110, align: 'center' },
+            { prop: 'amount', label: '金额', slot: true, width: 80, align: 'right', type: 'money' },
+            { prop: 'payMethod', label: '支付', width: 70, align: 'center', slot: true },
+            { prop: 'source', label: '就餐', width: 70, align: 'center', slot: true },
+            { prop: 'tableName', label: '桌台', width: 60, align: 'center' },
+            { prop: 'orderTime', label: '下单时间', width: 140, align: 'center' }
           ],
           // 缓存搜索参数
           lastSearch: {},
@@ -419,9 +414,9 @@
           ReggieUI.confirm('确认取消该订单？', '提示', { confirmButtonText: '确定', cancelButtonText: '再想想', type: 'warning' })
             .then(function() {
               editOrderDetail({ id: row.id, status: 5 }).then(function(res) {
-                if (res && res.code === 1) { self.$message.success('订单已取消'); self.init() }
-                else { self.$message.error(res.msg || '取消失败') }
-              }).catch(function(err) { self.$message.error('请求失败：' + err) })
+                if (res && res.code === 1) { ReggieUI.success('订单已取消'); self.init() }
+                else { ReggieUI.error(res.msg || '取消失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
         },
         cancelOrDeliveryOrComplete: function(status, id) {
@@ -429,9 +424,9 @@
           ReggieUI.confirm('确认更改该订单状态?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               editOrderDetail({ status: status, id: id }).then(function(res) {
-                if (res.code === 1) { self.$message.success(status === 3 ? '订单已派送' : '订单已完成'); self.init() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(function(err) { self.$message.error('请求失败：' + err) })
+                if (res.code === 1) { ReggieUI.success(status === 3 ? '订单已派送' : '订单已完成'); self.init() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
         },
         openRefund: function(row) {
@@ -440,11 +435,11 @@
         },
         async submitRefund() {
           var self = this
-          if (!self.refundForm.amount || parseFloat(self.refundForm.amount) <= 0) { self.$message.warning('请输入有效的退款金额'); return }
+          if (!self.refundForm.amount || parseFloat(self.refundForm.amount) <= 0) { ReggieUI.warning('请输入有效的退款金额'); return }
           var reason = self.refundForm.reasonType
-          if (!reason) { self.$message.warning('请选择退款原因'); return }
+          if (!reason) { ReggieUI.warning('请选择退款原因'); return }
           if (reason === '其他原因') {
-            if (!self.refundForm.reasonDetail) { self.$message.warning('请填写详细退款原因'); return }
+            if (!self.refundForm.reasonDetail) { ReggieUI.warning('请填写详细退款原因'); return }
             reason = self.refundForm.reasonDetail
           }
           self.refundLoading = true
@@ -454,11 +449,11 @@
             if (paymentRes && paymentRes.code === 1 && paymentRes.data && paymentRes.data.records && paymentRes.data.records.length > 0) {
               paymentOrderId = paymentRes.data.records[0].id
             }
-            if (!paymentOrderId) { self.$message.error('未找到对应支付订单，无法退款'); self.refundLoading = false; return }
+            if (!paymentOrderId) { ReggieUI.error('未找到对应支付订单，无法退款'); self.refundLoading = false; return }
             var res = await paymentRefund({ paymentOrderId: paymentOrderId, amount: parseFloat(self.refundForm.amount), reason: reason })
-            if (res && res.code === 1) { self.$message.success('退款成功'); self.refundVisible = false; self.init() }
-            else { self.$message.error(res ? res.msg : '退款失败') }
-          } catch (err) { self.$message.error('退款请求失败：' + err) }
+            if (res && res.code === 1) { ReggieUI.success('退款成功'); self.refundVisible = false; self.init() }
+            else { ReggieUI.error(res ? res.msg : '退款失败') }
+          } catch (err) { ReggieUI.error('退款请求失败：' + err) }
           self.refundLoading = false
         },
         exportOrders: async function(format) {
@@ -478,6 +473,20 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

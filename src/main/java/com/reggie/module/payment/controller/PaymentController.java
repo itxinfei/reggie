@@ -9,7 +9,7 @@ import com.reggie.common.CustomException;
 import com.reggie.common.R;
 import com.reggie.dto.PayRequestDTO;
 import com.reggie.dto.RefundRequestDTO;
-import com.reggie.entity.Orders;
+import com.reggie.module.order.model.Orders;
 import com.reggie.module.payment.channel.PaymentChannel;
 import com.reggie.module.payment.channel.PaymentChannelFactory;
 import com.reggie.module.payment.channel.PayRequest;
@@ -22,8 +22,8 @@ import static com.reggie.module.payment.model.PaymentOrder.STATUS_REFUND;
 import static com.reggie.module.payment.model.PaymentOrder.STATUS_SUCCESS;
 import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.payment.service.RefundRecordService;
-import com.reggie.service.DashboardService;
-import com.reggie.service.OrderService;
+import com.reggie.module.dashboard.service.DashboardService;
+import com.reggie.module.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -345,3 +345,5 @@ public class PaymentController {
         }
     }
 }
+
+

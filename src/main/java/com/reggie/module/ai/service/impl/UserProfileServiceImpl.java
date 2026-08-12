@@ -2,12 +2,12 @@ package com.reggie.module.ai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.reggie.entity.Dish;
-import com.reggie.entity.OrderDetail;
-import com.reggie.entity.Orders;
-import com.reggie.mapper.DishMapper;
-import com.reggie.mapper.OrderDetailMapper;
-import com.reggie.mapper.OrderMapper;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.dish.mapper.DishMapper;
+import com.reggie.module.order.mapper.OrderDetailMapper;
+import com.reggie.module.order.mapper.OrderMapper;
 import com.reggie.module.ai.mapper.AIMessageRecordMapper;
 import com.reggie.module.ai.mapper.UserProfileMapper;
 import com.reggie.module.ai.model.AIMessageRecord;
@@ -466,6 +466,9 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
         }
     }
 }
+
+
+
 
 
 

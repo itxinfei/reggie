@@ -6,22 +6,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>支付分析 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
     html, body { height: 100%; margin: 0; padding: 0; overflow-y: auto; overflow-x: hidden;
-      background: linear-gradient(135deg, var(--el-bg-subtle) 0%, var(--el-border-lighter) 100%);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+      background: var(--bg-page);
+      font-family: var(--font-family-base); }
     .payment-page { min-height: 100%; display: flex; flex-direction: column; }
     .payment-page .container { flex: 1; background: transparent; padding: 24px 32px 32px;
-      min-width: 0; max-width: 1600px; margin: 0 auto; width: 100%; }
+      min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
     .payment-page .tableBar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
       background: var(--bg-surface); padding: 16px 24px; border-radius: 14px; margin-bottom: 20px;
       box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
       transition: box-shadow 0.3s; }
     .payment-page .tableBar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .payment-page .tableBar .fl-label { font-size: 14px; color: var(--el-text-regular); font-weight: 500; flex-shrink: 0; }
+    .payment-page .tableBar .fl-label { font-size:var(--font-size-base); color: var(--el-text-regular); font-weight: 500; flex-shrink: 0; }
     .payment-page .tableBar .fl-spacer { flex: 1; min-width: 0; }
     .payment-page .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     @media (max-width: 1200px) { .payment-page .container { padding: 16px 20px 20px !important; }
@@ -33,6 +34,14 @@
   <div class="payment-page" id="report-payment-app" v-loading="loading">
     <div class="container">
 
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">支付分析</h1>
+          <p class="ds-page-header__subtitle">分析各支付渠道的交易数据</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
 
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 KPI 卡片 -->
       <stat-cards :cards="statsCards"></stat-cards>
@@ -97,7 +106,7 @@
   <script src="../../js/chart-panel.js"></script>
   <script>
     var CHANNEL_LABEL = { wechat: '微信支付', alipay: '支付宝', balance: '余额支付', other: '其他' };
-    var CHANNEL_COLOR = { wechat: '#07C160', alipay: '#1677FF', balance: '#E6A23C', other: '#909399' };
+    var CHANNEL_COLOR = { wechat: RgPalette.wechatGreen, alipay: RgPalette.alipayBlue, balance: RgPalette.warning, other: RgPalette.textSecondary };
 
     (function() {
       new Vue({
@@ -108,9 +117,9 @@
             // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
             paymentColumns: [
               { prop: 'channel', label: '支付渠道', width: 150, align: 'center' },
-              { prop: 'transactionCount', label: '交易笔数', width: 120, align: 'center' },
+              { prop: 'transactionCount', label: '交易笔数', width: 120, align: 'center', type: 'number' },
               { prop: 'amount', label: '金额（元）', width: 150, align: 'center', slot: true, type: 'money' },
-              { prop: 'ratio', label: '占比', minWidth: 200, align: 'center', slot: true }
+              { prop: 'ratio', label: '占比', width: 160, align: 'center', slot: true }
             ],
             pieChart: null, barChart: null, trendChart: null, resizeHandler: null
           }
@@ -178,15 +187,15 @@
           loadData: function() {
             var self = this;
             if (!self.dateRange || self.dateRange.length < 2) {
-              self.$message.warning('请选择日期范围'); return;
+              ReggieUI.warning('请选择日期范围'); return;
             }
             self.loading = true;
             reportPayment({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(res) {
               if (String(res.code) === '1') {
                 self.tableData = self.convertToArray(res.data || {});
                 self.$nextTick(function() { self.renderCharts(); self.loadPaymentTrend(); });
-              } else { self.$message.error(res.msg || '加载支付数据失败'); }
-            }).catch(function(err) { self.$message.error('请求失败：' + (err || '网络异常')); })
+              } else { ReggieUI.error(res.msg || '加载支付数据失败'); }
+            }).catch(function(err) { ReggieUI.error('请求失败：' + (err || '网络异常')); })
             .finally(function() { self.loading = false; });
           },
           loadPaymentTrend: function() {
@@ -200,32 +209,32 @@
             if (!this.trendChart) return;
             if (!data || !data.dates || !data.dates.length) {
               this.trendChart.setOption({ title: { text: '暂无趋势数据', left: 'center', top: 'center',
-                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } } }, true); return;
+                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } } }, true); return;
             }
             var dates = data.dates || [];
-            var makeAreaGrad = function(c) { return new echarts.graphic.LinearGradient(0,0,0,1, [{ offset:0,color:c+'33'},{ offset:1,color:c+'05' }]); };
+            var makeAreaGrad = function(c) { return c; };
             this.trendChart.setOption({
               tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)',
-                borderColor: '#e4e7ed', borderWidth: 1, textStyle: { color: '#303133', fontSize: 13 } },
-              legend: { data: ['微信支付', '支付宝', '余额支付'], bottom: 8, textStyle: { fontSize: 12, color: '#606266' } },
+                borderColor: RgPalette.borderLighter2, borderWidth: 1, textStyle: { color: RgPalette.textPrimary, fontSize: 13 } },
+              legend: { data: ['微信支付', '支付宝', '余额支付'], bottom: 8, textStyle: { fontSize: 12, color: RgPalette.textRegular } },
               // 修改点：增大左/底部 padding 防止标签被裁剪
               grid: { left: 55, right: 30, top: 25, bottom: 52 },
               xAxis: { type: 'category', data: dates, boundaryGap: false,
-                axisLine: { lineStyle: { color: '#e4e7ed' } }, axisTick: { show: false },
-                axisLabel: { color: '#909399', fontSize: 12 } },
+                axisLine: { lineStyle: { color: RgPalette.borderLighter2 } }, axisTick: { show: false },
+                axisLabel: { color: RgPalette.textSecondary, fontSize: 12 } },
               yAxis: { type: 'value', name: '金额(元)',
-                nameTextStyle: { color: '#909399', fontSize: 12 },
-                splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } } },
+                nameTextStyle: { color: RgPalette.textSecondary, fontSize: 12 },
+                splitLine: { lineStyle: { color: RgPalette.bgLight, type: 'dashed' } } },
               series: [
                 { name: '微信支付', type: 'line', data: data.wechat || [], smooth: true, symbol: 'circle', symbolSize: 6,
-                  lineStyle: { color: '#07C160', width: 3 }, itemStyle: { color: '#07C160', borderColor: '#fff', borderWidth: 2 },
-                  areaStyle: { color: makeAreaGrad('#07C160') } },
+                  lineStyle: { color: RgPalette.wechatGreen, width: 3 }, itemStyle: { color: RgPalette.wechatGreen, borderColor: RgPalette.white, borderWidth: 2 },
+                  areaStyle: { color: makeAreaGrad(RgPalette.wechatGreen) } },
                 { name: '支付宝', type: 'line', data: data.alipay || [], smooth: true, symbol: 'circle', symbolSize: 6,
-                  lineStyle: { color: '#1677FF', width: 3 }, itemStyle: { color: '#1677FF', borderColor: '#fff', borderWidth: 2 },
-                  areaStyle: { color: makeAreaGrad('#1677FF') } },
+                  lineStyle: { color: RgPalette.alipayBlue, width: 3 }, itemStyle: { color: RgPalette.alipayBlue, borderColor: RgPalette.white, borderWidth: 2 },
+                  areaStyle: { color: makeAreaGrad(RgPalette.alipayBlue) } },
                 { name: '余额支付', type: 'line', data: data.balance || [], smooth: true, symbol: 'circle', symbolSize: 6,
-                  lineStyle: { color: '#E6A23C', width: 3 }, itemStyle: { color: '#E6A23C', borderColor: '#fff', borderWidth: 2 },
-                  areaStyle: { color: makeAreaGrad('#E6A23C') } }
+                  lineStyle: { color: RgPalette.warning, width: 3 }, itemStyle: { color: RgPalette.warning, borderColor: RgPalette.white, borderWidth: 2 },
+                  areaStyle: { color: makeAreaGrad(RgPalette.warning) } }
               ]
             }, true);
           },
@@ -241,7 +250,7 @@
                 transactionCount: item.count || 0, amount: item.amount != null ? item.amount : null }; });
           },
           calcPercent: function(count) { if (!this.totalCount) return 0; return Math.round(count / this.totalCount * 100); },
-          channelProgressColor: function(key) { return CHANNEL_COLOR[key] || '#909399'; },
+          channelProgressColor: function(key) { return CHANNEL_COLOR[key] || RgPalette.textSecondary; },
           formatMoney: function(val) { return Number(val || 0).toFixed(2); },
           renderCharts: function() {
             // 修改点：渲染前 resize 确保容器尺寸正确
@@ -253,30 +262,30 @@
           renderPie: function() {
             if (!this.pieChart || !this.tableData.length) {
               if (this.pieChart) this.pieChart.setOption({ title: { text: '暂无支付数据', left: 'center', top: 'center',
-                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } } }, true); return;
+                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } } }, true); return;
             }
             var pieData = this.tableData.filter(function(r) { return r.transactionCount > 0; })
               .map(function(r) { return { name: r.channel, value: r.transactionCount,
-                itemStyle: { color: CHANNEL_COLOR[r.key] || '#909399' } }; });
+                itemStyle: { color: CHANNEL_COLOR[r.key] || RgPalette.textSecondary } }; });
             this.pieChart.setOption({
-              color: ['#07C160','#1677FF','#E6A23C','#909399'],
+              color: [RgPalette.wechatGreen,RgPalette.alipayBlue,RgPalette.warning,RgPalette.textSecondary],
               tooltip: { trigger: 'item', backgroundColor: 'rgba(255,255,255,0.96)',
-                borderColor: '#e4e7ed', borderWidth: 1, textStyle: { color: '#303133', fontSize: 13 },
+                borderColor: RgPalette.borderLighter2, borderWidth: 1, textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                 formatter: function(p) { return '<b>' + p.name + '</b><br/>' + p.marker + ' 笔数：<b>' + p.value + '</b>（' + p.percent + '%）'; } },
               legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10,
-                textStyle: { color: '#606266', fontSize: 12 } },
+                textStyle: { color: RgPalette.textRegular, fontSize: 12 } },
               series: [{ type: 'pie', radius: ['45%','68%'], center: ['50%','44%'],
-                avoidLabelOverlap: false, itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 3 },
-                label: { position: 'outside', formatter: '{b}\n{d}%', fontSize: 13, lineHeight: 18, color: '#606266' },
-                labelLine: { length: 25, length2: 20, lineStyle: { color: '#c0c4cc' } },
+                avoidLabelOverlap: false, itemStyle: { borderRadius: 6, borderColor: RgPalette.white, borderWidth: 3 },
+                label: { position: 'outside', formatter: '{b}\n{d}%', fontSize: 13, lineHeight: 18, color: RgPalette.textRegular },
+                labelLine: { length: 25, length2: 20, lineStyle: { color: RgPalette.borderBase } },
                 emphasis: { scaleSize: 10, label: { fontSize: 16, fontWeight: 'bold' } },
-                data: pieData.length ? pieData : [{ name: '暂无数据', value: 1, itemStyle: { color: '#e4e7ed' } }] }]
+                data: pieData.length ? pieData : [{ name: '暂无数据', value: 1, itemStyle: { color: RgPalette.borderLighter2 } }] }]
             }, true);
           },
           renderBar: function() {
             if (!this.barChart || !this.tableData.length) {
               if (this.barChart) this.barChart.setOption({ title: { text: '暂无支付数据', left: 'center', top: 'center',
-                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } } }, true); return;
+                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } } }, true); return;
             }
             var names = this.tableData.map(function(r) { return r.channel; });
             var counts = this.tableData.map(function(r) { return r.transactionCount; });
@@ -285,8 +294,8 @@
             var barW = names.length <= 2 ? 48 : names.length <= 3 ? 36 : 24;
             this.barChart.setOption({
               tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-                backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e4e7ed', borderWidth: 1,
-                textStyle: { color: '#303133', fontSize: 13 },
+                backgroundColor: 'rgba(255,255,255,0.96)', borderColor: RgPalette.borderLighter2, borderWidth: 1,
+                textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                 formatter: function(ps) {
                   var h = '<b>' + ps[0].axisValue + '</b><br/>';
                   ps.forEach(function(p) {
@@ -295,47 +304,47 @@
                   }); return h;
                 } },
               legend: { data: hasAmount ? ['交易笔数', '交易金额'] : ['交易笔数'], bottom: 4,
-                textStyle: { fontSize: 12, color: '#606266' } },
+                textStyle: { fontSize: 12, color: RgPalette.textRegular } },
               // 修改点：增大右 padding 防止金额标签被裁剪
               grid: { left: 55, right: hasAmount ? 70 : 20, top: 25, bottom: 52 },
               xAxis: { type: 'category', data: names, axisTick: { show: false },
-                axisLabel: { color: '#606266', interval: 0, fontSize: 13 } },
+                axisLabel: { color: RgPalette.textRegular, interval: 0, fontSize: 13 } },
               yAxis: [
                 { type: 'value', name: '笔数',
-                  nameTextStyle: { color: '#909399', fontSize: 12 },
-                  splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } },
-                  axisLabel: { color: '#909399', fontSize: 12 } },
+                  nameTextStyle: { color: RgPalette.textSecondary, fontSize: 12 },
+                  splitLine: { lineStyle: { type: 'dashed', color: RgPalette.bgLight } },
+                  axisLabel: { color: RgPalette.textSecondary, fontSize: 12 } },
                 hasAmount ? { type: 'value', name: '金额',
-                  nameTextStyle: { color: '#909399', fontSize: 12 },
-                  axisLabel: { formatter: '¥{value}', color: '#909399', fontSize: 12 },
+                  nameTextStyle: { color: RgPalette.textSecondary, fontSize: 12 },
+                  axisLabel: { formatter: '¥{value}', color: RgPalette.textSecondary, fontSize: 12 },
                   splitLine: { show: false } } : {}
               ].filter(function(y) { return Object.keys(y).length; }),
               series: [
                 { name: '交易笔数', type: 'bar', data: counts, barWidth: barW,
                   itemStyle: { borderRadius: [8, 8, 0, 0],
-                    color: function(p) { var key = Object.keys(CHANNEL_COLOR)[p.dataIndex]; return CHANNEL_COLOR[key] || '#909399'; } },
+                    color: function(p) { var key = Object.keys(CHANNEL_COLOR)[p.dataIndex]; return CHANNEL_COLOR[key] || RgPalette.textSecondary; } },
                   label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c} 笔' } },
                 hasAmount ? { name: '交易金额', type: 'line', yAxisIndex: 1, data: amounts,
                   smooth: true, symbol: 'emptyCircle', symbolSize: 8,
-                  lineStyle: { color: '#fc8452', width: 3 },
-                  itemStyle: { color: '#fc8452', borderColor: '#fff', borderWidth: 2 },
-                  label: { show: true, position: 'top', fontSize: 12, fontWeight: 700, color: '#e6a23c',
+                  lineStyle: { color: RgPalette.seriesOrange, width: 3 },
+                  itemStyle: { color: RgPalette.seriesOrange, borderColor: RgPalette.white, borderWidth: 2 },
+                  label: { show: true, position: 'top', fontSize: 12, fontWeight: 700, color: RgPalette.warning,
                     formatter: function(p) { return '¥' + Number(p.value).toFixed(0); } } } : null
               ].filter(function(s) { return s; })
             }, true);
           },
           handleExport: function() {
             var self = this;
-            if (!self.dateRange || self.dateRange.length < 2) { self.$message.warning('请先选择日期范围'); return; }
+            if (!self.dateRange || self.dateRange.length < 2) { ReggieUI.warning('请先选择日期范围'); return; }
             reportExport({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(blob) {
-              if (blob && blob.type && blob.type.indexOf('json') > -1) { self.$message.error('导出失败，文件格式异常'); return; }
+              if (blob && blob.type && blob.type.indexOf('json') > -1) { ReggieUI.error('导出失败，文件格式异常'); return; }
               var link = document.createElement('a');
               link.href = URL.createObjectURL(blob);
               link.download = '支付分析_' + self.dateRange[0] + '_' + self.dateRange[1] + '.csv';
               document.body.appendChild(link); link.click(); document.body.removeChild(link);
               URL.revokeObjectURL(link.href);
-              self.$message.success('导出成功');
-            }).catch(function(err) { self.$message.error('导出失败：' + (err || '网络异常')); });
+              ReggieUI.success('导出成功');
+            }).catch(function(err) { ReggieUI.error('导出失败：' + (err || '网络异常')); });
           }
         }
       })

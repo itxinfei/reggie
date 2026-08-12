@@ -1,7 +1,7 @@
 package com.reggie.module.printer.service;
 
-import com.reggie.entity.Orders;
-import com.reggie.entity.OrderDetail;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.model.OrderDetail;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -187,4 +187,5 @@ public class PrintTemplateService {
         return str.substring(0, maxLength);
     }
 }
+
 

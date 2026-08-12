@@ -6,15 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>菜品评价管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <style>
     html, body { height: 100%; margin: 0; padding: 0; overflow-y: auto; overflow-x: hidden;
-      background: linear-gradient(135deg, var(--el-bg-subtle) 0%, var(--el-border-lighter) 100%);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+      background: var(--bg-page);
+      font-family: var(--font-family-base); }
     .eval-app-wrap { min-height: 100%; display: flex; flex-direction: column; }
     .eval-app-wrap .container { flex: 1; background: transparent; padding: 24px 32px 32px;
-      min-width: 0; max-width: 1600px; margin: 0 auto; width: 100%; }
+      min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
     /* 修改点：stats-cards 使用 grid 并定义 clickable/active 交互效果 */
     .eval-app-wrap .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
     .eval-app-wrap .stat-card.clickable { cursor: pointer; user-select: none; transition: all 0.25s ease; }
@@ -26,15 +27,15 @@
       box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
       transition: box-shadow 0.3s; }
     .eval-app-wrap .filter-bar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .eval-app-wrap .filter-bar .fl-label { font-size: 14px; color: var(--el-text-regular); font-weight: 500; flex-shrink: 0; white-space: nowrap; }
+    .eval-app-wrap .filter-bar .fl-label { font-size:var(--font-size-base); color: var(--el-text-regular); font-weight: 500; flex-shrink: 0; white-space: nowrap; }
     .eval-app-wrap .star-filter { display: flex; align-items: center; gap: 4px; }
     .eval-app-wrap .star-btn { padding: 5px 12px; border: 1px solid var(--el-border-default); border-radius: 6px;
-      background: var(--bg-surface); cursor: pointer; font-size: 13px; font-weight: 500;
+      background: var(--bg-surface); cursor: pointer; font-size:var(--font-size-sm); font-weight: 500;
       transition: all 0.2s; color: var(--el-text-regular); outline: none; }
     .eval-app-wrap .star-btn:hover { border-color: var(--el-color-primary); color: var(--el-color-primary); }
     .eval-app-wrap .star-btn.active { background: var(--el-color-primary); border-color: var(--el-color-primary); color: var(--bg-surface); }
     .eval-app-wrap .eval-stars { display: inline-flex; gap: 2px; }
-    .eval-app-wrap .eval-stars .star { font-size: 16px; color: var(--el-border-lighter2); }
+    .eval-app-wrap .eval-stars .star { font-size:var(--font-size-lg); color: var(--el-border-lighter2); }
     .eval-app-wrap .eval-stars .star.filled { color: var(--gold-legacy); }
     .eval-app-wrap .eval-content { max-width: 280px; overflow: hidden; text-overflow: ellipsis;
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.5; }
@@ -43,7 +44,7 @@
       cursor: pointer; border: 1px solid var(--el-border-light); transition: transform 0.2s; }
     .eval-app-wrap .eval-images img:hover { transform: scale(1.1); }
     .eval-app-wrap .status-tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px;
-      border-radius: 6px; font-size: 12px; font-weight: 600; }
+      border-radius: 6px; font-size:var(--font-size-xs); font-weight: 600; }
     .eval-app-wrap .status-tag.pending { background: var(--color-warning-light); color: var(--color-warning); }
     .eval-app-wrap .status-tag.approved { background: var(--color-success-light); color: var(--color-success); }
     .eval-app-wrap .status-tag.rejected { background: var(--color-danger-light); color: var(--color-danger); }
@@ -52,14 +53,14 @@
     .eval-app-wrap .status-dot.rejected { background: var(--color-danger); }
     .eval-app-wrap .action-btns { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
     .eval-app-wrap .detail-section { margin-bottom: 20px; }
-    .eval-app-wrap .detail-section-title { font-size: 15px; font-weight: 600; color: var(--el-text-primary);
+    .eval-app-wrap .detail-section-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary);
       margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--el-bg-page);
       display: flex; align-items: center; gap: 6px; }
-    .eval-app-wrap .detail-row { display: flex; margin-bottom: 10px; font-size: 14px; line-height: 1.6; }
+    .eval-app-wrap .detail-row { display: flex; margin-bottom: 10px; font-size:var(--font-size-base); line-height: 1.6; }
     .eval-app-wrap .detail-row .dlabel { width: 90px; color: var(--color-info); flex-shrink: 0; }
     .eval-app-wrap .detail-row .dvalue { flex: 1; color: var(--el-text-primary); }
     .eval-app-wrap .reply-box { background: var(--el-bg-subtle); border-radius: 10px; padding: 14px 16px; margin-top: 8px; }
-    .eval-app-wrap .reply-box .reply-time { font-size: 12px; color: var(--color-info); margin-top: 6px; }
+    .eval-app-wrap .reply-box .reply-time { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 6px; }
     .eval-app-wrap .image-preview { max-width: 100%; max-height: 450px; border-radius: 10px; }
     @media (max-width: 1200px) { .eval-app-wrap .container { padding: 16px 20px 20px !important; } }
     @media (max-width: 768px) { .eval-app-wrap .container { padding: 12px 16px 16px !important; }
@@ -71,6 +72,14 @@
   <div class="eval-app-wrap" id="eval-app" v-loading="loading">
     <div class="container">
 
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">菜品评价管理</h1>
+          <p class="ds-page-header__subtitle">查看与管理顾客菜品评价</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
 
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
@@ -111,7 +120,7 @@
         :loading="loading"
         :stripe="true"
         :border="true"
-        :actions-width="200"
+        :actions-width="180"
         :actions-align="'center'"
         aria-label="评价列表"
         @page-change="onPageChange"
@@ -127,7 +136,7 @@
           <div class="eval-stars">
             <span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (row.starRating || 0) }">★</span>
           </div>
-          <span style="font-size:12px;color:var(--color-info);margin-left:4px;">{{ row.starRating }}分</span>
+          <span style="font-size:var(--font-size-xs);color:var(--color-info);margin-left:4px;">{{ row.starRating }}分</span>
         </template>
         <template #col-content="{ row }">
           <div class="eval-content" :title="row.content">{{ row.content || '无文字评价' }}</div>
@@ -137,7 +146,7 @@
             <img v-for="(img, idx) in getImageList(row.images).slice(0, 3)" :key="idx"
                  :src="getImageUrl(img)" @click="previewImage(getImageUrl(img))" alt="评价图片" />
           </div>
-          <span v-else style="color:var(--el-border-base);font-size:12px;">无</span>
+          <span v-else style="color:var(--el-border-base);font-size:var(--font-size-xs);">无</span>
         </template>
         <template #col-user="{ row }">{{ row.userName || '用户#' + row.userId }}</template>
         <template #col-status="{ row }">
@@ -163,9 +172,15 @@
     </div>
 
     <!-- ========== 详情弹窗 ========== -->
-    <el-dialog :title="'评价详情' + (detailData.dishName ? ' - ' + detailData.dishName : '')"
-      :visible.sync="detailVisible" custom-class="el-dialog--md unified-dialog"
-      :show-close="true" :append-to-body="true" :modal-append-to-body="true">
+    <crud-dialog
+      :title="'评价详情' + (detailData.dishName ? ' - ' + detailData.dishName : '')"
+      :visible.sync="detailVisible"
+      size="md"
+      :show-submit="false"
+      cancel-text="关 闭"
+      :show-close="true"
+      @close="closeDetail"
+    >
       <div v-if="detailData.id">
         <div class="detail-section">
           <div class="detail-section-title">📋 基本信息</div>
@@ -180,7 +195,7 @@
         </div>
         <div class="detail-section">
           <div class="detail-section-title">💬 评价内容</div>
-          <div style="padding:10px 0;line-height:1.8;color:var(--el-text-primary);font-size:14px;">{{ detailData.content || '（无文字内容）' }}</div>
+          <div style="padding:10px 0;line-height:1.8;color:var(--el-text-primary);font-size:var(--font-size-base);">{{ detailData.content || '（无文字内容）' }}</div>
           <div class="eval-images" v-if="detailImages.length > 0" style="margin-top:12px;">
             <img v-for="(img, idx) in detailImages" :key="idx" :src="getImageUrl(img)" @click="previewImage(getImageUrl(img))" alt="评价图片" />
           </div>
@@ -188,36 +203,45 @@
         <div class="detail-section" v-if="detailData.replyContent">
           <div class="detail-section-title">💌 商家回复</div>
           <div class="reply-box">
-            <div style="color:var(--el-text-primary);font-size:14px;">{{ detailData.replyContent }}</div>
+            <div style="color:var(--el-text-primary);font-size:var(--font-size-base);">{{ detailData.replyContent }}</div>
             <div class="reply-time">回复时间：{{ formatDate(detailData.replyTime) }}</div>
           </div>
         </div>
       </div>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="closeDetail">关 闭</el-button>
+      <template #footer>
         <el-button v-if="detailData.status === 0" type="success" size="medium" @click="handleAudit(detailData, 1); closeDetail()">审 核 通 过</el-button>
-      </span>
-    </el-dialog>
+      </template>
+    </crud-dialog>
 
     <!-- ========== 回复弹窗 ========== -->
-    <el-dialog title="回复评价" :visible.sync="replyVisible" custom-class="el-dialog--sm unified-dialog" :show-close="true" :append-to-body="true" :modal-append-to-body="true">
+    <crud-dialog
+      title="回复评价"
+      :visible.sync="replyVisible"
+      size="sm"
+      :submit-loading="replyLoading"
+      :show-close="true"
+      @submit="submitReply"
+      @close="closeReply"
+    >
       <div v-if="replyData.id" style="margin-bottom:12px;padding:14px;background:var(--el-bg-subtle);border-radius:10px;">
         <div style="font-weight:600;margin-bottom:4px;color:var(--el-text-primary);">{{ replyData.dishName || '' }} - {{ replyData.starRating }}★</div>
-        <div style="color:var(--el-text-regular);font-size:13px;line-height:1.6;">{{ replyData.content || '' }}</div>
+        <div style="color:var(--el-text-regular);font-size:var(--font-size-sm);line-height:1.6;">{{ replyData.content || '' }}</div>
       </div>
       <el-input v-model="replyContent" type="textarea" :rows="4"
         placeholder="请输入回复内容..." maxlength="500" show-word-limit>
       </el-input>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="closeReply">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitReply" :loading="replyLoading">确 定</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- ========== 图片预览 ========== -->
-    <el-dialog :visible.sync="previewVisible" custom-class="unified-dialog el-dialog--md" :show-close="true" center :append-to-body="true" :modal-append-to-body="true">
+    <crud-dialog
+      :visible.sync="previewVisible"
+      size="md"
+      :show-submit="false"
+      :show-close="true"
+      center
+    >
       <img :src="previewUrl" class="image-preview" alt="预览图片" />
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -239,15 +263,15 @@
             loading: false, tableData: [], total: 0, page: 1, pageSize: 10,
             // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
             evalColumns: [
-              { prop: 'id', label: 'ID', width: 80, align: 'center' },
-              { prop: 'dish', label: '菜品', minWidth: 160, slot: true },
-              { prop: 'stars', label: '评分', width: 140, align: 'center', slot: true },
-              { prop: 'content', label: '评价内容', minWidth: 220, slot: true },
-              { prop: 'images', label: '图片', width: 100, align: 'center', slot: true },
-              { prop: 'user', label: '评价人', width: 120, align: 'center', slot: true },
-              { prop: 'status', label: '状态', width: 110, align: 'center', slot: true },
-              { prop: 'reply', label: '回复', width: 80, align: 'center', slot: true },
-              { prop: 'createTime', label: '评价时间', width: 170, align: 'center', slot: true }
+              { prop: 'id', label: 'ID', width: 70, align: 'center' },
+              { prop: 'dish', label: '菜品', width: 110, slot: true },
+              { prop: 'stars', label: '评分', width: 110, align: 'center', slot: true },
+              { prop: 'content', label: '评价内容', width: 140, slot: true },
+              { prop: 'images', label: '图片', width: 90, align: 'center', slot: true },
+              { prop: 'user', label: '评价人', width: 100, align: 'center', slot: true },
+              { prop: 'status', label: '状态', width: 95, align: 'center', slot: true },
+              { prop: 'reply', label: '回复', width: 70, align: 'center', slot: true },
+              { prop: 'createTime', label: '评价时间', width: 155, align: 'center', slot: true }
             ],
             filters: { dishName: '', starRating: null, status: null },
             filterOptions: { names: [] }, optionsLoading: false, optionsLoadError: false,
@@ -278,7 +302,7 @@
             dishOptions().then(function(res) {
               if (String(res.code) === '1' && res.data) {
                 self.filterOptions.names = res.data.names || [];
-              } else { self.optionsLoadError = true; self.$message.warning('加载菜品选项失败：' + (res.msg || '接口返回异常')); }
+              } else { self.optionsLoadError = true; ReggieUI.warning('加载菜品选项失败：' + (res.msg || '接口返回异常')); }
             }).catch(function(err) {
               if (err && err.message === 'NOTLOGIN') return;
               self.optionsLoadError = true; console.error('加载菜品选项失败:', err);
@@ -297,8 +321,8 @@
             getEvaluationPage(params).then(function(res) {
               if (String(res.code) === '1') {
                 self.tableData = res.data.records || []; self.total = res.data.total || 0;
-              } else { self.$message.error(res.msg || '加载评价列表失败'); }
-            }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)); })
+              } else { ReggieUI.error(res.msg || '加载评价列表失败'); }
+            }).catch(function(err) { ReggieUI.error('请求失败：' + (err.message || err)); })
             .finally(function() { self.loading = false; });
           },
           loadStats: function() {
@@ -345,9 +369,9 @@
               return auditEvaluation(row.id, status);
             }).then(function(res) {
               if (String(res.code) === '1') {
-                self.$message.success('审核' + action + '成功');
+                ReggieUI.success('审核' + action + '成功');
                 self.loadData(); self.loadStats();
-              } else { self.$message.error(res.msg || '审核' + action + '失败'); }
+              } else { ReggieUI.error(res.msg || '审核' + action + '失败'); }
             }).catch(function(e) {
               if (e !== 'cancel') console.error('审核操作失败:', e);
             });
@@ -358,13 +382,13 @@
           closeReply: function() { this.replyVisible = false; this.replyData = {}; this.replyContent = ''; },
           submitReply: function() {
             var self = this;
-            if (!self.replyContent.trim()) { self.$message.warning('请输入回复内容'); return; }
+            if (!self.replyContent.trim()) { ReggieUI.warning('请输入回复内容'); return; }
             self.replyLoading = true;
             replyEvaluation(self.replyData.id, self.replyContent.trim()).then(function(res) {
               if (String(res.code) === '1') {
-                self.$message.success('回复成功'); self.closeReply(); self.loadData();
-              } else { self.$message.error(res.msg || '回复失败'); }
-            }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)); })
+                ReggieUI.success('回复成功'); self.closeReply(); self.loadData();
+              } else { ReggieUI.error(res.msg || '回复失败'); }
+            }).catch(function(err) { ReggieUI.error('请求失败：' + (err.message || err)); })
             .finally(function() { self.replyLoading = false; });
           },
           // 修改点：分页统一交由 crud-table 组件管理（@page-change 同时携带页码与每页条数）
@@ -400,6 +424,13 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
 
 
 

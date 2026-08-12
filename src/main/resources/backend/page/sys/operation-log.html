@@ -6,11 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>操作日志 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
   <div class="dashboard-container" id="log-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">操作日志</h1>
+          <p class="ds-page-header__subtitle">查看系统操作审计记录</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -46,7 +55,7 @@
           <el-tag size="mini" effect="plain" :type="methodTag(row.requestMethod)">{{ row.requestMethod }}</el-tag>
         </template>
         <template #col-isSuccess="{ row }">
-          <i class="el-icon-circle-check" style="color:var(--antd-success);font-size:16px;" v-if="row.isSuccess === 1"></i>
+          <i class="el-icon-circle-check" style="color:var(--color-success);font-size:16px;" v-if="row.isSuccess === 1"></i>
           <i class="el-icon-circle-close" style="color:var(--color-danger);font-size:16px;" v-else-if="row.isSuccess === 0"></i>
           <span v-else>-</span>
         </template>
@@ -95,19 +104,19 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'id', label: 'ID', width: 80, align: 'center' },
-            { prop: 'operatorId', label: '操作人ID', width: 90, align: 'center', type: 'number' },
-            { prop: 'operatorIp', label: '操作IP', width: 130, align: 'center' },
-            { prop: 'operatorName', label: '操作人', width: 100, slot: true, align: 'center' },
-            { prop: 'module', label: '操作模块', width: 120, align: 'center' },
-            { prop: 'operationType', label: '操作类型', width: 90, align: 'center', slot: true },
-            { prop: 'description', label: '操作描述', minWidth: 180, showOverflowTooltip: true, align: 'center' },
-            { prop: 'requestUrl', label: '请求地址', width: 180, showOverflowTooltip: true, align: 'center' },
-            { prop: 'requestMethod', label: '方法', width: 70, align: 'center', slot: true },
-            { prop: 'duration', label: '耗时(ms)', width: 90, align: 'center', type: 'number' },
-            { prop: 'isSuccess', label: '状态', width: 70, align: 'center', slot: true },
-            { prop: 'errorMsg', label: '错误信息', minWidth: 160, showOverflowTooltip: true, align: 'center' },
-            { prop: 'createTime', label: '操作时间', width: 160, align: 'center' }
+            { prop: 'id', label: 'ID', width: 70, align: 'center' },
+            { prop: 'operatorId', label: '操作人ID', width: 80, align: 'center', type: 'number' },
+            { prop: 'operatorIp', label: '操作IP', width: 120, align: 'center' },
+            { prop: 'operatorName', label: '操作人', width: 90, slot: true, align: 'center' },
+            { prop: 'module', label: '操作模块', width: 105, align: 'center' },
+            { prop: 'operationType', label: '操作类型', width: 80, align: 'center', slot: true },
+            { prop: 'description', label: '操作描述', width: 120, showOverflowTooltip: true, align: 'center' },
+            { prop: 'requestUrl', label: '请求地址', width: 120, showOverflowTooltip: true, align: 'center' },
+            { prop: 'requestMethod', label: '方法', width: 65, align: 'center', slot: true },
+            { prop: 'duration', label: '耗时(ms)', width: 85, align: 'center', type: 'number' },
+            { prop: 'isSuccess', label: '状态', width: 65, align: 'center', slot: true },
+            { prop: 'errorMsg', label: '错误信息', width: 120, showOverflowTooltip: true, align: 'center' },
+            { prop: 'createTime', label: '操作时间', width: 150, align: 'center' }
           ]
         }
       },
@@ -230,6 +239,13 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
 
 
 

@@ -6,13 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>会员管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; padding: 4px 0; }
     .detail-item { display: flex; align-items: center; }
-    .detail-item .d-label { width: 80px; font-size: 14px; color: var(--color-info); flex-shrink: 0; }
-    .detail-item .d-value { font-size: 14px; color: var(--el-text-primary); font-weight: 500; }
-    .level-badge { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+    .detail-item .d-label { width: 80px; font-size:var(--font-size-base); color: var(--color-info); flex-shrink: 0; }
+    .detail-item .d-value { font-size:var(--font-size-base); color: var(--el-text-primary); font-weight: 500; }
+    .level-badge { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size:var(--font-size-xs); font-weight: 500; }
     .level-badge.gold-badge { background: var(--amber-100); color: var(--amber-700); }
     .level-badge.silver-badge { background: var(--slate-200); color: var(--slate-500); }
     .level-badge.bronze-badge { background: var(--orange-200); color: var(--orange-700); }
@@ -25,6 +26,14 @@
 <body>
   <div class="dashboard-container" id="member-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">会员管理</h1>
+          <p class="ds-page-header__subtitle">管理会员信息、等级与余额</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -46,7 +55,7 @@
         :page-size="pageSize"
         :total="counts"
         :show-actions="true"
-        :actions-width="200"
+        :actions-width="280"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -54,7 +63,7 @@
           <span :class="getLevelClass(row.levelName)">{{ row.levelName || '普通会员' }}</span>
         </template>
         <template #col-balance="{ row }">
-          <span style="color:#f59e0b;font-weight:600;">￥{{ row.balance }}</span>
+          <span style="color:var(--legacy-f59e0b);font-weight:600;">￥{{ row.balance }}</span>
         </template>
         <template #col-totalConsumption="{ row }">
           <span style="font-weight:500;">￥{{ row.totalConsumption }}</span>
@@ -72,8 +81,8 @@
         <div class="detail-item"><span class="d-label">会员名称：</span><span class="d-value">{{ detail.name }}</span></div>
         <div class="detail-item"><span class="d-label">手机号：</span><span class="d-value">{{ detail.phone }}</span></div>
         <div class="detail-item"><span class="d-label">会员等级：</span><span class="d-value"><span :class="getLevelClass(detail.levelName)">{{ detail.levelName || '普通会员' }}</span></span></div>
-        <div class="detail-item"><span class="d-label">积分：</span><span class="d-value" style="color:#8b5cf6;font-weight:600;">{{ detail.points }}</span></div>
-        <div class="detail-item"><span class="d-label">余额：</span><span class="d-value" style="color:#f59e0b;font-weight:600;">￥{{ detail.balance }}</span></div>
+        <div class="detail-item"><span class="d-label">积分：</span><span class="d-value" style="color:var(--legacy-8b5cf6);font-weight:600;">{{ detail.points }}</span></div>
+        <div class="detail-item"><span class="d-label">余额：</span><span class="d-value" style="color:var(--legacy-f59e0b);font-weight:600;">￥{{ detail.balance }}</span></div>
         <div class="detail-item"><span class="d-label">累计消费：</span><span class="d-value" style="font-weight:600;">￥{{ detail.totalConsumption }}</span></div>
         <div class="detail-item"><span class="d-label">注册时间：</span><span class="d-value">{{ detail.createdTime }}</span></div>
         <div class="detail-item"><span class="d-label">会员状态：</span><span class="d-value">{{ detail.status === 1 ? '正常' : '已禁用' }}</span></div>
@@ -81,7 +90,7 @@
     </crud-dialog>
 
     <!-- ===== 充值弹窗 ===== -->
-    <crud-dialog title="会员充值" :visible.sync="rechargeDialogVisible" size="sm" @submit="submitRecharge" @close="rechargeDialogVisible = false">
+    <crud-dialog title="会员充值" :visible.sync="rechargeDialogVisible" :submit-loading="submitting" size="sm" @submit="submitRecharge" @close="rechargeDialogVisible = false">
       <!-- 修改点：补全 ref/:model/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
       <el-form ref="rechargeFormRef" :model="rechargeForm" :rules="rechargeRules" label-width="110px" size="small">
         <el-form-item label="会员名称："><span style="font-weight:600;">{{ rechargeMember.name }}</span></el-form-item>
@@ -120,7 +129,7 @@
       el: '#member-app',
       data: function() {
         return {
-          loading: false, counts: 0, page: 1, pageSize: 10, tableData: [],
+          loading: false, submitting: false, counts: 0, page: 1, pageSize: 10, tableData: [],
           searchConfig: [
             { type: 'input', field: 'name', placeholder: '会员名称', width: '200px' },
             { type: 'input', field: 'phone', placeholder: '手机号', width: '180px', hideSearchIcon: true },
@@ -129,15 +138,14 @@
           stats: { totalMembers: 0, highLevelCount: 0, midLevelCount: 0, lowLevelCount: 0, newMembersThisMonth: 0 },
           activeFilter: '', levelOptions: [],
           columns: [
-            { prop: 'name', label: '会员名称', align: 'center' },
-            { prop: 'phone', label: '手机号', align: 'center' },
-            { prop: 'levelId', label: '等级ID', width: 80, align: 'center', type: 'number' },
-            { prop: 'levelName', label: '会员等级', slot: true, align: 'center' },
-            { prop: 'status', label: '状态', width: 80, align: 'center', slot: true },
-            { prop: 'points', label: '积分', align: 'center', type: 'number' },
-            { prop: 'balance', label: '余额', slot: true, align: 'center', type: 'money' },
-            { prop: 'totalConsumption', label: '累计消费', slot: true, align: 'center', type: 'money' },
-            { prop: 'createdTime', label: '注册时间', width: 170, align: 'center' }
+            { prop: 'name', label: '会员名称', width: 100, showOverflowTooltip: true },
+            { prop: 'phone', label: '手机号', width: 120, align: 'center' },
+            { prop: 'levelName', label: '等级', slot: true, width: 80, align: 'center' },
+            { prop: 'points', label: '积分', width: 70, align: 'center', type: 'number' },
+            { prop: 'balance', label: '余额', slot: true, width: 80, align: 'center', type: 'money' },
+            { prop: 'totalConsumption', label: '累计消费', slot: true, width: 90, align: 'center', type: 'money' },
+            { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
+            { prop: 'createdTime', label: '注册时间', width: 140, align: 'center' }
           ],
           detailDialogVisible: false, detail: {},
           rechargeDialogVisible: false, rechargeMember: {},
@@ -189,7 +197,7 @@
               var statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
             }
-          } catch(e) { self.$message.error('请求失败：' + e) }
+          } catch(e) { ReggieUI.error('请求失败：' + e) }
           this.loading = false
         },
         async loadMemberStats() {
@@ -257,29 +265,46 @@
           var self = this
           getMember(row.id).then(function(res) {
             if (String(res.code) === '1') { self.detail = res.data; self.detailDialogVisible = true }
-            else { self.$message.error(res.msg || '操作失败') }
-          }).catch(function(e) { self.$message.error('请求失败：' + e) })
+            else { ReggieUI.error(res.msg || '操作失败') }
+          }).catch(function(e) { ReggieUI.error('请求失败：' + e) })
         },
         showRecharge: function(row) { this.rechargeMember = row; this.rechargeForm = { amount: '', giftAmount: '0', paymentMethod: 'WECHAT' }; this.rechargeDialogVisible = true },
         submitRecharge: function() {
+          if (this.submitting) return // 提交防重
           var self = this
           var passed = false
           self.$refs.rechargeFormRef.validate(function(valid) { passed = valid })
           if (!passed) {
-            self.$message.warning('请完善表单必填项')
+            ReggieUI.warning('请完善表单必填项')
             return
           }
-          if (!self.rechargeForm.amount || self.rechargeForm.amount <= 0) { self.$message.error('请输入有效的充值金额'); return }
+          if (!self.rechargeForm.amount || self.rechargeForm.amount <= 0) { ReggieUI.error('请输入有效的充值金额'); return }
+          self.submitting = true
           memberRecharge({ memberId: self.rechargeMember.id, amount: self.rechargeForm.amount, giftAmount: self.rechargeForm.giftAmount || 0, paymentMethod: self.rechargeForm.paymentMethod }).then(function(res) {
-            if (res.code === 1) { self.$message.success('充值成功！'); self.rechargeDialogVisible = false; self.init(true) }
-            else { self.$message.error(res.msg || '操作失败') }
-          }).catch(function(e) { self.$message.error('请求失败：' + e) })
+            self.submitting = false
+            if (res.code === 1) { ReggieUI.success('充值成功！'); self.rechargeDialogVisible = false; self.init(true) }
+            else { ReggieUI.error(res.msg || '操作失败') }
+          }).catch(function(e) { self.submitting = false; ReggieUI.error('请求失败：' + e) })
         }
       }
     })
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

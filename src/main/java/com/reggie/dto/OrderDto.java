@@ -1,7 +1,7 @@
 package com.reggie.dto;
 
-import com.reggie.entity.OrderDetail;
-import com.reggie.entity.Orders;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -23,3 +23,4 @@ public class OrderDto extends Orders {
     @Schema(description = "订单详情列表")
     private List<OrderDetail> orderDetails;
 }
+

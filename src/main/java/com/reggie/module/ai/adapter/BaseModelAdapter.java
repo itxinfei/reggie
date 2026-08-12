@@ -1,6 +1,7 @@
 package com.reggie.module.ai.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.ObjectMapperHolder;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AiProviderConfig;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,7 @@ import java.util.Map;
 @Slf4j
 public abstract class BaseModelAdapter implements AiModelAdapter {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
     private static final int DEFAULT_TIMEOUT_SECONDS = 60;
 
     // ==================== 子类必须实现 ====================
@@ -261,3 +262,5 @@ public abstract class BaseModelAdapter implements AiModelAdapter {
         return OBJECT_MAPPER;
     }
 }
+
+

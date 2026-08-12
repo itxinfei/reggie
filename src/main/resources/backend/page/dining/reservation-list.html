@@ -6,11 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>预约管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
   <div class="dashboard-container" id="reservation-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">桌台预订</h1>
+          <p class="ds-page-header__subtitle">管理桌台预订记录</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -37,7 +46,7 @@
         :total="counts"
         :show-index="true"
         :show-actions="true"
-        :actions-width="280"
+        :actions-width="200"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -92,13 +101,13 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'customerName', label: '客户姓名', align: 'center' },
-            { prop: 'phone', label: '手机号', align: 'center' },
-            { prop: 'tableName', label: '桌台', align: 'center' },
-            { prop: 'reservedTime', label: '预订时间', minWidth: '100', align: 'center' },
-            { prop: 'seatCount', label: '就餐人数', width: 90, align: 'center' },
-            { prop: 'status', label: '状态', slot: true, width: 90, align: 'center' },
-            { prop: 'remark', label: '备注', showOverflowTooltip: true, align: 'center' }
+            { prop: 'customerName', label: '客户姓名', width: 100, align: 'center' },
+            { prop: 'phone', label: '手机号', width: 120, align: 'center' },
+            { prop: 'tableName', label: '桌台', width: 80, align: 'center' },
+            { prop: 'reservedTime', label: '预订时间', width: 140, align: 'center' },
+            { prop: 'seatCount', label: '人数', width: 60, align: 'center', type: 'number' },
+            { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
+            { prop: 'remark', label: '备注', width: 100, showOverflowTooltip: true }
           ],
           lastSearch: {}
         }
@@ -201,9 +210,9 @@
           ReggieUI.confirm('确认该预订?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               confirmReservation(id).then(res => {
-                if (res.code === 1) { self.$message.success('已确认！'); self.init() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(err => { self.$message.error('请求失败：' + err) })
+                if (res.code === 1) { ReggieUI.success('已确认！'); self.init() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(err => { ReggieUI.error('请求失败：' + err) })
             })
         },
         arriveHandle(id) {
@@ -211,9 +220,9 @@
           ReggieUI.confirm('确认该客户已到店?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               arriveReservation(id).then(res => {
-                if (res.code === 1) { self.$message.success('已到店！'); self.init() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(err => { self.$message.error('请求失败：' + err) })
+                if (res.code === 1) { ReggieUI.success('已到店！'); self.init() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(err => { ReggieUI.error('请求失败：' + err) })
             })
         },
         cancelHandle(id) {
@@ -221,9 +230,9 @@
           ReggieUI.confirm('确认取消该预订?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               cancelReservation(id).then(res => {
-                if (res.code === 1) { self.$message.success('已取消！'); self.init() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(err => { self.$message.error('请求失败：' + err) })
+                if (res.code === 1) { ReggieUI.success('已取消！'); self.init() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(err => { ReggieUI.error('请求失败：' + err) })
             })
         }
       }
@@ -231,6 +240,20 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -14,7 +14,7 @@
   margin-right: 0;
 }
 .unified-dialog .el-dialog__title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--el-text-primary);
   line-height: 1.4;
@@ -34,7 +34,7 @@
   background: var(--el-bg-subtle);
 }
 .unified-dialog .el-dialog__headerbtn .el-dialog__close {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: var(--color-info);
   font-weight: 600;
 }
@@ -1542,10 +1542,11 @@
   padding-right: 0 !important;
   text-align: center !important;
 }
-/* 表格选择列 checkbox：禁用动画 + 锁定 transform，彻底消除选中时布局偏移 */
+/* 表格选择列 checkbox：禁用动画 + 锁定 transform，彻底消除选中时布局偏移
+   注意：el-checkbox__inner::after 的 transform 不在此锁定，交由 common-fixes.css
+   统一旋转对勾（改 transform:none → translate/rotate），否则对勾会歪斜 */
 .el-table-column--selection .cell .el-checkbox,
-.el-table-column--selection .cell .el-checkbox__inner,
-.el-table-column--selection .cell .el-checkbox__inner::after {
+.el-table-column--selection .cell .el-checkbox__inner {
   transition: none !important;
   transform: none !important;
 }
@@ -1553,6 +1554,33 @@
 .el-table-column--selection .cell .el-checkbox {
   display: block !important;
   vertical-align: middle !important;
+}
+/* ========== 表格选择列 checkbox 视觉优化（2026-08-13） ==========
+   问题根因：common-fixes.css 对 .el-checkbox__inner::after 施加 transform:none !important，
+   导致对勾失去 rotate(45deg) 居中 → 歪斜像残笔；label 占位 &nbsp; 造成“有文字”错觉。
+   修复：对勾旋转已在 common-fixes.css 源头修正；此处仅做选择列专属尺寸/颜色/隐藏 label。
+   注意：common-fixes.css 加载晚于本文件，::after 最终以 fixes 为准，故此处不重复定义。 */
+.el-table-column--selection .cell .el-checkbox__inner {
+  width: 16px !important;
+  height: 16px !important;
+  border: 1px solid var(--el-border-soft) !important;
+  border-radius: 2px !important;
+  background-color: var(--color-white) !important;
+  box-sizing: border-box !important;
+}
+/* hover / focus 时边框品牌色提示可交互 */
+.el-table-column--selection .cell .el-checkbox__inner:hover {
+  border-color: var(--color-brand-500) !important;
+}
+/* 选中 / 半选：品牌金填充 + 同色边框 */
+.el-table-column--selection .cell .el-checkbox__input.is-checked .el-checkbox__inner,
+.el-table-column--selection .cell .el-checkbox__input.is-indeterminate .el-checkbox__inner {
+  background-color: var(--color-brand-500) !important;
+  border-color: var(--color-brand-500) !important;
+}
+/* 隐藏选择列 label 占位文字（&nbsp;），消除“选中时像有文字”的错觉 */
+.el-table-column--selection .cell .el-checkbox__label {
+  display: none !important;
 }
 .el-table-filter {
   border: 1px solid var(--el-border-light);
@@ -1885,7 +1913,7 @@
   float: right;
 }
 .el-date-range-picker__header div {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 500;
   margin-right: 50px;
 }
@@ -1987,7 +2015,7 @@
   margin-top: 0;
 }
 .el-date-picker__header-label {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 500;
   padding: 0 5px;
   line-height: 22px;
@@ -2552,7 +2580,7 @@
 }
 .el-popover__title {
   color: var(--text-legacy-dark);
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   line-height: 1;
   margin-bottom: 12px;
 }
@@ -2625,7 +2653,7 @@
   padding-left: 0;
   margin-bottom: 0;
   line-height: 1;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-family: MicrosoftYaHei, MicrosoftYaHei-Bold;
   font-weight: 700;
   text-align: left;
@@ -2639,7 +2667,7 @@
   border: none;
   outline: 0;
   background: 0 0;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   cursor: pointer;
 }
 .el-form-item.is-error .el-input__inner,
@@ -3882,7 +3910,7 @@
   padding: 0 8px;
 }
 .el-alert__icon {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   width: 16px;
 }
 .el-alert__icon.is-big {
@@ -3956,7 +3984,7 @@
 }
 .el-notification__title {
   font-weight: 700;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: var(--text-legacy-dark);
   margin: 0;
 }
@@ -3981,7 +4009,7 @@
   right: 15px;
   cursor: pointer;
   color: var(--color-info);
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 .el-notification__closeBtn:hover {
   color: var(--text-legacy-muted);
@@ -7610,7 +7638,7 @@
   transform: translateY(-50%);
   cursor: pointer;
   color: var(--el-border-muted);
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 .el-message__closeBtn:hover {
   color: var(--color-info);
@@ -7884,7 +7912,7 @@
   text-align: left;
 }
 .el-step__title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   line-height: 38px;
 }
 .el-step__title.is-process {
@@ -8013,7 +8041,7 @@
   flex-grow: 1;
 }
 .el-step.is-simple .el-step__title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   line-height: 20px;
 }
 .el-step.is-simple:not(:last-of-type) .el-step__title {
@@ -10393,7 +10421,7 @@
   line-height: 40px;
 }
 .el-transfer-panel .el-transfer-panel__header .el-checkbox .el-checkbox__label {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: var(--text-legacy-dark);
   font-weight: 400;
 }

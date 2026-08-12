@@ -7,11 +7,20 @@
   <title>供应商管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
 <div class="dashboard-container" id="supplier-app">
   <div class="container">
+    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+    <header class="ds-page-header">
+      <div class="ds-page-header__titles">
+        <h1 class="ds-page-header__title" id="page-title">供应商管理</h1>
+        <p class="ds-page-header__subtitle">管理食材供应商信息</p>
+      </div>
+      <div class="ds-page-header__actions"></div>
+    </header>
 
     <!-- ============================================================
      组件1：stat-cards — 统计卡片
@@ -80,6 +89,7 @@
   <crud-dialog
     :title="dialogTitle"
     :visible.sync="dialogVisible"
+    :submit-loading="submitting"
     width="600px"
     @submit="submitForm"
     @close="resetForm"
@@ -123,6 +133,7 @@
         return {
           // ===== 表格数据 =====
           loading: false,
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
           tableData: [],
           page: 1,
           pageSize: 10,
@@ -172,11 +183,11 @@
 
           // 表格列配置
           columns: [
-            { prop: 'name', label: '供应商名称', minWidth: 160, align: 'center' },
-            { prop: 'contact', label: '联系人', width: 100, align: 'center' },
-            { prop: 'phone', label: '联系电话', width: 140, align: 'center' },
-            { prop: 'address', label: '地址', minWidth: 200, showOverflowTooltip: true, align: 'center' },
-            { prop: 'status', label: '状态', width: 100, align: 'center', slot: true }
+            { prop: 'name', label: '供应商名称', width: 140, showOverflowTooltip: true },
+            { prop: 'contact', label: '联系人', width: 80, align: 'center' },
+            { prop: 'phone', label: '联系电话', width: 120, align: 'center' },
+            { prop: 'address', label: '地址', width: 120, showOverflowTooltip: true },
+            { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
           ]
         }
       },
@@ -334,6 +345,7 @@
 
         /** 表单提交（校验通过后执行保存） */
         submitForm() {
+          if (this.submitting) return // 提交防重
           var fd = this.formData
           if (!fd.name) {
             ReggieUI.error('请输入供应商名称')
@@ -350,16 +362,19 @@
             : addSupplier({ name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status })
 
           var self = this
+          self.submitting = true
           apiCall.then(function (res) {
+            self.submitting = false
             if (res.code === 1) {
-              self.$message.success(self.editMode ? '修改成功！' : '添加成功！')
+              ReggieUI.success(self.editMode ? '修改成功！' : '添加成功！')
               self.dialogVisible = false
               self.loadData()
             } else {
-              self.$message.error(res.msg || '操作失败')
+              ReggieUI.error(res.msg || '操作失败')
             }
           }).catch(function (err) {
-            self.$message.error('请求失败：' + err)
+            self.submitting = false
+            ReggieUI.error('请求失败：' + err)
           })
         },
 
@@ -380,17 +395,17 @@
           }).then(function () {
             deleteSupplier(id).then(function (res) {
               if (res.code === 1) {
-                self.$message.success('删除成功！')
+                ReggieUI.success('删除成功！')
                 // 如果当前页删除后为空，回退一页
                 if (self.tableData.length === 1 && self.page > 1) {
                   self.page--
                 }
                 self.loadData()
               } else {
-                self.$message.error(res.msg || '操作失败')
+                ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(function (err) {
-              self.$message.error('请求失败：' + err)
+              ReggieUI.error('请求失败：' + err)
             })
           })
         }
@@ -399,6 +414,37 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

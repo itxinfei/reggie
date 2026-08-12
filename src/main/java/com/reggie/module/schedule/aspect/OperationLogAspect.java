@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.ReflectionKit;
 import com.reggie.common.BaseContext;
 import com.reggie.common.JacksonObjectMapper;
 import com.reggie.common.LogMaskUtils;
-import com.reggie.entity.OperationLog;
+import com.reggie.module.sys.model.OperationLog;
 import com.reggie.module.schedule.service.OperationLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -224,3 +224,4 @@ public class OperationLogAspect {
         }
     }
 }
+

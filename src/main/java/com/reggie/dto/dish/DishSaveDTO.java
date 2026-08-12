@@ -1,7 +1,7 @@
 package com.reggie.dto.dish;
 
 import com.reggie.common.validation.EnumValue;
-import com.reggie.entity.DishFlavor;
+import com.reggie.module.dish.model.DishFlavor;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -69,5 +69,6 @@ public class DishSaveDTO {
     @Schema(description = "口味列表")
     private List<DishFlavor> flavors;
 }
+
 
 

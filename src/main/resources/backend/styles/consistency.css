@@ -1,0 +1,140 @@
+/* ============================================================
+ * 全局一致性层（Consistency Layer）
+ * ------------------------------------------------------------
+ * 加载顺序：main.css 末尾（最后加载，用于覆盖 page.css 等历史漂移）
+ * 目的：在不改动各页面 HTML 结构的前提下，收敛全站视觉漂移，
+ *       输出统一、规范、可商用化的页面观感。
+ * 解决的历史漂移：
+ *   1. 字体栈 6 种变体混用（'Microsoft YaHei' 优先 / 'Segoe UI' 优先等）
+ *   2. 页面背景渐变/纯色混用
+ *   3. 主容器圆角被 page.css 覆盖为 4px（设计系统定义 12px）
+ *   4. 页头类名两套（.ds-page-header / .page-header）
+ * 原则：仅统一"理应一致"的视觉面，不改变各页面业务布局与交互。
+ * 注意：登录页（body.login-page）保留其品牌渐变背景。
+ * ============================================================ */
+
+/* ========== 1. 字体栈统一 ========== */
+/* 页面内曾出现 6 种 font-family 变体，统一收敛到 tokens 的 --font-family-base */
+html,
+body {
+  font-family: var(--font-family-base) !important;
+}
+
+/* ========== 2. 页面背景统一 ========== */
+/* 管理端内容页统一浅灰底（--bg-page）；登录页通过 :not() 排除，保留品牌渐变 */
+body:not(.login-page) {
+  background: var(--bg-page) !important;
+}
+
+/* ========== 3. 主容器表面统一 ========== */
+/* 重新断言设计系统容器规范（design-system.css 定义，被 page.css 覆盖后在此恢复） */
+.dashboard-container .container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4) var(--space-5);
+}
+
+/* 兼容非 dashboard-container 的页面容器（overview-container 等） */
+.overview-container .container,
+.daily-container .container,
+.chart-container .container,
+.addBrand-container .container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4) var(--space-5);
+}
+
+/* ========== 3b. 裸 .container 兜底（body 直下，无 dashboard-container 包裹） ========== */
+/* cashier/daily-settlement、cost/dish-cost、delivery/range-management、finance/withdrawal、
+   food/spec-management、marketing/discount、marketing/full-reduction、report/food-cost、
+   report/sales-report 等页面使用 <div id="app" class="container"> 直挂 body 下，
+   此前仅靠页面私有 padding/max-width，无卡片外观，与 26+ 个 dashboard-container 页面割裂。
+   此处统一补齐卡片表面，使其与主容器规范完全一致。 */
+body > .container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4) var(--space-5);
+  max-width: 1400px;
+  margin: 20px auto;   /* 页面留白：与 .dashboard-container 的 20px padding 对齐 */
+  min-width: 0;
+}
+
+/* ========== 5. 表格数据默认居中（!important 强化，消除一切覆盖源） ========== */
+/* 手写 el-table（cashier/delivery/finance/marketing 等）与 crud-table 数据单元格统一居中；
+   与 page.css 表头居中（.el-table th !important）策略一致，用 !important 强制生效，
+   防止 Element UI 默认 left / 其他样式文件的同特异性规则覆盖。
+   金额/数字列（.is-right）右对齐，符合金额展示规范。
+   修改点：文本长内容列（.is-left）左对齐，便于中文长文本扫读；
+          显式 align:center 的短标识列（.is-center）居中。三态对齐均 !important 保证一致性。 */
+.el-table td.is-left .cell,
+.el-table th.is-left .cell {
+  text-align: left !important;
+}
+.el-table td.is-center .cell,
+.el-table th.is-center .cell {
+  text-align: center !important;
+}
+.el-table td.is-right .cell,
+.el-table th.is-right .cell {
+  text-align: right !important;
+}
+
+/* ========== 6. 手写统计卡片统一（cashier/finance/cost/report 等页面的私有 .stats-row/.stats-card） ========== */
+/* 这些页面仍用私有实现而非 <stat-cards> 组件，此处补齐与统一组件一致的交互态与表面，
+   避免页面间统计卡片观感割裂（仅增强，不改页面 HTML）。 */
+.stats-row .stats-card,
+.stats-cards .stats-card {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  border: 1px solid var(--border-subtle);
+}
+.stats-row .stats-card:hover,
+.stats-cards .stats-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-brand-300);
+}
+
+/* ========== 4. 页头结构对齐 ========== */
+/* 旧版 .page-header（export/index、recommend/overview 等仍在使用）：
+ * 为平铺结构（h1/h2 + p + actions 平级），不能强制 flex（会打乱布局），
+ * 仅统一标题/副标题的字号、字重与颜色；页面内私有样式见对应页面已对齐 */
+.page-header {
+  margin-bottom: var(--space-5);
+}
+.page-header h1,
+.page-header h2,
+.page-header .page-header__title {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--text-primary);
+}
+.page-header .page-header__subtitle,
+.page-header p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* ========== 5. 表格表头统一（表头底色/字重/字号对齐设计规范） ========== */
+.el-table th.el-table__cell {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+/* ========== 6. 分页区域统一 ========== */
+.pageList {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: var(--space-5);
+}

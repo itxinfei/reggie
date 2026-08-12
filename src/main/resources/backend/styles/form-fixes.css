@@ -134,9 +134,11 @@
   transform: rotate(180deg);
 }
 
-/* 下拉菜单样式 */
+/* 下拉菜单样式
+ * 注意：不能设置 min-width:100%!important —— 会覆盖 Element UI 按触发控件计算的内联
+ * min-width，且下拉面板 append 到 body 后 100% = 视口宽度，导致菜单过宽。
+ * 宽度交由 Element UI 内联样式控制（与触发控件等宽），这里仅做外观约束。 */
 .el-select-dropdown {
-  min-width: 100% !important;
   max-width: 400px;
   max-height: 300px;
   border-radius: var(--radius-lg);
@@ -278,7 +280,7 @@
 }
 
 .el-date-table td.current:not(.disabled) span {
-  background: var(--gradient-brand);
+  background: var(--color-brand-500);
   color: white;
   font-weight: var(--font-weight-semibold);
 }
@@ -536,7 +538,7 @@
 }
 
 .el-transfer-panel__header {
-  background: var(--gradient-bg-secondary);
+  background: var(--bg-subtle);
   border-bottom: var(--border-width-thin) var(--border-style-solid) var(--border-color-light);
   padding: var(--space-3) var(--space-4);
 }
@@ -592,7 +594,7 @@
 
 .el-slider__bar {
   height: 6px;
-  background: var(--gradient-brand);
+  background: var(--color-brand-500);
   border-radius: var(--radius-full);
 }
 
@@ -682,4 +684,41 @@
   .el-textarea__inner {
     font-size: var(--font-size-xs);
   }
+}
+
+/* ========== 下拉选择器窄版样式 ========== */
+.el-select--narrow-xs {
+  width: 180px !important;
+  max-width: 180px !important;
+}
+
+.el-select--narrow-sm {
+  width: 200px !important;
+  max-width: 200px !important;
+}
+
+.el-select--narrow-md {
+  width: 240px !important;
+  max-width: 240px !important;
+}
+
+.el-select--wide {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* 下拉选项样式优化 */
+.el-select-dropdown__item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 搜索型下拉框样式 */
+.el-select .el-input__inner {
+  cursor: pointer;
+}
+
+.el-select.filterable .el-input__inner {
+  cursor: text;
 }

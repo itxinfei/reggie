@@ -2,16 +2,16 @@ package com.reggie.module.printer.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.CustomException;
-import com.reggie.entity.OrderDetail;
-import com.reggie.entity.Orders;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
 import com.reggie.module.printer.core.PrinterDeviceManager;
 import com.reggie.module.printer.core.PrinterTemplate;
 import com.reggie.module.printer.model.PrintJob;
 import com.reggie.module.printer.model.PrinterConfig;
 import com.reggie.module.printer.model.PrinterLog;
 import com.reggie.module.printer.model.PrinterStatus;
-import com.reggie.service.OrderDetailService;
-import com.reggie.service.OrderService;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.order.service.OrderService;
 import com.reggie.module.printer.service.PrinterConfigService;
 import com.reggie.module.printer.service.PrinterLogService;
 import com.reggie.module.printer.service.PrinterService;
@@ -120,6 +120,7 @@ public class PrinterServiceImpl implements PrinterService {
         return printerDeviceManager.queryStatus(config);
     }
 }
+
 
 
 

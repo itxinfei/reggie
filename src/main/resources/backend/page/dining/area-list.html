@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>区域管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
   </style>
@@ -13,6 +14,14 @@
 <body>
   <div class="dashboard-container" id="area-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">区域管理</h1>
+          <p class="ds-page-header__subtitle">管理桌台区域与排序</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- ========== 数据统计卡片 ========== -->
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
       <stat-cards :cards="statsCards"></stat-cards>
@@ -44,7 +53,7 @@
         index-label="#"
         :index-width="45"
         :show-actions="true"
-        :actions-width="160"
+        :actions-width="240"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -62,6 +71,7 @@
     <crud-dialog
       :title="dialog.title"
       :visible.sync="dialog.visible"
+      :submit-loading="submitting"
       width="420px"
       @submit="submitForm"
     >
@@ -92,6 +102,7 @@
       data() {
         return {
           loading: false,
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
           input: '',
           counts: 0,
           page: 1,
@@ -111,8 +122,8 @@
           ],
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
-            { prop: 'name', label: '区域名称', minWidth: 120, align: 'center', slot: true },
-            { prop: 'sort', label: '排序', width: 75, align: 'center' }
+            { prop: 'name', label: '区域名称', width: 120, align: 'center' },
+            { prop: 'sort', label: '排序', width: 60, align: 'center' }
           ],
           // 筛选下拉框配置
           filterOptions: { names: [] },
@@ -283,15 +294,18 @@
           this.dialog.visible = true
         },
         submitForm() {
+          if (this.submitting) return // 提交防重
           const self = this
           let passed = false
           self.$refs.form.validate(function(valid) { passed = valid })
           if (!passed) {
-            self.$message.warning('请完善表单必填项')
+            ReggieUI.warning('请完善表单必填项')
             return
           }
+          self.submitting = true
           if (self.action === 'add') {
             addArea({ name: this.form.name, sort: this.form.sort }).then(res => {
+              self.submitting = false
               if (res.code === 1) {
                 ReggieUI.success('区域添加成功！')
                 this.dialog.visible = false
@@ -300,10 +314,12 @@
                 ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(err => {
+              self.submitting = false
               ReggieUI.error('请求失败：' + err)
             })
           } else {
             updateArea({ id: this.form.id, name: this.form.name, sort: this.form.sort }).then(res => {
+              self.submitting = false
               if (res.code === 1) {
                 ReggieUI.success('区域修改成功！')
                 this.dialog.visible = false
@@ -312,6 +328,7 @@
                 ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(err => {
+              self.submitting = false
               ReggieUI.error('请求失败：' + err)
             })
           }
@@ -339,6 +356,19 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,8 +1,8 @@
 package com.reggie.module.cashier.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.reggie.entity.CashierRecord;
-import com.reggie.entity.DailySettlement;
+import com.reggie.module.cashier.model.CashierRecord;
+import com.reggie.module.cashier.model.DailySettlement;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -162,3 +162,4 @@ public interface CashierService extends IService<CashierRecord> {
      */
     Map<String, Object> getDailySettlementSummary(LocalDate startDate, LocalDate endDate, Long tenantId);
 }
+

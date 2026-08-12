@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 数据概览仪表盘测试
  * 注意：Dashboard接口依赖较多业务数据，测试中仅验证接口可正常调用
  */
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
@@ -92,3 +92,4 @@ public class DashboardControllerTest {
                 .andExpect(status().isOk());
     }
 }
+

@@ -8,6 +8,7 @@ import com.aliyuncs.exceptions.ClientException;
 import com.aliyuncs.profile.DefaultProfile;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.ObjectMapperHolder;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -42,7 +43,7 @@ public final class SMSUtils {
     /**
      * JSON序列化工具（线程安全，复用实例）
      */
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
 
     /**
      * 初始化短信凭证（由SmsConfig或启动时调用）
@@ -114,3 +115,5 @@ public final class SMSUtils {
 	}
 
 }
+
+

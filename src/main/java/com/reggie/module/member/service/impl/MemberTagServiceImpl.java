@@ -6,13 +6,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.enums.MemberBizTag;
-import com.reggie.entity.Orders;
+import com.reggie.module.order.model.Orders;
 import com.reggie.module.member.mapper.MemberTagMapper;
 import com.reggie.module.member.model.Member;
 import com.reggie.module.member.model.MemberTag;
 import com.reggie.module.member.service.MemberService;
 import com.reggie.module.member.service.MemberTagService;
-import com.reggie.mapper.OrderMapper;
+import com.reggie.module.order.mapper.OrderMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -249,4 +249,6 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
         return addTag(tenantId, memberId, tagName, bizTag, tagColor);
     }
 }
+
+
 

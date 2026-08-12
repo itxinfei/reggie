@@ -1,12 +1,12 @@
 package com.reggie.module.report;
 
 import com.reggie.common.BaseContext;
-import com.reggie.common.R;
-import com.reggie.entity.OrderDetail;
-import com.reggie.entity.Orders;
+
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.order.service.OrderService;
 import com.reggie.module.report.service.ReportService;
-import com.reggie.service.OrderDetailService;
-import com.reggie.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Sql(scripts = "classpath:schema-report.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
@@ -191,3 +191,4 @@ public class ReportServiceTest {
                 .andExpect(jsonPath("$.data.cancelledOrders").value(1));
     }
 }
+

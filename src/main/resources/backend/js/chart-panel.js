@@ -93,11 +93,6 @@ Vue.component('kpi-card', {
       type: String,
       default: ''
     },
-    /** 渐变 CSS（覆盖默认主题色） */
-    gradient: {
-      type: String,
-      default: ''
-    },
     /** 是否使用 flex 行布局（图标在左，文字在右） */
     flex: {
       type: Boolean,
@@ -112,16 +107,10 @@ Vue.component('kpi-card', {
   computed: {
     cardClass: function () {
       return 'kpi-card kpi-card--' + (this.color || 'primary')
-    },
-    customStyle: function () {
-      if (this.gradient) {
-        return { '--gradient': this.gradient }
-      }
-      return {}
     }
   },
   template:
-    '<div :class="cardClass" :style="customStyle">' +
+    '<div :class="cardClass">' +
       '<div v-if="icon" class="kpi-card__icon" v-text="icon"></div>' +
       '<div class="kpi-card__content">' +
         '<div class="kpi-card__label">{{ label }}</div>' +
@@ -165,8 +154,7 @@ Vue.component('page-shell', {
           ' :value="card.value" :label="card.label" :color="card.color"' +
           ' :icon="card.icon" :unit="card.unit || \'\'"' +
           ' :sub-text="card.subText || \'\'"' +
-          ' :flex="!!card.flex"' +
-          ':gradient="card.gradient" />' +
+          ' :flex="!!card.flex" />' +
       '</div>' +
       '<div class="page-shell__content"><slot></slot></div>' +
     '</div>',

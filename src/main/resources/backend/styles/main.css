@@ -35,4 +35,11 @@
 @import "unified-components.css";
 @import "form-fixes.css";
 
+/* 统计卡片组件样式（<stat-cards>/<stat-card> 依赖，必须随 main.css 全局加载，
+   否则统计卡片渲染为无样式纯文字） */
+@import "components-stats-card.css";
+
+/* 全局一致性层（最后加载，覆盖 page.css 等历史漂移：字体/背景/容器/表头/分页） */
+@import "consistency.css";
+
 

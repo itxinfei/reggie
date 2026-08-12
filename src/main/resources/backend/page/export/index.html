@@ -5,14 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>数据导出 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: var(--el-bg-page); color: var(--el-text-primary); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        body { background: var(--bg-page); color: var(--el-text-primary); font-family: var(--font-family-base); }
 
-        .page-header { margin-bottom: 24px; }
-        .page-header h2 { font-size: 20px; font-weight: 600; }
-        .page-header p { font-size: 13px; color: var(--color-info); margin-top: 4px; }
+        .page-header { margin-bottom: var(--space-5); }
+        .page-header h2 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0; }
+        .page-header p { font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--space-1); }
 
         /* 卡片网格 */
         .export-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
@@ -28,31 +29,31 @@
         .card-icon {
             width: 40px; height: 40px; border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 20px; flex-shrink: 0;
+            font-size:var(--font-size-2xl); flex-shrink: 0;
         }
         .icon-order { background: var(--el-color-primary-lighter); color: var(--el-color-primary); }
         .icon-dish  { background: var(--orange-50b); color: var(--color-warning); }
         .icon-emp   { background: var(--color-success-light); color: var(--color-success); }
         .icon-report{ background: var(--purple-50); color: var(--purple-legacy2); }
 
-        .card-title { font-size: 15px; font-weight: 600; }
-        .card-desc  { font-size: 12px; color: var(--color-info); margin-top: 2px; }
+        .card-title { font-size:var(--font-size-md); font-weight: 600; }
+        .card-desc  { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 2px; }
 
         /* 筛选区 */
         .filter-section { margin-bottom: 16px; padding: 12px; background: var(--el-bg-ghost); border-radius: 6px; }
         .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
         .filter-row:last-child { margin-bottom: 0; }
-        .filter-label { font-size: 13px; color: var(--el-text-regular); white-space: nowrap; min-width: 50px; }
+        .filter-label { font-size:var(--font-size-sm); color: var(--el-text-regular); white-space: nowrap; min-width: 50px; }
 
         .filter-row input, .filter-row select {
             padding: 6px 10px; border: 1px solid var(--el-border-default); border-radius: 4px;
-            font-size: 13px; outline: none; transition: border-color 0.2s;
+            font-size:var(--font-size-sm); outline: none; transition: border-color 0.2s;
         }
         .filter-row input:focus, .filter-row select:focus { border-color: var(--el-color-primary); }
 
         .quick-range { display: flex; gap: 4px; }
         .quick-range span {
-            padding: 4px 10px; font-size: 12px; border-radius: 4px;
+            padding: 4px 10px; font-size:var(--font-size-xs); border-radius: 4px;
             background: var(--bg-surface); border: 1px solid var(--el-border-default); cursor: pointer;
             transition: all 0.2s; color: var(--el-text-regular);
         }
@@ -76,30 +77,30 @@
 
         /* 导出记录 */
         .history-section { margin-top: 24px; }
-        .history-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--el-text-regular); }
+        .history-title { font-size:var(--font-size-base); font-weight: 600; margin-bottom: 12px; color: var(--el-text-regular); }
         .history-list { background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--el-border-light); }
         .history-item {
             display: flex; align-items: center; padding: 12px 20px;
-            border-bottom: 1px solid var(--el-bg-lighter); font-size: 13px;
+            border-bottom: 1px solid var(--el-bg-lighter); font-size:var(--font-size-sm);
         }
         .history-item:last-child { border-bottom: none; }
-        .history-icon { font-size: 18px; margin-right: 12px; }
+        .history-icon { font-size:var(--font-size-xl); margin-right: 12px; }
         .history-info { flex: 1; }
         .history-name { font-weight: 500; color: var(--el-text-primary); }
-        .history-meta { font-size: 12px; color: var(--color-info); margin-top: 2px; }
-        .history-size { font-size: 12px; color: var(--color-success); margin-left: 12px; white-space: nowrap; }
+        .history-meta { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 2px; }
+        .history-size { font-size:var(--font-size-xs); color: var(--color-success); margin-left: 12px; white-space: nowrap; }
         .history-status {
-            padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 500;
+            padding: 3px 10px; border-radius: 10px; font-size:var(--font-size-xs); font-weight: 500;
         }
         .history-status.success { background: var(--color-success-light); color: var(--color-success); }
         .history-status.fail { background: var(--color-danger-light); color: var(--color-danger); }
 
-        .empty-history { text-align: center; padding: 40px; color: var(--el-border-base); font-size: 13px; }
+        .empty-history { text-align: center; padding: 40px; color: var(--el-border-base); font-size:var(--font-size-sm); }
 
         /* Toast */
         .toast {
             position: fixed; top: 20px; right: 20px; padding: 14px 24px; border-radius: 6px;
-            color: var(--bg-surface); font-size: 14px; z-index: 9999; max-width: 400px;
+            color: var(--bg-surface); font-size:var(--font-size-base); z-index: 9999; max-width: 400px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.15); animation: slideIn 0.3s;
             display: none;
         }
@@ -179,7 +180,7 @@
                 <div class="filter-section">
                     <div class="filter-row">
                         <span class="filter-label">数据范围</span>
-                        <span style="font-size:13px;color:var(--color-info);">全部在售菜品（含停售）</span>
+                        <span style="font-size:var(--font-size-sm);color:var(--color-info);">全部在售菜品（含停售）</span>
                     </div>
                 </div>
                 <div class="btn-row">
@@ -200,7 +201,7 @@
                 <div class="filter-section">
                     <div class="filter-row">
                         <span class="filter-label">数据范围</span>
-                        <span style="font-size:13px;color:var(--color-info);">全部员工数据</span>
+                        <span style="font-size:var(--font-size-sm);color:var(--color-info);">全部员工数据</span>
                     </div>
                 </div>
                 <div class="btn-row">
@@ -241,7 +242,7 @@
         <!-- 导出记录 -->
         <div class="history-section">
             <div class="history-title" style="display:flex;justify-content:space-between;align-items:center;">
-                <span>&#128197; 导出记录 <span style="font-size:12px;color:var(--el-border-base);font-weight:400;">（最近 {{ history.length }} 条）</span></span>
+                <span>&#128197; 导出记录 <span style="font-size:var(--font-size-xs);color:var(--el-border-base);font-weight:400;">（最近 {{ history.length }} 条）</span></span>
                 <button v-if="history.length > 0" @click="clearHistory" class="app-btn app-btn-danger app-btn-sm">清空记录</button>
             </div>
             <div class="history-list" v-if="history.length > 0">
@@ -269,6 +270,7 @@
     <script src="../../plugins/vue/vue.js"></script>
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
     <script src="../../api/export.js"></script>

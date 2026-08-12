@@ -130,10 +130,10 @@
   background: var(--color-brand-50);
 }
 
-/* --- 新增按钮：绿色渐变（创建/添加） --- */
+/* --- 新增按钮：绿色（创建/添加） --- */
 .dashboard-container .container .tableBar .btn-add,
 .dashboard-container .container .tableBar .btn-action.el-button--success {
-  background: linear-gradient(135deg, var(--color-success), var(--el-color-success-light)) !important;
+  background: var(--color-success) !important;
   border: none !important;
   color: var(--color-white) !important;
   font-weight: 500;
@@ -141,14 +141,14 @@
 }
 .dashboard-container .container .tableBar .btn-add:hover,
 .dashboard-container .container .tableBar .btn-action.el-button--success:hover {
-  background: linear-gradient(135deg, var(--el-color-success-light), var(--color-success)) !important;
+  background: var(--color-success-dark) !important;
   box-shadow: 0 4px 14px rgba(103, 194, 58, 0.45);
 }
 
-/* --- 删除按钮：红色渐变（危险操作） --- */
+/* --- 删除按钮：红色（危险操作） --- */
 .dashboard-container .container .tableBar .btn-delete,
 .dashboard-container .container .tableBar .btn-action.el-button--danger {
-  background: linear-gradient(135deg, var(--color-danger), var(--legacy-f89898)) !important;
+  background: var(--color-danger) !important;
   border: none !important;
   color: var(--color-white) !important;
   font-weight: 500;
@@ -156,14 +156,14 @@
 }
 .dashboard-container .container .tableBar .btn-delete:hover,
 .dashboard-container .container .tableBar .btn-action.el-button--danger:hover {
-  background: linear-gradient(135deg, var(--legacy-f89898), var(--color-danger)) !important;
+  background: var(--color-danger-dark) !important;
   box-shadow: 0 4px 14px rgba(245, 108, 108, 0.45);
 }
 
-/* --- 导出按钮：橙色渐变（数据导出） --- */
+/* --- 导出按钮：橙色（数据导出） --- */
 .dashboard-container .container .tableBar .btn-export,
 .dashboard-container .container .tableBar .btn-action.el-button--warning {
-  background: linear-gradient(135deg, var(--color-warning), var(--legacy-eebe77)) !important;
+  background: var(--color-warning) !important;
   border: none !important;
   color: var(--color-white) !important;
   font-weight: 500;
@@ -171,7 +171,7 @@
 }
 .dashboard-container .container .tableBar .btn-export:hover,
 .dashboard-container .container .tableBar .btn-action.el-button--warning:hover {
-  background: linear-gradient(135deg, var(--legacy-eebe77), var(--color-warning)) !important;
+  background: var(--color-warning-dark) !important;
   box-shadow: 0 4px 14px rgba(230, 162, 60, 0.45);
 }
 
@@ -187,16 +187,16 @@
   background: var(--color-brand-50);
 }
 
-/* --- 预警按钮：橙色渐变（库存预警等） --- */
+/* --- 预警按钮：橙色（库存预警等） --- */
 .dashboard-container .container .tableBar .btn-warning-status {
-  background: linear-gradient(135deg, var(--color-warning), var(--legacy-eebe77)) !important;
+  background: var(--color-warning) !important;
   border: none !important;
   color: var(--color-white) !important;
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(230, 162, 60, 0.3);
 }
 .dashboard-container .container .tableBar .btn-warning-status:hover {
-  background: linear-gradient(135deg, var(--legacy-eebe77), var(--color-warning)) !important;
+  background: var(--color-warning-dark) !important;
   box-shadow: 0 4px 14px rgba(230, 162, 60, 0.45);
 }
 
@@ -526,11 +526,7 @@
   display: none;
 }
 
-/* 操作列按钮强制一行显示：只作用于含操作按钮的 cell，不影响其他长文本列 */
-.el-table td.is-center .cell {
-  white-space: nowrap;
-  overflow: visible;
-}
+/* 操作列 nowrap 已迁移至 components.css .crud-actions-col .cell（精确作用域，避免影响所有居中列） */
 
 /* 图片圆角样式 */
 .tableBox .el-image {
@@ -1571,3 +1567,14 @@
   height: 100%;
   line-height: 1;
 }
+
+
+
+
+
+
+
+/* 表格对齐/垂直居中/操作列 nowrap 已统一迁移至：
+   - consistency.css（td/th .cell 三态对齐 is-left/is-center/is-right，!important 单一来源）
+   - components.css（.crud-table-wrapper 域内 vertical-align、.crud-actions-col .cell nowrap 精确作用域）
+   原"全局表格数据居中样式"块已删除，避免与 consistency.css 冲突及重复定义。 */

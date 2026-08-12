@@ -2,16 +2,16 @@ package com.reggie.module.report.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
-import com.reggie.entity.Category;
-import com.reggie.entity.Dish;
-import com.reggie.entity.OrderDetail;
-import com.reggie.entity.Orders;
+import com.reggie.module.category.model.Category;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
 import com.reggie.module.export.util.ExportUtil;
 import com.reggie.module.report.service.ReportService;
-import com.reggie.service.CategoryService;
-import com.reggie.service.DishService;
-import com.reggie.service.OrderDetailService;
-import com.reggie.service.OrderService;
+import com.reggie.module.category.service.CategoryService;
+import com.reggie.module.dish.service.DishService;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.order.service.OrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -969,5 +969,9 @@ public class ReportServiceImpl implements ReportService {
         return result;
     }
 }
+
+
+
+
 
 

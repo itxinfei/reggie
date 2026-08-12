@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>日结管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     html, body {
@@ -32,7 +33,7 @@
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
     }
     .tableBar .toolbar-label {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       color: var(--el-text-regular);
       font-weight: 500;
     }
@@ -68,7 +69,7 @@
       color: var(--el-color-danger);
     }
     .stats-label {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       color: var(--el-text-secondary);
     }
     .table-card {
@@ -80,7 +81,7 @@
     .status-tag {
       padding: 4px 8px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size:var(--font-size-xs);
     }
     .status-tag.settled {
       background: var(--el-color-success-lighter);
@@ -94,6 +95,14 @@
 </head>
 <body>
   <div id="app" class="container">
+    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+    <header class="ds-page-header">
+      <div class="ds-page-header__titles">
+        <h1 class="ds-page-header__title" id="page-title">日结管理</h1>
+        <p class="ds-page-header__subtitle">查看每日营业日结与对账</p>
+      </div>
+      <div class="ds-page-header__actions"></div>
+    </header>
     <!-- 工具栏 -->
     <div class="tableBar">
       <span class="toolbar-label">日期范围：</span>
@@ -142,49 +151,49 @@
         stripe
         style="width: 100%"
         v-loading="loading">
-        <el-table aria-label="数据表格"-column prop="settlementDate" label="结算日期" width="120"></el-table-column>
-        <el-table aria-label="数据表格"-column prop="totalRevenue" label="营业额" width="120" align="right">
+        <el-table-column prop="settlementDate" label="结算日期" width="120"></el-table-column>
+        <el-table-column prop="totalRevenue" label="营业额" width="120" align="right">
           <template slot-scope="scope">
             ¥{{ formatMoney(scope.row.totalRevenue) }}
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="orderCount" label="订单数" width="100" align="center"></el-table-column>
-        <el-table aria-label="数据表格"-column prop="refundAmount" label="退款金额" width="120" align="right">
+        <el-table-column prop="orderCount" label="订单数" width="100" align="center"></el-table-column>
+        <el-table-column prop="refundAmount" label="退款金额" width="120" align="right">
           <template slot-scope="scope">
             <span style="color: var(--el-color-danger);">¥{{ formatMoney(scope.row.refundAmount) }}</span>
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="netIncome" label="净收入" width="120" align="right">
+        <el-table-column prop="netIncome" label="净收入" width="120" align="right">
           <template slot-scope="scope">
             <strong>¥{{ formatMoney(scope.row.netIncome) }}</strong>
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="totalCost" label="总成本" width="120" align="right">
+        <el-table-column prop="totalCost" label="总成本" width="120" align="right">
           <template slot-scope="scope">
             ¥{{ formatMoney(scope.row.totalCost) }}
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="grossProfit" label="毛利润" width="120" align="right">
+        <el-table-column prop="grossProfit" label="毛利润" width="120" align="right">
           <template slot-scope="scope">
             <span :style="{ color: scope.row.grossProfit >= 0 ? 'var(--el-color-success)' : 'var(--el-color-danger)' }">
               ¥{{ formatMoney(scope.row.grossProfit) }}
             </span>
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="profitRate" label="毛利率" width="100" align="center">
+        <el-table-column prop="profitRate" label="毛利率" width="100" align="center">
           <template slot-scope="scope">
             {{ scope.row.profitRate }}%
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="status" label="状态" width="100" align="center">
+        <el-table-column prop="status" label="状态" width="100" align="center">
           <template slot-scope="scope">
             <span class="status-tag" :class="scope.row.status === 1 ? 'settled' : 'unsettled'">
               {{ scope.row.status === 1 ? '已结账' : '未结账' }}
             </span>
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="settlementUserName" label="结账人" width="100"></el-table-column>
-        <el-table aria-label="数据表格"-column label="操作" width="200" fixed="right">
+        <el-table-column prop="settlementUserName" label="结账人" width="100"></el-table-column>
+        <el-table-column label="操作" width="200" fixed="right">
           <template slot-scope="scope">
             <el-button type="text" size="small" @click="handleViewDetail(scope.row)">查看详情</el-button>
             <el-button
@@ -204,7 +213,7 @@
     </div>
 
     <!-- 详情对话框 -->
-    <el-dialog title="日结详情" :visible.sync="detailVisible" width="700px">
+    <crud-dialog title="日结详情" :visible.sync="detailVisible" width="700px">
       <div v-if="currentDetail" style="padding: 20px;">
         <el-descriptions :column="2" border>
           <el-descriptions-item label="结算日期">{{ currentDetail.settlementDate }}</el-descriptions-item>
@@ -241,12 +250,13 @@
           <el-descriptions-item label="备注" :span="2">{{ currentDetail.remark || '--' }}</el-descriptions-item>
         </el-descriptions>
       </div>
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../js/common.js"></script>
@@ -311,7 +321,7 @@
             }
           } catch (err) {
             console.error('获取数据失败', err)
-            this.$message.error('获取数据失败')
+            ReggieUI.error('获取数据失败')
           } finally {
             this.loading = false
           }
@@ -338,15 +348,15 @@
             const res = await executeDailySettlement({ settlementDate: today })
             
             if (res.code === 1) {
-              this.$message.success('日结成功')
+              ReggieUI.success('日结成功')
               this.fetchData()
             } else {
-              this.$message.error(res.msg || '日结失败')
+              ReggieUI.error(res.msg || '日结失败')
             }
           } catch (err) {
             if (err !== 'cancel') {
               console.error('日结失败', err)
-              this.$message.error('日结失败')
+              ReggieUI.error('日结失败')
             }
           }
         },
@@ -365,15 +375,15 @@
             const res = await cancelDailySettlement({ settlementDate: row.settlementDate })
             
             if (res.code === 1) {
-              this.$message.success('取消成功')
+              ReggieUI.success('取消成功')
               this.fetchData()
             } else {
-              this.$message.error(res.msg || '取消失败')
+              ReggieUI.error(res.msg || '取消失败')
             }
           } catch (err) {
             if (err !== 'cancel') {
               console.error('取消失败', err)
-              this.$message.error('取消失败')
+              ReggieUI.error('取消失败')
             }
           }
         },
@@ -388,15 +398,15 @@
             const res = await deleteDailySettlement(row.id)
             
             if (res.code === 1) {
-              this.$message.success('删除成功')
+              ReggieUI.success('删除成功')
               this.fetchData()
             } else {
-              this.$message.error(res.msg || '删除失败')
+              ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
             if (err !== 'cancel') {
               console.error('删除失败', err)
-              this.$message.error('删除失败')
+              ReggieUI.error('删除失败')
             }
           }
         }

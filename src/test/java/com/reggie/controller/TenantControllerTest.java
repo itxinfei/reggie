@@ -1,9 +1,7 @@
 package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
-import com.reggie.common.R;
-import com.reggie.entity.Tenant;
-import com.reggie.service.TenantService;
+import com.reggie.module.tenant.service.TenantService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 租户管理控制器测试
  */
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
@@ -136,3 +134,4 @@ public class TenantControllerTest {
                 .andExpect(jsonPath("$.code").value(0));
     }
 }
+

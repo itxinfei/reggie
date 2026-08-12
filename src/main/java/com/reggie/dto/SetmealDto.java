@@ -1,7 +1,7 @@
 package com.reggie.dto;
 
-import com.reggie.entity.Setmeal;
-import com.reggie.entity.SetmealDish;
+import com.reggie.module.setmeal.model.Setmeal;
+import com.reggie.module.setmeal.model.SetmealDish;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -24,3 +24,4 @@ public class SetmealDto extends Setmeal {
     @Schema(description = "分类名称", example = "超值套餐")
     private String categoryName;
 }
+

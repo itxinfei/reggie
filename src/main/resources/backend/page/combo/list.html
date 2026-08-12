@@ -7,6 +7,7 @@
   <title>套餐管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     /* 提取的内联样式类 */
@@ -125,16 +126,16 @@
             <div class="addBut addBut-mb" @click="openDishSelectDialog">+ 添加菜品</div>
             <div class="table">
               <el-table aria-label="数据表格" :data="comboDishTable" border size="small" class="tableBox">
-                <el-table aria-label="数据表格"-column prop="name" label="名称" width="180" align="center"></el-table-column>
-                <el-table aria-label="数据表格"-column prop="price" label="原价" width="180">
+                <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
+                <el-table-column prop="price" label="原价" width="180">
                   <template slot-scope="scope">￥{{ scope.row.price }}</template>
                 </el-table-column>
-                <el-table aria-label="数据表格"-column prop="copies" label="份数" align="center">
+                <el-table-column prop="copies" label="份数" align="center">
                   <template slot-scope="scope">
                     <el-input-number v-model="scope.row.copies" size="small" :min="1" :max="99" controls-position="right" />
                   </template>
                 </el-table-column>
-                <el-table aria-label="数据表格"-column label="操作" width="120" align="center">
+                <el-table-column label="操作" width="120" align="center">
                   <template slot-scope="scope">
                     <el-button type="text" size="small" class="btn-delete" @click="removeComboDish(scope.$index)">删除</el-button>
                   </template>
@@ -163,8 +164,8 @@
     </el-form>
     <template #footer>
       <el-button size="medium" @click="handleDialogClose">取 消</el-button>
-      <el-button type="primary" size="medium" @click="submitComboForm()">确 定</el-button>
-      <el-button v-if="comboDialog.actionType == 'add'" type="primary" size="medium" class="continue" @click="submitComboForm('continue')">保存并继续添加</el-button>
+      <el-button type="primary" size="medium" :loading="submitting" @click="submitComboForm()">确 定</el-button>
+      <el-button v-if="comboDialog.actionType == 'add'" type="primary" size="medium" class="continue" :loading="submitting" @click="submitComboForm('continue')">保存并继续添加</el-button>
     </template>
   </crud-dialog>
 
@@ -261,6 +262,7 @@ new Vue({
   data() {
     return {
       input: '',
+      submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
       // 修改点：搜索下拉框动态选项（从数据库加载套餐名称）
       filterOptions: { names: [] },
       optionsLoading: false,
@@ -291,13 +293,13 @@ new Vue({
       ],
       // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
       columns: [
-        { prop: 'name', label: '套餐名称', minWidth: 120 },
-        { prop: 'image', label: '图片', width: 80, align: 'center', slot: true },
-        { prop: 'categoryName', label: '套餐分类', minWidth: 100 },
-        { prop: 'price', label: '套餐价', width: 100, align: 'center', slot: true, type: 'money' },
-        { prop: 'description', label: '套餐描述', minWidth: 200, slot: true },
-        { prop: 'status', label: '售卖状态', width: 100, align: 'center', slot: true },
-        { prop: 'updateTime', label: '最后操作时间', minWidth: 160 }
+        { prop: 'name', label: '套餐名称', width: 140, showOverflowTooltip: true },
+        { prop: 'image', label: '图片', width: 70, align: 'center', slot: true },
+        { prop: 'categoryName', label: '分类', width: 80, align: 'center' },
+        { prop: 'price', label: '价格', width: 80, align: 'center', slot: true, type: 'money' },
+        { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
+        { prop: 'description', label: '描述', width: 120, showOverflowTooltip: true },
+        { prop: 'updateTime', label: '更新时间', width: 140, align: 'center' }
       ],
       // 套餐弹窗
       comboDialog: {
@@ -628,9 +630,11 @@ new Vue({
     },
 
     submitComboForm(st) {
+      if (this.submitting) return // 提交防重
       var self = this
       this.$refs.comboForm.validate(function (valid) {
         if (valid) {
+          self.submitting = true
           var params = { ...self.comboForm }
           params.setmealDishes = self.comboDishTable.map(function (obj) {
             return {
@@ -643,18 +647,21 @@ new Vue({
           params.status = 1
 
           if (params.setmealDishes.length < 1) {
-            self.$message.error('请选择菜品！')
+            self.submitting = false
+            ReggieUI.error('请选择菜品！')
             return
           }
           if (!params.image) {
-            self.$message.error('请上传套餐图片')
+            self.submitting = false
+            ReggieUI.error('请上传套餐图片')
             return
           }
 
           if (self.comboDialog.actionType === 'add') {
             addSetmeal(params).then(function (res) {
+              self.submitting = false
               if (res.code === 1) {
-                self.$message.success('套餐添加成功！')
+                ReggieUI.success('套餐添加成功！')
                 self.comboDialog.visible = false
                 self.handleQuery()
                 if (st === 'continue') {
@@ -662,22 +669,25 @@ new Vue({
                   self.comboDialog.visible = true
                 }
               } else {
-                self.$message.error(res.msg || '操作失败')
+                ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(function (err) {
-              self.$message.error('请求失败：' + err)
+              self.submitting = false
+              ReggieUI.error('请求失败：' + err)
             })
           } else {
             editSetmeal(params).then(function (res) {
+              self.submitting = false
               if (res.code === 1) {
-                self.$message.success('套餐修改成功！')
+                ReggieUI.success('套餐修改成功！')
                 self.comboDialog.visible = false
                 self.handleQuery()
               } else {
-                self.$message.error(res.msg || '操作失败')
+                ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(function (err) {
-              self.$message.error('请求失败：' + err)
+              self.submitting = false
+              ReggieUI.error('请求失败：' + err)
             })
           }
         }
@@ -732,10 +742,10 @@ new Vue({
         if (res.code === 1) {
           self.comboCategoryList = res.data
         } else {
-          self.$message.error(res.msg || '获取分类失败')
+          ReggieUI.error(res.msg || '获取分类失败')
         }
       }).catch(function (err) {
-        self.$message.error('请求失败：' + err)
+        ReggieUI.error('请求失败：' + err)
       })
     },
 
@@ -748,10 +758,10 @@ new Vue({
             self.getDishList(res.data[0].id)
           }
         } else {
-          self.$message.error(res.msg || '获取菜品分类失败')
+          ReggieUI.error(res.msg || '获取菜品分类失败')
         }
       }).catch(function (err) {
-        self.$message.error('请求失败：' + err)
+        ReggieUI.error('请求失败：' + err)
       })
     },
 
@@ -773,10 +783,10 @@ new Vue({
             }
           })
         } else {
-          self.$message.error(res.msg || '获取菜品列表失败')
+          ReggieUI.error(res.msg || '获取菜品列表失败')
         }
       }).catch(function (err) {
-        self.$message.error('请求失败：' + err)
+        ReggieUI.error('请求失败：' + err)
       })
     },
 
@@ -813,10 +823,10 @@ new Vue({
               }
             })
           } else {
-            self.$message.error(res.msg || '搜索失败')
+            ReggieUI.error(res.msg || '搜索失败')
           }
         }).catch(function (err) {
-          self.$message.error('请求失败：' + err)
+          ReggieUI.error('请求失败：' + err)
         })
       } else {
         if (self.dishTypeList.length > 0) {
@@ -867,6 +877,20 @@ new Vue({
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

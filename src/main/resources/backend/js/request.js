@@ -86,11 +86,17 @@
       if (code === 0 && res.data.msg === 'NOTLOGIN') {
         localStorage.removeItem('userInfo')
         clearCsrfToken();
-        // 修改点：后端页面在iframe中加载，须用window.top导航顶层窗口到登录页
+        // 修改点(2026-08-12)：统一由顶层窗口跳转登录页。
+        // 优先导航顶层窗口；若处于 iframe 且顶层导航被浏览器策略阻止，
+        // 则发消息通知父窗口处理，避免登录页被嵌套在当前 iframe（数据区）内
         try {
-          window.top.location.href = '/backend/page/login/login.html'
+          if (window.top && window.top !== window) {
+            window.top.location.href = '/backend/page/login/login.html'
+          } else {
+            window.location.href = '/backend/page/login/login.html'
+          }
         } catch (e) {
-          window.location.href = '/backend/page/login/login.html'
+          try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch (_) {}
         }
         return Promise.reject(new Error('NOTLOGIN'))  // 修改点：阻止Promise继续进入then回调
       } else {

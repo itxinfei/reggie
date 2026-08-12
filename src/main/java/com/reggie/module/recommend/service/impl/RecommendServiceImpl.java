@@ -4,13 +4,34 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.BaseContext;
-import com.reggie.entity.*;
+import com.reggie.common.ObjectMapperHolder;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.dish.model.DishFlavor;
+import com.reggie.module.category.model.Category;
+import com.reggie.module.setmeal.model.Setmeal;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.dish.service.DishService;
+import com.reggie.module.category.service.CategoryService;
+import com.reggie.module.setmeal.service.SetmealService;
 import com.reggie.module.recommend.mapper.*;
 import com.reggie.module.recommend.model.*;
-import com.reggie.module.recommend.service.BrowseHistoryService;
-import com.reggie.module.recommend.service.MarketingCampaignService;
 import com.reggie.module.recommend.service.RecommendService;
-import com.reggie.service.*;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.dish.model.DishFlavor;
+import com.reggie.module.category.model.Category;
+import com.reggie.module.setmeal.model.Setmeal;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.dish.service.DishService;
+import com.reggie.module.category.service.CategoryService;
+import com.reggie.module.setmeal.service.SetmealService;
+import com.reggie.module.category.service.CategoryService;
+import com.reggie.module.category.model.Category;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -91,15 +112,8 @@ public class RecommendServiceImpl implements RecommendService {
     @Autowired
     private CategoryService categoryService;
 
-    /** 浏览历史服务 */
-    @Autowired
-    private BrowseHistoryService browseHistoryService;
-    /** 营销活动服务 */
-    @Autowired
-    private MarketingCampaignService marketingCampaignService;
-
-    /** JSON序列化工具 */
-    private final ObjectMapper objectMapper = new ObjectMapper();
+            /** JSON序列化工具 */
+    private final ObjectMapper objectMapper = ObjectMapperHolder.getDefault();
 
     /**
      * 应用启动时清理过期缓存
@@ -1009,4 +1023,9 @@ public class RecommendServiceImpl implements RecommendService {
                 .collect(Collectors.toList());
     }
 }
+
+
+
+
+
 

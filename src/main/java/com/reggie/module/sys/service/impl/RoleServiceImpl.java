@@ -7,7 +7,6 @@ import com.reggie.module.sys.entity.Role;
 import com.reggie.module.sys.entity.RolePermission;
 import com.reggie.module.sys.mapper.RoleMapper;
 import com.reggie.module.sys.mapper.RolePermissionMapper;
-import com.reggie.module.sys.service.PermissionService;
 import com.reggie.module.sys.service.RoleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -36,10 +38,6 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
 
     @Autowired
     private RolePermissionMapper rolePermissionMapper;
-
-    @Autowired
-    private PermissionService permissionService;
-
     @Override
     public Role getByRoleKey(String roleKey) {
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
@@ -99,4 +97,10 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         }).collect(Collectors.toList());
     }
 }
+
+
+
+
+
+
 

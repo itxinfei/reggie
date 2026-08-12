@@ -78,7 +78,7 @@
         :total="counts"
         :loading="loading"
         :show-actions="true"
-        :actions-width="160"
+        :actions-width="240"
         aria-label="数据列表"
         @page-change="onPageChange"
         @size-change="onSizeChange"
@@ -147,7 +147,7 @@
           // 列配置（详见 components.js 的 crud-table）
           columns: [
             { prop: 'id', label: 'ID', width: 80 },
-            { prop: 'name', label: '名称', minWidth: 140 },
+            { prop: 'name', label: '名称', width: 120 },
             { prop: 'status', label: '状态', width: 90, align: 'center', slot: true }
           ],
           tableData: [],
@@ -217,6 +217,7 @@
   </script>
 </body>
 </html>
+
 
 
 

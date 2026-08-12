@@ -30,4 +30,24 @@ public enum DishStatus {
         this.value = value;
         this.desc = desc;
     }
+
+    public int getValue() {
+        return value;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
+
+    /**
+     * 根据数值反向获取枚举
+     */
+    public static DishStatus fromCode(int value) {
+        for (DishStatus status : values()) {
+            if (status.value == value) {
+                return status;
+            }
+        }
+        return null;
+    }
 }

@@ -3,8 +3,8 @@ package com.reggie.controller;
 import com.reggie.common.BaseContext;
 import com.reggie.common.PasswordUtils;
 import com.reggie.common.SecurityConstants;
-import com.reggie.entity.Employee;
-import com.reggie.service.EmployeeService;
+import com.reggie.module.auth.model.Employee;
+import com.reggie.module.auth.service.EmployeeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
@@ -172,3 +172,7 @@ public class EmployeeControllerTest {
                 .andExpect(jsonPath("$.code").value(0));
     }
 }
+
+
+
+

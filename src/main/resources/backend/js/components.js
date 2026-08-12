@@ -460,6 +460,11 @@ Vue.component('crud-table', {
       type: String,
       default: 'center'
     },
+    /** 修改点：操作列是否固定在右侧（默认 false）。固定后可避免表格总宽不足时被压缩、导致末尾按钮被 .cell overflow 截断 */
+    actionsFixed: {
+      type: Boolean,
+      default: false
+    },
     /** 表格加载状态 */
     loading: {
       type: Boolean,
@@ -551,8 +556,14 @@ Vue.component('crud-table', {
   },
   template:
     '<div class="crud-table-wrapper" role="region" :aria-label="ariaLabel || \'数据列表\'">' +
+      // ===== 加载骨架屏（首次加载且无数据时显示，替代纯转圈；Element UI 2.15 无 el-skeleton，用纯 CSS 脉冲骨架） =====
+      '<div v-if="showSkeleton" class="ds-skeleton-table">' +
+        '<div v-for="i in 5" :key="i" class="ds-skeleton-row">' +
+          '<div v-for="c in skeletonCols" :key="c" class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div>' +
+        '</div>' +
+      '</div>' +
       // ===== 表格 =====
-      '<el-table' +
+      '<el-table v-else' +
       '  ref="elTable"' +
       '  :data="data"' +
       '  :stripe="stripe"' +
@@ -561,6 +572,7 @@ Vue.component('crud-table', {
       '  :row-key="rowKey || undefined"' +
       '  :max-height="maxHeight"' +
       '  :default-sort="defaultSort || undefined"' +
+      '  highlight-current-row' +
       '  v-loading="loading"' +
       '  class="tableBox"' +
       '  @selection-change="onSelectionChange"' +
@@ -580,40 +592,51 @@ Vue.component('crud-table', {
       // 行号列
       '<el-table-column v-if="showIndex" type="index" :label="indexLabel" :width="indexWidth" align="center"></el-table-column>' +
       // 数据列
+      // 修改点：列宽策略改为内容驱动 —— 页面配置的 width 作为 min-width（下限），
+      // 表格在容器内自动按内容伸缩均分，整行完整展示，避免固定 width 总和溢出导致横向滚动。
       '<el-table-column' +
       '  v-for="col in columns"' +
       '  :key="col.prop"' +
       '  :prop="col.prop"' +
       '  :label="col.label"' +
-      '  :width="col.width"' +
-      '  :min-width="col.minWidth"' +
-      '  :align="col.type ? \'right\' : (col.align || \'left\')"' +
+      '  :min-width="resolveColMinWidth(col)"' +
+      '  :align="resolveColAlign(col)"' +
+      '  :header-align="resolveColAlign(col)"' +
       '  :class-name="(col.type === \'money\' ? \'ds-money\' : (col.type === \'number\' ? \'ds-num\' : \'\')) + (col.className ? \' \' + col.className : \'\')"' +
       '  :fixed="col.fixed"' +
       '  :sortable="col.sortable ? \'custom\' : false"' +
-      '  :show-overflow-tooltip="!!col.showOverflowTooltip"' +
+      '  :show-overflow-tooltip="col.showOverflowTooltip !== false"' +
       '>' +
-        // 修改点：合并为单一 template，避免 v-if/v-else 多片段在 el-table-column 中渲染异常
+        // 修改点：合并为单一 template，避免 v-if/v-else 多片段在 el-table-column 中渲染异常；
+        // money/number 列在无自定义 formatter 时自动千分位格式化，保证金额展示统一
         '<template slot-scope="scope">' +
           '<slot v-if="col.slot" :name="\'col-\' + col.prop" :row="scope.row" :col="col" :$index="scope.$index">' +
             '<span v-if="typeof col.formatter === \'function\'">{{ col.formatter(scope.row[col.prop], scope.row, col) }}</span>' +
+            '<span v-else-if="col.type === \'money\'">{{ formatMoney(scope.row[col.prop]) }}</span>' +
+            '<span v-else-if="col.type === \'number\'">{{ formatNumber(scope.row[col.prop]) }}</span>' +
             '<span v-else>{{ scope.row[col.prop] }}</span>' +
           '</slot>' +
           '<span v-else-if="typeof col.formatter === \'function\'">{{ col.formatter(scope.row[col.prop], scope.row, col) }}</span>' +
+          '<span v-else-if="col.type === \'money\'">{{ formatMoney(scope.row[col.prop]) }}</span>' +
+          '<span v-else-if="col.type === \'number\'">{{ formatNumber(scope.row[col.prop]) }}</span>' +
           '<span v-else>{{ scope.row[col.prop] }}</span>' +
         '</template>' +
       '</el-table-column>' +
       // 操作列
-      '<el-table-column v-if="showActions" :label="actionsLabel" :width="actionsWidth" :align="actionsAlign">' +
+      // 操作列：用 min-width 而非 width —— 页面手填值作为最小宽度，
+      // 按钮数量变化时列自动扩宽，避免操作按钮被截断（M1 修复）
+      // 修改点：支持 actionsFixed 固定到右侧，并加 crud-actions-col class 便于 CSS nowrap 防截断
+      '<el-table-column v-if="showActions" :label="actionsLabel" :min-width="actionsWidth" :align="actionsAlign" :header-align="actionsAlign" :fixed="actionsFixed ? \'right\' : false" class-name="crud-actions-col">' +
         '<template slot-scope="scope">' +
           '<slot name="actions" :row="scope.row" :$index="scope.$index" :size="size"></slot>' +
         '</template>' +
       '</el-table-column>' +
-      // 空状态提示
+      // 空状态提示（样式收敛在 components.css 的 .ds-table-empty，禁止内联硬编码色）
       '<template slot="empty">' +
-        '<div style="padding:40px 0;">' +
-          '<i class="el-icon-document" style="font-size:48px;color:#c0c4cc;"></i>' +
-          '<p style="margin-top:8px;color:#c0c4cc;font-size:14px;">{{ emptyText }}</p>' +
+        '<div class="ds-table-empty">' +
+          '<i class="el-icon-document"></i>' +
+          '<p>{{ emptyText }}</p>' +
+          '<p class="ds-table-empty__hint">试试调整筛选条件，或点击右上角“新建”添加一条记录</p>' +
         '</div>' +
       '</template>' +
     '</el-table>' +
@@ -640,7 +663,45 @@ Vue.component('crud-table', {
       this.currentPage = val
     }
   },
+  computed: {
+    /** 骨架屏：首次加载且无数据时显示（避免空表 + 转圈的割裂感） */
+    showSkeleton: function () {
+      return this.loading && (!this.data || this.data.length === 0)
+    },
+    /** 骨架屏列数：数据列 + 可选的操作/多选/序号列 */
+    skeletonCols: function () {
+      var n = (this.columns || []).length
+      if (this.showActions) n += 1
+      if (this.selection) n += 1
+      if (this.showIndex) n += 1
+      return n
+    }
+  },
   methods: {
+    /**
+     * 列对齐解析：
+     *  - 金额列（col.type='money'）右对齐（tabular-nums 等宽数字，金额规范）
+     *  - 数字列（col.type='number'）默认右对齐（与金额一致，便于数值比对）
+     *  - 页面显式 align 优先
+     *  - 其余列默认居中对齐（统一视觉风格）
+     *    短标识列（状态/排序等）由页面显式 align 控制，金额/数字列仍右对齐
+     */
+    resolveColAlign: function (col) {
+      // 全局统一居中对齐：仅金额/数字列保留右对齐（便于数值比对），其余列一律居中
+      if (col.type === 'money' || col.type === 'number') return col.align || 'right'
+      return col.align || 'center'
+    },
+    /** 列宽解析（内容驱动策略）：
+     *  - 优先 minWidth（页面显式下限）
+     *  - 否则 width 降级为下限（历史配置兼容）
+     *  - 都未设置则返回 undefined，由 Element UI 按内容自动分配
+     * 目标：整行完整展示，避免固定 width 总和溢出导致横向滚动。
+     */
+    resolveColMinWidth: function (col) {
+      if (col.minWidth) return col.minWidth
+      if (col.width) return col.width
+      return undefined
+    },
     /** 获取已选中的行数据 */
     getSelectedRows: function () {
       return this.selectedRows
@@ -898,12 +959,91 @@ window.renderTableBar = function (config) {
 // 全局工具：单一来源集中在 window.RgFormat，新代码可直接引用
 // （如 window.RgFormat.formatMoney），无需依赖全局 mixin
 // ============================================================
+// ============================================================
+// 全局调色板：window.RgPalette —— ECharts 等 canvas 场景无法使用 CSS 变量，
+// 故运行时从 tokens.css 读取令牌值，作为 JS 侧唯一颜色来源（M2 修复）。
+// 用法：color: RgPalette.textSecondary / RgPalette.success ...
+// ============================================================
+window.RgPalette = (function () {
+  function read(name, fallback) {
+    try {
+      var v = getComputedStyle(document.documentElement).getPropertyValue(name)
+      return (v && v.trim()) ? v.trim() : fallback
+    } catch (e) { return fallback }
+  }
+  return {
+    // 文本
+    textPrimary:   read('--el-text-primary', '#303133'),
+    textRegular:   read('--el-text-regular', '#606266'),
+    textSecondary: read('--el-text-secondary', '#909399'),
+    textMuted:     read('--color-gray-400', '#9ca3af'),
+    // 边框 / 背景
+    borderDefault: read('--el-border-default', '#dcdfe6'),
+    borderBase:    read('--el-border-base', '#c0c4cc'),
+    borderLighter: read('--el-border-lighter', '#ebeef5'),
+    borderLighter2: read('--el-border-lighter2', '#e4e7ed'),
+    bgPage:        read('--bg-page', '#f5f6fa'),
+    bgSubtle:      read('--color-gray-50', '#f9fafb'),
+    white:         read('--color-white', '#ffffff'),
+    // 语义色
+    brand:         read('--color-brand-500', '#ffc200'),
+    brandDark:     read('--color-brand-700', '#c99200'),
+    success:       read('--color-success', '#67c23a'),
+    warning:       read('--color-warning', '#e6a23c'),
+    danger:        read('--color-danger', '#f56c6c'),
+    info:          read('--color-info', '#909399'),
+    // ECharts 常用数据系列色（数据可视化专用，非主题色）
+    seriesBlue:    '#5470c6',
+    seriesGreen:   '#91cc75',
+    seriesOrange:  '#fc8452',
+    seriesRed:     '#ff4d4f',
+    seriesPurple:  '#722ed1',
+    seriesCyan:    '#36a3f5',
+    // 报表页额外用到的数据色 / 品牌色（单一来源，页面禁写 hex）
+    alipayBlue:    '#1677FF',
+    wechatGreen:   '#07C160',
+    linkBlue:      '#409eff',
+    successDark:   '#67a94e',
+    successDeep:   '#3a8b1f',
+    seriesGold:    '#fac858',
+    seriesPink:    '#ee6666',
+    seriesViolet:  '#9a60b4',
+    seriesSky:     '#73c0de',
+    seriesMagenta: '#ea7ccc',
+    seriesGreen2:  '#13ce66',
+    antdBlue:      '#1890ff',
+    antdOrange:    '#ff7a45',
+    brand600:      '#e6ae00',
+    brand800:      '#a67600',
+    gray999:       '#999999',
+    bgLight:       '#f2f3f5',
+    blueSoft:      '#f0f4ff',
+    blueSoft2:     '#a0cfff',
+    blueDark:      '#2b6cb0',
+    blueDarkest:   '#1a365d',
+    graySoft:      '#d4d7de'
+  }
+})()
 window.RgFormat = {
-  /** 金额格式化：保留两位小数，空值返回 0.00 */
+  /** 金额格式化：千分位 + 保留两位小数，空值返回 0.00（全站金额展示统一入口） */
   formatMoney: function (val) {
     if (val === null || val === undefined || val === '') return '0.00'
     var n = Number(val)
-    return isNaN(n) ? '0.00' : n.toFixed(2)
+    if (isNaN(n)) return '0.00'
+    var fixed = n.toFixed(2)
+    var parts = fixed.split('.')
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    return parts.join('.')
+  },
+  /** 数字格式化：千分位（保留原小数位），空值返回 ''，用于数量/积分/库存等列 */
+  formatNumber: function (val) {
+    if (val === null || val === undefined || val === '') return ''
+    var n = Number(val)
+    if (isNaN(n)) return String(val)
+    var s = String(n)
+    var parts = s.split('.')
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    return parts.join('.')
   },
   /** 日期格式化：截取 yyyy-MM-dd，空值返回 '-' */
   formatDate: function (val) {
@@ -934,6 +1074,7 @@ window.RgFormat = {
 Vue.mixin({
   methods: {
     formatMoney: function (val) { return window.RgFormat.formatMoney(val) },
+    formatNumber: function (val) { return window.RgFormat.formatNumber(val) },
     formatDate: function (val) { return window.RgFormat.formatDate(val) },
     formatDateTime: function (val) { return window.RgFormat.formatDateTime(val) },
     rgStatusText: function (mapName, status) { return window.RgFormat.rgStatusText(mapName, status) },

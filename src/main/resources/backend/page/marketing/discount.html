@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>折扣活动管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     html, body {
@@ -32,7 +33,7 @@
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
     }
     .tableBar .toolbar-label {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       color: var(--el-text-regular);
       font-weight: 500;
     }
@@ -48,7 +49,7 @@
     .scope-tag {
       padding: 4px 8px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size:var(--font-size-xs);
     }
     .scope-tag.all {
       background: var(--el-color-primary-lighter);
@@ -69,7 +70,7 @@
     .status-tag {
       padding: 4px 8px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size:var(--font-size-xs);
     }
     .status-tag.active {
       background: var(--el-color-success-lighter);
@@ -83,6 +84,14 @@
 </head>
 <body>
   <div id="app" class="container">
+    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+    <header class="ds-page-header">
+      <div class="ds-page-header__titles">
+        <h1 class="ds-page-header__title" id="page-title">折扣活动</h1>
+        <p class="ds-page-header__subtitle">管理限时折扣活动</p>
+      </div>
+      <div class="ds-page-header__actions"></div>
+    </header>
     <!-- 工具栏 -->
     <div class="tableBar">
       <span class="toolbar-label">活动ID：</span>
@@ -151,7 +160,7 @@
     </div>
 
     <!-- 新增/编辑对话框 -->
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="600px">
+    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="600px">
       <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px">
         <el-form-item label="活动ID" prop="campaignId">
           <el-input-number v-model="formData.campaignId" :min="1" style="width: 100%;"></el-input-number>
@@ -184,21 +193,21 @@
         </el-form-item>
         <el-form-item label="折扣率" prop="discountRate">
           <el-input-number v-model="formData.discountRate" :precision="4" :min="0.01" :max="0.99" style="width: 100%;"></el-input-number>
-          <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">
+          <div class="form-tip">
             请输入折扣率，如8折请输入0.8
           </div>
         </el-form-item>
         <el-form-item label="最大优惠金额">
           <el-input-number v-model="formData.maxDiscountAmount" :precision="2" :min="0" style="width: 100%;"></el-input-number>
-          <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">0表示不限制</div>
+          <div class="form-tip">0表示不限制</div>
         </el-form-item>
         <el-form-item label="最低消费金额">
           <el-input-number v-model="formData.minConsumption" :precision="2" :min="0" style="width: 100%;"></el-input-number>
-          <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">0表示不限制</div>
+          <div class="form-tip">0表示不限制</div>
         </el-form-item>
         <el-form-item label="每人限用次数">
           <el-input-number v-model="formData.perUserLimit" :min="0" style="width: 100%;"></el-input-number>
-          <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">0表示不限制</div>
+          <div class="form-tip">0表示不限制</div>
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="formData.sortOrder" :min="0" style="width: 100%;"></el-input-number>
@@ -207,16 +216,13 @@
           <el-switch v-model="formData.status" :active-value="1" :inactive-value="0"></el-switch>
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="dialogVisible = false">取 消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确 定</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../js/common.js"></script>
@@ -287,7 +293,7 @@
             }
           } catch (err) {
             console.error('获取折扣规则列表失败', err)
-            this.$message.error('获取数据失败')
+            ReggieUI.error('获取数据失败')
           } finally {
             this.loading = false
           }
@@ -331,14 +337,14 @@
             const newStatus = row.status === 1 ? 0 : 1
             const res = await updateDiscountRule({ ...row, status: newStatus })
             if (res.code === 1) {
-              this.$message.success(newStatus === 1 ? '已启用' : '已禁用')
+              ReggieUI.success(newStatus === 1 ? '已启用' : '已禁用')
               this.fetchData()
             } else {
-              this.$message.error(res.msg || '操作失败')
+              ReggieUI.error(res.msg || '操作失败')
             }
           } catch (err) {
             console.error('操作失败', err)
-            this.$message.error('操作失败')
+            ReggieUI.error('操作失败')
           }
         },
         async handleDelete(row) {
@@ -351,15 +357,15 @@
             
             const res = await deleteDiscountRule(row.id)
             if (res.code === 1) {
-              this.$message.success('删除成功')
+              ReggieUI.success('删除成功')
               this.fetchData()
             } else {
-              this.$message.error(res.msg || '删除失败')
+              ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
             if (err !== 'cancel') {
               console.error('删除失败', err)
-              this.$message.error('删除失败')
+              ReggieUI.error('删除失败')
             }
           }
         },
@@ -377,15 +383,15 @@
               }
               
               if (res.code === 1) {
-                this.$message.success(this.formData.id ? '更新成功' : '新增成功')
+                ReggieUI.success(this.formData.id ? '更新成功' : '新增成功')
                 this.dialogVisible = false
                 this.fetchData()
               } else {
-                this.$message.error(res.msg || '操作失败')
+                ReggieUI.error(res.msg || '操作失败')
               }
             } catch (err) {
               console.error('提交失败', err)
-              this.$message.error('操作失败')
+              ReggieUI.error('操作失败')
             } finally {
               this.submitLoading = false
             }

@@ -6,11 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>角色管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     .perm-tree-dialog .el-tree { max-height: 400px; overflow-y: auto; border: 1px solid var(--el-border-light); border-radius: 4px; padding: 10px; }
     .perm-tree-dialog .el-tree-node__content { height: 32px; }
-    .perm-tree-dialog .el-tree-node__label { font-size: 13px; }
+    .perm-tree-dialog .el-tree-node__label { font-size:var(--font-size-sm); }
     .perm-header { display: flex; align-items: center; gap: 8px; }
     .perm-header .el-tag { margin: 0; }
   </style>
@@ -18,6 +19,14 @@
 <body>
   <div class="dashboard-container" id="role-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">角色管理</h1>
+          <p class="ds-page-header__subtitle">管理角色与权限分配</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -45,7 +54,7 @@
         :page-size="pageSize"
         :total="counts"
         :show-actions="true"
-        :actions-width="260"
+        :actions-width="200"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -69,6 +78,7 @@
     <crud-dialog
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
+      :submit-loading="submitting"
       width="500px"
       @submit="submitForm"
       @close="formData.dialogVisible = false"
@@ -97,9 +107,17 @@
     </crud-dialog>
 
     <!-- 权限分配弹窗 -->
-    <el-dialog title="权限分配" :visible.sync="permDialogVisible" custom-class="el-dialog--md unified-dialog perm-tree-dialog"
-      :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
-      <div style="margin-bottom: 12px; font-size: 13px; color: var(--el-text-regular);">
+    <crud-dialog
+      title="权限分配"
+      :visible.sync="permDialogVisible"
+      size="md"
+      :submit-loading="permSubmitting"
+      custom-class="perm-tree-dialog"
+      :close-on-click-modal="false"
+      @submit="submitPerms"
+      @close="permDialogVisible = false"
+    >
+      <div style="margin-bottom: 12px; font-size:var(--font-size-sm); color: var(--el-text-regular);">
         当前角色：<strong>{{ currentRole ? currentRole.roleName : '' }}</strong>
         <span style="margin-left: 12px;">已选 <el-tag type="success" size="mini">{{ checkedPerms.length }}</el-tag> 项权限</span>
       </div>
@@ -121,11 +139,7 @@
           </span>
         </template>
       </el-tree>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="permDialogVisible = false">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitPerms" :loading="permSubmitting">保存权限</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -165,11 +179,11 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'roleName', label: '角色名称', width: 150, align: 'center' },
-            { prop: 'roleKey', label: '角色标识', width: 120, slot: true, align: 'center' },
-            { prop: 'description', label: '描述', showOverflowTooltip: true, align: 'center' },
-            { prop: 'sort', label: '排序', width: 80, align: 'center' },
-            { prop: 'status', label: '状态', width: 100, align: 'center', slot: true }
+            { prop: 'roleName', label: '角色名称', width: 120, align: 'center' },
+            { prop: 'roleKey', label: '角色标识', width: 100, align: 'center' },
+            { prop: 'description', label: '描述', width: 120, showOverflowTooltip: true },
+            { prop: 'sort', label: '排序', width: 60, align: 'center' },
+            { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
           ],
           // 弹窗表单
           formData: {
@@ -325,24 +339,24 @@
         },
         submitForm() {
           const self = this
-          let passed = false
-          self.$refs.roleForm.validate(function(valid) { passed = valid })
-          if (!passed) {
-            self.$message.warning('请填写角色名称和标识')
-            return
-          }
-          self.submitting = true
-          var api = self.formData.id ? sysApi.roleUpdate(self.formData) : sysApi.roleAdd(self.formData)
-          api.then(function(res) {
-            if (res && res.code === 1) {
-              self.$message.success(res.msg || '操作成功')
-              self.formData.dialogVisible = false
-              self.init()
-            } else {
-              self.$message.error(res ? res.msg : '操作失败')
+          self.$refs.roleForm.validate(function(valid) {
+            if (!valid) {
+              ReggieUI.warning('请填写角色名称和标识')
+              return
             }
-          }).catch(function() { self.$message.error('操作失败') })
-            .finally(function() { self.submitting = false })
+            self.submitting = true
+            var api = self.formData.id ? sysApi.roleUpdate(self.formData) : sysApi.roleAdd(self.formData)
+            api.then(function(res) {
+              if (res && res.code === 1) {
+                ReggieUI.success(res.msg || '操作成功')
+                self.formData.dialogVisible = false
+                self.init()
+              } else {
+                ReggieUI.error(res ? res.msg : '操作失败')
+              }
+            }).catch(function() { ReggieUI.error('操作失败') })
+              .finally(function() { self.submitting = false })
+          })
         },
         deleteHandle(id) {
           var self = this
@@ -350,7 +364,7 @@
             .then(function() {
               sysApi.roleDelete(id).then(function(res) {
                 if (res && res.code === 1) {
-                  self.$message.success('删除成功')
+                  ReggieUI.success('删除成功')
                   self.init()
                 }
               })
@@ -413,12 +427,12 @@
           var self = this
           sysApi.assignPermissions(this.currentRole.id, keys).then(function(res) {
             if (res && res.code === 1) {
-              self.$message.success('权限分配成功')
+              ReggieUI.success('权限分配成功')
               self.permDialogVisible = false
             } else {
-              self.$message.error(res ? res.msg : '操作失败')
+              ReggieUI.error(res ? res.msg : '操作失败')
             }
-          }).catch(function() { self.$message.error('操作失败') })
+          }).catch(function() { ReggieUI.error('操作失败') })
             .finally(function() { self.permSubmitting = false })
         }
       }
@@ -426,6 +440,19 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

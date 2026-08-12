@@ -1,8 +1,8 @@
 package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
-import com.reggie.entity.OrderDetail;
-import com.reggie.service.OrderDetailService;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.service.OrderDetailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 订单明细控制器测试
  */
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
@@ -84,3 +84,6 @@ public class OrderDetailControllerTest {
                 .andExpect(jsonPath("$.data.name").value("另一个测试菜品"));
     }
 }
+
+
+

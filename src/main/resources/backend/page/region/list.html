@@ -6,11 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>行政区划管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
   <div class="dashboard-container" id="region-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">行政区划管理</h1>
+          <p class="ds-page-header__subtitle">管理配送区域与范围</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
       <table-bar
         :search-items="tableSearchItems"
@@ -41,7 +50,7 @@
         :total="counts"
         :loading="loading"
         :show-actions="true"
-        :actions-width="160"
+        :actions-width="240"
         :page-sizes="[10, 20, 30, 50]"
         @page-change="onPageChange"
         @size-change="onSizeChange"
@@ -131,14 +140,14 @@
           regionRules: {
             name: [{ required: true, whitespace: true, message: '请输入地区名称', trigger: 'blur' }]
           },
-          // 修改点：列配置（交给 <crud-table>，避免手写 <el-table aria-label="数据表格"-column> 重复）
+          // 修改点：列配置（交给 <crud-table>，避免手写 <el-table-column> 重复）
           columns: [
-            { prop: 'id', label: 'ID', width: 80 },
-            { prop: 'name', label: '地区名称', minWidth: 140 },
-            { prop: 'code', label: '区划代码', width: 120 },
-            { prop: 'level', label: '层级', width: 90, align: 'center', slot: true },
-            { prop: 'parentId', label: '父级ID', width: 90 },
-            { prop: 'sort', label: '排序', width: 80 }
+            { prop: 'id', label: 'ID', width: 60, align: 'center' },
+            { prop: 'name', label: '地区名称', width: 120 },
+            { prop: 'code', label: '区划代码', width: 100, align: 'center' },
+            { prop: 'level', label: '层级', width: 70, align: 'center', slot: true },
+            { prop: 'parentId', label: '父级ID', width: 70, align: 'center' },
+            { prop: 'sort', label: '排序', width: 60, align: 'center' }
           ]
         }
       },
@@ -249,7 +258,7 @@
           let passed = false
           self.$refs.regionForm.validate(function(valid) { passed = valid })
           if (!passed) {
-            self.$message.warning('请完善表单必填项')
+            ReggieUI.warning('请完善表单必填项')
             return
           }
           const data = {
@@ -269,11 +278,11 @@
               res = await addRegion(data)
             }
             if (res.code === 1) {
-              self.$message.success(self.formData.id ? '修改成功' : '新增成功')
+              ReggieUI.success(self.formData.id ? '修改成功' : '新增成功')
               self.formData.dialogVisible = false
               self.fetchData()
             } else {
-              self.$message.error(res.msg || '操作失败')
+              ReggieUI.error(res.msg || '操作失败')
             }
           } finally {
             self.submitLoading = false
@@ -296,6 +305,20 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

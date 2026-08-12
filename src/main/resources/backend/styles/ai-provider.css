@@ -7,7 +7,7 @@
 
 /* 激活供应商高亮卡片 */
 .active-provider-card {
-    background: linear-gradient(135deg, var(--legacy-f0f9ff) 0%, var(--antd-info-bg) 100%);
+    background: var(--antd-info-bg);
     border: 2px solid var(--color-brand-500);
     border-radius: 10px;
     padding: 20px 24px;

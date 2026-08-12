@@ -8,9 +8,11 @@ import com.aliyuncs.dysmsapi.model.v20170525.SendSmsRequest;
 import com.aliyuncs.dysmsapi.model.v20170525.SendSmsResponse;
 import com.aliyuncs.profile.DefaultProfile;
 import com.reggie.common.BaseContext;
+import com.reggie.common.ObjectMapperHolder;
 import com.reggie.common.CustomException;
-import com.reggie.entity.User;
-import com.reggie.mapper.UserMapper;
+import com.reggie.common.ObjectMapperHolder;
+import com.reggie.module.user.model.User;
+import com.reggie.module.user.mapper.UserMapper;
 import com.reggie.module.notification.mapper.NotificationRecordMapper;
 import com.reggie.module.notification.mapper.NotificationTemplateMapper;
 import com.reggie.module.notification.mapper.UserDeviceMapper;
@@ -52,7 +54,7 @@ import java.util.regex.Pattern;
 public class NotificationServiceImpl implements NotificationService {
 
     /** JSON序列化工具 */
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperHolder.getDefault();
 
     /** 通知模板Mapper */
     @Resource
@@ -825,6 +827,10 @@ public class NotificationServiceImpl implements NotificationService {
         return record;
     }
 }
+
+
+
+
 
 
 

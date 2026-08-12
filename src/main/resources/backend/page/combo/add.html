@@ -7,6 +7,7 @@
     <title>套餐管理 - 瑞吉外卖管理端</title>
     <!-- 引入样式 -->
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
     <style>
       .addDish .el-input {
@@ -200,11 +201,11 @@
                     <div class="addBut addBut-mb" @click="openAddDish">+ 添加菜品</div>
                     <div class="table">
                       <el-table aria-label="数据表格" :data="dishTable" border class="tableBox">
-                        <el-table aria-label="数据表格"-column prop="name" label="名称" width="180" align="center"></el-table-column>
-                        <el-table aria-label="数据表格"-column prop="price" label="原价" width="180">
+                        <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
+                        <el-table-column prop="price" label="原价" width="180">
                           <template slot-scope="scope"> {{ Number(scope.row.price) }} </template>
                         </el-table-column>
-                        <el-table aria-label="数据表格"-column prop="address" label="份数" align="center">
+                        <el-table-column prop="address" label="份数" align="center">
                           <template slot-scope="scope">
                             <el-input-number
                               v-model="scope.row.copies"
@@ -215,7 +216,7 @@
                             ></el-input-number>
                           </template>
                         </el-table-column>
-                        <el-table aria-label="数据表格"-column prop="address" label="操作" width="180px;" align="center">
+                        <el-table-column prop="address" label="操作" width="180px;" align="center">
                           <template slot-scope="scope">
                             <el-button type="text" size="small" @click="delDishHandle(scope.$index)"> 删除 </el-button>
                           </template>
@@ -247,11 +248,12 @@
           <div class="subBox address">
             <el-form-item>
               <el-button @click="goBack()" style="margin-right: 10px;"> 取消 </el-button>
-              <el-button type="primary" @click="submitForm('ruleForm', false)" style="margin-right: 10px;"> 保存 </el-button>
+              <el-button type="primary" :loading="submitting" @click="submitForm('ruleForm', false)" style="margin-right: 10px;"> 保存 </el-button>
               <el-button
                 v-if="actionType == 'add'"
                 type="primary"
                 class="continue"
+                :loading="submitting"
                 @click="submitForm('ruleForm', true)"
               >
                 保存并继续添加套餐
@@ -260,7 +262,7 @@
           </div>
         </el-form>
       </div>
-      <el-dialog title="添加菜品" custom-class="addDishList el-dialog--lg unified-dialog" :visible.sync="dialogVisible" :show-close="true" :append-to-body="true" :modal-append-to-body="true">
+      <crud-dialog title="添加菜品"  :visible.sync="dialogVisible" :show-close="true"  >
         <el-input
           v-model="value"
           class="seachDish search-input"
@@ -341,11 +343,7 @@
           </div>
         </div>
         
-        <span slot="footer" class="dialog-footer">
-          <el-button size="medium" @click="handleClose">取 消</el-button>
-          <el-button type="primary" size="medium" @click="addTableList">确 定</el-button>
-        </span>
-      </el-dialog>
+      </crud-dialog>
     </div>
     <!-- 开发环境版本，包含了有帮助的命令行警告 -->
     <script src="../../plugins/vue/vue.js"></script>
@@ -354,6 +352,7 @@
     <!-- 引入axios -->
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
     <script src="../../api/combo.js"></script>
@@ -367,6 +366,7 @@
           return {
             id: '',
             actionType: '',
+            submitting: false, // 提交防重：请求期间锁定保存按钮
             value: '',
             setMealList: [],
             seachKey: '',
@@ -533,8 +533,10 @@
             this.checkList = []
           },
           submitForm(formName, st) {
+            if (this.submitting) return // 提交防重
             this.$refs[formName].validate((valid) => {
               if (valid) {
+                this.submitting = true
                 let params = { ...this.ruleForm }
                 params.setmealDishes = this.dishTable.map((obj) => ({
                   copies: obj.copies,
@@ -545,10 +547,12 @@
                 params.status = this.ruleForm.status ? 1 : 0
                 params.categoryId = this.ruleForm.idType
                 if(params.setmealDishes.length < 1){
+                  this.submitting = false
                   ReggieUI.error('请选择菜品！')
                   return 
                 }
                 if(!this.imageUrl){
+                  this.submitting = false
                   ReggieUI.error('请上传套餐图片')
                   return 
                 }
@@ -557,6 +561,7 @@
                   delete params.id
                   addSetmeal(params)
                     .then((res) => {
+                      this.submitting = false
                       if (res.code === 1) {
                         ReggieUI.success('套餐添加成功！')
                         if (!st) {
@@ -584,12 +589,14 @@
                       }
                     })
                     .catch((err) => {
+                      this.submitting = false
                       ReggieUI.error('请求失败：' + err)
                     })
                 } else {
                   delete params.updateTime
                   editSetmeal(params)
                     .then((res) => {
+                      this.submitting = false
                       if (res.code === 1) {
                         ReggieUI.success('套餐修改成功！')
                         this.goBack()
@@ -598,6 +605,7 @@
                       }
                     })
                     .catch((err) => {
+                      this.submitting = false
                       ReggieUI.error('请求失败：' + err)
                     })
                 }

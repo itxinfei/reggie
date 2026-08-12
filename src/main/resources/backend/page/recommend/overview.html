@@ -5,20 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智能推荐概览 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
     <script src="../../plugins/echarts/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: var(--el-bg-subtle); padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
-        .page-header { margin-bottom: 20px; }
-        .page-header h2 { font-size: 20px; color: var(--el-text-primary); }
-        .page-header p { font-size: 13px; color: var(--color-info); margin-top: 4px; }
-        .page-header .header-actions { float: right; margin-top: -24px; display: flex; gap: 8px; }
+        body { background: var(--bg-page); padding: 20px; font-family: var(--font-family-base); }
+        .page-header { margin-bottom: var(--space-5); }
+        .page-header h2 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0; }
+        .page-header p { font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--space-1); }
+        .page-header .header-actions { float: right; margin-top: -28px; display: flex; gap: 8px; }
 
         /* 图表行 */
         .charts-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
         .chart-panel { background: var(--bg-surface); border-radius: 10px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
-        .panel-title { font-size: 15px; font-weight: 600; color: var(--el-text-primary); margin-bottom: 16px;
+        .panel-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 16px;
             padding-bottom: 12px; border-bottom: 1px solid var(--el-border-light); display: flex; align-items: center; gap: 8px; }
         .panel-title .el-icon { color: var(--el-color-primary); }
         .chart-box { width: 100%; height: 300px; }
@@ -30,22 +31,22 @@
         .dish-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }
         .dish-img { width: 100%; height: 120px; object-fit: cover; background: var(--el-bg-subtle); }
         .dish-body { padding: 10px 12px; }
-        .dish-name { font-size: 14px; font-weight: 500; color: var(--el-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .dish-price { font-size: 15px; font-weight: 600; color: var(--orange-700b); margin-top: 4px; }
-        .dish-desc { font-size: 12px; color: var(--color-info); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dish-name { font-size:var(--font-size-base); font-weight: 500; color: var(--el-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dish-price { font-size:var(--font-size-md); font-weight: 600; color: var(--color-brand-700); margin-top: 4px; }
+        .dish-desc { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .dish-sales { font-size: 11px; color: var(--color-success); margin-top: 4px; }
         .rank-badge { position: absolute; top: 0; left: 0; padding: 2px 8px; font-size: 11px; font-weight: 700;
             border-radius: 0 0 6px 0; z-index: 1; }
-        .rank-badge.r1 { background: var(--antd-error); color: var(--bg-surface); }
-        .rank-badge.r2 { background: var(--antd-orange); color: var(--bg-surface); }
-        .rank-badge.r3 { background: var(--antd-warning-l); color: var(--bg-surface); }
+        .rank-badge.r1 { background: var(--color-danger); color: var(--bg-surface); }
+        .rank-badge.r2 { background: var(--color-brand-500); color: var(--bg-surface); }
+        .rank-badge.r3 { background: var(--color-warning); color: var(--bg-surface); }
 
         .loading-wrap { text-align: center; padding: 60px 0; }
         .loading-wrap p { color: var(--color-info); margin-top: 12px; }
 
         /* 推荐算法标签 */
         .algo-tags { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-        .algo-tag { padding: 4px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--el-border-lighter2);
+        .algo-tag { padding: 4px 12px; border-radius: 20px; font-size:var(--font-size-xs); border: 1px solid var(--el-border-lighter2);
             cursor: pointer; transition: all 0.2s; color: var(--el-text-regular); }
         .algo-tag.active { background: var(--el-color-primary); color: var(--bg-surface); border-color: var(--el-color-primary); }
         .algo-tag:hover:not(.active) { border-color: var(--el-color-primary); color: var(--el-color-primary); }
@@ -364,15 +365,11 @@
                     { name: '浏览次数', type: 'line', data: browseCount, smooth: true,
                         symbol: 'circle', symbolSize: 6,
                         lineStyle: { color: '#5470c6', width: 3 },
-                        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                            { offset: 0, color: 'rgba(84,112,198,0.25)' },
-                            { offset: 1, color: 'rgba(84,112,198,0.02)' }]) } },
+                        areaStyle: { color: 'rgba(84,112,198,0.15)' } },
                     { name: '加购次数', type: 'line', data: cartCount, smooth: true,
                         symbol: 'circle', symbolSize: 6,
                         lineStyle: { color: '#91cc75', width: 3 },
-                        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                            { offset: 0, color: 'rgba(145,204,117,0.25)' },
-                            { offset: 1, color: 'rgba(145,204,117,0.02)' }]) } }
+                        areaStyle: { color: 'rgba(145,204,117,0.15)' } }
                 ]
             }, true);
         },

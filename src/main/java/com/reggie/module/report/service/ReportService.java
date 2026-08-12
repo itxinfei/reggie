@@ -1,6 +1,7 @@
 package com.reggie.module.report.service;
 
 import java.util.List;
+import com.reggie.module.category.model.Category;
 import java.util.Map;
 
 /**
@@ -167,3 +168,4 @@ public interface ReportService {
      */
     Map<String, Object> getCohortAnalysis(String startDate, String endDate, Long tenantId);
 }
+

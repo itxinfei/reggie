@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>营业日报 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
@@ -17,8 +18,8 @@
       padding: 0;
       overflow-y: auto;
       overflow-x: hidden;
-      background: linear-gradient(135deg, var(--el-bg-subtle) 0%, var(--el-border-lighter) 100%);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg-page);
+      font-family: var(--font-family-base);
     }
 
     /* ========== 主容器 ========== */
@@ -32,7 +33,7 @@
       background: transparent;
       padding: 24px 32px 32px;
       min-width: 0;
-      max-width: 1600px;
+      max-width: 1400px;
       margin: 0 auto;
       width: 100%;
     }
@@ -55,7 +56,7 @@
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
     }
     .tableBar .toolbar-label {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       color: var(--el-text-regular);
       font-weight: 500;
       margin-right: 4px;
@@ -93,7 +94,7 @@
       background: var(--el-bg-ghost);
     }
     .export-records-panel .panel-title {
-      font-size: 15px;
+      font-size:var(--font-size-md);
       font-weight: 600;
       color: var(--el-text-primary);
       flex: 1;
@@ -112,7 +113,7 @@
     .export-records-panel .expand-icon {
       transition: transform 0.3s;
       color: var(--el-border-base);
-      font-size: 14px;
+      font-size:var(--font-size-base);
     }
     .export-records-panel .expand-icon.is-expanded {
       transform: rotate(180deg);
@@ -126,13 +127,13 @@
     .record-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size:var(--font-size-sm);
     }
     .record-table thead th {
       background: var(--el-bg-ghost);
       color: var(--color-info);
       font-weight: 600;
-      font-size: 12px;
+      font-size:var(--font-size-xs);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       padding: 12px 16px;
@@ -159,7 +160,7 @@
       align-items: center;
       padding: 3px 10px;
       border-radius: 6px;
-      font-size: 12px;
+      font-size:var(--font-size-xs);
       font-weight: 600;
     }
     .format-tag.excel {
@@ -176,7 +177,7 @@
       gap: 4px;
       padding: 3px 10px;
       border-radius: 6px;
-      font-size: 12px;
+      font-size:var(--font-size-xs);
       font-weight: 600;
     }
     .status-tag.success {
@@ -206,7 +207,7 @@
       opacity: 0.4;
     }
     .empty-state .empty-text {
-      font-size: 14px;
+      font-size:var(--font-size-base);
     }
 
     /* ========== 响应式 ========== */
@@ -280,7 +281,7 @@
         <template #title>
           <i class="el-icon-data-line" style="color:var(--el-color-primary);"></i>
           营收趋势
-          <span style="font-size:12px;color:var(--el-border-base);font-weight:400;margin-left:4px;">（近7天）</span>
+          <span style="font-size:var(--font-size-xs);color:var(--el-border-base);font-weight:400;margin-left:4px;">（近7天）</span>
         </template>
         <div style="flex:1;min-height:360px;" id="trendChart"></div>
       </chart-panel>
@@ -288,7 +289,7 @@
         <template #title>
           <i class="el-icon-pie-chart" style="color:var(--color-warning);"></i>
           菜品分类销售占比
-          <span style="font-size:12px;color:var(--el-border-base);font-weight:400;margin-left:4px;">（基于已选日期）</span>
+          <span style="font-size:var(--font-size-xs);color:var(--el-border-base);font-weight:400;margin-left:4px;">（基于已选日期）</span>
         </template>
         <div style="flex:1;min-height:360px;" id="categoryChart"></div>
       </chart-panel>
@@ -357,7 +358,7 @@
                         @click="deleteRecord(index)"
                       >删除</el-button>
                     </template>
-                    <span v-else style="color:var(--el-border-base);font-size:12px;">--</span>
+                    <span v-else style="color:var(--el-border-base);font-size:var(--font-size-xs);">--</span>
                   </td>
                 </tr>
               </tbody>
@@ -601,7 +602,7 @@
           if (!trendData || trendData.length === 0) {
             this.chart.setOption({
               title: { text: '暂无趋势数据', left: 'center', top: 'center',
-                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
             }, true)
             return
           }
@@ -614,11 +615,11 @@
           this.chart.setOption({
             tooltip: {
               trigger: 'axis',
-              axisPointer: { type: 'cross', crossStyle: { color: '#d4d7de' } },
+              axisPointer: { type: 'cross', crossStyle: { color: RgPalette.graySoft } },
               backgroundColor: 'rgba(255,255,255,0.96)',
-              borderColor: '#e4e7ed',
+              borderColor: RgPalette.borderLighter2,
               borderWidth: 1,
-              textStyle: { color: '#303133', fontSize: 13 },
+              textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
               formatter(params) {
                 let html = '<b>' + params[0].axisValue + '</b><br/>'
                 params.forEach(p => {
@@ -630,28 +631,28 @@
                 return html
               }
             },
-            legend: { data: ['订单数', '营业额'], bottom: 8, textStyle: { color: '#606266', fontSize: 13 } },
+            legend: { data: ['订单数', '营业额'], bottom: 8, textStyle: { color: RgPalette.textRegular, fontSize: 13 } },
             // 修改点：增大 top/bottom/right 防止双Y轴标签和 legend 被裁剪
             grid: { left: 50, right: 65, top: 30, bottom: 52 },
             xAxis: {
               type: 'category',
               data: hasData ? dates : ['暂无数据'],
-              axisLine: { lineStyle: { color: '#e4e7ed' } },
+              axisLine: { lineStyle: { color: RgPalette.borderLighter2 } },
               axisTick: { show: false },
-              axisLabel: { color: '#909399', fontSize: 12, rotate: dates.length > 7 ? 30 : 0 }
+              axisLabel: { color: RgPalette.textSecondary, fontSize: 12, rotate: dates.length > 7 ? 30 : 0 }
             },
             yAxis: [
               {
                 type: 'value', name: '订单量(单)',
-                nameTextStyle: { color: '#909399', fontSize: 12 },
-                axisLabel: { color: '#909399', fontSize: 12 },
-                splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } },
+                nameTextStyle: { color: RgPalette.textSecondary, fontSize: 12 },
+                axisLabel: { color: RgPalette.textSecondary, fontSize: 12 },
+                splitLine: { lineStyle: { color: RgPalette.bgLight, type: 'dashed' } },
                 axisLine: { show: false }, axisTick: { show: false }
               },
               {
                 type: 'value', name: '营业额(元)',
-                nameTextStyle: { color: '#909399', fontSize: 12 },
-                axisLabel: { color: '#909399', fontSize: 12, formatter: '¥{value}' },
+                nameTextStyle: { color: RgPalette.textSecondary, fontSize: 12 },
+                axisLabel: { color: RgPalette.textSecondary, fontSize: 12, formatter: '¥{value}' },
                 splitLine: { show: false },
                 axisLine: { show: false }, axisTick: { show: false }
               }
@@ -662,26 +663,20 @@
                 barWidth: barW, barGap: '20%',
                 itemStyle: {
                   borderRadius: [6, 6, 0, 0],
-                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: '#6c9df8' },
-                    { offset: 1, color: '#5470c6' }
-                  ])
+                  color: RgPalette.seriesBlue
                 },
-                label: { show: hasData, position: 'top', color: '#5470c6', fontSize: 12, fontWeight: 600, formatter: '{c}' }
+                label: { show: hasData, position: 'top', color: RgPalette.seriesBlue, fontSize: 12, fontWeight: 600, formatter: '{c}' }
               },
               {
                 name: '营业额', type: 'line', yAxisIndex: 1, data: hasData ? amounts : [0],
                 smooth: true, symbol: 'emptyCircle', symbolSize: 8,
-                lineStyle: { color: '#91cc75', width: 3 },
-                itemStyle: { color: '#91cc75', borderColor: '#fff', borderWidth: 2 },
+                lineStyle: { color: RgPalette.seriesGreen, width: 3 },
+                itemStyle: { color: RgPalette.seriesGreen, borderColor: RgPalette.white, borderWidth: 2 },
                 areaStyle: {
-                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: 'rgba(145,204,117,0.28)' },
-                    { offset: 1, color: 'rgba(145,204,117,0.02)' }
-                  ])
+                  color: 'rgba(145,204,117,0.15)'
                 },
                 label: {
-                  show: hasData, position: 'top', color: '#67a94e', fontSize: 12, fontWeight: 700,
+                  show: hasData, position: 'top', color: RgPalette.successDark, fontSize: 12, fontWeight: 700,
                   formatter: p => '¥' + Number(p.value).toFixed(0)
                 }
               }
@@ -698,11 +693,11 @@
           if (!data || data.length === 0) {
             this.categoryChart.setOption({
               title: { text: '暂无分类数据', left: 'center', top: 'center',
-                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
             }, true)
             return
           }
-          var colors = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#fc8452','#9a60b4','#ea7ccc']
+          var colors = [RgPalette.seriesBlue,RgPalette.seriesGreen,RgPalette.seriesGold,RgPalette.seriesPink,RgPalette.seriesSky,RgPalette.seriesOrange,RgPalette.seriesViolet,RgPalette.seriesMagenta]
           this.categoryChart.setOption({
             tooltip: { trigger: 'item', formatter: '{b}: {c} 份 ({d}%)' },
             legend: { bottom: 4, textStyle: { fontSize: 12 } },
@@ -711,7 +706,7 @@
               radius: ['45%', '72%'],
               // 修改点：center top 从 48% 提至 44%，为底部 legend 留出空间
               center: ['50%', '44%'],
-              itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+              itemStyle: { borderRadius: 6, borderColor: RgPalette.white, borderWidth: 2 },
               label: { fontSize: 12, formatter: '{b}\n{d}%' },
               emphasis: { scaleSize: 8, label: { fontSize: 15, fontWeight: 'bold' } },
               data: data.map(function(item, i) {
@@ -840,7 +835,7 @@
               message: '<div style="line-height:1.8;">'
                 + '<div><i class="el-icon-warning-outline" style="margin-right:6px;color:var(--color-danger);"></i>格式：' + format.toUpperCase() + '</div>'
                 + '<div><i class="el-icon-info" style="margin-right:6px;color:var(--color-info);"></i>原因：' + (err.message || String(err)) + '</div>'
-                + '<div style="color:var(--el-border-base);font-size:12px;">时间：' + now + '</div>'
+                + '<div style="color:var(--el-border-base);font-size:var(--font-size-xs);">时间：' + now + '</div>'
                 + '</div>',
               type: 'error',
               duration: 8000,

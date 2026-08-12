@@ -1,8 +1,8 @@
 package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
-import com.reggie.entity.User;
-import com.reggie.service.UserService;
+import com.reggie.module.user.model.User;
+import com.reggie.module.user.service.UserService;
 import com.reggie.dto.auth.UserSendMsgDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,7 +23,7 @@ import java.util.Map;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
@@ -129,3 +129,6 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.data").value("退出成功"));
     }
 }
+
+
+

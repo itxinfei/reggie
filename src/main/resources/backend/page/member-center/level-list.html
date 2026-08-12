@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>会员等级 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     .stats-cards--col-3 {
@@ -14,14 +15,14 @@
 
     .progression-section { background: var(--bg-surface); border-radius: 14px; padding: 20px 24px; margin-bottom: 20px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-    .progression-title { font-size: 15px; font-weight: 600; color: var(--el-text-primary); margin-bottom: 16px;
+    .progression-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 16px;
       display: flex; align-items: center; gap: 8px; }
     .progression-bar { display: flex; align-items: flex-end; gap: 10px; padding: 10px 0; }
     .prog-item { flex: 1; text-align: center; position: relative; }
-    .prog-icon { font-size: 18px; margin-bottom: 6px; }
+    .prog-icon { font-size:var(--font-size-xl); margin-bottom: 6px; }
     .prog-bar-wrap { height: 8px; background: var(--el-bg-lighter); border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
     .prog-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
-    .prog-name { font-size: 12px; color: var(--el-text-regular); font-weight: 500; white-space: nowrap; }
+    .prog-name { font-size:var(--font-size-xs); color: var(--el-text-regular); font-weight: 500; white-space: nowrap; }
     .prog-pts { font-size: 11px; color: var(--color-info); }
     .prog-discount { font-size: 11px; color: var(--emerald); font-weight: 600; }
 
@@ -34,6 +35,14 @@
 <body>
   <div class="dashboard-container" id="level-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">会员等级</h1>
+          <p class="ds-page-header__subtitle">管理会员等级与权益</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- 修改点：使用 <stat-cards> 统一组件 -->
       <stat-cards :cards="statsCards"></stat-cards>
 
@@ -70,12 +79,12 @@
         :total="counts"
         :loading="loading"
         :show-actions="true"
-        :actions-width="160"
+        :actions-width="240"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
         <template #col-name="{ row }"><span style="font-weight:600;">{{ row.name }}</span></template>
-        <template #col-minPoints="{ row }"><span style="font-weight:600;color:#8b5cf6;">{{ row.minPoints }}</span></template>
+        <template #col-minPoints="{ row }"><span style="font-weight:600;color:var(--legacy-8b5cf6);">{{ row.minPoints }}</span></template>
         <template #col-discount="{ row }">
           <el-tag :type="row.discount >= 0.9 ? 'info' : row.discount >= 0.8 ? 'warning' : 'danger'" size="small" effect="dark">
             {{ row.discount != null ? (row.discount * 100).toFixed(0) + '%' : '-' }}
@@ -91,7 +100,7 @@
 
     <!-- ===== 弹窗 ===== -->
     <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，默认 footer 提供"取消/确定" -->
-    <crud-dialog :title="formData.title" :visible.sync="formData.dialogVisible" size="lg" @submit="submitForm">
+    <crud-dialog :title="formData.title" :visible.sync="formData.dialogVisible" :submit-loading="submitting" size="lg" @submit="submitForm">
       <el-form label-width="90px" :model="formData" :rules="formRules" ref="levelForm">
         <el-form-item label="等级名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入等级名称" maxlength="20"></el-input>
@@ -126,6 +135,7 @@
       mixins: [window.ReggieListMixin],
       data: function() {
         return {
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
           // 修改点：<table-bar> 统一组件配置
           tableSearchItems: [
             { type: 'input', field: 'name', placeholder: '等级名称搜索', width: 200 }
@@ -135,10 +145,10 @@
           ],
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
-            { prop: 'name', label: '等级名称', minWidth: 120, slot: true },
-            { prop: 'minPoints', label: '所需积分', width: 120, align: 'center', slot: true, type: 'number' },
-            { prop: 'discount', label: '折扣率', width: 120, align: 'center', slot: true, type: 'number' },
-            { prop: 'sort', label: '排序', width: 80, align: 'center', slot: true }
+            { prop: 'name', label: '等级名称', width: 120 },
+            { prop: 'minPoints', label: '所需积分', width: 90, align: 'center', slot: true, type: 'number' },
+            { prop: 'discount', label: '折扣率', width: 80, align: 'center', slot: true, type: 'number' },
+            { prop: 'sort', label: '排序', width: 60, align: 'center', slot: true }
           ],
           loading: false, action: '', counts: 0, page: 1, pageSize: 10, tableData: [],
           stats: { totalLevels: 0, highestLevel: '-', lowestPoints: 0, avgDiscount: '-' },
@@ -234,21 +244,25 @@
           var self = this; this.$nextTick(function() { if (self.$refs.levelForm) self.$refs.levelForm.clearValidate() })
         },
         submitForm: function() {
+          if (this.submitting) return // 提交防重
           var self = this
           this.$refs.levelForm.validate(function(valid) {
-            if (!valid) { self.$message.warning('请完善表单信息'); return false }
+            if (!valid) { ReggieUI.warning('请完善表单信息'); return false }
+            self.submitting = true
             var data = { name: self.formData.name, minPoints: self.formData.minPoints, discount: self.formData.discount, sort: self.formData.sort }
             if (self.action === 'add') {
               addLevel(data).then(function(res) {
-                if (res.code === 1) { self.$message.success('等级添加成功！'); self.formData.dialogVisible = false; self.handleQuery() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(function(e) { self.$message.error('请求失败：' + e) })
+                self.submitting = false
+                if (res.code === 1) { ReggieUI.success('等级添加成功！'); self.formData.dialogVisible = false; self.handleQuery() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(e) { self.submitting = false; ReggieUI.error('请求失败：' + e) })
             } else {
               data.id = self.formData.id
               updateLevel(data).then(function(res) {
-                if (res.code === 1) { self.$message.success('等级修改成功！'); self.formData.dialogVisible = false; self.handleQuery() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(function(e) { self.$message.error('请求失败：' + e) })
+                self.submitting = false
+                if (res.code === 1) { ReggieUI.success('等级修改成功！'); self.formData.dialogVisible = false; self.handleQuery() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(e) { self.submitting = false; ReggieUI.error('请求失败：' + e) })
             }
           })
         },
@@ -257,9 +271,9 @@
           ReggieUI.confirm('此操作将永久删除该等级, 是否继续?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               deleteLevel(id).then(function(res) {
-                if (res.code === 1) { self.$message.success('删除成功！'); self.handleQuery() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(function(e) { self.$message.error('请求失败：' + e) })
+                if (res.code === 1) { ReggieUI.success('删除成功！'); self.handleQuery() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(e) { ReggieUI.error('请求失败：' + e) })
             })
         },
         // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
@@ -268,6 +282,20 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

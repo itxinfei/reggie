@@ -6,11 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>打印日志 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
   <div class="dashboard-container" id="printer-log-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">打印日志</h1>
+          <p class="ds-page-header__subtitle">查看打印任务记录</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -117,12 +126,12 @@
           tableActions: [],
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
-            { prop: 'orderId', label: '订单号', width: 160 },
-            { prop: 'printType', label: '打印类型', width: 100, align: 'center', slot: true },
-            { prop: 'printerId', label: '打印机ID', width: 100, align: 'center' },
-            { prop: 'status', label: '状态', width: 90, align: 'center', slot: true },
-            { prop: 'errorMsg', label: '错误信息', minWidth: 160, showOverflowTooltip: true },
-            { prop: 'createdTime', label: '打印时间', width: 170 }
+            { prop: 'orderId', label: '订单号', width: 140, showOverflowTooltip: true },
+            { prop: 'printType', label: '类型', width: 70, align: 'center', slot: true },
+            { prop: 'printerId', label: '打印机ID', width: 80, align: 'center' },
+            { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
+            { prop: 'errorMsg', label: '错误信息', width: 100, showOverflowTooltip: true },
+            { prop: 'createdTime', label: '打印时间', width: 140, align: 'center' }
           ],
         }
       },
@@ -172,7 +181,7 @@
               self.tableData = logRes.data.records || []
               self.counts = logRes.data.total
             } else {
-              self.$message.error(logRes.msg || '操作失败')
+              ReggieUI.error(logRes.msg || '操作失败')
             }
             if (reloadStats) {
               var statsRes = results[1]
@@ -189,7 +198,7 @@
               }
             }
           } catch (err) {
-            self.$message.error('请求失败：' + (err.message || err))
+            ReggieUI.error('请求失败：' + (err.message || err))
           }
           self.loading = false
         },
@@ -233,13 +242,13 @@
           }).then(function() {
             printerPrint(row.orderId, row.printType).then(function(res) {
               if (res && res.code === 1) {
-                self.$message.success('打印任务已发送')
+                ReggieUI.success('打印任务已发送')
                 self.fetchData(false)
               } else {
-                self.$message.error(res ? res.msg : '打印失败')
+                ReggieUI.error(res ? res.msg : '打印失败')
               }
             }).catch(function(err) {
-              self.$message.error('请求失败：' + (err.message || err))
+              ReggieUI.error('请求失败：' + (err.message || err))
             })
           }).catch(function() { /* 用户取消 */ })
         },
@@ -264,6 +273,14 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
 
 
 

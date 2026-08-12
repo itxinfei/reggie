@@ -447,9 +447,8 @@
     font-size: 12px;
   }
   
-  .el-table .cell {
-    padding: 8px 4px;
-  }
+  /* cell padding 已由 components.css 统一管理（!important padding:0），
+     此处不再设 padding 避免冲突失效；移动端靠小字号 + 紧凑行高已足够 */
   
   .el-table .el-button {
     padding: 5px 8px;
@@ -520,7 +519,7 @@
 
 /* ========== 页面容器增强 ========== */
 .dashboard-container {
-  background: var(--gradient-bg-primary);
+  background: var(--bg-page);
   min-height: 100vh;
   padding: var(--space-6);
 }
@@ -590,7 +589,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--gradient-brand);
+  background: var(--stat-color, var(--color-brand-500));
 }
 
 .stats-card:hover {
@@ -689,7 +688,7 @@
 }
 
 .el-dialog__header {
-  background: var(--gradient-bg-secondary);
+  background: var(--bg-subtle);
   border-bottom: var(--border-width-thin) var(--border-style-solid) var(--border-color-light);
   padding: var(--space-5) var(--space-6);
   margin: 0;
@@ -761,22 +760,22 @@
 }
 
 .el-button--primary {
-  background: var(--gradient-brand);
+  background: var(--color-brand-500);
   border-color: var(--color-brand-500);
 }
 
 .el-button--success {
-  background: var(--gradient-success);
+  background: var(--color-success);
   border-color: var(--color-success);
 }
 
 .el-button--warning {
-  background: var(--gradient-warning);
+  background: var(--color-warning);
   border-color: var(--color-warning);
 }
 
 .el-button--danger {
-  background: var(--gradient-danger);
+  background: var(--color-danger);
   border-color: var(--color-danger);
 }
 
@@ -788,7 +787,7 @@
 }
 
 .el-table th {
-  background: var(--gradient-bg-secondary) !important;
+  background: var(--bg-subtle) !important;
   color: var(--text-primary);
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-sm);
@@ -832,7 +831,7 @@
 }
 
 .el-pagination .el-pager li.active {
-  background: var(--gradient-brand);
+  background: var(--color-brand-500);
   color: white;
   box-shadow: var(--shadow-sm);
 }

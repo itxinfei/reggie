@@ -2,6 +2,7 @@ package com.reggie.module.ai.provider;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.ObjectMapperHolder;
 import com.reggie.module.ai.config.AIConfigProperties;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIMessage;
@@ -35,7 +36,7 @@ public class OpenAICompatibleClient implements AIClient {
     private AIConfigProperties aiConfig;
 
     /** JSON序列化工具 */
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
 
     /**
      * 初始化AI Provider
@@ -159,3 +160,5 @@ public class OpenAICompatibleClient implements AIClient {
         return aiConfig.getModel();
     }
 }
+
+

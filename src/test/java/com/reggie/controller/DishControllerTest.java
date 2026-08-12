@@ -4,12 +4,12 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.RedisCacheUtil;
 import com.reggie.dto.DishDto;
 import com.reggie.dto.dish.DishSaveDTO;
-import com.reggie.entity.Category;
-import com.reggie.entity.Dish;
-import com.reggie.entity.DishFlavor;
-import com.reggie.service.CategoryService;
-import com.reggie.service.DishFlavorService;
-import com.reggie.service.DishService;
+import com.reggie.module.category.model.Category;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.dish.model.DishFlavor;
+import com.reggie.module.category.service.CategoryService;
+import com.reggie.module.dish.service.DishFlavorService;
+import com.reggie.module.dish.service.DishService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
@@ -252,3 +252,6 @@ public class DishControllerTest {
                 .andExpect(jsonPath("$.data[0].name").value("测试菜品"));
     }
 }
+
+
+

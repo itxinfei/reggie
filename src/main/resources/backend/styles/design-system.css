@@ -392,31 +392,6 @@ a.breadcrumb__item:hover,
   box-shadow: var(--shadow-sm);
 }
 
-.el-button--primary {
-  background: var(--gradient-brand);
-  border-color: var(--color-brand-500);
-}
-
-.el-button--primary:hover {
-  background: var(--gradient-brand);
-  border-color: var(--color-brand-400);
-}
-
-.el-button--success {
-  background: var(--gradient-success);
-  border-color: var(--color-success);
-}
-
-.el-button--warning {
-  background: var(--gradient-warning);
-  border-color: var(--color-warning);
-}
-
-.el-button--danger {
-  background: var(--gradient-danger);
-  border-color: var(--color-danger);
-}
-
 /* ========== 卡片样式增强 ========== */
 .el-card {
   border-radius: var(--radius-lg);
@@ -432,7 +407,7 @@ a.breadcrumb__item:hover,
 }
 
 .el-card__header {
-  background: var(--gradient-bg-secondary);
+  background: var(--bg-subtle);
   border-bottom: var(--border-width-thin) var(--border-style-solid) var(--border-color-light);
   padding: var(--space-4) var(--space-5);
 }
@@ -449,7 +424,7 @@ a.breadcrumb__item:hover,
 }
 
 .el-table th {
-  background: var(--gradient-bg-secondary) !important;
+  background: var(--bg-subtle) !important;
   color: var(--text-primary);
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-sm);
@@ -507,7 +482,7 @@ a.breadcrumb__item:hover,
 }
 
 .el-dialog__header {
-  background: var(--gradient-bg-secondary);
+  background: var(--bg-subtle);
   border-bottom: var(--border-width-thin) var(--border-style-solid) var(--border-color-light);
   padding: var(--space-5);
 }
@@ -548,7 +523,7 @@ a.breadcrumb__item:hover,
 }
 
 .el-pagination .el-pager li.active {
-  background: var(--gradient-brand);
+  background: var(--color-brand-500);
   color: white;
 }
 
@@ -671,7 +646,7 @@ a.breadcrumb__item:hover,
 }
 
 .el-date-table td.current:not(.disabled) span {
-  background: var(--gradient-brand);
+  background: var(--color-brand-500);
   color: white;
 }
 
@@ -716,7 +691,7 @@ a.breadcrumb__item:hover,
 
 .el-progress-bar__inner {
   border-radius: var(--radius-full);
-  background: var(--gradient-brand);
+  background: var(--color-brand-500);
 }
 
 /* ========== 面包屑增强 ========== */
@@ -770,7 +745,7 @@ a.breadcrumb__item:hover,
 }
 
 .el-drawer__header {
-  background: var(--gradient-bg-secondary);
+  background: var(--bg-subtle);
   border-bottom: var(--border-width-thin) var(--border-style-solid) var(--border-color-light);
   padding: var(--space-5);
   margin-bottom: 0;
@@ -820,7 +795,7 @@ a.breadcrumb__item:hover,
 
 /* ========== 回到顶部增强 ========== */
 .el-backtop {
-  background: var(--gradient-brand);
+  background: var(--color-brand-500);
   color: white;
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-lg);

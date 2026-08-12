@@ -6,16 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>菜品排行 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
     html, body { height: 100%; margin: 0; padding: 0; overflow-y: auto; overflow-x: hidden;
-      background: linear-gradient(135deg, var(--el-bg-subtle) 0%, var(--el-border-lighter) 100%);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+      background: var(--bg-page);
+      font-family: var(--font-family-base); }
     .dish-ranking-page { min-height: 100%; display: flex; flex-direction: column; }
     .dish-ranking-page .container { flex: 1; background: transparent; padding: 24px 32px 32px;
-      min-width: 0; max-width: 1600px; margin: 0 auto; width: 100%; }
+      min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
 
     /* 工具栏 */
     .tableBar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
@@ -23,7 +24,7 @@
       box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
       transition: box-shadow 0.3s; }
     .tableBar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .tableBar .toolbar-label { font-size: 14px; color: var(--el-text-regular); font-weight: 500; flex-shrink: 0; }
+    .tableBar .toolbar-label { font-size:var(--font-size-base); color: var(--el-text-regular); font-weight: 500; flex-shrink: 0; }
     .tableBar .toolbar-spacer { flex: 1; min-width: 0; }
 
     /* 图表并排 */
@@ -38,10 +39,10 @@
 
     /* 排名徽章 */
     .rank-badge { display: inline-flex; align-items: center; justify-content: center;
-      width: 24px; height: 24px; border-radius: 6px; font-size: 12px; font-weight: 700; }
-    .rank-badge.r1 { background: var(--antd-error); color: var(--bg-surface); }
-    .rank-badge.r2 { background: var(--antd-orange); color: var(--bg-surface); }
-    .rank-badge.r3 { background: var(--antd-warning-l); color: var(--bg-surface); }
+      width: 24px; height: 24px; border-radius: 6px; font-size:var(--font-size-xs); font-weight: 700; }
+    .rank-badge.r1 { background: var(--color-danger); color: var(--bg-surface); }
+    .rank-badge.r2 { background: var(--color-brand-500); color: var(--bg-surface); }
+    .rank-badge.r3 { background: var(--color-warning); color: var(--bg-surface); }
     .rank-badge.rn { background: var(--el-bg-lighter); color: var(--color-info); }
   </style>
 </head>
@@ -137,9 +138,9 @@
           // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
           dishColumns: [
             { prop: 'rank', label: '排名', width: 80, align: 'center', slot: true },
-            { prop: 'name', label: '菜品名称', minWidth: 180 },
+            { prop: 'name', label: '菜品名称', width: 140 },
             { prop: 'count', label: '销量（份）', width: 120, align: 'center', type: 'number' },
-            { prop: 'ratio', label: '占比', minWidth: 180, align: 'center', slot: true }
+            { prop: 'ratio', label: '占比', width: 140, align: 'center', slot: true }
           ],
           stats: { totalDishes: 0, topDishes: 0, totalSales: 0, avgSales: 0 },
           chart: null, trendChart: null, resizeHandler: null
@@ -215,11 +216,11 @@
                 self.tableData = rankRes.data || [];
                 self.renderChart();
                 self.loadTopTrend();
-              } else { self.$message.error(rankRes.msg || '加载失败'); }
+              } else { ReggieUI.error(rankRes.msg || '加载失败'); }
               if (statsRes && String(statsRes.code) === '1') {
                 self.stats = statsRes.data || self.stats;
               }
-            }).catch(function(err) { self.$message.error('请求失败：' + err); })
+            }).catch(function(err) { ReggieUI.error('请求失败：' + err); })
             .finally(function() { self.loading = false; });
         },
         loadDishRankingStats: function() {
@@ -254,7 +255,7 @@
           if (!data || !data.dates || !data.dates.length) {
             this.trendChart.setOption({
               title: { text: '暂无趋势数据', left: 'center', top: 'center',
-                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
             }, true); return;
           }
           var hexToRgba = function(hex, alpha) {
@@ -265,32 +266,30 @@
             var b = parseInt(h.substring(4,6), 16);
             return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
           };
-          var colors = ['#ff4d4f', '#5470c6', '#91cc75'];
+          var colors = [RgPalette.seriesRed, RgPalette.seriesBlue, RgPalette.seriesGreen];
           var dates = data.dates || [];
           var series = (data.series || []).map(function(s, i) {
-            var col = colors[i] || '#909399';
+            var col = colors[i] || RgPalette.textSecondary;
             return {
               name: s.name, type: 'line', data: s.data || [], smooth: true,
               symbol: 'circle', symbolSize: 7,
               lineStyle: { color: col, width: 3 },
-              itemStyle: { color: col, borderColor: '#fff', borderWidth: 2 },
-              areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1, [
-                { offset: 0, color: hexToRgba(col, 0.25) },
-                { offset: 1, color: 'rgba(255,255,255,0.02)' }]) }
+              itemStyle: { color: col, borderColor: RgPalette.white, borderWidth: 2 },
+              areaStyle: { color: hexToRgba(col, 0.15) }
             };
           });
           this.trendChart.setOption({
             tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)',
-              borderColor: '#e4e7ed', borderWidth: 1, textStyle: { color: '#303133', fontSize: 13 } },
+              borderColor: RgPalette.borderLighter2, borderWidth: 1, textStyle: { color: RgPalette.textPrimary, fontSize: 13 } },
             legend: { data: (data.series || []).map(function(s) { return s.name; }),
-              bottom: 8, textStyle: { fontSize: 12, color: '#606266' } },
+              bottom: 8, textStyle: { fontSize: 12, color: RgPalette.textRegular } },
             grid: { left: 55, right: 30, top: 25, bottom: 52 },
             xAxis: { type: 'category', data: dates, boundaryGap: false,
-              axisLine: { lineStyle: { color: '#e4e7ed' } }, axisTick: { show: false },
-              axisLabel: { color: '#909399', fontSize: 12 } },
+              axisLine: { lineStyle: { color: RgPalette.borderLighter2 } }, axisTick: { show: false },
+              axisLabel: { color: RgPalette.textSecondary, fontSize: 12 } },
             yAxis: { type: 'value', name: '销量(份)',
-              nameTextStyle: { color: '#909399', fontSize: 12 },
-              splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } } },
+              nameTextStyle: { color: RgPalette.textSecondary, fontSize: 12 },
+              splitLine: { lineStyle: { color: RgPalette.bgLight, type: 'dashed' } } },
             series: series
           }, true);
           var chart = this.trendChart;
@@ -304,16 +303,16 @@
         progressColor: function(count) {
           var max = this.tableData.length ? (this.tableData[0].count || 1) : 1;
           var ratio = count / max;
-          if (ratio > 0.8) return '#ff4d4f';
-          if (ratio > 0.5) return '#409eff';
-          return '#91cc75';
+          if (ratio > 0.8) return RgPalette.seriesRed;
+          if (ratio > 0.5) return RgPalette.linkBlue;
+          return RgPalette.seriesGreen;
         },
         renderChart: function() {
           if (!this.chart) return;
           if (!this.tableData || this.tableData.length === 0) {
             this.chart.setOption({
               title: { text: '暂无排行数据', left: 'center', top: 'center',
-                textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
             }, true); return;
           }
           var names = this.tableData.map(function(item) { return item.name; }).reverse();
@@ -322,29 +321,26 @@
           var barWidth = names.length <= 5 ? 26 : names.length <= 10 ? 22 : 18;
           this.chart.setOption({
             tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-              backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e4e7ed', borderWidth: 1,
-              textStyle: { color: '#303133', fontSize: 13 },
+              backgroundColor: 'rgba(255,255,255,0.96)', borderColor: RgPalette.borderLighter2, borderWidth: 1,
+              textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
               formatter: function(p) { return '<b>' + p[0].name + '</b><br/>' + p[0].marker + ' 销量：<b>' + p[0].value + ' 份</b>'; } },
             grid: { left: 130, right: 70, top: 16, bottom: 30 },
             xAxis: { type: 'value', name: '销量（份）',
-              splitLine: { lineStyle: { type: 'dashed', color: '#f2f3f5' } },
-              axisLabel: { color: '#909399' } },
+              splitLine: { lineStyle: { type: 'dashed', color: RgPalette.bgLight } },
+              axisLabel: { color: RgPalette.textSecondary } },
             yAxis: { type: 'category', data: names,
-              axisLabel: { color: '#606266', interval: 0, width: 110, overflow: 'truncate', fontSize: 13 } },
+              axisLabel: { color: RgPalette.textRegular, interval: 0, width: 110, overflow: 'truncate', fontSize: 13 } },
             series: [{ type: 'bar', data: counts, barMaxWidth: barWidth,
               itemStyle: {
                 borderRadius: [0, 6, 6, 0],
                 color: function(params) {
                   var v = params.value, r = v / maxVal;
-                  if (r > 0.8) return new echarts.graphic.LinearGradient(0,0,1,0,
-                    [{ offset: 0, color: '#ff7875' }, { offset: 1, color: '#ff4d4f' }]);
-                  if (r > 0.5) return new echarts.graphic.LinearGradient(0,0,1,0,
-                    [{ offset: 0, color: '#66b1ff' }, { offset: 1, color: '#409eff' }]);
-                  return new echarts.graphic.LinearGradient(0,0,1,0,
-                    [{ offset: 0, color: '#85ce61' }, { offset: 1, color: '#67c23a' }]);
+                  if (r > 0.8) return RgPalette.seriesRed;
+                  if (r > 0.5) return RgPalette.linkBlue;
+                  return RgPalette.success;
                 }
               },
-              label: { show: true, position: 'right', color: '#606266', fontSize: 12, fontWeight: 600,
+              label: { show: true, position: 'right', color: RgPalette.textRegular, fontSize: 12, fontWeight: 600,
                 formatter: function(p) { return p.value + ' 份'; } }
             }]
           }, true);
@@ -355,17 +351,18 @@
           if (this.chart) this.chart.clear(); if (this.trendChart) this.trendChart.clear();
         },
         handleExport: function() {
-          if (!this.dateRange || this.dateRange.length < 2) {
+          var self = this
+          if (!self.dateRange || self.dateRange.length < 2) {
             ReggieUI.warning('请先选择日期范围'); return;
           }
-          reportExport({ startDate: this.dateRange[0], endDate: this.dateRange[1] }).then(function(blob) {
+          reportExport({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(blob) {
             if (blob && blob.type && blob.type.indexOf('json') > -1) { ReggieUI.error('导出失败'); return; }
             var link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = '菜品排行_' + this.dateRange[0] + '_' + this.dateRange[1] + '.csv';
+            link.download = '菜品排行_' + self.dateRange[0] + '_' + self.dateRange[1] + '.csv';
             link.click(); URL.revokeObjectURL(link.href);
             ReggieUI.success('导出成功');
-          }.bind(this)).catch(function(err) { ReggieUI.error('导出失败：' + err); }.bind(this));
+          }).catch(function(err) { ReggieUI.error('导出失败：' + err); });
         }
       }
     })

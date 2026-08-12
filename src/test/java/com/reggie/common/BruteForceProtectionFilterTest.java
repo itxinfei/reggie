@@ -1,7 +1,7 @@
 package com.reggie.common;
 
-import com.reggie.entity.Employee;
-import com.reggie.service.EmployeeService;
+import com.reggie.module.auth.model.Employee;
+import com.reggie.module.auth.service.EmployeeService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,7 +18,7 @@ import static org.mockito.Mockito.*;
  * @author itxinfei
  */
 @SuppressWarnings("unchecked")
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @ActiveProfiles("test")
 class BruteForceProtectionFilterTest {
 
@@ -114,3 +114,5 @@ class BruteForceProtectionFilterTest {
         assertTrue(filter.isEnabled());
     }
 }
+
+

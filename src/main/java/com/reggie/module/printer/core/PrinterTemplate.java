@@ -1,7 +1,7 @@
 package com.reggie.module.printer.core;
 
-import com.reggie.entity.OrderDetail;
-import com.reggie.entity.Orders;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
 import com.reggie.module.printer.model.PrintJob;
 import com.reggie.module.printer.model.PrintLine;
 import lombok.extern.slf4j.Slf4j;
@@ -149,3 +149,4 @@ public class PrinterTemplate {
         return job;
     }
 }
+

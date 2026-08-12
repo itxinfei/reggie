@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.LogMaskUtils;
-import com.reggie.entity.OperationLog;
-import com.reggie.mapper.OperationLogMapper;
+import com.reggie.module.sys.model.OperationLog;
+import com.reggie.module.sys.mapper.OperationLogMapper;
 import com.reggie.module.schedule.service.OperationLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -117,6 +117,7 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
         return count;
     }
 }
+
 
 
 

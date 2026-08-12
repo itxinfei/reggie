@@ -1,10 +1,10 @@
 package com.reggie.module.cost.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.reggie.entity.DishCost;
-import com.reggie.entity.CostRecord;
-import com.reggie.entity.LaborCost;
-import com.reggie.entity.OtherCost;
+import com.reggie.module.cost.model.DishCost;
+import com.reggie.module.cost.model.CostRecord;
+import com.reggie.module.cost.model.LaborCost;
+import com.reggie.module.cost.model.OtherCost;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -215,3 +215,4 @@ public interface CostService extends IService<DishCost> {
      */
     List<Map<String, Object>> getCostAlert(BigDecimal threshold, Long tenantId);
 }
+

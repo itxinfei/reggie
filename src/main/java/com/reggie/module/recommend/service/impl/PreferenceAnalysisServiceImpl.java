@@ -2,12 +2,32 @@ package com.reggie.module.recommend.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
-import com.reggie.entity.*;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.dish.model.DishFlavor;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.category.model.Category;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.dish.service.DishFlavorService;
+import com.reggie.module.dish.service.DishService;
+import com.reggie.module.category.service.CategoryService;
 import com.reggie.module.recommend.mapper.BrowseHistoryMapper;
 import com.reggie.module.recommend.mapper.UserPreferenceMapper;
 import com.reggie.module.recommend.model.UserPreferenceTag;
 import com.reggie.module.recommend.service.PreferenceAnalysisService;
-import com.reggie.service.*;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.dish.model.DishFlavor;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.category.model.Category;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.dish.service.DishFlavorService;
+import com.reggie.module.dish.service.DishService;
+import com.reggie.module.category.service.CategoryService;
+import com.reggie.module.category.service.CategoryService;
+import com.reggie.module.category.model.Category;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,6 +38,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
+import com.reggie.module.category.model.Category;
 import java.util.stream.Collectors;
 
 /**
@@ -371,4 +392,9 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
         userPreferenceMapper.delete(wrapper);
     }
 }
+
+
+
+
+
 

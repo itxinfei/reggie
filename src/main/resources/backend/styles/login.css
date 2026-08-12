@@ -303,10 +303,15 @@ html.dark-theme .bg-grid {
 /* ================================================================
    表单
    ================================================================ */
-.login-form { width: 100%; }
-
+.login-form { width: 100%; padding: 0 !important; }
+/* 修改点：取消 Element UI 默认 label 宽度导致的 content 左缩进，保证输入框与卡片等宽 */
+.login-form .el-form-item { display: block; margin-bottom: 22px; }
+.login-form .el-form-item__label { width: 0 !important; padding: 0 !important; }
+.login-form .el-form-item__content { line-height: normal; width: 100% !important; margin-left: 0 !important; }
 .fi { margin-bottom: 22px; }
-.fi .el-form-item__content { line-height: normal; }
+.fi .el-form-item__content { line-height: normal; width: 100%; }
+/* 修改点：el-form-item 默认 inline-block，强制内容块级撑满，保证输入框宽度与卡片一致 */
+.fi .el-form-item__content .inp-wrap { width: 100%; }
 
 /* 输入框包裹 */
 .inp-wrap {
@@ -358,7 +363,7 @@ html.dark-theme .bg-grid {
 .inp-wrap.on .inp-icon { color: var(--c-focus); }
 
 /* Element UI input 嵌入 */
-.inp-wrap .el-input { flex: 1; height: 100%; }
+.inp-wrap .el-input { flex: 1; height: 100%; width: 100%; }
 .inp-wrap .el-input .el-input__inner {
   border: none !important;
   background: transparent !important;

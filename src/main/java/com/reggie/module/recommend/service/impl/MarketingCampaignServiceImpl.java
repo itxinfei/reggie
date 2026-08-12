@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
-import com.reggie.entity.User;
-import com.reggie.mapper.UserMapper;
+import com.reggie.module.user.model.User;
+import com.reggie.module.user.mapper.UserMapper;
 import com.reggie.module.member.mapper.CouponTemplateMapper;
 import com.reggie.module.member.mapper.CouponUserMapper;
 import com.reggie.module.member.model.CouponTemplate;
@@ -533,4 +533,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         return "活跃用户推荐";
     }
 }
+
+
+
 

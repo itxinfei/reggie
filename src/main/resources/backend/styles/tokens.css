@@ -188,9 +188,18 @@
   --el-bg-light:      #f5f5f5;
   --el-bg-base:       #fafafa;
   --el-bg-white:      #fafafb;
-  --el-color-primary: #409eff;
-  --el-color-primary-light: #c6e2ff;
-  --el-color-primary-lighter: #ecf5ff;
+  --el-color-primary: #c99200;   /* 品牌金（可读加深色，统一主题色，替代 Element 默认蓝） */
+  --el-color-primary-light: #ffe699;
+  --el-color-primary-lighter: #fffbeb;
+  /* 语义色基色（页面引用 var(--el-color-*)，统一映射到主调色板，消除悬空） */
+  --el-color-success: var(--color-success);
+  --el-color-success-lighter: #f0f9eb;
+  --el-color-warning: var(--color-warning);
+  --el-color-warning-lighter: #fdf6ec;
+  --el-color-danger: var(--color-danger);
+  --el-color-danger-lighter: #fef0f0;
+  --el-color-info: var(--color-info);
+  --el-color-info-lighter: #f4f4f5;
   --el-color-success-light: #85ce61;
   --el-color-warning-light: #ebb563;
   --el-color-danger-light: #f78989;
@@ -365,6 +374,9 @@
   --legacy-fecaca: #fecaca;
   --legacy-fef2f2: #fef2f2;
   --legacy-ff0: #ff0;
+  --legacy-8b5cf6: #8b5cf6;
+  --legacy-f59e0b: #f59e0b;
+  --legacy-f97316: #f97316;
   --legacy-ff4d51: #ff4d51;
   --legacy-ff6b35: #ff6b35;
   --legacy-ff8c5a: #ff8c5a;
@@ -390,28 +402,12 @@
  * ============================================================ */
 
 /* ========== 渐变色 ========== */
-:root {
-  /* 品牌渐变 */
-  --gradient-brand: linear-gradient(135deg, var(--color-brand-400) 0%, var(--color-brand-600) 100%);
-  --gradient-brand-light: linear-gradient(135deg, var(--color-brand-100) 0%, var(--color-brand-200) 100%);
-  
-  /* 状态渐变 */
-  --gradient-success: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
-  --gradient-warning: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
-  --gradient-danger: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
-  --gradient-info: linear-gradient(135deg, #909399 0%, #b1b3b8 100%);
-  
-  /* 背景渐变 */
-  --gradient-bg-primary: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
-  --gradient-bg-secondary: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
-  --gradient-bg-dark: linear-gradient(135deg, #304156 0%, #1f2d3d 100%);
-}
+/* 已废弃：渐变违反"禁止渐变/发光"硬性规范（2026-08-12 全站移除）。
+ * 视觉强调一律使用纯色语义令牌：--color-brand-500 / --color-success 等。 */
 
 /* ========== 动画和过渡 ========== */
 :root {
-  /* 过渡时间 */
-  --transition-fast: 0.15s ease;
-  --transition-base: 0.2s ease;
+  /* 过渡时间（--transition-fast/base 已在文件头部以 cubic-bezier 定义，此处不重复覆盖） */
   --transition-slow: 0.3s ease;
   --transition-slower: 0.4s ease;
   
@@ -606,4 +602,24 @@
   --breakpoint-lg: 992px;
   --breakpoint-xl: 1200px;
   --breakpoint-xxl: 1600px;
+}
+
+/* ========== Element UI 兼容变量别名 ========== */
+:root {
+  --el-bg-subtle: var(--bg-subtle);
+  --el-border-lighter: var(--border-subtle);
+  --el-border-lighter2: var(--border-default);
+  --el-text-primary: var(--text-primary);
+  --el-text-regular: var(--text-secondary);
+  --el-border-base: var(--border-default);
+  --el-fill-color-blank: var(--bg-surface);
+}
+
+/* ========== Ant Design 风格变量 ========== */
+:root {
+  --antd-warning-bg: var(--color-warning-light);
+  --antd-warning-bg2: var(--color-warning-light);
+  --antd-warning-l2b: var(--color-warning);
+  --antd-success-bg: var(--color-success-light);
+  --antd-danger-bg: var(--color-danger-light);
 }

@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import com.reggie.module.category.model.Category;
 import java.time.LocalDateTime;
 
 /**
@@ -50,3 +51,4 @@ public class MaterialCategory implements Serializable {
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
 }
+

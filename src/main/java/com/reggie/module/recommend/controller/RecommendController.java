@@ -2,7 +2,7 @@ package com.reggie.module.recommend.controller;
 import com.reggie.common.utils.PageUtils;
 
 import com.reggie.common.R;
-import com.reggie.entity.User;
+import com.reggie.module.user.model.User;
 import com.reggie.module.recommend.model.BrowseHistory;
 import com.reggie.module.recommend.model.MarketingCampaign;
 import com.reggie.module.recommend.model.MarketingMessage;
@@ -16,7 +16,14 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
@@ -386,4 +393,6 @@ public class RecommendController {
         return null;
     }
 }
+
+
 

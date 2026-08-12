@@ -7,6 +7,7 @@
   <title>员工管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     #member-app  .notAdmin::after{
@@ -57,7 +58,7 @@
         :total="counts"
         :loading="loading"
         :show-actions="true"
-        :actions-width="160"
+        :actions-width="240"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -120,8 +121,8 @@
       </el-form>
       <template #footer>
         <el-button size="medium" @click="handleDialogClose">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitMemberForm()">确 定</el-button>
-        <el-button v-if="memberDialog.actionType == 'add'" type="primary" size="medium" class="continue" @click="submitMemberForm('continue')">保存并继续添加</el-button>
+        <el-button type="primary" size="medium" :loading="submitting" @click="submitMemberForm()">确 定</el-button>
+        <el-button v-if="memberDialog.actionType == 'add'" type="primary" size="medium" class="continue" :loading="submitting" @click="submitMemberForm('continue')">保存并继续添加</el-button>
       </template>
     </crud-dialog>
   </div>
@@ -146,6 +147,7 @@
         data() {
           return {
              input: '',
+             submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
              // 修改点：搜索下拉框动态选项（从数据库加载员工姓名）
              filterOptions: { names: [] },
              optionsLoading: false,
@@ -162,10 +164,10 @@
           ],
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
-            { prop: 'name', label: '员工姓名', minWidth: 100 },
-            { prop: 'username', label: '账号', minWidth: 120 },
-            { prop: 'phone', label: '手机号', minWidth: 130 },
-            { prop: 'status', label: '账号状态', width: 120, align: 'center', slot: true }
+            { prop: 'name', label: '员工姓名', width: 100 },
+            { prop: 'username', label: '账号', width: 100 },
+            { prop: 'phone', label: '手机号', width: 120, align: 'center' },
+            { prop: 'status', label: '状态', width: 80, align: 'center', slot: true }
           ],
              id : '',
              status : '',
@@ -390,8 +392,10 @@
           },
           // 提交员工表单
           submitMemberForm(st) {
+            if (this.submitting) return // 提交防重
             this.$refs.memberForm.validate((valid) => {
               if (valid) {
+                this.submitting = true
                 const params = {
                   ...this.memberForm,
                   sex: this.memberForm.sex === '女' ? '0' : '1'
@@ -399,6 +403,7 @@
 
                 if (this.memberDialog.actionType === 'add') {
                   addEmployee(params).then(res => {
+                    this.submitting = false
                     if (res.code === 1) {
                       ReggieUI.success('员工添加成功！')
                       this.memberDialog.visible = false
@@ -411,10 +416,12 @@
                       ReggieUI.error(res.msg || '操作失败')
                     }
                   }).catch(err => {
+                    this.submitting = false
                     ReggieUI.error('请求失败：' + err)
                   })
                 } else {
                   editEmployee(params).then(res => {
+                    this.submitting = false
                     if (res.code === 1) {
                       ReggieUI.success('员工信息修改成功！')
                       this.memberDialog.visible = false
@@ -423,6 +430,7 @@
                       ReggieUI.error(res.msg || '操作失败')
                     }
                   }).catch(err => {
+                    this.submitting = false
                     ReggieUI.error('请求失败：' + err)
                   })
                 }
@@ -468,6 +476,20 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -5,12 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI模型配置 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
     <link rel="stylesheet" href="../../styles/ai-provider.css" />
 </head>
 <body>
 <div class="dashboard-container" id="provider-app">
     <div class="container">
+
+        <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+        <header class="ds-page-header">
+          <div class="ds-page-header__titles">
+            <h1 class="ds-page-header__title" id="page-title">AI 服务商配置</h1>
+            <p class="ds-page-header__subtitle">管理 AI 服务商与连接测试</p>
+          </div>
+          <div class="ds-page-header__actions"></div>
+        </header>
 
         <!-- 当前激活供应商 -->
         <div class="active-provider-card" v-if="activeProvider">
@@ -33,7 +43,7 @@
             </div>
         </div>
         <div class="active-provider-card" v-else style="text-align:center;padding:40px;">
-            <p style="color:var(--el-text-regular);font-size:14px;margin:0;">
+            <p style="color:var(--el-text-regular);font-size:var(--font-size-base);margin:0;">
                 暂无激活的 AI 模型，请在下方选择一个供应商并点击「激活」
             </p>
             <el-button type="primary" size="small" @click="initPresets" style="margin-top:14px;">
@@ -97,8 +107,8 @@
     </div>
 
     <!-- 添加/编辑弹窗 -->
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" custom-class="el-dialog--md unified-dialog"
-               :show-close="true" :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
+    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" 
+               :show-close="true" :close-on-click-modal="false"  >
         <!-- 修改点：补全 ref/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
         <el-form ref="providerForm" :model="form" :rules="providerRules" label-width="100px" size="small" class="dialog-form">
             <el-form-item label="供应商名称" prop="providerName">
@@ -185,17 +195,14 @@
                     placeholder="模型特点、适用场景等说明" />
             </el-form-item>
         </el-form>
-        <span slot="footer" class="dialog-footer">
-            <el-button size="medium" @click="dialogVisible = false">取 消</el-button>
-            <el-button type="primary" size="medium" @click="submitForm" :loading="submitting">保 存</el-button>
-        </span>
-    </el-dialog>
+    </crud-dialog>
 </div>
 
 <script src="../../plugins/vue/vue.js"></script>
 <script src="../../plugins/element-ui/index.js"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
 <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
 <script src="../../api/ai.js"></script>
 <script>
 (function() {
@@ -258,7 +265,7 @@
                         self.activeProvider = results[1].data || null;
                     }
                 }).catch(function(err) {
-                    self.$message.error('加载失败：' + (err.message || err));
+                    ReggieUI.error('加载失败：' + (err.message || err));
                 });
             },
 
@@ -278,13 +285,13 @@
                 }).then(function() {
                     $axios.post('/admin/ai/provider/activate/' + id).then(function(res) {
                         if (res.code === 1) {
-                            self.$message.success('切换成功');
+                            ReggieUI.success('切换成功');
                             self.loadData();
                         } else {
-                            self.$message.error(res.msg || '切换失败');
+                            ReggieUI.error(res.msg || '切换失败');
                         }
                     }).catch(function(err) {
-                        self.$message.error('切换失败：' + (err.message || err));
+                        ReggieUI.error('切换失败：' + (err.message || err));
                     });
                 }).catch(function() {});
             },
@@ -308,7 +315,7 @@
                     if (res.code === 1) {
                         var result = res.data.result || '';
                         var isSuccess = result.indexOf('SUCCESS') === 0;
-                        self.$message({
+                        ReggieUI.message({
                             type: isSuccess ? 'success' : 'error',
                             message: provider.providerName + ' (' + elapsed + 's)：' + result,
                             duration: 6000,
@@ -316,11 +323,11 @@
                         });
                         self.loadData();
                     } else {
-                        self.$message.error('测试失败：' + (res.msg || '服务器返回异常'));
+                        ReggieUI.error('测试失败：' + (res.msg || '服务器返回异常'));
                     }
                 }).catch(function(err) {
                     loadingMsg.close();
-                    self.$message({
+                    ReggieUI.message({
                         type: 'error',
                         message: '测试失败：' + (err.message || err),
                         duration: 5000,
@@ -337,10 +344,10 @@
                 }).then(function() {
                     $axios.delete('/admin/ai/provider/delete/' + id).then(function(res) {
                         if (res.code === 1) {
-                            self.$message.success('删除成功');
+                            ReggieUI.success('删除成功');
                             self.loadData();
                         } else {
-                            self.$message.error(res.msg || '删除失败');
+                            ReggieUI.error(res.msg || '删除失败');
                         }
                     });
                 }).catch(function() {});
@@ -386,18 +393,17 @@
 
             submitForm: function() {
                 var self = this;
-                var passed = false;
-                self.$refs.providerForm.validate(function(valid) { passed = valid; });
-                if (!passed) {
-                    self.$message.warning('请完善表单必填项');
-                    return;
-                }
-                if (!self.form.id && !self.form.apiKey) {
-                    self.$message.warning('请输入 API 密钥');
-                    return;
-                }
+                self.$refs.providerForm.validate(function(valid) {
+                    if (!valid) {
+                        ReggieUI.warning('请完善表单必填项');
+                        return;
+                    }
+                    if (!self.form.id && !self.form.apiKey) {
+                        ReggieUI.warning('请输入 API 密钥');
+                        return;
+                    }
 
-                self.submitting = true;
+                    self.submitting = true;
 
                 var payload = JSON.parse(JSON.stringify(self.form));
                 if (self.form.id && self.form._hasExistingKey && !self.form.apiKey) {
@@ -417,19 +423,20 @@
                         if (res.data && res.data.msg) {
                             msg = res.data.msg;
                         }
-                        self.$message.success(msg || (self.form.id ? '更新成功' : '添加成功'));
+                        ReggieUI.success(msg || (self.form.id ? '更新成功' : '添加成功'));
                         self.dialogVisible = false;
                         self.modelList = [];
                         self.modelFetchError = '';
                         self.loadData();
                     } else {
-                        self.$message.error(res.msg || '操作失败');
+                        ReggieUI.error(res.msg || '操作失败');
                     }
                 }).catch(function(err) {
-                    self.$message.error('操作失败：' + (err.message || err));
+                    ReggieUI.error('操作失败：' + (err.message || err));
                 }).finally(function() {
                     self.submitting = false;
                 });
+            });
             },
 
             initPresets: function() {
@@ -441,13 +448,13 @@
                 ).then(function() {
                     $axios.post('/admin/ai/provider/init-presets').then(function(res) {
                         if (res.code === 1) {
-                            self.$message.success(res.msg || '初始化成功');
+                            ReggieUI.success(res.msg || '初始化成功');
                             self.loadData();
                         } else {
-                            self.$message.error(res.msg || '初始化失败');
+                            ReggieUI.error(res.msg || '初始化失败');
                         }
                     }).catch(function(err) {
-                        self.$message.error('初始化失败：' + (err.message || err));
+                        ReggieUI.error('初始化失败：' + (err.message || err));
                     });
                 }).catch(function() {});
             },
@@ -472,7 +479,7 @@
                         if (self.modelList.length === 0) {
                             self.modelFetchError = '该供应商未返回任何模型，请手动输入模型名称';
                         } else {
-                            self.$message.success('成功获取 ' + self.modelList.length + ' 个模型');
+                            ReggieUI.success('成功获取 ' + self.modelList.length + ' 个模型');
                         }
                     } else {
                         self.modelFetchError = res.msg || '获取失败';

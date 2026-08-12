@@ -1,8 +1,8 @@
 package com.reggie.module.printer;
 
 import com.reggie.common.BaseContext;
-import com.reggie.entity.OrderDetail;
-import com.reggie.entity.Orders;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
 import com.reggie.module.printer.adapter.WindowsSystemPrinterAdapter;
 import com.reggie.module.printer.core.PrinterTemplate;
 import com.reggie.module.printer.model.PrintJob;
@@ -11,8 +11,8 @@ import com.reggie.module.printer.model.PrinterConfig;
 import com.reggie.module.printer.model.PrinterStatus;
 import com.reggie.module.printer.service.PrinterConfigService;
 import com.reggie.module.printer.service.PrinterService;
-import com.reggie.service.OrderDetailService;
-import com.reggie.service.OrderService;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.order.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 @Sql(scripts = {"classpath:schema-printer.sql", "classpath:schema-test-orders.sql"})
@@ -216,3 +216,4 @@ public class PrinterServiceTest {
         assertFalse(result);
     }
 }
+

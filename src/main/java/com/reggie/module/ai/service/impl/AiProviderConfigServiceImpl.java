@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.ObjectMapperHolder;
 import com.reggie.module.ai.mapper.AiProviderConfigMapper;
 import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.provider.AiProviderManager;
@@ -46,6 +47,11 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
 
     @Autowired
     private AiProviderManager aiProviderManager;
+    /** HTTP 状态码常量 */
+    private static final int HTTP_OK = 200;
+    private static final int HTTP_UNAUTHORIZED = 401;
+    private static final int HTTP_FORBIDDEN = 403;
+    private static final int HTTP_NOT_FOUND = 404;
 
     // ==================== 查询 ====================
 
@@ -171,13 +177,13 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             }
 
             int code = conn.getResponseCode();
-            if (code == 200) {
+            if (code == HTTP_OK) {
                 updateTestResult(config, "success");
                 return "SUCCESS: 连接正常 (HTTP " + code + ")";
-            } else if (code == 401 || code == 403) {
+            } else if (code == HTTP_UNAUTHORIZED || code == HTTP_FORBIDDEN) {
                 updateTestResult(config, "fail");
                 return "FAIL: API密钥无效或无权访问 (HTTP " + code + ")";
-            } else if (code == 404) {
+            } else if (code == HTTP_NOT_FOUND) {
                 updateTestResult(config, "fail");
                 return "FAIL: API地址不存在 (HTTP 404)，请求路径：" + testUrl + "，请求方法：POST，请检查 baseUrl 末尾是否有多余斜杠，以及模型名称是否正确";
             } else {
@@ -227,10 +233,10 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             }
 
             int code = conn.getResponseCode();
-            if (code == 200) {
+            if (code == HTTP_OK) {
                 updateTestResult(config, "success");
                 return "SUCCESS: 百度API连接正常 (HTTP " + code + ")";
-            } else if (code == 401 || code == 403) {
+            } else if (code == HTTP_UNAUTHORIZED || code == HTTP_FORBIDDEN) {
                 updateTestResult(config, "fail");
                 return "FAIL: access_token 无效 (HTTP " + code + ")";
             } else {
@@ -282,13 +288,13 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             }
 
             int code = conn.getResponseCode();
-            if (code == 200) {
+            if (code == HTTP_OK) {
                 updateTestResult(config, "success");
                 return "SUCCESS: Anthropic API 连接正常 (HTTP " + code + ")";
-            } else if (code == 401 || code == 403) {
+            } else if (code == HTTP_UNAUTHORIZED || code == HTTP_FORBIDDEN) {
                 updateTestResult(config, "fail");
                 return "FAIL: API密钥无效或无权访问 (HTTP " + code + ")";
-            } else if (code == 404) {
+            } else if (code == HTTP_NOT_FOUND) {
                 updateTestResult(config, "fail");
                 return "FAIL: API地址不存在 (HTTP 404)，请求路径：" + testUrl + "，请检查 baseUrl 和模型名称";
             } else {
@@ -355,7 +361,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
 
     // ==================== 修改点：拉取模型列表 ====================
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
 
     @Override
     public List<String> fetchModelList(String baseUrl, String apiKey) {
@@ -388,12 +394,12 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                     conn.setReadTimeout(15000);
 
                     int code = conn.getResponseCode();
-                    if (code == 200) {
+                    if (code == HTTP_OK) {
                         List<String> models = parseModelListResponse(conn);
                         allModels.addAll(models);
                         // 取到数据就结束，不继续尝试其他路径
                         if (!models.isEmpty()) break;
-                    } else if (code == 401 || code == 403) {
+                    } else if (code == HTTP_UNAUTHORIZED || code == HTTP_FORBIDDEN) {
                         // 密钥无效，不必尝试其他端点
                         log.warn("fetchModelList: API密钥无效, url={}, code={}", modelUrl, code);
                         break;
@@ -520,4 +526,8 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
         }
     }
 }
+
+
+
+
 

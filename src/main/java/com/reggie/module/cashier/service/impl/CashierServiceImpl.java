@@ -3,13 +3,14 @@ package com.reggie.module.cashier.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
-import com.reggie.entity.CashierRecord;
-import com.reggie.entity.DailySettlement;
-import com.reggie.entity.Orders;
+import com.reggie.module.cashier.model.CashierRecord;
+import com.reggie.module.cashier.model.DailySettlement;
+import com.reggie.module.order.model.Orders;
 import com.reggie.module.payment.model.PaymentOrder;
-import com.reggie.mapper.CashierRecordMapper;
+import com.reggie.module.cashier.mapper.DailySettlementMapper;
+import com.reggie.module.cashier.mapper.CashierRecordMapper;
 import com.reggie.module.cashier.service.CashierService;
-import com.reggie.service.OrderService;
+import com.reggie.module.order.service.OrderService;
 import com.reggie.module.payment.service.PaymentOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +45,7 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
     private CashierRecordMapper cashierRecordMapper;
 
     @Autowired
-    private com.reggie.mapper.DailySettlementMapper dailySettlementMapper;
+    private DailySettlementMapper dailySettlementMapper;
 
     @Autowired
     private OrderService orderService;
@@ -479,4 +480,9 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         return result;
     }
 }
+
+
+
+
+
 

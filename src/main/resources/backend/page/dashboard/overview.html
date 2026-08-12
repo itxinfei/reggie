@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>数据概览 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
@@ -18,8 +19,8 @@
       padding: 0;
       overflow-y: auto;
       overflow-x: hidden;
-      background: linear-gradient(135deg, var(--el-bg-subtle) 0%, var(--el-border-lighter) 100%);
-      font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg-page);
+      font-family: var(--font-family-base);
     }
 
     /* 主容器 */
@@ -34,28 +35,26 @@
       background: transparent;
       padding: 16px 24px 24px;
       min-width: 0;
-      max-width: 1600px;
+      max-width: 1400px;
       margin: 0 auto;
       width: 100%;
     }
 
-    /* ========== Redis 状态条 - 玻璃态设计 ========== */
+    /* ========== Redis 状态条 - 品牌金纯色卡片（符合"禁止渐变发光"规范） ========== */
     .redis-status-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
-      background: linear-gradient(135deg, rgba(255, 194, 0, 0.92) 0%, rgba(255, 170, 0, 0.92) 100%);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      background: var(--color-brand-500);
       color: var(--text-on-brand);
       padding: 14px 24px;
-      border-radius: 16px;
+      border-radius: var(--radius-lg);
       margin-bottom: 16px;
-      font-size: 14px;
-      box-shadow: 0 8px 32px rgba(255, 194, 0, 0.28);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size:var(--font-size-base);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-brand-400);
     }
     .redis-status-bar .redis-indicator {
       display: flex;
@@ -73,11 +72,9 @@
     }
     .redis-status-bar .redis-dot.on {
       background: var(--color-success);
-      box-shadow: 0 0 12px var(--color-success);
     }
     .redis-status-bar .redis-dot.off {
       background: var(--color-danger);
-      box-shadow: 0 0 12px var(--color-danger);
     }
     @keyframes pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
@@ -87,7 +84,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 12px;
+      font-size:var(--font-size-xs);
       opacity: 0.95;
       flex-shrink: 0;
     }
@@ -110,8 +107,8 @@
       align-items: center;
       justify-content: space-between;
       gap: var(--space-4);
-      background: linear-gradient(135deg, var(--antd-warning-bg) 0%, var(--antd-warning-bg2) 100%);
-      border: 1px solid var(--antd-warning-l2b);
+      background: var(--color-warning-light);
+      border: 1px solid var(--color-warning);
       border-radius: var(--radius-lg);
       padding: var(--space-3) var(--space-5);
       flex-wrap: wrap;
@@ -127,37 +124,32 @@
       margin-top: 2px;
     }
 
-    /* ========== KPI 卡片 - 4列整行显示（容器使用stats-cards统一规范） ========== */
-    .stats-cards {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 16px;
-    }
+    /* ========== KPI 卡片 - 4列整行显示（容器使用 stats-cards 统一规范，网格与响应式由
+       components-stats-card.css 提供，此处不再重复定义） ========== */
 
     .kpi-card {
       background: var(--bg-surface);
-      border-radius: 14px;
-      padding: 18px;
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
       min-height: 100px;
       position: relative;
       overflow: hidden;
       cursor: default;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-subtle);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
     }
 
     .kpi-card:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-lg);
       border-color: var(--color-brand-300);
     }
 
-    /* 顶部渐变装饰条 */
+    /* 顶部主题色装饰条（纯色，符合"禁止渐变"规范） */
     .kpi-card::before {
       content: '';
       position: absolute;
@@ -165,11 +157,11 @@
       left: 0;
       right: 0;
       height: 4px;
-      background: var(--gradient);
+      background: var(--stat-color, var(--color-brand-500));
       opacity: 0.8;
     }
 
-    /* 背景渐变装饰 */
+    /* 背景装饰圆（纯色，低透明度） */
     .kpi-card::after {
       content: '';
       position: absolute;
@@ -177,7 +169,7 @@
       right: -30%;
       width: 200px;
       height: 200px;
-      background: var(--gradient);
+      background: var(--stat-color, var(--color-brand-500));
       border-radius: 50%;
       opacity: 0.05;
       transition: all 0.5s;
@@ -195,7 +187,7 @@
       top: 20px;
       width: 56px;
       height: 56px;
-      border-radius: 14px;
+      border-radius: var(--radius-lg);
       background: var(--icon-bg);
       display: flex;
       align-items: center;
@@ -210,29 +202,26 @@
 
     /* 标签 */
     .kpi-card .kpi-label {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       color: var(--text-secondary);
       margin-bottom: 8px;
       font-weight: 500;
       letter-spacing: 0.3px;
     }
 
-    /* 数值 */
+    /* 数值（纯色令牌，符合"禁止渐变"规范） */
     .kpi-card .kpi-value {
       font-size: 28px;
       font-weight: 700;
       line-height: 1.1;
-      word-break: break-all;
+      font-variant-numeric: tabular-nums;
       margin-bottom: 8px;
-      background: var(--gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: var(--stat-color, var(--color-brand-600));
     }
 
     /* 副信息 */
     .kpi-card .kpi-sub {
-      font-size: 12px;
+      font-size:var(--font-size-xs);
       color: var(--text-secondary);
       margin-top: 0;
       display: flex;
@@ -275,26 +264,26 @@
     .cache-tag.redis { background: var(--color-success-light); color: var(--color-success); }
     .cache-tag.mysql { background: var(--color-warning-light); color: var(--color-warning); }
 
-    /* 主题配色 */
+    /* 主题配色（纯色令牌，符合"禁止渐变"规范） */
     .kpi-card.primary {
-      --gradient: linear-gradient(135deg, var(--color-brand-800) 0%, var(--color-brand-600) 100%);
-      --icon-bg: linear-gradient(135deg, rgba(255, 194, 0, 0.1) 0%, rgba(255, 216, 77, 0.15) 100%);
+      --stat-color: var(--color-brand-600);
+      --icon-bg: rgba(255, 194, 0, 0.1);
     }
     .kpi-card.success {
-      --gradient: linear-gradient(135deg, var(--color-success-dark) 0%, var(--color-success) 100%);
-      --icon-bg: linear-gradient(135deg, rgba(103, 194, 58, 0.1) 0%, rgba(133, 206, 97, 0.15) 100%);
+      --stat-color: var(--color-success);
+      --icon-bg: rgba(103, 194, 58, 0.1);
     }
     .kpi-card.warning {
-      --gradient: linear-gradient(135deg, var(--color-warning-dark) 0%, var(--color-warning) 100%);
-      --icon-bg: linear-gradient(135deg, rgba(230, 162, 60, 0.1) 0%, rgba(235, 181, 99, 0.15) 100%);
+      --stat-color: var(--color-warning);
+      --icon-bg: rgba(230, 162, 60, 0.1);
     }
     .kpi-card.danger {
-      --gradient: linear-gradient(135deg, var(--color-danger-dark) 0%, var(--color-danger) 100%);
-      --icon-bg: linear-gradient(135deg, rgba(245, 108, 108, 0.1) 0%, rgba(247, 137, 137, 0.15) 100%);
+      --stat-color: var(--color-danger);
+      --icon-bg: rgba(245, 108, 108, 0.1);
     }
     .kpi-card.info {
-      --gradient: linear-gradient(135deg, var(--color-gray-600) 0%, var(--color-gray-500) 100%);
-      --icon-bg: linear-gradient(135deg, rgba(144, 147, 153, 0.1) 0%, rgba(166, 169, 173, 0.15) 100%);
+      --stat-color: var(--color-gray-600);
+      --icon-bg: rgba(144, 147, 153, 0.1);
     }
 
     /* ========== 图表区域 ========== */
@@ -323,7 +312,7 @@
     }
 
     .chart-panel .chart-title {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       font-weight: 600;
       color: var(--el-text-primary);
       margin-bottom: 14px;
@@ -364,7 +353,7 @@
     }
 
     .bottom-panel .panel-title {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       font-weight: 600;
       color: var(--el-text-primary);
       margin-bottom: 14px;
@@ -400,15 +389,15 @@
       line-height: 28px;
       text-align: center;
       border-radius: 8px;
-      font-size: 13px;
+      font-size:var(--font-size-sm);
       font-weight: 700;
       margin-right: 14px;
       flex-shrink: 0;
       transition: all 0.2s;
     }
-    .hot-dish-rank.top-1 { background: linear-gradient(135deg, var(--antd-error) 0%, var(--antd-error-l) 100%); color: var(--bg-surface); }
-    .hot-dish-rank.top-2 { background: linear-gradient(135deg, var(--antd-orange) 0%, var(--antd-warning-l) 100%); color: var(--bg-surface); }
-    .hot-dish-rank.top-3 { background: linear-gradient(135deg, var(--antd-warning-l) 0%, var(--antd-warning-l2) 100%); color: var(--bg-surface); }
+    .hot-dish-rank.top-1 { background: var(--color-danger); color: var(--bg-surface); }
+    .hot-dish-rank.top-2 { background: var(--color-brand-500); color: var(--bg-surface); }
+    .hot-dish-rank.top-3 { background: var(--color-warning); color: var(--bg-surface); }
     .hot-dish-rank.normal { background: var(--el-bg-lighter); color: var(--gray-666); }
 
     .hot-dish-list .hot-dish-item:hover .hot-dish-rank {
@@ -417,7 +406,7 @@
 
     .hot-dish-name {
       flex: 1;
-      font-size: 14px;
+      font-size:var(--font-size-base);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -427,12 +416,9 @@
     }
 
     .hot-dish-count {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       font-weight: 600;
-      background: linear-gradient(135deg, var(--color-brand-500) 0%, var(--antd-warning-l3) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: var(--color-brand-600);
       margin-left: 12px;
       flex-shrink: 0;
     }
@@ -448,7 +434,7 @@
     }
     .hot-dish-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--color-brand-500) 0%, var(--antd-warning-l3) 100%);
+      background: var(--color-brand-500);
       border-radius: 4px;
       transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -467,23 +453,23 @@
       transition: all 0.2s;
     }
     .ops-metric:hover {
-      background: var(--antd-warning-bg2);
-      border-color: var(--antd-warning-l2b);
+      background: var(--color-warning-light);
+      border-color: var(--color-warning);
     }
     .ops-metric-label {
-      font-size: 12px;
+      font-size:var(--font-size-xs);
       color: var(--text-secondary);
       margin-bottom: 4px;
       font-weight: 500;
     }
     .ops-metric-value {
-      font-size: 20px;
+      font-size:var(--font-size-2xl);
       font-weight: 700;
       color: var(--el-text-primary);
       line-height: 1.2;
     }
     .ops-metric-compare {
-      font-size: 12px;
+      font-size:var(--font-size-xs);
       margin-top: 4px;
       display: flex;
       align-items: center;
@@ -509,7 +495,7 @@
       transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .ops-progress-label {
-      font-size: 12px;
+      font-size:var(--font-size-xs);
       color: var(--text-secondary);
       display: flex;
       justify-content: space-between;
@@ -529,7 +515,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
+      font-size:var(--font-size-xs);
       color: var(--text-secondary);
     }
     .ops-sys-dot {
@@ -610,7 +596,7 @@
         font-size: 22px;
       }
       .kpi-card .kpi-label {
-        font-size: 12px;
+        font-size:var(--font-size-xs);
       }
       .chart-box {
         min-height: 260px;
@@ -626,7 +612,7 @@
         min-height: 100px;
       }
       .kpi-card .kpi-label {
-        font-size: 12px;
+        font-size:var(--font-size-xs);
       }
       .kpi-card .kpi-value {
         font-size: 26px;
@@ -641,6 +627,15 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="overview-container" id="dashboard-app" v-loading="loading">
     <div class="container" id="main-content" tabindex="-1">
+
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">数据概览</h1>
+          <p class="ds-page-header__subtitle">今日经营核心指标一览</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
 
       <!-- ========== KPI 指标卡片 ========== -->
       <div class="stats-cards">
@@ -736,7 +731,7 @@
               <div class="ops-metric-value">{{ overview.completionRate || 0 }}%</div>
               <div class="ops-progress">
                 <div class="ops-progress-bar">
-                  <div class="ops-progress-fill" :style="{ width: (overview.completionRate || 0) + '%', background: 'linear-gradient(90deg, var(--color-brand-500), var(--antd-warning-l3))' }"></div>
+                  <div class="ops-progress-fill" :style="{ width: (overview.completionRate || 0) + '%', background: 'var(--color-brand-500)' }"></div>
                 </div>
                 <div class="ops-progress-label">
                   <span>已完成 {{ overview.completedOrders || 0 }}</span>
@@ -976,14 +971,14 @@
           const lineData = emptyData ? [0] : revenues;
 
           this.trendChart.setOption({
-            color: ['#e6ae00', '#67c23a'],
+            color: [RgPalette.brand600, RgPalette.success],
             tooltip: {
               trigger: 'axis',
-              axisPointer: { type: 'cross', crossStyle: { color: this.cssVar('--gray-999') || '#999' } },
+              axisPointer: { type: 'cross', crossStyle: { color: this.cssVar('--gray-999') || RgPalette.gray999 } },
               backgroundColor: 'rgba(255,255,255,0.96)',
-              borderColor: this.cssVar('--el-border-lighter2') || '#e4e7ed',
+              borderColor: this.cssVar('--el-border-lighter2') || RgPalette.borderLighter2,
               borderWidth: 1,
-              textStyle: { color: this.cssVar('--el-text-primary') || '#303133', fontSize: 13 },
+              textStyle: { color: this.cssVar('--el-text-primary') || RgPalette.textPrimary, fontSize: 13 },
               formatter: function(params) {
                 let html = '<strong>' + params[0].axisValue + '</strong><br/>';
                 params.forEach(function(p) {
@@ -1000,7 +995,7 @@
               bottom: 8,
               itemWidth: 14,
               itemHeight: 14,
-              textStyle: { color: this.cssVar('--el-text-regular') || '#606266', fontSize: 13 }
+              textStyle: { color: this.cssVar('--el-text-regular') || RgPalette.textRegular, fontSize: 13 }
             },
             grid: {
               left: 55,
@@ -1011,25 +1006,25 @@
             xAxis: {
               type: 'category',
               data: xData,
-              axisLine: { lineStyle: { color: this.cssVar('--el-border-lighter2') || '#e4e7ed' } },
+              axisLine: { lineStyle: { color: this.cssVar('--el-border-lighter2') || RgPalette.borderLighter2 } },
               axisTick: { show: false },
-              axisLabel: { color: this.cssVar('--el-text-secondary') || '#909399', fontSize: 12 }
+              axisLabel: { color: this.cssVar('--el-text-secondary') || RgPalette.textSecondary, fontSize: 12 }
             },
             yAxis: [
               {
                 type: 'value',
                 name: '订单量(单)',
-                nameTextStyle: { color: this.cssVar('--el-text-secondary') || '#909399', fontSize: 12, padding: [0, 40, 0, 0] },
-                axisLabel: { color: this.cssVar('--el-text-secondary') || '#909399', fontSize: 12 },
-                splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } },
+                nameTextStyle: { color: this.cssVar('--el-text-secondary') || RgPalette.textSecondary, fontSize: 12, padding: [0, 40, 0, 0] },
+                axisLabel: { color: this.cssVar('--el-text-secondary') || RgPalette.textSecondary, fontSize: 12 },
+                splitLine: { lineStyle: { color: RgPalette.bgLight, type: 'dashed' } },
                 axisLine: { show: false },
                 axisTick: { show: false }
               },
               {
                 type: 'value',
                 name: '营业额(元)',
-                nameTextStyle: { color: this.cssVar('--el-text-secondary') || '#909399', fontSize: 12, padding: [0, 0, 0, 40] },
-                axisLabel: { color: this.cssVar('--el-text-secondary') || '#909399', fontSize: 12, formatter: '¥{value}' },
+                nameTextStyle: { color: this.cssVar('--el-text-secondary') || RgPalette.textSecondary, fontSize: 12, padding: [0, 0, 0, 40] },
+                axisLabel: { color: this.cssVar('--el-text-secondary') || RgPalette.textSecondary, fontSize: 12, formatter: '¥{value}' },
                 splitLine: { show: false },
                 axisLine: { show: false },
                 axisTick: { show: false }
@@ -1044,26 +1039,19 @@
                 barGap: '20%',
                 itemStyle: {
                   borderRadius: [8, 8, 0, 0],
-                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: '#ffd966' },
-                    { offset: 0.5, color: '#ffc200' },
-                    { offset: 1, color: '#e6ae00' }
-                  ])
+                  color: RgPalette.brand
                 },
                 label: {
                   show: !emptyData,
                   position: 'top',
-                  color: '#a67600',
+                  color: RgPalette.brand800,
                   fontSize: 12,
                   fontWeight: 600,
                   formatter: '{c}'
                 },
                 emphasis: {
                   itemStyle: {
-                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                      { offset: 0, color: '#ffe699' },
-                      { offset: 1, color: '#ffc200' }
-                    ])
+                    color: RgPalette.brand
                   }
                 }
               },
@@ -1075,22 +1063,19 @@
                 smooth: true,
                 symbol: 'emptyCircle',
                 symbolSize: 10,
-                lineStyle: { color: '#67c23a', width: 3 },
+                lineStyle: { color: RgPalette.success, width: 3 },
                 itemStyle: {
-                  color: '#67c23a',
-                  borderColor: '#fff',
+                  color: RgPalette.success,
+                  borderColor: RgPalette.white,
                   borderWidth: 2
                 },
                 areaStyle: {
-                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: 'rgba(103,194,58,0.3)' },
-                    { offset: 1, color: 'rgba(103,194,58,0.02)' }
-                  ])
+                  color: 'rgba(103,194,58,0.15)'
                 },
                 label: {
                   show: !emptyData,
                   position: 'top',
-                  color: '#3a8b1f',
+                  color: RgPalette.successDeep,
                   fontSize: 14,
                   fontWeight: 700,
                   formatter: function(p) { return '¥' + Number(p.value).toFixed(0); }
@@ -1113,8 +1098,8 @@
           }
           const statusData = [];
           const colorPalette = [
-            '#ffc200', '#67c23a', '#e6a23c', '#f56c6c', '#909399',
-            '#722ed1', '#1890ff', '#13ce66', '#ff7a45', '#36a3f5'
+            RgPalette.brand, RgPalette.success, RgPalette.warning, RgPalette.danger, RgPalette.textSecondary,
+            RgPalette.seriesPurple, RgPalette.antdBlue, RgPalette.seriesGreen2, RgPalette.antdOrange, RgPalette.seriesCyan
           ];
 
           Object.keys(this.orderStatus).forEach(key => {
@@ -1128,7 +1113,7 @@
 
           var isEmpty = statusData.length === 0;
           if (isEmpty) {
-            statusData.push({ name: '暂无数据', value: 1, itemStyle: { color: this.cssVar('--el-border-lighter2') || '#e4e7ed' } });
+            statusData.push({ name: '暂无数据', value: 1, itemStyle: { color: this.cssVar('--el-border-lighter2') || RgPalette.borderLighter2 } });
           }
 
           this.statusChart.setOption({
@@ -1136,9 +1121,9 @@
             tooltip: {
               trigger: 'item',
               backgroundColor: 'rgba(255,255,255,0.96)',
-              borderColor: this.cssVar('--el-border-lighter2') || '#e4e7ed',
+              borderColor: this.cssVar('--el-border-lighter2') || RgPalette.borderLighter2,
               borderWidth: 1,
-              textStyle: { color: this.cssVar('--el-text-primary') || '#303133', fontSize: 13 },
+              textStyle: { color: this.cssVar('--el-text-primary') || RgPalette.textPrimary, fontSize: 13 },
               formatter: function(p) {
                 return '<b>' + p.name + '</b><br/>' + p.marker
                   + ' 订单数：<b>' + p.value + '</b> 单'
@@ -1151,7 +1136,7 @@
               itemWidth: 10,
               itemHeight: 10,
               itemGap: 20,
-              textStyle: { color: this.cssVar('--el-text-regular') || '#606266', fontSize: 12, padding: [2, 0, 0, 0] }
+              textStyle: { color: this.cssVar('--el-text-regular') || RgPalette.textRegular, fontSize: 12, padding: [2, 0, 0, 0] }
             },
             series: [{
               type: 'pie',
@@ -1160,14 +1145,14 @@
               avoidLabelOverlap: false,
               itemStyle: {
                 borderRadius: 6,
-                borderColor: '#fff',
+                borderColor: RgPalette.white,
                 borderWidth: 3
               },
               label: {
                 show: !isEmpty,
                 position: 'outside',
                 formatter: '{b}\n{d}%',
-                color: this.cssVar('--el-text-regular') || '#606266',
+                color: this.cssVar('--el-text-regular') || RgPalette.textRegular,
                 fontSize: 13,
                 lineHeight: 18
               },
@@ -1175,7 +1160,7 @@
                 show: !isEmpty,
                 length: 25,
                 length2: 20,
-                lineStyle: { color: this.cssVar('--el-border-base') || '#c0c4cc' }
+                lineStyle: { color: this.cssVar('--el-border-base') || RgPalette.borderBase }
               },
               emphasis: {
                 scaleSize: 12,

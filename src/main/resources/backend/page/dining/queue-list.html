@@ -6,11 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>排队管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
   <div class="dashboard-container" id="queue-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">排队叫号</h1>
+          <p class="ds-page-header__subtitle">管理堂食排队与叫号</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -39,7 +48,7 @@
         :total="counts"
         :show-index="true"
         :show-actions="true"
-        :actions-width="200"
+        :actions-width="180"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -59,6 +68,7 @@
     <crud-dialog
       title="取号"
       :visible.sync="dialog.visible"
+      :submit-loading="submitting"
       width="420px"
       submit-text="确 定"
       @submit="submitTake"
@@ -90,6 +100,7 @@
       data() {
         return {
           loading: false,
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
           counts: 0,
           page: 1,
           pageSize: 10,
@@ -114,11 +125,11 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'queueNo', label: '排队号', align: 'center' },
-            { prop: 'phone', label: '手机号', align: 'center' },
-            { prop: 'seatCount', label: '就餐人数', width: 90, align: 'center' },
-            { prop: 'status', label: '状态', slot: true, width: 100, align: 'center' },
-            { prop: 'createdTime', label: '取号时间', align: 'center' }
+            { prop: 'queueNo', label: '排队号', width: 80, align: 'center' },
+            { prop: 'phone', label: '手机号', width: 120, align: 'center' },
+            { prop: 'seatCount', label: '人数', width: 60, align: 'center', type: 'number' },
+            { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
+            { prop: 'createdTime', label: '取号时间', width: 140, align: 'center' }
           ],
           // 取号弹窗
           dialog: { visible: false },
@@ -232,31 +243,34 @@
           this.init(false)
         },
         submitTake() {
+          if (this.submitting) return // 提交防重
           const self = this
           let passed = false
           self.$refs.form.validate(function(valid) { passed = valid })
           if (!passed) {
-            self.$message.warning('请完善表单必填项')
+            ReggieUI.warning('请完善表单必填项')
             return
           }
+          self.submitting = true
           queueTake({ phone: self.form.phone, seatCount: self.form.seatCount }).then(res => {
+            self.submitting = false
             if (res.code === 1) {
-              self.$message.success('取号成功！排队号：' + (res.data ? res.data.queueNo : ''))
+              ReggieUI.success('取号成功！排队号：' + (res.data ? res.data.queueNo : ''))
               self.dialog.visible = false
               self.init()
             } else {
-              self.$message.error(res.msg || '操作失败')
+              ReggieUI.error(res.msg || '操作失败')
             }
-          }).catch(err => { self.$message.error('请求失败：' + err) })
+          }).catch(err => { self.submitting = false; ReggieUI.error('请求失败：' + err) })
         },
         callHandle(id) {
           var self = this
           ReggieUI.confirm('确认叫号该排队记录?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               queueCall({ id: id }).then(res => {
-                if (res.code === 1) { self.$message.success('叫号成功！'); self.init() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(err => { self.$message.error('请求失败：' + err) })
+                if (res.code === 1) { ReggieUI.success('叫号成功！'); self.init() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(err => { ReggieUI.error('请求失败：' + err) })
             })
         },
         cancelHandle(id) {
@@ -264,9 +278,9 @@
           ReggieUI.confirm('确认取消该排队?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               queueCancel(id).then(res => {
-                if (res.code === 1) { self.$message.success('已取消！'); self.init() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(err => { self.$message.error('请求失败：' + err) })
+                if (res.code === 1) { ReggieUI.success('已取消！'); self.init() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(err => { ReggieUI.error('请求失败：' + err) })
             })
         }
       }
@@ -274,6 +288,20 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

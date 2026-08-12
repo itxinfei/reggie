@@ -1,6 +1,6 @@
 package com.reggie.module.store.service;
 
-import com.reggie.entity.Tenant;
+import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.store.model.StoreDailySummary;
 import com.reggie.module.store.model.StoreInfo;
 import com.reggie.module.store.model.StoreSearchDTO;
@@ -140,3 +140,4 @@ public interface StoreService {
      */
     Map<String, Object> getStoreStats();
 }
+

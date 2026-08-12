@@ -6,11 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>优惠券管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
   <div class="dashboard-container" id="coupon-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">优惠券管理</h1>
+          <p class="ds-page-header__subtitle">管理优惠券模板与发放</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -38,7 +47,7 @@
         :page-size="pageSize"
         :total="counts"
         :show-actions="true"
-        :actions-width="160"
+        :actions-width="240"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -63,6 +72,7 @@
     <crud-dialog
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
+      :submit-loading="submitting"
       width="35%"
       @submit="submitForm"
       @close="handleClose"
@@ -118,6 +128,7 @@
       data() {
         return {
           loading: false,
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
           action: '',
           counts: 0,
           page: 1,
@@ -147,15 +158,14 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'name', label: '优惠券名称', align: 'center' },
-            { prop: 'type', label: '类型', slot: true, width: 100, align: 'center' },
-            { prop: 'discountRate', label: '折扣率', width: 80, align: 'center', type: 'number' },
-            { prop: 'conditionAmount', label: '条件金额', width: 100, align: 'center' },
-            { prop: 'discountAmount', label: '优惠金额', width: 100, align: 'center' },
-            { prop: 'totalCount', label: '总数量', width: 90, align: 'center' },
-            { prop: 'remainCount', label: '剩余数量', width: 90, align: 'center' },
-            { prop: 'validDays', label: '有效期(天)', width: 100, align: 'center' },
-            { prop: 'status', label: '状态', slot: true, width: 80, align: 'center' }
+            { prop: 'name', label: '优惠券名称', width: 140, showOverflowTooltip: true },
+            { prop: 'type', label: '类型', slot: true, width: 80, align: 'center' },
+            { prop: 'discountAmount', label: '优惠金额', width: 90, align: 'center' },
+            { prop: 'conditionAmount', label: '条件金额', width: 90, align: 'center' },
+            { prop: 'totalCount', label: '总数量', width: 70, align: 'center' },
+            { prop: 'remainCount', label: '剩余', width: 70, align: 'center' },
+            { prop: 'validDays', label: '有效期', width: 70, align: 'center' },
+            { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' }
           ],
           // 弹窗表单
           formData: {
@@ -306,16 +316,17 @@
           this.formData.dialogVisible = true
         },
         submitForm() {
+          if (this.submitting) return // 提交防重
           var self = this
           var passed = false
           self.$refs.couponForm.validate(function(valid) { passed = valid })
           if (!passed) {
-            self.$message.warning('请完善表单必填项')
+            ReggieUI.warning('请完善表单必填项')
             return
           }
           // 修改点：前端表单校验，与后端 validateCoupon 保持一致，拦截非法提交
           if (!self.formData.name || !self.formData.name.trim()) {
-            self.$message.error('请输入优惠券名称'); return
+            ReggieUI.error('请输入优惠券名称'); return
           }
           if (!this.formData.type) {
             ReggieUI.error('请选择优惠券类型'); return
@@ -352,27 +363,30 @@
             status: this.formData.status
           }
           var self = this
+          self.submitting = true
           if (this.action === 'add') {
             addCouponTemplate(data).then(res => {
+              self.submitting = false
               if (res.code === 1) {
-                self.$message.success('优惠券添加成功！')
+                ReggieUI.success('优惠券添加成功！')
                 self.formData.dialogVisible = false
                 self.init()
               } else {
-                self.$message.error(res.msg || '操作失败')
+                ReggieUI.error(res.msg || '操作失败')
               }
-            }).catch(err => { self.$message.error('请求失败：' + err) })
+            }).catch(err => { self.submitting = false; ReggieUI.error('请求失败：' + err) })
           } else {
             data.id = this.formData.id
             updateCouponTemplate(data).then(res => {
+              self.submitting = false
               if (res.code === 1) {
-                self.$message.success('优惠券修改成功！')
+                ReggieUI.success('优惠券修改成功！')
                 self.formData.dialogVisible = false
                 self.init()
               } else {
-                self.$message.error(res.msg || '操作失败')
+                ReggieUI.error(res.msg || '操作失败')
               }
-            }).catch(err => { self.$message.error('请求失败：' + err) })
+            }).catch(err => { self.submitting = false; ReggieUI.error('请求失败：' + err) })
           }
         },
         deleteHandle(id) {
@@ -382,12 +396,12 @@
           }).then(function() {
             deleteCouponTemplate(id).then(res => {
               if (res.code === 1) {
-                self.$message.success('删除成功！')
+                ReggieUI.success('删除成功！')
                 self.init()
               } else {
-                self.$message.error(res.msg || '操作失败')
+                ReggieUI.error(res.msg || '操作失败')
               }
-            }).catch(err => { self.$message.error('请求失败：' + err) })
+            }).catch(err => { ReggieUI.error('请求失败：' + err) })
           })
         },
         handleClose() {
@@ -398,6 +412,20 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

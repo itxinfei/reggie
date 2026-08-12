@@ -6,11 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>库存盘点 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     .sub-table { margin: 8px 0; width: 100%; }
     .sub-table .el-table__body-wrapper { background: var(--el-bg-ghost); }
-    .empty-expand { text-align: center; padding: 24px; color: var(--el-border-base); font-size: 13px; }
+    .empty-expand { text-align: center; padding: 24px; color: var(--el-border-base); font-size:var(--font-size-sm); }
     .check-detail-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; padding-right: 4px; }
     .detail-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px; background: var(--el-bg-ghost); border-radius: 6px; border: 1px solid var(--el-border-light); }
     .detail-row .el-input--narrow-md { width: 120px; }
@@ -21,6 +22,14 @@
 <body>
   <div class="dashboard-container" id="stock-check-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">库存盘点</h1>
+          <p class="ds-page-header__subtitle">管理食材盘点记录与盈亏</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
       <table-bar
@@ -52,21 +61,21 @@
         @expand-change="loadDetails">
         <template #expand="{ row }">
           <el-table aria-label="数据表格" :data="row.details" stripe class="tableBox sub-table" v-if="row.details && row.details.length">
-            <el-table aria-label="数据表格"-column label="食材名称" min-width="140">
+            <el-table-column label="食材名称" min-width="140">
               <template slot-scope="scope">{{ scope.row.materialName }}</template>
             </el-table-column>
-            <el-table aria-label="数据表格"-column prop="materialId" label="食材ID" width="80" align="center" />
-            <el-table aria-label="数据表格"-column prop="bookQty" label="账面数量" width="110" align="center" />
-            <el-table aria-label="数据表格"-column prop="actualQty" label="实际数量" width="110" align="center" />
-            <el-table aria-label="数据表格"-column prop="diffQty" label="差异数量" width="100" align="center" />
-            <el-table aria-label="数据表格"-column label="差异" width="90" align="center">
+            <el-table-column prop="materialId" label="食材ID" width="80" align="center" />
+            <el-table-column prop="bookQty" label="账面数量" width="110" align="center" />
+            <el-table-column prop="actualQty" label="实际数量" width="110" align="center" />
+            <el-table-column prop="diffQty" label="差异数量" width="100" align="center" />
+            <el-table-column label="差异" width="90" align="center">
               <template slot-scope="scope">
                 <span :style="scope.row.diff < 0 ? 'color: var(--color-danger); font-weight: 600' : scope.row.diff > 0 ? 'color: var(--color-success); font-weight: 600' : 'color: var(--color-info)'">
                   {{ scope.row.diff }}
                 </span>
               </template>
             </el-table-column>
-            <el-table aria-label="数据表格"-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
+            <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
           </el-table>
           <div v-else class="empty-expand">暂无明细数据</div>
         </template>
@@ -85,8 +94,15 @@
     </div>
 
     <!-- 新增盘点对话框（操作人 + 备注） -->
-    <el-dialog title="新增盘点单" :visible.sync="formData.dialogVisible" custom-class="el-dialog--md unified-dialog"
-      :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
+    <crud-dialog
+      title="新增盘点单"
+      :visible.sync="formData.dialogVisible"
+      size="md"
+      :submit-loading="submitting"
+      :close-on-click-modal="false"
+      @submit="submitCreate"
+      @close="formData.dialogVisible = false"
+    >
       <!-- 修改点：移除误导性死 class demo-form-inline（label-width 80 合适，保持不变） -->
       <!-- 修改点：补全 ref/:model/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
       <el-form ref="createForm" :model="formData" :rules="createRules" label-width="80px" size="small">
@@ -97,15 +113,18 @@
           <el-input v-model="formData.remark" placeholder="盘点备注（可选）" />
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="formData.dialogVisible = false">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitCreate()">确 定</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- 录入盘点数据并完成对话框 -->
-    <el-dialog title="录入盘点数据" :visible.sync="entryDialogVisible" custom-class="el-dialog--lg unified-dialog"
-      :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
+    <crud-dialog
+      title="录入盘点数据"
+      :visible.sync="entryDialogVisible"
+      size="lg"
+      :submit-loading="entrySubmitting"
+      :close-on-click-modal="false"
+      @submit="submitEntry"
+      @close="entryDialogVisible = false"
+    >
       <div v-if="entryMaterials.length === 0" style="text-align:center;padding:40px;color:var(--el-border-base);">
         暂无食材数据，请先添加盘点项
       </div>
@@ -115,17 +134,13 @@
           <div class="check-detail-list">
             <div v-for="(item, index) in entryForm.details" :key="item.id" class="detail-row">
               <span style="width:160px;flex-shrink:0;font-weight:500;">{{ item.materialName }}</span>
-              <span style="color:var(--color-info);font-size:12px;width:80px;">账面：{{ item.bookQty }}</span>
+              <span style="color:var(--color-info);font-size:var(--font-size-xs);width:80px;">账面：{{ item.bookQty }}</span>
               <el-input v-model="item.actualStock" placeholder="实际库存" type="number" style="width:120px" />
             </div>
           </div>
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="entryDialogVisible = false">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitEntry()">保存并完成</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -150,14 +165,14 @@
           activeFilter: '',
           // 修改点：crud-table 列配置（替代手写 el-table-column）
           columns: [
-            { prop: 'checkNo', label: '盘点单号', width: 160 },
-            { prop: 'operator', label: '操作员', width: 100, align: 'center' },
-            { prop: 'itemCount', label: '盘点项数', width: 100, align: 'center' },
-            { prop: 'totalDiffAmount', label: '总差异金额', width: 120, align: 'right', slot: true, type: 'money' },
-            { prop: 'profitLoss', label: '盈亏金额', width: 120, align: 'right', slot: true, type: 'money' },
-            { prop: 'remark', label: '备注', minWidth: 120, showOverflowTooltip: true },
-            { prop: 'status', label: '状态', width: 100, align: 'center', slot: true },
-            { prop: 'createdTime', label: '创建时间', width: 170 }
+            { prop: 'checkNo', label: '盘点单号', width: 140 },
+            { prop: 'operator', label: '操作员', width: 90, align: 'center' },
+            { prop: 'itemCount', label: '盘点项数', width: 90, align: 'center', type: 'number' },
+            { prop: 'totalDiffAmount', label: '总差异金额', width: 115, align: 'right', slot: true, type: 'money' },
+            { prop: 'profitLoss', label: '盈亏金额', width: 115, align: 'right', slot: true, type: 'money' },
+            { prop: 'remark', label: '备注', width: 90, showOverflowTooltip: true },
+            { prop: 'status', label: '状态', width: 90, align: 'center', slot: true },
+            { prop: 'createdTime', label: '创建时间', width: 155 }
           ],
           tableSearchItems: [],
           tableActions: [
@@ -222,11 +237,11 @@
               self.tableData = pageRes.data.records || []
               self.counts = Number(pageRes.data.total) || 0
             } else {
-              self.$message.error(pageRes.msg || '操作失败')
+              ReggieUI.error(pageRes.msg || '操作失败')
             }
             if (reloadStats) { self.loadStats() }
           } catch (err) {
-            self.$message.error('请求失败：' + err)
+            ReggieUI.error('请求失败：' + err)
           } finally {
             self.loading = false
           }
@@ -274,7 +289,7 @@
               self.$set(row, 'details', [])
             }
           }).catch(function(err) {
-            self.$message.error('加载明细失败：' + err)
+            ReggieUI.error('加载明细失败：' + err)
             self.$set(row, 'details', [])
           })
         },
@@ -300,21 +315,21 @@
           var passed = false
           self.$refs.createForm.validate(function(valid) { passed = valid })
           if (!passed) {
-            self.$message.error('请输入操作人')
+            ReggieUI.error('请输入操作人')
             return
           }
           var fd = self.formData
           addStockCheck({ operator: fd.operator.trim(), remark: (fd.remark || '').trim() }).then(function(res) {
             if (res.code === 1) {
-              self.$message.success('盘点单创建成功！')
+              ReggieUI.success('盘点单创建成功！')
               self.formData.dialogVisible = false
               // 创建后打开录入数据弹窗
               self.openEntryDialog(res.data.id)
             } else {
-              self.$message.error(res.msg || '创建失败')
+              ReggieUI.error(res.msg || '创建失败')
             }
           }).catch(function(err) {
-            self.$message.error('请求失败：' + err)
+            ReggieUI.error('请求失败：' + err)
           })
         },
         // 打开录入数据弹窗，加载食材列表供用户选择
@@ -344,10 +359,10 @@
               }
               self.entryDialogVisible = true
             } else {
-              self.$message.error('加载食材列表失败')
+              ReggieUI.error('加载食材列表失败')
             }
           }).catch(function(err) {
-            self.$message.error('请求失败：' + err)
+            ReggieUI.error('请求失败：' + err)
           })
         },
         submitEntry: function() {
@@ -367,17 +382,17 @@
           }
           completeStockCheck(this.entryCheckId, { items: items }).then(function(res) {
             if (res.code === 1) {
-              self.$message.success('盘点完成！')
+              ReggieUI.success('盘点完成！')
               self.entryDialogVisible = false
               self.entryCheckId = null
               self.entryMaterials = []
               self.entryForm = { details: [] }
               self.init(true)
             } else {
-              self.$message.error(res.msg || '操作失败')
+              ReggieUI.error(res.msg || '操作失败')
             }
           }).catch(function(err) {
-            self.$message.error('请求失败：' + err)
+            ReggieUI.error('请求失败：' + err)
           })
         },
         // 修改点：分页处理改为 crud-table 事件驱动（与库存流水页一致）
@@ -396,6 +411,13 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
 
 
 

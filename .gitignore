@@ -104,6 +104,10 @@ CLAUDE.md
 cookies.txt
 response.txt
 cp.txt
+# Windows 空设备重定向残留 / 本地工具缓存
+nul
+.atomcode/
+.m2/
 
 # ----------------------------------------------------------
 # 一次性工具脚本 (非项目源代码)
@@ -117,6 +121,10 @@ fresh.yaml
 # 本地维护文档 (非对外发布用)
 # ----------------------------------------------------------
 CHANGELOG.md
+CODE-REVIEW-REPORT.md
+FRONTEND-REVIEW-REPORT.md
+backend-style-audit.md
+backend-table-ui-audit.md
 
 # ----------------------------------------------------------
 # Maven 包装器 (仅保留 maven.config，忽略 wrapper JAR)

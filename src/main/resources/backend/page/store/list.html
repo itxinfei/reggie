@@ -5,28 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>门店管理 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: var(--el-bg-subtle); padding: 20px; font-family: 'Microsoft YaHei', sans-serif; }
+        body { background: var(--bg-page); padding: 20px; font-family: var(--font-family-base); }
         .dashboard-container { max-width: 1400px; margin: 0 auto; }
         .container { background: var(--bg-surface); border-radius: 8px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
 
         /* 工具栏 */
-        .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--el-border-light); margin-bottom: 16px; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--el-border-light); margin-bottom: var(--space-5); }
         .toolbar .el-input, .toolbar .el-select { width: 180px; }
         .toolbar .spacer { flex: 1; }
 
         /* 表格 */
         .store-table { margin-top: 4px; }
         .store-table .cell-status { display: flex; align-items: center; gap: 6px; }
-        .tag-active { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; background: var(--color-success-light); color: var(--color-success); }
-        .tag-inactive { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; background: var(--color-danger-light); color: var(--color-danger); }
+        .tag-active { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size:var(--font-size-xs); font-weight: 500; background: var(--color-success-light); color: var(--color-success); }
+        .tag-inactive { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size:var(--font-size-xs); font-weight: 500; background: var(--color-danger-light); color: var(--color-danger); }
         .amount-highlight { color: var(--color-warning); font-weight: 600; }
         .order-count { font-weight: 600; color: var(--el-color-primary); }
 
         /* 编辑弹窗 */
-        .form-section-title { font-size: 14px; font-weight: 600; color: var(--el-text-primary); margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px dashed var(--el-border-lighter2); }
+        .form-section-title { font-size:var(--font-size-base); font-weight: 600; color: var(--el-text-primary); margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px dashed var(--el-border-lighter2); }
         .form-section-title:first-child { margin-top: 0; }
         .footer-actions { text-align: right; padding-top: 8px; }
 
@@ -34,12 +35,39 @@
         .empty-wrap { text-align: center; padding: 60px 0; color: var(--color-info); }
 
         .sync-section { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+
+        /* 门店详情弹窗 */
+        .store-detail .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+        .store-detail .detail-title { font-size: var(--font-size-lg); font-weight: 600; color: var(--el-text-primary); }
+        .store-detail .detail-code { font-size: var(--font-size-xs); color: var(--text-muted); background: var(--bg-subtle); padding: 2px 8px; border-radius: 3px; }
+        .store-detail .form-section-title:first-of-type { margin-top: 4px; }
+        /* 详情字段网格（替代未注册的 el-descriptions） */
+        .store-detail .detail-grid { border: 1px solid var(--el-border-extra-light); border-radius: 6px; overflow: hidden; margin-bottom: 4px; }
+        .store-detail .detail-grid .el-col {
+            display: flex; align-items: center;
+            padding: 9px 12px; border-bottom: 1px solid var(--el-border-extra-light);
+            border-right: 1px solid var(--el-border-extra-light);
+        }
+        .store-detail .detail-grid .el-col:nth-child(2n) { border-right: none; }
+        .store-detail .detail-grid .el-col:nth-last-child(-n+2) { border-bottom: none; }
+        .store-detail .detail-grid .el-col[class*="span-24"],
+        .store-detail .detail-grid .el-col:last-child:nth-child(odd) { border-right: none; }
+        .store-detail .dt-label { flex: 0 0 84px; color: var(--text-muted); font-size: var(--font-size-sm); }
+        .store-detail .dt-value { flex: 1; color: var(--el-text-primary); font-size: var(--font-size-sm); word-break: break-all; }
     </style>
 </head>
 <body>
 <div id="app">
     <div class="dashboard-container">
         <div class="container">
+            <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+            <header class="ds-page-header">
+                <div class="ds-page-header__titles">
+                    <h1 class="ds-page-header__title" id="page-title">门店管理</h1>
+                    <p class="ds-page-header__subtitle">管理门店信息与营业状态</p>
+                </div>
+                <div class="ds-page-header__actions"></div>
+            </header>
             <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
             <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -79,67 +107,53 @@
                     size="small"
                     @selection-change="onSelectionChange"
                     @sort-change="onSortChange"
+                    @row-click="onRowClick"
+                    highlight-current-row
                     :default-sort="{prop: 'createTime', order: 'descending'}"
                     style="width:100%">
-                    <el-table aria-label="数据表格"-column type="selection" width="45" fixed="left"></el-table-column>
-                    <el-table aria-label="数据表格"-column label="序号" type="index" width="46" align="center"></el-table-column>
-                    <el-table aria-label="数据表格"-column prop="storeName" label="门店名称" min-width="110" sortable="custom" show-overflow-tooltip>
+                    <el-table-column type="selection" width="45" fixed="left"></el-table-column>
+                    <el-table-column label="序号" type="index" width="46" align="center"></el-table-column>
+                    <el-table-column prop="storeName" label="门店名称" min-width="150" sortable="custom" show-overflow-tooltip>
                         <template slot-scope="{row}">
                             <el-tag :type="storeTypeTag(row.storeType)" size="mini" effect="plain">{{ storeTypeName(row.storeType) }}</el-tag>
                             <span style="margin-left:6px; font-weight:500;">{{ row.storeName }}</span>
                         </template>
                     </el-table-column>
-                    <el-table aria-label="数据表格"-column prop="storeCode" label="门店编码" width="88" sortable="custom" show-overflow-tooltip></el-table-column>
-                    <el-table aria-label="数据表格"-column prop="contactPerson" label="联系人" width="74" show-overflow-tooltip></el-table-column>
-                    <el-table aria-label="数据表格"-column prop="contactPhone" label="联系电话" width="100" show-overflow-tooltip></el-table-column>
-                    <el-table aria-label="数据表格"-column prop="address" label="地址" min-width="110" show-overflow-tooltip></el-table-column>
-                    <el-table aria-label="数据表格"-column label="外卖/堂食" width="80" align="center">
+                    <el-table-column prop="storeCode" label="门店编码" width="92" sortable="custom" show-overflow-tooltip></el-table-column>
+                    <el-table-column label="联系人 / 电话" min-width="140" show-overflow-tooltip>
                         <template slot-scope="{row}">
-                            <span :style="{color: row.isDeliveryEnabled == 1 ? 'var(--color-success)' : 'var(--el-border-base)'}">&#128666;</span>
-                            <span style="margin:0 2px;">/</span>
-                            <span :style="{color: row.isDineInEnabled == 1 ? 'var(--el-color-primary)' : 'var(--el-border-base)'}">&#127869;</span>
+                            <span>{{ row.contactPerson || '—' }}</span>
+                            <span style="margin-left:8px; color:var(--text-muted);">{{ row.contactPhone || '—' }}</span>
                         </template>
                     </el-table-column>
-                    <el-table aria-label="数据表格"-column label="状态" width="60" align="center">
+                    <el-table-column label="状态" width="60" align="center">
                         <template slot-scope="{row}">
                             <el-switch
                                 v-model="row.status"
                                 :active-value="1"
                                 :inactive-value="0"
                                 @change="toggleSingleStatus(row)"
-                                active-color="#13ce66"
-                                inactive-color="#c0cc4c">
+                                active-color="var(--color-success)"
+                                inactive-color="var(--color-gray-300)">
                             </el-switch>
                         </template>
                     </el-table-column>
-                    <el-table aria-label="数据表格"-column prop="todayOrders" label="今日订单" width="70" align="center" sortable="custom">
+                    <el-table-column prop="todayOrders" label="今日订单" width="80" align="center" sortable="custom">
                         <template slot-scope="{row}">
                             <span class="order-count">{{ row.todayOrders || 0 }}</span>
                         </template>
                     </el-table-column>
-                    <el-table aria-label="数据表格"-column prop="todayAmount" label="今日营收" width="90" align="right" sortable="custom">
+                    <el-table-column prop="todayAmount" label="今日营收" width="100" align="right" sortable="custom">
                         <template slot-scope="{row}">
                             <span class="amount-highlight">&yen;{{ fmtAmount(row.todayAmount) }}</span>
                         </template>
                     </el-table-column>
-                    <el-table aria-label="数据表格"-column label="数据完善度" width="128" sortable="custom" prop="dataCompleteRate">
+                    <el-table-column label="操作" width="210" align="center" fixed="right">
                         <template slot-scope="{row}">
-                            <el-progress
-                                :percentage="toNumber(row.dataCompleteRate)"
-                                :stroke-width="14"
-                                :text-inside="true"
-                                :color="progressColor(row.dataCompleteRate)">
-                            </el-progress>
-                        </template>
-                    </el-table-column>
-                    <el-table aria-label="数据表格"-column prop="createTime" label="创建时间" width="126" sortable="custom">
-                        <template slot-scope="{row}">{{ formatDate(row.createTime) }}</template>
-                    </el-table-column>
-                    <el-table aria-label="数据表格"-column label="操作" width="178" align="center">
-                        <template slot-scope="{row}">
-                            <el-button type="text" size="mini" icon="el-icon-edit" @click="openEditDialog(row)">编辑</el-button>
-                            <el-button type="text" size="mini" icon="el-icon-switch-button" @click="switchToStore(row)">切换</el-button>
-                            <el-button type="text" size="mini" icon="el-icon-refresh" @click="openSyncDialog(row)">同步</el-button>
+                            <el-button type="text" size="mini" icon="el-icon-document" @click.stop="openDetail(row)">详情</el-button>
+                            <el-button type="text" size="mini" icon="el-icon-edit" @click.stop="openEditDialog(row)">编辑</el-button>
+                            <el-button type="text" size="mini" icon="el-icon-switch-button" @click.stop="switchToStore(row)">切换</el-button>
+                            <el-button type="text" size="mini" icon="el-icon-refresh" @click.stop="openSyncDialog(row)">同步</el-button>
                         </template>
                     </el-table-column>
                 </el-table>
@@ -168,7 +182,15 @@
     </div>
 
     <!-- ===== 新建/编辑门店对话框 ===== -->
-    <el-dialog :title="dialogTitle" :visible.sync="formDialogVisible" custom-class="el-dialog--lg unified-dialog" @close="resetForm" :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
+    <crud-dialog
+      :title="dialogTitle"
+      :visible.sync="formDialogVisible"
+      size="lg"
+      :submit-loading="submitting"
+      :close-on-click-modal="false"
+      @submit="submitForm"
+      @close="resetForm"
+    >
         <el-form :model="form" ref="formRef" label-width="100px" size="small" :rules="formRules">
             <div class="form-section-title">基本信息</div>
             <el-row :gutter="16">
@@ -284,12 +306,86 @@
             <el-button size="small" @click="formDialogVisible = false">取消</el-button>
             <el-button type="primary" size="small" @click="submitForm" :loading="submitting">{{ isCreate ? '确认创建' : '保存修改' }}</el-button>
         </div>
-    </el-dialog>
+    </crud-dialog>
+
+    <!-- ===== 门店详情对话框（点击行 / 详情按钮打开，展示完整信息，避免列表列过多） ===== -->
+    <crud-dialog
+      title="门店详情"
+      :visible.sync="detailDialogVisible"
+      size="lg"
+      :show-submit="false"
+      cancel-text="关 闭"
+      :close-on-click-modal="true"
+      @close="detailData=null">
+        <div v-if="detailData" class="store-detail">
+            <!-- 头部概要 -->
+            <div class="detail-header">
+                <el-tag :type="storeTypeTag(detailData.storeType)" size="small" effect="plain">{{ storeTypeName(detailData.storeType) }}</el-tag>
+                <span class="detail-title">{{ detailData.storeName }}</span>
+                <span class="detail-code">{{ detailData.storeCode }}</span>
+                <el-tag :type="detailData.status === 1 ? 'success' : 'info'" size="small" effect="light">
+                    {{ detailData.status === 1 ? '已启用' : '已停用' }}
+                </el-tag>
+            </div>
+
+            <!-- 基本信息 -->
+            <div class="form-section-title">基本信息</div>
+            <el-row :gutter="0" class="detail-grid">
+                <el-col :span="12"><span class="dt-label">门店名称</span><span class="dt-value">{{ detailData.storeName || '—' }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">门店编码</span><span class="dt-value">{{ detailData.storeCode || '—' }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">门店类型</span><span class="dt-value">{{ storeTypeName(detailData.storeType) }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">营业时间</span><span class="dt-value">{{ detailData.businessHours || '—' }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">联系人</span><span class="dt-value">{{ detailData.contactPerson || '—' }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">联系电话</span><span class="dt-value">{{ detailData.contactPhone || '—' }}</span></el-col>
+                <el-col :span="24"><span class="dt-label">门店地址</span><span class="dt-value">{{ detailData.address || '—' }}</span></el-col>
+            </el-row>
+
+            <!-- 运营设置 -->
+            <div class="form-section-title">运营设置</div>
+            <el-row :gutter="0" class="detail-grid">
+                <el-col :span="8"><span class="dt-label">配送半径</span><span class="dt-value">{{ detailData.deliveryRadius || 0 }} m</span></el-col>
+                <el-col :span="8"><span class="dt-label">起送金额</span><span class="dt-value">&yen;{{ fmtAmount(detailData.minDeliveryAmount) }}</span></el-col>
+                <el-col :span="8"><span class="dt-label">配送费</span><span class="dt-value">&yen;{{ fmtAmount(detailData.deliveryFee) }}</span></el-col>
+                <el-col :span="8">
+                    <span class="dt-label">支持外卖</span>
+                    <span class="dt-value"><el-tag :type="detailData.isDeliveryEnabled === 1 ? 'success' : 'info'" size="mini">{{ detailData.isDeliveryEnabled === 1 ? '支持' : '不支持' }}</el-tag></span>
+                </el-col>
+                <el-col :span="8">
+                    <span class="dt-label">支持堂食</span>
+                    <span class="dt-value"><el-tag :type="detailData.isDineInEnabled === 1 ? 'success' : 'info'" size="mini">{{ detailData.isDineInEnabled === 1 ? '支持' : '不支持' }}</el-tag></span>
+                </el-col>
+                <el-col :span="8">
+                    <span class="dt-label">数据完善度</span>
+                    <span class="dt-value"><el-progress :percentage="toNumber(detailData.dataCompleteRate)" :stroke-width="12" :color="progressColor(detailData.dataCompleteRate)"></el-progress></span>
+                </el-col>
+            </el-row>
+
+            <!-- 时间信息 -->
+            <div class="form-section-title">时间信息</div>
+            <el-row :gutter="0" class="detail-grid">
+                <el-col :span="12"><span class="dt-label">创建时间</span><span class="dt-value">{{ formatDateTime(detailData.createTime) }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">更新时间</span><span class="dt-value">{{ formatDateTime(detailData.updateTime) }}</span></el-col>
+            </el-row>
+
+            <div class="footer-actions">
+                <el-button size="small" type="primary" icon="el-icon-edit" @click="openEditDialog(detailData)">编辑</el-button>
+                <el-button size="small" icon="el-icon-switch-button" @click="switchToStore(detailData)">切换门店</el-button>
+                <el-button size="small" icon="el-icon-refresh" @click="openSyncDialog(detailData)">数据同步</el-button>
+            </div>
+        </div>
+    </crud-dialog>
 
     <!-- ===== 数据同步对话框 ===== -->
-    <el-dialog title="数据同步" :visible.sync="syncDialogVisible" custom-class="el-dialog--md unified-dialog"
-      :close-on-click-modal="true" @close="syncResult=null">
-        <p style="margin-bottom:14px; color:var(--el-text-regular); font-size:13px;">
+    <crud-dialog
+      title="数据同步"
+      :visible.sync="syncDialogVisible"
+      size="md"
+      :show-submit="false"
+      cancel-text="关 闭"
+      :close-on-click-modal="true"
+      @close="syncResult=null"
+    >
+        <p style="margin-bottom:14px; color:var(--el-text-regular); font-size:var(--font-size-sm);">
             将总部数据同步到 <b style="color:var(--el-text-primary);">{{ syncTargetName }}</b>
         </p>
         <div class="sync-section">
@@ -299,19 +395,16 @@
         </div>
         <el-alert
             v-if="syncResult"
-            :title="'同步完成：成功 ' + syncResult.synced + ' 条，失败 ' + syncResult.failed + ' 条'"
+            :title='同步完成：成功 ' + syncResult.synced + ' 条，失败 ' + syncResult.failed + ' 条'
             :type="syncResult.failed > 0 ? 'warning' : 'success'"
             :closable="false"
             style="margin-top:14px;">
         </el-alert>
         <template v-if="syncResult && syncResult.errors && syncResult.errors.length > 0">
           <p v-for="(err, i) in syncResult.errors" :key="i"
-             style="font-size:12px; color:var(--color-danger); margin-top:4px;">{{ err }}</p>
+             style="font-size:var(--font-size-xs); color:var(--color-danger); margin-top:4px;">{{ err }}</p>
         </template>
-        <span slot="footer" class="dialog-footer">
-            <el-button size="medium" @click="syncDialogVisible = false">关 闭</el-button>
-        </span>
-    </el-dialog>
+    </crud-dialog>
 </div>
 
 <script src="../../plugins/vue/vue.js"></script>
@@ -342,6 +435,9 @@
         formDialogVisible: false,
         isCreate: true,
         editTenantId: null,
+        // 详情
+        detailDialogVisible: false,
+        detailData: null,
         form: {
             storeName: '', storeCode: '', storeType: 2,
             contactPerson: '', contactPhone: '', address: '',
@@ -419,7 +515,7 @@
                     if (reloadStats) { self.updateStats(); }
                 }
             }).catch(function(err) {
-                self.$message.error('加载门店数据失败');
+                ReggieUI.error('加载门店数据失败');
             }).finally(function() { self.loading = false; });
         },
         updateStats: function() {
@@ -491,19 +587,19 @@
         batchConfirm: function(status, label) {
             var self = this;
             var ids = self.selection.map(function(r) { return r.tenantId; });
-            if (ids.length === 0) { self.$message.warning('请选择门店'); return; }
+            if (ids.length === 0) { ReggieUI.warning('请选择门店'); return; }
             self.$confirm('确认' + label + '已选的 ' + ids.length + ' 个门店吗？', '提示', {
                 confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
             }).then(function() {
                 batchUpdateStatus(ids, status).then(function(res) {
                     if (res && res.code === 1) {
                         var result = res.data;
-                        self.$message.success(label + '成功：' + result.successCount + '/' + result.total);
+                        ReggieUI.success(label + '成功：' + result.successCount + '/' + result.total);
                         self.loadData();
                     } else {
-                        self.$message.error(label + '失败');
+                        ReggieUI.error(label + '失败');
                     }
-                }).catch(function() { self.$message.error(label + '失败'); });
+                }).catch(function() { ReggieUI.error(label + '失败'); });
             }).catch(function() {});
         },
         doExport: function() {
@@ -513,7 +609,7 @@
                 storeType: self.search.storeType,
                 status: self.search.status
             };
-            self.$message({ message: '正在导出，请稍候...', type: 'info', duration: 2000 });
+            ReggieUI.message({ message: '正在导出，请稍候...', type: 'info', duration: 2000 });
             exportStores(params).then(function(res) {
                 var blob = new Blob([res], { type: 'text/csv;charset=utf-8' });
                 var url = window.URL.createObjectURL(blob);
@@ -522,9 +618,9 @@
                 a.download = 'store_export_' + new Date().toISOString().slice(0,10) + '.csv';
                 a.click();
                 window.URL.revokeObjectURL(url);
-                self.$message.success('导出成功');
+                ReggieUI.success('导出成功');
             }).catch(function() {
-                self.$message.error('导出失败');
+                ReggieUI.error('导出失败');
             });
         },
 
@@ -533,7 +629,7 @@
             var self = this;
             updateStatus(row.tenantId, row.status).then(function(res) {
                 if (res && res.code === 1) {
-                    self.$message.success('状态已更新');
+                    ReggieUI.success('状态已更新');
                 }
             }).catch(function() { self.loadData(); });
         },
@@ -541,10 +637,44 @@
             var self = this;
             switchStore(row.tenantId).then(function(res) {
                 if (res && res.code === 1) {
-                    self.$message.success('已切换到门店：' + row.storeName);
+                    ReggieUI.success('已切换到门店：' + row.storeName);
                     self.loadData();
                 }
             });
+        },
+
+        // ========== 详情 ==========
+        openDetail: function(row) {
+            var self = this;
+            // 修复点：列表数据可能不含全部字段，统一走 /store/detail 获取完整信息
+            getStoreDetail(row.tenantId).then(function(res) {
+                if (res && res.code === 1 && res.data) {
+                    var d = res.data;
+                    d.dataCompleteRate = self.calcCompleteRate(d);
+                    self.detailData = d;
+                    self.detailDialogVisible = true;
+                } else {
+                    ReggieUI.error('获取门店详情失败');
+                }
+            }).catch(function() {
+                ReggieUI.error('获取门店详情失败');
+            });
+        },
+        // 点击行打开详情（排除点击操作按钮 / 复选框 / 状态开关等交互元素时的误触发）
+        onRowClick: function(row, column, event) {
+            if (!event || !event.target) return;
+            var t = event.target;
+            if (t.closest('.el-button') || t.closest('.el-checkbox') || t.closest('.el-switch') || t.closest('.cell')) {
+                // 操作列 / 选择列 / 状态列点击不触发详情（cell 内可能含按钮）
+            }
+            // 仅当点击的是主数据单元格（非操作/选择/状态列）时打开详情
+            var cell = t.closest('.el-table__row td');
+            if (!cell) return;
+            var cls = cell.getAttribute('class') || '';
+            if (cls.indexOf('el-table-column--selection') > -1) return;
+            if (cls.indexOf('crud-actions-col') > -1) return;
+            if (t.closest('.el-switch')) return;
+            this.openDetail(row);
         },
 
         // ========== 编辑 ==========
@@ -575,7 +705,7 @@
                     self.formDialogVisible = true;
                 }
             }).catch(function() {
-                self.$message.error('获取门店详情失败');
+                ReggieUI.error('获取门店详情失败');
             });
         },
 
@@ -636,14 +766,14 @@
 
                 apiCall.then(function(res) {
                     if (res && res.code === 1) {
-                        self.$message.success(self.isCreate ? '门店创建成功' : '编辑成功');
+                        ReggieUI.success(self.isCreate ? '门店创建成功' : '编辑成功');
                         self.formDialogVisible = false;
                         self.loadData();
                     } else {
-                        self.$message.error(res.msg || '操作失败');
+                        ReggieUI.error(res.msg || '操作失败');
                     }
                 }).catch(function(err) {
-                    self.$message.error('操作失败: ' + (err.response && err.response.data && err.response.data.msg || err.message));
+                    ReggieUI.error('操作失败: ' + (err.response && err.response.data && err.response.data.msg || err.message));
                 }).finally(function() { self.submitting = false; });
             });
         },
@@ -670,10 +800,10 @@
             apiCall.then(function(res) {
                 if (res && res.code === 1) {
                     self.syncResult = res.data;
-                    self.$message.success('同步完成');
+                    ReggieUI.success('同步完成');
                 }
             }).catch(function() {
-                self.$message.error('同步失败');
+                ReggieUI.error('同步失败');
             }).finally(function() { self.syncing[type] = false; });
         },
 
@@ -710,6 +840,13 @@
                 return '';
             }
             return String(val).substring(0, 10);
+        },
+        // 修改点：详情弹窗用，保留完整日期时间（年-月-日 时:分:秒）
+        formatDateTime: function(val) {
+            if (val === null || val === undefined || val === '') return '—';
+            if (typeof val === 'string') return val.replace('T', ' ').substring(0, 19);
+            if (typeof val === 'number') return new Date(val).toISOString().replace('T', ' ').substring(0, 19);
+            return String(val);
         },
         // 修改点：el-progress 颜色随完善度变化（绿/橙/灰）
         progressColor: function(val) {

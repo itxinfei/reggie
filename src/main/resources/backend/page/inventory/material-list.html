@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>食材管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
@@ -54,7 +55,7 @@
         :page-sizes="[10,20,30,40]"
         :total="counts"
         :show-actions="true"
-        :actions-width="160"
+        :actions-width="180"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -77,6 +78,7 @@
     <crud-dialog
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
+      :submit-loading="submitting"
       width="600px"
       @submit="submitForm"
       @close="handleClose"
@@ -123,17 +125,17 @@
     <!-- 修改点：使用 <crud-dialog> 统一弹窗组件替代手写 el-dialog（仅展示，隐藏确认按钮） -->
     <crud-dialog title="库存预警" :visible.sync="warningDialogVisible" size="lg" :show-submit="false" cancel-text="关 闭">
       <el-table aria-label="数据表格" :data="warningData" stripe class="tableBox">
-        <el-table aria-label="数据表格"-column prop="name" label="食材名称" /></el-table-column>
-        <el-table aria-label="数据表格"-column label="食材分类">
+        <el-table-column prop="name" label="食材名称" /></el-table-column>
+        <el-table-column label="食材分类">
           <template slot-scope="scope">{{ scope.row.categoryName }}</template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="unit" label="单位" width="80" /></el-table-column>
-        <el-table aria-label="数据表格"-column label="库存数量">
+        <el-table-column prop="unit" label="单位" width="80" /></el-table-column>
+        <el-table-column label="库存数量">
           <template slot-scope="scope">
             <span style="color: red; font-weight: bold">{{ scope.row.stockQty }}</span>
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="minStock" label="最低库存" width="100" /></el-table-column>
+        <el-table-column prop="minStock" label="最低库存" width="100" /></el-table-column>
       </el-table>
     </crud-dialog>
   </div>
@@ -151,6 +153,7 @@
         data() {
           return {
             loading: false,
+            submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
             action: '',
             counts: 0,
             page: 1,
@@ -158,15 +161,14 @@
             tableData: [],
             // 修改点：crud-table 列配置（替代手写 el-table-column）
             columns: [
-              { prop: 'name', label: '食材名称', minWidth: 140, showOverflowTooltip: true },
-              { prop: 'categoryName', label: '食材分类', width: 120, align: 'center' },
-              { prop: 'unit', label: '单位', width: 80, align: 'center' },
-              { prop: 'stockQty', label: '库存数量', width: 120, align: 'center', slot: true, type: 'number' },
-              { prop: 'minStock', label: '最低库存', width: 100, align: 'center', type: 'number' },
-              { prop: 'unitPrice', label: '单价', width: 100, align: 'right', slot: true, type: 'money' },
-              { prop: 'supplierName', label: '供应商', width: 140, align: 'center' },
-              { prop: 'barcode', label: '条码', width: 120, align: 'center' },
-              { prop: 'status', label: '状态', width: 100, align: 'center', slot: true }
+              { prop: 'name', label: '食材名称', width: 120, showOverflowTooltip: true },
+              { prop: 'categoryName', label: '分类', width: 80, align: 'center' },
+              { prop: 'unit', label: '单位', width: 60, align: 'center' },
+              { prop: 'stockQty', label: '库存', width: 80, align: 'center', slot: true, type: 'number' },
+              { prop: 'minStock', label: '最低库存', width: 80, align: 'center', type: 'number' },
+              { prop: 'unitPrice', label: '单价', width: 80, align: 'right', slot: true, type: 'money' },
+              { prop: 'supplierName', label: '供应商', width: 100, align: 'center', showOverflowTooltip: true },
+              { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
             ],
             // 数据统计
             stats: {
@@ -427,13 +429,15 @@
             })
           },
           submitForm() {
+            if (this.submitting) return // 提交防重
             const self = this
             let passed = false
             self.$refs.materialForm.validate(function(valid) { passed = valid })
             if (!passed) {
-              self.$message.warning('请完善表单必填项')
+              ReggieUI.warning('请完善表单必填项')
               return
             }
+            self.submitting = true
             const fd = self.formData
             const params = {
               name: fd.name,
@@ -448,6 +452,7 @@
             }
             if (this.action === 'add') {
               addMaterial(params).then(res => {
+                self.submitting = false
                 if (res.code === 1) {
                   ReggieUI.success('添加成功！')
                   this.formData.dialogVisible = false
@@ -456,11 +461,13 @@
                   ReggieUI.error(res.msg || '操作失败')
                 }
               }).catch(err => {
+                self.submitting = false
                 ReggieUI.error('请求失败：' + err)
               })
             } else {
               params.id = fd.id
               updateMaterial(params).then(res => {
+                self.submitting = false
                 if (res.code === 1) {
                   ReggieUI.success('修改成功！')
                   this.formData.dialogVisible = false
@@ -489,6 +496,20 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

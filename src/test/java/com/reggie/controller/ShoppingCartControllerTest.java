@@ -1,8 +1,8 @@
 package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
-import com.reggie.entity.ShoppingCart;
-import com.reggie.service.ShoppingCartService;
+import com.reggie.module.shopping.model.ShoppingCart;
+import com.reggie.module.shopping.service.ShoppingCartService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +18,7 @@ import java.math.BigDecimal;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
@@ -166,4 +166,7 @@ public class ShoppingCartControllerTest {
         org.junit.jupiter.api.Assertions.assertTrue(shoppingCartService.list().isEmpty());
     }
 }
+
+
+
 

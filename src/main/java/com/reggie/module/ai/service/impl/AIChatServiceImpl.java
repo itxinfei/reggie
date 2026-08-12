@@ -7,8 +7,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.BaseContext;
-import com.reggie.entity.Dish;
-import com.reggie.mapper.DishMapper;
+import com.reggie.common.ObjectMapperHolder;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.dish.mapper.DishMapper;
 import com.reggie.module.ai.config.AIConfigProperties;
 import com.reggie.module.ai.mapper.AIConversationMapper;
 import com.reggie.module.ai.mapper.AIMessageRecordMapper;
@@ -88,7 +89,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     private AICacheService aiCacheService;
 
     /** JSON序列化工具 */
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
 
     /** 单次对话携带的最大历史消息数 */
     private static final int MAX_HISTORY_MESSAGES = 20;
@@ -939,4 +940,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         conversationContextService.clearContext(conversationId);
     }
 }
+
+
+
 

@@ -8,6 +8,7 @@ import com.reggie.module.inventory.model.MaterialCategory;
 import com.reggie.module.inventory.service.MaterialCategoryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.reggie.module.category.model.Category;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -40,5 +41,6 @@ public class MaterialCategoryServiceImpl extends ServiceImpl<MaterialCategoryMap
                         .orderByAsc(MaterialCategory::getSort));
     }
 }
+
 
 

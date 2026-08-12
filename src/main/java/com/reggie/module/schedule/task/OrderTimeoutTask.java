@@ -2,13 +2,13 @@ package com.reggie.module.schedule.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
-import com.reggie.entity.Orders;
-import com.reggie.entity.Tenant;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.inventory.mapper.MaterialMapper;
 import com.reggie.module.inventory.model.Material;
 import com.reggie.module.report.service.ReportService;
-import com.reggie.service.OrderService;
-import com.reggie.service.TenantService;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -260,3 +260,6 @@ public class OrderTimeoutTask {
         }
     }
 }
+
+
+

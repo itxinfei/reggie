@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>打印管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
   </style>
@@ -13,6 +14,14 @@
 <body>
   <div class="dashboard-container" id="printer-config-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">打印配置</h1>
+          <p class="ds-page-header__subtitle">管理打印机设备与纸张</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- ========== 数据统计卡片（统一组件） ========== -->
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
@@ -63,7 +72,7 @@
         :total="counts"
         :loading="loading"
         :show-actions="true"
-        :actions-width="240"
+        :actions-width="160"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -85,7 +94,7 @@
     </div>
 
     <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，默认 footer 提供"取消/确定" -->
-    <crud-dialog :title="dialog.title" :visible.sync="dialog.visible" size="lg" @submit="submit" @close="cancel">
+    <crud-dialog :title="dialog.title" :visible.sync="dialog.visible" :submit-loading="submitting" size="lg" @submit="submit" @close="cancel">
       <el-form ref="form" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入打印机名称，如：前台收银机"></el-input>
@@ -110,7 +119,7 @@
             </el-select>
             <el-button @click="fetchSystemPrinters" :loading="loadingPrinters" icon="el-icon-refresh">刷新</el-button>
           </div>
-          <div style="color:var(--color-info);font-size:12px;margin-top:4px;">
+          <div style="color:var(--color-info);font-size:var(--font-size-xs);margin-top:4px;">
             打印机需先在 Windows「设备和打印机」中安装驱动并能正常打印测试页
           </div>
         </el-form-item>
@@ -143,7 +152,7 @@
             <el-checkbox label="KITCHEN">厨房单</el-checkbox>
             <el-checkbox label="DELIVERY">配送单</el-checkbox>
           </el-checkbox-group>
-          <div style="color:var(--color-info);font-size:12px;margin-top:4px;">勾选后该打印机会接收对应类型的打印任务</div>
+          <div style="color:var(--color-info);font-size:var(--font-size-xs);margin-top:4px;">勾选后该打印机会接收对应类型的打印任务</div>
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="form.sort" :min="0" :max="999" controls-position="right"></el-input-number>
@@ -174,6 +183,7 @@
       data() {
         return {
           loading: false,
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
           query: {
             name: '',
             brand: '',
@@ -190,17 +200,13 @@
           ],
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
-            { prop: 'name', label: '名称', minWidth: 120 },
-            { prop: 'brand', label: '品牌', minWidth: 100 },
-            { prop: 'storeId', label: '门店ID', width: 80, align: 'center', type: 'number' },
-            { prop: 'deviceId', label: '设备ID', width: 100, align: 'center' },
-            { prop: 'type', label: '连接类型', width: 100, align: 'center' },
+            { prop: 'name', label: '名称', width: 120, showOverflowTooltip: true },
+            { prop: 'brand', label: '品牌', width: 80, align: 'center' },
+            { prop: 'type', label: '类型', width: 80, align: 'center' },
             { prop: 'ipAddress', label: 'IP地址', width: 120, align: 'center' },
-            { prop: 'port', label: '端口', width: 80, align: 'center' },
-            { prop: 'paperSize', label: '纸张大小', width: 90, align: 'center' },
-            { prop: 'printTypes', label: '打印类型', minWidth: 140, slot: true },
-            { prop: 'systemPrinterName', label: '系统打印机', minWidth: 140 },
-            { prop: 'status', label: '状态', width: 80, align: 'center', slot: true }
+            { prop: 'port', label: '端口', width: 60, align: 'center' },
+            { prop: 'printTypes', label: '打印类型', width: 120, slot: true, showOverflowTooltip: true },
+            { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
           ],
           stats: {
             totalPrinters: 0,
@@ -416,21 +422,23 @@
             if (res && res.code === 1) {
               self.systemPrinters = res.data || []
               if (!self.systemPrinters.length) {
-                self.$message.warning('未检测到已安装的打印机，请先在 Windows「设备和打印机」安装驱动')
+                ReggieUI.warning('未检测到已安装的打印机，请先在 Windows「设备和打印机」安装驱动')
               }
             } else {
-              self.$message.warning(res ? res.msg : '获取系统打印机失败')
+              ReggieUI.warning(res ? res.msg : '获取系统打印机失败')
             }
           }).catch(function() {
-            self.$message.error('获取系统打印机列表失败，请检查后端服务')
+            ReggieUI.error('获取系统打印机列表失败，请检查后端服务')
           }).finally(function() { self.loadingPrinters = false })
         },
         onTypeChange(val) {
           if (val === 'USB') this.fetchSystemPrinters()
         },
         submit() {
+          if (this.submitting) return // 提交防重
           this.$refs.form.validate(valid => {
             if (!valid) return
+            this.submitting = true
             const params = {
               name: this.form.name,
               type: this.form.type,
@@ -446,6 +454,7 @@
             }
             if (this.dialog.action === 'add') {
               addPrinterConfig(params).then(res => {
+                this.submitting = false
                 if (res.code === 1) {
                   ReggieUI.success('新增成功！')
                   this.dialog.visible = false
@@ -454,6 +463,7 @@
                   ReggieUI.error(res.msg || '操作失败')
                 }
               }).catch(err => {
+                this.submitting = false
                 ReggieUI.error('请求失败：' + err)
               })
             } else {
@@ -520,6 +530,20 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

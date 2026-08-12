@@ -304,16 +304,23 @@
           }
         },
         created() {
+          // 修改点(2026-08-12)：登录态预检——未登录直接整页跳转登录页，
+          // 从根上避免「未登录直接打开 index.html 时右侧 iframe 嵌套出登录页」的问题
           const userInfo = window.localStorage.getItem('userInfo')
-          if (userInfo) {
-            this.userInfo = JSON.parse(userInfo)
+          if (!userInfo) {
+            window.location.replace('/backend/page/login/login.html')
+            return
           }
+          this.userInfo = JSON.parse(userInfo)
           this.closeLoading()
         },
         mounted() {
           // 修改点：将菜单数据与处理方法暴露到全局，供 iframe 内页面通过 window.parent 调用
           window.menuList = this.menuList
           window.menuHandle = this.menuHandle
+          // 修改点(2026-08-12)：监听子页面发来的未登录信号，统一由顶层窗口跳转登录页，
+          // 防止登录页被嵌套在 iframe（数据区）内
+          window.addEventListener('message', this.handleChildNotLogin)
           // 修改点：监听窗口尺寸变化与 iframe 内容加载完成事件，动态调整 iframe 高度避免内容被裁剪
           this.initIframeAutoHeight()
         },
@@ -325,6 +332,12 @@
                 window.location.href = '/backend/page/login/login.html'
               }
             })
+          },
+          // 修改点(2026-08-12)：接收子页面（iframe）发来的未登录信号，由顶层窗口统一跳转登录页
+          handleChildNotLogin(event) {
+            if (event && event.data && event.data.type === 'REGGIE_NOTLOGIN') {
+              window.location.replace('/backend/page/login/login.html')
+            }
           },
           goHome() {
             this.navHistory = []  // 回到首页清空历史

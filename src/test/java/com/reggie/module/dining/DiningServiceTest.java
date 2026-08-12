@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @ActiveProfiles("test")
 @Sql(scripts = "classpath:schema-dining.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class DiningServiceTest {
@@ -178,3 +178,4 @@ public class DiningServiceTest {
         assertEquals("CANCELLED", reservationService.getById(r.getId()).getStatus());
     }
 }
+

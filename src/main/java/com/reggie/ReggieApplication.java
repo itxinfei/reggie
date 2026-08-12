@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletComponentScan;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -14,13 +15,13 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  * </p>
  *
  * @author 心飞为你飞
- * @since 2026-05-25
+ * @since 2026-08-25
  */
 @Slf4j
 @SpringBootApplication
 @ServletComponentScan
 @EnableTransactionManagement
-@org.springframework.cache.annotation.EnableCaching
+@EnableCaching
 @EnableScheduling
 @EnableAsync
 public class ReggieApplication {

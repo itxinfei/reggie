@@ -2,16 +2,16 @@ package com.reggie.module.schedule.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
-import com.reggie.entity.Dish;
-import com.reggie.entity.OrderDetail;
-import com.reggie.entity.Orders;
-import com.reggie.entity.SetmealDish;
-import com.reggie.entity.Tenant;
-import com.reggie.service.DishService;
-import com.reggie.service.OrderDetailService;
-import com.reggie.service.OrderService;
-import com.reggie.service.SetmealDishService;
-import com.reggie.service.TenantService;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.setmeal.model.SetmealDish;
+import com.reggie.module.tenant.model.Tenant;
+import com.reggie.module.dish.service.DishService;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.module.setmeal.service.SetmealDishService;
+import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -180,7 +180,7 @@ public class StockRefundCompensationTask {
                         new LambdaQueryWrapper<>();
                 sdWrapper.eq(SetmealDish::getSetmealId, detail.getSetmealId());
                 List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
-                for (com.reggie.entity.SetmealDish sd : setmealDishes) {
+                for (SetmealDish sd : setmealDishes) {
                     int copies = sd.getCopies() != null ? sd.getCopies() : 1;
                     BigDecimal totalQty = qty.multiply(new BigDecimal(copies));
                     if (refundStockAtomic(sd.getDishId(), totalQty)) {
@@ -266,3 +266,10 @@ public class StockRefundCompensationTask {
         }
     }
 }
+
+
+
+
+
+
+

@@ -3,11 +3,14 @@ package com.reggie.module.cost.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
-import com.reggie.entity.DishCost;
-import com.reggie.entity.CostRecord;
-import com.reggie.entity.LaborCost;
-import com.reggie.entity.OtherCost;
-import com.reggie.mapper.DishCostMapper;
+import com.reggie.module.cost.model.DishCost;
+import com.reggie.module.cost.model.CostRecord;
+import com.reggie.module.cost.model.LaborCost;
+import com.reggie.module.cost.model.OtherCost;
+import com.reggie.module.cost.mapper.CostRecordMapper;
+import com.reggie.module.cost.mapper.LaborCostMapper;
+import com.reggie.module.cost.mapper.OtherCostMapper;
+import com.reggie.module.cost.mapper.DishCostMapper;
 import com.reggie.module.cost.service.CostService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,13 +44,13 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
     private DishCostMapper dishCostMapper;
 
     @Autowired
-    private com.reggie.mapper.CostRecordMapper costRecordMapper;
+    private CostRecordMapper costRecordMapper;
 
     @Autowired
-    private com.reggie.mapper.LaborCostMapper laborCostMapper;
+    private LaborCostMapper laborCostMapper;
 
     @Autowired
-    private com.reggie.mapper.OtherCostMapper otherCostMapper;
+    private OtherCostMapper otherCostMapper;
 
     // ==================== 菜品成本管理 ====================
 
@@ -485,4 +488,8 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         }
     }
 }
+
+
+
+
 

@@ -19,7 +19,7 @@ import java.math.RoundingMode;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 @Sql(scripts = {"classpath:schema-member.sql"})
@@ -190,3 +190,4 @@ public class MemberServiceTest {
         assertNotNull(updated.getUsedTime());
     }
 }
+

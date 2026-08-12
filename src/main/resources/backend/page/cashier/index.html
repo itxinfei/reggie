@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>收银台 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     html, body {
@@ -51,7 +52,7 @@
       margin-bottom: 8px;
     }
     .stat-label {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       color: var(--el-text-secondary);
     }
     .cashier-main {
@@ -66,7 +67,7 @@
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
     }
     .panel-title {
-      font-size: 16px;
+      font-size:var(--font-size-lg);
       font-weight: 600;
       color: var(--el-text-primary);
       margin-bottom: 16px;
@@ -103,11 +104,11 @@
       margin-bottom: 4px;
     }
     .order-time {
-      font-size: 12px;
+      font-size:var(--font-size-xs);
       color: var(--el-text-secondary);
     }
     .order-amount {
-      font-size: 18px;
+      font-size:var(--font-size-xl);
       font-weight: 700;
       color: var(--el-color-danger);
     }
@@ -137,7 +138,7 @@
       color: var(--el-text-primary);
     }
     .summary-value.total {
-      font-size: 20px;
+      font-size:var(--font-size-2xl);
       color: var(--el-color-danger);
     }
     .payment-methods {
@@ -167,7 +168,7 @@
       display: block;
     }
     .payment-method span {
-      font-size: 14px;
+      font-size:var(--font-size-base);
     }
     .amount-input {
       margin-bottom: 20px;
@@ -188,7 +189,7 @@
       margin-bottom: 20px;
     }
     .change-label {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       color: var(--el-text-secondary);
       margin-bottom: 4px;
     }
@@ -200,7 +201,7 @@
     .submit-btn {
       width: 100%;
       height: 50px;
-      font-size: 18px;
+      font-size:var(--font-size-xl);
     }
   </style>
 </head>
@@ -356,6 +357,7 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../js/common.js"></script>
@@ -432,7 +434,7 @@
         },
         async handlePayment() {
           if (!this.selectedOrder) {
-            this.$message.warning('请先选择订单')
+            ReggieUI.warning('请先选择订单')
             return
           }
 
@@ -448,17 +450,17 @@
 
             const res = await cashPayment(params)
             if (res.code === 1) {
-              this.$message.success('收款成功')
+              ReggieUI.success('收款成功')
               this.selectedOrder = null
               this.actualAmount = 0
               this.remark = ''
               this.fetchData()
             } else {
-              this.$message.error(res.msg || '收款失败')
+              ReggieUI.error(res.msg || '收款失败')
             }
           } catch (err) {
             console.error('收款失败', err)
-            this.$message.error('收款失败')
+            ReggieUI.error('收款失败')
           } finally {
             this.submitLoading = false
           }

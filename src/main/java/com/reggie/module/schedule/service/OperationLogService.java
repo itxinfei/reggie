@@ -2,7 +2,7 @@ package com.reggie.module.schedule.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.reggie.entity.OperationLog;
+import com.reggie.module.sys.model.OperationLog;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,3 +41,4 @@ public interface OperationLogService extends IService<OperationLog> {
      */
     int cleanExpiredLogs(int retentionDays);
 }
+

@@ -5,6 +5,7 @@ import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import com.reggie.module.category.model.Category;
 import javax.validation.constraints.Size;
 
 /**
@@ -32,3 +33,4 @@ public class CategorySaveDTO {
     @NotNull(message = "排序不能为空")
     private Integer sort;
 }
+

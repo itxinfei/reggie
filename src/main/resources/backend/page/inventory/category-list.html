@@ -6,11 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>食材分类管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
   <div class="dashboard-container" id="category-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">食材分类</h1>
+          <p class="ds-page-header__subtitle">管理食材分类与排序</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
       <stat-cards :cards="statsCards"></stat-cards>
 
@@ -38,7 +47,7 @@
         :page-sizes="[10,20,30,40]"
         :total="counts"
         :show-actions="true"
-        :actions-width="160"
+        :actions-width="240"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -56,6 +65,7 @@
     <crud-dialog
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
+      :submit-loading="submitting"
       width="480px"
       @submit="submitForm"
       @close="handleClose"
@@ -87,15 +97,16 @@
       data() {
         return {
           loading: false,
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
           counts: 0,
           page: 1,
           pageSize: 10,
           tableData: [],
           // 修改点：crud-table 列配置（替代手写 el-table-column）
           columns: [
-            { prop: 'name', label: '分类名称', minWidth: 160, showOverflowTooltip: true },
-            { prop: 'sort', label: '排序', width: 100, align: 'center' },
-            { prop: 'materialCount', label: '食材数量', width: 120, align: 'center', slot: true, type: 'number' }
+            { prop: 'name', label: '分类名称', width: 160, showOverflowTooltip: true },
+            { prop: 'sort', label: '排序', width: 70, align: 'center' },
+            { prop: 'materialCount', label: '食材数量', width: 90, align: 'center', slot: true, type: 'number' }
           ],
           stats: { totalCategories: 0 },
           // 搜索条件
@@ -233,13 +244,15 @@
           this.formData.dialogVisible = false
         },
         submitForm() {
+          if (this.submitting) return // 提交防重
           const self = this
           let passed = false
           self.$refs.categoryForm.validate(function(valid) { passed = valid })
           if (!passed) {
-            self.$message.warning('请完善表单必填项')
+            ReggieUI.warning('请完善表单必填项')
             return
           }
+          self.submitting = true
           const fd = self.formData
           const action = fd.id ? updateMatCategory : addMatCategory
           const params = this.formData.id
@@ -247,6 +260,7 @@
             : { name: fd.name, sort: fd.sort }
 
           action(params).then(res => {
+            self.submitting = false
             if (res.code === 1) {
               ReggieUI.success(this.formData.id ? '分类修改成功！' : '分类添加成功！')
               this.formData.dialogVisible = false
@@ -255,6 +269,7 @@
               ReggieUI.error(res.msg || '操作失败')
             }
           }).catch(err => {
+            self.submitting = false
             ReggieUI.error('请求失败：' + err)
           })
         },
@@ -294,6 +309,20 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,12 +1,13 @@
 package com.reggie.module.ai.service;
 
-import com.reggie.entity.Dish;
+import com.reggie.module.dish.model.Dish;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
+import com.reggie.module.dish.mapper.DishMapper;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -36,7 +37,7 @@ public class AICacheService {
     private static final long DISH_CACHE_TTL = 5 * 60 * 1000L;
 
     @Resource
-    private com.reggie.mapper.DishMapper dishMapper;
+    private DishMapper dishMapper;
 
     /**
      * 获取格式化的菜品列表（带缓存）
@@ -89,3 +90,6 @@ public class AICacheService {
         return cachedDishList;
     }
 }
+
+
+

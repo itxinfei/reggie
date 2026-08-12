@@ -6,12 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>充值记录 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     .chart-panels { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
     .chart-panel { flex: 1; min-width: 380px; background: var(--bg-surface); border-radius: 14px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.06); padding: 18px 20px; }
-    .chart-panel .panel-title { font-size: 15px; font-weight: 600; color: var(--el-text-primary); margin-bottom: 12px;
+    .chart-panel .panel-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 12px;
       padding-bottom: 10px; border-bottom: 1px solid var(--el-bg-lighter); }
     .chart-box { width: 100%; height: 300px; }
     .filter-bar { background: var(--bg-surface); border-radius: 12px; padding: 14px 20px; margin-bottom: 16px;
@@ -25,6 +26,14 @@
 <body>
   <div class="dashboard-container" id="recharge-app">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">充值记录</h1>
+          <p class="ds-page-header__subtitle">查看会员充值流水</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
       <stat-cards :cards="statsCards"></stat-cards>
 
@@ -70,7 +79,7 @@
         @size-change="onSizeChange"
       >
         <template #col-amount="{ row }">
-          <span style="color:#f59e0b;font-weight:700;font-size:15px;">￥{{ row.amount }}</span>
+          <span style="color:var(--legacy-f59e0b);font-weight:700;font-size:15px;">￥{{ row.amount }}</span>
         </template>
         <template #col-giftAmount="{ row }">
           <span :style="{color: Number(row.giftAmount)>0?'var(--emerald)':'var(--color-info)', fontWeight: Number(row.giftAmount)>0?'600':'400' }">
@@ -111,12 +120,12 @@
           trendChart: null, paymentChart: null,
         // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
         columns: [
-          { prop: 'memberName', label: '会员名称', minWidth: 120 },
-          { prop: 'phone', label: '手机号', width: 130 },
-          { prop: 'amount', label: '充值金额', width: 130, align: 'center', slot: true, type: 'money' },
-          { prop: 'giftAmount', label: '赠送金额', width: 120, align: 'center', slot: true, type: 'money' },
-          { prop: 'paymentMethod', label: '支付方式', width: 110, align: 'center', slot: true },
-          { prop: 'createdTime', label: '充值时间', minWidth: 170 }
+          { prop: 'memberName', label: '会员名称', width: 100 },
+          { prop: 'phone', label: '手机号', width: 120, align: 'center' },
+          { prop: 'amount', label: '充值金额', width: 90, align: 'center', slot: true, type: 'money' },
+          { prop: 'giftAmount', label: '赠送金额', width: 90, align: 'center', slot: true, type: 'money' },
+          { prop: 'paymentMethod', label: '支付方式', width: 80, align: 'center', slot: true },
+          { prop: 'createdTime', label: '充值时间', width: 140, align: 'center' }
         ]
       }
     },
@@ -191,8 +200,7 @@
               yAxis: { type: 'value', axisLabel: { formatter: function(v) { return '¥' + (v/10000).toFixed(0) + 'w' } } },
               series: [{
                 type: 'bar', data: amounts, barWidth: '50%',
-                itemStyle: { borderRadius: [6,6,0,0], color: new echarts.graphic.LinearGradient(0,0,0,1,
-                  [{offset:0,color:'#f59e0b'},{offset:1,color:'#fbbf24'}]) }
+                itemStyle: { borderRadius: [6,6,0,0], color: '#f59e0b' }
               }]
             })
           }
@@ -238,5 +246,18 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

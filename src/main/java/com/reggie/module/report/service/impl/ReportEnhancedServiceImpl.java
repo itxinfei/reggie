@@ -1,15 +1,15 @@
 package com.reggie.module.report.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.reggie.entity.Orders;
-import com.reggie.entity.OrderDetail;
-import com.reggie.entity.Dish;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.dish.model.Dish;
 import com.reggie.module.cost.service.CostService;
 import com.reggie.module.finance.service.FinanceService;
 import com.reggie.module.report.service.ReportEnhancedService;
-import com.reggie.service.OrderService;
-import com.reggie.service.OrderDetailService;
-import com.reggie.service.DishService;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.dish.service.DishService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.IsoFields;
 import java.util.*;
+import com.reggie.module.category.model.Category;
 import java.util.stream.Collectors;
 
 /**
@@ -47,16 +48,8 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
 
     @Autowired
     private OrderDetailService orderDetailService;
-
-    @Autowired
-    private DishService dishService;
-
     @Autowired
     private CostService costService;
-
-    @Autowired
-    private FinanceService financeService;
-
     // ==================== Food Cost Report ====================
 
     @Override
@@ -659,5 +652,9 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         return summary;
     }
 }
+
+
+
+
 
 

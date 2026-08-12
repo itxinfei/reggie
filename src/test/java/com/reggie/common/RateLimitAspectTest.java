@@ -15,7 +15,7 @@ import static org.mockito.Mockito.*;
  * @author itxinfei
  */
 @SuppressWarnings("unchecked")
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @ActiveProfiles("test")
 class RateLimitAspectTest {
 
@@ -46,3 +46,4 @@ class RateLimitAspectTest {
         assertTrue(aspect.isEnabled());
     }
 }
+

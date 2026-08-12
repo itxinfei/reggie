@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>无障碍访问和性能优化示例 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
@@ -22,9 +23,9 @@
           border 
           stripe
           aria-label="示例表格">
-          <el-table aria-label="数据表格"-column prop="id" label="ID" width="80"></el-table-column>
-          <el-table aria-label="数据表格"-column prop="name" label="名称" width="120"></el-table-column>
-          <el-table aria-label="数据表格"-column prop="value" label="值"></el-table-column>
+          <el-table-column prop="id" label="ID" width="80"></el-table-column>
+          <el-table-column prop="name" label="名称" width="120"></el-table-column>
+          <el-table-column prop="value" label="值"></el-table-column>
         </el-table>
         
         <!-- 表单示例 -->
@@ -151,7 +152,7 @@
         handleSubmit() {
           this.$refs.sampleForm.validate((valid) => {
             if (valid) {
-              this.$message.success('提交成功')
+              ReggieUI.success('提交成功')
             }
           })
         },

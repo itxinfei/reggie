@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>成本核算 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
@@ -16,8 +17,8 @@
       padding: 0;
       overflow-y: auto;
       overflow-x: hidden;
-      background: linear-gradient(135deg, var(--el-bg-subtle) 0%, var(--el-border-lighter) 100%);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg-page);
+      font-family: var(--font-family-base);
     }
     .cost-container {
       min-height: 100%;
@@ -29,7 +30,7 @@
       background: transparent;
       padding: 24px 32px 32px;
       min-width: 0;
-      max-width: 1600px;
+      max-width: 1400px;
       margin: 0 auto;
       width: 100%;
     }
@@ -65,7 +66,7 @@
       border: 1px solid rgba(255, 255, 255, 0.8);
     }
     .chart-title {
-      font-size: 16px;
+      font-size:var(--font-size-lg);
       font-weight: 600;
       color: var(--el-text-primary);
       margin-bottom: 16px;
@@ -92,7 +93,7 @@
     .alert-level {
       padding: 4px 8px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size:var(--font-size-xs);
       font-weight: 600;
       margin-right: 12px;
     }
@@ -117,6 +118,14 @@
 <body>
   <div id="app" class="cost-container">
     <div class="container">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">成本核算</h1>
+          <p class="ds-page-header__subtitle">核算菜品成本与毛利</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
       <!-- 工具栏 -->
       <div class="tableBar">
         <span class="toolbar-label">日期范围：</span>
@@ -215,6 +224,7 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../js/common.js"></script>
@@ -293,7 +303,7 @@
         },
         async fetchData() {
           if (!this.dateRange || this.dateRange.length !== 2) {
-            this.$message.warning('请选择日期范围')
+            ReggieUI.warning('请选择日期范围')
             return
           }
           
@@ -334,7 +344,7 @@
             }
           } catch (err) {
             console.error('获取成本数据失败', err)
-            this.$message.error('获取数据失败')
+            ReggieUI.error('获取数据失败')
           }
         },
         updateTrendChart() {
@@ -369,7 +379,7 @@
                 stack: 'Total',
                 data: this.trendData.materialCosts,
                 areaStyle: {},
-                itemStyle: { color: '#67C23A' }
+                itemStyle: { color: RgPalette.success }
               },
               {
                 name: '人工成本',
@@ -377,7 +387,7 @@
                 stack: 'Total',
                 data: this.trendData.laborCosts,
                 areaStyle: {},
-                itemStyle: { color: '#E6A23C' }
+                itemStyle: { color: RgPalette.warning }
               },
               {
                 name: '其他成本',
@@ -385,13 +395,13 @@
                 stack: 'Total',
                 data: this.trendData.otherCosts,
                 areaStyle: {},
-                itemStyle: { color: '#909399' }
+                itemStyle: { color: RgPalette.textSecondary }
               },
               {
                 name: '总成本',
                 type: 'line',
                 data: this.trendData.totalCosts,
-                itemStyle: { color: '#409EFF' },
+                itemStyle: { color: RgPalette.linkBlue },
                 lineStyle: { width: 3 }
               }
             ]
@@ -416,7 +426,7 @@
                 avoidLabelOverlap: false,
                 itemStyle: {
                   borderRadius: 10,
-                  borderColor: '#fff',
+                  borderColor: RgPalette.white,
                   borderWidth: 2
                 },
                 label: {
@@ -476,10 +486,7 @@
                 type: 'bar',
                 data: this.rankingData.map(item => item.totalCost).reverse(),
                 itemStyle: {
-                  color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                    { offset: 0, color: '#409EFF' },
-                    { offset: 1, color: '#67C23A' }
-                  ])
+                  color: RgPalette.linkBlue
                 }
               }
             ]
@@ -497,7 +504,7 @@
           this.fetchData()
         },
         exportReport() {
-          this.$message.info('导出功能开发中...')
+          ReggieUI.info('导出功能开发中...')
         }
       }
     })

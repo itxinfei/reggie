@@ -7,8 +7,19 @@
   <title>分类管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
+    /* 页面级表格居中兜底：不依赖公共 CSS 加载/缓存，确保分类名称等数据列水平居中
+       （金额/数字列 .is-right 保持右对齐） */
+    .tableBox .el-table td .cell,
+    .tableBox .el-table th .cell {
+      text-align: center !important;
+    }
+    .tableBox .el-table td.is-right .cell,
+    .tableBox .el-table th.is-right .cell {
+      text-align: right !important;
+    }
   </style>
 </head>
 <body>
@@ -34,6 +45,7 @@
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
+        :loading="loading"
         @search="handleQuery"
         @reset="reset"
         @action="onTableAction">
@@ -42,7 +54,8 @@
           <el-select v-model="searchName" placeholder="请选择分类名称" class="el-select--narrow-xs" clearable filterable size="small"
             :loading="optionsLoading"
             :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')"
-            @visible-change="loadFilterOptions">
+            @visible-change="loadFilterOptions"
+            @change="handleQuery">
             <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
           </el-select>
         </template>
@@ -56,7 +69,7 @@
         :total="counts"
         :loading="loading"
         :show-actions="true"
-        :actions-width="120"
+        :actions-width="160"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -118,12 +131,13 @@
       </el-form>
       <template #footer>
         <el-button size="medium" @click="classData.dialogVisible = false">取 消</el-button>
-        <el-button type="primary" size="medium" @click="submitForm()">确 定</el-button>
+        <el-button type="primary" size="medium" :loading="submitting" @click="submitForm()">确 定</el-button>
         <el-button
           v-if="action != 'edit'"
           type="primary"
           size="medium"
           class="continue"
+          :loading="submitting"
           @click="submitForm('go')"
         > 保存并继续添加 </el-button>
       </template>
@@ -148,6 +162,7 @@
         data() {
           return {
             action: '',
+            submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
             counts: 0,
             page: 1,
             pageSize: 10,
@@ -177,10 +192,10 @@
             activeFilter: '',
             // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
             columns: [
-              { prop: 'name', label: '分类名称', minWidth: 140 },
-              { prop: 'type', label: '分类类型', width: 120, align: 'center', slot: true },
-              { prop: 'updateTime', label: '操作时间', minWidth: 160 },
-              { prop: 'sort', label: '排序', width: 80, align: 'center' }
+              { prop: 'name', label: '分类名称', width: 140, align: 'center' },
+              { prop: 'type', label: '分类类型', width: 90, align: 'center', slot: true },
+              { prop: 'sort', label: '排序', width: 60, align: 'center' },
+              { prop: 'updateTime', label: '操作时间', width: 140, align: 'center' }
             ],
             classData: {
               'title': '添加菜品分类',
@@ -328,6 +343,7 @@
             this.action = 'add'
             this.classData.name = ''
             this.classData.sort = null  // 修改点：null 表示不填则后端自动分配排序号
+            this.classData.id = ''      // 修改点：清空上次编辑残留的 id，避免新增时误提交
             this.classData.dialogVisible = true
             // 修改点：清除上次残留的表单校验状态
             this.$nextTick(() => {
@@ -372,8 +388,10 @@
           },
           // 修改点：数据提交——用 el-form validate() 替代手动 toast 校验，错误直接 inline 显示在字段下方
           submitForm(st) {
+            if (this.submitting) return // 提交防重
             this.$refs.categoryForm.validate().then((valid) => {
               if (!valid) return
+              this.submitting = true
               const classData = this.classData
               const name = (classData.name || '').trim()
               const params = { name: name, type: this.type }
@@ -382,6 +400,7 @@
               }
               if (this.action === 'add') {
                 addCategory(params).then(res => {
+                  this.submitting = false
                   if (res.code === 1) {
                     ReggieUI.success('分类添加成功！')
                     if (!st) {
@@ -397,11 +416,13 @@
                     ReggieUI.error(res.msg || '操作失败')
                   }
                 }).catch(err => {
+                  this.submitting = false
                   ReggieUI.error('请求失败：' + err)
                 })
               } else {
                 params.id = this.classData.id
                 editCategory(params).then(res => {
+                  this.submitting = false
                   if (res.code === 1) {
                     ReggieUI.success('分类修改成功！')
                     this.classData.dialogVisible = false
@@ -410,6 +431,7 @@
                     ReggieUI.error(res.msg || '操作失败')
                   }
                 }).catch(err => {
+                  this.submitting = false
                   ReggieUI.error('请求失败：' + err)
                 })
               }
@@ -423,6 +445,20 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -9,8 +9,8 @@ import com.reggie.module.marketing.model.NewCustomerDiscount;
 import com.reggie.module.marketing.model.BuyGetFree;
 import com.reggie.module.marketing.model.FlashSale;
 import com.reggie.module.marketing.service.MarketingToolService;
-import com.reggie.entity.User;
-import com.reggie.service.UserService;
+import com.reggie.module.user.model.User;
+import com.reggie.module.user.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -344,4 +344,5 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         return result;
     }
 }
+
 

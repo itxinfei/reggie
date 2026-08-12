@@ -3,14 +3,17 @@ package com.reggie.module.sys.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
 import com.reggie.common.annotation.RequiresAdmin;
-import com.reggie.entity.OperationLog;
+import com.reggie.module.sys.model.OperationLog;
 import com.reggie.module.schedule.service.OperationLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -122,4 +125,6 @@ public class SysOperationLogController {
         return R.success(stats);
     }
 }
+
+
 

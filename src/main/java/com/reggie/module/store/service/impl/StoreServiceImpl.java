@@ -6,11 +6,19 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.PasswordUtils;
-import com.reggie.entity.*;
+import com.reggie.module.auth.model.Employee;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.user.model.User;
+import com.reggie.module.tenant.model.Tenant;
+import com.reggie.module.order.mapper.OrderMapper;
+import com.reggie.module.user.mapper.UserMapper;
 import com.reggie.module.store.mapper.*;
 import com.reggie.module.store.model.*;
 import com.reggie.module.store.service.StoreService;
-import com.reggie.service.*;
+import com.reggie.module.auth.service.EmployeeService;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.module.user.service.UserService;
+import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -64,10 +72,10 @@ public class StoreServiceImpl implements StoreService {
     private UserService userService;
     /** 订单 Mapper（按门店聚合用） */
     @Autowired
-    private com.reggie.mapper.OrderMapper orderMapper;
+    private OrderMapper orderMapper;
     /** 用户 Mapper（按门店聚合用） */
     @Autowired
-    private com.reggie.mapper.UserMapper userMapper;
+    private UserMapper userMapper;
 
     @Override
     @Transactional
@@ -507,4 +515,11 @@ public class StoreServiceImpl implements StoreService {
         return summaryMapper.selectOne(wrapper);
     }
 }
+
+
+
+
+
+
+
 

@@ -6,17 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>桌台管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     /* 卡片视图切换 */
     .table-grid-toggle { display: flex; align-items: center; gap: 8px; }
     .table-grid-toggle .toggle-btn {
       padding: 6px 12px; border: 1px solid var(--el-border-default); border-radius: 4px;
-      background: var(--bg-surface); cursor: pointer; font-size: 14px; color: var(--el-text-regular);
+      background: var(--bg-surface); cursor: pointer; font-size:var(--font-size-base); color: var(--el-text-regular);
       transition: all 0.2s; display: flex; align-items: center; gap: 4px;
     }
-    .table-grid-toggle .toggle-btn.active { border-color: var(--el-color-primary); color: var(--el-color-primary); background: rgba(64,158,255,0.05); }
-    .table-grid-toggle .toggle-btn:hover { border-color: var(--el-color-primary); color: var(--el-color-primary); }
+    .table-grid-toggle .toggle-btn.active { border-color: var(--color-brand-500); color: var(--color-brand-500); background: var(--color-brand-50); }
+    .table-grid-toggle .toggle-btn:hover { border-color: var(--color-brand-500); color: var(--color-brand-500); }
     /* 卡片模式 */
     .table-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
     .table-card {
@@ -30,19 +31,19 @@
     .table-card .card-status-dot.occupied { background: var(--color-danger); animation: pulse 1.5s infinite; }
     .table-card .card-status-dot.reserved { background: var(--color-warning); }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-    .table-card .card-name { font-size: 16px; font-weight: 600; color: var(--el-text-primary); margin-bottom: 8px; }
+    .table-card .card-name { font-size:var(--font-size-lg); font-weight: 600; color: var(--el-text-primary); margin-bottom: 8px; }
     .table-card .card-meta { display: flex; flex-direction: column; gap: 4px; }
-    .table-card .card-meta span { font-size: 12px; color: var(--color-info); }
+    .table-card .card-meta span { font-size:var(--font-size-xs); color: var(--color-info); }
     .table-card .card-meta span strong { color: var(--el-text-regular); font-weight: 500; }
     .table-card .card-actions { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--el-bg-light); display: flex; gap: 6px; flex-wrap: wrap; }
-    .table-card .card-actions .el-button { font-size: 12px; padding: 4px 10px; }
+    .table-card .card-actions .el-button { font-size:var(--font-size-xs); padding: 4px 10px; }
     /* 二维码弹窗 */
     .qrcode-content { text-align: center; padding: 20px 0; }
-    .qrcode-content .qrcode-title { font-size: 16px; font-weight: 600; color: var(--el-text-primary); margin-bottom: 4px; }
-    .qrcode-content .qrcode-subtitle { font-size: 13px; color: var(--color-info); margin-bottom: 16px; }
+    .qrcode-content .qrcode-title { font-size:var(--font-size-lg); font-weight: 600; color: var(--el-text-primary); margin-bottom: 4px; }
+    .qrcode-content .qrcode-subtitle { font-size:var(--font-size-sm); color: var(--color-info); margin-bottom: 16px; }
     .qrcode-content .qrcode-img-wrap { background: var(--bg-surface); border: 1px solid var(--el-border-light); border-radius: 8px; padding: 16px; display: inline-block; }
     .qrcode-content .qrcode-img-wrap img { width: 200px; height: 200px; display: block; }
-    .qrcode-content .qrcode-tip { margin-top: 12px; font-size: 12px; color: var(--color-info); }
+    .qrcode-content .qrcode-tip { margin-top: 12px; font-size:var(--font-size-xs); color: var(--color-info); }
   </style>
 </head>
 <body>
@@ -95,7 +96,7 @@
           :loading="loading"
           :show-index="true"
           :show-actions="true"
-          :actions-width="190"
+          :actions-width="200"
           :stripe="true"
           :border="true"
           aria-label="桌台列表"
@@ -175,6 +176,7 @@
     <crud-dialog
       :title="dialog.title"
       :visible.sync="dialog.visible"
+      :submit-loading="submitting"
       width="520px"
       @submit="submitForm"
       @close="dialog.visible = false"
@@ -208,7 +210,7 @@
     </crud-dialog>
 
     <!-- 二维码弹窗 -->
-    <el-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible" custom-class="el-dialog--sm unified-dialog" :close-on-click-modal="true" center :append-to-body="true" :modal-append-to-body="true">
+    <crud-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible"  :close-on-click-modal="true" center  >
       <div class="qrcode-content">
         <div class="qrcode-title">桌台：{{ qrcodeDialog.tableName }}</div>
         <div class="qrcode-subtitle">编号：{{ qrcodeDialog.tableId }}</div>
@@ -220,11 +222,7 @@
         </div>
         <div class="qrcode-tip">顾客扫码即可点餐</div>
       </div>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="qrcodeDialog.visible = false">关 闭</el-button>
-        <el-button type="primary" size="medium" @click="downloadQrcode">下载二维码</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -241,6 +239,7 @@
       data: function() {
         return {
           loading: false,
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
           areaList: [],
           counts: 0,
           page: 1,
@@ -250,13 +249,13 @@
           statusLabels: { FREE: '空闲', OCCUPIED: '占用', RESERVED: '预留' },
           // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
           tableColumns: [
-            { prop: 'name', label: '桌台名称', minWidth: 110, align: 'center', slot: true },
-            { prop: 'areaName', label: '所属区域', width: 85, align: 'center' },
-            { prop: 'seatCount', label: '座位', width: 60, align: 'center' },
-            { prop: 'status', label: '状态', width: 88, align: 'center', slot: true },
-            { prop: 'tag', label: '标签', width: 75, align: 'center', slot: true },
-            { prop: 'minAmount', label: '最低消费', width: 90, align: 'center', slot: true },
-            { prop: 'sort', label: '排序', width: 65, align: 'center' }
+            { prop: 'name', label: '桌台名称', width: 100, align: 'center' },
+            { prop: 'areaName', label: '区域', width: 70, align: 'center' },
+            { prop: 'seatCount', label: '座位', width: 50, align: 'center', type: 'number' },
+            { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
+            { prop: 'tag', label: '标签', width: 60, align: 'center', slot: true },
+            { prop: 'minAmount', label: '最低消费', width: 80, align: 'center', slot: true, type: 'money' },
+            { prop: 'sort', label: '排序', width: 50, align: 'center' }
           ],
           // 统计
           stats: { totalTables: 0, freeTables: 0, occupiedTables: 0, reservedTables: 0 },
@@ -318,7 +317,7 @@
               var statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
             }
-          }).catch(function(err) { self.$message.error('加载失败：' + (err.message || err)) }).finally(function() { self.loading = false })
+          }).catch(function(err) { ReggieUI.error('加载失败：' + (err.message || err)) }).finally(function() { self.loading = false })
         },
         loadTableStats: function(params) {
           // 修改点：改用 pageSize:1 多状态并发查询取 total，避免 pageSize:1000 拉全量导致统计截断
@@ -339,7 +338,7 @@
           var self = this
           areaList().then(function(res) {
             if (res.code === 1) { self.areaList = res.data || []; self.searchConfig[1].options = self.areaList.map(function(a) { return { label: a.name, value: a.id } }) }
-          }).catch(function(err) { self.$message.error('区域加载失败：' + err) })
+          }).catch(function(err) { ReggieUI.error('区域加载失败：' + err) })
         },
         // stat-cards 点击
         onCardClick: function(payload) {
@@ -373,21 +372,25 @@
           this.$nextTick(function() { if (this.$refs.tableForm) this.$refs.tableForm.clearValidate() }.bind(this))
         },
         submitForm: function() {
+          if (this.submitting) return // 提交防重
           var self = this
           this.$refs.tableForm.validate(function(valid) {
             if (!valid) return
+            self.submitting = true
             var data = { name: self.form.name, areaId: self.form.areaId, seatCount: self.form.seatCount, minAmount: self.form.minAmount, status: self.form.status, sort: self.form.sort }
             if (self.action === 'add') {
               addTable(data).then(function(res) {
-                if (res.code === 1) { self.$message.success('桌台添加成功！'); self.dialog.visible = false; self.init() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)) })
+                self.submitting = false
+                if (res.code === 1) { ReggieUI.success('桌台添加成功！'); self.dialog.visible = false; self.init() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.submitting = false; ReggieUI.error('请求失败：' + (err.message || err)) })
             } else {
               data.id = self.form.id
               updateTable(data).then(function(res) {
-                if (res.code === 1) { self.$message.success('桌台修改成功！'); self.dialog.visible = false; self.init() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)) })
+                self.submitting = false
+                if (res.code === 1) { ReggieUI.success('桌台修改成功！'); self.dialog.visible = false; self.init() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.submitting = false; ReggieUI.error('请求失败：' + (err.message || err)) })
             }
           })
         },
@@ -397,15 +400,15 @@
           ReggieUI.confirm('确认将「' + row.name + '」状态改为「' + self.statusLabels[newStatus] + '」?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               updateTableStatus({ id: row.id, status: newStatus }).then(function(res) {
-                if (res.code === 1) { row.status = newStatus; self.$message.success('状态已更新'); self.init() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)) })
+                if (res.code === 1) { row.status = newStatus; ReggieUI.success('状态已更新'); self.init() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + (err.message || err)) })
             }).catch(function() { self.init() })
         },
         showQrcode: function(row) {
           var self = this
           this.qrcodeDialog = { visible: true, tableName: row.name, tableId: row.id, imageUrl: '' }
-          tableQrcode(row.id).then(function(res) { if (res.code === 1 && res.data) { self.qrcodeDialog.imageUrl = res.data } }).catch(function() { self.$message.warning('二维码加载失败') })
+          tableQrcode(row.id).then(function(res) { if (res.code === 1 && res.data) { self.qrcodeDialog.imageUrl = res.data } }).catch(function() { ReggieUI.warning('二维码加载失败') })
         },
         downloadQrcode: function() {
           if (this.qrcodeDialog.imageUrl) {
@@ -419,9 +422,9 @@
           ReggieUI.confirm('确认删除该桌台？删除后不可恢复。', '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               deleteTable(id).then(function(res) {
-                if (res.code === 1) { self.$message.success('删除成功！'); self.init() }
-                else { self.$message.error(res.msg || '操作失败') }
-              }).catch(function(err) { self.$message.error('请求失败：' + (err.message || err)) })
+                if (res.code === 1) { ReggieUI.success('删除成功！'); self.init() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + (err.message || err)) })
             })
         },
         handleSizeChange: function(val) { this.pageSize = val; this.init(false) },
@@ -437,6 +440,19 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

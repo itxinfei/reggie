@@ -1,7 +1,5 @@
 package com.reggie.common.validation;
 
-import com.reggie.enums.DishStatus;
-
 import javax.validation.Constraint;
 import javax.validation.Payload;
 import java.lang.annotation.Documented;
@@ -36,3 +34,4 @@ public @interface EnumValue {
      */
     int[] values() default {};
 }
+

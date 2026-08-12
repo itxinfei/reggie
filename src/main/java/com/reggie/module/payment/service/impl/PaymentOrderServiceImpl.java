@@ -3,11 +3,11 @@ package com.reggie.module.payment.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
-import com.reggie.entity.Orders;
+import com.reggie.module.order.model.Orders;
 import com.reggie.module.payment.mapper.PaymentOrderMapper;
 import com.reggie.module.payment.model.PaymentOrder;
 import com.reggie.module.payment.service.PaymentOrderService;
-import com.reggie.service.OrderService;
+import com.reggie.module.order.service.OrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -147,4 +147,5 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
             + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
     }
 }
+
 

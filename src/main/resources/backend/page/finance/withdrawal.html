@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>提现管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     html, body {
@@ -32,7 +33,7 @@
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
     }
     .tableBar .toolbar-label {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       color: var(--el-text-regular);
       font-weight: 500;
     }
@@ -65,7 +66,7 @@
       color: var(--el-color-success);
     }
     .stats-label {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       color: var(--el-text-secondary);
     }
     .table-card {
@@ -77,7 +78,7 @@
     .status-tag {
       padding: 4px 8px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size:var(--font-size-xs);
     }
     .status-tag.pending {
       background: var(--el-color-warning-lighter);
@@ -103,6 +104,14 @@
 </head>
 <body>
   <div id="app" class="container">
+    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+    <header class="ds-page-header">
+      <div class="ds-page-header__titles">
+        <h1 class="ds-page-header__title" id="page-title">提现管理</h1>
+        <p class="ds-page-header__subtitle">审核商家提现申请</p>
+      </div>
+      <div class="ds-page-header__actions"></div>
+    </header>
     <!-- 工具栏 -->
     <div class="tableBar">
       <span class="toolbar-label">状态：</span>
@@ -147,28 +156,28 @@
         stripe
         style="width: 100%"
         v-loading="loading">
-        <el-table aria-label="数据表格"-column prop="applicationNo" label="申请编号" width="180"></el-table-column>
-        <el-table aria-label="数据表格"-column prop="applicantName" label="申请人" width="100"></el-table-column>
-        <el-table aria-label="数据表格"-column prop="amount" label="提现金额" width="120" align="right">
+        <el-table-column prop="applicationNo" label="申请编号" width="180"></el-table-column>
+        <el-table-column prop="applicantName" label="申请人" width="100"></el-table-column>
+        <el-table-column prop="amount" label="提现金额" width="120" align="right">
           <template slot-scope="scope">
             <strong>¥{{ formatMoney(scope.row.amount) }}</strong>
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="withdrawMethod" label="提现方式" width="100" align="center">
+        <el-table-column prop="withdrawMethod" label="提现方式" width="100" align="center">
           <template slot-scope="scope">
             {{ getWithdrawMethodText(scope.row.withdrawMethod) }}
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="receiveAccount" label="收款账户" min-width="150" show-overflow-tooltip></el-table-column>
-        <el-table aria-label="数据表格"-column prop="status" label="状态" width="100" align="center">
+        <el-table-column prop="receiveAccount" label="收款账户" min-width="150" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="status" label="状态" width="100" align="center">
           <template slot-scope="scope">
             <span class="status-tag" :class="getStatusClass(scope.row.status)">
               {{ getStatusText(scope.row.status) }}
             </span>
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="createTime" label="申请时间" width="180"></el-table-column>
-        <el-table aria-label="数据表格"-column label="操作" width="200" fixed="right">
+        <el-table-column prop="createTime" label="申请时间" width="180"></el-table-column>
+        <el-table-column label="操作" width="200" fixed="right">
           <template slot-scope="scope">
             <el-button type="text" size="small" @click="handleView(scope.row)">查看</el-button>
             <el-button v-if="scope.row.status === 0" type="text" size="small" @click="handleReview(scope.row)">审核</el-button>
@@ -180,7 +189,7 @@
     </div>
 
     <!-- 申请对话框 -->
-    <el-dialog title="申请提现" :visible.sync="addDialogVisible" width="500px">
+    <crud-dialog title="申请提现" :visible.sync="addDialogVisible" width="500px">
       <el-form :model="addForm" :rules="addRules" ref="addForm" label-width="100px">
         <el-form-item label="提现金额" prop="amount">
           <el-input-number v-model="addForm.amount" :precision="2" :min="1" style="width: 100%;"></el-input-number>
@@ -202,14 +211,10 @@
           <el-input v-model="addForm.remark" type="textarea" :rows="2"></el-input>
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="addDialogVisible = false">取 消</el-button>
-        <el-button type="primary" @click="handleAddSubmit" :loading="submitLoading">提 交</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- 审核对话框 -->
-    <el-dialog title="审核提现申请" :visible.sync="reviewDialogVisible" width="500px">
+    <crud-dialog title="审核提现申请" :visible.sync="reviewDialogVisible" width="500px">
       <el-form :model="reviewForm" label-width="100px">
         <el-form-item label="申请编号">
           <span>{{ reviewForm.applicationNo }}</span>
@@ -227,14 +232,10 @@
           <el-input v-model="reviewForm.remark" type="textarea" :rows="2"></el-input>
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="reviewDialogVisible = false">取 消</el-button>
-        <el-button type="primary" @click="handleReviewSubmit" :loading="submitLoading">确 定</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- 打款对话框 -->
-    <el-dialog title="确认打款" :visible.sync="paymentDialogVisible" width="500px">
+    <crud-dialog title="确认打款" :visible.sync="paymentDialogVisible" width="500px">
       <el-form :model="paymentForm" label-width="100px">
         <el-form-item label="申请编号">
           <span>{{ paymentForm.applicationNo }}</span>
@@ -246,16 +247,13 @@
           <el-input v-model="paymentForm.paymentNo" placeholder="请输入打款流水号"></el-input>
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="paymentDialogVisible = false">取 消</el-button>
-        <el-button type="primary" @click="handlePaymentSubmit" :loading="submitLoading">确 认 打 款</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../js/common.js"></script>
@@ -341,7 +339,7 @@
             }
           } catch (err) {
             console.error('Failed to fetch data', err)
-            this.$message.error('Failed to fetch data')
+            ReggieUI.error('Failed to fetch data')
           } finally {
             this.loading = false
           }
@@ -381,16 +379,16 @@
             try {
               const res = await createWithdrawal(this.addForm)
               if (res.code === 1) {
-                this.$message.success('Application submitted')
+                ReggieUI.success('Application submitted')
                 this.addDialogVisible = false
                 this.fetchData()
                 this.fetchStatistics()
               } else {
-                this.$message.error(res.msg || 'Submission failed')
+                ReggieUI.error(res.msg || 'Submission failed')
               }
             } catch (err) {
               console.error('Submit failed', err)
-              this.$message.error('Submission failed')
+              ReggieUI.error('Submission failed')
             } finally {
               this.submitLoading = false
             }
@@ -430,16 +428,16 @@
               remark: this.reviewForm.remark
             })
             if (res.code === 1) {
-              this.$message.success('Review completed')
+              ReggieUI.success('Review completed')
               this.reviewDialogVisible = false
               this.fetchData()
               this.fetchStatistics()
             } else {
-              this.$message.error(res.msg || 'Review failed')
+              ReggieUI.error(res.msg || 'Review failed')
             }
           } catch (err) {
             console.error('Review failed', err)
-            this.$message.error('Review failed')
+            ReggieUI.error('Review failed')
           } finally {
             this.submitLoading = false
           }
@@ -455,7 +453,7 @@
         },
         async handlePaymentSubmit() {
           if (!this.paymentForm.paymentNo) {
-            this.$message.warning('Please enter payment number')
+            ReggieUI.warning('Please enter payment number')
             return
           }
           
@@ -465,16 +463,16 @@
               paymentNo: this.paymentForm.paymentNo
             })
             if (res.code === 1) {
-              this.$message.success('Payment processed')
+              ReggieUI.success('Payment processed')
               this.paymentDialogVisible = false
               this.fetchData()
               this.fetchStatistics()
             } else {
-              this.$message.error(res.msg || 'Payment failed')
+              ReggieUI.error(res.msg || 'Payment failed')
             }
           } catch (err) {
             console.error('Payment failed', err)
-            this.$message.error('Payment failed')
+            ReggieUI.error('Payment failed')
           } finally {
             this.submitLoading = false
           }
@@ -489,16 +487,16 @@
             
             const res = await cancelWithdrawal(row.id)
             if (res.code === 1) {
-              this.$message.success('Cancelled')
+              ReggieUI.success('Cancelled')
               this.fetchData()
               this.fetchStatistics()
             } else {
-              this.$message.error(res.msg || 'Cancellation failed')
+              ReggieUI.error(res.msg || 'Cancellation failed')
             }
           } catch (err) {
             if (err !== 'cancel') {
               console.error('Cancel failed', err)
-              this.$message.error('Cancellation failed')
+              ReggieUI.error('Cancellation failed')
             }
           }
         }

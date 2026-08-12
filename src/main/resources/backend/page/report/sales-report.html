@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>销售报表 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
@@ -33,7 +34,7 @@
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
     }
     .tableBar .toolbar-label {
-      font-size: 14px;
+      font-size:var(--font-size-base);
       color: var(--el-text-regular);
       font-weight: 500;
     }
@@ -56,7 +57,7 @@
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
     }
     .chart-title {
-      font-size: 16px;
+      font-size:var(--font-size-lg);
       font-weight: 600;
       color: var(--el-text-primary);
       margin-bottom: 16px;
@@ -74,6 +75,14 @@
 </head>
 <body>
   <div id="app" class="container">
+    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+    <header class="ds-page-header">
+      <div class="ds-page-header__titles">
+        <h1 class="ds-page-header__title" id="page-title">销售报表</h1>
+        <p class="ds-page-header__subtitle">统计商品销售数据</p>
+      </div>
+      <div class="ds-page-header__actions"></div>
+    </header>
     <!-- 工具栏 -->
     <div class="tableBar">
       <span class="toolbar-label">报表类型：</span>
@@ -165,15 +174,15 @@
     <div class="table-card">
       <div class="chart-title">详细数据</div>
       <el-table aria-label="数据表格" :data="detailData" border stripe style="width: 100%" v-loading="loading">
-        <el-table aria-label="数据表格"-column prop="label" label="时间" min-width="120"></el-table-column>
-        <el-table aria-label="数据表格"-column prop="revenue" label="营业额" width="120" align="right">
+        <el-table-column prop="label" label="时间" min-width="120"></el-table-column>
+        <el-table-column prop="revenue" label="营业额" width="120" align="right">
           <template slot-scope="scope">
             ¥{{ formatMoney(scope.row.revenue) }}
           </template>
         </el-table-column>
-        <el-table aria-label="数据表格"-column prop="orderCount" label="订单数" width="100" align="center"></el-table-column>
-        <el-table aria-label="数据表格"-column prop="completedCount" label="完成数" width="100" align="center"></el-table-column>
-        <el-table aria-label="数据表格"-column prop="avgOrderValue" label="客单价" width="120" align="right">
+        <el-table-column prop="orderCount" label="订单数" width="100" align="center"></el-table-column>
+        <el-table-column prop="completedCount" label="完成数" width="100" align="center"></el-table-column>
+        <el-table-column prop="avgOrderValue" label="客单价" width="120" align="right">
           <template slot-scope="scope">
             ¥{{ formatMoney(scope.row.avgOrderValue) }}
           </template>
@@ -185,6 +194,7 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../js/common.js"></script>
@@ -279,7 +289,7 @@
             }
           } catch (err) {
             console.error('Failed to fetch data', err)
-            this.$message.error('获取数据失败')
+            ReggieUI.error('获取数据失败')
           } finally {
             this.loading = false
           }
@@ -299,7 +309,7 @@
               name: '营业额',
               type: 'bar',
               data: revenues,
-              itemStyle: { color: '#409EFF' }
+              itemStyle: { color: RgPalette.linkBlue }
             }]
           })
           
@@ -313,7 +323,7 @@
               name: '订单数',
               type: 'line',
               data: orders,
-              itemStyle: { color: '#67C23A' },
+              itemStyle: { color: RgPalette.success },
               areaStyle: { opacity: 0.3 }
             }]
           })

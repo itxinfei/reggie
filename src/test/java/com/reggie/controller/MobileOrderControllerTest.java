@@ -2,8 +2,14 @@ package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
-import com.reggie.entity.*;
-import com.reggie.service.*;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.shopping.model.ShoppingCart;
+import com.reggie.module.address.model.AddressBook;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.shopping.service.ShoppingCartService;
+import com.reggie.module.address.service.AddressBookService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +27,7 @@ import java.time.LocalDateTime;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
@@ -115,3 +121,6 @@ public class MobileOrderControllerTest {
                 .andExpect(jsonPath("$.code").value(1));
     }
 }
+
+
+

@@ -16,7 +16,7 @@
 /* ========== chart-panel — 图表面板 ========== */
 .chart-panel {
   background: var(--color-white);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.8);
   transition: all 0.3s;
@@ -55,7 +55,7 @@
 
 .kpi-card {
   background: var(--color-white);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   padding: 22px 24px;
   position: relative;
   overflow: hidden;
@@ -73,7 +73,7 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10);
 }
 
-/* 顶部渐变条 */
+/* 顶部主题色条（纯色，符合"禁止渐变"规范） */
 .kpi-card::before {
   content: '';
   position: absolute;
@@ -81,11 +81,11 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--gradient);
+  background: var(--stat-color, var(--color-brand-500));
   opacity: 0.85;
 }
 
-/* 背景装饰圆 */
+/* 背景装饰圆（纯色，低透明度） */
 .kpi-card::after {
   content: '';
   position: absolute;
@@ -93,7 +93,7 @@
   right: -25%;
   width: 160px;
   height: 160px;
-  background: var(--gradient);
+  background: var(--stat-color, var(--color-brand-500));
   border-radius: 50%;
   opacity: 0.05;
   transition: all 0.5s;
@@ -111,7 +111,7 @@
   top: 20px;
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--icon-bg);
   display: flex;
   align-items: center;
@@ -142,10 +142,8 @@
   font-weight: 700;
   line-height: 1.2;
   margin-bottom: 4px;
-  background: var(--gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--stat-color, var(--color-brand-500));
+  font-variant-numeric: tabular-nums;
 }
 
 .kpi-card__unit {
@@ -159,13 +157,13 @@
   color: var(--color-info);
 }
 
-/* ===== 颜色主题 ===== */
-.kpi-card--primary  { --gradient: linear-gradient(135deg, var(--color-brand-500) 0%, var(--antd-warning-l3) 100%); --icon-bg: linear-gradient(135deg, rgba(255,194,0,0.1) 0%, rgba(255,216,77,0.14) 100%); }
-.kpi-card--success  { --gradient: linear-gradient(135deg, var(--color-success) 0%, var(--el-color-success-light) 100%); --icon-bg: linear-gradient(135deg, rgba(103,194,58,0.1) 0%, rgba(133,206,97,0.14) 100%); }
-.kpi-card--warning  { --gradient: linear-gradient(135deg, var(--color-warning) 0%, var(--el-color-warning-light) 100%); --icon-bg: linear-gradient(135deg, rgba(230,162,60,0.1) 0%, rgba(235,181,99,0.14) 100%); }
-.kpi-card--info     { --gradient: linear-gradient(135deg, var(--color-info) 0%, var(--gray-a6) 100%); --icon-bg: linear-gradient(135deg, rgba(144,147,153,0.1) 0%, rgba(166,169,173,0.14) 100%); }
-.kpi-card--danger   { --gradient: linear-gradient(135deg, var(--color-danger) 0%, var(--el-color-danger-light) 100%); --icon-bg: linear-gradient(135deg, rgba(245,108,108,0.1) 0%, rgba(247,137,137,0.14) 100%); }
-.kpi-card--purple   { --gradient: linear-gradient(135deg, var(--purple-legacy2) 0%, var(--legacy-ce93d8) 100%); --icon-bg: linear-gradient(135deg, rgba(156,39,176,0.1) 0%, rgba(206,147,216,0.14) 100%); }
+/* ===== 颜色主题（纯色令牌，符合"禁止渐变"规范） ===== */
+.kpi-card--primary  { --stat-color: var(--color-brand-500); --icon-bg: rgba(255,194,0,0.1); }
+.kpi-card--success  { --stat-color: var(--color-success);    --icon-bg: rgba(103,194,58,0.1); }
+.kpi-card--warning  { --stat-color: var(--color-warning);    --icon-bg: rgba(230,162,60,0.1); }
+.kpi-card--info     { --stat-color: var(--color-info);       --icon-bg: rgba(144,147,153,0.1); }
+.kpi-card--danger   { --stat-color: var(--color-danger);     --icon-bg: rgba(245,108,108,0.1); }
+.kpi-card--purple   { --stat-color: var(--purple-legacy2);   --icon-bg: rgba(156,39,176,0.1); }
 
 
 /* ========== page-shell — 报表页外壳 ========== */

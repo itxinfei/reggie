@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author itxinfei
  */
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @ActiveProfiles("test")
 class SecurityConfigIntegrationTest {
 
@@ -119,3 +119,4 @@ class SecurityConfigIntegrationTest {
         assertTrue(maskedAddress.contains("***"));
     }
 }
+

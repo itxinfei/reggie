@@ -1,7 +1,7 @@
 package com.reggie.dto;
 
-import com.reggie.entity.Dish;
-import com.reggie.entity.DishFlavor;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.dish.model.DishFlavor;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -28,3 +28,4 @@ public class DishDto extends Dish {
     @Schema(description = "份数（购物车使用）", example = "1")
     private Integer copies;
 }
+

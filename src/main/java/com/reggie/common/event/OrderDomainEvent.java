@@ -10,6 +10,8 @@ import org.springframework.context.ApplicationEvent;
  */
 public class OrderDomainEvent extends ApplicationEvent {
 
+    private static final long serialVersionUID = 1L;
+
     private final Long orderId;
     private final Long tenantId;
 
@@ -27,3 +29,4 @@ public class OrderDomainEvent extends ApplicationEvent {
         return tenantId;
     }
 }
+

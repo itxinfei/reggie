@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>菜品规格管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     html, body {
@@ -46,7 +47,7 @@
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
     }
     .card-title {
-      font-size: 16px;
+      font-size:var(--font-size-lg);
       font-weight: 600;
       color: var(--el-text-primary);
       margin-bottom: 16px;
@@ -56,7 +57,7 @@
     .type-tag {
       padding: 4px 8px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size:var(--font-size-xs);
     }
     .type-tag.single {
       background: var(--el-color-primary-lighter);
@@ -69,7 +70,7 @@
     .status-tag {
       padding: 4px 8px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size:var(--font-size-xs);
     }
     .status-tag.active {
       background: var(--el-color-success-lighter);
@@ -95,6 +96,14 @@
 </head>
 <body>
   <div id="app" class="container">
+    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+    <header class="ds-page-header">
+      <div class="ds-page-header__titles">
+        <h1 class="ds-page-header__title" id="page-title">规格管理</h1>
+        <p class="ds-page-header__subtitle">管理菜品规格与加价</p>
+      </div>
+      <div class="ds-page-header__actions"></div>
+    </header>
     <!-- 工具栏 -->
     <div class="tableBar">
       <el-button type="primary" icon="el-icon-plus" aria-label="新增" @click="handleAddGroup">新增规格组</el-button>
@@ -115,28 +124,28 @@
           highlight-current-row
           @current-change="handleGroupSelect"
           v-loading="groupLoading">
-          <el-table aria-label="数据表格"-column prop="id" label="ID" width="60"></el-table-column>
-          <el-table aria-label="数据表格"-column prop="name" label="规格组名称" min-width="120"></el-table-column>
-          <el-table aria-label="数据表格"-column prop="type" label="类型" width="80" align="center">
+          <el-table-column prop="id" label="ID" width="60"></el-table-column>
+          <el-table-column prop="name" label="规格组名称" min-width="120"></el-table-column>
+          <el-table-column prop="type" label="类型" width="80" align="center">
             <template slot-scope="scope">
               <span class="type-tag" :class="scope.row.type === 1 ? 'single' : 'multi'">
                 {{ scope.row.type === 1 ? '单选' : '多选' }}
               </span>
             </template>
           </el-table-column>
-          <el-table aria-label="数据表格"-column prop="required" label="必选" width="60" align="center">
+          <el-table-column prop="required" label="必选" width="60" align="center">
             <template slot-scope="scope">
               {{ scope.row.required === 1 ? '是' : '否' }}
             </template>
           </el-table-column>
-          <el-table aria-label="数据表格"-column prop="status" label="状态" width="80" align="center">
+          <el-table-column prop="status" label="状态" width="80" align="center">
             <template slot-scope="scope">
               <span class="status-tag" :class="scope.row.status === 1 ? 'active' : 'disabled'">
                 {{ scope.row.status === 1 ? '启用' : '禁用' }}
               </span>
             </template>
           </el-table-column>
-          <el-table aria-label="数据表格"-column label="操作" width="150" fixed="right">
+          <el-table-column label="操作" width="150" fixed="right">
             <template slot-scope="scope">
               <el-button type="text" size="small" @click.stop="handleEditGroup(scope.row)">编辑</el-button>
               <el-button type="text" size="small" style="color: var(--el-color-danger);" @click.stop="handleDeleteGroup(scope.row)">删除</el-button>
@@ -149,7 +158,7 @@
       <div class="table-card">
         <div class="card-title">
           规格选项列表
-          <span v-if="currentGroup" style="font-weight: normal; font-size: 14px; color: var(--el-text-secondary);">
+          <span v-if="currentGroup" style="font-weight: normal; font-size:var(--font-size-base); color: var(--el-text-secondary);">
             （{{ currentGroup.name }}）
           </span>
         </div>
@@ -166,23 +175,23 @@
             stripe
             style="width: 100%"
             v-loading="optionLoading">
-            <el-table aria-label="数据表格"-column prop="id" label="ID" width="60"></el-table-column>
-            <el-table aria-label="数据表格"-column prop="name" label="选项名称" min-width="100"></el-table-column>
-            <el-table aria-label="数据表格"-column prop="priceAdjust" label="价格调整" width="100" align="center">
+            <el-table-column prop="id" label="ID" width="60"></el-table-column>
+            <el-table-column prop="name" label="选项名称" min-width="100"></el-table-column>
+            <el-table-column prop="priceAdjust" label="价格调整" width="100" align="center">
               <template slot-scope="scope">
                 <span class="price-adjust" :class="getPriceAdjustClass(scope.row.priceAdjust)">
                   {{ formatPriceAdjust(scope.row.priceAdjust) }}
                 </span>
               </template>
             </el-table-column>
-            <el-table aria-label="数据表格"-column prop="status" label="状态" width="80" align="center">
+            <el-table-column prop="status" label="状态" width="80" align="center">
               <template slot-scope="scope">
                 <span class="status-tag" :class="scope.row.status === 1 ? 'active' : 'disabled'">
                   {{ scope.row.status === 1 ? '启用' : '禁用' }}
                 </span>
               </template>
             </el-table-column>
-            <el-table aria-label="数据表格"-column label="操作" width="150" fixed="right">
+            <el-table-column label="操作" width="150" fixed="right">
               <template slot-scope="scope">
                 <el-button type="text" size="small" @click="handleEditOption(scope.row)">编辑</el-button>
                 <el-button type="text" size="small" style="color: var(--el-color-danger);" @click="handleDeleteOption(scope.row)">删除</el-button>
@@ -194,7 +203,7 @@
     </div>
 
     <!-- 规格组编辑对话框 -->
-    <el-dialog :title="groupDialogTitle" :visible.sync="groupDialogVisible" width="500px">
+    <crud-dialog :title="groupDialogTitle" :visible.sync="groupDialogVisible" width="500px">
       <el-form :model="groupForm" :rules="groupRules" ref="groupForm" label-width="100px">
         <el-form-item label="规格组名称" prop="name">
           <el-input v-model="groupForm.name" placeholder="如：份量、辣度、温度"></el-input>
@@ -221,21 +230,17 @@
           <el-input v-model="groupForm.remark" type="textarea" :rows="2"></el-input>
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="groupDialogVisible = false">取 消</el-button>
-        <el-button type="primary" @click="handleGroupSubmit">确 定</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- 规格选项编辑对话框 -->
-    <el-dialog :title="optionDialogTitle" :visible.sync="optionDialogVisible" width="500px">
+    <crud-dialog :title="optionDialogTitle" :visible.sync="optionDialogVisible" width="500px">
       <el-form :model="optionForm" :rules="optionRules" ref="optionForm" label-width="100px">
         <el-form-item label="选项名称" prop="name">
           <el-input v-model="optionForm.name" placeholder="如：大份、中份、小份"></el-input>
         </el-form-item>
         <el-form-item label="价格调整">
           <el-input-number v-model="optionForm.priceAdjust" :precision="2" :step="1"></el-input-number>
-          <div style="color: var(--el-text-secondary); font-size: 12px; margin-top: 4px;">
+          <div class="form-tip">
             正数为加价，负数为减价，0为不调整
           </div>
         </el-form-item>
@@ -249,16 +254,13 @@
           <el-input v-model="optionForm.remark" type="textarea" :rows="2"></el-input>
         </el-form-item>
       </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="optionDialogVisible = false">取 消</el-button>
-        <el-button type="primary" @click="handleOptionSubmit">确 定</el-button>
-      </span>
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
   <script src="../../js/request.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../js/common.js"></script>
@@ -333,7 +335,7 @@
             }
           } catch (err) {
             console.error('获取规格组列表失败', err)
-            this.$message.error('获取数据失败')
+            ReggieUI.error('获取数据失败')
           } finally {
             this.groupLoading = false
           }
@@ -347,7 +349,7 @@
             }
           } catch (err) {
             console.error('获取规格选项列表失败', err)
-            this.$message.error('获取数据失败')
+            ReggieUI.error('获取数据失败')
           } finally {
             this.optionLoading = false
           }
@@ -395,17 +397,17 @@
             
             const res = await deleteSpecGroup(row.id)
             if (res.code === 1) {
-              this.$message.success('删除成功')
+              ReggieUI.success('删除成功')
               this.currentGroup = null
               this.optionList = []
               await this.fetchGroups()
             } else {
-              this.$message.error(res.msg || '删除失败')
+              ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
             if (err !== 'cancel') {
               console.error('删除失败', err)
-              this.$message.error('删除失败')
+              ReggieUI.error('删除失败')
             }
           }
         },
@@ -422,21 +424,21 @@
               }
               
               if (res.code === 1) {
-                this.$message.success(this.groupForm.id ? '更新成功' : '新增成功')
+                ReggieUI.success(this.groupForm.id ? '更新成功' : '新增成功')
                 this.groupDialogVisible = false
                 await this.fetchGroups()
               } else {
-                this.$message.error(res.msg || '操作失败')
+                ReggieUI.error(res.msg || '操作失败')
               }
             } catch (err) {
               console.error('提交失败', err)
-              this.$message.error('操作失败')
+              ReggieUI.error('操作失败')
             }
           })
         },
         handleAddOption() {
           if (!this.currentGroup) {
-            this.$message.warning('请先选择规格组')
+            ReggieUI.warning('请先选择规格组')
             return
           }
           this.optionDialogTitle = '新增规格选项'
@@ -472,17 +474,17 @@
             
             const res = await deleteSpecOption(row.id)
             if (res.code === 1) {
-              this.$message.success('删除成功')
+              ReggieUI.success('删除成功')
               if (this.currentGroup) {
                 await this.fetchOptions(this.currentGroup.id)
               }
             } else {
-              this.$message.error(res.msg || '删除失败')
+              ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
             if (err !== 'cancel') {
               console.error('删除失败', err)
-              this.$message.error('删除失败')
+              ReggieUI.error('删除失败')
             }
           }
         },
@@ -499,17 +501,17 @@
               }
               
               if (res.code === 1) {
-                this.$message.success(this.optionForm.id ? '更新成功' : '新增成功')
+                ReggieUI.success(this.optionForm.id ? '更新成功' : '新增成功')
                 this.optionDialogVisible = false
                 if (this.currentGroup) {
                   await this.fetchOptions(this.currentGroup.id)
                 }
               } else {
-                this.$message.error(res.msg || '操作失败')
+                ReggieUI.error(res.msg || '操作失败')
               }
             } catch (err) {
               console.error('提交失败', err)
-              this.$message.error('操作失败')
+              ReggieUI.error('操作失败')
             }
           })
         }

@@ -90,35 +90,11 @@
           </el-form>
 
           <div class="card-foot">
-            <a class="forgot-link" @click.prevent="showForgot">忘记密码？</a>
-            <span class="foot-divider">|</span>
             <span>&copy; 2026 瑞吉外卖</span>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- 忘记密码弹窗 -->
-    <el-dialog title="重置密码" :visible.sync="fpShow"
-               custom-class="el-dialog--sm unified-dialog fp-dialog"
-               :close-on-click-modal="false" :append-to-body="true">
-      <el-form :model="fpForm" :rules="fpRules" ref="fpFormRef" label-width="80px"
-               @submit.native.prevent="doForgot">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="fpForm.username" placeholder="请输入用户名" maxlength="50"></el-input>
-        </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="fpForm.phone" placeholder="请输入注册手机号" maxlength="11" type="tel"></el-input>
-        </el-form-item>
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input v-model="fpForm.newPassword" type="password" placeholder="至少6位" maxlength="20"></el-input>
-        </el-form-item>
-      </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button size="medium" @click="fpShow=false">取消</el-button>
-        <el-button type="primary" size="medium" @click="doForgot" :loading="fpLoading">确定</el-button>
-      </span>
-    </el-dialog>
 
     <!-- 主题切换 -->
     <button class="theme-btn" :title="dark ? '浅色模式' : '深色模式'"
@@ -228,7 +204,7 @@
                 localStorage.setItem('userInfo', JSON.stringify(safeUserInfo))
                 window.location.href = '/backend/index.html'
               } else {
-                self.$message.error(res.msg || '登录失败')
+                ReggieUI.error(res.msg || '登录失败')
                 self.loading = false
               }
             }).catch(function() {
@@ -251,10 +227,10 @@
             self.fpLoading = true
             forgotPasswordApi(self.fpForm).then(function(res) {
               if (String(res.code) === '1') {
-                self.$message.success(res.msg || '密码重置成功')
+                ReggieUI.success(res.msg || '密码重置成功')
                 self.fpShow = false
               } else {
-                self.$message.error(res.msg || '重置失败')
+                ReggieUI.error(res.msg || '重置失败')
               }
             }).finally(function() {
               self.fpLoading = false

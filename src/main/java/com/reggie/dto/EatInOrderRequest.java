@@ -1,6 +1,6 @@
 package com.reggie.dto;
 
-import com.reggie.entity.OrderDetail;
+import com.reggie.module.order.model.OrderDetail;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.util.List;
@@ -48,3 +48,4 @@ public class EatInOrderRequest {
         private Integer customerCount;
     }
 }
+

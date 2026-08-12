@@ -1,6 +1,8 @@
 package com.reggie.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.ObjectMapperHolder;
+import com.reggie.common.CsrfTokenUtil;
 import com.reggie.common.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
@@ -35,7 +37,7 @@ import java.io.IOException;
 @Order(1) // 在LoginCheckFilter之前执行
 public class CsrfFilter implements Filter {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
 
     /** 路径匹配器，支持通配符（与 LoginCheckFilter 保持一致） */
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
@@ -164,7 +166,7 @@ public class CsrfFilter implements Filter {
         String token = (String) session.getAttribute(CSRF_TOKEN_KEY);
         if (token == null) {
             // 生成新的CSRF Token
-            token = generateCsrfToken();
+            token = CsrfTokenUtil.generateToken();
             session.setAttribute(CSRF_TOKEN_KEY, token);
             log.debug("为用户生成新的CSRF Token");
         }
@@ -173,15 +175,7 @@ public class CsrfFilter implements Filter {
         response.setHeader(CSRF_HEADER_NAME, token);
     }
 
-    /**
-     * 生成CSRF Token
-     */
-    private String generateCsrfToken() {
-        java.security.SecureRandom random = new java.security.SecureRandom();
-        byte[] bytes = new byte[32];
-        random.nextBytes(bytes);
-        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
+    
 
     /**
      * 获取当前用户的CSRF Token（供Controller调用）
@@ -192,12 +186,11 @@ public class CsrfFilter implements Filter {
         }
         String token = (String) session.getAttribute(CSRF_TOKEN_KEY);
         if (token == null) {
-            java.security.SecureRandom random = new java.security.SecureRandom();
-            byte[] bytes = new byte[32];
-            random.nextBytes(bytes);
-            token = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+            token = CsrfTokenUtil.generateToken();
             session.setAttribute(CSRF_TOKEN_KEY, token);
         }
         return token;
     }
 }
+
+

@@ -27,7 +27,7 @@
 /* ========== 卡片基础（经典变体） ========== */
 .stat-card {
   background: var(--color-white);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 20px 24px;
   position: relative;
   overflow: hidden;
@@ -41,7 +41,7 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
-/* 顶部渐变条 */
+/* 顶部主题色条（纯色，符合"禁止渐变"规范） */
 .stat-card::before {
   content: '';
   position: absolute;
@@ -49,7 +49,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--gradient);
+  background: var(--stat-color, var(--color-brand-500));
 }
 
 /* 图标（经典变体：绝对定位右上角） */
@@ -75,34 +75,32 @@
   font-size: 30px;
   font-weight: 700;
   line-height: 1.2;
-  background: var(--gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--stat-color, var(--color-brand-500));
+  font-variant-numeric: tabular-nums;
 }
 
 /* 辅助信息行 */
 .stat-card .sub {
   font-size: 12px;
-  color: var(--el-border-base);
+  color: var(--text-secondary);
   margin-top: 6px;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-/* ========== 颜色主题 ========== */
-.stat-card.primary  { --gradient: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-300) 100%); }
-.stat-card.success  { --gradient: linear-gradient(135deg, var(--color-success) 0%, var(--el-color-success-light) 100%); }
-.stat-card.warning  { --gradient: linear-gradient(135deg, var(--color-warning) 0%, var(--el-color-warning-light) 100%); }
-.stat-card.danger   { --gradient: linear-gradient(135deg, var(--color-danger) 0%, var(--el-color-danger-light) 100%); }
-.stat-card.info     { --gradient: linear-gradient(135deg, var(--color-info) 0%, var(--gray-a6) 100%); }
+/* ========== 颜色主题（纯色令牌，符合"禁止渐变"规范） ========== */
+.stat-card.primary  { --stat-color: var(--color-brand-500); }
+.stat-card.success  { --stat-color: var(--color-success); }
+.stat-card.warning  { --stat-color: var(--color-warning); }
+.stat-card.danger   { --stat-color: var(--color-danger); }
+.stat-card.info     { --stat-color: var(--color-info); }
 
 /* 别名（兼容使用 blue/green/orange/purple 命名的页面） */
-.stat-card.blue     { --gradient: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-300) 100%); }
-.stat-card.green    { --gradient: linear-gradient(135deg, var(--color-success) 0%, var(--el-color-success-light) 100%); }
-.stat-card.orange   { --gradient: linear-gradient(135deg, var(--color-warning) 0%, var(--el-color-warning-light) 100%); }
-.stat-card.purple   { --gradient: linear-gradient(135deg, var(--purple-legacy2) 0%, var(--legacy-ce93d8) 100%); }
+.stat-card.blue     { --stat-color: var(--color-brand-500); }
+.stat-card.green    { --stat-color: var(--color-success); }
+.stat-card.orange   { --stat-color: var(--color-warning); }
+.stat-card.purple   { --stat-color: var(--purple-legacy2); }
 
 /* 趋势图标（推荐概览等页面右上角浮标） */
 .stat-card .trend-icon {
@@ -111,7 +109,7 @@
   top: 22px;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -146,7 +144,7 @@
   transform: none;
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;

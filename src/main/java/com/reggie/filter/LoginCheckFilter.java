@@ -1,6 +1,7 @@
 package com.reggie.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.ObjectMapperHolder;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +39,7 @@ public class LoginCheckFilter implements Filter{
     public static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     /** JSON序列化工具 */
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
 
     /** 不需要处理的请求路径（唯一来源，避免重复维护） */
     private static final String[] EXCLUDE_URLS = new String[]{
@@ -70,18 +71,9 @@ public class LoginCheckFilter implements Filter{
         // 静态资源目录（图片、上传文件）
         "/images/**",
         "/uploads/**",
-        // 登录页面（前端静态资源）
-        "/backend/page/login/**",
-        "/backend/plugins/**",
-        "/backend/styles/**",
-        "/backend/js/request.js",
-        "/backend/js/common.js",
-        "/backend/api/login.js",
-        "/front/page/login.html",
-        "/front/plugins/**",
-        "/front/styles/**",
-        "/front/js/request.js",
-        "/front/js/common.js",
+        // 前端静态资源（后台管理系统和用户端）
+        "/backend/**",
+        "/front/**",
         // API文档相关路径
         "/swagger-ui/**",
         "/swagger-ui.html",
@@ -197,3 +189,5 @@ public class LoginCheckFilter implements Filter{
         return false;
     }
 }
+
+

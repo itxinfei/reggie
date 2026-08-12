@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>营销活动管理 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
     <script src="../../plugins/echarts/echarts.min.js"></script>
     <style>
@@ -23,8 +24,8 @@
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--el-border-light);
         }
-        .chart-panel .chart-title { font-size: 14px; font-weight: 600; color: var(--el-text-primary); }
-        .chart-panel .chart-subtitle { font-size: 12px; color: var(--color-info); }
+        .chart-panel .chart-title { font-size:var(--font-size-base); font-weight: 600; color: var(--el-text-primary); }
+        .chart-panel .chart-subtitle { font-size:var(--font-size-xs); color: var(--color-info); }
         .chart-box { width: 100%; height: 260px; }
 
         /* ========== 表格区域 ========== */
@@ -37,7 +38,7 @@
         }
         .push-preview .preview-item {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 7px 10px; font-size: 13px; border-bottom: 1px solid var(--el-bg-light);
+            padding: 7px 10px; font-size:var(--font-size-sm); border-bottom: 1px solid var(--el-bg-light);
         }
         .push-preview .preview-item:last-child { border-bottom: none; }
 
@@ -50,7 +51,7 @@
             background: var(--el-bg-base); border-radius: 8px; padding: 14px 8px;
         }
         .stats-overview .stat-item .num { font-size: 22px; font-weight: 700; color: var(--el-text-primary); }
-        .stats-overview .stat-item .lbl { font-size: 12px; color: var(--color-info); margin-top: 4px; }
+        .stats-overview .stat-item .lbl { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 4px; }
 
         @media (max-width: 1400px) {
             .overview-charts { grid-template-columns: 1fr; }
@@ -60,6 +61,15 @@
 <body>
 <div class="dashboard-container" id="app">
     <div class="container">
+
+        <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+        <header class="ds-page-header">
+          <div class="ds-page-header__titles">
+            <h1 class="ds-page-header__title" id="page-title">营销活动</h1>
+            <p class="ds-page-header__subtitle">管理推荐营销活动</p>
+          </div>
+          <div class="ds-page-header__actions"></div>
+        </header>
 
         <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
         <stat-cards :cards="statsCards" :active-key.sync="searchStatus" @card-click="onCardClick"></stat-cards>
@@ -119,7 +129,7 @@
             :border="true"
             :selection="true"
             :selection-width="45"
-            :actions-width="200"
+            :actions-width="180"
             :actions-align="'center'"
             aria-label="营销活动列表"
             @page-change="onPageChange"
@@ -132,8 +142,8 @@
                 <el-tag :type="statusTagType(row.status)" size="small">{{ statusMap[row.status] }}</el-tag>
             </template>
             <template #col-time="{ row }">
-                <span style="font-size:12px;color:var(--el-text-regular);">{{ row.startTime || '-' }}</span><br/>
-                <span style="font-size:12px;color:var(--color-info);">{{ row.endTime || '-' }}</span>
+                <span style="font-size:var(--font-size-xs);color:var(--el-text-regular);">{{ row.startTime || '-' }}</span><br/>
+                <span style="font-size:var(--font-size-xs);color:var(--color-info);">{{ row.endTime || '-' }}</span>
             </template>
             <template #col-participants="{ row }">
                 <span style="color:var(--el-text-primary);">{{ row.currentParticipants || 0 }}</span>
@@ -166,8 +176,16 @@
     </div>
 
     <!-- ========== 新建/编辑对话框 ========== -->
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" custom-class="el-dialog--lg unified-dialog"
-      @close="resetForm" :close-on-click-modal="false" :append-to-body="true" :modal-append-to-body="true">
+    <!-- ========== 新建/编辑对话框 ========== -->
+    <crud-dialog
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      size="lg"
+      :submit-loading="submitting"
+      :close-on-click-modal="false"
+      @submit="submitForm"
+      @close="resetForm"
+    >
         <el-form :model="form" :rules="rules" ref="campaignForm" label-width="90px" size="small">
             <el-row :gutter="16">
                 <el-col :span="14">
@@ -209,9 +227,9 @@
                     <el-radio-button label="秒杀">秒杀</el-radio-button>
                 </el-radio-group>
                 <el-input v-model="form.ruleJson" type="textarea" :rows="3"
-                    :placeholder="rulePreset ? '' : 'JSON格式，如：{\"minAmount\":50,\"discountRate\":0.8}'" />
-                <div v-if="ruleError" style="font-size:11px;color:var(--color-danger);margin-top:4px;">{{ ruleError }}</div>
-                <span v-else style="font-size:11px;color:var(--color-info);">格式: {"minAmount":80,"reduceAmount":10} | {"discountRate":0.85} | {"flashPrice":9.9,"flashStock":100}</span>
+                    :placeholder="rulePreset ? '' : 'JSON格式，如：{"minAmount":50,"discountRate":0.8}'" />
+                <div v-if="ruleError" style="font-size:var(--font-size-xs);color:var(--color-danger);margin-top:4px;">{{ ruleError }}</div>
+                <span v-else style="font-size:var(--font-size-xs);color:var(--color-info);">格式: {"minAmount":80,"reduceAmount":10} | {"discountRate":0.85} | {"flashPrice":9.9,"flashStock":100}</span>
             </el-form-item>
             <el-form-item label="活动时间">
                 <!-- 修改点：添加快捷选项 + unlink-panels，优化时间选择体验 -->
@@ -236,15 +254,19 @@
                 </el-col>
             </el-row>
         </el-form>
-        <span slot="footer" class="dialog-footer">
-            <el-button size="medium" @click="dialogVisible = false">取 消</el-button>
-            <el-button type="primary" size="medium" @click="submitForm" :loading="submitting">保 存</el-button>
-        </span>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- ========== 推送消息对话框 ========== -->
-    <el-dialog title="推送营销消息" :visible.sync="pushDialogVisible" custom-class="el-dialog--md unified-dialog"
-      :close-on-click-modal="false">
+    <!-- ========== 推送消息对话框 ========== -->
+    <crud-dialog
+      title="推送营销消息"
+      :visible.sync="pushDialogVisible"
+      size="md"
+      :submit-loading="pushing"
+      :close-on-click-modal="false"
+      @submit="doPush"
+      @close="pushDialogVisible = false"
+    >
         <el-form label-width="90px" size="small">
             <el-form-item label="活动名称">
                 <el-tag type="primary">{{ pushTargetCampaign ? pushTargetCampaign.name : '' }}</el-tag>
@@ -262,7 +284,7 @@
             </el-form-item>
             <el-form-item label="预计触达">
                 <el-tag type="info" size="small">{{ pushEstimate }} 位用户</el-tag>
-                <span style="font-size:12px;color:var(--color-info);margin-left:8px;">系统自动匹配目标用户</span>
+                <span style="font-size:var(--font-size-xs);color:var(--color-info);margin-left:8px;">系统自动匹配目标用户</span>
             </el-form-item>
             <el-form-item label="推送预览" v-if="pushPreview.length > 0">
                 <div class="push-preview">
@@ -273,17 +295,19 @@
                 </div>
             </el-form-item>
         </el-form>
-        <span slot="footer" class="dialog-footer">
-            <el-button size="medium" @click="pushDialogVisible = false">取 消</el-button>
-            <el-button type="primary" size="medium" @click="doPush" :loading="pushing">
-                {{ pushForm.pushType === 3 ? '确认发送短信' : '确认推送' }}
-            </el-button>
-        </span>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- ========== 活动统计对话框 ========== -->
-    <el-dialog title="活动效果统计" :visible.sync="statsDialogVisible" custom-class="el-dialog--lg unified-dialog"
-      :close-on-click-modal="false" @opened="onStatsDialogOpen">
+    <!-- ========== 活动统计对话框 ========== -->
+    <crud-dialog
+      title="活动效果统计"
+      :visible.sync="statsDialogVisible"
+      size="lg"
+      :show-submit="false"
+      cancel-text="关 闭"
+      :close-on-click-modal="false"
+      @close="statsDialogVisible = false"
+    >
         <div v-if="statsCampaign">
             <!-- 修改点：使用数字卡片替代 descriptions -->
             <div class="stats-overview">
@@ -310,10 +334,7 @@
             </div>
             <div class="chart-box" id="campaignStatsChart" style="height:280px;"></div>
         </div>
-        <span slot="footer" class="dialog-footer">
-            <el-button size="medium" @click="statsDialogVisible = false">关 闭</el-button>
-        </span>
-    </el-dialog>
+    </crud-dialog>
 </div>
 
 <script src="../../plugins/vue/vue.js"></script>
@@ -345,7 +366,7 @@
             // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
             campaignColumns: [
                 { prop: 'id', label: 'ID', width: 60, align: 'center' },
-                { prop: 'name', label: '活动名称', minWidth: 140, slot: true },
+                { prop: 'name', label: '活动名称', width: 120, slot: true },
                 { prop: 'type', label: '类型', width: 90, align: 'center', slot: true },
                 { prop: 'target', label: '目标', width: 100, align: 'center', slot: true },
                 { prop: 'status', label: '状态', width: 100, align: 'center', slot: true },
@@ -405,15 +426,6 @@
                 ruleJson: '', priority: 0, startTime: '', endTime: '',
                 maxParticipants: null, couponTemplateId: null
             },
-            rules: {
-                name: [
-                    { required: true, message: '请输入活动名称', trigger: 'blur' },
-                    { min: 2, max: 100, message: '活动名称长度 2-100', trigger: 'blur' }
-                ],
-                campaignType: [{ required: true, message: '请选择活动类型', trigger: 'change' }],
-                targetType: [{ required: true, message: '请选择目标人群', trigger: 'change' }],
-                ruleJson: [{ validator: this.validateRuleJson, trigger: 'blur' }]
-            },
             typeMap: { 1:'满减', 2:'折扣', 3:'赠品', 4:'首单优惠', 5:'会员专享', 6:'限时秒杀' },
             targetMap: { 1:'全部用户', 2:'新用户', 3:'高频用户', 4:'流失预警', 5:'指定等级' },
             statusMap: { 0:'草稿', 1:'进行中', 2:'已结束', 3:'已暂停' }
@@ -426,6 +438,19 @@
         this.loadCouponTemplates();
     },
     computed: {
+        // 修改点：表单校验规则（computed 中 this 指向 Vue 实例，可引用 methods）
+        rules: function() {
+            var self = this;
+            return {
+                name: [
+                    { required: true, message: '请输入活动名称', trigger: 'blur' },
+                    { min: 2, max: 100, message: '活动名称长度 2-100', trigger: 'blur' }
+                ],
+                campaignType: [{ required: true, message: '请选择活动类型', trigger: 'change' }],
+                targetType: [{ required: true, message: '请选择目标人群', trigger: 'change' }],
+                ruleJson: [{ validator: self.validateRuleJson, trigger: 'blur' }]
+            };
+        },
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
             var self = this;
@@ -458,7 +483,7 @@
                     self.filterOptions.names = res.data.names || [];
                 } else {
                     self.optionsLoadError = true;
-                    self.$message.warning('加载活动选项失败：' + (res.msg || '接口返回异常'));
+                    ReggieUI.warning('加载活动选项失败：' + (res.msg || '接口返回异常'));
                 }
             }).catch(function(err) {
                 // 修改点：NOTLOGIN 错误已在全局拦截器处理（跳转登录页），无需重复提示
@@ -467,7 +492,7 @@
                 }
                 self.optionsLoadError = true;
                 console.error('加载活动选项失败:', err);
-                self.$message.error('加载筛选选项失败，请刷新页面重试');
+                ReggieUI.error('加载筛选选项失败，请刷新页面重试');
             }).finally(function() {
                 self.optionsLoading = false;
             });
@@ -568,7 +593,7 @@
                     self.total = data.total || 0;
                 }
             }).catch(function(err) {
-                self.$message.error('加载失败: ' + (err.response && err.response.data && err.response.data.msg || err.message));
+                ReggieUI.error('加载失败: ' + (err.response && err.response.data && err.response.data.msg || err.message));
             }).finally(function() { self.loading = false; });
         },
         // 修改点：调用后端 stats API 获取真实统计数据（替代 pageSize=1000 前端聚合）
@@ -670,25 +695,25 @@
                 // 修改点(2026-07-10)：使用批量删除接口，单次网络请求
                 recommendBackendApi.batchDeleteCampaigns({ ids: ids }).then(function(res) {
                     if (res.code === 1) {
-                        self.$message.success(res.data || '批量删除成功');
+                        ReggieUI.success(res.data || '批量删除成功');
                         self.selectedRows = [];
                         self.loadData();
                     } else {
-                        self.$message.error(res.msg || '批量删除失败');
+                        ReggieUI.error(res.msg || '批量删除失败');
                     }
-                }).catch(function() { self.$message.error('批量删除失败'); });
+                }).catch(function() { ReggieUI.error('批量删除失败'); });
             }).catch(function() {});
         },
         batchPause: function() {
             var self = this;
             var toPause = self.selectedRows.filter(function(r) { return r.status === 1; });
-            if (toPause.length === 0) { self.$message.warning('请选择进行中的活动'); return; }
+            if (toPause.length === 0) { ReggieUI.warning('请选择进行中的活动'); return; }
             self.$confirm('确认暂停选中的 ' + toPause.length + ' 个活动？', '批量暂停', { type: 'warning' }).then(function() {
                 var promises = toPause.map(function(r) { return recommendBackendApi.pauseCampaign(r.id); });
                 Promise.all(promises).then(function() {
-                    self.$message.success('批量暂停成功');
+                    ReggieUI.success('批量暂停成功');
                     self.loadData();
-                }).catch(function() { self.$message.error('部分暂停失败'); });
+                }).catch(function() { ReggieUI.error('部分暂停失败'); });
             }).catch(function() {});
         },
 
@@ -728,7 +753,7 @@
             self.$refs.campaignForm.validate(function(valid) {
                 if (!valid) return;
                 if (!self.dateRange || self.dateRange.length < 2) {
-                    self.$message.warning('请选择活动时间'); return;
+                    ReggieUI.warning('请选择活动时间'); return;
                 }
                 self.form.startTime = self.dateRange[0];
                 self.form.endTime = self.dateRange[1];
@@ -739,14 +764,14 @@
 
                 api.then(function(res) {
                     if (res.code === 1) {
-                        self.$message.success(self.dialogMode === 'create' ? '创建成功' : '更新成功');
+                        ReggieUI.success(self.dialogMode === 'create' ? '创建成功' : '更新成功');
                         self.dialogVisible = false;
                         self.loadData();
                     } else {
-                        self.$message.error(res.msg || '操作失败');
+                        ReggieUI.error(res.msg || '操作失败');
                     }
                 }).catch(function() {
-                    self.$message.error('操作失败，请稍后重试');
+                    ReggieUI.error('操作失败，请稍后重试');
                 }).finally(function() { self.submitting = false; });
             });
         },
@@ -764,8 +789,8 @@
             var self = this;
             self.$confirm('确认发布【' + row.name + '】？发布后将对目标用户可见。', '提示', { type: 'info' }).then(function() {
                 recommendBackendApi.publishCampaign(row.id).then(function(res) {
-                    if (res.code === 1) { self.$message.success('发布成功'); self.loadData(); }
-                    else { self.$message.error(res.msg || '发布失败'); }
+                    if (res.code === 1) { ReggieUI.success('发布成功'); self.loadData(); }
+                    else { ReggieUI.error(res.msg || '发布失败'); }
                 });
             }).catch(function() {});
         },
@@ -773,8 +798,8 @@
             var self = this;
             self.$confirm('确认暂停【' + row.name + '】？暂停后用户将无法参与。', '提示', { type: 'warning' }).then(function() {
                 recommendBackendApi.pauseCampaign(row.id).then(function(res) {
-                    if (res.code === 1) { self.$message.success('已暂停'); self.loadData(); }
-                    else { self.$message.error(res.msg || '暂停失败'); }
+                    if (res.code === 1) { ReggieUI.success('已暂停'); self.loadData(); }
+                    else { ReggieUI.error(res.msg || '暂停失败'); }
                 });
             }).catch(function() {});
         },
@@ -784,8 +809,8 @@
                 type: 'warning', confirmButtonText: '确认删除'
             }).then(function() {
                 recommendBackendApi.deleteCampaign(row.id).then(function(res) {
-                    if (res.code === 1) { self.$message.success('删除成功'); self.loadData(); }
-                    else { self.$message.error(res.msg || '删除失败'); }
+                    if (res.code === 1) { ReggieUI.success('删除成功'); self.loadData(); }
+                    else { ReggieUI.error(res.msg || '删除失败'); }
                 });
             }).catch(function() {});
         },
@@ -817,14 +842,14 @@
             var campaignId = self.pushTargetCampaign.id;
             recommendBackendApi.batchPush(campaignId, { pushType: self.pushForm.pushType }).then(function(res) {
                 if (res.code === 1) {
-                    self.$message.success(res.msg || '推送成功，共触达 ' + (res.data || 0) + ' 位用户');
+                    ReggieUI.success(res.msg || '推送成功，共触达 ' + (res.data || 0) + ' 位用户');
                     self.pushDialogVisible = false;
                     self.loadData();
                 } else {
-                    self.$message.error(res.msg || '推送失败');
+                    ReggieUI.error(res.msg || '推送失败');
                 }
             }).catch(function(err) {
-                self.$message.error('推送失败: ' + (err.response && err.response.data && err.response.data.msg || err.message));
+                ReggieUI.error('推送失败: ' + (err.response && err.response.data && err.response.data.msg || err.message));
             }).finally(function() { self.pushing = false; });
         },
 
@@ -897,6 +922,8 @@
 </script>
 </body>
 </html>
+
+
 
 
 

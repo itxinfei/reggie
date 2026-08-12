@@ -3,12 +3,12 @@ package com.reggie.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.BaseContext;
 import com.reggie.dto.SetmealDto;
-import com.reggie.entity.Category;
-import com.reggie.entity.Setmeal;
-import com.reggie.entity.SetmealDish;
-import com.reggie.service.CategoryService;
-import com.reggie.service.SetmealDishService;
-import com.reggie.service.SetmealService;
+import com.reggie.module.category.model.Category;
+import com.reggie.module.setmeal.model.Setmeal;
+import com.reggie.module.setmeal.model.SetmealDish;
+import com.reggie.module.category.service.CategoryService;
+import com.reggie.module.setmeal.service.SetmealDishService;
+import com.reggie.module.setmeal.service.SetmealService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
@@ -239,3 +239,6 @@ public class SetmealControllerTest {
                 .andExpect(jsonPath("$.data[0].name").value("测试套餐"));
     }
 }
+
+
+
