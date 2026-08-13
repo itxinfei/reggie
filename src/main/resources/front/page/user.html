@@ -13,31 +13,31 @@
         /* 会员卡片 */
         .member-card {
             margin: 0 12rem 12rem;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background: var(--color-primary-gradient);
             border-radius: 14rem;
             padding: 16rem 18rem;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 4rem 16rem rgba(15, 52, 96, 0.3);
+            box-shadow: 0 4rem 16rem rgba(255, 154, 0, 0.3);
         }
         .member-card::before {
             content: ''; position: absolute; top: -30rem; right: -30rem;
             width: 120rem; height: 120rem; border-radius: 50%;
-            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255,255,255,0.35) 0%, transparent 70%);
         }
         .member-card .card-top {
             display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rem;
             position: relative; z-index: 1;
         }
         .member-card .card-level-badge {
-            background: linear-gradient(135deg, #ffd54f, #ffb300);
-            color: #5d4037; font-size: 11rem; font-weight: 700;
+            background: rgba(255,255,255,0.45);
+            color: var(--color-text-primary); font-size: 11rem; font-weight: 700;
             padding: 3rem 10rem; border-radius: 20rem; letter-spacing: 0.5rem;
         }
         .member-card .card-level-badge.standard {
-            background: linear-gradient(135deg, #e0e0e0, #bdbdbd); color: #616161;
+            background: rgba(51,51,51,0.12); color: var(--color-text-primary);
         }
-        .member-card .card-arrow { color: rgba(255,255,255,0.5); font-size: 14rem; }
+        .member-card .card-arrow { color: rgba(51,51,51,0.6); font-size: 14rem; }
         .member-card .card-stats {
             display: flex; gap: 0; position: relative; z-index: 1;
         }
@@ -47,25 +47,25 @@
         .member-card .card-stat:not(:last-child)::after {
             content: ''; position: absolute; right: 0; top: 15%;
             width: 1px; height: 70%;
-            background: rgba(255,255,255,0.15);
+            background: rgba(51,51,51,0.15);
         }
         .member-card .card-stat .val {
-            font-size: 20rem; font-weight: 700; color: #fff;
+            font-size: 20rem; font-weight: 700; color: var(--color-text-primary);
             font-family: var(--font-family-number);
         }
         .member-card .card-stat .lbl {
-            font-size: 11rem; color: rgba(255,255,255,0.55); margin-top: 2rem;
+            font-size: 11rem; color: rgba(51,51,51,0.65); margin-top: 2rem;
         }
         .member-card .card-coupon-tag {
-            margin-top: 10rem; font-size: 12rem; color: rgba(255,255,255,0.6);
+            margin-top: 10rem; font-size: 12rem; color: rgba(51,51,51,0.7);
             display: flex; align-items: center; gap: 6rem; position: relative; z-index: 1;
         }
         .member-card .card-coupon-tag .coupon-count {
-            background: rgba(255,255,255,0.15); border-radius: 8rem;
-            padding: 3rem 8rem; color: #ffd54f; font-weight: 600;
+            background: rgba(255,255,255,0.45); border-radius: 8rem;
+            padding: 3rem 8rem; color: var(--color-text-primary); font-weight: 600;
         }
         .member-card .non-member-tip {
-            text-align: center; color: rgba(255,255,255,0.6); font-size: 13rem;
+            text-align: center; color: rgba(51,51,51,0.7); font-size: 13rem;
             padding: 6rem 0; position: relative; z-index: 1;
         }
     </style>
@@ -84,8 +84,12 @@
                 <div class="desc">
                     <div class="divName">
                         {{ userName || '用户' }}
-                        <img v-if="userGender === 1" src="./../images/women.png" class="gender-icon"/>
-                        <img v-else-if="userGender === 0" src="./../images/man.png" class="gender-icon"/>
+                        <span v-if="userGender === 1" class="gender-icon">
+                            <svg viewBox="0 0 24 24" style="width:16rem;height:16rem" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                        </span>
+                        <span v-else-if="userGender === 0" class="gender-icon">
+                            <svg viewBox="0 0 24 24" style="width:16rem;height:16rem" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                        </span>
                     </div>
                     <div class="divPhone">{{ maskedPhone }}</div>
                 </div>

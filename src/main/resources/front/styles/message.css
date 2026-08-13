@@ -86,7 +86,7 @@
   right: var(--spacing-lg);
   width: 8rem;
   height: 8rem;
-  background: #ff4d4f;
+  background: var(--color-danger);
   border-radius: var(--radius-round);
 }
 
@@ -125,10 +125,10 @@
   white-space: nowrap;
 }
 
-#messageApp .tag-notification { background: #e6f7ff; color: #1890ff; }
-#messageApp .tag-popup { background: #fff7e6; color: #fa8c16; }
-#messageApp .tag-sms { background: #f6ffed; color: #52c41a; }
-#messageApp .tag-coupon { background: #fff0f6; color: #eb2f96; }
+#messageApp .tag-notification { background: rgba(24, 144, 255, 0.1); color: var(--color-info); }
+#messageApp .tag-popup { background: rgba(255, 179, 0, 0.1); color: var(--color-warning); }
+#messageApp .tag-sms { background: rgba(7, 193, 96, 0.1); color: var(--color-success); }
+#messageApp .tag-coupon { background: rgba(243, 69, 70, 0.1); color: var(--color-price); }
 
 /* ---- 消息内容 ---- */
 #messageApp .msg-content {
@@ -230,7 +230,7 @@
 #messageApp .detail-close {
   width: 100%;
   padding: 10rem;
-  background: #f0f0f0;
+  background: var(--bg-input);
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--font-size-md);
@@ -240,5 +240,5 @@
 }
 
 #messageApp .detail-close:active {
-  background: #e0e0e0;
+  background: var(--color-text-disabled);
 }

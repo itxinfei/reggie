@@ -27,12 +27,6 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * Category service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> implements CategoryService {
 

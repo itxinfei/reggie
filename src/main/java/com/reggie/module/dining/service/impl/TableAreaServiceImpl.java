@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.dining.mapper.TableAreaMapper;
 import com.reggie.module.dining.model.TableArea;
 import com.reggie.module.dining.service.TableAreaService;
@@ -23,7 +24,7 @@ public class TableAreaServiceImpl extends ServiceImpl<TableAreaMapper, TableArea
 
     @Override
     public Page<TableArea> pageQuery(int page, int pageSize) {
-        Page<TableArea> pageRequest = new Page<>(page, pageSize);
+        Page<TableArea> pageRequest = PageUtils.of(page, pageSize);
         return this.page(pageRequest,
                 new LambdaQueryWrapper<TableArea>()
                         .eq(TableArea::getTenantId, BaseContext.getCurrentTenantId())

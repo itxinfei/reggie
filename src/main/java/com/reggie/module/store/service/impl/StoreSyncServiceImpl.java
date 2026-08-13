@@ -12,29 +12,21 @@ import com.reggie.module.dish.service.DishService;
 import com.reggie.module.category.service.CategoryService;
 import com.reggie.module.setmeal.service.SetmealDishService;
 import com.reggie.module.setmeal.service.SetmealService;
-import com.reggie.module.store.mapper.*;
-import com.reggie.module.store.model.*;
+import com.reggie.module.store.mapper.StoreSyncLogMapper;
+import com.reggie.module.store.model.StoreSyncLog;
 import com.reggie.module.store.service.StoreSyncService;
-import com.reggie.module.dish.model.DishFlavor;
-import com.reggie.module.dish.model.Dish;
-import com.reggie.module.category.model.Category;
-import com.reggie.module.setmeal.model.SetmealDish;
-import com.reggie.module.setmeal.model.Setmeal;
-import com.reggie.module.dish.service.DishFlavorService;
-import com.reggie.module.dish.service.DishService;
-import com.reggie.module.category.service.CategoryService;
-import com.reggie.module.setmeal.service.SetmealDishService;
-import com.reggie.module.setmeal.service.SetmealService;
-import com.reggie.module.category.model.Category;
-import com.reggie.module.category.service.CategoryService;
+import com.reggie.common.utils.PageUtils;
 import cn.hutool.core.util.StrUtil;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -43,13 +35,6 @@ import java.util.stream.Collectors;
  *
  * @author reggie
  * @since 2026-07-09
- */
-@Slf4j
-/**
- * StoreSync service implementation
- *
- * @author reggie
- * @since 2026-08-11
  */
 @Service
 @Transactional(rollbackFor = Exception.class)
@@ -270,7 +255,7 @@ public class StoreSyncServiceImpl implements StoreSyncService {
 
     @Override
     public List<Map<String, Object>> getSyncLogs(Long sourceTenantId, int page, int pageSize) {
-        Page<StoreSyncLog> pageObj = new Page<>(page, pageSize);
+        Page<StoreSyncLog> pageObj = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<StoreSyncLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StoreSyncLog::getSourceTenantId, sourceTenantId)
                .orderByDesc(StoreSyncLog::getStartTime);
@@ -317,7 +302,6 @@ public class StoreSyncServiceImpl implements StoreSyncService {
         syncLogMapper.updateById(syncLog);
     }
 }
-
 
 
 

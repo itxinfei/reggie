@@ -20,7 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -30,12 +34,6 @@ import java.util.stream.Collectors;
  * @since 2026-07-10
  */
 @Slf4j
-/**
- * MemberTag service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag> implements MemberTagService {
 

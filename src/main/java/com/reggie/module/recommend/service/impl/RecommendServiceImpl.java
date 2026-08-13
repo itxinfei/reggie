@@ -5,45 +5,48 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.BaseContext;
 import com.reggie.common.ObjectMapperHolder;
-import com.reggie.module.order.model.Orders;
-import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.category.model.Category;
+import com.reggie.module.category.service.CategoryService;
 import com.reggie.module.dish.model.Dish;
 import com.reggie.module.dish.model.DishFlavor;
-import com.reggie.module.category.model.Category;
-import com.reggie.module.setmeal.model.Setmeal;
-import com.reggie.module.order.service.OrderService;
-import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.dish.service.DishService;
-import com.reggie.module.category.service.CategoryService;
-import com.reggie.module.setmeal.service.SetmealService;
-import com.reggie.module.recommend.mapper.*;
-import com.reggie.module.recommend.model.*;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.module.recommend.mapper.BrowseHistoryMapper;
+import com.reggie.module.recommend.mapper.RecommendationCacheMapper;
+import com.reggie.module.recommend.mapper.RecommendationFeedbackMapper;
+import com.reggie.module.recommend.mapper.UserPreferenceMapper;
+import com.reggie.module.recommend.model.BrowseHistory;
+import com.reggie.module.recommend.model.RecommendationCache;
+import com.reggie.module.recommend.model.RecommendationFeedback;
+import com.reggie.module.recommend.model.UserPreferenceTag;
 import com.reggie.module.recommend.service.RecommendService;
-import com.reggie.module.order.model.Orders;
-import com.reggie.module.order.model.OrderDetail;
-import com.reggie.module.dish.model.Dish;
-import com.reggie.module.dish.model.DishFlavor;
-import com.reggie.module.category.model.Category;
 import com.reggie.module.setmeal.model.Setmeal;
-import com.reggie.module.order.service.OrderService;
-import com.reggie.module.order.service.OrderDetailService;
-import com.reggie.module.dish.service.DishService;
-import com.reggie.module.category.service.CategoryService;
 import com.reggie.module.setmeal.service.SetmealService;
-import com.reggie.module.category.service.CategoryService;
-import com.reggie.module.category.model.Category;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -60,12 +63,6 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * Recommend service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 public class RecommendServiceImpl implements RecommendService {
 
@@ -75,9 +72,42 @@ public class RecommendServiceImpl implements RecommendService {
     private static final int CF_MIN_USERS = 5;
     /** 推荐结果多样性因子（越高越多随机性） */
     private static final double DIVERSITY_FACTOR = 0.2;
+    /** 混合推荐权重：协同过滤（阿里规范：魔法值需定义语义化常量） */
+    private static final double WEIGHT_CF = 0.5;
+    /** 混合推荐权重：内容推荐 */
+    private static final double WEIGHT_CONTENT = 0.3;
+    /** 混合推荐权重：热门排行 */
+    private static final double WEIGHT_HOT = 0.2;
+    /** 混合推荐异步任务超时时间（秒） */
+    private static final int HYBRID_TIMEOUT_SECONDS = 3;
+    /** 相似用户至少共同购买菜品数 */
+    private static final int MIN_SHARED_DISHES = 3;
+    /** 概览统计窗口天数（近7天） */
+    private static final int STATS_WINDOW_DAYS = 7;
+    /** 算法对比统计窗口天数（近30天） */
+    private static final int ALGO_COMPARE_DAYS = 30;
+    /** 内容匹配评分：品类命中 */
+    private static final double SCORE_CATEGORY_MATCH = 0.5;
+    /** 内容匹配评分：口味命中 */
+    private static final double SCORE_TASTE_MATCH = 0.3;
+    /** 内容匹配评分：价格区间命中 */
+    private static final double SCORE_PRICE_MATCH = 0.2;
+    /** 内容匹配评分总分上限 */
+    private static final double SCORE_MAX_TOTAL = 1.0;
+    /** 价格档位分界：经济型 / 实惠型 / 中档 / 高端 */
+    private static final double PRICE_ECONOMY_MAX = 20;
+    private static final double PRICE_AFFORDABLE_MAX = 40;
+    private static final double PRICE_MID_RANGE_MAX = 80;
+    /** 推荐缓存置信度：各算法基础置信度 */
+    private static final double CONFIDENCE_HYBRID = 0.85;
+    private static final double CONFIDENCE_CF = 0.70;
+    private static final double CONFIDENCE_CONTENT = 0.65;
+    private static final double CONFIDENCE_HOT = 0.40;
+    private static final double CONFIDENCE_DEFAULT = 0.50;
+    private static final double CONFIDENCE_EMPTY = 0.0;
     /** 异步任务线程池（Spring 管理，应用关闭时优雅停机；替代原静态 FixedThreadPool） */
     @Resource(name = "recommendExecutor")
-    private ThreadPoolTaskExecutor ASYNC_EXECUTOR;
+    private ThreadPoolTaskExecutor asyncExecutor;
 
     /** 用户偏好标签Mapper */
     @Autowired
@@ -112,7 +142,7 @@ public class RecommendServiceImpl implements RecommendService {
     @Autowired
     private CategoryService categoryService;
 
-            /** JSON序列化工具 */
+    /** JSON序列化工具 */
     private final ObjectMapper objectMapper = ObjectMapperHolder.getDefault();
 
     /**
@@ -124,7 +154,7 @@ public class RecommendServiceImpl implements RecommendService {
             int deleted = cacheMapper.deleteExpired();
             log.info("[推荐引擎] 初始化完成，清理过期缓存 {} 条", deleted);
         } catch (Exception e) {
-            log.warn("[推荐引擎] 初始化跳过（可能是测试环境缺少数据表）: {}", e.getMessage());
+            log.warn("[推荐引擎] 初始化跳过（可能是测试环境缺少数据表）", e);
         }
     }
 
@@ -142,7 +172,7 @@ public class RecommendServiceImpl implements RecommendService {
         if (cache != null) {
             List<Long> cachedIds = parseDishIds(cache.getDishIds());
             if (!cachedIds.isEmpty()) {
-                log.debug("[推荐引擎] 命中缓存 userId={}, algorithm={}", userId, cache.getAlgorithm());
+                log.debug("[推荐引擎] 命中缓存 userId={}, algoName={}", userId, cache.getAlgoName());
                 return buildDishResultList(cachedIds, limit);
             }
         }
@@ -165,7 +195,7 @@ public class RecommendServiceImpl implements RecommendService {
         // 3. 异步缓存推荐结果
         final String finalAlgorithm = algorithm;
         final List<Map<String, Object>> finalResult = result;
-        ASYNC_EXECUTOR.submit(() -> saveToCache(userId, RecommendationCache.TYPE_DISH, finalResult, finalAlgorithm));
+        asyncExecutor.submit(() -> saveToCache(userId, RecommendationCache.TYPE_DISH, finalResult, finalAlgorithm));
 
         return result;
     }
@@ -212,7 +242,7 @@ public class RecommendServiceImpl implements RecommendService {
         Long tenantId = BaseContext.getCurrentTenantId();
 
         // 查询最近30天上架的菜品
-        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(ALGO_COMPARE_DAYS);
         LambdaQueryWrapper<Dish> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(tenantId != null, Dish::getTenantId, tenantId)
                .eq(Dish::getStatus, 1)
@@ -344,7 +374,7 @@ public class RecommendServiceImpl implements RecommendService {
             return Collections.emptyList();
         }
 
-        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(ALGO_COMPARE_DAYS);
         LambdaQueryWrapper<Orders> orderWrapper = new LambdaQueryWrapper<>();
         orderWrapper.ge(Orders::getCreateTime, thirtyDaysAgo);
         if (tenantId != null) {
@@ -418,7 +448,7 @@ public class RecommendServiceImpl implements RecommendService {
         // 正向反馈时更新偏好权重
         if (feedback.getFeedbackType() == RecommendationFeedback.FEEDBACK_ORDER ||
             feedback.getFeedbackType() == RecommendationFeedback.FEEDBACK_ADD_CART) {
-            ASYNC_EXECUTOR.submit(() -> preferenceAnalysisService.analyzeUserPreferences(feedback.getUserId()));
+            asyncExecutor.submit(() -> preferenceAnalysisService.analyzeUserPreferences(feedback.getUserId()));
         }
     }
 
@@ -429,7 +459,7 @@ public class RecommendServiceImpl implements RecommendService {
         wrapper.eq(RecommendationCache::getUserId, userId);
         cacheMapper.delete(wrapper);
         // 异步重新分析偏好
-        ASYNC_EXECUTOR.submit(() -> preferenceAnalysisService.analyzeUserPreferences(userId));
+        asyncExecutor.submit(() -> preferenceAnalysisService.analyzeUserPreferences(userId));
         log.info("[推荐引擎] 刷新用户{}的推荐缓存完成", userId);
     }
 
@@ -458,7 +488,7 @@ public class RecommendServiceImpl implements RecommendService {
             // 3. 推荐反馈统计 → 点击率(click) / 转化率(order)
             LambdaQueryWrapper<RecommendationFeedback> feedbackWrapper =
                     new LambdaQueryWrapper<>();
-            LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+            LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(STATS_WINDOW_DAYS);
             feedbackWrapper.ge(RecommendationFeedback::getCreateTime, sevenDaysAgo);
             if (tenantId != null) {
                 feedbackWrapper.eq(RecommendationFeedback::getTenantId, tenantId);
@@ -486,7 +516,7 @@ public class RecommendServiceImpl implements RecommendService {
                 LambdaQueryWrapper<Orders> gmvWrapper = new LambdaQueryWrapper<>();
                 gmvWrapper.in(Orders::getUserId, feedbackUserIds)
                         .ge(Orders::getCreateTime, sevenDaysAgo)
-                        .eq(Orders::getStatus, 4); // 已完成订单
+                        .eq(Orders::getStatus, Orders.STATUS_COMPLETED); // 已完成订单
                 if (tenantId != null) {
                     gmvWrapper.eq(Orders::getTenantId, tenantId);
                 }
@@ -503,7 +533,7 @@ public class RecommendServiceImpl implements RecommendService {
             stats.put("cachedUsers", cachedUsers);
             stats.put("totalOrderUsers", totalOrderUsers);
         } catch (Exception e) {
-            log.warn("[推荐引擎] 统计数据计算异常: {}", e.getMessage());
+            log.warn("[推荐引擎] 统计数据计算异常", e);
             stats.put("hybridRate", 0);
             stats.put("clickRate", 0);
             stats.put("conversionRate", 0);
@@ -554,7 +584,7 @@ public class RecommendServiceImpl implements RecommendService {
             }
             log.debug("[推荐引擎] 反馈分布统计: days={}, stats={}", days, stats);
         } catch (Exception e) {
-            log.warn("[推荐引擎] 反馈分布统计异常: {}", e.getMessage());
+            log.warn("[推荐引擎] 反馈分布统计异常", e);
         }
         return stats;
     }
@@ -568,7 +598,7 @@ public class RecommendServiceImpl implements RecommendService {
                 return result;
             }
         } catch (Exception e) {
-            log.warn("[推荐引擎] 偏好分布查询异常: {}", e.getMessage());
+            log.warn("[推荐引擎] 偏好分布查询异常", e);
         }
         return Collections.emptyList();
     }
@@ -581,7 +611,7 @@ public class RecommendServiceImpl implements RecommendService {
         result.put("cvRates", Arrays.asList(0.0, 0.0, 0.0, 0.0));
 
         try {
-            String startTime = LocalDateTime.now().minusDays(30).toString();
+            String startTime = LocalDateTime.now().minusDays(ALGO_COMPARE_DAYS).toString();
             Long tenantId = BaseContext.getCurrentTenantId();
             List<Map<String, Object>> rows = feedbackMapper.countByAlgorithmSince(startTime, tenantId);
 
@@ -596,7 +626,7 @@ public class RecommendServiceImpl implements RecommendService {
             double[] cvRates = new double[]{0.0, 0.0, 0.0, 0.0};
 
             for (Map<String, Object> row : rows) {
-                String algo = (String) row.get("algorithm");
+                String algo = (String) row.get("algo_name");
                 Long clickCnt = ((Number) row.get("click_cnt")).longValue();
                 Long orderCnt = ((Number) row.get("order_cnt")).longValue();
                 Long totalCnt = ((Number) row.get("total_cnt")).longValue();
@@ -619,7 +649,7 @@ public class RecommendServiceImpl implements RecommendService {
 
             log.debug("[推荐引擎] 算法效果对比: ct={}, cv={}", ctList, cvList);
         } catch (Exception e) {
-            log.warn("[推荐引擎] 算法对比查询异常: {}", e.getMessage());
+            log.warn("[推荐引擎] 算法对比查询异常", e);
         }
         return result;
     }
@@ -661,7 +691,7 @@ public class RecommendServiceImpl implements RecommendService {
 
             log.debug("[推荐引擎] 浏览趋势: dates size={}, browse={}, cart={}", dates.size(), browseCount, cartCount);
         } catch (Exception e) {
-            log.warn("[推荐引擎] 浏览趋势查询异常: {}", e.getMessage());
+            log.warn("[推荐引擎] 浏览趋势查询异常", e);
             // 异常时返回空日期+0值
             for (int i = days - 1; i >= 0; i--) {
                 java.time.LocalDate d = java.time.LocalDate.now().minusDays(i);
@@ -684,28 +714,28 @@ public class RecommendServiceImpl implements RecommendService {
      */
     private List<Map<String, Object>> hybridRecommend(Long userId, Long tenantId, int limit) {
         // 并发执行三种推荐算法
-        Future<List<Map<String, Object>>> cfFuture = ASYNC_EXECUTOR.submit(
+        Future<List<Map<String, Object>>> cfFuture = asyncExecutor.submit(
                 () -> collaborativeFiltering(userId, limit * 2));
-        Future<List<Map<String, Object>>> contentFuture = ASYNC_EXECUTOR.submit(
+        Future<List<Map<String, Object>>> contentFuture = asyncExecutor.submit(
                 () -> contentBasedRecommend(userId, limit * 2));
-        Future<List<Map<String, Object>>> hotFuture = ASYNC_EXECUTOR.submit(
+        Future<List<Map<String, Object>>> hotFuture = asyncExecutor.submit(
                 () -> hotRankRecommend(tenantId, limit));
 
         try {
-            List<Map<String, Object>> cfResult = cfFuture.get(3, TimeUnit.SECONDS);
-            List<Map<String, Object>> contentResult = contentFuture.get(3, TimeUnit.SECONDS);
-            List<Map<String, Object>> hotResult = hotFuture.get(3, TimeUnit.SECONDS);
+            List<Map<String, Object>> cfResult = cfFuture.get(HYBRID_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            List<Map<String, Object>> contentResult = contentFuture.get(HYBRID_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            List<Map<String, Object>> hotResult = hotFuture.get(HYBRID_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
             // 加权融合
             Map<Long, Double> fusionScore = new HashMap<>();
             Map<Long, Map<String, Object>> dishInfoMap = new LinkedHashMap<>();
 
             // CF推荐 权重0.5
-            mergeRecommendResult(cfResult, fusionScore, dishInfoMap, 0.5, "CF");
+            mergeRecommendResult(cfResult, fusionScore, dishInfoMap, WEIGHT_CF, "CF");
             // 内容推荐 权重0.3
-            mergeRecommendResult(contentResult, fusionScore, dishInfoMap, 0.3, "Content");
+            mergeRecommendResult(contentResult, fusionScore, dishInfoMap, WEIGHT_CONTENT, "Content");
             // 热门排行 权重0.2 + 多样性因子
-            mergeRecommendResult(hotResult, fusionScore, dishInfoMap, 0.2 + DIVERSITY_FACTOR, "Hot");
+            mergeRecommendResult(hotResult, fusionScore, dishInfoMap, WEIGHT_HOT + DIVERSITY_FACTOR, "Hot");
 
             // 按融合分数排序
             return fusionScore.entrySet().stream()
@@ -722,7 +752,7 @@ public class RecommendServiceImpl implements RecommendService {
                     .collect(Collectors.toList());
 
         } catch (Exception e) {
-            log.warn("[推荐引擎] 混合推荐异常，回退热门排行: {}", e.getMessage());
+            log.warn("[推荐引擎] 混合推荐异常，回退热门排行", e);
             return hotRankRecommend(tenantId, limit);
         }
     }
@@ -762,7 +792,7 @@ public class RecommendServiceImpl implements RecommendService {
         if (dish.getCategoryId() != null) {
             Category category = categoryService.getById(dish.getCategoryId());
             if (category != null && categoryPrefs.contains(category.getName())) {
-                score += 0.5;
+                score += SCORE_CATEGORY_MATCH;
             }
         }
 
@@ -771,7 +801,7 @@ public class RecommendServiceImpl implements RecommendService {
             String text = dish.getName() + " " + dish.getDescription();
             for (String taste : tastePrefs) {
                 if (text.contains(taste)) {
-                    score += 0.3;
+                    score += SCORE_TASTE_MATCH;
                 }
             }
         }
@@ -781,12 +811,12 @@ public class RecommendServiceImpl implements RecommendService {
             if (tag.getTagType() == UserPreferenceTag.TAG_TYPE_PRICE) {
                 boolean priceMatch = isPriceInRange(dish.getPrice(), tag.getTagName());
                 if (priceMatch) {
-                    score += 0.2 * tag.getTagValue().doubleValue();
+                    score += SCORE_PRICE_MATCH * tag.getTagValue().doubleValue();
                 }
             }
         }
 
-        return Math.min(score, 1.0);
+        return Math.min(score, SCORE_MAX_TOTAL);
     }
 
     /**
@@ -796,10 +826,10 @@ public class RecommendServiceImpl implements RecommendService {
         if (price == null || rangeTag == null) return false;
         double p = price.doubleValue();
         switch (rangeTag) {
-            case "经济型": return p < 20;
-            case "实惠型": return p >= 20 && p < 40;
-            case "中档": return p >= 40 && p < 80;
-            case "高端": return p >= 80;
+            case "经济型": return p < PRICE_ECONOMY_MAX;
+            case "实惠型": return p >= PRICE_ECONOMY_MAX && p < PRICE_AFFORDABLE_MAX;
+            case "中档": return p >= PRICE_AFFORDABLE_MAX && p < PRICE_MID_RANGE_MAX;
+            case "高端": return p >= PRICE_MID_RANGE_MAX;
             default: return false;
         }
     }
@@ -843,7 +873,7 @@ public class RecommendServiceImpl implements RecommendService {
 
         // 返回相似度最高的用户
         return userSimilarity.entrySet().stream()
-                .filter(e -> e.getValue() >= 3) // 至少3个共同菜品
+                .filter(e -> e.getValue() >= MIN_SHARED_DISHES) // 至少3个共同菜品
                 .sorted(Map.Entry.<Long, Integer>comparingByValue().reversed())
                 .limit(minUsers * 2)
                 .map(Map.Entry::getKey)
@@ -883,8 +913,11 @@ public class RecommendServiceImpl implements RecommendService {
 
     /**
      * 保存推荐结果到缓存
+     * <p>
+     * 注意：此方法由异步线程池（asyncExecutor）调用，且内部已捕获全部异常做降级处理，
+     * 因此 {@code @Transactional} 在此不适用——事务注解对异步线程不生效，且吞异常会阻止回滚。
+     * 缓存写入属尽力而为（best-effort）操作：失败仅记日志，下次请求会重新计算并覆盖，无需事务保护。
      */
-    @Transactional
     void saveToCache(Long userId, Integer type, List<Map<String, Object>> result, String algorithm) {
         try {
             // 删除旧缓存
@@ -900,7 +933,7 @@ public class RecommendServiceImpl implements RecommendService {
             RecommendationCache cache = new RecommendationCache();
             cache.setUserId(userId);
             cache.setRecommendType(type);
-            cache.setAlgorithm(algorithm);
+            cache.setAlgoName(algorithm);
             cache.setScore(BigDecimal.valueOf(score));
             cache.setExpireTime(LocalDateTime.now().plusHours(CACHE_EXPIRE_HOURS));
 
@@ -913,21 +946,22 @@ public class RecommendServiceImpl implements RecommendService {
 
             cacheMapper.insert(cache);
         } catch (Exception e) {
-            log.warn("[推荐引擎] 缓存保存失败: {}", e.getMessage());
+            log.warn("[推荐引擎] 缓存保存失败", e);
         }
     }
 
     /**
      * 计算推荐置信度
+     * 置信度作为缓存的 score 字段，用于多算法结果比较
      */
     private double computeConfidence(List<Map<String, Object>> result, String algorithm) {
-        if (result == null || result.isEmpty()) return 0.0;
+        if (result == null || result.isEmpty()) return CONFIDENCE_EMPTY;
         switch (algorithm) {
-            case RecommendationCache.ALGO_HYBRID: return 0.85;
-            case RecommendationCache.ALGO_CF: return 0.70;
-            case RecommendationCache.ALGO_CONTENT: return 0.65;
-            case RecommendationCache.ALGO_HOT: return 0.40;
-            default: return 0.50;
+            case RecommendationCache.ALGO_HYBRID: return CONFIDENCE_HYBRID;
+            case RecommendationCache.ALGO_CF: return CONFIDENCE_CF;
+            case RecommendationCache.ALGO_CONTENT: return CONFIDENCE_CONTENT;
+            case RecommendationCache.ALGO_HOT: return CONFIDENCE_HOT;
+            default: return CONFIDENCE_DEFAULT;
         }
     }
 
@@ -938,7 +972,7 @@ public class RecommendServiceImpl implements RecommendService {
         try {
             return objectMapper.readValue(json, new TypeReference<List<Long>>() {});
         } catch (Exception e) {
-            log.warn("[推荐引擎] JSON解析失败: {}", e.getMessage());
+            log.warn("[推荐引擎] JSON解析失败", e);
             return Collections.emptyList();
         }
     }
@@ -1023,7 +1057,6 @@ public class RecommendServiceImpl implements RecommendService {
                 .collect(Collectors.toList());
     }
 }
-
 
 
 

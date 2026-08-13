@@ -1,6 +1,11 @@
 package com.reggie.module.recommend.model;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -53,7 +58,7 @@ public class RecommendationCache implements Serializable {
     private String dishIds;
 
     /** 算法名称 */
-    private String algorithm;
+    private String algoName;
 
     /** 推荐置信度 */
     private BigDecimal score;

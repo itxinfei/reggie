@@ -46,8 +46,7 @@ public class CashierController {
     @GetMapping("/record/list")
     @Operation(summary = "获取收银记录列表")
     public R<List<CashierRecord>> getCashierRecordList(
-            @Parameter(description = "P a y T y p e")
-            @Parameter(description = "支付类型") @RequestParam(required = false) Integer payType,
+                        @Parameter(description = "支付类型") @RequestParam(required = false) Integer payType,
             @Parameter(description = "开始日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
             @Parameter(description = "结束日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -57,7 +56,7 @@ public class CashierController {
 
     @GetMapping("/record/order/{orderId}")
     @Operation(summary = "根据订单ID获取收银记录")
-    @Parameter(description = "O r d e r I d")
+    @Parameter(description = "OrderId")
     public R<CashierRecord> getCashierRecordByOrderId(@PathVariable Long orderId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         CashierRecord record = cashierService.getCashierRecordByOrderId(orderId, tenantId);
@@ -78,8 +77,7 @@ public class CashierController {
     @PostMapping("/cash-payment")
     @Operation(summary = "现金收银")
     public R<CashierRecord> cashPayment(
-            @Parameter(description = "O r d e r I d")
-            @Parameter(description = "订单ID") @RequestParam Long orderId,
+                        @Parameter(description = "订单ID") @RequestParam Long orderId,
             @Parameter(description = "订单号") @RequestParam String orderNumber,
             @Parameter(description = "收银金额") @RequestParam BigDecimal amount,
             @Parameter(description = "实收金额") @RequestParam BigDecimal actualAmount,
@@ -110,8 +108,7 @@ public class CashierController {
     @GetMapping("/settlement/list")
     @Operation(summary = "获取日结列表")
     public R<List<DailySettlement>> getDailySettlementList(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "开始日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "开始日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "结束日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<DailySettlement> list = cashierService.getDailySettlementList(startDate, endDate, tenantId);
@@ -120,7 +117,7 @@ public class CashierController {
 
     @GetMapping("/settlement/date/{date}")
     @Operation(summary = "根据日期获取日结")
-    @Parameter(description = "D a t e")
+    @Parameter(description = "Date")
     public R<DailySettlement> getDailySettlementByDate(@PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
         Long tenantId = BaseContext.getCurrentTenantId();
         DailySettlement settlement = cashierService.getDailySettlementByDate(date, tenantId);
@@ -130,8 +127,7 @@ public class CashierController {
     @PostMapping("/settlement/execute")
     @Operation(summary = "执行日结")
     public R<DailySettlement> executeDailySettlement(
-            @Parameter(description = "S e t t l e m e n t D a t e")
-            @Parameter(description = "结算日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate settlementDate) {
+                        @Parameter(description = "结算日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate settlementDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long userId = BaseContext.getCurrentId();
 
@@ -147,8 +143,7 @@ public class CashierController {
     @PostMapping("/settlement/cancel")
     @Operation(summary = "取消日结")
     public R<String> cancelDailySettlement(
-            @Parameter(description = "S e t t l e m e n t D a t e")
-            @Parameter(description = "结算日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate settlementDate) {
+                        @Parameter(description = "结算日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate settlementDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
 
         try {
@@ -173,8 +168,7 @@ public class CashierController {
     @GetMapping("/statistics")
     @Operation(summary = "获取收银统计")
     public R<Map<String, Object>> getCashierStatistics(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
             @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = cashierService.getCashierStatistics(startDate, endDate, tenantId);
@@ -184,8 +178,7 @@ public class CashierController {
     @GetMapping("/statistics/payment-type")
     @Operation(summary = "获取支付方式统计")
     public R<Map<String, Object>> getPaymentTypeStatistics(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
             @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = cashierService.getPaymentTypeStatistics(startDate, endDate, tenantId);
@@ -195,8 +188,7 @@ public class CashierController {
     @GetMapping("/trend")
     @Operation(summary = "获取收银趋势")
     public R<Map<String, Object>> getCashierTrend(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
             @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> trend = cashierService.getCashierTrend(startDate, endDate, tenantId);
@@ -206,8 +198,7 @@ public class CashierController {
     @GetMapping("/settlement/summary")
     @Operation(summary = "获取日结汇总")
     public R<Map<String, Object>> getDailySettlementSummary(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> summary = cashierService.getDailySettlementSummary(startDate, endDate, tenantId);

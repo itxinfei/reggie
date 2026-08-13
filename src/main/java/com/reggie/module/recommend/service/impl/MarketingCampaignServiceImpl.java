@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.user.model.User;
 import com.reggie.module.user.mapper.UserMapper;
 import com.reggie.module.member.mapper.CouponTemplateMapper;
@@ -23,7 +24,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -34,12 +39,6 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * MarketingCampaign service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignMapper, MarketingCampaign>
         implements MarketingCampaignService {
@@ -82,7 +81,8 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
 
         // 将Map结果转为MarketingCampaign列表，手动填充pushCount到临时Map后在前端处理
         // 这里将push_count通过Map透传，前端可以直接读取
-        Page<MarketingCampaign> result = new Page<>(page, pageSize, total);
+        Page<MarketingCampaign> result = PageUtils.of(page, pageSize);
+        result.setTotal(total);
         List<MarketingCampaign> records = new ArrayList<>();
         for (Map<String, Object> row : rows) {
             MarketingCampaign mc = new MarketingCampaign();
@@ -244,7 +244,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
 
     @Override
     public Page<Map<String, Object>> getMessages(Long userId, int page, int pageSize) {
-        if (userId == null) return new Page<>();
+        if (userId == null) return PageUtils.of(PageUtils.DEFAULT_PAGE, PageUtils.DEFAULT_PAGE_SIZE);
 
         LambdaQueryWrapper<MarketingMessage> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MarketingMessage::getUserId, userId)
@@ -252,9 +252,10 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
                        MarketingMessage.STATUS_READ, MarketingMessage.STATUS_USED)
                .orderByDesc(MarketingMessage::getCreateTime);
 
-        Page<MarketingMessage> msgPage = messageMapper.selectPage(new Page<>(page, pageSize), wrapper);
+        Page<MarketingMessage> msgPage = messageMapper.selectPage(PageUtils.of(page, pageSize), wrapper);
 
-        Page<Map<String, Object>> resultPage = new Page<>(page, pageSize, msgPage.getTotal());
+        Page<Map<String, Object>> resultPage = PageUtils.of(page, pageSize);
+        resultPage.setTotal(msgPage.getTotal());
         resultPage.setRecords(msgPage.getRecords().stream().map(m -> {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("id", m.getId());
@@ -311,7 +312,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
 
                 dispatched++;
             } catch (Exception e) {
-                log.warn("[自动发券] 活动{}发放失败: {}", campaign.getId(), e.getMessage());
+                log.warn("[自动发券] 活动{}发放失败", campaign.getId(), e);
             }
         }
 
@@ -395,7 +396,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
                 messageMapper.insert(message);
                 pushed++;
             } catch (Exception e) {
-                log.warn("[批量推送] 用户{}推送失败: {}", user.getId(), e.getMessage());
+                log.warn("[批量推送] 用户{}推送失败", user.getId(), e);
             }
         }
 
@@ -499,7 +500,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
 
             log.info("[推送预览] 活动{}匹配用户: preview={}, estimate={}", campaignId, preview.size(), estimate);
         } catch (Exception e) {
-            log.warn("[推送预览] 查询异常: {}", e.getMessage());
+            log.warn("[推送预览] 查询异常", e);
             result.put("preview", preview);
             result.put("estimate", 0);
         }

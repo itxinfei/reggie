@@ -384,7 +384,7 @@
         formatDiningType: function(val) {
           if (!val) return '-'
           var map = { TAKEOUT: '外卖配送', EAT_IN: '堂食扫码', QUEUE: '排队取餐', RESERVATION: '预订' }
-          return map[val] || val
+          return map[val] || '未知方式'
         },
         // 订单详情表格：表头样式（背景/文字走令牌，与全局表头规范一致）
         tableHeaderStyle: function() {

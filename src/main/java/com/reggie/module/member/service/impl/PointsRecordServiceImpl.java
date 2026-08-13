@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.member.mapper.PointsRecordMapper;
 import com.reggie.module.member.model.PointsRecord;
 import com.reggie.module.member.service.PointsRecordService;
@@ -25,7 +26,7 @@ public class PointsRecordServiceImpl extends ServiceImpl<PointsRecordMapper, Poi
 
     @Override
     public Page<PointsRecord> listByMember(Long memberId, int page, int pageSize) {
-        Page<PointsRecord> pageRequest = new Page<>(page, pageSize);
+        Page<PointsRecord> pageRequest = PageUtils.of(page, pageSize);
         return this.page(pageRequest,
                 new LambdaQueryWrapper<PointsRecord>()
                         .eq(PointsRecord::getMemberId, memberId)

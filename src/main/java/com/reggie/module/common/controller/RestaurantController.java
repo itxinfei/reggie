@@ -50,7 +50,7 @@ public class RestaurantController {
                 }
             }
         } catch (Exception e) {
-            log.warn("读取营业时间失败，使用默认值: {}", e.getMessage());
+            log.warn("读取营业时间失败，使用默认值", e);
         }
 
         Map<String, Object> info = new HashMap<>();

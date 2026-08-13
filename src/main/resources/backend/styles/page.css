@@ -267,17 +267,7 @@
   border-right: solid 1px var(--el-border-light);
 }
 
-.dashboard-container .container .tableLab .el-button--text.delBut {
-  color: var(--color-danger);
-}
-
-.dashboard-container .container .tableLab .el-button--text.blueBug {
-  color: var(--legacy-419eff);
-}
-
-.dashboard-container .container .tableLab .el-button--text.non::after {
-  display: none;
-}
+/* blueBug/delBut 旧操作按钮类已无页面引用，统一走 .btn-view/.btn-delete（components.css） */
 
 .el-table-column--selection .cell {
   padding: 0 !important;
@@ -457,26 +447,28 @@
   width: 100%;
 }
 
-/* 统一表格视觉样式 */
-.tableBox .el-table {
-  font-size: 13px;
+/* 统一表格视觉样式（.tableBox 与 .el-table 是同一元素，须用复合选择器；
+   样式与 components.css 的 crud 表格规范对齐，保证手写 el-table 与 crud-table 视觉一致） */
+.tableBox.el-table {
+  font-size: var(--font-size-base);
 }
 
-.tableBox .el-table th {
-  background-color: var(--el-bg-subtle) !important;
-  color: var(--gray-333) !important;
-  font-weight: 600 !important;
-  font-size: 14px !important;
+.tableBox.el-table th {
+  background-color: var(--bg-subtle) !important;
+  color: var(--text-secondary) !important;
+  font-weight: var(--font-weight-semibold) !important;
+  font-size: var(--font-size-sm) !important;
 }
 
 /* 统一表格内容垂直居中 */
-.tableBox .el-table td {
+.tableBox.el-table td {
   vertical-align: middle;
+  font-size: var(--font-size-base);
 }
 
-/* 增强斑马纹对比度 */
-.tableBox .el-table--striped .el-table__body tr.el-table__row--striped td {
-  background-color: var(--el-bg-base) !important;
+/* 增强斑马纹对比度（与 crud 表格一致） */
+.tableBox.el-table--striped .el-table__body tr.el-table__row--striped td {
+  background-color: var(--bg-subtle) !important;
 }
 
 /* 表格操作按钮间距 */
@@ -484,46 +476,18 @@
   margin: 0 5px;
 }
 
-/* 表格操作按钮样式优化 */
+/* 表格操作按钮样式（对齐 components.css 规范：4px 圆角 + 紧凑内边距） */
 .tableBox .el-button--text {
-  padding: 4px 10px !important;
-  border-radius: 3px;
-  transition: all 0.3s ease;
-}
-
-/* 蓝色操作按钮 */
-.tableBox .el-button--text.blueBug,
-.btn-view {
-  color: var(--color-brand-500);
-  background-color: transparent;
-}
-
-.tableBox .el-button--text.blueBug:hover,
-.btn-view:hover {
-  background-color: var(--el-color-primary-lighter);
-  color: var(--color-brand-500);
-}
-
-/* 红色操作按钮 */
-.tableBox .el-button--text.delBut {
-  color: var(--color-danger);
-  background-color: transparent;
-}
-
-.tableBox .el-button--text.delBut:hover {
-  background-color: var(--color-danger-light);
-  color: var(--color-danger);
+  padding: 3px 8px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 /* 通用操作按钮悬停效果 */
 .tableBox .el-button--text:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* 禁用分隔线 */
-.tableBox .el-button--text.non::after {
-  display: none;
 }
 
 /* 操作列 nowrap 已迁移至 components.css .crud-actions-col .cell（精确作用域，避免影响所有居中列） */

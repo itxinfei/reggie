@@ -1,6 +1,5 @@
 package com.reggie.module.notification.service;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -12,7 +11,6 @@ import java.util.Map;
  * @author reggie
  * @since 2026-08-11
  */
-@Slf4j
 @Service
 public class VoiceBroadcastService {
 

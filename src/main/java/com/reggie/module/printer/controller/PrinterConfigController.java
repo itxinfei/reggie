@@ -71,7 +71,7 @@ public class PrinterConfigController {
     public R<Page<PrinterConfig>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, String name,
             @RequestParam(required = false) String brand,
             @RequestParam(required = false) String type,
-            @Parameter(description = "S t a t u s")
+            @Parameter(description = "Status")
             @RequestParam(required = false) Integer status) {
         Page<PrinterConfig> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<PrinterConfig> queryWrapper = new LambdaQueryWrapper<>();

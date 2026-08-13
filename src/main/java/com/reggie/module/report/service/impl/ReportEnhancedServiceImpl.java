@@ -10,7 +10,6 @@ import com.reggie.module.report.service.ReportEnhancedService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.dish.service.DishService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,19 +21,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.IsoFields;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import com.reggie.module.category.model.Category;
 import java.util.stream.Collectors;
 
 /**
  * Enhanced Report Service Implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
-@Slf4j
-/**
- * ReportEnhanced service implementation
  *
  * @author reggie
  * @since 2026-08-11

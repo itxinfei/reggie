@@ -50,9 +50,9 @@
 #order .status-tabs {
   display: flex;
   height: 44rem;
-  background: #ffffff;
+  background: var(--bg-card);
   padding: 0 12rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--bg-hover);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -103,7 +103,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2rem dashed #efefef;
+  border-bottom: 2rem dashed var(--bg-hover);
 }
 
 #order .divBody .item:first-child .timeStatus {
@@ -111,7 +111,7 @@
 }
 
 #order .divBody .item + .item .timeStatus {
-  border-top: 1px solid #efefef;
+  border-top: 1px solid var(--bg-hover);
 }
 
 #order .divBody .item .timeStatus span:first-child {
@@ -150,7 +150,7 @@
 }
 
 #order .divBody .item .result .price {
-  color: #20232a;
+  color: var(--color-price);
   font-weight: 600;
   font-family: var(--font-family-number);
   font-size: var(--font-size-lg);
@@ -166,7 +166,7 @@
 #order .divBody .btn .btnAgain {
   width: 124rem;
   height: 36rem;
-  border: 1px solid #e5e4e4;
+  border: 1px solid var(--color-text-disabled);
   border-radius: 19rem;
   font-size: var(--font-size-md);
   font-family: var(--font-family-body);
@@ -199,7 +199,7 @@
   position: relative;
   cursor: pointer;
   transition: all var(--transition-normal);
-  background: #fff;
+  background: var(--bg-card);
 }
 
 #order .divBody .btn .btnCancel:active {
@@ -222,7 +222,7 @@
   position: relative;
   cursor: pointer;
   transition: all var(--transition-normal);
-  background: #fff;
+  background: var(--bg-card);
 }
 
 #order .divBody .btn .btnEval:active {
@@ -234,7 +234,7 @@
 #order .divBody .btn .btnShare {
   width: 124rem;
   height: 36rem;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--color-text-disabled);
   border-radius: 19rem;
   font-size: var(--font-size-md);
   font-family: var(--font-family-body);
@@ -245,7 +245,7 @@
   position: relative;
   cursor: pointer;
   transition: all var(--transition-normal);
-  background: #fff;
+  background: var(--bg-card);
 }
 
 #order .divBody .btn .btnShare:active {

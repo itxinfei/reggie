@@ -64,11 +64,11 @@
 
 .eval-stars .star {
   font-size: 14px;
-  color: #e4e7ed;
+  color: var(--color-text-disabled);
 }
 
 .eval-stars .star.filled {
-  color: #f7ba2a;
+  color: var(--color-star);
 }
 
 .eval-date {
@@ -86,17 +86,17 @@
 }
 
 .status-tag.pending {
-  background: #fdf6ec;
-  color: #e6a23c;
+  background: rgba(255, 179, 0, 0.1);
+  color: var(--color-warning);
 }
 
 .status-tag.approved {
-  background: #f0f9eb;
-  color: #67c23a;
+  background: rgba(7, 193, 96, 0.1);
+  color: var(--color-success);
 }
 
 .status-tag.rejected {
-  background: #fef0f0;
+  background: rgba(233, 78, 60, 0.1);
   color: var(--color-danger);
 }
 
@@ -121,7 +121,7 @@
   border-radius: 6px;
   object-fit: cover;
   cursor: pointer;
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--bg-hover);
 }
 
 .reply-section {
@@ -186,10 +186,10 @@
   transition: color 0.15s, transform 0.15s;
 }
 .star-rating .star-item.active {
-  color: #FF9900;
+  color: var(--color-star);
 }
 .star-rating .star-item:hover {
-  color: #F7BA2A;
+  color: var(--color-star);
   transform: scale(1.15);
 }
 
@@ -209,7 +209,7 @@
 /* 修改点：主要按钮（空状态"去下单"） */
 .btn-primary {
   background: var(--color-primary-gradient);
-  color: var(--color-text-white);
+  color: var(--color-text-primary);
   border: none;
   border-radius: 20px;
   padding: 8px 24px;
@@ -301,7 +301,7 @@
 }
 .submit-modal-footer .btn-submit {
   background: var(--color-primary-gradient);
-  color: var(--color-text-white);
+  color: var(--color-text-primary);
   border: none;
 }
 .submit-modal-footer .btn-submit:disabled {
@@ -313,7 +313,7 @@
 .submit-order-info {
   margin-bottom: 16px;
   padding: 10px;
-  background: #f5f7fa;
+  background: var(--bg-input);
   border-radius: 6px;
 }
 .submit-order-id {
@@ -336,7 +336,7 @@
 }
 .eval-textarea {
   width: 100%;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--bg-hover);
   border-radius: 8px;
   padding: 10px;
   font-size: 14px;
@@ -348,7 +348,7 @@
 }
 .eval-textarea:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 194, 0, 0.12);
 }
 .eval-word-count {
   display: block;
@@ -362,8 +362,8 @@
 .write-eval-bar {
   margin: 10px 12px;
   padding: 12px;
-  background: #fffbf0;
-  border: 1px solid #ffe082;
+  background: var(--color-primary-light);
+  border: 1px solid rgba(255, 194, 0, 0.3);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -375,7 +375,7 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #ff9800;
+  color: var(--color-warning);
   line-height: 20px;
 }
 .write-eval-bar .write-eval-info i {

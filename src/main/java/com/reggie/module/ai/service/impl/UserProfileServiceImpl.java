@@ -23,7 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -34,12 +39,6 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * UserProfile service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserProfile> implements UserProfileService {

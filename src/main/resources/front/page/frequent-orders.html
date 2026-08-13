@@ -9,6 +9,7 @@
     <script src="./../js/base.js"></script>
     <link rel="stylesheet" href="../styles/index.css" />
     <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/remixicon-fallback.css" />
     <style>
         .frequent-container {
             height: calc(100vh - var(--header-height));
@@ -20,7 +21,7 @@
         .quick-header {
             margin: 10rem 12rem;
             padding: 14rem var(--spacing-md);
-            background: linear-gradient(135deg, #ffc200 0%, #ff9a00 100%);
+            background: var(--color-primary-gradient);
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-card);
             display: flex;
@@ -31,7 +32,7 @@
             width: 44rem;
             height: 44rem;
             border-radius: 50%;
-            background: rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.4);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -39,7 +40,7 @@
         }
         .quick-header .qi-icon i {
             font-size: 22rem;
-            color: #fff;
+            color: var(--color-text-primary);
         }
         .quick-header .qi-text {
             flex: 1;
@@ -47,12 +48,12 @@
         .quick-header .qi-title {
             font-size: var(--font-size-lg);
             font-weight: 600;
-            color: #fff;
+            color: var(--color-text-primary);
             line-height: 24rem;
         }
         .quick-header .qi-desc {
             font-size: var(--font-size-sm);
-            color: rgba(255,255,255,0.85);
+            color: rgba(51,51,51,0.75);
             line-height: 20rem;
             margin-top: 2rem;
         }
@@ -82,7 +83,7 @@
         }
         .category-tab.active {
             background: var(--color-primary);
-            color: #fff;
+            color: var(--color-text-primary);
             font-weight: 600;
         }
 
@@ -104,13 +105,13 @@
             border-radius: var(--radius-sm);
             object-fit: cover;
             flex-shrink: 0;
-            background: #f5f5f5;
+            background: var(--bg-hover);
         }
         .dish-card .dish-img-placeholder {
             width: 90rem;
             height: 90rem;
             border-radius: var(--radius-sm);
-            background: #f5f5f5;
+            background: var(--bg-hover);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -118,7 +119,7 @@
         }
         .dish-card .dish-img-placeholder i {
             font-size: 32rem;
-            color: #ddd;
+            color: var(--color-text-disabled);
         }
         .dish-card .dish-info {
             flex: 1;
@@ -143,7 +144,7 @@
         }
         .dish-card .dish-meta .freq-badge {
             display: inline-block;
-            background: #fff3e0;
+            background: rgba(255, 194, 0, 0.12);
             color: var(--color-primary-dark);
             padding: 1rem 6rem;
             border-radius: 3rem;
@@ -170,7 +171,7 @@
         .dish-card .reorder-btn {
             padding: 6rem 16rem;
             background: var(--color-primary-gradient);
-            color: #fff;
+            color: var(--color-text-primary);
             border: none;
             border-radius: 16rem;
             font-size: var(--font-size-sm);
@@ -183,7 +184,7 @@
             opacity: 0.8;
         }
         .dish-card .reorder-btn:disabled {
-            background: #ccc;
+            background: var(--color-text-disabled);
             cursor: not-allowed;
         }
 
@@ -203,7 +204,7 @@
         }
         .empty-state i {
             font-size: 60rem;
-            color: #ddd;
+            color: var(--color-text-disabled);
         }
         .empty-state p {
             margin-top: 12rem;

@@ -1,6 +1,7 @@
 package com.reggie.module.user.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.reggie.module.user.model.User;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -20,6 +21,22 @@ import java.util.Map;
  */
 @Mapper
 public interface UserMapper extends BaseMapper<User>{
+
+    /**
+     * 按手机号查询用户（跨租户，供匿名登录使用）
+     * <p>
+     * 用户登录（/user/login）是公开端点，LoginCheckFilter 放行时不会设置租户上下文，
+     * 若走租户插件会注入 {@code tenant_id = -1} 导致永远查不到用户、登录失败。
+     * 登录前尚不知用户归属哪个租户，必须跳过租户过滤、按手机号全局匹配，
+     * 登录成功后租户上下文由用户自身 tenantId 恢复。
+     * </p>
+     *
+     * @param phone 手机号
+     * @return 用户信息，不存在则返回 null
+     */
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT * FROM `user` WHERE phone = #{phone} ORDER BY id ASC LIMIT 1")
+    User selectByPhoneIgnoreTenant(@Param("phone") String phone);
 
     /**
      * 按门店(tenant_id)聚合指定时间区间内的新增用户数（总部控制台用）

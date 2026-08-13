@@ -8,7 +8,6 @@ import com.reggie.module.dish.service.DishSpecService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +29,6 @@ import java.util.Map;
  * @author reggie
  * @since 2026-08-11
  */
-@Slf4j
 @RestController
 @RequestMapping("/dish/spec")
 @Tag(name = "菜品规格管理")
@@ -88,8 +86,7 @@ public class DishSpecController {
     @GetMapping("/option/list")
     @Operation(summary = "获取规格选项列表")
     public R<List<DishSpecOption>> getSpecOptions(
-            @Parameter(description = "G r o u p I d")
-            @Parameter(description = "规格组ID") @RequestParam Long groupId) {
+                        @Parameter(description = "规格组ID") @RequestParam Long groupId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<DishSpecOption> options = dishSpecService.getSpecOptions(groupId, tenantId);
         return R.success(options);
@@ -136,7 +133,7 @@ public class DishSpecController {
 
     @GetMapping("/dish/{dishId}")
     @Operation(summary = "获取菜品规格组")
-    @Parameter(description = "D i s h I d")
+    @Parameter(description = "DishId")
     public R<List<Map<String, Object>>> getDishSpecGroups(@PathVariable Long dishId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> groups = dishSpecService.getDishSpecGroups(dishId, tenantId);
@@ -156,7 +153,7 @@ public class DishSpecController {
 
     @DeleteMapping("/dish/{dishId}")
     @Operation(summary = "删除菜品规格关联")
-    @Parameter(description = "D i s h I d")
+    @Parameter(description = "DishId")
     public R<String> deleteDishSpecRelations(@PathVariable Long dishId) {
         boolean success = dishSpecService.deleteDishSpecRelations(dishId);
         return success ? R.success("删除成功") : R.error("删除失败");
@@ -167,8 +164,7 @@ public class DishSpecController {
     @PostMapping("/price/calculate")
     @Operation(summary = "计算规格价格")
     public R<BigDecimal> calculateSpecPrice(
-            @Parameter(description = "D i s h I d")
-            @Parameter(description = "菜品ID") @RequestParam Long dishId,
+                        @Parameter(description = "菜品ID") @RequestParam Long dishId,
             @Parameter(description = "基础价格") @RequestParam BigDecimal basePrice,
             @Parameter(description = "规格选项ID列表") @RequestBody List<Long> optionIds) {
         BigDecimal price = dishSpecService.calculateSpecPrice(dishId, basePrice, optionIds);
@@ -177,7 +173,7 @@ public class DishSpecController {
 
     @GetMapping("/detail/{dishId}")
     @Operation(summary = "获取菜品规格详情")
-    @Parameter(description = "D i s h I d")
+    @Parameter(description = "DishId")
     public R<Map<String, Object>> getDishSpecDetail(@PathVariable Long dishId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> detail = dishSpecService.getDishSpecDetail(dishId, tenantId);

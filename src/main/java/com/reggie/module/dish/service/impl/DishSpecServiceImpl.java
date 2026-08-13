@@ -9,7 +9,6 @@ import com.reggie.module.dish.mapper.DishSpecGroupMapper;
 import com.reggie.module.dish.mapper.DishSpecOptionMapper;
 import com.reggie.module.dish.mapper.DishSpecRelationMapper;
 import com.reggie.module.dish.service.DishSpecService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,17 +22,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * 菜品规格服务实现
- *
- * @author reggie
- * @since 2026-08-11
- */
-@Slf4j
-/**
- * DishSpec service implementation
  *
  * @author reggie
  * @since 2026-08-11

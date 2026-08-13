@@ -376,7 +376,7 @@
         },
         statusLabel(status) {
           const map = { DRAFT: '草稿', ORDERED: '已下单', PARTIAL: '部分收货', RECEIVED: '已收货', CANCELLED: '已取消' }
-          return map[status] || status
+          return map[status] || '未知状态'
         },
         formatMoney(val) {
           if (val === null || val === undefined) return '0.00'

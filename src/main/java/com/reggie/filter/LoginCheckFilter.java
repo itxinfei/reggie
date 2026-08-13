@@ -109,6 +109,23 @@ public class LoginCheckFilter implements Filter{
             //3、如果不需要处理，则直接放行
             if (check) {
                 log.debug("本次请求{}不需要处理", requestURI);
+                // EXCLUDE_URLS 中的公开接口（如 C 端浏览、推荐、后台公共数据）虽不需登录，
+                // 但若当前会话已有登录态（employee/user + tenantId），仍恢复上下文，
+                // 保证数据按租户隔离；匿名请求无会话则跳过（由租户插件 fail-open 处理）。
+                HttpSession excludeSession = request.getSession(false);
+                if (excludeSession != null) {
+                    Long excludeTenantId = (Long) excludeSession.getAttribute("tenantId");
+                    if (excludeTenantId != null) {
+                        BaseContext.setCurrentTenantId(excludeTenantId);
+                        Object empId = excludeSession.getAttribute("employee");
+                        Object userId = excludeSession.getAttribute("user");
+                        if (empId != null) {
+                            BaseContext.setCurrentId((Long) empId);
+                        } else if (userId != null) {
+                            BaseContext.setCurrentId((Long) userId);
+                        }
+                    }
+                }
                 filterChain.doFilter(request, response);
                 return;
             }

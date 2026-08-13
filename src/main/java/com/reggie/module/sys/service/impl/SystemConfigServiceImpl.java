@@ -5,7 +5,6 @@ import com.reggie.common.BaseContext;
 import com.reggie.module.sys.entity.SystemConfig;
 import com.reggie.module.sys.mapper.SystemConfigMapper;
 import com.reggie.module.sys.service.SystemConfigService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -19,18 +18,10 @@ import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 系统配置服务实现
  * 优先取租户级配置，其次取全局配置（tenant_id IS NULL）
- */
-@Slf4j
-/**
- * SystemConfig service implementation
- *
- * @author reggie
- * @since 2026-08-11
  */
 @Service
 @Transactional(rollbackFor = Exception.class)

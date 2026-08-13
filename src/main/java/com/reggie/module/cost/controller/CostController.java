@@ -9,7 +9,6 @@ import com.reggie.module.cost.service.CostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,7 +33,6 @@ import java.util.Map;
  * @author reggie
  * @since 2026-08-10
  */
-@Slf4j
 @RestController
 @RequestMapping("/cost")
 @Tag(name = "成本核算管理")
@@ -55,7 +53,7 @@ public class CostController {
 
     @GetMapping("/dish/{dishId}")
     @Operation(summary = "根据菜品ID获取成本")
-    @Parameter(description = "D i s h I d")
+    @Parameter(description = "DishId")
     public R<DishCost> getDishCostByDishId(@PathVariable Long dishId) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         DishCost dishCost = costService.getDishCostByDishId(dishId, tenantId);
@@ -104,8 +102,7 @@ public class CostController {
     @GetMapping("/record/list")
     @Operation(summary = "获取成本记录列表")
     public R<List<CostRecord>> getCostRecordList(
-            @Parameter(description = "C o s t T y p e")
-            @Parameter(description = "成本类型") @RequestParam(required = false) Integer costType,
+                        @Parameter(description = "成本类型") @RequestParam(required = false) Integer costType,
             @Parameter(description = "开始日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
             @Parameter(description = "结束日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
@@ -136,8 +133,7 @@ public class CostController {
     @GetMapping("/labor/list")
     @Operation(summary = "获取人工成本列表")
     public R<List<LaborCost>> getLaborCostList(
-            @Parameter(description = "C o s t M o n t h")
-            @Parameter(description = "成本月份") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") LocalDate costMonth) {
+                        @Parameter(description = "成本月份") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") LocalDate costMonth) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         List<LaborCost> list = costService.getLaborCostList(costMonth, tenantId);
         return R.success(list);
@@ -185,8 +181,7 @@ public class CostController {
     @GetMapping("/other/list")
     @Operation(summary = "获取其他成本列表")
     public R<List<OtherCost>> getOtherCostList(
-            @Parameter(description = "C o s t T y p e")
-            @Parameter(description = "成本类型") @RequestParam(required = false) Integer costType,
+                        @Parameter(description = "成本类型") @RequestParam(required = false) Integer costType,
             @Parameter(description = "开始日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
             @Parameter(description = "结束日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
@@ -225,8 +220,7 @@ public class CostController {
     @GetMapping("/summary")
     @Operation(summary = "获取成本汇总统计")
     public R<Map<String, Object>> getCostSummary(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         Map<String, Object> summary = costService.getCostSummary(startDate, endDate, tenantId);
@@ -236,8 +230,7 @@ public class CostController {
     @GetMapping("/trend")
     @Operation(summary = "获取成本趋势分析")
     public R<Map<String, Object>> getCostTrend(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         Map<String, Object> trend = costService.getCostTrend(startDate, endDate, tenantId);
@@ -247,8 +240,7 @@ public class CostController {
     @GetMapping("/structure")
     @Operation(summary = "获取成本结构分析")
     public R<Map<String, Object>> getCostStructure(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         Map<String, Object> structure = costService.getCostStructure(startDate, endDate, tenantId);
@@ -258,8 +250,7 @@ public class CostController {
     @GetMapping("/dish/ranking")
     @Operation(summary = "获取菜品成本排行")
     public R<List<Map<String, Object>>> getDishCostRanking(
-            @Parameter(description = "L i m i t")
-            @Parameter(description = "排行数量") @RequestParam(defaultValue = "10") int limit) {
+                        @Parameter(description = "排行数量") @RequestParam(defaultValue = "10") int limit) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         List<Map<String, Object>> ranking = costService.getDishCostRanking(limit, tenantId);
         return R.success(ranking);
@@ -267,7 +258,7 @@ public class CostController {
 
     @GetMapping("/dish/profit-rate/{dishId}")
     @Operation(summary = "计算菜品毛利率")
-    @Parameter(description = "D i s h I d")
+    @Parameter(description = "DishId")
     public R<BigDecimal> calculateProfitRate(@PathVariable Long dishId) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         BigDecimal profitRate = costService.calculateProfitRate(dishId, tenantId);
@@ -277,8 +268,7 @@ public class CostController {
     @GetMapping("/alert")
     @Operation(summary = "获取成本预警列表")
     public R<List<Map<String, Object>>> getCostAlert(
-            @Parameter(description = "T h r e s h o l d")
-            @Parameter(description = "预警阈值") @RequestParam(defaultValue = "20") BigDecimal threshold) {
+                        @Parameter(description = "预警阈值") @RequestParam(defaultValue = "20") BigDecimal threshold) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         List<Map<String, Object>> alerts = costService.getCostAlert(threshold, tenantId);
         return R.success(alerts);

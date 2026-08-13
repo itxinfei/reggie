@@ -28,8 +28,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
-import java.util.*;
-import org.springframework.web.bind.annotation.RequestParam;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -70,8 +72,7 @@ public class NotificationController {
     @GetMapping("/template/page")
     @Operation(summary = "分页查询模板", description = "分页查询通知模板列表，支持按业务类型筛选")
     public R<Page<NotificationTemplate>> templatePage(
-            @Parameter(description = "P a g e")
-            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+                        @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "业务类型（可选）") @RequestParam(required = false) String bizType) {
         Page<NotificationTemplate> pageInfo = PageUtils.of(page, pageSize);
@@ -354,13 +355,13 @@ public class NotificationController {
     @GetMapping("/record/page")
     @Operation(summary = "分页查询发送记录", description = "分页查询通知发送记录")
     public R<Page<NotificationRecord>> recordPage(
-            @Parameter(description = "P a g e")
+            @Parameter(description = "Page")
             @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "P a g e S i z e")
+            @Parameter(description = "PageSize")
             @RequestParam(defaultValue = "10") int pageSize,
-            @Parameter(description = "B i z T y p e")
+            @Parameter(description = "BizType")
             @RequestParam(required = false) String bizType,
-            @Parameter(description = "S t a t u s")
+            @Parameter(description = "Status")
             @RequestParam(required = false) Integer status) {
         Page<NotificationRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<NotificationRecord> wrapper = new LambdaQueryWrapper<>();

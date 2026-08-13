@@ -125,18 +125,18 @@ body.scrollable-page {
 /* 标签颜色 — 与编辑页统一 */
 #address .divContent .divItem .divAddress .spanCompany {
   background: linear-gradient(135deg, #e8f4fd, #dceeff);
-  color: #2b7fc9;
+  color: var(--color-info);
 }
 #address .divContent .divItem .divAddress .spanHome {
   background: linear-gradient(135deg, #fff7e6, #ffecc8);
-  color: #c97d1a;
+  color: var(--color-primary-dark);
 }
 #address .divContent .divItem .divAddress .spanSchool {
   background: linear-gradient(135deg, #e6faf3, #c8f0e3);
-  color: #1a9e6f;
+  color: var(--color-success);
 }
 #address .divContent .divItem .divAddress .spanNone {
-  background: linear-gradient(135deg, #f5f5f5, #eeeeee);
+  background: linear-gradient(135deg, var(--bg-hover), #eeeeee);
   color: var(--color-text-disabled);
 }
 

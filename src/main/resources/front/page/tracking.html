@@ -8,6 +8,7 @@
     <script src="./../js/base.js"></script>
     <link rel="stylesheet" href="../styles/index.css" />
     <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/remixicon-fallback.css" />
     <style>
         .tracking-container {
             height: calc(100vh - var(--header-height));
@@ -39,7 +40,7 @@
         .order-info-card .dish-summary {
             margin-top: 10rem;
             padding-top: 10rem;
-            border-top: 1px solid #f0f0f0;
+            border-top: 1px solid var(--bg-hover);
             font-size: var(--font-size-md);
             color: var(--color-text-secondary);
             line-height: 22rem;
@@ -66,7 +67,7 @@
         }
         .status-card .status-icon i {
             font-size: 28rem;
-            color: #fff;
+            color: var(--color-text-primary);
         }
         .status-card .status-text {
             font-size: var(--font-size-lg);
@@ -115,7 +116,7 @@
             width: 12rem;
             height: 12rem;
             border-radius: 50%;
-            background: #e0e0e0;
+            background: var(--bg-hover);
             flex-shrink: 0;
             z-index: 1;
         }
@@ -126,7 +127,7 @@
         .timeline-line {
             width: 2rem;
             flex: 1;
-            background: #e0e0e0;
+            background: var(--bg-hover);
             margin-top: 4rem;
         }
         .timeline-item.done .timeline-line,
@@ -180,7 +181,7 @@
         }
         .rider-avatar i {
             font-size: 24rem;
-            color: #fff;
+            color: var(--color-text-primary);
         }
         .rider-info {
             flex: 1;
@@ -213,7 +214,7 @@
             transition: background var(--transition-fast);
         }
         .rider-action-btn:active {
-            background: #e8e8e8;
+            background: var(--bg-hover);
         }
         .rider-action-btn i {
             font-size: 18rem;
@@ -239,10 +240,10 @@
             border-radius: 4rem;
             font-size: var(--font-size-sm);
             font-weight: 600;
-            color: #fff;
+            color: var(--color-text-white);
         }
         .platform-tag.meituan {
-            background: #ffc300;
+            background: var(--color-primary);
         }
         .platform-tag.eleme {
             background: #0096ff;
@@ -269,7 +270,7 @@
         }
         .empty-state i {
             font-size: 60rem;
-            color: #ddd;
+            color: var(--color-text-disabled);
         }
         .empty-state p {
             margin-top: 12rem;

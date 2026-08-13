@@ -26,12 +26,6 @@ import java.util.concurrent.TimeUnit;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * Queue service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> implements QueueService {

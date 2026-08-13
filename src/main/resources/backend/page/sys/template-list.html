@@ -331,7 +331,7 @@
         },
         bizTypeName(type) {
           var map = { 'ORDER_NOTICE': '订单通知', 'PROMOTION': '营销推送', 'VERIFY_CODE': '验证码', 'SYSTEM': '系统通知', 'JOB_NOTICE': '工作通知' }
-          return map[type] || type
+          return map[type] || '未知类型'
         },
         bizTypeColor(type) {
           var map = { 'ORDER_NOTICE': 'var(--color-brand-500)', 'PROMOTION': 'var(--color-warning)', 'VERIFY_CODE': 'var(--color-success)', 'SYSTEM': 'var(--color-info)', 'JOB_NOTICE': 'var(--color-danger)' }

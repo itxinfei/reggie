@@ -72,7 +72,7 @@ public class CategoryController {
     @RequireEmployee
         @GetMapping("/page")
     @Operation(summary = "分类分页查询", description = "分页查询分类列表，支持按类型、名称筛选，按排序字段升序排列")
-    @Parameter(description = "P a g e")
+    @Parameter(description = "Page")
     public R<Page<Category>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                   @Parameter(description = "Type")
                                   @RequestParam(required = false) String type,

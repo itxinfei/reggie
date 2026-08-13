@@ -6,14 +6,24 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.PasswordUtils;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.auth.model.Employee;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.user.model.User;
 import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.order.mapper.OrderMapper;
 import com.reggie.module.user.mapper.UserMapper;
-import com.reggie.module.store.mapper.*;
-import com.reggie.module.store.model.*;
+import com.reggie.module.store.mapper.StoreConfigMapper;
+import com.reggie.module.store.mapper.StoreDailySummaryMapper;
+import com.reggie.module.store.mapper.StoreEmployeePermissionMapper;
+import com.reggie.module.store.mapper.StoreInfoMapper;
+import com.reggie.module.store.mapper.StoreSyncLogMapper;
+import com.reggie.module.store.model.StoreConfig;
+import com.reggie.module.store.model.StoreDailySummary;
+import com.reggie.module.store.model.StoreEmployeePermission;
+import com.reggie.module.store.model.StoreInfo;
+import com.reggie.module.store.model.StoreSearchDTO;
+import com.reggie.module.store.model.StoreSyncLog;
 import com.reggie.module.store.service.StoreService;
 import com.reggie.module.auth.service.EmployeeService;
 import com.reggie.module.order.service.OrderService;
@@ -28,7 +38,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 门店管理服务实现
@@ -39,12 +54,6 @@ import java.util.*;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * Store service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 public class StoreServiceImpl implements StoreService {
 
@@ -228,7 +237,7 @@ public class StoreServiceImpl implements StoreService {
     // 修改点：新增分页搜索方法
     @Override
     public Map<String, Object> searchStores(StoreSearchDTO dto) {
-        Page<Map<String, Object>> page = new Page<>(dto.getPage(), dto.getPageSize());
+        Page<Map<String, Object>> page = PageUtils.of(dto.getPage(), dto.getPageSize());
         // 防止 SQL 注入：sortOrder 仅允许 asc/desc
         String sortOrder = "desc";
         if (dto.getSortOrder() != null && "asc".equalsIgnoreCase(dto.getSortOrder())) {

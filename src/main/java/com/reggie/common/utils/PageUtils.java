@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
  * <p>
  * 用于统一收敛 Controller 分页接口的 pageSize 上限与默认值，避免：
  * 1. pageSize 被传入超大值（如 10000）拖垮数据库；
- * 2. page/pageSize 未传参或传 0 时 {@code new Page<>(page, pageSize)} 产生异常分页。
+ * 2. page/pageSize 未传参或传 0 时 {@code PageUtils.of(page, pageSize)} 产生异常分页。
  * </p>
  *
  * @author AI

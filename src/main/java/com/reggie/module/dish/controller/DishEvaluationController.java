@@ -30,7 +30,6 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.util.List;
 import java.util.Map;
-import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 菜品评价管理控制器
@@ -86,7 +85,7 @@ public class DishEvaluationController {
     public R<Page<DishEvaluation>> listByDishId(
             @PathVariable Long dishId,
             @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") Integer page,
-            @Parameter(description = "P a g e S i z e")
+            @Parameter(description = "PageSize")
             @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页条数不能小于1") @Max(value = 50, message = "每页最多50条") Integer pageSize) {
 
         log.info("查询菜品评价列表：dishId={}, page={}, pageSize={}", dishId, page, pageSize);
@@ -131,9 +130,9 @@ public class DishEvaluationController {
     @GetMapping("/user/my")
     @Operation(summary = "获取我的评价列表", description = "查询当前登录用户的历史评价，按时间倒序")
     public R<Page<DishEvaluation>> listMyEvaluations(
-            @Parameter(description = "P a g e")
+            @Parameter(description = "Page")
             @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") Integer page,
-            @Parameter(description = "P a g e S i z e")
+            @Parameter(description = "PageSize")
             @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页条数不能小于1") @Max(value = 50, message = "每页最多50条") Integer pageSize) {
 
         log.info("查询我的评价列表：userId={}, page={}, pageSize={}", BaseContext.getCurrentId(), page, pageSize);
@@ -249,9 +248,9 @@ public class DishEvaluationController {
     @Operation(summary = "获取待审核评价列表", description = "分页查询待审核的评价，需商家/管理员权限")
     @RequiresPermission("evaluation:view")
     public R<Page<DishEvaluation>> listPending(
-            @Parameter(description = "P a g e")
+            @Parameter(description = "Page")
             @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") Integer page,
-            @Parameter(description = "P a g e S i z e")
+            @Parameter(description = "PageSize")
             @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页条数不能小于1") @Max(value = 50, message = "每页最多50条") Integer pageSize) {
 
         log.info("查询待审核评价列表：page={}, pageSize={}", page, pageSize);
@@ -284,7 +283,7 @@ public class DishEvaluationController {
     @GetMapping("/page")
     @Operation(summary = "管理端评价分页查询", description = "支持按菜品名称、审核状态、评分筛选的评价管理列表")
     public R<Page<DishEvaluation>> adminPage(
-            @Parameter(description = "D i s h N a m e")
+            @Parameter(description = "DishName")
             @Parameter(name = "dishName", description = "菜品名称（模糊查询）") @RequestParam(required = false) String dishName,
             @Parameter(name = "status", description = "审核状态（0待审核 1通过 2拒绝）") @RequestParam(required = false) Integer status,
             @Parameter(name = "starRating", description = "评分（1-5）") @RequestParam(required = false) Integer starRating,

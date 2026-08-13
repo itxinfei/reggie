@@ -7,10 +7,19 @@ import com.reggie.module.printer.model.PrinterStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import javax.print.*;
+import javax.print.Doc;
+import javax.print.DocFlavor;
+import javax.print.DocPrintJob;
+import javax.print.PrintException;
+import javax.print.PrintService;
+import javax.print.PrintServiceLookup;
+import javax.print.SimpleDoc;
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
-import javax.print.attribute.standard.*;
+import javax.print.attribute.standard.Copies;
+import javax.print.attribute.standard.OrientationRequested;
+import javax.print.attribute.standard.PrinterState;
+import javax.print.attribute.standard.Sides;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -110,7 +119,7 @@ public class WindowsSystemPrinterAdapter implements PrinterAdapter {
             return status;
 
         } catch (Exception e) {
-            log.error("查询打印机状态失败: {}", e.getMessage());
+            log.error("查询打印机状态失败", e);
             status.setOnline(false);
             status.setDetail("查询失败: " + e.getMessage());
             return status;
@@ -151,7 +160,7 @@ public class WindowsSystemPrinterAdapter implements PrinterAdapter {
             }
 
         } catch (Exception e) {
-            log.error("测试连接失败: {}", e.getMessage());
+            log.error("测试连接失败", e);
             return false;
         }
     }
@@ -219,7 +228,7 @@ public class WindowsSystemPrinterAdapter implements PrinterAdapter {
             }
             baos.write("\n\n\n".getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
-            log.error("构建打印数据失败: {}", e.getMessage());
+            log.error("构建打印数据失败", e);
         }
 
         return baos.toByteArray();

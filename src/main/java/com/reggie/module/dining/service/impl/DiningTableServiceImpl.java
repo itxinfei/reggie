@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.enums.DiningTableStatus;
 import com.reggie.module.dining.mapper.DiningTableMapper;
 import com.reggie.module.dining.model.DiningTable;
@@ -106,7 +107,7 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
     public Page<DiningTable> pageWithArea(int page, int pageSize) {
         LambdaQueryWrapper<DiningTable> qw = new LambdaQueryWrapper<>();
         qw.orderByAsc(DiningTable::getSort);
-        Page<DiningTable> pageInfo = new Page<>(page, pageSize);
+        Page<DiningTable> pageInfo = PageUtils.of(page, pageSize);
         page(pageInfo, qw);
 
         // 修复 N+1：先收集本页 areaId 去重，一次性批量查询区域，构建 Map 后填充

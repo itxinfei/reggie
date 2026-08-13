@@ -9,7 +9,6 @@ import com.reggie.module.delivery.model.Rider;
 import com.reggie.module.delivery.model.RiderLocationRecord;
 import com.reggie.module.delivery.model.DeliveryTimeRecord;
 import com.reggie.module.delivery.service.DeliveryTrackingService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,18 +17,14 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Delivery Tracking Service Implementation
  * 
- * @author reggie
- * @since 2026-08-11
- */
-@Slf4j
-/**
- * DeliveryTracking service implementation
- *
  * @author reggie
  * @since 2026-08-11
  */

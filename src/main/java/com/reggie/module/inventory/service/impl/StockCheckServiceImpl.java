@@ -20,7 +20,6 @@ import com.reggie.enums.StockRecordType;
 import com.reggie.module.inventory.service.MaterialService;
 import com.reggie.module.inventory.service.StockCheckService;
 import com.reggie.module.inventory.service.StockRecordService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,13 +37,6 @@ import java.util.stream.Collectors;
  *
  * @author reggie
  * @since 2026-07-09
- */
-@Slf4j
-/**
- * StockCheck service implementation
- *
- * @author reggie
- * @since 2026-08-11
  */
 @Service
 public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCheck> implements StockCheckService {

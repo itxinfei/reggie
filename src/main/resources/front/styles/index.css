@@ -23,6 +23,12 @@
   --color-info: #1890ff;
   --color-price: #F34346;
 
+  /* ---- 星级（评价/评分统一） ---- */
+  --color-star: #f7ba2a;
+
+  /* ---- 购物车底部栏（深色） ---- */
+  --bg-cart-bar: #3B3B3B;
+
   /* ---- 背景色 ---- */
   --bg-page: #f3f2f7;
   --bg-card: #ffffff;
@@ -333,4 +339,55 @@ i {
   font-weight: 400;
   text-align: left;
   color: var(--color-text-hint);
+}
+
+/* ================================================================
+   通用品牌头兜底样式（无前缀，供未单独定制的页面使用）
+   页面级 #xxx .divHead 选择器优先级更高，会自动覆盖此兜底。
+   覆盖页面：my-evaluations / tracking / frequent-orders
+   ================================================================ */
+.divHead {
+  width: 100%;
+  height: var(--header-height);
+  background: var(--color-primary-gradient);
+  padding: 0 var(--spacing-lg);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.divHead .divTitle {
+  font-size: var(--header-title-font-size);
+  font-family: var(--font-family-title);
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text-primary);
+  line-height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.divHead .divTitle .icon-back-arrow {
+  position: absolute;
+  left: var(--spacing-lg);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-primary);
+}
+
+.divHead .divTitle .icon-back-arrow:active {
+  transform: translateY(-50%) scale(0.85);
+}
+
+/* ================================================================
+   桌面端修复：base.js 桌面根字号统一为 1px（≈设计稿px），
+   内容不再按 28px 爆炸；body 居中显示 750px 卡片
+   ================================================================ */
+@media screen and (min-width: 751px) {
+  body {
+    margin-left: auto;
+    margin-right: auto;
+  }
 }

@@ -123,8 +123,7 @@ public class PaymentController {
     @PostMapping("/notify/{channel}")
     @Operation(summary = "支付回调通知", description = "接收支付渠道的异步通知，更新订单支付状态")
     public R<String> notify(
-            @Parameter(description = "C h a n n e l")
-            @Parameter(description = "支付渠道：WECHAT-微信、ALIPAY-支付宝", required = true) @PathVariable String channel,
+                        @Parameter(description = "支付渠道：WECHAT-微信、ALIPAY-支付宝", required = true) @PathVariable String channel,
             @Parameter(description = "回调参数") @RequestBody Map<String, String> params) {
         PaymentChannel paymentChannel = paymentChannelFactory.getChannel(channel);
         // 签名校验：禁止直接信任未验签的回调参数（防回调伪造）
@@ -279,8 +278,7 @@ public class PaymentController {
     @GetMapping("/query/{tradeNo}")
     @Operation(summary = "查询支付状态", description = "根据交易号查询支付订单状态")
     public R<PaymentOrder> query(
-            @Parameter(description = "T r a d e N o")
-            @Parameter(description = "交易号", required = true) @PathVariable String tradeNo) {
+                        @Parameter(description = "交易号", required = true) @PathVariable String tradeNo) {
         PaymentOrder po = paymentOrderService.lambdaQuery()
             .eq(PaymentOrder::getTradeNo, tradeNo).one();
         if (po == null) {
@@ -341,7 +339,7 @@ public class PaymentController {
                 dashboardService.clearOverviewCache(tenantId);
             }
         } catch (Exception e) {
-            log.warn("清除Dashboard缓存失败: {}", e.getMessage());
+            log.warn("清除Dashboard缓存失败", e);
         }
     }
 }

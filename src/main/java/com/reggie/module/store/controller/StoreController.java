@@ -33,7 +33,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 门店管理控制器
@@ -263,7 +262,7 @@ public class StoreController {
             writer.flush();
             log.info("[门店导出] 导出成功: {} 条记录", stores.size());
         } catch (IOException e) {
-            log.error("[门店导出] 写入CSV失败: {}", e.getMessage());
+            log.error("[门店导出] 写入CSV失败", e);
         }
     }
 
@@ -374,7 +373,7 @@ public class StoreController {
     public R<List<Map<String, Object>>> syncLogs(
             @RequestParam Long sourceTenantId,
             @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "P a g e S i z e")
+            @Parameter(description = "PageSize")
             @RequestParam(defaultValue = "10") int pageSize) {
         List<Map<String, Object>> logs = storeSyncService.getSyncLogs(sourceTenantId, page, PageUtils.cap(pageSize));
         return R.success(logs);

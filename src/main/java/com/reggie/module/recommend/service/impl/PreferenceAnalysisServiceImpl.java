@@ -16,18 +16,6 @@ import com.reggie.module.recommend.mapper.BrowseHistoryMapper;
 import com.reggie.module.recommend.mapper.UserPreferenceMapper;
 import com.reggie.module.recommend.model.UserPreferenceTag;
 import com.reggie.module.recommend.service.PreferenceAnalysisService;
-import com.reggie.module.order.model.Orders;
-import com.reggie.module.order.model.OrderDetail;
-import com.reggie.module.dish.model.DishFlavor;
-import com.reggie.module.dish.model.Dish;
-import com.reggie.module.category.model.Category;
-import com.reggie.module.order.service.OrderService;
-import com.reggie.module.order.service.OrderDetailService;
-import com.reggie.module.dish.service.DishFlavorService;
-import com.reggie.module.dish.service.DishService;
-import com.reggie.module.category.service.CategoryService;
-import com.reggie.module.category.service.CategoryService;
-import com.reggie.module.category.model.Category;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,9 +24,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
-import com.reggie.module.category.model.Category;
 import java.util.stream.Collectors;
 
 /**
@@ -49,12 +43,6 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * PreferenceAnalysis service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService {
 
@@ -392,7 +380,6 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
         userPreferenceMapper.delete(wrapper);
     }
 }
-
 
 
 

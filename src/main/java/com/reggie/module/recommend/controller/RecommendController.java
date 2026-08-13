@@ -14,7 +14,6 @@ import com.reggie.module.recommend.service.RecommendService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,8 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
-import java.util.*;
-import org.springframework.web.bind.annotation.RequestParam;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 智能推荐控制器
@@ -37,7 +37,6 @@ import org.springframework.web.bind.annotation.RequestParam;
  * @author reggie
  * @since 2026-07-09
  */
-@Slf4j
 @RestController
 @RequestMapping("/recommend")
 @Tag(name = "智能推荐", description = "菜品推荐、偏好分析、浏览记录等接口")

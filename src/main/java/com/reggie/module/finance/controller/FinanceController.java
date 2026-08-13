@@ -9,7 +9,6 @@ import com.reggie.module.finance.service.FinanceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,7 +31,6 @@ import java.util.Map;
  * @author reggie
  * @since 2026-08-11
  */
-@Slf4j
 @RestController
 @RequestMapping("/finance")
 @Tag(name = "Finance Management")
@@ -46,8 +44,7 @@ public class FinanceController {
     @GetMapping("/withdrawal/list")
     @Operation(summary = "Get withdrawal list")
     public R<List<WithdrawalApplication>> getWithdrawalList(
-            @Parameter(description = "S t a t u s")
-            @Parameter(description = "Status") @RequestParam(required = false) Integer status,
+                        @Parameter(description = "Status") @RequestParam(required = false) Integer status,
             @Parameter(description = "Start date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
             @Parameter(description = "End date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -118,8 +115,7 @@ public class FinanceController {
     @GetMapping("/reconciliation/list")
     @Operation(summary = "Get reconciliation list")
     public R<List<ReconciliationStatement>> getReconciliationList(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "Start date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "Start date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "End date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
             @Parameter(description = "Platform") @RequestParam(required = false) String platform) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -138,8 +134,7 @@ public class FinanceController {
     @PostMapping("/reconciliation/generate")
     @Operation(summary = "Generate reconciliation")
     public R<ReconciliationStatement> generateReconciliation(
-            @Parameter(description = "D a t e")
-            @Parameter(description = "Date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
+                        @Parameter(description = "Date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
             @Parameter(description = "Platform") @RequestParam(defaultValue = "all") String platform) {
         Long tenantId = BaseContext.getCurrentTenantId();
         ReconciliationStatement statement = financeService.generateReconciliation(date, platform, tenantId);
@@ -169,8 +164,7 @@ public class FinanceController {
     @GetMapping("/profit/list")
     @Operation(summary = "Get profit analysis list")
     public R<List<ProfitAnalysis>> getProfitAnalysisList(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "Start date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "Start date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "End date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<ProfitAnalysis> list = financeService.getProfitAnalysisList(startDate, endDate, tenantId);
@@ -179,7 +173,7 @@ public class FinanceController {
 
     @GetMapping("/profit/date/{date}")
     @Operation(summary = "Get profit analysis by date")
-    @Parameter(description = "D a t e")
+    @Parameter(description = "Date")
     public R<ProfitAnalysis> getProfitAnalysisByDate(@PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
         Long tenantId = BaseContext.getCurrentTenantId();
         ProfitAnalysis analysis = financeService.getProfitAnalysisByDate(date, tenantId);
@@ -189,8 +183,7 @@ public class FinanceController {
     @PostMapping("/profit/generate")
     @Operation(summary = "Generate profit analysis")
     public R<ProfitAnalysis> generateProfitAnalysis(
-            @Parameter(description = "D a t e")
-            @Parameter(description = "Date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+                        @Parameter(description = "Date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
         Long tenantId = BaseContext.getCurrentTenantId();
         ProfitAnalysis analysis = financeService.generateProfitAnalysis(date, tenantId);
         return R.success(analysis);
@@ -199,8 +192,7 @@ public class FinanceController {
     @GetMapping("/profit/trend")
     @Operation(summary = "Get profit trend")
     public R<Map<String, Object>> getProfitTrend(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> trend = financeService.getProfitTrend(startDate, endDate, tenantId);
@@ -210,8 +202,7 @@ public class FinanceController {
     @GetMapping("/profit/structure")
     @Operation(summary = "Get profit structure")
     public R<Map<String, Object>> getProfitStructure(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> structure = financeService.getProfitStructure(startDate, endDate, tenantId);
@@ -223,8 +214,7 @@ public class FinanceController {
     @GetMapping("/statistics")
     @Operation(summary = "Get finance statistics")
     public R<Map<String, Object>> getFinanceStatistics(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "Start date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+                        @Parameter(description = "Start date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
             @Parameter(description = "End date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = financeService.getFinanceStatistics(startDate, endDate, tenantId);

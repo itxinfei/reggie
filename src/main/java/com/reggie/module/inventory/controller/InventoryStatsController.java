@@ -11,10 +11,11 @@ import com.reggie.module.inventory.model.PurchaseOrder;
 import com.reggie.module.inventory.model.StockRecord;
 import com.reggie.enums.PurchaseOrderStatus;
 import com.reggie.enums.StockRecordType;
-import com.reggie.module.inventory.service.*;
+import com.reggie.module.inventory.service.MaterialCategoryService;
+import com.reggie.module.inventory.service.MaterialService;
+import com.reggie.module.inventory.service.SupplierService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,7 +27,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import com.reggie.module.category.model.Category;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 进销存统计控制器
@@ -35,7 +39,6 @@ import java.util.*;
  * @author reggie
  * @since 2026-07-11
  */
-@Slf4j
 @RequireEmployee
 @RestController
 @RequestMapping("/api/inventory/stats")

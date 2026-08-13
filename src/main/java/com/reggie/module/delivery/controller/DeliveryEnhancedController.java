@@ -8,7 +8,6 @@ import com.reggie.module.delivery.service.DeliveryEnhancedService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +29,6 @@ import java.util.Map;
  * @author reggie
  * @since 2026-08-11
  */
-@Slf4j
 @RestController
 @RequestMapping("/delivery/enhanced")
 @Tag(name = "配送增强管理")
@@ -88,8 +86,7 @@ public class DeliveryEnhancedController {
     @GetMapping("/fee-step/list")
     @Operation(summary = "获取配送费阶梯规则列表")
     public R<List<DeliveryFeeStep>> getFeeSteps(
-            @Parameter(description = "R u l e I d")
-            @Parameter(description = "规则ID") @RequestParam Long ruleId) {
+                        @Parameter(description = "规则ID") @RequestParam Long ruleId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<DeliveryFeeStep> steps = deliveryEnhancedService.getFeeSteps(ruleId, tenantId);
         return R.success(steps);
@@ -137,8 +134,7 @@ public class DeliveryEnhancedController {
     @PostMapping("/range/check")
     @Operation(summary = "校验地址是否在配送范围内")
     public R<Boolean> isInRange(
-            @Parameter(description = "R u l e I d")
-            @Parameter(description = "规则ID") @RequestParam Long ruleId,
+                        @Parameter(description = "规则ID") @RequestParam Long ruleId,
             @Parameter(description = "经度") @RequestParam BigDecimal longitude,
             @Parameter(description = "纬度") @RequestParam BigDecimal latitude) {
         boolean inRange = deliveryEnhancedService.isInRange(ruleId, longitude, latitude);
@@ -148,8 +144,7 @@ public class DeliveryEnhancedController {
     @PostMapping("/range/find")
     @Operation(summary = "查找匹配的配送范围规则")
     public R<Long> findMatchingRule(
-            @Parameter(description = "L o n g i t u d e")
-            @Parameter(description = "经度") @RequestParam BigDecimal longitude,
+                        @Parameter(description = "经度") @RequestParam BigDecimal longitude,
             @Parameter(description = "纬度") @RequestParam BigDecimal latitude) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long ruleId = deliveryEnhancedService.findMatchingRule(longitude, latitude, tenantId);
@@ -161,8 +156,7 @@ public class DeliveryEnhancedController {
     @PostMapping("/fee/calculate")
     @Operation(summary = "计算配送费")
     public R<BigDecimal> calculateDeliveryFee(
-            @Parameter(description = "R u l e I d")
-            @Parameter(description = "规则ID") @RequestParam Long ruleId,
+                        @Parameter(description = "规则ID") @RequestParam Long ruleId,
             @Parameter(description = "距离（米）") @RequestParam BigDecimal distance,
             @Parameter(description = "订单金额") @RequestParam BigDecimal orderAmount) {
         BigDecimal fee = deliveryEnhancedService.calculateDeliveryFee(ruleId, distance, orderAmount);
@@ -172,8 +166,7 @@ public class DeliveryEnhancedController {
     @PostMapping("/fee/auto-calculate")
     @Operation(summary = "自动计算配送费")
     public R<Map<String, Object>> calculateFee(
-            @Parameter(description = "L o n g i t u d e")
-            @Parameter(description = "经度") @RequestParam BigDecimal longitude,
+                        @Parameter(description = "经度") @RequestParam BigDecimal longitude,
             @Parameter(description = "纬度") @RequestParam BigDecimal latitude,
             @Parameter(description = "距离（米）") @RequestParam BigDecimal distance,
             @Parameter(description = "订单金额") @RequestParam BigDecimal orderAmount) {
@@ -185,8 +178,7 @@ public class DeliveryEnhancedController {
     @PostMapping("/distance/calculate")
     @Operation(summary = "计算两点间距离")
     public R<BigDecimal> calculateDistance(
-            @Parameter(description = "L o n1")
-            @Parameter(description = "经度1") @RequestParam BigDecimal lon1,
+                        @Parameter(description = "经度1") @RequestParam BigDecimal lon1,
             @Parameter(description = "纬度1") @RequestParam BigDecimal lat1,
             @Parameter(description = "经度2") @RequestParam BigDecimal lon2,
             @Parameter(description = "纬度2") @RequestParam BigDecimal lat2) {

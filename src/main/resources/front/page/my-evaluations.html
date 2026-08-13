@@ -9,6 +9,7 @@
     <script src="./../js/base.js"></script>
     <link rel="stylesheet" href="../styles/index.css" />
     <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="./../styles/remixicon-fallback.css" />
     <link rel="stylesheet" href="./../styles/evaluation.css" />
 </head>
 <body>
@@ -78,7 +79,7 @@
         <!-- 空状态 -->
         <div class="empty-state" v-else-if="!loading">
             <img src="./../images/no_order.png" style="width: 120px; opacity: 0.4;" />
-            <p style="color: #c0c4cc; margin-top: 16px; font-size: 14px;">暂无评价记录</p>
+            <p style="color: var(--color-text-hint); margin-top: 16px; font-size: 14px;">暂无评价记录</p>
             <!-- 修改点：el-button 替换为原生button -->
             <button class="btn-primary" @click="goToOrder">去下单</button>
         </div>
@@ -198,7 +199,7 @@
                         message: '修改评价需要先删除当前评价，确认继续吗？',
                         confirmButtonText: '继续修改',
                         cancelButtonText: '取消',
-                        confirmButtonColor: '#ff976a'
+                        confirmButtonColor: '#ffc200'
                     }).then(function() {
                         return deleteMyEvaluation({ id: item.id });
                     }).then(function(res) {
@@ -219,7 +220,7 @@
                             title: '删除评价',
                             message: '确认删除该评价吗？删除后不可恢复。',
                             confirmButtonText: '确认删除',
-                            confirmButtonColor: '#f56c6c',
+                            confirmButtonColor: '#e94e3c',
                             cancelButtonText: '取消'
                         })
                         try {

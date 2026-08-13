@@ -17,20 +17,6 @@ import com.reggie.module.category.service.CategoryService;
 import com.reggie.module.setmeal.service.SetmealService;
 import com.reggie.enums.OrderStatus;
 import com.reggie.module.export.util.ExportUtil;
-import com.reggie.module.auth.service.EmployeeService;
-import com.reggie.module.auth.model.Employee;
-import com.reggie.module.order.model.Orders;
-import com.reggie.module.order.model.OrderDetail;
-import com.reggie.module.dish.model.Dish;
-import com.reggie.module.category.model.Category;
-import com.reggie.module.setmeal.model.Setmeal;
-import com.reggie.module.order.service.OrderService;
-import com.reggie.module.order.service.OrderDetailService;
-import com.reggie.module.dish.service.DishService;
-import com.reggie.module.category.service.CategoryService;
-import com.reggie.module.setmeal.service.SetmealService;
-import com.reggie.module.category.service.CategoryService;
-import com.reggie.module.category.model.Category;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,8 +37,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
-import org.springframework.web.bind.annotation.RequestParam;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 数据导出Controller
@@ -104,8 +93,7 @@ public class ExportController {
     @GetMapping("/orders/excel")
     @Operation(summary = "导出订单Excel", description = "导出订单数据为Excel文件，支持按日期范围和订单状态筛选")
     public ResponseEntity<?> exportOrdersExcel(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
             @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
 
@@ -142,8 +130,7 @@ public class ExportController {
     @GetMapping("/orders/pdf")
     @Operation(summary = "导出订单PDF", description = "导出订单数据为PDF报表，支持按日期范围和订单状态筛选")
     public ResponseEntity<?> exportOrdersPdf(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
             @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
 
@@ -190,8 +177,7 @@ public class ExportController {
     @GetMapping("/dishes/excel")
     @Operation(summary = "导出菜品Excel", description = "导出菜品数据为Excel文件，支持按分类筛选")
     public ResponseEntity<?> exportDishesExcel(
-            @Parameter(description = "C a t e g o r y I d")
-            @Parameter(description = "分类ID（可选）") @RequestParam(required = false) Long categoryId) {
+                        @Parameter(description = "分类ID（可选）") @RequestParam(required = false) Long categoryId) {
 
         try {
             LinkedHashMap<String, String> columns = new LinkedHashMap<>();
@@ -220,8 +206,7 @@ public class ExportController {
     @GetMapping("/dishes/pdf")
     @Operation(summary = "导出菜品PDF", description = "导出菜品数据为PDF报表，支持按分类筛选")
     public ResponseEntity<?> exportDishesPdf(
-            @Parameter(description = "C a t e g o r y I d")
-            @Parameter(description = "分类ID（可选）") @RequestParam(required = false) Long categoryId) {
+                        @Parameter(description = "分类ID（可选）") @RequestParam(required = false) Long categoryId) {
 
         try {
             LinkedHashMap<String, String> columns = new LinkedHashMap<>();
@@ -499,7 +484,6 @@ public class ExportController {
         return new ResponseEntity<>(R.error(message), headers, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
-
 
 
 

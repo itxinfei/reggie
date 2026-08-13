@@ -252,7 +252,9 @@
 .crud-table-wrapper .tableBox .el-table__body tr {
   transition: background-color var(--transition-base);
 }
-.crud-table-wrapper .tableBox .el-table--striped .el-table__body tr.el-table__row--striped td {
+/* 修复：.el-table--striped 与 .tableBox 是同一根元素（class="el-table tableBox el-table--striped"），
+   原后代选择器 .tableBox .el-table--striped 永不匹配，改为复合选择器 */
+.crud-table-wrapper .tableBox.el-table--striped .el-table__body tr.el-table__row--striped td {
   background-color: var(--bg-subtle);
 }
 /* 行 hover 柔和品牌高亮，提示“可交互、可定位” */

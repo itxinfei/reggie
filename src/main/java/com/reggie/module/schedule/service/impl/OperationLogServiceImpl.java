@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.LogMaskUtils;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.sys.model.OperationLog;
 import com.reggie.module.sys.mapper.OperationLogMapper;
 import com.reggie.module.schedule.service.OperationLogService;
@@ -23,12 +24,6 @@ import java.util.Map;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * OperationLog service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, OperationLog> implements OperationLogService {
@@ -60,7 +55,7 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
     public Page<OperationLog> pageQuery(int page, int pageSize, String module,
                                          String operationType, String operatorName,
                                          LocalDateTime beginTime, LocalDateTime endTime) {
-        Page<OperationLog> pageInfo = new Page<>(page, pageSize);
+        Page<OperationLog> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
 
         if (module != null && !module.isEmpty()) {

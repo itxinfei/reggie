@@ -66,9 +66,9 @@ public class ReservationController {
     public R<Page<Reservation>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String customerName,
-                                     @Parameter(description = "P h o n e")
+                                     @Parameter(description = "Phone")
                                      @RequestParam(required = false) String phone,
-                                     @Parameter(description = "R e s e r v e d D a t e")
+                                     @Parameter(description = "ReservedDate")
                                      @RequestParam(required = false) String reservedDate) {
         Page<Reservation> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Reservation> qw = new LambdaQueryWrapper<>();

@@ -28,8 +28,8 @@ function orderAgainApi(data) {
 // 修改点：取消订单
 function cancelOrderApi(data) {
   return $axios({
-      'url': '/order',
+      'url': '/order/userCancel',
       'method': 'put',
-      data
+      params: { id: data && data.id }
   })
 }

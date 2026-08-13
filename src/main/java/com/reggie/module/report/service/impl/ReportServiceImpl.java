@@ -26,7 +26,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.IsoFields;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -36,12 +44,6 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * Report service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class ReportServiceImpl implements ReportService {

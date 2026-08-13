@@ -14,7 +14,6 @@ import com.reggie.module.setmeal.mapper.SetmealMapper;
 import com.reggie.module.category.service.CategoryService;
 import com.reggie.module.setmeal.service.SetmealDishService;
 import com.reggie.module.setmeal.service.SetmealService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -34,7 +33,6 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Service
-@Slf4j
 public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> implements SetmealService {
 
     /** 套餐菜品关联服务 */

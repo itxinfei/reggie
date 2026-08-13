@@ -12,7 +12,6 @@ import com.reggie.module.finance.service.FinanceService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.cost.service.CostService;
 import com.reggie.module.order.model.Orders;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,17 +21,15 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Finance Service Implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
-@Slf4j
-/**
- * Finance service implementation
  *
  * @author reggie
  * @since 2026-08-11

@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.event.OrderCancelledEvent;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.common.event.OrderCompletedEvent;
 import com.reggie.dto.OrderDto;
 import com.reggie.module.address.model.AddressBook;
@@ -491,7 +492,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      */
     @Override
     public Page<Orders> orderPage(int page, int pageSize, String number, String beginTime, String endTime, Integer status) {
-        Page<Orders> pageInfo = new Page<>(page, pageSize);
+        Page<Orders> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
 
         queryWrapper.like(StringUtils.isNotBlank(number), Orders::getNumber, number);
@@ -520,7 +521,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      */
     @Override
     public Page<?> userPage(int page, int pageSize, Integer status) {
-        Page<Orders> pageInfo = new Page<>(page, pageSize);
+        Page<Orders> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Orders::getUserId, BaseContext.getCurrentId());
         if (status != null) {
@@ -546,7 +547,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 dto.setOrderDetails(detailsMap.getOrDefault(order.getId(), Collections.emptyList()));
                 return dto;
             }).collect(Collectors.toList());
-            Page<OrderDto> dtoPage = new Page<>(page, pageSize, pageInfo.getTotal());
+            Page<OrderDto> dtoPage = PageUtils.of(page, pageSize);
+            dtoPage.setTotal(pageInfo.getTotal());
             dtoPage.setRecords(orderDtoList);
             return dtoPage;
         }

@@ -6,7 +6,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.module.ai.mapper.AIConversationMapper;
-import com.reggie.module.ai.model.*;
+import com.reggie.module.ai.model.AIChatRequest;
+import com.reggie.module.ai.model.AIChatResponse;
+import com.reggie.module.ai.model.AIConversation;
+import com.reggie.module.ai.model.AIMessage;
+import com.reggie.module.ai.model.AIMessageRecord;
+import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.service.AIChatService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,7 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * <p>
@@ -100,7 +104,7 @@ public class AIChatController {
      */
     @GetMapping("/chat/stream")
     @Operation(summary = "AI流式对话", description = "SSE流式输出，逐字显示AI回复")
-    @Parameter(description = "M e s s a g e")
+    @Parameter(description = "Message")
     public SseEmitter chatStream(@RequestParam String message, @RequestParam(required = false) String scene,
                                   @Parameter(description = "conversationId")
                                   @RequestParam(required = false) String conversationId) {
@@ -162,7 +166,7 @@ public class AIChatController {
      */
     @GetMapping("/order-assistant/stream")
     @Operation(summary = "智能点餐助手（流式）", description = "SSE流式输出推荐结果")
-    @Parameter(description = "M e s s a g e")
+    @Parameter(description = "Message")
     public SseEmitter orderAssistantStream(@RequestParam String message,
                                             @Parameter(description = "conversationId")
                                             @RequestParam(required = false) String conversationId) {
@@ -236,7 +240,7 @@ public class AIChatController {
      */
     @GetMapping("/conversations")
     @Operation(summary = "获取对话列表", description = "获取当前用户的AI对话历史列表")
-    @Parameter(description = "P a g e")
+    @Parameter(description = "Page")
     public R<List<AIConversation>> getConversations(@RequestParam(defaultValue = "1") int page,
                                                      @Parameter(description = "Page size")
                                                      @RequestParam(defaultValue = "20") int pageSize) {
@@ -252,7 +256,7 @@ public class AIChatController {
      */
     @GetMapping("/conversations/{conversationId}")
     @Operation(summary = "获取对话详情", description = "获取指定对话的消息历史")
-    @Parameter(description = "C o n v e r s a t i o n I d")
+    @Parameter(description = "ConversationId")
     public R<List<AIMessageRecord>> getConversationDetail(@PathVariable String conversationId) {
         List<AIMessageRecord> messages = aiChatService.getConversationMessages(conversationId);
         return R.success(messages);
@@ -280,7 +284,7 @@ public class AIChatController {
      */
     @DeleteMapping("/conversations/{conversationId}")
     @Operation(summary = "删除对话", description = "软删除指定对话")
-    @Parameter(description = "C o n v e r s a t i o n I d")
+    @Parameter(description = "ConversationId")
     public R<String> deleteConversation(@PathVariable String conversationId) {
         Long userId = BaseContext.getCurrentId();
         aiChatService.deleteConversation(conversationId, userId);
@@ -362,7 +366,7 @@ public class AIChatController {
      */
     @GetMapping("/conversations/search")
     @Operation(summary = "搜索对话", description = "按标题关键词搜索对话")
-    @Parameter(description = "K e y w o r d")
+    @Parameter(description = "Keyword")
     public R<List<AIConversation>> searchConversations(@RequestParam String keyword,
                                                        @Parameter(description = "Page number")
                                                        @RequestParam(defaultValue = "1") int page,
@@ -389,7 +393,7 @@ public class AIChatController {
      */
     @PostMapping("/conversations/{conversationId}/reset")
     @Operation(summary = "重置对话上下文", description = "清除对话的上下文缓存，保留历史消息记录")
-    @Parameter(description = "C o n v e r s a t i o n I d")
+    @Parameter(description = "ConversationId")
     public R<String> resetConversationContext(@PathVariable String conversationId) {
         Long userId = BaseContext.getCurrentId();
         // 验证所有权
@@ -412,7 +416,7 @@ public class AIChatController {
      */
     @GetMapping("/conversations/{conversationId}/context-stats")
     @Operation(summary = "上下文统计", description = "获取对话的上下文使用情况统计")
-    @Parameter(description = "C o n v e r s a t i o n I d")
+    @Parameter(description = "ConversationId")
     public R<Map<String, Object>> getContextStats(@PathVariable String conversationId) {
         Map<String, Object> stats = aiChatService.getContextStats(conversationId);
         return R.success(stats);

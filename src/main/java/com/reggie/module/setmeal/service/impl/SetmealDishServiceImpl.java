@@ -6,7 +6,6 @@ import com.reggie.common.BaseContext;
 import com.reggie.module.setmeal.model.SetmealDish;
 import com.reggie.module.setmeal.mapper.SetmealDishMapper;
 import com.reggie.module.setmeal.service.SetmealDishService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,7 +17,6 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Service
-@Slf4j
 public class SetmealDishServiceImpl extends ServiceImpl<SetmealDishMapper, SetmealDish> implements SetmealDishService {
 
     @Override

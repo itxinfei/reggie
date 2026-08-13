@@ -43,12 +43,6 @@ import java.util.concurrent.TimeUnit;
  * 5. Redis不可用时：自动降级为直接查询MySQL
  */
 @Slf4j
-/**
- * Dashboard service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class DashboardServiceImpl implements DashboardService {
@@ -116,7 +110,7 @@ public class DashboardServiceImpl implements DashboardService {
                     return result;
                 }
             } catch (Exception e) {
-                log.warn("[Dashboard] Redis读取异常，降级查询MySQL: {}", e.getMessage());
+                log.warn("[Dashboard] Redis读取异常，降级查询MySQL", e);
             }
         }
 
@@ -126,7 +120,7 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             overview = computeOverview(tenantId);
         } catch (Exception e) {
-            log.error("[Dashboard] 计算概览异常: {}", e.getMessage(), e);
+            log.error("[Dashboard] 计算概览异常", e);
             // 异常时不缓存，避免错误数据长时间生效
             return fallbackErrorResult("概览数据查询失败");
         }
@@ -139,7 +133,7 @@ public class DashboardServiceImpl implements DashboardService {
                 redisTemplate.expire(cacheKey, TTL_OVERVIEW, TimeUnit.MINUTES);
                 log.info("[Dashboard] 概览数据已缓存至Redis key={}", cacheKey);
             } catch (Exception e) {
-                log.warn("[Dashboard] Redis回填失败: {}", e.getMessage());
+                log.warn("[Dashboard] Redis回填失败", e);
             }
         }
 
@@ -249,7 +243,7 @@ public class DashboardServiceImpl implements DashboardService {
                     return result;
                 }
             } catch (Exception e) {
-                log.warn("[Dashboard] Redis读取异常，降级查询MySQL: {}", e.getMessage());
+                log.warn("[Dashboard] Redis读取异常，降级查询MySQL", e);
             }
         }
 
@@ -259,7 +253,7 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             trend = computeTrend(tenantId);
         } catch (Exception e) {
-            log.error("[Dashboard] 计算趋势异常: {}", e.getMessage(), e);
+            log.error("[Dashboard] 计算趋势异常", e);
             // 异常时不缓存，避免错误数据长时间生效，下次请求可重新计算
             return new ArrayList<>();
         }
@@ -270,7 +264,7 @@ public class DashboardServiceImpl implements DashboardService {
                 redisTemplate.opsForValue().set(cacheKey, trend, TTL_TREND, TimeUnit.MINUTES);
                 log.info("[Dashboard] 趋势数据已缓存至Redis key={}", cacheKey);
             } catch (Exception e) {
-                log.warn("[Dashboard] Redis回填失败: {}", e.getMessage());
+                log.warn("[Dashboard] Redis回填失败", e);
             }
         }
 
@@ -348,7 +342,7 @@ public class DashboardServiceImpl implements DashboardService {
                     return result;
                 }
             } catch (Exception e) {
-                log.warn("[Dashboard] Redis读取异常，降级查询MySQL: {}", e.getMessage());
+                log.warn("[Dashboard] Redis读取异常，降级查询MySQL", e);
             }
         }
 
@@ -358,7 +352,7 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             distribution = computeOrderStatusDistribution(tenantId);
         } catch (Exception e) {
-            log.error("[Dashboard] 计算订单状态分布异常: {}", e.getMessage(), e);
+            log.error("[Dashboard] 计算订单状态分布异常", e);
             // 异常时不缓存，避免错误数据长时间生效
             Map<String, Object> errorResult = new LinkedHashMap<>();
             errorResult.put("待付款", 0);
@@ -378,7 +372,7 @@ public class DashboardServiceImpl implements DashboardService {
                 redisTemplate.expire(cacheKey, TTL_ORDER_STATUS, TimeUnit.MINUTES);
                 log.info("[Dashboard] 订单状态分布已缓存至Redis key={}", cacheKey);
             } catch (Exception e) {
-                log.warn("[Dashboard] Redis回填失败: {}", e.getMessage());
+                log.warn("[Dashboard] Redis回填失败", e);
             }
         }
 
@@ -457,7 +451,7 @@ public class DashboardServiceImpl implements DashboardService {
                     return result;
                 }
             } catch (Exception e) {
-                log.warn("[Dashboard] Redis ZSet读取异常，降级查询MySQL: {}", e.getMessage());
+                log.warn("[Dashboard] Redis ZSet读取异常，降级查询MySQL", e);
             }
         }
 
@@ -467,7 +461,7 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             hotDishes = computeHotDishes(tenantId);
         } catch (Exception e) {
-            log.error("[Dashboard] 计算热销菜品异常: {}", e.getMessage(), e);
+            log.error("[Dashboard] 计算热销菜品异常", e);
             hotDishes = new ArrayList<>();
         }
 
@@ -500,7 +494,7 @@ public class DashboardServiceImpl implements DashboardService {
 
                 log.info("[Dashboard] 热销菜品已缓存至Redis ZSet key={}", cacheKey);
             } catch (Exception e) {
-                log.warn("[Dashboard] Redis ZSet回填失败: {}", e.getMessage());
+                log.warn("[Dashboard] Redis ZSet回填失败", e);
             }
         }
 
@@ -612,7 +606,7 @@ public class DashboardServiceImpl implements DashboardService {
             log.info("[Dashboard] 已清除缓存 overviewKey={}, statusKey={}, trendKey={}, hotDishesKey={}",
                     overviewKey, statusKey, trendKey, hotDishesKey);
         } catch (Exception e) {
-            log.warn("[Dashboard] 清除缓存失败: {}", e.getMessage());
+            log.warn("[Dashboard] 清除缓存失败", e);
         }
     }
 

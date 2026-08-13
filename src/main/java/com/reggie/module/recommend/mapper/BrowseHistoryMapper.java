@@ -1,6 +1,7 @@
 package com.reggie.module.recommend.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.reggie.module.recommend.model.BrowseHistory;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -58,11 +59,18 @@ public interface BrowseHistoryMapper extends BaseMapper<BrowseHistory> {
     /**
      * 统计每日浏览行为趋势（按日期分组）
      * 用于概览页浏览趋势折线图
+     * <p>
+     * 使用 {@code @InterceptorIgnore(tenantLine = "true")} 跳过租户拦截器：
+     * 租户过滤已由本 SQL 的 {@code <if test='tenantId != null'>} 分支显式控制
+     * （tenantId 为 null 表示不过滤，由调用方传入 {@code BaseContext.getCurrentTenantId()}），
+     * 若再叠加租户插件自动注入 {@code tenant_id = ?}，会造成重复过滤，
+     * 且在无租户上下文时误注入 {@code tenant_id = -1}，导致"null 不过滤"语义失效。
      *
      * @param startTime 起始时间
      * @param tenantId  租户ID（null不过滤）
      * @return 每行: date(日期), browse_count(浏览数), cart_count(加购数)
      */
+    @InterceptorIgnore(tenantLine = "true")
     @Select("<script>" +
             "SELECT " +
             "  DATE(create_time) AS date, " +

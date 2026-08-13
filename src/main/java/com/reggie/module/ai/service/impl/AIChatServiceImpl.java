@@ -8,12 +8,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.BaseContext;
 import com.reggie.common.ObjectMapperHolder;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.dish.model.Dish;
 import com.reggie.module.dish.mapper.DishMapper;
 import com.reggie.module.ai.config.AIConfigProperties;
 import com.reggie.module.ai.mapper.AIConversationMapper;
 import com.reggie.module.ai.mapper.AIMessageRecordMapper;
-import com.reggie.module.ai.model.*;
+import com.reggie.module.ai.model.AIChatRequest;
+import com.reggie.module.ai.model.AIChatResponse;
+import com.reggie.module.ai.model.AIConversation;
+import com.reggie.module.ai.model.AIMessage;
+import com.reggie.module.ai.model.AIMessageRecord;
+import com.reggie.module.ai.model.AIRecommendedDish;
+import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.provider.AiProviderManager;
 import com.reggie.module.ai.adapter.AiModelAdapter.StreamCallback;
 import com.reggie.module.ai.service.AIChatService;
@@ -28,7 +35,15 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
@@ -42,12 +57,6 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * AIChat service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 @SuppressWarnings("unchecked")
 public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConversation> implements AIChatService {
@@ -381,7 +390,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 .eq(AIConversation::getIsDeleted, 0)
                 .eq(AIConversation::getTenantId, BaseContext.getCurrentTenantId())
                 .orderByDesc(AIConversation::getUpdateTime);
-        Page<AIConversation> pageObj = new Page<>(page, pageSize);
+        Page<AIConversation> pageObj = PageUtils.of(page, pageSize);
         conversationMapper.selectPage(pageObj, wrapper);
         return pageObj.getRecords();
     }
@@ -638,7 +647,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 }
             }
         } catch (Exception e) {
-            log.debug("解析AI推荐菜品失败（Mock模式下正常）: {}", e.getMessage());
+            log.debug("解析AI推荐菜品失败（Mock模式下正常）", e);
         }
         return result;
     }
@@ -770,7 +779,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 .eq(AIMessageRecord::getIsDeleted, 0)
                 .eq(AIMessageRecord::getTenantId, BaseContext.getCurrentTenantId())
                 .orderByDesc(AIMessageRecord::getCreateTime);
-        Page<AIMessageRecord> pageObj = new Page<>(1, MAX_HISTORY_MESSAGES);
+        Page<AIMessageRecord> pageObj = PageUtils.of(1, MAX_HISTORY_MESSAGES);
         messageRecordMapper.selectPage(pageObj, wrapper);
         List<AIMessageRecord> records = pageObj.getRecords();
         // 反转列表，使消息按时间正序排列（最早的在前）
@@ -940,7 +949,6 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         conversationContextService.clearContext(conversationId);
     }
 }
-
 
 
 

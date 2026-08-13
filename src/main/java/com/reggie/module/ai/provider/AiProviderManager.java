@@ -97,7 +97,7 @@ public class AiProviderManager implements AIClient {
         try {
             reloadConfig();
         } catch (Exception e) {
-            log.warn("AI供应商配置加载失败（可能是测试环境缺少数据表），已跳过。错误: {}", e.getMessage());
+            log.warn("AI供应商配置加载失败（可能是测试环境缺少数据表），已跳过。错误", e);
             this.activeConfig = null;
         }
         log.info("AI供应商管理器初始化完成，当前供应商: {}",

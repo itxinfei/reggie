@@ -22,7 +22,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.reggie.module.category.model.Category;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 经营报表控制器
@@ -142,7 +144,7 @@ public class ReportController {
      */
     @GetMapping("/dish-trend")
     @Operation(summary = "菜品销量趋势", description = "获取指定菜品在日期范围内的每日销量趋势，数据来源：order_detail + orders 真实统计")
-    @Parameter(description = "N a m e s")
+    @Parameter(description = "Names")
     public R<Map<String, Object>> dishTrend(@RequestParam String names,
                                               @Parameter(description = "Start date")
                                               @RequestParam String startDate,
@@ -167,7 +169,7 @@ public class ReportController {
      */
     @GetMapping("/payment/trend")
     @Operation(summary = "支付金额趋势", description = "获取各支付渠道每日金额趋势，数据来源：orders 表真实统计")
-    @Parameter(description = "S t a r t D a t e")
+    @Parameter(description = "StartDate")
     public R<Map<String, Object>> paymentTrend(@RequestParam String startDate,
                                                 @Parameter(description = "End date")
                                                 @RequestParam String endDate) {
@@ -184,7 +186,7 @@ public class ReportController {
      */
     @GetMapping("/time-slot/heatmap")
     @Operation(summary = "时段热力图", description = "获取工作日×时段的客流量热力图数据，数据来源：orders 表真实统计")
-    @Parameter(description = "S t a r t D a t e")
+    @Parameter(description = "StartDate")
     public R<Map<String, Object>> timeSlotHeatmap(@RequestParam String startDate,
                                                     @Parameter(description = "End date")
                                                     @RequestParam String endDate) {

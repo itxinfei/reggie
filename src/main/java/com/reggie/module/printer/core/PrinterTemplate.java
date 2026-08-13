@@ -4,7 +4,6 @@ import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.printer.model.PrintJob;
 import com.reggie.module.printer.model.PrintLine;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
@@ -19,7 +18,6 @@ import java.util.List;
  * @author 心飞为你飞
  * @since 2026-07-09
  */
-@Slf4j
 @Component
 public class PrinterTemplate {
 

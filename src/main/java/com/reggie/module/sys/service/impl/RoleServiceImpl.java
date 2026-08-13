@@ -18,18 +18,11 @@ import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
-import java.util.stream.Collectors;
 
 /**
  * 角色服务实现
  */
 @Slf4j
-/**
- * Role service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements RoleService {
 

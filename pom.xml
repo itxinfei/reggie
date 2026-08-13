@@ -70,7 +70,7 @@
         <dependency>
             <groupId>com.github.ulisesbocchio</groupId>
             <artifactId>jasypt-spring-boot-starter</artifactId>
-            <version>3.0.3</version>
+            <version>2.1.2</version>
         </dependency>
 
         <dependency>
@@ -125,7 +125,6 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
-            <version>5.4.6</version>
         </dependency>
 
         <!-- Spring Boot Actuator for monitoring -->
@@ -141,11 +140,11 @@
         </dependency>
 
         <!-- 修改点：Spring Boot DevTools 开发热部署（常用开发组件，optional 避免传递依赖） -->
-        <dependency>
+<!--        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
             <optional>true</optional>
-        </dependency>
+        </dependency>-->
 
         <!-- Swagger/OpenAPI 3（与Spring Boot 2.4.x兼容的版本） -->
         <dependency>

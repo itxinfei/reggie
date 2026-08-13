@@ -129,7 +129,7 @@ public class DishController {
 
         //构造分页构造器对象
         Page<Dish> pageInfo = PageUtils.of(page,pageSize);
-        Page<DishDto> dishDtoPage = new Page<>();
+        Page<DishDto> dishDtoPage = PageUtils.of(page, pageSize);
 
         //条件构造器
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
@@ -304,7 +304,7 @@ public class DishController {
         }
 
         // 分页查询，防止全表扫描
-        Page<Dish> pageInfo = new Page<>(1, maxPageSize);
+        Page<Dish> pageInfo = PageUtils.of(1, maxPageSize);
         dishService.page(pageInfo, queryWrapper);
         // 达到上限时记录警告，避免静默截断
         if (pageInfo.getTotal() > maxPageSize) {

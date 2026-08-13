@@ -388,7 +388,7 @@ public class OrderController {
                 dashboardService.clearOverviewCache(tenantId);
             }
         } catch (Exception e) {
-            log.warn("清除Dashboard缓存失败: {}", e.getMessage());
+            log.warn("清除Dashboard缓存失败", e);
         }
     }
 }

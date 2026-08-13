@@ -91,6 +91,12 @@ public class UserController {
     private static final String PHONE_REGEX = "^1[3-9]\\d{9}$";
 
     /**
+     * 默认租户ID（主餐厅）
+     * <p>历史脏数据（用户登录时 register 因无租户上下文遗漏 tenant_id）归属默认租户。</p>
+     */
+    private static final Long DEFAULT_TENANT_ID = 1L;
+
+    /**
      * 发送短信验证码
      *
      * @param dto 发送短信请求
@@ -194,17 +200,21 @@ public class UserController {
 
         log.info("用户登录，手机号={}", phone);
 
-        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(User::getPhone, phone);
-        User user = userService.getOne(queryWrapper);
+        User user = userService.getByPhoneForLogin(phone);
 
         if(user == null){
             user = new User();
             user.setPhone(phone);
             user.setStatus(1);
             // 设置租户ID，确保新用户关联到当前租户
-            user.setTenantId(BaseContext.getCurrentTenantId());
+            user.setTenantId(BaseContext.getCurrentTenantId() != null ? BaseContext.getCurrentTenantId() : DEFAULT_TENANT_ID);
             userService.save(user);
+        } else if (user.getTenantId() == null) {
+            // 兼容历史脏数据：登录查询是跨租户的，若用户 tenant_id 为 null（旧版注册遗漏），
+            // 则归属默认租户（主餐厅），并回写数据库，避免登录后被 LoginCheckFilter 以
+            // "用户登录态不完整"拒绝，同时保证购物车/订单等按租户过滤的查询有上下文。
+            user.setTenantId(DEFAULT_TENANT_ID);
+            userService.updateById(user);
         }
 
         session.setAttribute("user", user.getId());

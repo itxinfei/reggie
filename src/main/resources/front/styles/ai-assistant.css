@@ -55,6 +55,7 @@
 
 /* ========== 暗色模式 ========== */
 .ai-container.dark-mode {
+    --primary-dark-mode: #ffb300;
     background: #1a1a2e;
 }
 .ai-container.dark-mode .ai-header {
@@ -68,11 +69,11 @@
     color: rgba(255,255,255,0.5);
 }
 .ai-container.dark-mode .scene-tab:hover {
-    color: #e94e3c;
+    color: var(--primary-dark-mode);
 }
 .ai-container.dark-mode .scene-tab.active {
-    color: #e94e3c;
-    border-bottom-color: #e94e3c;
+    color: var(--primary-dark-mode);
+    border-bottom-color: var(--primary-dark-mode);
 }
 .ai-container.dark-mode .quick-tips {
     background: #16213e;
@@ -80,8 +81,8 @@
 }
 .ai-container.dark-mode .quick-tip {
     background: #1a1a2e;
-    border-color: #e94e3c;
-    color: #e94e3c;
+    border-color: var(--primary-dark-mode);
+    color: var(--primary-dark-mode);
 }
 .ai-container.dark-mode .quick-tip.profile-tag {
     background: #16213e;
@@ -94,7 +95,7 @@
     color: #e0e0e0;
 }
 .ai-container.dark-mode .chat-msg.user .chat-bubble {
-    background: #e94e3c;
+    background: var(--primary-dark-mode);
     color: #fff;
 }
 .ai-container.dark-mode .input-area {
@@ -138,21 +139,21 @@
     color: #ccc;
 }
 .ai-container.dark-mode .retry-btn {
-    border-color: #e94e3c;
-    color: #e94e3c;
+    border-color: var(--primary-dark-mode);
+    color: var(--primary-dark-mode);
     background: #1a1a2e;
 }
 .ai-container.dark-mode .retry-btn:hover {
     background: #16213e;
 }
 .ai-container.dark-mode .network-banner {
-    background: #ff9800;
+    background: var(--color-warning);
     color: #000;
 }
 
 /* ========== 网络状态提示条 ========== */
 .network-banner {
-    background: #ff9800;
+    background: var(--color-warning);
     color: #000;
     text-align: center;
     padding: 6px 12px;
@@ -166,13 +167,13 @@
 
 /* ========== 顶部栏 ========== */
 .ai-header {
-    background: linear-gradient(135deg, #FF6B35 0%, #f7931e 100%);
+    background: var(--color-primary-gradient);
     color: var(--color-text-white);
     padding: var(--spacing-md) var(--spacing-lg);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+    box-shadow: 0 2px 8px rgba(255, 194, 0, 0.3);
     flex-shrink: 0;
 }
 .ai-header .header-left {
@@ -188,11 +189,11 @@
 }
 .ai-header .header-btn:hover { opacity: 1; }
 .ai-header .status-dot {
-    width: 8px; height: 8px; border-radius: 50%; background: #4caf50;
+    width: 8px; height: 8px; border-radius: 50%; background: var(--color-success);
     display: inline-block; margin-right: 6px; animation: pulse 2s infinite;
 }
 .ai-header .status-dot.offline {
-    background: #f44336;
+    background: var(--color-danger);
     animation: none;
 }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -217,7 +218,7 @@
 }
 .sidebar-header h3 { font-size: var(--font-size-lg); color: var(--color-text-primary); }
 .sidebar-header .new-chat-btn {
-    padding: 6px 14px; background: #FF6B35; color: var(--color-text-white); border: none;
+    padding: 6px 14px; background: var(--color-primary); color: var(--color-text-white); border: none;
     border-radius: var(--radius-lg); font-size: 13px; cursor: pointer;
 }
 .sidebar-list { flex: 1; overflow-y: auto; padding: var(--spacing-sm); }
@@ -226,7 +227,7 @@
     margin-bottom: 4px; transition: all 0.2s; position: relative;
 }
 .sidebar-item:hover { background: var(--bg-hover); }
-.sidebar-item.active { background: #FFF0E6; }
+.sidebar-item.active { background: rgba(255, 194, 0, 0.1); }
 .sidebar-item .conv-title {
     font-size: var(--font-size-md); color: var(--color-text-primary); overflow: hidden;
     text-overflow: ellipsis; white-space: nowrap; padding-right: 30px;
@@ -248,15 +249,15 @@
 .empty-sidebar .empty-icon { font-size: 48px; margin-bottom: var(--spacing-md); }
 .empty-sidebar p { font-size: 13px; }
 .sidebar-footer {
-    padding: 10px var(--spacing-lg); border-top: 1px solid #eee;
+    padding: 10px var(--spacing-lg); border-top: 1px solid var(--bg-hover);
     text-align: center;
 }
 .clear-all-btn {
     padding: 6px 20px; font-size: var(--font-size-sm); color: var(--color-danger);
-    border: 1px solid #fde2e2; background: #fef0f0;
+    border: 1px solid rgba(233, 78, 60, 0.2); background: rgba(233, 78, 60, 0.06);
     border-radius: 14px; cursor: pointer; transition: all 0.2s;
 }
-.clear-all-btn:hover { background: #fde2e2; }
+.clear-all-btn:hover { background: rgba(233, 78, 60, 0.12); }
 
 /* ========== 场景切换标签 ========== */
 .scene-tabs {
@@ -269,8 +270,8 @@
     color: var(--color-text-hint); cursor: pointer; border-bottom: 2px solid transparent;
     white-space: nowrap; transition: all 0.2s;
 }
-.scene-tab:hover { color: #FF6B35; }
-.scene-tab.active { color: #FF6B35; border-bottom-color: #FF6B35; }
+.scene-tab:hover { color: var(--color-primary-dark); }
+.scene-tab.active { color: var(--color-primary-dark); border-bottom-color: var(--color-primary-dark); }
 
 /* ========== 快捷提示 ========== */
 .quick-tips {
@@ -280,12 +281,12 @@
 }
 .quick-tip {
     font-size: var(--font-size-sm); padding: 6px 14px; border-radius: var(--radius-lg);
-    background: var(--bg-card); border: 1px solid #FF6B35; color: #FF6B35;
+    background: var(--bg-card); border: 1px solid var(--color-primary-dark); color: var(--color-primary-dark);
     cursor: pointer; white-space: nowrap; transition: all 0.2s;
 }
-.quick-tip:active { background: #FF6B35; color: var(--color-text-white); }
+.quick-tip:active { background: var(--color-primary); color: var(--color-text-white); }
 .quick-tip.profile-tag {
-    background: #FFF0E6; border-color: #FF6B35; color: #FF6B35;
+    background: rgba(255, 194, 0, 0.1); border-color: var(--color-primary-dark); color: var(--color-primary-dark);
 }
 
 /* ========== 聊天区域 ========== */
@@ -312,8 +313,8 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 18px; flex-shrink: 0;
 }
-.chat-msg.assistant .chat-avatar { background: #FFF0E6; }
-.chat-msg.user .chat-avatar { background: #FF6B35; color: var(--color-text-white); }
+.chat-msg.assistant .chat-avatar { background: rgba(255, 194, 0, 0.1); }
+.chat-msg.user .chat-avatar { background: var(--color-primary); color: var(--color-text-white); }
 .chat-bubble {
     padding: 10px 14px; border-radius: var(--radius-lg); font-size: var(--font-size-md);
     line-height: 1.7; word-break: break-word;
@@ -322,7 +323,7 @@
     background: var(--bg-page); border-top-left-radius: 4px;
 }
 .chat-msg.user .chat-bubble {
-    background: #FF6B35; color: var(--color-text-white); border-top-right-radius: 4px;
+    background: var(--color-primary); color: var(--color-text-white); border-top-right-radius: 4px;
 }
 
 /* 消息操作按钮（复制） */
@@ -334,7 +335,7 @@
     border: 1px solid #ddd; background: var(--bg-card); color: var(--color-text-secondary);
     cursor: pointer; transition: all 0.2s;
 }
-.copy-btn:hover { border-color: #FF6B35; color: #FF6B35; }
+.copy-btn:hover { border-color: var(--color-primary-dark); color: var(--color-primary-dark); }
 
 /* 富文本格式 */
 .chat-bubble .msg-bold { font-weight: 600; }
@@ -347,7 +348,7 @@
 .chat-bubble .msg-list ul ul { list-style: circle; }
 .chat-bubble .msg-list ul ul ul { list-style: square; }
 .chat-bubble .msg-highlight {
-    background: #FFF0E6; color: #FF6B35; padding: 2px 6px;
+    background: rgba(255, 194, 0, 0.1); color: var(--color-primary-dark); padding: 2px 6px;
     border-radius: var(--radius-sm); font-weight: 500;
 }
 
@@ -371,9 +372,9 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .dish-card .dish-reason { font-size: 11px; color: var(--color-text-hint); margin-top: 2px; }
-.dish-card .dish-price { font-size: var(--font-size-md); color: #FF6B35; font-weight: 600; margin-top: 4px; }
+.dish-card .dish-price { font-size: var(--font-size-md); color: var(--color-price); font-weight: 600; margin-top: 4px; }
 .dish-card .add-btn {
-    width: 28px; height: 28px; border-radius: var(--radius-round); background: #FF6B35;
+    width: 28px; height: 28px; border-radius: var(--radius-round); background: var(--color-primary);
     color: var(--color-text-white); border: none; font-size: var(--font-size-lg); cursor: pointer;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
@@ -384,12 +385,12 @@
 }
 .feedback-btn {
     padding: 3px 10px; border-radius: var(--radius-md); font-size: 11px;
-    border: 1px solid #ddd; background: var(--bg-card); color: var(--color-text-secondary);
+    border: 1px solid var(--bg-hover); background: var(--bg-card); color: var(--color-text-secondary);
     cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 3px;
 }
-.feedback-btn:hover { border-color: #FF6B35; color: #FF6B35; }
-.feedback-btn.active-good { border-color: var(--color-success); color: var(--color-success); background: #f0f9eb; }
-.feedback-btn.active-bad { border-color: var(--color-danger); color: var(--color-danger); background: #fef0f0; }
+.feedback-btn:hover { border-color: var(--color-primary-dark); color: var(--color-primary-dark); }
+.feedback-btn.active-good { border-color: var(--color-success); color: var(--color-success); background: rgba(7, 193, 96, 0.08); }
+.feedback-btn.active-bad { border-color: var(--color-danger); color: var(--color-danger); background: rgba(233, 78, 60, 0.08); }
 
 /* ========== 加载动画 ========== */
 .typing-indicator {
@@ -412,10 +413,10 @@
 }
 .retry-btn {
     padding: 4px 12px; border-radius: var(--radius-md); font-size: var(--font-size-sm);
-    border: 1px solid #FF6B35; color: #FF6B35; background: var(--bg-card);
+    border: 1px solid var(--color-primary-dark); color: var(--color-primary-dark); background: var(--bg-card);
     cursor: pointer;
 }
-.retry-btn:hover { background: #FFF0E6; }
+.retry-btn:hover { background: rgba(255, 194, 0, 0.1); }
 
 /* ========== 输入区 ========== */
 .input-area {
@@ -426,7 +427,7 @@
 .input-area input,
 .input-textarea {
     flex: 1; min-width: 0;
-    border: 1px solid #e0e0e0; border-radius: 24px;
+    border: 1px solid var(--bg-hover); border-radius: 24px;
     padding: 10px var(--spacing-lg);
     font-size: var(--font-size-md); font-family: inherit; font-weight: 400;
     line-height: 1.5; color: var(--color-text-primary);
@@ -442,8 +443,8 @@
 }
 .input-area input:focus,
 .input-textarea:focus {
-    border-color: #FF6B35;
-    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.12);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(255, 194, 0, 0.12);
 }
 .input-area input:disabled,
 .input-textarea:disabled {
@@ -452,7 +453,7 @@
 .input-area input::placeholder,
 .input-textarea::placeholder { font-size: var(--font-size-md); color: var(--color-text-hint); }
 .voice-btn {
-    width: 40px; height: 40px; border-radius: var(--radius-round); border: 1px solid #e0e0e0;
+    width: 40px; height: 40px; border-radius: var(--radius-round); border: 1px solid var(--bg-hover);
     background: var(--bg-card); font-size: 18px; cursor: pointer;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     transition: all 0.2s; user-select: none;
@@ -464,7 +465,7 @@
 }
 .send-btn {
     width: 40px; height: 40px; border-radius: var(--radius-round);
-    background: linear-gradient(135deg, #FF6B35, #f7931e);
+    background: var(--color-primary-gradient);
     color: var(--color-text-white); border: none; font-size: 18px; cursor: pointer;
     flex-shrink: 0; display: flex; align-items: center; justify-content: center;
     transition: all 0.2s; user-select: none;
@@ -474,7 +475,7 @@
 
 /* ========== 流式光标 ========== */
 .streaming-cursor::after {
-    content: '\25CB'; color: #FF6B35; animation: blink 0.8s infinite;
+    content: '\25CB'; color: var(--color-primary-dark); animation: blink 0.8s infinite;
     margin-left: 2px;
 }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }

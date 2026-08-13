@@ -21,7 +21,7 @@
 
 <br>
 
-<img src="https://img.shields.io/badge/Modules-12+-1677ff?logo=spring" alt="12+ Modules">
+<img src="https://img.shields.io/badge/Modules-31-1677ff?logo=spring" alt="12+ Modules">
 <img src="https://img.shields.io/badge/Data_Tables-50+-ff6b6b?logo=postgresql" alt="50+ Tables">
 <img src="https://img.shields.io/badge/Java_Files-407-4379a7?logo=java" alt="407 Java files">
 <img src="https://img.shields.io/badge/Total_Commits-194-success?logo=git" alt="194 commits">
@@ -35,6 +35,45 @@
 ## 📖 项目介绍
 
 **瑞吉外卖**是一套完整的餐饮管理系统，基于 Spring Boot + Vue 的单体应用架构，覆盖堂食、外卖、进销存、会员、支付、打印、报表等餐饮全业务场景。系统核心创新在于 **AI 智能引擎**，通过接入大语言模型实现智能点餐推荐、菜品描述生成、经营分析等能力。
+
+
+### 🏗️ 模块化架构
+
+项目采用 **模块化设计**，所有业务功能按领域划分为 31 个独立模块，每个模块包含完整的 Controller → Service → Mapper → Model 分层：
+
+| 模块 | 说明 | 核心功能 |
+|------|------|----------|
+| 🔐 **auth** | 员工认证 | 登录、登出、密码管理、验证码 |
+| 👤 **user** | 用户管理 | C 端用户、手机号登录、用户信息 |
+| 🍽️ **dish** | 菜品管理 | 菜品 CRUD、口味、规格、评价 |
+| 📋 **order** | 订单管理 | 下单、状态流转、订单查询 |
+| 📂 **category** | 分类管理 | 菜品分类、套餐分类 |
+| 🥡 **setmeal** | 套餐管理 | 套餐组合、起售停售 |
+| 🛒 **shopping** | 购物车 | 添加、删除、清空、结算 |
+| 📍 **address** | 地址管理 | 收货地址 CRUD、默认地址 |
+| 🏪 **store** | 门店管理 | 总部-分店、数据同步、门店配置 |
+| 🏢 **tenant** | 租户管理 | 多租户 SaaS、租户注册 |
+| 📊 **dashboard** | 仪表盘 | 经营概览、实时数据 |
+| 💰 **payment** | 支付管理 | 微信/支付宝、退款、回调 |
+| 🖨️ **printer** | 打印管理 | 小票打印、模板配置 |
+| 🤖 **ai** | AI 助手 | 智能推荐、描述生成、经营分析 |
+| 📈 **report** | 报表管理 | 日报、菜品排行、时段分析 |
+| 🎯 **recommend** | 推荐系统 | 协同过滤、用户画像、营销活动 |
+| 📦 **inventory** | 库存管理 | 原材料、采购、盘点 |
+| 💳 **cashier** | 收银管理 | 收银记录、日结 |
+| 💲 **cost** | 成本管理 | 菜品成本、人工、其他成本 |
+| 💹 **finance** | 财务管理 | 收支、利润分析 |
+| 👥 **member** | 会员管理 | 会员等级、积分、优惠券 |
+| 🎁 **marketing** | 营销管理 | 营销活动、工具 |
+| 📢 **notification** | 通知管理 | 消息推送、模板 |
+| 🚚 **delivery** | 配送管理 | 配送员、配送追踪 |
+| 🪑 **dining** | 堂食管理 | 桌台、排队、预约 |
+| 🛎️ **customer** | 客服管理 | 客户服务、工单 |
+| 📤 **export** | 数据导出 | Excel 导出 |
+| ⏰ **schedule** | 定时任务 | 订单超时、数据统计 |
+| 📋 **sys** | 系统管理 | 角色、权限、配置、日志 |
+| 🌍 **region** | 区域管理 | 省市区数据 |
+| 🔧 **common** | 公共接口 | 文件上传、餐厅信息 |
 
 - 后台管理系统
 
@@ -526,6 +565,8 @@ server:
 
 Made with ❤️ by [itxinfei](https://gitee.com/itxinfei)
 
-**407** Java 源文件 · **50** 管理后台页面 · **12** 移动端页面 · **194** 次提交
+**500+** Java 源文件 · **50** 管理后台页面 · **31** 业务模块 · **194** 次提交
 
 </div>
+
+

@@ -8,9 +8,9 @@ import com.aliyuncs.dysmsapi.model.v20170525.SendSmsRequest;
 import com.aliyuncs.dysmsapi.model.v20170525.SendSmsResponse;
 import com.aliyuncs.profile.DefaultProfile;
 import com.reggie.common.BaseContext;
-import com.reggie.common.ObjectMapperHolder;
 import com.reggie.common.CustomException;
 import com.reggie.common.ObjectMapperHolder;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.user.model.User;
 import com.reggie.module.user.mapper.UserMapper;
 import com.reggie.module.notification.mapper.NotificationRecordMapper;
@@ -31,7 +31,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -43,12 +47,6 @@ import java.util.regex.Pattern;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * Notification service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class NotificationServiceImpl implements NotificationService {
@@ -827,7 +825,6 @@ public class NotificationServiceImpl implements NotificationService {
         return record;
     }
 }
-
 
 
 

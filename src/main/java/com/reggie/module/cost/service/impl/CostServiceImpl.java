@@ -12,7 +12,6 @@ import com.reggie.module.cost.mapper.LaborCostMapper;
 import com.reggie.module.cost.mapper.OtherCostMapper;
 import com.reggie.module.cost.mapper.DishCostMapper;
 import com.reggie.module.cost.service.CostService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +20,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -29,13 +31,6 @@ import java.util.stream.Collectors;
  *
  * @author reggie
  * @since 2026-08-10
- */
-@Slf4j
-/**
- * Cost service implementation
- *
- * @author reggie
- * @since 2026-08-11
  */
 @Service
 public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> implements CostService {

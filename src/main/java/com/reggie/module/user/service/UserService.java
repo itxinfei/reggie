@@ -30,6 +30,18 @@ public interface UserService extends IService<User> {
     User getByPhone(String phone);
 
     /**
+     * 根据手机号跨租户查询用户（供匿名登录使用）
+     * <p>
+     * 用户登录（/user/login）是公开端点，登录前尚未设置租户上下文，不能走租户过滤，
+     * 否则会被注入 {@code tenant_id = -1} 导致永远查不到用户、登录失败。
+     * </p>
+     *
+     * @param phone 手机号
+     * @return 用户信息，不存在则返回null
+     */
+    User getByPhoneForLogin(String phone);
+
+    /**
      * 更新用户个人信息
      *
      * @param user 用户信息

@@ -9,7 +9,6 @@ import com.reggie.module.member.service.CouponUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,7 +24,6 @@ import org.springframework.web.bind.annotation.RequestParam;
  * @author reggie
  * @since 2026-07-09
  */
-@Slf4j
 @RestController
 @RequestMapping("/api/member/coupon-user")
 @Tag(name = "用户优惠券")

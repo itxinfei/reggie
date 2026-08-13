@@ -2,7 +2,6 @@ package com.reggie.module.printer.service;
 
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.model.OrderDetail;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -17,7 +16,6 @@ import java.util.Map;
  * @author reggie
  * @since 2026-08-11
  */
-@Slf4j
 @Service
 public class PrintTemplateService {
 

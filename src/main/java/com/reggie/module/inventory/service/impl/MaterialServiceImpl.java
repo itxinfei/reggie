@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.inventory.mapper.MaterialCategoryMapper;
 import com.reggie.module.inventory.mapper.MaterialMapper;
 import com.reggie.module.inventory.mapper.SupplierMapper;
@@ -12,7 +13,6 @@ import com.reggie.module.inventory.model.Material;
 import com.reggie.module.inventory.model.MaterialCategory;
 import com.reggie.module.inventory.model.Supplier;
 import com.reggie.module.inventory.service.MaterialService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,13 +29,6 @@ import static com.reggie.module.inventory.model.Material.STATUS_NORMAL;
  * @author reggie
  * @since 2026-07-09
  */
-@Slf4j
-/**
- * Material service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> implements MaterialService {
@@ -47,7 +40,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
 
     @Override
     public Page<Material> pageWithCategory(int page, int pageSize) {
-        Page<Material> pageInfo = new Page<>(page, pageSize);
+        Page<Material> pageInfo = PageUtils.of(page, pageSize);
         return page(pageInfo);
     }
 

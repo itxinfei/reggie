@@ -23,7 +23,7 @@
    ================================================================ */
 /* 修改点：padding-top 使用 safe-area-inset-top 适配 iPhone 灵动岛 / 刘海屏 */
 .header-section {
-  background: linear-gradient(180deg, #FFE566 0%, #FFD100 40%, #F5A623 100%);
+  background: var(--color-primary-gradient);
   flex-shrink: 0;
   padding: env(safe-area-inset-top, 0px) 12rem 0 12rem;
   position: relative;
@@ -186,8 +186,8 @@
 .restaurant-card .rc-brand {
   font-size: 10rem;
   font-weight: 600;
-  color: #FF7D00;
-  background: #FFF4E8;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-light);
   padding: 1rem 5rem;
   border-radius: 3rem;
   line-height: 16rem;
@@ -203,12 +203,12 @@
 }
 
 .restaurant-card .rc-stars {
-  color: #FF7D00;
+  color: var(--color-star);
   font-weight: 700;
 }
 
 .restaurant-card .rc-divider {
-  color: #E0E0E0;
+  color: var(--color-text-disabled);
   margin: 0 5rem;
 }
 
@@ -224,7 +224,7 @@
 .coupon-bar {
   display: flex;
   align-items: center;
-  border-top: 1px solid #FFF2D0;
+  border-top: 1px solid var(--color-primary-light);
   padding-top: 9rem;
   margin-top: 0;
   cursor: pointer;
@@ -242,8 +242,8 @@
   align-items: center;
   flex-shrink: 0;
   margin-right: 8rem;
-  background: #FFF5F5;
-  border: 0.5px solid #FFD9D9;
+  background: rgba(243, 67, 70, 0.06);
+  border: 0.5px solid rgba(243, 67, 70, 0.2);
   border-radius: 3rem;
   padding: 2rem 6rem;
 }
@@ -252,7 +252,7 @@
   font-size: 10rem;
   font-weight: 700;
   color: var(--color-text-white);
-  background: #F34346;
+  background: var(--color-price);
   padding: 1rem 4rem;
   border-radius: 2rem;
   margin-right: 3rem;
@@ -279,12 +279,12 @@
 .notice-bar {
   display: flex;
   align-items: center;
-  background: #FFF8E1;
+  background: var(--color-primary-light);
   border-radius: 6rem;
   padding: 7rem 10rem;
   margin-top: 8rem;
   font-size: 11rem;
-  color: #8D6E13;
+  color: var(--color-text-primary);
   cursor: pointer;
 }
 
@@ -346,7 +346,7 @@
 }
 
 .category-sidebar .cat-item:active {
-  background: #EDEDED;
+  background: var(--bg-hover);
 }
 
 .category-sidebar .cat-item .cat-text {
@@ -379,7 +379,7 @@
   transform: translateY(-50%);
   width: 3rem;
   height: 18rem;
-  background: #FFD100;
+  background: var(--color-primary);
   border-radius: 0 2rem 2rem 0;
 }
 
@@ -388,7 +388,7 @@
   min-width: 16rem;
   height: 16rem;
   line-height: 16rem;
-  background: #F34346;
+  background: var(--color-price);
   color: var(--color-text-white);
   font-size: 10rem;
   font-weight: 600;
@@ -430,7 +430,7 @@
   left: 116rem;
   right: 14rem;
   height: 1px;
-  background: #F2F2F2;
+  background: var(--bg-hover);
 }
 
 .dish-item:last-child::after {
@@ -446,7 +446,7 @@
   position: relative;
   cursor: pointer;
   margin-right: 12rem;
-  background: #F9F9F9;
+  background: var(--bg-input);
 }
 
 .dish-item .di-image img {
@@ -471,7 +471,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  background: linear-gradient(135deg, #FF4757, #FF6348);
+  background: linear-gradient(135deg, var(--color-price), var(--color-danger));
   color: var(--color-text-white);
   font-size: 9rem;
   font-weight: 600;
@@ -576,7 +576,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #FFD100;
+  background: var(--color-primary);
   color: var(--color-text-primary);
   font-size: 10rem;
   font-weight: 600;
@@ -590,7 +590,7 @@
 }
 
 .dish-item .di-action .di-spec:active {
-  background: #F0C000;
+  background: var(--color-primary-dark);
   transform: scale(0.93);
 }
 
@@ -625,7 +625,7 @@
   width: 100%;
   max-width: 750px;
   height: calc(48rem + env(safe-area-inset-bottom, 0px));
-  background: #3B3B3B;
+  background: var(--bg-cart-bar);
   display: flex;
   align-items: center;
   padding: 0 12rem env(safe-area-inset-bottom, 0px);
@@ -666,7 +666,7 @@
   position: absolute;
   top: -4rem;
   right: -6rem;
-  background: #F34346;
+  background: var(--color-price);
   color: var(--color-text-white);
   font-size: 10rem;
   font-weight: 700;
@@ -721,7 +721,7 @@
 }
 
 .cart-bar .cart-submit-active {
-  background: linear-gradient(135deg, #FFD100, #FFAE00);
+  background: var(--color-primary-gradient);
   color: var(--color-text-primary);
   box-shadow: 0 2rem 6rem rgba(255,209,0,0.35);
 }
@@ -774,7 +774,7 @@
   display: inline-block;
   height: 30rem;
   background: var(--bg-card);
-  border: 1px solid #E0E0E0;
+  border: 1px solid var(--color-text-disabled);
   border-radius: 15rem;
   line-height: 30rem;
   padding: 0 14rem;
@@ -790,8 +790,8 @@
 }
 
 #main .dialogFlavor .divContent .spanActive {
-  background: #FFD100;
-  border-color: #FFD100;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   font-weight: 600;
 }
 
@@ -817,7 +817,7 @@
 #main .dialogFlavor .divBottom div:last-child {
   width: 110rem;
   height: 34rem;
-  background: linear-gradient(135deg, #FFD100, #FFAE00);
+  background: var(--color-primary-gradient);
   border-radius: 17rem;
   text-align: center;
   line-height: 34rem;
@@ -872,7 +872,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 16rem;
-  border-bottom: 1px solid #F0F0F0;
+  border-bottom: 1px solid var(--bg-hover);
 }
 
 #main .dialogCart .divCartTitle .title {
@@ -1073,7 +1073,7 @@
 
 #main .detailsDialog .divNum .divTypes {
   height: 28rem;
-  background: linear-gradient(135deg, #FFD100, #FFAE00);
+  background: var(--color-primary-gradient);
   border-radius: 14rem;
   font-size: 12rem;
   font-weight: 600;
@@ -1129,7 +1129,7 @@
 #main .detailsDialog .eval-section {
   margin-top: 16rem;
   padding-top: 16rem;
-  border-top: 1px solid #f0f2f5;
+  border-top: 1px solid var(--bg-hover);
   text-align: left;
 }
 
@@ -1143,7 +1143,7 @@
 #main .detailsDialog .eval-rating {
   font-size: 22rem;
   font-weight: 700;
-  color: #f7ba2a;
+  color: var(--color-star);
 }
 
 #main .detailsDialog .eval-stars {
@@ -1153,11 +1153,11 @@
 
 #main .detailsDialog .eval-stars .star {
   font-size: 16rem;
-  color: #e4e7ed;
+  color: var(--color-text-disabled);
 }
 
 #main .detailsDialog .eval-stars .star.filled {
-  color: #f7ba2a;
+  color: var(--color-star);
 }
 
 #main .detailsDialog .eval-count {
@@ -1174,7 +1174,7 @@
 
 #main .detailsDialog .eval-review-item {
   padding: 10rem 12rem;
-  background: #f9fafb;
+  background: var(--bg-input);
   border-radius: 8rem;
 }
 
@@ -1198,11 +1198,11 @@
 
 #main .detailsDialog .eval-review-stars .star {
   font-size: 12rem;
-  color: #e4e7ed;
+  color: var(--color-text-disabled);
 }
 
 #main .detailsDialog .eval-review-stars .star.filled {
-  color: #f7ba2a;
+  color: var(--color-star);
 }
 
 #main .detailsDialog .eval-review-content {
@@ -1322,7 +1322,7 @@
 
 #main .setMealDetailsDialog .divNum .divTypes {
   height: 28rem;
-  background: linear-gradient(135deg, #FFD100, #FFAE00);
+  background: var(--color-primary-gradient);
   border-radius: 14rem;
   font-size: 12rem;
   font-weight: 600;
@@ -1346,7 +1346,7 @@
 #main .setMealDetailsDialog .divNum .right .addCart {
   width: 100rem;
   height: 32rem;
-  background: linear-gradient(135deg, #FFD100, #FFAE00);
+  background: var(--color-primary-gradient);
   border-radius: 16rem;
   font-size: 14rem;
   font-weight: 700;
@@ -1402,7 +1402,7 @@
   background: var(--bg-card);
   gap: 10rem;
   flex-shrink: 0;
-  border-bottom: 0.5px solid #F0F0F0;
+  border-bottom: 0.5px solid var(--bg-hover);
 }
 
 .search-input-wrap {
@@ -1417,7 +1417,7 @@
 }
 
 .search-input-wrap:focus-within {
-  background: #EDEDED;
+  background: var(--bg-hover);
 }
 
 .search-input-wrap .so-icon {
@@ -1507,7 +1507,7 @@
 }
 
 .search-tag:active {
-  background: #E8E8E8;
+  background: var(--bg-hover);
 }
 
 .search-empty-state {
@@ -1571,7 +1571,7 @@
 /* 修改点：搜索联想建议下拉 */
 .search-suggestions {
   background: var(--bg-card);
-  border-top: 0.5px solid #F0F0F0;
+  border-top: 0.5px solid var(--bg-hover);
   overflow: hidden;
 }
 
@@ -1581,7 +1581,7 @@
   height: 44rem;
   padding: 0 14rem;
   cursor: pointer;
-  border-bottom: 0.5px solid #f8f8f8;
+  border-bottom: 0.5px solid var(--bg-input);
   transition: background 0.12s;
 }
 
@@ -1622,7 +1622,7 @@
   background: var(--bg-card);
   margin: 0 12rem 0;
   padding: 12rem 0 8rem;
-  border-bottom: 6rem solid #f5f5f5;
+  border-bottom: 6rem solid var(--bg-hover);
 }
 .recommend-header {
   display: flex;
@@ -1662,7 +1662,7 @@
   margin: 0 auto;
   border-radius: 8rem;
   overflow: hidden;
-  background: #f8f8f8;
+  background: var(--bg-input);
 }
 .ri-image img {
   width: 100%;
@@ -1682,6 +1682,6 @@
 .ri-price {
   font-size: 14rem;
   font-weight: 700;
-  color: #ff4d29;
+  color: var(--color-price);
   margin-top: 2rem;
 }

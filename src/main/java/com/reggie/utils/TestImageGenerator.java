@@ -7,9 +7,17 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.GradientPaint;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
@@ -413,7 +421,7 @@ public class TestImageGenerator implements CommandLineRunner {
                     input.close();
                 }
             } catch (IOException e) {
-                log.debug("关闭资源失败: {}", e.getMessage());
+                log.debug("关闭资源失败", e);
             }
             if (conn != null) {
                 conn.disconnect();

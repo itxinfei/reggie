@@ -105,7 +105,7 @@
   gap: 4rem;
   height: 36rem;
   padding: 0 20rem;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--color-text-disabled);
   border-radius: 18rem;
   font-size: 15rem;
   font-family: var(--font-family-body);
@@ -113,7 +113,7 @@
   color: var(--color-text-primary);
   line-height: 36rem;
   cursor: pointer;
-  background: #fff;
+  background: var(--bg-card);
   transition: all var(--transition-normal);
 }
 #pay_success .divActions .btnShare:active {

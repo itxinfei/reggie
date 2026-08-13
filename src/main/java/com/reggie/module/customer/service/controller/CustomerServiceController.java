@@ -9,7 +9,6 @@ import com.reggie.module.customer.service.service.CustomerServiceInterface;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,7 +30,6 @@ import java.util.Map;
  * @author reggie
  * @since 2026-08-11
  */
-@Slf4j
 @RestController
 @RequestMapping("/cs")
 @Tag(name = "Customer Service Management")
@@ -45,8 +43,7 @@ public class CustomerServiceController {
     @PostMapping("/session/create")
     @Operation(summary = "Create customer service session")
     public R<CsSession> createSession(
-            @Parameter(description = "S e s s i o n T y p e")
-            @Parameter(description = "Session type") @RequestParam Integer sessionType,
+                        @Parameter(description = "Session type") @RequestParam Integer sessionType,
             @Parameter(description = "Order ID") @RequestParam(required = false) Long orderId) {
         Long userId = BaseContext.getCurrentId();
         String userName = "User"; // Should get from user service
@@ -58,8 +55,7 @@ public class CustomerServiceController {
     @GetMapping("/session/list")
     @Operation(summary = "Get session list")
     public R<List<CsSession>> getSessionList(
-            @Parameter(description = "S t a t u s")
-            @Parameter(description = "Status") @RequestParam(required = false) Integer status) {
+                        @Parameter(description = "Status") @RequestParam(required = false) Integer status) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<CsSession> list = customerService.getSessionList(status, tenantId);
         return R.success(list);
@@ -100,8 +96,7 @@ public class CustomerServiceController {
     @PostMapping("/message/send")
     @Operation(summary = "Send message")
     public R<CsMessage> sendMessage(
-            @Parameter(description = "S e s s i o n I d")
-            @Parameter(description = "Session ID") @RequestParam Long sessionId,
+                        @Parameter(description = "Session ID") @RequestParam Long sessionId,
             @Parameter(description = "Sender type: 1-User, 2-Agent") @RequestParam Integer senderType,
             @Parameter(description = "Message type: 1-Text, 2-Image") @RequestParam(defaultValue = "1") Integer messageType,
             @Parameter(description = "Content") @RequestParam String content,
@@ -115,7 +110,7 @@ public class CustomerServiceController {
 
     @GetMapping("/message/list/{sessionId}")
     @Operation(summary = "Get session messages")
-    @Parameter(description = "S e s s i o n I d")
+    @Parameter(description = "SessionId")
     public R<List<CsMessage>> getSessionMessages(@PathVariable Long sessionId) {
         List<CsMessage> messages = customerService.getSessionMessages(sessionId);
         return R.success(messages);
@@ -157,8 +152,7 @@ public class CustomerServiceController {
     @GetMapping("/complaint/list")
     @Operation(summary = "Get complaint list")
     public R<List<Complaint>> getComplaintList(
-            @Parameter(description = "S t a t u s")
-            @Parameter(description = "Status") @RequestParam(required = false) Integer status,
+                        @Parameter(description = "Status") @RequestParam(required = false) Integer status,
             @Parameter(description = "Type") @RequestParam(required = false) Integer type) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Complaint> list = customerService.getComplaintList(status, type, tenantId);
@@ -210,8 +204,7 @@ public class CustomerServiceController {
     @GetMapping("/statistics")
     @Operation(summary = "Get customer service statistics")
     public R<Map<String, Object>> getCustomerServiceStatistics(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+                        @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
             @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = customerService.getCustomerServiceStatistics(startDate, endDate, tenantId);
@@ -221,8 +214,7 @@ public class CustomerServiceController {
     @GetMapping("/complaint/statistics")
     @Operation(summary = "Get complaint statistics")
     public R<Map<String, Object>> getComplaintStatistics(
-            @Parameter(description = "S t a r t D a t e")
-            @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+                        @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
             @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = customerService.getComplaintStatistics(startDate, endDate, tenantId);

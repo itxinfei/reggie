@@ -6,7 +6,6 @@ import com.reggie.module.printer.model.PrintJob;
 import com.reggie.module.printer.model.PrinterConfig;
 import com.reggie.module.printer.model.PrinterStatus;
 import com.reggie.module.printer.service.PrinterConfigService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +19,6 @@ import java.util.List;
  * @author 心飞为你飞
  * @since 2026-07-09
  */
-@Slf4j
 @Component
 public class PrinterDeviceManager {
 

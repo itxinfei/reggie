@@ -9,25 +9,19 @@ import com.reggie.module.customer.service.model.CsSession;
 import com.reggie.module.customer.service.model.CsMessage;
 import com.reggie.module.customer.service.model.Complaint;
 import com.reggie.module.customer.service.service.CustomerServiceInterface;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Customer Service Implementation
  * 
- * @author reggie
- * @since 2026-08-11
- */
-@Slf4j
-/**
- * CustomerService service implementation
- *
  * @author reggie
  * @since 2026-08-11
  */

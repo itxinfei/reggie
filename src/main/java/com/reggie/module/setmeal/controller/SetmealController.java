@@ -105,7 +105,7 @@ public class SetmealController {
                                     @RequestParam(required = false) String code){
         //分页构造器对象
         Page<Setmeal> pageInfo = PageUtils.of(page,pageSize);
-        Page<SetmealDto> dtoPage = new Page<>();
+        Page<SetmealDto> dtoPage = PageUtils.of(page, pageSize);
 
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
         //添加查询条件，根据name进行like模糊查询
@@ -293,7 +293,7 @@ public class SetmealController {
 
         // 分页上限保护，防止全表扫描导致 OOM
         int maxPageSize = 200;
-        Page<Setmeal> pageInfo = new Page<>(1, maxPageSize);
+        Page<Setmeal> pageInfo = PageUtils.of(1, maxPageSize);
         setmealService.page(pageInfo, queryWrapper);
         if (pageInfo.getTotal() > maxPageSize) {
             log.warn("[setmeal/list] 查询结果共 {} 条，超过上限 {} 条，已截断返回", pageInfo.getTotal(), maxPageSize);

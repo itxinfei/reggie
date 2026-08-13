@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.inventory.mapper.MaterialMapper;
 import com.reggie.module.inventory.mapper.StockRecordMapper;
 import com.reggie.module.inventory.model.Material;
@@ -15,7 +16,6 @@ import com.reggie.module.inventory.model.StockRecord;
 import com.reggie.enums.StockRecordType;
 import com.reggie.module.inventory.service.MaterialService;
 import com.reggie.module.inventory.service.StockRecordService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,13 +31,6 @@ import java.util.stream.Collectors;
  *
  * @author reggie
  * @since 2026-07-09
- */
-@Slf4j
-/**
- * StockRecord service implementation
- *
- * @author reggie
- * @since 2026-08-11
  */
 @Service
 public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, StockRecord> implements StockRecordService {
@@ -103,7 +96,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
 
     @Override
     public Page<StockRecord> pageByMaterial(Long materialId, int page, int pageSize) {
-        Page<StockRecord> pageInfo = new Page<>(page, pageSize);
+        Page<StockRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<StockRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(StockRecord::getMaterialId, materialId);
         qw.orderByDesc(StockRecord::getCreatedTime);

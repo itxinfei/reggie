@@ -11,7 +11,6 @@ import com.reggie.module.marketing.model.FlashSale;
 import com.reggie.module.marketing.service.MarketingToolService;
 import com.reggie.module.user.model.User;
 import com.reggie.module.user.service.UserService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,18 +18,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Marketing Tool Service Implementation
  * 
- * @author reggie
- * @since 2026-08-11
- */
-@Slf4j
-/**
- * MarketingTool service implementation
- *
  * @author reggie
  * @since 2026-08-11
  */

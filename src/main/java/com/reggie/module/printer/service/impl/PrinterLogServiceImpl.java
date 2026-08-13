@@ -3,6 +3,7 @@ package com.reggie.module.printer.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.printer.mapper.PrinterLogMapper;
 import com.reggie.module.printer.model.PrinterLog;
 import com.reggie.module.printer.service.PrinterLogService;
@@ -32,7 +33,7 @@ public class PrinterLogServiceImpl extends ServiceImpl<PrinterLogMapper, Printer
     @Override
     public Page<PrinterLog> pageQuery(int page, int pageSize, Long printerId, Integer status) {
         // 修改点：删除冗余的手动 eq(tenantId)，由 TenantLineInnerInterceptor 统一处理
-        Page<PrinterLog> pageRequest = new Page<>(page, pageSize);
+        Page<PrinterLog> pageRequest = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<PrinterLog> wrapper = new LambdaQueryWrapper<PrinterLog>()
                 .orderByDesc(PrinterLog::getCreatedTime);
         if (printerId != null) {

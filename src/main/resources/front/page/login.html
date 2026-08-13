@@ -104,7 +104,7 @@
 
             <!-- 修改点：整行可点击切换勾选，不限于小圆点 -->
             <div class="agreementRow" @click="toggleAgreement">
-                <label class="agreementCheckbox" @click.stop>
+                <label class="agreementCheckbox" @click.stop="toggleAgreement">
                     <span class="checkIcon" :class="{checked: agreed}">
                         <span v-if="agreed" class="check-mark">✓</span>
                     </span>

@@ -30,22 +30,7 @@ a:hover {
   outline: none;
   text-decoration: none;
 }
-/* 修改点：统一文字链接为项目主色 var(--color-brand-500) */
-.blueBug {
-  color: var(--color-brand-500) !important;
-}
-.blueBug:hover {
-  background: var(--color-brand-50) !important;
-}
-.delBut {
-  color: var(--color-danger) !important;
-}
-.delBut:hover {
-  background: var(--color-danger-light) !important;
-}
-.non::after {
-  display: none;
-}
+/* blueBug/delBut/non 旧操作按钮类已无页面引用，统一走 .btn-view/.btn-delete（components.css） */
 div:focus {
   outline: none;
 }

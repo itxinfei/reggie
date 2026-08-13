@@ -12,7 +12,6 @@ import com.reggie.module.inventory.service.StockRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,7 +32,6 @@ import java.time.LocalTime;
  * @author reggie
  * @since 2026-07-09
  */
-@Slf4j
 @RequireEmployee
 @RestController
 @RequestMapping("/api/inventory/stock-record")
@@ -64,9 +62,9 @@ public class StockRecordController {
     public R<Page<StockRecord>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                       @RequestParam(required = false) Long materialId,
                                       @RequestParam(required = false) String type,
-                                      @Parameter(description = "S t a r t D a t e")
+                                      @Parameter(description = "StartDate")
                                       @RequestParam(required = false) String startDate,
-                                      @Parameter(description = "E n d D a t e")
+                                      @Parameter(description = "EndDate")
                                       @RequestParam(required = false) String endDate) {
         // 修改点：统一使用 LambdaQueryWrapper 支持所有筛选条件，而非分流到 pageByMaterial
         Page<StockRecord> pageInfo = PageUtils.of(page, pageSize);

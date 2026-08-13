@@ -12,7 +12,6 @@ import com.reggie.module.cashier.mapper.CashierRecordMapper;
 import com.reggie.module.cashier.service.CashierService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.payment.service.PaymentOrderService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +21,10 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -30,13 +32,6 @@ import java.util.stream.Collectors;
  *
  * @author reggie
  * @since 2026-08-10
- */
-@Slf4j
-/**
- * Cashier service implementation
- *
- * @author reggie
- * @since 2026-08-11
  */
 @Service
 public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, CashierRecord> implements CashierService {

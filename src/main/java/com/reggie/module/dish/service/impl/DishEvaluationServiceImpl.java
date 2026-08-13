@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.dish.model.DishEvaluation;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
@@ -104,7 +105,7 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
                 .eq(DishEvaluation::getStatus, 1)
                 .orderByDesc(DishEvaluation::getCreateTime);
 
-        Page<DishEvaluation> pageObj = new Page<>(page, pageSize);
+        Page<DishEvaluation> pageObj = PageUtils.of(page, pageSize);
         return this.page(pageObj, queryWrapper);
     }
 
@@ -129,7 +130,8 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
                 .eq(DishEvaluation::getUserId, userId);
         long total = this.count(countWrapper);
 
-        Page<DishEvaluation> pageObj = new Page<>(page, pageSize, total);
+        Page<DishEvaluation> pageObj = PageUtils.of(page, pageSize);
+        pageObj.setTotal(total);
         pageObj.setRecords(records);
         return pageObj;
     }
@@ -144,7 +146,7 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
                 .eq(starRating != null, DishEvaluation::getStarRating, starRating)
                 .orderByDesc(DishEvaluation::getCreateTime);
 
-        Page<DishEvaluation> pageObj = new Page<>(page, pageSize);
+        Page<DishEvaluation> pageObj = PageUtils.of(page, pageSize);
         return this.page(pageObj, queryWrapper);
     }
 

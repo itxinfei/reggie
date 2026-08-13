@@ -10,7 +10,6 @@ import com.reggie.module.inventory.service.MaterialService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +29,6 @@ import java.util.List;
  * @author reggie
  * @since 2026-07-09
  */
-@Slf4j
 @RequireEmployee
 @RestController
 @RequestMapping("/api/inventory/material")
@@ -59,7 +57,7 @@ public class MaterialController {
     public R<Page<Material>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                                    @RequestParam(required = false) String name,
                                    @RequestParam(required = false) Long categoryId,
-                                   @Parameter(description = "S t a t u s")
+                                   @Parameter(description = "Status")
                                    @RequestParam(required = false) String status) {
         Page<Material> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Material> qw = new LambdaQueryWrapper<>();

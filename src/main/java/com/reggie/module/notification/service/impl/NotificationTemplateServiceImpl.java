@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.notification.mapper.NotificationTemplateMapper;
 import com.reggie.module.notification.model.NotificationTemplate;
 import com.reggie.module.notification.service.NotificationTemplateService;
@@ -23,12 +24,6 @@ import java.util.List;
  * @since 2026-07-20
  */
 @Slf4j
-/**
- * NotificationTemplate service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class NotificationTemplateServiceImpl
@@ -37,7 +32,7 @@ public class NotificationTemplateServiceImpl
 
     @Override
     public Page<NotificationTemplate> pageTemplates(int page, int pageSize, String bizType) {
-        Page<NotificationTemplate> pageInfo = new Page<>(page, pageSize);
+        Page<NotificationTemplate> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
         if (bizType != null && !bizType.isEmpty()) {
             wrapper.eq(NotificationTemplate::getBizType, bizType);

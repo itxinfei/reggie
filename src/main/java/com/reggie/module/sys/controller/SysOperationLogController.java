@@ -21,7 +21,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
-import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * <p>
@@ -57,8 +56,7 @@ public class SysOperationLogController {
     @Operation(summary = "操作日志分页查询")
     public R<Page<OperationLog>> page(
             // 修改点：补充分页默认值，避免未传参时 page/pageSize 为 0 导致分页异常
-            @Parameter(description = "P a g e")
-            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+                        @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "模块名称") String module,
             @Parameter(description = "操作类型：INSERT/UPDATE/DELETE/OTHER") String operationType,

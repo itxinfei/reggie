@@ -46,6 +46,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
+    public User getByPhoneForLogin(String phone) {
+        return this.baseMapper.selectByPhoneIgnoreTenant(phone);
+    }
+
+    @Override
     public void updateUserBaseInfo(User user) {
         User updateEntity = new User();
         if (user.getName() != null) {

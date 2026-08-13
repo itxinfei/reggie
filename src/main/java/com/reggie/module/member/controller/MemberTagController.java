@@ -14,7 +14,6 @@ import com.reggie.module.member.service.MemberTagService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,9 +25,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
-import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 会员标签控制器
@@ -36,7 +39,6 @@ import org.springframework.web.bind.annotation.RequestParam;
  * @author reggie
  * @since 2026-07-10
  */
-@Slf4j
 @RestController
 @RequestMapping("/api/member/member-tag")
 @Tag(name = "会员标签管理")
@@ -202,7 +204,7 @@ public class MemberTagController {
         List<MemberTag> tags = memberTagService.list(tagQw);
 
         if (tags.isEmpty()) {
-            return R.success(new Page<>());
+            return R.success(PageUtils.of(PageUtils.DEFAULT_PAGE, PageUtils.DEFAULT_PAGE_SIZE));
         }
 
         Set<Long> memberIds = tags.stream()

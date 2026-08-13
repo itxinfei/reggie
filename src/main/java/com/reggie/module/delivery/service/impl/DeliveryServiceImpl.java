@@ -3,6 +3,7 @@ package com.reggie.module.delivery.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.enums.DeliveryOrderStatus;
 import com.reggie.module.delivery.mapper.DeliveryOrderMapper;
 import com.reggie.module.delivery.model.DeliveryOrder;
@@ -95,7 +96,7 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     @Override
     public Page<DeliveryOrder> pageOrders(int page, int pageSize, String platform, String status, String startDate, String endDate) {
-        Page<DeliveryOrder> pageInfo = new Page<>(page, pageSize);
+        Page<DeliveryOrder> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
         qw.eq(DeliveryOrder::getTenantId, BaseContext.getCurrentTenantId());
         if (StringUtils.isNotBlank(platform)) {

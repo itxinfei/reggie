@@ -9,7 +9,6 @@ import com.reggie.module.marketing.service.MarketingToolService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,7 +30,6 @@ import java.util.Map;
  * @author reggie
  * @since 2026-08-11
  */
-@Slf4j
 @RestController
 @RequestMapping("/marketing/tool")
 @Tag(name = "Marketing Tool Management")
@@ -79,8 +77,7 @@ public class MarketingToolController {
     @PostMapping("/new-customer/calculate")
     @Operation(summary = "Calculate new customer discount")
     public R<BigDecimal> calculateNewCustomerDiscount(
-            @Parameter(description = "O r d e r A m o u n t")
-            @Parameter(description = "Order amount") @RequestParam BigDecimal orderAmount) {
+                        @Parameter(description = "Order amount") @RequestParam BigDecimal orderAmount) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long userId = BaseContext.getCurrentId();
         BigDecimal discount = marketingToolService.calculateNewCustomerDiscount(userId, orderAmount, tenantId);
@@ -126,8 +123,7 @@ public class MarketingToolController {
     @PostMapping("/buy-get-free/calculate")
     @Operation(summary = "Calculate buy get free gift")
     public R<Map<String, Object>> calculateBuyGetFreeGift(
-            @Parameter(description = "A c t i v i t y I d")
-            @Parameter(description = "Activity ID") @RequestParam Long activityId,
+                        @Parameter(description = "Activity ID") @RequestParam Long activityId,
             @Parameter(description = "Dish ID") @RequestParam Long dishId,
             @Parameter(description = "Quantity") @RequestParam int quantity) {
         Map<String, Object> result = marketingToolService.calculateBuyGetFreeGift(activityId, dishId, quantity);
@@ -181,8 +177,7 @@ public class MarketingToolController {
     @PostMapping("/flash-sale/calculate")
     @Operation(summary = "Calculate flash sale price")
     public R<Map<String, Object>> calculateFlashSalePrice(
-            @Parameter(description = "F l a s h S a l e I d")
-            @Parameter(description = "Flash sale ID") @RequestParam Long flashSaleId,
+                        @Parameter(description = "Flash sale ID") @RequestParam Long flashSaleId,
             @Parameter(description = "Quantity") @RequestParam int quantity) {
         Long userId = BaseContext.getCurrentId();
         Map<String, Object> result = marketingToolService.calculateFlashSalePrice(flashSaleId, userId, quantity);

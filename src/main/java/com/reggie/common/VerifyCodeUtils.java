@@ -195,7 +195,7 @@ public class VerifyCodeUtils {
             try {
                 redisTemplate.delete(VERIFY_CODE_KEY_PREFIX + key);
             } catch (Exception e) {
-                log.warn("清除 Redis 验证码失败: {}", e.getMessage());
+                log.warn("清除 Redis 验证码失败", e);
             }
         }
 

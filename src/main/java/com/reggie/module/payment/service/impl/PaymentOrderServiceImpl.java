@@ -19,7 +19,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.UUID;
 
-import static com.reggie.module.payment.model.PaymentOrder.*;
+import static com.reggie.module.payment.model.PaymentOrder.STATUS_FAIL;
+import static com.reggie.module.payment.model.PaymentOrder.STATUS_PENDING;
+import static com.reggie.module.payment.model.PaymentOrder.STATUS_SUCCESS;
 
 /**
  * 支付订单服务实现
@@ -28,12 +30,6 @@ import static com.reggie.module.payment.model.PaymentOrder.*;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * PaymentOrder service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, PaymentOrder> implements PaymentOrderService {
 

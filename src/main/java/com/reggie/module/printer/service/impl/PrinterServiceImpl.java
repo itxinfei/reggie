@@ -30,12 +30,6 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Slf4j
-/**
- * Printer service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class PrinterServiceImpl implements PrinterService {

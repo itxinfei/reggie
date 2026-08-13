@@ -15,7 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 配送增强服务实现
@@ -24,12 +27,6 @@ import java.util.*;
  * @since 2026-08-11
  */
 @Slf4j
-/**
- * DeliveryEnhanced service implementation
- *
- * @author reggie
- * @since 2026-08-11
- */
 @Service
 public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMapper, DeliveryRangeRule> 
         implements DeliveryEnhancedService {

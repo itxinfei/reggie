@@ -1,10 +1,10 @@
 /* Additional payment method icon styles */
 .pay-wechat-icon {
-    background: #07c160;
+    background: var(--color-success);
 }
 .pay-alipay-icon {
-    background: #1677ff;
+    background: var(--color-info);
 }
 .pay-cod-icon {
-    background: #ff9a00;
+    background: var(--color-primary-dark);
 }
