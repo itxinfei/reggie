@@ -10,9 +10,11 @@
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div id="app">
     <div class="dashboard-container">
-      <div class="container">
+      <div class="container" id="main-content" role="main" aria-label="页面主要内容">
         <h1>无障碍访问和性能优化示例</h1>
         
         <!-- 表格示例 -->
@@ -23,9 +25,9 @@
           border 
           stripe
           aria-label="示例表格">
-          <el-table-column prop="id" label="ID" width="80"></el-table-column>
-          <el-table-column prop="name" label="名称" width="120"></el-table-column>
-          <el-table-column prop="value" label="值"></el-table-column>
+          <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
+          <el-table-column prop="name" label="名称" width="120" align="center"></el-table-column>
+          <el-table-column prop="value" label="值" align="center"></el-table-column>
         </el-table>
         
         <!-- 表单示例 -->

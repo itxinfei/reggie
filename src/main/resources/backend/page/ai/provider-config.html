@@ -10,8 +10,10 @@
     <link rel="stylesheet" href="../../styles/ai-provider.css" />
 </head>
 <body>
+<!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="provider-app">
-    <div class="container">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
 
         <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
         <header class="ds-page-header">
@@ -202,6 +204,8 @@
 <script src="../../plugins/element-ui/index.js"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
 <script src="../../js/request.js"></script>
+<script src="../../js/accessibility-utils.js"></script>
+<script src="../../js/performance-utils.js"></script>
   <script src="../../js/components.js"></script>
 <script src="../../api/ai.js"></script>
 <script>

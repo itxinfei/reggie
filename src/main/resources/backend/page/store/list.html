@@ -57,9 +57,11 @@
     </style>
 </head>
 <body>
+<!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
 <div id="app">
     <div class="dashboard-container">
-        <div class="container">
+        <div class="container" id="main-content" role="main" aria-label="页面主要内容">
             <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
             <header class="ds-page-header">
                 <div class="ds-page-header__titles">
@@ -113,14 +115,14 @@
                     style="width:100%">
                     <el-table-column type="selection" width="45" fixed="left"></el-table-column>
                     <el-table-column label="序号" type="index" width="46" align="center"></el-table-column>
-                    <el-table-column prop="storeName" label="门店名称" min-width="150" sortable="custom" show-overflow-tooltip>
+                    <el-table-column prop="storeName" label="门店名称" min-width="150" align="center" sortable="custom" show-overflow-tooltip>
                         <template slot-scope="{row}">
                             <el-tag :type="storeTypeTag(row.storeType)" size="mini" effect="plain">{{ storeTypeName(row.storeType) }}</el-tag>
                             <span style="margin-left:6px; font-weight:500;">{{ row.storeName }}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="storeCode" label="门店编码" width="92" sortable="custom" show-overflow-tooltip></el-table-column>
-                    <el-table-column label="联系人 / 电话" min-width="140" show-overflow-tooltip>
+                    <el-table-column prop="storeCode" label="门店编码" width="92" align="center" sortable="custom" show-overflow-tooltip></el-table-column>
+                    <el-table-column label="联系人 / 电话" min-width="140" align="center" show-overflow-tooltip>
                         <template slot-scope="{row}">
                             <span>{{ row.contactPerson || '—' }}</span>
                             <span style="margin-left:8px; color:var(--text-muted);">{{ row.contactPhone || '—' }}</span>
@@ -270,12 +272,12 @@
             <el-row :gutter="16">
                 <el-col :span="8">
                     <el-form-item label="支持外卖">
-                        <el-switch v-model="form.isDeliveryEnabled" :active-value="1" :inactive-value="0" active-color="#13ce66" />
+                        <el-switch v-model="form.isDeliveryEnabled" :active-value="1" :inactive-value="0" active-color="var(--legacy-13ce66)" />
                     </el-form-item>
                 </el-col>
                 <el-col :span="8">
                     <el-form-item label="支持堂食">
-                        <el-switch v-model="form.isDineInEnabled" :active-value="1" :inactive-value="0" active-color="#ffc200" />
+                        <el-switch v-model="form.isDineInEnabled" :active-value="1" :inactive-value="0" active-color="var(--color-brand-500)" />
                     </el-form-item>
                 </el-col>
                 <el-col :span="8">
@@ -411,6 +413,8 @@
 <script src="../../plugins/element-ui/index.js"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
 <script src="../../js/request.js"></script>
+<script src="../../js/accessibility-utils.js"></script>
+<script src="../../js/performance-utils.js"></script>
 <script src="../../api/store.js"></script>
 <script src="../../js/components.js"></script>
 <script>
@@ -848,12 +852,12 @@
             if (typeof val === 'number') return new Date(val).toISOString().replace('T', ' ').substring(0, 19);
             return String(val);
         },
-        // 修改点：el-progress 颜色随完善度变化（绿/橙/灰）
+        // 修改点：el-progress 颜色随完善度变化（绿/橙/灰），统一走语义令牌
         progressColor: function(val) {
             var n = this.toNumber(val);
-            if (n >= 80) return '#67C23A';
-            if (n >= 50) return '#E6A23C';
-            return '#909399';
+            if (n >= 80) return 'var(--color-success)';
+            if (n >= 50) return 'var(--color-warning)';
+            return 'var(--color-info)';
         },
         // 修改点：根据字段填写情况计算数据完善度（0-100 整数），驱动 el-progress
         calcCompleteRate: function(row) {

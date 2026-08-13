@@ -97,37 +97,12 @@
   margin-top: 20px;
 }
 
-/* 操作列内按钮间距 */
-.crud-table-wrapper .tableBox .el-button--text + .el-button--text {
-  margin-left: 8px;
-}
-
-/* 修改点：统一按钮样式体系，去除操作列分隔线，旧版 blueBug/delBut 颜色与 btn-view/btn-delete 一致 */
-.crud-table-wrapper .tableBox .el-button--text.blueBug {
-  color: var(--color-brand-500);
-}
-.crud-table-wrapper .tableBox .el-button--text.blueBug:hover {
-  background: var(--color-brand-50);
-}
-
-.crud-table-wrapper .tableBox .el-button--text.delBut {
-  color: var(--color-danger);
-}
-.crud-table-wrapper .tableBox .el-button--text.delBut:hover {
-  background: var(--color-danger-light);
-}
+/* ========== 操作列按钮统一间距 ========== */
+/* 操作列内按钮间距（新版统一样式见下方 .el-button--text 块） */
 
 /* ========== 表格内标签微调 ========== */
 .crud-table-wrapper .tableBox .el-tag--small {
   font-size: 12px;
-}
-
-/* ========== 操作列按钮统一间距 ========== */
-.crud-table-wrapper .tableBox .el-button--text {
-  padding: 4px 10px;
-  font-size: 13px;
-  border-radius: 3px;
-  transition: all 0.2s ease;
 }
 
 /* ========== dialog 通用微调 ========== */
@@ -202,6 +177,43 @@
 .info-box .item-box .des {
   flex: 1;
   color: var(--gray-333);
+}
+
+/* 独立弹窗键值行（退款弹窗等无 .info-box 包裹的场景，避免依赖内联 style） */
+.refund-form {
+  padding: 10px 0;
+}
+.refund-form .item-box {
+  display: flex;
+  min-height: 20px;
+  line-height: 20px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--gray-666);
+  text-align: left;
+  margin-bottom: 14px;
+}
+.refund-form .item-box:last-child {
+  margin-bottom: 0;
+}
+.refund-form .item-box .label {
+  width: 80px;
+  flex-shrink: 0;
+}
+.refund-form .item-box .des {
+  flex: 1;
+  color: var(--gray-333);
+}
+.refund-form .item-box .des-danger {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+.refund-form .el-input,
+.refund-form .el-select {
+  width: 160px;
+}
+.refund-form .el-textarea {
+  width: 220px;
 }
 
 /* 操作列按钮颜色变体（统一为品牌金 var(--color-brand-500) 的加深可读版本，保证白底对比度） */

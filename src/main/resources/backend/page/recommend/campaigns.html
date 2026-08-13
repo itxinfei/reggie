@@ -59,8 +59,10 @@
     </style>
 </head>
 <body>
+<!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="app">
-    <div class="container">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
 
         <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
         <header class="ds-page-header">
@@ -341,9 +343,13 @@
 <script src="../../plugins/element-ui/index.js"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
 <script src="../../js/request.js"></script>
+<script src="../../js/accessibility-utils.js"></script>
+<script src="../../js/performance-utils.js"></script>
 <script src="../../api/recommend.js"></script>
 <script src="../../js/components.js"></script>
 <script>
+  // 图表语义色统一引用全局 window.RgPalette（components.js 从 tokens.css 运行时解析，
+  // canvas 无法使用 CSS 变量，RgPalette 为 JS 侧唯一颜色来源）；多色系列数据色保留图表调色板
   new Vue({
     el: '#app',
     data: function() {
@@ -529,14 +535,14 @@
                     series: [{
                         type: 'pie', radius: ['45%', '70%'], center: ['35%', '50%'],
                         avoidLabelOverlap: false,
-                        itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 },
+                        itemStyle: { borderRadius: 4, borderColor: RgPalette.white, borderWidth: 2 },
                         label: { show: false },
                         emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
                         data: [
-                            { value: self.summary.active || 0, name: '进行中', itemStyle: { color: '#67c23a' } },
-                            { value: self.summary.draft || 0, name: '草稿', itemStyle: { color: '#909399' } },
-                            { value: self.summary.ended || 0, name: '已结束', itemStyle: { color: '#e6a23c' } },
-                            { value: self.summary.paused || 0, name: '已暂停', itemStyle: { color: '#f56c6c' } }
+                            { value: self.summary.active || 0, name: '进行中', itemStyle: { color: RgPalette.success } },
+                            { value: self.summary.draft || 0, name: '草稿', itemStyle: { color: RgPalette.info } },
+                            { value: self.summary.ended || 0, name: '已结束', itemStyle: { color: RgPalette.warning } },
+                            { value: self.summary.paused || 0, name: '已暂停', itemStyle: { color: RgPalette.danger } }
                         ]
                     }]
                 }, true);
@@ -562,7 +568,7 @@
                             data: [self.summary.totalParticipants || 0],
                             barWidth: 50,
                             itemStyle: { color: '#91cc75', borderRadius: [6, 6, 0, 0] },
-                            label: { show: true, position: 'top', fontSize: 14, fontWeight: 'bold', color: '#67c23a' }
+                            label: { show: true, position: 'top', fontSize: 14, fontWeight: 'bold', color: RgPalette.success }
                         }
                     ]
                 }, true);

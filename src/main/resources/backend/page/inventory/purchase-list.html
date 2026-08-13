@@ -19,8 +19,10 @@
   </style>
 </head>
 <body>
-  <div class="dashboard-container" id="purchase-app">
-    <div class="container">
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="purchase-app">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -74,19 +76,19 @@
         @expand-change="loadDetails">
         <template #expand="{ row }">
           <el-table aria-label="数据表格" :data="row.details" stripe class="tableBox" v-if="row.details && row.details.length">
-            <el-table-column prop="materialName" label="食材名称" min-width="140" show-overflow-tooltip />
+            <el-table-column prop="materialName" label="食材名称" min-width="140" align="center" show-overflow-tooltip />
             <el-table-column prop="materialId" label="食材ID" width="80" align="center" />
-            <el-table-column prop="qty" label="数量" />
-            <el-table-column label="单价">
+            <el-table-column prop="qty" label="数量" align="center" />
+            <el-table-column label="单价" align="right">
               <template slot-scope="scope">￥{{ scope.row.unitPrice }}</template>
             </el-table-column>
-            <el-table-column label="已收货">
+            <el-table-column label="已收货" align="center">
               <template slot-scope="scope">{{ scope.row.receivedQty || 0 }}</template>
             </el-table-column>
-            <el-table-column label="小计">
+            <el-table-column label="小计" align="right">
               <template slot-scope="scope">￥{{ scope.row.amount }}</template>
             </el-table-column>
-            <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
+            <el-table-column prop="remark" label="备注" min-width="120" align="center" show-overflow-tooltip />
           </el-table>
           <div v-else style="text-align:center;padding:16px;color:var(--el-border-base);">暂无明细数据</div>
         </template>
@@ -282,7 +284,7 @@
               ],
               series: [
                 { name: '采购金额', type: 'bar', data: amounts, barWidth: 14, itemStyle: { borderRadius: [6,6,0,0], color: 'var(--color-brand-500)' } },
-                { name: '采购单数', type: 'line', yAxisIndex: 1, data: counts, smooth: true, lineStyle: { width: 2, color: '#67c23a' }, symbol: 'circle', symbolSize: 6 }
+                { name: '采购单数', type: 'line', yAxisIndex: 1, data: counts, smooth: true, lineStyle: { width: 2, color: 'var(--color-success)' }, symbol: 'circle', symbolSize: 6 }
               ]
             })
           } catch (e) { console.warn('趋势图加载失败:', e) }

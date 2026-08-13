@@ -759,10 +759,7 @@
   box-shadow: var(--shadow-sm);
 }
 
-.el-button--primary {
-  background: var(--color-brand-500);
-  border-color: var(--color-brand-500);
-}
+/* 主按钮样式统一收敛至 design-system.css（金底深字，唯一权威） */
 
 .el-button--success {
   background: var(--color-success);

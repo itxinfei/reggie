@@ -10,8 +10,10 @@
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
-  <div class="dashboard-container" id="log-app">
-    <div class="container">
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="log-app">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -38,6 +40,7 @@
       <!-- 数据表格 -->
       <crud-table
         ref="crudTable"
+        empty-hint="试试调整筛选条件"
         :data="tableData"
         :columns="columns"
         :loading="loading"
@@ -105,7 +108,7 @@
           // 表格列配置
           columns: [
             { prop: 'id', label: 'ID', width: 70, align: 'center' },
-            { prop: 'operatorId', label: '操作人ID', width: 80, align: 'center', type: 'number' },
+            { prop: 'operatorId', label: '操作人ID', width: 80, align: 'center' },
             { prop: 'operatorIp', label: '操作IP', width: 120, align: 'center' },
             { prop: 'operatorName', label: '操作人', width: 90, slot: true, align: 'center' },
             { prop: 'module', label: '操作模块', width: 105, align: 'center' },
@@ -113,7 +116,7 @@
             { prop: 'description', label: '操作描述', width: 120, showOverflowTooltip: true, align: 'center' },
             { prop: 'requestUrl', label: '请求地址', width: 120, showOverflowTooltip: true, align: 'center' },
             { prop: 'requestMethod', label: '方法', width: 65, align: 'center', slot: true },
-            { prop: 'duration', label: '耗时(ms)', width: 85, align: 'center', type: 'number' },
+            { prop: 'duration', label: '耗时(ms)', width: 85, type: 'number' },
             { prop: 'isSuccess', label: '状态', width: 65, align: 'center', slot: true },
             { prop: 'errorMsg', label: '错误信息', width: 120, showOverflowTooltip: true, align: 'center' },
             { prop: 'createTime', label: '操作时间', width: 150, align: 'center' }

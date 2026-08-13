@@ -24,8 +24,10 @@
   </style>
 </head>
 <body>
-  <div class="dashboard-container" id="member-app">
-    <div class="container">
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="member-app">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -48,6 +50,7 @@
       <!-- ===== 数据表格 ===== -->
       <crud-table
         ref="crudTable"
+        empty-hint="试试调整筛选条件"
         :data="tableData"
         :columns="columns"
         :loading="loading"
@@ -141,9 +144,9 @@
             { prop: 'name', label: '会员名称', width: 100, showOverflowTooltip: true },
             { prop: 'phone', label: '手机号', width: 120, align: 'center' },
             { prop: 'levelName', label: '等级', slot: true, width: 80, align: 'center' },
-            { prop: 'points', label: '积分', width: 70, align: 'center', type: 'number' },
-            { prop: 'balance', label: '余额', slot: true, width: 80, align: 'center', type: 'money' },
-            { prop: 'totalConsumption', label: '累计消费', slot: true, width: 90, align: 'center', type: 'money' },
+            { prop: 'points', label: '积分', width: 70, type: 'number' },
+            { prop: 'balance', label: '余额', slot: true, width: 80, type: 'money' },
+            { prop: 'totalConsumption', label: '累计消费', slot: true, width: 90, type: 'money' },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
             { prop: 'createdTime', label: '注册时间', width: 140, align: 'center' }
           ],

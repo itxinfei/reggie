@@ -94,7 +94,9 @@
   </style>
 </head>
 <body>
-  <div id="app" class="container">
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#app" class="skip-link">跳转到主内容</a>
+ <div id="app" class="container" role="main" aria-label="页面主要内容">
     <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
     <header class="ds-page-header">
       <div class="ds-page-header__titles">
@@ -151,7 +153,7 @@
         stripe
         style="width: 100%"
         v-loading="loading">
-        <el-table-column prop="settlementDate" label="结算日期" width="120"></el-table-column>
+        <el-table-column prop="settlementDate" label="结算日期" width="120" align="center"></el-table-column>
         <el-table-column prop="totalRevenue" label="营业额" width="120" align="right">
           <template slot-scope="scope">
             ¥{{ formatMoney(scope.row.totalRevenue) }}
@@ -192,8 +194,8 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="settlementUserName" label="结账人" width="100"></el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column prop="settlementUserName" label="结账人" width="100" align="center"></el-table-column>
+        <el-table-column label="操作" width="200" align="center" fixed="right">
           <template slot-scope="scope">
             <el-button type="text" size="small" @click="handleViewDetail(scope.row)">查看详情</el-button>
             <el-button

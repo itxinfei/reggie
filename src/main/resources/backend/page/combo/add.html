@@ -172,8 +172,10 @@
     </style>
   </head>
   <body>
+    <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+    <a href="#main-content" class="skip-link">跳转到主内容</a>
     <div class="addBrand-container" id="combo-add-app">
-      <div class="container">
+      <div class="container" id="main-content" role="main" aria-label="页面主要内容">
         <el-form
           ref="ruleForm"
           :model="ruleForm"
@@ -202,7 +204,7 @@
                     <div class="table">
                       <el-table aria-label="数据表格" :data="dishTable" border class="tableBox">
                         <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
-                        <el-table-column prop="price" label="原价" width="180">
+                        <el-table-column prop="price" label="原价" width="180" align="right">
                           <template slot-scope="scope"> {{ Number(scope.row.price) }} </template>
                         </el-table-column>
                         <el-table-column prop="address" label="份数" align="center">

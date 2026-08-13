@@ -83,7 +83,9 @@
   </style>
 </head>
 <body>
-  <div id="app" class="container">
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#app" class="skip-link">跳转到主内容</a>
+ <div id="app" class="container" role="main" aria-label="页面主要内容">
     <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
     <header class="ds-page-header">
       <div class="ds-page-header__titles">
@@ -110,9 +112,9 @@
         stripe
         style="width: 100%"
         v-loading="loading">
-        <el-table-column prop="id" label="ID" width="80"></el-table-column>
-        <el-table-column prop="campaignId" label="活动ID" width="100"></el-table-column>
-        <el-table-column prop="ruleName" label="规则名称" min-width="150"></el-table-column>
+        <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
+        <el-table-column prop="campaignId" label="活动ID" width="100" align="center"></el-table-column>
+        <el-table-column prop="ruleName" label="规则名称" min-width="150" align="center"></el-table-column>
         <el-table-column prop="scope" label="折扣范围" width="120" align="center">
           <template slot-scope="scope">
             <span class="scope-tag" :class="getScopeClass(scope.row.scope)">
@@ -147,7 +149,7 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="180" align="center" fixed="right">
           <template slot-scope="scope">
             <el-button type="text" size="small" @click="handleEdit(scope.row)">编辑</el-button>
             <el-button type="text" size="small" @click="handleToggleStatus(scope.row)">

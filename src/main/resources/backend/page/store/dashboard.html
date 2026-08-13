@@ -77,8 +77,8 @@
             font-size:var(--font-size-base); font-weight: 700; flex-shrink: 0;
         }
         .rank-num.r1 { background: var(--color-brand-500); color: var(--text-on-brand); }
-        .rank-num.r2 { background: #aeb4c0; color: #fff; }
-        .rank-num.r3 { background: #c98a4e; color: #fff; }
+        .rank-num.r2 { background: var(--color-info); color: var(--color-white); }
+        .rank-num.r3 { background: var(--color-warning); color: var(--color-white); }
         .rank-num.rn { background: var(--el-bg-light); color: var(--color-info); }
         .rank-info { flex: 1; min-width: 0; }
         .rank-name { font-size:var(--font-size-base); font-weight: 600; color: var(--el-text-primary); display: flex; align-items: center; gap: 8px; }
@@ -126,8 +126,10 @@
     </style>
 </head>
 <body>
-<div class="store-dashboard" id="store-dash-app" v-loading="loading">
-    <div class="container">
+<!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+<div class="<div class="store-dashboard"" id="store-dash-app" v-loading="loading">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -215,9 +217,13 @@
 <script src="../../plugins/element-ui/index.js"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
 <script src="../../js/request.js"></script>
+<script src="../../js/accessibility-utils.js"></script>
+<script src="../../js/performance-utils.js"></script>
 <script src="../../api/store.js"></script>
 <script src="../../js/components.js"></script>
 <script>
+  // 图表语义色统一引用全局 window.RgPalette（components.js 从 tokens.css 运行时解析，
+  // canvas 无法使用 CSS 变量，RgPalette 为 JS 侧唯一颜色来源）；多色系列数据色保留图表调色板
   new Vue({
     el: '#store-dash-app',
     data: {
@@ -226,7 +232,7 @@
         barChart: null,
         resizeHandler: null,
         lastUpdated: null,
-        brandColor: '#ffc200', // 与 --color-brand-500 一致
+        brandColor: RgPalette.brand, // 与 --color-brand-500 一致（CH 定义见脚本顶部）
         topN: 10 // 柱状图仅展示订单量前 N 名，避免门店过多时拥挤
     },
     created() {
@@ -267,7 +273,7 @@
             var orders = hasData ? stores.map(function(s) { return s.todayOrders || 0; }) : [0];
             var amounts = hasData ? stores.map(function(s) { return s.todayAmount || 0; }) : [0];
             // 修改点：协调配色（品牌金为主 + 蓝/青/绿/紫/橙辅），避免前几根红橙像报错
-            var colors = ['#ffc200', '#5470c6', '#73c0de', '#91cc75', '#9a60b4',
+            var colors = [RgPalette.brand, '#5470c6', '#73c0de', '#91cc75', '#9a60b4',
                           '#fc8452', '#36a3f5', '#ea7ccc', '#3ba272', '#ee6666'];
 
             // 门店名过长时截断，避免 x 轴标签溢出重叠
@@ -281,8 +287,8 @@
                 color: colors,
                 tooltip: {
                     trigger: 'axis', axisPointer: { type: 'shadow' },
-                    backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e4e7ed', borderWidth: 1,
-                    textStyle: { color: '#303133', fontSize: 13 },
+                    backgroundColor: 'rgba(255,255,255,0.96)', borderColor: RgPalette.borderLighter2, borderWidth: 1,
+                    textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                     formatter: function(params) {
                         var html = '<b>' + params[0].axisValue + '</b><br/>';
                         params.forEach(function(p) {
@@ -292,24 +298,24 @@
                         return html;
                     }
                 },
-                legend: { data: ['订单数', '营收'], bottom: 8, textStyle: { color: '#606266', fontSize: 13 } },
+                legend: { data: ['订单数', '营收'], bottom: 8, textStyle: { color: RgPalette.textRegular, fontSize: 13 } },
                 grid: { left: 55, right: 55, top: 20, bottom: 56 },
                 xAxis: {
                     type: 'category', data: labels,
-                    axisLine: { lineStyle: { color: '#e4e7ed' } },
+                    axisLine: { lineStyle: { color: RgPalette.borderLighter2 } },
                     axisTick: { show: false },
                     axisLabel: {
-                        color: '#909399', fontSize: 11,
+                        color: RgPalette.info, fontSize: 11,
                         interval: 0, rotate: labels.length > 6 ? 25 : 0
                     }
                 },
                 yAxis: [
-                    { type: 'value', name: '订单量(单)', nameTextStyle: { color: '#909399', fontSize: 12 },
-                      axisLabel: { color: '#909399', fontSize: 12 },
-                      splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } },
+                    { type: 'value', name: '订单量(单)', nameTextStyle: { color: RgPalette.info, fontSize: 12 },
+                      axisLabel: { color: RgPalette.info, fontSize: 12 },
+                      splitLine: { lineStyle: { color: RgPalette.borderLighter2, type: 'dashed' } },
                       axisLine: { show: false }, axisTick: { show: false } },
-                    { type: 'value', name: '营收(元)', nameTextStyle: { color: '#909399', fontSize: 12 },
-                      axisLabel: { color: '#909399', fontSize: 12, formatter: '¥{value}' },
+                    { type: 'value', name: '营收(元)', nameTextStyle: { color: RgPalette.info, fontSize: 12 },
+                      axisLabel: { color: RgPalette.info, fontSize: 12, formatter: '¥{value}' },
                       splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false } }
                 ],
                 series: [
@@ -325,10 +331,10 @@
                     {
                         name: '营收', type: 'line', yAxisIndex: 1, data: amounts,
                         smooth: true, symbol: 'emptyCircle', symbolSize: 8,
-                        lineStyle: { color: '#ffc200', width: 3 },
-                        itemStyle: { color: '#ffc200', borderColor: '#fff', borderWidth: 2 },
+                        lineStyle: { color: RgPalette.brand, width: 3 },
+                        itemStyle: { color: RgPalette.brand, borderColor: RgPalette.white, borderWidth: 2 },
                         label: {
-                            show: hasData, position: 'top', fontSize: 12, fontWeight: 700, color: '#c99200',
+                            show: hasData, position: 'top', fontSize: 12, fontWeight: 700, color: RgPalette.brandDark,
                             formatter: function(p) { return '¥' + Number(p.value).toFixed(0); }
                         }
                     }

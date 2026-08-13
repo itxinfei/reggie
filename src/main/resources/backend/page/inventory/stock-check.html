@@ -20,8 +20,10 @@
   </style>
 </head>
 <body>
-  <div class="dashboard-container" id="stock-check-app">
-    <div class="container">
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="stock-check-app">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -61,7 +63,7 @@
         @expand-change="loadDetails">
         <template #expand="{ row }">
           <el-table aria-label="数据表格" :data="row.details" stripe class="tableBox sub-table" v-if="row.details && row.details.length">
-            <el-table-column label="食材名称" min-width="140">
+            <el-table-column label="食材名称" min-width="140" align="center">
               <template slot-scope="scope">{{ scope.row.materialName }}</template>
             </el-table-column>
             <el-table-column prop="materialId" label="食材ID" width="80" align="center" />
@@ -75,7 +77,7 @@
                 </span>
               </template>
             </el-table-column>
-            <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
+            <el-table-column prop="remark" label="备注" min-width="120" align="center" show-overflow-tooltip />
           </el-table>
           <div v-else class="empty-expand">暂无明细数据</div>
         </template>
@@ -167,7 +169,7 @@
           columns: [
             { prop: 'checkNo', label: '盘点单号', width: 140 },
             { prop: 'operator', label: '操作员', width: 90, align: 'center' },
-            { prop: 'itemCount', label: '盘点项数', width: 90, align: 'center', type: 'number' },
+            { prop: 'itemCount', label: '盘点项数', width: 90, type: 'number' },
             { prop: 'totalDiffAmount', label: '总差异金额', width: 115, align: 'right', slot: true, type: 'money' },
             { prop: 'profitLoss', label: '盈亏金额', width: 115, align: 'right', slot: true, type: 'money' },
             { prop: 'remark', label: '备注', width: 90, showOverflowTooltip: true },

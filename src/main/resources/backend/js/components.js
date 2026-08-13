@@ -91,8 +91,8 @@ Vue.component('stat-cards', {
             '{{ card.value != null ? card.value : 0 }}' +
             '<small v-if="card.unit" style="font-size:14px;font-weight:400;margin-left:2px;">{{ card.unit }}</small>' +
           '</div>' +
-          '<div v-if="card.sub" class="sub">' +
-            '<span v-if="card.subText">{{ card.subText }}</span>' +
+          '<div v-if="card.subText" class="sub">' +
+            '<span>{{ card.subText }}</span>' +
           '</div>' +
         '</template>' +
       '</div>' +
@@ -258,6 +258,7 @@ Vue.component('table-bar', {
           '<el-input v-if="item.type === \'input\'" :key="\'search-\' + item.field"' +
           '  v-model="searchValues[item.field]"' +
           '  :placeholder="item.placeholder || \'请输入\'"' +
+          '  :aria-label="item.label || item.placeholder || \'搜索条件\'"' +
           '  :class="item.cssClass || \'\'"' +
           '  :style="item.width ? { width: toWidth(item.width) } : {}"' +
           '  :clearable="item.clearable !== false"' +
@@ -269,6 +270,7 @@ Vue.component('table-bar', {
           '<el-select v-else-if="item.type === \'select\'" :key="\'search-\' + item.field"' +
           '  v-model="searchValues[item.field]"' +
           '  :placeholder="item.placeholder || \'请选择\'"' +
+          '  :aria-label="item.label || item.placeholder || \'筛选条件\'"' +
           '  :class="item.cssClass || \'\'"' +
           '  :style="item.width ? { width: toWidth(item.width) } : {}"' +
           '  :clearable="item.clearable !== false"' +
@@ -286,6 +288,7 @@ Vue.component('table-bar', {
           '  unlink-panels' +
           '  :picker-options="pickerOptions"' +
           '  :placeholder="item.placeholder || \'选择日期范围\'"' +
+          '  :aria-label="item.label || item.placeholder || \'时间范围\'"' +
           '  range-separator="至"' +
           '  start-placeholder="开始日期"' +
           '  end-placeholder="结束日期"' +
@@ -520,6 +523,16 @@ Vue.component('crud-table', {
       type: String,
       default: '暂无数据'
     },
+    /**
+     * 空状态辅助提示（显示在 emptyText 下方）。
+     * 默认文案含"新建"引导，仅适合有新增按钮的 CRUD 页面；
+     * 无"新建"按钮的页面（报表/日志/纯查询等）必须显式传 empty-hint 覆盖，
+     * 否则会出现"点击右上角新建"的误导提示。
+     */
+    emptyHint: {
+      type: String,
+      default: '试试调整筛选条件，或点击右上角“新建”添加一条记录'
+    },
     /** 表格区域无障碍标签（role=region，配合页内 aria-label 透传） */
     ariaLabel: {
       type: String,
@@ -636,7 +649,7 @@ Vue.component('crud-table', {
         '<div class="ds-table-empty">' +
           '<i class="el-icon-document"></i>' +
           '<p>{{ emptyText }}</p>' +
-          '<p class="ds-table-empty__hint">试试调整筛选条件，或点击右上角“新建”添加一条记录</p>' +
+          '<p v-if="emptyHint" class="ds-table-empty__hint">{{ emptyHint }}</p>' +
         '</div>' +
       '</template>' +
     '</el-table>' +

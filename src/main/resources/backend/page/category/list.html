@@ -9,18 +9,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
-  <style>
-    /* 页面级表格居中兜底：不依赖公共 CSS 加载/缓存，确保分类名称等数据列水平居中
-       （金额/数字列 .is-right 保持右对齐） */
-    .tableBox .el-table td .cell,
-    .tableBox .el-table th .cell {
-      text-align: center !important;
-    }
-    .tableBox .el-table td.is-right .cell,
-    .tableBox .el-table th.is-right .cell {
-      text-align: right !important;
-    }
-  </style>
+  <!-- 对齐规范单一来源：styles/consistency.css（.is-left/.is-center/.is-right），页面禁止写 text-align 覆盖 -->
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->

@@ -10,8 +10,10 @@
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
-  <div class="dashboard-container" id="delivery-app">
-    <div class="container">
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="delivery-app">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -40,6 +42,7 @@
       <!-- 数据表格 -->
       <crud-table
         ref="crudTable"
+        empty-hint="试试调整筛选条件"
         :data="tableData"
         :columns="columns"
         :loading="loading"
@@ -55,10 +58,10 @@
           <el-tag v-if="row.platform === 'MEITUAN'" size="small">美团</el-tag>
           <el-tag v-else-if="row.platform === 'ELEME'" type="success" size="small">饿了么</el-tag>
           <el-tag v-else-if="row.platform === 'DOUYIN'" type="warning" size="small">抖音</el-tag>
-          <span v-else>{{ row.platform }}</span>
+          <span v-else>未知平台</span>
         </template>
         <template #col-amount="{ row }">
-          <span style="color:var(--color-danger);font-weight:500">￥{{ row.amount }}</span>
+          <span class="ds-money--danger">￥{{ formatMoney(row.amount) }}</span>
         </template>
         <template #col-status="{ row }">
           <el-tag v-if="row.status === 'PENDING'" type="warning" size="small">待接单</el-tag>
@@ -67,7 +70,7 @@
           <el-tag v-else-if="row.status === 'DELIVERING'" type="primary" size="small">配送中</el-tag>
           <el-tag v-else-if="row.status === 'DELIVERED'" type="success" size="small">已送达</el-tag>
           <el-tag v-else-if="row.status === 'CANCELLED'" type="danger" size="small">已取消</el-tag>
-          <span v-else>{{ row.status }}</span>
+          <el-tag v-else size="small">{{ statusLabelMap[row.status] || '未知状态' }}</el-tag>
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" @click="showDetail(row)">详情</el-button>
@@ -106,8 +109,9 @@
                   <el-tag v-else-if="detailOrder.status === 'DELIVERING'" type="primary" size="mini">配送中</el-tag>
                   <el-tag v-else-if="detailOrder.status === 'DELIVERED'" type="success" size="mini">已送达</el-tag>
                   <el-tag v-else-if="detailOrder.status === 'CANCELLED'" type="danger" size="mini">已取消</el-tag>
+                  <el-tag v-else size="mini">{{ statusLabelMap[detailOrder.status] || '未知状态' }}</el-tag>
                 </el-form-item>
-                <el-form-item label="订单金额"><b style="color:var(--color-danger)">￥{{ detailOrder.amount }}</b></el-form-item>
+                <el-form-item label="订单金额"><b class="ds-money--danger">￥{{ detailOrder.amount }}</b></el-form-item>
                 <el-form-item label="菜品摘要">{{ detailOrder.dishSummary || '-' }}</el-form-item>
               </el-form>
             </el-col>
@@ -193,7 +197,7 @@
             { prop: 'platform', label: '平台', slot: true, width: 70, align: 'center' },
             { prop: 'userName', label: '用户', width: 80, align: 'center' },
             { prop: 'phone', label: '电话', width: 110, align: 'center' },
-            { prop: 'amount', label: '金额', slot: true, width: 80, align: 'center', type: 'money' },
+            { prop: 'amount', label: '金额', slot: true, width: 80, type: 'money' },
             { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
             { prop: 'orderTime', label: '下单时间', width: 140, align: 'center' }
           ],

@@ -11,8 +11,10 @@
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="addBrand-container" id="member-add-app">
-    <div class="container">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <el-form
         ref="ruleForm"
         :model="ruleForm"

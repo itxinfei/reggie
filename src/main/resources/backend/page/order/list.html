@@ -45,6 +45,7 @@
       <!-- 数据表格 -->
       <crud-table
         ref="crudTable"
+        empty-hint="试试调整筛选条件"
         :data="tableData"
         :columns="columns"
         :loading="loading"
@@ -66,7 +67,7 @@
           {{ formatDiningType(row.source) }}
         </template>
         <template #col-amount="{ row }">
-          <span>￥{{ row.amount }}</span>
+          <span>￥{{ formatMoney(row.amount) }}</span>
         </template>
         <template #actions="{ row }">
           <el-button type="text" @click="goDetail(row)" class="btn-view">查看</el-button>
@@ -182,20 +183,20 @@
       @submit="submitRefund"
       @close="refundVisible = false"
     >
-      <div style="padding:10px 0;">
-        <div class="item-box" style="margin-bottom:14px;">
-          <span class="label" style="width:80px;">订单号：</span><span class="des">{{ refundForm.number }}</span>
+      <div class="refund-form">
+        <div class="item-box">
+          <span class="label">订单号：</span><span class="des">{{ refundForm.number }}</span>
         </div>
-        <div class="item-box" style="margin-bottom:14px;">
-          <span class="label" style="width:80px;">订单金额：</span><span class="des" style="color:var(--color-danger);font-weight:600;">￥{{ refundForm.amount }}</span>
+        <div class="item-box">
+          <span class="label">订单金额：</span><span class="des des-danger">￥{{ refundForm.amount }}</span>
         </div>
-        <div class="item-box" style="margin-bottom:14px;">
-          <span class="label" style="width:80px;">退款金额：</span>
-          <el-input v-model="refundForm.amount" type="number" style="width:160px" size="small" :max="refundForm.maxAmount" :min="0.01" :step="0.01"></el-input>
+        <div class="item-box">
+          <span class="label">退款金额：</span>
+          <el-input v-model="refundForm.amount" type="number" size="small" :max="refundForm.maxAmount" :min="0.01" :step="0.01"></el-input>
         </div>
-        <div class="item-box" style="margin-bottom:14px;">
-          <span class="label" style="width:80px;">退款原因：</span>
-          <el-select v-model="refundForm.reasonType" style="width:160px" size="small">
+        <div class="item-box">
+          <span class="label">退款原因：</span>
+          <el-select v-model="refundForm.reasonType" size="small">
             <el-option label="口味问题" value="口味问题"></el-option>
             <el-option label="配送超时" value="配送超时"></el-option>
             <el-option label="商品不符" value="商品不符"></el-option>
@@ -204,8 +205,8 @@
           </el-select>
         </div>
         <div class="item-box" v-if="refundForm.reasonType === '其他原因'">
-          <span class="label" style="width:80px;">详细说明：</span>
-          <el-input v-model="refundForm.reasonDetail" type="textarea" :rows="2" style="width:220px" size="small" placeholder="请填写退款原因"></el-input>
+          <span class="label">详细说明：</span>
+          <el-input v-model="refundForm.reasonDetail" type="textarea" :rows="2" size="small" placeholder="请填写退款原因"></el-input>
         </div>
       </div>
     </crud-dialog>
@@ -343,10 +344,6 @@
           } catch (err) { console.warn('加载订单统计数据失败:', err) }
           return { code: 0 }
         },
-        formatMoney: function(val) {
-          if (val === null || val === undefined) return '0.00'
-          return Number(val).toFixed(2)
-        },
         // stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
           if (payload.activeKey === 'pending') {
@@ -389,9 +386,9 @@
           var map = { TAKEOUT: '外卖配送', EAT_IN: '堂食扫码', QUEUE: '排队取餐', RESERVATION: '预订' }
           return map[val] || val
         },
-        // 订单详情表格：表头样式
+        // 订单详情表格：表头样式（背景/文字走令牌，与全局表头规范一致）
         tableHeaderStyle: function() {
-          return { background: '#f5f7fa', color: '#606266', fontWeight: '600', fontSize: '12px' }
+          return { background: 'var(--el-bg-subtle)', color: 'var(--el-text-regular)', fontWeight: '600', fontSize: '12px' }
         },
         // 订单详情表格：单元格样式
         tableCellStyle: function() {

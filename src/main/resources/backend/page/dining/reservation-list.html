@@ -10,8 +10,10 @@
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
-  <div class="dashboard-container" id="reservation-app">
-    <div class="container">
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="reservation-app">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -38,6 +40,7 @@
       <!-- 数据表格 -->
       <crud-table
         ref="crudTable"
+        empty-hint="试试调整筛选条件"
         :data="tableData"
         :columns="columns"
         :loading="loading"
@@ -105,7 +108,7 @@
             { prop: 'phone', label: '手机号', width: 120, align: 'center' },
             { prop: 'tableName', label: '桌台', width: 80, align: 'center' },
             { prop: 'reservedTime', label: '预订时间', width: 140, align: 'center' },
-            { prop: 'seatCount', label: '人数', width: 60, align: 'center', type: 'number' },
+            { prop: 'seatCount', label: '人数', width: 60, type: 'number' },
             { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
             { prop: 'remark', label: '备注', width: 100, showOverflowTooltip: true }
           ],

@@ -95,6 +95,7 @@
 
       <!-- 数据表格（统一 crud-table 组件，替代手写 el-table） -->
       <crud-table
+        empty-hint="暂无相关记录"
         :data="tableData"
         :columns="dishColumns"
         :loading="loading"
@@ -139,7 +140,7 @@
           dishColumns: [
             { prop: 'rank', label: '排名', width: 80, align: 'center', slot: true },
             { prop: 'name', label: '菜品名称', width: 140 },
-            { prop: 'count', label: '销量（份）', width: 120, align: 'center', type: 'number' },
+            { prop: 'count', label: '销量（份）', width: 120, type: 'number' },
             { prop: 'ratio', label: '占比', width: 140, align: 'center', slot: true }
           ],
           stats: { totalDishes: 0, topDishes: 0, totalSales: 0, avgSales: 0 },

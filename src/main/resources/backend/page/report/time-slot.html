@@ -36,8 +36,10 @@
   </style>
 </head>
 <body>
-  <div class="timeslot-page" id="report-timeslot-app" v-loading="loading">
-    <div class="container">
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="<div class="timeslot-page"" id="report-timeslot-app" v-loading="loading">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
 
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
@@ -80,6 +82,7 @@
 
       <!-- ========== 数据表格（统一 crud-table 组件，替代手写 el-table） ========== -->
       <crud-table
+        empty-hint="暂无相关记录"
         :data="tableData"
         :columns="timeSlotColumns"
         :loading="loading"
@@ -121,9 +124,9 @@
             // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
             timeSlotColumns: [
               { prop: 'name', label: '时段', width: 120, align: 'center' },
-              { prop: 'count', label: '订单数', width: 120, align: 'center', type: 'number' },
+              { prop: 'count', label: '订单数', width: 120, type: 'number' },
               { prop: 'ratio', label: '占比', width: 120, align: 'center', slot: true },
-              { prop: 'amount', label: '营业额（元）', width: 150, align: 'center', slot: true, type: 'money' },
+              { prop: 'amount', label: '营业额（元）', width: 150, slot: true, type: 'money' },
               { prop: 'heat', label: '时段热度', width: 160, align: 'center', slot: true }
             ],
             barChart: null, pieChart: null, heatmapChart: null,

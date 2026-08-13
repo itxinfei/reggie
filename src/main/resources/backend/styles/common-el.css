@@ -9858,59 +9858,7 @@
   border-radius: 50%;
   padding: 12px;
 }
-.el-button--primary {
-  color: var(--gray-333);
-  background-color: var(--color-brand-500);
-  border-color: var(--color-brand-500);
-}
-.el-button--primary:focus,
-.el-button--primary:hover {
-  background: var(--color-brand-300);
-  border-color: var(--color-brand-300);
-  color: var(--gray-333);
-}
-.el-button--primary.is-active,
-.el-button--primary:active {
-  background: var(--color-brand-600);
-  border-color: var(--color-brand-600);
-  color: var(--gray-333);
-}
-.el-button--primary:active {
-  outline: 0;
-}
-.el-button--primary.is-disabled,
-.el-button--primary.is-disabled:active,
-.el-button--primary.is-disabled:focus,
-.el-button--primary.is-disabled:hover {
-  color: var(--legacy-b9b9b9);
-  background-color: var(--legacy-f6f1e0);
-  border-color: var(--legacy-f6f1e0);
-}
-.el-button--primary.is-plain {
-  color: var(--color-brand-500);
-  background: var(--color-brand-50);
-  border-color: var(--legacy-fbe396);
-}
-.el-button--primary.is-plain:focus,
-.el-button--primary.is-plain:hover {
-  background: var(--color-brand-500);
-  border-color: var(--color-brand-500);
-  color: var(--gray-333);
-}
-.el-button--primary.is-plain:active {
-  background: var(--color-brand-600);
-  border-color: var(--color-brand-600);
-  color: var(--gray-333);
-  outline: 0;
-}
-.el-button--primary.is-plain.is-disabled,
-.el-button--primary.is-plain.is-disabled:active,
-.el-button--primary.is-plain.is-disabled:focus,
-.el-button--primary.is-plain.is-disabled:hover {
-  color: var(--color-brand-500);
-  background-color: var(--color-brand-50);
-  border-color: var(--legacy-fbe396);
-}
+/* 主按钮（.el-button--primary）样式统一收敛至 design-system.css（金底深字，唯一权威） */
 .el-button--success {
   color: var(--color-white);
   background-color: var(--color-success);
@@ -10138,7 +10086,7 @@
 .el-button--mini,
 .el-button--small {
   font-size: 14px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }
 .el-button--medium.is-round {
   padding: 10px 20px;
@@ -10161,19 +10109,19 @@
   padding: 7px;
 }
 .el-button--text {
-  color: var(--color-brand-500);
+  color: var(--color-brand-700);
   background: 0 0;
   padding-left: 0;
   padding-right: 0;
 }
 .el-button--text:focus,
 .el-button--text:hover {
-  color: var(--color-brand-300);
+  color: var(--color-brand-800);
   border-color: transparent;
-  background-color: transparent;
+  background-color: var(--color-brand-50);
 }
 .el-button--text:active {
-  color: var(--color-brand-600);
+  color: var(--color-brand-800);
   background-color: transparent;
 }
 .el-button-group {

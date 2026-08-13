@@ -362,6 +362,25 @@ a.breadcrumb__item:hover,
   color: var(--text-primary);
 }
 
+/* 金额语义色工具类（替代页面内联 color/font-weight，单一来源） */
+.ds-money--gold {
+  color: var(--legacy-f59e0b);
+  font-weight: 700;
+  font-size: 15px;
+}
+.ds-money--danger {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+.ds-money--success {
+  color: var(--emerald);
+  font-weight: 600;
+}
+.ds-money--muted {
+  color: var(--color-info);
+  font-weight: 400;
+}
+
 /* ========== 13. 卡片网格（自适应列数，替代各页写死 calc 栅格） ========== */
 .ds-card-grid {
   display: grid;

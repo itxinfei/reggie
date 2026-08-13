@@ -10,8 +10,10 @@
     <link rel="stylesheet" href="../../styles/ai-chat.css" />
 </head>
 <body>
-    <div class="dashboard-container" id="ai-app">
-        <div class="container ai-chat-layout">
+    <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+   <a href="#main-content" class="skip-link">跳转到主内容</a>
+   <div class="dashboard-container" id="ai-app">
+        <div class="container ai-chat-layout" id="main-content" role="main" aria-label="AI 助手">
             <!-- 左侧边栏：对话历史 -->
             <div class="ai-sidebar" :class="{ open: sidebarOpen }">
                 <div class="sidebar-header">

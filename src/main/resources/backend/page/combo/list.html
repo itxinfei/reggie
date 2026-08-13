@@ -127,7 +127,7 @@
             <div class="table">
               <el-table aria-label="数据表格" :data="comboDishTable" border size="small" class="tableBox">
                 <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
-                <el-table-column prop="price" label="原价" width="180">
+                <el-table-column prop="price" label="原价" width="180" align="right">
                   <template slot-scope="scope">￥{{ scope.row.price }}</template>
                 </el-table-column>
                 <el-table-column prop="copies" label="份数" align="center">
@@ -250,6 +250,8 @@
 <script src="../../plugins/element-ui/index.js"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
 <script src="../../js/request.js"></script>
+<script src="../../js/accessibility-utils.js"></script>
+<script src="../../js/performance-utils.js"></script>
 <script src="../../api/combo.js"></script>
 <script src="../../api/food.js"></script>
 <script src="../../js/components.js"></script>
@@ -296,7 +298,7 @@ new Vue({
         { prop: 'name', label: '套餐名称', width: 140, showOverflowTooltip: true },
         { prop: 'image', label: '图片', width: 70, align: 'center', slot: true },
         { prop: 'categoryName', label: '分类', width: 80, align: 'center' },
-        { prop: 'price', label: '价格', width: 80, align: 'center', slot: true, type: 'money' },
+        { prop: 'price', label: '价格', width: 80, slot: true, type: 'money' },
         { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
         { prop: 'description', label: '描述', width: 120, showOverflowTooltip: true },
         { prop: 'updateTime', label: '更新时间', width: 140, align: 'center' }

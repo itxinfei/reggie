@@ -124,7 +124,11 @@
       else if (message.includes("Request failed with status code")) {
         message = "系统接口" + message.substring(message.length - 3) + "异常";
       }
-      if (window.ELEMENT && window.ELEMENT.Message) {
+      if (window.ReggieUI && window.ReggieUI.error) {
+        // 统一走 ReggieUI 反馈入口（common.js 规范：禁止混用 $message / ElMessage 直写）；
+        // 错误提示保留 5s，便于阅读完整错误信息
+        window.ReggieUI.error(message, 5 * 1000)
+      } else if (window.ELEMENT && window.ELEMENT.Message) {
         window.ELEMENT.Message({
           message: message,
           type: 'error',
@@ -163,12 +167,12 @@
         var res = callMethod('$message', global.ELEMENT && global.ELEMENT.Message, options);
         if (res === null && options && options.message) { global.alert(options.message); }
       },
-      /** 轻提示：type 可取 success/warning/info/error；duration 毫秒 */
+      /** 轻提示：type 可取 success/warning/info/error；duration 毫秒（默认 3000，与 Element UI 默认一致） */
       toast: function (message, type, duration) {
         var res = callMethod('$message', global.ELEMENT && global.ELEMENT.Message, {
           message: message,
           type: type || 'info',
-          duration: (duration == null) ? 2000 : duration
+          duration: (duration == null) ? 3000 : duration
         });
         if (res === null) { global.alert(message); }
       },

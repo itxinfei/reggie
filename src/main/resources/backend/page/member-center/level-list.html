@@ -33,8 +33,10 @@
   </style>
 </head>
 <body>
-  <div class="dashboard-container" id="level-app">
-    <div class="container">
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="level-app">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -146,8 +148,8 @@
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
             { prop: 'name', label: '等级名称', width: 120 },
-            { prop: 'minPoints', label: '所需积分', width: 90, align: 'center', slot: true, type: 'number' },
-            { prop: 'discount', label: '折扣率', width: 80, align: 'center', slot: true, type: 'number' },
+            { prop: 'minPoints', label: '所需积分', width: 90, slot: true, type: 'number' },
+            { prop: 'discount', label: '折扣率', width: 80, slot: true, type: 'number' },
             { prop: 'sort', label: '排序', width: 60, align: 'center', slot: true }
           ],
           loading: false, action: '', counts: 0, page: 1, pageSize: 10, tableData: [],

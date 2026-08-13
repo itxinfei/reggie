@@ -10,8 +10,10 @@
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="stock-record-app">
-    <div class="container">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -44,6 +46,7 @@
 
       <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination -->
       <crud-table
+        empty-hint="试试调整筛选条件"
         :data="tableData"
         :columns="columns"
         :loading="loading"
@@ -88,7 +91,7 @@
           columns: [
             { prop: 'materialName', label: '食材名称', width: 120, showOverflowTooltip: true },
             { prop: 'type', label: '类型', width: 70, align: 'center', slot: true },
-            { prop: 'quantity', label: '数量', width: 70, align: 'center', type: 'number' },
+            { prop: 'quantity', label: '数量', width: 70, type: 'number' },
             { prop: 'unitPrice', label: '单价', width: 80, align: 'right', slot: true, type: 'money' },
             { prop: 'totalAmount', label: '总金额', width: 90, align: 'right', slot: true, type: 'money' },
             

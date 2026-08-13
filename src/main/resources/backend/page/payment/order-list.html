@@ -83,8 +83,10 @@
   </style>
 </head>
 <body>
-  <div class="dashboard-container" id="payment-app" v-loading="loading">
-    <div class="container">
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="payment-app" v-loading="loading">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -111,6 +113,7 @@
       <!-- 数据表格 -->
       <crud-table
         ref="crudTable"
+        empty-hint="试试调整筛选条件"
         :data="tableData"
         :columns="columns"
         :loading="false"
@@ -305,7 +308,7 @@
             { prop: 'id', label: '交易流水号', width: 130, showOverflowTooltip: true },
             { prop: 'orderId', label: '订单号', width: 110, showOverflowTooltip: true },
             { prop: 'channel', label: '渠道', slot: true, width: 70, align: 'center' },
-            { prop: 'amount', label: '金额', slot: true, width: 80, align: 'center', type: 'money' },
+            { prop: 'amount', label: '金额', slot: true, width: 80, type: 'money' },
             { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
             { prop: 'paidTime', label: '支付时间', width: 140, align: 'center' }
           ],

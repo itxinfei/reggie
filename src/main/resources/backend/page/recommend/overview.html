@@ -61,8 +61,9 @@
     </style>
 </head>
 <body>
-<div id="app">
-    <div class="page-header">
+<!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+<a href="#app" class="skip-link">跳转到主内容</a>
+<div id="app" role="main" aria-label="页面主要内容">
         <h2>智能推荐概览</h2>
         <p>基于协同过滤、内容推荐和热门融合的混合推荐算法引擎，实时分析用户偏好</p>
         <div class="header-actions">
@@ -147,9 +148,13 @@
 <script src="../../plugins/element-ui/index.js"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
 <script src="../../js/request.js"></script>
+<script src="../../js/accessibility-utils.js"></script>
+<script src="../../js/performance-utils.js"></script>
 <script src="../../api/recommend.js"></script>
 <script src="../../js/components.js"></script>
 <script>
+  // 图表语义色统一引用全局 window.RgPalette（components.js 从 tokens.css 运行时解析，
+  // canvas 无法使用 CSS 变量，RgPalette 为 JS 侧唯一颜色来源）；多色系列数据色保留图表调色板
   new Vue({
     el: '#app',
     data: {
@@ -254,7 +259,7 @@
             if (!this.feedbackChart) return;
             this.feedbackChart.setOption({
                 title: { text: '暂无反馈数据', left: 'center', top: 'center',
-                    textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+                    textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
             }, true);
         },
 
@@ -289,7 +294,7 @@
             if (!this.preferenceChart) return;
             this.preferenceChart.setOption({
                 title: { text: '暂无偏好数据，需用户产生浏览/下单行为', left: 'center', top: 'center',
-                    textStyle: { color: '#c0c4cc', fontSize: 13, fontWeight: 'normal' } }
+                    textStyle: { color: RgPalette.borderBase, fontSize: 13, fontWeight: 'normal' } }
             }, true);
         },
 
@@ -330,7 +335,7 @@
             if (!this.algoChart) return;
             this.algoChart.setOption({
                 title: { text: '暂无推荐算法数据', left: 'center', top: 'center',
-                    textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+                    textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
             }, true);
         },
 
@@ -354,8 +359,8 @@
                 tooltip: {
                     trigger: 'axis',
                     backgroundColor: 'rgba(255,255,255,0.95)',
-                    borderColor: '#e4e7ed',
-                    textStyle: { color: '#303133', fontSize: 12 }
+                    borderColor: RgPalette.borderLighter2,
+                    textStyle: { color: RgPalette.textPrimary, fontSize: 12 }
                 },
                 legend: { data: ['浏览次数', '加购次数'], bottom: 0 },
                 grid: { left: 50, right: 50, top: 10, bottom: 40 },
@@ -378,7 +383,7 @@
             if (!this.browseChart) return;
             this.browseChart.setOption({
                 title: { text: '暂无浏览数据', left: 'center', top: 'center',
-                    textStyle: { color: '#c0c4cc', fontSize: 14, fontWeight: 'normal' } }
+                    textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
             }, true);
         },
 
