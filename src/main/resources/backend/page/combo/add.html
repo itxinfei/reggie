@@ -264,7 +264,7 @@
           </div>
         </el-form>
       </div>
-      <crud-dialog title="添加菜品"  :visible.sync="dialogVisible" :show-close="true"  >
+      <crud-dialog title="添加菜品" :visible.sync="dialogVisible" :show-close="true" @submit="addTableList">
         <el-input
           v-model="value"
           class="seachDish search-input"
@@ -532,7 +532,7 @@
             })
             this.dialogVisible = false
             // 添加处理逻辑清空选中list
-            this.checkList = []
+            this.checkedList = []
           },
           submitForm(formName, st) {
             if (this.submitting) return // 提交防重

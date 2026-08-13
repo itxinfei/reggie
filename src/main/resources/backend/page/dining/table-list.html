@@ -210,7 +210,7 @@
     </crud-dialog>
 
     <!-- 二维码弹窗 -->
-    <crud-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible"  :close-on-click-modal="true" center  >
+    <crud-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible"  :close-on-click-modal="true" center  :show-submit="false">
       <div class="qrcode-content">
         <div class="qrcode-title">桌台：{{ qrcodeDialog.tableName }}</div>
         <div class="qrcode-subtitle">编号：{{ qrcodeDialog.tableId }}</div>

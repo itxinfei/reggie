@@ -304,10 +304,6 @@
                 </el-row>
             </template>
         </el-form>
-        <div class="footer-actions">
-            <el-button size="small" @click="formDialogVisible = false">取消</el-button>
-            <el-button type="primary" size="small" @click="submitForm" :loading="submitting">{{ isCreate ? '确认创建' : '保存修改' }}</el-button>
-        </div>
     </crud-dialog>
 
     <!-- ===== 门店详情对话框（点击行 / 详情按钮打开，展示完整信息，避免列表列过多） ===== -->

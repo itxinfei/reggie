@@ -530,8 +530,7 @@
   box-shadow: var(--shadow-lg);
   padding: var(--space-6);
   margin-bottom: var(--space-6);
-  border: var(--border-width-thin) var(--border-style-solid) rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
+  border: var(--border-width-thin) var(--border-style-solid) var(--border-color-light);
 }
 
 /* ========== 工具栏增强 ========== */
@@ -750,12 +749,10 @@
 }
 
 .el-button:hover {
-  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 
 .el-button:active {
-  transform: translateY(0);
   box-shadow: var(--shadow-sm);
 }
 
@@ -788,8 +785,6 @@
   color: var(--text-primary);
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   padding: var(--space-4) var(--space-5);
 }
 
@@ -880,8 +875,6 @@
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
 }
 
 .status-tag--success {

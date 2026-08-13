@@ -33,7 +33,7 @@
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
-  <div class="<div class="payment-page"" id="report-payment-app" v-loading="loading">
+  <div class="payment-page" id="report-payment-app" v-loading="loading">
     <div class="container" id="main-content" role="main" aria-label="页面主要内容">
 
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
@@ -254,7 +254,6 @@
           },
           calcPercent: function(count) { if (!this.totalCount) return 0; return Math.round(count / this.totalCount * 100); },
           channelProgressColor: function(key) { return CHANNEL_COLOR[key] || RgPalette.textSecondary; },
-          formatMoney: function(val) { return Number(val || 0).toFixed(2); },
           renderCharts: function() {
             // 修改点：渲染前 resize 确保容器尺寸正确
             [this.pieChart, this.barChart].forEach(function(ch) {

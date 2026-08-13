@@ -80,7 +80,6 @@
    ================================================================ */
 html,
 body {
-  max-width: 750px;
   height: 100%;
   background: var(--bg-page);
   font-family: var(--font-family-base);
@@ -382,12 +381,17 @@ i {
 }
 
 /* ================================================================
-   桌面端修复：base.js 桌面根字号统一为 1px（≈设计稿px），
-   内容不再按 28px 爆炸；body 居中显示 750px 卡片
+   桌面端修复：移动端 H5 在宽屏浏览器中居中呈现为“手机”预览，
+   两侧留白使用中性背景，避免内容缩在左上角、观感像“页面坏了”。
+   base.js 已把设计宽度封顶 750px，这里再把容器居中并加投影。
    ================================================================ */
 @media screen and (min-width: 751px) {
-  body {
-    margin-left: auto;
-    margin-right: auto;
+  html {
+    background: #e9e9ef;
+  }
+  #main {
+    max-width: 750px;
+    margin: 0 auto;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.12);
   }
 }

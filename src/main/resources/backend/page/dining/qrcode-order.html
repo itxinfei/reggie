@@ -117,7 +117,7 @@
     </div>
 
     <!-- 购物车弹窗 -->
-    <crud-dialog title="购物车" :visible.sync="cartDialog.visible"  :show-close="true" :close-on-click-modal="true"  >
+    <crud-dialog title="购物车" :visible.sync="cartDialog.visible"  :show-close="true" :close-on-click-modal="true"  :show-submit="false">
       <div v-if="cart.length === 0" class="empty-cart">购物车是空的</div>
       <div v-for="item in cart" :key="item.dishId" class="cart-item">
         <div class="cart-item-name">{{ item.name }}</div>
@@ -132,7 +132,7 @@
 
     <!-- 提交订单弹窗 -->
     <crud-dialog title="确认订单" :visible.sync="submitDialog.visible" 
-      :close-on-click-modal="false">
+      :close-on-click-modal="false" @submit="confirmSubmit">
       <div style="padding: 10px 0;">
         <div class="qr-title">
           🪑 桌台：<strong>{{ tableInfo ? tableInfo.name : '' }}</strong>（可坐{{ tableInfo ? tableInfo.seatCount : '' }}人）

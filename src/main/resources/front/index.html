@@ -33,17 +33,15 @@
             <i class="ri-mic-line voice-icon" @click.stop="startVoiceSearch"></i>
           </div>
           <!-- 修改点：消息铃铛入口 + 未读角标 -->
-          <div class="msg-bell" @click="toMessagePage" style="position:relative;margin-right:12px;cursor:pointer;">
-            <span style="font-size:18px;">&#x1F514;</span>
-            <span v-if="unreadMsgCount > 0" style="position:absolute;top:-6px;right:-8px;
-                  background:var(--color-danger);color:var(--color-text-white);font-size:10px;min-width:16px;height:16px;
-                  line-height:16px;text-align:center;border-radius:8px;padding:0 4px;">
+          <div class="msg-bell" @click="toMessagePage">
+            <span class="bell-icon">&#x1F514;</span>
+            <span v-if="unreadMsgCount > 0" class="msg-badge">
               {{ unreadMsgCount > 99 ? '99+' : unreadMsgCount }}
             </span>
           </div>
           <!-- 修改点：AI点餐助手入口 -->
-          <div class="ai-entry" @click="toAIAssistant" style="position:relative;margin-right:12px;cursor:pointer;">
-            <span style="font-size:20px;">&#x1F916;</span>
+          <div class="ai-entry" @click="toAIAssistant">
+            <span class="ai-icon">&#x1F916;</span>
           </div>
           <div class="user-btn" @click="toUserPage">
             <img :src="userAvatar || './images/headPage.png'" />
@@ -203,10 +201,10 @@
         <div class="divCartTitle">
           <div class="title">购物车</div>
           <div class="clear" @click="clearCart">
-            <span style="font-size:14px;">🗑️</span> 清空
+            <span class="clear-icon">🗑️</span> 清空
           </div>
           <div class="cart-close-btn" @click="cartDialogShow = false">
-            <img src="./images/close.png" style="width:18px;height:18px;"/>
+            <img src="./images/close.png"/>
           </div>
         </div>
         <div class="divCartContent">
@@ -368,7 +366,7 @@
         <div class="search-section" v-if="!searchKeyword">
           <div class="search-section-title" v-if="searchHistory.length > 0">
             <span>搜索历史</span>
-            <span @click="clearSearchHistory" title="清空" style="cursor:pointer;font-size:16px;">🗑️</span>
+            <span class="search-section-title-clear" @click="clearSearchHistory" title="清空">🗑️</span>
           </div>
           <div class="search-tags">
             <span

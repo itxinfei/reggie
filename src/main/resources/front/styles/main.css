@@ -56,16 +56,15 @@
 .top-bar .location .icon-location-outline {
   width: 16rem;
   height: 16rem;
-  border-color: var(--color-text-white);
+  border-color: rgba(51,51,51,0.75);
   margin-right: 4rem;
   flex-shrink: 0;
   border-width: 1.5rem;
-  filter: drop-shadow(0 1rem 1rem rgba(0,0,0,0.08));
 }
 .top-bar .location .icon-location-outline::after {
   width: 5rem;
   height: 5rem;
-  background: var(--color-text-white);
+  background: rgba(51,51,51,0.75);
 }
 
 .top-bar .location span {
@@ -80,23 +79,22 @@
 .top-bar .search-box {
   flex: 1;
   height: 32rem;
-  background: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.55);
   border-radius: 16rem;
   display: flex;
   align-items: center;
   padding: 0 12rem;
   cursor: pointer;
   transition: background 0.2s;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 1rem 4rem rgba(0,0,0,0.06);
 }
 
 .top-bar .search-box:active {
-  background: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.85);
 }
 
 .top-bar .search-box i {
-  color: var(--color-text-hint);
+  color: var(--color-text-secondary);
   font-size: 15rem;
   margin-right: 5rem;
 }
@@ -116,8 +114,52 @@
 }
 
 .top-bar .search-box span {
-  color: var(--color-text-disabled);
+  color: var(--color-text-secondary);
   font-size: 13rem;
+}
+
+/* 顶部消息铃铛 + AI 入口（统一样式） */
+.top-bar .msg-bell,
+.top-bar .ai-entry {
+  position: relative;
+  width: 34rem;
+  height: 34rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: transform var(--transition-fast), opacity 0.2s;
+}
+.top-bar .msg-bell:active,
+.top-bar .ai-entry:active {
+  transform: scale(0.9);
+  opacity: 0.7;
+}
+.top-bar .msg-bell .bell-icon,
+.top-bar .ai-entry .ai-icon {
+  font-size: 17rem;
+  line-height: 1;
+}
+
+/* 消息未读角标 */
+.top-bar .msg-bell .msg-badge {
+  position: absolute;
+  top: -4rem;
+  right: -6rem;
+  min-width: 16rem;
+  height: 16rem;
+  padding: 0 4rem;
+  box-sizing: border-box;
+  background: var(--color-danger);
+  color: var(--color-text-white);
+  font-size: 10rem;
+  font-style: normal;
+  line-height: 16rem;
+  text-align: center;
+  border-radius: 8rem;
+  box-shadow: 0 2rem 4rem rgba(233,78,60,0.4);
 }
 
 .top-bar .user-btn {
@@ -136,7 +178,7 @@
   width: 28rem;
   height: 28rem;
   border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,0.8);
+  box-shadow: 0 0 0 2rem rgba(51,51,51,0.18);
 }
 
 /* ---- 商家信息卡片 ---- */
@@ -732,8 +774,8 @@
 }
 
 .cart-bar .cart-submit-disabled {
-  background: #555;
-  color: var(--color-text-disabled);
+  background: var(--color-text-disabled);
+  color: rgba(255,255,255,0.6);
   cursor: not-allowed;
 }
 
@@ -891,6 +933,13 @@
   color: var(--color-text-hint);
   font-size: 14rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+#main .dialogCart .divCartTitle .clear .clear-icon {
+  font-size: 14rem;
+  line-height: 1;
+  margin-right: 4rem;
 }
 
 #main .dialogCart .divCartTitle .cart-close-btn {
@@ -900,6 +949,16 @@
   align-items: center;
   justify-content: center;
   margin-left: auto;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.05);
+  transition: background 0.2s;
+}
+#main .dialogCart .divCartTitle .cart-close-btn:active {
+  background: rgba(0,0,0,0.12);
+}
+#main .dialogCart .divCartTitle .cart-close-btn img {
+  width: 18rem;
+  height: 18rem;
 }
 
 #main .dialogCart .divCartContent {
@@ -1485,6 +1544,17 @@
   cursor: pointer;
 }
 
+.search-section-title .search-section-title-clear {
+  font-size: 16rem;
+  color: var(--color-text-disabled);
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+}
+.search-section-title .search-section-title-clear:active {
+  color: var(--color-text-hint);
+}
+
 .search-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1620,9 +1690,10 @@
    ================================================================ */
 .recommend-section {
   background: var(--bg-card);
-  margin: 0 12rem 0;
-  padding: 12rem 0 8rem;
-  border-bottom: 6rem solid var(--bg-hover);
+  margin: 8rem 12rem 0;
+  padding: 12rem 0 10rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
 }
 .recommend-header {
   display: flex;
@@ -1655,6 +1726,13 @@
   width: 100rem;
   cursor: pointer;
   text-align: center;
+  padding: 6rem 4rem;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast), transform var(--transition-fast);
+}
+.recommend-item:active {
+  background: var(--bg-page);
+  transform: scale(0.96);
 }
 .ri-image {
   width: 80rem;
@@ -1684,4 +1762,30 @@
   font-weight: 700;
   color: var(--color-price);
   margin-top: 2rem;
+}
+
+/* ================================================================
+   修改点：桌面端鼠标悬停手型反馈
+   移动端 H5 在桌面浏览器打开时，很多带 @click 的区域（菜品行、推荐项、
+   优惠券/公告栏、头部入口、加购按钮等）默认是箭头光标，看起来“点不动”，
+   造成“点击不灵”的观感。这里统一补上 pointer，提升可点击性辨识度。
+   ================================================================ */
+.search-box,
+.msg-bell,
+.ai-entry,
+.user-btn,
+.coupon-bar,
+.notice-bar,
+.recommend-item,
+.ri-image,
+.ri-info,
+.di-image,
+.di-info,
+.di-spec,
+.di-action img,
+.cart-icon-wrap,
+.voice-icon,
+.suggestion-item,
+.search-tag {
+  cursor: pointer;
 }

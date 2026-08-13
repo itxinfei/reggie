@@ -147,10 +147,9 @@
     <crud-dialog
       title="支付详情"
       :visible.sync="detailVisible"
-      
       :close-on-click-modal="true"
-      
-      
+      :show-submit="false"
+      :show-cancel="false"
       @closed="detailForm = {}"
     >
       <div v-if="detailForm" class="pd-wrap">

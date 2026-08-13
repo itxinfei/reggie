@@ -34,7 +34,9 @@ import javax.servlet.http.HttpSession;
 @Component
 public class EmployeeGuardAspect {
 
-    @Around("@annotation(com.reggie.common.annotation.RequireEmployee)")
+    // 同时拦截方法级(@annotation)与类级(@within) @RequireEmployee。
+    // 仅写 @annotation 会导致类级注解的 Controller 不被命中，顾客登录后可越权访问后台接口(P0 漏洞)。
+    @Around("@annotation(com.reggie.common.annotation.RequireEmployee) || @within(com.reggie.common.annotation.RequireEmployee)")
     public Object checkEmployee(ProceedingJoinPoint joinPoint) throws Throwable {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes == null) {

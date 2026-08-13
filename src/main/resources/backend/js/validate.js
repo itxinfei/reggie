@@ -1,8 +1,4 @@
 
-function isValidUsername (str) {
-  return ['admin', 'editor'].indexOf(str.trim()) >= 0;
-}
-
 function isExternal (path) {
   return /^(https?:|mailto:|tel:)/.test(path);
 }

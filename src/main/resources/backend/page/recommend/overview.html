@@ -10,11 +10,7 @@
     <script src="../../plugins/echarts/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: var(--bg-page); padding: 20px; font-family: var(--font-family-base); }
-        .page-header { margin-bottom: var(--space-5); }
-        .page-header h2 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0; }
-        .page-header p { font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--space-1); }
-        .page-header .header-actions { float: right; margin-top: -28px; display: flex; gap: 8px; }
+        body { background: var(--bg-page); font-family: var(--font-family-base); }
 
         /* 图表行 */
         .charts-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
@@ -62,14 +58,19 @@
 </head>
 <body>
 <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
-<a href="#app" class="skip-link">跳转到主内容</a>
-<div id="app" role="main" aria-label="页面主要内容">
-        <h2>智能推荐概览</h2>
-        <p>基于协同过滤、内容推荐和热门融合的混合推荐算法引擎，实时分析用户偏好</p>
-        <div class="header-actions">
-            <el-button type="primary" size="small" icon="el-icon-refresh" @click="refreshAll" :loading="loadingAll">刷新数据</el-button>
-        </div>
-    </div>
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+<div class="dashboard-container" id="app">
+  <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <!-- 页头：标题 + 副标题 + 操作（与全站 ds-page-header 规范一致） -->
+    <header class="ds-page-header">
+      <div class="ds-page-header__titles">
+        <h1 class="ds-page-header__title" id="page-title">智能推荐概览</h1>
+        <p class="ds-page-header__subtitle">基于协同过滤、内容推荐和热门融合的混合推荐算法引擎，实时分析用户偏好</p>
+      </div>
+      <div class="ds-page-header__actions">
+        <el-button type="primary" size="small" icon="el-icon-refresh" @click="refreshAll" :loading="loadingAll">刷新数据</el-button>
+      </div>
+    </header>
 
     <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
     <stat-cards :cards="statsCards"></stat-cards>
@@ -142,6 +143,7 @@
             <p>暂无数据，请先确保有订单和浏览数据</p>
         </div>
     </div>
+  </div>
 </div>
 
 <script src="../../plugins/vue/vue.js"></script>

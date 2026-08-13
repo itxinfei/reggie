@@ -53,6 +53,17 @@
         .stats-overview .stat-item .num { font-size: 22px; font-weight: 700; color: var(--el-text-primary); }
         .stats-overview .stat-item .lbl { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 4px; }
 
+        /* ========== 批量操作栏（选中行后显示，紧贴表格上方） ========== */
+        .batch-bar {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 16px; padding: 10px 14px;
+            background: var(--color-brand-50);
+            border: 1px solid var(--color-brand-300);
+            border-radius: 6px;
+        }
+        .batch-bar__count { font-size: var(--font-size-sm); color: var(--el-text-regular); font-weight: 500; }
+        .batch-bar .el-button { margin-left: 0; }
+
         @media (max-width: 1400px) {
             .overview-charts { grid-template-columns: 1fr; }
         }
@@ -70,7 +81,9 @@
             <h1 class="ds-page-header__title" id="page-title">营销活动</h1>
             <p class="ds-page-header__subtitle">管理推荐营销活动</p>
           </div>
-          <div class="ds-page-header__actions"></div>
+          <div class="ds-page-header__actions">
+            <el-button type="primary" size="small" icon="el-icon-plus" @click="openDialog('create')">新建活动</el-button>
+          </div>
         </header>
 
         <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
@@ -97,10 +110,8 @@
         <!-- 修改点：使用 <table-bar> 统一组件 -->
         <table-bar
           :search-items="tableSearchItems"
-          :actions="tableActions"
           @search="loadData"
-          @reset="resetSearch"
-          @action="onTableAction">
+          @reset="resetSearch">
           <template slot="search-extra">
             <el-select v-model="searchName" placeholder="选择活动名称" size="small" clearable filterable
               style="width:200px;"
@@ -119,8 +130,17 @@
           </template>
         </table-bar>
 
+        <!-- 批量操作栏：选中行后显示在表格上方，避免滚动到表格底部才能操作 -->
+        <div class="batch-bar" v-show="selectedRows.length > 0">
+          <span class="batch-bar__count">已选 {{ selectedRows.length }} 项</span>
+          <el-button size="small" type="danger" plain @click="batchDelete">批量删除</el-button>
+          <el-button size="small" type="warning" plain @click="batchPause">批量暂停</el-button>
+          <el-button size="small" type="text" @click="clearSelection">清空选择</el-button>
+        </div>
+
         <!-- ========== 表格（统一 crud-table 组件，替代手写 el-table + 独立分页） ========== -->
         <crud-table
+          ref="campaignTable"
             :data="tableData"
             :columns="campaignColumns"
             :page="currentPage"
@@ -170,14 +190,8 @@
             </template>
         </crud-table>
 
-        <!-- ========== 批量操作（分页由 crud-table 内置接管） ========== -->
-        <div style="display:flex;gap:8px;margin-top:16px;">
-            <el-button size="small" :disabled="selectedRows.length === 0" @click="batchDelete">批量删除</el-button>
-            <el-button size="small" type="warning" :disabled="selectedRows.length === 0" @click="batchPause">批量暂停</el-button>
-        </div>
     </div>
 
-    <!-- ========== 新建/编辑对话框 ========== -->
     <!-- ========== 新建/编辑对话框 ========== -->
     <crud-dialog
       :title="dialogTitle"
@@ -259,7 +273,6 @@
     </crud-dialog>
 
     <!-- ========== 推送消息对话框 ========== -->
-    <!-- ========== 推送消息对话框 ========== -->
     <crud-dialog
       title="推送营销消息"
       :visible.sync="pushDialogVisible"
@@ -299,7 +312,6 @@
         </el-form>
     </crud-dialog>
 
-    <!-- ========== 活动统计对话框 ========== -->
     <!-- ========== 活动统计对话框 ========== -->
     <crud-dialog
       title="活动效果统计"
@@ -361,9 +373,6 @@
             activeKey: '',
             // 修改点：<table-bar> 统一组件配置
             tableSearchItems: [],
-            tableActions: [
-                { key: 'add', text: '新建活动', type: 'primary' }
-            ],
             // 修改点：搜索下拉框动态选项
             filterOptions: { names: [] },
             optionsLoading: false,
@@ -662,9 +671,10 @@
             this.loadData()
             this.loadSummary()
         },
-        // 修改点：<table-bar> 组件统一操作分发
-        onTableAction: function(payload) {
-            if (payload.key === 'add') { this.openDialog('create'); }
+        // 清空表格多选（批量操作栏“清空选择”按钮）
+        clearSelection: function() {
+            if (this.$refs.campaignTable) { this.$refs.campaignTable.clearSelection(); }
+            this.selectedRows = [];
         },
         resetSearch: function() {
           this.searchName = ''

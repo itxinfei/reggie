@@ -8,9 +8,13 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
-  <script src="../../plugins/echarts/echarts.min.js"></script>
+  <!-- 性能优化：ECharts(~1MB)改为 preload 提前并行下载，运行时动态注入，不再阻塞首屏渲染 -->
+  <link rel="preload" as="script" href="../../plugins/echarts/echarts.min.js" />
   <style>
     /* ========== 现代化数据概览设计 ========== */
+
+    /* 防止 Vue 挂载前原始模板（{{ }}）闪烁，提升首屏观感 */
+    [v-cloak] { display: none !important; }
 
     /* 基础重置 */
     html, body {
@@ -625,7 +629,7 @@
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳到主内容</a>
-  <div class="overview-container" id="dashboard-app" v-loading="loading">
+  <div class="overview-container" id="dashboard-app" v-cloak v-loading="loading">
     <div class="container" id="main-content" role="main" tabindex="-1">
 
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
@@ -800,6 +804,24 @@
   <script src="../../js/components.js"></script>
 
   <script>
+    // ========== ECharts 按需懒加载（性能优化核心） ==========
+    // 原先在 <head> 同步加载 1MB 的 echarts.min.js 会阻塞首屏渲染；
+    // 改为运行时动态注入，下载与首屏数据请求并行，且不阻塞 HTML 解析。
+    var _echartsPromise = null;
+    function loadEchartsScript() {
+      if (_echartsPromise) return _echartsPromise;
+      _echartsPromise = new Promise(function (resolve, reject) {
+        if (typeof window.echarts !== 'undefined') { resolve(window.echarts); return; }
+        var s = document.createElement('script');
+        s.src = '../../plugins/echarts/echarts.min.js';
+        s.async = true;
+        s.onload = function () { resolve(window.echarts); };
+        s.onerror = function (e) { reject(e); };
+        document.head.appendChild(s);
+      });
+      return _echartsPromise;
+    }
+
     new Vue({
       el: '#dashboard-app',
       data() {
@@ -834,6 +856,8 @@
         }
       },
       created() {
+        // 提前触发 ECharts 懒加载，使其与首屏数据请求并行下载
+        loadEchartsScript();
         this.loadAllData();
       },
       mounted() {
@@ -860,9 +884,13 @@
         async loadAllData() {
           this.loading = true;
           try {
-            const res = await $axios.get('/api/dashboard/all', {
+            // 性能优化：概览数据与库存预警无依赖，并行请求，避免串行等待
+            const dashPromise = $axios.get('/api/dashboard/all', {
               params: { hotDishLimit: 10 }
             });
+            const invPromise = inventoryStatsOverview().catch(() => null);
+            const [res, invRes] = await Promise.all([dashPromise, invPromise]);
+
             if (String(res.code) === '1') {
               const data = res.data;
               this.overview = data.overview || {};
@@ -874,12 +902,22 @@
 
               // 修改点：计算昨日对比
               this.calcYesterdayCompare();
-              this.loadInventoryAlert();
 
-              this.$nextTick(() => {
-                this.renderTrendChart();
-                this.renderStatusChart();
-              });
+              // 库存预警：并行结果直接赋值（失败已降级为 null）
+              if (invRes && String(invRes.code) === '1') {
+                this.inventoryAlert = invRes.data || null;
+              }
+
+              // 图表渲染不阻塞 KPI 展示：ECharts 加载失败仅跳过图表，不影响其余数据
+              try {
+                await this.ensureEcharts();
+                this.$nextTick(() => {
+                  this.renderTrendChart();
+                  this.renderStatusChart();
+                });
+              } catch (e) {
+                console.warn('ECharts 加载失败，已跳过图表渲染', e);
+              }
             } else {
               ReggieUI.error(res.msg || '数据加载失败');
             }
@@ -888,16 +926,6 @@
           } finally {
             this.loading = false;
           }
-        },
-
-        // 修改点：加载库存预警
-        async loadInventoryAlert() {
-          try {
-            const res = await inventoryStatsOverview();
-            if (res && String(res.code) === '1') {
-              this.inventoryAlert = res.data || null;
-            }
-          } catch (err) { /* 静默失败 */ }
         },
 
         // 修改点：从趋势数据计算昨日对比
@@ -942,6 +970,11 @@
         // 检查ECharts是否已加载（CDN可能延迟）
         echartsReady() {
           return typeof echarts !== 'undefined';
+        },
+
+        // 确保 ECharts 已加载（运行时动态注入，返回 Promise）
+        ensureEcharts() {
+          return loadEchartsScript();
         },
 
         // 读取设计令牌（CSS 变量），使图表文本/坐标轴色值与全站令牌体系一致

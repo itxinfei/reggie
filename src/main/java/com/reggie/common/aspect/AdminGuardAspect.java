@@ -29,7 +29,9 @@ public class AdminGuardAspect {
     /** 超级管理员角色标识，需与 PermissionAspect.ADMIN_ROLE_KEY 保持一致 */
     private static final String ADMIN_ROLE_KEY = "SUPER_ADMIN";
 
-    @Around("@annotation(com.reggie.common.annotation.RequiresAdmin)")
+    // 同时拦截方法级(@annotation)与类级(@within) @RequiresAdmin。
+    // 仅写 @annotation 会导致类级注解的 Controller 不被命中，非管理员可越权操作系统管理接口(P0 漏洞)。
+    @Around("@annotation(com.reggie.common.annotation.RequiresAdmin) || @within(com.reggie.common.annotation.RequiresAdmin)")
     public Object checkAdmin(ProceedingJoinPoint joinPoint) throws Throwable {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes == null) {

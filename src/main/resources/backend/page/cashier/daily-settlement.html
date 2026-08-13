@@ -91,6 +91,26 @@
       background: var(--el-color-warning-lighter);
       color: var(--el-color-warning);
     }
+    /* 详情字段网格（替代本构建未注册的 el-descriptions） */
+    .settle-detail {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .settle-detail .dt-item {
+      display: flex;
+      align-items: center;
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      border-right: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    .settle-detail .dt-item:nth-child(2n) { border-right: none; }
+    .settle-detail .dt-item.full { grid-column: 1 / -1; border-right: none; }
+    .settle-detail .dt-item:nth-last-child(-n+2):not(.full) { border-bottom: none; }
+    .settle-detail .dt-label { flex: 0 0 84px; color: var(--el-text-secondary); font-size: var(--font-size-sm); }
+    .settle-detail .dt-value { flex: 1; color: var(--el-text-primary); font-size: var(--font-size-sm); word-break: break-all; }
   </style>
 </head>
 <body>
@@ -215,42 +235,32 @@
     </div>
 
     <!-- 详情对话框 -->
-    <crud-dialog title="日结详情" :visible.sync="detailVisible" width="700px">
+    <crud-dialog title="日结详情" :visible.sync="detailVisible" width="700px" :show-submit="false" cancel-text="关 闭">
       <div v-if="currentDetail" style="padding: 20px;">
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="结算日期">{{ currentDetail.settlementDate }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <span class="status-tag" :class="currentDetail.status === 1 ? 'settled' : 'unsettled'">
-              {{ currentDetail.status === 1 ? '已结账' : '未结账' }}
-            </span>
-          </el-descriptions-item>
-          <el-descriptions-item label="营业额">¥{{ formatMoney(currentDetail.totalRevenue) }}</el-descriptions-item>
-          <el-descriptions-item label="订单数">{{ currentDetail.orderCount }}</el-descriptions-item>
-          <el-descriptions-item label="现金收入">¥{{ formatMoney(currentDetail.cashIncome) }}</el-descriptions-item>
-          <el-descriptions-item label="微信收入">¥{{ formatMoney(currentDetail.wechatIncome) }}</el-descriptions-item>
-          <el-descriptions-item label="支付宝收入">¥{{ formatMoney(currentDetail.alipayIncome) }}</el-descriptions-item>
-          <el-descriptions-item label="银行卡收入">¥{{ formatMoney(currentDetail.bankcardIncome) }}</el-descriptions-item>
-          <el-descriptions-item label="退款金额">
-            <span style="color: var(--el-color-danger);">¥{{ formatMoney(currentDetail.refundAmount) }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="退款数量">{{ currentDetail.refundCount }}</el-descriptions-item>
-          <el-descriptions-item label="净收入">
-            <strong>¥{{ formatMoney(currentDetail.netIncome) }}</strong>
-          </el-descriptions-item>
-          <el-descriptions-item label="毛利率">{{ currentDetail.profitRate }}%</el-descriptions-item>
-          <el-descriptions-item label="食材成本">¥{{ formatMoney(currentDetail.materialCost) }}</el-descriptions-item>
-          <el-descriptions-item label="人工成本">¥{{ formatMoney(currentDetail.laborCost) }}</el-descriptions-item>
-          <el-descriptions-item label="其他成本">¥{{ formatMoney(currentDetail.otherCost) }}</el-descriptions-item>
-          <el-descriptions-item label="总成本">¥{{ formatMoney(currentDetail.totalCost) }}</el-descriptions-item>
-          <el-descriptions-item label="毛利润">
-            <span :style="{ color: currentDetail.grossProfit >= 0 ? 'var(--el-color-success)' : 'var(--el-color-danger)' }">
-              ¥{{ formatMoney(currentDetail.grossProfit) }}
-            </span>
-          </el-descriptions-item>
-          <el-descriptions-item label="结账人">{{ currentDetail.settlementUserName || '--' }}</el-descriptions-item>
-          <el-descriptions-item label="结账时间" :span="2">{{ currentDetail.settlementTime || '--' }}</el-descriptions-item>
-          <el-descriptions-item label="备注" :span="2">{{ currentDetail.remark || '--' }}</el-descriptions-item>
-        </el-descriptions>
+        <div class="settle-detail">
+          <div class="dt-item"><span class="dt-label">结算日期</span><span class="dt-value">{{ currentDetail.settlementDate }}</span></div>
+          <div class="dt-item"><span class="dt-label">状态</span><span class="dt-value">
+            <span class="status-tag" :class="currentDetail.status === 1 ? 'settled' : 'unsettled'">{{ currentDetail.status === 1 ? '已结账' : '未结账' }}</span>
+          </span></div>
+          <div class="dt-item"><span class="dt-label">营业额</span><span class="dt-value">¥{{ formatMoney(currentDetail.totalRevenue) }}</span></div>
+          <div class="dt-item"><span class="dt-label">订单数</span><span class="dt-value">{{ currentDetail.orderCount }}</span></div>
+          <div class="dt-item"><span class="dt-label">现金收入</span><span class="dt-value">¥{{ formatMoney(currentDetail.cashIncome) }}</span></div>
+          <div class="dt-item"><span class="dt-label">微信收入</span><span class="dt-value">¥{{ formatMoney(currentDetail.wechatIncome) }}</span></div>
+          <div class="dt-item"><span class="dt-label">支付宝收入</span><span class="dt-value">¥{{ formatMoney(currentDetail.alipayIncome) }}</span></div>
+          <div class="dt-item"><span class="dt-label">银行卡收入</span><span class="dt-value">¥{{ formatMoney(currentDetail.bankcardIncome) }}</span></div>
+          <div class="dt-item"><span class="dt-label">退款金额</span><span class="dt-value" style="color: var(--el-color-danger);">¥{{ formatMoney(currentDetail.refundAmount) }}</span></div>
+          <div class="dt-item"><span class="dt-label">退款数量</span><span class="dt-value">{{ currentDetail.refundCount }}</span></div>
+          <div class="dt-item"><span class="dt-label">净收入</span><span class="dt-value"><strong>¥{{ formatMoney(currentDetail.netIncome) }}</strong></span></div>
+          <div class="dt-item"><span class="dt-label">毛利率</span><span class="dt-value">{{ currentDetail.profitRate }}%</span></div>
+          <div class="dt-item"><span class="dt-label">食材成本</span><span class="dt-value">¥{{ formatMoney(currentDetail.materialCost) }}</span></div>
+          <div class="dt-item"><span class="dt-label">人工成本</span><span class="dt-value">¥{{ formatMoney(currentDetail.laborCost) }}</span></div>
+          <div class="dt-item"><span class="dt-label">其他成本</span><span class="dt-value">¥{{ formatMoney(currentDetail.otherCost) }}</span></div>
+          <div class="dt-item"><span class="dt-label">总成本</span><span class="dt-value">¥{{ formatMoney(currentDetail.totalCost) }}</span></div>
+          <div class="dt-item"><span class="dt-label">毛利润</span><span class="dt-value" :style="{ color: currentDetail.grossProfit >= 0 ? 'var(--el-color-success)' : 'var(--el-color-danger)' }">¥{{ formatMoney(currentDetail.grossProfit) }}</span></div>
+          <div class="dt-item"><span class="dt-label">结账人</span><span class="dt-value">{{ currentDetail.settlementUserName || '--' }}</span></div>
+          <div class="dt-item full"><span class="dt-label">结账时间</span><span class="dt-value">{{ currentDetail.settlementTime || '--' }}</span></div>
+          <div class="dt-item full"><span class="dt-label">备注</span><span class="dt-value">{{ currentDetail.remark || '--' }}</span></div>
+        </div>
       </div>
     </crud-dialog>
   </div>

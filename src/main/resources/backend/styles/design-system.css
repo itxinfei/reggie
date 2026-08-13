@@ -398,16 +398,13 @@ a.breadcrumb__item:hover,
   transition: var(--transition-all);
   border-radius: var(--radius-md);
   font-weight: var(--font-weight-medium);
-  letter-spacing: 0.5px;
 }
 
 .el-button:hover {
-  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 
 .el-button:active {
-  transform: translateY(0);
   box-shadow: var(--shadow-sm);
 }
 
@@ -422,7 +419,6 @@ a.breadcrumb__item:hover,
 
 .el-card:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
 }
 
 .el-card__header {
@@ -447,8 +443,6 @@ a.breadcrumb__item:hover,
   color: var(--text-primary);
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .el-table td {

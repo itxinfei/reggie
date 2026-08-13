@@ -162,7 +162,7 @@
     </div>
 
     <!-- 新增/编辑对话框 -->
-    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="600px">
+    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="600px" @submit="handleSubmit">
       <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px">
         <el-form-item label="活动ID" prop="campaignId">
           <el-input-number v-model="formData.campaignId" :min="1" style="width: 100%;"></el-input-number>

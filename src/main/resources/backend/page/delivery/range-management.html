@@ -183,7 +183,7 @@
     </div>
 
     <!-- 新增/编辑对话框 -->
-    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="700px">
+    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="700px" @submit="handleSubmit">
       <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px">
         <el-form-item label="规则名称" prop="ruleName">
           <el-input v-model="formData.ruleName" placeholder="请输入规则名称"></el-input>
@@ -265,7 +265,7 @@
     </crud-dialog>
 
     <!-- 阶梯规则对话框 -->
-    <crud-dialog title="配送费阶梯规则" :visible.sync="feeStepVisible" width="800px">
+    <crud-dialog title="配送费阶梯规则" :visible.sync="feeStepVisible" width="800px" :show-submit="false">
       <div style="margin-bottom: 16px;">
         <el-button type="primary" size="small" icon="el-icon-plus" @click="handleAddFeeStep">新增阶梯</el-button>
       </div>
@@ -285,7 +285,7 @@
     </crud-dialog>
 
     <!-- 阶梯规则编辑对话框 -->
-    <crud-dialog :title="feeStepDialogTitle" :visible.sync="feeStepEditVisible" width="500px">
+    <crud-dialog :title="feeStepDialogTitle" :visible.sync="feeStepEditVisible" width="500px" @submit="handleFeeStepSubmit">
       <el-form :model="feeStepForm" ref="feeStepForm" label-width="100px">
         <el-form-item label="起始距离">
           <el-input-number v-model="feeStepForm.startDistance" :min="0" style="width: 100%;"></el-input-number>

@@ -65,7 +65,9 @@ public class PermissionAspect {
     // 修改点：与 EmployeeController.resolveRoleKey 对齐，登录管理员角色标识已改为 SUPER_ADMIN
     private static final String ADMIN_ROLE_KEY = "SUPER_ADMIN";
 
-    @Around("@annotation(com.reggie.common.annotation.RequiresPermission)")
+    // 同时拦截方法级(@annotation)与类级(@within) @RequiresPermission，
+    // 与下方 getAnnotation() 已支持类级读取保持一致，避免类级注解失效导致越权。
+    @Around("@annotation(com.reggie.common.annotation.RequiresPermission) || @within(com.reggie.common.annotation.RequiresPermission)")
     public Object checkPermission(ProceedingJoinPoint joinPoint) throws Throwable {
         RequiresPermission annotation = getAnnotation(joinPoint);
         if (annotation == null) {

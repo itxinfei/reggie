@@ -205,7 +205,7 @@
     </div>
 
     <!-- 规格组编辑对话框 -->
-    <crud-dialog :title="groupDialogTitle" :visible.sync="groupDialogVisible" width="500px">
+    <crud-dialog :title="groupDialogTitle" :visible.sync="groupDialogVisible" width="500px" @submit="handleGroupSubmit">
       <el-form :model="groupForm" :rules="groupRules" ref="groupForm" label-width="100px">
         <el-form-item label="规格组名称" prop="name">
           <el-input v-model="groupForm.name" placeholder="如：份量、辣度、温度"></el-input>
@@ -235,7 +235,7 @@
     </crud-dialog>
 
     <!-- 规格选项编辑对话框 -->
-    <crud-dialog :title="optionDialogTitle" :visible.sync="optionDialogVisible" width="500px">
+    <crud-dialog :title="optionDialogTitle" :visible.sync="optionDialogVisible" width="500px" @submit="handleOptionSubmit">
       <el-form :model="optionForm" :rules="optionRules" ref="optionForm" label-width="100px">
         <el-form-item label="选项名称" prop="name">
           <el-input v-model="optionForm.name" placeholder="如：大份、中份、小份"></el-input>
