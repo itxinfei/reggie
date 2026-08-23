@@ -357,3 +357,105 @@ CREATE TABLE store (
   PRIMARY KEY (id)
 );
 CREATE INDEX idx_store_tenant ON store(tenant_id);
+
+-- ==================== 门店配置表 ====================
+DROP TABLE IF EXISTS store_config;
+CREATE TABLE store_config (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '门店ID',
+  config_key varchar(100) NULL DEFAULT NULL COMMENT '配置键',
+  config_value varchar(500) NULL DEFAULT NULL COMMENT '配置值',
+  config_type int NULL DEFAULT NULL COMMENT '配置类型',
+  description varchar(200) NULL DEFAULT NULL COMMENT '说明',
+  created_by bigint NULL DEFAULT NULL COMMENT '创建人',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (id)
+);
+
+-- ==================== 门店基础信息表 ====================
+DROP TABLE IF EXISTS store_info;
+CREATE TABLE store_info (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  store_code varchar(50) NULL DEFAULT NULL COMMENT '门店编码',
+  store_type int NULL DEFAULT NULL COMMENT '门店类型',
+  parent_tenant_id bigint NULL DEFAULT NULL COMMENT '上级租户ID',
+  business_hours varchar(200) NULL DEFAULT NULL COMMENT '营业时间',
+  delivery_radius int NULL DEFAULT NULL COMMENT '配送半径',
+  min_delivery_amount decimal(10,2) NULL DEFAULT NULL COMMENT '最低配送金额',
+  delivery_fee decimal(10,2) NULL DEFAULT NULL COMMENT '配送费',
+  is_delivery_enabled int NULL DEFAULT NULL COMMENT '是否开启配送',
+  is_dine_in_enabled int NULL DEFAULT NULL COMMENT '是否开启堂食',
+  contact_person varchar(50) NULL DEFAULT NULL COMMENT '联系人',
+  contact_phone varchar(20) NULL DEFAULT NULL COMMENT '联系电话',
+  longitude decimal(10,7) NULL DEFAULT NULL COMMENT '经度',
+  latitude decimal(10,7) NULL DEFAULT NULL COMMENT '纬度',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (id)
+);
+
+-- ==================== 门店日报汇总 ====================
+DROP TABLE IF EXISTS store_daily_summary;
+CREATE TABLE store_daily_summary (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  summary_date date NULL DEFAULT NULL COMMENT '汇总日期',
+  total_orders int NULL DEFAULT NULL COMMENT '总订单数',
+  completed_orders int NULL DEFAULT NULL COMMENT '完成订单数',
+  cancelled_orders int NULL DEFAULT NULL COMMENT '取消订单数',
+  total_amount decimal(12,2) NULL DEFAULT NULL COMMENT '总金额',
+  actual_amount decimal(12,2) NULL DEFAULT NULL COMMENT '实收金额',
+  new_users int NULL DEFAULT NULL COMMENT '新用户数',
+  avg_order_amount decimal(10,2) NULL DEFAULT NULL COMMENT '平均客单价',
+  top_dish_json varchar(500) NULL DEFAULT NULL COMMENT '热销菜品JSON',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (id)
+);
+
+-- ==================== 门店员工权限 ====================
+DROP TABLE IF EXISTS store_employee_permission;
+CREATE TABLE store_employee_permission (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  employee_id bigint NULL DEFAULT NULL COMMENT '员工ID',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  role_type int NULL DEFAULT NULL COMMENT '角色类型',
+  permissions varchar(500) NULL DEFAULT NULL COMMENT '权限列表',
+  is_active int NULL DEFAULT NULL COMMENT '是否启用',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (id)
+);
+
+-- ==================== 门店同步日志 ====================
+DROP TABLE IF EXISTS store_sync_log;
+CREATE TABLE store_sync_log (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  source_tenant_id bigint NULL DEFAULT NULL COMMENT '源租户ID',
+  target_tenant_id bigint NULL DEFAULT NULL COMMENT '目标租户ID',
+  sync_type int NULL DEFAULT NULL COMMENT '同步类型',
+  sync_mode int NULL DEFAULT NULL COMMENT '同步模式',
+  sync_status int NULL DEFAULT NULL COMMENT '同步状态',
+  sync_count int NULL DEFAULT NULL COMMENT '同步数量',
+  fail_count int NULL DEFAULT NULL COMMENT '失败数量',
+  error_detail varchar(1000) NULL DEFAULT NULL COMMENT '错误详情',
+  operator_id bigint NULL DEFAULT NULL COMMENT '操作人ID',
+  start_time datetime NULL DEFAULT NULL COMMENT '开始时间',
+  end_time datetime NULL DEFAULT NULL COMMENT '结束时间',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (id)
+);

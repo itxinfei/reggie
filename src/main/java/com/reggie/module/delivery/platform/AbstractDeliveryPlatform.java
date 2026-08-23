@@ -112,7 +112,9 @@ public abstract class AbstractDeliveryPlatform implements DeliveryPlatform {
             String url = trimTrailingSlash(pc.getBaseUrl()) + "/api/delivery/" + action;
             log.info("[{}] 调用平台接口: {} params={}", platformKey(), url, params.keySet());
             String body = HttpUtil.post(url, params);
-            log.info("[{}] 平台响应: {}", platformKey(), body == null ? "null" : body);
+            // 响应体可能含手机号/地址/token 等敏感信息，仅记录响应长度和关键标识，脱敏后落日志
+            log.info("[{}] 平台响应: length={} chars, action={}", platformKey(),
+                    body == null ? 0 : body.length(), action);
             return body;
         } catch (Exception e) {
             log.error("[{}] 调用平台接口异常: action={}, error={}", platformKey(), action, e.getMessage(), e);

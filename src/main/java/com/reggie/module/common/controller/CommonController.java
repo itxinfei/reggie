@@ -21,8 +21,11 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -44,6 +47,24 @@ public class CommonController {
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif");
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
     private static final int BUFFER_SIZE = 1024;
+
+    /** 图片魔数：扩展名 → 合法文件头集合 */
+    private static final Map<String, byte[][]> MAGIC_BYTES = new HashMap<>();
+    static {
+        MAGIC_BYTES.put("jpg", new byte[][]{
+                { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF }
+        });
+        MAGIC_BYTES.put("jpeg", new byte[][]{
+                { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF }
+        });
+        MAGIC_BYTES.put("png", new byte[][]{
+                { (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }
+        });
+        MAGIC_BYTES.put("gif", new byte[][]{
+                { 0x47, 0x49, 0x46, 0x38, 0x37, 0x61 },
+                { 0x47, 0x49, 0x46, 0x38, 0x39, 0x61 }
+        });
+    }
 
     @Value("${reggie.path:}")
     private String configPath;
@@ -119,6 +140,11 @@ public class CommonController {
             return R.error("文件大小不能超过5MB");
         }
 
+        // 4. 校验文件魔数（Magic Bytes），防止扩展名绕过（如 shell.jsp.png）
+        if (!checkMagicBytes(file, extension)) {
+            return R.error("文件内容与声明类型不符，上传被拒绝");
+        }
+
         //file是一个临时文件，需要转存到指定位置，否则本次请求完成后临时文件会删除
         log.info("文件上传：originalFilename={}, size={}", originalFilename, file.getSize());
 
@@ -146,6 +172,61 @@ public class CommonController {
             return R.error("文件上传失败");
         }
         return R.success(relativePath);
+    }
+
+    /**
+     * 校验文件魔数（Magic Bytes），确认文件内容与声明的扩展名一致
+     * <p>
+     * 仅校验扩展名可被绕过（如将 shell.jsp 重命名为 .png），魔数校验可拒绝此类伪装。
+     *
+     * @param file      MultipartFile
+     * @param extension 小写扩展名
+     * @return true=魔数匹配
+     */
+    private boolean checkMagicBytes(MultipartFile file, String extension) {
+        byte[][] expectedMags = MAGIC_BYTES.get(extension);
+        if (expectedMags == null || expectedMags.length == 0) {
+            return false;
+        }
+        InputStream is = null;
+        try {
+            is = file.getInputStream();
+            int maxLen = expectedMags[0].length;
+            for (byte[] other : expectedMags) {
+                if (other.length > maxLen) {
+                    maxLen = other.length;
+                }
+            }
+            byte[] head = new byte[maxLen];
+            int bytesRead = is.read(head);
+            if (bytesRead < maxLen) {
+                return false;
+            }
+            for (byte[] expected : expectedMags) {
+                boolean match = true;
+                for (int i = 0; i < expected.length; i++) {
+                    if (head[i] != expected[i]) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (IOException e) {
+            log.error("文件魔数校验失败: extension={}, error={}", extension, e.getMessage(), e);
+            return false;
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    log.warn("文件流关闭异常", e);
+                }
+            }
+        }
     }
 
     /**

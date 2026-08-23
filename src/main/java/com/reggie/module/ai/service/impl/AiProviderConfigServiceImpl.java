@@ -18,6 +18,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -144,6 +145,13 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
     private String testOpenAICompatibleProvider(AiProviderConfig config) {
         // 规范化 baseUrl，去除末尾斜杠，避免双重斜杠导致 404
         String normalizedUrl = config.getBaseUrl() == null ? "" : config.getBaseUrl().replaceAll("/+$", "");
+
+        // SSRF 防护：从数据库读取的 baseUrl 也必须校验（管理员改库/内部恶意人员场景）
+        if (!validateBaseUrl(normalizedUrl)) {
+            updateTestResult(config, "fail");
+            return "FAIL: baseUrl 校验失败，禁止访问内网地址";
+        }
+
         HttpURLConnection conn = null;
         try {
             String testUrl = normalizedUrl + "/chat/completions";
@@ -208,6 +216,11 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
     private String testBaiduProvider(AiProviderConfig config) {
         HttpURLConnection conn = null;
         try {
+            // SSRF 防护
+            if (!validateBaseUrl(config.getBaseUrl())) {
+                updateTestResult(config, "fail");
+                return "FAIL: baseUrl 校验失败，禁止访问内网地址";
+            }
             String testUrl = config.getBaseUrl() + "?access_token=" + config.getApiKey();
             URL url = new URL(testUrl);
             conn = (HttpURLConnection) url.openConnection();
@@ -256,6 +269,11 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
     private String testAnthropicProvider(AiProviderConfig config) {
         HttpURLConnection conn = null;
         try {
+            // SSRF 防护
+            if (!validateBaseUrl(config.getBaseUrl())) {
+                updateTestResult(config, "fail");
+                return "FAIL: baseUrl 校验失败，禁止访问内网地址";
+            }
             String testUrl = config.getBaseUrl() + "/messages";
             URL url = new URL(testUrl);
             conn = (HttpURLConnection) url.openConnection();
@@ -355,6 +373,56 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
         return config;
     }
 
+/**
+     * 校验 baseUrl 是否合法（防 SSRF）
+     * <p>
+     * 检查项：
+     * 1. 协议必须是 https
+     * 2. 解析域名后反查 IP，拒绝私有网段（内网 IP、链路本地、回环）
+     * 3. 异常时 fail-closed 返回 false
+     *
+     * @param baseUrl 待校验的 baseUrl
+     * @return true=合法，false=非法（需拒绝）
+     */
+    private boolean validateBaseUrl(String baseUrl) {
+        if (baseUrl == null || baseUrl.trim().isEmpty()) {
+            return false;
+        }
+        URL url;
+        try {
+            url = new URL(baseUrl);
+        } catch (Exception e) {
+            log.warn("[SSRF防护] baseUrl 格式非法: {}", baseUrl);
+            return false;
+        }
+
+        // 仅允许 https 协议
+        if (!"https".equalsIgnoreCase(url.getProtocol())) {
+            log.warn("[SSRF防护] baseUrl 协议非法: protocol={}, baseUrl={}", url.getProtocol(), baseUrl);
+            return false;
+        }
+
+        String host = url.getHost();
+        if (host == null || host.trim().isEmpty()) {
+            return false;
+        }
+
+        // 反查 IP，拒绝私有/内网地址
+        try {
+            InetAddress addr = InetAddress.getByName(host);
+            if (addr.isSiteLocalAddress() || addr.isLoopbackAddress()
+                    || addr.isLinkLocalAddress() || addr.isAnyLocalAddress()) {
+                log.warn("[SSRF防护] baseUrl 解析到内网地址: host={}, ip={}", host, addr.getHostAddress());
+                return false;
+            }
+        } catch (Exception e) {
+            log.warn("[SSRF防护] baseUrl 域名解析失败: host={}", host);
+            return false;
+        }
+
+        return true;
+    }
+
     // ==================== 修改点：拉取模型列表 ====================
 
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
@@ -367,6 +435,12 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
         }
         if (apiKey == null || apiKey.trim().isEmpty()) {
             log.warn("fetchModelList: apiKey 为空");
+            return Collections.emptyList();
+        }
+
+        // SSRF 防护：用户提交的 baseUrl 必须通过校验
+        if (!validateBaseUrl(baseUrl)) {
+            log.warn("fetchModelList: baseUrl 校验失败，拒绝请求");
             return Collections.emptyList();
         }
 
@@ -416,7 +490,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             // 去重（使用 LinkedHashSet 保持插入顺序，避免 O(n^2)）
             Set<String> modelSet = new LinkedHashSet<>(allModels);
             List<String> result = new ArrayList<>(modelSet);
-            log.info("fetchModelList: 获取到 {} 个模型, baseUrl={}", result.size(), normalizedUrl);
+            log.debug("fetchModelList: 获取到 {} 个模型, baseUrl={}", result.size(), normalizedUrl);
             return result;
         } catch (Exception e) {
             log.error("fetchModelList: 未预期异常, baseUrl={}", baseUrl, e);
