@@ -259,11 +259,11 @@
             channel: ls.channel || undefined,
             status: ls.status || undefined
           }
-          var requests = [sysApi.templatePage(params)]
+          const requests = [sysApi.templatePage(params)]
           if (reloadStats) { requests.push(this.loadTemplateStats()) }
-          var results = await Promise.all(requests)
-          var tplRes = results[0]
-          var statsRes = results[1]
+          const results = await Promise.all(requests)
+          const tplRes = results[0]
+          const statsRes = results[1]
           if (tplRes && tplRes.code === 1) {
             this.tableData = tplRes.data.records || []
             this.counts = tplRes.data.total || 0
@@ -282,7 +282,7 @@
             var r4 = await sysApi.templatePage({ page: 1, pageSize: 1, channel: 1 })
             var r5 = await sysApi.templatePage({ page: 1, pageSize: 1, channel: 3 })
             if (String(r1.code) === '1') {
-              var sms = (r4.data.total || 0) + (r5.data.total || 0)
+              const sms = (r4.data.total || 0) + (r5.data.total || 0)
               return { code: 1, data: {
                 total: r1.data.total || 0,
                 enabled: r2.data.total || 0,
@@ -368,7 +368,7 @@
               return
             }
             self.submitting = true
-          var api = self.formData.id ? sysApi.templateUpdate(self.formData) : sysApi.templateAdd(self.formData)
+          const api = self.formData.id ? sysApi.templateUpdate(self.formData) : sysApi.templateAdd(self.formData)
           api.then(function(res) {
             if (res && res.code === 1) {
               ReggieUI.success(res.msg || '操作成功')
@@ -383,7 +383,7 @@
         },
         toggleStatus(row) {
           const self = this
-          var newStatus = row.status === 1 ? 0 : 1
+          const newStatus = row.status === 1 ? 0 : 1
           sysApi.templateToggle(row.id, newStatus).then(function(res) {
             if (res && res.code === 1) {
               row.status = newStatus

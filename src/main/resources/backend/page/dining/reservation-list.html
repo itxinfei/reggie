@@ -143,10 +143,10 @@
             endTime: ls.endTime || undefined
           }
           // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-          var requests = [reservationPage(params)]
+          const requests = [reservationPage(params)]
           if (reloadStats) { requests.push(this.loadReservationStats()) }
-          var results = await Promise.all(requests)
-          var resvRes = results[0]
+          const results = await Promise.all(requests)
+          const resvRes = results[0]
           if (String(resvRes.code) === '1') {
             this.tableData = resvRes.data.records || []
             this.counts = resvRes.data.total
@@ -154,7 +154,7 @@
             ReggieUI.error(resvRes.msg || '操作失败')
           }
           if (reloadStats) {
-            var statsRes = results[1]
+            const statsRes = results[1]
             if (statsRes && String(statsRes.code) === '1') {
               this.stats = statsRes.data || this.stats
             }
@@ -164,7 +164,7 @@
         async loadReservationStats() {
           try {
             // 修改点：使用 pageSize=1 × 5 轻量查询替代 pageSize=1000 拉全量，直接取 total 避免数据截断
-            var results = await Promise.all([
+            const results = await Promise.all([
               reservationPage({ page: 1, pageSize: 1 }),
               reservationPage({ page: 1, pageSize: 1, status: 'PENDING' }),
               reservationPage({ page: 1, pageSize: 1, status: 'CONFIRMED' }),

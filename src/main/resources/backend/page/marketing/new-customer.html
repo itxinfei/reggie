@@ -224,7 +224,7 @@
             params.status = self.activeFilter
           }
           try {
-            var res = await getNewCustomerDiscounts(params)
+            const res = await getNewCustomerDiscounts(params)
             if (String(res.code) === '1') {
               self.tableData = res.data || []
               self.counts = res.total || (res.data ? res.data.length : 0)
@@ -236,12 +236,12 @@
         },
         async loadStats() {
           try {
-            var results = await Promise.all([
+            const results = await Promise.all([
               getNewCustomerDiscounts({ page: 1, pageSize: 1, status: '1' }),
               getNewCustomerDiscounts({ page: 1, pageSize: 1, status: '0' })
             ])
-            var activeCount = (String(results[0].code) === '1') ? (results[0].total || results[0].data.length || 0) : 0
-            var inactiveCount = (String(results[1].code) === '1') ? (results[1].total || results[1].data.length || 0) : 0
+            const activeCount = (String(results[0].code) === '1') ? (results[0].total || results[0].data.length || 0) : 0
+            const inactiveCount = (String(results[1].code) === '1') ? (results[1].total || results[1].data.length || 0) : 0
             this.stats = {
               total: activeCount + inactiveCount,
               active: activeCount,
@@ -312,7 +312,7 @@
         },
         async handleToggleStatus(row) {
           try {
-            var newStatus = row.status === 1 ? 0 : 1
+            const newStatus = row.status === 1 ? 0 : 1
             var res = await updateNewCustomerDiscount(Object.assign({}, row, { status: newStatus }))
             if (res.code === 1) {
               ReggieUI.success(newStatus === 1 ? '已启用' : '已禁用')
@@ -332,7 +332,7 @@
               cancelButtonText: '取消',
               type: 'warning'
             })
-            var res = await deleteNewCustomerDiscount(row.id)
+            const res = await deleteNewCustomerDiscount(row.id)
             if (res.code === 1) {
               ReggieUI.success('删除成功')
               this.init()
@@ -348,7 +348,7 @@
         },
         handleSubmit: function() {
           const self = this
-          var passed = false
+          const passed = false
           this.$refs.ruleForm.validate(function(valid) { passed = valid })
           if (!passed) return
           if (self.formData.discountType === 2 && (!self.formData.maxDiscountAmount || self.formData.maxDiscountAmount <= 0)) {
@@ -356,7 +356,7 @@
             return
           }
           self.submitLoading = true
-          var apiCall = self.formData.id ? updateNewCustomerDiscount(self.formData) : saveNewCustomerDiscount(self.formData)
+          const apiCall = self.formData.id ? updateNewCustomerDiscount(self.formData) : saveNewCustomerDiscount(self.formData)
           apiCall.then(function(res) {
             if (res.code === 1) {
               ReggieUI.success(self.formData.id ? '更新成功' : '新增成功')

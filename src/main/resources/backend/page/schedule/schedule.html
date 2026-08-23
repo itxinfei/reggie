@@ -192,13 +192,13 @@
         // ===== 初始化 =====
         initMonth: function () {
           const now = new Date()
-          var y = now.getFullYear()
-          var m = now.getMonth() + 1
+          const y = now.getFullYear()
+          const m = now.getMonth() + 1
           this.scheduleMonth = y + '-' + pad2(m)
         },
         initEmployees: function () {
           const self = this
-          var names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
+          const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
           self.employeeOptions = names.map(function (n, i) {
             return { id: i + 1, name: n }
           })
@@ -220,25 +220,24 @@
         loadMockSchedule: function () {
           const self = this
           const parts = self.scheduleMonth.split('-')
-          var year = parseInt(parts[0], 10)
-          var month = parseInt(parts[1], 10)
+          const year = parseInt(parts[0], 10)
+          const month = parseInt(parts[1], 10)
           const daysInMonth = new Date(year, month, 0).getDate()
-          var weekdays = ['一', '二', '三', '四', '五', '六', '日']
-
+          const weekdays = ['一', '二', '三', '四', '五', '六', '日']
           // 生成日期列头
           self.dayHeaders = []
           for (let d = 1; d <= daysInMonth; d++) {
             const wd = new Date(year, month - 1, d).getDay()
-            var label = d + '(' + weekdays[wd] + ')'
+            const label = d + '(' + weekdays[wd] + ')'
             self.dayHeaders.push(label)
           }
 
           // 构建排班数据
-          var shifts = ['morning', 'noon', 'night', 'full', 'rest']
+          const shifts = ['morning', 'noon', 'night', 'full', 'rest']
           var labels = { morning: '早', noon: '中', night: '晚', full: '全天', rest: '休' }
           var data = {}
           self.employeeOptions.forEach(function (emp) {
-            var empKey = emp.id
+            const empKey = emp.id
             data[empKey] = {}
             for (let dd = 1; dd <= daysInMonth; dd++) {
               const wd = new Date(year, month - 1, dd).getDay()
@@ -246,7 +245,7 @@
               if (wd === 0 || wd === 6) {
                 s = 'rest'
               } else {
-                var idx = ((emp.id + dd) % shifts.length)
+                const idx = ((emp.id + dd) % shifts.length)
                 s = shifts[idx]
               }
               if (s !== 'rest') {
@@ -264,11 +263,11 @@
             self.loadMockSchedule()
             return
           }
-          var parts = self.scheduleMonth.split('-')
-          var year = parseInt(parts[0], 10)
-          var month = parseInt(parts[1], 10)
+          const parts = self.scheduleMonth.split('-')
+          const year = parseInt(parts[0], 10)
+          const month = parseInt(parts[1], 10)
           const daysInMonth = new Date(year, month, 0).getDate()
-          var weekdays = ['一', '二', '三', '四', '五', '六', '日']
+          const weekdays = ['一', '二', '三', '四', '五', '六', '日']
           var labels = { morning: '早', noon: '中', night: '晚', full: '全天', rest: '休' }
           var shiftMap = { 'early': 'morning', 'morning': 'morning', 'noon': 'noon', 'afternoon': 'noon', 'night': 'night', 'evening': 'night', 'full': 'full', 'rest': 'rest' }
 
@@ -280,7 +279,7 @@
 
           var newData = {}
           backendData.rows.forEach(function (row) {
-            var key = row.employeeId
+            const key = row.employeeId
             newData[key] = newData[key] || {}
             newData[key][row.day] = { shift: shiftMap[row.shift] || 'morning', label: labels[shiftMap[row.shift]] || row.shift }
           })
@@ -290,25 +289,24 @@
         },
         buildStats: function () {
           const self = this
-          var parts = self.scheduleMonth.split('-')
-          var year = parseInt(parts[0], 10)
-          var month = parseInt(parts[1], 10)
+          const parts = self.scheduleMonth.split('-')
+          const year = parseInt(parts[0], 10)
+          const month = parseInt(parts[1], 10)
           const today = new Date()
           const daysInMonth = new Date(year, month, 0).getDate()
 
-          var todayOnDuty = 0
-          var todayScheduled = 0
-          var absentCount = 0
+          const todayOnDuty = 0
+          const todayScheduled = 0
+          const absentCount = 0
           var onDutyTodaySet = {}
 
           const now = new Date()
-          var nowMonth = now.getMonth() + 1
-          var nowYear = now.getFullYear()
-
+          const nowMonth = now.getMonth() + 1
+          const nowYear = now.getFullYear()
           self.employeeOptions.forEach(function (emp) {
-            var empData = self.scheduleData[emp.id]
+            const empData = self.scheduleData[emp.id]
             if (empData) {
-              var todayCell = empData[now.getDate()]
+              const todayCell = empData[now.getDate()]
               if (todayCell) {
                 todayScheduled++
                 if (todayCell.shift === 'full' || todayCell.shift === 'morning' || todayCell.shift === 'noon') {
@@ -329,27 +327,26 @@
         },
         buildWeekShiftData: function () {
           const self = this
-          var days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+          const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
           const now = new Date()
-          var weekStart = now.getDate() - now.getDay() + 1
-
+          const weekStart = now.getDate() - now.getDay() + 1
           var colors = { morning: 'var(--color-success)', noon: 'var(--color-brand-500)', night: 'var(--color-info)', full: 'var(--color-danger)' }
           var shiftNames = { morning: '早', noon: '中', night: '晚', full: '全天' }
 
           const totalAll = 0
-          var weekData = []
+          const weekData = []
           for (let w = 0; w < 7; w++) {
-            var dayNum = weekStart + w
+            const dayNum = weekStart + w
             if (dayNum < 1 || dayNum > 28) break
             var counts = { morning: 0, noon: 0, night: 0, full: 0 }
             self.employeeOptions.forEach(function (emp) {
-              var cell = self.scheduleData[emp.id] && self.scheduleData[emp.id][dayNum]
+              const cell = self.scheduleData[emp.id] && self.scheduleData[emp.id][dayNum]
               if (cell) counts[cell.shift] = (counts[cell.shift] || 0) + 1
             })
-            var total = counts.morning + counts.noon + counts.night + counts.full
+            const total = counts.morning + counts.noon + counts.night + counts.full
             totalAll += total
 
-            var shifts = []
+            const shifts = []
             shifts.push({ key: 'morning', label: '早', value: counts.morning, color: colors.morning, pct: total > 0 ? Math.round(counts.morning / total * 100) : 0 })
             shifts.push({ key: 'noon',    label: '中', value: counts.noon,    color: colors.noon,    pct: total > 0 ? Math.round(counts.noon / total * 100) : 0 })
             shifts.push({ key: 'night',   label: '晚', value: counts.night,   color: colors.night,   pct: total > 0 ? Math.round(counts.night / total * 100) : 0 })
@@ -359,7 +356,7 @@
           self.weekShiftData = weekData
 
           // 汇总统计
-          var sumM = 0, sumN = 0, sumE = 0, sumF = 0
+          const sumM = 0, sumN = 0, sumE = 0, sumF = 0
           weekData.forEach(function (w) {
             w.shifts.forEach(function (s) {
               if (s.key === 'morning') sumM += s.value
@@ -378,9 +375,9 @@
 
         // ===== 排班表格辅助 =====
         getCell: function (empId, dayLabel) {
-          var parts = dayLabel.match(/^(\d+)/)
+          const parts = dayLabel.match(/^(\d+)/)
           if (!parts) return null
-          var day = parseInt(parts[1], 10)
+          const day = parseInt(parts[1], 10)
           return this.scheduleData[empId] && this.scheduleData[empId][day] || null
         },
         getShiftTagType: function (shift) {
@@ -416,7 +413,7 @@
               // 后端未就绪时，本地 mock 保存
               var match = self.form.date.match(/-(\d{2})$/)
               if (match) {
-                var day = parseInt(match[1], 10)
+                const day = parseInt(match[1], 10)
                 var labels = { morning: '早', noon: '中', night: '晚', full: '全天' }
                 self.$set(self.scheduleData[self.form.employeeId], day, { shift: self.form.shift, label: labels[self.form.shift] })
               }
@@ -428,7 +425,7 @@
         },
         editCell: function (emp, dayLabel) {
           this.form = { employeeId: emp.id, date: this.scheduleMonth + '-0' + dayLabel.split('(')[0], shift: 'morning', startTime: '', endTime: '', remark: '' }
-          var cell = this.getCell(emp.id, dayLabel)
+          const cell = this.getCell(emp.id, dayLabel)
           if (cell) {
             this.form.shift = cell.shift
           }

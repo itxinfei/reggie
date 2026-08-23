@@ -345,12 +345,12 @@
       },
       computed: {
         pagedData() {
-          var start = (this.page - 1) * this.pageSize
+          const start = (this.page - 1) * this.pageSize
           return this.filteredData.slice(start, start + this.pageSize)
         },
         filteredData() {
-          var data = this.allData
-          var params = this.searchParams
+          const data = this.allData
+          const params = this.searchParams
           if (params.status !== undefined && params.status !== '') {
             data = data.filter(function(item) { return item.status === params.status })
           }

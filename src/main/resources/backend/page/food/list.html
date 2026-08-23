@@ -369,7 +369,7 @@
           var params = { page: this.page, pageSize: this.pageSize, name: self.lastSearch.name || undefined, code: self.lastSearch.code || undefined, categoryId: self.lastSearch.categoryId || undefined }
           if (self.activeFilter && self.activeFilter !== '') { params.status = self.activeFilter }
           try {
-            var dishRes = await getDishPage(params)
+            const dishRes = await getDishPage(params)
             if (String(dishRes.code) === '1') { self.tableData = dishRes.data.records || []; self.counts = dishRes.data.total }
           } catch (err) { ReggieUI.error('鍔犺浇鑿滃搧鍒楄〃澶辫触:') }
           self.loading = false
@@ -382,14 +382,14 @@
         async loadDishStats() {
           try {
             // 淇敼鐐癸細骞惰鏌ヨ鍚勭姸鎬佽彍鍝佹€绘暟锛屾浛浠ｇ‖缂栫爜 deletedDishes=0锛涚粨鏋滆嚜璧嬪€硷紝璋冪敤鏂规棤闇€鍐嶅彇杩斿洖鍊?
-            var results = await Promise.all([
+            const results = await Promise.all([
               getDishPage({ page: 1, pageSize: 1, status: '1' }),
               getDishPage({ page: 1, pageSize: 1, status: '0' }),
               getDishPage({ page: 1, pageSize: 1, isDeleted: 1 })
             ])
-            var activeCount = (String(results[0].code) === '1') ? (results[0].data.total || 0) : 0
-            var inactiveCount = (String(results[1].code) === '1') ? (results[1].data.total || 0) : 0
-            var deletedCount = (String(results[2].code) === '1') ? (results[2].data.total || 0) : 0
+            const activeCount = (String(results[0].code) === '1') ? (results[0].data.total || 0) : 0
+            const inactiveCount = (String(results[1].code) === '1') ? (results[1].data.total || 0) : 0
+            const deletedCount = (String(results[2].code) === '1') ? (results[2].data.total || 0) : 0
             var stats = {
               totalDishes: activeCount + inactiveCount,
               activeDishes: activeCount,
@@ -452,12 +452,12 @@
         async initDishForm(id) {
           const self = this
           try {
-            var res = await queryDishById(id)
+            const res = await queryDishById(id)
             if (String(res.code) === '1') {
-              var data = res.data
+              const data = res.data
               self.dishForm = { id: data.id, name: data.name, code: data.code || '', categoryId: data.categoryId, price: String(data.price), sort: data.sort || 0, stockQty: data.stockQty != null ? String(data.stockQty) : '', minStock: data.minStock != null ? String(data.minStock) : '', image: data.image, imageUrl: '/common/download?name=' + data.image, description: data.description || '', status: String(data.status) === '1' }
               self.dishFlavors = data.flavors && data.flavors.map(function(obj) {
-                var parsedValue = []
+                const parsedValue = []
                 if (obj.value) {
                   try { parsedValue = JSON.parse(obj.value) }
                   catch (e) { parsedValue = typeof obj.value === 'string' ? obj.value.split(',').map(function(s) { return s.trim() }).filter(Boolean) : [obj.value] }
@@ -488,13 +488,13 @@
         async submitStockForm() {
           if (this.submitting) return // 鎻愪氦闃查噸
           const self = this
-          var passed = false
+          const passed = false
           self.$refs.stockEditForm.validate(function(valid) { passed = valid })
           if (!passed) {
             ReggieUI.warning('璇峰畬鍠勮〃鍗曞繀濉」')
             return
           }
-          var form = self.stockForm
+          const form = self.stockForm
           self.submitting = true
           try {
             var res = await updateDishStock(form.id, { stockQty: form.newStockQty, minStock: form.newMinStock })
@@ -513,7 +513,7 @@
           this.$nextTick(function() { const ref = self.$refs['dialogTagInput' + index]; if (ref && ref[0]) ref[0].$refs.input.focus() })
         },
         confirmDialogTag: function(index) {
-          var inputValue = this.dishFlavors[index].inputValue
+          const inputValue = this.dishFlavors[index].inputValue
           if (inputValue && inputValue.trim()) { const trimmed = inputValue.trim(); if (!this.dishFlavors[index].value.includes(trimmed)) { this.dishFlavors[index].value.push(trimmed) } }
           this.dishFlavors[index].inputVisible = false; this.dishFlavors[index].inputValue = ''
         },
@@ -563,7 +563,7 @@
         },
         onChange: function(file) {
           if (file) {
-            const suffix = file.name.split('.')[1]; var size = file.size / 1024 / 1024 < 2
+            const suffix = file.name.split('.')[1]; const size = file.size / 1024 / 1024 < 2
             if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) { ReggieUI.error('涓婁紶鍥剧墖鍙敮鎸?png銆乯peg銆乯pg 鏍煎紡锛?); this.$refs.upload.clearFiles(); return false }
             if (!size) { ReggieUI.error('涓婁紶鏂囦欢澶у皬涓嶈兘瓒呰繃 2MB!'); return false }
             return file
@@ -598,7 +598,7 @@
         },
         exportDishes: function(format) {
           try {
-            var ext = format === 'excel' ? 'xlsx' : 'pdf'
+            const ext = format === 'excel' ? 'xlsx' : 'pdf'
             var apiCall = format === 'excel' ? exportApi.exportDishesExcel({}) : exportApi.exportDishesPdf({})
             exportApi.downloadFile(apiCall, '鑿滃搧鏁版嵁.' + ext)
             ReggieUI.success('瀵煎嚭鎴愬姛锛屾枃浠跺凡寮€濮嬩笅杞?)
@@ -619,11 +619,11 @@
         },
         loadBOMItems: function() {
           const self = this
-          var dishId = self.bomDialog.dishId
+          const dishId = self.bomDialog.dishId
           if (!dishId) { return }
           dishMaterialListByDish(dishId).then(function(res) {
             if (res.code === 1) {
-              var data = res.data || []
+              const data = res.data || []
               self.bomItems = data.map(function(item) {
                 return {
                   id: item.id || null,
@@ -665,7 +665,7 @@
           const self = this
           // 鏍￠獙锛氭墍鏈夎蹇呴』閫夐鏉愪笖鐢ㄩ噺 > 0
           for (let i = 0; i < self.bomItems.length; i++) {
-            var item = self.bomItems[i]
+            const item = self.bomItems[i]
             if (!item.materialId) { ReggieUI.warning('绗?' + (i + 1) + ' 琛屾湭閫夋嫨椋熸潗'); return }
             if (!item.usageQty || item.usageQty <= 0) { ReggieUI.warning('绗?' + (i + 1) + ' 琛岀敤閲忓繀椤诲ぇ浜?0'); return }
           }

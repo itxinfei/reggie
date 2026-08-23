@@ -463,7 +463,7 @@ new Vue({
           getCategoryList({ type: 2 })
         ])
         if (String(totalRes.code) === '1') {
-          var catCount = 0
+          const catCount = 0
           try {
             catCount = catRes ? (catRes.data || []).length : 0
           } catch (e) {
@@ -604,7 +604,7 @@ new Vue({
       try {
         const res = await querySetmealById(id)
         if (String(res.code) === '1') {
-          var data = res.data
+          const data = res.data
           this.comboForm = {
             id: data.id,
             name: data.name,
@@ -712,8 +712,8 @@ new Vue({
 
     onChange(file) {
       if (file) {
-        var suffix = file.name.split('.')[1]
-        var size = file.size / 1024 / 1024 < 2
+        const suffix = file.name.split('.')[1]
+        const size = file.size / 1024 / 1024 < 2
         if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) {
           ReggieUI.error('上传图片只支持 png、jpeg、jpg 格式！')
           this.$refs.comboUpload.clearFiles()
@@ -815,7 +815,7 @@ new Vue({
 
     searchDish() {
       const self = this
-      var name = this.dishSearchKey.trim()
+      const name = this.dishSearchKey.trim()
       if (name) {
         queryDishList({ name: name }).then(function (res) {
           if (res.code === 1) {

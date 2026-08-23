@@ -300,9 +300,9 @@
         },
         async loadTemplates() {
           try {
-            var res = await couponTemplateList()
+            const res = await couponTemplateList()
             if (String(res.code) === '1') {
-              var records = res.data.records || []
+              const records = res.data.records || []
               this.templateOptions = records.map(function(t) {
                 return {
                   value: t.id,
@@ -318,9 +318,9 @@
         async loadStats() {
           this.statsLoading = true
           try {
-            var res = await couponExpiringStats(this.days)
+            const res = await couponExpiringStats(this.days)
             if (String(res.code) === '1' && res.data) {
-              var d = res.data
+              const d = res.data
               this.statsData = {
                 totalExpiringCount: d.totalExpiringCount || 0,
                 totalExpiredCount: d.totalExpiredCount || 0,
@@ -347,7 +347,7 @@
               }
               if (this.templateId) params.templateId = this.templateId
               if (this.phone) params.phone = this.phone
-              var res = await couponExpiring(params)
+              const res = await couponExpiring(params)
             } else {
               params = {
                 page: this.page,
@@ -355,7 +355,7 @@
               }
               if (this.templateId) params.templateId = this.templateId
               if (this.phone) params.phone = this.phone
-              var res = await couponExpired(params)
+              const res = await couponExpired(params)
             }
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
@@ -401,7 +401,7 @@
               extendDays: this.extendForm.extendDays
             })
             if (String(res.code) === '1') {
-              var d = res.data
+              const d = res.data
               this.$message.success('寤舵湡鎴愬姛锛? + d.successCount + '鏉′紭鎯犲埜寤堕暱' + this.extendForm.extendDays + '澶?)
               this.extendForm.dialogVisible = false
               this.loadTable()

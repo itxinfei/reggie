@@ -134,11 +134,11 @@
         }
       },
       created: function() {
-        var t = localStorage.getItem('login-theme')
+        const t = localStorage.getItem('login-theme')
         this.dark = t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme:dark)').matches)
         this.setTheme()
         // 记住上次用户名
-        var u = localStorage.getItem('login-username')
+        const u = localStorage.getItem('login-username')
         if (u) this.form.username = u
       },
       mounted: function() {
@@ -170,7 +170,7 @@
           this.setTheme()
         },
         focusPass: function() {
-          var el = this.$refs.loginForm.$el.querySelector('input[type="password"]')
+          const el = this.$refs.loginForm.$el.querySelector('input[type="password"]')
           if (el) el.focus()
         },
         doLogin: function() {

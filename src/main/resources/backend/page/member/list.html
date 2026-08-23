@@ -458,8 +458,8 @@
           // 导出员工数据
           exportEmployees(format) {
             try {
-              var ext = format === 'excel' ? 'xlsx' : 'pdf'
-              var apiCall = format === 'excel'
+              const ext = format === 'excel' ? 'xlsx' : 'pdf'
+              const apiCall = format === 'excel'
                 ? exportApi.exportEmployeesExcel({})
                 : exportApi.exportEmployeesPdf({})
               exportApi.downloadFile(apiCall, '员工数据.' + ext)

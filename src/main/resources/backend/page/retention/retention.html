@@ -703,7 +703,7 @@
       },
       computed: {
         filteredMembers: function () {
-          var list = this.memberList
+          const list = this.memberList
           if (this.filterLevel !== 'ALL') {
             list = list.filter(function (m) { return m.level === this.filterLevel }.bind(this))
           }
@@ -756,7 +756,7 @@
             self.$axios({ url: '/api/retention/ranking', method: 'get' })
               .then(function (res) {
                 if (res.data && res.data.code === 1 && res.data.data) {
-                  var data = res.data.data
+                  const data = res.data.data
                   if (Array.isArray(data)) {
                     self.rankingList = data.slice(0, 10)
                   } else if (Array.isArray(data.records)) {
@@ -783,7 +783,7 @@
             self.$axios({ url: '/api/retention/warning', method: 'get' })
               .then(function (res) {
                 if (res.data && res.data.code === 1 && res.data.data) {
-                  var data = res.data.data
+                  const data = res.data.data
                   if (Array.isArray(data)) {
                     self.warningList = data
                   } else if (Array.isArray(data.records)) {
@@ -810,7 +810,7 @@
             self.$axios({ url: '/api/retention/recommend', method: 'get' })
               .then(function (res) {
                 if (res.data && res.data.code === 1 && res.data.data) {
-                  var data = res.data.data
+                  const data = res.data.data
                   if (Array.isArray(data)) {
                     self.recommendList = data.slice(0, 8)
                   } else if (Array.isArray(data.records)) {
@@ -840,7 +840,7 @@
             self.$axios({ url: '/api/retention/list', method: 'get', params: params })
               .then(function (res) {
                 if (res.data && res.data.code === 1 && res.data.data) {
-                  var data = res.data.data
+                  const data = res.data.data
                   if (Array.isArray(data)) {
                     self.memberList = data.slice(0, 15)
                   } else if (Array.isArray(data.records)) {
@@ -980,7 +980,7 @@
 
         confirmSendCoupon: function () {
           const self = this
-          var memberId = self.couponTarget.memberId
+          const memberId = self.couponTarget.memberId
           self.couponLoading = true
           try {
             self.$axios({ url: '/api/retention/send/' + memberId, method: 'post' })

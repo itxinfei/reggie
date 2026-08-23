@@ -273,17 +273,17 @@
       computed: {
         // 瑙ｆ瀽浼氬憳ID鍒楄〃
         parsedMemberIds: function() {
-          var text = this.form.memberIdsText || ''
+          const text = this.form.memberIdsText || ''
           if (!text.trim()) return []
           // 鎸夐€楀彿銆佺┖鏍笺€佹崲琛岀瓑鍒嗛殧
           var raw = text.split(/[,\s\n\r]+/).map(function(s) { return s.trim() }).filter(function(s) { return s.length > 0 })
           // 杞暣鏁板苟鍘婚噸
           var set = {}
           for (let i = 0; i < raw.length; i++) {
-            var n = parseInt(raw[i], 10)
+            const n = parseInt(raw[i], 10)
             if (!isNaN(n) && n > 0) set[n] = true
           }
-          var list = []
+          const list = []
           for (let k in set) { list.push(parseInt(k, 10)) }
           return list
         },
@@ -299,7 +299,7 @@
         canIssue: function() {
           if (!this.form.templateId) return false
           if (this.form.mode === 'members') return this.parsedMemberIds.length > 0
-          // 鎸夋潯浠讹細鑷冲皯璁剧疆涓€涓潯浠?          var c = this.form.condition
+          // 鎸夋潯浠讹細鑷冲皯璁剧疆涓€涓潯浠?          const c = this.form.condition
           return c.levelId != null || c.newMemberDays != null ||
                  c.minPoints != null || c.maxPoints != null ||
                  c.minConsumption != null || c.maxConsumption != null
@@ -323,7 +323,7 @@
       methods: {
         async loadStats() {
           try {
-            var res = await couponStats()
+            const res = await couponStats()
             if (String(res.code) === '1') {
               this.stats = res.data || {}
             }
@@ -331,7 +331,7 @@
         },
         async loadTemplates() {
           try {
-            var res = await couponTemplateList()
+            const res = await couponTemplateList()
             if (String(res.code) === '1') {
               // 鍙睍绀哄惎鐢ㄧ姸鎬佺殑妯℃澘
               const records = res.data && res.data.records ? res.data.records : []
@@ -390,7 +390,7 @@
               })
             } else {
               var c = {}
-              var cond = this.form.condition
+              const cond = this.form.condition
               if (cond.levelId != null) c.levelId = cond.levelId
               if (cond.newMemberDays != null) c.newMemberDays = cond.newMemberDays
               if (cond.minPoints != null) c.minPoints = cond.minPoints
@@ -406,9 +406,9 @@
 
             if (String(res.code) === '1') {
               var data = res.data || {}
-              var name = this.currentTemplate ? this.currentTemplate.name : ''
+              const name = this.currentTemplate ? this.currentTemplate.name : ''
               const now = new Date()
-              var timeStr = now.getFullYear() + '-' +
+              const timeStr = now.getFullYear() + '-' +
                 String(now.getMonth() + 1).padStart(2, '0') + '-' +
                 String(now.getDate()).padStart(2, '0') + ' ' +
                 String(now.getHours()).padStart(2, '0') + ':' +
@@ -436,7 +436,7 @@
                 time: timeStr
               })
 
-              var msg = '鍙戞斁瀹屾垚锛氭垚鍔?' + (data.successCount || 0) + '锛屽凡棰嗚繃 ' + (data.alreadyIssuedCount || 0) + '锛屽け璐?' + (data.failCount || 0)
+              const msg = '鍙戞斁瀹屾垚锛氭垚鍔?' + (data.successCount || 0) + '锛屽凡棰嗚繃 ' + (data.alreadyIssuedCount || 0) + '锛屽け璐?' + (data.failCount || 0)
               this.$message.success(msg)
               this.loadStats()
               this.loadTemplates()

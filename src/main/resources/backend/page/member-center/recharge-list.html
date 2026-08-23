@@ -161,16 +161,16 @@
           this.loading = true
           var params = { page: this.page, pageSize: this.pageSize, phone: this.input.phone || undefined, paymentMethod: this.input.paymentMethod || undefined }
           try {
-            var requests = [rechargePage(params)]
+            const requests = [rechargePage(params)]
             if (reloadStats) { requests.push(rechargeStats()) }
-            var results = await Promise.all(requests)
-            var pageRes = results[0]
+            const results = await Promise.all(requests)
+            const pageRes = results[0]
             if (String(pageRes.code) === '1') {
               this.tableData = pageRes.data.records || []
               this.counts = pageRes.data.total
             } else { ReggieUI.error(pageRes.msg || '操作失败') }
             if (reloadStats) {
-              var statsRes = results[1]
+              const statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') {
                 this.stats = statsRes.data
                 this.$nextTick(function() { this.renderCharts() })
@@ -194,7 +194,7 @@
           const self = this
           // 趋势
           if (self.trendChart && self.stats.trend) {
-            var months = [], amounts = []
+            const months = [], amounts = []
             self.stats.trend.forEach(function(d) { months.push(d.month); amounts.push(Number(d.amount) || 0) })
             self.trendChart.setOption({
               tooltip: { trigger: 'axis', formatter: function(p) { return p[0].name + '<br/>充值：¥' + p[0].value.toLocaleString() } },
@@ -210,10 +210,10 @@
           // 支付方式
           if (self.paymentChart && self.stats.paymentDistribution) {
             var pieData = self.stats.paymentDistribution.map(function(d) {
-              var name = d.name === 'WECHAT' ? '微信支付' : d.name === 'ALIPAY' ? '支付宝' : d.name === 'CASH' ? '现金' : d.name
+              const name = d.name === 'WECHAT' ? '微信支付' : d.name === 'ALIPAY' ? '支付宝' : d.name === 'CASH' ? '现金' : d.name
               return { name: name, value: Number(d.value) || 0 }
             })
-            var colors = [RgPalette.emerald,RgPalette.alipayBlue,RgPalette.amber500,RgPalette.violet500]
+            const colors = [RgPalette.emerald,RgPalette.alipayBlue,RgPalette.amber500,RgPalette.violet500]
             self.paymentChart.setOption({
               tooltip: { trigger: 'item', formatter: '{b}: ¥{c} ({d}%)' },
               series: [{
@@ -227,7 +227,7 @@
         },
         fmtMoney: function(v) {
           if (v == null) return '0.00'
-          var n = Number(v)
+          const n = Number(v)
           if (n >= 10000) return (n/10000).toFixed(2).replace(/\.?0+$/,'') + '万'
           return n.toFixed(2)
         },

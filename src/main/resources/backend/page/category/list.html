@@ -256,14 +256,13 @@
           var params = {'page': this.page, 'pageSize': this.pageSize}
           if (this.activeFilter) { params.type = this.activeFilter }
           // 修改点：搜索名称去除首尾空格后传递，空字符串不传
-          var name = (this.searchName || '').trim()
+          const name = (this.searchName || '').trim()
           if (name) { params.name = name }
           // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-          var requests = [getCategoryPage(params)]
+          const requests = [getCategoryPage(params)]
           if (reloadStats) { requests.push(this.loadCategoryStats()) }
-          var results = await Promise.all(requests)
-          var categoryRes = results[0]
-
+          const results = await Promise.all(requests)
+          const categoryRes = results[0]
           // 处理分类列表数据
           if (String(categoryRes.code) === '1') {
             this.tableData = categoryRes.data.records
@@ -273,7 +272,7 @@
           }
 
           if (reloadStats) {
-            var statsRes = results[1]
+            const statsRes = results[1]
             // 处理统计数据
             if (statsRes && String(statsRes.code) === '1') {
               this.stats = statsRes.data || this.stats

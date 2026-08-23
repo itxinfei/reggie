@@ -280,7 +280,7 @@
             try {
               const res = await getDishCostByDishId(dishId)
               if (res.code === 1 && res.data) {
-                var c = res.data
+                const c = res.data
                 this.formData.materialCost = Number(c.materialCost) || 0
                 this.formData.laborCost = Number(c.laborCost) || 0
                 this.formData.otherCost = Number(c.otherCost) || 0
@@ -344,7 +344,7 @@
           if (!passed) return
 
           self.submitLoading = true
-          var apiCall = self.formData.id ? updateDishCost(self.formData) : saveDishCost(self.formData)
+          const apiCall = self.formData.id ? updateDishCost(self.formData) : saveDishCost(self.formData)
           apiCall.then(function(res) {
             if (res.code === 1) {
               ReggieUI.success(self.formData.id ? '更新成功' : '新增成功')

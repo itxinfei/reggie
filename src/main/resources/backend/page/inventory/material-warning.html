@@ -372,9 +372,9 @@
         },
         async loadCategories() {
           try {
-            var res = await matCategoryList()
+            const res = await matCategoryList()
             if (String(res.code) === '1') {
-              var records = res.data || (res.data && res.data.records) || []
+              const records = res.data || (res.data && res.data.records) || []
               if (res.data && res.data.records) records = res.data.records
               this.categoryOptions = records.map(function(c) {
                 return { value: c.id, label: c.name }
@@ -387,9 +387,9 @@
         async loadStats() {
           this.statsLoading = true
           try {
-            var res = await materialWarningStats()
+            const res = await materialWarningStats()
             if (String(res.code) === '1' && res.data) {
-              var d = res.data
+              const d = res.data
               var bySev = d.bySeverity || {}
               this.statsData = {
                 totalCount: d.totalCount || 0,
@@ -416,7 +416,7 @@
             }
             if (this.categoryId) params.categoryId = this.categoryId
             if (this.severity) params.severity = this.severity
-            var res = await materialWarningPage(params)
+            const res = await materialWarningPage(params)
             if (String(res.code) === '1') {
               var data = res.data || {}
               this.tableData = data.records || []
@@ -462,9 +462,9 @@
           const self = this
           const items = []
           for (let i = 0; i < this.selectedRows.length; i++) {
-            var row = this.selectedRows[i]
-            var suggestItem = this.findSuggestItem(row.id)
-            var qty = suggestItem && Number(suggestItem.suggestQty) > 0
+            const row = this.selectedRows[i]
+            const suggestItem = this.findSuggestItem(row.id)
+            const qty = suggestItem && Number(suggestItem.suggestQty) > 0
               ? Number(suggestItem.suggestQty)
               : Number((Number(row.minStock) - Number(row.stockQty)).toFixed(2))
             if (Number(qty) < 1) qty = 1
@@ -490,7 +490,7 @@
           return null
         },
         onRestockQtyChange(idx) {
-          var item = this.restockForm.items[idx]
+          const item = this.restockForm.items[idx]
           if (item && item.qty != null && Number(item.qty) < 1) {
             item.qty = '1.00'
           }
@@ -503,7 +503,7 @@
           const self = this
           const items = []
           for (let i = 0; i < this.restockForm.items.length; i++) {
-            var it = this.restockForm.items[i]
+            const it = this.restockForm.items[i]
             items.push({
               materialId: it.materialId,
               qty: String(it.qty)

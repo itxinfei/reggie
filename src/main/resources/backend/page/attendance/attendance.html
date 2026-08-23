@@ -134,15 +134,15 @@
         // ===== 日期初始化 =====
         initDates: function () {
           const now = new Date()
-          var y = now.getFullYear()
-          var m = now.getMonth()
-          var d = now.getDate()
+          const y = now.getFullYear()
+          const m = now.getMonth()
+          const d = now.getDate()
           this.todayDate = y + '-' + pad2(m + 1) + '-' + pad2(d)
           this.calendarMonth = y + '-' + pad2(m + 1)
         },
         initEmployeeOptions: function () {
           const self = this
-          var names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
+          const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
           self.employeeOptions = names.map(function (n, i) {
             return { id: i + 1, name: n, avatar: n.charAt(0) }
           })
@@ -170,7 +170,7 @@
         fetchWeekSummary: function () {
           const self = this
           return attendanceWeekSummary().then(function (res) {
-            var data = res.data
+            const data = res.data
             self.statsCards = [
               { key: 'present', icon: 'ri-user-check-line', label: '本周出勤', value: data.presentCount || 0, color: 'primary', unit: '人' },
               { key: 'absent',  icon: 'ri-user-unfollow-line', label: '缺勤', value: data.absentCount || 0, color: 'danger', unit: '人' },
@@ -204,8 +204,8 @@
         fetchAbnormalList: function () {
           const self = this
           const now = new Date()
-          var dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-          var items = [
+          const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+          const items = [
             { id: 1, name: '张三', avatar: '张', type: 'late', statusText: '迟到', detail: '签到 08:32，超出 32 分钟', daysBack: 1 },
             { id: 2, name: '李四', avatar: '李', type: 'early', statusText: '早退', detail: '打卡 11:30，早退 30 分钟', daysBack: 2 },
             { id: 3, name: '王五', avatar: '王', type: 'absent', statusText: '缺勤', detail: '全天无打卡记录', daysBack: 3 },
@@ -246,19 +246,18 @@
         },
         buildCalendar: function (monthStr, backendDays) {
           const self = this
-          var parts = monthStr.split('-')
-          var year = parseInt(parts[0], 10)
-          var month = parseInt(parts[1], 10)
+          const parts = monthStr.split('-')
+          const year = parseInt(parts[0], 10)
+          const month = parseInt(parts[1], 10)
           if (isNaN(year) || isNaN(month)) return
 
           const firstDay = new Date(year, month - 1, 1)
           const lastDay = new Date(year, month, 0)
-          var startWeekday = firstDay.getDay()
-          var totalDays = lastDay.getDate()
-
+          const startWeekday = firstDay.getDay()
+          const totalDays = lastDay.getDate()
           const today = new Date()
-          var weeks = []
-          var dayCounter = 1
+          const weeks = []
+          const dayCounter = 1
           var dayStatuses = {}
 
           // 使用后端数据或 mock
@@ -276,7 +275,7 @@
               } else if (weekday === 6) {
                 dayStatuses[d] = ''
               } else {
-                var r = Math.abs(((d * 7 + month * 3) % 10))
+                const r = Math.abs(((d * 7 + month * 3) % 10))
                 if (r === 2) dayStatuses[d] = 'late'
                 else if (r === 5) dayStatuses[d] = 'absent'
                 else dayStatuses[d] = 'normal'
@@ -285,7 +284,7 @@
           }
 
           const totalCells = 0
-          var rows = 6
+          const rows = 6
           for (let r = 0; r < rows; r++) {
             const week = []
             for (let c = 0; c < 7; c++) {
@@ -293,7 +292,7 @@
               if (totalCells <= startWeekday || dayCounter > totalDays) {
                 week.push({ day: 0, isCurrentMonth: false, status: '', isToday: false, weekDay: c })
               } else {
-                var isToday = (year === today.getFullYear() && month === today.getMonth() + 1 && dayCounter === today.getDate())
+                const isToday = (year === today.getFullYear() && month === today.getMonth() + 1 && dayCounter === today.getDate())
                 week.push({
                   day: dayCounter,
                   isCurrentMonth: true,

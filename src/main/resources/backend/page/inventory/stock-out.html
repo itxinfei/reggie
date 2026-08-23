@@ -306,11 +306,11 @@
           const self = this
           self.$refs.outForm.validate(async function(valid) {
             if (!valid) return
-            var fd = self.outForm
+            const fd = self.outForm
             if (self.submitting) return
             self.submitting = true
             try {
-              var bizId = fd.bizId ? Number(fd.bizId) : undefined
+              const bizId = fd.bizId ? Number(fd.bizId) : undefined
               var params = {
                 materialId: fd.materialId,
                 qty: fd.qty,
@@ -318,7 +318,7 @@
                 remark: fd.remark || '领用出库',
                 operator: fd.operator.trim()
               }
-              var res = await stockOut(params)
+              const res = await stockOut(params)
               if (res.code === 1) {
                 ReggieUI.success('出库成功')
                 self.resetAfterSubmit()
@@ -359,7 +359,7 @@
               params.startDate = this.input.dateRange[0]
               params.endDate = this.input.dateRange[1]
             }
-            var res = await stockRecordPage(params)
+            const res = await stockRecordPage(params)
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
               this.counts = Number(res.data.total) || 0

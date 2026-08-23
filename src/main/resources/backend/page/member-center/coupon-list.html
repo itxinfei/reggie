@@ -219,10 +219,10 @@
             status: sv.status || undefined
           }
           // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-          var requests = [couponTemplatePage(params)]
+          const requests = [couponTemplatePage(params)]
           if (reloadStats) { requests.push(this.loadCouponStats()) }
-          var results = await Promise.all(requests)
-          var couponRes = results[0]
+          const results = await Promise.all(requests)
+          const couponRes = results[0]
           if (String(couponRes.code) === '1') {
             this.tableData = couponRes.data.records || []
             this.counts = couponRes.data.total
@@ -230,7 +230,7 @@
             ReggieUI.error(couponRes.msg || '操作失败')
           }
           if (reloadStats) {
-            var statsRes = results[1]
+            const statsRes = results[1]
             if (statsRes && String(statsRes.code) === '1') {
               this.stats = statsRes.data || this.stats
             }
@@ -240,7 +240,7 @@
         async loadCouponStats() {
           try {
             // 修改点：改为调用后端聚合接口 /stats，避免 pageSize=1000 拉全量后在浏览器聚合
-            var res = await couponStats()
+            const res = await couponStats()
             if (String(res.code) === '1') {
               return { code: 1, data: res.data || {} }
             }
@@ -320,7 +320,7 @@
         submitForm() {
           if (this.submitting) return // 提交防重
           const self = this
-          var passed = false
+          const passed = false
           self.$refs.couponForm.validate(function(valid) { passed = valid })
           if (!passed) {
             ReggieUI.warning('请完善表单必填项')

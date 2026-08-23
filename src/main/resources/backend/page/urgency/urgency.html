@@ -600,7 +600,7 @@
             self.$axios({ url: '/api/urgency/queue', method: 'get' })
               .then(function (res) {
                 if (res.data && res.data.code === 1 && res.data.data) {
-                  var d = res.data.data
+                  const d = res.data.data
                   self.currentCallTable = d.currentCallTable || '08'
                   self.waitingAheadCount = d.waitingAheadCount || 3
                   self.queueList = d.queueList || []
@@ -637,7 +637,7 @@
         },
         applyMockOrders: function () {
           const self = this
-          var mockData = [
+          const mockData = [
             {
               orderId: 'ORD20260823001',
               tableNo: '03',
@@ -740,7 +740,7 @@
         computeCountdowns: function () {
           const self = this
           self.orders.forEach(function (order) {
-            var diffMs = Date.now() - (order.orderTimeMs || Date.now())
+            const diffMs = Date.now() - (order.orderTimeMs || Date.now())
             order.totalSeconds = Math.max(0, Math.floor(diffMs / 1000))
             order.isOverdue = order.totalSeconds > 600
             self.$set(order, 'countdown', self.formatMMSS(order.totalSeconds))
@@ -748,8 +748,8 @@
         },
 
         formatMMSS: function (totalSeconds) {
-          var m = Math.floor(totalSeconds / 60)
-          var s = totalSeconds % 60
+          const m = Math.floor(totalSeconds / 60)
+          const s = totalSeconds % 60
           return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s)
         },
 
@@ -819,7 +819,7 @@
 
         confirmUrge: function () {
           const self = this
-          var orderId = self.urgeOrder.orderId
+          const orderId = self.urgeOrder.orderId
           self.urgeLoading = true
           try {
             self.$axios({ url: '/api/urgency/call/' + orderId, method: 'post' })

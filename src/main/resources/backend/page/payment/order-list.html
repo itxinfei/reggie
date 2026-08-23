@@ -269,7 +269,7 @@
       if (!row) return row
       var r = Object.assign({}, row)
       if (r.status) {
-        var upper = r.status.toUpperCase()
+        const upper = r.status.toUpperCase()
         r.status = PAYMENT_STATUS[upper] || r.status
       }
       return r
@@ -349,16 +349,16 @@
             beginTime: self.lastSearch.beginTime || undefined,
             endTime: self.lastSearch.endTime || undefined
           }
-          var requests = [paymentPage(params)]
+          const requests = [paymentPage(params)]
           if (reloadStats) { requests.push(self.loadPaymentStats()) }
-          var results = await Promise.all(requests)
-          var paymentRes = results[0]
+          const results = await Promise.all(requests)
+          const paymentRes = results[0]
           if (String(paymentRes.code) === '1') {
             self.tableData = (paymentRes.data.records || []).map(function(r) { return normalizePayment(r) })
             self.counts = paymentRes.data.total
           }
           if (reloadStats) {
-            var statsRes = results[1]
+            const statsRes = results[1]
             if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
           }
           self.loading = false
@@ -366,9 +366,9 @@
         async loadPaymentStats() {
           try {
             const today = new Date()
-            var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
+            const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
             // 修改点：使用 4 次 pageSize=1 轻量查询取 total，替代 pageSize=1000 拉全量再前端过滤
-            var results = await Promise.all([
+            const results = await Promise.all([
               paymentPage({ page: 1, pageSize: 1, beginTime: todayStr + ' 00:00:00', endTime: todayStr + ' 23:59:59' }),
               paymentPage({ page: 1, pageSize: 1, status: '成功' }),
               paymentPage({ page: 1, pageSize: 1, status: '待支付' }),
@@ -388,7 +388,7 @@
           const self = this
           if (payload.activeKey === '今日') {
             const today = new Date()
-            var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
+            const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
             self.lastSearch = { beginTime: todayStr + ' 00:00:00', endTime: todayStr + ' 23:59:59' }
           } else if (payload.activeKey === '成功' || payload.activeKey === '待支付' || payload.activeKey === '失败') {
             self.lastSearch = { status: payload.activeKey }
@@ -434,7 +434,7 @@
           return PAYMENT_STATUS[(status || '').toUpperCase()] || (status || '-')
         },
         viewDetail: function(row) {
-          var normalized = normalizePayment(row)
+          const normalized = normalizePayment(row)
           this.detailForm = normalized
           this.detailVisible = true
         },

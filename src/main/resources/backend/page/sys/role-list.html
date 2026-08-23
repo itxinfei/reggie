@@ -232,16 +232,16 @@
             roleName: ls.roleName || undefined,
             status: ls.status || undefined
           }
-          var requests = [sysApi.rolePage(params)]
+          const requests = [sysApi.rolePage(params)]
           if (reloadStats) { requests.push(this.loadRoleStats()) }
-          var results = await Promise.all(requests)
-          var roleRes = results[0]
+          const results = await Promise.all(requests)
+          const roleRes = results[0]
           if (roleRes && roleRes.code === 1) {
             this.tableData = roleRes.data.records || []
             this.counts = roleRes.data.total || 0
           }
           if (reloadStats) {
-            var statsRes = results[1]
+            const statsRes = results[1]
             if (statsRes && statsRes.code === 1) {
               this.stats = Object.assign({}, this.stats, statsRes.data || {})
             }
@@ -251,9 +251,9 @@
         async loadRoleStats() {
           try {
             // 修改点：改为调用后端 /sys/role/stats SQL 聚合接口，避免 pageSize:999 拉全量遍历 withPerms
-            var res = await sysApi.roleStats()
+            const res = await sysApi.roleStats()
             if (String(res.code) === '1' && res.data) {
-              var d = res.data
+              const d = res.data
               return {
                 code: 1,
                 data: {
@@ -272,7 +272,7 @@
           var searchItem = self.searchConfig.find(function(s) { return s.field === 'roleName' })
           if (searchItem) searchItem.loading = true
           try {
-            var res = await sysApi.roleOptions()
+            const res = await sysApi.roleOptions()
             if (String(res.code) === '1' && res.data) {
               var options = (res.data.names || []).map(function(n) {
                 return { label: n, value: n }
@@ -347,7 +347,7 @@
               return
             }
             self.submitting = true
-            var api = self.formData.id ? sysApi.roleUpdate(self.formData) : sysApi.roleAdd(self.formData)
+            const api = self.formData.id ? sysApi.roleUpdate(self.formData) : sysApi.roleAdd(self.formData)
             api.then(function(res) {
               if (res && res.code === 1) {
                 ReggieUI.success(res.msg || '操作成功')
@@ -389,7 +389,7 @@
         },
         buildTree(flatList) {
           const map = new Map()
-          var roots = []
+          const roots = []
           flatList.forEach(function(item) {
             map.set(item.id, Object.assign({}, item, { children: [] }))
           })
@@ -397,7 +397,7 @@
             if (item.parentId == 0) {
               roots.push(map.get(item.id))
             } else {
-              var parent = map.get(item.parentId)
+              const parent = map.get(item.parentId)
               if (parent) {
                 parent.children.push(map.get(item.id))
               }
@@ -424,7 +424,7 @@
           }
         },
         submitPerms() {
-          var keys = this.$refs.permTree ? this.$refs.permTree.getCheckedKeys() : this.checkedPerms
+          const keys = this.$refs.permTree ? this.$refs.permTree.getCheckedKeys() : this.checkedPerms
           this.permSubmitting = true
           const self = this
           sysApi.assignPermissions(this.currentRole.id, keys).then(function(res) {

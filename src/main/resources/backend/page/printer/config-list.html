@@ -364,7 +364,7 @@
         },
         // 修改点：stat-cards 组件卡片点击事件（替代原 filterByStatus）
         onCardClick(payload) {
-          var key = payload.activeKey
+          const key = payload.activeKey
           this.activeFilter = key
           // 修改点：query.status 保持为数字类型（后端期望数值型状态参数）
           this.query.status = key === '' ? '' : Number(key)

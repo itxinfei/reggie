@@ -188,16 +188,16 @@
           const self = this
           try {
             // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-            var requests = [memberPage(params)]
+            const requests = [memberPage(params)]
             if (reloadStats) { requests.push(self.loadMemberStats()) }
-            var results = await Promise.all(requests)
-            var memberRes = results[0]
+            const results = await Promise.all(requests)
+            const memberRes = results[0]
             if (String(memberRes.code) === '1') {
               self.tableData = memberRes.data.records || []
               self.counts = memberRes.data.total
             }
             if (reloadStats) {
-              var statsRes = results[1]
+              const statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
             }
           } catch(e) { ReggieUI.error('请求失败：' + e) }
@@ -207,25 +207,25 @@
           try {
             // 修改点：改为调用后端聚合接口 /stats，彻底移除原 pageSize:9999 拉全量会员再浏览器计数的做法；
             // 仅保留等级积分门槛的分级逻辑（用 levelOptions + 后端返回的 levelCountMap 聚合计数）
-            var res = await memberStats()
+            const res = await memberStats()
             if (String(res.code) !== '1') return { code: 0 }
             var d = res.data || {}
-            var total = d.totalMembers || 0
-            var newThisMonth = d.newMembersThisMonth || 0
+            const total = d.totalMembers || 0
+            const newThisMonth = d.newMembersThisMonth || 0
             var levelCountMap = d.levelCountMap || {}
-            var noLevelCount = d.noLevelCount || 0
-            var levels = this.levelOptions || []
+            const noLevelCount = d.noLevelCount || 0
+            const levels = this.levelOptions || []
             // 按积分门槛分类（分级阈值规则与原前端逻辑保持一致）
             var sortedLevels = levels.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
-            var highMinPts = sortedLevels.length >= 3 ? sortedLevels[Math.floor(sortedLevels.length*0.6)].minPoints : 5000
-            var midMinPts = sortedLevels.length >= 2 ? sortedLevels[Math.floor(sortedLevels.length*0.3)].minPoints : 1000
+            const highMinPts = sortedLevels.length >= 3 ? sortedLevels[Math.floor(sortedLevels.length*0.6)].minPoints : 5000
+            const midMinPts = sortedLevels.length >= 2 ? sortedLevels[Math.floor(sortedLevels.length*0.3)].minPoints : 1000
             var highLevelIds = sortedLevels.filter(function(l) { return (l.minPoints||0) >= highMinPts }).map(function(l) { return l.id })
             var midLevelIds = sortedLevels.filter(function(l) { const p = l.minPoints||0; return p >= midMinPts && p < highMinPts }).map(function(l) { return l.id })
             var lowLevelIds = sortedLevels.filter(function(l) { return (l.minPoints||0) < midMinPts }).map(function(l) { return l.id })
             var sum = function(ids) { return ids.reduce(function(s, id) { return s + (levelCountMap[id] || 0) }, 0) }
-            var highCount = sum(highLevelIds)
-            var midCount = sum(midLevelIds)
-            var lowCount = sum(lowLevelIds) + noLevelCount
+            const highCount = sum(highLevelIds)
+            const midCount = sum(midLevelIds)
+            const lowCount = sum(lowLevelIds) + noLevelCount
             return { code: 1, data: { totalMembers: total, highLevelCount: highCount, midLevelCount: midCount, lowLevelCount: lowCount, newMembersThisMonth: newThisMonth } }
           } catch(e) { return { code: 0 } }
         },
@@ -275,7 +275,7 @@
         submitRecharge: function() {
           if (this.submitting) return // 提交防重
           const self = this
-          var passed = false
+          const passed = false
           self.$refs.rechargeFormRef.validate(function(valid) { passed = valid })
           if (!passed) {
             ReggieUI.warning('请完善表单必填项')

@@ -171,7 +171,7 @@
             for (let i = 1; i <= 87; i++) {
               all.push({ id: i, name: '示例项 ' + i, status: i % 2 })
             }
-            var start = (self.page - 1) * self.pageSize
+            const start = (self.page - 1) * self.pageSize
             self.tableData = all.slice(start, start + self.pageSize)
             self.counts = all.length
             self.loading = false

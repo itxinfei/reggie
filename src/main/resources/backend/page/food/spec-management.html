@@ -416,7 +416,7 @@
           if (!passed) return
 
           const self = this
-          var apiCall = self.groupForm.id ? updateSpecGroup(self.groupForm) : saveSpecGroup(self.groupForm)
+          const apiCall = self.groupForm.id ? updateSpecGroup(self.groupForm) : saveSpecGroup(self.groupForm)
           apiCall.then(function(res) {
             if (res.code === 1) {
               ReggieUI.success(self.groupForm.id ? '更新成功' : '新增成功')
@@ -486,7 +486,7 @@
           if (!passed) return
 
           const self = this
-          var apiCall = self.optionForm.id ? updateSpecOption(self.optionForm) : saveSpecOption(self.optionForm)
+          const apiCall = self.optionForm.id ? updateSpecOption(self.optionForm) : saveSpecOption(self.optionForm)
           apiCall.then(function(res) {
             if (res.code === 1) {
               ReggieUI.success(self.optionForm.id ? '更新成功' : '新增成功')

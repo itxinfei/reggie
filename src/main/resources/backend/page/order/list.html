@@ -280,10 +280,10 @@
         },
         // 修改点：订单状态步骤条数据（待付款→待接单→配送中→已完成；取消/退款为终态）
         statusSteps: function() {
-          var s = this.diaForm && this.diaForm.status
+          const s = this.diaForm && this.diaForm.status
           if (s === 5) return [{ label: '已取消' }]
           if (s === 6) return [{ label: '已退款' }]
-          var flow = [
+          const flow = [
             { key: 1, label: '待付款' },
             { key: 2, label: '待接单' },
             { key: 3, label: '配送中' },
@@ -295,7 +295,7 @@
         },
         // 修改点：商品明细金额合计（用于金额明细分区展示）
         goodsTotal: function() {
-          var list = this.diaForm && this.diaForm.orderDetails
+          const list = this.diaForm && this.diaForm.orderDetails
           if (!list || !list.length) return 0
           return list.reduce(function(sum, it) { return sum + (Number(it.amount) || 0) }, 0)
         }
@@ -313,27 +313,27 @@
             endTime: self.lastSearch.endTime || undefined
           }
           if (self.activeFilter === 'pending') params.status = 2
-          var requests = [getOrderDetailPage(params)]
+          const requests = [getOrderDetailPage(params)]
           if (reloadStats) { requests.push(self.loadOrderStats()) }
-          var results = await Promise.all(requests)
-          var orderRes = results[0]
+          const results = await Promise.all(requests)
+          const orderRes = results[0]
           if (String(orderRes.code) === '1') { self.tableData = orderRes.data.records || []; self.counts = orderRes.data.total }
           if (reloadStats) {
-            var statsRes = results[1]
+            const statsRes = results[1]
             if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
           }
           self.loading = false
         },
         async loadOrderStats() {
           try {
-            var results = await Promise.all([
+            const results = await Promise.all([
               $axios.get('/api/dashboard/all', { params: { hotDishLimit: 10 } }),
               getOrderDetailPage({ page: 1, pageSize: 1 })
             ])
-            var dashRes = results[0]
-            var orderTotalRes = results[1]
+            const dashRes = results[0]
+            const orderTotalRes = results[1]
             if (String(dashRes.code) === '1') {
-              var data = dashRes.data
+              const data = dashRes.data
               return { code: 1, data: {
                 todayOrders: data.overview?.totalOrders || 0,
                 todayRevenue: data.overview?.totalRevenue || 0,
@@ -433,7 +433,7 @@
         async submitRefund() {
           const self = this
           if (!self.refundForm.amount || parseFloat(self.refundForm.amount) <= 0) { ReggieUI.warning('请输入有效的退款金额'); return }
-          var reason = self.refundForm.reasonType
+          const reason = self.refundForm.reasonType
           if (!reason) { ReggieUI.warning('请选择退款原因'); return }
           if (reason === '其他原因') {
             if (!self.refundForm.reasonDetail) { ReggieUI.warning('请填写详细退款原因'); return }
@@ -442,7 +442,7 @@
           self.refundLoading = true
           try {
             var paymentRes = await $axios.get('/api/payment/page', { params: { page: 1, pageSize: 1, orderId: self.refundForm.id } })
-            var paymentOrderId = null
+            const paymentOrderId = null
             if (paymentRes && paymentRes.code === 1 && paymentRes.data && paymentRes.data.records && paymentRes.data.records.length > 0) {
               paymentOrderId = paymentRes.data.records[0].id
             }
@@ -459,8 +459,8 @@
           if (this.lastSearch.endTime) params.endDate = this.lastSearch.endTime
           if (this.lastSearch.number) params.number = this.lastSearch.number
           try {
-            var ext = format === 'excel' ? 'xlsx' : 'pdf'
-            var apiCall = format === 'excel' ? exportApi.exportOrdersExcel(params) : exportApi.exportOrdersPdf(params)
+            const ext = format === 'excel' ? 'xlsx' : 'pdf'
+            const apiCall = format === 'excel' ? exportApi.exportOrdersExcel(params) : exportApi.exportOrdersPdf(params)
             await exportApi.downloadFile(apiCall, '订单数据.' + ext)
             ReggieUI.success('导出成功，文件已开始下载')
           } catch (err) { ReggieUI.error('导出失败：' + (err.message || err)) }

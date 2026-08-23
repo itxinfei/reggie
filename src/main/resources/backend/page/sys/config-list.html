@@ -156,7 +156,7 @@
         statsCards: function() {
           const self = this
           var typeLabels = { type1: '功能开关', type2: '运营参数', type3: '显示设置', type4: '其他' }
-          var typeKeys = ['type1', 'type2', 'type3', 'type4']
+          const typeKeys = ['type1', 'type2', 'type3', 'type4']
           return [
             { key: '', icon: '⚙️', label: '配置总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: 'type1', icon: '🔘', label: '功能开关', value: self.stats.type1 || 0, color: 'success', clickable: true, active: self.activeFilter === 'type1' },
@@ -174,17 +174,17 @@
             configType: ls.configType || undefined,
             keyword: ls.keyword || undefined
           }
-          var requests = [sysApi.configList()]
+          const requests = [sysApi.configList()]
           if (reloadStats) { requests.push(this.loadConfigStats()) }
-          var results = await Promise.all(requests)
-          var listRes = results[0]
-          var statsRes = results[1]
+          const results = await Promise.all(requests)
+          const listRes = results[0]
+          const statsRes = results[1]
           if (listRes && listRes.code === 1) {
-            var all = listRes.data || []
+            const all = listRes.data || []
             // 客户端分页（configList返回全量数据）
             this.counts = all.length
-            var start = ((this.page - 1) * this.pageSize)
-            var end = Math.min(start + this.pageSize, all.length)
+            const start = ((this.page - 1) * this.pageSize)
+            const end = Math.min(start + this.pageSize, all.length)
             this.tableData = all.slice(start, end).map(function(item) {
               return Object.assign({}, item, { _editing: false })
             })
@@ -196,12 +196,12 @@
         },
         async loadConfigStats() {
           try {
-            var res = await sysApi.configList()
+            const res = await sysApi.configList()
             if (res && res.code === 1) {
-              var list = res.data || []
+              const list = res.data || []
               var stats = { total: list.length, type1: 0, type2: 0, type3: 0, type4: 0 }
               list.forEach(function(item) {
-                var t = String(item.configType || '4')
+                const t = String(item.configType || '4')
                 if (stats.hasOwnProperty('type' + t)) stats['type' + t]++
               })
               return { code: 1, data: stats }
@@ -270,7 +270,7 @@
               return
             }
             self.submitting = true
-          var api = self.formData.id ? sysApi.configUpdate(self.formData) : sysApi.configAdd(self.formData)
+          const api = self.formData.id ? sysApi.configUpdate(self.formData) : sysApi.configAdd(self.formData)
           api.then(function(res) {
             if (res && res.code === 1) {
               ReggieUI.success(res.msg || '操作成功')

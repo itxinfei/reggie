@@ -536,7 +536,7 @@
       },
       computed: {
         batchTotalAmount: function () {
-          var total = 0
+          const total = 0
           const self = this
           this.batchForm.items.forEach(function (item) {
             total += Number(item.qty || 0) * Number(item.unitPrice || 0)
@@ -548,7 +548,7 @@
         this.loadDashboard()
         this.loadTable()
         // 浠庢湰鍦扮紦瀛樿鍙栦笂娆′繚瀛樼殑琛ヨ揣璁剧疆
-        var saved = this.getLocalSettings()
+        const saved = this.getLocalSettings()
         if (saved) {
           this.suggestDays = saved.statsDays || 30
           this.replenishCycle = saved.replenishCycle || 14
@@ -582,7 +582,7 @@
           return 'var(--color-success)'
         },
         daysPercent: function (days) {
-          var d = Number(days || 0)
+          const d = Number(days || 0)
           if (d >= 14) return 100
           return Math.max(5, Math.min(100, (d / 14) * 100))
         },
@@ -593,7 +593,7 @@
           this.statsLoading = true
           replenishDashboard().then(function (res) {
             if (String(res.code) === '1' && res.data) {
-              var d = res.data
+              const d = res.data
               self.statsData = {
                 urgentCount: d.urgentCount || 0,
                 criticalCount: d.criticalCount || 0,
@@ -606,7 +606,7 @@
             console.warn('鏅鸿兘琛ヨ揣鐪嬫澘涓嶅彲鐢紝闄嶇骇鍔犺浇棰勮缁熻:', e)
             materialWarningStats().then(function (res2) {
               if (String(res2.code) === '1' && res2.data) {
-                var d2 = res2.data
+                const d2 = res2.data
                 self.statsData = {
                   urgentCount: d2.urgentCount || (d2.bySeverity && d2.bySeverity.URGENT) || 0,
                   criticalCount: d2.criticalCount || (d2.bySeverity && d2.bySeverity.CRITICAL) || 0,
@@ -632,7 +632,7 @@
           }
           smartReplenishSuggest(params).then(function (res) {
             if (String(res.code) === '1') {
-              var data = res.data || []
+              const data = res.data || []
               if (Array.isArray(data)) {
                 self.tableData = data
                 self.counts = data.length
@@ -748,8 +748,8 @@
           const self = this
           const items = []
           for (let i = 0; i < this.selectedRows.length; i++) {
-            var row = this.selectedRows[i]
-            var qty = Number(row.suggestQty || 0) > 0 ? Number(row.suggestQty) : 1
+            const row = this.selectedRows[i]
+            const qty = Number(row.suggestQty || 0) > 0 ? Number(row.suggestQty) : 1
             items.push({
               materialId: row.materialId || row.id,
               materialName: row.name,
@@ -772,7 +772,7 @@
           const self = this
           const items = []
           for (let i = 0; i < this.batchForm.items.length; i++) {
-            var it = this.batchForm.items[i]
+            const it = this.batchForm.items[i]
             items.push({
               materialId: it.materialId,
               qty: String(it.qty)
@@ -813,8 +813,8 @@
             responseType: 'blob'
           }).then(function (res) {
             const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-            var url = window.URL.createObjectURL(blob)
-            var a = document.createElement('a')
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
             a.href = url
             a.download = '琛ヨ揣娓呭崟_' + new Date().toISOString().slice(0, 10) + '.xlsx'
             a.click()
@@ -830,7 +830,7 @@
         openSettings: function () {
           this.settingsForm.statsDays = this.suggestDays
           this.settingsForm.replenishCycle = this.replenishCycle
-          var saved = this.getLocalSettings()
+          const saved = this.getLocalSettings()
           if (saved) {
             this.settingsForm.urgentDays = saved.urgentDays || 1
             this.settingsForm.criticalDays = saved.criticalDays || 3
@@ -857,7 +857,7 @@
         },
         getLocalSettings: function () {
           try {
-            var v = localStorage.getItem('reggie_replenish_settings')
+            const v = localStorage.getItem('reggie_replenish_settings')
             return v ? JSON.parse(v) : null
           } catch (e) {
             return null

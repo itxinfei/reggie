@@ -450,7 +450,7 @@
         submitTake: function() {
           if (this.takeLoading) return
           const self = this
-          var passed = false
+          const passed = false
           self.$refs.takeFormRef.validate(function(valid) { passed = valid })
           if (!passed) return
           self.takeLoading = true
@@ -508,7 +508,7 @@
           const self = this
           ReggieUI.confirm('绾喛顓荤亸?' + (row.queueNo || '鐠囥儴顔囪ぐ?) + ' 闁偓閸ョ偟鐡戝鍜冪吹', '閹绘劗銇?, { confirmButtonText: '绾喖鐣?, cancelButtonText: '閸欐牗绉?, type: 'warning' })
             .then(function() {
-              var id = row.id || row.queueId
+              const id = row.id || row.queueId
               if (id) { recallQueue(id).then(function(res) {
                 if (res.code === 1) { ReggieUI.success('瀹告煡鈧偓閸ョ偟鐡戝?); self.loadStats(); self.loadTable() }
                 else { ReggieUI.error(res.msg || '閹垮秳缍旀径杈Е') }

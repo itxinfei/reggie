@@ -226,9 +226,9 @@
         },
         async loadTemplates() {
           try {
-            var res = await couponTemplateList()
+            const res = await couponTemplateList()
             if (String(res.code) === '1') {
-              var records = res.data.records || []
+              const records = res.data.records || []
               this.templateOptions = records.map(function(t) {
                 return {
                   value: t.id,
@@ -257,9 +257,9 @@
           if (!this.templateId) return
           this.effectLoading = true
           try {
-            var res = await couponEffect(this.templateId)
+            const res = await couponEffect(this.templateId)
             if (String(res.code) === '1' && res.data) {
-              var d = res.data
+              const d = res.data
               this.effectData = {
                 totalCount: d.totalCount || 0,
                 remainCount: d.remainCount || 0,
@@ -288,7 +288,7 @@
               page: this.page,
               pageSize: this.pageSize
             }
-            var res = await couponIssued(this.templateId, params)
+            const res = await couponIssued(this.templateId, params)
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
               this.counts = res.data.total

@@ -402,12 +402,12 @@
       },
       computed: {
         pagedData() {
-          var start = (this.page - 1) * this.pageSize
+          const start = (this.page - 1) * this.pageSize
           return this.filteredData.slice(start, start + this.pageSize)
         },
         filteredData() {
-          var data = this.allData
-          var params = this.searchParams
+          const data = this.allData
+          const params = this.searchParams
           if (params.ruleName) {
             data = data.filter(function(item) { return item.ruleName && item.ruleName.indexOf(params.ruleName) > -1 })
           }
@@ -557,7 +557,7 @@
           if (!passed) return
 
           self.submitLoading = true
-          var apiCall = self.formData.id ? updateRangeRule(self.formData) : saveRangeRule(self.formData)
+          const apiCall = self.formData.id ? updateRangeRule(self.formData) : saveRangeRule(self.formData)
           apiCall.then(function(res) {
             if (res.code === 1) {
               ReggieUI.success(self.formData.id ? '更新成功' : '新增成功')
@@ -638,7 +638,7 @@
           if (!passed) return
 
           const self = this
-          var apiCall = self.feeStepForm.id ? updateFeeStep(self.feeStepForm) : saveFeeStep(self.feeStepForm)
+          const apiCall = self.feeStepForm.id ? updateFeeStep(self.feeStepForm) : saveFeeStep(self.feeStepForm)
           apiCall.then(function(res) {
             if (res.code === 1) {
               ReggieUI.success(self.feeStepForm.id ? '更新成功' : '新增成功')

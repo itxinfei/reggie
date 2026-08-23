@@ -252,11 +252,11 @@
         formatDate: function(dt) {
           if (!dt) return '-'
           const d = new Date(dt)
-          var year = d.getFullYear()
-          var month = ('0' + (d.getMonth() + 1)).slice(-2)
-          var day = ('0' + d.getDate()).slice(-2)
-          var hour = ('0' + d.getHours()).slice(-2)
-          var min = ('0' + d.getMinutes()).slice(-2)
+          const year = d.getFullYear()
+          const month = ('0' + (d.getMonth() + 1)).slice(-2)
+          const day = ('0' + d.getDate()).slice(-2)
+          const hour = ('0' + d.getHours()).slice(-2)
+          const min = ('0' + d.getMinutes()).slice(-2)
           return year + '-' + month + '-' + day + ' ' + hour + ':' + min
         },
         statusTagType: function(status) {
@@ -272,7 +272,7 @@
           dishOptions().then(function(res) {
             if (res.code === 1 && res.data) {
               self.dishOptions = res.data.map(function(d) {
-                var price = d.price ? Number(d.price).toFixed(2) : '0.00'
+                const price = d.price ? Number(d.price).toFixed(2) : '0.00'
                 return { value: d.id, label: d.name + ' (¥' + price + ')', price: d.price, dishName: d.name }
               })
             }
@@ -291,7 +291,7 @@
             params.status = self.activeFilter
           }
           try {
-            var res = await getFlashSales(params)
+            const res = await getFlashSales(params)
             if (String(res.code) === '1') {
               self.tableData = res.data || []
               self.counts = res.total || (res.data ? res.data.length : 0)
@@ -303,14 +303,14 @@
         },
         async loadStats() {
           try {
-            var results = await Promise.all([
+            const results = await Promise.all([
               getFlashSales({ page: 1, pageSize: 1, status: '1' }),
               getFlashSales({ page: 1, pageSize: 1, status: '2' }),
               getFlashSales({ page: 1, pageSize: 1, status: '3' })
             ])
-            var activeCount = (String(results[0].code) === '1') ? (results[0].total || results[0].data.length || 0) : 0
-            var pausedCount = (String(results[1].code) === '1') ? (results[1].total || results[1].data.length || 0) : 0
-            var endedCount = (String(results[2].code) === '1') ? (results[2].total || results[2].data.length || 0) : 0
+            const activeCount = (String(results[0].code) === '1') ? (results[0].total || results[0].data.length || 0) : 0
+            const pausedCount = (String(results[1].code) === '1') ? (results[1].total || results[1].data.length || 0) : 0
+            const endedCount = (String(results[2].code) === '1') ? (results[2].total || results[2].data.length || 0) : 0
             this.stats = {
               total: activeCount + pausedCount + endedCount,
               active: activeCount,
@@ -403,7 +403,7 @@
               ReggieUI.warning('草稿或已结束状态不可切换')
               return
             }
-            var newStatus = row.status === 1 ? 2 : 1
+            const newStatus = row.status === 1 ? 2 : 1
             var res = await updateFlashSale(Object.assign({}, row, { status: newStatus }))
             if (res.code === 1) {
               ReggieUI.success(newStatus === 1 ? '已启用' : '已暂停')
@@ -423,7 +423,7 @@
               cancelButtonText: '取消',
               type: 'warning'
             })
-            var res = await deleteFlashSale(row.id)
+            const res = await deleteFlashSale(row.id)
             if (res.code === 1) {
               ReggieUI.success('删除成功')
               this.init()
@@ -439,7 +439,7 @@
         },
         handleSubmit: function() {
           const self = this
-          var passed = false
+          const passed = false
           this.$refs.ruleForm.validate(function(valid) { passed = valid })
           if (!passed) return
           if (self.formData.flashPrice && self.formData.originalPrice && self.formData.flashPrice >= self.formData.originalPrice) {
@@ -452,7 +452,7 @@
           }
           self.submitLoading = true
           var submitData = Object.assign({}, self.formData, { timeRange: null })
-          var apiCall = self.formData.id ? updateFlashSale(submitData) : saveFlashSale(submitData)
+          const apiCall = self.formData.id ? updateFlashSale(submitData) : saveFlashSale(submitData)
           apiCall.then(function(res) {
             if (res.code === 1) {
               ReggieUI.success(self.formData.id ? '更新成功' : '新增成功')

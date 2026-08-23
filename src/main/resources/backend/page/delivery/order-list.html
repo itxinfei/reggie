@@ -259,7 +259,7 @@
           this.optionsLoading = true
           this.optionsLoadError = false
           try {
-            var res = await deliveryFilterOptions()
+            const res = await deliveryFilterOptions()
             if (String(res.code) === '1' && res.data) {
               this.filterOptions.platforms = res.data.platforms || []
               this.filterOptions.statuses = res.data.statuses || []
@@ -287,10 +287,10 @@
               startDate: this.lastSearch.startDate || undefined,
               endDate: this.lastSearch.endDate || undefined
             }
-            var requests = [deliveryOrderPage(params)]
+            const requests = [deliveryOrderPage(params)]
             if (reloadStats) { requests.push(deliveryStats({ platform: params.platform, startDate: params.startDate, endDate: params.endDate })) }
-            var results = await Promise.all(requests)
-            var orderRes = results[0]
+            const results = await Promise.all(requests)
+            const orderRes = results[0]
             if (String(orderRes.code) === '1') {
               this.tableData = orderRes.data.records || []
               this.counts = orderRes.data.total
@@ -298,7 +298,7 @@
               ReggieUI.error(orderRes.msg || '加载订单列表失败')
             }
             if (reloadStats) {
-              var statsRes = results[1]
+              const statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') {
                 this.stats = statsRes.data || this.stats
               }
@@ -350,7 +350,7 @@
           if (this.syncLoading) return
           this.syncLoading = true
           try {
-            var res = await deliverySyncMenu()
+            const res = await deliverySyncMenu()
             if (String(res.code) === '1') ReggieUI.success('同步菜品成功')
             else ReggieUI.warning(res.msg || '同步失败，请稍后重试')
           } catch (err) {
@@ -364,7 +364,7 @@
           if (this.syncLoading) return
           this.syncLoading = true
           try {
-            var res = await deliverySyncStock()
+            const res = await deliverySyncStock()
             if (String(res.code) === '1') ReggieUI.success('同步库存成功')
             else ReggieUI.warning(res.msg || '同步失败，请稍后重试')
           } catch (err) {
@@ -393,11 +393,10 @@
         // 修改点：完整的状态流转操作
         statusChange: function(row, targetStatus) {
           const self = this
-          var label = this.statusLabelMap[targetStatus] || targetStatus
-          var confirmText = '确认将【' + row.platformOrderId + '】状态更新为"' + label + '"？'
+          const label = this.statusLabelMap[targetStatus] || targetStatus
+          const confirmText = '确认将【' + row.platformOrderId + '】状态更新为"' + label + '"？'
           var typeMap = { 'PICKING': 'warning', 'DELIVERING': 'primary', 'DELIVERED': 'success' }
-          var confirmType = typeMap[targetStatus] || 'info'
-
+          const confirmType = typeMap[targetStatus] || 'info'
           ReggieUI.confirm(confirmText, '状态更新', {
             confirmButtonText: '确定', cancelButtonText: '取消', type: confirmType
           }).then(function() {
@@ -440,7 +439,7 @@
         showDetail: async function(row) {
           this.loadingDetail = true
           try {
-            var res = await deliveryOrderDetail(row.id)
+            const res = await deliveryOrderDetail(row.id)
             if (String(res.code) === '1' && res.data) {
               this.detailOrder = res.data
             } else {

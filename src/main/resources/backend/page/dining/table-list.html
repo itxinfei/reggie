@@ -320,13 +320,13 @@
           var params = { page: this.page, pageSize: this.pageSize,
             name: self.lastSearch.name || undefined, areaId: self.lastSearch.areaId || undefined, status: self.lastSearch.status || undefined }
           self.loading = true
-          var requests = [tablePage(params)]
+          const requests = [tablePage(params)]
           if (reloadStats) { requests.push(self.loadTableStats()) }
           Promise.all(requests).then(function(results) {
-            var tableRes = results[0]
+            const tableRes = results[0]
             if (String(tableRes.code) === '1') { self.tableData = tableRes.data.records || []; self.counts = tableRes.data.total || 0 }
             if (reloadStats) {
-              var statsRes = results[1]
+              const statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
             }
           }).catch(function(err) { ReggieUI.error('加载失败：' + (err.message || err)) }).finally(function() { self.loading = false })

@@ -226,7 +226,7 @@
         },
         async loadTableInfo() {
           try {
-            var res = await tableInfo(this.tableId)
+            const res = await tableInfo(this.tableId)
             if (res && res.code === 1 && res.data) {
               this.tableInfo = res.data
             }
@@ -247,7 +247,7 @@
             ReggieUI.warning('璇ヨ彍鍝佸凡鍞絼')
             return
           }
-          var existing = this.cart.find(item => item.dishId === dish.id)
+          const existing = this.cart.find(item => item.dishId === dish.id)
           if (existing) {
             if (existing.qty >= (dish.stockQty || 999)) {
               ReggieUI.warning('搴撳瓨涓嶈冻')
@@ -268,7 +268,7 @@
         changeQty(item, delta) {
           item.qty += delta
           if (item.qty <= 0) {
-            var idx = this.cart.indexOf(item)
+            const idx = this.cart.indexOf(item)
             if (idx >= 0) this.cart.splice(idx, 1)
           }
         },

@@ -156,7 +156,7 @@
       methods: {
         // 修改点：<stat-cards> 组件统一卡片点击分发（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
-          var key = payload.activeKey
+          const key = payload.activeKey
           this.activeFilter = key
           this.query.status = key === '' ? '' : Number(key)
           this.search()
@@ -175,11 +175,11 @@
             endTime:   this.query.dateRange && this.query.dateRange[1] ? this.query.dateRange[1] : undefined
           }
           try {
-          var requests = [printerLogPage(params)]
+          const requests = [printerLogPage(params)]
           if (reloadStats) { requests.push(self.loadLogStats()) }
-          var results = await Promise.all(requests)
-            var logRes = results[0]
-            var statsRes = results[1]
+          const results = await Promise.all(requests)
+            const logRes = results[0]
+            const statsRes = results[1]
             if (String(logRes.code) === '1') {
               self.tableData = logRes.data.records || []
               self.counts = logRes.data.total
@@ -187,12 +187,12 @@
               ReggieUI.error(logRes.msg || '操作失败')
             }
             if (reloadStats) {
-              var statsRes = results[1]
+              const statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') {
                 var stats = statsRes.data || {}
                 // 修改点：打印类型数基于当前列表真实数据去重 printType，替代恒为 0/1 的估算假数据
                 var typeSet = {}
-                var recs = (logRes.data && logRes.data.records) || []
+                const recs = (logRes.data && logRes.data.records) || []
                 recs.forEach(function (r) {
                   if (r.printType !== undefined && r.printType !== null && r.printType !== '') typeSet[r.printType] = true
                 })
@@ -208,13 +208,13 @@
         async loadLogStats() {
           try {
             // 修改点：使用 pageSize=1 × 3 并发查询替代 pageSize=2000 拉全量，避免数据截断
-            var results = await Promise.all([
+            const results = await Promise.all([
               printerLogPage({ page: 1, pageSize: 1 }),
               printerLogPage({ page: 1, pageSize: 1, status: 1 }),
               printerLogPage({ page: 1, pageSize: 1, status: 0 })
             ])
-            var totalRes = results[0], successRes = results[1], failRes = results[2]
-            var total = 0, successCount = 0, failCount = 0
+            const totalRes = results[0], successRes = results[1], failRes = results[2]
+            const total = 0, successCount = 0, failCount = 0
             if (String(totalRes.code) === '1' && totalRes.data) total = totalRes.data.total || 0
             if (String(successRes.code) === '1' && successRes.data) successCount = successRes.data.total || 0
             if (String(failRes.code) === '1' && failRes.data) failCount = failRes.data.total || 0

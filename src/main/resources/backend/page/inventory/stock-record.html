@@ -136,11 +136,10 @@
           }
 
           // 修改点：F9 性能 — 列表只查当前页，全局统计仅 reloadStats 时重算
-          var requests = [stockRecordPage(params)]
+          const requests = [stockRecordPage(params)]
           if (reloadStats) { requests.push(this.loadStats()) }
-          var results = await Promise.all(requests)
-          var pageRes = results[0]
-
+          const results = await Promise.all(requests)
+          const pageRes = results[0]
           if (String(pageRes.code) === '1') {
             this.tableData = pageRes.data.records || []
             this.counts = Number(pageRes.data.total) || 0
@@ -149,7 +148,7 @@
           }
 
           if (reloadStats) {
-            var statsRes = results[1]
+            const statsRes = results[1]
             if (statsRes && String(statsRes.code) === '1') {
               this.stats = statsRes.data || this.stats
             }

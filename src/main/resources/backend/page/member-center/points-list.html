@@ -168,16 +168,16 @@
           this.loading = true
           var params = { page: this.page, pageSize: this.pageSize, phone: this.input.phone || undefined, type: this.input.type || undefined }
           try {
-            var requests = [pointsPage(params)]
+            const requests = [pointsPage(params)]
             if (reloadStats) { requests.push(pointsStats()) }
-            var results = await Promise.all(requests)
-            var pageRes = results[0]
+            const results = await Promise.all(requests)
+            const pageRes = results[0]
             if (String(pageRes.code) === '1') {
               this.tableData = pageRes.data.records || []
               this.counts = pageRes.data.total
             } else { ReggieUI.error(pageRes.msg || '操作失败') }
             if (reloadStats) {
-              var statsRes = results[1]
+              const statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') {
                 this.stats = statsRes.data
                 this.$nextTick(function() { this.renderCharts() })
@@ -200,7 +200,7 @@
           const self = this
           // 趋势图
           if (self.trendChart && self.stats.trend) {
-            var dates = [], acquired = [], consumed = []
+            const dates = [], acquired = [], consumed = []
             self.stats.trend.forEach(function(d) { dates.push(d.date); acquired.push(d.acquired); consumed.push(d.consumed) })
             self.trendChart.setOption({
               tooltip: { trigger: 'axis' },

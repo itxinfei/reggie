@@ -151,16 +151,16 @@
             beginTime: ls.beginTime || undefined,
             endTime: ls.endTime || undefined
           }
-          var requests = [sysApi.logPage(params)]
+          const requests = [sysApi.logPage(params)]
           if (reloadStats) { requests.push(this.loadStats()) }
-          var results = await Promise.all(requests)
-          var logRes = results[0]
+          const results = await Promise.all(requests)
+          const logRes = results[0]
           if (logRes && logRes.code === 1) {
             this.tableData = logRes.data.records || []
             this.counts = logRes.data.total || 0
           }
           if (reloadStats) {
-            var statsRes = results[1]
+            const statsRes = results[1]
             if (statsRes && statsRes.code === 1) {
               this.stats = Object.assign({}, this.stats, statsRes.data || {})
             }

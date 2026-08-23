@@ -209,15 +209,15 @@
           return Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         },
         franchiseeName(id) {
-          var f = this.franchiseeMap[id]
+          const f = this.franchiseeMap[id]
           return f ? f.name : (id || '-')
         },
         // 加载加盟商下拉（供搜索框与表单使用）
         async loadFranchisees() {
           try {
-            var res = await franchiseeList()
+            const res = await franchiseeList()
             if (String(res.code) === '1') {
-              var list = res.data || []
+              const list = res.data || []
               this.franchiseeOptions = list
               var map = {}
               list.forEach(function(f) { map[f.id] = f })
@@ -239,7 +239,7 @@
             status: sv.status || undefined
           }
           try {
-            var res = await contractPage(params)
+            const res = await contractPage(params)
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
               this.counts = res.data.total
@@ -308,7 +308,7 @@
         submitForm() {
           if (this.submitting) return // 提交防重
           const self = this
-          var passed = false
+          const passed = false
           self.$refs.contractForm.validate(function(valid) { passed = valid })
           if (!passed) {
             ReggieUI.warning('请完善表单必填项')
@@ -333,7 +333,7 @@
             data.endDate = self.formData.dateRange[1]
           }
           if (self.formData.commissionType === 1) {
-            var rate = Number(self.formData.commissionRate)
+            const rate = Number(self.formData.commissionRate)
             if (!self.formData.commissionRate || isNaN(rate) || rate <= 0 || rate >= 100) {
               ReggieUI.error('抽成比例必须在 0~100 之间'); return
             }
@@ -341,7 +341,7 @@
             data.commissionRate = (rate / 100).toFixed(4)
             data.commissionAmount = null
           } else {
-            var amt = Number(self.formData.commissionAmount)
+            const amt = Number(self.formData.commissionAmount)
             if (!self.formData.commissionAmount || isNaN(amt) || amt < 0) {
               ReggieUI.error('请输入有效的固定抽成金额'); return
             }

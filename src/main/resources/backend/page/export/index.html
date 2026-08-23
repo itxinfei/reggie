@@ -366,7 +366,7 @@
                     const self = this;
                     self.dishExport.loading = true;
                     const ext = format === 'excel' ? 'xlsx' : 'pdf';
-                    var apiCall = format === 'excel'
+                    const apiCall = format === 'excel'
                         ? exportApi.exportDishesExcel({})
                         : exportApi.exportDishesPdf({});
 
@@ -386,7 +386,7 @@
                     const self = this;
                     self.empExport.loading = true;
                     const ext = format === 'excel' ? 'xlsx' : 'pdf';
-                    var apiCall = format === 'excel'
+                    const apiCall = format === 'excel'
                         ? exportApi.exportEmployeesExcel({})
                         : exportApi.exportEmployeesPdf({});
 

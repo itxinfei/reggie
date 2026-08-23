@@ -260,13 +260,13 @@
             if (this.activeFilter && this.activeFilter !== 'low') params.status = this.activeFilter
 
             // 修改点：F9 性能 — 列表只查当前页，全局统计仅 reloadStats 时重算
-            var requests = [materialPage(params)]
+            const requests = [materialPage(params)]
             if (reloadStats) { requests.push(this.loadMaterialStats()) }
-            var results = await Promise.all(requests)
-            var materialRes = results[0]
+            const results = await Promise.all(requests)
+            const materialRes = results[0]
             // 修改点：库存预警在前端过滤
             if (materialRes && materialRes.data && materialRes.data.records && this.activeFilter === 'low') {
-              var records = materialRes.data.records
+              const records = materialRes.data.records
               materialRes.data.records = records.filter(function(r) { return r.stockQty <= r.minStock })
               materialRes.data.total = materialRes.data.records.length
             }
@@ -281,7 +281,7 @@
 
             // 处理统计数据（仅 reloadStats 时）
             if (reloadStats) {
-              var statsRes = results[1]
+              const statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') {
                 this.stats = statsRes.data || this.stats
               }

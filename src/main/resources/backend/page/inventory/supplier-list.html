@@ -227,22 +227,20 @@
             // 修改点：F9 性能 — 全局统计（总数/启用/禁用/本月新增）与分页无关，仅 reloadStats 时重算
             // 本月新增：按本月起止时间区间查询真实 total，避免写死为 0 的假数据
             const now = new Date()
-            var y = now.getFullYear()
-            var m = String(now.getMonth() + 1).padStart(2, '0')
+            const y = now.getFullYear()
+            const m = String(now.getMonth() + 1).padStart(2, '0')
             const lastDay = new Date(y, now.getMonth() + 1, 0).getDate()
-            var monthStart = y + '-' + m + '-01 00:00:00'
-            var monthEnd = y + '-' + m + '-' + String(lastDay).padStart(2, '0') + ' 23:59:59'
-
-            var requests = [supplierPage(params)]
+            const monthStart = y + '-' + m + '-01 00:00:00'
+            const monthEnd = y + '-' + m + '-' + String(lastDay).padStart(2, '0') + ' 23:59:59'
+            const requests = [supplierPage(params)]
             if (reloadStats) {
               requests.push(supplierPage({ page: 1, pageSize: 1 }))
               requests.push(supplierPage({ page: 1, pageSize: 1, status: '1' }))
               requests.push(supplierPage({ page: 1, pageSize: 1, status: '0' }))
               requests.push(supplierPage({ page: 1, pageSize: 1, beginTime: monthStart, endTime: monthEnd }))
             }
-            var results = await Promise.all(requests)
-            var pageRes = results[0]
-
+            const results = await Promise.all(requests)
+            const pageRes = results[0]
             if (String(pageRes.code) === '1') {
               this.tableData = pageRes.data.records || []
               this.counts = Number(pageRes.data.total)
@@ -252,7 +250,7 @@
 
             // 从 total 字段直接获取统计数量，无需拉取全量数据再前端过滤
             if (reloadStats) {
-              var totalRes = results[1], activeRes = results[2], disabledRes = results[3], newRes = results[4]
+              const totalRes = results[1], activeRes = results[2], disabledRes = results[3], newRes = results[4]
               this.statsData = {
                 totalCount: (String(totalRes.code) === '1' && totalRes.data) ? String(totalRes.data.total || 0) : '0',
                 activeCount: (String(activeRes.code) === '1' && activeRes.data) ? String(activeRes.data.total || 0) : '0',
@@ -357,8 +355,8 @@
 
         /** 执行新增/修改保存 */
         doSave() {
-          var fd = this.formData
-          var apiCall = this.editMode
+          const fd = this.formData
+          const apiCall = this.editMode
             ? updateSupplier({ id: this.editId, name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status })
             : addSupplier({ name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status })
 

@@ -233,15 +233,14 @@
               areaPage({ page: 1, pageSize: 1 }),
               tableAreaStats()
             ])
-            var totalAreas = (areaRes && areaRes.data) ? (areaRes.data.total || 0) : 0
-            var totalTables = 0
-            var maxTablesArea = '-'
+            const totalAreas = (areaRes && areaRes.data) ? (areaRes.data.total || 0) : 0
+            const totalTables = 0
+            const maxTablesArea = '-'
             if (String(tableStatsRes.code) === '1' && tableStatsRes.data) {
               totalTables = Number(tableStatsRes.data.totalTables) || 0
               maxTablesArea = tableStatsRes.data.maxTablesArea || '-'
             }
-            var avg = totalAreas > 0 ? (totalTables / totalAreas).toFixed(1) : 0
-
+            const avg = totalAreas > 0 ? (totalTables / totalAreas).toFixed(1) : 0
             return {
               code: 1,
               data: {

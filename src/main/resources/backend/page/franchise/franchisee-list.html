@@ -168,7 +168,7 @@
             status: sv.status || undefined
           }
           try {
-            var res = await franchiseePage(params)
+            const res = await franchiseePage(params)
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
               this.counts = res.data.total
@@ -231,7 +231,7 @@
         submitForm() {
           if (this.submitting) return // 提交防重
           const self = this
-          var passed = false
+          const passed = false
           self.$refs.franchiseeForm.validate(function(valid) { passed = valid })
           if (!passed) {
             ReggieUI.warning('请完善表单必填项')

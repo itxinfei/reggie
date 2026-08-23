@@ -658,7 +658,7 @@
 
         // 修改点：<stat-cards> 组件统一卡片点击分发（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
-            var key = payload.activeKey
+            const key = payload.activeKey
             if (key === '') {
                 this.searchStatus = null
             } else if (key === '1') {
@@ -773,7 +773,7 @@
                 self.form.startTime = self.dateRange[0];
                 self.form.endTime = self.dateRange[1];
                 self.submitting = true;
-                var api = self.dialogMode === 'create'
+                const api = self.dialogMode === 'create'
                     ? recommendBackendApi.createCampaign(self.form)
                     : recommendBackendApi.updateCampaign(Object.assign({ id: self.editId }, self.form));
 

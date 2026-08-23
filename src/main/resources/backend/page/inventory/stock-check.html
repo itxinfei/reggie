@@ -234,7 +234,7 @@
 
           this.loading = true
           try {
-            var pageRes = await stockCheckPage(params)
+            const pageRes = await stockCheckPage(params)
             if (String(pageRes.code) === '1') {
               self.tableData = pageRes.data.records || []
               self.counts = Number(pageRes.data.total) || 0
@@ -264,7 +264,7 @@
               if (String(diffRes.code) === '1' && diffRes.data && diffRes.data.records) {
                 const records = diffRes.data.records
                 for (let i = 0; i < records.length; i++) {
-                  var details = records[i].details
+                  const details = records[i].details
                   if (details && details.some(function(d) { return d.diff != null && d.diff !== 0 })) {
                     self.stats.diffCount++
                   }
@@ -285,7 +285,7 @@
           const self = this
           stockCheckPage({ page: 1, pageSize: 100, id: row.id }).then(function(res) {
             if (res.code === 1 && res.data && res.data.records && res.data.records.length > 0) {
-              var details = res.data.records[0].details || []
+              const details = res.data.records[0].details || []
               self.$set(row, 'details', details)
             } else {
               self.$set(row, 'details', [])
@@ -314,13 +314,13 @@
         },
         submitCreate() {
           const self = this
-          var passed = false
+          const passed = false
           self.$refs.createForm.validate(function(valid) { passed = valid })
           if (!passed) {
             ReggieUI.error('请输入操作人')
             return
           }
-          var fd = self.formData
+          const fd = self.formData
           addStockCheck({ operator: fd.operator.trim(), remark: (fd.remark || '').trim() }).then(function(res) {
             if (res.code === 1) {
               ReggieUI.success('盘点单创建成功！')
@@ -345,7 +345,7 @@
           // 加载食材列表，每条食材的账面数量从 Material.stockQty 读取
           materialList().then(function(res) {
             if (res.code === 1) {
-              var materials = res.data || []
+              const materials = res.data || []
               self.entryMaterials = materials
               self.entryForm = {
                 details: materials.map(function(m) {
