@@ -270,11 +270,11 @@
         async loadTemplateStats() {
           try {
             // 修改点：改用 pageSize:1 多状态/渠道并发查询取 total，避免 pageSize:1000 拉全量导致统计截断
-            var r1 = await sysApi.templatePage({ page: 1, pageSize: 1 })
-            var r2 = await sysApi.templatePage({ page: 1, pageSize: 1, status: 1 })
-            var r3 = await sysApi.templatePage({ page: 1, pageSize: 1, status: 0 })
-            var r4 = await sysApi.templatePage({ page: 1, pageSize: 1, channel: 1 })
-            var r5 = await sysApi.templatePage({ page: 1, pageSize: 1, channel: 3 })
+            const r1 = await sysApi.templatePage({$3})
+            const r2 = await sysApi.templatePage({$3})
+            const r3 = await sysApi.templatePage({$3})
+            const r4 = await sysApi.templatePage({$3})
+            const r5 = await sysApi.templatePage({$3})
             if (String(r1.code) === '1') {
               const sms = (r4.data.total || 0) + (r5.data.total || 0)
               return { code: 1, data: {

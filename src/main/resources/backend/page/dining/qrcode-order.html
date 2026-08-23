@@ -211,11 +211,11 @@
         async loadData() {
           this.loading = true
           try {
-            var dishRes = await getDishPage({ page: 1, pageSize: 100, status: 1 })
+            const dishRes = await getDishPage({$3})
             if (dishRes && dishRes.code === 1) {
               this.dishes = (dishRes.data.records || []).map(d => ({ ...d, qty: 0 }))
             }
-            var catRes = await getCategoryList({ type: 1 })
+            const catRes = await getCategoryList({$3})
             if (catRes && catRes.code === 1) {
               this.categories = catRes.data || []
             }

@@ -346,7 +346,7 @@
         },
         async loadLevels() {
           try {
-            var res = await levelPage({ page: 1, pageSize: 100 })
+            const res = await levelPage({$3})
             if (String(res.code) === '1') {
               const records = res.data && res.data.records ? res.data.records : []
               this.levelList = []

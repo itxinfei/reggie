@@ -434,7 +434,7 @@
         async loadSuggest() {
           this.suggestLoading = true
           try {
-            var res = await materialReplenishSuggest({ days: this.suggestDays })
+            const res = await materialReplenishSuggest({$3})
             if (String(res.code) === '1') {
               this.suggestList = res.data || []
             } else {

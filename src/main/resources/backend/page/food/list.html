@@ -350,7 +350,7 @@
               required: true,
               validator: function(rule, value, callback) {
                 if (!value) { callback(new Error('璇峰～鍐欒彍鍝佷环鏍?)); return }
-                var reg = /^\d+(\.\d{0,2})?$/
+                const reg = $2
                 if (!reg.test(value)) { callback(new Error('鑿滃搧浠锋牸鏍煎紡鍙兘涓烘暟瀛?涓旀渶澶氫繚鐣欎袱浣嶅皬鏁?)); return }
                 if (value >= 10000) { callback(new Error('鑿滃搧浠锋牸灏忎簬10000')); return }
                 callback()

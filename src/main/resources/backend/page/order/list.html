@@ -442,7 +442,7 @@
               paymentOrderId = paymentRes.data.records[0].id
             }
             if (!paymentOrderId) { ReggieUI.error('未找到对应支付订单，无法退款'); self.refundLoading = false; return }
-            var res = await paymentRefund({ paymentOrderId: paymentOrderId, amount: parseFloat(self.refundForm.amount), reason: reason })
+            const res = await paymentRefund({$3})
             if (res && res.code === 1) { ReggieUI.success('退款成功'); self.refundVisible = false; self.init() }
             else { ReggieUI.error(res ? res.msg : '退款失败') }
           } catch (err) { ReggieUI.error('退款请求失败：' + err) }

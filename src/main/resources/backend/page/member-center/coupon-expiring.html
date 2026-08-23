@@ -396,10 +396,7 @@
           }
           this.extendLoading = true
           try {
-            var res = await couponBatchExtend({
-              couponUserIds: ids,
-              extendDays: this.extendForm.extendDays
-            })
+            const res = await couponBatchExtend({$3})
             if (String(res.code) === '1') {
               const d = res.data
               this.$message.success('寤舵湡鎴愬姛锛? + d.successCount + '鏉′紭鎯犲埜寤堕暱' + this.extendForm.extendDays + '澶?)
