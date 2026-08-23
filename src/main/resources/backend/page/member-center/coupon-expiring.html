@@ -383,7 +383,7 @@
             this.$message.warning('鏈嬀閫変换浣曚紭鎯犲埜')
             return
           }
-          var self = this
+          const self = this
           this.$refs.extendFormRef.validate(function(valid) {
             if (!valid) return
             self.doExtend()
@@ -391,7 +391,7 @@
         },
         async doExtend() {
           var ids = []
-          for (var i = 0; i < this.selectedRows.length; i++) {
+          for (let i = 0; i < this.selectedRows.length; i++) {
             ids.push(this.selectedRows[i].couponUserId)
           }
           this.extendLoading = true

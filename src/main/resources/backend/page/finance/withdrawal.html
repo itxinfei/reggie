@@ -448,7 +448,7 @@
           })
         },
         handleAddSubmit() {
-          var self = this
+          const self = this
           let passed = false
           this.$refs.addForm.validate(function(valid) { passed = valid })
           if (!passed) return
@@ -484,7 +484,7 @@
           this.reviewDialogVisible = true
         },
         async handleReviewSubmit() {
-          var self = this
+          const self = this
           this.$refs.reviewFormRef.validate(function (valid) {
             if (!valid) {
               return
@@ -519,7 +519,7 @@
           this.paymentDialogVisible = true
         },
         async handlePaymentSubmit() {
-          var self = this
+          const self = this
           this.$refs.paymentFormRef.validate(function (valid) {
             if (!valid) {
               return

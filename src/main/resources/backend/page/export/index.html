@@ -301,32 +301,32 @@
                 // ==================== 鏃ユ湡蹇嵎閫夋嫨 ====================
                 setOrderRange(range) {
                     this.orderRange = range;
-                    var now = new Date();
+                    const now = new Date();
                     if (range === 'today') {
                         this.orderFilter.startDate = this.formatDate(now);
                         this.orderFilter.endDate = this.formatDate(now);
                     } else if (range === 'week') {
-                        var d = new Date(now.getTime() - 6 * 86400000);
+                        const d = new Date(now.getTime() - 6 * 86400000);
                         this.orderFilter.startDate = this.formatDate(d);
                         this.orderFilter.endDate = this.formatDate(now);
                     } else if (range === 'month') {
-                        var d = new Date(now.getTime() - 29 * 86400000);
+                        const d = new Date(now.getTime() - 29 * 86400000);
                         this.orderFilter.startDate = this.formatDate(d);
                         this.orderFilter.endDate = this.formatDate(now);
                     }
                 },
                 setReportRange(range) {
                     this.reportRange = range;
-                    var now = new Date();
+                    const now = new Date();
                     if (range === 'today') {
                         this.reportFilter.startDate = this.formatDate(now);
                         this.reportFilter.endDate = this.formatDate(now);
                     } else if (range === 'week') {
-                        var d = new Date(now.getTime() - 6 * 86400000);
+                        const d = new Date(now.getTime() - 6 * 86400000);
                         this.reportFilter.startDate = this.formatDate(d);
                         this.reportFilter.endDate = this.formatDate(now);
                     } else if (range === 'month') {
-                        var d = new Date(now.getTime() - 29 * 86400000);
+                        const d = new Date(now.getTime() - 29 * 86400000);
                         this.reportFilter.startDate = this.formatDate(d);
                         this.reportFilter.endDate = this.formatDate(now);
                     }
@@ -337,9 +337,9 @@
 
                 // ==================== 瀵煎嚭鎿嶄綔 ====================
                 exportOrder(format) {
-                    var self = this;
+                    const self = this;
                     self.orderExport.loading = true;
-                    var params = {};
+                    const params = {$2};
                     if (self.orderFilter.startDate) params.startDate = self.orderFilter.startDate;
                     if (self.orderFilter.endDate) params.endDate = self.orderFilter.endDate;
                     if (self.orderFilter.status) params.status = self.orderFilter.status;
@@ -363,7 +363,7 @@
                 },
 
                 exportDish(format) {
-                    var self = this;
+                    const self = this;
                     self.dishExport.loading = true;
                     var ext = format === 'excel' ? 'xlsx' : 'pdf';
                     var apiCall = format === 'excel'
@@ -383,7 +383,7 @@
                 },
 
                 exportEmp(format) {
-                    var self = this;
+                    const self = this;
                     self.empExport.loading = true;
                     var ext = format === 'excel' ? 'xlsx' : 'pdf';
                     var apiCall = format === 'excel'
@@ -403,9 +403,9 @@
                 },
 
                 exportReport(format) {
-                    var self = this;
+                    const self = this;
                     self.reportExport.loading = true;
-                    var params = {};
+                    const params = {$2};
                     if (self.reportFilter.startDate) params.startDate = self.reportFilter.startDate;
                     if (self.reportFilter.endDate) params.endDate = self.reportFilter.endDate;
                     var ext = format === 'excel' ? 'xlsx' : 'pdf';
@@ -428,7 +428,7 @@
 
                 // ==================== 瀵煎嚭璁板綍 ====================
                 addHistory(name, icon, ext, success) {
-                    var now = new Date();
+                    const now = new Date();
                     var time = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0')
                         + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
                     this.history.unshift({
@@ -447,7 +447,7 @@
             }
         });
 
-        var toastTimer = null;
+        const toastTimer = $2;
         function showToast(msg, type) {
             var toast = document.getElementById('toast');
             toast.textContent = msg;

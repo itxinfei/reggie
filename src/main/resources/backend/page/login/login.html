@@ -142,7 +142,7 @@
         if (u) this.form.username = u
       },
       mounted: function() {
-        var self = this
+        const self = this
         setTimeout(function() { self.loaded = true }, 120)
       },
       methods: {
@@ -155,7 +155,7 @@
         err: function(field) {
           var fs = this.$refs.loginForm ? this.$refs.loginForm.fields : null
           if (!fs) return false
-          for (var i = 0; i < fs.length; i++) {
+          for (let i = 0; i < fs.length; i++) {
             if (fs[i].prop === field) return fs[i].validateState === 'error'
           }
           return false
@@ -174,7 +174,7 @@
           if (el) el.focus()
         },
         doLogin: function() {
-          var self = this
+          const self = this
           this.$refs.loginForm.validate(function(ok) {
             if (!ok || self.loading) return
             self.loading = true
@@ -204,13 +204,13 @@
         showForgot: function() {
           this.fpShow = true
           this.fpForm = { username: '', phone: '', newPassword: '' }
-          var self = this
+          const self = this
           this.$nextTick(function() {
             if (self.$refs.fpFormRef) self.$refs.fpFormRef.clearValidate()
           })
         },
         doForgot: function() {
-          var self = this
+          const self = this
           this.$refs.fpFormRef.validate(function(ok) {
             if (!ok) return
             self.fpLoading = true

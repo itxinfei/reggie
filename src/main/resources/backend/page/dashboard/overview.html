@@ -781,7 +781,7 @@
     // ========== ECharts 按需懒加载（性能优化核心） ==========
     // 原先在 <head> 同步加载 1MB 的 echarts.min.js 会阻塞首屏渲染；
     // 改为运行时动态注入，下载与首屏数据请求并行，且不阻塞 HTML 解析。
-    var _echartsPromise = null;
+    const _echartsPromise = $2;
     function loadEchartsScript() {
       if (_echartsPromise) return _echartsPromise;
       _echartsPromise = new Promise(function (resolve, reject) {
@@ -1211,11 +1211,11 @@
             if (window.parent && window.parent !== window && typeof window.parent.menuHandle === 'function') {
               var menuList = window.parent.menuList;
               if (menuList && menuList.length) {
-                for (var i = 0; i < menuList.length; i++) {
+                for (let i = 0; i < menuList.length; i++) {
                   var item = menuList[i];
                   if (item.url === url) { window.parent.menuHandle(item, false); return; }
                   if (item.children && item.children.length) {
-                    for (var j = 0; j < item.children.length; j++) {
+                    for (let j = 0; j < item.children.length; j++) {
                       if (item.children[j].url === url) {
                         window.parent.menuHandle(item.children[j], false);
                         return;

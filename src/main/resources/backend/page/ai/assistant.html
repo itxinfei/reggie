@@ -198,9 +198,9 @@
         function safeFormatContent(content) {
             if (!content) return [];
             if (typeof content !== 'string') return [{ type: 'text', text: String(content) }];
-            var parts = [];
+            const parts = $2;
             var lines = content.split('\n');
-            for (var li = 0; li < lines.length; li++) {
+            for (let li = 0; li < lines.length; li++) {
                 var line = lines[li];
                 if (li > 0) parts.push({ type: 'text', text: '\n' });
                 var boldRegex = /\*\*(.*?)\*\*/g;
@@ -216,9 +216,9 @@
                     parts.push({ type: 'text', text: line.substring(lastIndex) });
                 }
                 if ((line.trim().startsWith('- ') || line.trim().startsWith('· ')) && parts.length > 0) {
-                    var listItems = [];
+                    const listItems = $2;
                     listItems.push(line.trim().replace(/^[-·]\s*/, ''));
-                    for (var ni = li + 1; ni < lines.length; ni++) {
+                    for (let ni = li + 1; ni < lines.length; ni++) {
                         var nextLine = lines[ni].trim();
                         if (nextLine.startsWith('- ') || nextLine.startsWith('· ')) {
                             listItems.push(nextLine.replace(/^[-·]\s*/, ''));
@@ -230,8 +230,8 @@
                 }
             }
             if (parts.length === 0) return [{ type: 'text', text: content }];
-            var merged = [];
-            for (var i = 0; i < parts.length; i++) {
+            const merged = $2;
+            for (let i = 0; i < parts.length; i++) {
                 if (i > 0 && parts[i].type === 'text' && merged[merged.length - 1].type === 'text') {
                     merged[merged.length - 1].text += parts[i].text;
                 } else { merged.push(parts[i]); }
@@ -252,12 +252,7 @@
         }
 
         /** 场景图标映射 */
-        var sceneIcons = {
-            business_analysis: '📊',
-            dish_desc: '📝',
-            marketing: '📢',
-            order_assistant: '🍽️'
-        };
+        const sceneIcons = {$2};
 
         new Vue({
             el: '#ai-app',
@@ -318,22 +313,18 @@
                     return this.quickTipsMap[this.currentScene] || [];
                 },
                 inputPlaceholder: function() {
-                    var map = {
-                        business_analysis: '输入经营相关问题...',
-                        dish_desc: '输入菜名，生成美食描述...',
-                        marketing: '输入营销需求...'
-                    };
+                    const map = {$2};
                     return map[this.currentScene] || '输入消息...';
                 },
                 hasStreamingMessage: function() {
-                    var self = this;
+                    const self = this;
                     return self.messages.some(function(m) {
                         return m.role === 'assistant' && m.streaming === true;
                     });
                 },
                 /** 当前选中的对话对象 */
                 currentConversation: function() {
-                    var self = this;
+                    const self = this;
                     if (!self.currentConversationId || !self.conversations) return null;
                     var found = self.conversations.filter(function(c) {
                         return c.conversationId === self.currentConversationId;
@@ -352,7 +343,7 @@
 
                 /** 加载对话列表 */
                 loadConversations: function() {
-                    var self = this;
+                    const self = this;
                     self.sidebarLoading = true;
                     aiBackendApi.getConversations(1, 50).then(function(res) {
                         var data = res.data || res;
@@ -372,7 +363,7 @@
                 /** 选择对话并加载历史消息 */
                 selectConversation: function(conv) {
                     if (!conv || !conv.conversationId) return;
-                    var self = this;
+                    const self = this;
                     // 如果已经是当前对话，不重复加载
                     if (self.currentConversationId === conv.conversationId && self.messages.length > 0) {
                         return;
@@ -384,7 +375,7 @@
 
                 /** 加载指定对话的消息历史 */
                 loadConversationMessages: function(conversationId) {
-                    var self = this;
+                    const self = this;
                     self.messages = [];
                     self.loadingHistory = true;
                     aiBackendApi.getConversationDetail(conversationId).then(function(res) {
@@ -392,16 +383,7 @@
                         var records = (data && data.code === 1 ? data.data : data) || [];
                         // 将数据库记录转换为消息格式
                         self.messages = records.map(function(record) {
-                            var msg = {
-                                _key: 'msg_' + (record.id || Date.now() + Math.random()),
-                                dbMessageId: record.id,
-                                role: record.role || 'user',
-                                content: record.content || '',
-                                showFeedback: record.role === 'assistant',
-                                feedback: record.feedback || null,
-                                streaming: false,
-                                timestamp: record.createTime ? new Date(record.createTime).getTime() : Date.now()
-                            };
+                            const msg = {$2};
                             // 安全渲染
                             if (msg.role === 'assistant') {
                                 msg.renderedParts = safeFormatContent(msg.content);
@@ -431,7 +413,7 @@
 
                 /** 删除对话 */
                 handleDeleteConv: function(conv) {
-                    var self = this;
+                    const self = this;
                     ReggieUI.confirm('确定要删除对话"' + (conv.title || '新对话') + '"吗？删除后不可恢复。', '提示', {
                         confirmButtonText: '确定',
                         cancelButtonText: '取消',
@@ -473,30 +455,15 @@
                     var text = this.inputText.trim();
                     if (!text || this.loading) return;
 
-                    var self = this;
+                    const self = this;
                     self.currentRequestId++;
                     var requestId = self.currentRequestId;
 
                     // 用户消息
-                    var userMsg = {
-                        _key: 'user_' + Date.now(),
-                        role: 'user',
-                        content: text,
-                        timestamp: Date.now()
-                    };
+                    const userMsg = {$2};
 
                     // AI 占位消息（流式模式）
-                    var assistantMsg = {
-                        _key: 'ai_' + (Date.now() + 1),
-                        role: 'assistant',
-                        content: '',
-                        renderedParts: [],
-                        streaming: true,
-                        showFeedback: false,
-                        feedback: null,
-                        error: false,
-                        timestamp: Date.now()
-                    };
+                    const assistantMsg = {$2};
 
                     self.messages.push(userMsg);
                     self.messages.push(assistantMsg);
@@ -513,7 +480,7 @@
                         if (self.currentConversationId) {
                             params.push('conversationId=' + encodeURIComponent(self.currentConversationId));
                         }
-                        var eventSource = new EventSource('/api/ai/chat/stream?' + params.join('&'));
+                        const eventSource = new EventSource('/api/ai/chat/stream?' + params.join('&'));
 
                         eventSource.addEventListener('message', function(event) {
                             if (requestId !== self.currentRequestId) {
@@ -611,7 +578,7 @@
                 },
 
                 retryMessage: function(msg) {
-                    var self = this;
+                    const self = this;
                     var idx = self.messages.indexOf(msg);
                     if (idx > 0) {
                         // 删除失败的 AI 消息及其前面的用户消息
@@ -652,7 +619,7 @@
                 // ==================== 健康检查（修改点：新增） ====================
 
                 checkHealth: function() {
-                    var self = this;
+                    const self = this;
                     self.connectionStatus.checking = true;
                     aiBackendApi.health().then(function(res) {
                         var data = (res.data || res);
@@ -670,7 +637,7 @@
 
                 sendFeedback: function(msg, type) {
                     if (!msg.dbMessageId) return;
-                    var self = this;
+                    const self = this;
                     msg.feedback = type;
                     aiBackendApi.recordFeedback({
                         messageId: msg.dbMessageId,
@@ -683,7 +650,7 @@
                 // ==================== 工具 ====================
 
                 scrollToBottom: function() {
-                    var self = this;
+                    const self = this;
                     this.$nextTick(function() {
                         var el = self.$refs.chatBody;
                         if (el) el.scrollTop = el.scrollHeight;

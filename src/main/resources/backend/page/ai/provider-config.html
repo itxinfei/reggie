@@ -214,10 +214,7 @@
 (function() {
     'use strict';
 
-    var PROVIDER_EMOJI = {
-        deepseek: '🤖', qwen: '🌊', zhipu: '🧠', ernie: '🟢',
-        baichuan: '🌊', moonshot: '🌙', minimax: '✨', '360': '🛡️', custom: '⚙️'
-    };
+    const PROVIDER_EMOJI = {$2};
 
     new Vue({
         el: '#provider-app',
@@ -259,7 +256,7 @@
 
         methods: {
             loadData: function() {
-                var self = this;
+                const self = this;
                 Promise.all([
                     $axios.get('/admin/ai/provider/list'),
                     $axios.get('/admin/ai/provider/active')
@@ -284,7 +281,7 @@
             },
 
             activateProvider: function(id) {
-                var self = this;
+                const self = this;
                 ReggieUI.confirm('切换模型后，AI 将立即使用新模型。确定继续吗？', '切换确认', {
                     confirmButtonText: '确定切换',
                     type: 'warning'
@@ -303,7 +300,7 @@
             },
 
             testProvider: function(id) {
-                var self = this;
+                const self = this;
                 var provider = this.providers.find(function(p) { return p.id === id; });
                 if (!provider) return;
 
@@ -343,7 +340,7 @@
             },
 
             deleteProvider: function(id) {
-                var self = this;
+                const self = this;
                 ReggieUI.confirm('确定删除此模型配置吗？此操作不可恢复。', '删除确认', {
                     confirmButtonText: '确定删除',
                     type: 'warning'
@@ -376,7 +373,7 @@
 
             openEditDialog: function(provider) {
                 this.form = JSON.parse(JSON.stringify(provider));
-                var self = this;
+                const self = this;
                 this.form._hasExistingKey = !!(provider.apiKey && provider.apiKey.indexOf('****') > 0);
                 // 修改点：重置模型列表状态
                 this.modelList = [];
@@ -398,7 +395,7 @@
             },
 
             submitForm: function() {
-                var self = this;
+                const self = this;
                 self.$refs.providerForm.validate(function(valid) {
                     if (!valid) {
                         ReggieUI.warning('请完善表单必填项');
@@ -446,7 +443,7 @@
             },
 
             initPresets: function() {
-                var self = this;
+                const self = this;
                 ReggieUI.confirm(
                     '将自动添加 DeepSeek、通义千问、智谱AI、文心一言、百川、月之暗面、MiniMax、360 等 8 个预设模型配置。继续吗？',
                     '初始化预设',
@@ -467,7 +464,7 @@
 
             // 修改点：从AI供应商API拉取可用模型列表（参考ChatBox/NextChat交互方式）
             fetchModelList: function() {
-                var self = this;
+                const self = this;
                 if (!this.form.baseUrl || !this.form.apiKey) {
                     ReggieUI.warning('请先填写 API 地址和 API 密钥');
                     return;

@@ -197,7 +197,7 @@
         }
       },
       created() {
-        var urlParams = new URLSearchParams(window.location.search)
+        const urlParams = new URLSearchParams(window.location.search)
         this.tableId = urlParams.get('tableId')
         if (this.tableId) {
           this.loadData()

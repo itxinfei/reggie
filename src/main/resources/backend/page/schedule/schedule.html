@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>排班管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
+  <div class="dashboard-container" id="schedule-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">排班管理</h1>
+          <p class="ds-page-header__subtitle">管理员工班次安排与在岗情况</p>
+        </div>
+      </header>
+
+      <!-- 统计卡片 -->
+      <stat-cards :cards="statsCards"></stat-cards>
+
+      <!-- 排班设置 -->
+      <el-card shadow="never" class="section-card">
+        <div class="section-header">
+          <h3>排班设置</h3>
+          <div class="header-actions">
+            <el-date-picker
+              v-model="scheduleMonth"
+              type="month"
+              value-format="yyyy-MM"
+              placeholder="选择月份"
+              size="small"
+              style="width:200px;margin-right:12px;"
+              @change="fetchScheduleData"
+            ></el-date-picker>
+            <el-button type="primary" size="small" @click="openDialog">
+              <i class="el-icon-plus"></i> 添加排班
+            </el-button>
+          </div>
+        </div>
+
+        <!-- 排班日历表格 -->
+        <div class="schedule-legend">
+          <span class="legend-item"><el-tag type="success" size="mini">早班</el-tag></span>
+          <span class="legend-item"><el-tag type="primary" size="mini">中班</el-tag></span>
+          <span class="legend-item"><el-tag type="info" size="mini">晚班</el-tag></span>
+          <span class="legend-item"><el-tag type="danger" size="mini">全天</el-tag></span>
+          <span class="legend-item"><el-tag type="" size="mini">休息</el-tag></span>
+        </div>
+        <div class="schedule-table-wrap" v-loading="loading">
+          <table class="schedule-table">
+            <thead>
+              <tr>
+                <th class="col-employee">员工</th>
+                <th v-for="d in dayHeaders" :key="d" class="col-day">{{ d }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="emp in scheduleRows" :key="emp.id">
+                <td class="col-employee">
+                  <span class="emp-name">{{ emp.name }}</span>
+                </td>
+                <td v-for="d in dayHeaders" :key="emp.id + '-' + d" class="col-day">
+                  <el-tag
+                    v-if="getCell(emp.id, d)"
+                    :type="getShiftTagType(getCell(emp.id, d).shift)"
+                    size="mini"
+                    class="shift-tag"
+                    @click="editCell(emp, d)"
+                  >{{ getCell(emp.id, d).label }}</el-tag>
+                  <span v-else class="empty-cell">-</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </el-card>
+
+      <!-- 本周汇总 -->
+      <el-row :gutter="24" class="content-row">
+        <el-col :span="16">
+          <el-card shadow="never" class="section-card">
+            <div class="section-header">
+              <h3>本周时段人数分布</h3>
+              <span class="section-date">周一至周日</span>
+            </div>
+            <div class="shift-bars">
+              <div class="bar-row" v-for="item in weekShiftData" :key="item.day">
+                <span class="bar-label">{{ item.day }}</span>
+                <div class="bar-track">
+                  <div v-for="s in item.shifts" :key="s.key" class="bar-segment"
+                       :style="{ width: s.pct + '%', background: s.color }"
+                       :title="s.label + '：' + s.value + '人'">
+                    <span class="bar-text">{{ s.value > 0 ? s.value : '' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+        <el-col :span="8">
+          <el-card shadow="never" class="section-card">
+            <div class="section-header">
+              <h3>排班统计</h3>
+            </div>
+            <div class="shift-summary">
+              <div class="summary-item" v-for="s in shiftSummary" :key="s.key">
+                <div class="summary-left">
+                  <el-tag :type="s.tagType" size="small">{{ s.label }}</el-tag>
+                </div>
+                <div class="summary-value">{{ s.value }} <span class="summary-unit">人次</span></div>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <!-- 添加排班弹窗 -->
+      <crud-dialog title="添加排班" :visible.sync="dialog.visible" :submit-loading="submitting" size="md" @submit="submitForm">
+        <el-form ref="scheduleForm" :model="form" :rules="formRules" label-width="80px" size="small">
+          <el-form-item label="员工" prop="employeeId">
+            <el-select v-model="form.employeeId" placeholder="请选择员工" style="width:293px;" clearable>
+              <el-option v-for="emp in employeeOptions" :key="emp.id" :label="emp.name" :value="emp.id"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="日期" prop="date">
+            <el-date-picker v-model="form.date" type="date" value-format="yyyy-MM-dd" placeholder="选择日期" style="width:293px;"></el-date-picker>
+          </el-form-item>
+          <el-form-item label="班次" prop="shift">
+            <el-radio-group v-model="form.shift">
+              <el-radio label="morning">早班 08:00-16:00</el-radio>
+              <el-radio label="noon">中班 12:00-20:00</el-radio>
+              <el-radio label="night">晚班 16:00-24:00</el-radio>
+              <el-radio label="full">全天 08:00-20:00</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="时间">
+            <el-time-picker v-model="form.startTime" format="HH:mm" value-format="HH:mm" placeholder="开始时间" style="width:200px;margin-right:8px;"></el-time-picker>
+            <el-time-picker v-model="form.endTime" format="HH:mm" value-format="HH:mm" placeholder="结束时间" style="width:200px;"></el-time-picker>
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="选填，如：负责收银台" maxlength="100" show-word-limit></el-input>
+          </el-form-item>
+        </el-form>
+      </crud-dialog>
+    </main>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/components.js"></script>
+  <script src="../../api/attendance.js"></script>
+  <script>
+    new Vue({
+      el: '#schedule-app',
+      data: function () {
+        return {
+          loading: false,
+          submitting: false,
+          statsCards: [],
+          scheduleMonth: '',
+          dayHeaders: [],
+          scheduleRows: [],
+          scheduleData: {},
+          dialog: { visible: false },
+          form: { employeeId: '', date: '', shift: 'morning', startTime: '', endTime: '', remark: '' },
+          formRules: {
+            employeeId: [{ required: true, message: '请选择员工', trigger: 'change' }],
+            date:       [{ required: true, message: '请选择日期', trigger: 'change' }],
+            shift:      [{ required: true, message: '请选择班次', trigger: 'change' }]
+          },
+          employeeOptions: [],
+          weekShiftData: [],
+          shiftSummary: []
+        }
+      },
+      created: function () {
+        this.initMonth()
+        this.initEmployees()
+        this.fetchScheduleData()
+      },
+      methods: {
+        // ===== 初始化 =====
+        initMonth: function () {
+          const now = new Date()
+          var y = now.getFullYear()
+          var m = now.getMonth() + 1
+          this.scheduleMonth = y + '-' + pad2(m)
+        },
+        initEmployees: function () {
+          const self = this
+          var names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
+          self.employeeOptions = names.map(function (n, i) {
+            return { id: i + 1, name: n }
+          })
+        },
+
+        // ===== 数据加载 =====
+        fetchScheduleData: function () {
+          const self = this
+          self.loading = true
+          scheduleMonthly({ month: self.scheduleMonth }).then(function (res) {
+            self.buildSchedule(res.data)
+            self.buildStats()
+            self.loading = false
+          }).catch(function () {
+            self.loadMockSchedule()
+            self.loading = false
+          })
+        },
+        loadMockSchedule: function () {
+          const self = this
+          var parts = self.scheduleMonth.split('-')
+          var year = parseInt(parts[0], 10)
+          var month = parseInt(parts[1], 10)
+          const daysInMonth = new Date(year, month, 0).getDate()
+          var weekdays = ['一', '二', '三', '四', '五', '六', '日']
+
+          // 生成日期列头
+          self.dayHeaders = []
+          for (let d = 1; d <= daysInMonth; d++) {
+            const wd = new Date(year, month - 1, d).getDay()
+            var label = d + '(' + weekdays[wd] + ')'
+            self.dayHeaders.push(label)
+          }
+
+          // 构建排班数据
+          var shifts = ['morning', 'noon', 'night', 'full', 'rest']
+          var labels = { morning: '早', noon: '中', night: '晚', full: '全天', rest: '休' }
+          var data = {}
+          self.employeeOptions.forEach(function (emp) {
+            var empKey = emp.id
+            data[empKey] = {}
+            for (let dd = 1; dd <= daysInMonth; dd++) {
+              const wd = new Date(year, month - 1, dd).getDay()
+              var s
+              if (wd === 0 || wd === 6) {
+                s = 'rest'
+              } else {
+                var idx = ((emp.id + dd) % shifts.length)
+                s = shifts[idx]
+              }
+              if (s !== 'rest') {
+                data[empKey][dd] = { shift: s, label: labels[s] }
+              }
+            }
+          })
+          self.scheduleData = data
+          self.buildStats()
+          self.buildWeekShiftData()
+        },
+        buildSchedule: function (backendData) {
+          const self = this
+          if (!backendData || !backendData.rows) {
+            self.loadMockSchedule()
+            return
+          }
+          var parts = self.scheduleMonth.split('-')
+          var year = parseInt(parts[0], 10)
+          var month = parseInt(parts[1], 10)
+          const daysInMonth = new Date(year, month, 0).getDate()
+          var weekdays = ['一', '二', '三', '四', '五', '六', '日']
+          var labels = { morning: '早', noon: '中', night: '晚', full: '全天', rest: '休' }
+          var shiftMap = { 'early': 'morning', 'morning': 'morning', 'noon': 'noon', 'afternoon': 'noon', 'night': 'night', 'evening': 'night', 'full': 'full', 'rest': 'rest' }
+
+          self.dayHeaders = []
+          for (let d = 1; d <= daysInMonth; d++) {
+            const wd = new Date(year, month - 1, d).getDay()
+            self.dayHeaders.push(d + '(' + weekdays[wd] + ')')
+          }
+
+          var newData = {}
+          backendData.rows.forEach(function (row) {
+            var key = row.employeeId
+            newData[key] = newData[key] || {}
+            newData[key][row.day] = { shift: shiftMap[row.shift] || 'morning', label: labels[shiftMap[row.shift]] || row.shift }
+          })
+          self.scheduleData = newData
+          self.buildStats()
+          self.buildWeekShiftData()
+        },
+        buildStats: function () {
+          const self = this
+          var parts = self.scheduleMonth.split('-')
+          var year = parseInt(parts[0], 10)
+          var month = parseInt(parts[1], 10)
+          const today = new Date()
+          const daysInMonth = new Date(year, month, 0).getDate()
+
+          var todayOnDuty = 0
+          var todayScheduled = 0
+          var absentCount = 0
+          var onDutyTodaySet = {}
+
+          const now = new Date()
+          var nowMonth = now.getMonth() + 1
+          var nowYear = now.getFullYear()
+
+          self.employeeOptions.forEach(function (emp) {
+            var empData = self.scheduleData[emp.id]
+            if (empData) {
+              var todayCell = empData[now.getDate()]
+              if (todayCell) {
+                todayScheduled++
+                if (todayCell.shift === 'full' || todayCell.shift === 'morning' || todayCell.shift === 'noon') {
+                  todayOnDuty++
+                }
+              } else if (nowYear === year && nowMonth === month) {
+                absentCount++
+              }
+            }
+          })
+
+          self.statsCards = [
+            { key: 'onDuty',    icon: 'ri-user-location-line', label: '今日在岗', value: todayOnDuty, color: 'primary', unit: '人' },
+            { key: 'scheduled', icon: 'ri-calendar-event-line', label: '今日排班', value: todayScheduled, color: 'success', unit: '人' },
+            { key: 'absent',    icon: 'ri-user-unfollow-line', label: '缺岗', value: absentCount, color: 'danger', unit: '人' },
+            { key: 'monthDays', icon: 'ri-calendar-check-line', label: '本月排班天数', value: daysInMonth, color: 'info', unit: '天' }
+          ]
+        },
+        buildWeekShiftData: function () {
+          const self = this
+          var days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+          const now = new Date()
+          var weekStart = now.getDate() - now.getDay() + 1
+
+          var colors = { morning: 'var(--color-success)', noon: 'var(--color-brand-500)', night: 'var(--color-info)', full: 'var(--color-danger)' }
+          var shiftNames = { morning: '早', noon: '中', night: '晚', full: '全天' }
+
+          var totalAll = 0
+          var weekData = []
+          for (let w = 0; w < 7; w++) {
+            var dayNum = weekStart + w
+            if (dayNum < 1 || dayNum > 28) break
+            var counts = { morning: 0, noon: 0, night: 0, full: 0 }
+            self.employeeOptions.forEach(function (emp) {
+              var cell = self.scheduleData[emp.id] && self.scheduleData[emp.id][dayNum]
+              if (cell) counts[cell.shift] = (counts[cell.shift] || 0) + 1
+            })
+            var total = counts.morning + counts.noon + counts.night + counts.full
+            totalAll += total
+
+            var shifts = []
+            shifts.push({ key: 'morning', label: '早', value: counts.morning, color: colors.morning, pct: total > 0 ? Math.round(counts.morning / total * 100) : 0 })
+            shifts.push({ key: 'noon',    label: '中', value: counts.noon,    color: colors.noon,    pct: total > 0 ? Math.round(counts.noon / total * 100) : 0 })
+            shifts.push({ key: 'night',   label: '晚', value: counts.night,   color: colors.night,   pct: total > 0 ? Math.round(counts.night / total * 100) : 0 })
+            shifts.push({ key: 'full',    label: '全天', value: counts.full,   color: colors.full,   pct: total > 0 ? Math.round(counts.full / total * 100) : 0 })
+            weekData.push({ day: days[w], shifts: shifts })
+          }
+          self.weekShiftData = weekData
+
+          // 汇总统计
+          var sumM = 0, sumN = 0, sumE = 0, sumF = 0
+          weekData.forEach(function (w) {
+            w.shifts.forEach(function (s) {
+              if (s.key === 'morning') sumM += s.value
+              else if (s.key === 'noon') sumN += s.value
+              else if (s.key === 'night') sumE += s.value
+              else if (s.key === 'full') sumF += s.value
+            })
+          })
+          self.shiftSummary = [
+            { key: 'morning', label: '早班', value: sumM, tagType: 'success' },
+            { key: 'noon',    label: '中班', value: sumN, tagType: 'primary' },
+            { key: 'night',   label: '晚班', value: sumE, tagType: 'info' },
+            { key: 'full',    label: '全天', value: sumF, tagType: 'danger' }
+          ]
+        },
+
+        // ===== 排班表格辅助 =====
+        getCell: function (empId, dayLabel) {
+          var parts = dayLabel.match(/^(\d+)/)
+          if (!parts) return null
+          var day = parseInt(parts[1], 10)
+          return this.scheduleData[empId] && this.scheduleData[empId][day] || null
+        },
+        getShiftTagType: function (shift) {
+          var map = { morning: 'success', noon: 'primary', night: 'info', full: 'danger' }
+          return map[shift] || 'info'
+        },
+
+        // ===== 弹窗操作 =====
+        openDialog: function () {
+          this.form = { employeeId: '', date: '', shift: 'morning', startTime: '', endTime: '', remark: '' }
+          this.dialog.visible = true
+        },
+        submitForm: function () {
+          const self = this
+          self.$refs.scheduleForm.validate(function (valid) {
+            if (!valid) return
+            self.submitting = true
+            var data = {
+              employeeId: self.form.employeeId,
+              date: self.form.date,
+              shift: self.form.shift,
+              startTime: self.form.startTime,
+              endTime: self.form.endTime,
+              remark: self.form.remark
+            }
+            scheduleSave(data).then(function () {
+              self.submitting = false
+              self.dialog.visible = false
+              self.$message.success('排班添加成功')
+              self.fetchScheduleData()
+            }).catch(function (e) {
+              self.submitting = false
+              // 后端未就绪时，本地 mock 保存
+              var match = self.form.date.match(/-(\d{2})$/)
+              if (match) {
+                var day = parseInt(match[1], 10)
+                var labels = { morning: '早', noon: '中', night: '晚', full: '全天' }
+                self.$set(self.scheduleData[self.form.employeeId], day, { shift: self.form.shift, label: labels[self.form.shift] })
+              }
+              self.submitting = false
+              self.dialog.visible = false
+              self.$message.success('排班已保存（本地）')
+            })
+          })
+        },
+        editCell: function (emp, dayLabel) {
+          this.form = { employeeId: emp.id, date: this.scheduleMonth + '-0' + dayLabel.split('(')[0], shift: 'morning', startTime: '', endTime: '', remark: '' }
+          var cell = this.getCell(emp.id, dayLabel)
+          if (cell) {
+            this.form.shift = cell.shift
+          }
+          this.dialog.visible = true
+        }
+      }
+    })
+
+    function pad2(n) {
+      return n < 10 ? '0' + n : '' + n
+    }
+  </script>
+
+  <style lang="less" scoped>
+    @import "../../styles/tokens.css";
+
+    .ds-page { padding-left: var(--space-5); padding-right: var(--space-5); }
+    .container { max-width: 1400px; margin: 0 auto; }
+    .stats-cards { margin-bottom: var(--space-6); }
+
+    .section-card {
+      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--space-6);
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-2);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .section-header h3 {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .section-date {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+    }
+    .header-actions { display: flex; align-items: center; }
+
+    /* 排班图例 */
+    .schedule-legend {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-bottom: var(--space-3);
+    }
+    .legend-item { display: flex; align-items: center; }
+
+    /* 排班表格 */
+    .schedule-table-wrap { overflow-x: auto; }
+    .schedule-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--font-size-sm);
+      table-layout: fixed;
+    }
+    .schedule-table thead th {
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+      padding: 8px 4px;
+      border: 1px solid var(--border-default);
+      text-align: center;
+      white-space: nowrap;
+      font-size: var(--font-size-xs);
+    }
+    .schedule-table thead th.col-employee {
+      width: 80px;
+      min-width: 80px;
+      position: sticky;
+      left: 0;
+      background: var(--bg-subtle);
+      z-index: 2;
+    }
+    .schedule-table tbody td {
+      padding: 4px;
+      border: 1px solid var(--border-default);
+      text-align: center;
+      vertical-align: middle;
+      height: 32px;
+    }
+    .schedule-table tbody td.col-employee {
+      background: var(--bg-surface);
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .schedule-table tbody tr:hover td { background: var(--color-brand-50); }
+    .schedule-table tbody tr:hover td.col-employee { background: var(--color-brand-100); }
+    .shift-tag {
+      cursor: pointer;
+      transition: all var(--transition-base);
+    }
+    .shift-tag:hover { opacity: 0.8; transform: scale(1.1); }
+    .empty-cell { color: var(--text-muted); font-size: var(--font-size-xs); }
+
+    /* 本周时段人数分布 */
+    .content-row { margin-bottom: var(--space-6); }
+
+    .shift-bars { padding: var(--space-2) 0; }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .bar-row:last-child { margin-bottom: 0; }
+    .bar-label {
+      width: 40px;
+      flex-shrink: 0;
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+    .bar-track {
+      flex: 1;
+      height: 20px;
+      display: flex;
+      background: var(--border-subtle);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .bar-segment {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      transition: all var(--transition-base);
+    }
+    .bar-segment:hover { opacity: 0.85; }
+    .bar-text {
+      font-size: var(--font-size-xs);
+      color: var(--text-inverse);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* 排班汇总 */
+    .shift-summary { min-height: 200px; }
+    .summary-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .summary-item:last-child { border-bottom: none; }
+    .summary-value {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .summary-unit {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      margin-left: 4px;
+      font-weight: var(--font-weight-regular);
+    }
+
+    @media (max-width: 768px) {
+      .ds-page { padding-left: var(--space-3); padding-right: var(--space-3); }
+      .el-col { margin-bottom: var(--space-4); }
+    }
+  </style>
+</body>
+</html>

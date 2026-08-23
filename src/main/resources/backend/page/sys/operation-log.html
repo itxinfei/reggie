@@ -128,7 +128,7 @@
       },
       computed: {
         statsCards: function() {
-          var self = this
+          const self = this
           return [
             { key: '', icon: '📋', label: '今日操作', value: self.stats.todayCount || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: 'total', icon: '📊', label: '累计操作', value: self.stats.totalCount || 0, color: 'success', clickable: true, active: self.activeFilter === 'total' },
@@ -193,7 +193,7 @@
         },
         // stat-cards 点击
         onCardClick: function(payload) {
-          var self = this
+          const self = this
           if (payload.key === '') {
             self.activeFilter = ''
           } else {

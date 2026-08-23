@@ -270,7 +270,7 @@
       },
       computed: {
         statsCards: function() {
-          var self = this
+          const self = this
           return [
             { key: 'today', icon: '📋', label: '今日订单数', value: self.stats.todayOrders, color: 'primary' },
             { key: 'revenue', icon: '💰', label: '今日营业额 (元)', value: self.formatMoney(self.stats.todayRevenue), color: 'success' },
@@ -305,7 +305,7 @@
         // 修改点：F9 性能 — 列表与全局统计分离，reloadStats=true 才重算（分页传 false）
         async init(reloadStats = true) {
           this.loading = true
-          var self = this
+          const self = this
           var params = {
             page: self.page, pageSize: self.pageSize,
             number: self.lastSearch.number || undefined,
@@ -399,7 +399,7 @@
           // 修改点：用当前行数据预填充 diaForm（表格已有完整字段），避免弹窗从空内容膨胀导致抖动
           this.diaForm = { ...row }
           // 异步获取完整订单详情（含 orderDetails 菜品明细），静默更新不触发额外重排
-          var self = this
+          const self = this
           $axios.get('/order/' + row.id).then(function(res) {
             if (res && res.code === 1 && res.data) {
               self.diaForm = res.data
@@ -407,7 +407,7 @@
           }).catch(function() {})
         },
         cancelOrder: function(row) {
-          var self = this
+          const self = this
           ReggieUI.confirm('确认取消该订单？', '提示', { confirmButtonText: '确定', cancelButtonText: '再想想', type: 'warning' })
             .then(function() {
               editOrderDetail({ id: row.id, status: 5 }).then(function(res) {
@@ -417,7 +417,7 @@
             })
         },
         cancelOrDeliveryOrComplete: function(status, id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('确认更改该订单状态?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               editOrderDetail({ status: status, id: id }).then(function(res) {
@@ -431,7 +431,7 @@
           this.refundVisible = true
         },
         async submitRefund() {
-          var self = this
+          const self = this
           if (!self.refundForm.amount || parseFloat(self.refundForm.amount) <= 0) { ReggieUI.warning('请输入有效的退款金额'); return }
           var reason = self.refundForm.reasonType
           if (!reason) { ReggieUI.warning('请选择退款原因'); return }

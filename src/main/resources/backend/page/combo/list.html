@@ -341,7 +341,7 @@ new Vue({
   computed: {
     // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
     statsCards: function() {
-      var self = this;
+      const self = this;
       return [
         { key: '', icon: 'ri-box-3-line', label: '套餐总数', value: self.stats.totalCombos || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
         { key: '1', icon: 'ri-checkbox-circle-line', label: '已启售', value: self.stats.activeCombos || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
@@ -454,7 +454,7 @@ new Vue({
      */
     async loadComboStats() {
       try {
-        var self = this
+        const self = this
         // 修改点：改用 pageSize:1 多状态并发查询取 total，避免 pageSize:1000 拉全量导致统计截断
         const [totalRes, activeRes, inactiveRes, catRes] = await Promise.all([
           getSetmealPage({ page: 1, pageSize: 1 }),
@@ -637,7 +637,7 @@ new Vue({
 
     submitComboForm(st) {
       if (this.submitting) return // 提交防重
-      var self = this
+      const self = this
       this.$refs.comboForm.validate(function (valid) {
         if (valid) {
           self.submitting = true
@@ -743,7 +743,7 @@ new Vue({
     },
 
     getComboCategoryList() {
-      var self = this
+      const self = this
       getCategoryList({ type: 2 }).then(function (res) {
         if (res.code === 1) {
           self.comboCategoryList = res.data
@@ -756,7 +756,7 @@ new Vue({
     },
 
     getDishTypeList() {
-      var self = this
+      const self = this
       getCategoryList({ type: 1 }).then(function (res) {
         if (res.code === 1) {
           self.dishTypeList = res.data
@@ -772,7 +772,7 @@ new Vue({
     },
 
     getDishList(categoryId) {
-      var self = this
+      const self = this
       queryDishList({ categoryId: categoryId }).then(function (res) {
         if (res.code === 1) {
           if (res.data.length === 0) {
@@ -797,7 +797,7 @@ new Vue({
     },
 
     debounceSearch() {
-      var self = this
+      const self = this
       if (this.searchTimer) { clearTimeout(this.searchTimer) }
       this.searchTimer = setTimeout(function() {
         self.searchDish()
@@ -805,7 +805,7 @@ new Vue({
     },
 
     handleSearchEsc() {
-      var self = this
+      const self = this
       if (this.searchTimer) { clearTimeout(this.searchTimer) }
       // 搜索框清空时恢复原始分类列表
       if (!this.dishSearchKey.trim() && self.dishTypeList.length > 0) {
@@ -814,7 +814,7 @@ new Vue({
     },
 
     searchDish() {
-      var self = this
+      const self = this
       var name = this.dishSearchKey.trim()
       if (name) {
         queryDishList({ name: name }).then(function (res) {
@@ -859,8 +859,8 @@ new Vue({
         ReggieUI.warning('请至少选择一道菜品')
         return
       }
-      var existingIds = new Set(this.comboDishTable.map(function (item) { return item.dishId || item.id }))
-      var self = this
+      const existingIds = new Set(this.comboDishTable.map(function (item) { return item.dishId || item.id }))
+      const self = this
       this.selectedDishList.forEach(function (item) {
         if (!existingIds.has(item.dishId)) {
           self.comboDishTable.push({

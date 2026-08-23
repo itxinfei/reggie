@@ -551,7 +551,7 @@
           }
         },
         handleSubmit() {
-          var self = this
+          const self = this
           let passed = false
           this.$refs.ruleForm.validate(function(valid) { passed = valid })
           if (!passed) return
@@ -637,7 +637,7 @@
           this.$refs.feeStepFormRef.validate(function(valid) { passed = valid })
           if (!passed) return
 
-          var self = this
+          const self = this
           var apiCall = self.feeStepForm.id ? updateFeeStep(self.feeStepForm) : saveFeeStep(self.feeStepForm)
           apiCall.then(function(res) {
             if (res.code === 1) {

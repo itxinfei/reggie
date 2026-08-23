@@ -392,9 +392,9 @@
             summary: { total: 0, active: 0, draft: 0, ended: 0, paused: 0, totalParticipants: 0, totalPushed: 0 },
             // 修改点(2026-07-10)：新增 recentDates 用于图表的 X 轴
             recentDates: (function() {
-                var arr = [];
-                for (var i = 6; i >= 0; i--) {
-                    var d = new Date();
+                const arr = $2;
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date();
                     d.setDate(d.getDate() - i);
                     arr.push((d.getMonth() + 1) + '/' + d.getDate());
                 }
@@ -407,26 +407,26 @@
                 shortcuts: [{
                     text: '今天',
                     onClick: function (picker) {
-                        var s = new Date(); s.setHours(0,0,0,0); var e = new Date(); e.setHours(23,59,59,999)
+                        const s = new Date(); s.setHours(0,0,0,0); const e = new Date(); e.setHours(23,59,59,999)
                         picker.$emit('pick', [s, e])
                     }
                 }, {
                     text: '最近7天',
                     onClick: function (picker) {
-                        var e = new Date(); e.setHours(23,59,59,999); var s = new Date(); s.setDate(s.getDate()-6); s.setHours(0,0,0,0)
+                        const e = new Date(); e.setHours(23,59,59,999); const s = new Date(); s.setDate(s.getDate()-6); s.setHours(0,0,0,0)
                         picker.$emit('pick', [s, e])
                     }
                 }, {
                     text: '最近30天',
                     onClick: function (picker) {
-                        var e = new Date(); e.setHours(23,59,59,999); var s = new Date(); s.setDate(s.getDate()-29); s.setHours(0,0,0,0)
+                        const e = new Date(); e.setHours(23,59,59,999); const s = new Date(); s.setDate(s.getDate()-29); s.setHours(0,0,0,0)
                         picker.$emit('pick', [s, e])
                     }
                 }, {
                     text: '本月',
                     onClick: function (picker) {
-                        var n = new Date(); var s = new Date(n.getFullYear(), n.getMonth(), 1)
-                        var e = new Date(n.getFullYear(), n.getMonth()+1, 0); e.setHours(23,59,59,999)
+                        const n = new Date(); const s = new Date(n.getFullYear(), n.getMonth(), 1)
+                        const e = new Date(n.getFullYear(), n.getMonth()+1, 0); e.setHours(23,59,59,999)
                         picker.$emit('pick', [s, e])
                     }
                 }]
@@ -455,7 +455,7 @@
     computed: {
         // 修改点：表单校验规则（computed 中 this 指向 Vue 实例，可引用 methods）
         rules: function() {
-            var self = this;
+            const self = this;
             return {
                 name: [
                     { required: true, message: '请输入活动名称', trigger: 'blur' },
@@ -468,7 +468,7 @@
         },
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
-            var self = this;
+            const self = this;
             return [
                 { key: '', icon: '📋', label: '活动总数', value: self.summary.total, color: 'primary', clickable: true, active: self.activeKey === '' },
                 { key: '1', icon: '▶', label: '进行中', value: self.summary.active, color: 'success', clickable: true, active: self.activeKey === '1' },
@@ -490,7 +490,7 @@
     methods: {
         /* ====== 筛选选项加载 ====== */
         loadFilterOptions: function() {
-            var self = this;
+            const self = this;
             self.optionsLoading = true;
             self.optionsLoadError = false;
             recommendBackendApi.campaignOptions().then(function(res) {
@@ -519,7 +519,7 @@
         },
         /* ====== 图表初始化 ====== */
         initOverviewCharts: function() {
-            var self = this;
+            const self = this;
             this.$nextTick(function() {
                 var pieDom = document.getElementById('statusPieChart');
                 var barDom = document.getElementById('overviewBarChart');
@@ -534,7 +534,7 @@
             if (this.statsChart) this.statsChart.resize();
         },
         renderOverviewCharts: function() {
-            var self = this;
+            const self = this;
             // 状态分布饼图 — 修改点：展示全部4种状态
             if (this.statusPieChart) {
                 this.statusPieChart.setOption({
@@ -585,14 +585,14 @@
 
         /* ====== 数据加载 ====== */
         loadCouponTemplates: function() {
-            var self = this;
+            const self = this;
             $axios.get('/api/member/coupon-template/page', { params: { page: 1, pageSize: 100 } })
                 .then(function(res) {
                     if (res.code === 1 && res.data) self.couponTemplates = res.data.records || [];
                 }).catch(function() {});
         },
         loadData: function() {
-            var self = this;
+            const self = this;
             self.loading = true;
             recommendBackendApi.getCampaignsPage({
                 page: self.currentPage,
@@ -612,7 +612,7 @@
         },
         // 修改点：调用后端 stats API 获取真实统计数据（替代 pageSize=1000 前端聚合）
         loadSummary: function() {
-            var self = this;
+            const self = this;
             recommendBackendApi.getCampaignStats().then(function(res) {
                 if (res.code === 1 && res.data) {
                     var s = res.data;
@@ -703,7 +703,7 @@
             this.loadData();
         },
         batchDelete: function() {
-            var self = this;
+            const self = this;
             if (self.selectedRows.length === 0) return;
             ReggieUI.confirm('确认删除选中的 ' + self.selectedRows.length + ' 个活动？', '批量删除', { type: 'warning' }).then(function() {
                 var ids = self.selectedRows.map(function(r) { return r.id; });
@@ -720,7 +720,7 @@
             }).catch(function() {});
         },
         batchPause: function() {
-            var self = this;
+            const self = this;
             var toPause = self.selectedRows.filter(function(r) { return r.status === 1; });
             if (toPause.length === 0) { ReggieUI.warning('请选择进行中的活动'); return; }
             ReggieUI.confirm('确认暂停选中的 ' + toPause.length + ' 个活动？', '批量暂停', { type: 'warning' }).then(function() {
@@ -764,7 +764,7 @@
             if (this.$refs.campaignForm) this.$refs.campaignForm.clearValidate();
         },
         submitForm: function() {
-            var self = this;
+            const self = this;
             self.$refs.campaignForm.validate(function(valid) {
                 if (!valid) return;
                 if (!self.dateRange || self.dateRange.length < 2) {
@@ -801,7 +801,7 @@
             }
         },
         publishCampaign: function(row) {
-            var self = this;
+            const self = this;
             ReggieUI.confirm('确认发布【' + row.name + '】？发布后将对目标用户可见。', '提示', { type: 'info' }).then(function() {
                 recommendBackendApi.publishCampaign(row.id).then(function(res) {
                     if (res.code === 1) { ReggieUI.success('发布成功'); self.loadData(); }
@@ -810,7 +810,7 @@
             }).catch(function() {});
         },
         pauseCampaign: function(row) {
-            var self = this;
+            const self = this;
             ReggieUI.confirm('确认暂停【' + row.name + '】？暂停后用户将无法参与。', '提示', { type: 'warning' }).then(function() {
                 recommendBackendApi.pauseCampaign(row.id).then(function(res) {
                     if (res.code === 1) { ReggieUI.success('已暂停'); self.loadData(); }
@@ -819,7 +819,7 @@
             }).catch(function() {});
         },
         deleteCampaign: function(row) {
-            var self = this;
+            const self = this;
             ReggieUI.confirm('确认删除【' + row.name + '】？此操作不可恢复！', '警告', {
                 type: 'warning', confirmButtonText: '确认删除'
             }).then(function() {
@@ -840,7 +840,7 @@
             this.fetchPushPreview(row.id);
         },
         fetchPushPreview: function(campaignId) {
-            var self = this;
+            const self = this;
             $axios.get('/marketing/push-preview/' + campaignId, { params: { limit: 10 } }).then(function(res) {
                 if (res.code === 1 && res.data) {
                     self.pushPreview = res.data.preview || [];
@@ -852,7 +852,7 @@
         },
         doPush: function() {
             if (!this.pushTargetCampaign) return;
-            var self = this;
+            const self = this;
             self.pushing = true;
             var campaignId = self.pushTargetCampaign.id;
             recommendBackendApi.batchPush(campaignId, { pushType: self.pushForm.pushType }).then(function(res) {
@@ -872,7 +872,7 @@
         viewStats: function(row) {
             // 修改点：确保 pushCount 有值，没有则从服务端查询
             if (row.pushCount == null || row.pushCount === undefined) {
-                var self = this;
+                const self = this;
                 recommendBackendApi.getPushCount(row.id).then(function(res) {
                     if (res.code === 1) {
                         row.pushCount = res.data || 0;
@@ -892,7 +892,7 @@
             }
         },
         onStatsDialogOpen: function() {
-            var self = this;
+            const self = this;
             this.$nextTick(function() {
                 var dom = document.getElementById('campaignStatsChart');
                 if (dom) {

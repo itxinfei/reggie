@@ -290,7 +290,7 @@
         computed: {
           // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
           statsCards: function() {
-            var self = this;
+            const self = this;
             return [
               { key: '', icon: '📋', label: '全部评价', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
               { key: '0', icon: '⏳', label: '待审核', value: self.stats.pending || 0, color: 'warning', clickable: true, active: self.activeFilter === '0' },
@@ -301,7 +301,7 @@
         },
         methods: {
           loadFilterOptions: function() {
-            var self = this; self.optionsLoading = true; self.optionsLoadError = false;
+            const self = this; self.optionsLoading = true; self.optionsLoadError = false;
             dishOptions().then(function(res) {
               if (String(res.code) === '1' && res.data) {
                 self.filterOptions.names = res.data.names || [];
@@ -315,9 +315,9 @@
             if (visible && this.optionsLoadError) this.loadFilterOptions();
           },
           loadData: function() {
-            var self = this; self.loading = true;
+            const self = this; self.loading = true;
             // 修改点：过滤null/undefined参数，避免传空字符串导致后端空查询
-            var params = { page: self.page, pageSize: self.pageSize };
+            const params = {$2};
             if (self.filters.dishName) params.dishName = self.filters.dishName;
             if (self.filters.status != null) params.status = self.filters.status;
             if (self.filters.starRating != null) params.starRating = self.filters.starRating;
@@ -329,7 +329,7 @@
             .finally(function() { self.loading = false; });
           },
           loadStats: function() {
-            var self = this;
+            const self = this;
             // 修改点：使用Promise.all批量请求，减少网络往返
             var ps = [
               getEvaluationPage({ page: 1, pageSize: 1 }),
@@ -363,7 +363,7 @@
           closeDetail: function() { this.detailVisible = false; this.detailData = {}; this.detailImages = []; },
           // 修改点：重命名为 handleAudit，避免与 evaluation.js 全局 auditEvaluation 函数名冲突
           handleAudit: function(row, status) {
-            var self = this;
+            const self = this;
             var action = status === 1 ? '通过' : '拒绝';
             ReggieUI.confirm('确认' + action + '该评价吗？', '提示', {
               confirmButtonText: '确 定', cancelButtonText: '取 消',
@@ -384,7 +384,7 @@
           },
           closeReply: function() { this.replyVisible = false; this.replyData = {}; this.replyContent = ''; },
           submitReply: function() {
-            var self = this;
+            const self = this;
             if (!self.replyContent.trim()) { ReggieUI.warning('请输入回复内容'); return; }
             self.replyLoading = true;
             replyEvaluation(self.replyData.id, self.replyContent.trim()).then(function(res) {
@@ -418,7 +418,7 @@
           statusClass: function(status) {
             if (status === 0) return 'pending'; if (status === 1) return 'approved'; if (status === 2) return 'rejected'; return '';
           },
-          statusText: function(status) { var m = { 0: '待审核', 1: '已通过', 2: '已拒绝' }; return m[status] != null ? m[status] : '未知'; },
+          statusText: function(status) { const m = {$2}; return m[status] != null ? m[status] : '未知'; },
           formatDate: function(d) { if (!d) return '-'; return d.replace('T', ' ').substring(0, 19); },
           previewImage: function(url) { this.previewUrl = url; this.previewVisible = true; }
         }

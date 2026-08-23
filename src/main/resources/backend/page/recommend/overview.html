@@ -176,7 +176,7 @@
     computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards() {
-            var self = this;
+            const self = this;
             return [
                 { key: '覆盖率', icon: '🎯', label: '推荐覆盖率', value: (self.stats.hybridRate != null ? self.stats.hybridRate + '%' : '--'), color: 'primary' },
                 { key: 'CTR', icon: '👆', label: '推荐点击率 (CTR)', value: (self.stats.clickRate != null ? self.stats.clickRate + '%' : '--'), color: 'success' },

@@ -199,9 +199,9 @@
           dialogTitle: '新增秒杀活动',
           submitLoading: false,
           dateShortcuts: [
-            { text: '今日', onClick: function(picker) { var start = new Date(); var end = new Date(); end.setHours(23, 59, 59); picker.$emit('pick', [start, end]) } },
-            { text: '未来 3 天', onClick: function(picker) { var start = new Date(); var end = new Date(); end.setTime(start.getTime() + 3 * 24 * 60 * 60 * 1000); picker.$emit('pick', [start, end]) } },
-            { text: '未来 7 天', onClick: function(picker) { var start = new Date(); var end = new Date(); end.setTime(start.getTime() + 7 * 24 * 60 * 60 * 1000); picker.$emit('pick', [start, end]) } }
+            { text: '今日', onClick: function(picker) { const start = new Date(); const end = new Date(); end.setHours(23, 59, 59); picker.$emit('pick', [start, end]) } },
+            { text: '未来 3 天', onClick: function(picker) { const start = new Date(); const end = new Date(); end.setTime(start.getTime() + 3 * 24 * 60 * 60 * 1000); picker.$emit('pick', [start, end]) } },
+            { text: '未来 7 天', onClick: function(picker) { const start = new Date(); const end = new Date(); end.setTime(start.getTime() + 7 * 24 * 60 * 60 * 1000); picker.$emit('pick', [start, end]) } }
           ],
           formData: {
             id: null,
@@ -230,7 +230,7 @@
       },
       computed: {
         statsCards: function() {
-          var self = this
+          const self = this
           return [
             { key: '', icon: 'ri-bolt-line', label: '全部活动', value: self.stats.total, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: '1', icon: 'ri-flashlight-line', label: '进行中', value: self.stats.active, color: 'success', clickable: true, active: self.activeFilter === '1' },
@@ -251,7 +251,7 @@
         },
         formatDate: function(dt) {
           if (!dt) return '-'
-          var d = new Date(dt)
+          const d = new Date(dt)
           var year = d.getFullYear()
           var month = ('0' + (d.getMonth() + 1)).slice(-2)
           var day = ('0' + d.getDate()).slice(-2)
@@ -268,7 +268,7 @@
           return map[String(status)] || '未知'
         },
         loadDishOptions: function() {
-          var self = this
+          const self = this
           dishOptions().then(function(res) {
             if (res.code === 1 && res.data) {
               self.dishOptions = res.data.map(function(d) {
@@ -282,7 +282,7 @@
         },
         async init() {
           this.loading = true
-          var self = this
+          const self = this
           var params = { page: this.page, pageSize: this.pageSize }
           if (self.lastSearch.name) {
             params.name = self.lastSearch.name
@@ -322,7 +322,7 @@
           }
         },
         onCardClick: function(payload) {
-          var self = this
+          const self = this
           self.activeFilter = payload.activeKey
           self.lastSearch = {}
           self.page = 1
@@ -355,7 +355,7 @@
           this.init()
         },
         onDishChange: function(id) {
-          var self = this
+          const self = this
           var opt = self.dishOptions.filter(function(d) { return d.value === id })[0]
           if (opt) {
             self.formData.dishName = opt.dishName || ''
@@ -438,7 +438,7 @@
           }
         },
         handleSubmit: function() {
-          var self = this
+          const self = this
           var passed = false
           this.$refs.ruleForm.validate(function(valid) { passed = valid })
           if (!passed) return

@@ -208,7 +208,7 @@
       },
       computed: {
         activeContracts() {
-          var self = this
+          const self = this
           return (self.contractOptions || []).filter(function(c) { return c.status === 1 })
         }
       },
@@ -306,7 +306,7 @@
         },
         submitGenerate() {
           if (this.generating) return // 提交防重
-          var self = this
+          const self = this
           var passed = false
           self.$refs.genForm.validate(function(valid) { passed = valid })
           if (!passed) {
@@ -327,7 +327,7 @@
         },
         // 确认结算单（待确认 → 已确认）
         confirmHandle(row) {
-          var self = this
+          const self = this
           ReggieUI.confirm('确认该结算单的营业额与抽成金额无误？确认后进入已确认状态。', '提示', {
             confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning'
           }).then(function() {
@@ -343,7 +343,7 @@
         },
         // 完成结算（已确认 → 已结算）
         settleHandle(row) {
-          var self = this
+          const self = this
           ReggieUI.confirm('完成结算后将标记该周期抽成已划转，是否继续？', '提示', {
             confirmButtonText: '结算', cancelButtonText: '取消', type: 'warning'
           }).then(function() {
@@ -359,7 +359,7 @@
         },
         // 详情
         detailHandle(row) {
-          var self = this
+          const self = this
           getSettlement(row.id).then(res => {
             if (res.code === 1) {
               var d = res.data || {}

@@ -476,7 +476,7 @@
         },
         // 淇敼鐐癸細statsCards 缁熶竴鍗＄墖閰嶇疆锛堜緵 <stat-cards> 缁勪欢浣跨敤锛?
         statsCards: function() {
-          var self = this;
+          const self = this;
           return [
             { key: '璁㈠崟', icon: '馃搵', label: '璁㈠崟鎬绘暟', value: self.dailyData.totalOrders || 0, color: 'primary' },
             { key: '钀ヤ笟棰?, icon: '馃挵', label: '钀ヤ笟棰濓紙鍏冿級', value: '楼' + self.formatMoney(self.dailyData.totalAmount), color: 'success' },
@@ -489,7 +489,7 @@
         // queryDate 榛樿鍊煎凡閫氳繃 data() 涓棴鍖呰缃?
       },
       mounted() {
-        var self = this;
+        const self = this;
         this.$nextTick(() => {
           // 淇敼鐐癸細瀹夊叏鍒濆鍖栧浘琛紝澧炲姞瀹瑰櫒瀛樺湪鍒ゆ柇
           var initChart = function(id) {
@@ -533,7 +533,7 @@
 
         // table-bar @reset 鈥?閲嶇疆鏃ユ湡鍒颁粖澶?
         onTableReset: function() {
-          var today = new Date()
+          const today = new Date()
           var y = today.getFullYear()
           var m = String(today.getMonth() + 1).padStart(2, '0')
           var d = String(today.getDate()).padStart(2, '0')
@@ -683,7 +683,7 @@
             ]
           }, true)
           // 淇敼鐐癸細娓叉煋鍚庡欢杩?resize 纭繚鍦?flex 甯冨眬涓昂瀵告纭?
-          var self = this;
+          const self = this;
           setTimeout(function() { if (self.chart && !self.chart.isDisposed()) self.chart.resize(); }, 200);
         },
 

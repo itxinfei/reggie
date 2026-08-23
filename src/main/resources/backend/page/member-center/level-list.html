@@ -166,7 +166,7 @@
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
-          var self = this;
+          const self = this;
           return [
             { key: 'total', icon: '🏅', label: '等级总数', value: self.stats.totalLevels || 0, color: 'primary' },
             { key: 'highest', icon: '👑', label: '最高等级', value: self.stats.highestLevel || '-', color: 'success' },
@@ -236,18 +236,18 @@
           this.formData.id = ''; this.formData.name = ''; this.formData.minPoints = ''
           this.formData.discount = ''; this.formData.sort = ''
           this.formData.dialogVisible = true
-          var self = this; this.$nextTick(function() { if (self.$refs.levelForm) self.$refs.levelForm.clearValidate() })
+          const self = this; this.$nextTick(function() { if (self.$refs.levelForm) self.$refs.levelForm.clearValidate() })
         },
         editHandle: function(row) {
           this.action = 'edit'; this.formData.title = '修改会员等级'
           this.formData.id = row.id; this.formData.name = row.name
           this.formData.minPoints = row.minPoints; this.formData.discount = row.discount; this.formData.sort = row.sort
           this.formData.dialogVisible = true
-          var self = this; this.$nextTick(function() { if (self.$refs.levelForm) self.$refs.levelForm.clearValidate() })
+          const self = this; this.$nextTick(function() { if (self.$refs.levelForm) self.$refs.levelForm.clearValidate() })
         },
         submitForm: function() {
           if (this.submitting) return // 提交防重
-          var self = this
+          const self = this
           this.$refs.levelForm.validate(function(valid) {
             if (!valid) { ReggieUI.warning('请完善表单信息'); return false }
             self.submitting = true
@@ -269,7 +269,7 @@
           })
         },
         deleteHandle: function(id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('此操作将永久删除该等级, 是否继续?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               deleteLevel(id).then(function(res) {

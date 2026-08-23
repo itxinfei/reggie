@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>考勤管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
+  <div class="dashboard-container" id="attendance-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">考勤管理</h1>
+          <p class="ds-page-header__subtitle">查看员工出勤状况与考勤异常</p>
+        </div>
+      </header>
+
+      <!-- 统计卡片 -->
+      <stat-cards :cards="statsCards"></stat-cards>
+
+      <!-- 今日考勤 + 本周异常 -->
+      <el-row :gutter="24" class="content-row">
+        <el-col :span="12">
+          <el-card shadow="never" class="section-card">
+            <div class="section-header">
+              <h3>今日考勤</h3>
+              <span class="section-date">{{ todayDate }}</span>
+            </div>
+            <div v-loading="loading" class="today-list">
+              <div v-for="item in todayList" :key="item.id" class="today-item">
+                <div class="today-avatar">{{ item.avatar }}</div>
+                <div class="today-info">
+                  <div class="today-name">{{ item.name }}</div>
+                  <div class="today-shift">{{ item.shiftName }} · {{ item.shiftTime }}</div>
+                </div>
+                <el-tag :type="item.statusType" size="small">{{ item.statusText }}</el-tag>
+              </div>
+              <el-empty v-if="!loading && todayList.length === 0" description="今日暂无排班" :image-size="60"></el-empty>
+            </div>
+          </el-card>
+        </el-col>
+        <el-col :span="12">
+          <el-card shadow="never" class="section-card">
+            <div class="section-header">
+              <h3>本周异常考勤</h3>
+              <el-tag type="info" size="small">共 {{ abnormalList.length }} 条</el-tag>
+            </div>
+            <div v-loading="loading" class="abnormal-list">
+              <div v-for="item in abnormalList" :key="item.id" class="abnormal-item">
+                <div class="abnormal-avatar">{{ item.avatar }}</div>
+                <div class="abnormal-info">
+                  <div class="abnormal-name">{{ item.name }}</div>
+                  <div class="abnormal-date">{{ item.date }}</div>
+                </div>
+                <el-tag :type="item.type" size="small">{{ item.statusText }}</el-tag>
+                <div class="abnormal-detail">{{ item.detail }}</div>
+              </div>
+              <el-empty v-if="!loading && abnormalList.length === 0" description="本周无异常记录" :image-size="60"></el-empty>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <!-- 考勤日历 -->
+      <el-card shadow="never" class="calendar-card">
+        <div class="section-header">
+          <h3>考勤日历</h3>
+          <div class="calendar-controls">
+            <el-select v-model="calendarEmployee" placeholder="选择员工" size="small" style="width:293px;margin-right:12px;" @change="fetchCalendar">
+              <el-option v-for="emp in employeeOptions" :key="emp.id" :label="emp.name" :value="emp.id"></el-option>
+            </el-select>
+            <el-date-picker v-model="calendarMonth" type="month" value-format="yyyy-MM" placeholder="选择月份" size="small" style="width:200px;" @change="fetchCalendar"></el-date-picker>
+          </div>
+        </div>
+        <div class="calendar-legend">
+          <span class="legend-item"><i class="dot dot-normal"></i>正常</span>
+          <span class="legend-item"><i class="dot dot-late"></i>迟到</span>
+          <span class="legend-item"><i class="dot dot-absent"></i>缺勤</span>
+          <span class="legend-item"><i class="dot dot-rest"></i>休息</span>
+          <span class="legend-item"><i class="dot dot-scheduled"></i>已排班</span>
+        </div>
+        <div class="calendar-grid" v-loading="calendarLoading">
+          <div class="calendar-weekdays">
+            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+          </div>
+          <div class="calendar-week" v-for="(week, wi) in calendarWeeks" :key="wi">
+            <div v-for="(day, di) in week" :key="wi + '-' + di" class="calendar-cell" :class="{ 'is-today': day.isToday, 'is-sunday': day.weekDay === 0, 'is-saturday': day.weekDay === 6 }">
+              <span class="day-num" :class="{ 'is-inactive': !day.isCurrentMonth }">{{ day.day }}</span>
+              <i v-if="day.status" class="dot" :class="'dot-' + day.status"></i>
+            </div>
+          </div>
+        </div>
+      </el-card>
+    </main>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/components.js"></script>
+  <script src="../../api/attendance.js"></script>
+  <script>
+    new Vue({
+      el: '#attendance-app',
+      data: function () {
+        return {
+          loading: false,
+          calendarLoading: false,
+          statsCards: [],
+          todayList: [],
+          abnormalList: [],
+          todayDate: '',
+          employeeOptions: [],
+          calendarEmployee: '',
+          calendarMonth: '',
+          calendarWeeks: []
+        }
+      },
+      created: function () {
+        this.initDates()
+        this.initEmployeeOptions()
+        this.fetchAll()
+      },
+      methods: {
+        // ===== 日期初始化 =====
+        initDates: function () {
+          const now = new Date()
+          var y = now.getFullYear()
+          var m = now.getMonth()
+          var d = now.getDate()
+          this.todayDate = y + '-' + pad2(m + 1) + '-' + pad2(d)
+          this.calendarMonth = y + '-' + pad2(m + 1)
+        },
+        initEmployeeOptions: function () {
+          const self = this
+          var names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
+          self.employeeOptions = names.map(function (n, i) {
+            return { id: i + 1, name: n, avatar: n.charAt(0) }
+          })
+          if (self.employeeOptions.length > 0) {
+            self.calendarEmployee = self.employeeOptions[0].id
+          }
+        },
+
+        // ===== 数据加载 =====
+        fetchAll: function () {
+          const self = this
+          self.loading = true
+          Promise.all([
+            self.fetchWeekSummary(),
+            self.fetchTodayList(),
+            self.fetchAbnormalList(),
+            self.fetchCalendar()
+          ]).then(function () {
+            self.loading = false
+          }).catch(function (e) {
+            self.loading = false
+            self.$message.warning('数据加载失败，已使用演示数据')
+          })
+        },
+        fetchWeekSummary: function () {
+          const self = this
+          return attendanceWeekSummary().then(function (res) {
+            var data = res.data
+            self.statsCards = [
+              { key: 'present', icon: 'ri-user-check-line', label: '本周出勤', value: data.presentCount || 0, color: 'primary', unit: '人' },
+              { key: 'absent',  icon: 'ri-user-unfollow-line', label: '缺勤', value: data.absentCount || 0, color: 'danger', unit: '人' },
+              { key: 'late',    icon: 'ri-time-line', label: '迟到', value: data.lateCount || 0, color: 'warning', unit: '人' },
+              { key: 'hours',   icon: 'ri-timer-line', label: '平均工时', value: data.avgHours || 0, color: 'primary', unit: '小时' }
+            ]
+          }).catch(function () {
+            self.statsCards = [
+              { key: 'present', icon: 'ri-user-check-line', label: '本周出勤', value: 18, color: 'primary', unit: '人' },
+              { key: 'absent',  icon: 'ri-user-unfollow-line', label: '缺勤', value: 2, color: 'danger', unit: '人' },
+              { key: 'late',    icon: 'ri-time-line', label: '迟到', value: 4, color: 'warning', unit: '人' },
+              { key: 'hours',   icon: 'ri-timer-line', label: '平均工时', value: 8.2, color: 'primary', unit: '小时' }
+            ]
+          })
+        },
+        fetchTodayList: function () {
+          const self = this
+          return attendanceToday().then(function (res) {
+            self.todayList = res.data || []
+          }).catch(function () {
+            self.todayList = [
+              { id: 1, name: '张三', avatar: '张', shiftName: '早班', shiftTime: '08:00-16:00', statusText: '已签到', statusType: 'success' },
+              { id: 2, name: '李四', avatar: '李', shiftName: '中班', shiftTime: '12:00-20:00', statusText: '已签到', statusType: 'success' },
+              { id: 3, name: '王五', avatar: '王', shiftName: '早班', shiftTime: '08:00-16:00', statusText: '迟到', statusType: 'warning' },
+              { id: 4, name: '赵六', avatar: '赵', shiftName: '晚班', shiftTime: '16:00-24:00', statusText: '未签到', statusType: 'info' },
+              { id: 5, name: '钱七', avatar: '钱', shiftName: '全天', shiftTime: '08:00-20:00', statusText: '已签到', statusType: 'success' },
+              { id: 6, name: '孙八', avatar: '孙', shiftName: '中班', shiftTime: '12:00-20:00', statusText: '缺勤', statusType: 'danger' }
+            ]
+          })
+        },
+        fetchAbnormalList: function () {
+          const self = this
+          const now = new Date()
+          var dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+          var items = [
+            { id: 1, name: '张三', avatar: '张', type: 'late', statusText: '迟到', detail: '签到 08:32，超出 32 分钟', daysBack: 1 },
+            { id: 2, name: '李四', avatar: '李', type: 'early', statusText: '早退', detail: '打卡 11:30，早退 30 分钟', daysBack: 2 },
+            { id: 3, name: '王五', avatar: '王', type: 'absent', statusText: '缺勤', detail: '全天无打卡记录', daysBack: 3 },
+            { id: 4, name: '赵六', avatar: '赵', type: 'late', statusText: '迟到', detail: '签到 12:45，超出 45 分钟', daysBack: 4 },
+            { id: 5, name: '钱七', avatar: '钱', type: 'late', statusText: '迟到', detail: '签到 08:15，超出 15 分钟', daysBack: 1 }
+          ]
+          var typeMap = { late: 'warning', early: 'warning', absent: 'danger' }
+          var textMap = { late: '迟到', early: '早退', absent: '缺勤' }
+          var type2key = { late: 'warning', early: 'warning', absent: 'danger' }
+          self.abnormalList = items.map(function (it) {
+            const dt = new Date(now)
+            dt.setDate(dt.getDate() - it.daysBack)
+            return {
+              id: it.id, name: it.name, avatar: it.avatar,
+              date: dt.getFullYear() + '-' + pad2(dt.getMonth() + 1) + '-' + pad2(dt.getDate()),
+              type: type2key[it.type] || 'info',
+              statusText: it.statusText,
+              detail: it.detail
+            }
+          })
+          // 尝试从后端获取
+          attendanceAbnormal({ weekStart: '' }).then(function (res) {
+            if (res.data && res.data.length) self.abnormalList = res.data
+          }).catch(function () {})
+        },
+
+        // ===== 考勤日历 =====
+        fetchCalendar: function () {
+          const self = this
+          self.calendarLoading = true
+          attendanceCalendar({ month: self.calendarMonth, employeeId: self.calendarEmployee }).then(function (res) {
+            self.buildCalendar(self.calendarMonth, res.data)
+            self.calendarLoading = false
+          }).catch(function () {
+            self.buildCalendar(self.calendarMonth, null)
+            self.calendarLoading = false
+          })
+        },
+        buildCalendar: function (monthStr, backendDays) {
+          const self = this
+          var parts = monthStr.split('-')
+          var year = parseInt(parts[0], 10)
+          var month = parseInt(parts[1], 10)
+          if (isNaN(year) || isNaN(month)) return
+
+          const firstDay = new Date(year, month - 1, 1)
+          const lastDay = new Date(year, month, 0)
+          var startWeekday = firstDay.getDay()
+          var totalDays = lastDay.getDate()
+
+          const today = new Date()
+          var weeks = []
+          var dayCounter = 1
+          var dayStatuses = {}
+
+          // 使用后端数据或 mock
+          if (backendDays && backendDays.length) {
+            backendDays.forEach(function (d) {
+              dayStatuses[d.day] = d.status
+            })
+          } else {
+            // mock 数据：随机分配状态
+            var statuses = ['normal', 'late', 'absent', 'rest', '']
+            for (let d = 1; d <= totalDays; d++) {
+              const weekday = new Date(year, month - 1, d).getDay()
+              if (weekday === 0) {
+                dayStatuses[d] = 'rest'
+              } else if (weekday === 6) {
+                dayStatuses[d] = ''
+              } else {
+                var r = Math.abs(((d * 7 + month * 3) % 10))
+                if (r === 2) dayStatuses[d] = 'late'
+                else if (r === 5) dayStatuses[d] = 'absent'
+                else dayStatuses[d] = 'normal'
+              }
+            }
+          }
+
+          var totalCells = 0
+          var rows = 6
+          for (let r = 0; r < rows; r++) {
+            var week = []
+            for (let c = 0; c < 7; c++) {
+              totalCells++
+              if (totalCells <= startWeekday || dayCounter > totalDays) {
+                week.push({ day: 0, isCurrentMonth: false, status: '', isToday: false, weekDay: c })
+              } else {
+                var isToday = (year === today.getFullYear() && month === today.getMonth() + 1 && dayCounter === today.getDate())
+                week.push({
+                  day: dayCounter,
+                  isCurrentMonth: true,
+                  status: dayStatuses[dayCounter] || '',
+                  isToday: isToday,
+                  weekDay: c
+                })
+                dayCounter++
+              }
+            }
+            weeks.push(week)
+            if (dayCounter > totalDays) break
+          }
+          self.calendarWeeks = weeks
+        }
+      }
+    })
+
+    function pad2(n) {
+      return n < 10 ? '0' + n : '' + n
+    }
+  </script>
+
+  <style lang="less" scoped>
+    @import "../../styles/tokens.css";
+
+    /* 页面左右边距 */
+    .ds-page { padding-left: var(--space-5); padding-right: var(--space-5); }
+
+    /* 内容区最大宽度 */
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    /* 统计卡片间距 */
+    .stats-cards { margin-bottom: var(--space-6); }
+
+    .content-row { margin-bottom: var(--space-6); }
+
+    /* 通用卡片 */
+    .section-card { padding: var(--space-4); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-2);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .section-header h3 {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .section-date {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+    }
+
+    /* 今日考勤列表 */
+    .today-list { min-height: 320px; }
+    .today-item {
+      display: flex;
+      align-items: center;
+      padding: var(--space-2) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      transition: background-color var(--transition-base);
+    }
+    .today-item:hover { background-color: var(--bg-subtle); margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: var(--radius-sm); }
+    .today-item:last-child { border-bottom: none; }
+
+    .today-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-full);
+      background: var(--color-brand-100);
+      color: var(--color-brand-700);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      margin-right: var(--space-3);
+      flex-shrink: 0;
+    }
+    .today-info { flex: 1; min-width: 0; }
+    .today-name { font-size: var(--font-size-base); color: var(--text-primary); font-weight: var(--font-weight-medium); }
+    .today-shift { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 2px; }
+
+    /* 异常考勤列表 */
+    .abnormal-list { min-height: 320px; }
+    .abnormal-item {
+      display: flex;
+      align-items: flex-start;
+      padding: var(--space-2) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      transition: background-color var(--transition-base);
+    }
+    .abnormal-item:hover { background-color: var(--bg-subtle); margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: var(--radius-sm); }
+    .abnormal-item:last-child { border-bottom: none; }
+
+    .abnormal-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-full);
+      background: var(--color-danger-light);
+      color: var(--color-danger);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-medium);
+      margin-right: var(--space-3);
+      flex-shrink: 0;
+    }
+    .abnormal-info { flex: 1; min-width: 0; }
+    .abnormal-name { font-size: var(--font-size-base); color: var(--text-primary); }
+    .abnormal-date { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 2px; }
+    .abnormal-detail {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* 考勤日历卡片 */
+    .calendar-card { padding: var(--space-4); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+    .calendar-controls { display: flex; align-items: center; }
+
+    .calendar-legend {
+      display: flex;
+      align-items: center;
+      gap: var(--space-5);
+      padding: var(--space-2) 0 var(--space-3);
+      margin-bottom: var(--space-3);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+    }
+
+    .calendar-grid { min-height: 280px; }
+    .calendar-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-1) 0 var(--space-2);
+    }
+    .calendar-week {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+      background: var(--border-subtle);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 1px;
+    }
+    .calendar-cell {
+      background: var(--bg-surface);
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: background-color var(--transition-base);
+      min-height: 44px;
+    }
+    .calendar-cell.is-today {
+      background: var(--color-brand-50);
+    }
+    .calendar-cell.is-today .day-num {
+      color: var(--color-brand-700);
+      font-weight: var(--font-weight-semibold);
+    }
+    .day-num {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+    }
+    .day-num.is-inactive { color: var(--text-muted); opacity: 0.4; }
+    .is-sunday .day-num, .is-saturday .day-num { color: var(--color-danger); }
+
+    /* 状态圆点 */
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: var(--radius-full);
+      display: inline-block;
+      margin-top: 2px;
+    }
+    .dot-normal    { background: var(--color-success); }
+    .dot-late      { background: var(--color-warning); }
+    .dot-absent    { background: var(--color-danger); }
+    .dot-rest      { background: var(--color-info); }
+    .dot-scheduled { background: var(--color-brand-500); }
+
+    /* 响应式 */
+    @media (max-width: 768px) {
+      .ds-page { padding-left: var(--space-3); padding-right: var(--space-3); }
+      .el-col { margin-bottom: var(--space-4); }
+    }
+  </style>
+</body>
+</html>

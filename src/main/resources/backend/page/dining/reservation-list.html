@@ -120,7 +120,7 @@
       },
       computed: {
         statsCards: function() {
-          var self = this
+          const self = this
           return [
             { key: '', icon: '📋', label: '预约总数', value: self.stats.totalReservations, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: 'PENDING', icon: '⏳', label: '待确认', value: self.stats.pendingCount, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
@@ -209,7 +209,7 @@
           this.init(false)
         },
         confirmHandle(id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('确认该预订?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               confirmReservation(id).then(res => {
@@ -219,7 +219,7 @@
             })
         },
         arriveHandle(id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('确认该客户已到店?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               arriveReservation(id).then(res => {
@@ -229,7 +229,7 @@
             })
         },
         cancelHandle(id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('确认取消该预订?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               cancelReservation(id).then(res => {

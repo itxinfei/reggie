@@ -135,7 +135,7 @@
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
-          var self = this;
+          const self = this;
           return [
             { key: '总额', icon: '💰', label: '累计充值总额', value: '￥' + self.fmtMoney(self.stats.totalAmount), color: 'warning' },
             { key: '今日', icon: '📅', label: '今日充值', value: '￥' + self.fmtMoney(self.stats.todayAmount), color: 'success' },
@@ -182,7 +182,7 @@
         initCharts: function() {
           this.trendChart = echarts.init(document.getElementById('trendChart'))
           this.paymentChart = echarts.init(document.getElementById('paymentChart'))
-          var self = this
+          const self = this
           // 修改点：具名处理函数并保存引用，便于 beforeDestroy 中移除监听器，防止页面切换时监听器累积泄漏
           this._resizeHandler = function() {
             if (self.trendChart) self.trendChart.resize()
@@ -191,7 +191,7 @@
           window.addEventListener('resize', this._resizeHandler)
         },
         renderCharts: function() {
-          var self = this
+          const self = this
           // 趋势
           if (self.trendChart && self.stats.trend) {
             var months = [], amounts = []

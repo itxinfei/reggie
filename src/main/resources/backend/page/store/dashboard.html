@@ -244,7 +244,7 @@
     },
     methods: {
         loadDashboard() {
-            var self = this;
+            const self = this;
             getDashboardOverview().then(res => {
                 if (res.code === 1) {
                     self.dashboard = res.data;
@@ -258,7 +258,7 @@
             }).finally(() => { self.loading = false; });
         },
         renderBarChart() {
-            var self = this;
+            const self = this;
             if (!self.dashboard || !self.dashboard.storeRanking) return;
             var stores = self.dashboard.storeRanking.slice(0, self.topN);
             var dom = document.getElementById('storeBarChart');

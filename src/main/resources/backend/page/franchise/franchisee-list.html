@@ -230,7 +230,7 @@
         },
         submitForm() {
           if (this.submitting) return // 提交防重
-          var self = this
+          const self = this
           var passed = false
           self.$refs.franchiseeForm.validate(function(valid) { passed = valid })
           if (!passed) {
@@ -275,7 +275,7 @@
           }
         },
         deleteHandle(id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('此操作将删除该加盟商, 是否继续?', '提示', {
             confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
           }).then(function() {

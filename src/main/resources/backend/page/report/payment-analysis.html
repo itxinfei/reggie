@@ -108,8 +108,8 @@
   <script src="../../js/components.js"></script>
   <script src="../../js/chart-panel.js"></script>
   <script>
-    var CHANNEL_LABEL = { wechat: '微信支付', alipay: '支付宝', balance: '余额支付', other: '其他' };
-    var CHANNEL_COLOR = { wechat: RgPalette.wechatGreen, alipay: RgPalette.alipayBlue, balance: RgPalette.warning, other: RgPalette.textSecondary };
+    const CHANNEL_LABEL = {$2};
+    const CHANNEL_COLOR = {$2};
 
     (function() {
       new Vue({
@@ -137,7 +137,7 @@
           },
           // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
           statsCards: function() {
-            var self = this;
+            const self = this;
             return [
               { key: '笔数', icon: '💳', label: '交易总笔数', value: self.totalCount, color: 'primary' },
               { key: '总额', icon: '💰', label: '交易总额（元）', value: '¥' + self.formatMoney(self.totalAmount), color: 'success' },
@@ -147,14 +147,14 @@
           }
         },
         created: function() {
-          var now = new Date();
-          var first = new Date(now.getFullYear(), now.getMonth(), 1);
-          var last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          const now = new Date();
+          const first = new Date(now.getFullYear(), now.getMonth(), 1);
+          const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
           var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
           this.dateRange = [fmt(first), fmt(last)];
         },
         mounted: function() {
-          var self = this;
+          const self = this;
           self.$nextTick(function() {
             // 修改点：安全初始化图表
             var initChart = function(id) {
@@ -188,7 +188,7 @@
         },
         methods: {
           loadData: function() {
-            var self = this;
+            const self = this;
             if (!self.dateRange || self.dateRange.length < 2) {
               ReggieUI.warning('请选择日期范围'); return;
             }
@@ -202,7 +202,7 @@
             .finally(function() { self.loading = false; });
           },
           loadPaymentTrend: function() {
-            var self = this;
+            const self = this;
             if (!self.trendChart) return;
             $axios.get('/api/report/payment/trend', { params: { startDate: self.dateRange[0], endDate: self.dateRange[1] } })
               .then(function(res) { if (res.code === 1 && res.data) self.renderPaymentTrend(res.data); })
@@ -336,7 +336,7 @@
             }, true);
           },
           handleExport: function() {
-            var self = this;
+            const self = this;
             if (!self.dateRange || self.dateRange.length < 2) { ReggieUI.warning('请先选择日期范围'); return; }
             reportExport({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(blob) {
               if (blob && blob.type && blob.type.indexOf('json') > -1) { ReggieUI.error('导出失败，文件格式异常'); return; }

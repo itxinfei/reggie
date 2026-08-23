@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>鏅鸿兘琛ヨ揣 - 鐟炲悏澶栧崠绠＄悊绔?/title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+  <style lang="less" scoped>
+    @import "../../styles/tokens.css";
+
+    .replenish-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
+
+    /* 缁熻鍗＄墖琛?*/
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      margin-bottom: var(--space-6)
+    }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr) } }
+    @media (max-width: 520px) { .stats-grid { grid-template-columns: 1fr } }
+    .stat-card {
+      padding: var(--space-4);
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      border-left: 4px solid var(--border-default);
+      transition: all var(--transition-base)
+    }
+    .stat-card.danger { border-left-color: var(--color-danger) }
+    .stat-card.warning { border-left-color: var(--color-warning) }
+    .stat-card.brand { border-left-color: var(--color-brand-500) }
+    .stat-card.info { border-left-color: var(--color-info) }
+    .stat-card__icon { font-size: var(--font-size-3xl); line-height: 1 }
+    .stat-card__body { flex: 1 }
+    .stat-card__label { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px }
+    .stat-card__value {
+      font-size: var(--font-size-3xl);
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.2
+    }
+    .stat-card__sub { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 2px }
+    .stat-card.danger .stat-card__value { color: var(--color-danger) }
+    .stat-card.warning .stat-card__value { color: var(--color-warning) }
+    .stat-card.info .stat-card__value { color: var(--color-info) }
+    .stat-card.brand .stat-card__value { color: var(--color-brand-700) }
+
+    /* 鎿嶄綔鎸夐挳鏍?*/
+    .action-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+      flex-wrap: wrap
+    }
+    .action-bar__tip { font-size: var(--font-size-xs); color: var(--text-muted) }
+    .action-bar__spacer { flex: 1 }
+    .action-bar__hint { font-size: var(--font-size-xs); color: var(--text-muted) }
+
+    /* 棰勮澶╂暟杩涘害鏉?*/
+    .days-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 120px
+    }
+    .days-bar {
+      flex: 1;
+      height: 6px;
+      background: var(--border-default);
+      border-radius: var(--radius-sm);
+      overflow: hidden
+    }
+    .days-bar__fill {
+      height: 100%;
+      border-radius: var(--radius-sm);
+      transition: width 0.3s
+    }
+    .days-text {
+      font-size: var(--font-size-xs);
+      font-weight: 500;
+      min-width: 40px;
+      text-align: right;
+      font-variant-numeric: tabular-nums
+    }
+
+    /* 绱ф€ュ害鏍囩鏍峰紡寰皟 */
+    .urgency-tag { font-weight: 500 }
+
+    /* 琛ヨ揣寮圭獥鏄庣粏琛?*/
+    .restock-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-default);
+      gap: 12px
+    }
+    .restock-item:last-child { border-bottom: none }
+    .restock-item__name {
+      width: 100px;
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: var(--font-size-base)
+    }
+    .restock-item__label { font-size: var(--font-size-xs); color: var(--text-muted); width: 60px }
+    .restock-item__value {
+      font-size: var(--font-size-base);
+      color: var(--text-primary);
+      width: 50px;
+      text-align: right;
+      font-variant-numeric: tabular-nums
+    }
+    .restock-item__qty { width: 110px }
+    .restock-item__unit { font-size: var(--font-size-xs); color: var(--text-muted); margin-left: 4px }
+    .restock-summary {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--el-bg-ghost);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      margin-top: var(--space-3);
+      gap: 8px
+    }
+    .restock-summary__total {
+      font-size: var(--font-size-xl);
+      font-weight: 600;
+      color: var(--color-brand-700);
+      font-variant-numeric: tabular-nums
+    }
+
+    /* 琛ヨ揣璁剧疆寮圭獥 */
+    .settings-form { padding: 8px 4px 0 }
+
+    /* 绌烘€?*/
+    .empty-state {
+      text-align: center;
+      padding: 60px var(--space-4);
+      color: var(--text-muted);
+      font-size: var(--font-size-base)
+    }
+    .empty-state__icon { font-size: var(--font-size-4xl); line-height: 1; margin-bottom: var(--space-4) }
+    .empty-state__desc { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-2) }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">璺宠浆鍒颁富鍐呭</a>
+  <div class="dashboard-container" id="replenish-app">
+    <div class="container replenish-container" id="main-content" role="main" aria-label="鏅鸿兘琛ヨ揣鐪嬫澘">
+
+      <!-- 椤靛ご -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">鏅鸿兘琛ヨ揣</h1>
+          <p class="ds-page-header__subtitle">鍩轰簬鏃ュ潎娑堣€楁櫤鑳介娴嬶紝涓€閿敓鎴愯ˉ璐у缓璁笌閲囪喘鍗?/p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
+
+      <!-- 缁熻鍗＄墖 -->
+      <div class="stats-grid" v-loading="statsLoading">
+        <div class="stat-card danger">
+          <div class="stat-card__icon">馃毃</div>
+          <div class="stat-card__body">
+            <div class="stat-card__label">绱ф€ワ紙鈮?澶╄€楀敖锛?/div>
+            <div class="stat-card__value">{{ statsData.urgentCount || 0 }}</div>
+            <div class="stat-card__sub">绉嶉鏉愶紝闇€绔嬪嵆琛ヨ揣</div>
+          </div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-card__icon">鈿狅笍</div>
+          <div class="stat-card__body">
+            <div class="stat-card__label">绱ц揩锛堚墹3澶╄€楀敖锛?/div>
+            <div class="stat-card__value">{{ statsData.criticalCount || 0 }}</div>
+            <div class="stat-card__sub">绉嶉鏉愶紝寤鸿灏藉揩琛ヨ揣</div>
+          </div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-card__icon">馃挕</div>
+          <div class="stat-card__body">
+            <div class="stat-card__label">鍏虫敞锛堚墹7澶╄€楀敖锛?/div>
+            <div class="stat-card__value">{{ statsData.warningCount || 0 }}</div>
+            <div class="stat-card__sub">绉嶉鏉愶紝鍙帓鍏ヨ鍒?/div>
+          </div>
+        </div>
+        <div class="stat-card brand">
+          <div class="stat-card__icon">馃摝</div>
+          <div class="stat-card__body">
+            <div class="stat-card__label">浠婃棩寤鸿琛ヨ揣閲戦</div>
+            <div class="stat-card__value">楼{{ (statsData.totalAmount || 0).toFixed(2) }}</div>
+            <div class="stat-card__sub">娑夊強 {{ tableData.length || 0 }} 绉嶉鏉?/div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 鎿嶄綔鎸夐挳鏍?-->
+      <div class="action-bar">
+        <el-button
+          type="primary"
+          size="small"
+          icon="el-icon-shopping-cart-2"
+          :disabled="selectedRows.length === 0"
+          @click="openBatchRestock"
+        >涓€閿ˉ璐э紙宸查€?{{ selectedRows.length }} 椤癸級</el-button>
+        <el-button
+          type="primary"
+          size="small"
+          icon="el-icon-download"
+          plain
+          @click="exportList"
+        >瀵煎嚭琛ヨ揣娓呭崟</el-button>
+        <el-button
+          size="small"
+          icon="el-icon-setting"
+          @click="openSettings"
+        >琛ヨ揣璁剧疆</el-button>
+        <div class="action-bar__spacer"></div>
+        <el-select
+          v-model="suggestDays"
+          size="small"
+          style="width:100px"
+          @change="refreshAll"
+          aria-label="缁熻澶╂暟"
+        >
+          <el-option :value="7" label="7澶?></el-option>
+          <el-option :value="30" label="30澶?></el-option>
+          <el-option :value="60" label="60澶?></el-option>
+        </el-select>
+        <span class="action-bar__hint">缁熻鍛ㄦ湡</span>
+        <el-select
+          v-model="replenishCycle"
+          size="small"
+          style="width:110px"
+          @change="refreshAll"
+          aria-label="琛ヨ揣鍛ㄦ湡"
+        >
+          <el-option :value="7" label="7澶?></el-option>
+          <el-option :value="14" label="14澶?></el-option>
+          <el-option :value="21" label="21澶?></el-option>
+          <el-option :value="30" label="30澶?></el-option>
+        </el-select>
+        <span class="action-bar__hint">琛ヨ揣鍛ㄦ湡</span>
+      </div>
+
+      <!-- 琛ヨ揣寤鸿琛ㄦ牸 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="tableLoading"
+        :page="page"
+        :page-size="pageSize"
+        :page-sizes="[10,20,30,40]"
+        :total="counts"
+        :selection="true"
+        :show-actions="true"
+        :actions-width="100"
+        :actions-fixed="true"
+        :empty-hint="'璋冩暣缁熻鍛ㄦ湡鎴栬ˉ璐ц缃悗閲嶆柊鏌ヨ'"
+        :aria-label="'琛ヨ揣寤鸿鍒楄〃'"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        @selection-change="onSelectionChange"
+      >
+        <template #col-urgency="{ row }">
+          <el-tag :type="urgencyType(row.urgency)" size="small" class="urgency-tag">
+            {{ urgencyText(row.urgency) }}
+          </el-tag>
+        </template>
+        <template #col-estimatedDays="{ row }">
+          <div class="days-cell">
+            <div class="days-bar">
+              <div class="days-bar__fill" :style="{ width: daysPercent(row.estimatedDays) + '%', background: urgencyColor(row.urgency) }"></div>
+            </div>
+            <span class="days-text" :style="{ color: urgencyColor(row.urgency) }">
+              {{ row.estimatedDays || 0 }}澶?            </span>
+          </div>
+        </template>
+        <template #col-stockQty="{ row }">
+          <span style="font-variant-numeric:tabular-nums">{{ row.stockQty }} <span style="font-size: var(--font-size-xs);color:var(--text-muted)">{{ row.unit }}</span></span>
+        </template>
+        <template #col-dailyUsage="{ row }">
+          <span style="font-variant-numeric:tabular-nums">{{ (row.dailyUsage || 0).toFixed(1) }} <span style="font-size: var(--font-size-xs);color:var(--text-muted)">{{ row.unit }}/澶?/span></span>
+        </template>
+        <template #col-suggestQty="{ row }">
+          <span style="font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-danger)">{{ (row.suggestQty || 0).toFixed(1) }} <span style="font-size: var(--font-size-xs);color:var(--text-muted);font-weight:400">{{ row.unit }}</span></span>
+        </template>
+        <template #col-estimatedCost="{ row }">
+          <span style="font-variant-numeric:tabular-nums">楼{{ (row.suggestQty * (row.unitPrice || 0)).toFixed(2) }}</span>
+        </template>
+        <template #actions="{ row }">
+          <el-button
+            type="primary"
+            size="mini"
+            icon="el-icon-shopping-cart-2"
+            :disabled="row.urgency === 'NORMAL'"
+            @click="openSingleRestock(row)"
+          >琛ヨ揣</el-button>
+        </template>
+      </crud-table>
+
+      <div v-if="counts === 0 && !tableLoading" class="empty-state">
+        <div class="empty-state__icon">鉁?/div>
+        <div>鏆傛棤琛ヨ揣寤鸿</div>
+        <div class="empty-state__desc">鎵€鏈夐鏉愬簱瀛樺厖瓒筹紝鏃犻渶琛ヨ揣</div>
+      </div>
+    </div>
+
+    <!-- 鍗曟潯琛ヨ揣寮圭獥 -->
+    <crud-dialog
+      title="琛ヨ揣纭"
+      :visible.sync="singleDialogVisible"
+      :submit-loading="singleLoading"
+      width="420px"
+      @submit="submitSingleRestock"
+      @close="handleSingleClose"
+    >
+      <div style="padding: 4px 8px 0">
+        <div style="margin-bottom: 10px">
+          <span style="font-size: var(--font-size-xs);color:var(--text-muted)">椋熸潗锛?/span>
+          <span style="font-weight:500;color:var(--text-primary)">{{ singleForm.materialName }}</span>
+        </div>
+        <div style="margin-bottom: 10px">
+          <span style="font-size: var(--font-size-xs);color:var(--text-muted)">褰撳墠搴撳瓨锛?/span>
+          <span style="font-variant-numeric:tabular-nums">{{ singleForm.stockQty }} {{ singleForm.unit }}</span>
+          <span style="margin-left:12px;font-size: var(--font-size-xs);color:var(--text-muted)">鏃ュ潎娑堣€楋細</span>
+          <span style="font-variant-numeric:tabular-nums">{{ singleForm.dailyUsage }} {{ singleForm.unit }}/澶?/span>
+        </div>
+        <div style="margin-bottom: 10px">
+          <span style="font-size: var(--font-size-xs);color:var(--text-muted)">棰勮鑰楀敖锛?/span>
+          <span style="font-variant-numeric:tabular-nums;font-weight:600" :style="{ color: urgencyColor(singleForm.urgency) }">{{ singleForm.estimatedDays }} 澶?/span>
+        </div>
+        <el-divider></el-divider>
+        <el-form :model="singleForm" label-width="80px">
+          <el-form-item label="寤鸿閲囪喘">
+            <span style="font-variant-numeric:tabular-nums;color:var(--text-muted)">{{ (singleForm.suggestQty || 0).toFixed(1) }} {{ singleForm.unit }}</span>
+          </el-form-item>
+          <el-form-item label="瀹為檯琛ヨ揣">
+            <el-input-number
+              v-model="singleForm.qty"
+              :min="1"
+              :max="99999"
+              :precision="2"
+              :style="{ width: '220px' }"
+            ></el-input-number>
+            <span class="restock-item__unit">{{ singleForm.unit }}</span>
+            <span style="margin-left:8px;font-size: var(--font-size-xs);color:var(--text-muted)">鍗曚环 楼{{ (singleForm.unitPrice || 0).toFixed(2) }}</span>
+          </el-form-item>
+          <el-form-item label="棰勮鑺辫垂">
+            <span style="font-weight:600;font-size: var(--font-size-lg);color:var(--color-brand-700);font-variant-numeric:tabular-nums">楼{{ ((singleForm.qty || 0) * (singleForm.unitPrice || 0)).toFixed(2) }}</span>
+          </el-form-item>
+          <el-form-item label="澶囨敞">
+            <el-input v-model="singleForm.remark" type="textarea" :rows="2" placeholder="琛ヨ揣澶囨敞锛堝彲閫夛級"></el-input>
+          </el-form-item>
+        </el-form>
+      </div>
+    </crud-dialog>
+
+    <!-- 鎵归噺琛ヨ揣寮圭獥 -->
+    <crud-dialog
+      title="鎵归噺琛ヨ揣"
+      :visible.sync="batchDialogVisible"
+      :submit-loading="batchLoading"
+      width="560px"
+      @submit="submitBatchRestock"
+      @close="handleBatchClose"
+    >
+      <div style="padding: 4px 8px 0">
+        <div style="font-size: var(--font-size-xs);color:var(--text-muted);margin-bottom:8px">
+          宸查€?<strong style="color:var(--text-primary)">{{ batchForm.items.length }}</strong> 椤归鏉愶紝绯荤粺宸叉寜寤鸿閲忓～鍏咃紝鍙墜鍔ㄨ皟鏁达細
+        </div>
+        <div v-for="(item, idx) in batchForm.items" :key="item.materialId" class="restock-item">
+          <span class="restock-item__name">{{ item.materialName || ('椋熸潗'+idx) }}</span>
+          <span class="restock-item__label">寤鸿:</span>
+          <span class="restock-item__value" style="color:var(--text-muted)">{{ (item.suggestQty || 0).toFixed(1) }}</span>
+          <span class="restock-item__label">琛ヨ揣:</span>
+          <el-input-number
+            v-model="item.qty"
+            :min="1"
+            :max="99999"
+            :precision="2"
+            class="restock-item__qty"
+            @change="onBatchQtyChange"
+          ></el-input-number>
+          <span class="restock-item__unit">{{ item.unit || '' }}</span>
+        </div>
+        <div class="restock-summary">
+          <span>棰勮琛ヨ揣鎬昏姳璐癸細</span>
+          <span class="restock-summary__total">楼{{ batchTotalAmount.toFixed(2) }}</span>
+          <span style="margin-left:auto;font-size: var(--font-size-xs);color:var(--text-muted)">鍏?{{ batchForm.items.length }} 椤?/span>
+        </div>
+        <el-form :model="batchForm" label-width="60px" style="margin-top:12px">
+          <el-form-item label="澶囨敞">
+            <el-input v-model="batchForm.remark" type="textarea" :rows="2" placeholder="琛ヨ揣澶囨敞锛堝彲閫夛級"></el-input>
+          </el-form-item>
+        </el-form>
+      </div>
+    </crud-dialog>
+
+    <!-- 琛ヨ揣璁剧疆寮圭獥 -->
+    <crud-dialog
+      title="琛ヨ揣璁剧疆"
+      :visible.sync="settingsDialogVisible"
+      width="480px"
+      submit-text="淇?瀛?
+      @submit="saveSettings"
+    >
+      <div class="settings-form">
+        <el-form :model="settingsForm" label-width="100px">
+          <el-form-item label="缁熻澶╂暟">
+            <el-select v-model="settingsForm.statsDays" style="width:220px" aria-label="缁熻澶╂暟">
+              <el-option :value="7" label="7澶?></el-option>
+              <el-option :value="30" label="30澶?></el-option>
+              <el-option :value="60" label="60澶?></el-option>
+              <el-option :value="90" label="90澶?></el-option>
+            </el-select>
+            <span style="margin-left:8px;font-size: var(--font-size-xs);color:var(--text-muted)">鐢ㄤ簬璁＄畻鏃ュ潎娑堣€?/span>
+          </el-form-item>
+          <el-form-item label="琛ヨ揣鍛ㄦ湡">
+            <el-select v-model="settingsForm.replenishCycle" style="width:220px" aria-label="琛ヨ揣鍛ㄦ湡">
+              <el-option :value="7" label="7澶?></el-option>
+              <el-option :value="14" label="14澶?></el-option>
+              <el-option :value="21" label="21澶?></el-option>
+              <el-option :value="30" label="30澶?></el-option>
+            </el-select>
+            <span style="margin-left:8px;font-size: var(--font-size-xs);color:var(--text-muted)">琛ヨ揣閲忚鐩栧ぉ鏁?/span>
+          </el-form-item>
+          <el-form-item label="绱ф€ュぉ鏁?>
+            <el-input-number v-model="settingsForm.urgentDays" :min="1" :max="7" :style="{ width: 120 }"></el-input-number>
+            <span style="margin-left:8px;font-size: var(--font-size-xs);color:var(--text-muted)">浣庝簬姝ゅぉ鏁版爣璁颁负绱ф€?/span>
+          </el-form-item>
+          <el-form-item label="绱ц揩澶╂暟">
+            <el-input-number v-model="settingsForm.criticalDays" :min="2" :max="7" :style="{ width: 120 }"></el-input-number>
+            <span style="margin-left:8px;font-size: var(--font-size-xs);color:var(--text-muted)">浣庝簬姝ゅぉ鏁版爣璁颁负绱ц揩</span>
+          </el-form-item>
+          <el-form-item label="鍏虫敞澶╂暟">
+            <el-input-number v-model="settingsForm.warningDays" :min="3" :max="14" :style="{ width: 120 }"></el-input-number>
+            <span style="margin-left:8px;font-size: var(--font-size-xs);color:var(--text-muted)">浣庝簬姝ゅぉ鏁版爣璁颁负鍏虫敞</span>
+          </el-form-item>
+          <el-form-item label="棰濆缂撳啿">
+            <el-switch
+              v-model="settingsForm.enableBuffer"
+              active-text="寮€鍚澶栫紦鍐诧紙寤鸿閲?+20%锛?
+              inactive-text="鍏抽棴"
+            ></el-switch>
+          </el-form-item>
+        </el-form>
+      </div>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/components.js"></script>
+  <script src="../../api/inventory.js"></script>
+  <script>
+    new Vue({
+      el: '#replenish-app',
+      data: function () {
+        return {
+          // 缁熻澶╂暟涓庤ˉ璐у懆鏈燂紙绛涢€夊弬鏁帮級
+          suggestDays: 30,
+          replenishCycle: 14,
+          // 缁熻鍗＄墖
+          statsLoading: false,
+          statsData: {
+            urgentCount: 0,
+            criticalCount: 0,
+            warningCount: 0,
+            totalAmount: 0
+          },
+          // 琛ㄦ牸
+          tableLoading: false,
+          page: 1,
+          pageSize: 10,
+          counts: 0,
+          tableData: [],
+          selectedRows: [],
+          columns: [
+            { prop: 'name', label: '椋熸潗鍚嶇О', width: 130, showOverflowTooltip: true },
+            { prop: 'categoryName', label: '鍒嗙被', width: 90 },
+            { prop: 'supplierName', label: '渚涘簲鍟?, width: 110, showOverflowTooltip: true },
+            { prop: 'stockQty', label: '褰撳墠搴撳瓨', slot: true, width: 90, align: 'right' },
+            { prop: 'dailyUsage', label: '鏃ュ潎娑堣€?, slot: true, width: 100, align: 'right' },
+            { prop: 'estimatedDays', label: '棰勮澶╂暟', slot: true, width: 130, align: 'center' },
+            { prop: 'suggestQty', label: '寤鸿閲囪喘', slot: true, width: 90, align: 'right' },
+            { prop: 'estimatedCost', label: '棰勮鑺辫垂', slot: true, width: 100, align: 'right' },
+            { prop: 'urgency', label: '绱ф€ュ害', slot: true, width: 80, align: 'center' }
+          ],
+          // 鍗曟潯琛ヨ揣寮圭獥
+          singleDialogVisible: false,
+          singleLoading: false,
+          singleForm: {
+            materialId: null,
+            materialName: '',
+            unit: '',
+            stockQty: 0,
+            dailyUsage: 0,
+            estimatedDays: 0,
+            suggestQty: 0,
+            urgency: '',
+            unitPrice: 0,
+            qty: 0,
+            remark: ''
+          },
+          // 鎵归噺琛ヨ揣寮圭獥
+          batchDialogVisible: false,
+          batchLoading: false,
+          batchForm: {
+            items: [],
+            remark: ''
+          },
+          // 琛ヨ揣璁剧疆寮圭獥
+          settingsDialogVisible: false,
+          settingsForm: {
+            statsDays: 30,
+            replenishCycle: 14,
+            urgentDays: 1,
+            criticalDays: 3,
+            warningDays: 7,
+            enableBuffer: false
+          }
+        }
+      },
+      computed: {
+        batchTotalAmount: function () {
+          var total = 0
+          const self = this
+          this.batchForm.items.forEach(function (item) {
+            total += Number(item.qty || 0) * Number(item.unitPrice || 0)
+          })
+          return total
+        }
+      },
+      created: function () {
+        this.loadDashboard()
+        this.loadTable()
+        // 浠庢湰鍦扮紦瀛樿鍙栦笂娆′繚瀛樼殑琛ヨ揣璁剧疆
+        var saved = this.getLocalSettings()
+        if (saved) {
+          this.suggestDays = saved.statsDays || 30
+          this.replenishCycle = saved.replenishCycle || 14
+          this.settingsForm = Object.assign({}, this.settingsForm, saved)
+        }
+      },
+      filters: {
+        toDecimal: function (val) {
+          if (val == null) return '0.00'
+          return Number(val).toFixed(2)
+        }
+      },
+      methods: {
+        // ---- 绱ф€ュ害鏄犲皠 ----
+        urgencyType: function (urgency) {
+          if (urgency === 'URGENT') return 'danger'
+          if (urgency === 'CRITICAL') return 'warning'
+          if (urgency === 'WARNING') return 'info'
+          return 'success'
+        },
+        urgencyText: function (urgency) {
+          if (urgency === 'URGENT') return '绱ф€?
+          if (urgency === 'CRITICAL') return '绱ц揩'
+          if (urgency === 'WARNING') return '鍏虫敞'
+          return '鍏呰冻'
+        },
+        urgencyColor: function (urgency) {
+          if (urgency === 'URGENT') return 'var(--color-danger)'
+          if (urgency === 'CRITICAL') return 'var(--color-warning)'
+          if (urgency === 'WARNING') return 'var(--color-info)'
+          return 'var(--color-success)'
+        },
+        daysPercent: function (days) {
+          var d = Number(days || 0)
+          if (d >= 14) return 100
+          return Math.max(5, Math.min(100, (d / 14) * 100))
+        },
+
+        // ---- 鏁版嵁鍔犺浇 ----
+        loadDashboard: function () {
+          const self = this
+          this.statsLoading = true
+          replenishDashboard().then(function (res) {
+            if (String(res.code) === '1' && res.data) {
+              var d = res.data
+              self.statsData = {
+                urgentCount: d.urgentCount || 0,
+                criticalCount: d.criticalCount || 0,
+                warningCount: d.warningCount || 0,
+                totalAmount: d.totalAmount || 0
+              }
+            }
+          }).catch(function (e) {
+            // 鏅鸿兘琛ヨ揣鎺ュ彛涓嶅彲鐢ㄦ椂锛岄檷绾у埌棰勮缁熻
+            console.warn('鏅鸿兘琛ヨ揣鐪嬫澘涓嶅彲鐢紝闄嶇骇鍔犺浇棰勮缁熻:', e)
+            materialWarningStats().then(function (res2) {
+              if (String(res2.code) === '1' && res2.data) {
+                var d2 = res2.data
+                self.statsData = {
+                  urgentCount: d2.urgentCount || (d2.bySeverity && d2.bySeverity.URGENT) || 0,
+                  criticalCount: d2.criticalCount || (d2.bySeverity && d2.bySeverity.CRITICAL) || 0,
+                  warningCount: d2.warningCount || (d2.bySeverity && d2.bySeverity.WARNING) || 0,
+                  totalAmount: d2.totalAmount || 0
+                }
+              }
+            }).catch(function (e2) {
+              console.warn('鍔犺浇琛ヨ揣缁熻澶辫触:', e2)
+            }).finally(function () {
+              self.statsLoading = false
+            })
+          }).finally(function () {
+            self.statsLoading = false
+          })
+        },
+        loadTable: function () {
+          const self = this
+          this.tableLoading = true
+          var params = {
+            days: this.suggestDays,
+            replenishCycle: this.replenishCycle
+          }
+          smartReplenishSuggest(params).then(function (res) {
+            if (String(res.code) === '1') {
+              var data = res.data || []
+              if (Array.isArray(data)) {
+                self.tableData = data
+                self.counts = data.length
+              } else {
+                self.tableData = []
+                self.counts = 0
+              }
+            } else {
+              self.tableData = []
+              self.counts = 0
+              self.$message.error(res.msg || '鍔犺浇琛ヨ揣寤鸿澶辫触')
+            }
+          }).catch(function (e) {
+            console.warn('鏅鸿兘琛ヨ揣寤鸿涓嶅彲鐢紝闄嶇骇鍔犺浇:', e)
+            // 闄嶇骇锛氳皟鐢ㄥ師鏈夎ˉ璐у缓璁帴鍙?            var fallbackParams = { days: self.suggestDays }
+            materialReplenishSuggest(fallbackParams).then(function (res2) {
+              if (String(res2.code) === '1' && Array.isArray(res2.data)) {
+                self.tableData = res2.data
+                self.counts = res2.data.length
+              } else {
+                self.tableData = []
+                self.counts = 0
+              }
+            }).catch(function (e2) {
+              console.warn('鍔犺浇琛ヨ揣寤鸿澶辫触:', e2)
+              self.tableData = []
+              self.counts = 0
+            })
+          }).finally(function () {
+            self.tableLoading = false
+          })
+        },
+        refreshAll: function () {
+          this.page = 1
+          this.tableData = []
+          this.counts = 0
+          this.selectedRows = []
+          this.loadDashboard()
+          this.loadTable()
+        },
+
+        // ---- 鍒嗛〉 ----
+        onPageChange: function (payload) {
+          this.page = payload.page
+          this.loadTable()
+        },
+        onSizeChange: function (payload) {
+          this.pageSize = (typeof payload === 'object' && payload) ? (payload.pageSize || payload) : payload
+          this.page = 1
+          this.loadTable()
+        },
+        onSelectionChange: function (payload) {
+          this.selectedRows = (payload && payload.rows) || payload || []
+        },
+
+        // ---- 鍗曟潯琛ヨ揣 ----
+        openSingleRestock: function (row) {
+          const self = this
+          self.singleForm = {
+            materialId: row.materialId || row.id,
+            materialName: row.name,
+            unit: row.unit || '',
+            stockQty: row.stockQty || 0,
+            dailyUsage: row.dailyUsage || 0,
+            estimatedDays: row.estimatedDays || 0,
+            suggestQty: row.suggestQty || 0,
+            urgency: row.urgency || 'NORMAL',
+            unitPrice: row.unitPrice || 0,
+            qty: Number(row.suggestQty || 0) > 0 ? Number(row.suggestQty) : 1,
+            remark: ''
+          }
+          self.singleDialogVisible = true
+        },
+        submitSingleRestock: function () {
+          const self = this
+          var item = {
+            materialId: self.singleForm.materialId,
+            qty: String(self.singleForm.qty),
+            remark: self.singleForm.remark
+          }
+          self.singleLoading = true
+          materialBatchRestock({
+            materialIds: [self.singleForm.materialId],
+            items: [item],
+            remark: self.singleForm.remark
+          }).then(function (res) {
+            if (String(res.code) === '1') {
+              self.$message.success('琛ヨ揣鎴愬姛锛屽凡鐢熸垚閲囪喘鍗曞苟鑷姩鍏ュ簱锛岄噰璐崟ID=' + res.data)
+              self.singleDialogVisible = false
+              self.loadDashboard()
+              self.loadTable()
+            } else {
+              self.$message.error(res.msg || '琛ヨ揣澶辫触')
+            }
+          }).catch(function (e) {
+            console.warn('琛ヨ揣澶辫触:', e)
+            self.$message.error('鎿嶄綔澶辫触锛岃閲嶈瘯')
+          }).finally(function () {
+            self.singleLoading = false
+          })
+        },
+        handleSingleClose: function () {
+          this.singleForm.qty = 0
+          this.singleForm.remark = ''
+        },
+
+        // ---- 鎵归噺琛ヨ揣 ----
+        openBatchRestock: function () {
+          if (this.selectedRows.length === 0) {
+            this.$message.warning('鏈嬀閫変换浣曢鏉?)
+            return
+          }
+          const self = this
+          var items = []
+          for (let i = 0; i < this.selectedRows.length; i++) {
+            var row = this.selectedRows[i]
+            var qty = Number(row.suggestQty || 0) > 0 ? Number(row.suggestQty) : 1
+            items.push({
+              materialId: row.materialId || row.id,
+              materialName: row.name,
+              unit: row.unit || '',
+              suggestQty: row.suggestQty || 0,
+              unitPrice: row.unitPrice || 0,
+              qty: qty
+            })
+          }
+          this.batchForm.items = items
+          this.batchForm.remark = ''
+          this.batchDialogVisible = true
+        },
+        onBatchQtyChange: function () {},
+        submitBatchRestock: function () {
+          if (this.batchForm.items.length === 0) {
+            this.$message.warning('鏃犺ˉ璐ф槑缁?)
+            return
+          }
+          const self = this
+          var items = []
+          for (let i = 0; i < this.batchForm.items.length; i++) {
+            var it = this.batchForm.items[i]
+            items.push({
+              materialId: it.materialId,
+              qty: String(it.qty)
+            })
+          }
+          self.batchLoading = true
+          materialBatchRestock({
+            materialIds: this.batchForm.items.map(function (it) { return it.materialId }),
+            items: items,
+            remark: self.batchForm.remark
+          }).then(function (res) {
+            if (String(res.code) === '1') {
+              self.$message.success('鎵归噺琛ヨ揣鎴愬姛锛氬凡鐢熸垚閲囪喘鍗曞苟鑷姩鍏ュ簱锛岄噰璐崟ID=' + res.data)
+              self.batchDialogVisible = false
+              self.selectedRows = []
+              self.loadDashboard()
+              self.loadTable()
+            } else {
+              self.$message.error(res.msg || '鎵归噺琛ヨ揣澶辫触')
+            }
+          }).catch(function (e) {
+            console.warn('鎵归噺琛ヨ揣澶辫触:', e)
+            self.$message.error('鎿嶄綔澶辫触锛岃閲嶈瘯')
+          }).finally(function () {
+            self.batchLoading = false
+          })
+        },
+        handleBatchClose: function () {
+          this.batchForm.items = []
+          this.batchForm.remark = ''
+        },
+
+        // ---- 瀵煎嚭 ----
+        exportList: function () {
+          this.$message.info('瀵煎嚭琛ヨ揣娓呭崟锛岃绛夊緟...')
+          $axios.get('/api/inventory/replenish/suggest/export', {
+            params: { days: this.suggestDays, replenishCycle: this.replenishCycle },
+            responseType: 'blob'
+          }).then(function (res) {
+            const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            var url = window.URL.createObjectURL(blob)
+            var a = document.createElement('a')
+            a.href = url
+            a.download = '琛ヨ揣娓呭崟_' + new Date().toISOString().slice(0, 10) + '.xlsx'
+            a.click()
+            window.URL.revokeObjectURL(url)
+            this.$message.success('瀵煎嚭鎴愬姛')
+          }).catch(function (e) {
+            console.warn('瀵煎嚭澶辫触:', e)
+            this.$message.error('瀵煎嚭澶辫触锛岃閲嶈瘯')
+          })
+        },
+
+        // ---- 琛ヨ揣璁剧疆 ----
+        openSettings: function () {
+          this.settingsForm.statsDays = this.suggestDays
+          this.settingsForm.replenishCycle = this.replenishCycle
+          var saved = this.getLocalSettings()
+          if (saved) {
+            this.settingsForm.urgentDays = saved.urgentDays || 1
+            this.settingsForm.criticalDays = saved.criticalDays || 3
+            this.settingsForm.warningDays = saved.warningDays || 7
+            this.settingsForm.enableBuffer = saved.enableBuffer || false
+          }
+          this.settingsDialogVisible = true
+        },
+        saveSettings: function () {
+          const self = this
+          self.suggestDays = self.settingsForm.statsDays
+          self.replenishCycle = self.settingsForm.replenishCycle
+          this.setLocalSettings({
+            statsDays: self.settingsForm.statsDays,
+            replenishCycle: self.settingsForm.replenishCycle,
+            urgentDays: self.settingsForm.urgentDays,
+            criticalDays: self.settingsForm.criticalDays,
+            warningDays: self.settingsForm.warningDays,
+            enableBuffer: self.settingsForm.enableBuffer
+          })
+          this.$message.success('琛ヨ揣璁剧疆宸蹭繚瀛橈紝閲嶆柊璁＄畻寤鸿涓?..')
+          this.settingsDialogVisible = false
+          this.refreshAll()
+        },
+        getLocalSettings: function () {
+          try {
+            var v = localStorage.getItem('reggie_replenish_settings')
+            return v ? JSON.parse(v) : null
+          } catch (e) {
+            return null
+          }
+        },
+        setLocalSettings: function (data) {
+          try {
+            localStorage.setItem('reggie_replenish_settings', JSON.stringify(data))
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
+    })
+  </script>
+</body>
+</html>

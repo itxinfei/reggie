@@ -303,7 +303,7 @@
           this.outForm.qty = 1
         },
         async submitOut() {
-          var self = this
+          const self = this
           self.$refs.outForm.validate(async function(valid) {
             if (!valid) return
             var fd = self.outForm

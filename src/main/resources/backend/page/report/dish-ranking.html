@@ -157,7 +157,7 @@
           return '菜品销量排行（Top ' + (this.tableData ? this.tableData.length : 0) + '）';
         },
         statsCards: function() {
-          var self = this;
+          const self = this;
           return [
             { key: '菜品', icon: '🍽', label: '菜品总数', value: self.stats.totalDishes || 0, color: 'primary' },
             { key: '上榜', icon: '🏆', label: '上榜菜品', value: self.stats.topDishes || 0, color: 'success' },
@@ -167,16 +167,16 @@
         }
       },
       created: function() {
-        var self = this;
-        var now = new Date();
-        var first = new Date(now.getFullYear(), now.getMonth(), 1);
-        var last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const self = this;
+        const now = new Date();
+        const first = new Date(now.getFullYear(), now.getMonth(), 1);
+        const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
         self.dateRange = [fmt(first), fmt(last)];
         self.loadCategories();
       },
       mounted: function() {
-        var self = this;
+        const self = this;
         self.$nextTick(function() {
           var rEl = document.getElementById('rankingChart');
           var tEl = document.getElementById('trendLineChart');
@@ -201,7 +201,7 @@
       },
       methods: {
         loadCategories: function() {
-          var self = this;
+          const self = this;
           $axios.get('/category/list').then(function(res) {
             if (res.code === 1 && res.data) {
               self.categories = res.data || [];
@@ -216,9 +216,9 @@
           }
         },
         loadData: function() {
-          var self = this;
+          const self = this;
           self.loading = true;
-          var params = { limit: self.limit };
+          const params = {$2};
           if (self.dateRange && self.dateRange.length >= 2) {
             params.startDate = self.dateRange[0]; params.endDate = self.dateRange[1];
           }
@@ -239,7 +239,7 @@
             .finally(function() { self.loading = false; });
         },
         loadDishRankingStats: function() {
-          var self = this;
+          const self = this;
           return reportDishRanking({ limit: 1000 }).then(function(res) {
             if (String(res.code) === '1') {
               var data = res.data || [];
@@ -251,7 +251,7 @@
           }).catch(function() { return { code: 0 }; });
         },
         loadTopTrend: function() {
-          var self = this;
+          const self = this;
           if (!self.tableData || self.tableData.length === 0 || !self.trendChart) return;
           var top3Names = self.tableData.slice(0, 3).map(function(d) { return d.name; });
           if (top3Names.length === 0) return;
@@ -366,7 +366,7 @@
           if (this.chart) this.chart.clear(); if (this.trendChart) this.trendChart.clear();
         },
         handleExport: function() {
-          var self = this
+          const self = this
           if (!self.dateRange || self.dateRange.length < 2) {
             ReggieUI.warning('请先选择日期范围'); return;
           }

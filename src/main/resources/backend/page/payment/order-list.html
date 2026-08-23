@@ -326,7 +326,7 @@
       },
       computed: {
         statsCards: function() {
-          var self = this
+          const self = this
           return [
             { key: '今日', icon: '💰', label: '今日支付订单', value: self.stats.todayPayments, color: 'primary', clickable: true, active: self.activeFilter === '今日' },
             { key: '成功', icon: '✅', label: '支付成功', value: self.stats.successPayments, color: 'success', clickable: true, active: self.activeFilter === '成功' },
@@ -340,7 +340,7 @@
         // 修改点：F9 性能 — 列表与全局统计分离，reloadStats=true 才重算（分页传 false）
         async init(reloadStats = true) {
           this.loading = true
-          var self = this
+          const self = this
           var params = {
             page: self.page, pageSize: self.pageSize,
             orderId: self.lastSearch.orderId || undefined,
@@ -365,7 +365,7 @@
         },
         async loadPaymentStats() {
           try {
-            var today = new Date()
+            const today = new Date()
             var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
             // 修改点：使用 4 次 pageSize=1 轻量查询取 total，替代 pageSize=1000 拉全量再前端过滤
             var results = await Promise.all([
@@ -385,9 +385,9 @@
         },
         // stat-cards 点击
         onCardClick: function(payload) {
-          var self = this
+          const self = this
           if (payload.activeKey === '今日') {
-            var today = new Date()
+            const today = new Date()
             var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
             self.lastSearch = { beginTime: todayStr + ' 00:00:00', endTime: todayStr + ' 23:59:59' }
           } else if (payload.activeKey === '成功' || payload.activeKey === '待支付' || payload.activeKey === '失败') {
@@ -444,7 +444,7 @@
         },
         submitRefund: function() {
           if (this.submitting) return // 提交防重
-          var self = this
+          const self = this
           this.$refs.refundFormRef.validate(function(valid) {
             if (!valid) { return }
             if (self.refundForm.amount > self.refundForm.maxAmount) { ReggieUI.error('退款金额不能超过支付金额'); return }

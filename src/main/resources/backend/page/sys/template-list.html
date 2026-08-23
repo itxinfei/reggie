@@ -239,7 +239,7 @@
       },
       computed: {
         statsCards: function() {
-          var self = this
+          const self = this
           return [
             { key: '', icon: '📋', label: '模板总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: 'enabled', icon: '✅', label: '已启用', value: self.stats.enabled || 0, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
@@ -361,7 +361,7 @@
           }
         },
         submitForm() {
-          var self = this
+          const self = this
           self.$refs.templateForm.validate(function(valid) {
             if (!valid) {
               ReggieUI.warning('请完善表单必填项')
@@ -382,7 +382,7 @@
           })
         },
         toggleStatus(row) {
-          var self = this
+          const self = this
           var newStatus = row.status === 1 ? 0 : 1
           sysApi.templateToggle(row.id, newStatus).then(function(res) {
             if (res && res.code === 1) {
@@ -392,7 +392,7 @@
           })
         },
         deleteHandle(id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('确定删除该模板吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               sysApi.templateDelete(id).then(function(res) {

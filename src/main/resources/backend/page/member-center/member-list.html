@@ -167,7 +167,7 @@
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
-          var self = this;
+          const self = this;
           return [
             { key: '', icon: '👥', label: '会员总数', value: self.stats.totalMembers, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: 'gold', icon: '⭐', label: '高级会员', value: self.stats.highLevelCount, color: 'warning', clickable: true, active: self.activeFilter === 'gold' },
@@ -185,7 +185,7 @@
         async init(reloadStats = true) {
           this.loading = true
           var params = { page: this.page, pageSize: this.pageSize, name: this.searchInput.name || undefined, phone: this.searchInput.phone || undefined, levelId: this.searchInput.levelId || undefined }
-          var self = this
+          const self = this
           try {
             // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
             var requests = [memberPage(params)]
@@ -230,7 +230,7 @@
           } catch(e) { return { code: 0 } }
         },
         loadLevels: function() {
-          var self = this
+          const self = this
           levelPage({ page: 1, pageSize: 100 }).then(function(res) {
             if (String(res.code) === '1') {
               self.levelOptions = res.data.records || []
@@ -265,7 +265,7 @@
         onPageChange: function(p) { this.page = p.page; this.init(false) },
         onSizeChange: function(p) { this.pageSize = (p && p.pageSize !== undefined) ? p.pageSize : p; this.page = 1; this.init(false) },
         viewDetail: function(row) {
-          var self = this
+          const self = this
           getMember(row.id).then(function(res) {
             if (String(res.code) === '1') { self.detail = res.data; self.detailDialogVisible = true }
             else { ReggieUI.error(res.msg || '操作失败') }
@@ -274,7 +274,7 @@
         showRecharge: function(row) { this.rechargeMember = row; this.rechargeForm = { amount: '', giftAmount: '0', paymentMethod: 'WECHAT' }; this.rechargeDialogVisible = true },
         submitRecharge: function() {
           if (this.submitting) return // 提交防重
-          var self = this
+          const self = this
           var passed = false
           self.$refs.rechargeFormRef.validate(function(valid) { passed = valid })
           if (!passed) {

@@ -143,7 +143,7 @@
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
-          var self = this;
+          const self = this;
           return [
             { key: '总积分', icon: '💎', label: '全平台总积分', value: self.fmtNum(self.stats.totalPoints), color: 'info' },
             { key: '今日', icon: '📈', label: '今日获取', value: '+' + self.fmtNum(self.stats.todayAcquired), color: 'success' },
@@ -197,7 +197,7 @@
           window.addEventListener('resize', this._resizeHandler)
         },
         renderCharts: function() {
-          var self = this
+          const self = this
           // 趋势图
           if (self.trendChart && self.stats.trend) {
             var dates = [], acquired = [], consumed = []

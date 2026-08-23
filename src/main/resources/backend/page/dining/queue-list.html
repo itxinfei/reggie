@@ -349,7 +349,7 @@
         },
         // 閸旂姾娴囩紒鐔活吀
         loadStats: function() {
-          var self = this
+          const self = this
           self.statsLoading = true
           queueStats().then(function(res) {
             self.statsLoading = false
@@ -363,7 +363,7 @@
         },
         // 閸旂姾娴囩悰銊︾壐
         loadTable: function() {
-          var self = this
+          const self = this
           self.tableLoading = true
           var params = {
             page: self.page,
@@ -385,7 +385,7 @@
           })
         },
         // 閸旂姾娴囧灞藉酱闁銆嶉敍鍫濆弳鎼囱冭剨缁愭鏁ら敍?        loadTableOptions: function() {
-          var self = this
+          const self = this
           tablePage({ page: 1, pageSize: 200 }).then(function(res) {
             if (res.code === 1 && res.data && res.data.records) {
               self.tableOptions = res.data.records.map(function(t) {
@@ -418,7 +418,7 @@
           this.loadTable()
         },
         // 閸欘偂绗呮稉鈧担?        callNext: function() {
-          var self = this
+          const self = this
           if (self.callLoading) return
           self.callLoading = true
           var body = {}
@@ -449,7 +449,7 @@
         },
         submitTake: function() {
           if (this.takeLoading) return
-          var self = this
+          const self = this
           var passed = false
           self.$refs.takeFormRef.validate(function(valid) { passed = valid })
           if (!passed) return
@@ -484,7 +484,7 @@
         },
         submitSeat: function() {
           if (this.seatLoading) return
-          var self = this
+          const self = this
           self.seatLoading = true
           var data = { queueId: self.seatForm.queueId }
           if (self.seatForm.tableId) { data.tableId = self.seatForm.tableId }
@@ -505,7 +505,7 @@
         },
         // CALLED 閳?WAITING閿涘牓鈧偓閸ョ偟鐡戝鍜冪礉閻劋绨拠顖氬建閸欓绫傞柨娆欑礆
         recallHandle: function(row) {
-          var self = this
+          const self = this
           ReggieUI.confirm('绾喛顓荤亸?' + (row.queueNo || '鐠囥儴顔囪ぐ?) + ' 闁偓閸ョ偟鐡戝鍜冪吹', '閹绘劗銇?, { confirmButtonText: '绾喖鐣?, cancelButtonText: '閸欐牗绉?, type: 'warning' })
             .then(function() {
               var id = row.id || row.queueId
@@ -516,7 +516,7 @@
             })
         },
         // CANCELLED 閳?WAITING閿涘牊浠径宥嗗笓闂冪噦绱濋悽銊ょ艾鐠囶垰褰囧☉鍫㈢眰闁挎瑱绱?        reactivateHandle: function(id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('绾喛顓婚幁銏狀槻鐠囥儲甯撻梼鐔活唶瑜版洩绱?, '閹绘劗銇?, { confirmButtonText: '绾喖鐣?, cancelButtonText: '閸欐牗绉?, type: 'warning' })
             .then(function() {
               reactivateQueue(id).then(function(res) {
@@ -527,7 +527,7 @@
         },
         // 閸欐牗绉烽幒鎺楁Е
         cancelHandle: function(id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('绾喛顓婚崣鏍ㄧХ鐠囥儲甯撻梼鐔活唶瑜版洩绱?, '閹绘劗銇?, { confirmButtonText: '绾喖鐣?, cancelButtonText: '閸欐牗绉?, type: 'warning' })
             .then(function() {
               queueCancel(id).then(function(res) {

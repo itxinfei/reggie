@@ -415,7 +415,7 @@
           this.$refs.groupForm.validate(function(valid) { passed = valid })
           if (!passed) return
 
-          var self = this
+          const self = this
           var apiCall = self.groupForm.id ? updateSpecGroup(self.groupForm) : saveSpecGroup(self.groupForm)
           apiCall.then(function(res) {
             if (res.code === 1) {
@@ -485,7 +485,7 @@
           this.$refs.optionForm.validate(function(valid) { passed = valid })
           if (!passed) return
 
-          var self = this
+          const self = this
           var apiCall = self.optionForm.id ? updateSpecOption(self.optionForm) : saveSpecOption(self.optionForm)
           apiCall.then(function(res) {
             if (res.code === 1) {

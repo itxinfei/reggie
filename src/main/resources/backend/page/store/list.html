@@ -470,7 +470,7 @@
         dialogTitle: function() { return this.isCreate ? '鏂板缓闂ㄥ簵' : '缂栬緫闂ㄥ簵'; },
         // 淇敼鐐癸細statsCards 缁熶竴鍗＄墖閰嶇疆锛堜緵 <stat-cards> 缁勪欢浣跨敤锛?
         statsCards: function() {
-            var self = this;
+            const self = this;
             return [
                 { key: '', icon: '馃彔', label: '闂ㄥ簵鎬绘暟', value: self.stats.totalStores, color: 'primary', clickable: true, active: self.activeFilter === '' },
                 { key: 'active', icon: '鉁?, label: '宸插惎鐢?, value: self.stats.activeStores, color: 'success', clickable: true, active: self.activeFilter === 'active' },
@@ -484,17 +484,9 @@
         // ========== 鏁版嵁鍔犺浇 ==========
         loadData: function(reloadStats) {
             if (reloadStats === undefined) { reloadStats = true; }
-            var self = this;
+            const self = this;
             self.loading = true;
-            var params = {
-                keyword: self.search.keyword || null,
-                storeType: self.search.storeType,
-                status: self.search.status,
-                page: self.pagination.current,
-                pageSize: self.pagination.size,
-                sortBy: self.sort.sortBy,
-                sortOrder: self.sort.sortOrder
-            };
+            const params = {$2};
             // 濡傛灉閫変簡缁熻鍗＄墖绛涢€夛紝瑕嗙洊status
             if (self.activeFilter === 'active') { params.status = 1; }
             else if (self.activeFilter === 'inactive') { params.status = 0; }
@@ -519,7 +511,7 @@
             }).finally(function() { self.loading = false; });
         },
         updateStats: function() {
-            var self = this;
+            const self = this;
             // 淇敼鐐癸細鏀逛负璋冪敤鍚庣 /store/stats SQL 鑱氬悎鎺ュ彛锛屾浛浠?listStores 鎷夊叏閲忓悗 filter 缁熻锛堟秷闄?N+1 涓庡叏閲忓唴瀛樿绠楋級
             storeStats().then(function(res) {
                 if (res && res.code === 1 && res.data) {
@@ -585,7 +577,7 @@
             this.batchConfirm(0, '鎵归噺鍋滅敤');
         },
         batchConfirm: function(status, label) {
-            var self = this;
+            const self = this;
             var ids = self.selection.map(function(r) { return r.tenantId; });
             if (ids.length === 0) { ReggieUI.warning('璇烽€夋嫨闂ㄥ簵'); return; }
             ReggieUI.confirm('纭' + label + '宸查€夌殑 ' + ids.length + ' 涓棬搴楀悧锛?, '鎻愮ず', {
@@ -603,15 +595,11 @@
             }).catch(function() {});
         },
         doExport: function() {
-            var self = this;
-            var params = {
-                keyword: self.search.keyword || null,
-                storeType: self.search.storeType,
-                status: self.search.status
-            };
+            const self = this;
+            const params = {$2};
             ReggieUI.message({ message: '姝ｅ湪瀵煎嚭锛岃绋嶅€?..', type: 'info', duration: 2000 });
             exportStores(params).then(function(res) {
-                var blob = new Blob([res], { type: 'text/csv;charset=utf-8' });
+                const blob = new Blob([res], { type: 'text/csv;charset=utf-8' });
                 var url = window.URL.createObjectURL(blob);
                 var a = document.createElement('a');
                 a.href = url;
@@ -626,7 +614,7 @@
 
         // ========== 鍗曡鎿嶄綔 ==========
         toggleSingleStatus: function(row) {
-            var self = this;
+            const self = this;
             updateStatus(row.tenantId, row.status).then(function(res) {
                 if (res && res.code === 1) {
                     ReggieUI.success('鐘舵€佸凡鏇存柊');
@@ -634,7 +622,7 @@
             }).catch(function() { self.loadData(); });
         },
         switchToStore: function(row) {
-            var self = this;
+            const self = this;
             switchStore(row.tenantId).then(function(res) {
                 if (res && res.code === 1) {
                     ReggieUI.success('宸插垏鎹㈠埌闂ㄥ簵锛? + row.storeName);
@@ -645,7 +633,7 @@
 
         // ========== 璇︽儏 ==========
         openDetail: function(row) {
-            var self = this;
+            const self = this;
             // 淇鐐癸細鍒楄〃鏁版嵁鍙兘涓嶅惈鍏ㄩ儴瀛楁锛岀粺涓€璧?/store/detail 鑾峰彇瀹屾暣淇℃伅
             getStoreDetail(row.tenantId).then(function(res) {
                 if (res && res.code === 1 && res.data) {
@@ -679,7 +667,7 @@
 
         // ========== 缂栬緫 ==========
         openEditDialog: function(row) {
-            var self = this;
+            const self = this;
             self.isCreate = false;
             self.editTenantId = row.tenantId;
             getStoreDetail(row.tenantId).then(function(res) {
@@ -728,7 +716,7 @@
             if (this.$refs.formRef) this.$refs.formRef.clearValidate();
         },
         submitForm: function() {
-            var self = this;
+            const self = this;
             self.$refs.formRef.validate(function(valid) {
                 if (!valid) return;
                 self.submitting = true;
@@ -739,21 +727,7 @@
                     businessHours = self.form.businessHoursRange[0] + '-' + self.form.businessHoursRange[1];
                 }
 
-                var payload = {
-                    storeName: self.form.storeName,
-                    storeCode: self.form.storeCode,
-                    storeType: self.form.storeType,
-                    contactPerson: self.form.contactPerson,
-                    contactPhone: self.form.contactPhone,
-                    address: self.form.address,
-                    businessHours: businessHours,
-                    deliveryRadius: self.form.deliveryRadius,
-                    minDeliveryAmount: self.form.minDeliveryAmount,
-                    deliveryFee: self.form.deliveryFee,
-                    isDeliveryEnabled: self.form.isDeliveryEnabled,
-                    isDineInEnabled: self.form.isDineInEnabled,
-                    status: self.form.status
-                };
+                const payload = {$2};
 
                 var apiCall;
                 if (self.isCreate) {
@@ -786,8 +760,8 @@
             this.syncDialogVisible = true;
         },
         doSync: function(type) {
-            var self = this;
-            var sourceTenantId = null;
+            const self = this;
+            const sourceTenantId = $2;
             if (self.tableData.length > 0) sourceTenantId = self.tableData[0].tenantId;
             var apiMap = {
                 dishes: syncDishes({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, dishIds: null, operatorId: 1 }),
@@ -812,7 +786,7 @@
             return type === 1 ? 'danger' : type === 2 ? 'success' : 'warning';
         },
         storeTypeName: function(type) {
-            var map = { 1: '鎬诲簵', 2: '鐩磋惀', 3: '鍔犵洘' };
+            const map = {$2};
             return map[type] || String(type);
         },
         fmtAmount: function(val) {
@@ -863,8 +837,8 @@
                 row.minDeliveryAmount, row.deliveryFee,
                 row.isDeliveryEnabled, row.isDineInEnabled
             ];
-            var filled = 0;
-            for (var i = 0; i < fields.length; i++) {
+            const filled = $2;
+            for (let i = 0; i < fields.length; i++) {
                 if (fields[i] !== null && fields[i] !== undefined && fields[i] !== '') filled++;
             }
             return Math.round((filled / fields.length) * 100);

@@ -144,7 +144,7 @@
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
-          var self = this;
+          const self = this;
           return [
             { key: '', icon: '🖨️', label: '打印总次数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: '1', icon: '✅', label: '打印成功', value: self.stats.successCount || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
@@ -164,7 +164,7 @@
         // 修改点：F9 性能 — 列表查询与全局统计分离，reloadStats=true 才重算
         async fetchData(reloadStats = true) {
           this.loading = true
-          var self = this
+          const self = this
           var params = {
             page: this.page,
             pageSize: this.pageSize,
@@ -237,7 +237,7 @@
           this.search()
         },
         handleReprint(row) {
-          var self = this
+          const self = this
           ReggieUI.confirm('确认重新打印订单 ' + row.orderId + ' 的' + this.printTypeTag(row.printType).label + '？', '提示', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',

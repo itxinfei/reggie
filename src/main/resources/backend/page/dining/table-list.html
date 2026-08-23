@@ -301,7 +301,7 @@
       },
       computed: {
         statsCards: function() {
-          var self = this
+          const self = this
           return [
             { key: '', icon: '🪑', label: '桌台总数', value: self.stats.totalTables, color: 'primary', clickable: true, active: self.activeFilter === '', flex: true },
             { key: 'FREE', icon: '✓', label: '空闲桌台', value: self.stats.freeTables, color: 'success', clickable: true, active: self.activeFilter === 'FREE', flex: true },
@@ -316,7 +316,7 @@
         // 修改点：F9 性能 — 列表与全局统计分离，reloadStats=true 才重算（默认 true，分页传 false）
         init: function(reloadStats) {
           if (reloadStats === undefined) reloadStats = true
-          var self = this
+          const self = this
           var params = { page: this.page, pageSize: this.pageSize,
             name: self.lastSearch.name || undefined, areaId: self.lastSearch.areaId || undefined, status: self.lastSearch.status || undefined }
           self.loading = true
@@ -341,14 +341,14 @@
           }).catch(function() { return { code: 0 } })
         },
         loadAreaList: function() {
-          var self = this
+          const self = this
           areaList().then(function(res) {
             if (res.code === 1) { self.areaList = res.data || []; self.searchConfig[1].options = self.areaList.map(function(a) { return { label: a.name, value: a.id } }) }
           }).catch(function(err) { ReggieUI.error('区域加载失败：' + err) })
         },
         // stat-cards 点击
         onCardClick: function(payload) {
-          var self = this
+          const self = this
           self.activeFilter = payload.activeKey
           self.lastSearch = { status: self.activeFilter || undefined }
           self.page = 1; self.init()
@@ -379,7 +379,7 @@
         },
         submitForm: function() {
           if (this.submitting) return // 提交防重
-          var self = this
+          const self = this
           this.$refs.tableForm.validate(function(valid) {
             if (!valid) return
             self.submitting = true
@@ -401,7 +401,7 @@
           })
         },
         quickChangeStatus: function(row, newStatus) {
-          var self = this
+          const self = this
           if (row.status === newStatus) return
           ReggieUI.confirm('确认将「' + row.name + '」状态改为「' + self.statusLabels[newStatus] + '」?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
@@ -412,7 +412,7 @@
             }).catch(function() { self.init() })
         },
         showQrcode: function(row) {
-          var self = this
+          const self = this
           this.qrcodeDialog = { visible: true, tableName: row.name, tableId: row.id, imageUrl: '' }
           tableQrcode(row.id).then(function(res) { if (res.code === 1 && res.data) { self.qrcodeDialog.imageUrl = res.data } }).catch(function() { ReggieUI.warning('二维码加载失败') })
         },
@@ -424,7 +424,7 @@
           }
         },
         deleteHandle: function(id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('确认删除该桌台？删除后不可恢复。', '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               deleteTable(id).then(function(res) {
@@ -452,7 +452,7 @@
           }
           var allowed = rules[current]
           if (!allowed) return false
-          for (var i = 0; i < allowed.length; i++) {
+          for (let i = 0; i < allowed.length; i++) {
             if (allowed[i] === target) return true
           }
           return false

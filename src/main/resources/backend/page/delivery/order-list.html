@@ -225,7 +225,7 @@
       },
       computed: {
         statsCards: function() {
-          var self = this
+          const self = this
           return [
             { key: 'PENDING', icon: '⏳', label: '待处理', value: self.stats.pendingCount, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
             { key: 'DELIVERING', icon: '🚘', label: '配送中', value: (self.stats.deliveringCount || 0), color: 'info', clickable: true, active: self.activeFilter === 'DELIVERING' },
@@ -376,7 +376,7 @@
         },
         // ==================== 订单操作 ====================
         acceptOrder: function(row) {
-          var self = this
+          const self = this
           ReggieUI.confirm(
             '确认接单【' + row.platformOrderId + '】？接单后将通知平台。',
             '确认接单',
@@ -392,7 +392,7 @@
         },
         // 修改点：完整的状态流转操作
         statusChange: function(row, targetStatus) {
-          var self = this
+          const self = this
           var label = this.statusLabelMap[targetStatus] || targetStatus
           var confirmText = '确认将【' + row.platformOrderId + '】状态更新为"' + label + '"？'
           var typeMap = { 'PICKING': 'warning', 'DELIVERING': 'primary', 'DELIVERED': 'success' }
@@ -418,7 +418,7 @@
           this.cancelVisible = true
         },
         confirmCancel: function() {
-          var self = this
+          const self = this
           this.$refs.cancelForm.validate(function(valid) {
             if (!valid) return
             self.cancelLoading = true

@@ -338,7 +338,7 @@
           }
         },
         handleSubmit() {
-          var self = this
+          const self = this
           let passed = false
           this.$refs.costForm.validate(function(valid) { passed = valid })
           if (!passed) return

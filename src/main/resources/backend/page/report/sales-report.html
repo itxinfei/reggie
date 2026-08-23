@@ -172,7 +172,7 @@
       },
       computed: {
         statsCards: function() {
-          var self = this;
+          const self = this;
           return [
             { key: '营业额', icon: '💰', label: '总营业额', value: '¥' + self.formatMoney(self.report.totalRevenue), color: 'primary' },
             { key: '订单数', icon: '📋', label: '总订单数', value: self.report.totalOrders, color: 'success' },

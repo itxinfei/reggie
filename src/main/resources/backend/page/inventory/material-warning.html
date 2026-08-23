@@ -459,9 +459,9 @@
             return
           }
           // 鍖归厤琛ヨ揣寤鸿锛屽～鍏呭缓璁噰璐噺
-          var self = this
+          const self = this
           var items = []
-          for (var i = 0; i < this.selectedRows.length; i++) {
+          for (let i = 0; i < this.selectedRows.length; i++) {
             var row = this.selectedRows[i]
             var suggestItem = this.findSuggestItem(row.id)
             var qty = suggestItem && Number(suggestItem.suggestQty) > 0
@@ -482,7 +482,7 @@
           this.restockForm.dialogVisible = true
         },
         findSuggestItem(materialId) {
-          for (var i = 0; i < this.suggestList.length; i++) {
+          for (let i = 0; i < this.suggestList.length; i++) {
             if (this.suggestList[i].materialId === materialId) {
               return this.suggestList[i]
             }
@@ -500,9 +500,9 @@
             this.$message.warning('鏃犺ˉ璐ф槑缁?)
             return
           }
-          var self = this
+          const self = this
           var items = []
-          for (var i = 0; i < this.restockForm.items.length; i++) {
+          for (let i = 0; i < this.restockForm.items.length; i++) {
             var it = this.restockForm.items[i]
             items.push({
               materialId: it.materialId,

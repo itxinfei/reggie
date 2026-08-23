@@ -226,10 +226,10 @@
           try {
             // 修改点：F9 性能 — 全局统计（总数/启用/禁用/本月新增）与分页无关，仅 reloadStats 时重算
             // 本月新增：按本月起止时间区间查询真实 total，避免写死为 0 的假数据
-            var now = new Date()
+            const now = new Date()
             var y = now.getFullYear()
             var m = String(now.getMonth() + 1).padStart(2, '0')
-            var lastDay = new Date(y, now.getMonth() + 1, 0).getDate()
+            const lastDay = new Date(y, now.getMonth() + 1, 0).getDate()
             var monthStart = y + '-' + m + '-01 00:00:00'
             var monthEnd = y + '-' + m + '-' + String(lastDay).padStart(2, '0') + ' 23:59:59'
 
@@ -348,7 +348,7 @@
         /** 表单提交（校验通过后执行保存） */
         submitForm() {
           if (this.submitting) return // 提交防重
-          var self = this
+          const self = this
           let passed = false
           self.$refs.supplierForm.validate(function (valid) { passed = valid })
           if (!passed) return
@@ -362,7 +362,7 @@
             ? updateSupplier({ id: this.editId, name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status })
             : addSupplier({ name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status })
 
-          var self = this
+          const self = this
           self.submitting = true
           apiCall.then(function (res) {
             self.submitting = false
@@ -388,7 +388,7 @@
         // ==================== 删除 ====================
 
         handleDelete(id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('此操作将永久删除该供应商, 是否继续?', '提示', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',

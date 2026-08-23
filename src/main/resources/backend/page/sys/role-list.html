@@ -212,7 +212,7 @@
       },
       computed: {
         statsCards: function() {
-          var self = this
+          const self = this
           return [
             { key: '', icon: '👥', label: '角色总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: 'enabled', icon: '✅', label: '已启用', value: self.stats.enabled || 0, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
@@ -268,7 +268,7 @@
           return { code: 0 }
         },
         async loadRoleOptions() {
-          var self = this
+          const self = this
           var searchItem = self.searchConfig.find(function(s) { return s.field === 'roleName' })
           if (searchItem) searchItem.loading = true
           try {
@@ -290,7 +290,7 @@
         },
         // stat-cards 点击
         onCardClick: function(payload) {
-          var self = this
+          const self = this
           if (payload.key === '') {
             self.activeFilter = ''
           } else {
@@ -361,7 +361,7 @@
           })
         },
         deleteHandle(id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('确定删除该角色吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               sysApi.roleDelete(id).then(function(res) {
@@ -380,7 +380,7 @@
           this.loadRolePerms(row.id)
         },
         loadPermTree() {
-          var self = this
+          const self = this
           sysApi.permissionTree().then(function(res) {
             if (res && res.code === 1) {
               self.permTreeData = self.buildTree(res.data || [])
@@ -388,7 +388,7 @@
           })
         },
         buildTree(flatList) {
-          var map = new Map()
+          const map = new Map()
           var roots = []
           flatList.forEach(function(item) {
             map.set(item.id, Object.assign({}, item, { children: [] }))
@@ -406,7 +406,7 @@
           return roots
         },
         loadRolePerms(roleId) {
-          var self = this
+          const self = this
           sysApi.rolePermissions(roleId).then(function(res) {
             if (res && res.code === 1) {
               self.checkedPerms = res.data || []
@@ -426,7 +426,7 @@
         submitPerms() {
           var keys = this.$refs.permTree ? this.$refs.permTree.getCheckedKeys() : this.checkedPerms
           this.permSubmitting = true
-          var self = this
+          const self = this
           sysApi.assignPermissions(this.currentRole.id, keys).then(function(res) {
             if (res && res.code === 1) {
               ReggieUI.success('权限分配成功')

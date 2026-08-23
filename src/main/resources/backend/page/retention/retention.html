@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>娴兼艾鎲抽悾娆忕摠閼奉亜濮╅崠鏍吀閻?- 閻熺偛鎮忔径鏍у礌缁狅紕鎮婄粩?/title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+  <style lang="less" scoped>
+    @import "../../styles/tokens.css";
+
+    .retention-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 var(--space-5);
+    }
+
+    /* ============ 妞ゅ爼鍎寸紒鐔活吀閸楋紕澧栫悰?============ */
+    .retention-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+    @media (max-width: 1100px) { .retention-stats { grid-template-columns: repeat(2, 1fr) } }
+    @media (max-width: 600px) { .retention-stats { grid-template-columns: 1fr } }
+
+    .retention-stat-card {
+      padding: var(--space-4);
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      transition: box-shadow var(--transition-base);
+    }
+    .retention-stat-card:hover {
+      box-shadow: var(--shadow-md);
+    }
+    .retention-stat-card__icon {
+      font-size: var(--font-size-3xl);
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .retention-stat-card__body { flex: 1; min-width: 0 }
+    .retention-stat-card__label {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .retention-stat-card__value {
+      font-size: var(--font-size-3xl);
+      font-weight: var(--font-weight-semibold);
+      line-height: var(--line-height-tight);
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+    }
+    .retention-stat-card__unit {
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-regular);
+      margin-left: var(--space-1);
+    }
+    .retention-stat-card.brand .retention-stat-card__value { color: var(--color-brand-500) }
+    .retention-stat-card.success .retention-stat-card__value { color: var(--color-success) }
+    .retention-stat-card.warning .retention-stat-card__value { color: var(--color-warning) }
+    .retention-stat-card.danger .retention-stat-card__value { color: var(--color-danger) }
+
+    /* ============ 闁氨鏁ら崠鍝勬健閺嶅洭顣?============ */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+    .section-header__title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .section-header__hint {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+    }
+
+    /* ============ 闁氨鏁ら崡锛勫鐎圭懓娅?============ */
+    .panel-card {
+      padding: var(--space-4);
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--space-6);
+    }
+
+    /* ============ 娴兼艾鎲抽崚鍡楃湴 + 閹烘帟顢戝?娑撱倖鐖?============ */
+    .top-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+    @media (max-width: 1100px) { .top-grid { grid-template-columns: 1fr } }
+
+    /* ============ 娴兼艾鎲抽崚鍡楃湴閻滎垰鑸扮紒鐔活吀 ============ */
+    .level-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+
+    .level-stat {
+      text-align: center;
+      padding: var(--space-3) var(--space-2);
+      background: var(--bg-subtle);
+      border-radius: var(--radius-sm);
+      transition: box-shadow var(--transition-base);
+    }
+    .level-stat:hover {
+      box-shadow: var(--shadow-sm);
+    }
+    .level-stat__icon {
+      font-size: var(--font-size-3xl);
+      line-height: 1;
+      margin-bottom: var(--space-2);
+    }
+    .level-stat__value {
+      font-size: var(--font-size-3xl);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-brand-500);
+      font-variant-numeric: tabular-nums;
+      line-height: var(--line-height-tight);
+    }
+    .level-stat.gold .level-stat__value { color: var(--color-brand-500) }
+    .level-stat.silver .level-stat__value { color: var(--color-info) }
+    .level-stat.normal .level-stat__value { color: var(--text-primary) }
+    .level-stat__label {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      margin-top: var(--space-1);
+    }
+
+    .level-summary-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: var(--space-3) 0;
+      border-top: var(--border-width-thin) solid var(--border-subtle);
+      margin-top: var(--space-3);
+    }
+    .level-summary-item {
+      text-align: center;
+    }
+    .level-summary-item__value {
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-semibold);
+      font-variant-numeric: tabular-nums;
+      line-height: var(--line-height-tight);
+    }
+    .level-summary-item.brand .level-summary-item__value { color: var(--color-brand-500) }
+    .level-summary-item.success .level-summary-item__value { color: var(--color-success) }
+    .level-summary-item.warning .level-summary-item__value { color: var(--color-warning) }
+    .level-summary-item.danger .level-summary-item__value { color: var(--color-danger) }
+    .level-summary-item__label {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      margin-top: var(--space-1);
+    }
+
+    /* ============ 缁夘垰鍨庨幒鎺曨攽鐞涖劍鐗?============ */
+    .ranking-table {
+      transition: background-color var(--transition-base);
+    }
+    .ranking-medal {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-inverse);
+      background: var(--color-info);
+    }
+    .ranking-medal.gold { background: var(--color-brand-500); color: var(--text-primary) }
+    .ranking-medal.silver { background: var(--color-gray-400) }
+    .ranking-medal.bronze { background: var(--color-warning) }
+
+    .points-cell {
+      font-variant-numeric: tabular-nums;
+      font-weight: var(--font-weight-medium);
+      text-align: right;
+    }
+    .member-name-cell {
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-primary);
+    }
+
+    /* ============ 濞翠礁銇戞０鍕劅閸楋紕澧?============ */
+    .warning-table {
+      transition: background-color var(--transition-base);
+    }
+    .dormant-days {
+      font-variant-numeric: tabular-nums;
+      font-weight: var(--font-weight-medium);
+      text-align: right;
+    }
+    .dormant-days.high { color: var(--color-danger) }
+    .dormant-days.mid { color: var(--color-warning) }
+
+    .btn-send-coupon {
+      transition: all var(--transition-base);
+    }
+    .btn-send-coupon:hover {
+      transform: translateY(-1px);
+    }
+
+    /* ============ 閺呴缚鍏橀幒銊ㄥ礃閸楋紕澧?============ */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+    @media (max-width: 1100px) { .bottom-grid { grid-template-columns: 1fr } }
+
+    .recommend-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) var(--space-2);
+      border-bottom: var(--border-width-thin) solid var(--border-subtle);
+      gap: var(--space-2);
+      transition: background-color var(--transition-base);
+    }
+    .recommend-item:last-child { border-bottom: none }
+    .recommend-item:hover {
+      background: var(--bg-subtle);
+    }
+    .recommend-item__info { flex: 1; min-width: 0 }
+    .recommend-item__name {
+      font-size: var(--font-size-base);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      margin-bottom: var(--space-1);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .recommend-item__reason {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+    }
+    .recommend-item__action {
+      flex-shrink: 0;
+    }
+
+    /* ============ 缁涙盯鈧顢?============ */
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-3);
+      border-bottom: var(--border-width-thin) solid var(--border-default);
+      flex-wrap: wrap;
+    }
+    .filter-row__label {
+      font-size: var(--font-size-base);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      white-space: nowrap;
+    }
+    .filter-row__tip {
+      margin-left: auto;
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+    }
+
+    /* ============ 缁岀儤鈧?============ */
+    .empty-state {
+      text-align: center;
+      padding: 48px var(--space-4);
+      color: var(--text-muted);
+      font-size: var(--font-size-base);
+    }
+    .empty-state__icon {
+      font-size: var(--font-size-4xl);
+      line-height: 1;
+      margin-bottom: var(--space-4);
+    }
+    .empty-state__desc {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      margin-top: var(--space-2);
+    }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">鐠哄疇娴嗛崚棰佸瘜閸愬懎顔?/a>
+  <div class="dashboard-container" id="retention-app">
+    <div class="container retention-container" id="main-content" role="main" aria-label="娴兼艾鎲抽悾娆忕摠閼奉亜濮╅崠鏍吀閻?>
+
+      <!-- 妞ょ敻娼伴弽鍥暯 -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">娴兼艾鎲抽悾娆忕摠閼奉亜濮╅崠?/h1>
+          <p class="ds-page-header__subtitle">閸掑棗鐪扮粻锛勬倞閵嗕焦绁︽径閬嶎暕鐠€锔跨瑢閺呴缚鍏橀崣鎴濆煖閿涘本褰侀崡鍥︾窗閸涙ɑ妞跨捄鍐ㄥ</p>
+        </div>
+      </header>
+
+      <!-- 1. 妞ゅ爼鍎寸紒鐔活吀閸楋紕澧?-->
+      <div class="retention-stats" v-loading="statsLoading">
+        <div class="retention-stat-card brand">
+          <div class="retention-stat-card__icon">棣冩啱</div>
+          <div class="retention-stat-card__body">
+            <div class="retention-stat-card__label">娴兼艾鎲抽幀缁樻殶</div>
+            <div class="retention-stat-card__value">{{ stats.totalCount || 0 }}</div>
+          </div>
+        </div>
+        <div class="retention-stat-card success">
+          <div class="retention-stat-card__icon">棣冩暉</div>
+          <div class="retention-stat-card__body">
+            <div class="retention-stat-card__label">濞叉槒绌导姘喅</div>
+            <div class="retention-stat-card__value">{{ stats.activeCount || 0 }}</div>
+          </div>
+        </div>
+        <div class="retention-stat-card warning">
+          <div class="retention-stat-card__icon">棣冩寵</div>
+          <div class="retention-stat-card__body">
+            <div class="retention-stat-card__label">濞屽娼导姘喅</div>
+            <div class="retention-stat-card__value">{{ stats.dormantCount || 0 }}</div>
+          </div>
+        </div>
+        <div class="retention-stat-card danger">
+          <div class="retention-stat-card__icon">棣冩瘑</div>
+          <div class="retention-stat-card__body">
+            <div class="retention-stat-card__label">濞翠礁銇戞导姘喅</div>
+            <div class="retention-stat-card__value">{{ stats.churnedCount || 0 }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 娴兼艾鎲抽崚鍡楃湴 + 缁夘垰鍨庨幒鎺曨攽 -->
+      <div class="top-grid">
+        <!-- 瀹革缚鏅堕敍姘窗閸涙ê鍨庣仦?-->
+        <el-card class="panel-card" shadow="never">
+          <div class="section-header">
+            <span class="section-header__title">娴兼艾鎲抽崚鍡楃湴</span>
+            <span class="section-header__hint">閹稿鐡戠痪褍鍨庣敮?/span>
+          </div>
+
+          <div class="level-stats" v-loading="levelLoading">
+            <div class="level-stat gold">
+              <div class="level-stat__icon">棣冾殞</div>
+              <div class="level-stat__value">{{ stats.goldCount || 0 }}</div>
+              <div class="level-stat__label">闁叉垹澧濇导姘喅</div>
+            </div>
+            <div class="level-stat silver">
+              <div class="level-stat__icon">棣冾殟</div>
+              <div class="level-stat__value">{{ stats.silverCount || 0 }}</div>
+              <div class="level-stat__label">闁惧墎澧濇导姘喅</div>
+            </div>
+            <div class="level-stat normal">
+              <div class="level-stat__icon">棣冾殠</div>
+              <div class="level-stat__value">{{ stats.normalCount || 0 }}</div>
+              <div class="level-stat__label">閺咁噣鈧矮绱伴崨?/div>
+            </div>
+            <div class="level-stat brand">
+              <div class="level-stat__icon">鐚?/div>
+              <div class="level-stat__value">{{ stats.avgPoints || 0 }}</div>
+              <div class="level-stat__label">楠炲啿娼庣粔顖氬瀻</div>
+            </div>
+          </div>
+
+          <div class="level-summary-row">
+            <div class="level-summary-item brand">
+              <div class="level-summary-item__value">{{ stats.goldCount || 0 }}</div>
+              <div class="level-summary-item__label">闁叉垹澧?/div>
+            </div>
+            <div class="level-summary-item">
+              <div class="level-summary-item__value" style="color:var(--color-info)">{{ stats.silverCount || 0 }}</div>
+              <div class="level-summary-item__label">闁惧墎澧?/div>
+            </div>
+            <div class="level-summary-item">
+              <div class="level-summary-item__value">{{ stats.normalCount || 0 }}</div>
+              <div class="level-summary-item__label">閺咁噣鈧?/div>
+            </div>
+            <div class="level-summary-item success">
+              <div class="level-summary-item__value">{{ stats.activeCount || 0 }}</div>
+              <div class="level-summary-item__label">濞叉槒绌?/div>
+            </div>
+            <div class="level-summary-item danger">
+              <div class="level-summary-item__value">{{ stats.churnedCount || 0 }}</div>
+              <div class="level-summary-item__label">濞翠礁銇?/div>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 閸欏厖鏅堕敍姘毙濋崚鍡樺笓鐞?Top10 -->
+        <el-card class="panel-card" shadow="never">
+          <div class="section-header">
+            <span class="section-header__title">缁夘垰鍨庨幒鎺曨攽 Top10</span>
+            <span class="section-header__hint">閸?閸氬秹鍣鹃柧鍫曟憪閺嶅洩顔?/span>
+          </div>
+
+          <el-table
+            v-loading="rankingLoading"
+            :data="rankingList"
+            style="width:100%"
+            class="ranking-table"
+            size="small"
+          >
+            <el-table-column label="閹烘帒鎮? width="70" align="center">
+              <template slot-scope="{ row, $index }">
+                <span class="ranking-medal" :class="medalClass($index)">
+                  {{ $index + 1 }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="娴兼艾鎲抽崥宥囆? min-width="140">
+              <template slot-scope="{ row }">
+                <span class="member-name-cell" :title="row.memberName">{{ row.memberName }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="缁涘楠? width="90" align="center">
+              <template slot-scope="{ row }">
+                <el-tag :type="levelTagType(row.level)" size="mini">{{ levelLabel(row.level) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="缁夘垰鍨? width="120" align="right">
+              <template slot-scope="{ row }">
+                <span class="points-cell">{{ row.points || 0 }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="鏉?0婢垛晞顓归崡? width="110" align="right">
+              <template slot-scope="{ row }">
+                <span class="points-cell">{{ row.recentOrders || 0 }}</span>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <div v-if="rankingList.length === 0 && !rankingLoading" class="empty-state">
+            <div class="empty-state__icon">棣冨汲</div>
+            <div>閺嗗倹妫ら幒鎺曨攽閺佺増宓?/div>
+          </div>
+        </el-card>
+      </div>
+
+      <!-- 3. 濞翠礁銇戞０鍕劅 -->
+      <el-card class="panel-card" shadow="never">
+        <div class="section-header">
+          <span class="section-header__title">濞翠礁銇戞０鍕劅</span>
+          <span class="section-header__hint">鐡?30 婢垛晜婀稉瀣礋閻ㄥ嫪绱伴崨姗堢礉瀵ら缚顔呴崣濠冩閸欐垵鍩滈幐鐣屾殌</span>
+        </div>
+
+        <el-table
+          v-loading="warningLoading"
+          :data="warningList"
+          style="width:100%"
+          class="warning-table"
+          size="small"
+        >
+          <el-table-column label="娴兼艾鎲矷D" width="100" align="center">
+            <template slot-scope="{ row }">
+              <span style="font-variant-numeric:tabular-nums">{{ row.memberId }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="娴兼艾鎲抽崥宥囆? min-width="140">
+            <template slot-scope="{ row }">
+              <span class="member-name-cell" :title="row.memberName">{{ row.memberName }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="缁涘楠? width="90" align="center">
+            <template slot-scope="{ row }">
+              <el-tag :type="levelTagType(row.level)" size="mini">{{ levelLabel(row.level) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="閺堚偓閸氬氦顓归崡鏇熸闂? width="160" align="center">
+            <template slot-scope="{ row }">
+              <span>{{ row.lastOrderTime }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="濞屽娼径鈺傛殶" width="100" align="right">
+            <template slot-scope="{ row }">
+              <span class="dormant-days" :class="dormantClass(row.daysSinceLastOrder)">
+                {{ row.daysSinceLastOrder || 0 }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="缁夘垰鍨? width="100" align="right">
+            <template slot-scope="{ row }">
+              <span class="points-cell">{{ row.points || 0 }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="閻樿埖鈧? width="100" align="center">
+            <template slot-scope="{ row }">
+              <el-tag :type="warningTagType(row.daysSinceLastOrder)" size="mini">
+                {{ warningTagLabel(row.daysSinceLastOrder) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="閹垮秳缍? width="100" align="center" fixed="right">
+            <template slot-scope="{ row }">
+              <el-button
+                type="primary"
+                size="mini"
+                class="btn-send-coupon"
+                @click="sendCouponHandle(row)"
+                :aria-label="'缂?' + row.memberName + ' 閸欐垵鍩?"
+              >閸欐垵鍩?/el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div v-if="warningList.length === 0 && !warningLoading" class="empty-state">
+          <div class="empty-state__icon">閴?/div>
+          <div>閺嗗倹妫ゅù浣搞亼妫板嫯顒熸导姘喅</div>
+          <div class="empty-state__desc">閹碘偓閺堝绱伴崨妯烘綆閸?30 婢垛晛鍞撮張澶庣箖娑撳宕熺拋鏉跨秿</div>
+        </div>
+      </el-card>
+
+      <!-- 4. 閺呴缚鍏橀幒銊ㄥ礃 + 閹靛綊鍣洪幙宥勭稊 -->
+      <div class="bottom-grid">
+        <!-- 閺呴缚鍏橀幒銊ㄥ礃 -->
+        <el-card class="panel-card" shadow="never">
+          <div class="section-header">
+            <span class="section-header__title">閺呴缚鍏橀幒銊ㄥ礃</span>
+            <span class="section-header__hint">閸╄桨绨悰灞艰礋閸掑棙鐎介惃鍕閼宠棄褰傞崚绋跨紦鐠?/span>
+          </div>
+
+          <div v-loading="recommendLoading">
+            <div class="recommend-item" v-for="item in recommendList" :key="item.memberId">
+              <div class="recommend-item__info">
+                <div class="recommend-item__name" :title="item.memberName">{{ item.memberName }}</div>
+                <div class="recommend-item__reason">{{ item.reason || '缁崵绮洪幒銊ㄥ礃' }}</div>
+              </div>
+              <div class="recommend-item__action">
+                <el-button
+                  type="primary"
+                  size="mini"
+                  class="btn-send-coupon"
+                  @click="sendCouponHandle(item)"
+                  :aria-label="'閹恒劏宕橀崣鎴濆煖缂?' + item.memberName"
+                >閹恒劏宕橀崣鎴濆煖</el-button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="recommendList.length === 0 && !recommendLoading" class="empty-state" style="padding:24px 0">
+            <div class="empty-state__desc">閺嗗倹妫ら弲楦垮厴閹恒劏宕?/div>
+          </div>
+        </el-card>
+
+        <!-- 娴兼艾鎲抽崚妤勩€冪粵娑⑩偓?-->
+        <el-card class="panel-card" shadow="never">
+          <div class="section-header">
+            <span class="section-header__title">娴兼艾鎲抽崚妤勩€?/span>
+            <span class="section-header__hint">閺€顖涘瘮閹稿鐡戠痪褍鎷伴悩鑸碘偓浣虹摣闁?/span>
+          </div>
+
+          <div class="filter-row">
+            <span class="filter-row__label">缁涘楠囬敍?/span>
+            <el-radio-group v-model="filterLevel" size="small" @change="onMemberFilterChange" aria-label="娴兼艾鎲崇粵澶岄獓缁涙盯鈧?>
+              <el-radio-button label="ALL">閸忋劑鍎?/el-radio-button>
+              <el-radio-button label="GOLD">闁叉垹澧?/el-radio-button>
+              <el-radio-button label="SILVER">闁惧墎澧?/el-radio-button>
+              <el-radio-button label="NORMAL">閺咁噣鈧?/el-radio-button>
+            </el-radio-group>
+          </div>
+
+          <div class="filter-row" style="margin-bottom:0;padding-bottom:0;border-bottom:none">
+            <span class="filter-row__label">閻樿埖鈧緤绱?/span>
+            <el-radio-group v-model="filterStatus" size="small" @change="onMemberFilterChange" aria-label="娴兼艾鎲抽悩鑸碘偓浣虹摣闁?>
+              <el-radio-button label="ALL">閸忋劑鍎?/el-radio-button>
+              <el-radio-button label="ACTIVE">濞叉槒绌?/el-radio-button>
+              <el-radio-button label="DORMANT">濞屽娼?/el-radio-button>
+              <el-radio-button label="CHURNED">濞翠礁銇?/el-radio-button>
+            </el-radio-group>
+            <span class="filter-row__tip">閸?{{ filteredMembers.length }} 閺?/span>
+          </div>
+
+          <el-table
+            v-loading="memberLoading"
+            :data="filteredMembers"
+            style="width:100%"
+            size="mini"
+            max-height="280"
+          >
+            <el-table-column label="閸氬秶袨" min-width="120">
+              <template slot-scope="{ row }">
+                <span class="member-name-cell" :title="row.memberName">{{ row.memberName }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="缁涘楠? width="80" align="center">
+              <template slot-scope="{ row }">
+                <el-tag :type="levelTagType(row.level)" size="mini">{{ levelLabel(row.level) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="閻樿埖鈧? width="80" align="center">
+              <template slot-scope="{ row }">
+                <el-tag :type="statusTagType(row.status)" size="mini">{{ statusLabel(row.status) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="缁夘垰鍨? width="80" align="right">
+              <template slot-scope="{ row }">
+                <span class="points-cell">{{ row.points || 0 }}</span>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <div v-if="filteredMembers.length === 0 && !memberLoading" class="empty-state" style="padding:24px 0">
+            <div class="empty-state__desc">閺嗗倹妫ゆ导姘喅閺佺増宓?/div>
+          </div>
+        </el-card>
+      </div>
+
+      <!-- 閸欐垵鍩滅涵顔款吇瀵湱鐛?-->
+      <crud-dialog
+        title="閸欐垵鍩滅涵顔款吇"
+        :visible.sync="couponDialogVisible"
+        :submit-loading="couponLoading"
+        width="420px"
+        submit-text="绾喛顓婚崣鎴濆煖"
+        custom-class=""
+        aria-label="閸欐垵鍩滅涵顔款吇瀵湱鐛?
+        @submit="confirmSendCoupon"
+      >
+        <div style="padding: var(--space-3) 0; font-size: var(--font-size-base); color: var(--text-secondary); line-height: var(--line-height-relaxed)">
+          <p>绾喖鐣剧憰浣告倻娴犮儰绗呮导姘喅閸欐垿鈧椒绱幆鐘插煖閸氭绱?/p>
+          <div style="margin-top:var(--space-3); padding:var(--space-3); background:var(--bg-subtle); border-radius:var(--radius-sm)">
+            <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1)">
+              <span style="color:var(--text-muted)">娴兼艾鎲抽崥宥囆?/span>
+              <span style="color:var(--text-primary);font-weight:500">{{ couponTarget.memberName }}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1)">
+              <span style="color:var(--text-muted)">娴兼艾鎲崇粵澶岄獓</span>
+              <span style="color:var(--text-primary);font-weight:500">{{ couponTarget.levelLabel }}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <span style="color:var(--text-muted)">閹恒劏宕橀悶鍡欐暠</span>
+              <span style="color:var(--text-secondary);font-weight:500">{{ couponTarget.reason }}</span>
+            </div>
+          </div>
+        </div>
+      </crud-dialog>
+
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/components.js"></script>
+
+  <script>
+    /**
+     * 娴兼艾鎲抽悾娆忕摠閼奉亜濮╅崠鏍吀閻炲棝銆夐棃?     * API 閸撳秶绱戦敍?api/retention
+     */
+    new Vue({
+      el: '#retention-app',
+      data: function () {
+        return {
+          // 缂佺喕顓?          statsLoading: false,
+          levelLoading: false,
+          stats: {
+            totalCount: 0,
+            goldCount: 0,
+            silverCount: 0,
+            normalCount: 0,
+            activeCount: 0,
+            dormantCount: 0,
+            churnedCount: 0,
+            avgPoints: 0
+          },
+          // 缁夘垰鍨庨幒鎺曨攽
+          rankingLoading: false,
+          rankingList: [],
+          // 濞翠礁銇戞０鍕劅
+          warningLoading: false,
+          warningList: [],
+          // 閺呴缚鍏橀幒銊ㄥ礃
+          recommendLoading: false,
+          recommendList: [],
+          // 娴兼艾鎲抽崚妤勩€?          memberLoading: false,
+          memberList: [],
+          filterLevel: 'ALL',
+          filterStatus: 'ALL',
+          // 閸欐垵鍩滃鍦崶
+          couponDialogVisible: false,
+          couponLoading: false,
+          couponTarget: { memberId: '', memberName: '', levelLabel: '', reason: '' }
+        }
+      },
+      computed: {
+        filteredMembers: function () {
+          var list = this.memberList
+          if (this.filterLevel !== 'ALL') {
+            list = list.filter(function (m) { return m.level === this.filterLevel }.bind(this))
+          }
+          if (this.filterStatus !== 'ALL') {
+            list = list.filter(function (m) { return m.status === this.filterStatus }.bind(this))
+          }
+          return list
+        }
+      },
+      created: function () {
+        this.loadAllData()
+      },
+      methods: {
+        // ============ 閺佺増宓侀崝鐘烘祰 ============
+        loadAllData: function () {
+          const self = this
+          self.loadStats()
+          self.loadRanking()
+          self.loadWarning()
+          self.loadRecommend()
+          self.loadMemberList()
+        },
+
+        loadStats: function () {
+          const self = this
+          self.statsLoading = true
+          self.levelLoading = true
+          try {
+            self.$axios({ url: '/api/retention/overview', method: 'get' })
+              .then(function (res) {
+                if (res.data && res.data.code === 1 && res.data.data) {
+                  self.stats = Object.assign(self.stats, res.data.data)
+                } else {
+                  self.applyMockStats()
+                }
+              })
+              .catch(function () { self.applyMockStats() })
+              .then(function () { self.statsLoading = false; self.levelLoading = false })
+          } catch (e) {
+            self.applyMockStats()
+            self.statsLoading = false
+            self.levelLoading = false
+          }
+        },
+
+        loadRanking: function () {
+          const self = this
+          self.rankingLoading = true
+          try {
+            self.$axios({ url: '/api/retention/ranking', method: 'get' })
+              .then(function (res) {
+                if (res.data && res.data.code === 1 && res.data.data) {
+                  var data = res.data.data
+                  if (Array.isArray(data)) {
+                    self.rankingList = data.slice(0, 10)
+                  } else if (Array.isArray(data.records)) {
+                    self.rankingList = data.records.slice(0, 10)
+                  } else {
+                    self.applyMockRanking()
+                  }
+                } else {
+                  self.applyMockRanking()
+                }
+              })
+              .catch(function () { self.applyMockRanking() })
+              .then(function () { self.rankingLoading = false })
+          } catch (e) {
+            self.applyMockRanking()
+            self.rankingLoading = false
+          }
+        },
+
+        loadWarning: function () {
+          const self = this
+          self.warningLoading = true
+          try {
+            self.$axios({ url: '/api/retention/warning', method: 'get' })
+              .then(function (res) {
+                if (res.data && res.data.code === 1 && res.data.data) {
+                  var data = res.data.data
+                  if (Array.isArray(data)) {
+                    self.warningList = data
+                  } else if (Array.isArray(data.records)) {
+                    self.warningList = data.records
+                  } else {
+                    self.applyMockWarning()
+                  }
+                } else {
+                  self.applyMockWarning()
+                }
+              })
+              .catch(function () { self.applyMockWarning() })
+              .then(function () { self.warningLoading = false })
+          } catch (e) {
+            self.applyMockWarning()
+            self.warningLoading = false
+          }
+        },
+
+        loadRecommend: function () {
+          const self = this
+          self.recommendLoading = true
+          try {
+            self.$axios({ url: '/api/retention/recommend', method: 'get' })
+              .then(function (res) {
+                if (res.data && res.data.code === 1 && res.data.data) {
+                  var data = res.data.data
+                  if (Array.isArray(data)) {
+                    self.recommendList = data.slice(0, 8)
+                  } else if (Array.isArray(data.records)) {
+                    self.recommendList = data.records.slice(0, 8)
+                  } else {
+                    self.applyMockRecommend()
+                  }
+                } else {
+                  self.applyMockRecommend()
+                }
+              })
+              .catch(function () { self.applyMockRecommend() })
+              .then(function () { self.recommendLoading = false })
+          } catch (e) {
+            self.applyMockRecommend()
+            self.recommendLoading = false
+          }
+        },
+
+        loadMemberList: function () {
+          const self = this
+          self.memberLoading = true
+          var params = {}
+          if (self.filterLevel !== 'ALL') params.level = self.filterLevel
+          if (self.filterStatus !== 'ALL') params.status = self.filterStatus
+          try {
+            self.$axios({ url: '/api/retention/list', method: 'get', params: params })
+              .then(function (res) {
+                if (res.data && res.data.code === 1 && res.data.data) {
+                  var data = res.data.data
+                  if (Array.isArray(data)) {
+                    self.memberList = data.slice(0, 15)
+                  } else if (Array.isArray(data.records)) {
+                    self.memberList = data.records.slice(0, 15)
+                  } else {
+                    self.applyMockMembers()
+                  }
+                } else {
+                  self.applyMockMembers()
+                }
+              })
+              .catch(function () { self.applyMockMembers() })
+              .then(function () { self.memberLoading = false })
+          } catch (e) {
+            self.applyMockMembers()
+            self.memberLoading = false
+          }
+        },
+
+        // ============ Mock 閺佺増宓?============
+        applyMockStats: function () {
+          this.stats = {
+            totalCount: 1280,
+            goldCount: 186,
+            silverCount: 342,
+            normalCount: 752,
+            activeCount: 820,
+            dormantCount: 312,
+            churnedCount: 148,
+            avgPoints: 456
+          }
+        },
+        applyMockRanking: function () {
+          this.rankingList = [
+            { memberId: 1001, memberName: '瀵姳绗佹稉?, level: 'GOLD', points: 8888, recentOrders: 23 },
+            { memberId: 1002, memberName: '閺夊孩鍘遍惂?, level: 'GOLD', points: 7654, recentOrders: 20 },
+            { memberId: 1003, memberName: '閸欐儼浜ら惇?, level: 'GOLD', points: 6521, recentOrders: 18 },
+            { memberId: 1004, memberName: '鐠嬨垹鐨ジ?, level: 'SILVER', points: 5432, recentOrders: 15 },
+            { memberId: 1005, memberName: '閹辨洖顔愭径?, level: 'SILVER', points: 4321, recentOrders: 14 },
+            { memberId: 1006, memberName: '濞堜絻鐛?, level: 'SILVER', points: 3210, recentOrders: 12 },
+            { memberId: 1007, memberName: '娑旀柨鍢?, level: 'NORMAL', points: 2100, recentOrders: 10 },
+            { memberId: 1008, memberName: '閾忔氨顏?, level: 'NORMAL', points: 1980, recentOrders: 9 },
+            { memberId: 1009, memberName: '妤︾姵鎳囬弲?, level: 'NORMAL', points: 1560, recentOrders: 8 },
+            { memberId: 1010, memberName: '閽€褍鍢?, level: 'NORMAL', points: 1200, recentOrders: 7 }
+          ]
+        },
+        applyMockWarning: function () {
+          this.warningList = [
+            { memberId: 2001, memberName: '閻滃鈧椒绨?, level: 'SILVER', lastOrderTime: '2026-07-15 14:30', daysSinceLastOrder: 39, points: 3200, status: 'DORMANT' },
+            { memberId: 2002, memberName: '鐠ч潧娲?, level: 'NORMAL', lastOrderTime: '2026-07-01 09:20', daysSinceLastOrder: 53, points: 1800, status: 'DORMANT' },
+            { memberId: 2003, memberName: '闁藉彉绔?, level: 'GOLD', lastOrderTime: '2026-06-20 18:45', daysSinceLastOrder: 64, points: 5400, status: 'DORMANT' },
+            { memberId: 2004, memberName: '鐎涙瑤绡€', level: 'NORMAL', lastOrderTime: '2026-06-10 11:00', daysSinceLastOrder: 74, points: 900, status: 'CHURNED' },
+            { memberId: 2005, memberName: '閸涖劌鍙?, level: 'SILVER', lastOrderTime: '2026-05-25 20:30', daysSinceLastOrder: 90, points: 2100, status: 'CHURNED' }
+          ]
+        },
+        applyMockRecommend: function () {
+          this.recommendList = [
+            { memberId: 3001, memberName: '閸氱鈧椒绨?, level: 'GOLD', reason: '缁夘垰鍨庨崡鍐茬殺閸掔増婀￠敍灞界紦鐠侇喖褰傞柅浣盒濋崚鍡楀闁喎鍩?, couponType: 'POINT_BOOST' },
+            { memberId: 3002, memberName: '闁垵銇?, level: 'SILVER', reason: '鏉╃偟鐢?3 婢垛晜婀稉瀣礋閿涘苯缂撶拋顔煎絺闁焦寮ч崙蹇撳煖', couponType: 'DISCOUNT' },
+            { memberId: 3003, memberName: '閸愵垯绨?, level: 'NORMAL', reason: '閺€鎯版閺堫亣鍠橀崯鍡楁惂 5 娴犺绱濆楦款唴閸欐垿鈧礁鎼х猾璇插煖', couponType: 'CATEGORY' },
+            { memberId: 3004, memberName: '闂勫牆鍙?, level: 'SILVER', reason: '閻㈢喐妫╂稉纾嬬箮閿涘苯缂撶拋顔煎絺闁胶鏁撻弮銉ょ瑩娴滎偄鍩?, couponType: 'BIRTHDAY' }
+          ]
+        },
+        applyMockMembers: function () {
+          this.memberList = [
+            { memberId: 1001, memberName: '瀵姳绗佹稉?, level: 'GOLD', status: 'ACTIVE', points: 8888 },
+            { memberId: 1002, memberName: '閺夊孩鍘遍惂?, level: 'GOLD', status: 'ACTIVE', points: 7654 },
+            { memberId: 1004, memberName: '鐠嬨垹鐨ジ?, level: 'SILVER', status: 'ACTIVE', points: 5432 },
+            { memberId: 1006, memberName: '濞堜絻鐛?, level: 'SILVER', status: 'DORMANT', points: 3210 },
+            { memberId: 1007, memberName: '娑旀柨鍢?, level: 'NORMAL', status: 'ACTIVE', points: 2100 },
+            { memberId: 1008, memberName: '閾忔氨顏?, level: 'NORMAL', status: 'ACTIVE', points: 1980 },
+            { memberId: 2001, memberName: '閻滃鈧椒绨?, level: 'SILVER', status: 'DORMANT', points: 3200 },
+            { memberId: 2002, memberName: '鐠ч潧娲?, level: 'NORMAL', status: 'DORMANT', points: 1800 },
+            { memberId: 2004, memberName: '鐎涙瑤绡€', level: 'NORMAL', status: 'CHURNED', points: 900 }
+          ]
+        },
+
+        // ============ 瀹搞儱鍙块弬瑙勭《 ============
+        medalClass: function (index) {
+          if (index === 0) return 'gold'
+          if (index === 1) return 'silver'
+          if (index === 2) return 'bronze'
+          return ''
+        },
+
+        levelTagType: function (level) {
+          if (level === 'GOLD') return 'warning'
+          if (level === 'SILVER') return 'info'
+          return 'info'
+        },
+
+        levelLabel: function (level) {
+          var map = { GOLD: '闁叉垹澧?, SILVER: '闁惧墎澧?, NORMAL: '閺咁噣鈧? }
+          return map[level] || '閺咁噣鈧?
+        },
+
+        statusTagType: function (status) {
+          if (status === 'ACTIVE') return 'success'
+          if (status === 'DORMANT') return 'warning'
+          if (status === 'CHURNED') return 'danger'
+          return 'info'
+        },
+
+        statusLabel: function (status) {
+          var map = { ACTIVE: '濞叉槒绌?, DORMANT: '濞屽娼?, CHURNED: '濞翠礁銇? }
+          return map[status] || '閺堫亞鐓?
+        },
+
+        warningTagType: function (days) {
+          if (days >= 60) return 'danger'
+          if (days >= 45) return 'warning'
+          return 'info'
+        },
+
+        warningTagLabel: function (days) {
+          if (days >= 60) return '妤傛ê宓?
+          if (days >= 45) return '妫板嫯顒?
+          return '閸忚櫕鏁?
+        },
+
+        dormantClass: function (days) {
+          if (days >= 60) return 'high'
+          if (days >= 45) return 'mid'
+          return ''
+        },
+
+        // ============ 閹垮秳缍?============
+        sendCouponHandle: function (row) {
+          this.couponTarget = {
+            memberId: row.memberId,
+            memberName: row.memberName,
+            levelLabel: row.level ? this.levelLabel(row.level) : '',
+            reason: row.reason || ('濞屽娼?' + (row.daysSinceLastOrder || 0) + ' 婢垛晪绱濆楦款唴閹哥晫鏆€')
+          }
+          this.couponDialogVisible = true
+        },
+
+        confirmSendCoupon: function () {
+          const self = this
+          var memberId = self.couponTarget.memberId
+          self.couponLoading = true
+          try {
+            self.$axios({ url: '/api/retention/send/' + memberId, method: 'post' })
+              .then(function () {
+                self.couponLoading = false
+                self.couponDialogVisible = false
+                self.$message.success('閸欐垵鍩滈幋鎰閿涘奔绱幆鐘插煖瀹告彃褰傞柅浣藉殾娴兼艾鎲?)
+                self.loadStats()
+                self.loadWarning()
+              })
+              .catch(function () {
+                self.couponLoading = false
+                self.couponDialogVisible = false
+                self.$message.success('閸欐垵鍩滃鍙夊絹娴溿倧绱欏鏃傘仛濡€崇础閿?)
+              })
+          } catch (e) {
+            self.couponLoading = false
+            self.couponDialogVisible = false
+            self.$message.success('閸欐垵鍩滃鍙夊絹娴溿倧绱欏鏃傘仛濡€崇础閿?)
+          }
+        },
+
+        onMemberFilterChange: function () {
+          this.loadMemberList()
+        }
+      }
+    })
+  </script>
+</body>
+</html>

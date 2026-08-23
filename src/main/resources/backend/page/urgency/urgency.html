@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>閸岊剙宕熺粻锛勬倞 - 閻熺偛鎮忔径鏍у礌缁狅紕鎮婄粩?/title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+  <style lang="less" scoped>
+    @import "../../styles/tokens.css";
+
+    .urgency-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 var(--space-5);
+    }
+
+    /* ============ 妞ゅ爼鍎寸紒鐔活吀閸楋紕澧栫悰?============ */
+    .urgency-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+    @media (max-width: 1100px) { .urgency-stats { grid-template-columns: repeat(2, 1fr) } }
+    @media (max-width: 600px) { .urgency-stats { grid-template-columns: 1fr } }
+
+    .urgency-stat-card {
+      padding: var(--space-4);
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      transition: box-shadow var(--transition-base);
+    }
+    .urgency-stat-card:hover {
+      box-shadow: var(--shadow-md);
+    }
+    .urgency-stat-card__icon {
+      font-size: var(--font-size-3xl);
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .urgency-stat-card__body { flex: 1; min-width: 0 }
+    .urgency-stat-card__label {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .urgency-stat-card__value {
+      font-size: var(--font-size-3xl);
+      font-weight: var(--font-weight-semibold);
+      line-height: var(--line-height-tight);
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+    }
+    .urgency-stat-card__unit {
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-regular);
+      margin-left: var(--space-1);
+    }
+    .urgency-stat-card.warning .urgency-stat-card__value { color: var(--color-warning) }
+    .urgency-stat-card.danger .urgency-stat-card__value { color: var(--color-danger) }
+    .urgency-stat-card.brand .urgency-stat-card__value { color: var(--color-brand-500) }
+    .urgency-stat-card.success .urgency-stat-card__value { color: var(--color-success) }
+
+    /* ============ 闁氨鏁ら崠鍝勬健閺嶅洭顣?============ */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+    .section-header__title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .section-header__hint {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+    }
+
+    /* ============ 閸岊剙宕熼崚妤勩€冮崡锛勫 ============ */
+    .list-card {
+      padding: var(--space-4);
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--space-6);
+    }
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-3);
+      border-bottom: var(--border-width-thin) solid var(--border-default);
+      flex-wrap: wrap;
+    }
+    .filter-row__label {
+      font-size: var(--font-size-base);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      white-space: nowrap;
+    }
+    .filter-row__tip {
+      margin-left: auto;
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+    }
+
+    /* 鐞涖劍鐗哥悰?hover 鏉╁洦娴?*/
+    .urgency-table {
+      transition: background-color var(--transition-base);
+    }
+
+    /* 缁涘绶熼弮鍫曟毐閸?*/
+    .wait-time {
+      font-variant-numeric: tabular-nums;
+      font-weight: var(--font-weight-medium);
+      font-size: var(--font-size-base);
+    }
+    .wait-time.overdue {
+      color: var(--color-danger);
+    }
+
+    /* 閼挎粌鎼ч崚妤佸焻閺?*/
+    .dish-cell {
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-secondary);
+    }
+
+    /* 鏉╂稑瀹抽弶陇澹?*/
+    .progress-cooking { --progress-color: var(--color-brand-500) }
+    .progress-waiting { --progress-color: var(--color-info) }
+    .progress-done { --progress-color: var(--color-success) }
+    .el-progress-bar__inner {
+      background-color: var(--progress-color, var(--color-brand-500)) !important;
+      transition: width var(--transition-base);
+    }
+    .el-progress-bar__innerText {
+      color: var(--text-inverse) !important;
+    }
+
+    /* ============ 閸欘偄褰?+ 缂佺喕顓?娑撱倖鐖敮鍐ㄧ湰 ============ */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+    @media (max-width: 1100px) { .bottom-grid { grid-template-columns: 1fr } }
+
+    .queue-card {
+      padding: var(--space-4);
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* 閸欘偄褰块崡锛勫 */
+    .call-section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4);
+      background: var(--bg-subtle);
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--space-4);
+    }
+    .call-section__left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .call-section__label {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      line-height: var(--line-height-base);
+    }
+    .call-section__number {
+      font-size: var(--font-size-4xl);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-brand-500);
+      line-height: var(--line-height-tight);
+      font-variant-numeric: tabular-nums;
+    }
+    .call-section__waiting {
+      font-size: var(--font-size-base);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+    .call-section__waiting-num {
+      font-size: var(--font-size-2xl);
+      color: var(--color-danger);
+      font-weight: var(--font-weight-semibold);
+      font-variant-numeric: tabular-nums;
+      margin: 0 var(--space-1);
+    }
+
+    .queue-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-2) 0;
+      border-bottom: var(--border-width-thin) solid var(--border-subtle);
+    }
+    .queue-list-item:last-child { border-bottom: none }
+    .queue-list-item__table {
+      font-size: var(--font-size-base);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      font-variant-numeric: tabular-nums;
+    }
+    .queue-list-item__hint {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+    }
+
+    /* 缂佺喕顓搁崡锛勫娑撳鐖?*/
+    .urgency-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-3);
+      padding: var(--space-4);
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+    }
+    @media (max-width: 600px) { .urgency-summary { grid-template-columns: 1fr } }
+
+    .summary-item {
+      text-align: center;
+      padding: var(--space-3) var(--space-2);
+      border-right: var(--border-width-thin) solid var(--border-subtle);
+    }
+    .summary-item:last-child { border-right: none }
+    .summary-item__label {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      margin-bottom: var(--space-2);
+    }
+    .summary-item__value {
+      font-size: var(--font-size-3xl);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-brand-500);
+      font-variant-numeric: tabular-nums;
+      line-height: var(--line-height-tight);
+    }
+    .summary-item.success .summary-item__value { color: var(--color-success) }
+    .summary-item.info .summary-item__value { color: var(--text-primary) }
+    .summary-item__unit {
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-regular);
+      margin-left: var(--space-1);
+    }
+
+    /* ============ 缁岀儤鈧?============ */
+    .empty-state {
+      text-align: center;
+      padding: 48px var(--space-4);
+      color: var(--text-muted);
+      font-size: var(--font-size-base);
+    }
+    .empty-state__icon {
+      font-size: var(--font-size-4xl);
+      line-height: 1;
+      margin-bottom: var(--space-4);
+    }
+    .empty-state__desc {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      margin-top: var(--space-2);
+    }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">鐠哄疇娴嗛崚棰佸瘜閸愬懎顔?/a>
+  <div class="dashboard-container" id="urgency-app">
+    <div class="container urgency-container" id="main-content" role="main" aria-label="閸岊剙宕熺粻锛勬倞閻婢?>
+
+      <!-- 妞ょ敻娼伴弽鍥暯 -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">閸岊剙宕熺粻锛勬倞</h1>
+          <p class="ds-page-header__subtitle">鐎圭偞妞傞惄鎴炵ゴ鐠併垹宕熺粵澶婄窡閺冨爼鏆遍敍宀冪Т閺冨爼顣╃拃锔跨瑢娑撯偓闁款喖鍋撻崡?/p>
+        </div>
+      </header>
+
+      <!-- 1. 妞ゅ爼鍎寸紒鐔活吀閸楋紕澧?-->
+      <div class="urgency-stats" v-loading="statsLoading">
+        <div class="urgency-stat-card warning">
+          <div class="urgency-stat-card__icon">棣冩晜</div>
+          <div class="urgency-stat-card__body">
+            <div class="urgency-stat-card__label">閸岊剙宕熸稉?/div>
+            <div class="urgency-stat-card__value">{{ stats.urgentCount || 0 }}</div>
+          </div>
+        </div>
+        <div class="urgency-stat-card danger">
+          <div class="urgency-stat-card__icon">閳?/div>
+          <div class="urgency-stat-card__body">
+            <div class="urgency-stat-card__label">鐡掑懏妞傞崣顖氬亾</div>
+            <div class="urgency-stat-card__value">{{ stats.overdueCount || 0 }}</div>
+          </div>
+        </div>
+        <div class="urgency-stat-card brand">
+          <div class="urgency-stat-card__icon">閳?/div>
+          <div class="urgency-stat-card__body">
+            <div class="urgency-stat-card__label">楠炲啿娼庣粵澶婄窡</div>
+            <div class="urgency-stat-card__value">{{ stats.avgWaitMin || 0 }}<span class="urgency-stat-card__unit">閸?/span></div>
+          </div>
+        </div>
+        <div class="urgency-stat-card danger">
+          <div class="urgency-stat-card__icon">閳?/div>
+          <div class="urgency-stat-card__body">
+            <div class="urgency-stat-card__label">閺堚偓闂€璺ㄧ搼瀵?/div>
+            <div class="urgency-stat-card__value">{{ stats.maxWaitMin || 0 }}<span class="urgency-stat-card__unit">閸?/span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 閸岊剙宕熼崚妤勩€?-->
+      <el-card class="list-card" shadow="never">
+        <div class="section-header">
+          <span class="section-header__title">閸岊剙宕熼崚妤勩€?/span>
+          <span class="section-header__hint">缁涘绶熼弮鍫曟毐 &gt; 10 閸掑棝鎸撻懛顏勫З閺嶅洨瀛╂０鍕劅</span>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-row__label">閻樿埖鈧胶鐡柅澶涚窗</span>
+          <el-radio-group v-model="filterStatus" size="small" @change="onFilterChange" aria-label="鐠併垹宕熼悩鑸碘偓浣虹摣闁?>
+            <el-radio-button label="ALL">閸忋劑鍎?/el-radio-button>
+            <el-radio-button label="COOKING">閸掓湹缍旀稉?/el-radio-button>
+            <el-radio-button label="WAITING_CALL">缁涘绶熼崣顐㈠娇</el-radio-button>
+            <el-radio-button label="DONE">瀹告彃鐣幋?/el-radio-button>
+          </el-radio-group>
+          <span class="filter-row__tip">閸?{{ filteredOrders.length }} 閺?/span>
+        </div>
+
+        <el-table
+          v-loading="tableLoading"
+          :data="filteredOrders"
+          :row-class-name="tableRowClassName"
+          style="width:100%"
+          class="urgency-table"
+          size="small"
+          header-cell-class-name="urgency-table-head"
+        >
+          <el-table-column prop="orderId" label="鐠併垹宕熼崣? width="180" align="center" fixed>
+            <template slot-scope="{ row }">
+              <span style="font-variant-numeric:tabular-nums">{{ row.orderId }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="tableNo" label="濡楀苯褰? width="80" align="center">
+            <template slot-scope="{ row }">
+              <span>{{ row.tableNo }}閸?/span>
+            </template>
+          </el-table-column>
+          <el-table-column label="閼挎粌鎼? min-width="200">
+            <template slot-scope="{ row }">
+              <span class="dish-cell" :title="row.dishNames.join('閵?)">{{ row.displayDishes }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="orderTime" label="娑撳宕熼弮鍫曟？" width="140" align="center"></el-table-column>
+          <el-table-column label="缁涘绶熼弮鍫曟毐" width="120" align="center">
+            <template slot-scope="{ row }">
+              <span class="wait-time" :class="{ overdue: row.isOverdue }">{{ row.countdown }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="閸掓湹缍旀潻娑樺" width="160" align="center">
+            <template slot-scope="{ row }">
+              <el-progress
+                :percentage="row.progress"
+                :stroke-width="12"
+                :show-text="row.progress < 90"
+                :class="'progress-' + (row.status === 'DONE' ? 'done' : (row.status === 'COOKING' ? 'cooking' : 'waiting'))"
+                status="success"
+              ></el-progress>
+            </template>
+          </el-table-column>
+          <el-table-column label="閻樿埖鈧? width="100" align="center">
+            <template slot-scope="{ row }">
+              <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="閹垮秳缍? width="90" align="center" fixed="right">
+            <template slot-scope="{ row }">
+              <el-button
+                type="primary"
+                size="mini"
+                :disabled="row.status === 'DONE'"
+                @click="urgeHandle(row)"
+                :aria-label="'閸岊剙宕?' + row.orderId"
+              >閸岊剙宕?/el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div v-if="filteredOrders.length === 0 && !tableLoading" class="empty-state">
+          <div class="empty-state__icon">棣冩惖</div>
+          <div>閺嗗倹妫ら崒顒€宕熺拋鏉跨秿</div>
+          <div class="empty-state__desc">瑜版捁顓归崡鏇犵搼瀵板懓绉撮弮鑸垫閼奉亜濮╂潻娑樺弳閸岊剙宕熼崚妤勩€?/div>
+        </div>
+      </el-card>
+
+      <!-- 3. 閸欘偄褰块幒鎺楁Е + 閸岊剙宕熺紒鐔活吀 -->
+      <div class="bottom-grid">
+        <el-card class="queue-card" shadow="never">
+          <div class="section-header">
+            <span class="section-header__title">閸倿顥ら崣顐㈠娇</span>
+            <span class="section-header__hint">鐎圭偞妞傞幒鎺楁Е閻樿埖鈧?/span>
+          </div>
+
+          <div class="call-section">
+            <div class="call-section__left">
+              <span class="call-section__label">瑜版挸澧犻崣顐㈠娇</span>
+              <span class="call-section__number">{{ currentCallTable }}閸?/span>
+            </div>
+            <div class="call-section__waiting">
+              閸撳秵鏌熺粵澶婄窡
+              <span class="call-section__waiting-num">{{ waitingAheadCount }}</span>
+              濡?            </div>
+          </div>
+
+          <div class="queue-list-item" v-for="item in queueList" :key="item.tableNo">
+            <span class="queue-list-item__table">{{ item.tableNo }}閸欓攱顢?/span>
+            <el-tag :type="item.status === 'COOKING' ? 'warning' : 'info'" size="mini">
+              {{ item.status === 'COOKING' ? '閸掓湹缍旀稉? : '瀵板懎褰ㄩ崣? }}
+            </el-tag>
+          </div>
+
+          <div v-if="queueList.length === 0" class="empty-state" style="padding:24px 0">
+            <div class="empty-state__desc">瑜版挸澧犻弮鐘冲笓闂冪喐顢戝▎?/div>
+          </div>
+        </el-card>
+
+        <div class="urgency-summary">
+          <div class="summary-item">
+            <div class="summary-item__label">娴犲﹥妫╅崒顒€宕熼幀缁樻殶</div>
+            <div class="summary-item__value">{{ summary.todayTotal || 0 }}<span class="summary-item__unit">閸?/span></div>
+          </div>
+          <div class="summary-item success">
+            <div class="summary-item__label">閸岊剙宕熺€瑰本鍨氶悳?/div>
+            <div class="summary-item__value">{{ summary.completeRate || 0 }}<span class="summary-item__unit">%</span></div>
+          </div>
+          <div class="summary-item info">
+            <div class="summary-item__label">楠炲啿娼庨崫宥呯安</div>
+            <div class="summary-item__value">{{ summary.avgResponseMin || 0 }}<span class="summary-item__unit">閸?/span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 閸岊剙宕熺涵顔款吇瀵湱鐛?-->
+      <crud-dialog
+        title="閸岊剙宕熺涵顔款吇"
+        :visible.sync="urgeDialogVisible"
+        :submit-loading="urgeLoading"
+        width="420px"
+        submit-text="绾喛顓婚崒顒€宕?
+        aria-label="閸岊剙宕熺涵顔款吇瀵湱鐛?
+        @submit="confirmUrge"
+      >
+        <div style="padding: var(--space-3) 0; font-size: var(--font-size-base); color: var(--text-secondary); line-height: var(--line-height-relaxed)">
+          <p>绾喖鐣剧憰浣稿亾閸楁洑浜掓稉瀣吂閸楁洖鎮ч敍?/p>
+          <div style="margin-top:var(--space-3); padding:var(--space-3); background:var(--bg-subtle); border-radius:var(--radius-sm)">
+            <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1)">
+              <span style="color:var(--text-muted)">鐠併垹宕熼崣?/span>
+              <span style="color:var(--text-primary);font-weight:500;font-variant-numeric:tabular-nums">{{ urgeOrder.orderId }}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1)">
+              <span style="color:var(--text-muted)">濡楀苯褰?/span>
+              <span style="color:var(--text-primary);font-weight:500">{{ urgeOrder.tableNo }}閸?/span>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <span style="color:var(--text-muted)">缁涘绶熼弮鍫曟毐</span>
+              <span style="color:var(--color-danger);font-weight:500;font-variant-numeric:tabular-nums">{{ urgeOrder.countdown }}</span>
+            </div>
+          </div>
+        </div>
+      </crud-dialog>
+
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/components.js"></script>
+
+  <script>
+    /**
+     * 閸岊剙宕熺粻锛勬倞妞ょ敻娼?     * 閸氬海顏亸杈╁崕閸氬骸鎯庨悽?API 鐠嬪啰鏁ら敍灞姐亼鐠愩儲妞傞懛顏勫З闂勫秶楠囨稉?Mock 閺佺増宓?     */
+    new Vue({
+      el: '#urgency-app',
+      data: function () {
+        return {
+          // 缂佺喕顓搁崡锛勫
+          statsLoading: false,
+          stats: { urgentCount: 0, overdueCount: 0, avgWaitMin: 0, maxWaitMin: 0 },
+          // 閸掓銆冪粵娑⑩偓?          filterStatus: 'ALL',
+          tableLoading: false,
+          orders: [],
+          // 閸欘偄褰?          currentCallTable: '08',
+          waitingAheadCount: 3,
+          queueList: [],
+          // 閸岊剙宕熺紒鐔活吀
+          summary: { todayTotal: 0, completeRate: 0, avgResponseMin: 0 },
+          // 閸岊剙宕熷鍦崶
+          urgeDialogVisible: false,
+          urgeLoading: false,
+          urgeOrder: { orderId: '', tableNo: '', countdown: '' },
+          // 閸婃帟顓搁弮璺虹暰閺冭泛娅?          timerId: null
+        }
+      },
+      computed: {
+        filteredOrders: function () {
+          if (this.filterStatus === 'ALL') {
+            return this.orders
+          }
+          return this.orders.filter(function (o) {
+            return o.status === this.filterStatus
+          }.bind(this))
+        }
+      },
+      created: function () {
+        this.loadAllData()
+        this.startCountdown()
+      },
+      destroyed: function () {
+        if (this.timerId) {
+          clearInterval(this.timerId)
+          this.timerId = null
+        }
+      },
+      methods: {
+        // ============ 閺佺増宓侀崝鐘烘祰 ============
+        loadAllData: function () {
+          const self = this
+          self.loadStats()
+          self.loadOrderList()
+          self.loadQueueInfo()
+          self.loadSummary()
+        },
+
+        loadStats: function () {
+          const self = this
+          self.statsLoading = true
+          try {
+            self.$axios({ url: '/api/urgency/overview', method: 'get' })
+              .then(function (res) {
+                if (res.data && res.data.code === 1 && res.data.data) {
+                  self.stats = res.data.data
+                } else {
+                  self.applyMockStats()
+                }
+              })
+              .catch(function () { self.applyMockStats() })
+              .then(function () { self.statsLoading = false })
+          } catch (e) {
+            self.applyMockStats()
+            self.statsLoading = false
+          }
+        },
+
+        loadOrderList: function () {
+          const self = this
+          self.tableLoading = true
+          try {
+            self.$axios({ url: '/api/urgency/list', method: 'get', params: { page: 1, pageSize: 20 } })
+              .then(function (res) {
+                if (res.data && res.data.code === 1 && res.data.data) {
+                  self.orders = self.normalizeOrders(res.data.data.records || res.data.data)
+                  self.computeCountdowns()
+                } else {
+                  self.applyMockOrders()
+                }
+              })
+              .catch(function () { self.applyMockOrders() })
+              .then(function () { self.tableLoading = false })
+          } catch (e) {
+            self.applyMockOrders()
+            self.tableLoading = false
+          }
+        },
+
+        loadQueueInfo: function () {
+          const self = this
+          try {
+            self.$axios({ url: '/api/urgency/queue', method: 'get' })
+              .then(function (res) {
+                if (res.data && res.data.code === 1 && res.data.data) {
+                  var d = res.data.data
+                  self.currentCallTable = d.currentCallTable || '08'
+                  self.waitingAheadCount = d.waitingAheadCount || 3
+                  self.queueList = d.queueList || []
+                } else {
+                  self.applyMockQueue()
+                }
+              })
+              .catch(function () { self.applyMockQueue() })
+          } catch (e) {
+            self.applyMockQueue()
+          }
+        },
+
+        loadSummary: function () {
+          const self = this
+          try {
+            self.$axios({ url: '/api/urgency/summary', method: 'get' })
+              .then(function (res) {
+                if (res.data && res.data.code === 1 && res.data.data) {
+                  self.summary = res.data.data
+                } else {
+                  self.applyMockSummary()
+                }
+              })
+              .catch(function () { self.applyMockSummary() })
+          } catch (e) {
+            self.applyMockSummary()
+          }
+        },
+
+        // ============ Mock 閺佺増宓?============
+        applyMockStats: function () {
+          this.stats = { urgentCount: 5, overdueCount: 2, avgWaitMin: 6, maxWaitMin: 18 }
+        },
+        applyMockOrders: function () {
+          const self = this
+          var mockData = [
+            {
+              orderId: 'ORD20260823001',
+              tableNo: '03',
+              dishNames: ['鐎诡偂绻氭ウ鈥茬', '妤硅锕╃挒鍡氬帿', '缁娊銈?],
+              displayDishes: '鐎诡偂绻氭ウ鈥茬閵嗕線澶繝鍡氱湸閼垫劏鈧?,
+              orderTime: '2026-08-23 11:35:20',
+              orderTimeMs: Date.now() - 18 * 60 * 1000,
+              status: 'COOKING',
+              progress: 70
+            },
+            {
+              orderId: 'ORD20260823002',
+              tableNo: '05',
+              dishNames: ['缁俱垻鍎抽懖?],
+              displayDishes: '缁俱垻鍎抽懖?,
+              orderTime: '2026-08-23 11:40:15',
+              orderTimeMs: Date.now() - 13 * 60 * 1000,
+              status: 'COOKING',
+              progress: 60
+            },
+            {
+              orderId: 'ORD20260823003',
+              tableNo: '07',
+              dishNames: ['濮樺鍙滄ジ?, '閽傛粏鎼查悽鐔诲綅'],
+              displayDishes: '濮樺鍙滄ジ绗衡偓浣芥審閽冨鏁撻懣?,
+              orderTime: '2026-08-23 11:42:00',
+              orderTimeMs: Date.now() - 11 * 60 * 1000,
+              status: 'WAITING_CALL',
+              progress: 40
+            },
+            {
+              orderId: 'ORD20260823004',
+              tableNo: '08',
+              dishNames: ['缁牠鍞婚柌宀冨墾', '鐟楄法瀛╅弻鑳巢濮?],
+              displayDishes: '缁牠鍞婚柌宀冨墾閵嗕浇銈跨痪銏＄唵閾斿鍫?,
+              orderTime: '2026-08-23 11:45:30',
+              orderTimeMs: Date.now() - 9 * 60 * 1000,
+              status: 'COOKING',
+              progress: 55
+            },
+            {
+              orderId: 'ORD20260823005',
+              tableNo: '10',
+              dishNames: ['闁版瓕褰嶆ジ?, '楠炶尙鍚€鐠炲棜顫?, '閻愭帡銈?],
+              displayDishes: '闁版瓕褰嶆ジ绗衡偓浣稿叡閻撴瓕鐪寸憴鎺嗏偓?,
+              orderTime: '2026-08-23 11:48:10',
+              orderTimeMs: Date.now() - 6 * 60 * 1000,
+              status: 'COOKING',
+              progress: 30
+            },
+            {
+              orderId: 'ORD20260823006',
+              tableNo: '12',
+              dishNames: ['閻戙倗绻€'],
+              displayDishes: '閻戙倗绻€',
+              orderTime: '2026-08-23 11:50:00',
+              orderTimeMs: Date.now() - 4 * 60 * 1000,
+              status: 'WAITING_CALL',
+              progress: 20
+            },
+            {
+              orderId: 'ORD20260823007',
+              tableNo: '02',
+              dishNames: ['閸ョ偤鏀ㄩ懖?, '閹峰秹绮嶉悺?],
+              displayDishes: '閸ョ偤鏀ㄩ懖澶堚偓浣瑰姒涘嫮鎽?,
+              orderTime: '2026-08-23 11:30:00',
+              orderTimeMs: Date.now() - 23 * 60 * 1000,
+              status: 'DONE',
+              progress: 100
+            },
+            {
+              orderId: 'ORD20260823008',
+              tableNo: '15',
+              dishNames: ['閻忣偊鏀ㄦ惔鏇熸灐', '濮ｆ稖鍊?, '妤︻叀顢?, '闁叉垿鎷￠懣?],
+              displayDishes: '閻忣偊鏀ㄦ惔鏇熸灐閵嗕焦鐦洪懖姘ｂ偓?,
+              orderTime: '2026-08-23 11:52:30',
+              orderTimeMs: Date.now() - 3 * 60 * 1000,
+              status: 'COOKING',
+              progress: 15
+            }
+          ]
+          self.orders = mockData
+          self.computeCountdowns()
+        },
+        applyMockQueue: function () {
+          this.currentCallTable = '08'
+          this.waitingAheadCount = 3
+          this.queueList = [
+            { tableNo: '09', status: 'COOKING' },
+            { tableNo: '10', status: 'COOKING' },
+            { tableNo: '11', status: 'WAITING' },
+            { tableNo: '12', status: 'WAITING' }
+          ]
+        },
+        applyMockSummary: function () {
+          this.summary = { todayTotal: 25, completeRate: 92, avgResponseMin: 3 }
+        },
+
+        // ============ 閸婃帟顓搁弮?============
+        computeCountdowns: function () {
+          const self = this
+          self.orders.forEach(function (order) {
+            var diffMs = Date.now() - (order.orderTimeMs || Date.now())
+            order.totalSeconds = Math.max(0, Math.floor(diffMs / 1000))
+            order.isOverdue = order.totalSeconds > 600
+            self.$set(order, 'countdown', self.formatMMSS(order.totalSeconds))
+          })
+        },
+
+        formatMMSS: function (totalSeconds) {
+          var m = Math.floor(totalSeconds / 60)
+          var s = totalSeconds % 60
+          return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s)
+        },
+
+        startCountdown: function () {
+          const self = this
+          self.timerId = setInterval(function () {
+            self.orders.forEach(function (order) {
+              order.totalSeconds += 1
+              order.isOverdue = order.totalSeconds > 600
+              self.$set(order, 'countdown', self.formatMMSS(order.totalSeconds))
+            })
+            // 鐡掑懏妞傞崣顖氬亾閺侀绡冪€圭偞妞傞弴瀛樻煀
+            self.stats.overdueCount = self.orders.filter(function (o) { return o.isOverdue }).length
+          }, 1000)
+        },
+
+        // ============ 瀹搞儱鍙块弬瑙勭《 ============
+        normalizeOrders: function (raw) {
+          const self = this
+          return raw.map(function (o) {
+            o.orderTimeMs = o.orderTimeMs || new Date(o.orderTime).getTime()
+            o.displayDishes = self.truncateDishes(o.dishNames)
+            o.totalSeconds = Math.max(0, Math.floor((Date.now() - o.orderTimeMs) / 1000))
+            o.isOverdue = o.totalSeconds > 600
+            o.countdown = self.formatMMSS(o.totalSeconds)
+            return o
+          })
+        },
+
+        truncateDishes: function (names) {
+          if (!names || names.length === 0) return ''
+          if (names.length <= 2) {
+            return names.join('閵?)
+          }
+          return names[0] + '閵? + names[1] + '閳?
+        },
+
+        statusTagType: function (status) {
+          if (status === 'COOKING') return 'warning'
+          if (status === 'WAITING_CALL') return 'info'
+          if (status === 'DONE') return 'success'
+          return 'info'
+        },
+
+        statusLabel: function (status) {
+          var map = { COOKING: '閸掓湹缍旀稉?, WAITING_CALL: '缁涘绶熼崣顐㈠娇', DONE: '瀹告彃鐣幋? }
+          return map[status] || '閺堫亞鐓?
+        },
+
+        tableRowClassName: function () {
+          return 'urgency-table-row'
+        },
+
+        // ============ 閹垮秳缍?============
+        onFilterChange: function () {
+          // 閸掑洦宕茬粵娑⑩偓澶婃倵閺冪娀娓舵０婵嗩樆閹垮秳缍旈敍瀹憃mputed 閼奉亜濮╂潻鍥ㄦ姢
+        },
+
+        urgeHandle: function (row) {
+          this.urgeOrder = {
+            orderId: row.orderId,
+            tableNo: row.tableNo,
+            countdown: row.countdown
+          }
+          this.urgeDialogVisible = true
+        },
+
+        confirmUrge: function () {
+          const self = this
+          var orderId = self.urgeOrder.orderId
+          self.urgeLoading = true
+          try {
+            self.$axios({ url: '/api/urgency/call/' + orderId, method: 'post' })
+              .then(function () {
+                self.urgeLoading = false
+                self.urgeDialogVisible = false
+                self.$message.success('閸岊剙宕熼幋鎰閿涘苯鍑￠柅姘辩叀閸樸劍鍩ч崝鐘斥偓銉ヮ槱閻?)
+                self.loadStats()
+              })
+              .catch(function () {
+                self.urgeLoading = false
+                self.urgeDialogVisible = false
+                self.$message.success('閸岊剙宕熷鍙夊絹娴溿倧绱欏鏃傘仛濡€崇础閿?)
+              })
+          } catch (e) {
+            self.urgeLoading = false
+            self.urgeDialogVisible = false
+            self.$message.success('閸岊剙宕熷鍙夊絹娴溿倧绱欏鏃傘仛濡€崇础閿?)
+          }
+        }
+      }
+    })
+  </script>
+</body>
+</html>

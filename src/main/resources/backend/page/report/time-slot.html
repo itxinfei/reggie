@@ -143,7 +143,7 @@
           },
           // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
           statsCards: function() {
-            var self = this;
+            const self = this;
             return [
               { key: '时段', icon: '🕐', label: '时段数量', value: self.tableData.length || 0, color: 'primary' },
               { key: '订单', icon: '📋', label: '总订单数', value: self.totalCount, color: 'success' },
@@ -153,14 +153,14 @@
           }
         },
         created: function() {
-          var now = new Date();
-          var first = new Date(now.getFullYear(), now.getMonth(), 1);
-          var last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          const now = new Date();
+          const first = new Date(now.getFullYear(), now.getMonth(), 1);
+          const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
           var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
           this.dateRange = [fmt(first), fmt(last)];
         },
         mounted: function() {
-          var self = this;
+          const self = this;
           self.$nextTick(function() {
             self.initCharts();
             self.loadData();
@@ -176,7 +176,7 @@
         methods: {
           // 修改点：独立初始化逻辑，增加安全判断与延迟 resize 防止变形
           initCharts: function() {
-            var self = this;
+            const self = this;
             var tryInit = function(id, key) {
               var el = document.getElementById(id);
               if (!el) { console.warn('[time-slot] 图表容器未找到:', id); return null; }
@@ -208,7 +208,7 @@
             }
           },
           loadData: function() {
-            var self = this;
+            const self = this;
             if (!self.dateRange || self.dateRange.length < 2) {
               ReggieUI.warning('请选择日期范围'); return;
             }
@@ -222,7 +222,7 @@
             .finally(function() { self.loading = false; });
           },
           loadHeatmap: function() {
-            var self = this; if (!self.heatmapChart) return;
+            const self = this; if (!self.heatmapChart) return;
             $axios.get('/api/report/time-slot/heatmap', { params: { startDate: self.dateRange[0], endDate: self.dateRange[1] } })
               .then(function(res) { if (res.code === 1 && res.data) self.renderHeatmap(res.data); })
               .catch(function() {});
@@ -269,7 +269,7 @@
             if (r > 0.8) return RgPalette.seriesRed; if (r > 0.5) return RgPalette.warning; return RgPalette.linkBlue;
           },
           renderCharts: function() {
-            var self = this;
+            const self = this;
             // 修改点：渲染前先保障容器尺寸稳定
             [self.barChart, self.pieChart].forEach(function(ch) {
               if (ch && !ch.isDisposed()) ch.resize();
@@ -347,7 +347,7 @@
             }, true);
           },
           handleExport: function() {
-            var self = this;
+            const self = this;
             if (!self.dateRange || self.dateRange.length < 2) { ReggieUI.warning('请先选择日期范围'); return; }
             reportExport({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(blob) {
               if (blob && blob.type && blob.type.indexOf('json') > -1) { ReggieUI.error('导出失败，文件格式异常'); return; }

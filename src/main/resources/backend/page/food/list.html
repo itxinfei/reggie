@@ -333,7 +333,7 @@
       },
       computed: {
         statsCards: function() {
-        var self = this
+        const self = this
         return [
           { key: '', icon: 'ri-restaurant-line', label: '鑿滃搧鎬绘暟', value: self.stats.totalDishes, color: 'primary', clickable: true, active: self.activeFilter === '' },
           { key: '1', icon: 'ri-checkbox-circle-line', label: '宸插惎鍞?, value: self.stats.activeDishes, color: 'success', clickable: true, active: self.activeFilter === '1' },
@@ -342,7 +342,7 @@
         ]
       },
         dishRules: function() {
-          var self = this
+          const self = this
           return {
             name: [{ required: true, message: '璇峰～鍐欒彍鍝佸悕绉?, trigger: 'blur' }],
             categoryId: [{ required: true, message: '璇烽€夋嫨鑿滃搧鍒嗙被', trigger: 'change' }],
@@ -365,7 +365,7 @@
         // 淇敼鐐癸細F9 鎬ц兘鈥斺€斿垪琛ㄥ彧鏌ュ綋鍓嶉〉鏁版嵁锛岀粺璁′负鍏ㄥ眬鑱氬悎鐢?loadDishStats 鐙珛鍔犺浇锛屼笉闅忕炕椤?绛涢€夐噸绠?
         async init() {
           this.loading = true
-          var self = this
+          const self = this
           var params = { page: this.page, pageSize: this.pageSize, name: self.lastSearch.name || undefined, code: self.lastSearch.code || undefined, categoryId: self.lastSearch.categoryId || undefined }
           if (self.activeFilter && self.activeFilter !== '') { params.status = self.activeFilter }
           try {
@@ -402,19 +402,19 @@
           return { code: 0 }
         },
         loadCategoryOptions: function() {
-          var self = this
+          const self = this
           getCategoryList({ type: 1 }).then(function(res) {
             if (res.code === 1) { self.categoryOptions = res.data || []; self.searchConfig[1].options = self.categoryOptions.map(function(c) { return { label: c.name, value: c.id } }) }
           }).catch(function(err) { ReggieUI.error('鍔犺浇鍒嗙被閫夐」澶辫触:') })
         },
         getDishList: function() {
-          var self = this
+          const self = this
           getCategoryList({ type: 1 }).then(function(res) { if (res.code === 1) { self.dishList = res.data || [] } }).catch(function(err) { ReggieUI.error('鍔犺浇鑿滃搧鍒嗙被澶辫触:') })
         },
         getImage: function(image) { return '/common/download?name=' + image },
         // stat-cards 鐐瑰嚮
         onCardClick: function(payload) {
-          var self = this
+          const self = this
           self.activeFilter = payload.activeKey
           self.lastSearch = {}
           self.page = 1; self.init()
@@ -431,7 +431,7 @@
           this.page = 1; this.init()
         },
         onAction: function(payload) {
-          var self = this
+          const self = this
           switch (payload.key) {
             case 'batchDelete': self.deleteHandle('鎵归噺', null); break
             case 'batchStart': self.statusHandle('1'); break
@@ -450,7 +450,7 @@
           else { this.dishDialog.title = '淇敼鑿滃搧'; this.dishDialog.actionType = 'edit'; this.dishDialog.visible = true; this.getDishList(); this.initDishForm(st) }
         },
         async initDishForm(id) {
-          var self = this
+          const self = this
           try {
             var res = await queryDishById(id)
             if (String(res.code) === '1') {
@@ -487,7 +487,7 @@
         },
         async submitStockForm() {
           if (this.submitting) return // 鎻愪氦闃查噸
-          var self = this
+          const self = this
           var passed = false
           self.$refs.stockEditForm.validate(function(valid) { passed = valid })
           if (!passed) {
@@ -509,7 +509,7 @@
         delDialogFlavorLabel: function(index, tIdx) { this.dishFlavors[index].value.splice(tIdx, 1) },
         showDialogTagInput: function(index) {
           this.dishFlavors[index].inputVisible = true
-          var self = this
+          const self = this
           this.$nextTick(function() { var ref = self.$refs['dialogTagInput' + index]; if (ref && ref[0]) ref[0].$refs.input.focus() })
         },
         confirmDialogTag: function(index) {
@@ -519,7 +519,7 @@
         },
         submitDishForm: function(st) {
           if (this.submitting) return // 鎻愪氦闃查噸
-          var self = this
+          const self = this
           this.$refs.dishForm.validate(function(valid) {
             if (!valid) return
             self.submitting = true
@@ -570,7 +570,7 @@
           }
         },
         deleteHandle: function(type, id) {
-          var self = this
+          const self = this
           if (type === '鎵归噺' && id === null) { if (self.checkList.length === 0) { ReggieUI.error('璇烽€夋嫨鍒犻櫎瀵硅薄'); return } }
           ReggieUI.confirm('纭鍒犻櫎璇ヨ彍鍝? 鏄惁缁х画?', '纭畾鍒犻櫎', { confirmButtonText: '纭畾', cancelButtonText: '鍙栨秷', type: 'warning' })
             .then(function() {
@@ -581,7 +581,7 @@
             })
         },
         statusHandle: function(row) {
-          var self = this
+          const self = this
           var params = {}
           if (typeof row === 'string') {
             if (self.checkList.length === 0) { ReggieUI.error('鎵归噺鎿嶄綔锛岃鍏堝嬀閫夋搷浣滆彍鍝侊紒'); return false }
@@ -606,19 +606,19 @@
         },
         // ========== 閰嶆柟缂栬緫 ==========
         editBOM: function(row) {
-          var self = this
+          const self = this
           self.bomDialog = { visible: true, dishId: row.id, dishName: row.name }
           self.loadMaterialOptions()
           self.loadBOMItems()
         },
         loadMaterialOptions: function() {
-          var self = this
+          const self = this
           materialList().then(function(res) {
             if (res.code === 1) { self.materialOptions = res.data || [] }
           }).catch(function(err) { ReggieUI.error('鍔犺浇椋熸潗鍒楄〃澶辫触锛? + err) })
         },
         loadBOMItems: function() {
-          var self = this
+          const self = this
           var dishId = self.bomDialog.dishId
           if (!dishId) { return }
           dishMaterialListByDish(dishId).then(function(res) {
@@ -653,7 +653,7 @@
           this.bomItems.splice(index, 1)
         },
         onMaterialChange: function(row, value) {
-          for (var i = 0; i < this.materialOptions.length; i++) {
+          for (let i = 0; i < this.materialOptions.length; i++) {
             if (this.materialOptions[i].id === value) {
               row.materialUnit = this.materialOptions[i].unit || ''
               break
@@ -662,9 +662,9 @@
         },
         submitBOM: function() {
           if (this.bomSubmitting) return
-          var self = this
+          const self = this
           // 鏍￠獙锛氭墍鏈夎蹇呴』閫夐鏉愪笖鐢ㄩ噺 > 0
-          for (var i = 0; i < self.bomItems.length; i++) {
+          for (let i = 0; i < self.bomItems.length; i++) {
             var item = self.bomItems[i]
             if (!item.materialId) { ReggieUI.warning('绗?' + (i + 1) + ' 琛屾湭閫夋嫨椋熸潗'); return }
             if (!item.usageQty || item.usageQty <= 0) { ReggieUI.warning('绗?' + (i + 1) + ' 琛岀敤閲忓繀椤诲ぇ浜?0'); return }

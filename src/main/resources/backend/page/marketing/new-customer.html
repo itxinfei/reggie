@@ -196,7 +196,7 @@
       },
       computed: {
         statsCards: function() {
-          var self = this
+          const self = this
           return [
             { key: '', icon: 'ri-user-add-line', label: '全部优惠', value: self.stats.total, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: '1', icon: 'ri-checkbox-circle-line', label: '已启用', value: self.stats.active, color: 'success', clickable: true, active: self.activeFilter === '1' },
@@ -215,7 +215,7 @@
         },
         async init() {
           this.loading = true
-          var self = this
+          const self = this
           var params = { page: this.page, pageSize: this.pageSize }
           if (self.lastSearch.name) {
             params.name = self.lastSearch.name
@@ -252,7 +252,7 @@
           }
         },
         onCardClick: function(payload) {
-          var self = this
+          const self = this
           self.activeFilter = payload.activeKey
           self.lastSearch = {}
           self.page = 1
@@ -347,7 +347,7 @@
           }
         },
         handleSubmit: function() {
-          var self = this
+          const self = this
           var passed = false
           this.$refs.ruleForm.validate(function(valid) { passed = valid })
           if (!passed) return

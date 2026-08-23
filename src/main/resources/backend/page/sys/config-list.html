@@ -154,7 +154,7 @@
       },
       computed: {
         statsCards: function() {
-          var self = this
+          const self = this
           var typeLabels = { type1: '功能开关', type2: '运营参数', type3: '显示设置', type4: '其他' }
           var typeKeys = ['type1', 'type2', 'type3', 'type4']
           return [
@@ -263,7 +263,7 @@
           this.formData = Object.assign({}, this.formData, { title: '编辑配置', dialogVisible: true }, JSON.parse(JSON.stringify(row)))
         },
         submitForm() {
-          var self = this
+          const self = this
           self.$refs.configForm.validate(function(valid) {
             if (!valid) {
               ReggieUI.warning('请完善表单必填项')
@@ -284,7 +284,7 @@
           })
         },
         deleteHandle(id) {
-          var self = this
+          const self = this
           ReggieUI.confirm('确定删除该配置吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               sysApi.configDelete(id).then(function(res) {

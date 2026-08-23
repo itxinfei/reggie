@@ -263,7 +263,7 @@
       computed: {
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards() {
-          var self = this
+          const self = this
           return [
             { key: '', icon: '🖨️', label: '打印机总数', value: self.stats.totalPrinters || 0, color: 'primary', clickable: true },
             { key: '1', icon: '✅', label: '已启用', value: self.stats.activePrinters || 0, color: 'success', clickable: true },
@@ -413,12 +413,12 @@
           if (this.form.type === 'USB') this.fetchSystemPrinters()
         },
         resetForm(defaults) {
-          var self = this
+          const self = this
           Object.keys(defaults).forEach(function(k) { self.form[k] = defaults[k] })
         },
         fetchSystemPrinters() {
           this.loadingPrinters = true
-          var self = this
+          const self = this
           listSystemPrinters().then(function(res) {
             if (res && res.code === 1) {
               self.systemPrinters = res.data || []
