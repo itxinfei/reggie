@@ -211,13 +211,7 @@
         async init(reloadStats = true) {
           this.loading = true
           var sv = this.searchValues || {}
-          var params = {
-            page: this.page,
-            pageSize: this.pageSize,
-            name: sv.name || undefined,
-            type: sv.type || undefined,
-            status: sv.status || undefined
-          }
+          const params = {$2}
           // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
           const requests = [couponTemplatePage(params)]
           if (reloadStats) { requests.push(this.loadCouponStats()) }
@@ -354,16 +348,7 @@
           if (this.formData.validDays === '' || Number(this.formData.validDays) <= 0) {
             ReggieUI.error('请输入有效天数'); return
           }
-          var data = {
-            name: this.formData.name,
-            type: this.formData.type,
-            conditionAmount: this.formData.conditionAmount || null,
-            discountAmount: this.formData.discountAmount || null,
-            discountRate: this.formData.discountRate || null,
-            totalCount: this.formData.totalCount,
-            validDays: this.formData.validDays,
-            status: this.formData.status
-          }
+          const data = {$2}
           const self = this
           self.submitting = true
           if (this.action === 'add') {

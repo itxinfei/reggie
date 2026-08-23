@@ -263,11 +263,11 @@
           return year + '-' + month + '-' + day + ' ' + hour + ':' + min
         },
         statusTagType: function(status) {
-          var map = { '0': 'info', '1': 'success', '2': 'warning', '3': 'danger' }
+          const map = {$2}
           return map[String(status)] || 'info'
         },
         statusText: function(status) {
-          var map = { '0': '草稿', '1': '进行中', '2': '暂停', '3': '结束' }
+          const map = {$2}
           return map[String(status)] || '未知'
         },
         loadDishOptions: function() {
@@ -285,7 +285,7 @@
         async init() {
           this.loading = true
           const self = this
-          var params = { page: this.page, pageSize: this.pageSize }
+          const params = {$2}
           if (self.lastSearch.name) {
             params.name = self.lastSearch.name
           }

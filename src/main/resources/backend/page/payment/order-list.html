@@ -254,16 +254,8 @@
   <script>
     // ========== 支付状态常量映射（统一来源） ==========
     // 修改点：新增 PAID → 已支付 映射，与后端 PaymentOrder 状态常量完全对齐
-    var PAYMENT_STATUS = {
-      PENDING:  '待支付', SUCCESS: '成功', FAIL: '失败',
-      REFUND: '已退款', REFUNDED: '已退款',
-      PAID: '已支付', PROCESSING: '处理中'
-    }
-    var PAYMENT_STATUS_TAG = {
-      PENDING: 'warning', SUCCESS: 'success', FAIL: 'danger',
-      REFUND: 'info', REFUNDED: 'info',
-      PAID: 'success', PROCESSING: 'warning'
-    }
+    const PAYMENT_STATUS = {$2}
+    const PAYMENT_STATUS_TAG = {$2}
     // 修改点：normalizePayment 现在直接将 status 转为中文（不再依赖 _statusLabel 间接字段）
     function normalizePayment(row) {
       if (!row) return row
@@ -341,14 +333,7 @@
         async init(reloadStats = true) {
           this.loading = true
           const self = this
-          var params = {
-            page: self.page, pageSize: self.pageSize,
-            orderId: self.lastSearch.orderId || undefined,
-            channel: self.lastSearch.channel || undefined,
-            status: self.lastSearch.status || undefined,
-            beginTime: self.lastSearch.beginTime || undefined,
-            endTime: self.lastSearch.endTime || undefined
-          }
+          const params = {$2}
           const requests = [paymentPage(params)]
           if (reloadStats) { requests.push(self.loadPaymentStats()) }
           const results = await Promise.all(requests)
@@ -417,10 +402,7 @@
         statusTagType: function(status) {
           if (!status) return ''
           // 中文直查
-          var byLabel = {
-            '待支付': 'warning', '成功': 'success', '失败': 'danger',
-            '已退款': 'info', '已支付': 'success', '处理中': 'warning'
-          }
+          const byLabel = {$2}
           if (byLabel[status]) return byLabel[status]
           // 兜底：英文 key 查
           return PAYMENT_STATUS_TAG[(status || '').toUpperCase()] || ''

@@ -306,12 +306,7 @@
         async init(reloadStats = true) {
           this.loading = true
           const self = this
-          var params = {
-            page: self.page, pageSize: self.pageSize,
-            number: self.lastSearch.number || undefined,
-            beginTime: self.lastSearch.beginTime || undefined,
-            endTime: self.lastSearch.endTime || undefined
-          }
+          const params = {$2}
           if (self.activeFilter === 'pending') params.status = 2
           const requests = [getOrderDetailPage(params)]
           if (reloadStats) { requests.push(self.loadOrderStats()) }
@@ -373,17 +368,17 @@
         onSizeChange: function(payload) { this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload; this.page = 1; this.init(false) },
         // 状态工具方法
         getOrderType: function(row) {
-          var map = { 1: '待付款', 2: '待接单', 3: '配送中', 4: '已完成', 5: '已取消', 6: '已退款' }
+          const map = {$2}
           return map[row.status] || ''
         },
         getOrderTagType: function(row) {
-          var map = { 1: 'warning', 2: 'warning', 3: 'primary', 4: 'success', 5: 'info', 6: 'danger' }
+          const map = {$2}
           return map[row.status] || 'info'
         },
         // 就餐方式枚举转换（订单详情弹窗使用）
         formatDiningType: function(val) {
           if (!val) return '-'
-          var map = { TAKEOUT: '外卖配送', EAT_IN: '堂食扫码', QUEUE: '排队取餐', RESERVATION: '预订' }
+          const map = {$2}
           return map[val] || '未知方式'
         },
         // 订单详情表格：表头样式（背景/文字走令牌，与全局表头规范一致）
@@ -454,7 +449,7 @@
           self.refundLoading = false
         },
         exportOrders: async function(format) {
-          var params = {}
+          const params = {$2}
           if (this.lastSearch.beginTime) params.startDate = this.lastSearch.beginTime
           if (this.lastSearch.endTime) params.endDate = this.lastSearch.endTime
           if (this.lastSearch.number) params.number = this.lastSearch.number

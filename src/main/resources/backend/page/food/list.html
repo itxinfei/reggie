@@ -366,7 +366,7 @@
         async init() {
           this.loading = true
           const self = this
-          var params = { page: this.page, pageSize: this.pageSize, name: self.lastSearch.name || undefined, code: self.lastSearch.code || undefined, categoryId: self.lastSearch.categoryId || undefined }
+          const params = {$2}
           if (self.activeFilter && self.activeFilter !== '') { params.status = self.activeFilter }
           try {
             const dishRes = await getDishPage(params)
@@ -390,12 +390,7 @@
             const activeCount = (String(results[0].code) === '1') ? (results[0].data.total || 0) : 0
             const inactiveCount = (String(results[1].code) === '1') ? (results[1].data.total || 0) : 0
             const deletedCount = (String(results[2].code) === '1') ? (results[2].data.total || 0) : 0
-            var stats = {
-              totalDishes: activeCount + inactiveCount,
-              activeDishes: activeCount,
-              inactiveDishes: inactiveCount,
-              deletedDishes: deletedCount
-            }
+            const stats = {$2}
             this.stats = stats
             return { code: 1, data: stats }
           } catch (err) { console.warn('鍔犺浇鑿滃搧缁熻鏁版嵁澶辫触:', err) }
@@ -523,16 +518,7 @@
           this.$refs.dishForm.validate(function(valid) {
             if (!valid) return
             self.submitting = true
-            var params = {
-              name: self.dishForm.name,
-              code: self.dishForm.code,
-              categoryId: self.dishForm.categoryId,
-              price: self.dishForm.price,
-              sort: self.dishForm.sort || 0,
-              image: self.dishForm.image,
-              description: self.dishForm.description,
-              status: self.dishForm.status ? 1 : 0
-            }
+            const params = {$2}
             params.flavors = self.dishFlavors.map(function(obj) { return { name: obj.name, value: JSON.stringify(obj.value) } })
             if (self.dishForm.stockQty !== null && self.dishForm.stockQty !== undefined && self.dishForm.stockQty !== '') { params.stockQty = parseFloat(self.dishForm.stockQty) }
             if (self.dishForm.minStock !== null && self.dishForm.minStock !== undefined && self.dishForm.minStock !== '') { params.minStock = parseFloat(self.dishForm.minStock) }
@@ -582,7 +568,7 @@
         },
         statusHandle: function(row) {
           const self = this
-          var params = {}
+          const params = {$2}
           if (typeof row === 'string') {
             if (self.checkList.length === 0) { ReggieUI.error('鎵归噺鎿嶄綔锛岃鍏堝嬀閫夋搷浣滆彍鍝侊紒'); return false }
             params.id = self.checkList.join(','); params.status = row
@@ -677,7 +663,7 @@
               sort: it.sort
             }
           })
-          var params = { dishId: self.bomDialog.dishId, items: items }
+          const params = {$2}
           self.bomSubmitting = true
           dishMaterialBatchSave(params).then(function(res) {
             self.bomSubmitting = false

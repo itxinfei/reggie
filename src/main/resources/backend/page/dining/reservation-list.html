@@ -133,15 +133,7 @@
         async init(reloadStats = true) {
           this.loading = true
           var ls = this.lastSearch || {}
-          var params = {
-            page: this.page,
-            pageSize: this.pageSize,
-            customerName: ls.customerName || undefined,
-            phone: ls.phone || undefined,
-            status: ls.status || undefined,
-            beginTime: ls.beginTime || undefined,
-            endTime: ls.endTime || undefined
-          }
+          const params = {$2}
           // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
           const requests = [reservationPage(params)]
           if (reloadStats) { requests.push(this.loadReservationStats()) }

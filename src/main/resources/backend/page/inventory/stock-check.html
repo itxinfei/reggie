@@ -224,7 +224,7 @@
         },
         async init(reloadStats = true) {
           const self = this
-          var params = { page: this.page, pageSize: this.pageSize }
+          const params = {$2}
           if (this.input.status) params.status = this.input.status
           if (this.input.dateRange) {
             params.startDate = this.input.dateRange[0]

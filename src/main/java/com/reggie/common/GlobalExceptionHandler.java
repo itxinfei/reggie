@@ -18,7 +18,6 @@ import java.sql.SQLIntegrityConstraintViolationException;
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
 import java.util.List;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -47,9 +46,6 @@ import java.util.stream.Collectors;
 @ResponseBody
 @Slf4j
 public class GlobalExceptionHandler {
-
-    /** 提取唯一约束冲突中重复值的正则（MySQL: Duplicate entry 'xxx' for key ...） */
-    private static final Pattern DUPLICATE_ENTRY_PATTERN = Pattern.compile("Duplicate entry '([^']*)'");
 
     /**
      * 处理SQL完整性约束违反异常（唯一索引冲突）

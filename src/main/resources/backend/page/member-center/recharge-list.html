@@ -159,7 +159,7 @@
         // 修改点：F9 性能 — 列表查询与全局统计分离，reloadStats=true 才重算
         async fetchData(reloadStats = true) {
           this.loading = true
-          var params = { page: this.page, pageSize: this.pageSize, phone: this.input.phone || undefined, paymentMethod: this.input.paymentMethod || undefined }
+          const params = {$2}
           try {
             const requests = [rechargePage(params)]
             if (reloadStats) { requests.push(rechargeStats()) }

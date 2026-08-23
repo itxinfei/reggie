@@ -142,15 +142,7 @@
         async init(reloadStats = true) {
           this.loading = true
           var ls = this.lastSearch || {}
-          var params = {
-            page: this.page,
-            pageSize: this.pageSize,
-            module: ls.module || undefined,
-            operationType: ls.operationType || undefined,
-            operatorName: ls.operatorName || undefined,
-            beginTime: ls.beginTime || undefined,
-            endTime: ls.endTime || undefined
-          }
+          const params = {$2}
           const requests = [sysApi.logPage(params)]
           if (reloadStats) { requests.push(this.loadStats()) }
           const results = await Promise.all(requests)
@@ -175,7 +167,7 @@
               sysApi.logPage({ page: 1, pageSize: 1, isSuccess: 1 }),
               sysApi.logPage({ page: 1, pageSize: 1, isSuccess: 0 })
             ])
-            var data = {}
+            const data = {$2}
             if (statsRes && String(statsRes.code) === '1') {
               data = Object.assign({}, data, statsRes.data || {})
             }
@@ -230,11 +222,11 @@
           this.init(false)
         },
         opTypeTag(type) {
-          var map = { 'INSERT': 'success', 'UPDATE': 'warning', 'DELETE': 'danger', 'OTHER': 'info' }
+          const map = {$2}
           return map[type] || 'info'
         },
         methodTag(method) {
-          var map = { 'GET': 'success', 'POST': 'primary', 'PUT': 'warning', 'DELETE': 'danger' }
+          const map = {$2}
           return map[method] || 'info'
         }
       }

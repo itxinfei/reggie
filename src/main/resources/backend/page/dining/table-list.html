@@ -317,8 +317,7 @@
         init: function(reloadStats) {
           if (reloadStats === undefined) reloadStats = true
           const self = this
-          var params = { page: this.page, pageSize: this.pageSize,
-            name: self.lastSearch.name || undefined, areaId: self.lastSearch.areaId || undefined, status: self.lastSearch.status || undefined }
+          const params = {$2}
           self.loading = true
           const requests = [tablePage(params)]
           if (reloadStats) { requests.push(self.loadTableStats()) }
@@ -383,7 +382,7 @@
           this.$refs.tableForm.validate(function(valid) {
             if (!valid) return
             self.submitting = true
-            var data = { name: self.form.name, areaId: self.form.areaId, seatCount: self.form.seatCount, minAmount: self.form.minAmount, status: self.form.status, sort: self.form.sort }
+            const data = {$2}
             if (self.action === 'add') {
               addTable(data).then(function(res) {
                 self.submitting = false
@@ -444,12 +443,7 @@
         // 状态流转白名单（与后端 ALLOWED_TABLE_TRANSITIONS 一致）
         canTransition: function(current, target) {
           if (current === target) return false
-          var rules = {
-            FREE: ['OCCUPIED', 'RESERVED', 'CLEANING'],
-            OCCUPIED: ['FREE', 'CLEANING'],
-            RESERVED: ['OCCUPIED', 'FREE'],
-            CLEANING: ['FREE']
-          }
+          const rules = {$2}
           const allowed = rules[current]
           if (!allowed) return false
           for (let i = 0; i < allowed.length; i++) {

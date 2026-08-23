@@ -258,17 +258,17 @@
           return Number(value).toFixed(2)
         },
         getScopeTagType(scope) {
-          var map = { 1: '', 2: 'success', 3: 'warning', 4: 'info' }
+          const map = {$2}
           return map[scope] || ''
         },
         getScopeText(scope) {
-          var map = { 1: '全场', 2: '指定分类', 3: '指定菜品', 4: '指定套餐' }
+          const map = {$2}
           return map[scope] || '未知'
         },
         async init() {
           this.loading = true
           const self = this
-          var params = { page: this.page, pageSize: this.pageSize }
+          const params = {$2}
           if (self.lastSearch.campaignId) {
             params.campaignId = self.lastSearch.campaignId
           }

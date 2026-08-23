@@ -245,17 +245,17 @@
           return Number(value).toFixed(2)
         },
         getDiscountTypeTagType(type) {
-          var map = { 1: '', 2: 'success', 3: 'warning' }
+          const map = {$2}
           return map[type] || ''
         },
         getDiscountTypeText(type) {
-          var map = { 1: '减固定金额', 2: '打折', 3: '赠品' }
+          const map = {$2}
           return map[type] || '未知'
         },
         async init() {
           this.loading = true
           const self = this
-          var params = { page: this.page, pageSize: this.pageSize }
+          const params = {$2}
           if (self.lastSearch.campaignId) {
             params.campaignId = self.lastSearch.campaignId
           }

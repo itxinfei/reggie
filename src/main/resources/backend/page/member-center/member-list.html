@@ -184,7 +184,7 @@
         },
         async init(reloadStats = true) {
           this.loading = true
-          var params = { page: this.page, pageSize: this.pageSize, name: this.searchInput.name || undefined, phone: this.searchInput.phone || undefined, levelId: this.searchInput.levelId || undefined }
+          const params = {$2}
           const self = this
           try {
             // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算

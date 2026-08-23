@@ -626,10 +626,7 @@
         loadTable: function () {
           const self = this
           this.tableLoading = true
-          var params = {
-            days: this.suggestDays,
-            replenishCycle: this.replenishCycle
-          }
+          const params = {$2}
           smartReplenishSuggest(params).then(function (res) {
             if (String(res.code) === '1') {
               const data = res.data || []
@@ -647,7 +644,7 @@
             }
           }).catch(function (e) {
             console.warn('鏅鸿兘琛ヨ揣寤鸿涓嶅彲鐢紝闄嶇骇鍔犺浇:', e)
-            // 闄嶇骇锛氳皟鐢ㄥ師鏈夎ˉ璐у缓璁帴鍙?            var fallbackParams = { days: self.suggestDays }
+            // 闄嶇骇锛氳皟鐢ㄥ師鏈夎ˉ璐у缓璁帴鍙?            const fallbackParams = {$2}
             materialReplenishSuggest(fallbackParams).then(function (res2) {
               if (String(res2.code) === '1' && Array.isArray(res2.data)) {
                 self.tableData = res2.data
@@ -708,11 +705,7 @@
         },
         submitSingleRestock: function () {
           const self = this
-          var item = {
-            materialId: self.singleForm.materialId,
-            qty: String(self.singleForm.qty),
-            remark: self.singleForm.remark
-          }
+          const item = {$2}
           self.singleLoading = true
           materialBatchRestock({
             materialIds: [self.singleForm.materialId],

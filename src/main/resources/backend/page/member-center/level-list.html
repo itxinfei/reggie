@@ -251,7 +251,7 @@
           this.$refs.levelForm.validate(function(valid) {
             if (!valid) { ReggieUI.warning('请完善表单信息'); return false }
             self.submitting = true
-            var data = { name: self.formData.name, minPoints: self.formData.minPoints, discount: self.formData.discount, sort: self.formData.sort }
+            const data = {$2}
             if (self.action === 'add') {
               addLevel(data).then(function(res) {
                 self.submitting = false

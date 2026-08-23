@@ -833,7 +833,7 @@
         loadMemberList: function () {
           const self = this
           self.memberLoading = true
-          var params = {}
+          const params = {$2}
           if (self.filterLevel !== 'ALL') params.level = self.filterLevel
           if (self.filterStatus !== 'ALL') params.status = self.filterStatus
           try {
@@ -933,7 +933,7 @@
         },
 
         levelLabel: function (level) {
-          var map = { GOLD: '闁叉垹澧?, SILVER: '闁惧墎澧?, NORMAL: '閺咁噣鈧? }
+          const map = {$2}
           return map[level] || '閺咁噣鈧?
         },
 
@@ -945,7 +945,7 @@
         },
 
         statusLabel: function (status) {
-          var map = { ACTIVE: '濞叉槒绌?, DORMANT: '濞屽娼?, CHURNED: '濞翠礁銇? }
+          const map = {$2}
           return map[status] || '閺堫亞鐓?
         },
 

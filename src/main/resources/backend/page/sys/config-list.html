@@ -155,7 +155,7 @@
       computed: {
         statsCards: function() {
           const self = this
-          var typeLabels = { type1: '功能开关', type2: '运营参数', type3: '显示设置', type4: '其他' }
+          const typeLabels = {$2}
           const typeKeys = ['type1', 'type2', 'type3', 'type4']
           return [
             { key: '', icon: '⚙️', label: '配置总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
@@ -169,11 +169,7 @@
         async init(reloadStats = true) {
           this.loading = true
           var ls = this.lastSearch || {}
-          var params = {
-            configKey: ls.configKey || undefined,
-            configType: ls.configType || undefined,
-            keyword: ls.keyword || undefined
-          }
+          const params = {$2}
           const requests = [sysApi.configList()]
           if (reloadStats) { requests.push(this.loadConfigStats()) }
           const results = await Promise.all(requests)
@@ -199,7 +195,7 @@
             const res = await sysApi.configList()
             if (res && res.code === 1) {
               const list = res.data || []
-              var stats = { total: list.length, type1: 0, type2: 0, type3: 0, type4: 0 }
+              const stats = {$2}
               list.forEach(function(item) {
                 const t = String(item.configType || '4')
                 if (stats.hasOwnProperty('type' + t)) stats['type' + t]++
@@ -217,7 +213,7 @@
           this.init(false)
         },
         buildFilterParams(key) {
-          var map = { type1: '1', type2: '2', type3: '3' }
+          const map = {$2}
           return map[key] ? { configType: map[key] } : {}
         },
         // table-bar 回调
@@ -247,11 +243,11 @@
           this.init(false)
         },
         typeName(type) {
-          var map = { 1: '功能开关', 2: '运营参数', 3: '显示设置', 4: '其他' }
+          const map = {$2}
           return map[type] || '其他'
         },
         typeTagType(type) {
-          var map = { 1: 'success', 2: 'warning', 3: 'info', 4: '' }
+          const map = {$2}
           return map[type] || ''
         },
         openDialog() {

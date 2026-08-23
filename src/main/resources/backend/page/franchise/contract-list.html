@@ -219,7 +219,7 @@
             if (String(res.code) === '1') {
               const list = res.data || []
               this.franchiseeOptions = list
-              var map = {}
+              const map = {$2}
               list.forEach(function(f) { map[f.id] = f })
               this.franchiseeMap = map
               // 同步搜索下拉选项
@@ -232,12 +232,7 @@
         async init() {
           this.loading = true
           var sv = this.searchValues || {}
-          var params = {
-            page: this.page,
-            pageSize: this.pageSize,
-            franchiseeId: sv.franchiseeId || undefined,
-            status: sv.status || undefined
-          }
+          const params = {$2}
           try {
             const res = await contractPage(params)
             if (String(res.code) === '1') {
@@ -320,14 +315,7 @@
           if (!self.formData.contractNo || !self.formData.contractNo.trim()) {
             ReggieUI.error('请输入合同编号'); return
           }
-          var data = {
-            franchiseeId: self.formData.franchiseeId,
-            contractNo: self.formData.contractNo,
-            commissionType: self.formData.commissionType,
-            settleCycle: 1, // 月结
-            status: self.formData.status,
-            remark: self.formData.remark || null
-          }
+          const data = {$2}
           if (self.formData.dateRange && self.formData.dateRange.length === 2) {
             data.startDate = self.formData.dateRange[0]
             data.endDate = self.formData.dateRange[1]

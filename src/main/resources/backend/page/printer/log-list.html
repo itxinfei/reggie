@@ -165,15 +165,7 @@
         async fetchData(reloadStats = true) {
           this.loading = true
           const self = this
-          var params = {
-            page: this.page,
-            pageSize: this.pageSize,
-            orderId:   this.query.orderId   || undefined,
-            printType: this.query.printType || undefined,
-            status:    this.query.status !== '' ? this.query.status : undefined,
-            beginTime: this.query.dateRange && this.query.dateRange[0] ? this.query.dateRange[0] : undefined,
-            endTime:   this.query.dateRange && this.query.dateRange[1] ? this.query.dateRange[1] : undefined
-          }
+          const params = {$2}
           try {
           const requests = [printerLogPage(params)]
           if (reloadStats) { requests.push(self.loadLogStats()) }
@@ -191,7 +183,7 @@
               if (statsRes && String(statsRes.code) === '1') {
                 var stats = statsRes.data || {}
                 // 修改点：打印类型数基于当前列表真实数据去重 printType，替代恒为 0/1 的估算假数据
-                var typeSet = {}
+                const typeSet = {$2}
                 const recs = (logRes.data && logRes.data.records) || []
                 recs.forEach(function (r) {
                   if (r.printType !== undefined && r.printType !== null && r.printType !== '') typeSet[r.printType] = true

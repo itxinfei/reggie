@@ -234,8 +234,8 @@
 
           // 构建排班数据
           const shifts = ['morning', 'noon', 'night', 'full', 'rest']
-          var labels = { morning: '早', noon: '中', night: '晚', full: '全天', rest: '休' }
-          var data = {}
+          const labels = {$2}
+          const data = {$2}
           self.employeeOptions.forEach(function (emp) {
             const empKey = emp.id
             data[empKey] = {}
@@ -268,16 +268,15 @@
           const month = parseInt(parts[1], 10)
           const daysInMonth = new Date(year, month, 0).getDate()
           const weekdays = ['一', '二', '三', '四', '五', '六', '日']
-          var labels = { morning: '早', noon: '中', night: '晚', full: '全天', rest: '休' }
-          var shiftMap = { 'early': 'morning', 'morning': 'morning', 'noon': 'noon', 'afternoon': 'noon', 'night': 'night', 'evening': 'night', 'full': 'full', 'rest': 'rest' }
-
+          const labels = {$2}
+          const shiftMap = {$2}
           self.dayHeaders = []
           for (let d = 1; d <= daysInMonth; d++) {
             const wd = new Date(year, month - 1, d).getDay()
             self.dayHeaders.push(d + '(' + weekdays[wd] + ')')
           }
 
-          var newData = {}
+          const newData = {$2}
           backendData.rows.forEach(function (row) {
             const key = row.employeeId
             newData[key] = newData[key] || {}
@@ -298,8 +297,7 @@
           const todayOnDuty = 0
           const todayScheduled = 0
           const absentCount = 0
-          var onDutyTodaySet = {}
-
+          const onDutyTodaySet = {$2}
           const now = new Date()
           const nowMonth = now.getMonth() + 1
           const nowYear = now.getFullYear()
@@ -330,15 +328,14 @@
           const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
           const now = new Date()
           const weekStart = now.getDate() - now.getDay() + 1
-          var colors = { morning: 'var(--color-success)', noon: 'var(--color-brand-500)', night: 'var(--color-info)', full: 'var(--color-danger)' }
-          var shiftNames = { morning: '早', noon: '中', night: '晚', full: '全天' }
-
+          const colors = {$2}
+          const shiftNames = {$2}
           const totalAll = 0
           const weekData = []
           for (let w = 0; w < 7; w++) {
             const dayNum = weekStart + w
             if (dayNum < 1 || dayNum > 28) break
-            var counts = { morning: 0, noon: 0, night: 0, full: 0 }
+            const counts = {$2}
             self.employeeOptions.forEach(function (emp) {
               const cell = self.scheduleData[emp.id] && self.scheduleData[emp.id][dayNum]
               if (cell) counts[cell.shift] = (counts[cell.shift] || 0) + 1
@@ -381,7 +378,7 @@
           return this.scheduleData[empId] && this.scheduleData[empId][day] || null
         },
         getShiftTagType: function (shift) {
-          var map = { morning: 'success', noon: 'primary', night: 'info', full: 'danger' }
+          const map = {$2}
           return map[shift] || 'info'
         },
 
@@ -395,14 +392,7 @@
           self.$refs.scheduleForm.validate(function (valid) {
             if (!valid) return
             self.submitting = true
-            var data = {
-              employeeId: self.form.employeeId,
-              date: self.form.date,
-              shift: self.form.shift,
-              startTime: self.form.startTime,
-              endTime: self.form.endTime,
-              remark: self.form.remark
-            }
+            const data = {$2}
             scheduleSave(data).then(function () {
               self.submitting = false
               self.dialog.visible = false
@@ -414,7 +404,7 @@
               var match = self.form.date.match(/-(\d{2})$/)
               if (match) {
                 const day = parseInt(match[1], 10)
-                var labels = { morning: '早', noon: '中', night: '晚', full: '全天' }
+                const labels = {$2}
                 self.$set(self.scheduleData[self.form.employeeId], day, { shift: self.form.shift, label: labels[self.form.shift] })
               }
               self.submitting = false

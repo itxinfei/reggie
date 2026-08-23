@@ -278,7 +278,7 @@
           // 鎸夐€楀彿銆佺┖鏍笺€佹崲琛岀瓑鍒嗛殧
           var raw = text.split(/[,\s\n\r]+/).map(function(s) { return s.trim() }).filter(function(s) { return s.length > 0 })
           // 杞暣鏁板苟鍘婚噸
-          var set = {}
+          const set = {$2}
           for (let i = 0; i < raw.length; i++) {
             const n = parseInt(raw[i], 10)
             if (!isNaN(n) && n > 0) set[n] = true
@@ -389,7 +389,7 @@
                 memberIds: this.parsedMemberIds
               })
             } else {
-              var c = {}
+              const c = {$2}
               const cond = this.form.condition
               if (cond.levelId != null) c.levelId = cond.levelId
               if (cond.newMemberDays != null) c.newMemberDays = cond.newMemberDays

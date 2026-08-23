@@ -284,10 +284,7 @@
           if (!this.templateId) return
           this.tableLoading = true
           try {
-            var params = {
-              page: this.page,
-              pageSize: this.pageSize
-            }
+            const params = {$2}
             const res = await couponIssued(this.templateId, params)
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []

@@ -344,7 +344,7 @@
           return 'info'
         },
         statusLabel: function(status) {
-          var map = { WAITING: '缁涘绶熸稉?, CALLED: '瀹告彃褰ㄩ崣?, SEATED: '瀹告彃鍙嗘惔?, CANCELLED: '瀹告彃褰囧☉? }
+          const map = {$2}
           return map[status] || '閺堫亞鐓?
         },
         // 閸旂姾娴囩紒鐔活吀
@@ -365,10 +365,7 @@
         loadTable: function() {
           const self = this
           self.tableLoading = true
-          var params = {
-            page: self.page,
-            pageSize: self.pageSize
-          }
+          const params = {$2}
           if (self.searchPhone && self.searchPhone.trim()) { params.phone = self.searchPhone.trim() }
           if (self.searchStatus) { params.status = self.searchStatus }
           queuePage(params).then(function(res) {
@@ -421,7 +418,7 @@
           const self = this
           if (self.callLoading) return
           self.callLoading = true
-          var body = {}
+          const body = {$2}
           if (self.callSeatCount) { body.seatCount = self.callSeatCount }
           queueCall(body).then(function(res) {
             self.callLoading = false
@@ -486,7 +483,7 @@
           if (this.seatLoading) return
           const self = this
           self.seatLoading = true
-          var data = { queueId: self.seatForm.queueId }
+          const data = {$2}
           if (self.seatForm.tableId) { data.tableId = self.seatForm.tableId }
           queueSeat(data).then(function(res) {
             self.seatLoading = false
