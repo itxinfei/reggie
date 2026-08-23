@@ -344,12 +344,12 @@
                     if (self.orderFilter.endDate) params.endDate = self.orderFilter.endDate;
                     if (self.orderFilter.status) params.status = self.orderFilter.status;
 
-                    var ext = format === 'excel' ? 'xlsx' : 'pdf';
-                    var apiCall = format === 'excel'
+                    const ext = format === 'excel' ? 'xlsx' : 'pdf';
+                    const apiCall = format === 'excel'
                         ? exportApi.exportOrdersExcel(params)
                         : exportApi.exportOrdersPdf(params);
 
-                    var label = '璁㈠崟鏁版嵁 (' + self.orderFilter.startDate + '~' + self.orderFilter.endDate + ')';
+                    const label = '璁㈠崟鏁版嵁 (' + self.orderFilter.startDate + '~' + self.orderFilter.endDate + ')';
                     exportApi.downloadFile(apiCall, '璁㈠崟鏁版嵁.' + ext)
                         .then(function() {
                             self.addHistory(label, '&#128203;', ext, true);
@@ -365,7 +365,7 @@
                 exportDish(format) {
                     const self = this;
                     self.dishExport.loading = true;
-                    var ext = format === 'excel' ? 'xlsx' : 'pdf';
+                    const ext = format === 'excel' ? 'xlsx' : 'pdf';
                     var apiCall = format === 'excel'
                         ? exportApi.exportDishesExcel({})
                         : exportApi.exportDishesPdf({});
@@ -385,7 +385,7 @@
                 exportEmp(format) {
                     const self = this;
                     self.empExport.loading = true;
-                    var ext = format === 'excel' ? 'xlsx' : 'pdf';
+                    const ext = format === 'excel' ? 'xlsx' : 'pdf';
                     var apiCall = format === 'excel'
                         ? exportApi.exportEmployeesExcel({})
                         : exportApi.exportEmployeesPdf({});
@@ -408,12 +408,12 @@
                     const params = {$2};
                     if (self.reportFilter.startDate) params.startDate = self.reportFilter.startDate;
                     if (self.reportFilter.endDate) params.endDate = self.reportFilter.endDate;
-                    var ext = format === 'excel' ? 'xlsx' : 'pdf';
-                    var apiCall = format === 'excel'
+                    const ext = format === 'excel' ? 'xlsx' : 'pdf';
+                    const apiCall = format === 'excel'
                         ? exportApi.exportReportExcel(params)
                         : exportApi.exportReportPdf(params);
 
-                    var label = '缁忚惀鎶ヨ〃 (' + self.reportFilter.startDate + '~' + self.reportFilter.endDate + ')';
+                    const label = '缁忚惀鎶ヨ〃 (' + self.reportFilter.startDate + '~' + self.reportFilter.endDate + ')';
                     exportApi.downloadFile(apiCall, '缁忚惀鎶ヨ〃.' + ext)
                         .then(function() {
                             self.addHistory(label, '&#128200;', ext, true);
@@ -429,7 +429,7 @@
                 // ==================== 瀵煎嚭璁板綍 ====================
                 addHistory(name, icon, ext, success) {
                     const now = new Date();
-                    var time = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0')
+                    const time = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0')
                         + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
                     this.history.unshift({
                         name: name + '.' + ext,
@@ -449,7 +449,7 @@
 
         const toastTimer = $2;
         function showToast(msg, type) {
-            var toast = document.getElementById('toast');
+            const toast = document.getElementById('toast');
             toast.textContent = msg;
             toast.className = 'toast toast-' + type;
             toast.style.display = 'block';

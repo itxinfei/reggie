@@ -418,7 +418,7 @@
         },
         downloadQrcode: function() {
           if (this.qrcodeDialog.imageUrl) {
-            var a = document.createElement('a'); a.href = this.qrcodeDialog.imageUrl;
+            const a = document.createElement('a'); a.href = this.qrcodeDialog.imageUrl;
             a.download = 'qrcode-table-' + this.qrcodeDialog.tableId + '.png'; a.click();
             ReggieUI.success('二维码已开始下载')
           }
@@ -450,7 +450,7 @@
             RESERVED: ['OCCUPIED', 'FREE'],
             CLEANING: ['FREE']
           }
-          var allowed = rules[current]
+          const allowed = rules[current]
           if (!allowed) return false
           for (let i = 0; i < allowed.length; i++) {
             if (allowed[i] === target) return true

@@ -746,7 +746,7 @@
             return
           }
           const self = this
-          var items = []
+          const items = []
           for (let i = 0; i < this.selectedRows.length; i++) {
             var row = this.selectedRows[i]
             var qty = Number(row.suggestQty || 0) > 0 ? Number(row.suggestQty) : 1
@@ -770,7 +770,7 @@
             return
           }
           const self = this
-          var items = []
+          const items = []
           for (let i = 0; i < this.batchForm.items.length; i++) {
             var it = this.batchForm.items[i]
             items.push({

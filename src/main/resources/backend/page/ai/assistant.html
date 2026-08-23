@@ -199,12 +199,12 @@
             if (!content) return [];
             if (typeof content !== 'string') return [{ type: 'text', text: String(content) }];
             const parts = $2;
-            var lines = content.split('\n');
+            const lines = content.split('\n');
             for (let li = 0; li < lines.length; li++) {
-                var line = lines[li];
+                const line = lines[li];
                 if (li > 0) parts.push({ type: 'text', text: '\n' });
-                var boldRegex = /\*\*(.*?)\*\*/g;
-                var lastIndex = 0, match;
+                const boldRegex = /\*\*(.*?)\*\*/g;
+                const lastIndex = 0, match;
                 while ((match = boldRegex.exec(line)) !== null) {
                     if (match.index > lastIndex) {
                         parts.push({ type: 'text', text: line.substring(lastIndex, match.index) });
@@ -219,7 +219,7 @@
                     const listItems = $2;
                     listItems.push(line.trim().replace(/^[-·]\s*/, ''));
                     for (let ni = li + 1; ni < lines.length; ni++) {
-                        var nextLine = lines[ni].trim();
+                        const nextLine = lines[ni].trim();
                         if (nextLine.startsWith('- ') || nextLine.startsWith('· ')) {
                             listItems.push(nextLine.replace(/^[-·]\s*/, ''));
                         } else { break; }
@@ -243,9 +243,9 @@
         function formatConvTime(dateStr) {
             if (!dateStr) return '';
             if (typeof dateStr === 'string' && dateStr.indexOf('T') > -1) {
-                var parts = dateStr.split('T');
-                var date = parts[0];
-                var time = parts[1] ? parts[1].substring(0, 5) : '';
+                const parts = dateStr.split('T');
+                const date = parts[0];
+                const time = parts[1] ? parts[1].substring(0, 5) : '';
                 return date + ' ' + time;
             }
             return String(dateStr);
@@ -346,7 +346,7 @@
                     const self = this;
                     self.sidebarLoading = true;
                     aiBackendApi.getConversations(1, 50).then(function(res) {
-                        var data = res.data || res;
+                        const data = res.$2 || res;
                         self.conversations = (data && data.code === 1 ? data.data : data) || [];
                         // 修改点：如果有对话，自动选中最近一条
                         if (self.conversations.length > 0 && !self.currentConversationId) {
@@ -379,8 +379,8 @@
                     self.messages = [];
                     self.loadingHistory = true;
                     aiBackendApi.getConversationDetail(conversationId).then(function(res) {
-                        var data = res.data || res;
-                        var records = (data && data.code === 1 ? data.data : data) || [];
+                        const data = res.$2 || res;
+                        const records = (data && data.code === 1 ? data.data : data) || [];
                         // 将数据库记录转换为消息格式
                         self.messages = records.map(function(record) {
                             const msg = {$2};
@@ -452,12 +452,12 @@
                 // ==================== 消息发送 ====================
 
                 sendMessage: function() {
-                    var text = this.inputText.trim();
+                    const text = this.inputText.trim();
                     if (!text || this.loading) return;
 
                     const self = this;
                     self.currentRequestId++;
-                    var requestId = self.currentRequestId;
+                    const requestId = self.currentRequestId;
 
                     // 用户消息
                     const userMsg = {$2};
@@ -473,10 +473,7 @@
 
                     // 修改点：使用SSE流式对话替代普通POST
                     try {
-                        var params = [
-                            'message=' + encodeURIComponent(text),
-                            'scene=' + encodeURIComponent(self.currentScene)
-                        ];
+                        const params = [$2];
                         if (self.currentConversationId) {
                             params.push('conversationId=' + encodeURIComponent(self.currentConversationId));
                         }
@@ -488,7 +485,7 @@
                                 return;
                             }
                             try {
-                                var chunk = JSON.parse(event.data);
+                                const chunk = JSON.parse($2);
                                 assistantMsg.content += chunk.text || '';
                                 assistantMsg.renderedParts = safeFormatContent(assistantMsg.content);
                                 // 记录服务端返回的 messageId
@@ -507,7 +504,7 @@
                             eventSource.close();
                             if (requestId !== self.currentRequestId) return;
                             try {
-                                var doneData = JSON.parse(event.data);
+                                const doneData = JSON.parse($2);
                                 if (doneData.messageId) {
                                     assistantMsg.dbMessageId = doneData.messageId;
                                 }
@@ -526,7 +523,7 @@
                         eventSource.addEventListener('dishes', function(event) {
                             // 点餐场景：处理推荐菜品（前端暂不展示，仅记录）
                             try {
-                                var dishes = JSON.parse(event.data);
+                                const dishes = JSON.parse($2);
                                 assistantMsg._dishes = dishes;
                             } catch (e) { /* ignore */ }
                         });
@@ -535,7 +532,7 @@
                             eventSource.close();
                             if (requestId !== self.currentRequestId) return;
                             try {
-                                var errorData = JSON.parse(event.data);
+                                const errorData = JSON.parse($2);
                                 assistantMsg.content = errorData.message || '服务暂时不可用，请稍后重试';
                             } catch (e) {
                                 assistantMsg.content = '服务暂时不可用，请稍后重试';
@@ -579,14 +576,14 @@
 
                 retryMessage: function(msg) {
                     const self = this;
-                    var idx = self.messages.indexOf(msg);
+                    const idx = self.messages.indexOf(msg);
                     if (idx > 0) {
                         // 删除失败的 AI 消息及其前面的用户消息
                         self.messages.splice(idx - 1, 2);
                     }
                     // 用之前的用户消息内容重新发送
                     if (idx > 0) {
-                        var prevUser = self.messages[idx - 2];
+                        const prevUser = self.messages[idx - 2];
                         if (prevUser && prevUser.role === 'user') {
                             self.inputText = prevUser.content;
                             self.sendMessage();
@@ -622,7 +619,7 @@
                     const self = this;
                     self.connectionStatus.checking = true;
                     aiBackendApi.health().then(function(res) {
-                        var data = (res.data || res);
+                        const data = (res.data || res);
                         var healthData = (data && data.code === 1 ? data.data : data) || {};
                         self.connectionStatus.model = healthData.model || 'unknown';
                         self.connectionStatus.connected = healthData.available === true;
@@ -652,7 +649,7 @@
                 scrollToBottom: function() {
                     const self = this;
                     this.$nextTick(function() {
-                        var el = self.$refs.chatBody;
+                        const el = self.$refs.$2;
                         if (el) el.scrollTop = el.scrollHeight;
                     });
                 }

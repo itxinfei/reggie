@@ -143,6 +143,8 @@ docs/code-review-report.md
 docs/frontend-benchmark-report.md
 docs/TestImageGenerator-最终版说明.md
 docs/项目完成度分析报告-2026-07-08.md
+# 通配：禁止上传任何 docs/*.md 分析文档
+docs/*.md
 
 /scripts/
 

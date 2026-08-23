@@ -241,9 +241,9 @@
 
         renderFeedbackChart(data) {
             if (!this.feedbackChart) return;
-            var names = ['点击', '收藏', '加购', '下单', '不感兴趣'];
-            var values = [data.click || 0, data.favorite || 0, data.cart || 0, data.order || 0, data.unlike || 0];
-            var colors = [RgPalette.seriesBlue, RgPalette.seriesGreen, RgPalette.seriesGold, RgPalette.seriesPink, RgPalette.borderBase];
+            const names = [$2];
+            const values = [$2];
+            const colors = [$2];
             this.feedbackChart.setOption({
                 tooltip: { trigger: 'axis' },
                 grid: { left: 50, right: 20, top: 10, bottom: 40 },
@@ -313,9 +313,9 @@
 
         renderAlgoChart(data) {
             if (!this.algoChart) return;
-            var algos = data.algos || ['协同过滤', '内容推荐', '热门排行', '混合推荐'];
-            var ctRates = data.ctRates || [0, 0, 0, 0];
-            var cvRates = data.cvRates || [0, 0, 0, 0];
+            const algos = data.algos || ['协同过滤', '内容推荐', '热门排行', '混合推荐'];
+            const ctRates = data.ctRates || [0, 0, 0, 0];
+            const cvRates = data.cvRates || [0, 0, 0, 0];
             this.algoChart.setOption({
                 tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
                 legend: { data: ['点击率%', '转化率%'], bottom: 0 },
@@ -354,9 +354,9 @@
 
         renderBrowseChart(data) {
             if (!this.browseChart) return;
-            var dates = data.dates || [];
-            var browseCount = data.browseCount || [];
-            var cartCount = data.cartCount || [];
+            const dates = data.dates || [];
+            const browseCount = data.browseCount || [];
+            const cartCount = data.cartCount || [];
             this.browseChart.setOption({
                 tooltip: {
                     trigger: 'axis',

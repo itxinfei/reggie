@@ -220,7 +220,7 @@
             var highMinPts = sortedLevels.length >= 3 ? sortedLevels[Math.floor(sortedLevels.length*0.6)].minPoints : 5000
             var midMinPts = sortedLevels.length >= 2 ? sortedLevels[Math.floor(sortedLevels.length*0.3)].minPoints : 1000
             var highLevelIds = sortedLevels.filter(function(l) { return (l.minPoints||0) >= highMinPts }).map(function(l) { return l.id })
-            var midLevelIds = sortedLevels.filter(function(l) { var p=l.minPoints||0; return p >= midMinPts && p < highMinPts }).map(function(l) { return l.id })
+            var midLevelIds = sortedLevels.filter(function(l) { const p = l.minPoints||0; return p >= midMinPts && p < highMinPts }).map(function(l) { return l.id })
             var lowLevelIds = sortedLevels.filter(function(l) { return (l.minPoints||0) < midMinPts }).map(function(l) { return l.id })
             var sum = function(ids) { return ids.reduce(function(s, id) { return s + (levelCountMap[id] || 0) }, 0) }
             var highCount = sum(highLevelIds)

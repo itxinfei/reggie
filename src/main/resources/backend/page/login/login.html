@@ -153,7 +153,7 @@
           cb(v && v.length >= 6 ? undefined : new Error('密码至少6位'))
         },
         err: function(field) {
-          var fs = this.$refs.loginForm ? this.$refs.loginForm.fields : null
+          const fs = this.$refs.loginForm ? this.$refs.loginForm.fields : null
           if (!fs) return false
           for (let i = 0; i < fs.length; i++) {
             if (fs[i].prop === field) return fs[i].validateState === 'error'

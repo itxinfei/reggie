@@ -262,7 +262,7 @@
             try {
               var diffRes = await stockCheckPage({ page: 1, pageSize: 100, status: 'DONE' })
               if (String(diffRes.code) === '1' && diffRes.data && diffRes.data.records) {
-                var records = diffRes.data.records
+                const records = diffRes.data.records
                 for (let i = 0; i < records.length; i++) {
                   var details = records[i].details
                   if (details && details.some(function(d) { return d.diff != null && d.diff !== 0 })) {

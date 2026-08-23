@@ -869,7 +869,7 @@
                     // 修改点：改为调用后端 /notification/record/stats SQL 聚合接口，避免 pageSize:999 拉全量后前端 forEach 计算
                     notificationApi.getRecordStats().then(function(res) {
                         if (res && res.code === 1 && res.data) {
-                            var d = res.data;
+                            const d = res.data;
                             self.stats = {
                                 todaySms: Number(d.todaySms) || 0,
                                 todayPush: Number(d.todayPush) || 0,
@@ -923,12 +923,12 @@
 
                 saveTemplate: function() {
                     const self = this;
-                    var form = self.templateModal.form;
+                    const form = self.templateModal.form;
                     if (!form.templateName || !form.content) {
                         ReggieUI.warning('模板名称和内容不能为空');
                         return;
                     }
-                    var apiCall = self.templateModal.isEdit
+                    const apiCall = self.templateModal.isEdit
                         ? notificationApi.updateTemplate(form)
                         : notificationApi.addTemplate(form);
                     apiCall.then(function(res) {
@@ -944,7 +944,7 @@
                 },
 
                 toggleTemplate: function(t) {
-                    var newStatus = t.status === 1 ? 0 : 1;
+                    const newStatus = t.status === 1 ? 0 : 1;
                     notificationApi.toggleTemplate(t.id, newStatus).then(function(res) {
                         if (res && res.code === 1) {
                             t.status = newStatus;
@@ -1001,7 +1001,7 @@
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
             document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-            var btn = document.querySelector('.tab-btn[onclick="switchTab(\'' + tab + '\')"]');
+            const btn = document.querySelector('.tab-btn[onclick="switchTab(\'' + tab + '\')"]');
             if (btn) btn.classList.add('active');
             document.getElementById('tab-' + tab).classList.add('active');
 

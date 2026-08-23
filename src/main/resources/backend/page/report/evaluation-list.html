@@ -331,12 +331,7 @@
           loadStats: function() {
             const self = this;
             // 修改点：使用Promise.all批量请求，减少网络往返
-            var ps = [
-              getEvaluationPage({ page: 1, pageSize: 1 }),
-              getPendingEvaluations({ page: 1, pageSize: 1 }),
-              getEvaluationPage({ page: 1, pageSize: 1, status: 1 }),
-              getEvaluationPage({ page: 1, pageSize: 1, status: 2 })
-            ];
+            const ps = [$2];
             Promise.all(ps.map(function(p) { return p.catch(function() { return null; }); }))
               .then(function(results) {
                 if (results[0] && String(results[0].code) === '1') self.stats.total = results[0].data.total || 0;
@@ -352,7 +347,7 @@
           },
           // 修改点：<stat-cards> 组件统一卡片点击分发
           onCardClick: function(payload) {
-            var key = payload.key;
+            const key = payload.key;
             this.filters.status = key === '' ? null : Number(key);
             this.filterStatus = this.filters.status;
             this.page = 1; this.loadData();
@@ -364,7 +359,7 @@
           // 修改点：重命名为 handleAudit，避免与 evaluation.js 全局 auditEvaluation 函数名冲突
           handleAudit: function(row, status) {
             const self = this;
-            var action = status === 1 ? '通过' : '拒绝';
+            const action = status === 1 ? '通过' : '拒绝';
             ReggieUI.confirm('确认' + action + '该评价吗？', '提示', {
               confirmButtonText: '确 定', cancelButtonText: '取 消',
               type: status === 1 ? 'success' : 'warning'
@@ -409,7 +404,7 @@
           },
           getImageList: function(images) {
             if (!images) return []; if (Array.isArray(images)) return images;
-            try { var parsed = JSON.parse(images); return Array.isArray(parsed) ? parsed : []; } catch(e) { return images ? [images] : []; }
+            try { const parsed = JSON.parse($2); return Array.isArray(parsed) ? parsed : []; } catch(e) { return images ? [images] : []; }
           },
           getImageUrl: function(name) {
             if (!name) return ''; if (typeof name === 'string' && name.indexOf('http') === 0) return name;

@@ -521,8 +521,8 @@
         initOverviewCharts: function() {
             const self = this;
             this.$nextTick(function() {
-                var pieDom = document.getElementById('statusPieChart');
-                var barDom = document.getElementById('overviewBarChart');
+                const pieDom = document.getElementById('statusPieChart');
+                const barDom = document.getElementById('overviewBarChart');
                 if (pieDom) self.statusPieChart = echarts.init(pieDom);
                 if (barDom) self.overviewBarChart = echarts.init(barDom);
                 self.renderOverviewCharts();
@@ -602,7 +602,7 @@
                 campaignType: self.searchType || undefined
             }).then(function(res) {
                 if (res.code === 1) {
-                    var data = res.data;
+                    const data = res.data;
                     self.tableData = data.records || [];
                     self.total = data.total || 0;
                 }
@@ -615,7 +615,7 @@
             const self = this;
             recommendBackendApi.getCampaignStats().then(function(res) {
                 if (res.code === 1 && res.data) {
-                    var s = res.data;
+                    const s = res.data;
                     self.summary.total = s.total || 0;
                     self.summary.active = s.active || 0;
                     self.summary.draft = s.draft || 0;
@@ -854,7 +854,7 @@
             if (!this.pushTargetCampaign) return;
             const self = this;
             self.pushing = true;
-            var campaignId = self.pushTargetCampaign.id;
+            const campaignId = self.pushTargetCampaign.id;
             recommendBackendApi.batchPush(campaignId, { pushType: self.pushForm.pushType }).then(function(res) {
                 if (res.code === 1) {
                     ReggieUI.success(res.msg || '推送成功，共触达 ' + (res.data || 0) + ' 位用户');
@@ -894,7 +894,7 @@
         onStatsDialogOpen: function() {
             const self = this;
             this.$nextTick(function() {
-                var dom = document.getElementById('campaignStatsChart');
+                const dom = document.getElementById('campaignStatsChart');
                 if (dom) {
                     if (self.statsChart) self.statsChart.dispose();
                     self.statsChart = echarts.init(dom);
@@ -904,10 +904,10 @@
         },
         renderStatsChart: function() {
             if (!this.statsChart || !this.statsCampaign) return;
-            var c = this.statsCampaign;
+            const c = this.statsCampaign;
             // 修改点(2026-07-10)：使用真实数据，不再模拟
-            var pushCount = c.pushCount || 0;
-            var participants = c.currentParticipants || 0;
+            const pushCount = c.pushCount || 0;
+            const participants = c.currentParticipants || 0;
             this.statsChart.setOption({
                 tooltip: { trigger: 'axis' },
                 legend: { data: ['推送数', '参与数'], bottom: 0, textStyle: { fontSize: 12 } },

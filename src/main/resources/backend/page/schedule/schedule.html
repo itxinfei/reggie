@@ -219,7 +219,7 @@
         },
         loadMockSchedule: function () {
           const self = this
-          var parts = self.scheduleMonth.split('-')
+          const parts = self.scheduleMonth.split('-')
           var year = parseInt(parts[0], 10)
           var month = parseInt(parts[1], 10)
           const daysInMonth = new Date(year, month, 0).getDate()
@@ -336,7 +336,7 @@
           var colors = { morning: 'var(--color-success)', noon: 'var(--color-brand-500)', night: 'var(--color-info)', full: 'var(--color-danger)' }
           var shiftNames = { morning: '早', noon: '中', night: '晚', full: '全天' }
 
-          var totalAll = 0
+          const totalAll = 0
           var weekData = []
           for (let w = 0; w < 7; w++) {
             var dayNum = weekStart + w

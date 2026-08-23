@@ -310,14 +310,14 @@
                     duration: 0,
                     iconClass: 'el-icon-loading'
                 });
-                var startTime = Date.now();
+                const startTime = Date.now();
 
                 $axios.get('/admin/ai/provider/test/' + id).then(function(res) {
                     loadingMsg.close();
-                    var elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
                     if (res.code === 1) {
-                        var result = res.data.result || '';
-                        var isSuccess = result.indexOf('SUCCESS') === 0;
+                        const result = res.data.result || '';
+                        const isSuccess = result.indexOf('SUCCESS') === 0;
                         ReggieUI.message({
                             type: isSuccess ? 'success' : 'error',
                             message: provider.providerName + ' (' + elapsed + 's)：' + result,
@@ -408,21 +408,21 @@
 
                     self.submitting = true;
 
-                var payload = JSON.parse(JSON.stringify(self.form));
+                const payload = JSON.parse(JSON.stringify(self.form));
                 if (self.form.id && self.form._hasExistingKey && !self.form.apiKey) {
                     delete payload.apiKey;
                     delete payload._hasExistingKey;
                 }
                 delete payload._hasExistingKey;
 
-                var api = this.form.id
+                const api = this.form.id
                     ? $axios.post('/admin/ai/provider/update', payload)
                     : $axios.post('/admin/ai/provider/add', payload);
 
                 api.then(function(res) {
                     if (res.code === 1) {
                         // 修改点：add 接口返回 { action:"新增"/"更新", msg }，update 返回简单字符串
-                        var msg = res.msg || '';
+                        const msg = res.msg || '';
                         if (res.data && res.data.msg) {
                             msg = res.data.msg;
                         }

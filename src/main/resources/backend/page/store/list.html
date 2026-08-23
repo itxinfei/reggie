@@ -515,7 +515,7 @@
             // 淇敼鐐癸細鏀逛负璋冪敤鍚庣 /store/stats SQL 鑱氬悎鎺ュ彛锛屾浛浠?listStores 鎷夊叏閲忓悗 filter 缁熻锛堟秷闄?N+1 涓庡叏閲忓唴瀛樿绠楋級
             storeStats().then(function(res) {
                 if (res && res.code === 1 && res.data) {
-                    var d = res.data;
+                    const d = res.data;
                     self.stats.totalStores = Number(d.totalStores) || 0;
                     self.stats.activeStores = Number(d.activeStores) || 0;
                     self.stats.inactiveStores = Number(d.inactiveStores) || 0;
@@ -585,7 +585,7 @@
             }).then(function() {
                 batchUpdateStatus(ids, status).then(function(res) {
                     if (res && res.code === 1) {
-                        var result = res.data;
+                        const result = res.data;
                         ReggieUI.success(label + '鎴愬姛锛? + result.successCount + '/' + result.total);
                         self.loadData();
                     } else {
@@ -600,8 +600,8 @@
             ReggieUI.message({ message: '姝ｅ湪瀵煎嚭锛岃绋嶅€?..', type: 'info', duration: 2000 });
             exportStores(params).then(function(res) {
                 const blob = new Blob([res], { type: 'text/csv;charset=utf-8' });
-                var url = window.URL.createObjectURL(blob);
-                var a = document.createElement('a');
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
                 a.href = url;
                 a.download = 'store_export_' + new Date().toISOString().slice(0,10) + '.csv';
                 a.click();
@@ -637,7 +637,7 @@
             // 淇鐐癸細鍒楄〃鏁版嵁鍙兘涓嶅惈鍏ㄩ儴瀛楁锛岀粺涓€璧?/store/detail 鑾峰彇瀹屾暣淇℃伅
             getStoreDetail(row.tenantId).then(function(res) {
                 if (res && res.code === 1 && res.data) {
-                    var d = res.data;
+                    const d = res.data;
                     d.dataCompleteRate = self.calcCompleteRate(d);
                     self.detailData = d;
                     self.detailDialogVisible = true;
@@ -651,14 +651,14 @@
         // 鐐瑰嚮琛屾墦寮€璇︽儏锛堟帓闄ょ偣鍑绘搷浣滄寜閽?/ 澶嶉€夋 / 鐘舵€佸紑鍏崇瓑浜や簰鍏冪礌鏃剁殑璇Е鍙戯級
         onRowClick: function(row, column, event) {
             if (!event || !event.target) return;
-            var t = event.target;
+            const t = event.target;
             if (t.closest('.el-button') || t.closest('.el-checkbox') || t.closest('.el-switch') || t.closest('.cell')) {
                 // 鎿嶄綔鍒?/ 閫夋嫨鍒?/ 鐘舵€佸垪鐐瑰嚮涓嶈Е鍙戣鎯咃紙cell 鍐呭彲鑳藉惈鎸夐挳锛?
             }
             // 浠呭綋鐐瑰嚮鐨勬槸涓绘暟鎹崟鍏冩牸锛堥潪鎿嶄綔/閫夋嫨/鐘舵€佸垪锛夋椂鎵撳紑璇︽儏
-            var cell = t.closest('.el-table__row td');
+            const cell = t.closest('.el-table__row td');
             if (!cell) return;
-            var cls = cell.getAttribute('class') || '';
+            const cls = cell.getAttribute('class') || '';
             if (cls.indexOf('el-table-column--selection') > -1) return;
             if (cls.indexOf('crud-actions-col') > -1) return;
             if (t.closest('.el-switch')) return;
@@ -672,7 +672,7 @@
             self.editTenantId = row.tenantId;
             getStoreDetail(row.tenantId).then(function(res) {
                 if (res && res.code === 1 && res.data) {
-                    var d = res.data;
+                    const d = res.data;
                     self.form = {
                         storeName: d.storeName || '',
                         storeCode: d.storeCode || '',
@@ -722,7 +722,7 @@
                 self.submitting = true;
 
                 // 澶勭悊钀ヤ笟鏃堕棿
-                var businessHours = self.form.businessHours;
+                const businessHours = self.form.businessHours;
                 if (self.form.businessHoursRange && self.form.businessHoursRange.length === 2) {
                     businessHours = self.form.businessHoursRange[0] + '-' + self.form.businessHoursRange[1];
                 }
@@ -768,7 +768,7 @@
                 categories: syncCategories({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, operatorId: 1 }),
                 setmeals: syncSetmeals({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, setmealIds: null, operatorId: 1 })
             };
-            var apiCall = apiMap[type];
+            const apiCall = apiMap[type];
             if (!apiCall) return;
             self.syncing[type] = true;
             apiCall.then(function(res) {
@@ -797,7 +797,7 @@
         // 淇敼鐐癸細缁熶竴绫诲瀷杞崲宸ュ叿锛岃В鍐崇粍浠跺睘鎬х被鍨嬫牎楠屽け璐ラ棶棰?
         // 灏嗕换鎰忓€硷紙瀛楃涓?鏁板瓧/绌猴級杞崲涓?Number锛汦lProgress.percentage 蹇呴』 Number
         toNumber: function(val) {
-            var n = Number(val);
+            const n = Number(val);
             if (isNaN(n)) return 0;
             return n;
         },
@@ -824,19 +824,14 @@
         },
         // 淇敼鐐癸細el-progress 棰滆壊闅忓畬鍠勫害鍙樺寲锛堢豢/姗?鐏帮級锛岀粺涓€璧拌涔変护鐗?
         progressColor: function(val) {
-            var n = this.toNumber(val);
+            const n = this.toNumber(val);
             if (n >= 80) return 'var(--color-success)';
             if (n >= 50) return 'var(--color-warning)';
             return 'var(--color-info)';
         },
         // 淇敼鐐癸細鏍规嵁瀛楁濉啓鎯呭喌璁＄畻鏁版嵁瀹屽杽搴︼紙0-100 鏁存暟锛夛紝椹卞姩 el-progress
         calcCompleteRate: function(row) {
-            var fields = [
-                row.storeName, row.storeCode, row.contactPerson, row.contactPhone,
-                row.address, row.businessHours, row.deliveryRadius,
-                row.minDeliveryAmount, row.deliveryFee,
-                row.isDeliveryEnabled, row.isDineInEnabled
-            ];
+            const fields = [$2];
             const filled = $2;
             for (let i = 0; i < fields.length; i++) {
                 if (fields[i] !== null && fields[i] !== undefined && fields[i] !== '') filled++;
@@ -845,7 +840,7 @@
         },
         parseBusinessHours: function(val) {
             if (!val) return null;
-            var parts = val.split('-');
+            const parts = val.split('-');
             if (parts.length === 2) return [parts[0], parts[1]];
             return null;
         }

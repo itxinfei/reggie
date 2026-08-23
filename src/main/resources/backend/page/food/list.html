@@ -510,11 +510,11 @@
         showDialogTagInput: function(index) {
           this.dishFlavors[index].inputVisible = true
           const self = this
-          this.$nextTick(function() { var ref = self.$refs['dialogTagInput' + index]; if (ref && ref[0]) ref[0].$refs.input.focus() })
+          this.$nextTick(function() { const ref = self.$refs['dialogTagInput' + index]; if (ref && ref[0]) ref[0].$refs.input.focus() })
         },
         confirmDialogTag: function(index) {
           var inputValue = this.dishFlavors[index].inputValue
-          if (inputValue && inputValue.trim()) { var trimmed = inputValue.trim(); if (!this.dishFlavors[index].value.includes(trimmed)) { this.dishFlavors[index].value.push(trimmed) } }
+          if (inputValue && inputValue.trim()) { const trimmed = inputValue.trim(); if (!this.dishFlavors[index].value.includes(trimmed)) { this.dishFlavors[index].value.push(trimmed) } }
           this.dishFlavors[index].inputVisible = false; this.dishFlavors[index].inputValue = ''
         },
         submitDishForm: function(st) {
@@ -563,7 +563,7 @@
         },
         onChange: function(file) {
           if (file) {
-            var suffix = file.name.split('.')[1]; var size = file.size / 1024 / 1024 < 2
+            const suffix = file.name.split('.')[1]; var size = file.size / 1024 / 1024 < 2
             if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) { ReggieUI.error('涓婁紶鍥剧墖鍙敮鎸?png銆乯peg銆乯pg 鏍煎紡锛?); this.$refs.upload.clearFiles(); return false }
             if (!size) { ReggieUI.error('涓婁紶鏂囦欢澶у皬涓嶈兘瓒呰繃 2MB!'); return false }
             return file

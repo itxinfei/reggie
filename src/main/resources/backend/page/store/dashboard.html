@@ -260,24 +260,23 @@
         renderBarChart() {
             const self = this;
             if (!self.dashboard || !self.dashboard.storeRanking) return;
-            var stores = self.dashboard.storeRanking.slice(0, self.topN);
-            var dom = document.getElementById('storeBarChart');
+            const stores = self.dashboard.storeRanking.slice(0, self.topN);
+            const dom = document.getElementById('storeBarChart');
             if (!dom) return;
             if (!this.barChart) this.barChart = echarts.init(dom);
-            var hasData = stores.length > 0;
+            const hasData = stores.length > 0;
             var names = hasData ? stores.map(function(s) { return s.storeName; }) : ['鏆傛棤鏁版嵁'];
             var orders = hasData ? stores.map(function(s) { return s.todayOrders || 0; }) : [0];
             var amounts = hasData ? stores.map(function(s) { return s.todayAmount || 0; }) : [0];
             // 淇敼鐐癸細鍗忚皟閰嶈壊锛堝搧鐗岄噾涓轰富 + 钃?闈?缁?绱?姗欒緟锛夛紝閬垮厤鍓嶅嚑鏍圭孩姗欏儚鎶ラ敊
-            var colors = [RgPalette.brand, RgPalette.seriesBlue, RgPalette.seriesSky, RgPalette.seriesGreen, RgPalette.seriesViolet,
-                          RgPalette.seriesOrange, RgPalette.seriesCyan, RgPalette.seriesMagenta, RgPalette.seriesGreen2, RgPalette.seriesPink];
+            const colors = [$2];
 
             // 闂ㄥ簵鍚嶈繃闀挎椂鎴柇锛岄伩鍏?x 杞存爣绛炬孩鍑洪噸鍙?
             function truncate(name) {
                 if (!name) return '';
                 return name.length > 6 ? name.substring(0, 6) + '鈥? : name;
             }
-            var labels = names.map(truncate);
+            const labels = names.map(truncate);
 
             this.barChart.setOption({
                 color: colors,
@@ -286,9 +285,9 @@
                     backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
                     textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                     formatter: function(params) {
-                        var html = '<b>' + params[0].axisValue + '</b><br/>';
+                        const html = '<b>' + params[0].axisValue + '</b><br/>';
                         params.forEach(function(p) {
-                            var val = p.seriesName === '钀ユ敹' ? '楼' + Number(p.value).toFixed(2) : p.value + ' 鍗?;
+                            const val = p.seriesName === '钀ユ敹' ? '楼' + Number(p.value).toFixed(2) : p.value + ' 鍗?;
                             html += p.marker + ' ' + p.seriesName + '锛?b>' + val + '</b><br/>';
                         });
                         return html;
@@ -339,8 +338,8 @@
         },
         rankBarWidth(idx) {
             if (!this.dashboard || !this.dashboard.storeRanking || !this.dashboard.storeRanking.length) return '0%';
-            var maxOrders = this.dashboard.storeRanking[0].todayOrders || 1;
-            var orders = this.dashboard.storeRanking[idx].todayOrders || 0;
+            const maxOrders = this.dashboard.storeRanking[0].todayOrders || 1;
+            const orders = this.dashboard.storeRanking[idx].todayOrders || 0;
             return Math.max((orders / maxOrders * 100), 8) + '%';
         },
         // 淇敼鐐癸細澶嶇敤鍏ㄥ眬 RgFormat.formatMoney锛坈omponents.js 宸叉寕杞斤級锛屼笉鍐嶉噸澶嶅疄鐜?formatAmount

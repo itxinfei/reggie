@@ -786,7 +786,7 @@
       if (_echartsPromise) return _echartsPromise;
       _echartsPromise = new Promise(function (resolve, reject) {
         if (typeof window.echarts !== 'undefined') { resolve(window.echarts); return; }
-        var s = document.createElement('script');
+        const s = document.createElement('script');
         s.src = '../../plugins/echarts/echarts.min.js';
         s.async = true;
         s.onload = function () { resolve(window.echarts); };
@@ -904,7 +904,7 @@
 
         // 修改点：从趋势数据计算昨日对比
         calcYesterdayCompare() {
-          var trend = this.trend || [];
+          const trend = this.trend || [];
           if (trend.length < 2) {
             this.yesterdayOrders = 0;
             this.yesterdayRevenue = 0;
@@ -914,19 +914,19 @@
             this.revenueTrendText = '--';
             return;
           }
-          var today = trend[trend.length - 1];
-          var yesterday = trend[trend.length - 2];
-          var todayOrders = today.orderCount || 0;
-          var yesterdayOrdersVal = yesterday.orderCount || 0;
-          var todayRevenue = Number(today.revenue) || 0;
-          var yesterdayRevenueVal = Number(yesterday.revenue) || 0;
+          const today = trend[trend.length - 1];
+          const yesterday = trend[trend.length - 2];
+          const todayOrders = today.orderCount || 0;
+          const yesterdayOrdersVal = yesterday.orderCount || 0;
+          const todayRevenue = Number(today.revenue) || 0;
+          const yesterdayRevenueVal = Number(yesterday.revenue) || 0;
 
           this.yesterdayOrders = yesterdayOrdersVal;
           this.yesterdayRevenue = yesterdayRevenueVal;
 
           // 订单对比
           if (yesterdayOrdersVal > 0) {
-            var orderChange = ((todayOrders - yesterdayOrdersVal) / yesterdayOrdersVal * 100);
+            const orderChange = ((todayOrders - yesterdayOrdersVal) / yesterdayOrdersVal * 100);
             this.orderTrendClass = orderChange > 0 ? 'up' : orderChange < 0 ? 'down' : 'neutral';
             this.orderTrendText = (orderChange > 0 ? '↑' : orderChange < 0 ? '↓' : '→')
               + ' ' + Math.abs(orderChange).toFixed(1) + '%';
@@ -934,7 +934,7 @@
 
           // 营业额对比
           if (yesterdayRevenueVal > 0) {
-            var revenueChange = ((todayRevenue - yesterdayRevenueVal) / yesterdayRevenueVal * 100);
+            const revenueChange = ((todayRevenue - yesterdayRevenueVal) / yesterdayRevenueVal * 100);
             this.revenueTrendClass = revenueChange > 0 ? 'up' : revenueChange < 0 ? 'down' : 'neutral';
             this.revenueTrendText = (revenueChange > 0 ? '↑' : revenueChange < 0 ? '↓' : '→')
               + ' ' + Math.abs(revenueChange).toFixed(1) + '%';
@@ -1111,14 +1111,14 @@
 
           Object.keys(this.orderStatus).forEach(key => {
             if (key !== 'cacheSource' && key !== 'redisEnabled') {
-              var v = this.orderStatus[key];
+              const v = this.orderStatus[key];
               if (v > 0) {
                 statusData.push({ name: key, value: v });
               }
             }
           });
 
-          var isEmpty = statusData.length === 0;
+          const isEmpty = statusData.length === 0;
           if (isEmpty) {
             statusData.push({ name: '暂无数据', value: 1, itemStyle: { color: this.cssVar('--el-border-lighter2') || RgPalette.borderLighter2 } });
           }
@@ -1209,10 +1209,10 @@
         goTo(url) {
           try {
             if (window.parent && window.parent !== window && typeof window.parent.menuHandle === 'function') {
-              var menuList = window.parent.menuList;
+              const menuList = window.parent.menuList;
               if (menuList && menuList.length) {
                 for (let i = 0; i < menuList.length; i++) {
-                  var item = menuList[i];
+                  const item = menuList[i];
                   if (item.url === url) { window.parent.menuHandle(item, false); return; }
                   if (item.children && item.children.length) {
                     for (let j = 0; j < item.children.length; j++) {

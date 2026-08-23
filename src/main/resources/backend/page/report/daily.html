@@ -493,7 +493,7 @@
         this.$nextTick(() => {
           // 淇敼鐐癸細瀹夊叏鍒濆鍖栧浘琛紝澧炲姞瀹瑰櫒瀛樺湪鍒ゆ柇
           var initChart = function(id) {
-            var el = document.getElementById(id);
+            const el = document.getElementById(id);
             if (!el) { console.warn('[daily] 鍥捐〃瀹瑰櫒鏈壘鍒?', id); return null; }
             return echarts.init(el);
           };
@@ -611,7 +611,7 @@
           const amounts = trendData.map(t => Number(t.revenue) || 0)
           const hasData = dates.length > 0
           // 淇敼鐐癸細鏍规嵁鏁版嵁閲忚嚜閫傚簲鏌卞锛岄槻姝㈠浘琛ㄦ嫢鎸ゅ彉褰?
-          var barW = dates.length <= 5 ? 32 : dates.length <= 10 ? 26 : 20;
+          const barW = dates.length <= 5 ? 32 : dates.length <= 10 ? 26 : 20;
           this.chart.setOption({
             tooltip: {
               trigger: 'axis',

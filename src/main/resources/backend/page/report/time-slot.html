@@ -115,7 +115,7 @@
   <script src="../../js/chart-panel.js"></script>
   <script>
     (function() {
-      var COLORS = [RgPalette.seriesBlue,RgPalette.seriesGreen,RgPalette.seriesGold,RgPalette.seriesPink,RgPalette.seriesSky,RgPalette.seriesOrange,RgPalette.seriesViolet];
+      const COLORS = [$2];
       new Vue({
         el: '#report-timeslot-app',
         data: function() {
@@ -178,9 +178,9 @@
           initCharts: function() {
             const self = this;
             var tryInit = function(id, key) {
-              var el = document.getElementById(id);
+              const el = document.getElementById(id);
               if (!el) { console.warn('[time-slot] 图表容器未找到:', id); return null; }
-              var ch = echarts.init(el);
+              const ch = echarts.init(el);
               // 修改点：延迟手动 resize 确保父子容器尺寸稳定后再渲染
               setTimeout(function() { if (ch && !ch.isDisposed()) ch.resize(); }, 300);
               return ch;
@@ -202,7 +202,7 @@
                     if (ch && !ch.isDisposed()) ch.resize();
                   });
                 });
-                var chartPanel = document.querySelector('.timeslot-page .chart-panel');
+                const chartPanel = document.querySelector('.timeslot-page .chart-panel');
                 if (chartPanel) self.observer.observe(chartPanel.parentElement || chartPanel);
               } catch(e) { console.warn('[time-slot] ResizeObserver 初始化失败:', e); }
             }
@@ -229,10 +229,10 @@
           },
           renderHeatmap: function(data) {
             if (!this.heatmapChart) return;
-            var days = ['周一','周二','周三','周四','周五','周六','周日'];
-            var slots = ['早市','午市','下午茶','晚市','夜市'];
+            const days = [$2];
+            const slots = [$2];
             var heatData = (data.data || []).map(function(d) { return [d.slotIdx || 0, d.dayIdx || 0, d.value || 0]; });
-            var maxVal = data.maxVal || 100;
+            const maxVal = data.maxVal || 100;
             this.heatmapChart.setOption({
               tooltip: { formatter: function(p) { return days[p.value[1]] + ' ' + slots[p.value[0]] + ': ' + p.value[2] + ' 单'; },
                 backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
@@ -258,14 +258,14 @@
             });
           },
           calcPercent: function(count) {
-            var t = this.totalCount; if (!t) return '0.0';
+            const t = this.totalCount; if (!t) return '0.0';
             return (count / t * 100).toFixed(1);
           },
           formatMoney: function(val) { return window.RgFormat.formatMoney(val) },
           slotHeatColor: function(row) {
             if (!this.tableData.length) return RgPalette.textSecondary;
             var max = this.tableData.reduce(function(m, r) { return Math.max(m, r.count || 0); }, 1);
-            var r = (row.count || 0) / max;
+            const r = (row.count || 0) / max;
             if (r > 0.8) return RgPalette.seriesRed; if (r > 0.5) return RgPalette.warning; return RgPalette.linkBlue;
           },
           renderCharts: function() {
@@ -285,15 +285,15 @@
             var names = this.tableData.map(function(r) { return r.name; });
             var counts = this.tableData.map(function(r) { return r.count; });
             var amounts = this.tableData.map(function(r) { return Number(r.amount || 0).toFixed(2); });
-            var barW = names.length <= 3 ? 40 : names.length <= 5 ? 30 : 22;
+            const barW = names.length <= 3 ? 40 : names.length <= 5 ? 30 : 22;
             this.barChart.setOption({
               tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
                 backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
                 textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                 formatter: function(ps) {
-                  var h = '<b>' + ps[0].axisValue + '</b><br/>';
+                  const h = '<b>' + ps[0].axisValue + '</b><br/>';
                   ps.forEach(function(p) {
-                    var v = p.seriesName === '营业额' ? '¥' + Number(p.value).toFixed(2) : p.value + ' 单';
+                    const v = p.seriesName === '营业额' ? '¥' + Number(p.value).toFixed(2) : p.value + ' 单';
                     h += p.marker + ' ' + p.seriesName + '：<b>' + v + '</b><br/>';
                   }); return h;
                 } },
@@ -351,7 +351,7 @@
             if (!self.dateRange || self.dateRange.length < 2) { ReggieUI.warning('请先选择日期范围'); return; }
             reportExport({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(blob) {
               if (blob && blob.type && blob.type.indexOf('json') > -1) { ReggieUI.error('导出失败，文件格式异常'); return; }
-              var link = document.createElement('a');
+              const link = document.createElement('a');
               link.href = URL.createObjectURL(blob);
               link.download = '时段分析_' + self.dateRange[0] + '_' + self.dateRange[1] + '.csv';
               document.body.appendChild(link); link.click(); document.body.removeChild(link);

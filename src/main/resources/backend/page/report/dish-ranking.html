@@ -178,8 +178,8 @@
       mounted: function() {
         const self = this;
         self.$nextTick(function() {
-          var rEl = document.getElementById('rankingChart');
-          var tEl = document.getElementById('trendLineChart');
+          const rEl = document.getElementById('rankingChart');
+          const tEl = document.getElementById('trendLineChart');
           if (rEl) self.chart = echarts.init(rEl);
           if (tEl) self.trendChart = echarts.init(tEl);
           self.resizeHandler = function() {
@@ -226,7 +226,7 @@
 
           Promise.all([reportDishRanking(params), self.loadDishRankingStats()])
             .then(function(results) {
-              var rankRes = results[0], statsRes = results[1];
+              const rankRes = results[0], statsRes = results[1];
               if (String(rankRes.code) === '1') {
                 self.tableData = rankRes.data || [];
                 self.renderChart();
@@ -242,9 +242,9 @@
           const self = this;
           return reportDishRanking({ limit: 1000 }).then(function(res) {
             if (String(res.code) === '1') {
-              var data = res.data || [];
+              const data = res.data || [];
               var totalSales = data.reduce(function(s, i) { return s + (i.count || 0); }, 0);
-              var avgSales = data.length > 0 ? Math.round(totalSales / data.length) : 0;
+              const avgSales = data.length > 0 ? Math.round(totalSales / data.length) : 0;
               return { code: 1, data: { totalDishes: data.length, topDishes: data.length, totalSales: totalSales, avgSales: avgSales } };
             }
             return { code: 0 };
@@ -274,17 +274,17 @@
             }, true); return;
           }
           var hexToRgba = function(hex, alpha) {
-            var h = hex.replace('#','');
+            const h = hex.replace('#','');
             if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
-            var r = parseInt(h.substring(0,2), 16);
-            var g = parseInt(h.substring(2,4), 16);
-            var b = parseInt(h.substring(4,6), 16);
+            const r = parseInt(h.substring(0,2), 16);
+            const g = parseInt(h.substring(2,4), 16);
+            const b = parseInt(h.substring(4,6), 16);
             return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
           };
-          var colors = [RgPalette.seriesRed, RgPalette.seriesBlue, RgPalette.seriesGreen];
-          var dates = data.dates || [];
+          const colors = [$2];
+          const dates = data.dates || [];
           var series = (data.series || []).map(function(s, i) {
-            var col = colors[i] || RgPalette.textSecondary;
+            const col = colors[i] || RgPalette.textSecondary;
             return {
               name: s.name, type: 'line', data: s.data || [], smooth: true,
               symbol: 'circle', symbolSize: 7,
@@ -307,17 +307,17 @@
               splitLine: { lineStyle: { color: RgPalette.bgLight, type: 'dashed' } } },
             series: series
           }, true);
-          var chart = this.trendChart;
+          const chart = this.trendChart;
           setTimeout(function() { if (chart && !chart.isDisposed()) chart.resize(); }, 200);
         },
         calcPercent: function(count) {
           if (!this.tableData.length) return 0;
-          var max = this.tableData[0].count || 1;
+          const max = this.tableData[0].count || 1;
           return Math.round(count / max * 100);
         },
         progressColor: function(count) {
-          var max = this.tableData.length ? (this.tableData[0].count || 1) : 1;
-          var ratio = count / max;
+          const max = this.tableData.length ? (this.tableData[0].count || 1) : 1;
+          const ratio = count / max;
           if (ratio > 0.8) return RgPalette.seriesRed;
           if (ratio > 0.5) return RgPalette.linkBlue;
           return RgPalette.seriesGreen;
@@ -332,8 +332,8 @@
           }
           var names = this.tableData.map(function(item) { return item.name; }).reverse();
           var counts = this.tableData.map(function(item) { return item.count; }).reverse();
-          var maxVal = counts.length ? Math.max.apply(null, counts) : 1;
-          var barWidth = names.length <= 5 ? 26 : names.length <= 10 ? 22 : 18;
+          const maxVal = counts.length ? Math.max.apply(null, counts) : 1;
+          const barWidth = names.length <= 5 ? 26 : names.length <= 10 ? 22 : 18;
           this.chart.setOption({
             tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
               backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
@@ -349,7 +349,7 @@
               itemStyle: {
                 borderRadius: [0, RgPalette.radiusMd, RgPalette.radiusMd, 0],
                 color: function(params) {
-                  var v = params.value, r = v / maxVal;
+                  const v = params.value, r = v / maxVal;
                   if (r > 0.8) return RgPalette.seriesRed;
                   if (r > 0.5) return RgPalette.linkBlue;
                   return RgPalette.success;
@@ -372,7 +372,7 @@
           }
           reportExport({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(blob) {
             if (blob && blob.type && blob.type.indexOf('json') > -1) { ReggieUI.error('导出失败'); return; }
-            var link = document.createElement('a');
+            const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = '菜品排行_' + self.dateRange[0] + '_' + self.dateRange[1] + '.csv';
             link.click(); URL.revokeObjectURL(link.href);

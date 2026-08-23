@@ -334,7 +334,7 @@
             var res = await couponTemplateList()
             if (String(res.code) === '1') {
               // 鍙睍绀哄惎鐢ㄧ姸鎬佺殑妯℃澘
-              var records = res.data && res.data.records ? res.data.records : []
+              const records = res.data && res.data.records ? res.data.records : []
               this.templateList = []
               for (let i = 0; i < records.length; i++) {
                 if (records[i].status === 1) {
@@ -348,7 +348,7 @@
           try {
             var res = await levelPage({ page: 1, pageSize: 100 })
             if (String(res.code) === '1') {
-              var records = res.data && res.data.records ? res.data.records : []
+              const records = res.data && res.data.records ? res.data.records : []
               this.levelList = []
               for (let i = 0; i < records.length; i++) {
                 if (records[i].status === 1) {
