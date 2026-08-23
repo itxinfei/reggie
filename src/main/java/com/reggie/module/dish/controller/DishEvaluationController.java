@@ -289,8 +289,8 @@ public class DishEvaluationController {
             @Parameter(name = "dishName", description = "菜品名称（模糊查询）") @RequestParam(required = false) String dishName,
             @Parameter(name = "status", description = "审核状态（0待审核 1通过 2拒绝）") @RequestParam(required = false) Integer status,
             @Parameter(name = "starRating", description = "评分（1-5）") @RequestParam(required = false) Integer starRating,
-            @Parameter(name = "page", description = "页码") @RequestParam(defaultValue = "1") Integer page,
-            @Parameter(name = "pageSize", description = "每页条数") @RequestParam(defaultValue = "10") Integer pageSize) {
+            @Parameter(name = "page", description = "页码") @RequestParam(defaultValue = "1") @Min(1) Integer page,
+            @Parameter(name = "pageSize", description = "每页条数") @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer pageSize) {
 
         log.info("[Evaluation] 管理端评价查询：dishName={}, status={}, starRating={}, page={}, pageSize={}",
                 dishName, status, starRating, page, PageUtils.cap(pageSize));

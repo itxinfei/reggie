@@ -68,6 +68,10 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
     @Override
     public List<Material> checkWarning() {
         LambdaQueryWrapper<Material> qw = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            qw.eq(Material::getTenantId, tenantId);
+        }
         qw.eq(Material::getStatus, STATUS_NORMAL);
         qw.apply("stock_qty < min_stock");
         List<Material> list = list(qw);
@@ -124,6 +128,10 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
     @Override
     public Page<WarningMaterialVO> warningPage(int page, int pageSize, Long categoryId, String severity) {
         LambdaQueryWrapper<Material> qw = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            qw.eq(Material::getTenantId, tenantId);
+        }
         qw.eq(Material::getStatus, STATUS_NORMAL);
         qw.apply("stock_qty < min_stock");
         qw.eq(categoryId != null, Material::getCategoryId, categoryId);
@@ -160,6 +168,10 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
     @Override
     public Map<String, Object> warningStats() {
         LambdaQueryWrapper<Material> qw = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            qw.eq(Material::getTenantId, tenantId);
+        }
         qw.eq(Material::getStatus, STATUS_NORMAL);
         qw.apply("stock_qty < min_stock");
         List<Material> list = list(qw);
@@ -241,11 +253,13 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         }
         LocalDateTime since = LocalDateTime.now().minusDays(days);
 
-        // 查询近 N 天出库记录
+        // 查询近 N 天出库记录（附加租户条件，防止跨租户探测库存流水）
+        Long tenantId = BaseContext.getCurrentTenantId();
         List<StockRecord> outRecords = stockRecordService.list(
             new LambdaQueryWrapper<StockRecord>()
                 .eq(StockRecord::getType, StockRecordType.OUT.getValue())
                 .ge(StockRecord::getCreatedTime, since)
+                .eq(tenantId != null, StockRecord::getTenantId, tenantId)
         );
 
         // 按 materialId 汇总出库总量

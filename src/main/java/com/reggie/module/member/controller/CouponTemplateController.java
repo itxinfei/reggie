@@ -37,6 +37,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -77,7 +79,7 @@ public class CouponTemplateController {
     @Parameter(name = "name", description = "优惠券名称（可选，模糊查询）")
     @Parameter(name = "type", description = "优惠券类型（可选，FULL_REDUCTION/DISCOUNT/NEW_MEMBER）")
     @Parameter(name = "status", description = "状态（可选，0禁用 1启用）")
-    public R<Page<CouponTemplate>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, String name, String type, Integer status) {
+    public R<Page<CouponTemplate>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, String name, String type, Integer status) {
         Page<CouponTemplate> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<CouponTemplate> qw = new LambdaQueryWrapper<>();
         qw.like(name != null && !name.isEmpty(), CouponTemplate::getName, name);
@@ -250,8 +252,8 @@ public class CouponTemplateController {
     @Parameter(name = "templateId", description = "优惠券模板ID", required = true)
     public R<com.baomidou.mybatisplus.extension.plugins.pagination.Page<IssuedMemberVO>> issuedMembers(
             @PathVariable Long templateId,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize) {
         log.info("查询投放明细: templateId={}, page={}, pageSize={}", templateId, page, pageSize);
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<IssuedMemberVO> pageInfo = PageUtils.of(page, pageSize);
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<IssuedMemberVO> result = couponTemplateService.issuedMembers(pageInfo, templateId);
@@ -293,8 +295,8 @@ public class CouponTemplateController {
             @RequestParam(defaultValue = "7") int days,
             Long templateId,
             String phone,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize) {
         log.info("查询即将到期预警: days={}, templateId={}, phone={}, page={}", days, templateId, phone != null ? LogMaskUtils.maskPhone(phone) : "", page);
         if (days <= 0 || days > 90) {
             return R.error("预警天数必须在1~90之间");
@@ -315,8 +317,8 @@ public class CouponTemplateController {
     public R<com.baomidou.mybatisplus.extension.plugins.pagination.Page<ExpiringCouponVO>> expired(
             Long templateId,
             String phone,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize) {
         log.info("查询已过期明细: templateId={}, phone={}, page={}", templateId, phone != null ? LogMaskUtils.maskPhone(phone) : "", page);
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<ExpiringCouponVO> pageInfo = PageUtils.of(page, pageSize);
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<ExpiringCouponVO> result =

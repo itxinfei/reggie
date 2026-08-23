@@ -2,6 +2,8 @@ package com.reggie.module.delivery.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.module.delivery.mapper.DeliveryRangeRuleMapper;
 import com.reggie.module.delivery.model.DeliveryRangeRule;
 import com.reggie.module.delivery.model.DeliveryFeeStep;
@@ -52,7 +54,14 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
 
     @Override
     public DeliveryRangeRule getRangeRuleById(Long id) {
-        return rangeRuleMapper.selectById(id);
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId == null) {
+            return rangeRuleMapper.selectById(id);
+        }
+        LambdaQueryWrapper<DeliveryRangeRule> qw = new LambdaQueryWrapper<>();
+        qw.eq(DeliveryRangeRule::getId, id)
+                .eq(DeliveryRangeRule::getTenantId, currentTenantId);
+        return rangeRuleMapper.selectOne(qw);
     }
 
     @Override
@@ -61,9 +70,20 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
         if (rule.getId() == null) {
             rule.setCreateTime(LocalDateTime.now());
             rule.setUpdateTime(LocalDateTime.now());
+            rule.setTenantId(BaseContext.getCurrentTenantId());
             return rangeRuleMapper.insert(rule) > 0;
         } else {
+            // 租户归属校验：防止跨租户篡改配送范围
+            Long currentTenantId = BaseContext.getCurrentTenantId();
+            DeliveryRangeRule existing = rangeRuleMapper.selectById(rule.getId());
+            if (existing == null) {
+                return false;
+            }
+            if (currentTenantId != null && !currentTenantId.equals(existing.getTenantId())) {
+                throw new CustomException("无权操作其他租户的配送范围规则");
+            }
             rule.setUpdateTime(LocalDateTime.now());
+            rule.setTenantId(existing.getTenantId());
             return rangeRuleMapper.updateById(rule) > 0;
         }
     }
@@ -71,6 +91,14 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteRangeRule(Long id) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        DeliveryRangeRule rule = rangeRuleMapper.selectById(id);
+        if (rule == null) {
+            return false;
+        }
+        if (currentTenantId != null && !currentTenantId.equals(rule.getTenantId())) {
+            throw new CustomException("无权操作其他租户的配送范围规则");
+        }
         return rangeRuleMapper.deleteById(id) > 0;
     }
 
@@ -95,9 +123,20 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
         if (step.getId() == null) {
             step.setCreateTime(LocalDateTime.now());
             step.setUpdateTime(LocalDateTime.now());
+            step.setTenantId(BaseContext.getCurrentTenantId());
             return feeStepMapper.insert(step) > 0;
         } else {
+            // 租户归属校验：防止跨租户篡改配送费阶梯
+            Long currentTenantId = BaseContext.getCurrentTenantId();
+            DeliveryFeeStep existing = feeStepMapper.selectById(step.getId());
+            if (existing == null) {
+                return false;
+            }
+            if (currentTenantId != null && !currentTenantId.equals(existing.getTenantId())) {
+                throw new CustomException("无权操作其他租户的配送费阶梯");
+            }
             step.setUpdateTime(LocalDateTime.now());
+            step.setTenantId(existing.getTenantId());
             return feeStepMapper.updateById(step) > 0;
         }
     }
@@ -105,6 +144,14 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteFeeStep(Long id) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        DeliveryFeeStep step = feeStepMapper.selectById(id);
+        if (step == null) {
+            return false;
+        }
+        if (currentTenantId != null && !currentTenantId.equals(step.getTenantId())) {
+            throw new CustomException("无权操作其他租户的配送费阶梯");
+        }
         return feeStepMapper.deleteById(id) > 0;
     }
 

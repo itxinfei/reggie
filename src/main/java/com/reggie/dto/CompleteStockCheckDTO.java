@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.util.List;
 
 /**
@@ -20,5 +21,6 @@ public class CompleteStockCheckDTO {
 
     @Schema(description = "盘点明细项列表", required = true)
     @NotNull(message = "盘点明细不能为空")
+    @Size(max = 200, message = "盘点明细不能超过200项")
     private List<StockCheckItemDTO> items;
 }

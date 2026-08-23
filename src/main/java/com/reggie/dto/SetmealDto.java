@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import java.util.List;
+import javax.validation.constraints.Size;
 
 /**
  * 套餐数据传输对象
@@ -19,6 +20,7 @@ import java.util.List;
 public class SetmealDto extends Setmeal {
 
     @Schema(description = "套餐菜品关系列表")
+    @Size(max = 50, message = "套餐菜品不能超过50个")
     private List<SetmealDish> setmealDishes;
 
     @Schema(description = "分类名称", example = "超值套餐")

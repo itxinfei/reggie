@@ -33,6 +33,7 @@ CREATE TABLE orders (
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等键',
   stock_refunded int NULL DEFAULT 0 COMMENT '已退库存数量',
+  used_coupon_id bigint NULL DEFAULT NULL COMMENT '优惠券ID',
   PRIMARY KEY (id)
 );
 

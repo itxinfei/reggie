@@ -1,4 +1,6 @@
 package com.reggie.module.inventory.controller;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -59,7 +61,7 @@ public class StockRecordController {
     @Parameter(name = "type", description = "类型（可选）：IN-入库，OUT-出库，CHECK-盘点")
     @Parameter(name = "startDate", description = "开始日期（可选）")
     @Parameter(name = "endDate", description = "结束日期（可选）")
-    public R<Page<StockRecord>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
+    public R<Page<StockRecord>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                       @RequestParam(required = false) Long materialId,
                                       @RequestParam(required = false) String type,
                                       @Parameter(description = "StartDate")

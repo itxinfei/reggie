@@ -15,6 +15,8 @@ import com.reggie.common.SecurityConstants;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.common.annotation.RequiresAdmin;
 import com.reggie.dto.auth.EmployeeLoginDTO;
+import com.reggie.module.auth.dto.UpdateEmployeeStatusBatchDTO;
+import com.reggie.module.auth.dto.UpdateEmployeeStatusDTO;
 import com.reggie.module.auth.model.Employee;
 import com.reggie.enums.EmployeeRole;
 import com.reggie.enums.UserStatus;
@@ -38,6 +40,8 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -435,7 +439,7 @@ public class EmployeeController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "员工姓名（可选，模糊查询）")
     @Parameter(name = "status", description = "账号状态（可选，1=正常 ,0=禁用）")
-    public R<Page<Employee>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String name, @RequestParam(required = false) Integer status){
+    public R<Page<Employee>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String name, @RequestParam(required = false) Integer status){
         log.debug("分页查询员工：page={}, pageSize={}, name={}", page, pageSize, name);
 
         //构造分页构造器
@@ -581,12 +585,12 @@ public class EmployeeController {
     @RequiresAdmin
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改员工状态", description = "仅更新员工启用/禁用状态，不影响其他字段，自动校验租户权限")
-    public R<String> updateStatus(HttpServletRequest request, @RequestBody Map<String, Object> params) {
+    public R<String> updateStatus(HttpServletRequest request, @Valid @RequestBody UpdateEmployeeStatusDTO dto) {
         if (!isAdmin(request)) {
             return R.error("权限不足");
         }
-        Long id = params.get("id") != null ? Long.valueOf(params.get("id").toString()) : null;
-        Integer status = params.get("status") != null ? Integer.valueOf(params.get("status").toString()) : null;
+        Long id = dto.getId();
+        Integer status = dto.getStatus();
         if (id == null || status == null) {
             return R.error("参数错误");
         }
@@ -614,31 +618,14 @@ public class EmployeeController {
     @RequiresAdmin
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "批量修改员工状态", description = "批量更新员工启用/禁用状态，自动校验租户权限")
-    public R<String> updateStatusBatch(HttpServletRequest request, @RequestBody Map<String, Object> params) {
+    public R<String> updateStatusBatch(HttpServletRequest request, @Valid @RequestBody UpdateEmployeeStatusBatchDTO dto) {
         if (!isAdmin(request)) {
             return R.error("权限不足");
         }
-        Object idsObj = params.get("ids");
-        Integer status = params.get("status") != null ? Integer.valueOf(params.get("status").toString()) : null;
-        if (idsObj == null || status == null) {
+        List<Long> ids = dto.getIds();
+        Integer status = dto.getStatus();
+        if (ids == null || ids.isEmpty() || status == null) {
             return R.error("参数错误");
-        }
-        List<Long> ids = new ArrayList<>();
-        if (idsObj instanceof List) {
-            for (Object o : (List<?>) idsObj) {
-                ids.add(Long.valueOf(o.toString()));
-            }
-        } else {
-            String[] split = idsObj.toString().split(",");
-            for (String s : split) {
-                String trim = s.trim();
-                if (!trim.isEmpty()) {
-                    ids.add(Long.parseLong(trim));
-                }
-            }
-        }
-        if (ids.isEmpty()) {
-            return R.error("请选择要操作的员工");
         }
         Long currentTenantId = BaseContext.getCurrentTenantId();
         List<Employee> targets = employeeService.listByIds(ids);

@@ -1,4 +1,6 @@
 package com.reggie.module.inventory.controller;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -61,7 +63,7 @@ public class MaterialController {
     @Parameter(name = "name", description = "食材名称（可选，模糊查询）")
     @Parameter(name = "categoryId", description = "分类ID（可选）")
     @Parameter(name = "status", description = "状态（可选）：0-禁用，1-启用")
-    public R<Page<Material>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
+    public R<Page<Material>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                    @RequestParam(required = false) String name,
                                    @RequestParam(required = false) Long categoryId,
                                    @Parameter(description = "Status")
@@ -193,8 +195,8 @@ public class MaterialController {
     @Parameter(name = "categoryId", description = "分类ID（可选）")
     @Parameter(name = "severity", description = "严重度（可选）：CRITICAL/WARNING/LOW")
     public R<Page<WarningMaterialVO>> warningPage(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String severity) {
         return R.success(materialService.warningPage(page, pageSize, categoryId, severity));

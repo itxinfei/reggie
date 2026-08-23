@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -60,7 +62,7 @@ public class StockCheckController {
     @Parameter(name = "status", description = "状态（可选）：DRAFT-草稿，IN_PROGRESS-进行中，DONE-已完成")
     @Parameter(name = "startDate", description = "开始日期（可选）")
     @Parameter(name = "endDate", description = "结束日期（可选）")
-    public R<Page<StockCheck>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
+    public R<Page<StockCheck>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String startDate,
                                      @Parameter(description = "EndDate")

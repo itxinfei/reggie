@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import javax.validation.Valid;
 import com.reggie.common.RateLimit;
 
 import java.math.BigDecimal;
@@ -54,7 +55,7 @@ public class MarketingToolController {
     @PostMapping("/new-customer")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Save new customer discount")
-    public R<String> saveNewCustomerDiscount(@RequestBody NewCustomerDiscount discount) {
+    public R<String> saveNewCustomerDiscount(@Valid @RequestBody NewCustomerDiscount discount) {
         Long tenantId = BaseContext.getCurrentTenantId();
         discount.setTenantId(tenantId);
         boolean success = marketingToolService.saveOrUpdateNewCustomerDiscount(discount);
@@ -64,7 +65,7 @@ public class MarketingToolController {
     @PutMapping("/new-customer")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update new customer discount")
-    public R<String> updateNewCustomerDiscount(@RequestBody NewCustomerDiscount discount) {
+    public R<String> updateNewCustomerDiscount(@Valid @RequestBody NewCustomerDiscount discount) {
         Long tenantId = BaseContext.getCurrentTenantId();
         discount.setTenantId(tenantId);
         boolean success = marketingToolService.saveOrUpdateNewCustomerDiscount(discount);
@@ -103,7 +104,7 @@ public class MarketingToolController {
     @PostMapping("/buy-get-free")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Save buy get free activity")
-    public R<String> saveBuyGetFree(@RequestBody BuyGetFree activity) {
+    public R<String> saveBuyGetFree(@Valid @RequestBody BuyGetFree activity) {
         Long tenantId = BaseContext.getCurrentTenantId();
         activity.setTenantId(tenantId);
         boolean success = marketingToolService.saveOrUpdateBuyGetFree(activity);
@@ -113,7 +114,7 @@ public class MarketingToolController {
     @PutMapping("/buy-get-free")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update buy get free activity")
-    public R<String> updateBuyGetFree(@RequestBody BuyGetFree activity) {
+    public R<String> updateBuyGetFree(@Valid @RequestBody BuyGetFree activity) {
         Long tenantId = BaseContext.getCurrentTenantId();
         activity.setTenantId(tenantId);
         boolean success = marketingToolService.saveOrUpdateBuyGetFree(activity);
@@ -152,7 +153,7 @@ public class MarketingToolController {
     @PostMapping("/flash-sale")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Save flash sale")
-    public R<String> saveFlashSale(@RequestBody FlashSale flashSale) {
+    public R<String> saveFlashSale(@Valid @RequestBody FlashSale flashSale) {
         Long tenantId = BaseContext.getCurrentTenantId();
         flashSale.setTenantId(tenantId);
         boolean success = marketingToolService.saveOrUpdateFlashSale(flashSale);
@@ -162,7 +163,7 @@ public class MarketingToolController {
     @PutMapping("/flash-sale")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update flash sale")
-    public R<String> updateFlashSale(@RequestBody FlashSale flashSale) {
+    public R<String> updateFlashSale(@Valid @RequestBody FlashSale flashSale) {
         Long tenantId = BaseContext.getCurrentTenantId();
         flashSale.setTenantId(tenantId);
         boolean success = marketingToolService.saveOrUpdateFlashSale(flashSale);

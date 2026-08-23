@@ -182,6 +182,8 @@ public class ReportServiceTest {
     void testControllerDaily() throws Exception {
         mockMvc.perform(get("/api/report/daily")
                         .param("date", "2026-07-01")
+                        .sessionAttr("employee", 1L)
+                        .sessionAttr("tenantId", 1L)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))

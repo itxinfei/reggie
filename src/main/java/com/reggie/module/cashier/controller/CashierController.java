@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import javax.validation.Valid;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -75,7 +76,7 @@ public class CashierController {
     @PostMapping("/record")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存收银记录")
-    public R<String> saveCashierRecord(@RequestBody CashierRecord cashierRecord) {
+    public R<String> saveCashierRecord(@Valid @RequestBody CashierRecord cashierRecord) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long userId = BaseContext.getCurrentId();
         cashierRecord.setTenantId(tenantId);

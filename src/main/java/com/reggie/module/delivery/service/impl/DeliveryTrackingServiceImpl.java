@@ -59,7 +59,14 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
 
     @Override
     public Rider getRiderById(Long id) {
-        return riderMapper.selectById(id);
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId == null) {
+            return riderMapper.selectById(id);
+        }
+        LambdaQueryWrapper<Rider> qw = new LambdaQueryWrapper<>();
+        qw.eq(Rider::getId, id)
+                .eq(Rider::getTenantId, currentTenantId);
+        return riderMapper.selectOne(qw);
     }
 
     @Override
@@ -71,9 +78,21 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
             rider.setCurrentOrderCount(0);
             rider.setTotalOrderCount(0);
             rider.setRating(new BigDecimal("5.0"));
+            rider.setTenantId(BaseContext.getCurrentTenantId());
             return riderMapper.insert(rider) > 0;
         } else {
+            // 租户归属校验：防止跨租户篡改骑手信息
+            Long currentTenantId = BaseContext.getCurrentTenantId();
+            Rider existing = riderMapper.selectById(rider.getId());
+            if (existing == null) {
+                return false;
+            }
+            if (currentTenantId != null && !currentTenantId.equals(existing.getTenantId())) {
+                throw new CustomException("无权操作其他门店的骑手");
+            }
             rider.setUpdateTime(LocalDateTime.now());
+            // 保留原有租户ID，防止越权改写
+            rider.setTenantId(existing.getTenantId());
             return riderMapper.updateById(rider) > 0;
         }
     }
@@ -81,6 +100,14 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteRider(Long id) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        Rider rider = riderMapper.selectById(id);
+        if (rider == null) {
+            return false;
+        }
+        if (currentTenantId != null && !currentTenantId.equals(rider.getTenantId())) {
+            throw new CustomException("无权操作其他门店的骑手");
+        }
         return riderMapper.deleteById(id) > 0;
     }
 
@@ -141,6 +168,10 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
     public List<RiderLocationRecord> getRiderLocationHistory(Long riderId, LocalDateTime startTime, LocalDateTime endTime) {
         LambdaQueryWrapper<RiderLocationRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(RiderLocationRecord::getRiderId, riderId);
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null) {
+            qw.eq(RiderLocationRecord::getTenantId, currentTenantId);
+        }
         if (startTime != null) {
             qw.ge(RiderLocationRecord::getRecordTime, startTime);
         }
@@ -209,6 +240,12 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
 
         Rider rider = riderMapper.selectById(riderId);
         if (rider == null) {
+            result.put("found", false);
+            return result;
+        }
+        // 租户归属校验：防止跨租户查询骑手位置
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(rider.getTenantId())) {
             result.put("found", false);
             return result;
         }

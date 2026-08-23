@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>数据导出 - 瑞吉外卖管理端</title>
+    <title>鏁版嵁瀵煎嚭 - 鐟炲悏澶栧崠绠＄悊绔?/title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
@@ -15,7 +15,7 @@
         .page-header h2 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0; }
         .page-header p { font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--space-1); }
 
-        /* 卡片网格 */
+        /* 鍗＄墖缃戞牸 */
         .export-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 
         .export-card {
@@ -39,7 +39,7 @@
         .card-title { font-size:var(--font-size-md); font-weight: 600; }
         .card-desc  { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 2px; }
 
-        /* 筛选区 */
+        /* 绛涢€夊尯 */
         .filter-section { margin-bottom: 16px; padding: 12px; background: var(--el-bg-ghost); border-radius: var(--radius-md); }
         .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
         .filter-row:last-child { margin-bottom: 0; }
@@ -60,10 +60,10 @@
         .quick-range span:hover { color: var(--el-color-primary); border-color: var(--el-color-primary); }
         .quick-range span.active { background: var(--el-color-primary); color: var(--bg-surface); border-color: var(--el-color-primary); }
 
-        /* 按钮行 */
+        /* 鎸夐挳琛?*/
         .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
 
-        /* Loading 遮罩 */
+        /* Loading 閬僵 */
         .btn-loading {
             position: relative; overflow: hidden;
         }
@@ -75,7 +75,7 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* 导出记录 */
+        /* 瀵煎嚭璁板綍 */
         .history-section { margin-top: 24px; }
         .history-title { font-size:var(--font-size-base); font-weight: 600; margin-bottom: 12px; color: var(--el-text-regular); }
         .history-list { background: var(--bg-surface); border-radius: var(--radius-md); border: 1px solid var(--el-border-light); }
@@ -122,129 +122,129 @@
     </style>
 </head>
 <body>
-    <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
-    <a href="#app" class="skip-link">跳转到主内容</a>
-    <div id="app" role="main" aria-label="页面主要内容">
-            <h2>数据导出</h2>
-            <p>支持将业务数据导出为 Excel(.xlsx) 和 PDF 格式，文件自动包含导出时间戳</p>
+    <!-- 閿洏鐢ㄦ埛锛氳烦杞埌涓诲唴瀹癸紙WCAG 2.4.1锛?-->
+    <a href="#app" class="skip-link">璺宠浆鍒颁富鍐呭</a>
+    <div id="app" role="main" aria-label="椤甸潰涓昏鍐呭">
+            <h2>鏁版嵁瀵煎嚭</h2>
+            <p>鏀寔灏嗕笟鍔℃暟鎹鍑轰负 Excel(.xlsx) 鍜?PDF 鏍煎紡锛屾枃浠惰嚜鍔ㄥ寘鍚鍑烘椂闂存埑</p>
         </div>
 
         <div class="export-cards">
-            <!-- 订单导出 -->
+            <!-- 璁㈠崟瀵煎嚭 -->
             <div class="export-card">
                 <div class="card-header">
                     <div class="card-icon icon-order">&#128203;</div>
                     <div>
-                        <div class="card-title">订单数据导出</div>
-                        <div class="card-desc">导出订单号、用户、金额、状态、时间等信息</div>
+                        <div class="card-title">璁㈠崟鏁版嵁瀵煎嚭</div>
+                        <div class="card-desc">瀵煎嚭璁㈠崟鍙枫€佺敤鎴枫€侀噾棰濄€佺姸鎬併€佹椂闂寸瓑淇℃伅</div>
                     </div>
                 </div>
                 <div class="filter-section">
                     <div class="filter-row">
-                        <span class="filter-label">日期范围</span>
+                        <span class="filter-label">鏃ユ湡鑼冨洿</span>
                         <input type="date" v-model="orderFilter.startDate" />
-                        <span style="color:var(--el-border-base);">至</span>
+                        <span style="color:var(--el-border-base);">鑷?/span>
                         <input type="date" v-model="orderFilter.endDate" />
                         <div class="quick-range">
-                            <span :class="{active: orderRange === 'today'}" role="button" tabindex="0" @click="setOrderRange('today')" @keydown.enter="setOrderRange('today')" :aria-pressed="orderRange === 'today'">今天</span>
-                            <span :class="{active: orderRange === 'week'}" role="button" tabindex="0" @click="setOrderRange('week')" @keydown.enter="setOrderRange('week')" :aria-pressed="orderRange === 'week'">近7天</span>
-                            <span :class="{active: orderRange === 'month'}" role="button" tabindex="0" @click="setOrderRange('month')" @keydown.enter="setOrderRange('month')" :aria-pressed="orderRange === 'month'">近30天</span>
+                            <span :class="{active: orderRange === 'today'}" role="button" tabindex="0" @click="setOrderRange('today')" @keydown.enter="setOrderRange('today')" :aria-pressed="orderRange === 'today'">浠婂ぉ</span>
+                            <span :class="{active: orderRange === 'week'}" role="button" tabindex="0" @click="setOrderRange('week')" @keydown.enter="setOrderRange('week')" :aria-pressed="orderRange === 'week'">杩?澶?/span>
+                            <span :class="{active: orderRange === 'month'}" role="button" tabindex="0" @click="setOrderRange('month')" @keydown.enter="setOrderRange('month')" :aria-pressed="orderRange === 'month'">杩?0澶?/span>
                         </div>
                     </div>
                     <div class="filter-row">
-                        <span class="filter-label">订单状态</span>
+                        <span class="filter-label">璁㈠崟鐘舵€?/span>
                         <select v-model="orderFilter.status">
-                            <option value="">全部状态</option>
-                            <option value="2">待接单</option>
-                            <option value="3">已接单</option>
-                            <option value="4">派送中</option>
-                            <option value="5">已完成</option>
-                            <option value="6">已取消</option>
+                            <option value="">鍏ㄩ儴鐘舵€?/option>
+                            <option value="2">寰呮帴鍗?/option>
+                            <option value="3">宸叉帴鍗?/option>
+                            <option value="4">娲鹃€佷腑</option>
+                            <option value="5">宸插畬鎴?/option>
+                            <option value="6">宸插彇娑?/option>
                         </select>
                     </div>
                 </div>
                 <div class="btn-row">
-                    <button class="app-btn app-btn-excel" :class="{'btn-loading': orderExport.loading}" :disabled="orderExport.loading" @click="exportOrder('excel')">导出 Excel</button>
-                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': orderExport.loading}" :disabled="orderExport.loading" @click="exportOrder('pdf')">导出 PDF</button>
+                    <button class="app-btn app-btn-excel" :class="{'btn-loading': orderExport.loading}" :disabled="orderExport.loading" @click="exportOrder('excel')">瀵煎嚭 Excel</button>
+                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': orderExport.loading}" :disabled="orderExport.loading" @click="exportOrder('pdf')">瀵煎嚭 PDF</button>
                 </div>
             </div>
 
-            <!-- 菜品导出 -->
+            <!-- 鑿滃搧瀵煎嚭 -->
             <div class="export-card">
                 <div class="card-header">
                     <div class="card-icon icon-dish">&#127834;</div>
                     <div>
-                        <div class="card-title">菜品数据导出</div>
-                        <div class="card-desc">导出菜品名称、分类、价格、售卖状态等信息</div>
+                        <div class="card-title">鑿滃搧鏁版嵁瀵煎嚭</div>
+                        <div class="card-desc">瀵煎嚭鑿滃搧鍚嶇О銆佸垎绫汇€佷环鏍笺€佸敭鍗栫姸鎬佺瓑淇℃伅</div>
                     </div>
                 </div>
                 <div class="filter-section">
                     <div class="filter-row">
-                        <span class="filter-label">数据范围</span>
-                        <span style="font-size:var(--font-size-sm);color:var(--color-info);">全部在售菜品（含停售）</span>
+                        <span class="filter-label">鏁版嵁鑼冨洿</span>
+                        <span style="font-size:var(--font-size-sm);color:var(--color-info);">鍏ㄩ儴鍦ㄥ敭鑿滃搧锛堝惈鍋滃敭锛?/span>
                     </div>
                 </div>
                 <div class="btn-row">
-                    <button class="app-btn app-btn-excel" :class="{'btn-loading': dishExport.loading}" :disabled="dishExport.loading" @click="exportDish('excel')">导出 Excel</button>
-                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': dishExport.loading}" :disabled="dishExport.loading" @click="exportDish('pdf')">导出 PDF</button>
+                    <button class="app-btn app-btn-excel" :class="{'btn-loading': dishExport.loading}" :disabled="dishExport.loading" @click="exportDish('excel')">瀵煎嚭 Excel</button>
+                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': dishExport.loading}" :disabled="dishExport.loading" @click="exportDish('pdf')">瀵煎嚭 PDF</button>
                 </div>
             </div>
 
-            <!-- 员工导出 -->
+            <!-- 鍛樺伐瀵煎嚭 -->
             <div class="export-card">
                 <div class="card-header">
                     <div class="card-icon icon-emp">&#128101;</div>
                     <div>
-                        <div class="card-title">员工数据导出</div>
-                        <div class="card-desc">导出员工姓名、账号、手机号、性别、状态、入职时间</div>
+                        <div class="card-title">鍛樺伐鏁版嵁瀵煎嚭</div>
+                        <div class="card-desc">瀵煎嚭鍛樺伐濮撳悕銆佽处鍙枫€佹墜鏈哄彿銆佹€у埆銆佺姸鎬併€佸叆鑱屾椂闂?/div>
                     </div>
                 </div>
                 <div class="filter-section">
                     <div class="filter-row">
-                        <span class="filter-label">数据范围</span>
-                        <span style="font-size:var(--font-size-sm);color:var(--color-info);">全部员工数据</span>
+                        <span class="filter-label">鏁版嵁鑼冨洿</span>
+                        <span style="font-size:var(--font-size-sm);color:var(--color-info);">鍏ㄩ儴鍛樺伐鏁版嵁</span>
                     </div>
                 </div>
                 <div class="btn-row">
-                    <button class="app-btn app-btn-excel" :class="{'btn-loading': empExport.loading}" :disabled="empExport.loading" @click="exportEmp('excel')">导出 Excel</button>
-                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': empExport.loading}" :disabled="empExport.loading" @click="exportEmp('pdf')">导出 PDF</button>
+                    <button class="app-btn app-btn-excel" :class="{'btn-loading': empExport.loading}" :disabled="empExport.loading" @click="exportEmp('excel')">瀵煎嚭 Excel</button>
+                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': empExport.loading}" :disabled="empExport.loading" @click="exportEmp('pdf')">瀵煎嚭 PDF</button>
                 </div>
             </div>
 
-            <!-- 经营报表导出 -->
+            <!-- 缁忚惀鎶ヨ〃瀵煎嚭 -->
             <div class="export-card">
                 <div class="card-header">
                     <div class="card-icon icon-report">&#128200;</div>
                     <div>
-                        <div class="card-title">经营报表导出</div>
-                        <div class="card-desc">导出每日经营汇总，含营业额、订单量、客单价等核心指标</div>
+                        <div class="card-title">缁忚惀鎶ヨ〃瀵煎嚭</div>
+                        <div class="card-desc">瀵煎嚭姣忔棩缁忚惀姹囨€伙紝鍚惀涓氶銆佽鍗曢噺銆佸鍗曚环绛夋牳蹇冩寚鏍?/div>
                     </div>
                 </div>
                 <div class="filter-section">
                     <div class="filter-row">
-                        <span class="filter-label">日期范围</span>
+                        <span class="filter-label">鏃ユ湡鑼冨洿</span>
                         <input type="date" v-model="reportFilter.startDate" />
-                        <span style="color:var(--el-border-base);">至</span>
+                        <span style="color:var(--el-border-base);">鑷?/span>
                         <input type="date" v-model="reportFilter.endDate" />
                         <div class="quick-range">
-                            <span :class="{active: reportRange === 'today'}" role="button" tabindex="0" @click="setReportRange('today')" @keydown.enter="setReportRange('today')" :aria-pressed="reportRange === 'today'">今天</span>
-                            <span :class="{active: reportRange === 'week'}" role="button" tabindex="0" @click="setReportRange('week')" @keydown.enter="setReportRange('week')" :aria-pressed="reportRange === 'week'">近7天</span>
-                            <span :class="{active: reportRange === 'month'}" role="button" tabindex="0" @click="setReportRange('month')" @keydown.enter="setReportRange('month')" :aria-pressed="reportRange === 'month'">近30天</span>
+                            <span :class="{active: reportRange === 'today'}" role="button" tabindex="0" @click="setReportRange('today')" @keydown.enter="setReportRange('today')" :aria-pressed="reportRange === 'today'">浠婂ぉ</span>
+                            <span :class="{active: reportRange === 'week'}" role="button" tabindex="0" @click="setReportRange('week')" @keydown.enter="setReportRange('week')" :aria-pressed="reportRange === 'week'">杩?澶?/span>
+                            <span :class="{active: reportRange === 'month'}" role="button" tabindex="0" @click="setReportRange('month')" @keydown.enter="setReportRange('month')" :aria-pressed="reportRange === 'month'">杩?0澶?/span>
                         </div>
                     </div>
                 </div>
                 <div class="btn-row">
-                    <button class="app-btn app-btn-excel" :class="{'btn-loading': reportExport.loading}" :disabled="reportExport.loading" @click="exportReport('excel')">导出 Excel</button>
-                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': reportExport.loading}" :disabled="reportExport.loading" @click="exportReport('pdf')">导出 PDF</button>
+                    <button class="app-btn app-btn-excel" :class="{'btn-loading': reportExport.loading}" :disabled="reportExport.loading" @click="exportReport('excel')">瀵煎嚭 Excel</button>
+                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': reportExport.loading}" :disabled="reportExport.loading" @click="exportReport('pdf')">瀵煎嚭 PDF</button>
                 </div>
             </div>
         </div>
 
-        <!-- 导出记录 -->
+        <!-- 瀵煎嚭璁板綍 -->
         <div class="history-section">
             <div class="history-title" style="display:flex;justify-content:space-between;align-items:center;">
-                <span>&#128197; 导出记录 <span style="font-size:var(--font-size-xs);color:var(--el-border-base);font-weight:400;">（最近 {{ history.length }} 条）</span></span>
-                <button v-if="history.length > 0" @click="clearHistory" class="app-btn app-btn-danger app-btn-sm">清空记录</button>
+                <span>&#128197; 瀵煎嚭璁板綍 <span style="font-size:var(--font-size-xs);color:var(--el-border-base);font-weight:400;">锛堟渶杩?{{ history.length }} 鏉★級</span></span>
+                <button v-if="history.length > 0" @click="clearHistory" class="app-btn app-btn-danger app-btn-sm">娓呯┖璁板綍</button>
             </div>
             <div class="history-list" v-if="history.length > 0">
                 <div class="history-item" v-for="(item, idx) in history" :key="idx">
@@ -255,13 +255,13 @@
                     </div>
                     <span class="history-size">{{ item.size }}</span>
                     <span class="history-status" :class="item.success ? 'success' : 'fail'">
-                        {{ item.success ? '✓ 成功' : '✗ 失败' }}
+                        {{ item.success ? '鉁?鎴愬姛' : '鉁?澶辫触' }}
                     </span>
                 </div>
             </div>
             <div class="history-list empty-history" v-else>
-                <div style="font-size:36px;margin-bottom:8px;">📥</div>
-                暂无导出记录，点击上方按钮开始导出
+                <div style="font-size: var(--font-size-4xl);margin-bottom:8px;">馃摜</div>
+                鏆傛棤瀵煎嚭璁板綍锛岀偣鍑讳笂鏂规寜閽紑濮嬪鍑?
             </div>
         </div>
     </div>
@@ -298,7 +298,7 @@
                 this.setReportRange('week');
             },
             methods: {
-                // ==================== 日期快捷选择 ====================
+                // ==================== 鏃ユ湡蹇嵎閫夋嫨 ====================
                 setOrderRange(range) {
                     this.orderRange = range;
                     var now = new Date();
@@ -335,7 +335,7 @@
                     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
                 },
 
-                // ==================== 导出操作 ====================
+                // ==================== 瀵煎嚭鎿嶄綔 ====================
                 exportOrder(format) {
                     var self = this;
                     self.orderExport.loading = true;
@@ -349,15 +349,15 @@
                         ? exportApi.exportOrdersExcel(params)
                         : exportApi.exportOrdersPdf(params);
 
-                    var label = '订单数据 (' + self.orderFilter.startDate + '~' + self.orderFilter.endDate + ')';
-                    exportApi.downloadFile(apiCall, '订单数据.' + ext)
+                    var label = '璁㈠崟鏁版嵁 (' + self.orderFilter.startDate + '~' + self.orderFilter.endDate + ')';
+                    exportApi.downloadFile(apiCall, '璁㈠崟鏁版嵁.' + ext)
                         .then(function() {
                             self.addHistory(label, '&#128203;', ext, true);
-                            showToast('订单数据导出成功，文件已开始下载', 'success');
+                            showToast('璁㈠崟鏁版嵁瀵煎嚭鎴愬姛锛屾枃浠跺凡寮€濮嬩笅杞?, 'success');
                         })
                         .catch(function(err) {
                             self.addHistory(label, '&#128203;', ext, false);
-                            showToast(err.message || '订单数据导出失败', 'error');
+                            showToast(err.message || '璁㈠崟鏁版嵁瀵煎嚭澶辫触', 'error');
                         })
                         .finally(function() { self.orderExport.loading = false; });
                 },
@@ -370,14 +370,14 @@
                         ? exportApi.exportDishesExcel({})
                         : exportApi.exportDishesPdf({});
 
-                    exportApi.downloadFile(apiCall, '菜品数据.' + ext)
+                    exportApi.downloadFile(apiCall, '鑿滃搧鏁版嵁.' + ext)
                         .then(function() {
-                            self.addHistory('菜品数据', '&#127834;', ext, true);
-                            showToast('菜品数据导出成功', 'success');
+                            self.addHistory('鑿滃搧鏁版嵁', '&#127834;', ext, true);
+                            showToast('鑿滃搧鏁版嵁瀵煎嚭鎴愬姛', 'success');
                         })
                         .catch(function(err) {
-                            self.addHistory('菜品数据', '&#127834;', ext, false);
-                            showToast(err.message || '菜品数据导出失败', 'error');
+                            self.addHistory('鑿滃搧鏁版嵁', '&#127834;', ext, false);
+                            showToast(err.message || '鑿滃搧鏁版嵁瀵煎嚭澶辫触', 'error');
                         })
                         .finally(function() { self.dishExport.loading = false; });
                 },
@@ -390,14 +390,14 @@
                         ? exportApi.exportEmployeesExcel({})
                         : exportApi.exportEmployeesPdf({});
 
-                    exportApi.downloadFile(apiCall, '员工数据.' + ext)
+                    exportApi.downloadFile(apiCall, '鍛樺伐鏁版嵁.' + ext)
                         .then(function() {
-                            self.addHistory('员工数据', '&#128101;', ext, true);
-                            showToast('员工数据导出成功', 'success');
+                            self.addHistory('鍛樺伐鏁版嵁', '&#128101;', ext, true);
+                            showToast('鍛樺伐鏁版嵁瀵煎嚭鎴愬姛', 'success');
                         })
                         .catch(function(err) {
-                            self.addHistory('员工数据', '&#128101;', ext, false);
-                            showToast(err.message || '员工数据导出失败', 'error');
+                            self.addHistory('鍛樺伐鏁版嵁', '&#128101;', ext, false);
+                            showToast(err.message || '鍛樺伐鏁版嵁瀵煎嚭澶辫触', 'error');
                         })
                         .finally(function() { self.empExport.loading = false; });
                 },
@@ -413,20 +413,20 @@
                         ? exportApi.exportReportExcel(params)
                         : exportApi.exportReportPdf(params);
 
-                    var label = '经营报表 (' + self.reportFilter.startDate + '~' + self.reportFilter.endDate + ')';
-                    exportApi.downloadFile(apiCall, '经营报表.' + ext)
+                    var label = '缁忚惀鎶ヨ〃 (' + self.reportFilter.startDate + '~' + self.reportFilter.endDate + ')';
+                    exportApi.downloadFile(apiCall, '缁忚惀鎶ヨ〃.' + ext)
                         .then(function() {
                             self.addHistory(label, '&#128200;', ext, true);
-                            showToast('经营报表导出成功', 'success');
+                            showToast('缁忚惀鎶ヨ〃瀵煎嚭鎴愬姛', 'success');
                         })
                         .catch(function(err) {
                             self.addHistory(label, '&#128200;', ext, false);
-                            showToast(err.message || '经营报表导出失败', 'error');
+                            showToast(err.message || '缁忚惀鎶ヨ〃瀵煎嚭澶辫触', 'error');
                         })
                         .finally(function() { self.reportExport.loading = false; });
                 },
 
-                // ==================== 导出记录 ====================
+                // ==================== 瀵煎嚭璁板綍 ====================
                 addHistory(name, icon, ext, success) {
                     var now = new Date();
                     var time = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0')
@@ -435,14 +435,14 @@
                         name: name + '.' + ext,
                         icon: icon,
                         time: time,
-                        size: ext.toUpperCase() + ' 文件',
+                        size: ext.toUpperCase() + ' 鏂囦欢',
                         success: success
                     });
                     if (this.history.length > 50) this.history.pop();
                 },
                 clearHistory() {
                     this.history = [];
-                    showToast('导出记录已清空', 'info');
+                    showToast('瀵煎嚭璁板綍宸叉竻绌?, 'info');
                 }
             }
         });

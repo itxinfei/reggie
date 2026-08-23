@@ -69,6 +69,7 @@
                 </span>
                 <div class="header-scenes">
                     <span v-for="scene in scenes"
+                          :key="scene.value"
                           :class="['scene-tag', { active: currentScene === scene.value }]"
                           role="button" tabindex="0"
                           @click="switchScene(scene.value)" @keydown.enter="switchScene(scene.value)"

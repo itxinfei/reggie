@@ -4,69 +4,69 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>到期预警 - 瑞吉外卖管理端</title>
+  <title>鍒版湡棰勮 - 鐟炲悏澶栧崠绠＄悊绔?/title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     .warn-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
 
-    /* 筛选栏 */
+    /* 绛涢€夋爮 */
     .filter-bar { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: flex-end; gap: var(--space-4); margin-bottom: var(--space-6); flex-wrap: wrap }
     .filter-bar__label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap }
     .filter-bar__col { display: flex; flex-direction: column; gap: 4px }
     .filter-bar__input { height: 36px }
     .filter-bar__btn { height: 36px; font-size: var(--font-size-base) }
 
-    /* 统计卡片行 */
+    /* 缁熻鍗＄墖琛?*/
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-6) }
     @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr) } }
     @media (max-width: 520px) { .stats-grid { grid-template-columns: 1fr } }
     .stat-card { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: var(--space-4) }
-    .stat-card__icon { font-size: 28px; line-height: 1 }
+    .stat-card__icon { font-size: var(--font-size-3xl); line-height: 1 }
     .stat-card__body { flex: 1 }
-    .stat-card__label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px }
-    .stat-card__value { font-size: 24px; font-weight: 600; color: var(--text-primary); line-height: 1.2 }
-    .stat-card__sub { font-size: 12px; color: var(--text-muted); margin-top: 2px }
-    .stat-card.danger .stat-card__value { color: #f56c6c }
-    .stat-card.warning .stat-card__value { color: #e6a23c }
+    .stat-card__label { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px }
+    .stat-card__value { font-size: var(--font-size-3xl); font-weight: 600; color: var(--text-primary); line-height: 1.2 }
+    .stat-card__sub { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 2px }
+    .stat-card.danger .stat-card__value { color: var(--color-danger) }
+    .stat-card.warning .stat-card__value { color: var(--color-warning) }
     .stat-card.brand .stat-card__value { color: var(--color-brand-500) }
 
-    /* 批量延期按钮行 */
+    /* 鎵归噺寤舵湡鎸夐挳琛?*/
     .batch-bar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap }
-    .batch-bar__tip { font-size: 12px; color: var(--text-muted) }
+    .batch-bar__tip { font-size: var(--font-size-xs); color: var(--text-muted) }
 
-    /* 空态 */
+    /* 绌烘€?*/
     .empty-state { text-align: center; padding: 60px var(--space-4); color: var(--text-muted); font-size: var(--font-size-base) }
-    .empty-state__icon { font-size: 48px; line-height: 1; margin-bottom: var(--space-4) }
-    .empty-state__desc { font-size: 12px; color: var(--text-muted); margin-top: var(--space-2) }
+    .empty-state__icon { font-size: var(--font-size-4xl); line-height: 1; margin-bottom: var(--space-4) }
+    .empty-state__desc { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-2) }
   </style>
 </head>
 <body>
-  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <a href="#main-content" class="skip-link">璺宠浆鍒颁富鍐呭</a>
   <div class="dashboard-container" id="expiring-app">
-    <div class="container warn-container" id="main-content" role="main" aria-label="优惠券到期预警">
+    <div class="container warn-container" id="main-content" role="main" aria-label="浼樻儬鍒稿埌鏈熼璀?>
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">到期预警</h1>
-          <p class="ds-page-header__subtitle">查看即将到期/已过期的优惠券，批量干预挽回营销投入</p>
+          <h1 class="ds-page-header__title" id="page-title">鍒版湡棰勮</h1>
+          <p class="ds-page-header__subtitle">鏌ョ湅鍗冲皢鍒版湡/宸茶繃鏈熺殑浼樻儬鍒革紝鎵归噺骞查鎸藉洖钀ラ攢鎶曞叆</p>
         </div>
       </header>
 
-      <!-- 筛选栏 -->
+      <!-- 绛涢€夋爮 -->
       <div class="filter-bar">
         <div class="filter-bar__col">
-          <span class="filter-bar__label">预警天数：</span>
-          <el-select v-model="days" class="filter-bar__input" style="width:120px" @change="onFilterChange" aria-label="预警天数">
-            <el-option :value="1" label="1天">1天内到期</el-option>
-            <el-option :value="3" label="3天">3天内到期</el-option>
-            <el-option :value="7" label="7天">7天内到期</el-option>
-            <el-option :value="14" label="14天">14天内到期</el-option>
+          <span class="filter-bar__label">棰勮澶╂暟锛?/span>
+          <el-select v-model="days" class="filter-bar__input" style="width:120px" @change="onFilterChange" aria-label="棰勮澶╂暟">
+            <el-option :value="1" label="1澶?>1澶╁唴鍒版湡</el-option>
+            <el-option :value="3" label="3澶?>3澶╁唴鍒版湡</el-option>
+            <el-option :value="7" label="7澶?>7澶╁唴鍒版湡</el-option>
+            <el-option :value="14" label="14澶?>14澶╁唴鍒版湡</el-option>
           </el-select>
         </div>
         <div class="filter-bar__col">
-          <span class="filter-bar__label">优惠券模板：</span>
-          <el-select v-model="templateId" class="filter-bar__input" style="width:260px" filterable clearable @change="onFilterChange" aria-label="优惠券模板">
+          <span class="filter-bar__label">浼樻儬鍒告ā鏉匡細</span>
+          <el-select v-model="templateId" class="filter-bar__input" style="width:260px" filterable clearable @change="onFilterChange" aria-label="浼樻儬鍒告ā鏉?>
             <el-option
               v-for="t in templateOptions"
               :key="t.value"
@@ -79,68 +79,68 @@
           </el-select>
         </div>
         <div class="filter-bar__col">
-          <span class="filter-bar__label">会员手机：</span>
-          <el-input v-model="phone" class="filter-bar__input" placeholder="手机号模糊查询" style="width:200px" @keyup.enter.native="onFilterChange" clearable aria-label="会员手机"></el-input>
+          <span class="filter-bar__label">浼氬憳鎵嬫満锛?/span>
+          <el-input v-model="phone" class="filter-bar__input" placeholder="鎵嬫満鍙锋ā绯婃煡璇? style="width:200px" @keyup.enter.native="onFilterChange" clearable aria-label="浼氬憳鎵嬫満"></el-input>
         </div>
-        <el-button type="primary" size="small" @click="onFilterChange" class="filter-bar__btn">查询</el-button>
-        <el-button size="small" @click="refreshAll">刷新全部</el-button>
+        <el-button type="primary" size="small" @click="onFilterChange" class="filter-bar__btn">鏌ヨ</el-button>
+        <el-button size="small" @click="refreshAll">鍒锋柊鍏ㄩ儴</el-button>
       </div>
 
-      <!-- 统计卡片 -->
+      <!-- 缁熻鍗＄墖 -->
       <div class="stats-grid" v-loading="statsLoading">
         <div class="stat-card warning">
-          <div class="stat-card__icon">⏰</div>
+          <div class="stat-card__icon">鈴?/div>
           <div class="stat-card__body">
-            <div class="stat-card__label">{{ days }}天内到期</div>
+            <div class="stat-card__label">{{ days }}澶╁唴鍒版湡</div>
             <div class="stat-card__value">{{ statsData.totalExpiringCount }}</div>
-            <div class="stat-card__sub">优惠总额 ¥{{ statsData.totalExpiringAmount | toDecimal }}</div>
+            <div class="stat-card__sub">浼樻儬鎬婚 楼{{ statsData.totalExpiringAmount | toDecimal }}</div>
           </div>
         </div>
         <div class="stat-card danger">
-          <div class="stat-card__icon">❌</div>
+          <div class="stat-card__icon">鉂?/div>
           <div class="stat-card__body">
-            <div class="stat-card__label">已过期</div>
+            <div class="stat-card__label">宸茶繃鏈?/div>
             <div class="stat-card__value">{{ statsData.totalExpiredCount }}</div>
-            <div class="stat-card__sub">优惠总额 ¥{{ statsData.totalExpiredAmount | toDecimal }}</div>
+            <div class="stat-card__sub">浼樻儬鎬婚 楼{{ statsData.totalExpiredAmount | toDecimal }}</div>
           </div>
         </div>
         <div class="stat-card brand">
-          <div class="stat-card__icon">📦</div>
+          <div class="stat-card__icon">馃摝</div>
           <div class="stat-card__body">
-            <div class="stat-card__label">涉及模板数</div>
+            <div class="stat-card__label">娑夊強妯℃澘鏁?/div>
             <div class="stat-card__value">{{ statsData.byTemplate ? statsData.byTemplate.length : 0 }}</div>
-            <div class="stat-card__sub">有预警的优惠券模板</div>
+            <div class="stat-card__sub">鏈夐璀︾殑浼樻儬鍒告ā鏉?/div>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-card__icon">📋</div>
+          <div class="stat-card__icon">馃搵</div>
           <div class="stat-card__body">
-            <div class="stat-card__label">当前Tab</div>
-            <div class="stat-card__value" style="font-size:16px">{{ activeTab === 'expiring' ? '即将到期' : '已过期' }}</div>
-            <div class="stat-card__sub">{{ activeTab === 'expiring' ? '可批量延期' : '仅可查询' }}</div>
+            <div class="stat-card__label">褰撳墠Tab</div>
+            <div class="stat-card__value" style="font-size: var(--font-size-lg)">{{ activeTab === 'expiring' ? '鍗冲皢鍒版湡' : '宸茶繃鏈? }}</div>
+            <div class="stat-card__sub">{{ activeTab === 'expiring' ? '鍙壒閲忓欢鏈? : '浠呭彲鏌ヨ' }}</div>
           </div>
         </div>
       </div>
 
-      <!-- Tab切换 -->
+      <!-- Tab鍒囨崲 -->
       <el-tabs v-model="activeTab" @tab-click="onTabClick">
-        <el-tab-pane label="即将到期" name="expiring"></el-tab-pane>
-        <el-tab-pane label="已过期" name="expired"></el-tab-pane>
+        <el-tab-pane label="鍗冲皢鍒版湡" name="expiring"></el-tab-pane>
+        <el-tab-pane label="宸茶繃鏈? name="expired"></el-tab-pane>
       </el-tabs>
 
-      <!-- 即将到期：批量延期按钮 -->
+      <!-- 鍗冲皢鍒版湡锛氭壒閲忓欢鏈熸寜閽?-->
       <div class="batch-bar" v-if="activeTab === 'expiring'">
         <el-button
           type="primary"
           size="small"
           :disabled="selectedRows.length === 0"
           @click="openExtendDialog"
-        >批量延期</el-button>
-        <span class="batch-bar__tip" v-if="selectedRows.length > 0">已选 {{ selectedRows.length }} 条，可一键延长过期时间</span>
-        <span class="batch-bar__tip" v-else>勾选即将到期的优惠券，可批量延长过期时间</span>
+        >鎵归噺寤舵湡</el-button>
+        <span class="batch-bar__tip" v-if="selectedRows.length > 0">宸查€?{{ selectedRows.length }} 鏉★紝鍙竴閿欢闀胯繃鏈熸椂闂?/span>
+        <span class="batch-bar__tip" v-else>鍕鹃€夊嵆灏嗗埌鏈熺殑浼樻儬鍒革紝鍙壒閲忓欢闀胯繃鏈熸椂闂?/span>
       </div>
 
-      <!-- 明细表格 -->
+      <!-- 鏄庣粏琛ㄦ牸 -->
       <crud-table
         ref="crudTable"
         :data="tableData"
@@ -156,7 +156,7 @@
       >
         <template #col-couponType="{ row }">
           <el-tag :type="row.couponType === 'FULL_REDUCTION' ? 'success' : row.couponType === 'DISCOUNT' ? 'warning' : 'info'" size="small">
-            {{ row.couponType === 'FULL_REDUCTION' ? '满减' : row.couponType === 'DISCOUNT' ? '折扣' : '新客' }}
+            {{ row.couponType === 'FULL_REDUCTION' ? '婊″噺' : row.couponType === 'DISCOUNT' ? '鎶樻墸' : '鏂板' }}
           </el-tag>
         </template>
         <template #col-expireTime="{ row }">
@@ -165,13 +165,13 @@
       </crud-table>
 
       <div v-if="counts === 0 && !tableLoading" class="empty-state">
-        <div class="empty-state__icon">🎉</div>
-        <div>{{ activeTab === 'expiring' ? '暂无即将到期的优惠券' : '暂无已过期的优惠券' }}</div>
-        <div class="empty-state__desc">可调整预警天数或清除筛选条件后重新查询</div>
+        <div class="empty-state__icon">馃帀</div>
+        <div>{{ activeTab === 'expiring' ? '鏆傛棤鍗冲皢鍒版湡鐨勪紭鎯犲埜' : '鏆傛棤宸茶繃鏈熺殑浼樻儬鍒? }}</div>
+        <div class="empty-state__desc">鍙皟鏁撮璀﹀ぉ鏁版垨娓呴櫎绛涢€夋潯浠跺悗閲嶆柊鏌ヨ</div>
       </div>
     </div>
 
-    <!-- 批量延期弹窗 -->
+    <!-- 鎵归噺寤舵湡寮圭獥 -->
     <crud-dialog
       :title="extendForm.title"
       :visible.sync="extendForm.dialogVisible"
@@ -181,13 +181,13 @@
       @close="handleExtendClose"
     >
       <el-form :model="extendForm" :rules="extendRules" ref="extendFormRef" label-width="100px">
-        <el-form-item label="已选数量" prop="selectedCount">
+        <el-form-item label="宸查€夋暟閲? prop="selectedCount">
           <el-input-number v-model="extendForm.selectedCount" :min="0" :max="9999" disabled></el-input-number>
-          <span style="margin-left:8px; font-size:12px; color:var(--text-muted)">条优惠券</span>
+          <span style="margin-left:8px; font-size: var(--font-size-xs); color:var(--text-muted)">鏉′紭鎯犲埜</span>
         </el-form-item>
-        <el-form-item label="延长天数" prop="extendDays">
+        <el-form-item label="寤堕暱澶╂暟" prop="extendDays">
           <el-input-number v-model="extendForm.extendDays" :min="1" :max="365" style="width:200px"></el-input-number>
-          <span style="margin-left:8px; font-size:12px; color:var(--text-muted)">天</span>
+          <span style="margin-left:8px; font-size: var(--font-size-xs); color:var(--text-muted)">澶?/span>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -211,7 +211,7 @@
           phone: null,
           templateOptions: [],
           activeTab: 'expiring',
-          // 统计
+          // 缁熻
           statsLoading: false,
           statsData: {
             totalExpiringCount: 0,
@@ -220,7 +220,7 @@
             totalExpiredAmount: 0,
             byTemplate: []
           },
-          // 表格
+          // 琛ㄦ牸
           tableLoading: false,
           page: 1,
           pageSize: 10,
@@ -228,32 +228,32 @@
           tableData: [],
           selectedRows: [],
           columns: [
-            { prop: 'templateName', label: '优惠券模板', width: 180 },
-            { prop: 'couponType', label: '类型', slot: true, width: 90, align: 'center' },
-            { prop: 'memberName', label: '会员姓名', width: 100 },
-            { prop: 'memberPhone', label: '会员手机', width: 130 },
-            { prop: 'couponCode', label: '优惠券码', width: 140 },
-            { prop: 'discountAmount', label: '优惠金额', width: 110, align: 'right',
+            { prop: 'templateName', label: '浼樻儬鍒告ā鏉?, width: 180 },
+            { prop: 'couponType', label: '绫诲瀷', slot: true, width: 90, align: 'center' },
+            { prop: 'memberName', label: '浼氬憳濮撳悕', width: 100 },
+            { prop: 'memberPhone', label: '浼氬憳鎵嬫満', width: 130 },
+            { prop: 'couponCode', label: '浼樻儬鍒哥爜', width: 140 },
+            { prop: 'discountAmount', label: '浼樻儬閲戦', width: 110, align: 'right',
               formatter: function(row) {
                 if (row.couponType === 'DISCOUNT') {
-                  return row.discountRate ? (Number(row.discountRate) * 10).toFixed(1) + '折' : '-'
+                  return row.discountRate ? (Number(row.discountRate) * 10).toFixed(1) + '鎶? : '-'
                 }
-                if (row.discountAmount != null) return '¥' + Number(row.discountAmount).toFixed(2)
+                if (row.discountAmount != null) return '楼' + Number(row.discountAmount).toFixed(2)
                 return '-'
               } },
-            { prop: 'createdTime', label: '领取时间', width: 160, align: 'center' },
-            { prop: 'expireTime', label: '过期时间', slot: true, width: 160, align: 'center' }
+            { prop: 'createdTime', label: '棰嗗彇鏃堕棿', width: 160, align: 'center' },
+            { prop: 'expireTime', label: '杩囨湡鏃堕棿', slot: true, width: 160, align: 'center' }
           ],
-          // 延期弹窗
+          // 寤舵湡寮圭獥
           extendLoading: false,
           extendForm: {
-            title: '批量延期优惠券',
+            title: '鎵归噺寤舵湡浼樻儬鍒?,
             dialogVisible: false,
             selectedCount: 0,
             extendDays: 7
           },
           extendRules: {
-            extendDays: [{ required: true, message: '请选择延长天数', trigger: 'change' }]
+            extendDays: [{ required: true, message: '璇烽€夋嫨寤堕暱澶╂暟', trigger: 'change' }]
           }
         }
       },
@@ -312,7 +312,7 @@
               })
             }
           } catch (e) {
-            console.warn('加载模板列表失败:', e)
+            console.warn('鍔犺浇妯℃澘鍒楄〃澶辫触:', e)
           }
         },
         async loadStats() {
@@ -330,7 +330,7 @@
               }
             }
           } catch (e) {
-            console.warn('加载预警统计失败:', e)
+            console.warn('鍔犺浇棰勮缁熻澶辫触:', e)
           } finally {
             this.statsLoading = false
           }
@@ -363,10 +363,10 @@
             } else {
               this.tableData = []
               this.counts = 0
-              this.$message.error(res.msg || '加载失败')
+              this.$message.error(res.msg || '鍔犺浇澶辫触')
             }
           } catch (e) {
-            console.warn('加载明细失败:', e)
+            console.warn('鍔犺浇鏄庣粏澶辫触:', e)
             this.tableData = []
             this.counts = 0
           } finally {
@@ -380,7 +380,7 @@
         },
         async submitExtend() {
           if (this.selectedRows.length === 0) {
-            this.$message.warning('未勾选任何优惠券')
+            this.$message.warning('鏈嬀閫変换浣曚紭鎯犲埜')
             return
           }
           var self = this
@@ -402,16 +402,16 @@
             })
             if (String(res.code) === '1') {
               var d = res.data
-              this.$message.success('延期成功：' + d.successCount + '条优惠券延长' + this.extendForm.extendDays + '天')
+              this.$message.success('寤舵湡鎴愬姛锛? + d.successCount + '鏉′紭鎯犲埜寤堕暱' + this.extendForm.extendDays + '澶?)
               this.extendForm.dialogVisible = false
               this.loadTable()
               this.loadStats()
             } else {
-              this.$message.error(res.msg || '延期失败')
+              this.$message.error(res.msg || '寤舵湡澶辫触')
             }
           } catch (e) {
-            console.warn('批量延期失败:', e)
-            this.$message.error('操作失败，请重试')
+            console.warn('鎵归噺寤舵湡澶辫触:', e)
+            this.$message.error('鎿嶄綔澶辫触锛岃閲嶈瘯')
           } finally {
             this.extendLoading = false
           }

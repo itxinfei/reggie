@@ -4,6 +4,7 @@ import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.SecurityConstants;
 import com.reggie.common.CustomException;
+import com.reggie.module.tenant.dto.TenantRegisterDTO;
 import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.tenant.service.TenantService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpSession;
@@ -53,11 +55,11 @@ public class TenantController {
     @Parameter(name = "password", description = "管理员密码", required = true)
     @Parameter(name = "phone", description = "手机号", required = true)
     @Parameter(name = "verifyCode", description = "短信验证码", required = true)
-    public R<String> register(@Valid @RequestBody Tenant tenant,
-                              String username,
-                              String password,
-                              String phone,
-                              String verifyCode,
+    public R<String> register(@Valid @RequestBody TenantRegisterDTO dto,
+                              @RequestParam("username") String username,
+                              @RequestParam("password") String password,
+                              @RequestParam("phone") String phone,
+                              @RequestParam(required = false, name = "verifyCode") String verifyCode,
                               HttpSession session) {
         // 校验手机号格式
         if (phone == null || !phone.matches(SecurityConstants.PHONE_PATTERN)) {
@@ -68,6 +70,13 @@ public class TenantController {
         if (verifyCode == null || verifyCode.isEmpty()) {
             return R.error("验证码不能为空");
         }
+
+        // DTO 转换为 Tenant 实体，设置默认状态为正常
+        Tenant tenant = new Tenant();
+        tenant.setName(dto.getShopName());
+        tenant.setPhone(dto.getPhone());
+        tenant.setAddress(dto.getAddress());
+        tenant.setStatus(1);
 
         try {
             tenantService.registerWithAdmin(tenant, username, password, phone, verifyCode, session);

@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import javax.validation.Valid;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -65,7 +66,7 @@ public class FinanceController {
     @PostMapping("/withdrawal")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Create withdrawal application")
-    public R<String> createWithdrawal(@RequestBody WithdrawalApplication application) {
+    public R<String> createWithdrawal(@Valid @RequestBody WithdrawalApplication application) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long userId = BaseContext.getCurrentId();
         application.setTenantId(tenantId);

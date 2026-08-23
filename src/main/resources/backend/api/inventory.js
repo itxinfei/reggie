@@ -46,6 +46,10 @@ const materialWarningStats = () => $axios({ url: '/api/inventory/material/warnin
 const materialReplenishSuggest = (params) => $axios({ url: '/api/inventory/material/replenish-suggest', method: 'get', params })
 const materialBatchRestock = (data) => $axios({ url: '/api/inventory/material/batch-restock', method: 'post', data })
 
+// 智能补货看板（面向中小餐厅老板）
+const replenishDashboard = () => $axios({ url: '/api/inventory/replenish/dashboard', method: 'get' })
+const smartReplenishSuggest = (params) => $axios({ url: '/api/inventory/replenish/suggest', method: 'get', params })
+
 // 进销存统计
 const inventoryStatsOverview = () => $axios({ url: '/api/inventory/stats/overview', method: 'get' })
 const inventoryPurchaseTrend = () => $axios({ url: '/api/inventory/stats/purchase-trend', method: 'get' })

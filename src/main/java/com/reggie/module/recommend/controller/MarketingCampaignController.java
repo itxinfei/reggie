@@ -6,6 +6,8 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.R;
 import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.module.recommend.dto.BatchDeleteCampaignsDTO;
+import com.reggie.module.recommend.dto.BatchPushCampaignDTO;
 import com.reggie.module.recommend.model.MarketingCampaign;
 import com.reggie.module.recommend.service.MarketingCampaignService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,6 +26,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.reggie.common.RateLimit;
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -62,8 +66,8 @@ public class MarketingCampaignController {
     @GetMapping("/campaigns/page")
     @Operation(summary = "分页查询营销活动", description = "分页查询营销活动列表，支持按名称、状态、活动类型筛选")
     public R<Page<MarketingCampaign>> pageCampaigns(
-            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
             @Parameter(description = "活动名称（可选）") @RequestParam(required = false) String name,
             @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status,
             @Parameter(description = "活动类型（可选）") @RequestParam(required = false) Integer campaignType) {
@@ -146,10 +150,9 @@ public class MarketingCampaignController {
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量删除营销活动", description = "批量删除指定的营销活动")
     public R<String> batchDeleteCampaigns(
-            @Parameter(description = "活动ID列表", required = true) @RequestBody Map<String, Object> body) {
-        @SuppressWarnings("unchecked")
-        List<Number> rawIds = (List<Number>) body.get("ids");
-        if (rawIds == null || rawIds.isEmpty()) {
+            @Parameter(description = "活动ID列表", required = true) @Valid @RequestBody BatchDeleteCampaignsDTO dto) {
+        List<Long> ids = dto.getIds();
+        if (ids == null || ids.isEmpty()) {
             return R.error("请选择要删除的活动");
         }
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -157,15 +160,15 @@ public class MarketingCampaignController {
             throw new CustomException("租户上下文不存在");
         }
         int deleted = 0;
-        for (Number n : rawIds) {
-            MarketingCampaign campaign = marketingCampaignService.getById(n.longValue());
+        for (Long id : ids) {
+            MarketingCampaign campaign = marketingCampaignService.getById(id);
             if (campaign == null) {
                 continue;
             }
             if (!tenantId.equals(campaign.getTenantId())) {
                 throw new CustomException("营销活动中存在不属于当前租户的记录");
             }
-            marketingCampaignService.removeById(n.longValue());
+            marketingCampaignService.removeById(id);
             deleted++;
         }
         log.info("[营销管理] 批量删除活动: count={}", deleted);
@@ -328,9 +331,8 @@ public class MarketingCampaignController {
     @Operation(summary = "批量推送营销消息", description = "根据活动目标人群自动匹配用户并批量推送营销消息")
     public R<String> batchPush(
             @Parameter(description = "活动ID", required = true) @PathVariable Long campaignId,
-            @Parameter(description = "推送参数（pushType）") @RequestBody Map<String, Object> body) {
-        Integer pushType = body.get("pushType") != null ?
-                Integer.valueOf(body.get("pushType").toString()) : 1;
+            @Parameter(description = "推送参数（pushType）") @Valid @RequestBody BatchPushCampaignDTO dto) {
+        Integer pushType = dto.getPushType();
         int count = marketingCampaignService.batchPushMessages(campaignId, pushType);
         return R.success("已向" + count + "位用户推送营销消息");
     }

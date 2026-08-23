@@ -49,6 +49,8 @@ public class OrderCompletedListener {
     @Async("recommendExecutor")
     @EventListener
     public void onOrderCompleted(OrderCompletedEvent event) {
+        Long originalTenantId = BaseContext.getCurrentTenantId();
+        BaseContext.setCurrentTenantId(event.getTenantId());
         try {
             Orders order = orderService.getById(event.getOrderId());
             if (order == null) {
@@ -61,6 +63,12 @@ public class OrderCompletedListener {
             Long orderId = event.getOrderId();
             log.error("[会员权益] 订单{}完成后权益发放失败，已加入待对账队列: {}", orderId, e.getMessage(), e);
             enqueuePendingReward(orderId, e);
+        } finally {
+            if (originalTenantId != null) {
+                BaseContext.setCurrentTenantId(originalTenantId);
+            } else {
+                BaseContext.remove();
+            }
         }
     }
 

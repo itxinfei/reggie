@@ -1,4 +1,6 @@
 package com.reggie.module.member.controller;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -58,9 +60,9 @@ public class MemberLevelController {
     @Operation(summary = "分页查询", description = "分页查询会员等级列表，自动过滤当前租户数据")
     public R<Page<MemberLevel>> page(
             @Parameter(description = "Page")
-            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
             @Parameter(description = "PageSize")
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize) {
         Page<MemberLevel> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<MemberLevel> qw = new LambdaQueryWrapper<>();
         Long tenantId = BaseContext.getCurrentTenantId();

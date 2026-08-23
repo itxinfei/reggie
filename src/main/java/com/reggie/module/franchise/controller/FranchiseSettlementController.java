@@ -1,5 +1,7 @@
 package com.reggie.module.franchise.controller;
 
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
 import com.reggie.common.BaseContext;
@@ -81,8 +83,8 @@ public class FranchiseSettlementController {
     @GetMapping("/page")
     @Operation(summary = "结算单分页查询", description = "支持按周期/状态/加盟商筛选")
     public R<Page<FranchiseSettlement>> page(
-            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
             @Parameter(description = "结算周期，如 2026-08") @RequestParam(required = false) String settlePeriod,
             @Parameter(description = "状态：0待确认 1已确认 2已结算") @RequestParam(required = false) Integer status,
             @Parameter(description = "加盟商ID") @RequestParam(required = false) Long franchiseeId) {

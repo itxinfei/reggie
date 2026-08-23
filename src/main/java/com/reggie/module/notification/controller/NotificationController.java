@@ -6,6 +6,11 @@ import com.reggie.common.RateLimit;
 import com.reggie.common.RateLimitType;
 import com.reggie.common.annotation.RequiresPermission;
 import com.reggie.common.BaseContext;
+import com.reggie.module.notification.dto.BatchSendNotificationDTO;
+import com.reggie.module.notification.dto.RegisterDeviceDTO;
+import com.reggie.module.notification.dto.SendNotificationDTO;
+import com.reggie.module.notification.dto.SendSimpleMessageDTO;
+import com.reggie.module.notification.dto.SendToAllUsersDTO;
 import com.reggie.module.notification.model.NotificationRecord;
 import com.reggie.module.notification.model.NotificationTemplate;
 import com.reggie.module.notification.service.NotificationRecordService;
@@ -26,6 +31,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -70,8 +78,8 @@ public class NotificationController {
     @GetMapping("/template/page")
     @Operation(summary = "分页查询模板", description = "分页查询通知模板列表，支持按业务类型筛选")
     public R<Page<NotificationTemplate>> templatePage(
-                        @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+                        @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
             @Parameter(description = "业务类型（可选）") @RequestParam(required = false) String bizType) {
         Long tenantId = BaseContext.getCurrentTenantId();
         // 域4 改造：分页查询下沉到 Service，内置租户过滤
@@ -179,14 +187,12 @@ public class NotificationController {
     @RequiresPermission("notification:send")
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     public R<NotificationRecord> sendNotification(
-            @Parameter(description = "通知参数（bizType/channel/targets/params/sendTime）", required = true) @RequestBody Map<String, Object> body) {
-        String bizType = (String) body.get("bizType");
-        Integer channel = (Integer) body.getOrDefault("channel", 1);
-        @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
-        List<String> targets = (List<String>) body.get("targets");
-        @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
-        Map<String, String> params = (Map<String, String>) body.get("params");
-        String sendTimeStr = (String) body.get("sendTime");
+            @Parameter(description = "通知参数（bizType/channel/targets/params/sendTime）", required = true) @Valid @RequestBody SendNotificationDTO dto) {
+        String bizType = dto.getBizType();
+        Integer channel = dto.getChannel();
+        List<String> targets = dto.getTargets();
+        Map<String, String> params = dto.getParams();
+        String sendTimeStr = dto.getSendTime();
 
         if (bizType == null || targets == null || targets.isEmpty()) {
             return R.error("业务类型和目标用户不能为空");
@@ -230,25 +236,13 @@ public class NotificationController {
     @RequiresPermission("notification:send")
     @RateLimit(maxRequestsPerSecond = 3, type = RateLimitType.USER)
     public R<NotificationRecord> batchSend(
-            @Parameter(description = "发送参数（templateId/channel/targetType/targets/params/sendTime）", required = true) @RequestBody Map<String, Object> body) {
-        // 入口校验：templateId 非空，避免 toString() 触发 NPE
-        Object templateIdRaw = body.get("templateId");
-        if (templateIdRaw == null) {
-            return R.error("模板ID不能为空");
-        }
-        Long templateId;
-        try {
-            templateId = Long.valueOf(templateIdRaw.toString());
-        } catch (NumberFormatException e) {
-            return R.error("模板ID格式非法");
-        }
-        Integer channel = (Integer) body.getOrDefault("channel", 1);
-        Integer targetType = (Integer) body.getOrDefault("targetType", 1);
-        @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
-        List<String> targets = (List<String>) body.get("targets");
-        @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
-        Map<String, String> params = (Map<String, String>) body.get("params");
-        String sendTimeStr = (String) body.get("sendTime");
+            @Parameter(description = "发送参数（templateId/channel/targetType/targets/params/sendTime）", required = true) @Valid @RequestBody BatchSendNotificationDTO dto) {
+        Long templateId = dto.getTemplateId();
+        Integer channel = dto.getChannel();
+        Integer targetType = dto.getTargetType();
+        List<String> targets = dto.getTargets();
+        Map<String, String> params = dto.getParams();
+        String sendTimeStr = dto.getSendTime();
 
         // 入口校验：targets 非空且不超上限，防止 NPE 与下游过载
         if (targets == null || targets.isEmpty()) {
@@ -283,11 +277,10 @@ public class NotificationController {
     @RequiresPermission("notification:send")
     @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.GLOBAL)
     public R<NotificationRecord> sendToAllUsers(
-            @Parameter(description = "推送参数（bizType/channel/params）", required = true) @RequestBody Map<String, Object> body) {
-        String bizType = (String) body.get("bizType");
-        Integer channel = (Integer) body.getOrDefault("channel", 1);
-        @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
-        Map<String, String> params = (Map<String, String>) body.get("params");
+            @Parameter(description = "推送参数（bizType/channel/params）", required = true) @Valid @RequestBody SendToAllUsersDTO dto) {
+        String bizType = dto.getBizType();
+        Integer channel = dto.getChannel();
+        Map<String, String> params = dto.getParams();
 
         if (bizType == null) {
             return R.error("业务类型不能为空");
@@ -309,9 +302,9 @@ public class NotificationController {
     @Operation(summary = "分页查询发送记录", description = "分页查询通知发送记录")
     public R<Page<NotificationRecord>> recordPage(
             @Parameter(description = "Page")
-            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
             @Parameter(description = "PageSize")
-            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
             @Parameter(description = "BizType")
             @RequestParam(required = false) String bizType,
             @Parameter(description = "Status")
@@ -370,14 +363,14 @@ public class NotificationController {
     @PostMapping("/device/register")
     @Operation(summary = "注册设备Token", description = "注册/更新用户设备推送Token")
     public R<String> registerDevice(
-            @Parameter(description = "设备信息（platform/deviceToken）", required = true) @RequestBody Map<String, Object> body) {
+            @Parameter(description = "设备信息（platform/deviceToken）", required = true) @Valid @RequestBody RegisterDeviceDTO dto) {
         // 修改点：以登录会话身份为准绑定设备，杜绝伪造他人 userId 的越权注册（IDOR）
         Long sessionUserId = BaseContext.getCurrentId();
         if (sessionUserId == null) {
             return R.error("请先登录");
         }
-        String platform = (String) body.get("platform");
-        String deviceToken = (String) body.get("deviceToken");
+        String platform = dto.getPlatform();
+        String deviceToken = dto.getDeviceToken();
         if (platform == null || platform.trim().isEmpty() || deviceToken == null || deviceToken.trim().isEmpty()) {
             return R.error("平台与设备Token不能为空");
         }
@@ -421,12 +414,11 @@ public class NotificationController {
     @RequiresPermission("notification:send")
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     public R<NotificationRecord> sendSimpleMessage(
-            @Parameter(description = "消息参数（channel/targets/content/title）", required = true) @RequestBody Map<String, Object> body) {
-        Integer channel = (Integer) body.getOrDefault("channel", 1);
-        @SuppressWarnings("unchecked") // JSON反序列化类型转换，由调用方保证类型正确
-        List<String> targets = (List<String>) body.get("targets");
-        String content = (String) body.get("content");
-        String title = (String) body.get("title");
+            @Parameter(description = "消息参数（channel/targets/content/title）", required = true) @Valid @RequestBody SendSimpleMessageDTO dto) {
+        Integer channel = dto.getChannel();
+        List<String> targets = dto.getTargets();
+        String content = dto.getContent();
+        String title = dto.getTitle();
 
         if (targets == null || targets.isEmpty()) {
             return R.error("目标用户不能为空");

@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import javax.validation.Valid;
 import com.reggie.common.RateLimit;
 
 import java.math.BigDecimal;
@@ -57,7 +58,7 @@ public class MarketingController {
     @PostMapping("/full-reduction")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Save full reduction rule")
-    public R<String> saveFullReductionRule(@RequestBody FullReductionRule rule) {
+    public R<String> saveFullReductionRule(@Valid @RequestBody FullReductionRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = marketingService.saveOrUpdateFullReductionRule(rule);
@@ -67,7 +68,7 @@ public class MarketingController {
     @PutMapping("/full-reduction")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update full reduction rule")
-    public R<String> updateFullReductionRule(@RequestBody FullReductionRule rule) {
+    public R<String> updateFullReductionRule(@Valid @RequestBody FullReductionRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = marketingService.saveOrUpdateFullReductionRule(rule);
@@ -85,7 +86,7 @@ public class MarketingController {
     @PostMapping("/full-reduction/batch")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "Batch save full reduction rules")
-    public R<String> batchSaveFullReductionRules(@RequestBody List<FullReductionRule> rules) {
+    public R<String> batchSaveFullReductionRules(@Valid @RequestBody List<FullReductionRule> rules) {
         Long tenantId = BaseContext.getCurrentTenantId();
         for (FullReductionRule rule : rules) {
             rule.setTenantId(tenantId);
@@ -108,7 +109,7 @@ public class MarketingController {
     @PostMapping("/discount")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Save discount rule")
-    public R<String> saveDiscountRule(@RequestBody DiscountRule rule) {
+    public R<String> saveDiscountRule(@Valid @RequestBody DiscountRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = marketingService.saveOrUpdateDiscountRule(rule);
@@ -118,7 +119,7 @@ public class MarketingController {
     @PutMapping("/discount")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update discount rule")
-    public R<String> updateDiscountRule(@RequestBody DiscountRule rule) {
+    public R<String> updateDiscountRule(@Valid @RequestBody DiscountRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = marketingService.saveOrUpdateDiscountRule(rule);
@@ -136,7 +137,7 @@ public class MarketingController {
     @PostMapping("/discount/batch")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "Batch save discount rules")
-    public R<String> batchSaveDiscountRules(@RequestBody List<DiscountRule> rules) {
+    public R<String> batchSaveDiscountRules(@Valid @RequestBody List<DiscountRule> rules) {
         Long tenantId = BaseContext.getCurrentTenantId();
         for (DiscountRule rule : rules) {
             rule.setTenantId(tenantId);

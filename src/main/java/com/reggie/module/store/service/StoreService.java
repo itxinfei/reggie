@@ -1,6 +1,7 @@
 package com.reggie.module.store.service;
 
 import com.reggie.module.tenant.model.Tenant;
+import com.reggie.module.store.dto.UpdateStoreDTO;
 import com.reggie.module.store.model.StoreDailySummary;
 import com.reggie.module.store.model.StoreInfo;
 import com.reggie.module.store.model.StoreSearchDTO;
@@ -32,12 +33,12 @@ public interface StoreService {
 
     /**
      * 更新门店信息（编辑）
-     * 修改点：新增方法，支持修改Tenant和StoreInfo
+     * 修改点：使用白名单 DTO 替代 Map，防止 mass assignment 攻击
      *
      * @param tenantId  门店tenantId
-     * @param updateData 更新数据Map
+     * @param updateDTO 更新数据DTO（白名单字段）
      */
-    void updateStore(Long tenantId, Map<String, Object> updateData);
+    void updateStore(Long tenantId, UpdateStoreDTO updateDTO);
 
     /**
      * 查询所有门店列表（总部视角，无分页，兼容旧接口）

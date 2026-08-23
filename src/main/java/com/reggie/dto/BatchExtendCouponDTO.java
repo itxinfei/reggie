@@ -5,6 +5,7 @@ import lombok.Data;
 
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.Positive;
+import javax.validation.constraints.Size;
 import java.util.List;
 
 /**
@@ -19,6 +20,7 @@ public class BatchExtendCouponDTO {
 
     @Schema(description = "用户优惠券ID列表", required = true, example = "[1, 2, 3]")
     @NotEmpty(message = "用户优惠券ID列表不能为空")
+    @Size(max = 200, message = "用户优惠券ID列表不能超过200个")
     private List<Long> couponUserIds;
 
     @Schema(description = "延长天数", required = true, example = "7")

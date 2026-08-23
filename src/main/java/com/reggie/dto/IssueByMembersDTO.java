@@ -5,6 +5,7 @@ import lombok.Data;
 
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.util.List;
 
 /**
@@ -22,5 +23,6 @@ public class IssueByMembersDTO {
 
     @Schema(description = "会员ID列表", required = true, example = "[1, 2, 3]")
     @NotEmpty(message = "会员ID列表不能为空")
+    @Size(max = 200, message = "会员ID列表不能超过200个")
     private List<Long> memberIds;
 }

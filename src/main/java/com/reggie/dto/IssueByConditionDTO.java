@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.util.Map;
 
 /**
@@ -31,5 +32,6 @@ public class IssueByConditionDTO {
 
     @Schema(description = "筛选条件（可选：levelId/status/minPoints/maxPoints/minConsumption/maxConsumption/newMemberDays）",
             example = "{\"levelId\": 2, \"minPoints\": 100}")
+    @Size(max = 20, message = "筛选条件不能超过20个")
     private Map<String, Object> condition;
 }

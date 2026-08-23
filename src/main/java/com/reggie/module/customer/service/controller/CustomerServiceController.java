@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import javax.validation.Valid;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -148,7 +149,7 @@ public class CustomerServiceController {
     @PostMapping("/complaint/create")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Create complaint")
-    public R<Complaint> createComplaint(@RequestBody Complaint complaint) {
+    public R<Complaint> createComplaint(@Valid @RequestBody Complaint complaint) {
         Long userId = BaseContext.getCurrentId();
         Long tenantId = BaseContext.getCurrentTenantId();
         complaint.setUserId(userId);

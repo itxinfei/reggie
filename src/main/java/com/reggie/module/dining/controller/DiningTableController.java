@@ -30,6 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.reggie.common.RateLimit;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +75,7 @@ public class DiningTableController {
     @Parameter(name = "name", description = "桌台名称（可选，模糊搜索）")
     @Parameter(name = "areaId", description = "区域ID（可选）")
     @Parameter(name = "status", description = "桌台状态（可选）：FREE-空闲, OCCUPIED-占用, RESERVED-预留, CLEANING-清洁中")
-    public R<Page<DiningTable>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
+    public R<Page<DiningTable>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                      @RequestParam(required = false) String name,
                                      @RequestParam(required = false) Long areaId,
                                      @RequestParam(required = false) String status) {
@@ -104,6 +106,9 @@ public class DiningTableController {
     public R<DiningTable> save(@Valid @RequestBody DiningTable table) {
         log.info("新增桌台: {}", table.getName());
         table.setTenantId(BaseContext.getCurrentTenantId());
+        if (table.getAreaId() == null) {
+            return R.error("区域ID不能为空");
+        }
         if (table.getStatus() == null || table.getStatus().trim().isEmpty()) {
             table.setStatus("FREE");
         }
@@ -133,9 +138,13 @@ public class DiningTableController {
         if (existing == null) {
             return R.error("桌台不存在或无权操作");
         }
-        // 请求体未传状态时，保留原状态（避免 @NotBlank 导致更新时必填）
+        // 请求体未传状态时，保留原状态
         if (table.getStatus() == null || table.getStatus().trim().isEmpty()) {
             table.setStatus(existing.getStatus());
+        }
+        // 请求体未传区域ID时，保留原区域
+        if (table.getAreaId() == null) {
+            table.setAreaId(existing.getAreaId());
         }
         // 防止通过请求体篡改租户ID
         table.setTenantId(tenantId);
@@ -198,6 +207,10 @@ public class DiningTableController {
     @Operation(summary = "修改桌台状态", description = "更新桌台使用状态（空闲/使用中/已预订等）")
     public R<String> changeStatus(@Valid @RequestBody ChangeTableStatusDTO dto) {
         log.info("修改桌台状态: id={}, status={}", dto.getId(), dto.getStatus());
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
         diningTableService.changeStatus(dto.getId(), dto.getStatus());
         return R.success("修改状态成功");
     }

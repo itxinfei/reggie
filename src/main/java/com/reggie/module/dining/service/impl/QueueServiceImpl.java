@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -38,7 +39,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
     private static final String QUEUE_LOCK_KEY_PREFIX = "queue:takeNumber:lock:";
 
     /** 分布式锁过期时间（秒） */
-    private static final int LOCK_EXPIRE_SECONDS = 10;
+    private static final int LOCK_EXPIRE_SECONDS = 30;
 
     /** 获取锁最大等待时间（毫秒） */
     private static final int LOCK_WAIT_MILLIS = 3000;
@@ -51,12 +52,19 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
 
     @Override
     public QueueRecord takeNumber(Integer seatCount, String phone) {
-        // 修改点：使用 Redis SETNX 实现分布式锁
         String lockKey = QUEUE_LOCK_KEY_PREFIX + seatCount;
-        boolean locked = acquireLock(lockKey);
+        String lockValue = UUID.randomUUID().toString();
+        Boolean acquired = false;
+        try {
+            acquired = tryAcquire(lockKey, lockValue);
+        } catch (Exception e) {
+            // Redis 不可用/异常时降级放行（单机部署无并发问题）
+            log.warn("[排队取号] 获取锁异常，降级放行: seatCount={}, error={}",
+                    seatCount, e.getMessage(), e);
+        }
 
-        if (!locked) {
-            log.warn("[排队取号] 获取锁失败，系统繁忙：seatCount={}", seatCount);
+        if (!Boolean.TRUE.equals(acquired)) {
+            log.warn("[排队取号] 获取锁失败，系统繁忙: seatCount={}", seatCount);
             throw new RuntimeException("系统繁忙，请稍后重试");
         }
 
@@ -83,63 +91,68 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
             save(record);
             return record;
         } finally {
-            releaseLock(lockKey);
+            tryReleaseLock(lockKey, lockValue);
         }
     }
 
     /**
-     * 获取分布式锁（自旋 + SETNX）
-     * 修改点：使用 Redis SETNX + EXPIRE 实现简单分布式锁
+     * 获取分布式锁：SETNX + EXPIRE，锁值为 UUID，用于 ownership 校验。
      *
-     * @param lockKey 锁的Key
-     * @return true=获取成功，false=超时失败
+     * @return true=获取成功；false=超时未获取；异常时返回 false
      */
-    private boolean acquireLock(String lockKey) {
+    private Boolean tryAcquire(String lockKey, String lockValue) {
         if (redisTemplate == null) {
-            return true; // Redis 不可用时降级放行（单机部署无并发问题）
+            return false;
         }
-
         long startTime = System.currentTimeMillis();
         try {
             while (System.currentTimeMillis() - startTime < LOCK_WAIT_MILLIS) {
                 Boolean success = redisTemplate.opsForValue()
-                        .setIfAbsent(lockKey, "1", LOCK_EXPIRE_SECONDS, TimeUnit.SECONDS);
+                        .setIfAbsent(lockKey, lockValue, LOCK_EXPIRE_SECONDS, TimeUnit.SECONDS);
                 if (Boolean.TRUE.equals(success)) {
                     return true;
                 }
-                // 自旋等待后重试
                 Thread.sleep(LOCK_RETRY_INTERVAL);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.warn("[排队取号] 获取锁被中断：{}", lockKey);
+            log.warn("[排队取号] 获取锁被中断: {}", lockKey);
         } catch (Exception e) {
-            // Redis 连接异常时降级放行（测试环境或无 Redis 时）
-            log.warn("[排队取号] 获取锁异常，降级放行：{}, error={}", lockKey, e.getMessage(), e);
+            log.error("[排队取号] 获取锁异常: {}, error={}", lockKey, e.getMessage(), e);
         }
-        return true; // 异常时降级放行，避免阻塞业务
+        return false;
     }
 
     /**
-     * 释放分布式锁
-     * 修改点：仅删除自己的锁（简单实现，生产建议 Lua 脚本校验 ownership）
+     * 释放分布式锁：仅删除自己持有的锁（校验 UUID），防止误删其他线程的锁。
+     * 生产环境建议改用 Lua 脚本原子校验 + 删除。
      */
-    private void releaseLock(String lockKey) {
+    private void tryReleaseLock(String lockKey, String lockValue) {
         if (redisTemplate == null) {
             return;
         }
         try {
-            redisTemplate.delete(lockKey);
+            Object current = redisTemplate.opsForValue().get(lockKey);
+            if (lockValue.equals(current)) {
+                redisTemplate.delete(lockKey);
+            } else {
+                log.warn("[排队取号] 锁已不属于当前线程，跳过释放: {}", lockKey);
+            }
         } catch (Exception e) {
-            log.warn("[排队取号] 释放锁失败：{}, error={}", lockKey, e.getMessage(), e);
+            log.warn("[排队取号] 释放锁失败: {}, error={}", lockKey, e.getMessage(), e);
         }
     }
 
     @Override
     public QueueRecord callNext(Integer seatCount) {
         int maxRetry = 50;
+        // 安全加固：叫号查询必须附加租户条件，防止跨租户叫号
+        Long tenantId = BaseContext.getCurrentTenantId();
         for (int i = 0; i < maxRetry; i++) {
             LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
+            if (tenantId != null) {
+                qw.eq(QueueRecord::getTenantId, tenantId);
+            }
             qw.eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue());
             if (seatCount != null) qw.eq(QueueRecord::getSeatCount, seatCount);
             qw.orderByAsc(QueueRecord::getCreatedTime);
@@ -151,6 +164,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
             // CAS 更新：仅当状态仍为 WAITING 时才更新为 CALLED
             boolean success = lambdaUpdate()
                     .eq(QueueRecord::getId, record.getId())
+                    .eq(QueueRecord::getTenantId, tenantId)
                     .eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
                     .set(QueueRecord::getStatus, QueueRecordStatus.CALLED.getValue())
                     .update();
@@ -167,9 +181,25 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
 
     @Override
     public void cancelQueue(Long id) {
+        // 安全加固：先按租户校验归属，再执行 CAS 更新，防止攻击者遍历 ID 取消其他租户排队记录
+        if (id == null) {
+            log.warn("[排队取消] id为空");
+            return;
+        }
+        QueueRecord record = getById(id);
+        if (record == null) {
+            log.warn("[排队取消] 记录不存在: id={}", id);
+            return;
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(record.getTenantId())) {
+            log.warn("[排队取消] 无权操作其他租户的排队记录: id={}", id);
+            return;
+        }
         // CAS 更新：仅当状态为 WAITING 时才允许取消，防止并发重复操作
         boolean success = lambdaUpdate()
                 .eq(QueueRecord::getId, id)
+                .eq(QueueRecord::getTenantId, currentTenantId)
                 .eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
                 .set(QueueRecord::getStatus, QueueRecordStatus.CANCELLED.getValue())
                 .update();

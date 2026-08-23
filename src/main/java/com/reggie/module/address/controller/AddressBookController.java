@@ -74,7 +74,19 @@ public class AddressBookController {
         if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
             return R.error("没有查询到对应地址信息");
         }
-        addressBookService.updateById(addressBook);
+        // 使用租户过滤的更新条件，防止跨租户越权 + 白名单字段更新
+        LambdaUpdateWrapper<AddressBook> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(AddressBook::getId, addressBook.getId())
+                .eq(AddressBook::getTenantId, currentTenantId);
+        if (addressBook.getConsignee() != null) wrapper.set(AddressBook::getConsignee, addressBook.getConsignee());
+        if (addressBook.getPhone() != null) wrapper.set(AddressBook::getPhone, addressBook.getPhone());
+        if (addressBook.getProvinceName() != null) wrapper.set(AddressBook::getProvinceName, addressBook.getProvinceName());
+        if (addressBook.getCityName() != null) wrapper.set(AddressBook::getCityName, addressBook.getCityName());
+        if (addressBook.getDistrictName() != null) wrapper.set(AddressBook::getDistrictName, addressBook.getDistrictName());
+        if (addressBook.getDetail() != null) wrapper.set(AddressBook::getDetail, addressBook.getDetail());
+        if (addressBook.getLabel() != null) wrapper.set(AddressBook::getLabel, addressBook.getLabel());
+        if (addressBook.getIsDefault() != null) wrapper.set(AddressBook::getIsDefault, addressBook.getIsDefault());
+        addressBookService.update(wrapper);
         return R.success(addressBook);
     }
 
@@ -147,9 +159,13 @@ public class AddressBookController {
         //SQL:update address_book set is_default = 0 where user_id = ? and tenant_id = ?
         addressBookService.update(wrapper);
 
+        // 使用白名单字段更新，防止 updateById 全字段覆盖
+        LambdaUpdateWrapper<AddressBook> wrapper2 = new LambdaUpdateWrapper<>();
+        wrapper2.eq(AddressBook::getId, addressBook.getId())
+                .eq(currentTenantId != null, AddressBook::getTenantId, currentTenantId)
+                .set(AddressBook::getIsDefault, AddressBook.IS_DEFAULT);
+        addressBookService.update(wrapper2);
         addressBook.setIsDefault(AddressBook.IS_DEFAULT);
-        //SQL:update address_book set is_default = 1 where id = ?
-        addressBookService.updateById(addressBook);
         return R.success(addressBook);
     }
 
@@ -187,8 +203,10 @@ public class AddressBookController {
         LambdaQueryWrapper<AddressBook> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(AddressBook::getUserId, BaseContext.getCurrentId());
         queryWrapper.eq(AddressBook::getIsDefault, 1);
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        queryWrapper.eq(currentTenantId != null, AddressBook::getTenantId, currentTenantId);
 
-        //SQL:select * from address_book where user_id = ? and is_default = 1
+        //SQL:select * from address_book where user_id = ? and is_default = 1 and tenant_id = ?
         AddressBook addressBook = addressBookService.getOne(queryWrapper);
 
         if (addressBook == null) {
@@ -216,9 +234,11 @@ public class AddressBookController {
         //条件构造器
         LambdaQueryWrapper<AddressBook> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(null != addressBook.getUserId(), AddressBook::getUserId, addressBook.getUserId());
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        queryWrapper.eq(currentTenantId != null, AddressBook::getTenantId, currentTenantId);
         queryWrapper.orderByDesc(AddressBook::getUpdateTime);
 
-        //SQL:select * from address_book where user_id = ? order by update_time desc
+        //SQL:select * from address_book where user_id = ? and tenant_id = ? order by update_time desc
         return R.success(addressBookService.list(queryWrapper));
     }
 }

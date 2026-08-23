@@ -6,6 +6,7 @@ import lombok.Data;
 
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.util.List;
 
 /**
@@ -26,6 +27,7 @@ public class EatInOrderRequest {
 
     @NotEmpty(message = "订单明细不能为空")
     @Schema(description = "订单明细列表", required = true)
+    @Size(max = 100, message = "订单明细不能超过100项")
     private List<OrderDetail> orderDetails;
 
     @Schema(description = "订单信息")

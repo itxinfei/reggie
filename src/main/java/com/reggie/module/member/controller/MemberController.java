@@ -37,6 +37,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -81,7 +83,7 @@ public class MemberController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "会员姓名（可选，模糊查询）")
     @Parameter(name = "phone", description = "手机号（可选，模糊查询）")
-    public R<Page<Member>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, String name, String phone,
+    public R<Page<Member>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, String name, String phone,
                                 @RequestParam(required = false) Long levelId) {
         Page<Member> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Member> qw = new LambdaQueryWrapper<>();
@@ -231,7 +233,10 @@ public class MemberController {
         if (phone == null || phone.trim().isEmpty()) {
             return R.error("手机号不能为空");
         }
-        Member member = memberService.lambdaQuery().eq(Member::getPhone, phone.trim()).one();
+        Member member = memberService.lambdaQuery()
+                .eq(Member::getPhone, phone.trim())
+                .eq(Member::getTenantId, BaseContext.getCurrentTenantId())
+                .one();
         if (member != null) {
             memberService.fillLevelName(Collections.singletonList(member));
             return R.success(member);

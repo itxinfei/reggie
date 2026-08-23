@@ -5,6 +5,7 @@ import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.user.model.User;
+import com.reggie.module.recommend.dto.RecordBrowseDTO;
 import com.reggie.module.recommend.model.BrowseHistory;
 import com.reggie.module.recommend.model.MarketingCampaign;
 import com.reggie.module.recommend.model.RecommendationFeedback;
@@ -27,6 +28,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpSession;
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -191,21 +195,18 @@ public class RecommendController {
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "记录浏览行为", description = "记录用户浏览菜品的行为，用于推荐算法")
     public R<String> recordBrowse(
-            @Parameter(description = "浏览信息（targetType/targetId/targetName/duration/actionType）", required = true) @RequestBody Map<String, Object> body,
+            @Parameter(description = "浏览信息（targetType/targetId/targetName/duration/actionType）", required = true) @Valid @RequestBody RecordBrowseDTO dto,
             HttpSession session) {
         Long userId = getUserId(session);
         if (userId == null) {
             return R.error("请先登录");
         }
 
-        Integer targetType = (Integer) body.get("targetType");
-        Long targetId = body.get("targetId") != null ?
-                Long.valueOf(body.get("targetId").toString()) : null;
-        String targetName = (String) body.get("targetName");
-        Integer duration = body.get("duration") != null ?
-                Integer.valueOf(body.get("duration").toString()) : 0;
-        Integer actionType = body.get("actionType") != null ?
-                Integer.valueOf(body.get("actionType").toString()) : BrowseHistory.ACTION_VIEW;
+        Integer targetType = dto.getTargetType();
+        Long targetId = dto.getTargetId();
+        String targetName = dto.getTargetName();
+        Integer duration = dto.getDuration();
+        Integer actionType = dto.getActionType() != null ? dto.getActionType() : BrowseHistory.ACTION_VIEW;
 
         browseHistoryService.recordBrowse(userId, targetType, targetId,
                 targetName, duration, actionType);
@@ -289,8 +290,8 @@ public class RecommendController {
     @Operation(summary = "用户消息列表", description = "获取当前用户的所有营销消息列表（分页）")
     public R<com.baomidou.mybatisplus.extension.plugins.pagination.Page<Map<String, Object>>> getUserMessages(
             @Parameter(description = "P a g e")
-            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页数量") @RequestParam(defaultValue = "20") int pageSize,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "20") @Min(1) @Max(100) int pageSize,
             HttpSession session) {
         Long userId = getUserId(session);
         if (userId == null) {

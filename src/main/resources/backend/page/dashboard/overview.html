@@ -259,7 +259,8 @@
     }
 
     /* 缓存标签 */
-    border-radius: var(--radius-sm);
+    .cache-tag {
+      border-radius: var(--radius-sm);
       font-weight: 500;
     }
     .cache-tag.redis { background: var(--color-success-light); color: var(--color-success); }
@@ -359,7 +360,13 @@
       border-bottom: none;
       padding-bottom: 0;
     }
-    border-radius: var(--radius-md);
+    .hot-dish-rank {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-md);
       font-size:var(--font-size-sm);
       font-weight: 700;
       margin-right: 14px;

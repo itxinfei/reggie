@@ -6,10 +6,14 @@ import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.LogMaskUtils;
 import com.reggie.common.R;
 import com.reggie.dto.OrderDto;
 import com.reggie.dto.EatInOrderRequest;
+import com.reggie.module.order.dto.OrderAgainDTO;
+import com.reggie.module.order.dto.OrderSubmitDTO;
+import com.reggie.module.order.dto.OrderUpdateStatusDTO;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.service.OrderDetailService;
@@ -27,6 +31,9 @@ import java.util.Map;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -69,10 +76,15 @@ public class OrderController {
     @Operation(summary = "提交订单", description = "用户下单，返回订单ID、订单号和金额供前端跳转支付")
     @Parameter(name = "orders", description = "订单信息（含幂等令牌idempotencyKey）", required = true)
     @RateLimit(maxRequestsPerSecond = 5) // 防止高频提交订单
-    public R<Map<String, Object>> submit(@RequestBody Orders orders){
-        log.info("订单数据：手机号={}，地址={}",
+    public R<Map<String, Object>> submit(@Valid @RequestBody OrderSubmitDTO dto){
+        Orders orders = new Orders();
+        orders.setAddressBookId(dto.getAddressBookId());
+        orders.setRemark(dto.getRemark());
+        orders.setPhone(dto.getPhone());
+        orders.setIdempotencyKey(dto.getIdempotencyKey());
+        log.info("订单数据：手机号={}，地址ID={}",
             LogMaskUtils.maskPhone(orders.getPhone()),
-            LogMaskUtils.maskAddress(orders.getAddress()));
+            dto.getAddressBookId());
 
         // 幂等性校验：检查是否重复提交
         String idempotencyKey = orders.getIdempotencyKey();
@@ -92,7 +104,11 @@ public class OrderController {
 
         // 设置租户ID
         orders.setTenantId(BaseContext.getCurrentTenantId());
-        orderService.submit(orders);
+        try {
+            orderService.submit(orders);
+        } catch (CustomException e) {
+            return R.error(e.getMessage());
+        }
 
         // 修改点：下单后清除 Dashboard 缓存，确保今日订单数实时更新
         clearDashboardCache();
@@ -199,7 +215,7 @@ public class OrderController {
     @Parameter(name = "beginTime", description = "开始时间（可选）")
     @Parameter(name = "endTime", description = "结束时间（可选）")
     @Parameter(name = "status", description = "订单状态（可选，1=待付款,2=待接单/处理中,3=已接单/派送中,4=已完成,5=已取消,6=已退款）")
-    public R<Page<Orders>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String number, @RequestParam(required = false) String beginTime, @RequestParam(required = false) String endTime, @RequestParam(required = false) Integer status) {
+    public R<Page<Orders>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String number, @RequestParam(required = false) String beginTime, @RequestParam(required = false) String endTime, @RequestParam(required = false) Integer status) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext
         Page<Orders> pageInfo = orderService.orderPage(page, PageUtils.cap(pageSize), number, beginTime, endTime, status);
         // 脱敏：列表页手机号脱敏，保护用户隐私
@@ -251,7 +267,7 @@ public class OrderController {
     @Parameter(name = "page", description = "页码", required = true)
     @Parameter(name = "pageSize", description = "每页数量", required = true)
     @Parameter(name = "status", description = "订单状态（可选：1待付款 2待接单/处理中 3已接单/派送中 4已完成 5已取消 6已退款，不传则查全部）")
-    public R<?> userPage(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
+    public R<?> userPage(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                          @RequestParam(required = false) Integer status) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext
         return R.success(orderService.userPage(page, PageUtils.cap(pageSize), status));
@@ -266,16 +282,16 @@ public class OrderController {
     @PostMapping("/again")
     @Operation(summary = "再来一单", description = "将订单商品重新添加到购物车")
     @Parameter(name = "orders", description = "订单信息（只需包含id）", required = true)
-    public R<String> again(@RequestBody Orders orders) {
-        if (orders.getId() == null) {
+    public R<String> again(@Valid @RequestBody OrderAgainDTO dto) {
+        if (dto.getId() == null) {
             return R.error("订单ID不能为空");
         }
-        Orders existing = orderService.getById(orders.getId());
+        Orders existing = orderService.getById(dto.getId());
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (existing == null || currentTenantId == null || !Objects.equals(currentTenantId, existing.getTenantId())) {
             return R.error("订单不存在或不属于当前租户");
         }
-        orderService.again(orders.getId());
+        orderService.again(dto.getId());
         return R.success("添加购物车成功");
     }
 
@@ -289,19 +305,19 @@ public class OrderController {
     @RequireEmployee
     @Operation(summary = "更新订单状态", description = "更新订单状态")
     @Parameter(name = "orders", description = "订单状态信息（含id和status）", required = true)
-    public R<String> updateStatus(@RequestBody Orders orders) {
-        if (orders.getId() == null) {
+    public R<String> updateStatus(@Valid @RequestBody OrderUpdateStatusDTO dto) {
+        if (dto.getId() == null) {
             return R.error("订单ID不能为空");
         }
-        if (orders.getStatus() == null) {
+        if (dto.getStatus() == null) {
             return R.error("订单状态不能为空");
         }
-        Orders existing = orderService.getById(orders.getId());
+        Orders existing = orderService.getById(dto.getId());
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (existing == null || currentTenantId == null || !Objects.equals(currentTenantId, existing.getTenantId())) {
             return R.error("订单不存在或不属于当前租户");
         }
-        statusFlowService.updateStatus(orders.getStatus(), orders.getId());
+        statusFlowService.updateStatus(dto.getStatus(), dto.getId());
         // 修改点：订单状态变更后清除 Dashboard 缓存，防止数据不实
         clearDashboardCache();
         return R.success("操作成功");

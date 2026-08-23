@@ -1,4 +1,6 @@
 package com.reggie.module.inventory.controller;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -55,7 +57,7 @@ public class SupplierController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "供应商名称（可选，模糊查询）")
     @Parameter(name = "status", description = "状态（可选）：0-禁用，1-启用")
-    public R<Page<Supplier>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
+    public R<Page<Supplier>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                    @RequestParam(required = false) String name,
                                    @RequestParam(required = false) Integer status) {
         Page<Supplier> pageInfo = PageUtils.of(page, pageSize);

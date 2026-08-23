@@ -27,6 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.reggie.common.RateLimit;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.List;
 
 /**
@@ -136,8 +138,8 @@ public class FranchiseContractController {
     @GetMapping("/page")
     @Operation(summary = "合同分页查询", description = "支持按加盟商、状态筛选")
     public R<Page<FranchiseContract>> page(
-            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
             @Parameter(description = "加盟商ID") @RequestParam(required = false) Long franchiseeId,
             @Parameter(description = "合同状态") @RequestParam(required = false) Integer status) {
         Page<FranchiseContract> pageInfo = PageUtils.of(page, pageSize);

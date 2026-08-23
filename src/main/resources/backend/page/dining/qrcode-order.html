@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>扫码点餐 - 瑞吉外卖</title>
+  <title>鎵爜鐐归 - 鐟炲悏澶栧崠</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
@@ -18,6 +18,7 @@
     .category-tab { padding: 12px 20px; cursor: pointer; white-space: nowrap; font-size:var(--font-size-base); color: var(--el-text-regular); border-bottom: 2px solid transparent; transition: all 0.2s; }
     .category-tab.active { color: var(--legacy-ff6b35); border-bottom-color: var(--legacy-ff6b35); font-weight: 600; }
     .dish-list { padding: 8px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .dish-card { padding: 8px; border: 1px solid var(--el-border-light); background: var(--bg-surface);
     border-radius: var(--radius-md); box-shadow: var(--shadow-xs); cursor: pointer; transition: all 0.2s; }
     .dish-card:active { transform: scale(0.98); }
     .dish-card.sold-out { opacity: 0.6; }
@@ -25,21 +26,21 @@
     .dish-info { padding: 8px 10px; }
     .dish-name { font-size:var(--font-size-base); font-weight: 600; color: var(--el-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .dish-price { font-size:var(--font-size-lg); font-weight: 700; color: var(--legacy-ff6b35); margin-top: 4px; }
-    .dish-price::before { content: '￥'; font-size:var(--font-size-xs); }
+    .dish-price::before { content: '锟?; font-size:var(--font-size-xs); }
     .sold-out-tag { position: relative; }
-    .sold-out-tag::after { content: '售罄'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); font-size:var(--font-size-2xl); color: var(--color-danger); font-weight: 700; border: 2px solid var(--color-danger); border-radius: var(--radius-sm);
-    /* 购物车栏 */
-    .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--color-white); border-top: 1px solid var(--el-border-light); padding: 10px 16px; display: flex; align-items: center; gap: 12px; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.06); }
+    .sold-out-tag::after { content: '鍞絼'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); font-size:var(--font-size-2xl); color: var(--color-danger); font-weight: 700; border: 2px solid var(--color-danger); border-radius: var(--radius-sm); }
+    /* 璐墿杞︽爮 */
+    .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--color-white); border-top: 1px solid var(--el-border-light); padding: 10px 16px; display: flex; align-items: center; gap: 12px; z-index: 100; box-shadow: var(--shadow-md); }
     .cart-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--legacy-ff6b35); color: var(--color-white); display: flex; align-items: center; justify-content: center; font-size: var(--font-size-2xl); position: relative; }
     .cart-badge { position: absolute; top: -4px; right: -4px; background: var(--color-danger); color: var(--color-white); font-size: var(--font-size-xs); min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
     .cart-info { flex: 1; }
     .cart-total { font-size:var(--font-size-xl); font-weight: 700; color: var(--el-text-primary); }
-    .cart-total::before { content: '￥'; font-size:var(--font-size-xs); }
+    .cart-total::before { content: '锟?; font-size:var(--font-size-xs); }
     .cart-hint { font-size:var(--font-size-xs); color: var(--color-info); }
     .cart-btn { background: var(--color-brand-500); color: var(--text-on-brand); border: none; padding: 10px 24px; border-radius: var(--radius-lg); font-size:var(--font-size-md); font-weight: 600; cursor: pointer; }
     .cart-btn:hover { background: var(--color-brand-400); }
     .cart-btn:disabled { background: var(--el-border-base); cursor: not-allowed; }
-    /* 购物车弹窗 */
+    /* 璐墿杞﹀脊绐?*/
     .cart-dialog .el-dialog { border-radius: var(--radius-lg); }
     .cart-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--el-border-lighter); }
     .cart-item-name { flex: 1; font-size:var(--font-size-base); }
@@ -48,11 +49,11 @@
     .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--el-border-default); background: var(--color-white); cursor: pointer; font-size:var(--font-size-lg); display: flex; align-items: center; justify-content: center; }
     .qty-btn:disabled { color: var(--el-border-base); cursor: not-allowed; }
     .qty-num { font-size:var(--font-size-base); min-width: 20px; text-align: center; }
-    /* 提交订单弹窗 */
+    /* 鎻愪氦璁㈠崟寮圭獥 */
     .submit-dialog .el-dialog { border-radius: var(--radius-lg); }
     .empty-cart { text-align: center; padding: 40px; color: var(--el-border-base); }
 
-    /* 提取的内联样式类 */
+    /* 鎻愬彇鐨勫唴鑱旀牱寮忕被 */
     .qr-title { font-size:var(--font-size-base); color: var(--el-text-regular); margin-bottom: 12px; }
     .qr-label { font-size:var(--font-size-sm); color: var(--el-text-regular); display: block; margin-bottom: 4px; }
     .qr-input { width: 100%; padding: 8px 12px; border: 1px solid var(--el-border-default); border-radius: var(--radius-sm); font-size:var(--font-size-base); }
@@ -61,100 +62,100 @@
   </style>
 </head>
 <body>
-  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
-  <a href="#dine-app" class="skip-link">跳转到主内容</a>
+  <!-- 閿洏鐢ㄦ埛锛氳烦杞埌涓诲唴瀹癸紙WCAG 2.4.1锛?-->
+  <a href="#dine-app" class="skip-link">璺宠浆鍒颁富鍐呭</a>
 
-  <div id="dine-app" role="main" aria-label="页面主要内容">
-    <!-- 页头 -->
+  <div id="dine-app" role="main" aria-label="椤甸潰涓昏鍐呭">
+    <!-- 椤靛ご -->
     <div class="header" v-if="tableInfo">
-      <div class="store-name">{{ storeInfo.name || '瑞吉外卖' }}</div>
-      <div class="table-info">🪑 {{ tableInfo.name }} · 可坐{{ tableInfo.seatCount }}人</div>
+      <div class="store-name">{{ storeInfo.name || '鐟炲悏澶栧崠' }}</div>
+      <div class="table-info">馃獞 {{ tableInfo.name }} 路 鍙潗{{ tableInfo.seatCount }}浜?/div>
     </div>
 
-    <!-- 加载中 -->
+    <!-- 鍔犺浇涓?-->
     <div v-if="loading" style="text-align:center;padding:60px 0;color:var(--el-border-base);">
-      <div>加载中...</div>
+      <div>鍔犺浇涓?..</div>
     </div>
 
-    <!-- 分类Tab -->
+    <!-- 鍒嗙被Tab -->
     <div class="category-tabs" v-if="!loading" role="tablist">
-      <div role="tab" class="category-tab" tabindex="0" :class="{active: activeCategory === 0}" @click="switchCategory(0)" @keydown.enter="switchCategory(0)">全部</div>
+      <div role="tab" class="category-tab" tabindex="0" :class="{active: activeCategory === 0}" @click="switchCategory(0)" @keydown.enter="switchCategory(0)">鍏ㄩ儴</div>
       <div role="tab" v-for="cat in categories" :key="cat.id" class="category-tab" tabindex="0" :class="{active: activeCategory === cat.id}" @click="switchCategory(cat.id)" @keydown.enter="switchCategory(cat.id)">
         {{ cat.name }}
       </div>
     </div>
 
-    <!-- 菜品列表 -->
+    <!-- 鑿滃搧鍒楄〃 -->
     <div class="dish-list" v-if="!loading">
-      <div class="dish-card" v-for="dish in filteredDishes" :key="dish.id" role="button" tabindex="0" :aria-label="(dish.name + '，价格' + Number(dish.price).toFixed(2) + '元')" :class="{'sold-out': dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)}" @click="addToCart(dish)" @keydown.enter="addToCart(dish)">
+      <div class="dish-card" v-for="dish in filteredDishes" :key="dish.id" role="button" tabindex="0" :aria-label="(dish.name + '锛屼环鏍? + Number(dish.price).toFixed(2) + '鍏?)" :class="{'sold-out': dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)}" @click="addToCart(dish)" @keydown.enter="addToCart(dish)">
         <div style="position:relative;">
-          <img :src="getImage(dish.image)" class="dish-img" :alt="dish.name || '菜品图片'" />
+          <img :src="getImage(dish.image)" class="dish-img" :alt="dish.name || '鑿滃搧鍥剧墖'" />
           <div v-if="dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)" class="sold-out-tag"></div>
         </div>
         <div class="dish-info">
           <div class="dish-name">{{ dish.name }}</div>
           <div class="qr-flex-row">
             <div class="dish-price">{{ Number(dish.price).toFixed(2) }}</div>
-            <div style="font-size:var(--font-size-xs);color:var(--color-info);" v-if="dish.stockQty != null">库存{{ dish.stockQty }}</div>
+            <div style="font-size:var(--font-size-xs);color:var(--color-info);" v-if="dish.stockQty != null">搴撳瓨{{ dish.stockQty }}</div>
           </div>
         </div>
       </div>
       <div v-if="filteredDishes.length === 0" class="empty-cart" style="grid-column:1/-1;">
-        暂无菜品
+        鏆傛棤鑿滃搧
       </div>
     </div>
 
-    <!-- 购物车栏 -->
+    <!-- 璐墿杞︽爮 -->
     <div class="cart-bar" v-if="!loading && cartTotal() > 0">
-      <div class="cart-icon" role="button" tabindex="0" :aria-label="('购物车，共' + cartTotal() + '件商品')" @click="showCartDialog" @keydown.enter="showCartDialog">
-        🛒
+      <div class="cart-icon" role="button" tabindex="0" :aria-label="('璐墿杞︼紝鍏? + cartTotal() + '浠跺晢鍝?)" @click="showCartDialog" @keydown.enter="showCartDialog">
+        馃洅
         <div class="cart-badge" v-if="cartTotal() > 0">{{ cartTotal() }}</div>
       </div>
       <div class="cart-info">
         <div class="cart-total">{{ cartAmount().toFixed(2) }}</div>
-        <div class="cart-hint">堂食扫码点餐</div>
+        <div class="cart-hint">鍫傞鎵爜鐐归</div>
       </div>
-      <button class="cart-btn" @click="submitOrder" :disabled="cartTotal() === 0">去结算</button>
+      <button class="cart-btn" @click="submitOrder" :disabled="cartTotal() === 0">鍘荤粨绠?/button>
     </div>
 
-    <!-- 购物车弹窗 -->
-    <crud-dialog title="购物车" :visible.sync="cartDialog.visible"  :show-close="true" :close-on-click-modal="true"  :show-submit="false">
-      <div v-if="cart.length === 0" class="empty-cart">购物车是空的</div>
+    <!-- 璐墿杞﹀脊绐?-->
+    <crud-dialog title="璐墿杞? :visible.sync="cartDialog.visible"  :show-close="true" :close-on-click-modal="true"  :show-submit="false">
+      <div v-if="cart.length === 0" class="empty-cart">璐墿杞︽槸绌虹殑</div>
       <div v-for="item in cart" :key="item.dishId" class="cart-item">
         <div class="cart-item-name">{{ item.name }}</div>
-        <div class="cart-item-price">￥{{ Number(item.price).toFixed(2) }}</div>
+        <div class="cart-item-price">锟{ Number(item.price).toFixed(2) }}</div>
         <div class="qty-control">
-          <button class="qty-btn" @click="changeQty(item, -1)" :disabled="item.qty <= 1" aria-label="减少数量">-</button>
+          <button class="qty-btn" @click="changeQty(item, -1)" :disabled="item.qty <= 1" aria-label="鍑忓皯鏁伴噺">-</button>
           <span class="qty-num">{{ item.qty }}</span>
-          <button class="qty-btn" @click="changeQty(item, 1)" aria-label="增加数量">+</button>
+          <button class="qty-btn" @click="changeQty(item, 1)" aria-label="澧炲姞鏁伴噺">+</button>
         </div>
       </div>
     </crud-dialog>
 
-    <!-- 提交订单弹窗 -->
-    <crud-dialog title="确认订单" :visible.sync="submitDialog.visible" 
+    <!-- 鎻愪氦璁㈠崟寮圭獥 -->
+    <crud-dialog title="纭璁㈠崟" :visible.sync="submitDialog.visible" 
       :close-on-click-modal="false" @submit="confirmSubmit">
       <div style="padding: 10px 0;">
         <div class="qr-title">
-          🪑 桌台：<strong>{{ tableInfo ? tableInfo.name : '' }}</strong>（可坐{{ tableInfo ? tableInfo.seatCount : '' }}人）
+          馃獞 妗屽彴锛?strong>{{ tableInfo ? tableInfo.name : '' }}</strong>锛堝彲鍧恵{ tableInfo ? tableInfo.seatCount : '' }}浜猴級
         </div>
         <div class="qr-title">
-          共 <strong>{{ cartTotal() }}</strong> 件商品
+          鍏?<strong>{{ cartTotal() }}</strong> 浠跺晢鍝?
         </div>
         <div style="font-size:var(--font-size-2xl);font-weight:700;color:var(--legacy-ff6b35);margin-bottom:16px;">
-          合计：￥{{ cartAmount().toFixed(2) }}
+          鍚堣锛氾骏{{ cartAmount().toFixed(2) }}
         </div>
         <div class="form-group">
-          <label class="qr-label" for="qrContactName">联系人 <span style="color:var(--color-danger);">*</span></label>
-          <input id="qrContactName" v-model="submitForm.contactName" placeholder="请输入联系人姓名" class="qr-input" />
+          <label class="qr-label" for="qrContactName">鑱旂郴浜?<span style="color:var(--color-danger);">*</span></label>
+          <input id="qrContactName" v-model="submitForm.contactName" placeholder="璇疯緭鍏ヨ仈绯讳汉濮撳悕" class="qr-input" />
         </div>
         <div class="form-group">
-          <label class="qr-label" for="qrContactPhone">手机号 <span style="color:var(--color-danger);">*</span></label>
-          <input id="qrContactPhone" v-model="submitForm.contactPhone" placeholder="请输入手机号" type="tel" maxlength="11" class="qr-input" />
+          <label class="qr-label" for="qrContactPhone">鎵嬫満鍙?<span style="color:var(--color-danger);">*</span></label>
+          <input id="qrContactPhone" v-model="submitForm.contactPhone" placeholder="璇疯緭鍏ユ墜鏈哄彿" type="tel" maxlength="11" class="qr-input" />
         </div>
         <div class="form-group">
-          <label class="qr-label" for="qrRemark">备注</label>
-          <textarea id="qrRemark" v-model="submitForm.remark" placeholder="如有特殊需求请备注" rows="2" class="qr-textarea"></textarea>
+          <label class="qr-label" for="qrRemark">澶囨敞</label>
+          <textarea id="qrRemark" v-model="submitForm.remark" placeholder="濡傛湁鐗规畩闇€姹傝澶囨敞" rows="2" class="qr-textarea"></textarea>
         </div>
       </div>
     </crud-dialog>
@@ -203,7 +204,7 @@
           this.loadTableInfo()
         } else {
           this.loading = false
-          ReggieUI.error('无效的桌台二维码')
+          ReggieUI.error('鏃犳晥鐨勬鍙颁簩缁寸爜')
         }
       },
       methods: {
@@ -219,7 +220,7 @@
               this.categories = catRes.data || []
             }
           } catch (err) {
-            ReggieUI.error('加载数据失败:')
+            ReggieUI.error('鍔犺浇鏁版嵁澶辫触:')
           }
           this.loading = false
         },
@@ -230,7 +231,7 @@
               this.tableInfo = res.data
             }
           } catch (err) {
-            ReggieUI.error('加载桌台信息失败:')
+            ReggieUI.error('鍔犺浇妗屽彴淇℃伅澶辫触:')
           }
         },
         getImage(img) {
@@ -243,13 +244,13 @@
         },
         addToCart(dish) {
           if (dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)) {
-            ReggieUI.warning('该菜品已售罄')
+            ReggieUI.warning('璇ヨ彍鍝佸凡鍞絼')
             return
           }
           var existing = this.cart.find(item => item.dishId === dish.id)
           if (existing) {
             if (existing.qty >= (dish.stockQty || 999)) {
-              ReggieUI.warning('库存不足')
+              ReggieUI.warning('搴撳瓨涓嶈冻')
               return
             }
             existing.qty++
@@ -282,23 +283,23 @@
         },
         submitOrder() {
           if (this.cart.length === 0) {
-            ReggieUI.warning('请先选择菜品')
+            ReggieUI.warning('璇峰厛閫夋嫨鑿滃搧')
             return
           }
           this.submitDialog.visible = true
         },
         async confirmSubmit() {
           if (!this.submitForm.contactName.trim()) {
-            ReggieUI.warning('请输入联系人姓名')
+            ReggieUI.warning('璇疯緭鍏ヨ仈绯讳汉濮撳悕')
             return
           }
           if (!this.submitForm.contactPhone.trim()) {
-            ReggieUI.warning('请输入手机号')
+            ReggieUI.warning('璇疯緭鍏ユ墜鏈哄彿')
             return
           }
           this.submitting = true
           try {
-            // 构建订单明细
+            // 鏋勫缓璁㈠崟鏄庣粏
             var orderDetails = this.cart.map(function(item) {
               return {
                 dishId: item.dishId,
@@ -311,11 +312,11 @@
               }
             })
 
-            // 调用堂食下单接口
+            // 璋冪敤鍫傞涓嬪崟鎺ュ彛
             var res = await submitEatInOrder({
               order: {
                 tableId: parseInt(this.tableId),
-                tableName: this.tableInfo ? this.tableInfo.name : ('桌台' + this.tableId),
+                tableName: this.tableInfo ? this.tableInfo.name : ('妗屽彴' + this.tableId),
                 userName: this.submitForm.contactName,
                 phone: this.submitForm.contactPhone,
                 remark: this.submitForm.remark || '',
@@ -326,16 +327,16 @@
             })
 
             if (res && res.code === 1) {
-              ReggieUI.success('下单成功！订单号：' + (res.data ? res.data.number : ''))
+              ReggieUI.success('涓嬪崟鎴愬姛锛佽鍗曞彿锛? + (res.data ? res.data.number : ''))
               this.cart = []
               this.submitDialog.visible = false
-              // 刷新桌台状态
+              // 鍒锋柊妗屽彴鐘舵€?
               this.loadTableInfo()
             } else {
-              ReggieUI.error((res ? res.msg : '') || '下单失败')
+              ReggieUI.error((res ? res.msg : '') || '涓嬪崟澶辫触')
             }
           } catch (err) {
-            ReggieUI.error('下单失败：' + err)
+            ReggieUI.error('涓嬪崟澶辫触锛? + err)
           }
           this.submitting = false
         }

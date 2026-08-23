@@ -1,4 +1,6 @@
 package com.reggie.module.member.controller;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -194,9 +196,9 @@ public class MemberTagController {
             @Parameter(name = "bizTag", description = "业务标签", required = true)
             @PathVariable String bizTag,
             @Parameter(name = "page", description = "页码", required = true)
-            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "1") @Min(1) Integer page,
             @Parameter(name = "pageSize", description = "每页数量", required = true)
-            @RequestParam(defaultValue = "10") Integer pageSize) {
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer pageSize) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             return R.error("租户信息缺失");

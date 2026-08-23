@@ -1,4 +1,6 @@
 package com.reggie.module.order.controller;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -50,8 +52,8 @@ public class OrderDetailController {
     @GetMapping("/page")
     @Operation(summary = "订单明细分页", description = "分页查询订单明细列表")
     public R<Page<OrderDetail>> page(
-                        @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
+                        @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
             @Parameter(description = "订单ID") @RequestParam(required = false) Long orderId) {
         Page<OrderDetail> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<OrderDetail> qw = new LambdaQueryWrapper<>();

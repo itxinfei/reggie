@@ -15,6 +15,11 @@ import com.reggie.module.ai.model.AIConversation;
 import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AIMessageRecord;
 import com.reggie.module.ai.model.AiProviderConfig;
+import com.reggie.module.ai.dto.BusinessAnalysisRequest;
+import com.reggie.module.ai.dto.CreateConversationRequest;
+import com.reggie.module.ai.dto.DishDescriptionRequest;
+import com.reggie.module.ai.dto.OrderAssistantRequest;
+import com.reggie.module.ai.dto.RecordFeedbackRequest;
 import com.reggie.module.ai.service.AIChatService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,6 +37,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -142,11 +149,11 @@ public class AIChatController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 2, type = RateLimitType.USER)
     @Operation(summary = "智能点餐助手", description = "用户用自然语言描述需求，AI推荐最合适的菜品")
-    public R<AIChatResponse> orderAssistant(@RequestBody Map<String, Object> params) {
-        String message = (String) params.getOrDefault("message", "");
+    public R<AIChatResponse> orderAssistant(@Valid @RequestBody OrderAssistantRequest params) {
+        String message = params.getMessage();
         // #10 安全修复：删除客户端 userId 入参，统一从登录上下文获取，防止越权 IDOR
         Long userId = BaseContext.getCurrentId();
-        String conversationId = params.containsKey("conversationId") ? (String) params.get("conversationId") : null;
+        String conversationId = params.getConversationId();
 
         log.info("智能点餐请求: userId={}, messageLength={}", userId, message.length());
 
@@ -197,10 +204,12 @@ public class AIChatController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
     @Operation(summary = "AI菜品描述生成", description = "输入菜品名称，AI生成专业美食描述文案")
-    public R<String> generateDishDescription(@RequestBody Map<String, String> params) {
-        String dishName = params.get("dishName");
-        String categoryName = params.getOrDefault("categoryName", "");
-        String ingredients = params.getOrDefault("ingredients", "");
+    public R<String> generateDishDescription(@Valid @RequestBody DishDescriptionRequest params) {
+        String dishName = params.getDishName();
+        String categoryName = params.getCategoryName();
+        String ingredients = params.getIngredients();
+        if (categoryName == null) categoryName = "";
+        if (ingredients == null) ingredients = "";
         log.info("生成菜品描述: dishName={}", dishName);
         String description = aiChatService.generateDishDescription(dishName, categoryName, ingredients);
         return R.success(description);
@@ -215,9 +224,10 @@ public class AIChatController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
     @Operation(summary = "AI经营分析", description = "输入经营数据和问题，AI提供专业分析")
-    public R<String> analyzeBusiness(@RequestBody Map<String, String> params) {
-        String question = params.get("question");
-        String dataJson = params.getOrDefault("data", "{}");
+    public R<String> analyzeBusiness(@Valid @RequestBody BusinessAnalysisRequest params) {
+        String question = params.getQuestion();
+        String dataJson = params.getData();
+        if (dataJson == null) dataJson = "{}";
         log.info("经营分析请求: question={}", question);
         String analysis = aiChatService.analyzeBusiness(question, dataJson);
         return R.success(analysis);
@@ -257,9 +267,9 @@ public class AIChatController {
     @RequireEmployee
     @Operation(summary = "获取对话列表", description = "获取当前用户的AI对话历史列表")
     @Parameter(description = "Page")
-    public R<List<AIConversation>> getConversations(@RequestParam(defaultValue = "1") int page,
+    public R<List<AIConversation>> getConversations(@RequestParam(defaultValue = "1") @Min(1) int page,
                                                      @Parameter(description = "Page size")
-                                                     @RequestParam(defaultValue = "20") int pageSize) {
+                                                     @RequestParam(defaultValue = "20") @Min(1) @Max(100) int pageSize) {
         Long userId = BaseContext.getCurrentId();
         List<AIConversation> conversations = aiChatService.getUserConversations(userId, page, PageUtils.cap(pageSize));
         return R.success(conversations);
@@ -288,10 +298,10 @@ public class AIChatController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     @Operation(summary = "创建对话", description = "创建新的AI对话")
-    public R<AIConversation> createConversation(@RequestBody(required = false) Map<String, String> params) {
+    public R<AIConversation> createConversation(@RequestBody(required = false) CreateConversationRequest params) {
         Long userId = BaseContext.getCurrentId();
-        String title = params != null ? params.get("title") : null;
-        String scene = params != null ? params.get("scene") : "order_assistant";
+        String title = params != null ? params.getTitle() : null;
+        String scene = params != null && params.getScene() != null ? params.getScene() : "order_assistant";
         AIConversation conv = aiChatService.createConversation(userId, title, scene);
         return R.success(conv);
     }
@@ -323,10 +333,10 @@ public class AIChatController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10, type = RateLimitType.USER)
     @Operation(summary = "记录反馈", description = "用户对AI回复的反馈（有用/没用）")
-    public R<String> recordFeedback(@RequestBody Map<String, Object> params) {
+    public R<String> recordFeedback(@Valid @RequestBody RecordFeedbackRequest params) {
         Long userId = BaseContext.getCurrentId();
-        Long messageId = params.containsKey("messageId") ? Long.valueOf(params.get("messageId").toString()) : null;
-        String feedbackType = (String) params.get("feedbackType");
+        Long messageId = params.getMessageId();
+        String feedbackType = params.getFeedbackType();
         aiChatService.recordFeedback(messageId, feedbackType, userId);
         return R.success("反馈记录成功");
     }
@@ -394,9 +404,9 @@ public class AIChatController {
     @Parameter(description = "Keyword")
     public R<List<AIConversation>> searchConversations(@RequestParam String keyword,
                                                        @Parameter(description = "Page number")
-                                                       @RequestParam(defaultValue = "1") int page,
+                                                       @RequestParam(defaultValue = "1") @Min(1) int page,
                                                        @Parameter(description = "Page size")
-                                                       @RequestParam(defaultValue = "20") int pageSize) {
+                                                       @RequestParam(defaultValue = "20") @Min(1) @Max(100) int pageSize) {
         Long userId = BaseContext.getCurrentId();
         LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AIConversation::getUserId, userId)

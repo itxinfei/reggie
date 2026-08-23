@@ -6,6 +6,7 @@ import lombok.Data;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.List;
 
@@ -27,5 +28,6 @@ public class DishMaterialBatchDTO implements Serializable {
 
     @Valid
     @Schema(description = "食材明细列表")
+    @Size(max = 200, message = "食材明细不能超过200项")
     private List<DishMaterialSaveDTO> items;
 }

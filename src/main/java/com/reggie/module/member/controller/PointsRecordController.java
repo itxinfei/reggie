@@ -1,4 +1,6 @@
 package com.reggie.module.member.controller;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -63,7 +65,7 @@ public class PointsRecordController {
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "phone", description = "会员手机号（可选，精确查询）")
-    public R<Map<String, Object>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, String phone,
+    public R<Map<String, Object>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, String phone,
                                        @RequestParam(required = false) String type) {
         Page<PointsRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<PointsRecord> qw = new LambdaQueryWrapper<>();

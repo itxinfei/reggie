@@ -27,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.List;
 
 /**
@@ -129,8 +131,8 @@ public class FranchiseeController {
     @GetMapping("/page")
     @Operation(summary = "加盟商分页查询", description = "支持按名称、状态筛选")
     public R<Page<Franchisee>> page(
-            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
             @Parameter(description = "名称（模糊）") @RequestParam(required = false) String name,
             @Parameter(description = "状态") @RequestParam(required = false) Integer status) {
         Page<Franchisee> pageInfo = PageUtils.of(page, pageSize);

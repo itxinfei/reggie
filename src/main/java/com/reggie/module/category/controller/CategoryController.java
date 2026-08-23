@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -74,7 +76,7 @@ public class CategoryController {
         @GetMapping("/page")
     @Operation(summary = "分类分页查询", description = "分页查询分类列表，支持按类型、名称筛选，按排序字段升序排列")
     @Parameter(description = "Page")
-    public R<Page<Category>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
+    public R<Page<Category>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                   @Parameter(description = "Type")
                                   @RequestParam(required = false) String type,
                                   @Parameter(description = "Name")

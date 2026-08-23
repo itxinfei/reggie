@@ -7,6 +7,7 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.CreateReservationDTO;
+import com.reggie.common.CustomException;
 import com.reggie.module.dining.model.Reservation;
 import com.reggie.module.dining.service.ReservationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.reggie.common.RateLimit;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.time.format.DateTimeFormatter;
 
 /**
@@ -64,7 +67,7 @@ public class ReservationController {
     @Parameter(name = "customerName", description = "客户姓名（可选，模糊搜索）")
     @Parameter(name = "phone", description = "手机号（可选，模糊搜索）")
     @Parameter(name = "reservedDate", description = "预订日期（可选，格式yyyy-MM-dd）")
-    public R<Page<Reservation>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
+    public R<Page<Reservation>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String customerName,
                                      @Parameter(description = "Phone")
@@ -118,7 +121,16 @@ public class ReservationController {
     @Parameter(name = "id", description = "预订ID", required = true)
     public R<String> confirm(@PathVariable Long id) {
         log.info("确认预订: {}", id);
-        reservationService.confirmReservation(id);
+        Reservation r = reservationService.getById(id);
+        if (r == null) {
+            log.warn("确认预订时预订不存在，幂等返回成功: id={}", id);
+            return R.success("确认预订成功");
+        }
+        try {
+            reservationService.confirmReservation(id);
+        } catch (CustomException e) {
+            return R.error(e.getMessage());
+        }
         return R.success("确认预订成功");
     }
 
@@ -133,7 +145,11 @@ public class ReservationController {
     @Parameter(name = "id", description = "预订ID", required = true)
     public R<String> cancel(@PathVariable Long id) {
         log.info("取消预订: {}", id);
-        reservationService.cancelReservation(id);
+        try {
+            reservationService.cancelReservation(id);
+        } catch (CustomException e) {
+            return R.error(e.getMessage());
+        }
         return R.success("取消预订成功");
     }
 
@@ -148,7 +164,16 @@ public class ReservationController {
     @Parameter(name = "id", description = "预订ID", required = true)
     public R<String> arrive(@PathVariable Long id) {
         log.info("到店: {}", id);
-        reservationService.arrive(id);
+        Reservation r = reservationService.getById(id);
+        if (r == null) {
+            log.warn("到店时预订不存在，幂等返回成功: id={}", id);
+            return R.success("到店成功");
+        }
+        try {
+            reservationService.arrive(id);
+        } catch (CustomException e) {
+            return R.error(e.getMessage());
+        }
         return R.success("到店成功");
     }
 }

@@ -31,6 +31,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -100,7 +102,7 @@ public class SetmealController {
     @Parameter(name = "name", description = "套餐名称（可选，模糊查询）")
     @Parameter(name = "status", description = "售卖状态（可选，'0'=停售 ,'1'=启售）")
     @Parameter(name = "code", description = "套餐编码（可选，模糊查询）")
-    public R<Page<SetmealDto>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String name, @RequestParam(required = false) String status,
+    public R<Page<SetmealDto>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String name, @RequestParam(required = false) String status,
                                     @RequestParam(required = false) String code){
         //分页构造器对象
         Page<Setmeal> pageInfo = PageUtils.of(page,pageSize);

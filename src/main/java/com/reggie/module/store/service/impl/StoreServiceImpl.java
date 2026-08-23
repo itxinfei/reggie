@@ -20,7 +20,10 @@ import com.reggie.module.store.model.StoreDailySummary;
 import com.reggie.module.store.model.StoreEmployeePermission;
 import com.reggie.module.store.model.StoreInfo;
 import com.reggie.module.store.model.StoreSearchDTO;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.reggie.module.store.dto.UpdateStoreDTO;
 import com.reggie.module.store.service.StoreService;
+import com.reggie.common.LogMaskUtils;
 import com.reggie.module.auth.service.EmployeeService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.user.service.UserService;
@@ -123,11 +126,11 @@ public class StoreServiceImpl implements StoreService {
         return storeInfo;
     }
 
-    // 修改点：新增编辑方法
+    // 修改点：使用白名单 DTO + UpdateWrapper 替代 Map + updateById()，防止 mass assignment 攻击
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void updateStore(Long tenantId, Map<String, Object> updateData) {
-        // 1. 更新 Tenant 表
+    public void updateStore(Long tenantId, UpdateStoreDTO updateDTO) {
+        // 1. 更新 Tenant 表（白名单字段：name, address, status）
         Tenant tenant = tenantService.getById(tenantId);
         if (tenant == null) {
             log.warn("[门店管理] 编辑门店失败: tenantId={} 不存在", tenantId);
@@ -136,55 +139,70 @@ public class StoreServiceImpl implements StoreService {
         // 租户权限校验：防止跨租户越权编辑门店
         StoreInfo existingStore = storeInfoMapper.findByTenantId(tenantId);
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (currentTenantId != null && existingStore != null && !currentTenantId.equals(existingStore.getParentTenantId()) && !currentTenantId.equals(tenantId)) {
+        if (currentTenantId != null && existingStore != null
+                && !currentTenantId.equals(existingStore.getParentTenantId())
+                && !currentTenantId.equals(tenantId)) {
             log.warn("[门店管理] 无权编辑其他门店: tenantId={}, currentTenantId={}", tenantId, currentTenantId);
             return;
         }
-        if (updateData.containsKey("storeName")) {
-            tenant.setName((String) updateData.get("storeName"));
-        }
-        if (updateData.containsKey("address")) {
-            tenant.setAddress((String) updateData.get("address"));
-        }
-        if (updateData.containsKey("status")) {
-            tenant.setStatus(Integer.valueOf(updateData.get("status").toString()));
-        }
-        tenantService.updateById(tenant);
 
-        // 2. 更新 StoreInfo 表
+        // 使用 UpdateWrapper，仅更新白名单字段（passwordType 等敏感字段不可被覆盖）
+        UpdateWrapper<Tenant> tenantWrapper = new UpdateWrapper<>();
+        tenantWrapper.eq("id", tenantId);
+        if (updateDTO.getStoreName() != null) {
+            tenantWrapper.set("name", updateDTO.getStoreName());
+        }
+        if (updateDTO.getAddress() != null) {
+            tenantWrapper.set("address", updateDTO.getAddress());
+        }
+        if (updateDTO.getStatus() != null) {
+            tenantWrapper.set("status", updateDTO.getStatus());
+        }
+        if (updateDTO.getStoreName() != null || updateDTO.getAddress() != null || updateDTO.getStatus() != null) {
+            tenantService.update(tenantWrapper);
+        }
+
+        // 2. 更新 StoreInfo 表（白名单字段，parentTenantId 等敏感字段不可被覆盖）
         StoreInfo storeInfo = storeInfoMapper.findByTenantId(tenantId);
         if (storeInfo != null) {
-            if (updateData.containsKey("storeCode")) {
-                storeInfo.setStoreCode((String) updateData.get("storeCode"));
+            UpdateWrapper<StoreInfo> storeWrapper = new UpdateWrapper<>();
+            storeWrapper.eq("tenant_id", tenantId);
+            if (updateDTO.getStoreCode() != null) {
+                storeWrapper.set("store_code", updateDTO.getStoreCode());
             }
-            if (updateData.containsKey("storeType")) {
-                storeInfo.setStoreType(Integer.valueOf(updateData.get("storeType").toString()));
+            if (updateDTO.getStoreType() != null) {
+                storeWrapper.set("store_type", updateDTO.getStoreType());
             }
-            if (updateData.containsKey("businessHours")) {
-                storeInfo.setBusinessHours((String) updateData.get("businessHours"));
+            if (updateDTO.getBusinessHours() != null) {
+                storeWrapper.set("business_hours", updateDTO.getBusinessHours());
             }
-            if (updateData.containsKey("contactPerson")) {
-                storeInfo.setContactPerson((String) updateData.get("contactPerson"));
+            if (updateDTO.getContactPerson() != null) {
+                storeWrapper.set("contact_person", updateDTO.getContactPerson());
             }
-            if (updateData.containsKey("contactPhone")) {
-                storeInfo.setContactPhone((String) updateData.get("contactPhone"));
+            if (updateDTO.getContactPhone() != null) {
+                storeWrapper.set("contact_phone", updateDTO.getContactPhone());
             }
-            if (updateData.containsKey("deliveryRadius")) {
-                storeInfo.setDeliveryRadius(Integer.valueOf(updateData.get("deliveryRadius").toString()));
+            if (updateDTO.getDeliveryRadius() != null) {
+                storeWrapper.set("delivery_radius", updateDTO.getDeliveryRadius());
             }
-            if (updateData.containsKey("minDeliveryAmount")) {
-                storeInfo.setMinDeliveryAmount(new BigDecimal(updateData.get("minDeliveryAmount").toString()));
+            if (updateDTO.getMinDeliveryAmount() != null) {
+                storeWrapper.set("min_delivery_amount", updateDTO.getMinDeliveryAmount());
             }
-            if (updateData.containsKey("deliveryFee")) {
-                storeInfo.setDeliveryFee(new BigDecimal(updateData.get("deliveryFee").toString()));
+            if (updateDTO.getDeliveryFee() != null) {
+                storeWrapper.set("delivery_fee", updateDTO.getDeliveryFee());
             }
-            if (updateData.containsKey("isDeliveryEnabled")) {
-                storeInfo.setIsDeliveryEnabled(Integer.valueOf(updateData.get("isDeliveryEnabled").toString()));
+            if (updateDTO.getIsDeliveryEnabled() != null) {
+                storeWrapper.set("is_delivery_enabled", updateDTO.getIsDeliveryEnabled());
             }
-            if (updateData.containsKey("isDineInEnabled")) {
-                storeInfo.setIsDineInEnabled(Integer.valueOf(updateData.get("isDineInEnabled").toString()));
+            if (updateDTO.getIsDineInEnabled() != null) {
+                storeWrapper.set("is_dine_in_enabled", updateDTO.getIsDineInEnabled());
             }
-            storeInfoMapper.updateById(storeInfo);
+            // 使用 UpdateWrapper 的 set() 值更新；entity 传 null 避免 MP 从旧实体读取字段值覆盖 set() 结果
+            storeInfoMapper.update(null, storeWrapper);
+
+            log.info("[门店管理] 编辑门店成功: tenantId={}, storeCode={}, contactPhone={}",
+                    tenantId, updateDTO.getStoreCode(), LogMaskUtils.maskPhone(updateDTO.getContactPhone()));
+            return;
         }
 
         log.info("[门店管理] 编辑门店成功: tenantId={}", tenantId);
@@ -396,8 +414,10 @@ public class StoreServiceImpl implements StoreService {
             log.warn("[门店管理] 无权修改其他门店状态: tenantId={}, currentTenantId={}", tenantId, currentTenantId);
             return;
         }
-        tenant.setStatus(status);
-        tenantService.updateById(tenant);
+        // 使用 UpdateWrapper 仅更新 status 字段，防止 mass assignment
+        UpdateWrapper<Tenant> wrapper = new UpdateWrapper<>();
+        wrapper.eq("id", tenantId).set("status", status);
+        tenantService.update(wrapper);
         log.info("[门店管理] 门店{}状态更新为: {}", tenantId, status);
     }
 
@@ -417,8 +437,10 @@ public class StoreServiceImpl implements StoreService {
                     log.warn("[门店管理] 批量更新跳过无权门店: tenantId={}, currentTenantId={}", tenantId, currentTenantId);
                     continue;
                 }
-                tenant.setStatus(status);
-                tenantService.updateById(tenant);
+                // 使用 UpdateWrapper 仅更新 status 字段，防止 mass assignment
+                UpdateWrapper<Tenant> wrapper = new UpdateWrapper<>();
+                wrapper.eq("id", tenantId).set("status", status);
+                tenantService.update(wrapper);
                 successCount++;
             } catch (Exception e) {
                 log.error("[门店管理] 批量更新状态失败: tenantId={}, error={}", tenantId, e.getMessage(), e);

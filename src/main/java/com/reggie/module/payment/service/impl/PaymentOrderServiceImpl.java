@@ -110,26 +110,34 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
         if (po == null) {
             return;
         }
-        // 回填租户上下文，确保后续业务订单查询走正确的租户隔离
+        // 回填租户上下文，确保后续业务订单查询走正确的租户隔离；finally 块清理避免 ThreadLocal 残留
+        Long originalTenantId = BaseContext.getCurrentTenantId();
         BaseContext.setCurrentTenantId(po.getTenantId());
-        Orders order = orderService.getById(po.getOrderId());
-        if (order != null && order.getStatus() != null) {
-            if (Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
-                // 原子更新（CAS 状态机保护）：仅当订单状态为 PENDING_PAY 时才更新为 ORDERED，避免覆盖并发写入
-                boolean updated = orderService.lambdaUpdate()
-                        .eq(Orders::getId, order.getId())
-                        .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
-                        .set(Orders::getStatus, Orders.STATUS_ORDERED)
-                        .set(Orders::getCheckoutTime, LocalDateTime.now())
-                        .update();
-                if (updated) {
-                    log.info("支付成功联动更新订单: orderId={}, orderStatus=待接单", po.getOrderId());
+        try {
+            Orders order = orderService.getById(po.getOrderId());
+            if (order != null && order.getStatus() != null) {
+                if (Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
+                    boolean updated = orderService.lambdaUpdate()
+                            .eq(Orders::getId, order.getId())
+                            .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
+                            .set(Orders::getStatus, Orders.STATUS_ORDERED)
+                            .set(Orders::getCheckoutTime, LocalDateTime.now())
+                            .update();
+                    if (updated) {
+                        log.info("支付成功联动更新订单: orderId={}, orderStatus=待接单", po.getOrderId());
+                    } else {
+                        log.warn("支付成功但订单状态已被他人变更，跳过联动更新: orderId={}", po.getOrderId());
+                    }
                 } else {
-                    log.warn("支付成功但订单状态已被他人变更，跳过联动更新: orderId={}", po.getOrderId());
+                    log.warn("支付成功但订单状态非待付款，跳过联动更新: orderId={}, currentStatus={}",
+                            po.getOrderId(), order.getStatus());
                 }
+            }
+        } finally {
+            if (originalTenantId != null) {
+                BaseContext.setCurrentTenantId(originalTenantId);
             } else {
-                log.warn("支付成功但订单状态非待付款，跳过联动更新: orderId={}, currentStatus={}",
-                        po.getOrderId(), order.getStatus());
+                BaseContext.remove();
             }
         }
     }
@@ -150,26 +158,34 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
         if (po == null) {
             return;
         }
-        // 回填租户上下文，确保后续业务订单查询走正确的租户隔离
+        // 回填租户上下文，finally 块清理避免 ThreadLocal 残留
+        Long originalTenantId = BaseContext.getCurrentTenantId();
         BaseContext.setCurrentTenantId(po.getTenantId());
-        // 仅当订单为待付款时才联动取消，避免覆盖已配送/已完成订单（状态机校验）
-        Orders order = orderService.getById(po.getOrderId());
-        if (order != null && order.getStatus() != null) {
-            if (Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
-                // 原子更新（CAS 状态机保护）：仅当订单状态为 PENDING_PAY 时才更新为 CANCELLED，避免覆盖并发写入
-                boolean updated = orderService.lambdaUpdate()
-                        .eq(Orders::getId, order.getId())
-                        .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
-                        .set(Orders::getStatus, Orders.STATUS_CANCELLED)
-                        .update();
-                if (updated) {
-                    log.warn("支付失败联动取消订单: orderId={}, reason={}", po.getOrderId(), errorMsg);
+        try {
+            // 仅当订单为待付款时才联动取消，避免覆盖已配送/已完成订单（状态机校验）
+            Orders order = orderService.getById(po.getOrderId());
+            if (order != null && order.getStatus() != null) {
+                if (Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
+                    boolean updated = orderService.lambdaUpdate()
+                            .eq(Orders::getId, order.getId())
+                            .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
+                            .set(Orders::getStatus, Orders.STATUS_CANCELLED)
+                            .update();
+                    if (updated) {
+                        log.warn("支付失败联动取消订单: orderId={}, reason={}", po.getOrderId(), errorMsg);
+                    } else {
+                        log.warn("支付失败但订单状态已被他人变更，跳过联动取消: orderId={}", po.getOrderId());
+                    }
                 } else {
-                    log.warn("支付失败但订单状态已被他人变更，跳过联动取消: orderId={}", po.getOrderId());
+                    log.warn("支付失败但订单状态非待付款，跳过联动取消: orderId={}, currentStatus={}",
+                            po.getOrderId(), order.getStatus());
                 }
+            }
+        } finally {
+            if (originalTenantId != null) {
+                BaseContext.setCurrentTenantId(originalTenantId);
             } else {
-                log.warn("支付失败但订单状态非待付款，跳过联动取消: orderId={}, currentStatus={}",
-                        po.getOrderId(), order.getStatus());
+                BaseContext.remove();
             }
         }
     }

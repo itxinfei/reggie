@@ -28,6 +28,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 
 /**
  * 排队管理控制器
@@ -60,7 +62,7 @@ public class QueueController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "status", description = "状态（可选）：WAITING-等待中, CALLED-已叫号, SEATED-已入座, CANCELLED-已取消")
     @Parameter(name = "phone", description = "手机号（可选，模糊搜索）")
-    public R<Page<QueueRecord>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
+    public R<Page<QueueRecord>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String phone) {
         Page<QueueRecord> pageInfo = PageUtils.of(page, pageSize);

@@ -1,4 +1,6 @@
 package com.reggie.module.region.controller;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -96,9 +98,9 @@ public class RegionController {
     @Operation(summary = "分页查询行政区划", description = "后台管理分页查询行政区划数据")
     public R<Page<Region>> page(
             @Parameter(name = "page", description = "页码", required = true, example = "1")
-            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
             @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
-            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
             @Parameter(name = "name", description = "地区名称（模糊查询）")
             @RequestParam(required = false) String name,
             @Parameter(name = "level", description = "行政区划级别（1省 2市 3区）")

@@ -61,8 +61,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Member registerByPhone(String phone, String name) {
-        // 检查手机号是否已注册
-        Member existing = lambdaQuery().eq(Member::getPhone, phone).one();
+        // 安全加固：查询手机号是否已注册时必须附加租户条件，防止跨租户探测
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Member existing = lambdaQuery()
+                .eq(Member::getPhone, phone)
+                .eq(Member::getTenantId, tenantId)
+                .one();
         if (existing != null) {
             throw new CustomException("该手机号已注册");
         }
@@ -181,7 +185,11 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         if (userId == null) {
             return null;
         }
-        return lambdaQuery().eq(Member::getUserId, userId).one();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        return lambdaQuery()
+                .eq(Member::getUserId, userId)
+                .eq(tenantId != null, Member::getTenantId, tenantId)
+                .one();
     }
 
     @Override

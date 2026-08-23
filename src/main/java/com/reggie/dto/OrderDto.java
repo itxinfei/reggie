@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import java.util.List;
+import javax.validation.constraints.Size;
 
 /**
  * <p>
@@ -21,6 +22,7 @@ import java.util.List;
 public class OrderDto extends Orders {
 
     @Schema(description = "订单详情列表")
+    @Size(max = 100, message = "订单详情不能超过100项")
     private List<OrderDetail> orderDetails;
 }
 

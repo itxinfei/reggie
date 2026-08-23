@@ -195,10 +195,22 @@ public class RecommendServiceImpl implements RecommendService {
             algorithm = RecommendationCache.ALGO_HOT;
         }
 
-        // 3. 异步缓存推荐结果
+        // 3. 异步缓存推荐结果（需传递租户上下文到异步线程，确保租户隔离）
         final String finalAlgorithm = algorithm;
         final List<Map<String, Object>> finalResult = result;
-        asyncExecutor.submit(() -> saveToCache(userId, RecommendationCache.TYPE_DISH, finalResult, finalAlgorithm));
+        asyncExecutor.submit(() -> {
+            Long originalTenantId = BaseContext.getCurrentTenantId();
+            BaseContext.setCurrentTenantId(tenantId);
+            try {
+                saveToCache(userId, RecommendationCache.TYPE_DISH, finalResult, finalAlgorithm);
+            } finally {
+                if (originalTenantId != null) {
+                    BaseContext.setCurrentTenantId(originalTenantId);
+                } else {
+                    BaseContext.remove();
+                }
+            }
+        });
 
         return result;
     }
@@ -468,11 +480,21 @@ public class RecommendServiceImpl implements RecommendService {
         log.debug("[推荐引擎] 记录反馈 userId={}, dishId={}, type={}",
                 feedback.getUserId(), feedback.getDishId(), feedback.getFeedbackType());
 
-        // 正向反馈时更新偏好权重
-        if (feedback.getFeedbackType() == RecommendationFeedback.FEEDBACK_ORDER ||
-            feedback.getFeedbackType() == RecommendationFeedback.FEEDBACK_ADD_CART) {
-            asyncExecutor.submit(() -> preferenceAnalysisService.analyzeUserPreferences(feedback.getUserId()));
-        }
+        // 正向反馈时更新偏好权重（需传递租户上下文到异步线程，确保租户隔离）
+        Long feedbackTenantId = BaseContext.getCurrentTenantId();
+        asyncExecutor.submit(() -> {
+            Long originalTenantId = BaseContext.getCurrentTenantId();
+            BaseContext.setCurrentTenantId(feedbackTenantId);
+            try {
+                preferenceAnalysisService.analyzeUserPreferences(feedback.getUserId());
+            } finally {
+                if (originalTenantId != null) {
+                    BaseContext.setCurrentTenantId(originalTenantId);
+                } else {
+                    BaseContext.remove();
+                }
+            }
+        });
     }
 
     @Override
@@ -481,8 +503,21 @@ public class RecommendServiceImpl implements RecommendService {
         LambdaQueryWrapper<RecommendationCache> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(RecommendationCache::getUserId, userId);
         cacheMapper.delete(wrapper);
-        // 异步重新分析偏好
-        asyncExecutor.submit(() -> preferenceAnalysisService.analyzeUserPreferences(userId));
+        // 异步重新分析偏好（需传递租户上下文到异步线程，确保租户隔离）
+        Long refreshTenantId = BaseContext.getCurrentTenantId();
+        asyncExecutor.submit(() -> {
+            Long originalTenantId = BaseContext.getCurrentTenantId();
+            BaseContext.setCurrentTenantId(refreshTenantId);
+            try {
+                preferenceAnalysisService.analyzeUserPreferences(userId);
+            } finally {
+                if (originalTenantId != null) {
+                    BaseContext.setCurrentTenantId(originalTenantId);
+                } else {
+                    BaseContext.remove();
+                }
+            }
+        });
         log.info("[推荐引擎] 刷新用户{}的推荐缓存完成", userId);
     }
 
@@ -519,13 +554,46 @@ public class RecommendServiceImpl implements RecommendService {
      * 权重分配：CF:50%, Content:30%, Hot:20%
      */
     private List<Map<String, Object>> hybridRecommend(Long userId, Long tenantId, int limit) {
-        // 并发执行三种推荐算法
-        Future<List<Map<String, Object>>> cfFuture = asyncExecutor.submit(
-                () -> collaborativeFiltering(userId, limit * 2));
-        Future<List<Map<String, Object>>> contentFuture = asyncExecutor.submit(
-                () -> contentBasedRecommend(userId, limit * 2));
-        Future<List<Map<String, Object>>> hotFuture = asyncExecutor.submit(
-                () -> hotRankRecommend(tenantId, limit));
+        // 并发执行三种推荐算法（需传递租户上下文到异步线程，确保租户隔离）
+        Future<List<Map<String, Object>>> cfFuture = asyncExecutor.submit(() -> {
+            Long originalTenantId = BaseContext.getCurrentTenantId();
+            BaseContext.setCurrentTenantId(tenantId);
+            try {
+                return collaborativeFiltering(userId, limit * 2);
+            } finally {
+                if (originalTenantId != null) {
+                    BaseContext.setCurrentTenantId(originalTenantId);
+                } else {
+                    BaseContext.remove();
+                }
+            }
+        });
+        Future<List<Map<String, Object>>> contentFuture = asyncExecutor.submit(() -> {
+            Long originalTenantId = BaseContext.getCurrentTenantId();
+            BaseContext.setCurrentTenantId(tenantId);
+            try {
+                return contentBasedRecommend(userId, limit * 2);
+            } finally {
+                if (originalTenantId != null) {
+                    BaseContext.setCurrentTenantId(originalTenantId);
+                } else {
+                    BaseContext.remove();
+                }
+            }
+        });
+        Future<List<Map<String, Object>>> hotFuture = asyncExecutor.submit(() -> {
+            Long originalTenantId = BaseContext.getCurrentTenantId();
+            BaseContext.setCurrentTenantId(tenantId);
+            try {
+                return hotRankRecommend(tenantId, limit);
+            } finally {
+                if (originalTenantId != null) {
+                    BaseContext.setCurrentTenantId(originalTenantId);
+                } else {
+                    BaseContext.remove();
+                }
+            }
+        });
 
         try {
             List<Map<String, Object>> cfResult = cfFuture.get(HYBRID_TIMEOUT_SECONDS, TimeUnit.SECONDS);

@@ -5,6 +5,7 @@ import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.util.Map;
 
 /**
@@ -22,5 +23,6 @@ public class SyncStockDTO {
 
     @Schema(description = "库存数据（Key: 商品ID, Value: 库存数量）", required = true)
     @NotNull(message = "库存数据不能为空")
+    @Size(max = 100, message = "库存数据不能超过100条")
     private Map<Long, Integer> stock;
 }

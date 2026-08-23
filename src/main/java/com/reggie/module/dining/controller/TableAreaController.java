@@ -1,4 +1,6 @@
 package com.reggie.module.dining.controller;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -58,7 +60,7 @@ public class TableAreaController {
     @Operation(summary = "分页查询", description = "分页查询桌台区域列表")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
-    public R<Page<TableArea>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize) {
+    public R<Page<TableArea>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize) {
         Page<TableArea> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<TableArea> qw = new LambdaQueryWrapper<>();
         qw.orderByAsc(TableArea::getSort);

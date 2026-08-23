@@ -37,12 +37,17 @@ public class CommonControllerTest {
 
     @Test
     void testUploadSuccess() throws Exception {
-        // 创建一个测试图片文件
+        // 创建带合法JPEG魔数的测试图片文件
+        byte[] jpgBytes = new byte[]{
+                (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0,
+                0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
+                0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00
+        };
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "test-image.jpg",
                 MediaType.IMAGE_JPEG_VALUE,
-                "test image content".getBytes()
+                jpgBytes
         );
 
         mockMvc.perform(multipart("/common/upload")
@@ -92,11 +97,16 @@ public class CommonControllerTest {
 
     @Test
     void testUploadPngFile() throws Exception {
+        // 创建带合法PNG魔数的测试图片文件
+        byte[] pngBytes = new byte[]{
+                (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+                0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52
+        };
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "test-image.png",
                 MediaType.IMAGE_PNG_VALUE,
-                "test png content".getBytes()
+                pngBytes
         );
 
         mockMvc.perform(multipart("/common/upload")
@@ -110,12 +120,17 @@ public class CommonControllerTest {
 
     @Test
     void testDownloadExistingFile() throws Exception {
-        // 先上传一个文件
+        // 先上传一个带合法JPEG魔数的文件
+        byte[] jpgBytes = new byte[]{
+                (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0,
+                0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
+                0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00
+        };
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "download-test.jpg",
                 MediaType.IMAGE_JPEG_VALUE,
-                "download test content".getBytes()
+                jpgBytes
         );
 
         String responseContent = mockMvc.perform(multipart("/common/upload")

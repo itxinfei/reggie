@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.List;
 
 import com.reggie.module.sys.dto.SystemConfigSaveDTO;
@@ -66,7 +68,7 @@ public class SystemConfigController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量更新配置", description = "批量更新系统配置项")
-    public R<String> rootBatchUpdate(@RequestBody List<SystemConfig> configs) {
+    public R<String> rootBatchUpdate(@Valid @RequestBody List<SystemConfig> configs) {
         if (configs != null && !configs.isEmpty()) {
             for (SystemConfig config : configs) {
                 if (config.getConfigKey() != null) {
@@ -87,8 +89,8 @@ public class SystemConfigController {
     @GetMapping("/page")
     @Operation(summary = "配置分页查询", description = "分页查询系统配置")
     public R<Page<SystemConfig>> page(
-                        @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
+                        @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
             @Parameter(description = "配置键") @RequestParam(required = false) String configKey) {
         // 修改点：原实现新建 pageInfo 后未执行分页查询，直接返回空页；此处补充分页与关键字筛选
         Page<SystemConfig> pageInfo = PageUtils.of(page, pageSize);
@@ -148,7 +150,7 @@ public class SystemConfigController {
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量更新配置", description = "批量更新系统配置项")
     public R<String> batchUpdate(
-            @Parameter(description = "配置列表") @RequestBody List<SystemConfig> configs) {
+            @Parameter(description = "配置列表") @Valid @RequestBody List<SystemConfig> configs) {
         if (configs != null && !configs.isEmpty()) {
             for (SystemConfig config : configs) {
                 if (config.getConfigKey() != null) {

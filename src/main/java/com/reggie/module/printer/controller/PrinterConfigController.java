@@ -1,4 +1,6 @@
 package com.reggie.module.printer.controller;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -68,7 +70,7 @@ public class PrinterConfigController {
     @Parameter(name = "brand", description = "品牌型号（可选，模糊查询）")
     @Parameter(name = "type", description = "连接类型（可选）：USB, TCP, CLOUD, BLUETOOTH")
     @Parameter(name = "status", description = "状态（可选）：1=启用, 0=停用")
-    public R<Page<PrinterConfig>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, String name,
+    public R<Page<PrinterConfig>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, String name,
             @RequestParam(required = false) String brand,
             @RequestParam(required = false) String type,
             @Parameter(description = "Status")

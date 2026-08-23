@@ -3,6 +3,7 @@ package com.reggie.module.inventory.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.List;
 
@@ -20,9 +21,11 @@ public class BatchRestockDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Schema(description = "食材ID列表", required = true)
+    @Size(max = 200, message = "食材ID列表不能超过200个")
     private List<Long> materialIds;
 
     @Schema(description = "补货明细：食材ID → 补货数量")
+    @Size(max = 200, message = "补货明细不能超过200项")
     private List<RestockItem> items;
 
     @Schema(description = "采购单备注")

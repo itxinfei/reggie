@@ -3,6 +3,7 @@ package com.reggie.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import javax.validation.constraints.Size;
 import java.util.List;
 
 /**
@@ -17,5 +18,6 @@ import java.util.List;
 public class BatchRemoveMemberTagDTO {
 
     @Schema(description = "标签ID列表", example = "[1, 2, 3]")
+    @Size(max = 50, message = "标签ID列表不能超过50个")
     private List<Long> tagIds;
 }

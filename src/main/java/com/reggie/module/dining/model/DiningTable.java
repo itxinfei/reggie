@@ -37,7 +37,6 @@ public class DiningTable implements Serializable {
     private Long tenantId;
 
     @Schema(description = "区域ID", example = "1")
-    @NotNull(message = "区域ID不能为空")
     private Long areaId;
 
     @Schema(description = "区域名称（非数据库字段，用于关联查询）", example = "大厅")
@@ -54,7 +53,6 @@ public class DiningTable implements Serializable {
     private Integer seatCount;
 
     @Schema(description = "桌台状态：FREE=空闲，OCCUPIED=使用中，RESERVED=已预订，CLEANING=清洁中", example = "FREE")
-    @NotBlank(message = "状态不能为空")
     private String status;
 
     @Schema(description = "最低消费金额（元）", example = "50.00")

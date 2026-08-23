@@ -532,6 +532,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         Page<Orders> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
 
+        // 安全加固：后台订单分页必须附加租户条件，防止跨租户数据泄露
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(Orders::getTenantId, tenantId);
+        }
+
         queryWrapper.like(StringUtils.isNotBlank(number), Orders::getNumber, number);
         queryWrapper.eq(status != null, Orders::getStatus, status);
 

@@ -27,6 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
 import java.util.Map;
 
 /**
@@ -76,8 +78,8 @@ public class DeliveryController {
     @GetMapping("/orders")
     @Operation(summary = "分页查询外卖订单", description = "分页查询外卖平台订单，支持按平台、状态、时间范围筛选")
     public R<Page<DeliveryOrder>> pageOrders(
-                        @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+                        @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
             @Parameter(description = "外卖平台（可选）") @RequestParam(required = false) String platform,
             @Parameter(description = "状态（可选）") @RequestParam(required = false) String status,
             @Parameter(description = "开始日期（可选）") @RequestParam(required = false) String startDate,

@@ -67,6 +67,7 @@ public class DishSaveDTO {
     private java.math.BigDecimal minStock;
 
     @Schema(description = "口味列表")
+    @Size(max = 20, message = "口味不能超过20个")
     private List<DishFlavor> flavors;
 }
 
