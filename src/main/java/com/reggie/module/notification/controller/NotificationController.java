@@ -1,18 +1,16 @@
 package com.reggie.module.notification.controller;
-import com.reggie.common.utils.PageUtils;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.RateLimitType;
 import com.reggie.common.annotation.RequiresPermission;
 import com.reggie.common.BaseContext;
-import com.reggie.module.notification.mapper.NotificationRecordMapper;
-import com.reggie.module.notification.mapper.NotificationTemplateMapper;
 import com.reggie.module.notification.model.NotificationRecord;
 import com.reggie.module.notification.model.NotificationTemplate;
+import com.reggie.module.notification.service.NotificationRecordService;
 import com.reggie.module.notification.service.NotificationService;
+import com.reggie.module.notification.service.NotificationTemplateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,10 +50,10 @@ public class NotificationController {
     private NotificationService notificationService;
 
     @Resource
-    private NotificationTemplateMapper templateMapper;
+    private NotificationTemplateService templateService;
 
     @Resource
-    private NotificationRecordMapper recordMapper;
+    private NotificationRecordService recordService;
 
     /** 批量发送目标数量上限，防止一次性投递过大任务压垮下游短信/推送通道 */
     private static final int MAX_BATCH_TARGETS = 1000;
@@ -75,18 +73,9 @@ public class NotificationController {
                         @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "业务类型（可选）") @RequestParam(required = false) String bizType) {
-        Page<NotificationTemplate> pageInfo = PageUtils.of(page, pageSize);
-        LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
-        if (bizType != null && !bizType.isEmpty()) {
-            wrapper.eq(NotificationTemplate::getBizType, bizType);
-        }
-        // 租户隔离：仅查询当前租户的模板
         Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null) {
-            wrapper.eq(NotificationTemplate::getTenantId, tenantId);
-        }
-        wrapper.orderByDesc(NotificationTemplate::getCreateTime);
-        templateMapper.selectPage(pageInfo, wrapper);
+        // 域4 改造：分页查询下沉到 Service，内置租户过滤
+        Page<NotificationTemplate> pageInfo = templateService.pageTemplates(page, pageSize, bizType, tenantId);
         return R.success(pageInfo);
     }
 
@@ -98,18 +87,13 @@ public class NotificationController {
     @GetMapping("/template/{id}")
     @Operation(summary = "查询模板详情", description = "根据ID查询通知模板详情")
     public R<NotificationTemplate> templateDetail(
-            @Parameter(description = "I d")
             @Parameter(description = "模板ID", required = true) @PathVariable Long id) {
-        NotificationTemplate template = templateMapper.selectById(id);
-        if (template != null) {
-            // 租户校验：确保只能查看当前租户的模板
-            Long tenantId = BaseContext.getCurrentTenantId();
-            if (tenantId != null && !tenantId.equals(template.getTenantId())) {
-                return R.error("无权查看其他租户的模板");
-            }
-            return R.success(template);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> checkResult = templateService.getTemplateWithTenantCheck(id, tenantId);
+        if (Boolean.FALSE.equals(checkResult.get("ok"))) {
+            return R.error((String) checkResult.get("message"));
         }
-        return R.error("模板不存在");
+        return R.success((NotificationTemplate) checkResult.get("template"));
     }
 
     /**
@@ -121,13 +105,9 @@ public class NotificationController {
     @Operation(summary = "新增通知模板", description = "创建新的通知模板")
     public R<String> addTemplate(
             @Parameter(description = "模板信息", required = true) @RequestBody NotificationTemplate template) {
-        // 显式设置租户ID（绕过MyBatis-Plus自动填充的时序问题）
         Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null) {
-            template.setTenantId(tenantId);
-        }
-        templateMapper.insert(template);
-        log.info("新增通知模板: id={}, name={}, tenantId={}", template.getId(), template.getTemplateName(), tenantId);
+        // 域4 改造：新增模板下沉到 Service，自动设置租户ID
+        templateService.addTemplateWithTenant(template, tenantId);
         return R.success("添加成功");
     }
 
@@ -143,17 +123,11 @@ public class NotificationController {
         if (template.getId() == null) {
             return R.error("模板ID不能为空");
         }
-        // 租户校验：确保只能修改当前租户的模板
-        NotificationTemplate existing = templateMapper.selectById(template.getId());
-        if (existing == null) {
-            return R.error("模板不存在");
-        }
         Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null && !tenantId.equals(existing.getTenantId())) {
-            return R.error("无权修改其他租户的模板");
+        Map<String, Object> updateResult = templateService.updateTemplateWithTenant(template, tenantId);
+        if (Boolean.FALSE.equals(updateResult.get("ok"))) {
+            return R.error((String) updateResult.get("message"));
         }
-        templateMapper.updateById(template);
-        log.info("更新通知模板: id={}, tenantId={}", template.getId(), tenantId);
         return R.success("修改成功");
     }
 
@@ -166,21 +140,14 @@ public class NotificationController {
     @PutMapping("/template/{id}/status/{status}")
     @Operation(summary = "启用/停用模板", description = "切换通知模板的启用状态")
     public R<String> toggleTemplate(
-            @Parameter(description = "I d")
             @Parameter(description = "模板ID", required = true) @PathVariable Long id,
             @Parameter(description = "状态：1启用 0停用", required = true) @PathVariable Integer status) {
-        NotificationTemplate template = templateMapper.selectById(id);
-        if (template == null) {
-            return R.error("模板不存在");
-        }
-        // 租户校验
         Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null && !tenantId.equals(template.getTenantId())) {
-            return R.error("无权操作其他租户的模板");
+        Map<String, Object> toggleResult = templateService.toggleStatusWithTenant(id, status, tenantId);
+        if (Boolean.FALSE.equals(toggleResult.get("ok"))) {
+            return R.error((String) toggleResult.get("message"));
         }
-        template.setStatus(status);
-        templateMapper.updateById(template);
-        return R.success(status == 1 ? "已启用" : "已停用");
+        return R.success((String) toggleResult.get("message"));
     }
 
     /**
@@ -191,19 +158,12 @@ public class NotificationController {
     @DeleteMapping("/template/{id}")
     @Operation(summary = "删除通知模板", description = "删除指定的通知模板")
     public R<String> deleteTemplate(
-            @Parameter(description = "I d")
             @Parameter(description = "模板ID", required = true) @PathVariable Long id) {
-        NotificationTemplate template = templateMapper.selectById(id);
-        if (template == null) {
-            return R.error("模板不存在");
-        }
-        // 租户校验
         Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null && !tenantId.equals(template.getTenantId())) {
-            return R.error("无权删除其他租户的模板");
+        Map<String, Object> removeResult = templateService.removeTemplateWithTenant(id, tenantId);
+        if (Boolean.FALSE.equals(removeResult.get("ok"))) {
+            return R.error((String) removeResult.get("message"));
         }
-        templateMapper.deleteById(id);
-        log.info("删除通知模板: id={}, tenantId={}", id, tenantId);
         return R.success("删除成功");
     }
 
@@ -243,15 +203,8 @@ public class NotificationController {
 
         if (sendTime != null && sendTime.isAfter(java.time.LocalDateTime.now())) {
             // 查找匹配的启用模板获取templateId（多租户隔离）
-            LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(NotificationTemplate::getBizType, bizType)
-                   .eq(NotificationTemplate::getStatus, 1);
             Long tenantId = BaseContext.getCurrentTenantId();
-            if (tenantId != null) {
-                wrapper.eq(NotificationTemplate::getTenantId, tenantId);
-            }
-            wrapper.last("LIMIT 1");
-            NotificationTemplate template = templateMapper.selectOne(wrapper);
+            NotificationTemplate template = templateService.findByBizTypeAndTenant(bizType, tenantId);
             if (template == null) {
                 return R.error("未找到业务类型[" + bizType + "]的启用模板");
             }
@@ -363,21 +316,9 @@ public class NotificationController {
             @RequestParam(required = false) String bizType,
             @Parameter(description = "Status")
             @RequestParam(required = false) Integer status) {
-        Page<NotificationRecord> pageInfo = PageUtils.of(page, pageSize);
-        LambdaQueryWrapper<NotificationRecord> wrapper = new LambdaQueryWrapper<>();
-        if (bizType != null && !bizType.isEmpty()) {
-            wrapper.eq(NotificationRecord::getBizType, bizType);
-        }
-        if (status != null) {
-            wrapper.eq(NotificationRecord::getStatus, status);
-        }
-        // 租户隔离：仅查询当前租户的发送记录
         Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null) {
-            wrapper.eq(NotificationRecord::getTenantId, tenantId);
-        }
-        wrapper.orderByDesc(NotificationRecord::getCreateTime);
-        recordMapper.selectPage(pageInfo, wrapper);
+        // 域4 改造：分页查询下沉到 Service
+        Page<NotificationRecord> pageInfo = recordService.pageRecords(page, pageSize, bizType, status, tenantId);
         return R.success(pageInfo);
     }
 
@@ -394,7 +335,8 @@ public class NotificationController {
         java.time.LocalDateTime start = today.atStartOfDay();
         java.time.LocalDateTime end = today.atTime(java.time.LocalTime.MAX);
         Long tenantId = BaseContext.getCurrentTenantId();
-        Map<String, Object> stats = recordMapper.statBetween(start, end, tenantId);
+        // 域4 改造：聚合统计下沉到 Service
+        Map<String, Object> stats = recordService.statBetween(start, end, tenantId);
         if (stats == null) {
             stats = new HashMap<>();
         }
@@ -409,18 +351,13 @@ public class NotificationController {
     @GetMapping("/record/{id}")
     @Operation(summary = "查询发送记录详情", description = "根据ID查询通知发送记录详情")
     public R<NotificationRecord> recordDetail(
-            @Parameter(description = "I d")
             @Parameter(description = "记录ID", required = true) @PathVariable Long id) {
-        NotificationRecord record = recordMapper.selectById(id);
-        if (record != null) {
-            // 租户校验：确保只能查看当前租户的记录
-            Long tenantId = BaseContext.getCurrentTenantId();
-            if (tenantId != null && !tenantId.equals(record.getTenantId())) {
-                return R.error("无权查看其他租户的通知记录");
-            }
-            return R.success(record);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> checkResult = recordService.getRecordWithTenantCheck(id, tenantId);
+        if (Boolean.FALSE.equals(checkResult.get("ok"))) {
+            return R.error((String) checkResult.get("message"));
         }
-        return R.error("记录不存在");
+        return R.success((NotificationRecord) checkResult.get("record"));
     }
 
     // ==================== 设备注册 ====================

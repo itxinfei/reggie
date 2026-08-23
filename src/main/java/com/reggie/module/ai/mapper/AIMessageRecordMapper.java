@@ -22,9 +22,11 @@ public interface AIMessageRecordMapper extends BaseMapper<AIMessageRecord> {
      * 查询会话消息列表
      *
      * @param conversationId 会话ID
+     * @param tenantId 租户ID
      * @param isDeleted 是否删除
      * @return 消息列表
      */
     List<AIMessageRecord> selectByConversationId(@Param("conversationId") String conversationId,
+                                                   @Param("tenantId") Long tenantId,
                                                    @Param("isDeleted") Integer isDeleted);
 }

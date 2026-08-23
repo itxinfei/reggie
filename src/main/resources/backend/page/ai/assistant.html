@@ -18,12 +18,12 @@
             <div class="ai-sidebar" :class="{ open: sidebarOpen }">
                 <div class="sidebar-header">
                     <h4>💬 对话历史</h4>
-                    <button class="refresh-btn" @click="loadConversations" :disabled="sidebarLoading">
+                    <button class="refresh-btn" @click="loadConversations" :disabled="sidebarLoading" aria-label="{{ sidebarLoading ? '刷新中' : '刷新对话列表' }}">
                         {{ sidebarLoading ? '刷新中...' : '🔄 刷新' }}
                     </button>
                 </div>
 
-                <button class="new-chat-btn" @click="createNewConversation" :disabled="loading">
+                <button class="new-chat-btn" @click="createNewConversation" :disabled="loading" aria-label="新建对话">
                     ✨ 新建对话
                 </button>
 
@@ -31,7 +31,9 @@
                 <div class="conv-list" v-if="conversations.length > 0">
                     <div v-for="conv in conversations" :key="conv.conversationId"
                          :class="['conv-item', { active: currentConversationId === conv.conversationId }]"
-                         @click="selectConversation(conv)">
+                         role="button" tabindex="0"
+                         @click="selectConversation(conv)" @keydown.enter="selectConversation(conv)"
+                         :aria-label="conv.title || '新对话'" :aria-pressed="currentConversationId === conv.conversationId">
                         <div class="conv-icon">{{ getSceneIcon(conv.scene) }}</div>
                         <div class="conv-info">
                             <div class="conv-title">{{ conv.title || '新对话' }}</div>
@@ -40,7 +42,7 @@
                                 <span>{{ formatConvTime(conv.updateTime || conv.createTime) }}</span>
                             </div>
                         </div>
-                        <button class="conv-delete" @click.stop="handleDeleteConv(conv)" title="删除对话">×</button>
+                        <button class="conv-delete" @click.stop="handleDeleteConv(conv)" aria-label="删除对话" title="删除对话">×</button>
                     </div>
                 </div>
 
@@ -59,7 +61,7 @@
             <div class="ai-main">
             <!-- 修改点：紧凑单行头栏 — 集成侧边栏切换 + 标题 + 场景标签 + 连接状态 -->
             <div class="ai-header">
-                <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen" title="切换侧边栏">☰</button>
+                <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen" aria-label="切换侧边栏" title="切换侧边栏">☰</button>
                 <span class="header-logo">🤖</span>
                 <span class="header-title">AI 经营分析助手</span>
                 <span class="current-conv-title" v-if="currentConversation" :title="currentConversation.title">
@@ -68,7 +70,9 @@
                 <div class="header-scenes">
                     <span v-for="scene in scenes"
                           :class="['scene-tag', { active: currentScene === scene.value }]"
-                          @click="switchScene(scene.value)">
+                          role="button" tabindex="0"
+                          @click="switchScene(scene.value)" @keydown.enter="switchScene(scene.value)"
+                          :aria-label="scene.label" :aria-pressed="currentScene === scene.value">
                         {{ scene.label }}
                     </span>
                 </div>
@@ -82,7 +86,7 @@
 
             <!-- 快捷卡片 -->
             <div class="quick-cards" v-if="messages.length <= 1">
-                <span class="quick-card" v-for="tip in currentQuickTips" :key="tip" @click="sendQuick(tip)">
+                <span class="quick-card" v-for="tip in currentQuickTips" :key="tip" role="button" tabindex="0" @click="sendQuick(tip)" @keydown.enter="sendQuick(tip)" :aria-label="'快捷问题：' + tip">
                     {{ tip }}
                 </span>
             </div>
@@ -357,7 +361,7 @@
                             self.selectConversation(self.conversations[0]);
                         }
                     }).catch(function(err) {
-                        console.error('加载对话列表失败:', err);
+                        ReggieUI.error('加载对话列表失败');
                         self.conversations = [];
                     }).finally(function() {
                         self.sidebarLoading = false;
@@ -404,7 +408,7 @@
                             return msg;
                         });
                     }).catch(function(err) {
-                        console.error('加载消息历史失败:', err);
+                        ReggieUI.error('加载消息历史失败');
                         self.messages = [];
                     }).finally(function() {
                         self.loadingHistory = false;
@@ -427,7 +431,7 @@
                 /** 删除对话 */
                 handleDeleteConv: function(conv) {
                     var self = this;
-                    self.$confirm('确定要删除对话"' + (conv.title || '新对话') + '"吗？删除后不可恢复。', '提示', {
+                    ReggieUI.confirm('确定要删除对话"' + (conv.title || '新对话') + '"吗？删除后不可恢复。', '提示', {
                         confirmButtonText: '确定',
                         cancelButtonText: '取消',
                         type: 'warning'
@@ -447,7 +451,6 @@
                                 }
                             }
                         }).catch(function(err) {
-                            console.error('删除对话失败:', err);
                             ReggieUI.error('删除失败，请重试');
                         });
                     }).catch(function() {});
@@ -672,7 +675,7 @@
                         messageId: msg.dbMessageId,
                         feedbackType: type
                     }).catch(function(err) {
-                        console.error('反馈提交失败:', err);
+                        ReggieUI.error('反馈提交失败');
                     });
                 },
 

@@ -29,9 +29,9 @@
       gap: 12px;
       background: var(--bg-surface);
       padding: 16px 24px;
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-sm);
     }
     .tableBar .toolbar-label {
       font-size:var(--font-size-base);
@@ -52,9 +52,9 @@
     }
     .chart-card {
       background: var(--bg-surface);
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-sm);
     }
     .chart-title {
       font-size:var(--font-size-lg);
@@ -67,9 +67,9 @@
     }
     .table-card {
       background: var(--bg-surface);
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-sm);
     }
   </style>
 </head>
@@ -283,7 +283,6 @@
               this.rankingData = rankingRes.data || []
             }
           } catch (err) {
-            console.error('Failed to fetch data', err)
             ReggieUI.error('获取数据失败')
           } finally {
             this.loading = false

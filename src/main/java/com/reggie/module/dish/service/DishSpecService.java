@@ -3,7 +3,6 @@ package com.reggie.module.dish.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.dish.model.DishSpecGroup;
 import com.reggie.module.dish.model.DishSpecOption;
-import com.reggie.module.dish.model.DishSpecRelation;
 
 import java.math.BigDecimal;
 import java.util.List;

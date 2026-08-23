@@ -141,12 +141,14 @@
                 <div v-if="modelList.length > 0" class="model-list-panel">
                     <div class="model-list-header">
                         共 {{ modelList.length }} 个可用模型，点击即可选择：
-                        <span class="model-list-clear" @click="modelList = []">✕ 收起</span>
+                        <span class="model-list-clear" role="button" tabindex="0" @click="modelList = []" @keydown.enter="modelList = []" aria-label="收起模型列表">✕ 收起</span>
                     </div>
                     <div class="model-list-items">
                         <span v-for="m in modelList" :key="m"
                               :class="['model-chip', { active: form.modelName === m }]"
-                              @click="selectModel(m)">
+                              role="button" tabindex="0"
+                              @click="selectModel(m)" @keydown.enter="selectModel(m)"
+                              :aria-label="'选择模型' + m" :aria-pressed="form.modelName === m">
                             {{ m }}
                         </span>
                     </div>

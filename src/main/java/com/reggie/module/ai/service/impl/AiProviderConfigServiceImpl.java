@@ -25,8 +25,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * AI供应商配置服务实现
@@ -192,7 +194,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             return "FAIL: 无法连接到服务器，请检查 baseUrl 是否正确";
         } catch (Exception e) {
             updateTestResult(config, "fail");
-            return "FAIL: " + e.getMessage();
+            return "FAIL: 连接测试异常，请检查配置后重试";
         } finally {
             if (conn != null) {
                 conn.disconnect();
@@ -239,7 +241,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             }
         } catch (Exception e) {
             updateTestResult(config, "fail");
-            return "FAIL: " + e.getMessage();
+            return "FAIL: 连接测试异常，请检查配置后重试";
         } finally {
             if (conn != null) {
                 conn.disconnect();
@@ -303,7 +305,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             return "FAIL: 无法连接到服务器，请检查 baseUrl 是否正确";
         } catch (Exception e) {
             updateTestResult(config, "fail");
-            return "FAIL: " + e.getMessage();
+            return "FAIL: 连接测试异常，请检查配置后重试";
         } finally {
             if (conn != null) {
                 conn.disconnect();
@@ -411,13 +413,9 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                 }
             }
 
-            // 去重
-            List<String> result = new ArrayList<>();
-            for (String m : allModels) {
-                if (!result.contains(m)) {
-                    result.add(m);
-                }
-            }
+            // 去重（使用 LinkedHashSet 保持插入顺序，避免 O(n^2)）
+            Set<String> modelSet = new LinkedHashSet<>(allModels);
+            List<String> result = new ArrayList<>(modelSet);
             log.info("fetchModelList: 获取到 {} 个模型, baseUrl={}", result.size(), normalizedUrl);
             return result;
         } catch (Exception e) {

@@ -529,6 +529,25 @@
   color: var(--color-text-secondary);
 }
 
+/* 修改点：可用券为空时的空态 + 加载中状态 */
+#add_order .divContent .coupon-section .coupon-empty {
+  text-align: center;
+  padding: 20rem 0 8rem 0;
+  font-size: 13rem;
+  color: var(--color-text-hint);
+}
+#add_order .divContent .coupon-section .coupon-empty a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  margin-left: 4rem;
+}
+#add_order .divContent .coupon-section .coupon-loading {
+  text-align: center;
+  padding: 12rem 0;
+  font-size: 12rem;
+  color: var(--color-text-hint);
+}
+
 /* 修改点：送达时间选择器弹窗样式 */
 #add_order .time-picker-popup {
   background: var(--bg-card);

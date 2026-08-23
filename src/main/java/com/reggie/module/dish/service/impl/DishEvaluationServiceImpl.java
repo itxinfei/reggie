@@ -67,28 +67,6 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
     }
 
     /**
-     * 根据菜品ID查询评价列表
-     *
-     * @param tenantId 租户ID
-     * @param dishId   菜品ID
-     * @param status   审核状态（null表示查询已通过的）
-     * @return 评价列表
-     */
-    @Override
-    public List<DishEvaluation> listByDishId(Long tenantId, Long dishId, Integer status) {
-        LambdaQueryWrapper<DishEvaluation> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(DishEvaluation::getTenantId, tenantId)
-                .eq(DishEvaluation::getDishId, dishId)
-                .eq(status != null, DishEvaluation::getStatus, status)
-                .orderByDesc(DishEvaluation::getCreateTime);
-        // 当status为null时，默认查询已通过(status=1)的评价
-        if (status == null) {
-            queryWrapper.eq(DishEvaluation::getStatus, 1);
-        }
-        return this.list(queryWrapper);
-    }
-
-    /**
      * 根据菜品ID分页查询评价列表
      *
      * @param tenantId  租户ID
@@ -364,31 +342,6 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
     }
 
     /**
-     * 获取菜品评分分布（各分数段评价数量）
-     *
-     * @param tenantId 租户ID
-     * @param dishId   菜品ID
-     * @return 评分分布列表
-     */
-    @Override
-    public List<Map<String, Object>> getDishRatingDistribution(Long tenantId, Long dishId) {
-        return baseMapper.getDishRatingDistribution(tenantId, dishId);
-    }
-
-    /**
-     * 获取菜品平均评分
-     *
-     * @param tenantId 租户ID
-     * @param dishId   菜品ID
-     * @return 平均评分
-     */
-    @Override
-    public Double getAverageRating(Long tenantId, Long dishId) {
-        Double avgRating = baseMapper.getAverageRating(tenantId, dishId);
-        return avgRating != null ? avgRating : 0.0;
-    }
-
-    /**
      * 根据订单ID查询评价列表
      *
      * @param tenantId 租户ID
@@ -402,18 +355,6 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
                 .eq(DishEvaluation::getOrderId, orderId)
                 .orderByDesc(DishEvaluation::getCreateTime);
         return this.list(queryWrapper);
-    }
-
-    /**
-     * 统计指定状态的评价数量
-     *
-     * @param tenantId 租户ID
-     * @param status   审核状态
-     * @return 评价数量
-     */
-    @Override
-    public int countByStatus(Long tenantId, Integer status) {
-        return baseMapper.countByStatus(tenantId, status);
     }
 
     /**

@@ -77,8 +77,10 @@ public class BaiduAdapter extends BaseModelAdapter {
                 return parseResponse(conn, config);
             } else {
                 String errorBody = readErrorBody(conn);
+                // 修改点：errorBody 截断 200 字，防止 token 回显或超长响应体落盘
                 log.error("AI请求[{} / {}]失败: code={}, error={}",
-                        config.getProviderCode(), FORMAT_ID, responseCode, errorBody);
+                        config.getProviderCode(), FORMAT_ID, responseCode,
+                        truncate(errorBody, 200));
                 return errorResponse("百度AI服务错误（" + config.getProviderName()
                         + "）：HTTP " + responseCode + " - " + errorBody, config);
             }

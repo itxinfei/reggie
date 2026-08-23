@@ -8,6 +8,7 @@ import com.reggie.module.inventory.mapper.MaterialMapper;
 import com.reggie.module.inventory.model.Material;
 import com.reggie.module.report.service.ReportService;
 import com.reggie.module.order.service.OrderService;
+import com.reggie.module.order.service.statusflow.OrderStatusFlowService;
 import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,10 @@ public class OrderTimeoutTask {
     @Autowired
     private OrderService orderService;
 
+    /** 订单状态流转服务 */
+    @Autowired
+    private OrderStatusFlowService statusFlowService;
+
     /** 原料Mapper */
     @Autowired
     private MaterialMapper materialMapper;
@@ -70,7 +75,8 @@ public class OrderTimeoutTask {
     @Scheduled(fixedRate = ORDER_TIMEOUT_CHECK_INTERVAL)
     public void cancelTimeoutOrders() {
         // 分布式锁防止任务重叠
-        if (!tryLock("schedule:lock:order-timeout", LOCK_TTL_MS)) {
+        String lockValue = tryLock("schedule:lock:order-timeout", LOCK_TTL_MS);
+        if (lockValue == null) {
             log.debug("[定时任务] 订单超时取消任务正在执行中，跳过本次");
             return;
         }
@@ -99,7 +105,7 @@ public class OrderTimeoutTask {
                     tenants.size(), totalCancelled);
             }
         } finally {
-            unlock("schedule:lock:order-timeout");
+            unlock("schedule:lock:order-timeout", lockValue);
         }
     }
 
@@ -123,7 +129,7 @@ public class OrderTimeoutTask {
         int cancelled = 0;
         for (Orders order : timeoutOrders) {
             try {
-                orderService.cancelOrder(order.getId(), "超时未接单，系统自动取消");
+                statusFlowService.cancelOrder(order.getId(), "超时未接单，系统自动取消");
                 log.warn("[定时任务] 订单超时自动取消: orderId={}, number={}, tenantId={}",
                     order.getId(), order.getNumber(), BaseContext.getCurrentTenantId());
                 cancelled++;
@@ -140,25 +146,34 @@ public class OrderTimeoutTask {
     // ──────────────────────────────────────
     @Scheduled(cron = "0 0 2 * * ?")
     public void dailyStatistics() {
-        List<Tenant> tenants = tenantService.listActiveTenants();
-        if (tenants.isEmpty()) {
+        String lockValue = tryLock("schedule:lock:daily-statistics", LOCK_TTL_MS);
+        if (lockValue == null) {
+            log.debug("[定时任务] 每日经营统计任务正在执行中，跳过本次");
             return;
         }
-
-        String yesterday = LocalDateTime.now().minusDays(1).toLocalDate().toString();
-
-        for (Tenant tenant : tenants) {
-            BaseContext.setCurrentTenantId(tenant.getId());
-            try {
-                Map<String, Object> report = reportService.getDailyReport(yesterday, tenant.getId());
-                log.info("[定时任务] 每日经营统计完成: date={}, tenantId={}, orders={}",
-                    yesterday, tenant.getId(), report);
-            } catch (Exception e) {
-                log.error("[定时任务] 每日统计失败: tenantId={}, error={}",
-                    tenant.getId(), e.getMessage());
-            } finally {
-                BaseContext.remove();
+        try {
+            List<Tenant> tenants = tenantService.listActiveTenants();
+            if (tenants.isEmpty()) {
+                return;
             }
+
+            String yesterday = LocalDateTime.now().minusDays(1).toLocalDate().toString();
+
+            for (Tenant tenant : tenants) {
+                BaseContext.setCurrentTenantId(tenant.getId());
+                try {
+                    Map<String, Object> report = reportService.getDailyReport(yesterday, tenant.getId());
+                    log.info("[定时任务] 每日经营统计完成: date={}, tenantId={}, orders={}",
+                        yesterday, tenant.getId(), report);
+                } catch (Exception e) {
+                    log.error("[定时任务] 每日统计失败: tenantId={}, error={}",
+                        tenant.getId(), e.getMessage());
+                } finally {
+                    BaseContext.remove();
+                }
+            }
+        } finally {
+            unlock("schedule:lock:daily-statistics", lockValue);
         }
     }
 
@@ -167,18 +182,27 @@ public class OrderTimeoutTask {
     // ──────────────────────────────────────
     @Scheduled(fixedRate = INVENTORY_ALERT_CHECK_INTERVAL)
     public void checkInventoryAlert() {
-        List<Tenant> tenants = tenantService.listActiveTenants();
-        if (tenants.isEmpty()) {
+        String lockValue = tryLock("schedule:lock:inventory-alert", LOCK_TTL_MS);
+        if (lockValue == null) {
+            log.debug("[定时任务] 库存预警检查正在执行中，跳过本次");
             return;
         }
-
-        for (Tenant tenant : tenants) {
-            BaseContext.setCurrentTenantId(tenant.getId());
-            try {
-                checkInventoryAlertForTenant();
-            } finally {
-                BaseContext.remove();
+        try {
+            List<Tenant> tenants = tenantService.listActiveTenants();
+            if (tenants.isEmpty()) {
+                return;
             }
+
+            for (Tenant tenant : tenants) {
+                BaseContext.setCurrentTenantId(tenant.getId());
+                try {
+                    checkInventoryAlertForTenant();
+                } finally {
+                    BaseContext.remove();
+                }
+            }
+        } finally {
+            unlock("schedule:lock:inventory-alert", lockValue);
         }
     }
 
@@ -225,36 +249,45 @@ public class OrderTimeoutTask {
      * 尝试获取分布式锁
      * @param lockKey 锁Key
      * @param ttlMs 锁过期时间（毫秒）
-     * @return true=获取成功，false=获取失败
+     * @return 锁值（UUID），获取失败返回null
      */
-    private boolean tryLock(String lockKey, long ttlMs) {
+    private String tryLock(String lockKey, long ttlMs) {
         if (redisTemplate == null) {
             // fail-closed：写操作类定时任务在 Redis 不可用时跳过本次执行，避免多实例重复取消订单
             log.warn("[定时任务] Redis不可用，跳过本次执行（分布式锁获取失败）: {}", lockKey);
-            return false;
+            return null;
         }
         try {
+            // 使用UUID作为锁值，标识持有者身份
+            String lockValue = java.util.UUID.randomUUID().toString();
             // SET NX EX：原子操作，不存在才设置并过期
             Boolean success = redisTemplate.opsForValue()
-                    .setIfAbsent(lockKey, "1", ttlMs, TimeUnit.MILLISECONDS);
-            return Boolean.TRUE.equals(success);
+                    .setIfAbsent(lockKey, lockValue, ttlMs, TimeUnit.MILLISECONDS);
+            return Boolean.TRUE.equals(success) ? lockValue : null;
         } catch (Exception e) {
             // fail-closed：获取锁异常时跳过本次执行，避免多实例重复取消订单
             log.error("[定时任务] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
-            return false;
+            return null;
         }
     }
 
     /**
-     * 释放分布式锁
+     * 释放分布式锁（Lua脚本原子操作：比对锁值后才删除）
      * @param lockKey 锁Key
+     * @param lockValue 锁值（UUID）
      */
-    private void unlock(String lockKey) {
-        if (redisTemplate == null) {
+    private void unlock(String lockKey, String lockValue) {
+        if (redisTemplate == null || lockValue == null) {
             return;
         }
         try {
-            redisTemplate.delete(lockKey);
+            // Lua脚本：比对锁值后才删除，防止误删他人的锁
+            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            redisTemplate.execute(
+                new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
+                java.util.Collections.singletonList(lockKey),
+                lockValue
+            );
         } catch (Exception e) {
             log.error("[定时任务] 释放分布式锁失败: {}", lockKey, e);
         }

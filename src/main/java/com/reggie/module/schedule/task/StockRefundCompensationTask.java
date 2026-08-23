@@ -2,7 +2,6 @@ package com.reggie.module.schedule.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
-import com.reggie.module.dish.model.Dish;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.setmeal.model.SetmealDish;
@@ -55,8 +54,6 @@ public class StockRefundCompensationTask {
     @Autowired
     private DishService dishService;
 
-    /** 菜品服务（用于库存补偿） */
-
     /** 租户服务（用于获取活跃租户列表） */
     @Autowired
     private TenantService tenantService;
@@ -77,7 +74,8 @@ public class StockRefundCompensationTask {
     @Scheduled(fixedRate = 30 * 60 * 1000)
     public void compensateStockRefund() {
         // 分布式锁防止任务重叠
-        if (!tryLock("schedule:lock:stock-refund-compensation", LOCK_TTL_MS)) {
+        String lockValue = tryLock("schedule:lock:stock-refund-compensation", LOCK_TTL_MS);
+        if (lockValue == null) {
             log.debug("[库存补偿] 补偿任务正在执行中，跳过本次");
             return;
         }
@@ -105,7 +103,7 @@ public class StockRefundCompensationTask {
                 log.info("[库存补偿] 批量补偿完成，共处理 {} 个租户，补偿 {} 个订单", tenants.size(), totalCompensated);
             }
         } finally {
-            unlock("schedule:lock:stock-refund-compensation");
+            unlock("schedule:lock:stock-refund-compensation", lockValue);
         }
     }
 
@@ -238,29 +236,37 @@ public class StockRefundCompensationTask {
     // 分布式锁辅助方法
     // ──────────────────────────────────────
 
-    private boolean tryLock(String lockKey, long ttlMs) {
+    private String tryLock(String lockKey, long ttlMs) {
         if (redisTemplate == null) {
             // fail-closed：写操作类定时任务在 Redis 不可用时跳过本次执行，避免多实例重复补偿
             log.warn("[库存补偿] Redis不可用，跳过本次执行（分布式锁获取失败）: {}", lockKey);
-            return false;
+            return null;
         }
         try {
+            // 使用UUID作为锁值，标识持有者身份
+            String lockValue = java.util.UUID.randomUUID().toString();
             Boolean success = redisTemplate.opsForValue()
-                    .setIfAbsent(lockKey, "1", ttlMs, TimeUnit.MILLISECONDS);
-            return Boolean.TRUE.equals(success);
+                    .setIfAbsent(lockKey, lockValue, ttlMs, TimeUnit.MILLISECONDS);
+            return Boolean.TRUE.equals(success) ? lockValue : null;
         } catch (Exception e) {
             // fail-closed：获取锁异常时跳过本次执行，避免多实例重复补偿
             log.error("[库存补偿] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
-            return false;
+            return null;
         }
     }
 
-    private void unlock(String lockKey) {
-        if (redisTemplate == null) {
+    private void unlock(String lockKey, String lockValue) {
+        if (redisTemplate == null || lockValue == null) {
             return;
         }
         try {
-            redisTemplate.delete(lockKey);
+            // Lua脚本：比对锁值后才删除，防止误删他人的锁
+            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            redisTemplate.execute(
+                new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
+                java.util.Collections.singletonList(lockKey),
+                lockValue
+            );
         } catch (Exception e) {
             log.error("[库存补偿] 释放分布式锁失败: {}", lockKey, e);
         }

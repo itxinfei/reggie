@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.member.model.Member;
 import com.reggie.module.member.model.MemberLevel;
 import com.reggie.module.member.service.MemberLevelService;
@@ -40,6 +42,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/member/level")
 @Tag(name = "会员等级管理")
+@RequireEmployee
 public class MemberLevelController {
 
     @Autowired
@@ -86,13 +89,21 @@ public class MemberLevelController {
 
     /**
      * 新增会员等级
-     * @param memberLevel 会员等级信息
+     * <p>租户安全：强制设置 tenantId，防止前端 JSON 注入其他租户 ID。</p>
+     *
+     * @param memberLevel 会员等级信息（tenantId 字段被服务端覆盖）
      * @return 操作结果
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增等级", description = "创建新的会员等级")
     public R<String> save(@RequestBody MemberLevel memberLevel) {
         log.info("新增会员等级: {}", memberLevel.getName());
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        memberLevel.setTenantId(tenantId);
         memberLevel.setCreatedTime(LocalDateTime.now());
         memberLevelService.save(memberLevel);
         return R.success("新增会员等级成功");
@@ -100,24 +111,59 @@ public class MemberLevelController {
 
     /**
      * 修改会员等级
-     * @param memberLevel 会员等级信息
+     * <p>租户安全：先校验归属当前租户，再更新业务字段。</p>
+     *
+     * @param memberLevel 会员等级信息（tenantId 字段被服务端覆盖）
      * @return 操作结果
      */
     @PutMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改等级", description = "更新会员等级信息")
     public R<String> update(@RequestBody MemberLevel memberLevel) {
         log.info("修改会员等级: {}", memberLevel.getId());
-        memberLevelService.updateById(memberLevel);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        MemberLevel exist = memberLevelService.getById(memberLevel.getId());
+        if (exist == null) {
+            throw new CustomException("会员等级不存在");
+        }
+        if (!tenantId.equals(exist.getTenantId())) {
+            throw new CustomException("会员等级不属于当前租户");
+        }
+        // 仅更新业务字段
+        exist.setName(memberLevel.getName());
+        exist.setMinPoints(memberLevel.getMinPoints());
+        exist.setMaxPoints(memberLevel.getMaxPoints());
+        exist.setDiscount(memberLevel.getDiscount());
+        exist.setDescription(memberLevel.getDescription());
+        exist.setSort(memberLevel.getSort());
+        memberLevelService.updateById(exist);
         return R.success("修改会员等级成功");
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除等级", description = "根据ID删除会员等级，删除前校验是否仍有会员引用该等级")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "删除等级", description = "根据ID删除会员等级，先校验租户归属与引用计数")
     @Parameter(name = "id", description = "等级ID", required = true)
     public R<String> delete(@PathVariable Long id) {
         log.info("删除会员等级: {}", id);
-        // 修改点：删除前校验是否存在会员引用该等级，避免产生孤儿数据（会员.levelId 悬空）
-        long refCount = memberService.count(new LambdaQueryWrapper<Member>().eq(Member::getLevelId, id));
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        MemberLevel level = memberLevelService.getById(id);
+        if (level == null) {
+            throw new CustomException("会员等级不存在");
+        }
+        if (!tenantId.equals(level.getTenantId())) {
+            throw new CustomException("会员等级不属于当前租户");
+        }
+        // 校验是否存在会员引用该等级（同时按租户过滤）
+        LambdaQueryWrapper<Member> memberQw = new LambdaQueryWrapper<>();
+        memberQw.eq(Member::getTenantId, tenantId).eq(Member::getLevelId, id);
+        long refCount = memberService.count(memberQw);
         if (refCount > 0) {
             throw new CustomException("该等级下仍存在 " + refCount + " 名会员，无法删除");
         }

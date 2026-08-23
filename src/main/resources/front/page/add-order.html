@@ -173,29 +173,33 @@
                 </div>
 
                 <!-- 修改点：优惠券选择 -->
-                <div class="coupon-section" v-if="couponList.length > 0">
+                <div class="coupon-section" v-show="true">
                     <div class="title">
                         优惠券
-                        <span class="coupon-tip">（可享{{ discountAmount }}元优惠）</span>
+                        <span class="coupon-tip" v-if="selectedCoupon">（可减¥{{ selectedCoupon.discountAmount }}）</span>
                     </div>
                     <div class="coupon-list">
+                        <div class="coupon-loading" v-if="couponLoading">加载中…</div>
+                        <div class="coupon-empty" v-else-if="couponList.length === 0">
+                            暂无可用优惠券，去 <a href="javascript:void(0)" @click="goMemberCenter">领券</a>
+                        </div>
                         <div class="coupon-card"
-                             v-for="(coupon, idx) in couponList"
-                             :key="idx"
-                             :class="{active: selectedCoupon === idx}"
-                             @click="selectCoupon(idx)">
+                             v-for="coupon in couponList"
+                             :key="coupon.id"
+                             :class="{active: selectedCoupon && selectedCoupon.id === coupon.id}"
+                             @click="selectCoupon(coupon)">
                             <div class="coupon-left">
-                                <span class="coupon-amount">¥{{ coupon.discount }}</span>
-                                <span class="coupon-condition">{{ coupon.condition }}</span>
+                                <span class="coupon-amount">¥{{ Number(coupon.discountAmount).toFixed(2) }}</span>
+                                <span class="coupon-condition">满¥{{ Number(coupon.conditionAmount).toFixed(2) }}可用</span>
                             </div>
                             <div class="coupon-right">
-                                <div class="coupon-name">{{ coupon.name }}</div>
-                                <div class="coupon-desc">{{ coupon.desc }}</div>
+                                <div class="coupon-name">{{ coupon.templateName }}</div>
+                                <div class="coupon-desc">过期：{{ coupon.expireTime | fmtDate }}</div>
                             </div>
-                            <i class="coupon-check" v-if="selectedCoupon === idx">✓</i>
+                            <i class="coupon-check" v-if="selectedCoupon && selectedCoupon.id === coupon.id">✓</i>
                         </div>
                     </div>
-                    <div class="coupon-no-use" @click="selectedCoupon = -1" v-if="selectedCoupon >= 0">
+                    <div class="coupon-no-use" @click="selectCoupon(null)" v-if="selectedCoupon">
                         不使用优惠券
                     </div>
                 </div>
@@ -245,12 +249,9 @@
                         // 支付方式 — 3=货到付款
                         payMethod: 3,
                         // 优惠券列表及选中项
-                        couponList: [
-                            { name: '满减券', discount: 3, condition: '满25可用', desc: '新客专享' },
-                            { name: '满减券', discount: 5, condition: '满50可用', desc: '满50减5' },
-                            { name: '满减券', discount: 10, condition: '满90可用', desc: '满90减10' }
-                        ],
-                        selectedCoupon: -1, // -1表示未使用优惠券
+                        couponList:[],
+                        selectedCoupon:null,
+                        couponLoading:false,
                         // 配送方式：0=立即配送，1=预约配送
                         deliveryMode: 0,
                         // 送达时间选择（立即配送）
@@ -308,15 +309,10 @@
                         }
                         return this.finishTime + ' ' + (this.selectedTimeIdx === 0 ? '尽快送达' : this.timeOptions[this.selectedTimeIdx].label)
                     },
-                    // 修改点：计算优惠金额（需满足满减条件）
+                    // 修改点：计算优惠金额（直接取券对象里的 discountAmount，conditionAmount 已在后端可用券接口中校验过）
                     discountAmount(){
-                        if(this.selectedCoupon >= 0 && this.selectedCoupon < this.couponList.length){
-                            const coupon = this.couponList[this.selectedCoupon]
-                            const match = coupon.condition.match(/(\d+)/)
-                            const threshold = match ? parseInt(match[1]) : 0
-                            if(this.goodsPrice >= threshold){
-                                return coupon.discount
-                            }
+                        if(this.selectedCoupon){
+                            return Number(this.selectedCoupon.discountAmount) || 0
                         }
                         return 0
                     },
@@ -382,6 +378,10 @@
                         this.defaultAddress()
                         //获取购物车的商品
                         this.getCartData()
+                        // 修改点：加载当前用户下单可用券（依赖 goodsPrice，先拉一次）
+                        this.$nextTick(function(){
+                            this.loadUsableCoupons()
+                        }.bind(this))
                     },
                     //获取默认地址
                     async defaultAddress(){
@@ -426,9 +426,47 @@
                             vant.Toast.fail(res.msg || '加载购物车失败');
                         }
                     },
-                    // 修改点：选择优惠券
-                    selectCoupon(idx){
-                        this.selectedCoupon = this.selectedCoupon === idx ? -1 : idx
+                    // 修改点：选择优惠券（传入券对象，再次点击相同券取消选中）
+                    selectCoupon(coupon){
+                        if(!coupon){
+                            this.selectedCoupon = null
+                            return
+                        }
+                        this.selectedCoupon = (this.selectedCoupon && this.selectedCoupon.id === coupon.id) ? null : coupon
+                    },
+                    // 修改点：加载当前订单金额对应的可用券列表
+                    async loadUsableCoupons(){
+                        if(!this.goodsPrice || this.goodsPrice <= 0){
+                            this.couponList = []
+                            return
+                        }
+                        if(this.couponLoading) return
+                        this.couponLoading = true
+                        try{
+                            var amount = Number(this.goodsPrice).toFixed(2)
+                            const res = await $axios({ url: '/front/coupon/usable', method: 'get', params: { orderAmount: amount } })
+                            if(res.code === 1 && Array.isArray(res.data)){
+                                this.couponList = res.data
+                                // 若当前选中的券不在新列表里（金额变化导致不可用），清空
+                                if(this.selectedCoupon){
+                                    var found = false
+                                    for(var i=0;i<this.couponList.length;i++){
+                                        if(this.couponList[i].id === this.selectedCoupon.id){ found = true; break }
+                                    }
+                                    if(!found){ this.selectedCoupon = null }
+                                }
+                            }else{
+                                this.couponList = []
+                            }
+                        }catch(e){
+                            this.couponList = []
+                        }finally{
+                            this.couponLoading = false
+                        }
+                    },
+                    // 修改点：跳转到会员中心领券
+                    goMemberCenter(){
+                        window.location.href = '/front/page/member-center.html'
                     },
                     // 选择送达时间
                     selectTime(idx){
@@ -487,8 +525,9 @@
                             remark:this.note,
                             payMethod:this.payMethod,
                             addressBookId:this.address.id,
-                            amount: this.finalPrice,        // 修改点：传递优惠后的实际金额
-                            expectDeliveryTime: this.expectDeliveryTime  // 修改点：传递预计送达时间
+                            amount: this.finalPrice,
+                            expectDeliveryTime: this.expectDeliveryTime,
+                            usedCouponId: this.selectedCoupon ? this.selectedCoupon.id : null
                         }
                         const res = await addOrderApi(params)
                         this.loading = false

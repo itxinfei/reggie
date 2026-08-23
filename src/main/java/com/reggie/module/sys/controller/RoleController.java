@@ -4,15 +4,15 @@ import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
 import com.reggie.module.sys.entity.Permission;
 import com.reggie.module.sys.entity.Role;
-import com.reggie.module.sys.entity.RolePermission;
 import com.reggie.common.annotation.RequiresAdmin;
 import com.reggie.common.aspect.PermissionAspect;
-import com.reggie.module.sys.mapper.RoleMapper;
-import com.reggie.module.sys.mapper.RolePermissionMapper;
 import com.reggie.module.sys.service.PermissionService;
 import com.reggie.module.sys.service.RoleService;
+import com.reggie.module.sys.dto.RoleSaveDTO;
+import com.reggie.module.sys.dto.RoleUpdateDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -57,12 +57,6 @@ public class RoleController {
     private PermissionService permissionService;
 
     @Autowired
-    private RoleMapper roleMapper;
-
-    @Autowired
-    private RolePermissionMapper rolePermissionMapper;
-
-    @Autowired
     private PermissionAspect permissionAspect;
 
     /**
@@ -98,7 +92,7 @@ public class RoleController {
     @GetMapping("/stats")
     @Operation(summary = "角色统计", description = "聚合统计角色总数、启用数、禁用数、已分配权限角色数")
     public R<Map<String, Object>> stats() {
-        Map<String, Object> stats = roleMapper.statRoles();
+        Map<String, Object> stats = roleService.statRoles();
         if (stats == null) {
             stats = new HashMap<>();
         }
@@ -121,48 +115,52 @@ public class RoleController {
 
     /**
      * 新增角色
-     * @param role 角色信息
+     * <p>租户安全：使用 RoleSaveDTO 仅接收业务字段，tenantId 由 Service 层通过 BaseContext 强制设置。</p>
+     *
+     * @param dto 角色信息
      * @return 操作结果
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增角色", description = "创建新角色，需提供角色名称和编码")
     public R<String> add(
-            @Parameter(description = "角色信息") @Valid @RequestBody Role role) {
-        role.setIsDeleted(0);
-        roleService.save(role);
+            @Parameter(description = "角色信息") @Valid @RequestBody RoleSaveDTO dto) {
+        roleService.addTenantRole(dto.getRoleName(), dto.getRoleKey(),
+                dto.getDescription(), dto.getSort(), dto.getStatus());
         return R.success("角色创建成功");
     }
 
     /**
      * 修改角色
-     * @param role 角色信息
+     * <p>租户安全：使用 RoleUpdateDTO，Service 层先校验归属再更新业务字段，
+     * 绕过全实体覆盖漏洞。</p>
+     *
+     * @param dto 角色信息
      * @return 操作结果
      */
     @PutMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改角色", description = "更新角色信息")
     public R<String> update(
-            @Parameter(description = "角色信息") @Valid @RequestBody Role role) {
-        roleService.updateById(role);
+            @Parameter(description = "角色信息") @Valid @RequestBody RoleUpdateDTO dto) {
+        roleService.updateTenantRole(dto.getId(), dto.getRoleName(), dto.getRoleKey(),
+                dto.getDescription(), dto.getSort(), dto.getStatus());
         return R.success("角色更新成功");
     }
 
     /**
      * 删除角色（逻辑删除）
+     * <p>租户安全：Service 层先校验该角色属于当前租户，再执行级联删除。</p>
+     *
      * @param id 角色ID
      * @return 操作结果
      */
     @DeleteMapping("/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除角色", description = "逻辑删除指定角色并清理角色-权限关联")
-    @Parameter(description = "I d")
     public R<String> delete(@Parameter(description = "角色ID") @PathVariable Long id) {
-        // 修改点：逻辑删除角色的同时清理 role_permission 关联，避免产生孤儿数据
-        rolePermissionMapper.delete(
-            new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, id));
-        Role role = roleService.getById(id);
-        if (role != null) {
-            role.setIsDeleted(1);
-            roleService.updateById(role);
-        }
+        // 租户安全删除：先校验归属再执行级联删除
+        roleService.deleteTenantRole(id);
         // 角色权限变更，清除角色与员工权限缓存
         permissionService.clearPermissionCache(id);
         permissionAspect.clearAllEmployeePermissionCache();
@@ -176,7 +174,6 @@ public class RoleController {
      */
     @GetMapping("/{id}/permissions")
     @Operation(summary = "查询角色权限", description = "获取指定角色已分配的权限ID列表")
-    @Parameter(description = "I d")
     public R<List<Long>> getPermissions(@Parameter(description = "角色ID") @PathVariable Long id) {
         List<Long> permIds = roleService.getPermissionIds(id);
         return R.success(permIds);
@@ -189,9 +186,9 @@ public class RoleController {
      * @return 操作结果
      */
     @PutMapping("/{id}/permissions")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "分配角色权限", description = "为角色批量分配权限")
     public R<String> assignPermissions(
-            @Parameter(description = "I d")
             @Parameter(description = "角色ID") @PathVariable Long id,
             @Parameter(description = "权限ID列表") @RequestBody Map<String, List<Long>> body) {
         List<Long> permissionIds = body.get("permissionIds");

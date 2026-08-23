@@ -2,6 +2,7 @@ package com.reggie.module.marketing.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.marketing.model.FullReductionRule;
 import com.reggie.module.marketing.model.DiscountRule;
 import com.reggie.module.marketing.model.CampaignUsageRecord;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.reggie.common.RateLimit;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -35,6 +37,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/marketing")
 @Tag(name = "Marketing Activity Management")
+@RequireEmployee
 public class MarketingController {
 
     @Autowired
@@ -52,6 +55,7 @@ public class MarketingController {
     }
 
     @PostMapping("/full-reduction")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Save full reduction rule")
     public R<String> saveFullReductionRule(@RequestBody FullReductionRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -61,6 +65,7 @@ public class MarketingController {
     }
 
     @PutMapping("/full-reduction")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update full reduction rule")
     public R<String> updateFullReductionRule(@RequestBody FullReductionRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -70,6 +75,7 @@ public class MarketingController {
     }
 
     @DeleteMapping("/full-reduction/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Delete full reduction rule")
     public R<String> deleteFullReductionRule(@Parameter(description = "ID") @PathVariable Long id) {
         boolean success = marketingService.deleteFullReductionRule(id);
@@ -77,6 +83,7 @@ public class MarketingController {
     }
 
     @PostMapping("/full-reduction/batch")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "Batch save full reduction rules")
     public R<String> batchSaveFullReductionRules(@RequestBody List<FullReductionRule> rules) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -99,6 +106,7 @@ public class MarketingController {
     }
 
     @PostMapping("/discount")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Save discount rule")
     public R<String> saveDiscountRule(@RequestBody DiscountRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -108,6 +116,7 @@ public class MarketingController {
     }
 
     @PutMapping("/discount")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update discount rule")
     public R<String> updateDiscountRule(@RequestBody DiscountRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -117,6 +126,7 @@ public class MarketingController {
     }
 
     @DeleteMapping("/discount/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Delete discount rule")
     public R<String> deleteDiscountRule(@Parameter(description = "ID") @PathVariable Long id) {
         boolean success = marketingService.deleteDiscountRule(id);
@@ -124,6 +134,7 @@ public class MarketingController {
     }
 
     @PostMapping("/discount/batch")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "Batch save discount rules")
     public R<String> batchSaveDiscountRules(@RequestBody List<DiscountRule> rules) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -137,6 +148,7 @@ public class MarketingController {
     // ==================== Marketing Calculation ====================
 
     @PostMapping("/calculate/full-reduction")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Calculate full reduction discount")
     public R<BigDecimal> calculateFullReduction(
             @Parameter(description = "Campaign ID") @RequestParam Long campaignId,
@@ -148,6 +160,7 @@ public class MarketingController {
     }
 
     @PostMapping("/calculate/discount")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Calculate discount")
     public R<BigDecimal> calculateDiscount(
             @Parameter(description = "Campaign ID") @RequestParam Long campaignId,
@@ -160,6 +173,7 @@ public class MarketingController {
     }
 
     @PostMapping("/calculate/best")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Calculate best discount")
     public R<Map<String, Object>> calculateBestDiscount(
             @Parameter(description = "Order amount") @RequestParam BigDecimal orderAmount,

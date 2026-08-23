@@ -455,10 +455,16 @@
   font-size: var(--font-size-sm) !important;
 }
 
-/* 统一表格内容垂直居中 */
+/* 统一表格内容垂直居中 + 密度（padding 13px 0 与 components.css crud 规范一致） */
 .tableBox.el-table td {
   vertical-align: middle;
   font-size: var(--font-size-base);
+  padding: 13px 0;
+}
+
+/* 表格行高统一（与 crud-table 的 48px 视觉密度一致，保证手写 el-table 与 crud 表格对齐） */
+.tableBox.el-table .el-table__row {
+  height: 48px;
 }
 
 /* 增强斑马纹对比度（与 crud 表格一致） */

@@ -20,7 +20,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -315,6 +314,18 @@ public class SetmealController {
                 .filter(s -> !s.isEmpty())
                 .map(Long::parseLong)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取套餐统计数据（轻量接口，仅COUNT查询，不拉取全量数据）
+     * @return 统计数据（total/active/inactive）
+     */
+    @RequireEmployee
+    @GetMapping("/stats")
+    @Operation(summary = "套餐统计", description = "获取套餐统计数据（总数、起售数、停售数），轻量COUNT查询")
+    public R<Map<String, Object>> stats() {
+        Map<String, Object> stats = setmealService.getStats();
+        return R.success(stats);
     }
 
     /**

@@ -80,11 +80,6 @@ public interface AIChatService extends IService<AIConversation> {
     void deleteConversation(String conversationId, Long userId);
 
     /**
-     * 保存消息记录
-     */
-    void saveMessage(AIMessageRecord record);
-
-    /**
      * 记录用户反馈
      */
     void recordFeedback(Long messageId, String feedbackType, Long userId);
@@ -100,4 +95,25 @@ public interface AIChatService extends IService<AIConversation> {
      * 重置对话上下文（清除缓存，保留历史记录）
      */
     void resetContext(String conversationId);
+
+    /**
+     * 按标题关键词搜索对话（含用户过滤和逻辑删除过滤）
+     * <p>域4 改造：从 AIChatController 下沉，Controller 不再直接操作 Mapper</p>
+     *
+     * @param userId   当前用户ID
+     * @param keyword  搜索关键词（同时匹配 title 和 scene）
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 匹配的对话列表
+     */
+    List<AIConversation> searchConversations(Long userId, String keyword, int page, int pageSize);
+
+    /**
+     * 验证对话所有权（按对话ID查询 userId 和 isDeleted）
+     * <p>域4 改造：从 AIChatController 下沉</p>
+     *
+     * @param conversationId 对话ID
+     * @return 对话所属用户ID（未找到或已删除返回 null）
+     */
+    Long validateConversationOwnership(String conversationId);
 }

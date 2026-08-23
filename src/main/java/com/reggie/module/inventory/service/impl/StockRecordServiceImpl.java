@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.common.BatchFillHelper;
 import com.reggie.common.CustomException;
 import com.reggie.common.utils.PageUtils;
 import com.reggie.module.inventory.mapper.MaterialMapper;
@@ -23,7 +24,6 @@ import org.springframework.util.CollectionUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -151,25 +151,12 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
             r.setQuantity(r.getQty());
         }
 
-        List<Long> materialIds = records.stream()
-                .map(StockRecord::getMaterialId)
-                .filter(id -> id != null)
-                .distinct()
-                .collect(Collectors.toList());
-        if (materialIds.isEmpty()) return;
-
-        Map<Long, String> nameMap = materialService.list(
-                new LambdaQueryWrapper<Material>().in(Material::getId, materialIds))
-                .stream().collect(Collectors.toMap(
-                        Material::getId,
-                        Material::getName,
-                        (v1, v2) -> v1));
-
-        for (StockRecord r : records) {
-            if (r.getMaterialId() != null) {
-                r.setMaterialName(nameMap.get(r.getMaterialId()));
-            }
-        }
+        BatchFillHelper.fillNames(
+                records,
+                StockRecord::getMaterialId,
+                ids -> materialService.list(new LambdaQueryWrapper<Material>().in(Material::getId, ids))
+                        .stream().collect(Collectors.toMap(Material::getId, Material::getName, (v1, v2) -> v1)),
+                StockRecord::setMaterialName);
     }
 }
 

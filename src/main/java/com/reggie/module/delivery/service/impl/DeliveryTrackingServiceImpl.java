@@ -2,6 +2,8 @@ package com.reggie.module.delivery.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.module.delivery.mapper.RiderMapper;
 import com.reggie.module.delivery.mapper.RiderLocationRecordMapper;
 import com.reggie.module.delivery.mapper.DeliveryTimeRecordMapper;
@@ -16,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -90,6 +91,11 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         if (rider == null) {
             return false;
         }
+        // 租户归属校验：防止跨租户篡改骑手状态
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(rider.getTenantId())) {
+            throw new CustomException("无权操作其他门店的骑手");
+        }
         rider.setStatus(status);
         rider.setUpdateTime(LocalDateTime.now());
         return riderMapper.updateById(rider) > 0;
@@ -101,10 +107,14 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
     @Transactional(rollbackFor = Exception.class)
     public boolean updateRiderLocation(Long riderId, BigDecimal longitude, BigDecimal latitude,
                                         BigDecimal speed, BigDecimal direction) {
-        // Update rider current location
         Rider rider = riderMapper.selectById(riderId);
         if (rider == null) {
             return false;
+        }
+        // 租户归属校验：防止跨租户伪造骑手位置
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(rider.getTenantId())) {
+            throw new CustomException("无权操作其他门店的骑手");
         }
 
         rider.setCurrentLongitude(longitude);

@@ -20,6 +20,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -262,8 +263,8 @@ public class PermissionAspect {
                     } finally {
                         try {
                             cursor.close();
-                        } catch (Exception ignored) {
-                            // cursor close silently
+                        } catch (IOException ex) {
+                            log.warn("[权限缓存] cursor 关闭异常", ex);
                         }
                     }
                     return result;
@@ -274,7 +275,7 @@ public class PermissionAspect {
                 log.info("[权限缓存] 已清除全部员工权限缓存，共{}条", keys.size());
             }
         } catch (Exception e) {
-            log.warn("[权限缓存] 清除全部员工权限缓存失败：{}", e.getMessage());
+            log.warn("[权限缓存] 清除全部员工权限缓存失败：{}", e.getMessage(), e);
         }
     }
 }

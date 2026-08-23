@@ -13,6 +13,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.RequestBuilder;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -31,19 +33,34 @@ public class PrinterConfigControllerTest {
     @Autowired
     private PrinterConfigService printerConfigService;
 
+    private static final long EMPLOYEE_ID = 1L;
+    private static final long TENANT_ID = 1L;
+
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        // 服务层/权限切面需要用到的上下文（ThreadLocal）
+        BaseContext.setCurrentId(EMPLOYEE_ID);
+        BaseContext.setCurrentTenantId(TENANT_ID);
+    }
+
+    /**
+     * 员工会话：EmployeeGuardAspect 在 MockMvc 下读不到 @WebFilter 写入的 request 属性
+     * employeeId，回退到 session 属性 "employee"（Long）。每个请求都必须带上该会话属性，
+     * 否则切面返回 code=0（无权限），导致接口被拒。
+     */
+    private RequestBuilder withEmployee(RequestBuilder builder) {
+        return ((MockHttpServletRequestBuilder) builder)
+                .sessionAttr("employee", EMPLOYEE_ID)
+                .sessionAttr("tenantId", TENANT_ID);
     }
 
     @Test
     void testSavePrinterConfig() throws Exception {
-        mockMvc.perform(post("/printer/config")
+        mockMvc.perform(withEmployee(post("/printer/config")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"tenantId\":1,\"name\":\"测试打印机\",\"type\":\"NETWORK\",\"printType\":\"KITCHEN\",\"sort\":1}"))
+                .content("{\"tenantId\":1,\"name\":\"测试打印机\",\"type\":\"NETWORK\",\"printType\":\"KITCHEN\",\"sort\":1}")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").exists());
+                .andExpect(jsonPath("$.code").value(1));
     }
 
     @Test
@@ -55,11 +72,11 @@ public class PrinterConfigControllerTest {
         config.setTenantId(1L);
         printerConfigService.save(config);
 
-        mockMvc.perform(put("/printer/config")
+        mockMvc.perform(withEmployee(put("/printer/config")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":" + config.getId() + ",\"name\":\"新名称\",\"type\":\"NETWORK\",\"printType\":\"KITCHEN\",\"sort\":1}"))
+                .content("{\"id\":" + config.getId() + ",\"name\":\"新名称\",\"type\":\"NETWORK\",\"printType\":\"KITCHEN\",\"sort\":1}")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").exists());
+                .andExpect(jsonPath("$.code").value(1));
     }
 
     @Test
@@ -71,9 +88,9 @@ public class PrinterConfigControllerTest {
         config.setTenantId(1L);
         printerConfigService.save(config);
 
-        mockMvc.perform(delete("/printer/config/" + config.getId()))
+        mockMvc.perform(withEmployee(delete("/printer/config/" + config.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").exists());
+                .andExpect(jsonPath("$.code").value(1));
     }
 
     @Test
@@ -85,16 +102,17 @@ public class PrinterConfigControllerTest {
         config.setTenantId(1L);
         printerConfigService.save(config);
 
-        mockMvc.perform(get("/printer/config/" + config.getId()))
+        mockMvc.perform(withEmployee(get("/printer/config/" + config.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").exists());
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.name").value("查询测试打印机"));
     }
 
     @Test
     void testGetPrinterConfigByIdNotFound() throws Exception {
-        mockMvc.perform(get("/printer/config/999"))
+        mockMvc.perform(withEmployee(get("/printer/config/999")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").exists());
+                .andExpect(jsonPath("$.code").value(0));
     }
 
     @Test
@@ -110,34 +128,45 @@ public class PrinterConfigControllerTest {
         PrinterConfig config2 = new PrinterConfig();
         config2.setName("打印机2");
         config2.setType("BLUETOOTH");
-        config2.setPrintType("KITCHEN");
+        config2.setPrintType("BILL");
         config2.setTenantId(1L);
         config2.setSort(2);
         printerConfigService.save(config2);
 
-        mockMvc.perform(get("/printer/config/list"))
+        // 不过滤：返回全部
+        mockMvc.perform(withEmployee(get("/printer/config/list")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").exists())
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(2));
+
+        // 按 printType 过滤（print_types 字段，逗号分隔集合）
+        mockMvc.perform(withEmployee(get("/printer/config/list")
+                .param("printType", "KITCHEN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].printType").value("KITCHEN"));
     }
 
     @Test
     void testPagePrinterConfigs() throws Exception {
-        mockMvc.perform(get("/printer/config/page")
+        mockMvc.perform(withEmployee(get("/printer/config/page")
                 .param("page", "1")
-                .param("pageSize", "10"))
+                .param("pageSize", "10")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").exists());
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").exists());
     }
 
     @Test
     void testPagePrinterConfigsWithName() throws Exception {
-        mockMvc.perform(get("/printer/config/page")
+        mockMvc.perform(withEmployee(get("/printer/config/page")
                 .param("page", "1")
                 .param("pageSize", "10")
-                .param("name", "测试"))
+                .param("name", "测试")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").exists());
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").exists());
     }
 }
-

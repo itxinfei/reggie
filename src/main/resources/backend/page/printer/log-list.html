@@ -32,7 +32,7 @@
         @reset="reset">
         <template slot="search-extra">
           <el-input v-model="query.orderId" placeholder="订单号" clearable @keyup.enter.native="search">
-            <i slot="prefix" class="el-input__icon el-icon-search" style="cursor:pointer" @click="search"></i>
+            <i slot="prefix" class="el-input__icon el-icon-search" style="cursor:pointer" @click="search" role="button" aria-label="搜索" tabindex="0"></i>
           </el-input>
           <el-select v-model="query.printType" placeholder="打印类型" clearable @change="search">
             <el-option label="小票" value="ORDER"></el-option>

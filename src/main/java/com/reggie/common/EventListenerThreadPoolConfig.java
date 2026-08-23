@@ -3,7 +3,6 @@ package com.reggie.common;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
@@ -39,6 +38,7 @@ public class EventListenerThreadPoolConfig {
         executor.setTaskDecorator(runnable -> {
             Long currentId = BaseContext.getCurrentId();
             Long currentTenantId = BaseContext.getCurrentTenantId();
+            String currentTraceId = BaseContext.getCurrentTraceId();
             return () -> {
                 try {
                     if (currentId != null) {
@@ -46,6 +46,9 @@ public class EventListenerThreadPoolConfig {
                     }
                     if (currentTenantId != null) {
                         BaseContext.setCurrentTenantId(currentTenantId);
+                    }
+                    if (currentTraceId != null) {
+                        BaseContext.setCurrentTraceId(currentTraceId);
                     }
                     runnable.run();
                 } finally {

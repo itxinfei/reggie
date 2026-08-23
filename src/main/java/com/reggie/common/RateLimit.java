@@ -37,6 +37,12 @@ public @interface RateLimit {
     String keyPrefix() default "rate_limit:";
 
     /**
+     * 限流窗口时间（秒）
+     * 决定滑动窗口的大小，控制 Redis key 的过期时间
+     */
+    int time() default 1;
+
+    /**
      * 是否启用限流
      */
     boolean enabled() default true;

@@ -24,12 +24,4 @@ public interface PointsRecordService extends IService<PointsRecord> {
      * @return 分页积分流水
      */
     Page<PointsRecord> listByMember(Long memberId, int page, int pageSize);
-
-    /**
-     * 查询会员的积分余额
-     *
-     * @param memberId 会员ID
-     * @return 积分余额
-     */
-    int getBalance(Long memberId);
 }

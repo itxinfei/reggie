@@ -17,9 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-
-import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -623,46 +620,75 @@ public class ReportServiceImpl implements ReportService {
             LocalDate start = LocalDate.parse(startDate);
             LocalDate end = LocalDate.parse(endDate);
 
-            // 按天遍历
-            for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
-                dates.add(date.toString().substring(5)); // MM-DD 格式
+            // 生成日期序列
+            List<String> dateKeys = new ArrayList<>();
+            LocalDate d = start;
+            while (!d.isAfter(end)) {
+                dateKeys.add(d.toString().substring(5)); // MM-DD 格式
+                d = d.plusDays(1);
+            }
 
-                // 查询当天的订单ID
-                LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
-                orderQw.between(Orders::getOrderTime, date.atStartOfDay(), date.atTime(LocalTime.MAX));
-                orderQw.select(Orders::getId);
-                List<Orders> dayOrders = orderService.list(orderQw);
+            // 一次性查询整个日期范围内的订单ID
+            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+            orderQw.between(Orders::getOrderTime, start.atStartOfDay(), end.atTime(LocalTime.MAX));
+            orderQw.select(Orders::getId);
+            List<Orders> allOrders = orderService.list(orderQw);
 
-                // 当天无订单，各菜品销量为0
-                if (dayOrders.isEmpty()) {
+            // 一次性查询整个日期范围内的订单详情
+            List<Long> allOrderIds;
+            if (!allOrders.isEmpty()) {
+                allOrderIds = allOrders.stream().map(Orders::getId).collect(Collectors.toList());
+                LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
+                detailQw.in(OrderDetail::getOrderId, allOrderIds);
+                detailQw.select(OrderDetail::getName, OrderDetail::getNumber);
+                List<OrderDetail> allDetails = orderDetailService.list(detailQw);
+
+                // 构建 orderId -> Order 的日期映射，用于确定每笔订单所属日期
+                Map<Long, String> orderIdToDateKey = new HashMap<>();
+                for (Orders order : allOrders) {
+                    if (order.getOrderTime() != null) {
+                        String dayKey = order.getOrderTime().toLocalDate().toString().substring(5);
+                        orderIdToDateKey.put(order.getId(), dayKey);
+                    }
+                }
+
+                // 按 dateKey -> dishName 聚合销量: (dateKey, dishName) -> totalNumber
+                Map<String, Map<String, Integer>> dateDishCountMap = new HashMap<>();
+                for (OrderDetail detail : allDetails) {
+                    if (detail.getName() == null) continue;
+                    Long orderId = detail.getOrderId();
+                    String dayKey = orderIdToDateKey.get(orderId);
+                    if (dayKey == null) continue;
+                    int qty = detail.getNumber() != null ? detail.getNumber() : 0;
+                    dateDishCountMap
+                            .computeIfAbsent(dayKey, k -> new HashMap<>())
+                            .merge(detail.getName(), qty, Integer::sum);
+                }
+
+                // 填充各菜品每天的销量
+                for (String dateKey : dateKeys) {
+                    Map<String, Integer> dayCountMap = dateDishCountMap.get(dateKey);
+                    if (dayCountMap == null) {
+                        for (String name : dishNames) {
+                            dishDataMap.get(name.trim()).add(0);
+                        }
+                    } else {
+                        for (String name : dishNames) {
+                            String key = name.trim();
+                            dishDataMap.get(key).add(dayCountMap.getOrDefault(key, 0));
+                        }
+                    }
+                }
+            } else {
+                // 整个范围无订单，所有日期所有菜品均为0
+                for (String dateKey : dateKeys) {
                     for (String name : dishNames) {
                         dishDataMap.get(name.trim()).add(0);
                     }
-                    continue;
-                }
-
-                List<Long> dayOrderIds = dayOrders.stream().map(Orders::getId).collect(Collectors.toList());
-
-                // 查询当天的订单详情
-                LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
-                detailQw.in(OrderDetail::getOrderId, dayOrderIds);
-                detailQw.select(OrderDetail::getName, OrderDetail::getNumber);
-                List<OrderDetail> dayDetails = orderDetailService.list(detailQw);
-
-                // 按菜品名称聚合当天销量
-                Map<String, Integer> dayCountMap = new HashMap<>();
-                for (OrderDetail d : dayDetails) {
-                    if (d.getName() != null) {
-                        dayCountMap.merge(d.getName(), d.getNumber() != null ? d.getNumber() : 0, Integer::sum);
-                    }
-                }
-
-                // 填充各菜品的当天销量
-                for (String name : dishNames) {
-                    String key = name.trim();
-                    dishDataMap.get(key).add(dayCountMap.getOrDefault(key, 0));
                 }
             }
+
+            dates.addAll(dateKeys);
 
             // 构建 series 列表
             for (String name : dishNames) {

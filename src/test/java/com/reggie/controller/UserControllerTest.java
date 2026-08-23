@@ -3,7 +3,6 @@ package com.reggie.controller;
 import com.reggie.common.BaseContext;
 import com.reggie.module.user.model.User;
 import com.reggie.module.user.service.UserService;
-import com.reggie.dto.auth.UserSendMsgDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,9 +51,6 @@ public class UserControllerTest {
 
     @Test
     void testSendMsg() throws Exception {
-        UserSendMsgDTO dto = new UserSendMsgDTO();
-        dto.setPhone("13900139000");
-
         mockMvc.perform(post("/user/sendMsg")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"phone\":\"13900139000\"}"))

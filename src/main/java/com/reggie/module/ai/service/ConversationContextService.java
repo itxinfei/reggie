@@ -2,10 +2,11 @@ package com.reggie.module.ai.service;
 
 import com.reggie.module.ai.model.AIMessage;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
+import javax.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,6 +52,9 @@ public class ConversationContextService {
 
     /** 对话上下文缓存（conversationId → ContextState） */
     private final Map<String, ContextState> contextCache = new ConcurrentHashMap<>();
+
+    /** 定时清理调度器，应用关闭时需优雅停止 */
+    private java.util.concurrent.ScheduledExecutorService cleanupScheduler;
 
     /** 用户偏好关键词集合（用于提取关键信息） */
     private static final Set<String> PREFERENCE_KEYWORDS = new HashSet<>(Arrays.asList(
@@ -300,10 +304,10 @@ public class ConversationContextService {
         }
 
         if (!userPreferences.isEmpty()) {
-            sb.append("用户偏好：").append(String.join("、", userPreferences)).append("。\n");
+            sb.append("用户偏好：").append(StringUtils.join(userPreferences, "、")).append("。\n");
         }
         if (!entities.isEmpty()) {
-            sb.append("相关实体：").append(String.join("、", entities)).append("。\n");
+            sb.append("相关实体：").append(StringUtils.join(entities, "、")).append("。\n");
         }
         if (lastAction.length() > 0) {
             sb.append("上次对话：").append(lastAction.toString()).append("...");
@@ -349,11 +353,30 @@ public class ConversationContextService {
      */
     @PostConstruct
     public void init() {
-        java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+        this.cleanupScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "context-cleaner");
             t.setDaemon(true);
             return t;
-        }).scheduleAtFixedRate(this::cleanupExpired, 30, 30, java.util.concurrent.TimeUnit.MINUTES);
+        });
+        this.cleanupScheduler.scheduleAtFixedRate(this::cleanupExpired, 30, 30, java.util.concurrent.TimeUnit.MINUTES);
+    }
+
+    /**
+     * 应用关闭时优雅停止清理调度器
+     */
+    @PreDestroy
+    public void destroy() {
+        if (cleanupScheduler != null && !cleanupScheduler.isShutdown()) {
+            cleanupScheduler.shutdown();
+            try {
+                if (!cleanupScheduler.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    cleanupScheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                cleanupScheduler.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     private synchronized void cleanupExpired() {

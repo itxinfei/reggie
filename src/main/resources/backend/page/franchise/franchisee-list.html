@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>加盟商管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="franchisee-app">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">加盟商管理</h1>
+          <p class="ds-page-header__subtitle">管理加盟商档案，支撑加盟分账/抽成</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
+
+      <!-- 搜索 + 操作栏 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      ></table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :show-actions="true"
+        :actions-width="180"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+            {{ row.status === 1 ? '启用' : '禁用' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="editHandle(row)">修改</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
+        </template>
+      </crud-table>
+    </div>
+
+    <!-- 新增/编辑弹窗 -->
+    <crud-dialog
+      :title="formData.title"
+      :visible.sync="formData.dialogVisible"
+      :submit-loading="submitting"
+      width="40%"
+      @submit="submitForm"
+      @close="handleClose"
+    >
+      <el-form ref="franchiseeForm" :model="formData" :rules="formRules" label-width="100px" size="small">
+        <el-form-item label="加盟商名称：" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入加盟商名称" maxlength="100"></el-input>
+        </el-form-item>
+        <el-form-item label="联系人：" prop="contactPerson">
+          <el-input v-model="formData.contactPerson" placeholder="请输入联系人" maxlength="50"></el-input>
+        </el-form-item>
+        <el-form-item label="联系电话：" prop="contactPhone">
+          <el-input v-model="formData.contactPhone" placeholder="请输入联系电话" maxlength="20"></el-input>
+        </el-form-item>
+        <el-form-item label="联系地址：">
+          <el-input v-model="formData.address" placeholder="请输入联系地址" maxlength="255"></el-input>
+        </el-form-item>
+        <el-form-item label="状态：">
+          <el-radio-group v-model="formData.status">
+            <el-radio :label="1">启用</el-radio>
+            <el-radio :label="0">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="备注：">
+          <el-input v-model="formData.remark" type="textarea" :rows="2" placeholder="请输入备注" maxlength="500"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/components.js"></script>
+  <script src="../../api/franchise.js"></script>
+  <script>
+    new Vue({
+      el: '#franchisee-app',
+      data() {
+        return {
+          loading: false,
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
+          action: '',
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          // 搜索配置
+          searchConfig: [
+            { type: 'input', field: 'name', placeholder: '请输入加盟商名称', width: '220px' },
+            { type: 'select', field: 'status', placeholder: '请选择状态', width: '150px',
+              options: [
+                { label: '启用', value: '1' },
+                { label: '禁用', value: '0' }
+              ] }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'add', text: '+ 新增加盟商', type: 'primary' }
+          ],
+          // 表格列配置（对齐由 components.js resolveColAlign 统一控制：文本居中、金额/数字右对齐）
+          columns: [
+            { prop: 'name', label: '加盟商名称', minWidth: 140, showOverflowTooltip: true },
+            { prop: 'contactPerson', label: '联系人', width: 100 },
+            { prop: 'contactPhone', label: '联系电话', width: 130 },
+            { prop: 'address', label: '联系地址', minWidth: 180, showOverflowTooltip: true },
+            { prop: 'status', label: '状态', slot: true, width: 80 },
+            { prop: 'remark', label: '备注', minWidth: 120, showOverflowTooltip: true }
+          ],
+          // 弹窗表单
+          formData: {
+            title: '新增加盟商',
+            dialogVisible: false,
+            id: '',
+            name: '',
+            contactPerson: '',
+            contactPhone: '',
+            address: '',
+            status: 1,
+            remark: ''
+          },
+          formRules: {
+            name: [{ required: true, whitespace: true, message: '请输入加盟商名称', trigger: 'blur' }]
+          },
+          searchValues: {}
+        }
+      },
+      created() {
+        this.init()
+      },
+      methods: {
+        async init() {
+          this.loading = true
+          var sv = this.searchValues || {}
+          var params = {
+            page: this.page,
+            pageSize: this.pageSize,
+            name: sv.name || undefined,
+            status: sv.status || undefined
+          }
+          try {
+            var res = await franchiseePage(params)
+            if (String(res.code) === '1') {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          } catch (err) {
+            ReggieUI.error('请求失败：' + err)
+          }
+          this.loading = false
+        },
+        // table-bar 回调
+        onSearch(searchParams) {
+          this.searchValues = searchParams
+          this.page = 1
+          this.init()
+        },
+        onReset() {
+          this.searchValues = {}
+          this.page = 1
+          this.init()
+        },
+        onAction(payload) {
+          if (payload.key === 'add') this.addHandle()
+        },
+        // 分页
+        onPageChange(payload) {
+          this.page = payload.page
+          this.init()
+        },
+        onSizeChange(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.init()
+        },
+        // CRUD 操作
+        addHandle() {
+          this.action = 'add'
+          this.formData.title = '新增加盟商'
+          this.formData.id = ''
+          this.formData.name = ''
+          this.formData.contactPerson = ''
+          this.formData.contactPhone = ''
+          this.formData.address = ''
+          this.formData.status = 1
+          this.formData.remark = ''
+          this.formData.dialogVisible = true
+        },
+        editHandle(row) {
+          this.action = 'edit'
+          this.formData.title = '修改加盟商'
+          this.formData.id = row.id
+          this.formData.name = row.name
+          this.formData.contactPerson = row.contactPerson
+          this.formData.contactPhone = row.contactPhone
+          this.formData.address = row.address
+          this.formData.status = row.status
+          this.formData.remark = row.remark
+          this.formData.dialogVisible = true
+        },
+        submitForm() {
+          if (this.submitting) return // 提交防重
+          var self = this
+          var passed = false
+          self.$refs.franchiseeForm.validate(function(valid) { passed = valid })
+          if (!passed) {
+            ReggieUI.warning('请完善表单必填项')
+            return
+          }
+          if (!self.formData.name || !self.formData.name.trim()) {
+            ReggieUI.error('请输入加盟商名称'); return
+          }
+          var data = {
+            name: self.formData.name,
+            contactPerson: self.formData.contactPerson || null,
+            contactPhone: self.formData.contactPhone || null,
+            address: self.formData.address || null,
+            status: self.formData.status,
+            remark: self.formData.remark || null
+          }
+          self.submitting = true
+          if (this.action === 'add') {
+            addFranchisee(data).then(res => {
+              self.submitting = false
+              if (res.code === 1) {
+                ReggieUI.success('加盟商添加成功！')
+                self.formData.dialogVisible = false
+                self.init()
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(err => { self.submitting = false; ReggieUI.error('请求失败：' + err) })
+          } else {
+            data.id = self.formData.id
+            updateFranchisee(data).then(res => {
+              self.submitting = false
+              if (res.code === 1) {
+                ReggieUI.success('加盟商修改成功！')
+                self.formData.dialogVisible = false
+                self.init()
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(err => { self.submitting = false; ReggieUI.error('请求失败：' + err) })
+          }
+        },
+        deleteHandle(id) {
+          var self = this
+          ReggieUI.confirm('此操作将删除该加盟商, 是否继续?', '提示', {
+            confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
+          }).then(function() {
+            deleteFranchisee(id).then(res => {
+              if (res.code === 1) {
+                ReggieUI.success('删除成功！')
+                self.init()
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(err => { ReggieUI.error('请求失败：' + err) })
+          })
+        },
+        handleClose() {
+          this.formData.dialogVisible = false
+        }
+      }
+    })
+  </script>
+</body>
+</html>

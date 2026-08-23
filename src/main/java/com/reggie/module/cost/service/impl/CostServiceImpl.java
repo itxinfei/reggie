@@ -2,7 +2,6 @@ package com.reggie.module.cost.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.reggie.common.BaseContext;
 import com.reggie.module.cost.model.DishCost;
 import com.reggie.module.cost.model.CostRecord;
 import com.reggie.module.cost.model.LaborCost;
@@ -24,7 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 成本核算服务实现
@@ -409,7 +407,7 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
             qw.eq(DishCost::getTenantId, tenantId);
         }
         qw.orderByDesc(DishCost::getTotalCost);
-        qw.last("LIMIT " + limit);
+        qw.last("LIMIT " + sanitizeLimit(limit));
         List<DishCost> dishCosts = dishCostMapper.selectList(qw);
 
         List<Map<String, Object>> ranking = new ArrayList<>();
@@ -482,8 +480,16 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
             return "正常";
         }
     }
-}
 
+    /**
+     * 校验 LIMIT 参数，防止负值/过大值导致查询异常
+     * 修复说明：原实现 .last("LIMIT " + limit) 中 limit 为 int 类型，
+     * 虽不存在字符串注入，但负值/超大值会生成非法或性能恶化的 SQL。
+     */
+    private static int sanitizeLimit(int limit) {
+        return Math.max(1, Math.min(limit, 100));
+    }
+}
 
 
 

@@ -1,7 +1,14 @@
 package com.reggie.module.payment.channel;
 
+import com.reggie.module.payment.config.PaymentConfigProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Map;
 import java.util.UUID;
 
@@ -16,6 +23,10 @@ import java.util.UUID;
 @Slf4j
 @Component
 public class WechatPayChannel implements PaymentChannel {
+
+    /** 支付配置（回调验签所需 API 密钥、签名类型、mock-mode 开关） */
+    @Autowired
+    private PaymentConfigProperties paymentConfig;
 
     /**
      * 创建支付订单
@@ -80,29 +91,83 @@ public class WechatPayChannel implements PaymentChannel {
     }
 
     /**
-     * 校验微信支付回调签名。
+     * 校验微信支付回调签名（APIv2）。
      * <p>
-     * STUB 实现：仅校验必要参数（out_trade_no、sign）存在性。生产环境必须替换为
-     * {@code WxPayUtil.verifyNotifySign} 配合微信支付 API 密钥进行真实签名校验，
-     * 严禁保留此恒真逻辑上线。
+     * 真实校验：剔除 sign 后，其余参数按 key 字典序拼接
+     * {@code k1=v1&k2=v2...&key=API密钥}，计算 MD5（或 HMAC-SHA256）摘要转大写与 sign 比对。
+     * </p>
+     * <p>
+     * 安全开关：mock-mode=true（开发/演示）时跳过验签仅告警；
+     * mock-mode=false（生产）时必须配置微信 API 密钥，否则<b>拒绝回调</b>（fail-closed），
+     * 严禁恒真放行。
      * </p>
      *
      * @param params 回调参数
-     * @return true=必要参数齐全（待替换为真实签名校验）；false=参数缺失
+     * @return true=签名校验通过；false=校验失败
      */
     @Override
     public boolean verifyNotifySign(Map<String, String> params) {
-        if (params == null) {
+        if (params == null || params.isEmpty()) {
             return false;
         }
-        String outTradeNo = params.get("out_trade_no");
         String sign = params.get("sign");
-        if (outTradeNo == null || outTradeNo.trim().isEmpty() || sign == null || sign.trim().isEmpty()) {
-            log.warn("WechatPay 回调签名校验失败：缺少 out_trade_no 或 sign 参数，params={}", params);
+        if (sign == null || sign.trim().isEmpty()) {
+            log.warn("WechatPay 回调签名校验失败：缺少 sign 参数，params={}", params);
             return false;
         }
-        // TODO(生产环境必须替换): 使用 WxPayUtil.verifyNotifySign 进行真实签名校验
-        log.warn("WechatPay 回调签名校验为 STUB 实现，仅校验参数存在性，生产环境必须替换为真实签名校验");
-        return true;
+        if (paymentConfig.isMockMode()) {
+            log.warn("WechatPay 回调签名校验已跳过（mock-mode=true，仅限开发/演示），生产环境必须关闭 mock-mode 并配置微信 API 密钥");
+            return true;
+        }
+        String apiKey = paymentConfig.getWechatApiKey();
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            log.error("WechatPay 生产模式未配置微信 API 密钥（reggie.payment.wechat-api-key），拒绝回调（fail-closed）");
+            return false;
+        }
+        try {
+            // 1. 构建待签名串：剔除 sign，其余参数按 key 字典序拼接 k1=v1&k2=v2，末尾追加 &key=API密钥
+            StringBuilder content = new StringBuilder();
+            params.entrySet().stream()
+                    .filter(e -> !"sign".equals(e.getKey()))
+                    .filter(e -> e.getValue() != null && !e.getValue().trim().isEmpty())
+                    .sorted(java.util.Map.Entry.comparingByKey())
+                    .forEach(e -> {
+                        if (content.length() > 0) {
+                            content.append("&");
+                        }
+                        content.append(e.getKey()).append("=").append(e.getValue());
+                    });
+            content.append("&key=").append(apiKey);
+
+            // 2. 计算签名摘要
+            byte[] digest;
+            if ("HMAC-SHA256".equalsIgnoreCase(paymentConfig.getWechatSignType())) {
+                Mac mac = Mac.getInstance("HmacSHA256");
+                mac.init(new SecretKeySpec(apiKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+                digest = mac.doFinal(content.toString().getBytes(StandardCharsets.UTF_8));
+            } else {
+                MessageDigest md5 = MessageDigest.getInstance("MD5");
+                digest = md5.digest(content.toString().getBytes(StandardCharsets.UTF_8));
+            }
+            String computed = bytesToHex(digest).toUpperCase();
+
+            boolean ok = computed.equals(sign.trim().toUpperCase());
+            if (!ok) {
+                log.warn("WechatPay 回调签名校验失败（MD5/HMAC-SHA256 不通过），out_trade_no={}", params.get("out_trade_no"));
+            }
+            return ok;
+        } catch (Exception e) {
+            log.error("WechatPay 回调签名校验异常: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /** 字节数组转十六进制字符串 */
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) {
+            sb.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+        }
+        return sb.toString();
     }
 }

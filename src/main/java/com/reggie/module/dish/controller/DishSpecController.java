@@ -2,6 +2,8 @@ package com.reggie.module.dish.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.dish.model.DishSpecGroup;
 import com.reggie.module.dish.model.DishSpecOption;
 import com.reggie.module.dish.service.DishSpecService;
@@ -32,6 +34,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/dish/spec")
 @Tag(name = "菜品规格管理")
+@RequireEmployee
 public class DishSpecController {
 
     @Autowired
@@ -49,13 +52,13 @@ public class DishSpecController {
 
     @GetMapping("/group/{id}")
     @Operation(summary = "获取规格组详情")
-    @Parameter(description = "I d")
     public R<DishSpecGroup> getSpecGroupById(@PathVariable Long id) {
         DishSpecGroup group = dishSpecService.getSpecGroupById(id);
         return R.success(group);
     }
 
     @PostMapping("/group")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存规格组")
     public R<String> saveSpecGroup(@RequestBody DishSpecGroup group) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -65,6 +68,7 @@ public class DishSpecController {
     }
 
     @PutMapping("/group")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新规格组")
     public R<String> updateSpecGroup(@RequestBody DishSpecGroup group) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -74,8 +78,8 @@ public class DishSpecController {
     }
 
     @DeleteMapping("/group/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除规格组")
-    @Parameter(description = "I d")
     public R<String> deleteSpecGroup(@PathVariable Long id) {
         boolean success = dishSpecService.deleteSpecGroup(id);
         return success ? R.success("删除成功") : R.error("删除失败");
@@ -93,6 +97,7 @@ public class DishSpecController {
     }
 
     @PostMapping("/option")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存规格选项")
     public R<String> saveSpecOption(@RequestBody DishSpecOption option) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -102,6 +107,7 @@ public class DishSpecController {
     }
 
     @PutMapping("/option")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新规格选项")
     public R<String> updateSpecOption(@RequestBody DishSpecOption option) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -111,14 +117,15 @@ public class DishSpecController {
     }
 
     @DeleteMapping("/option/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除规格选项")
-    @Parameter(description = "I d")
     public R<String> deleteSpecOption(@PathVariable Long id) {
         boolean success = dishSpecService.deleteSpecOption(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
 
     @PostMapping("/option/batch")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量保存规格选项")
     public R<String> batchSaveSpecOptions(@RequestBody List<DishSpecOption> options) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -141,6 +148,7 @@ public class DishSpecController {
     }
 
     @PostMapping("/dish/{dishId}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "设置菜品规格关联")
     public R<String> setDishSpecGroups(
             @Parameter(description = "Dish ID")
@@ -152,6 +160,7 @@ public class DishSpecController {
     }
 
     @DeleteMapping("/dish/{dishId}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除菜品规格关联")
     @Parameter(description = "DishId")
     public R<String> deleteDishSpecRelations(@PathVariable Long dishId) {
@@ -162,6 +171,7 @@ public class DishSpecController {
     // ==================== 规格价格计算 ====================
 
     @PostMapping("/price/calculate")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "计算规格价格")
     public R<BigDecimal> calculateSpecPrice(
                         @Parameter(description = "菜品ID") @RequestParam Long dishId,

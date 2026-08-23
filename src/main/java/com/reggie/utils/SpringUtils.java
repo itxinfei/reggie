@@ -3,7 +3,6 @@ package com.reggie.utils;
 import cn.hutool.core.bean.BeanUtil;
 import com.reggie.common.ApplicationContextProvider;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.context.request.RequestContextHolder;

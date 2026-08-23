@@ -58,8 +58,8 @@
           <el-tag size="mini" effect="plain" :type="methodTag(row.requestMethod)">{{ row.requestMethod }}</el-tag>
         </template>
         <template #col-isSuccess="{ row }">
-          <i class="el-icon-circle-check" style="color:var(--color-success);font-size:16px;" v-if="row.isSuccess === 1"></i>
-          <i class="el-icon-circle-close" style="color:var(--color-danger);font-size:16px;" v-else-if="row.isSuccess === 0"></i>
+          <i class="el-icon-circle-check" style="color:var(--color-success);font-size:var(--font-size-lg);" v-if="row.isSuccess === 1"></i>
+          <i class="el-icon-circle-close" style="color:var(--color-danger);font-size:var(--font-size-lg);" v-else-if="row.isSuccess === 0"></i>
           <span v-else>-</span>
         </template>
         <template #col-operatorName="{ row }">

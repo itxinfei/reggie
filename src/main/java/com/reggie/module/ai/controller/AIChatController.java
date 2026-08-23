@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.RateLimitType;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.ai.mapper.AIConversationMapper;
 import com.reggie.module.ai.model.AIChatRequest;
 import com.reggie.module.ai.model.AIChatResponse;
@@ -70,6 +73,8 @@ public class AIChatController {
      * @return AI回复结果
      */
     @PostMapping("/chat")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 2, type = RateLimitType.USER)
     @Operation(summary = "通用AI对话", description = "支持多场景：点餐推荐、菜品描述、经营分析、营销文案")
     public R<AIChatResponse> chat(@Valid @RequestBody AIChatRequest request) {
         Long userId = BaseContext.getCurrentId();
@@ -103,6 +108,8 @@ public class AIChatController {
      * @return SSE流式响应
      */
     @GetMapping("/chat/stream")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
     @Operation(summary = "AI流式对话", description = "SSE流式输出，逐字显示AI回复")
     @Parameter(description = "Message")
     public SseEmitter chatStream(@RequestParam String message, @RequestParam(required = false) String scene,
@@ -132,6 +139,8 @@ public class AIChatController {
      * @return AI推荐结果
      */
     @PostMapping("/order-assistant")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 2, type = RateLimitType.USER)
     @Operation(summary = "智能点餐助手", description = "用户用自然语言描述需求，AI推荐最合适的菜品")
     public R<AIChatResponse> orderAssistant(@RequestBody Map<String, Object> params) {
         String message = (String) params.getOrDefault("message", "");
@@ -165,6 +174,8 @@ public class AIChatController {
      * @return SSE流式响应
      */
     @GetMapping("/order-assistant/stream")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
     @Operation(summary = "智能点餐助手（流式）", description = "SSE流式输出推荐结果")
     @Parameter(description = "Message")
     public SseEmitter orderAssistantStream(@RequestParam String message,
@@ -183,6 +194,8 @@ public class AIChatController {
      * @return 菜品描述文案
      */
     @PostMapping("/dish-description")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
     @Operation(summary = "AI菜品描述生成", description = "输入菜品名称，AI生成专业美食描述文案")
     public R<String> generateDishDescription(@RequestBody Map<String, String> params) {
         String dishName = params.get("dishName");
@@ -199,6 +212,8 @@ public class AIChatController {
      * @return AI分析结果
      */
     @PostMapping("/business-analysis")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
     @Operation(summary = "AI经营分析", description = "输入经营数据和问题，AI提供专业分析")
     public R<String> analyzeBusiness(@RequestBody Map<String, String> params) {
         String question = params.get("question");
@@ -239,6 +254,7 @@ public class AIChatController {
      * @return 对话列表
      */
     @GetMapping("/conversations")
+    @RequireEmployee
     @Operation(summary = "获取对话列表", description = "获取当前用户的AI对话历史列表")
     @Parameter(description = "Page")
     public R<List<AIConversation>> getConversations(@RequestParam(defaultValue = "1") int page,
@@ -255,6 +271,7 @@ public class AIChatController {
      * @return 消息历史列表
      */
     @GetMapping("/conversations/{conversationId}")
+    @RequireEmployee
     @Operation(summary = "获取对话详情", description = "获取指定对话的消息历史")
     @Parameter(description = "ConversationId")
     public R<List<AIMessageRecord>> getConversationDetail(@PathVariable String conversationId) {
@@ -268,6 +285,8 @@ public class AIChatController {
      * @return 创建的对话信息
      */
     @PostMapping("/conversations")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     @Operation(summary = "创建对话", description = "创建新的AI对话")
     public R<AIConversation> createConversation(@RequestBody(required = false) Map<String, String> params) {
         Long userId = BaseContext.getCurrentId();
@@ -283,6 +302,8 @@ public class AIChatController {
      * @return 操作结果
      */
     @DeleteMapping("/conversations/{conversationId}")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     @Operation(summary = "删除对话", description = "软删除指定对话")
     @Parameter(description = "ConversationId")
     public R<String> deleteConversation(@PathVariable String conversationId) {
@@ -299,6 +320,8 @@ public class AIChatController {
      * @return 操作结果
      */
     @PostMapping("/feedback")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10, type = RateLimitType.USER)
     @Operation(summary = "记录反馈", description = "用户对AI回复的反馈（有用/没用）")
     public R<String> recordFeedback(@RequestBody Map<String, Object> params) {
         Long userId = BaseContext.getCurrentId();
@@ -314,6 +337,7 @@ public class AIChatController {
      * 获取用户画像摘要
      */
     @GetMapping("/profile/summary")
+    @RequireEmployee
     @Operation(summary = "获取用户画像", description = "返回用户口味偏好、常点菜品等标签")
     public R<Map<String, Object>> getProfileSummary() {
         Long userId = BaseContext.getCurrentId();
@@ -365,6 +389,7 @@ public class AIChatController {
      * @return 匹配的对话列表
      */
     @GetMapping("/conversations/search")
+    @RequireEmployee
     @Operation(summary = "搜索对话", description = "按标题关键词搜索对话")
     @Parameter(description = "Keyword")
     public R<List<AIConversation>> searchConversations(@RequestParam String keyword,
@@ -392,6 +417,7 @@ public class AIChatController {
      * @return 操作结果
      */
     @PostMapping("/conversations/{conversationId}/reset")
+    @RequireEmployee
     @Operation(summary = "重置对话上下文", description = "清除对话的上下文缓存，保留历史消息记录")
     @Parameter(description = "ConversationId")
     public R<String> resetConversationContext(@PathVariable String conversationId) {
@@ -415,6 +441,7 @@ public class AIChatController {
      * @return 统计信息
      */
     @GetMapping("/conversations/{conversationId}/context-stats")
+    @RequireEmployee
     @Operation(summary = "上下文统计", description = "获取对话的上下文使用情况统计")
     @Parameter(description = "ConversationId")
     public R<Map<String, Object>> getContextStats(@PathVariable String conversationId) {

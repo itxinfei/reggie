@@ -2,6 +2,8 @@ package com.reggie.module.setmeal.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.dish.model.Dish;
 import com.reggie.module.setmeal.model.Setmeal;
 import com.reggie.module.setmeal.model.SetmealDish;
@@ -37,6 +39,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/setmeal-dish")
 @Slf4j
 @Tag(name = "套餐菜品关联管理", description = "套餐与菜品关联关系的独立CRUD接口")
+@RequireEmployee
 public class SetmealDishController {
 
     @Autowired
@@ -54,6 +57,7 @@ public class SetmealDishController {
      * @return 操作结果
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增套餐菜品关联", description = "向套餐中添加一个菜品关联")
     @Parameter(name = "setmealDish", description = "关联信息（套餐ID、菜品ID、份数、排序等）", required = true)
     public R<SetmealDish> save(@RequestBody SetmealDish setmealDish) {
@@ -76,6 +80,7 @@ public class SetmealDishController {
      * @return 操作结果
      */
     @PostMapping("/batch")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量新增套餐菜品关联", description = "向套餐中添加多个菜品关联")
     @Parameter(name = "setmealDishList", description = "关联信息列表", required = true)
     public R<String> saveBatch(@RequestBody List<SetmealDish> setmealDishList) {
@@ -118,6 +123,7 @@ public class SetmealDishController {
      * @return 操作结果
      */
     @PutMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改套餐菜品关联", description = "根据ID更新关联信息（份数、排序等）")
     @Parameter(name = "setmealDish", description = "关联信息（必须包含ID）", required = true)
     public R<String> update(@RequestBody SetmealDish setmealDish) {
@@ -141,6 +147,7 @@ public class SetmealDishController {
      * @return 操作结果
      */
     @DeleteMapping("/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除套餐菜品关联", description = "根据ID删除单个关联记录")
     @Parameter(name = "id", description = "关联ID", required = true)
     public R<String> delete(@PathVariable Long id) {
@@ -158,6 +165,7 @@ public class SetmealDishController {
      * @return 操作结果
      */
     @DeleteMapping
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量删除套餐菜品关联", description = "根据ID列表批量删除关联记录")
     @Parameter(name = "ids", description = "关联ID列表，逗号分隔（如 1,2,3）", required = true)
     public R<String> deleteBatch(@RequestParam String ids) {

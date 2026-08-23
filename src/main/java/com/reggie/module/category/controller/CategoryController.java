@@ -4,6 +4,7 @@ import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
 import com.reggie.module.category.model.Category;
@@ -95,10 +96,36 @@ public class CategoryController {
     @RateLimit(maxRequestsPerSecond = 10)
     @DeleteMapping("/{id}")
     @Operation(summary = "删除分类", description = "根据ID删除分类，删除前校验是否关联了菜品或套餐")
-    @Parameter(description = "I d")
     public R<String> delete(@PathVariable Long id) {
         log.info("删除分类，id={}", id);
         categoryService.remove(id);
+        return R.success("分类删除成功");
+    }
+
+    /**
+     * 批量删除分类
+     */
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @DeleteMapping
+    @Operation(summary = "批量删除分类", description = "根据逗号分隔的ID批量删除分类，删除前逐条校验关联性")
+    public R<String> deleteBatch(@RequestParam String ids) {
+        if (ids == null || ids.trim().isEmpty()) {
+            return R.error("请选择要删除的分类");
+        }
+        String[] split = ids.split(",");
+        List<Long> idList = new ArrayList<>();
+        for (String s : split) {
+            String trim = s.trim();
+            if (!trim.isEmpty()) {
+                idList.add(Long.parseLong(trim));
+            }
+        }
+        if (idList.isEmpty()) {
+            return R.error("请选择要删除的分类");
+        }
+        log.info("批量删除分类，ids={}", idList);
+        categoryService.remove(idList);
         return R.success("分类删除成功");
     }
 
@@ -112,10 +139,16 @@ public class CategoryController {
     @Operation(summary = "修改分类", description = "根据ID更新分类名称或排序，不允许修改分类类型")
     public R<String> update(@Valid @RequestBody Category category) {
         log.info("修改分类：id={}, name={}, sort={}", category.getId(), category.getName(), category.getSort());
+        // 安全：使用白名单字段更新，防止Mass Assignment攻击
+        LambdaUpdateWrapper<Category> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Category::getId, category.getId());
         if (category.getName() != null) {
-            category.setName(category.getName().trim());
+            updateWrapper.set(Category::getName, category.getName().trim());
         }
-        categoryService.updateById(category);
+        if (category.getSort() != null) {
+            updateWrapper.set(Category::getSort, category.getSort());
+        }
+        categoryService.update(updateWrapper);
         return R.success("分类修改成功");
     }
 
@@ -124,7 +157,6 @@ public class CategoryController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "查询分类详情", description = "根据ID查询分类信息")
-    @Parameter(description = "I d")
     public R<Category> get(@PathVariable Long id) {
         Category category = categoryService.getById(id);
         if (category == null) {

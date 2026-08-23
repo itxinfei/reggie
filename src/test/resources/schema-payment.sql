@@ -43,3 +43,10 @@ CREATE INDEX idx_payment_order_order ON payment_order (order_id);
 CREATE INDEX idx_payment_order_trade ON payment_order (trade_no);
 CREATE INDEX idx_refund_record_payment ON refund_record (payment_order_id);
 CREATE INDEX idx_refund_record_tenant ON refund_record (tenant_id);
+
+-- 测试支付单需要的业务订单（对应 testCreatePaymentOrder/testPayOrder/testRefund 中的 orderId=100/101/102）
+INSERT INTO orders (id, number, status, user_id, address_book_id, order_time, amount, user_name, phone, address, consignee, dining_type, create_time, update_time, tenant_id, is_deleted)
+VALUES
+  (100, 'PAY001', 1, 1, 1, CURRENT_TIMESTAMP, 99.99, '测试用户', '13800000001', '测试地址', '张三', 'OUTSIDE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, 0),
+  (101, 'PAY002', 1, 1, 1, CURRENT_TIMESTAMP, 50.00, '测试用户', '13800000002', '测试地址', '李四', 'OUTSIDE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, 0),
+  (102, 'PAY003', 1, 1, 1, CURRENT_TIMESTAMP, 200.00, '测试用户', '13800000003', '测试地址', '王五', 'OUTSIDE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, 0);

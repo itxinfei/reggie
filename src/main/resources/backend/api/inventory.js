@@ -40,7 +40,20 @@ const stockCheckPage = (params) => $axios({ url: '/api/inventory/stock-check/pag
 const addStockCheck = (params) => $axios({ url: '/api/inventory/stock-check', method: 'post', data: params })
 const completeStockCheck = (id, params) => $axios({ url: `/api/inventory/stock-check/complete/${id}`, method: 'put', data: params })
 
+// 库存预警与补货（域⑨）
+const materialWarningPage = (params) => $axios({ url: '/api/inventory/material/warning/page', method: 'get', params })
+const materialWarningStats = () => $axios({ url: '/api/inventory/material/warning-stats', method: 'get' })
+const materialReplenishSuggest = (params) => $axios({ url: '/api/inventory/material/replenish-suggest', method: 'get', params })
+const materialBatchRestock = (data) => $axios({ url: '/api/inventory/material/batch-restock', method: 'post', data })
+
 // 进销存统计
 const inventoryStatsOverview = () => $axios({ url: '/api/inventory/stats/overview', method: 'get' })
 const inventoryPurchaseTrend = () => $axios({ url: '/api/inventory/stats/purchase-trend', method: 'get' })
 const inventoryStockTrend = () => $axios({ url: '/api/inventory/stats/stock-trend', method: 'get' })
+
+// 菜品食材关联（BOM）
+const dishMaterialListByDish = (dishId) => $axios({ url: `/api/inventory/dish-material/listByDish/${dishId}`, method: 'get' })
+const dishMaterialSave = (params) => $axios({ url: '/api/inventory/dish-material', method: 'post', data: params })
+const dishMaterialUpdate = (id, params) => $axios({ url: `/api/inventory/dish-material/${id}`, method: 'put', data: params })
+const dishMaterialDelete = (id) => $axios({ url: `/api/inventory/dish-material/${id}`, method: 'delete' })
+const dishMaterialBatchSave = (params) => $axios({ url: '/api/inventory/dish-material/batchSave', method: 'post', data: params })

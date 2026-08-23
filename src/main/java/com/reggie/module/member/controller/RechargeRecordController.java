@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.member.model.Member;
 import com.reggie.module.member.model.RechargeRecord;
 import com.reggie.module.member.service.MemberService;
@@ -43,6 +44,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/member/recharge")
 @Tag(name = "充值记录")
+@RequireEmployee
 public class RechargeRecordController {
 
     @Autowired

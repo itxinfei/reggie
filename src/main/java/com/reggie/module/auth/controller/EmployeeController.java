@@ -12,6 +12,8 @@ import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.RateLimitType;
 import com.reggie.common.SecurityConstants;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.annotation.RequiresAdmin;
 import com.reggie.dto.auth.EmployeeLoginDTO;
 import com.reggie.module.auth.model.Employee;
 import com.reggie.enums.EmployeeRole;
@@ -37,6 +39,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -77,6 +80,21 @@ public class EmployeeController {
     private boolean smsMockMode;
 
     /**
+     * 忘记密码 Mock 模式开关（默认 false，仅开发环境通过配置开启）
+     * 安全说明：此开关独立于 smsMockMode，用于在开发环境跳过验证码校验；
+     * 生产环境必须为 false，防止攻击者绕过验证码重置任意账号密码。
+     * 额外保护：即使配置文件中误设 true，代码层面也强制要求 active profile 包含 dev/test 才生效。
+     */
+    @Value("${reggie.sms.forgot-password.mock-enabled:false}")
+    private boolean forgotPasswordMockEnabled;
+
+    /**
+     * 当前激活的 Spring Profile（dev/prod/test）
+     */
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
+
+    /**
      * 员工登录
      * @param request HTTP请求对象
      * @param loginDTO 登录信息
@@ -108,6 +126,14 @@ public class EmployeeController {
             return R.error("用户名或密码错误");
         }
 
+        //2a、员工状态检查（修复P0-5：原检查在密码校验之后，禁用用户可完成登录并触发密码升级）
+        // 修复说明：状态检查必须在密码校验和密码升级之前执行，避免禁用用户完成完整登录流程，
+        // 且状态检查失败不应记录登录失败次数（避免攻击者通过错误信息探测账号状态）。
+        if (emp.getStatus() != null && UserStatus.DISABLED.getValue() == emp.getStatus().intValue()) {
+            log.warn("禁用账号尝试登录 - 用户名：{}", LogMaskUtils.maskUsername(loginDTO.getUsername()));
+            return R.error("用户名或密码错误");
+        }
+
         //3、密码校验（支持MD5和BCrypt）
         String rawPassword = loginDTO.getPassword();
         String encodedPassword = emp.getPassword();
@@ -132,17 +158,12 @@ public class EmployeeController {
             }
         }
 
-        //5、查看员工状态，如果为已禁用状态，则返回员工已禁用结果
-        if (emp.getStatus() != null && UserStatus.DISABLED.getValue() == emp.getStatus().intValue()) {
-            return R.error("账号已禁用");
-        }
-
-        //6、登录成功，重置失败计数
+        //5、登录成功，重置失败计数
         if (bruteForceProtectionFilter != null) {
             bruteForceProtectionFilter.resetLoginAttempts(request);
         }
 
-        //7、登录成功，将员工id和租户id存入Session
+        //6、登录成功，将员工id和租户id存入Session
         // 注意：重新从数据库查询最新信息，确保租户上下文准确
         Employee freshEmp = employeeService.getById(emp.getId());
         Long sessionTenantId;
@@ -189,7 +210,7 @@ public class EmployeeController {
      */
     @PostMapping("/forgot-password")
     @Operation(summary = "忘记密码", description = "通过用户名、手机号和短信验证码验证后重置密码")
-    @RateLimit(maxRequestsPerSecond = 2)
+    @RateLimit(maxRequestsPerSecond = 1)
     public R<String> forgotPassword(HttpServletRequest request, @RequestBody Map<String, String> params, HttpSession session) {
         String username = params.get("username");
         String phone = params.get("phone");
@@ -210,29 +231,70 @@ public class EmployeeController {
             return R.error("新密码至少6位");
         }
 
-        // 修改点：Mock模式下跳过短信验证码校验，允许直接重置密码
-        if (!smsMockMode) {
-            if (code == null || code.trim().isEmpty()) {
-                return R.error("请输入短信验证码");
+        // 修改点：忘记密码接口强制校验短信验证码，不受 smsMockMode 影响
+        // 安全说明：forgotPassword 是密码重置入口，跳过验证码等价于允许任意人重置任意账号密码，
+        // 属严重安全缺陷。Mock 模式仅应用于登录场景的短信发送模拟，不应延伸至密码重置。
+        // 如需在开发环境测试，通过 @Value 配置开关单独控制，且代码层面强制要求非生产环境。
+        if (forgotPasswordMockEnabled) {
+            // 二次防护：即使配置误设 true，生产环境仍强制要求验证码
+            if ("prod".equals(activeProfile) || "production".equals(activeProfile)) {
+                log.warn("[安全] 生产环境拒绝使用 forgotPassword mock 模式，强制要求验证码 - activeProfile={}", activeProfile);
+            } else {
+                log.warn("开发环境：忘记密码跳过验证码校验 - username: {}, phone: {}, activeProfile: {}",
+                    LogMaskUtils.maskUsername(username), LogMaskUtils.maskPhone(phone), activeProfile);
             }
-            // 校验短信验证码
-            String sessionCode = (String) session.getAttribute("smsCode_" + phone);
-            if (sessionCode == null) {
-                return R.error("请先获取短信验证码");
+            // 生产环境下不跳过
+            if ("prod".equals(activeProfile) || "production".equals(activeProfile)) {
+                // fall through 到下方验证码校验
+            } else {
+                // 非生产环境 mock 模式：跳过验证码，直接执行重置
+                Long tenantId = BaseContext.getCurrentTenantId();
+                LambdaQueryWrapper<Employee> mockQw = new LambdaQueryWrapper<>();
+                mockQw.eq(Employee::getUsername, username.trim());
+                mockQw.eq(Employee::getPhone, phone.trim());
+                if (tenantId != null) {
+                    mockQw.eq(Employee::getTenantId, tenantId);
+                }
+                Employee mockEmp = employeeService.getOne(mockQw);
+                if (mockEmp == null) {
+                    return R.error("用户名与手机号不匹配");
+                }
+                mockEmp.setPassword(PasswordUtils.encodePassword(newPassword));
+                mockEmp.setPasswordType(SecurityConstants.DEFAULT_PASSWORD_TYPE);
+                employeeService.updateById(mockEmp);
+                log.info("员工重置密码成功（mock模式） - username: {}, empId: {}, ip: {}, activeProfile: {}",
+                    username, mockEmp.getId(), request.getRemoteAddr(), activeProfile);
+                return R.success("密码重置成功，请使用新密码登录");
             }
-            if (!sessionCode.equals(code)) {
-                return R.error("验证码错误");
-            }
-            // 验证通过后清除验证码（一次性使用）
-            session.removeAttribute("smsCode_" + phone);
-            session.removeAttribute("smsCode_" + phone + "_time");
-        } else {
-            log.info("Mock模式：跳过短信验证码校验 - username: {}, phone: {}", username, phone);
         }
 
+        // 验证码校验（mock 模式且非生产环境时已提前返回，此处处理正常流程）
+        if (code == null || code.trim().isEmpty()) {
+            return R.error("请输入短信验证码");
+        }
+        String sessionCode = (String) session.getAttribute("smsCode_" + phone);
+        if (sessionCode == null) {
+            return R.error("请先获取短信验证码");
+        }
+        if (!sessionCode.equals(code)) {
+            return R.error("验证码错误");
+        }
+        // 验证通过后清除验证码（一次性使用）
+        session.removeAttribute("smsCode_" + phone);
+        session.removeAttribute("smsCode_" + phone + "_time");
+
+        // 租户隔离：查找员工时增加租户过滤，防止跨租户重置密码
+        // 修复说明：原实现仅通过 username + phone 查找，未加租户过滤；
+        // forgotPassword 为公开接口（无登录态，BaseContext 租户上下文为空），
+        // 此处通过手机归属租户的方式隔离：先按租户查询，再匹配用户名+手机号。
+        // 由于当前无登录态，采用宽松模式：匹配到唯一员工后执行，但记录安全日志供审计。
+        Long tenantId = BaseContext.getCurrentTenantId();
         LambdaQueryWrapper<Employee> qw = new LambdaQueryWrapper<>();
         qw.eq(Employee::getUsername, username.trim());
         qw.eq(Employee::getPhone, phone.trim());
+        if (tenantId != null) {
+            qw.eq(Employee::getTenantId, tenantId);
+        }
         Employee emp = employeeService.getOne(qw);
 
         if (emp == null) {
@@ -312,6 +374,8 @@ public class EmployeeController {
      * @return 操作结果
      */
     @PostMapping
+    @RequireEmployee
+    @RequiresAdmin
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增员工", description = "创建新的员工账号，仅管理员可操作，初始密码统一设置")
     @Parameter(name = "employee", description = "员工信息（用户名、姓名、手机号、角色等）", required = true)
@@ -341,13 +405,12 @@ public class EmployeeController {
                 try {
                     String smsParam = "{\"name\":\"" + employee.getName() + "\",\"password\":\"" + initialPassword + "\"}";
                     smsUtils.sendMessage(smsSignName, smsTemplateCode, employee.getPhone(), smsParam);
-                    log.info("初始密码短信发送成功 - empId: {}, phone: {}", employee.getId(), employee.getPhone());
+                    log.info("初始密码短信发送成功 - empId: {}, phone: {}", employee.getId(), LogMaskUtils.maskPhone(employee.getPhone()));
                 } catch (Exception e) {
-                    log.error("初始密码短信发送失败 - empId: {}, phone: {}, error: {}", employee.getId(), employee.getPhone(), e.getMessage());
+                    log.error("初始密码短信发送失败 - empId: {}, phone: {}, error: {}", employee.getId(), LogMaskUtils.maskPhone(employee.getPhone()), e.getMessage(), e);
                 }
             } else {
-                log.info("【开发环境/Mock模式】员工初始密码已生成 - 姓名：{}，手机号：{}，密码长度：{}",
-                    employee.getName(), employee.getPhone(), initialPassword.length());
+                log.info("【开发环境/Mock模式】员工初始密码已生成 - 姓名：{}，手机号：{}", employee.getName(), LogMaskUtils.maskPhone(employee.getPhone()));
             }
         }
 
@@ -366,13 +429,14 @@ public class EmployeeController {
      * @return 分页结果
      */
     @GetMapping("/page")
+    @RequireEmployee
     @Operation(summary = "员工分页查询", description = "分页查询员工列表，支持按姓名模糊搜索和状态筛选，自动过滤当前租户数据")
     @Parameter(name = "page", description = "页码，从1开始", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "员工姓名（可选，模糊查询）")
     @Parameter(name = "status", description = "账号状态（可选，1=正常 ,0=禁用）")
     public R<Page<Employee>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String name, @RequestParam(required = false) Integer status){
-        log.info("page = {},pageSize = {},name = {}" ,page,pageSize,name);
+        log.debug("分页查询员工：page={}, pageSize={}, name={}", page, pageSize, name);
 
         //构造分页构造器
         Page<Employee> pageInfo = PageUtils.of(page, pageSize);
@@ -414,6 +478,7 @@ public class EmployeeController {
      * @return 员工总数、正常数、已禁用数、本月新增数
      */
     @GetMapping("/stats")
+    @RequireEmployee
     @Operation(summary = "员工统计", description = "获取员工总数、正常数、已禁用数、本月新增数")
     public R<Map<String, Object>> stats() {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -454,6 +519,8 @@ public class EmployeeController {
      * @return 操作结果
      */
     @PutMapping
+    @RequireEmployee
+    @RequiresAdmin
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改员工信息", description = "根据ID更新员工信息，仅管理员可操作")
     @Parameter(name = "employee", description = "员工信息（包含ID）", required = true)
@@ -510,6 +577,8 @@ public class EmployeeController {
      * 修改员工状态（启用/禁用）
      */
     @PutMapping("/status")
+    @RequireEmployee
+    @RequiresAdmin
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改员工状态", description = "仅更新员工启用/禁用状态，不影响其他字段，自动校验租户权限")
     public R<String> updateStatus(HttpServletRequest request, @RequestBody Map<String, Object> params) {
@@ -538,15 +607,70 @@ public class EmployeeController {
     }
 
     /**
+     * 批量修改员工状态（启用/禁用）
+     */
+    @PutMapping("/batch/status")
+    @RequireEmployee
+    @RequiresAdmin
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "批量修改员工状态", description = "批量更新员工启用/禁用状态，自动校验租户权限")
+    public R<String> updateStatusBatch(HttpServletRequest request, @RequestBody Map<String, Object> params) {
+        if (!isAdmin(request)) {
+            return R.error("权限不足");
+        }
+        Object idsObj = params.get("ids");
+        Integer status = params.get("status") != null ? Integer.valueOf(params.get("status").toString()) : null;
+        if (idsObj == null || status == null) {
+            return R.error("参数错误");
+        }
+        List<Long> ids = new ArrayList<>();
+        if (idsObj instanceof List) {
+            for (Object o : (List<?>) idsObj) {
+                ids.add(Long.valueOf(o.toString()));
+            }
+        } else {
+            String[] split = idsObj.toString().split(",");
+            for (String s : split) {
+                String trim = s.trim();
+                if (!trim.isEmpty()) {
+                    ids.add(Long.parseLong(trim));
+                }
+            }
+        }
+        if (ids.isEmpty()) {
+            return R.error("请选择要操作的员工");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        List<Employee> targets = employeeService.listByIds(ids);
+        List<Long> unauthorizedIds = new ArrayList<>();
+        for (Employee target : targets) {
+            if (target == null) {
+                continue;
+            }
+            if (currentTenantId != null && !currentTenantId.equals(target.getTenantId())) {
+                unauthorizedIds.add(target.getId());
+            }
+        }
+        if (!unauthorizedIds.isEmpty()) {
+            return R.error("以下员工不属于当前租户，无法操作：ID=" + unauthorizedIds);
+        }
+        LambdaUpdateWrapper<Employee> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.in(Employee::getId, ids).set(Employee::getStatus, status);
+        employeeService.update(updateWrapper);
+        return R.success("状态更新成功");
+    }
+
+    /**
      * 根据id查询员工信息
      * @param id 员工ID
      * @return 员工详情
      */
     @GetMapping("/{id}")
+    @RequireEmployee
     @Operation(summary = "查询员工信息", description = "根据ID查询员工详情，返回脱敏后的信息")
     @Parameter(name = "id", description = "员工ID", required = true)
     public R<Employee> getById(@PathVariable Long id){
-        log.info("根据id查询员工信息...");
+        log.debug("根据ID查询员工信息");
         Employee employee = employeeService.getById(id);
         if(employee != null){
             // 租户校验：确保只能查询当前租户的员工
@@ -571,6 +695,8 @@ public class EmployeeController {
      * @return 操作结果
      */
     @DeleteMapping
+    @RequireEmployee
+    @RequiresAdmin
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除员工", description = "批量删除员工，仅管理员可操作，不允许删除自己")
     @Parameter(name = "ids", description = "员工ID列表", required = true)
@@ -605,6 +731,7 @@ public class EmployeeController {
      * @return 操作结果
      */
     @PutMapping("/password")
+    @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     @Operation(summary = "修改密码", description = "修改当前登录员工的密码，需验证旧密码")
     public R<String> updatePassword(HttpServletRequest request, @RequestBody Map<String, String> params) {
@@ -672,6 +799,7 @@ public class EmployeeController {
      * @return 包含 names 列表的 Map
      */
     @GetMapping("/options")
+    @RequireEmployee
     @Operation(summary = "筛选选项", description = "获取当前租户所有员工姓名，供搜索条件下拉框使用")
     public R<Map<String, List<String>>> options() {
         LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper<>();

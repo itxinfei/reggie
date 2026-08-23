@@ -14,6 +14,8 @@ import com.reggie.utils.SMSUtils;
 import com.reggie.common.BruteForceProtectionFilter;
 import com.reggie.common.RateLimit;
 import com.reggie.common.RateLimitType;
+import com.reggie.common.LogMaskUtils;
+import com.reggie.common.SecurityConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -87,9 +89,6 @@ public class UserController {
     /** 安全随机数生成器 */
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    /** 手机号正则 */
-    private static final String PHONE_REGEX = "^1[3-9]\\d{9}$";
-
     /**
      * 默认租户ID（主餐厅）
      * <p>历史脏数据（用户登录时 register 因无租户上下文遗漏 tenant_id）归属默认租户。</p>
@@ -112,7 +111,7 @@ public class UserController {
         if(phone == null || phone.isEmpty()){
             return R.error("手机号不能为空");
         }
-        if(!phone.matches(PHONE_REGEX)){
+        if(!phone.matches(SecurityConstants.PHONE_PATTERN)){
             return R.error("手机号格式不正确");
         }
 
@@ -131,15 +130,15 @@ public class UserController {
 
         if("dev".equals(activeProfile)){
             // 开发环境：在控制台打印完整验证码，方便调试
-            log.info("【开发环境】验证码已生成 -> 手机号：{}，验证码：{}", phone, codeStr);
+            log.info("【开发环境】验证码已生成 -> 手机号：{}，验证码：****", LogMaskUtils.maskPhone(phone));
         } else {
             // 生产环境：仅记录脱敏日志；若配置了短信模板则通过阿里云发送真实短信
-            log.info("【生产环境】验证码已生成 -> 手机号：{}，验证码：****", phone);
+            log.info("【生产环境】验证码已生成 -> 手机号：{}，验证码：****", LogMaskUtils.maskPhone(phone));
             if(smsTemplateCode != null && !smsTemplateCode.isEmpty()){
                 try {
                     SMSUtils.sendMessage(smsSignName, smsTemplateCode, phone, codeStr);
                 } catch (Exception e){
-                    log.error("短信发送失败，phone={}, error={}", phone, e.getMessage());
+                    log.error("短信发送失败，phone={}, error={}", LogMaskUtils.maskPhone(phone), e.getMessage(), e);
                     // 短信发送失败时清除Session中的验证码，避免无效验证码残留
                     session.removeAttribute("smsCode_" + phone);
                     session.removeAttribute("smsCode_" + phone + "_time");
@@ -198,7 +197,7 @@ public class UserController {
         // 登录成功，重置失败计数
         resetLoginAttempts(session, phone);
 
-        log.info("用户登录，手机号={}", phone);
+        log.info("用户登录，手机号={}", LogMaskUtils.maskPhone(phone));
 
         User user = userService.getByPhoneForLogin(phone);
 
@@ -314,7 +313,7 @@ public class UserController {
             @Parameter(name = "status", description = "状态：0禁用 1正常") Integer status) {
 
         log.info("用户分页查询：page={}, pageSize={}, name={}, phone={}, status={}",
-            page, pageSize, name, phone, status);
+                page, pageSize, name, phone != null ? LogMaskUtils.maskPhone(phone) : "", status);
 
         Page<User> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();

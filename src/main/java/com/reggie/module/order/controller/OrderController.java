@@ -14,6 +14,7 @@ import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.order.service.OrderService;
+import com.reggie.module.order.service.statusflow.OrderStatusFlowService;
 import com.reggie.module.dashboard.service.DashboardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -51,6 +52,9 @@ public class OrderController {
     private OrderService orderService;
 
     @Autowired
+    private OrderStatusFlowService statusFlowService;
+
+    @Autowired
     private OrderDetailService orderDetailService;
 
     @Autowired
@@ -64,6 +68,7 @@ public class OrderController {
     @PostMapping("/submit")
     @Operation(summary = "提交订单", description = "用户下单，返回订单ID、订单号和金额供前端跳转支付")
     @Parameter(name = "orders", description = "订单信息（含幂等令牌idempotencyKey）", required = true)
+    @RateLimit(maxRequestsPerSecond = 5) // 防止高频提交订单
     public R<Map<String, Object>> submit(@RequestBody Orders orders){
         log.info("订单数据：手机号={}，地址={}",
             LogMaskUtils.maskPhone(orders.getPhone()),
@@ -109,6 +114,7 @@ public class OrderController {
     @PostMapping("/eatIn")
     @Operation(summary = "堂食扫码下单", description = "顾客扫码点餐，直接传入菜品列表下单，自动更新桌台状态")
     @Parameter(name = "request", description = "堂食下单请求（订单信息+明细列表）", required = true)
+    @RateLimit(maxRequestsPerSecond = 5) // 防止高频提交订单
     public R<Map<String, Object>> eatIn(@RequestBody @Validated EatInOrderRequest request) {
         log.info("[堂食] 扫码下单: tableId={}, customerCount={}, items={}",
             request.getOrder().getTableId(),
@@ -219,6 +225,20 @@ public class OrderController {
     }
 
     /**
+     * 收银台待收银订单列表（管理端专用）
+     * 筛选条件：本租户下 status=STATUS_ORDERED 且无收银记录的订单
+     *
+     * @return 待收银订单列表（按下单时间倒序）
+     */
+    @GetMapping("/pendingCheckout")
+    @RequireEmployee
+    @Operation(summary = "待收银订单列表", description = "收银台专用，返回本租户下所有待结账的订单")
+    public R<List<Orders>> pendingCheckout() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        return R.success(orderService.listPendingCheckout(tenantId));
+    }
+
+    /**
      * 分页查询当前用户的订单
      *
      * @param page 页码
@@ -281,7 +301,7 @@ public class OrderController {
         if (existing == null || currentTenantId == null || !Objects.equals(currentTenantId, existing.getTenantId())) {
             return R.error("订单不存在或不属于当前租户");
         }
-        orderService.updateStatus(orders.getStatus(), orders.getId());
+        statusFlowService.updateStatus(orders.getStatus(), orders.getId());
         // 修改点：订单状态变更后清除 Dashboard 缓存，防止数据不实
         clearDashboardCache();
         return R.success("操作成功");
@@ -298,7 +318,7 @@ public class OrderController {
     @Operation(summary = "接单", description = "后台确认接单，订单状态从待接单变为配送中")
     @Parameter(name = "id", description = "订单ID", required = true)
     public R<String> confirm(@RequestParam Long id) {
-        orderService.confirmOrder(id);
+        statusFlowService.confirmOrder(id);
         return R.success("接单成功");
     }
 
@@ -311,7 +331,7 @@ public class OrderController {
     @Operation(summary = "拒单", description = "后台拒单，订单状态变为已取消")
     @Parameter(name = "id", description = "订单ID", required = true)
     public R<String> reject(@RequestParam Long id) {
-        orderService.rejectOrder(id);
+        statusFlowService.rejectOrder(id);
         return R.success("已拒单");
     }
 
@@ -324,7 +344,7 @@ public class OrderController {
     @Operation(summary = "完成订单", description = "标记订单为已完成")
     @Parameter(name = "id", description = "订单ID", required = true)
     public R<String> complete(@RequestParam Long id) {
-        orderService.completeOrder(id);
+        statusFlowService.completeOrder(id);
         return R.success("订单已完成");
     }
 
@@ -338,7 +358,7 @@ public class OrderController {
     @Parameter(name = "id", description = "订单ID", required = true)
     @Parameter(name = "reason", description = "取消原因", required = false)
     public R<String> cancel(@RequestParam Long id, @RequestParam(required = false) String reason) {
-        orderService.cancelOrder(id, reason);
+        statusFlowService.cancelOrder(id, reason);
         return R.success("订单已取消");
     }
 
@@ -375,7 +395,7 @@ public class OrderController {
             && !Objects.equals(existing.getStatus(), Orders.STATUS_ORDERED)) {
             return R.error("当前状态不允许取消，如需退款请联系客服");
         }
-        orderService.cancelOrder(id, "用户主动取消");
+        statusFlowService.cancelOrder(id, "用户主动取消");
         return R.success("订单已取消");
     }
     /**

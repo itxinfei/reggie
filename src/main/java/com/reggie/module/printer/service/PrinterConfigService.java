@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.printer.model.PrinterConfig;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -30,4 +31,13 @@ public interface PrinterConfigService extends IService<PrinterConfig> {
      * @return 打印机配置
      */
     PrinterConfig getByType(String printerType);
+
+    /**
+     * 打印机配置统计（总数、启用、停用、连接类型种类数）
+     * <p>域4 改造：从 PrinterConfigController 下沉，Controller 不再直接操作 Mapper</p>
+     *
+     * @param tenantId 租户ID（可为 null，超管跳过过滤）
+     * @return 聚合结果：totalPrinters/activePrinters/inactivePrinters/typeCount
+     */
+    Map<String, Object> statPrinters(Long tenantId);
 }

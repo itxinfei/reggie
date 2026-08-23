@@ -13,22 +13,22 @@
       grid-template-columns: repeat(4, 1fr);
     }
 
-    .progression-section { background: var(--bg-surface); border-radius: 14px; padding: 20px 24px; margin-bottom: 20px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .progression-section { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 20px;
+      box-shadow: var(--shadow-sm); }
     .progression-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 16px;
       display: flex; align-items: center; gap: 8px; }
     .progression-bar { display: flex; align-items: flex-end; gap: 10px; padding: 10px 0; }
     .prog-item { flex: 1; text-align: center; position: relative; }
     .prog-icon { font-size:var(--font-size-xl); margin-bottom: 6px; }
-    .prog-bar-wrap { height: 8px; background: var(--el-bg-lighter); border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
-    .prog-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+    .prog-bar-wrap { height: 8px; background: var(--el-bg-lighter); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 6px; }
+    .prog-bar-fill { height: 100%; border-radius: var(--radius-sm); transition: width 0.6s ease; }
     .prog-name { font-size:var(--font-size-xs); color: var(--el-text-regular); font-weight: 500; white-space: nowrap; }
-    .prog-pts { font-size: 11px; color: var(--color-info); }
-    .prog-discount { font-size: 11px; color: var(--emerald); font-weight: 600; }
+    .prog-pts { font-size: var(--font-size-xs); color: var(--color-info); }
+    .prog-discount { font-size: var(--font-size-xs); color: var(--emerald); font-weight: 600; }
 
     @media (max-width: 900px) {
       .stat-card { min-width: 140px; flex: 1 1 calc(50% - 8px); }
-      .prog-name { font-size: 10px; }
+      .prog-name { font-size: var(--font-size-xs); }
     }
   </style>
 </head>
@@ -216,7 +216,7 @@
           return ((idx + 1) / max * 100) + '%'
         },
         getBarColor: function(idx) {
-          var colors = ['#e2e8f0','#a78bfa','#818cf8','#60a5fa','#34d399','#fbbf24','#f97316','#ef4444']
+          var colors = [RgPalette.slate200,RgPalette.violet400,RgPalette.indigo400,RgPalette.blue400,RgPalette.emerald400,RgPalette.amber400,RgPalette.orange500,RgPalette.red500]
           return colors[idx % colors.length]
         },
         // <table-bar> @search 回调（table-bar 已管理搜索条件，通过 searchParams 传入）

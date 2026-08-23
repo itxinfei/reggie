@@ -12,7 +12,9 @@ CREATE TABLE member_level (
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   name varchar(50) NULL DEFAULT NULL COMMENT '等级名称',
   MIN_POINTS bigint NULL DEFAULT 0 COMMENT '最低积分要求',
+  MAX_POINTS bigint NULL DEFAULT NULL COMMENT '最高积分上限',
   discount decimal(3,2) NULL DEFAULT 1.00 COMMENT '折扣率',
+  description varchar(200) NULL DEFAULT NULL COMMENT '等级说明',
   sort int NULL DEFAULT NULL COMMENT '排序',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
@@ -95,7 +97,8 @@ CREATE TABLE points_record (
   create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
   update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_points_biz (tenant_id, biz_type, biz_id, type)
 );
 
 CREATE TABLE recharge_record (

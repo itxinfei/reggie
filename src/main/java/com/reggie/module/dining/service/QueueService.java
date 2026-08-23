@@ -2,6 +2,7 @@ package com.reggie.module.dining.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.dining.model.QueueRecord;
+import com.reggie.module.dining.vo.QueueStatsVO;
 
 /**
  * <p>
@@ -37,4 +38,33 @@ public interface QueueService extends IService<QueueRecord> {
      * @param id 排队记录ID
      */
     void cancelQueue(Long id);
+
+    /**
+     * 安排入座：CALLED → SEATED
+     *
+     * @param queueId 排队记录ID
+     * @param tableId 桌台ID（可选）
+     */
+    void seatCustomer(Long queueId, Long tableId);
+
+    /**
+     * 退回等待：CALLED → WAITING
+     *
+     * @param id 排队记录ID
+     */
+    void recallQueue(Long id);
+
+    /**
+     * 恢复排队：CANCELLED → WAITING
+     *
+     * @param id 排队记录ID
+     */
+    void reactivateQueue(Long id);
+
+    /**
+     * 排队统计（按状态分类计数）
+     *
+     * @return 排队统计
+     */
+    QueueStatsVO queueStats();
 }

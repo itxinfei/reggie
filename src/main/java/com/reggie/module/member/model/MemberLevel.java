@@ -38,8 +38,14 @@ public class MemberLevel implements Serializable {
     @Schema(description = "升级所需最低积分", example = "1000")
     private Long minPoints;
 
+    @Schema(description = "升级所需最高积分", example = "5000")
+    private Long maxPoints;
+
     @Schema(description = "折扣率（如8.5折=0.85）", example = "0.85")
     private BigDecimal discount;
+
+    @Schema(description = "等级描述", example = "享全场9.5折优惠")
+    private String description;
 
     @Schema(description = "排序号（升序排列等级层级）", example = "2")
     private Integer sort;

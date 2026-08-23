@@ -5,11 +5,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.ChangeTableStatusDTO;
 import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.model.TableArea;
 import com.reggie.module.dining.service.DiningTableService;
-import com.reggie.module.dining.mapper.DiningTableMapper;
+import com.reggie.module.dining.vo.TableStatsVO;
 import com.reggie.utils.QRCodeUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,13 +25,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.reggie.common.RateLimit;
 
 import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 堂食桌台管理控制器
@@ -43,6 +45,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RestController
 @RequestMapping("/api/dining/table")
 @Tag(name = "堂食桌台管理")
+@RequireEmployee
 public class DiningTableController {
 
     @Autowired
@@ -52,24 +55,42 @@ public class DiningTableController {
     private QRCodeUtil qrCodeUtil;
 
     @Autowired
-    private DiningTableMapper diningTableMapper;
-
-    @Autowired
     private com.reggie.module.dining.service.TableAreaService tableAreaService;
 
     /**
      * 分页查询桌台列表
      * @param page 页码
      * @param pageSize 每页数量
+     * @param name 桌台名称（可选，模糊搜索）
+     * @param areaId 区域ID（可选）
+     * @param status 桌台状态（可选）
      * @return 分页结果（自动关联区域信息）
      */
     @GetMapping("/page")
-    @Operation(summary = "分页查询", description = "分页查询桌台列表，自动关联区域信息")
+    @Operation(summary = "分页查询", description = "分页查询桌台列表，支持按名称、区域、状态筛选")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
-    public R<Page<DiningTable>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize) {
-        Page<DiningTable> pageInfo = diningTableService.pageWithArea(page, PageUtils.cap(pageSize));
+    @Parameter(name = "name", description = "桌台名称（可选，模糊搜索）")
+    @Parameter(name = "areaId", description = "区域ID（可选）")
+    @Parameter(name = "status", description = "桌台状态（可选）：FREE-空闲, OCCUPIED-占用, RESERVED-预留, CLEANING-清洁中")
+    public R<Page<DiningTable>> page(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
+                                     @RequestParam(required = false) String name,
+                                     @RequestParam(required = false) Long areaId,
+                                     @RequestParam(required = false) String status) {
+        Page<DiningTable> pageInfo = diningTableService.pageWithArea(page, PageUtils.cap(pageSize), name, areaId, status);
         return R.success(pageInfo);
+    }
+
+    /**
+     * 桌台统计（按状态分类计数）
+     *
+     * @return 桌台统计
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "桌台统计", description = "按状态分类统计桌台数量")
+    public R<TableStatsVO> tableStats() {
+        TableStatsVO stats = diningTableService.tableStats();
+        return R.success(stats);
     }
 
     /**
@@ -78,10 +99,14 @@ public class DiningTableController {
      * @return 新增桌台信息
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增桌台", description = "创建新的桌台并关联区域")
-    public R<DiningTable> save(@RequestBody DiningTable table) {
+    public R<DiningTable> save(@Valid @RequestBody DiningTable table) {
         log.info("新增桌台: {}", table.getName());
         table.setTenantId(BaseContext.getCurrentTenantId());
+        if (table.getStatus() == null || table.getStatus().trim().isEmpty()) {
+            table.setStatus("FREE");
+        }
         diningTableService.save(table);
         return R.success(table);
     }
@@ -92,8 +117,9 @@ public class DiningTableController {
      * @return 操作结果
      */
     @PutMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改桌台", description = "更新桌台基本信息")
-    public R<String> update(@RequestBody DiningTable table) {
+    public R<String> update(@Valid @RequestBody DiningTable table) {
         log.info("修改桌台: {}", table.getId());
         // 租户归属校验：按 id + tenantId 查询，确认桌台归属当前租户
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -103,8 +129,13 @@ public class DiningTableController {
         LambdaQueryWrapper<DiningTable> checkWrapper = new LambdaQueryWrapper<>();
         checkWrapper.eq(DiningTable::getId, table.getId())
                     .eq(DiningTable::getTenantId, tenantId);
-        if (diningTableService.count(checkWrapper) == 0) {
+        DiningTable existing = diningTableService.getOne(checkWrapper);
+        if (existing == null) {
             return R.error("桌台不存在或无权操作");
+        }
+        // 请求体未传状态时，保留原状态（避免 @NotBlank 导致更新时必填）
+        if (table.getStatus() == null || table.getStatus().trim().isEmpty()) {
+            table.setStatus(existing.getStatus());
         }
         // 防止通过请求体篡改租户ID
         table.setTenantId(tenantId);
@@ -113,6 +144,7 @@ public class DiningTableController {
     }
 
     @DeleteMapping("/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除桌台", description = "根据ID删除桌台")
     @Parameter(name = "id", description = "桌台ID", required = true)
     public R<String> delete(@PathVariable Long id) {
@@ -162,6 +194,7 @@ public class DiningTableController {
      * @return 操作结果
      */
     @PutMapping("/status")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改桌台状态", description = "更新桌台使用状态（空闲/使用中/已预订等）")
     public R<String> changeStatus(@Valid @RequestBody ChangeTableStatusDTO dto) {
         log.info("修改桌台状态: id={}, status={}", dto.getId(), dto.getStatus());
@@ -216,23 +249,7 @@ public class DiningTableController {
     @GetMapping("/area-stats")
     @Operation(summary = "桌台区域统计", description = "聚合统计桌台总数与最大容量区域")
     public R<Map<String, Object>> areaStats() {
-        List<Map<String, Object>> rows = diningTableMapper.statByArea();
-        int totalTables = 0;
-        String maxArea = "-";
-        int maxCount = 0;
-        for (Map<String, Object> row : rows) {
-            int cnt = row.get("cnt") == null ? 0 : ((Number) row.get("cnt")).intValue();
-            totalTables += cnt;
-            if (cnt > maxCount) {
-                maxCount = cnt;
-                Object areaName = row.get("areaName");
-                maxArea = (areaName == null ? "未知区域" : String.valueOf(areaName)) + "(" + cnt + "桌)";
-            }
-        }
-        Map<String, Object> result = new HashMap<>();
-        result.put("totalTables", totalTables);
-        result.put("maxTablesArea", maxArea);
-        return R.success(result);
+        return R.success(diningTableService.areaStats());
     }
 
     /**
@@ -257,7 +274,7 @@ public class DiningTableController {
             return R.success("data:image/png;base64," + qrCodeBase64);
         } catch (Exception e) {
             log.error("生成二维码失败: tableId={}", id, e);
-            return R.error("生成二维码失败: " + e.getMessage());
+            return R.error("生成二维码失败，请稍后重试");
         }
     }
 }

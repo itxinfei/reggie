@@ -2,15 +2,17 @@ package com.reggie.module.recommend.controller;
 import com.reggie.common.utils.PageUtils;
 
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.user.model.User;
 import com.reggie.module.recommend.model.BrowseHistory;
 import com.reggie.module.recommend.model.MarketingCampaign;
-import com.reggie.module.recommend.model.MarketingMessage;
 import com.reggie.module.recommend.model.RecommendationFeedback;
 import com.reggie.module.recommend.service.BrowseHistoryService;
 import com.reggie.module.recommend.service.MarketingCampaignService;
 import com.reggie.module.recommend.service.PreferenceAnalysisService;
 import com.reggie.module.recommend.service.RecommendService;
+import com.reggie.module.recommend.service.analytics.RecommendationAnalyticsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpSession;
-import javax.validation.Valid;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/recommend")
 @Tag(name = "智能推荐", description = "菜品推荐、偏好分析、浏览记录等接口")
+@RequireEmployee
 public class RecommendController {
 
     /** 默认推荐数量 */
@@ -47,6 +49,8 @@ public class RecommendController {
 
     @Autowired
     private RecommendService recommendService;
+    @Autowired
+    private RecommendationAnalyticsService analyticsService;
     @Autowired
     private BrowseHistoryService browseHistoryService;
     @Autowired
@@ -97,7 +101,7 @@ public class RecommendController {
     @GetMapping("/stats")
     @Operation(summary = "推荐统计数据", description = "获取推荐引擎真实统计数据：覆盖率、点击率、转化率等指标")
     public R<Map<String, Object>> getStats() {
-        Map<String, Object> stats = recommendService.calculateStats();
+        Map<String, Object> stats = analyticsService.calculateStats();
         return R.success(stats);
     }
 
@@ -148,6 +152,7 @@ public class RecommendController {
      * @return 操作结果
      */
     @PostMapping("/feedback")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "记录推荐反馈", description = "用户对推荐结果进行反馈（喜欢/不喜欢）")
     public R<String> recordFeedback(
             @Parameter(description = "反馈信息", required = true) @RequestBody RecommendationFeedback feedback,
@@ -166,6 +171,7 @@ public class RecommendController {
      * @return 操作结果
      */
     @PostMapping("/refresh-cache")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "刷新推荐缓存", description = "用户操作触发推荐缓存刷新，如下拉刷新")
     public R<String> refreshCache(HttpSession session) {
         Long userId = getUserId(session);
@@ -182,6 +188,7 @@ public class RecommendController {
      * @return 操作结果
      */
     @PostMapping("/browse")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "记录浏览行为", description = "记录用户浏览菜品的行为，用于推荐算法")
     public R<String> recordBrowse(
             @Parameter(description = "浏览信息（targetType/targetId/targetName/duration/actionType）", required = true) @RequestBody Map<String, Object> body,
@@ -263,9 +270,9 @@ public class RecommendController {
      * @return 操作结果
      */
     @PutMapping("/messages/{id}/read")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "标记消息已读", description = "将指定营销消息标记为已读")
     public R<String> markMessageRead(
-            @Parameter(description = "I d")
             @Parameter(description = "消息ID", required = true) @PathVariable Long id) {
         marketingCampaignService.markMessageRead(id);
         return R.success("已标记");
@@ -316,6 +323,7 @@ public class RecommendController {
      * @return 操作结果
      */
     @PostMapping("/analyze-preference")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "触发偏好分析", description = "触发用户口味偏好分析，通常在用户订单完成后调用")
     public R<String> analyzePreference(HttpSession session) {
         Long userId = getUserId(session);
@@ -337,7 +345,7 @@ public class RecommendController {
     public R<Map<String, Integer>> feedbackStats(
             @Parameter(description = "D a y s")
             @Parameter(description = "统计天数") @RequestParam(defaultValue = "7") int days) {
-        Map<String, Integer> stats = recommendService.getFeedbackStats(days);
+        Map<String, Integer> stats = analyticsService.getFeedbackStats(days);
         return R.success(stats);
     }
 
@@ -348,7 +356,7 @@ public class RecommendController {
     @GetMapping("/preference/distribution")
     @Operation(summary = "口味偏好分布", description = "获取用户口味偏好分布，用于概览页偏好饼图")
     public R<List<Map<String, Object>>> preferenceDistribution() {
-        List<Map<String, Object>> list = recommendService.getPreferenceDistribution();
+        List<Map<String, Object>> list = analyticsService.getPreferenceDistribution();
         return R.success(list);
     }
 
@@ -359,7 +367,7 @@ public class RecommendController {
     @GetMapping("/algo/compare")
     @Operation(summary = "算法效果对比", description = "获取推荐算法效果对比数据，用于概览页对比柱状图")
     public R<Map<String, Object>> algoCompare() {
-        Map<String, Object> result = recommendService.getAlgoCompare();
+        Map<String, Object> result = analyticsService.getAlgoCompare();
         return R.success(result);
     }
 
@@ -373,7 +381,7 @@ public class RecommendController {
     public R<Map<String, Object>> browseTrend(
             @Parameter(description = "D a y s")
             @Parameter(description = "统计天数") @RequestParam(defaultValue = "7") int days) {
-        Map<String, Object> result = recommendService.getBrowseTrend(days);
+        Map<String, Object> result = analyticsService.getBrowseTrend(days);
         return R.success(result);
     }
 

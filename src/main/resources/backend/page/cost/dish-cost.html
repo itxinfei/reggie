@@ -28,9 +28,9 @@
       gap: 12px;
       background: var(--bg-surface);
       padding: 16px 24px;
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-sm);
     }
     .tableBar .toolbar-label {
       font-size:var(--font-size-base);
@@ -42,9 +42,9 @@
     }
     .table-card {
       background: var(--bg-surface);
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-sm);
     }
     .profit-rate {
       font-weight: 600;
@@ -135,7 +135,7 @@
     </div>
 
     <!-- 新增/编辑对话框 -->
-    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="600px" @submit="handleSubmit">
+    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" size="lg" @submit="handleSubmit">
       <el-form :model="formData" :rules="formRules" ref="costForm" label-width="100px">
         <el-form-item label="菜品" prop="dishId">
           <el-select
@@ -244,7 +244,6 @@
               this.tableData = res.data || []
             }
           } catch (err) {
-            console.error('获取菜品成本列表失败', err)
             ReggieUI.error('获取数据失败')
           } finally {
             this.loading = false
@@ -263,7 +262,7 @@
                 this.dishOptions = res.data || []
               }
             } catch (err) {
-              console.error('搜索菜品失败', err)
+              ReggieUI.error('搜索菜品失败')
             } finally {
               this.dishLoading = false
             }
@@ -271,10 +270,25 @@
             this.dishOptions = []
           }
         },
-        handleDishChange(dishId) {
+        async handleDishChange(dishId) {
           const dish = this.dishOptions.find(item => item.id === dishId)
           if (dish) {
             this.formData.dishName = dish.name
+          }
+          // 新增模式下，调用后端 calculateDishCost（已打通 BOM：食材×单价）自动带出食材成本与售价
+          if (this.formData.id === null && dishId) {
+            try {
+              const res = await getDishCostByDishId(dishId)
+              if (res.code === 1 && res.data) {
+                var c = res.data
+                this.formData.materialCost = Number(c.materialCost) || 0
+                this.formData.laborCost = Number(c.laborCost) || 0
+                this.formData.otherCost = Number(c.otherCost) || 0
+                this.formData.salePrice = Number(c.salePrice) || 0
+              }
+            } catch (err) {
+              // 首次录入菜品无历史成本数据时返回空，忽略即可
+            }
           }
         },
         handleAdd() {
@@ -304,7 +318,7 @@
         },
         async handleDelete(row) {
           try {
-            await this.$confirm('确定要删除该菜品成本吗？', '提示', {
+            await ReggieUI.confirm('确定要删除该菜品成本吗？', '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
               type: 'warning'
@@ -319,37 +333,30 @@
             }
           } catch (err) {
             if (err !== 'cancel') {
-              console.error('删除失败', err)
               ReggieUI.error('删除失败')
             }
           }
         },
         handleSubmit() {
-          this.$refs.costForm.validate(async (valid) => {
-            if (!valid) return
-            
-            this.submitLoading = true
-            try {
-              let res
-              if (this.formData.id) {
-                res = await updateDishCost(this.formData)
-              } else {
-                res = await saveDishCost(this.formData)
-              }
-              
-              if (res.code === 1) {
-                ReggieUI.success(this.formData.id ? '更新成功' : '新增成功')
-                this.dialogVisible = false
-                this.fetchData()
-              } else {
-                ReggieUI.error(res.msg || '操作失败')
-              }
-            } catch (err) {
-              console.error('提交失败', err)
-              ReggieUI.error('操作失败')
-            } finally {
-              this.submitLoading = false
+          var self = this
+          let passed = false
+          this.$refs.costForm.validate(function(valid) { passed = valid })
+          if (!passed) return
+
+          self.submitLoading = true
+          var apiCall = self.formData.id ? updateDishCost(self.formData) : saveDishCost(self.formData)
+          apiCall.then(function(res) {
+            if (res.code === 1) {
+              ReggieUI.success(self.formData.id ? '更新成功' : '新增成功')
+              self.dialogVisible = false
+              self.fetchData()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
             }
+          }).catch(function(err) {
+            ReggieUI.error('操作失败')
+          }).finally(function() {
+            self.submitLoading = false
           })
         },
         handleExport() {

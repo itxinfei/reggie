@@ -74,7 +74,7 @@
       :title="dialog.title"
       :visible.sync="dialog.visible"
       :submit-loading="submitting"
-      width="420px"
+      size="sm"
       @submit="submitForm"
     >
       <!-- 修改点：补全 :rules，启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
@@ -190,7 +190,6 @@
               return
             }
             this.optionsLoadError = true
-            console.error('加载区域选项失败:', err)
             ReggieUI.error('加载筛选选项失败，请刷新页面重试')
           } finally {
             this.optionsLoading = false

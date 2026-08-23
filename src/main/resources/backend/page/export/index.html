@@ -19,15 +19,15 @@
         .export-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 
         .export-card {
-            background: var(--bg-surface); border-radius: 8px; padding: 24px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid var(--el-border-light);
+            background: var(--bg-surface); border-radius: var(--radius-md); padding: 24px;
+            box-shadow: var(--shadow-xs); border: 1px solid var(--el-border-light);
             transition: box-shadow 0.2s;
         }
-        .export-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+        .export-card:hover { box-shadow: var(--shadow-md); }
 
         .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
         .card-icon {
-            width: 40px; height: 40px; border-radius: 8px;
+            width: 40px; height: 40px; border-radius: var(--radius-md);
             display: flex; align-items: center; justify-content: center;
             font-size:var(--font-size-2xl); flex-shrink: 0;
         }
@@ -40,20 +40,20 @@
         .card-desc  { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 2px; }
 
         /* 筛选区 */
-        .filter-section { margin-bottom: 16px; padding: 12px; background: var(--el-bg-ghost); border-radius: 6px; }
+        .filter-section { margin-bottom: 16px; padding: 12px; background: var(--el-bg-ghost); border-radius: var(--radius-md); }
         .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
         .filter-row:last-child { margin-bottom: 0; }
         .filter-label { font-size:var(--font-size-sm); color: var(--el-text-regular); white-space: nowrap; min-width: 50px; }
 
         .filter-row input, .filter-row select {
-            padding: 6px 10px; border: 1px solid var(--el-border-default); border-radius: 4px;
+            padding: 6px 10px; border: 1px solid var(--el-border-default); border-radius: var(--radius-sm);
             font-size:var(--font-size-sm); outline: none; transition: border-color 0.2s;
         }
         .filter-row input:focus, .filter-row select:focus { border-color: var(--el-color-primary); }
 
         .quick-range { display: flex; gap: 4px; }
         .quick-range span {
-            padding: 4px 10px; font-size:var(--font-size-xs); border-radius: 4px;
+            padding: 4px 10px; font-size:var(--font-size-xs); border-radius: var(--radius-sm);
             background: var(--bg-surface); border: 1px solid var(--el-border-default); cursor: pointer;
             transition: all 0.2s; color: var(--el-text-regular);
         }
@@ -78,7 +78,7 @@
         /* 导出记录 */
         .history-section { margin-top: 24px; }
         .history-title { font-size:var(--font-size-base); font-weight: 600; margin-bottom: 12px; color: var(--el-text-regular); }
-        .history-list { background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--el-border-light); }
+        .history-list { background: var(--bg-surface); border-radius: var(--radius-md); border: 1px solid var(--el-border-light); }
         .history-item {
             display: flex; align-items: center; padding: 12px 20px;
             border-bottom: 1px solid var(--el-bg-lighter); font-size:var(--font-size-sm);
@@ -90,7 +90,7 @@
         .history-meta { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 2px; }
         .history-size { font-size:var(--font-size-xs); color: var(--color-success); margin-left: 12px; white-space: nowrap; }
         .history-status {
-            padding: 3px 10px; border-radius: 10px; font-size:var(--font-size-xs); font-weight: 500;
+            padding: 3px 10px; border-radius: var(--radius-md); font-size:var(--font-size-xs); font-weight: 500;
         }
         .history-status.success { background: var(--color-success-light); color: var(--color-success); }
         .history-status.fail { background: var(--color-danger-light); color: var(--color-danger); }
@@ -99,9 +99,9 @@
 
         /* Toast */
         .toast {
-            position: fixed; top: 20px; right: 20px; padding: 14px 24px; border-radius: 6px;
+            position: fixed; top: 20px; right: 20px; padding: 14px 24px; border-radius: var(--radius-md);
             color: var(--bg-surface); font-size:var(--font-size-base); z-index: 9999; max-width: 400px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.15); animation: slideIn 0.3s;
+            box-shadow: var(--shadow-lg); animation: slideIn 0.3s;
             display: none;
         }
         .toast-success { background: var(--color-success); }
@@ -146,9 +146,9 @@
                         <span style="color:var(--el-border-base);">至</span>
                         <input type="date" v-model="orderFilter.endDate" />
                         <div class="quick-range">
-                            <span :class="{active: orderRange === 'today'}" @click="setOrderRange('today')">今天</span>
-                            <span :class="{active: orderRange === 'week'}" @click="setOrderRange('week')">近7天</span>
-                            <span :class="{active: orderRange === 'month'}" @click="setOrderRange('month')">近30天</span>
+                            <span :class="{active: orderRange === 'today'}" role="button" tabindex="0" @click="setOrderRange('today')" @keydown.enter="setOrderRange('today')" :aria-pressed="orderRange === 'today'">今天</span>
+                            <span :class="{active: orderRange === 'week'}" role="button" tabindex="0" @click="setOrderRange('week')" @keydown.enter="setOrderRange('week')" :aria-pressed="orderRange === 'week'">近7天</span>
+                            <span :class="{active: orderRange === 'month'}" role="button" tabindex="0" @click="setOrderRange('month')" @keydown.enter="setOrderRange('month')" :aria-pressed="orderRange === 'month'">近30天</span>
                         </div>
                     </div>
                     <div class="filter-row">
@@ -227,9 +227,9 @@
                         <span style="color:var(--el-border-base);">至</span>
                         <input type="date" v-model="reportFilter.endDate" />
                         <div class="quick-range">
-                            <span :class="{active: reportRange === 'today'}" @click="setReportRange('today')">今天</span>
-                            <span :class="{active: reportRange === 'week'}" @click="setReportRange('week')">近7天</span>
-                            <span :class="{active: reportRange === 'month'}" @click="setReportRange('month')">近30天</span>
+                            <span :class="{active: reportRange === 'today'}" role="button" tabindex="0" @click="setReportRange('today')" @keydown.enter="setReportRange('today')" :aria-pressed="reportRange === 'today'">今天</span>
+                            <span :class="{active: reportRange === 'week'}" role="button" tabindex="0" @click="setReportRange('week')" @keydown.enter="setReportRange('week')" :aria-pressed="reportRange === 'week'">近7天</span>
+                            <span :class="{active: reportRange === 'month'}" role="button" tabindex="0" @click="setReportRange('month')" @keydown.enter="setReportRange('month')" :aria-pressed="reportRange === 'month'">近30天</span>
                         </div>
                     </div>
                 </div>

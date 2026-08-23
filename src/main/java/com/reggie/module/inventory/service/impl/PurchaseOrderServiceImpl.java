@@ -5,12 +5,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.common.BatchFillHelper;
 import com.reggie.common.CustomException;
 import com.reggie.module.inventory.mapper.PurchaseOrderDetailMapper;
 import com.reggie.module.inventory.mapper.PurchaseOrderMapper;
 import com.reggie.module.inventory.model.Material;
 import com.reggie.module.inventory.model.PurchaseOrder;
 import com.reggie.module.inventory.model.PurchaseOrderDetail;
+import com.reggie.module.inventory.model.Supplier;
 import com.reggie.enums.PurchaseOrderStatus;
 import com.reggie.module.inventory.service.MaterialService;
 import com.reggie.module.inventory.service.PurchaseOrderDetailService;
@@ -24,6 +26,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 采购单服务实现
@@ -81,6 +84,11 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         if (po == null) {
             throw new CustomException("采购单不存在");
         }
+        // 租户归属校验：防止跨租户越权添加采购明细
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(po.getTenantId())) {
+            throw new CustomException("无权操作其他租户的采购单");
+        }
         if (!PurchaseOrderStatus.DRAFT.getValue().equals(po.getStatus())) {
             throw new CustomException("采购单不是草稿状态，无法添加明细");
         }
@@ -105,6 +113,11 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         PurchaseOrder po = getById(orderId);
         if (po == null) {
             throw new CustomException("采购单不存在");
+        }
+        // 租户归属校验：防止跨租户越权收货
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(po.getTenantId())) {
+            throw new CustomException("无权操作其他租户的采购单");
         }
         if (!PurchaseOrderStatus.ORDERED.getValue().equals(po.getStatus()) && !PurchaseOrderStatus.PARTIAL.getValue().equals(po.getStatus())) {
             throw new CustomException("采购单状态不允许收货");
@@ -169,54 +182,24 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
      * 批量填充采购单的供应商名称
      */
     private void fillSupplierName(List<PurchaseOrder> orders) {
-        if (org.springframework.util.CollectionUtils.isEmpty(orders)) return;
-        java.util.List<Long> supplierIds = orders.stream()
-                .map(PurchaseOrder::getSupplierId)
-                .filter(id -> id != null)
-                .distinct()
-                .collect(java.util.stream.Collectors.toList());
-        if (supplierIds.isEmpty()) return;
-
-        java.util.Map<Long, String> nameMap = supplierService.list(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.reggie.module.inventory.model.Supplier>()
-                        .in(com.reggie.module.inventory.model.Supplier::getId, supplierIds))
-                .stream().collect(java.util.stream.Collectors.toMap(
-                        com.reggie.module.inventory.model.Supplier::getId,
-                        com.reggie.module.inventory.model.Supplier::getName,
-                        (v1, v2) -> v1));
-
-        for (PurchaseOrder po : orders) {
-            if (po.getSupplierId() != null) {
-                po.setSupplierName(nameMap.get(po.getSupplierId()));
-            }
-        }
+        BatchFillHelper.fillNames(
+                orders,
+                PurchaseOrder::getSupplierId,
+                ids -> supplierService.list(new LambdaQueryWrapper<Supplier>().in(Supplier::getId, ids))
+                        .stream().collect(Collectors.toMap(Supplier::getId, Supplier::getName, (v1, v2) -> v1)),
+                PurchaseOrder::setSupplierName);
     }
 
     /**
      * 批量填充采购明细的物料名称
      */
     private void fillMaterialName(List<PurchaseOrderDetail> details) {
-        if (org.springframework.util.CollectionUtils.isEmpty(details)) return;
-        java.util.List<Long> materialIds = details.stream()
-                .map(PurchaseOrderDetail::getMaterialId)
-                .filter(id -> id != null)
-                .distinct()
-                .collect(java.util.stream.Collectors.toList());
-        if (materialIds.isEmpty()) return;
-
-        java.util.Map<Long, String> nameMap = materialService.list(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Material>()
-                        .in(Material::getId, materialIds))
-                .stream().collect(java.util.stream.Collectors.toMap(
-                        Material::getId,
-                        Material::getName,
-                        (v1, v2) -> v1));
-
-        for (PurchaseOrderDetail d : details) {
-            if (d.getMaterialId() != null) {
-                d.setMaterialName(nameMap.get(d.getMaterialId()));
-            }
-        }
+        BatchFillHelper.fillNames(
+                details,
+                PurchaseOrderDetail::getMaterialId,
+                ids -> materialService.list(new LambdaQueryWrapper<Material>().in(Material::getId, ids))
+                        .stream().collect(Collectors.toMap(Material::getId, Material::getName, (v1, v2) -> v1)),
+                PurchaseOrderDetail::setMaterialName);
     }
 
     @Override
@@ -225,6 +208,11 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         PurchaseOrder po = getById(orderId);
         if (po == null) {
             throw new CustomException("采购单不存在");
+        }
+        // 租户归属校验：防止跨租户越权审批采购单
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(po.getTenantId())) {
+            throw new CustomException("无权操作其他租户的采购单");
         }
         if (!PurchaseOrderStatus.DRAFT.getValue().equals(po.getStatus())) {
             throw new CustomException("只有草稿状态的采购单才能审核");
@@ -239,6 +227,11 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         PurchaseOrder po = getById(orderId);
         if (po == null) {
             throw new CustomException("采购单不存在");
+        }
+        // 租户归属校验：防止跨租户越权取消采购单
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(po.getTenantId())) {
+            throw new CustomException("无权操作其他租户的采购单");
         }
         if (PurchaseOrderStatus.RECEIVED.getValue().equals(po.getStatus()) || PurchaseOrderStatus.CANCELLED.getValue().equals(po.getStatus())) {
             throw new CustomException("采购单状态不允许取消");

@@ -4,6 +4,8 @@ import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.module.member.model.CouponAvailableDTO;
 import com.reggie.module.member.model.CouponUser;
 import com.reggie.module.member.service.CouponUserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RestController
 @RequestMapping("/api/member/coupon-user")
 @Tag(name = "用户优惠券")
+@RequireEmployee
 public class CouponUserController {
 
     @Autowired
@@ -66,6 +70,21 @@ public class CouponUserController {
         qw.eq(CouponUser::getMemberId, memberId);
         qw.orderByDesc(CouponUser::getCreatedTime);
         List<CouponUser> list = couponUserService.list(qw);
+        return R.success(list);
+    }
+
+    /**
+     * 查询会员在当前订单金额下可使用的优惠券（收银台选券）
+     * @param userId      用户ID（与 coupon_user.member_id 一致）
+     * @param orderAmount 当前订单应付金额
+     * @return 可用优惠券列表（含可抵扣金额）
+     */
+    @GetMapping("/available")
+    @Operation(summary = "可用优惠券", description = "根据会员用户ID与订单金额返回可使用的优惠券列表，用于收银台选券抵扣")
+    @Parameter(name = "userId", description = "用户ID", required = true)
+    @Parameter(name = "orderAmount", description = "订单应付金额", required = true)
+    public R<List<CouponAvailableDTO>> availableCoupons(@RequestParam Long userId, @RequestParam BigDecimal orderAmount) {
+        List<CouponAvailableDTO> list = couponUserService.availableCoupons(userId, orderAmount);
         return R.success(list);
     }
 }

@@ -6,10 +6,12 @@ import com.reggie.common.BaseContext;
 import com.reggie.module.printer.mapper.PrinterConfigMapper;
 import com.reggie.module.printer.model.PrinterConfig;
 import com.reggie.module.printer.service.PrinterConfigService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 打印机配置服务实现
@@ -20,6 +22,9 @@ import java.util.List;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class PrinterConfigServiceImpl extends ServiceImpl<PrinterConfigMapper, PrinterConfig> implements PrinterConfigService {
+
+    @Autowired
+    private PrinterConfigMapper printerConfigMapper;
 
     @Override
     public List<PrinterConfig> listByTenant() {
@@ -35,6 +40,11 @@ public class PrinterConfigServiceImpl extends ServiceImpl<PrinterConfigMapper, P
                 .eq(PrinterConfig::getTenantId, BaseContext.getCurrentTenantId())
                 .last("LIMIT 1"))
                 .stream().findFirst().orElse(null);
+    }
+
+    @Override
+    public Map<String, Object> statPrinters(Long tenantId) {
+        return printerConfigMapper.statPrinters(tenantId);
     }
 }
 

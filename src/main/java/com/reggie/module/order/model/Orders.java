@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import javax.validation.constraints.DecimalMin;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
  * 订单
  */
 @Data
+@TableName("orders")
 @Schema(description = "订单")
 public class Orders implements Serializable {
 
@@ -63,7 +65,7 @@ public class Orders implements Serializable {
     @Schema(description = "结账时间", example = "2024-01-01 13:00:00")
     private LocalDateTime checkoutTime;
 
-    @Schema(description = "支付方式：1=微信，2=支付宝", example = "1")
+    @Schema(description = "支付方式：1=现金，2=微信，3=支付宝，4=银行卡，5=会员储值", example = "1")
     private Integer payMethod;
 
     @Schema(description = "实收金额", example = "88.00", required = true)
@@ -111,14 +113,6 @@ public class Orders implements Serializable {
     @TableField(exist = false)
     private String tableName;
 
-    @Schema(description = "排队记录ID（非数据库字段，排队场景关联）", example = "1")
-    @TableField(exist = false)
-    private Long queueId;
-
-    @Schema(description = "预订记录ID（非数据库字段，预订场景关联）", example = "1")
-    @TableField(exist = false)
-    private Long reservationId;
-
     @Schema(description = "用餐人数（非数据库字段）", example = "4")
     @TableField(exist = false)
     private Integer customerCount;
@@ -154,5 +148,9 @@ public class Orders implements Serializable {
     @Schema(description = "库存是否已回退：0=否，1=是", example = "0")
     @TableField("stock_refunded")
     private Integer stockRefunded;
+
+    @Schema(description = "本单使用的优惠券ID（用户优惠券记录ID），未使用为 null", example = "1")
+    @TableField("used_coupon_id")
+    private Long usedCouponId;
 }
 

@@ -1,15 +1,16 @@
 /* ============================================================
    瑞吉外卖管理端 - 登录页
-   设计：流动渐变背景 + 多层光球动画 + 极简表单
+   设计：简洁双栏布局 + 实心令牌表面（去除玻璃/渐变/光球等装饰）
+   统一规范：圆角卡片 12px、输入 8px；颜色全部引设计令牌
    ============================================================ */
 
 /* ---- CSS 变量 ---- */
 :root, html.light-theme {
   --c-bg1:  var(--legacy-f0f2f8);
   --c-bg2:  var(--legacy-e4e9f2);
-  --c-card: rgba(255,255,255,.84);
-  --c-card-bd: rgba(255,255,255,.55);
-  --c-shadow: 0 8px 40px rgba(0,0,0,.07);
+  --c-card: var(--color-white);
+  --c-card-bd: var(--color-gray-200);
+  --c-shadow: 0 8px 40px rgba(0,0,0,.08);
   --c-t1:  var(--legacy-1a1d2e);
   --c-t2:  var(--legacy-5a5f7a);
   --c-t3:  var(--legacy-8b90a5);
@@ -24,17 +25,13 @@
   --c-left1: var(--legacy-1a1d2e);
   --c-left2: var(--legacy-2d1f3d);
   --c-left-t: var(--color-white);
-  --orb-a: rgba(255,194,0,.22);
-  --orb-b: rgba(139,92,246,.16);
-  --orb-c: rgba(34,197,94,.1);
-  --orb-d: rgba(59,130,246,.12);
 }
 
 html.dark-theme {
   --c-bg1:  var(--legacy-0a0d17);
   --c-bg2:  var(--legacy-121530);
-  --c-card: rgba(18,22,38,.86);
-  --c-card-bd: rgba(255,255,255,.06);
+  --c-card: rgba(18,22,38,.92);
+  --c-card-bd: rgba(255,255,255,.08);
   --c-shadow: 0 8px 40px rgba(0,0,0,.45);
   --c-t1:  var(--legacy-f1f3f9);
   --c-t2:  var(--legacy-a0a5ba);
@@ -50,10 +47,6 @@ html.dark-theme {
   --c-left1: var(--legacy-0a0d17);
   --c-left2: var(--legacy-1a1030);
   --c-left-t: var(--color-white);
-  --orb-a: rgba(255,194,0,.18);
-  --orb-b: rgba(139,92,246,.1);
-  --orb-c: rgba(34,197,94,.06);
-  --orb-d: rgba(59,130,246,.08);
 }
 
 /* ---- 基础 ---- */
@@ -64,101 +57,10 @@ html, body.login-page {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
                "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
 }
 
 body.login-page {
   background: var(--c-bg1);
-  transition: background .5s;
-}
-
-/* ================================================================
-   背景动画系统
-   ================================================================ */
-
-/* 流动渐变底层 */
-.bg-layer {
-  position: fixed; inset: 0; z-index: 0;
-  pointer-events: none; overflow: hidden;
-  background: linear-gradient(135deg, var(--c-bg1), var(--c-bg2), var(--c-bg1));
-  background-size: 300% 300%;
-  animation: bgFlow 18s ease infinite;
-}
-
-@keyframes bgFlow {
-  0%, 100% { background-position: 0% 50%; }
-  25%  { background-position: 100% 30%; }
-  50%  { background-position: 80% 80%; }
-  75%  { background-position: 20% 20%; }
-}
-
-/* 网格纹理 */
-.bg-grid {
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
-  background-size: 60px 60px;
-  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 15%, transparent 70%);
-}
-html.dark-theme .bg-grid {
-  background-image:
-    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
-}
-
-/* 四层光球 - 各自动画路径不同 */
-.bg-orb {
-  position: absolute; border-radius: 50%;
-  filter: blur(100px);
-  will-change: transform;
-}
-
-.bg-orb.a {
-  width: 600px; height: 600px; background: var(--orb-a);
-  top: -250px; left: -200px;
-  animation: orbA 28s ease-in-out infinite;
-}
-.bg-orb.b {
-  width: 450px; height: 450px; background: var(--orb-b);
-  bottom: -200px; right: -150px;
-  animation: orbB 24s ease-in-out infinite;
-}
-.bg-orb.c {
-  width: 380px; height: 380px; background: var(--orb-c);
-  top: 45%; left: 60%;
-  animation: orbC 30s ease-in-out infinite;
-}
-.bg-orb.d {
-  width: 300px; height: 300px; background: var(--orb-d);
-  top: 10%; right: 30%;
-  animation: orbD 22s ease-in-out infinite;
-}
-
-/* 各光球独立运动轨迹 */
-@keyframes orbA {
-  0%, 100% { transform: translate(0,0) scale(1); }
-  20%  { transform: translate(80px, -50px) scale(1.08); }
-  40%  { transform: translate(-30px, 40px) scale(.93); }
-  60%  { transform: translate(50px, -20px) scale(1.05); }
-  80%  { transform: translate(-60px, 30px) scale(.95); }
-}
-@keyframes orbB {
-  0%, 100% { transform: translate(0,0) scale(1); }
-  30%  { transform: translate(-70px, 50px) scale(1.06); }
-  60%  { transform: translate(40px, -40px) scale(.92); }
-  90%  { transform: translate(-20px, -10px) scale(1.04); }
-}
-@keyframes orbC {
-  0%, 100% { transform: translate(0,0) scale(1); }
-  25%  { transform: translate(-50px, -60px) scale(1.1); }
-  50%  { transform: translate(30px, 45px) scale(.88); }
-  75%  { transform: translate(-40px, 20px) scale(1.03); }
-}
-@keyframes orbD {
-  0%, 100% { transform: translate(0,0) scale(1); }
-  35%  { transform: translate(60px, 40px) scale(1.07); }
-  70%  { transform: translate(-45px, -30px) scale(.9); }
 }
 
 /* ================================================================
@@ -175,14 +77,11 @@ html.dark-theme .bg-grid {
 .login-shell {
   display: flex;
   width: 100%; max-width: 980px; min-height: 600px;
-  border-radius: 24px;
+  border-radius: 12px;
   background: var(--c-card);
   box-shadow: var(--c-shadow);
   border: 1px solid var(--c-card-bd);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
   overflow: hidden;
-  transition: background .4s, box-shadow .4s;
 }
 
 /* ---- 左侧品牌区 ---- */
@@ -190,45 +89,14 @@ html.dark-theme .bg-grid {
   position: relative; flex: 1;
   display: flex; align-items: center; justify-content: center;
   padding: 60px 52px;
-  background: linear-gradient(150deg, var(--c-left1), var(--c-left2));
+  background: var(--c-left1);
   overflow: hidden; min-height: 100%;
-}
-
-/* 多层纹理叠加 */
-.left-mask {
-  position: absolute; inset: 0;
-  z-index: 0; pointer-events: none;
-  background:
-    repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(255,255,255,.018) 3px, rgba(255,255,255,.018) 6px),
-    radial-gradient(ellipse 70% 50% at 25% 25%, rgba(255,194,0,.12) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 72% 78%, rgba(139,92,246,.07) 0%, transparent 60%);
-}
-
-/* 大号旋转几何环 - 居中放置 */
-.left-ring {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 520px; height: 520px;
-  margin: -260px 0 0 -260px;
-  border: 1.5px solid rgba(255,255,255,.05);
-  border-radius: 42% 58% 53% 47% / 47% 48% 52% 53%;
-  animation: ringSpin 28s linear infinite;
-}
-
-@keyframes ringSpin { to { transform: rotate(360deg); } }
-
-.left-ring::after {
-  content: '';
-  position: absolute; inset: -80px;
-  border: 1px solid rgba(255,255,255,.025);
-  border-radius: 48% 52% 45% 55% / 55% 42% 58% 45%;
-  animation: ringSpin 22s linear infinite reverse;
 }
 
 .left-inner {
   position: relative; z-index: 2;
   color: var(--c-left-t); text-align: center;
-  animation: fadeUp .7s ease .15s both;
+  animation: fadeUp .5s ease .1s both;
 }
 
 .left-brand {
@@ -239,15 +107,15 @@ html.dark-theme .bg-grid {
 .brand-icon {
   width: 48px; height: 48px; display: flex;
   align-items: center; justify-content: center;
-  background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-300));
-  border-radius: 14px;
+  background: var(--c-focus);
+  border-radius: 12px;
   font-size: 24px; color: var(--text-on-brand);
-  box-shadow: 0 10px 30px rgba(255,194,0,.45);
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
 }
 
 .brand-name {
   font-size: 22px; font-weight: 700;
-  letter-spacing: 2px; opacity: .95;
+  opacity: .95;
 }
 
 .left-heading {
@@ -257,8 +125,8 @@ html.dark-theme .bg-grid {
 
 .left-sub {
   font-size: 14px; margin: 0;
-  opacity: .5; line-height: 1.8;
-  letter-spacing: 1.5px;
+  opacity: .6; line-height: 1.8;
+  letter-spacing: 1px;
 }
 
 @keyframes fadeUp {
@@ -271,12 +139,13 @@ html.dark-theme .bg-grid {
   flex: 1;
   display: flex; align-items: center; justify-content: center;
   padding: 48px 52px;
+  background: var(--c-card);
 }
 
 .login-card {
   width: 100%; max-width: 360px;
   opacity: 0; transform: translateY(20px);
-  transition: opacity .65s ease .1s, transform .65s ease .1s;
+  transition: opacity .55s ease .1s, transform .55s ease .1s;
 }
 .login-card.in { opacity: 1; transform: translateY(0); }
 
@@ -284,11 +153,11 @@ html.dark-theme .bg-grid {
 
 .card-badge {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 56px; height: 56px; border-radius: 16px;
-  background: linear-gradient(135deg, var(--c-focus), var(--c-focus-2));
+  width: 56px; height: 56px; border-radius: 12px;
+  background: var(--c-focus);
   color: var(--text-on-brand); font-size: 26px;
   margin-bottom: 22px;
-  box-shadow: 0 10px 28px rgba(255,194,0,.4);
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
 }
 
 .card-h2 {
@@ -304,13 +173,11 @@ html.dark-theme .bg-grid {
    表单
    ================================================================ */
 .login-form { width: 100%; padding: 0 !important; }
-/* 修改点：取消 Element UI 默认 label 宽度导致的 content 左缩进，保证输入框与卡片等宽 */
 .login-form .el-form-item { display: block; margin-bottom: 22px; }
 .login-form .el-form-item__label { width: 0 !important; padding: 0 !important; }
 .login-form .el-form-item__content { line-height: normal; width: 100% !important; margin-left: 0 !important; }
 .fi { margin-bottom: 22px; }
 .fi .el-form-item__content { line-height: normal; width: 100%; }
-/* 修改点：el-form-item 默认 inline-block，强制内容块级撑满，保证输入框宽度与卡片一致 */
 .fi .el-form-item__content .inp-wrap { width: 100%; }
 
 /* 输入框包裹 */
@@ -318,7 +185,7 @@ html.dark-theme .bg-grid {
   display: flex; align-items: center;
   height: 50px;
   border: 1.5px solid var(--c-inp-bd);
-  border-radius: 13px;
+  border-radius: 8px;
   background: var(--c-inp-bg);
   box-shadow: 0 1px 2px rgba(0,0,0,.04), inset 0 1px 2px rgba(0,0,0,.02);
   transition: border-color .25s, box-shadow .25s, transform .2s, background .25s;
@@ -362,7 +229,6 @@ html.dark-theme .bg-grid {
 }
 .inp-wrap.on .inp-icon { color: var(--c-focus); }
 
-/* Element UI input 嵌入 */
 .inp-wrap .el-input { flex: 1; height: 100%; width: 100%; }
 .inp-wrap .el-input .el-input__inner {
   border: none !important;
@@ -377,7 +243,6 @@ html.dark-theme .bg-grid {
   color: var(--c-t3); opacity: .45; font-size: 14px;
 }
 
-/* 密码显隐 */
 .inp-eye {
   display: flex; align-items: center; justify-content: center;
   width: 46px; height: 50px; flex-shrink: 0;
@@ -388,7 +253,6 @@ html.dark-theme .bg-grid {
 }
 .inp-eye:hover { color: var(--c-focus); background: var(--c-focus-g); }
 
-/* 校验通过勾 */
 .inp-ok {
   display: flex; align-items: center; justify-content: center;
   width: 40px; height: 50px; flex-shrink: 0;
@@ -402,39 +266,25 @@ html.dark-theme .bg-grid {
 .btn-login {
   position: relative;
   width: 100%; height: 50px;
-  border: none; border-radius: 13px;
-  background: linear-gradient(135deg, var(--c-focus), var(--c-focus-2));
+  border: none; border-radius: 8px;
+  background: var(--c-focus);
   color: var(--text-on-brand); font-size: 16px; font-weight: 600;
   letter-spacing: 2px; cursor: pointer; overflow: hidden;
-  box-shadow: 0 10px 28px rgba(255,194,0,.42);
-  transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .3s, opacity .2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .3s, opacity .2s, background .2s;
 }
-
-/* hover 渐变切换 */
-.btn-login::before {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(135deg, var(--c-focus-2), var(--c-focus));
-  opacity: 0; transition: opacity .35s;
-}
-.btn-login:hover:not(:disabled)::before { opacity: 1; }
-
-.btn-login > span {
-  position: relative; z-index: 2;
-  display: inline-flex; align-items: center;
-  justify-content: center; gap: 8px;
-}
-.btn-login i { font-size: 18px; }
 
 .btn-login:hover:not(:disabled) {
+  background: var(--c-focus-2);
   transform: translateY(-2px);
-  box-shadow: 0 16px 40px rgba(255,194,0,.55);
+  box-shadow: 0 4px 14px rgba(0,0,0,.16);
 }
 .btn-login:active:not(:disabled) {
   transform: translateY(0) scale(.97);
 }
 .btn-login:disabled {
   cursor: not-allowed; opacity: .65;
-  box-shadow: 0 4px 12px rgba(255,194,0,.22);
+  box-shadow: 0 2px 6px rgba(0,0,0,.1);
 }
 .btn-login:focus-visible {
   outline: 2px solid var(--c-focus); outline-offset: 2px;
@@ -484,8 +334,6 @@ html.dark-theme .bg-grid {
   color: var(--c-t2); font-size: 19px;
   cursor: pointer; z-index: 100;
   display: flex; align-items: center; justify-content: center;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 2px 10px rgba(0,0,0,.06);
   transition: all .3s;
 }
@@ -499,7 +347,7 @@ html.dark-theme .bg-grid {
 
 /* ---- 忘记密码弹窗 ---- */
 .fp-dialog .el-dialog {
-  border-radius: 16px; overflow: hidden;
+  border-radius: 12px; overflow: hidden;
   background: var(--c-card); border: 1px solid var(--c-card-bd);
 }
 .fp-dialog .el-dialog__header { padding: 22px 24px 0; border-bottom: none; }
@@ -508,7 +356,7 @@ html.dark-theme .bg-grid {
 .fp-dialog .el-dialog__footer { padding: 10px 24px 22px; }
 .fp-dialog .el-form-item__label { color: var(--c-t2); font-size: 13px; }
 .fp-dialog .el-input__inner {
-  border-radius: 10px; background: var(--c-inp-bg);
+  border-radius: 8px; background: var(--c-inp-bg);
   border-color: var(--c-inp-bd); color: var(--c-t1);
   height: 42px; line-height: 42px;
 }
@@ -519,7 +367,7 @@ html.dark-theme .bg-grid {
 .fp-dialog .el-dialog__headerbtn .el-dialog__close { color: var(--c-t3); }
 .fp-dialog .el-dialog__headerbtn:hover .el-dialog__close { color: var(--c-focus); }
 .fp-dialog .el-button--primary {
-  background: var(--c-focus); border-color: var(--c-focus); border-radius: 10px;
+  background: var(--c-focus); border-color: var(--c-focus); border-radius: 8px;
   color: var(--text-on-brand);
 }
 .fp-dialog .el-button--primary:hover {
@@ -538,7 +386,6 @@ html.dark-theme .bg-grid {
   .left-brand { margin-bottom: 20px; }
   .brand-icon { width: 36px; height: 36px; font-size: 18px; }
   .brand-name { font-size: 17px; }
-  .left-ring { display: none; }
   .shell-right { padding: 28px 30px; }
   .card-top { margin-bottom: 28px; }
   .card-badge { width: 48px; height: 48px; font-size: 22px; margin-bottom: 16px; }
@@ -548,21 +395,20 @@ html.dark-theme .bg-grid {
 
 @media (max-width: 480px) {
   #login-app { padding: 10px; padding-top: calc(48px + env(safe-area-inset-top)); }
-  .login-shell { border-radius: 14px; }
+  .login-shell { border-radius: 12px; }
   .shell-left { padding: 20px; min-height: 100px; }
   .shell-right { padding: 20px 22px; }
   .btn-login { height: 46px; font-size: 15px; }
-  .inp-wrap { height: 46px; border-radius: 11px; }
+  .inp-wrap { height: 46px; border-radius: 8px; }
   .inp-wrap .el-input .el-input__inner { height: 44px !important; line-height: 44px !important; }
 }
 
 /* ---- 减少动画 ---- */
 @media (prefers-reduced-motion: reduce) {
-  .bg-layer, .bg-orb, .left-ring, .left-ring::after, .btn-dot {
+  .login-card, .left-inner, .card-foot, .btn-dot {
     animation: none !important;
   }
   .login-card, .left-inner, .card-foot {
-    animation: none !important;
     opacity: 1 !important; transform: none !important;
   }
   .inp-wrap, .btn-login { transition: none !important; }

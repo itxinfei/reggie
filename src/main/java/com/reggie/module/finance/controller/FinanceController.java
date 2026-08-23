@@ -2,6 +2,8 @@ package com.reggie.module.finance.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.finance.model.WithdrawalApplication;
 import com.reggie.module.finance.model.ReconciliationStatement;
 import com.reggie.module.finance.model.ProfitAnalysis;
@@ -34,6 +36,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/finance")
 @Tag(name = "Finance Management")
+@RequireEmployee
 public class FinanceController {
 
     @Autowired
@@ -54,13 +57,13 @@ public class FinanceController {
 
     @GetMapping("/withdrawal/{id}")
     @Operation(summary = "Get withdrawal by ID")
-    @Parameter(description = "I d")
     public R<WithdrawalApplication> getWithdrawalById(@PathVariable Long id) {
         WithdrawalApplication application = financeService.getWithdrawalById(id);
         return R.success(application);
     }
 
     @PostMapping("/withdrawal")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Create withdrawal application")
     public R<String> createWithdrawal(@RequestBody WithdrawalApplication application) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -72,6 +75,7 @@ public class FinanceController {
     }
 
     @PostMapping("/withdrawal/{id}/review")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Review withdrawal application")
     public R<String> reviewWithdrawal(
             @Parameter(description = "ID")
@@ -85,6 +89,7 @@ public class FinanceController {
     }
 
     @PostMapping("/withdrawal/{id}/payment")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Process withdrawal payment")
     public R<String> processWithdrawalPayment(
             @Parameter(description = "ID")
@@ -95,16 +100,16 @@ public class FinanceController {
     }
 
     @PostMapping("/withdrawal/{id}/cancel")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Cancel withdrawal")
-    @Parameter(description = "I d")
     public R<String> cancelWithdrawal(@PathVariable Long id) {
         boolean success = financeService.cancelWithdrawal(id);
         return success ? R.success("Cancelled") : R.error("Cancellation failed");
     }
 
     @DeleteMapping("/withdrawal/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Delete withdrawal")
-    @Parameter(description = "I d")
     public R<String> deleteWithdrawal(@PathVariable Long id) {
         boolean success = financeService.deleteWithdrawal(id);
         return success ? R.success("Deleted") : R.error("Deletion failed");
@@ -125,13 +130,13 @@ public class FinanceController {
 
     @GetMapping("/reconciliation/{id}")
     @Operation(summary = "Get reconciliation by ID")
-    @Parameter(description = "I d")
     public R<ReconciliationStatement> getReconciliationById(@PathVariable Long id) {
         ReconciliationStatement statement = financeService.getReconciliationById(id);
         return R.success(statement);
     }
 
     @PostMapping("/reconciliation/generate")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Generate reconciliation")
     public R<ReconciliationStatement> generateReconciliation(
                         @Parameter(description = "Date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
@@ -142,8 +147,8 @@ public class FinanceController {
     }
 
     @PostMapping("/reconciliation/{id}/confirm")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Confirm reconciliation")
-    @Parameter(description = "I d")
     public R<String> confirmReconciliation(@PathVariable Long id) {
         Long userId = BaseContext.getCurrentId();
         String userName = "Admin";
@@ -152,8 +157,8 @@ public class FinanceController {
     }
 
     @DeleteMapping("/reconciliation/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Delete reconciliation")
-    @Parameter(description = "I d")
     public R<String> deleteReconciliation(@PathVariable Long id) {
         boolean success = financeService.deleteReconciliation(id);
         return success ? R.success("Deleted") : R.error("Deletion failed");
@@ -181,6 +186,7 @@ public class FinanceController {
     }
 
     @PostMapping("/profit/generate")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Generate profit analysis")
     public R<ProfitAnalysis> generateProfitAnalysis(
                         @Parameter(description = "Date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {

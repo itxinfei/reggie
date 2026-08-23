@@ -42,6 +42,13 @@ public class DeliveryServiceImpl implements DeliveryService {
     /** 日志记录器 */
     private static final Logger log = LoggerFactory.getLogger(DeliveryServiceImpl.class);
 
+    /** 平台回调类型：新订单 */
+    private static final String CALLBACK_TYPE_NEW_ORDER = "new_order";
+    /** 平台回调类型：状态更新 */
+    private static final String CALLBACK_TYPE_STATUS_UPDATE = "status_update";
+    /** 平台回调类型：取消 */
+    private static final String CALLBACK_TYPE_CANCEL = "cancel";
+
     /** 配送平台工厂 */
     @Autowired
     private DeliveryPlatformFactory factory;
@@ -349,11 +356,11 @@ public class DeliveryServiceImpl implements DeliveryService {
             }
 
             switch (type) {
-                case "new_order":
+                case CALLBACK_TYPE_NEW_ORDER:
                     // 新订单通知：保存/更新订单
                     return handleNewOrderCallback(order, platform, params, callbackTenantId);
 
-                case "status_update":
+                case CALLBACK_TYPE_STATUS_UPDATE:
                     // 状态变更通知
                     if (order == null) {
                         log.warn("回调订单不存在: platform={}, platformOrderId={}", platform, platformOrderId);
@@ -362,7 +369,7 @@ public class DeliveryServiceImpl implements DeliveryService {
                     updateOrderStatusCallback(order, status);
                     return "success";
 
-                case "cancel":
+                case CALLBACK_TYPE_CANCEL:
                     // 取消通知（用户或平台主动取消）
                     if (order == null) {
                         log.warn("回调订单不存在: platform={}, platformOrderId={}", platform, platformOrderId);

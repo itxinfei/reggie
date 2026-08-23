@@ -2,6 +2,7 @@ package com.reggie.module.report.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.report.service.ReportEnhancedService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,6 +25,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/report/enhanced")
 @Tag(name = "Enhanced Report Management")
+@RequireEmployee
 public class ReportEnhancedController {
 
     @Autowired

@@ -13,6 +13,7 @@ import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.model.TableArea;
 import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.module.dining.service.TableAreaService;
+import com.reggie.module.dining.vo.TableStatsVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,9 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
     /** 桌台区域服务 */
     @Autowired
     private TableAreaService tableAreaService;
+
+    @Autowired
+    private DiningTableMapper diningTableMapper;
 
     /** 桌台状态流转白名单：每个状态允许的合法目标状态 */
     private static final Map<String, Set<String>> ALLOWED_TABLE_TRANSITIONS = new LinkedHashMap<>();
@@ -105,7 +109,15 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
 
     @Override
     public Page<DiningTable> pageWithArea(int page, int pageSize) {
+        return pageWithArea(page, pageSize, null, null, null);
+    }
+
+    @Override
+    public Page<DiningTable> pageWithArea(int page, int pageSize, String name, Long areaId, String status) {
         LambdaQueryWrapper<DiningTable> qw = new LambdaQueryWrapper<>();
+        qw.eq(name != null && !name.isEmpty(), DiningTable::getName, name);
+        qw.eq(areaId != null, DiningTable::getAreaId, areaId);
+        qw.eq(status != null && !status.isEmpty(), DiningTable::getStatus, status);
         qw.orderByAsc(DiningTable::getSort);
         Page<DiningTable> pageInfo = PageUtils.of(page, pageSize);
         page(pageInfo, qw);
@@ -134,6 +146,67 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
             }
         }
         return pageInfo;
+    }
+
+    /**
+     * 桌台统计：按状态分类计数
+     * 使用 LambdaQueryWrapper + count() 单次查询各状态数量，租户隔离
+     */
+    @Override
+    public TableStatsVO tableStats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        TableStatsVO stats = new TableStatsVO();
+
+        // 总数
+        long total = lambdaQuery()
+                .eq(DiningTable::getTenantId, tenantId)
+                .count();
+        stats.setTotalTables(total);
+
+        // 各状态计数
+        stats.setFreeTables(Long.valueOf(lambdaQuery()
+                .eq(DiningTable::getTenantId, tenantId)
+                .eq(DiningTable::getStatus, DiningTableStatus.FREE.getValue())
+                .count()));
+        stats.setOccupiedTables(Long.valueOf(lambdaQuery()
+                .eq(DiningTable::getTenantId, tenantId)
+                .eq(DiningTable::getStatus, DiningTableStatus.OCCUPIED.getValue())
+                .count()));
+        stats.setReservedTables(Long.valueOf(lambdaQuery()
+                .eq(DiningTable::getTenantId, tenantId)
+                .eq(DiningTable::getStatus, DiningTableStatus.RESERVED.getValue())
+                .count()));
+        stats.setCleaningTables(Long.valueOf(lambdaQuery()
+                .eq(DiningTable::getTenantId, tenantId)
+                .eq(DiningTable::getStatus, DiningTableStatus.CLEANING.getValue())
+                .count()));
+
+        return stats;
+    }
+
+    @Override
+    public Map<String, Object> areaStats() {
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> byAreaList = diningTableMapper.statByArea();
+        int total = 0;
+        String maxArea = "-";
+        int maxCount = 0;
+        for (Map<String, Object> row : byAreaList) {
+            int cnt = 0;
+            Object cntVal = row.get("cnt");
+            if (cntVal instanceof Number) {
+                cnt = ((Number) cntVal).intValue();
+            }
+            total += cnt;
+            if (cnt > maxCount) {
+                maxCount = cnt;
+                Object areaName = row.get("areaName");
+                maxArea = (areaName == null ? "未知区域" : String.valueOf(areaName)) + "(" + cnt + "桌)";
+            }
+        }
+        result.put("totalTables", total);
+        result.put("maxTablesArea", maxArea);
+        return result;
     }
 }
 

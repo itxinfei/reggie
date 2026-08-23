@@ -293,7 +293,6 @@
               return
             }
             this.optionsLoadError = true
-            console.error('加载打印机筛选选项失败:', err)
             ReggieUI.error('加载打印机筛选选项失败，请刷新页面重试')
           } finally {
             this.optionsLoading = false

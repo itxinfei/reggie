@@ -162,7 +162,18 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
         groupQw.eq(DishSpecGroup::getStatus, 1);
         List<DishSpecGroup> groups = specGroupMapper.selectList(groupQw);
 
-        // 3. 查询每个规格组的选项
+        // 3. 批量查询所有规格组的选项，避免 N+1 查询
+        LambdaQueryWrapper<DishSpecOption> optionQw = new LambdaQueryWrapper<>();
+        if (tenantId != null) {
+            optionQw.eq(DishSpecOption::getTenantId, tenantId);
+        }
+        optionQw.eq(DishSpecOption::getStatus, 1);
+        optionQw.orderByAsc(DishSpecOption::getSortOrder);
+        List<DishSpecOption> allOptions = specOptionMapper.selectList(optionQw);
+        Map<Long, List<DishSpecOption>> optionsByGroup = allOptions.stream()
+                .collect(Collectors.groupingBy(DishSpecOption::getGroupId));
+
+        // 4. 组装结果
         List<Map<String, Object>> result = new ArrayList<>();
         for (DishSpecGroup group : groups) {
             Map<String, Object> groupMap = new HashMap<>();
@@ -172,8 +183,8 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
             groupMap.put("required", group.getRequired());
             groupMap.put("maxSelect", group.getMaxSelect());
 
-            List<DishSpecOption> options = getSpecOptions(group.getId(), tenantId);
-            groupMap.put("options", options);
+            List<DishSpecOption> options = optionsByGroup.get(group.getId());
+            groupMap.put("options", options != null ? options : new ArrayList<>());
 
             result.add(groupMap);
         }
@@ -187,18 +198,22 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
         // 1. 删除原有关联
         deleteDishSpecRelations(dishId);
 
-        // 2. 保存新关联
+        // 2. 保存新关联（批量构建后批量插入）
         if (groupIds != null && !groupIds.isEmpty()) {
+            LocalDateTime now = LocalDateTime.now();
+            Long currentId = com.reggie.common.BaseContext.getCurrentId();
+            List<DishSpecRelation> relations = new ArrayList<>();
             for (int i = 0; i < groupIds.size(); i++) {
                 DishSpecRelation relation = new DishSpecRelation();
                 relation.setDishId(dishId);
                 relation.setGroupId(groupIds.get(i));
                 relation.setSortOrder(i);
                 relation.setTenantId(tenantId);
-                relation.setCreateTime(LocalDateTime.now());
-                relation.setCreateUser(com.reggie.common.BaseContext.getCurrentId());
-                specRelationMapper.insert(relation);
+                relation.setCreateTime(now);
+                relation.setCreateUser(currentId);
+                relations.add(relation);
             }
+            specRelationMapper.insertBatch(relations);
         }
 
         return true;
@@ -222,10 +237,14 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
 
         BigDecimal totalPrice = basePrice;
 
-        // 查询选项的价格调整
-        for (Long optionId : optionIds) {
-            DishSpecOption option = specOptionMapper.selectById(optionId);
-            if (option != null && option.getPriceAdjust() != null) {
+        // 批量查询选项的价格调整，避免 N+1 查询
+        List<DishSpecOption> options = specOptionMapper.selectBatchIds(optionIds);
+        if (options == null || options.isEmpty()) {
+            return basePrice;
+        }
+
+        for (DishSpecOption option : options) {
+            if (option.getPriceAdjust() != null) {
                 totalPrice = totalPrice.add(option.getPriceAdjust());
             }
         }

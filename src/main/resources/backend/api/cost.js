@@ -31,5 +31,7 @@ const getCostSummary = (params) => $axios({ url: '/cost/summary', method: 'get',
 const getCostTrend = (params) => $axios({ url: '/cost/trend', method: 'get', params })
 const getCostStructure = (params) => $axios({ url: '/cost/structure', method: 'get', params })
 const getDishCostRanking = (params) => $axios({ url: '/cost/dish/ranking', method: 'get', params })
+const getCostRanking = getDishCostRanking // 别名：页面调用 getCostRanking
 const calculateProfitRate = (dishId) => $axios({ url: `/cost/dish/profit-rate/${dishId}`, method: 'get' })
 const getCostAlert = (params) => $axios({ url: '/cost/alert', method: 'get', params })
+const getCostAlerts = getCostAlert // 别名：页面调用 getCostAlerts

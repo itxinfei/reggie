@@ -2,6 +2,7 @@ package com.reggie.module.marketing.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.marketing.model.NewCustomerDiscount;
 import com.reggie.module.marketing.model.BuyGetFree;
 import com.reggie.module.marketing.model.FlashSale;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.reggie.common.RateLimit;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -33,6 +35,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/marketing/tool")
 @Tag(name = "Marketing Tool Management")
+@RequireEmployee
 public class MarketingToolController {
 
     @Autowired
@@ -49,6 +52,7 @@ public class MarketingToolController {
     }
 
     @PostMapping("/new-customer")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Save new customer discount")
     public R<String> saveNewCustomerDiscount(@RequestBody NewCustomerDiscount discount) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -58,6 +62,7 @@ public class MarketingToolController {
     }
 
     @PutMapping("/new-customer")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update new customer discount")
     public R<String> updateNewCustomerDiscount(@RequestBody NewCustomerDiscount discount) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -67,14 +72,15 @@ public class MarketingToolController {
     }
 
     @DeleteMapping("/new-customer/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Delete new customer discount")
-    @Parameter(description = "I d")
     public R<String> deleteNewCustomerDiscount(@PathVariable Long id) {
         boolean success = marketingToolService.deleteNewCustomerDiscount(id);
         return success ? R.success("Deleted successfully") : R.error("Delete failed");
     }
 
     @PostMapping("/new-customer/calculate")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Calculate new customer discount")
     public R<BigDecimal> calculateNewCustomerDiscount(
                         @Parameter(description = "Order amount") @RequestParam BigDecimal orderAmount) {
@@ -95,6 +101,7 @@ public class MarketingToolController {
     }
 
     @PostMapping("/buy-get-free")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Save buy get free activity")
     public R<String> saveBuyGetFree(@RequestBody BuyGetFree activity) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -104,6 +111,7 @@ public class MarketingToolController {
     }
 
     @PutMapping("/buy-get-free")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update buy get free activity")
     public R<String> updateBuyGetFree(@RequestBody BuyGetFree activity) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -113,14 +121,15 @@ public class MarketingToolController {
     }
 
     @DeleteMapping("/buy-get-free/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Delete buy get free activity")
-    @Parameter(description = "I d")
     public R<String> deleteBuyGetFree(@PathVariable Long id) {
         boolean success = marketingToolService.deleteBuyGetFree(id);
         return success ? R.success("Deleted successfully") : R.error("Delete failed");
     }
 
     @PostMapping("/buy-get-free/calculate")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Calculate buy get free gift")
     public R<Map<String, Object>> calculateBuyGetFreeGift(
                         @Parameter(description = "Activity ID") @RequestParam Long activityId,
@@ -141,6 +150,7 @@ public class MarketingToolController {
     }
 
     @PostMapping("/flash-sale")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Save flash sale")
     public R<String> saveFlashSale(@RequestBody FlashSale flashSale) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -150,6 +160,7 @@ public class MarketingToolController {
     }
 
     @PutMapping("/flash-sale")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update flash sale")
     public R<String> updateFlashSale(@RequestBody FlashSale flashSale) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -159,8 +170,8 @@ public class MarketingToolController {
     }
 
     @DeleteMapping("/flash-sale/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Delete flash sale")
-    @Parameter(description = "I d")
     public R<String> deleteFlashSale(@PathVariable Long id) {
         boolean success = marketingToolService.deleteFlashSale(id);
         return success ? R.success("Deleted successfully") : R.error("Delete failed");
@@ -175,6 +186,7 @@ public class MarketingToolController {
     }
 
     @PostMapping("/flash-sale/calculate")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Calculate flash sale price")
     public R<Map<String, Object>> calculateFlashSalePrice(
                         @Parameter(description = "Flash sale ID") @RequestParam Long flashSaleId,

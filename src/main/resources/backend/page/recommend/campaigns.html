@@ -17,8 +17,8 @@
             margin-bottom: 20px;
         }
         .chart-panel {
-            background: var(--bg-surface); border-radius: 12px; padding: 18px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.04); border: 1px solid var(--el-bg-page);
+            background: var(--bg-surface); border-radius: var(--radius-lg); padding: 18px;
+            box-shadow: var(--shadow-sm); border: 1px solid var(--el-bg-page);
         }
         .chart-panel .chart-header {
             display: flex; justify-content: space-between; align-items: center;
@@ -34,7 +34,7 @@
         /* ========== 推送预览列表 ========== */
         .push-preview {
             max-height: 200px; overflow-y: auto;
-            border: 1px solid var(--el-border-light); border-radius: 6px; padding: 8px; margin-top: 8px;
+            border: 1px solid var(--el-border-light); border-radius: var(--radius-md); padding: 8px; margin-top: 8px;
         }
         .push-preview .preview-item {
             display: flex; align-items: center; justify-content: space-between;
@@ -48,9 +48,9 @@
             margin-bottom: 16px; text-align: center;
         }
         .stats-overview .stat-item {
-            background: var(--el-bg-base); border-radius: 8px; padding: 14px 8px;
+            background: var(--el-bg-base); border-radius: var(--radius-md); padding: 14px 8px;
         }
-        .stats-overview .stat-item .num { font-size: 22px; font-weight: 700; color: var(--el-text-primary); }
+        .stats-overview .stat-item .num { font-size: var(--font-size-2xl); font-weight: 700; color: var(--el-text-primary); }
         .stats-overview .stat-item .lbl { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 4px; }
 
         /* ========== 批量操作栏（选中行后显示，紧贴表格上方） ========== */
@@ -59,7 +59,7 @@
             margin-bottom: 16px; padding: 10px 14px;
             background: var(--color-brand-50);
             border: 1px solid var(--color-brand-300);
-            border-radius: 6px;
+            border-radius: var(--radius-md);
         }
         .batch-bar__count { font-size: var(--font-size-sm); color: var(--el-text-regular); font-weight: 500; }
         .batch-bar .el-button { margin-left: 0; }
@@ -340,7 +340,7 @@
                     <div class="lbl">参与率</div>
                 </div>
             </div>
-            <div class="info-box" style="border:1px solid var(--el-border-lighter2);border-radius:4px;margin-bottom:16px;">
+            <div class="info-box" style="border:1px solid var(--el-border-lighter2);border-radius:var(--radius-sm);margin-bottom:16px;">
                 <div class="item-box"><span class="label">活动名称：</span><span class="des">{{ statsCampaign.name }}</span></div>
                 <div class="item-box"><span class="label">活动类型：</span><span class="des">{{ typeMap[statsCampaign.campaignType] }}</span></div>
                 <div class="item-box"><span class="label">参与上限：</span><span class="des">{{ statsCampaign.maxParticipants || '不限' }}</span></div>
@@ -506,7 +506,6 @@
                     return;
                 }
                 self.optionsLoadError = true;
-                console.error('加载活动选项失败:', err);
                 ReggieUI.error('加载筛选选项失败，请刷新页面重试');
             }).finally(function() {
                 self.optionsLoading = false;
@@ -544,7 +543,7 @@
                     series: [{
                         type: 'pie', radius: ['45%', '70%'], center: ['35%', '50%'],
                         avoidLabelOverlap: false,
-                        itemStyle: { borderRadius: 4, borderColor: RgPalette.white, borderWidth: 2 },
+                        itemStyle: { borderRadius: RgPalette.radiusSm borderColor: RgPalette.white, borderWidth: 2 },
                         label: { show: false },
                         emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
                         data: [
@@ -569,14 +568,14 @@
                             name: '推送消息数', type: 'bar',
                             data: [self.summary.totalPushed || 0],
                             barWidth: 50,
-                            itemStyle: { color: '#5470c6', borderRadius: [6, 6, 0, 0] },
-                            label: { show: true, position: 'top', fontSize: 14, fontWeight: 'bold', color: '#5470c6' }
+                            itemStyle: { color: RgPalette.seriesBlue, borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] },
+                            label: { show: true, position: 'top', fontSize: 14, fontWeight: 'bold', color: RgPalette.seriesBlue }
                         },
                         {
                             name: '参与总人数', type: 'bar',
                             data: [self.summary.totalParticipants || 0],
                             barWidth: 50,
-                            itemStyle: { color: '#91cc75', borderRadius: [6, 6, 0, 0] },
+                            itemStyle: { color: RgPalette.seriesGreen, borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] },
                             label: { show: true, position: 'top', fontSize: 14, fontWeight: 'bold', color: RgPalette.success }
                         }
                     ]
@@ -706,7 +705,7 @@
         batchDelete: function() {
             var self = this;
             if (self.selectedRows.length === 0) return;
-            self.$confirm('确认删除选中的 ' + self.selectedRows.length + ' 个活动？', '批量删除', { type: 'warning' }).then(function() {
+            ReggieUI.confirm('确认删除选中的 ' + self.selectedRows.length + ' 个活动？', '批量删除', { type: 'warning' }).then(function() {
                 var ids = self.selectedRows.map(function(r) { return r.id; });
                 // 修改点(2026-07-10)：使用批量删除接口，单次网络请求
                 recommendBackendApi.batchDeleteCampaigns({ ids: ids }).then(function(res) {
@@ -724,7 +723,7 @@
             var self = this;
             var toPause = self.selectedRows.filter(function(r) { return r.status === 1; });
             if (toPause.length === 0) { ReggieUI.warning('请选择进行中的活动'); return; }
-            self.$confirm('确认暂停选中的 ' + toPause.length + ' 个活动？', '批量暂停', { type: 'warning' }).then(function() {
+            ReggieUI.confirm('确认暂停选中的 ' + toPause.length + ' 个活动？', '批量暂停', { type: 'warning' }).then(function() {
                 var promises = toPause.map(function(r) { return recommendBackendApi.pauseCampaign(r.id); });
                 Promise.all(promises).then(function() {
                     ReggieUI.success('批量暂停成功');
@@ -803,7 +802,7 @@
         },
         publishCampaign: function(row) {
             var self = this;
-            self.$confirm('确认发布【' + row.name + '】？发布后将对目标用户可见。', '提示', { type: 'info' }).then(function() {
+            ReggieUI.confirm('确认发布【' + row.name + '】？发布后将对目标用户可见。', '提示', { type: 'info' }).then(function() {
                 recommendBackendApi.publishCampaign(row.id).then(function(res) {
                     if (res.code === 1) { ReggieUI.success('发布成功'); self.loadData(); }
                     else { ReggieUI.error(res.msg || '发布失败'); }
@@ -812,7 +811,7 @@
         },
         pauseCampaign: function(row) {
             var self = this;
-            self.$confirm('确认暂停【' + row.name + '】？暂停后用户将无法参与。', '提示', { type: 'warning' }).then(function() {
+            ReggieUI.confirm('确认暂停【' + row.name + '】？暂停后用户将无法参与。', '提示', { type: 'warning' }).then(function() {
                 recommendBackendApi.pauseCampaign(row.id).then(function(res) {
                     if (res.code === 1) { ReggieUI.success('已暂停'); self.loadData(); }
                     else { ReggieUI.error(res.msg || '暂停失败'); }
@@ -821,7 +820,7 @@
         },
         deleteCampaign: function(row) {
             var self = this;
-            self.$confirm('确认删除【' + row.name + '】？此操作不可恢复！', '警告', {
+            ReggieUI.confirm('确认删除【' + row.name + '】？此操作不可恢复！', '警告', {
                 type: 'warning', confirmButtonText: '确认删除'
             }).then(function() {
                 recommendBackendApi.deleteCampaign(row.id).then(function(res) {
@@ -919,12 +918,12 @@
                     {
                         name: '推送数', type: 'bar',
                         data: [pushCount],
-                        itemStyle: { color: '#5470c6', borderRadius: [4,4,0,0] }
+                        itemStyle: { color: RgPalette.seriesBlue, borderRadius: [RgPalette.radiusSm, RgPalette.radiusSm, 0, 0] }
                     },
                     {
                         name: '参与数', type: 'bar',
                         data: [participants],
-                        itemStyle: { color: '#91cc75', borderRadius: [4,4,0,0] }
+                        itemStyle: { color: RgPalette.seriesGreen, borderRadius: [RgPalette.radiusSm, RgPalette.radiusSm, 0, 0] }
                     }
                 ]
             }, true);

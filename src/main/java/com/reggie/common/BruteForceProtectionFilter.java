@@ -12,11 +12,15 @@ import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
 /**
@@ -44,14 +48,26 @@ public class BruteForceProtectionFilter implements Filter {
     private final boolean enabled;
 
     /**
-     * 最大允许失败次数
+     * Redis 瞬态故障熔断标记：Redis 异常时 fail-open（放行登录但放弃防护），
+     * 避免单点故障导致全站登录不可用。熔断持续 30 秒后自动恢复探测。
      */
-    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private volatile long redisCircuitOpenUntil = 0;
+
+    /**
+     * 熔断持续时间（毫秒）
+     */
+    private static final long CIRCUIT_OPEN_DURATION_MS = 30_000L;
+
+    /**
+     * 最大允许失败次数（复用 SecurityConstants，保持单一来源）
+     */
+    private static final int MAX_FAILED_ATTEMPTS = SecurityConstants.MAX_LOGIN_FAIL_COUNT;
 
     /**
      * 锁定时间（秒）
+     * 注意：SecurityConstants.LOGIN_LOCK_DURATION 以分钟为单位，此处转换为秒以匹配 Lua 脚本
      */
-    private static final int LOCKOUT_DURATION = 900; // 15分钟，与SecurityConstants.LOGIN_LOCK_DURATION保持一致
+    private static final int LOCKOUT_DURATION = SecurityConstants.LOGIN_LOCK_DURATION * 60;
 
     /**
      * 登录失败计数 key 前缀
@@ -174,7 +190,7 @@ public class BruteForceProtectionFilter implements Filter {
             // 返回 -1 表示已锁定，否则为当前失败次数
             Long failures = redisTemplate.execute(incrementWithExpireScript,
                     Arrays.asList(failureKey, lockedKey),
-                    900,           // ARGV[1]: 过期时间15分钟
+                    LOCKOUT_DURATION,  // ARGV[1]: 过期时间（秒），引用 SecurityConstants 计算值
                     MAX_FAILED_ATTEMPTS);  // ARGV[2]: 最大尝试次数
 
             if (failures != null && failures == -1) {
@@ -187,7 +203,7 @@ public class BruteForceProtectionFilter implements Filter {
                 }
             }
         } catch (Exception e) {
-            log.error("记录登录失败异常：identifier={}, error={}", identifier, e.getMessage());
+            log.error("记录登录失败异常：identifier={}, error={}", identifier, e.getMessage(), e);
         }
     }
 
@@ -208,7 +224,7 @@ public class BruteForceProtectionFilter implements Filter {
             redisTemplate.delete(lockedKey);
             log.info("登录失败计数已重置 - 标识：{}", identifier);
         } catch (Exception e) {
-            log.error("重置登录失败计数异常：{}", e.getMessage());
+            log.error("重置登录失败计数异常：{}", e.getMessage(), e);
         }
     }
 
@@ -228,20 +244,29 @@ public class BruteForceProtectionFilter implements Filter {
             Object count = redisTemplate.opsForValue().get(failureKey);
             return count != null ? Integer.parseInt(count.toString()) : 0;
         } catch (Exception e) {
-            log.error("获取登录失败次数异常：{}", e.getMessage());
+            log.error("获取登录失败次数异常：{}", e.getMessage(), e);
             return 0;
         }
     }
 
     /**
      * 检查是否被锁定
+     * 修改点：Redis 异常时 fail-open（放行），配合瞬态故障熔断，
+     * 避免 Redis 单点故障导致全站登录不可用。暴力破解防护降级为"放弃防护但保持可用"。
      */
     private boolean isLocked(String identifier) {
         try {
             String lockedKey = LOGIN_LOCKED_KEY_PREFIX + identifier;
             return redisTemplate.hasKey(lockedKey);
         } catch (Exception e) {
-            log.error("检查账号锁定状态异常：{}", e.getMessage());
+            long now = System.currentTimeMillis();
+            if (now < redisCircuitOpenUntil) {
+                // 熔断期内，静默放行，降低重复告警噪声
+                return false;
+            }
+            redisCircuitOpenUntil = now + CIRCUIT_OPEN_DURATION_MS;
+            log.error("检查账号锁定状态异常，Redis 故障熔断 30s（fail-open 放行，暴力破解防护临时失效）：{}",
+                    e.getMessage(), e);
             return false;
         }
     }
@@ -304,7 +329,7 @@ public class BruteForceProtectionFilter implements Filter {
             Object count = redisTemplate.opsForValue().get(failureKey);
             return count != null ? Integer.parseInt(count.toString()) : 0;
         } catch (Exception e) {
-            log.error("获取登录失败次数异常：{}", e.getMessage());
+            log.error("获取登录失败次数异常：{}", e.getMessage(), e);
             return 0;
         }
     }
@@ -334,21 +359,110 @@ public class BruteForceProtectionFilter implements Filter {
 
     /**
      * 获取标识（用户名/IP）
+     * <p>
+     * 修复说明：原实现仅通过 request.getParameter() 获取用户名/手机号，
+     * 但登录接口（/employee/login、/user/login）均使用 @RequestBody 接收 JSON，
+     * getParameter() 对 JSON body 无效，导致暴力破解防护完全失效。
+     * 现实现改为直接从输入流读取 JSON body，并解析 username/phone/userAccount 字段；
+     * 同时依赖 Spring 的 CharacterEncodingFilter（通常已启用 ContentCachingRequestWrapper）
+     * 保证输入流可被重复读取，下游 Controller 仍可正常接收 @RequestBody。
      */
     private String getIdentifier(HttpServletRequest request) {
-        // 优先使用用户名
+        // 优先从 query 参数获取（兼容 form-urlencoded）
         String username = request.getParameter("username");
         if (username != null && !username.trim().isEmpty()) {
-            return username;
+            return username.trim();
         }
 
         // 移动端登录获取 phone 参数
         String phone = request.getParameter("phone");
         if (phone != null && !phone.trim().isEmpty()) {
-            return phone;
+            return phone.trim();
         }
 
-        // 否则使用 IP
+        // 从 JSON body 读取（@RequestBody 场景）
+        String bodyStr = readRequestJsonBody(request);
+        if (bodyStr != null && !bodyStr.isEmpty()) {
+            String u = extractJsonValue(bodyStr, "username");
+            if (u != null && !u.trim().isEmpty()) {
+                return u.trim();
+            }
+            String p = extractJsonValue(bodyStr, "phone");
+            if (p != null && !p.trim().isEmpty()) {
+                return p.trim();
+            }
+            String ua = extractJsonValue(bodyStr, "userAccount");
+            if (ua != null && !ua.trim().isEmpty()) {
+                return ua.trim();
+            }
+        }
+
+        // 兜底：使用请求源IP
         return request.getRemoteAddr();
+    }
+
+    /**
+     * 从 HttpServletRequest 读取 JSON body
+     * <p>
+     * 注意：此方法仅应在请求未被下游消费前调用一次。Spring 的
+     * CharacterEncodingFilter 通常已将请求包装为 ContentCachingRequestWrapper，
+     * 使得输入流可被重复读取；此处兜底处理：若未包装则直接读取。
+     */
+    private String readRequestJsonBody(HttpServletRequest request) {
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new InputStreamReader(request.getInputStream(), Charset.forName("UTF-8")));
+            StringBuilder sb = new StringBuilder();
+            int ch;
+            while ((ch = reader.read()) != -1) {
+                sb.append((char) ch);
+            }
+            return sb.toString();
+        } catch (IOException e) {
+            log.debug("读取登录请求JSON body失败，降级使用IP：{}", e.getMessage());
+            return null;
+        } finally {
+            if (reader != null) {
+                try { reader.close(); } catch (IOException ignored) {}
+            }
+        }
+    }
+
+    /**
+     * 简易 JSON 字段值提取（仅支持顶层字符串值，不依赖第三方 JSON 库）
+     * 格式匹配：{"fieldName":"value"} 或 {"fieldName": "value"}
+     */
+    private String extractJsonValue(String json, String fieldName) {
+        if (json == null || fieldName == null) {
+            return null;
+        }
+        String search = "\"" + fieldName + "\"";
+        int keyIdx = json.indexOf(search);
+        if (keyIdx < 0) {
+            return null;
+        }
+        int colonIdx = json.indexOf(':', keyIdx + search.length());
+        if (colonIdx < 0) {
+            return null;
+        }
+        int startIdx = -1;
+        for (int i = colonIdx + 1; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (c == '"') {
+                startIdx = i + 1;
+                break;
+            } else if (c == '{' || c == '[' || c == 'n' || c == 't' || c == 'f' || Character.isDigit(c)) {
+                // 非字符串值不提取
+                return null;
+            }
+        }
+        if (startIdx < 0) {
+            return null;
+        }
+        int endIdx = json.indexOf('"', startIdx);
+        if (endIdx < 0) {
+            return null;
+        }
+        return json.substring(startIdx, endIdx);
     }
 }

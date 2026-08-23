@@ -1,6 +1,8 @@
 package com.reggie.module.printer.controller;
 
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.printer.adapter.PrinterAdapterFactory;
 import com.reggie.module.printer.model.PrinterConfig;
 import com.reggie.module.printer.model.PrinterStatus;
@@ -35,6 +37,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/printer")
 @Tag(name = "打印机打印")
+@RequireEmployee
 public class PrinterController {
 
     @Autowired
@@ -53,6 +56,7 @@ public class PrinterController {
      * @return 操作结果
      */
     @PostMapping("/print/{orderId}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "打印订单", description = "根据订单ID打印订单小票，支持多种打印类型（BILL-小票、KITCHEN-厨房单）")
     @Parameter(name = "orderId", description = "订单ID", required = true)
     @Parameter(name = "type", description = "打印类型：BILL-小票（默认）、KITCHEN-厨房单", required = false)
@@ -68,6 +72,7 @@ public class PrinterController {
      * @return 连接测试结果
      */
     @PostMapping("/test/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "测试打印机连接", description = "测试指定打印机是否连接正常")
     @Parameter(name = "id", description = "打印机ID", required = true)
     public R<String> test(@PathVariable Long id) {
@@ -95,7 +100,6 @@ public class PrinterController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "查询打印机", description = "根据ID查询打印机配置")
-    @Parameter(description = "I d")
     public R<PrinterConfig> getById(@PathVariable Long id) {
         PrinterConfig config = printerConfigService.getById(id);
         if (config != null) {

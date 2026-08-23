@@ -13,17 +13,13 @@ import com.reggie.module.user.model.User;
 import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.order.mapper.OrderMapper;
 import com.reggie.module.user.mapper.UserMapper;
-import com.reggie.module.store.mapper.StoreConfigMapper;
 import com.reggie.module.store.mapper.StoreDailySummaryMapper;
 import com.reggie.module.store.mapper.StoreEmployeePermissionMapper;
 import com.reggie.module.store.mapper.StoreInfoMapper;
-import com.reggie.module.store.mapper.StoreSyncLogMapper;
-import com.reggie.module.store.model.StoreConfig;
 import com.reggie.module.store.model.StoreDailySummary;
 import com.reggie.module.store.model.StoreEmployeePermission;
 import com.reggie.module.store.model.StoreInfo;
 import com.reggie.module.store.model.StoreSearchDTO;
-import com.reggie.module.store.model.StoreSyncLog;
 import com.reggie.module.store.service.StoreService;
 import com.reggie.module.auth.service.EmployeeService;
 import com.reggie.module.order.service.OrderService;
@@ -87,7 +83,7 @@ public class StoreServiceImpl implements StoreService {
     private UserMapper userMapper;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public StoreInfo createStore(StoreInfo storeInfo, Tenant tenant,
                                   String username, String password) {
         // 1. 创建租户
@@ -129,12 +125,19 @@ public class StoreServiceImpl implements StoreService {
 
     // 修改点：新增编辑方法
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void updateStore(Long tenantId, Map<String, Object> updateData) {
         // 1. 更新 Tenant 表
         Tenant tenant = tenantService.getById(tenantId);
         if (tenant == null) {
             log.warn("[门店管理] 编辑门店失败: tenantId={} 不存在", tenantId);
+            return;
+        }
+        // 租户权限校验：防止跨租户越权编辑门店
+        StoreInfo existingStore = storeInfoMapper.findByTenantId(tenantId);
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && existingStore != null && !currentTenantId.equals(existingStore.getParentTenantId()) && !currentTenantId.equals(tenantId)) {
+            log.warn("[门店管理] 无权编辑其他门店: tenantId={}, currentTenantId={}", tenantId, currentTenantId);
             return;
         }
         if (updateData.containsKey("storeName")) {
@@ -383,28 +386,42 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public void updateStoreStatus(Long tenantId, Integer status) {
         Tenant tenant = tenantService.getById(tenantId);
-        if (tenant != null) {
-            tenant.setStatus(status);
-            tenantService.updateById(tenant);
-            log.info("[门店管理] 门店{}状态更新为: {}", tenantId, status);
+        if (tenant == null) {
+            return;
         }
+        // 租户权限校验：防止跨租户越权修改门店状态
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        StoreInfo existingStore = storeInfoMapper.findByTenantId(tenantId);
+        if (currentTenantId != null && existingStore != null && !currentTenantId.equals(existingStore.getParentTenantId()) && !currentTenantId.equals(tenantId)) {
+            log.warn("[门店管理] 无权修改其他门店状态: tenantId={}, currentTenantId={}", tenantId, currentTenantId);
+            return;
+        }
+        tenant.setStatus(status);
+        tenantService.updateById(tenant);
+        log.info("[门店管理] 门店{}状态更新为: {}", tenantId, status);
     }
 
     // 修改点：新增批量更新状态方法
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public int batchUpdateStoreStatus(List<Long> tenantIds, Integer status) {
         int successCount = 0;
+        Long currentTenantId = BaseContext.getCurrentTenantId();
         for (Long tenantId : tenantIds) {
             try {
                 Tenant tenant = tenantService.getById(tenantId);
-                if (tenant != null) {
-                    tenant.setStatus(status);
-                    tenantService.updateById(tenant);
-                    successCount++;
+                if (tenant == null) continue;
+                // 租户权限校验：防止跨租户批量修改状态
+                StoreInfo existingStore = storeInfoMapper.findByTenantId(tenantId);
+                if (currentTenantId != null && existingStore != null && !currentTenantId.equals(existingStore.getParentTenantId()) && !currentTenantId.equals(tenantId)) {
+                    log.warn("[门店管理] 批量更新跳过无权门店: tenantId={}, currentTenantId={}", tenantId, currentTenantId);
+                    continue;
                 }
+                tenant.setStatus(status);
+                tenantService.updateById(tenant);
+                successCount++;
             } catch (Exception e) {
-                log.error("[门店管理] 批量更新状态失败: tenantId={}, error={}", tenantId, e.getMessage());
+                log.error("[门店管理] 批量更新状态失败: tenantId={}, error={}", tenantId, e.getMessage(), e);
             }
         }
         log.info("[门店管理] 批量更新门店状态完成: 成功{}个, 目标状态={}", successCount, status);
@@ -523,8 +540,12 @@ public class StoreServiceImpl implements StoreService {
                .eq(StoreDailySummary::getSummaryDate, LocalDate.now());
         return summaryMapper.selectOne(wrapper);
     }
-}
 
+    @Override
+    public StoreInfo findByTenantId(Long tenantId) {
+        return storeInfoMapper.findByTenantId(tenantId);
+    }
+}
 
 
 

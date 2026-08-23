@@ -56,7 +56,7 @@
 .top-bar .location .icon-location-outline {
   width: 16rem;
   height: 16rem;
-  border-color: rgba(51,51,51,0.75);
+  border-color: var(--gold-text);
   margin-right: 4rem;
   flex-shrink: 0;
   border-width: 1.5rem;
@@ -64,7 +64,7 @@
 .top-bar .location .icon-location-outline::after {
   width: 5rem;
   height: 5rem;
-  background: rgba(51,51,51,0.75);
+  background: var(--gold-text);
 }
 
 .top-bar .location span {

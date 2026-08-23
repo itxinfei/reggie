@@ -2,6 +2,7 @@
 -- Matches MyBatis-Plus 3.4.2 default UPPER_SNAKE_CASE column naming
 
 -- Drop child tables first, parent tables last
+DROP TABLE IF EXISTS dish_material;
 DROP TABLE IF EXISTS stock_record;
 DROP TABLE IF EXISTS stock_check_detail;
 DROP TABLE IF EXISTS purchase_order_detail;
@@ -128,6 +129,21 @@ CREATE TABLE stock_check_detail (
   PRIMARY KEY (ID)
 );
 
+CREATE TABLE dish_material (
+  ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
+  DISH_ID bigint NULL DEFAULT NULL COMMENT '菜品ID',
+  MATERIAL_ID bigint NULL DEFAULT NULL COMMENT '食材ID',
+  USAGE_QTY decimal(10,3) NULL DEFAULT NULL COMMENT '单份菜品消耗食材数量',
+  SORT int NULL DEFAULT 0 COMMENT '排序',
+  CREATE_TIME datetime NULL DEFAULT NULL COMMENT '创建时间',
+  UPDATE_TIME datetime NULL DEFAULT NULL COMMENT '更新时间',
+  CREATE_USER bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  UPDATE_USER bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  IS_DELETED int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (ID)
+);
+
 CREATE TABLE stock_record (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
@@ -168,3 +184,7 @@ CREATE INDEX idx_stock_record_tenant_id ON stock_record(TENANT_ID);
 CREATE INDEX idx_stock_record_material_id ON stock_record(MATERIAL_ID);
 CREATE INDEX idx_stock_record_biz_id ON stock_record(BIZ_ID);
 CREATE INDEX idx_stock_record_type ON stock_record(TYPE);
+CREATE INDEX idx_dish_material_tenant_id ON dish_material(TENANT_ID);
+CREATE INDEX idx_dish_material_dish_id ON dish_material(DISH_ID);
+CREATE INDEX idx_dish_material_material_id ON dish_material(MATERIAL_ID);
+CREATE UNIQUE INDEX idx_dish_material_dish_material ON dish_material(TENANT_ID, DISH_ID, MATERIAL_ID);

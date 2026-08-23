@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分账结算 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+  <style>
+    /* 结算单详情：极简可读网格（令牌驱动，无多余装饰） */
+    .settlement-detail-dialog .detail-body { margin: 0; }
+    .settlement-detail-dialog .detail-item {
+      display: flex; align-items: baseline; padding: 8px 0;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: var(--font-size-sm); line-height: 1.5;
+    }
+    .settlement-detail-dialog .detail-label {
+      flex: 0 0 96px; color: var(--text-secondary);
+    }
+    .settlement-detail-dialog .detail-value {
+      flex: 1; color: var(--text-primary); font-weight: 500;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="settlement-app">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">加盟分账结算</h1>
+          <p class="ds-page-header__subtitle">按合同与周期生成分账结算单，总部核对后确认、结算</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
+
+      <!-- 搜索 + 操作栏 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      ></table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :show-actions="true"
+        :actions-width="200"
+        empty-hint="暂无结算单，试试调整筛选条件"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-franchisee="{ row }">
+          {{ franchiseeName(row.franchiseeId) }}
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 0 ? 'info' : row.status === 1 ? 'warning' : 'success'" size="small">
+            {{ row.status === 0 ? '待确认' : row.status === 1 ? '已确认' : '已结算' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button v-if="row.status === 0" type="text" size="small" class="btn-view" @click="confirmHandle(row)">确认</el-button>
+          <el-button v-if="row.status === 1" type="text" size="small" class="btn-success" @click="settleHandle(row)">结算</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="detailHandle(row)">详情</el-button>
+        </template>
+      </crud-table>
+    </div>
+
+    <!-- 生成结算单弹窗 -->
+    <crud-dialog
+      :title="genData.title"
+      :visible.sync="genData.dialogVisible"
+      :submit-loading="generating"
+      width="42%"
+      @submit="submitGenerate"
+      @close="genData.dialogVisible = false"
+    >
+      <el-form ref="genForm" :model="genData" :rules="genRules" label-width="100px" size="small">
+        <el-form-item label="加盟合同：" prop="contractId">
+          <el-select v-model="genData.contractId" placeholder="请选择生效中的加盟合同" filterable style="width: 100%">
+            <el-option v-for="c in activeContracts" :key="c.id" :label="c.contractNo + '（' + franchiseeName(c.franchiseeId) + '）'" :value="c.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="结算周期：" prop="settlePeriod">
+          <el-date-picker
+            v-model="genData.settlePeriod"
+            type="month"
+            placeholder="选择结算月份（如 2026-08）"
+            value-format="yyyy-MM"
+            style="width: 100%"
+          ></el-date-picker>
+        </el-form-item>
+        <el-form-item>
+          <div class="el-form-item__help" style="color: var(--text-secondary); font-size: var(--font-size-xs); line-height: 1.5;">
+            结算单将聚合该门店周期内<b>已完成</b>订单，按合同抽成规则计算应抽成金额与应结算金额；同一合同+周期重复生成会幂等返回已有单据。
+          </div>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 结算单详情弹窗（统一接入 crud-dialog，纯展示故隐藏确认按钮） -->
+    <crud-dialog
+      title="结算单详情"
+      :visible.sync="detailVisible"
+      width="46%"
+      custom-class="settlement-detail-dialog"
+      :show-submit="false"
+      cancel-text="关闭"
+      @close="detailVisible = false"
+    >
+      <el-row v-if="detail" :gutter="12" class="detail-body">
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">合同编号：</span><span class="detail-value">{{ detail.contractNo || '-' }}</span></div></el-col>
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">加盟商：</span><span class="detail-value">{{ franchiseeName(detail.franchiseeId) }}</span></div></el-col>
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">结算周期：</span><span class="detail-value">{{ detail.settlePeriod }}</span></div></el-col>
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">门店租户ID：</span><span class="detail-value">{{ detail.storeTenantId || '-' }}</span></div></el-col>
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">订单数：</span><span class="detail-value">{{ detail.orderCount }}</span></div></el-col>
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">周期营业额：</span><span class="detail-value">¥{{ formatMoney(detail.salesAmount) }}</span></div></el-col>
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">抽成方式：</span><span class="detail-value">{{ detail.commissionType === 1 ? '按比例' : '固定金额' }}</span></div></el-col>
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">抽成比例：</span><span class="detail-value">{{ detail.commissionRate != null ? (detail.commissionRate * 100).toFixed(2) + '%' : '-' }}</span></div></el-col>
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">应抽成金额：</span><span class="detail-value">¥{{ formatMoney(detail.commissionAmount) }}</span></div></el-col>
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">应结算金额：</span><span class="detail-value">¥{{ formatMoney(detail.settleAmount) }}</span></div></el-col>
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">状态：</span><span class="detail-value">{{ detail.status === 0 ? '待确认' : detail.status === 1 ? '已确认' : '已结算' }}</span></div></el-col>
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">确认时间：</span><span class="detail-value">{{ detail.confirmTime || '-' }}</span></div></el-col>
+        <el-col :span="12"><div class="detail-item"><span class="detail-label">结算时间：</span><span class="detail-value">{{ detail.settleTime || '-' }}</span></div></el-col>
+        <el-col v-if="detail.remark" :span="24"><div class="detail-item"><span class="detail-label">备注：</span><span class="detail-value">{{ detail.remark }}</span></div></el-col>
+      </el-row>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/components.js"></script>
+  <script src="../../api/franchise.js"></script>
+  <script>
+    new Vue({
+      el: '#settlement-app',
+      data() {
+        return {
+          loading: false,
+          generating: false, // 生成结算单提交防重
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          franchiseeOptions: [],
+          franchiseeMap: {},
+          contractOptions: [],
+          detail: null,
+          detailVisible: false,
+          // 搜索配置
+          searchConfig: [
+            { type: 'input', field: 'settlePeriod', placeholder: '结算周期（如 2026-08）', width: '200px' },
+            { type: 'select', field: 'status', placeholder: '请选择状态', width: '150px',
+              options: [
+                { label: '待确认', value: '0' },
+                { label: '已确认', value: '1' },
+                { label: '已结算', value: '2' }
+              ] },
+            { type: 'select', field: 'franchiseeId', placeholder: '请选择加盟商', width: '200px',
+              options: [] }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'generate', text: '+ 生成结算单', type: 'primary' }
+          ],
+          // 表格列配置（对齐由 components.js resolveColAlign 统一控制：文本居中、金额/数字右对齐）
+          columns: [
+            { prop: 'settlePeriod', label: '结算周期', width: 110 },
+            { prop: 'franchiseeId', label: '加盟商', slot: true, minWidth: 120, showOverflowTooltip: true },
+            { prop: 'orderCount', label: '订单数', width: 80, type: 'number' },
+            { prop: 'salesAmount', label: '营业额', width: 110, type: 'money' },
+            { prop: 'commissionAmount', label: '应抽成', width: 110, type: 'money' },
+            { prop: 'settleAmount', label: '应结算', width: 120, type: 'money' },
+            { prop: 'status', label: '状态', slot: true, width: 90 },
+            { prop: 'createTime', label: '生成时间', width: 160 }
+          ],
+          // 生成弹窗表单
+          genData: {
+            title: '生成结算单',
+            dialogVisible: false,
+            contractId: '',
+            settlePeriod: ''
+          },
+          genRules: {
+            contractId: [{ required: true, message: '请选择加盟合同', trigger: 'change' }],
+            settlePeriod: [{ required: true, message: '请选择结算周期', trigger: 'change' }]
+          },
+          searchValues: {}
+        }
+      },
+      computed: {
+        activeContracts() {
+          var self = this
+          return (self.contractOptions || []).filter(function(c) { return c.status === 1 })
+        }
+      },
+      created() {
+        this.loadFranchisees()
+        this.loadContracts()
+        this.init()
+      },
+      methods: {
+        formatMoney(v) {
+          if (v === null || v === undefined || v === '') return '0.00'
+          return Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        },
+        franchiseeName(id) {
+          var f = this.franchiseeMap[id]
+          return f ? f.name : (id || '-')
+        },
+        async loadFranchisees() {
+          try {
+            var res = await franchiseeList()
+            if (String(res.code) === '1') {
+              var list = res.data || []
+              this.franchiseeOptions = list
+              var map = {}
+              list.forEach(function(f) { map[f.id] = f })
+              this.franchiseeMap = map
+              this.searchConfig[2].options = list.map(function(f) { return { label: f.name, value: String(f.id) } })
+            }
+          } catch (err) {
+            console.warn('加载加盟商下拉失败:', err)
+          }
+        },
+        async loadContracts() {
+          try {
+            var res = await contractList()
+            if (String(res.code) === '1') {
+              this.contractOptions = res.data || []
+            }
+          } catch (err) {
+            console.warn('加载合同下拉失败:', err)
+          }
+        },
+        async init() {
+          this.loading = true
+          var sv = this.searchValues || {}
+          var params = {
+            page: this.page,
+            pageSize: this.pageSize,
+            settlePeriod: sv.settlePeriod || undefined,
+            status: sv.status || undefined,
+            franchiseeId: sv.franchiseeId || undefined
+          }
+          try {
+            var res = await settlementPage(params)
+            if (String(res.code) === '1') {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          } catch (err) {
+            ReggieUI.error('请求失败：' + err)
+          }
+          this.loading = false
+        },
+        // table-bar 回调
+        onSearch(searchParams) {
+          this.searchValues = searchParams
+          this.page = 1
+          this.init()
+        },
+        onReset() {
+          this.searchValues = {}
+          this.page = 1
+          this.init()
+        },
+        onAction(payload) {
+          if (payload.key === 'generate') this.generateHandle()
+        },
+        // 分页
+        onPageChange(payload) {
+          this.page = payload.page
+          this.init()
+        },
+        onSizeChange(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.init()
+        },
+        // 生成结算单
+        generateHandle() {
+          this.genData.title = '生成结算单'
+          this.genData.contractId = ''
+          this.genData.settlePeriod = ''
+          this.genData.dialogVisible = true
+        },
+        submitGenerate() {
+          if (this.generating) return // 提交防重
+          var self = this
+          var passed = false
+          self.$refs.genForm.validate(function(valid) { passed = valid })
+          if (!passed) {
+            ReggieUI.warning('请选择合同与结算周期')
+            return
+          }
+          self.generating = true
+          generateSettlement(self.genData.contractId, self.genData.settlePeriod).then(res => {
+            self.generating = false
+            if (res.code === 1) {
+              ReggieUI.success('结算单生成成功！')
+              self.genData.dialogVisible = false
+              self.init()
+            } else {
+              ReggieUI.error(res.msg || '生成失败')
+            }
+          }).catch(err => { self.generating = false; ReggieUI.error('请求失败：' + err) })
+        },
+        // 确认结算单（待确认 → 已确认）
+        confirmHandle(row) {
+          var self = this
+          ReggieUI.confirm('确认该结算单的营业额与抽成金额无误？确认后进入已确认状态。', '提示', {
+            confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning'
+          }).then(function() {
+            confirmSettlement(row.id).then(res => {
+              if (res.code === 1) {
+                ReggieUI.success('确认成功！')
+                self.init()
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(err => { ReggieUI.error('请求失败：' + err) })
+          })
+        },
+        // 完成结算（已确认 → 已结算）
+        settleHandle(row) {
+          var self = this
+          ReggieUI.confirm('完成结算后将标记该周期抽成已划转，是否继续？', '提示', {
+            confirmButtonText: '结算', cancelButtonText: '取消', type: 'warning'
+          }).then(function() {
+            settleSettlement(row.id).then(res => {
+              if (res.code === 1) {
+                ReggieUI.success('结算成功！')
+                self.init()
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(err => { ReggieUI.error('请求失败：' + err) })
+          })
+        },
+        // 详情
+        detailHandle(row) {
+          var self = this
+          getSettlement(row.id).then(res => {
+            if (res.code === 1) {
+              var d = res.data || {}
+              // 附带合同编号便于展示
+              var c = (self.contractOptions || []).find(function(x) { return x.id === d.contractId })
+              d.contractNo = c ? c.contractNo : ''
+              self.detail = d
+              self.detailVisible = true
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(err => { ReggieUI.error('请求失败：' + err) })
+        }
+      }
+    })
+  </script>
+</body>
+</html>

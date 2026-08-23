@@ -20,10 +20,10 @@
 
     /* 工具栏 */
     .tableBar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
-      background: var(--bg-surface); padding: 16px 24px; border-radius: 12px; margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+      background: var(--bg-surface); padding: 16px 24px; border-radius: var(--radius-lg); margin-bottom: 20px;
+      box-shadow: var(--shadow-sm); border: 1px solid var(--el-border-light);
       transition: all 0.3s; }
-    .tableBar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .tableBar:hover { box-shadow: var(--shadow-lg); }
     .tableBar .toolbar-label { font-size:var(--font-size-base); color: var(--el-text-regular); font-weight: 500; flex-shrink: 0; }
     .tableBar .toolbar-spacer { flex: 1; min-width: 0; }
 
@@ -235,7 +235,7 @@
             var maxVal = data.maxVal || 100;
             this.heatmapChart.setOption({
               tooltip: { formatter: function(p) { return days[p.value[1]] + ' ' + slots[p.value[0]] + ': ' + p.value[2] + ' 单'; },
-                backgroundColor: 'rgba(255,255,255,0.96)', borderColor: RgPalette.borderLighter2, borderWidth: 1,
+                backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
                 textStyle: { color: RgPalette.textPrimary, fontSize: 13 } },
               grid: { left: 80, right: 30, top: 15, bottom: 70 },
               xAxis: { type: 'category', data: slots, splitArea: { show: true },
@@ -288,7 +288,7 @@
             var barW = names.length <= 3 ? 40 : names.length <= 5 ? 30 : 22;
             this.barChart.setOption({
               tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-                backgroundColor: 'rgba(255,255,255,0.96)', borderColor: RgPalette.borderLighter2, borderWidth: 1,
+                backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
                 textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                 formatter: function(ps) {
                   var h = '<b>' + ps[0].axisValue + '</b><br/>';
@@ -314,7 +314,7 @@
               ],
               series: [
                 { name: '订单数', type: 'bar', data: counts, barWidth: barW,
-                  itemStyle: { borderRadius: [8, 8, 0, 0],
+                  itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0],
                     color: function(p) { return COLORS[p.dataIndex % COLORS.length]; } },
                   label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c} 单' } },
                 { name: '营业额', type: 'line', yAxisIndex: 1, data: amounts,
@@ -332,13 +332,13 @@
               itemStyle: { color: COLORS[i % COLORS.length] } }; });
             var isEmpty = pieData.every(function(d) { return !d.value; }) || !pieData.length;
             this.pieChart.setOption({
-              tooltip: { trigger: 'item', backgroundColor: 'rgba(255,255,255,0.96)',
+              tooltip: { trigger: 'item', backgroundColor: RgPalette.white,
                 borderColor: RgPalette.borderLighter2, borderWidth: 1, textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                 formatter: function(p) { return '<b>' + p.name + '</b><br/>' + p.marker + ' 订单：<b>' + p.value + ' 单</b>（' + p.percent + '%）'; } },
               legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10,
                 textStyle: { color: RgPalette.textRegular, fontSize: 12 } },
               series: [{ type: 'pie', radius: isEmpty ? ['0%','55%'] : ['45%','68%'], center: ['50%','44%'],
-                avoidLabelOverlap: false, itemStyle: { borderRadius: 6, borderColor: RgPalette.white, borderWidth: 3 },
+                avoidLabelOverlap: false, itemStyle: { borderRadius: RgPalette.radiusMd borderColor: RgPalette.white, borderWidth: 3 },
                 label: { show: !isEmpty, position: 'outside', formatter: '{b}\n{d}%',
                   fontSize: 13, lineHeight: 18, color: RgPalette.textRegular },
                 labelLine: { show: !isEmpty, length: 25, length2: 20, lineStyle: { color: RgPalette.borderBase } },

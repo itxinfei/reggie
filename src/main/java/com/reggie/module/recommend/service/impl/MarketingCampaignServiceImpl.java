@@ -1,6 +1,7 @@
 package com.reggie.module.recommend.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
@@ -9,7 +10,6 @@ import com.reggie.module.user.model.User;
 import com.reggie.module.user.mapper.UserMapper;
 import com.reggie.module.member.mapper.CouponTemplateMapper;
 import com.reggie.module.member.mapper.CouponUserMapper;
-import com.reggie.module.member.model.CouponTemplate;
 import com.reggie.module.member.model.CouponUser;
 import com.reggie.module.member.service.CouponTemplateService;
 import com.reggie.module.recommend.mapper.MarketingCampaignMapper;
@@ -24,8 +24,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +63,12 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
     /** 用户偏好分析服务 */
     @Autowired
     private PreferenceAnalysisService preferenceAnalysisService;
+    /** 订单服务（用于批量查询用户订单数） */
+    @Autowired
+    private com.reggie.module.order.service.OrderService orderService;
+    /** 浏览历史Mapper（用于批量查询用户浏览数） */
+    @Autowired
+    private com.reggie.module.recommend.mapper.BrowseHistoryMapper browseHistoryMapper;
     /** 用户Mapper */
     @Autowired
     private UserMapper userMapper;
@@ -137,7 +145,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public int batchDeleteCampaigns(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return 0;
@@ -174,7 +182,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public boolean pushMarketingMessage(Long campaignId, Long userId, Integer pushType) {
         if (campaignId == null || userId == null) return false;
 
@@ -280,7 +288,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public int autoDispatchCoupons(Long userId) {
         if (userId == null) return 0;
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -349,8 +357,119 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         return couponUserMapper.selectCount(wrapper) <= 1;
     }
 
+    /**
+     * 批量查询用户的优惠券领取数量（判断新用户）
+     * 用 selectMaps + GROUP BY 一次性获取所有用户的优惠券数量
+     *
+     * @param userIds 用户ID列表
+     * @return userId -> couponCount 的映射
+     */
+    private Map<Long, Long> batchQueryCouponCounts(List<Long> userIds) {
+        Map<Long, Long> result = new HashMap<>();
+        if (userIds == null || userIds.isEmpty()) {
+            return result;
+        }
+        // 使用 selectMaps 获取 count，因为 CouponUser 实体没有 count 字段
+        List<Map<String, Object>> rows = couponUserMapper.selectMaps(
+                new QueryWrapper<CouponUser>()
+                        .select("member_id", "COUNT(*) as cnt")
+                        .in("member_id", userIds)
+                        .groupBy("member_id"));
+        for (Map<String, Object> row : rows) {
+            Long memberId = toLong(row.get("member_id"));
+            Long cnt = toLong(row.get("cnt"));
+            if (memberId != null && cnt != null) {
+                result.put(memberId, cnt);
+            }
+        }
+        // 没有优惠券记录的用户，计数为 0
+        for (Long uid : userIds) {
+            if (!result.containsKey(uid)) {
+                result.put(uid, 0L);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 批量查询用户最近30天的订单数（判断高频用户 + 流失预警）
+     * 一次性查询所有用户近30天订单，在内存中按 userId 分组计数
+     *
+     * @param userIds 用户ID列表
+     * @return userId -> orderCount(最近30天) 的映射
+     */
+    private Map<Long, Integer> batchQueryRecentOrderCounts(List<Long> userIds) {
+        Map<Long, Integer> result = new HashMap<>();
+        if (userIds == null || userIds.isEmpty()) {
+            return result;
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minus(30, ChronoUnit.DAYS);
+
+        LambdaQueryWrapper<com.reggie.module.order.model.Orders> wrapper =
+                new LambdaQueryWrapper<>();
+        wrapper.eq(tenantId != null, com.reggie.module.order.model.Orders::getTenantId, tenantId)
+               .in(com.reggie.module.order.model.Orders::getUserId, userIds)
+               .ge(com.reggie.module.order.model.Orders::getOrderTime, thirtyDaysAgo);
+
+        List<com.reggie.module.order.model.Orders> orders =
+                orderService.list(wrapper);
+        if (orders == null || orders.isEmpty()) {
+            for (Long uid : userIds) {
+                result.put(uid, 0);
+            }
+            return result;
+        }
+
+        for (com.reggie.module.order.model.Orders order : orders) {
+            Long uid = order.getUserId();
+            result.merge(uid, 1, Integer::sum);
+        }
+        // 无订单的用户，计数为 0
+        for (Long uid : userIds) {
+            if (!result.containsKey(uid)) {
+                result.put(uid, 0);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 批量查询用户最近7天的浏览记录数（判断流失预警）
+     * 使用 BrowseHistoryMapper.countByUsersSince 批量查询
+     *
+     * @param userIds 用户ID列表
+     * @return userId -> browseCount(最近7天) 的映射
+     */
+    private Map<Long, Integer> batchQueryRecentBrowseCounts(List<Long> userIds) {
+        Map<Long, Integer> result = new HashMap<>();
+        if (userIds == null || userIds.isEmpty()) {
+            return result;
+        }
+        LocalDateTime sevenDaysAgo = LocalDateTime.now().minus(7, ChronoUnit.DAYS);
+        String startTimeStr = sevenDaysAgo.toString();
+
+        List<Map<String, Object>> rows = browseHistoryMapper.countByUsersSince(userIds, startTimeStr);
+        if (rows != null) {
+            for (Map<String, Object> row : rows) {
+                Long userId = toLong(row.get("user_id"));
+                Integer count = toInt(row.get("browse_count"));
+                if (userId != null && count != null) {
+                    result.put(userId, count);
+                }
+            }
+        }
+        // 无浏览记录的用户，计数为 0
+        for (Long uid : userIds) {
+            if (!result.containsKey(uid)) {
+                result.put(uid, 0);
+            }
+        }
+        return result;
+    }
+
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public int batchPushMessages(Long campaignId, Integer pushType) {
         MarketingCampaign campaign = getById(campaignId);
         if (campaign == null) {
@@ -363,41 +482,71 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         // 查询当前门店所有用户
         LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
         userWrapper.eq(tenantId != null, User::getTenantId, tenantId)
-                   .eq(User::getStatus, 1); // 启用状态
+                   .eq(User::getStatus, 1);
         List<User> allUsers = userMapper.selectList(userWrapper);
+        if (allUsers == null || allUsers.isEmpty()) {
+            log.info("[批量推送] 活动{}无可推送用户", campaignId);
+            return 0;
+        }
 
+        // ========== 批量预查询用户画像标签（避免 N+1） ==========
+        List<Long> userIds = new ArrayList<>(allUsers.size());
+        for (User u : allUsers) {
+            userIds.add(u.getId());
+        }
+
+        // 1. 批量查询优惠券领取数量（判断新用户）
+        Map<Long, Long> couponCountMap = batchQueryCouponCounts(userIds);
+
+        // 2. 批量查询订单数（判断高频用户 + 流失预警）
+        Map<Long, Integer> orderCountMap = batchQueryRecentOrderCounts(userIds);
+
+        // 3. 批量查询浏览记录数（判断流失预警：7天内有浏览）
+        Map<Long, Integer> browseCountMap = batchQueryRecentBrowseCounts(userIds);
+        // ============================================
+
+        List<MarketingMessage> messagesToInsert = new ArrayList<>();
         int pushed = 0;
         for (User user : allUsers) {
             try {
-                // 检查该用户是否匹配活动目标人群
-                boolean isNewUser = isNewUser(user.getId());
-                boolean isHighFreq = preferenceAnalysisService.isHighFrequencyUser(user.getId());
-                boolean isChurnWarning = preferenceAnalysisService.isChurnWarningUser(user.getId());
+                Long userId = user.getId();
+
+                // 新用户：优惠券领取数<=1
+                boolean isNewUser = (couponCountMap.getOrDefault(userId, 0L) <= 1);
+                // 高频用户：最近30天订单>=8
+                boolean isHighFreq = (orderCountMap.getOrDefault(userId, 0) >= 8);
+                // 流失预警：最近30天无订单 + 最近7天有浏览
+                boolean isChurnWarning = (orderCountMap.getOrDefault(userId, 0) == 0
+                        && browseCountMap.getOrDefault(userId, 0) > 0);
 
                 if (!isUserMatchCampaign(campaign, isNewUser, isHighFreq, isChurnWarning)) {
                     continue;
                 }
 
                 // 检查参与上限
-                if (campaign.getMaxParticipants() != null &&
-                        campaign.getCurrentParticipants() >= campaign.getMaxParticipants()) {
+                if (campaign.getMaxParticipants() != null
+                        && campaign.getCurrentParticipants() >= campaign.getMaxParticipants()) {
                     break;
                 }
 
-                // 创建推送消息
                 MarketingMessage message = new MarketingMessage();
                 message.setCampaignId(campaignId);
-                message.setUserId(user.getId());
+                message.setUserId(userId);
                 message.setPushType(pushType != null ? pushType : MarketingMessage.PUSH_POPUP);
                 message.setTitle(campaign.getName());
                 message.setContent(campaign.getDescription() != null ?
                         campaign.getDescription() : "您有一份专属优惠待领取！");
-                message.setStatus(MarketingMessage.STATUS_SENT); // 推送即已发送
-                messageMapper.insert(message);
+                message.setStatus(MarketingMessage.STATUS_SENT);
+                messagesToInsert.add(message);
                 pushed++;
             } catch (Exception e) {
-                log.warn("[批量推送] 用户{}推送失败", user.getId(), e);
+                log.warn("[批量推送] 用户匹配失败", e);
             }
+        }
+
+        // 批量插入推送消息
+        if (!messagesToInsert.isEmpty()) {
+            messageMapper.insertBatchList(messagesToInsert);
         }
 
         // 更新参与人数
@@ -465,6 +614,23 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
                        .eq(User::getStatus, 1);
             List<User> allUsers = userMapper.selectList(userWrapper);
 
+            if (allUsers == null || allUsers.isEmpty()) {
+                result.put("preview", preview);
+                result.put("estimate", 0);
+                return result;
+            }
+
+            // ========== 批量预查询用户画像标签（避免 N+1） ==========
+            List<Long> userIds = new ArrayList<>(allUsers.size());
+            for (User u : allUsers) {
+                userIds.add(u.getId());
+            }
+
+            Map<Long, Long> couponCountMap = batchQueryCouponCounts(userIds);
+            Map<Long, Integer> orderCountMap = batchQueryRecentOrderCounts(userIds);
+            Map<Long, Integer> browseCountMap = batchQueryRecentBrowseCounts(userIds);
+            // =====================================================
+
             int matchedCount = 0;
             for (User user : allUsers) {
                 if (preview.size() >= limit) {
@@ -473,9 +639,14 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
                     continue;
                 }
 
-                boolean isNewUser = isNewUser(user.getId());
-                boolean isHighFreq = preferenceAnalysisService.isHighFrequencyUser(user.getId());
-                boolean isChurnWarning = preferenceAnalysisService.isChurnWarningUser(user.getId());
+                Long userId = user.getId();
+                // 新用户：优惠券领取数<=1
+                boolean isNewUser = (couponCountMap.getOrDefault(userId, 0L) <= 1);
+                // 高频用户：最近30天订单>=8
+                boolean isHighFreq = (orderCountMap.getOrDefault(userId, 0) >= 8);
+                // 流失预警：最近30天无订单 + 最近7天有浏览
+                boolean isChurnWarning = (orderCountMap.getOrDefault(userId, 0) == 0
+                        && browseCountMap.getOrDefault(userId, 0) > 0);
 
                 if (isUserMatchCampaign(campaign, isNewUser, isHighFreq, isChurnWarning)) {
                     // 脱敏显示用户名

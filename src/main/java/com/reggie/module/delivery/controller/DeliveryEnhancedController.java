@@ -2,6 +2,8 @@ package com.reggie.module.delivery.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.delivery.model.DeliveryRangeRule;
 import com.reggie.module.delivery.model.DeliveryFeeStep;
 import com.reggie.module.delivery.service.DeliveryEnhancedService;
@@ -32,6 +34,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/delivery/enhanced")
 @Tag(name = "配送增强管理")
+@RequireEmployee
 public class DeliveryEnhancedController {
 
     @Autowired
@@ -49,13 +52,13 @@ public class DeliveryEnhancedController {
 
     @GetMapping("/range/{id}")
     @Operation(summary = "获取配送范围规则详情")
-    @Parameter(description = "I d")
     public R<DeliveryRangeRule> getRangeRuleById(@PathVariable Long id) {
         DeliveryRangeRule rule = deliveryEnhancedService.getRangeRuleById(id);
         return R.success(rule);
     }
 
     @PostMapping("/range")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存配送范围规则")
     public R<String> saveRangeRule(@RequestBody DeliveryRangeRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -65,6 +68,7 @@ public class DeliveryEnhancedController {
     }
 
     @PutMapping("/range")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新配送范围规则")
     public R<String> updateRangeRule(@RequestBody DeliveryRangeRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -74,8 +78,8 @@ public class DeliveryEnhancedController {
     }
 
     @DeleteMapping("/range/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除配送范围规则")
-    @Parameter(description = "I d")
     public R<String> deleteRangeRule(@PathVariable Long id) {
         boolean success = deliveryEnhancedService.deleteRangeRule(id);
         return success ? R.success("删除成功") : R.error("删除失败");
@@ -93,6 +97,7 @@ public class DeliveryEnhancedController {
     }
 
     @PostMapping("/fee-step")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存配送费阶梯规则")
     public R<String> saveFeeStep(@RequestBody DeliveryFeeStep step) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -102,6 +107,7 @@ public class DeliveryEnhancedController {
     }
 
     @PutMapping("/fee-step")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新配送费阶梯规则")
     public R<String> updateFeeStep(@RequestBody DeliveryFeeStep step) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -111,14 +117,15 @@ public class DeliveryEnhancedController {
     }
 
     @DeleteMapping("/fee-step/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除配送费阶梯规则")
-    @Parameter(description = "I d")
     public R<String> deleteFeeStep(@PathVariable Long id) {
         boolean success = deliveryEnhancedService.deleteFeeStep(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
 
     @PostMapping("/fee-step/batch")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量保存配送费阶梯规则")
     public R<String> batchSaveFeeSteps(@RequestBody List<DeliveryFeeStep> steps) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -132,6 +139,7 @@ public class DeliveryEnhancedController {
     // ==================== 配送范围校验 ====================
 
     @PostMapping("/range/check")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "校验地址是否在配送范围内")
     public R<Boolean> isInRange(
                         @Parameter(description = "规则ID") @RequestParam Long ruleId,
@@ -142,6 +150,7 @@ public class DeliveryEnhancedController {
     }
 
     @PostMapping("/range/find")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "查找匹配的配送范围规则")
     public R<Long> findMatchingRule(
                         @Parameter(description = "经度") @RequestParam BigDecimal longitude,
@@ -154,6 +163,7 @@ public class DeliveryEnhancedController {
     // ==================== 配送费计算 ====================
 
     @PostMapping("/fee/calculate")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "计算配送费")
     public R<BigDecimal> calculateDeliveryFee(
                         @Parameter(description = "规则ID") @RequestParam Long ruleId,
@@ -164,6 +174,7 @@ public class DeliveryEnhancedController {
     }
 
     @PostMapping("/fee/auto-calculate")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "自动计算配送费")
     public R<Map<String, Object>> calculateFee(
                         @Parameter(description = "经度") @RequestParam BigDecimal longitude,
@@ -176,6 +187,7 @@ public class DeliveryEnhancedController {
     }
 
     @PostMapping("/distance/calculate")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "计算两点间距离")
     public R<BigDecimal> calculateDistance(
                         @Parameter(description = "经度1") @RequestParam BigDecimal lon1,

@@ -6,9 +6,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
-import java.util.Map;
 import com.reggie.module.dish.mapper.DishMapper;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * AI 模块缓存服务
@@ -90,6 +88,5 @@ public class AICacheService {
         return cachedDishList;
     }
 }
-
 
 

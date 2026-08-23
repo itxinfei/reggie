@@ -23,13 +23,13 @@
     }
     .cashier-header {
       background: var(--bg-surface);
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       padding: 20px;
       margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-sm);
     }
     .cashier-title {
-      font-size: 24px;
+      font-size: var(--font-size-3xl);
       font-weight: 600;
       color: var(--el-text-primary);
       margin-bottom: 16px;
@@ -43,10 +43,10 @@
       text-align: center;
       padding: 16px;
       background: var(--el-bg-page);
-      border-radius: 8px;
+      border-radius: var(--radius-md);
     }
     .stat-value {
-      font-size: 28px;
+      font-size: var(--font-size-3xl);
       font-weight: 700;
       color: var(--el-color-primary);
       margin-bottom: 8px;
@@ -62,9 +62,9 @@
     }
     .order-panel {
       background: var(--bg-surface);
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-sm);
     }
     .panel-title {
       font-size:var(--font-size-lg);
@@ -84,11 +84,7 @@
       padding: 12px;
       margin-bottom: 8px;
       background: var(--el-bg-page);
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .order-item:hover {
+border-radius: var(--radius-md); }
       background: var(--el-color-primary-lighter);
     }
     .order-item.active {
@@ -107,6 +103,30 @@
       font-size:var(--font-size-xs);
       color: var(--el-text-secondary);
     }
+    .order-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+    .table-chip {
+      display: inline-block;
+      padding: 1px 6px;
+      background: var(--el-color-success-lighter);
+      color: var(--el-color-success);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-xs);
+      font-weight: 500;
+    }
+    .phone-chip {
+      display: inline-block;
+      padding: 1px 6px;
+      background: var(--el-fill-color-light);
+      color: var(--el-text-secondary);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-xs);
+    }
     .order-amount {
       font-size:var(--font-size-xl);
       font-weight: 700;
@@ -114,9 +134,9 @@
     }
     .payment-panel {
       background: var(--bg-surface);
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-sm);
     }
     .payment-summary {
       margin-bottom: 20px;
@@ -151,19 +171,22 @@
       padding: 16px;
       text-align: center;
       border: 2px solid var(--el-border-lighter);
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .payment-method:hover {
+border-radius: var(--radius-md); }
       border-color: var(--el-color-primary);
     }
     .payment-method.active {
       border-color: var(--el-color-primary);
       background: var(--el-color-primary-lighter);
     }
+    .payment-method.disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .payment-method.disabled:hover {
+      border-color: var(--el-border-lighter);
+    }
     .payment-method i {
-      font-size: 24px;
+      font-size: var(--font-size-3xl);
       margin-bottom: 8px;
       display: block;
     }
@@ -181,27 +204,129 @@
     .amount-input .el-input-number {
       width: 100%;
     }
+    .quick-amounts {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .quick-label {
+      font-size: var(--font-size-xs);
+      color: var(--el-text-secondary);
+      margin-right: 2px;
+    }
+    .quick-amounts .el-button {
+      padding: 6px 12px;
+      font-size: var(--font-size-xs);
+      font-weight: 500;
+    }
     .change-amount {
       text-align: center;
       padding: 16px;
       background: var(--el-color-success-lighter);
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-    .change-label {
+border-radius: var(--radius-md); }
       font-size:var(--font-size-base);
       color: var(--el-text-secondary);
       margin-bottom: 4px;
     }
     .change-value {
-      font-size: 24px;
+      font-size: var(--font-size-3xl);
       font-weight: 700;
       color: var(--el-color-success);
+    }
+    .member-section {
+      margin-bottom: 20px;
+      padding: 12px;
+      border: 1px solid var(--el-border-color);
+      border-radius: var(--border-radius-card);
+      background: var(--el-fill-color-light);
+    }
+    .member-info {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: var(--font-size-base);
+    }
+    .member-info .member-name {
+      font-weight: 600;
+      color: var(--el-text-primary);
+    }
+    .member-info .member-meta {
+      color: var(--el-text-secondary);
     }
     .submit-btn {
       width: 100%;
       height: 50px;
       font-size:var(--font-size-xl);
+    }
+    .coupon-section {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--el-border-lighter);
+    }
+    .coupon-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .coupon-title {
+      font-weight: 500;
+      color: var(--el-text-primary);
+    }
+    .coupon-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 40px;
+    }
+    .coupon-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--el-border-color);
+      border-radius: var(--border-radius-base);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .coupon-item:hover {
+      border-color: var(--el-color-primary);
+    }
+    .coupon-item.active {
+      border-color: var(--el-color-primary);
+      background: var(--el-color-primary-lighter);
+    }
+    .coupon-name {
+      font-weight: 600;
+      color: var(--el-text-primary);
+      margin-bottom: 4px;
+    }
+    .coupon-cond {
+      font-size: var(--font-size-xs);
+      color: var(--el-text-secondary);
+    }
+    .coupon-right {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      color: var(--el-color-danger);
+    }
+    .pay-hint {
+      margin: 4px 0 20px;
+      padding: 10px 12px;
+      font-size: var(--font-size-sm);
+      color: var(--el-text-secondary);
+      background: var(--el-color-primary-lighter);
+      border: 1px solid var(--el-color-primary-light-5);
+      border-radius: var(--border-radius-base);
+      line-height: 1.5;
+    }
+    .pay-hint .el-icon-info {
+      color: var(--el-color-primary);
+      margin-right: 4px;
     }
   </style>
 </head>
@@ -250,9 +375,15 @@
             :key="order.id"
             class="order-item"
             :class="{ active: selectedOrder && selectedOrder.id === order.id }"
-            @click="selectOrder(order)">
+            role="button" tabindex="0"
+            @click="selectOrder(order)" @keydown.enter="selectOrder(order)"
+            :aria-label="'订单 ' + order.number" :aria-pressed="selectedOrder && selectedOrder.id === order.id">
             <div class="order-info">
-              <div class="order-number">{{ order.number }}</div>
+              <div class="order-header">
+                <span class="order-number">{{ order.number }}</span>
+                <span v-if="order.tableName" class="table-chip">{{ order.tableName }}</span>
+                <span v-else-if="order.phone" class="phone-chip">{{ last4(order.phone) }}</span>
+              </div>
               <div class="order-time">{{ order.orderTime }}</div>
             </div>
             <div class="order-amount">¥{{ formatMoney(order.amount) }}</div>
@@ -281,9 +412,78 @@
             <span class="summary-label">订单金额</span>
             <span class="summary-value total">¥{{ formatMoney(selectedOrder.amount) }}</span>
           </div>
+          <div class="summary-row" v-if="discountAmount > 0">
+            <span class="summary-label">优惠券抵扣</span>
+            <span class="summary-value" style="color: var(--el-color-success);">-¥{{ formatMoney(discountAmount) }}</span>
+          </div>
+          <div class="summary-row" v-if="discountAmount > 0">
+            <span class="summary-label">应付金额</span>
+            <span class="summary-value total">¥{{ formatMoney(payableAmount) }}</span>
+          </div>
         </div>
         <div v-else style="text-align: center; padding: 40px; color: var(--el-text-secondary);">
           请先选择订单
+        </div>
+
+        <!-- 会员识别 -->
+        <div v-if="selectedOrder" class="member-section">
+          <div class="summary-row">
+            <span class="summary-label">会员</span>
+            <span class="summary-value">
+              <el-input
+                v-model="memberPhone"
+                placeholder="输入会员手机号"
+                size="small"
+                style="width: 160px;"
+                @keyup.enter.native="identifyMember">
+              </el-input>
+              <el-button
+                size="small"
+                type="primary"
+                :loading="memberLoading"
+                @click="identifyMember"
+                style="margin-left: 8px;">
+                识别
+              </el-button>
+            </span>
+          </div>
+          <div v-if="currentMember" class="member-info">
+            <span class="member-name">{{ currentMember.name || currentMember.nickname }}</span>
+            <span class="member-meta">积分 {{ currentMember.points }}</span>
+            <span class="member-meta">余额 ¥{{ formatMoney(currentMember.balance) }}</span>
+            <span class="member-meta">等级 {{ currentMember.levelName || '普通会员' }}</span>
+          </div>
+
+          <!-- 优惠券选择 -->
+          <div v-if="currentMember" class="coupon-section">
+            <div class="coupon-header">
+              <span class="coupon-title">优惠券</span>
+              <el-button
+                v-if="availableCoupons.length === 0 && !couponLoading"
+                type="text"
+                size="mini"
+                disabled>暂无可用券</el-button>
+              <el-button
+                v-else-if="availableCoupons.length > 0"
+                type="text"
+                size="mini"
+                @click="clearCoupon">不使用优惠券</el-button>
+            </div>
+            <div v-loading="couponLoading" class="coupon-list">
+              <div
+                v-for="coupon in availableCoupons"
+                :key="coupon.id"
+                class="coupon-item"
+                :class="{ active: selectedCouponId === coupon.id }"
+                @click="selectCoupon(coupon)">
+                <div class="coupon-left">
+                  <div class="coupon-name">{{ coupon.name }}</div>
+                  <div class="coupon-cond">{{ couponConditionText(coupon) }}</div>
+                </div>
+                <div class="coupon-right">-¥{{ formatMoney(coupon.currentDiscount) }}</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 支付方式 -->
@@ -293,49 +493,74 @@
             <div
               class="payment-method"
               :class="{ active: payType === 1 }"
-              @click="payType = 1">
+              @click="selectPayType(1)">
               <i class="el-icon-money" style="color: var(--el-color-success);"></i>
               <span>现金</span>
             </div>
             <div
               class="payment-method"
               :class="{ active: payType === 2 }"
-              @click="payType = 2">
+              @click="selectPayType(2)">
               <i class="el-icon-chat-dot-round" style="color: var(--el-color-success);"></i>
               <span>微信</span>
             </div>
             <div
               class="payment-method"
               :class="{ active: payType === 3 }"
-              @click="payType = 3">
+              @click="selectPayType(3)">
               <i class="el-icon-s-platform" style="color: var(--el-color-primary);"></i>
               <span>支付宝</span>
             </div>
             <div
               class="payment-method"
               :class="{ active: payType === 4 }"
-              @click="payType = 4">
+              @click="selectPayType(4)">
               <i class="el-icon-bank-card" style="color: var(--el-color-warning);"></i>
               <span>银行卡</span>
             </div>
+            <div
+              class="payment-method"
+              :class="{ active: payType === 5, disabled: !currentMember }"
+              @click="currentMember ? selectPayType(5) : ReggieUI.warning('请先识别会员后使用储值支付')">
+              <i class="el-icon-wallet" style="color: var(--el-color-primary);"></i>
+              <span>会员储值</span>
+            </div>
+          </div>
+          <div v-if="payType === 5 && currentMember" class="pay-hint">
+            将从会员「{{ currentMember.name || currentMember.nickname }}」储值余额抵扣 ¥{{ formatMoney(payableAmount) }}
           </div>
 
           <!-- 现金支付输入 -->
           <div v-if="payType === 1" class="amount-input">
-            <label>实收金额</label>
+            <label id="lbl-actual-amount" for="inp-actual-amount">实收金额</label>
             <el-input-number
               v-model="actualAmount"
               :precision="2"
-              :min="selectedOrder.amount"
+              :min="payableAmount"
               :step="10"
-              placeholder="请输入实收金额">
+              placeholder="请输入实收金额"
+              id="inp-actual-amount">
             </el-input-number>
+            <div class="quick-amounts">
+              <span class="quick-label">快捷：</span>
+              <el-button size="mini" plain @click="actualAmount = payableAmount">{{ Math.ceil(payableAmount) }}元</el-button>
+              <el-button size="mini" plain @click="actualAmount = Math.max(payableAmount, 50)">50元</el-button>
+              <el-button size="mini" plain @click="actualAmount = Math.max(payableAmount, 100)">100元</el-button>
+              <el-button size="mini" plain @click="actualAmount = Math.max(payableAmount, 200)">200元</el-button>
+              <el-button size="mini" plain @click="actualAmount = Math.max(payableAmount, 500)">500元</el-button>
+            </div>
           </div>
 
           <!-- 找零显示 -->
-          <div v-if="payType === 1 && actualAmount > selectedOrder.amount" class="change-amount">
+          <div v-if="payType === 1 && actualAmount > payableAmount" class="change-amount">
             <div class="change-label">找零</div>
-            <div class="change-value">¥{{ formatMoney(actualAmount - selectedOrder.amount) }}</div>
+            <div class="change-value">¥{{ formatMoney(actualAmount - payableAmount) }}</div>
+          </div>
+
+          <!-- 非现金支付说明：如实记录所选渠道，实收默认等于应付金额 -->
+          <div v-if="payType !== 1" class="pay-hint">
+            <i class="el-icon-info"></i>
+            已选择「{{ payTypeText }}」收款，系统将按该渠道记录本次收款（在线支付网关接入后以实际到账为准）。
           </div>
 
           <!-- 备注 -->
@@ -350,7 +575,7 @@
             :loading="submitLoading"
             @click="handlePayment">
             <i class="el-icon-check"></i>
-            确认收款 ¥{{ formatMoney(selectedOrder.amount) }}
+            确认收款 ¥{{ formatMoney(payableAmount) }}
           </el-button>
         </div>
       </div>
@@ -366,6 +591,7 @@
   <script src="../../js/common.js"></script>
   <script src="../../api/cashier.js"></script>
   <script src="../../api/order.js"></script>
+  <script src="../../api/member-center.js"></script>
   <script>
     new Vue({
       el: '#app',
@@ -383,7 +609,29 @@
           actualAmount: 0,
           remark: '',
           submitLoading: false,
-          timeTimer: null
+          timeTimer: null,
+          memberPhone: '',
+          currentMember: null,
+          memberLoading: false,
+          availableCoupons: [],
+          selectedCouponId: null,
+          couponLoading: false
+        }
+      },
+      computed: {
+        discountAmount() {
+          if (!this.selectedCouponId || !this.availableCoupons.length) return 0
+          const coupon = this.availableCoupons.find(c => c.id === this.selectedCouponId)
+          return coupon ? Number(coupon.currentDiscount) || 0 : 0
+        },
+        payableAmount() {
+          if (!this.selectedOrder) return 0
+          const payable = Number(this.selectedOrder.amount) - this.discountAmount
+          return payable > 0 ? payable : 0
+        },
+        payTypeText() {
+          const map = { 1: '现金', 2: '微信', 3: '支付宝', 4: '银行卡', 5: '会员储值' }
+          return map[this.payType] || '现金'
         }
       },
       created() {
@@ -408,6 +656,10 @@
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
         },
+        last4(phone) {
+          if (!phone || phone.length < 4) return ''
+          return phone.substring(phone.length - 4)
+        },
         async fetchData() {
           try {
             // 获取今日统计
@@ -420,13 +672,13 @@
               this.todayStats = statsRes.data
             }
 
-            // 获取待结账订单（状态为待付款的订单）
-            const ordersRes = await getOrderList({ status: 1 })
+            // 获取待收银订单（管理端专用接口）
+            const ordersRes = await getPendingCheckoutList()
             if (ordersRes.code === 1) {
               this.pendingOrders = ordersRes.data || []
             }
           } catch (err) {
-            console.error('获取数据失败', err)
+            ReggieUI.error('获取数据失败')
           }
         },
         selectOrder(order) {
@@ -434,6 +686,85 @@
           this.actualAmount = order.amount
           this.payType = 1
           this.remark = ''
+          this.memberPhone = ''
+          this.currentMember = null
+          this.availableCoupons = []
+          this.selectedCouponId = null
+        },
+        selectPayType(value) {
+          this.payType = value
+          // 非现金支付：实收金额默认等于应付金额（无找零输入）
+          if (value !== 1) {
+            this.actualAmount = this.payableAmount
+          }
+        },
+        async identifyMember() {
+          const phone = (this.memberPhone || '').trim()
+          if (!phone) {
+            ReggieUI.warning('请输入会员手机号')
+            return
+          }
+          this.memberLoading = true
+          try {
+            const res = await memberByPhone(phone)
+            if (res.code === 1 && res.data) {
+              this.currentMember = res.data
+              ReggieUI.success('已识别会员：' + (res.data.name || res.data.nickname || phone))
+              this.fetchAvailableCoupons()
+            } else {
+              this.currentMember = null
+              ReggieUI.warning((res.msg || '未找到会员'))
+            }
+          } catch (err) {
+            this.currentMember = null
+            ReggieUI.error('会员识别失败')
+          } finally {
+            this.memberLoading = false
+          }
+        },
+        async fetchAvailableCoupons() {
+          if (!this.currentMember || !this.selectedOrder) {
+            this.availableCoupons = []
+            return
+          }
+          this.couponLoading = true
+          try {
+            const res = await memberAvailableCoupons(this.currentMember.userId, this.selectedOrder.amount)
+            if (res.code === 1 && res.data) {
+              this.availableCoupons = res.data
+              this.selectedCouponId = null
+            } else {
+              this.availableCoupons = []
+            }
+          } catch (err) {
+            this.availableCoupons = []
+            ReggieUI.error('查询可用优惠券失败')
+          } finally {
+            this.couponLoading = false
+          }
+        },
+        selectCoupon(coupon) {
+          if (this.selectedCouponId === coupon.id) {
+            this.selectedCouponId = null
+          } else {
+            this.selectedCouponId = coupon.id
+          }
+          // 选券后现金实收默认回填为应付金额
+          this.actualAmount = this.payableAmount
+        },
+        clearCoupon() {
+          this.selectedCouponId = null
+          this.actualAmount = this.selectedOrder ? this.selectedOrder.amount : 0
+        },
+        couponConditionText(coupon) {
+          if (coupon.type === 'DISCOUNT' || coupon.type === 2) {
+            const rate = coupon.discountRate ? (Number(coupon.discountRate) * 10).toFixed(1) : '?'
+            return '折扣券 · ' + rate + '折'
+          }
+          const cond = coupon.conditionAmount && Number(coupon.conditionAmount) > 0
+            ? '满' + Number(coupon.conditionAmount) + '元'
+            : '无门槛'
+          return '满减券 · ' + cond
         },
         async handlePayment() {
           if (!this.selectedOrder) {
@@ -447,7 +778,10 @@
               orderId: this.selectedOrder.id,
               orderNumber: this.selectedOrder.number,
               amount: this.selectedOrder.amount,
-              actualAmount: this.payType === 1 ? this.actualAmount : this.selectedOrder.amount,
+              actualAmount: this.payType === 1 ? this.actualAmount : this.payableAmount,
+              payType: this.payType,
+              usedCouponId: this.selectedCouponId,
+              memberUserId: this.currentMember ? this.currentMember.userId : null,
               remark: this.remark
             }
 
@@ -462,7 +796,6 @@
               ReggieUI.error(res.msg || '收款失败')
             }
           } catch (err) {
-            console.error('收款失败', err)
             ReggieUI.error('收款失败')
           } finally {
             this.submitLoading = false

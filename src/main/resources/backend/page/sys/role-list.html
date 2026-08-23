@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <style>
-    .perm-tree-dialog .el-tree { max-height: 400px; overflow-y: auto; border: 1px solid var(--el-border-light); border-radius: 4px; padding: 10px; }
+    .perm-tree-dialog .el-tree { max-height: 400px; overflow-y: auto; border: 1px solid var(--el-border-light); border-radius: var(--radius-sm); padding: 10px; }
     .perm-tree-dialog .el-tree-node__content { height: 32px; }
     .perm-tree-dialog .el-tree-node__label { font-size:var(--font-size-sm); }
     .perm-header { display: flex; align-items: center; gap: 8px; }
@@ -280,7 +280,7 @@
               if (searchItem) searchItem.options = options
             }
           } catch (err) {
-            if (err.message !== 'NOTLOGIN') console.error('加载角色选项失败:', err)
+            if (err.message !== 'NOTLOGIN') ReggieUI.error('加载角色选项失败')
           } finally {
             if (searchItem) searchItem.loading = false
           }

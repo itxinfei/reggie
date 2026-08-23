@@ -832,26 +832,27 @@
 /* 弹框样式处理 */
 .el-dialog {
   min-width: 568px !important;
-  border-radius: 8px !important;
+  /* 圆角统一为品牌令牌 12px（与 unified-components.css 弹窗增强、页面 12px 意图一致） */
+  border-radius: var(--radius-lg) !important;
 }
 
 .el-dialog__header {
-  padding: 20px 30px;
-  background: var(--legacy-fbfbfa);
-  border-radius: 8px 8px 0px 0px;
-  border-bottom: 1px solid var(--legacy-e5e4e4);
+  padding: var(--space-5) var(--space-6);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-lg) var(--radius-lg) 0px 0px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .el-dialog__header .el-dialog__title {
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  color: var(--gray-333);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
 }
 
 .el-dialog__body {
-  padding: 43px 90px 21px;
+  padding: var(--space-6);
 }
 
 .el-dialog__footer {
-  padding: 0px 30px 30px;
+  padding: var(--space-4) var(--space-6);
 }

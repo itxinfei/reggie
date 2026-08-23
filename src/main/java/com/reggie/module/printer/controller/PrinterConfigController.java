@@ -4,8 +4,10 @@ import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.R;
-import com.reggie.module.printer.mapper.PrinterConfigMapper;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.printer.model.PrinterConfig;
 import com.reggie.module.printer.service.PrinterConfigService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,13 +44,11 @@ import java.util.Set;
 @RestController
 @RequestMapping("/printer/config")
 @Tag(name = "打印机配置")
+@RequireEmployee
 public class PrinterConfigController {
 
     @Autowired
     private PrinterConfigService printerConfigService;
-
-    @Autowired
-    private PrinterConfigMapper printerConfigMapper;
 
     /**
      * 分页查询打印机配置列表
@@ -101,7 +101,7 @@ public class PrinterConfigController {
     @Operation(summary = "打印机统计", description = "聚合统计打印机总数、启用数、停用数、连接类型种类数")
     public R<Map<String, Object>> stats() {
         Long tenantId = BaseContext.getCurrentTenantId();
-        Map<String, Object> stats = printerConfigMapper.statPrinters(tenantId);
+        Map<String, Object> stats = printerConfigService.statPrinters(tenantId);
         if (stats == null) {
             stats = new HashMap<>();
         }
@@ -110,13 +110,18 @@ public class PrinterConfigController {
 
     /**
      * 新增打印机配置
-     * @param printerConfig 打印机配置信息
-     * @return 操作结果
+     * <p>租户安全：强制设置 tenantId。</p>
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增配置", description = "创建新的打印机配置")
     public R<String> save(@RequestBody PrinterConfig printerConfig) {
         log.info("新增打印机配置: {}", printerConfig.getName());
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        printerConfig.setTenantId(tenantId);
         printerConfig.setCreatedTime(LocalDateTime.now());
         printerConfig.setUpdateTime(LocalDateTime.now());
         printerConfigService.save(printerConfig);
@@ -125,23 +130,57 @@ public class PrinterConfigController {
 
     /**
      * 修改打印机配置
-     * @param printerConfig 打印机配置信息
-     * @return 操作结果
+     * <p>租户安全：先校验归属，再更新业务字段。</p>
      */
     @PutMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改配置", description = "更新打印机配置信息")
     public R<String> update(@RequestBody PrinterConfig printerConfig) {
         log.info("修改打印机配置: {}", printerConfig.getId());
-        printerConfig.setUpdateTime(LocalDateTime.now());
-        printerConfigService.updateById(printerConfig);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        PrinterConfig exist = printerConfigService.getById(printerConfig.getId());
+        if (exist == null) {
+            throw new CustomException("打印机配置不存在");
+        }
+        if (!tenantId.equals(exist.getTenantId())) {
+            throw new CustomException("打印机配置不属于当前租户");
+        }
+        exist.setName(printerConfig.getName());
+        exist.setType(printerConfig.getType());
+        exist.setBrand(printerConfig.getBrand());
+        exist.setDeviceId(printerConfig.getDeviceId());
+        exist.setIpAddress(printerConfig.getIpAddress());
+        exist.setPort(printerConfig.getPort());
+        exist.setPaperSize(printerConfig.getPaperSize());
+        exist.setPrintTypes(printerConfig.getPrintTypes());
+        exist.setStatus(printerConfig.getStatus());
+        exist.setSort(printerConfig.getSort());
+        exist.setSystemPrinterName(printerConfig.getSystemPrinterName());
+        exist.setUpdateTime(LocalDateTime.now());
+        printerConfigService.updateById(exist);
         return R.success("修改打印机配置成功");
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除配置", description = "根据ID删除打印机配置")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "删除配置", description = "根据ID删除打印机配置（先校验租户归属）")
     @Parameter(name = "id", description = "配置ID", required = true)
     public R<String> delete(@PathVariable Long id) {
         log.info("删除打印机配置: {}", id);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        PrinterConfig exist = printerConfigService.getById(id);
+        if (exist == null) {
+            throw new CustomException("打印机配置不存在");
+        }
+        if (!tenantId.equals(exist.getTenantId())) {
+            throw new CustomException("打印机配置不属于当前租户");
+        }
         printerConfigService.removeById(id);
         return R.success("删除打印机配置成功");
     }

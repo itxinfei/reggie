@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequiresAdmin;
 import com.reggie.module.sys.entity.SystemConfig;
 import com.reggie.module.sys.service.SystemConfigService;
@@ -23,7 +24,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
 import java.util.List;
-import java.util.Map;
+
+import com.reggie.module.sys.dto.SystemConfigSaveDTO;
+import com.reggie.module.sys.dto.SystemConfigUpdateDTO;
 
 /**
  * 系统配置管理Controller
@@ -61,6 +64,7 @@ public class SystemConfigController {
      * 根路径 PUT — 兼容前端 PUT /sys/config
      */
     @PutMapping
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量更新配置", description = "批量更新系统配置项")
     public R<String> rootBatchUpdate(@RequestBody List<SystemConfig> configs) {
         if (configs != null && !configs.isEmpty()) {
@@ -110,23 +114,30 @@ public class SystemConfigController {
 
     /**
      * 新增配置
+     * <p>租户安全：使用 SystemConfigSaveDTO 仅接收 configKey/configValue，
+     * tenantId 由 Service 层通过 BaseContext 强制设置，前端无法篡改。</p>
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增配置", description = "创建系统配置")
     public R<String> add(
-            @Parameter(description = "配置信息") @Valid @RequestBody SystemConfig config) {
-        systemConfigService.save(config);
+            @Parameter(description = "配置信息") @Valid @RequestBody SystemConfigSaveDTO dto) {
+        systemConfigService.addTenantConfig(dto.getConfigKey(), dto.getConfigValue());
         return R.success("配置创建成功");
     }
 
     /**
-     * 修改配置 — PUT /sys/config/{id}
+     * 修改配置
+     * <p>租户安全：使用 SystemConfigUpdateDTO，Service 层先校验归属再更新，
+     * 仅允许修改 configValue，绕过全实体覆盖漏洞。</p>
      */
     @PutMapping("/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改配置", description = "更新系统配置")
     public R<String> update(
-            @Parameter(description = "配置信息") @Valid @RequestBody SystemConfig config) {
-        systemConfigService.updateById(config);
+            @Parameter(description = "配置ID") @PathVariable Long id,
+            @Parameter(description = "配置信息") @Valid @RequestBody SystemConfigUpdateDTO dto) {
+        systemConfigService.updateTenantConfig(id, dto.getConfigKey(), dto.getConfigValue());
         return R.success("配置更新成功");
     }
 
@@ -134,6 +145,7 @@ public class SystemConfigController {
      * 批量更新配置（前端表单提交用）
      */
     @PutMapping("/batch")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量更新配置", description = "批量更新系统配置项")
     public R<String> batchUpdate(
             @Parameter(description = "配置列表") @RequestBody List<SystemConfig> configs) {
@@ -153,13 +165,14 @@ public class SystemConfigController {
 
     /**
      * 删除配置
+     * <p>租户安全：Service 层先校验该 id 的配置属于当前租户，再删除。</p>
      */
     @DeleteMapping("/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除配置", description = "删除指定系统配置")
-    public R<String> delete(
-            @Parameter(description = "I d")
-            @Parameter(description = "配置ID") @PathVariable Long id) {
-        systemConfigService.removeById(id);
+    @Parameter(description = "配置ID")
+    public R<String> delete(@Parameter(description = "配置ID") @PathVariable Long id) {
+        systemConfigService.deleteTenantConfig(id);
         return R.success("配置删除成功");
     }
 }

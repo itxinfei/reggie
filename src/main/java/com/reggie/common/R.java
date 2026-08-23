@@ -1,6 +1,5 @@
 package com.reggie.common;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.util.HashMap;
@@ -37,9 +36,15 @@ public class R<T> {
 
     /**
      * 构造方法，初始化请求ID和时间戳
+     * <p>
+     * requestId 优先复用当前请求的 traceId（由 TraceIdFilter 注入），
+     * 保证全链路日志和响应体的 ID 一致；异步/无上下文场景兜底生成 UUID。
+     * </p>
      */
     public R() {
-        this.requestId = UUID.randomUUID().toString().replace("-", "");
+        String traceId = BaseContext.getCurrentTraceId();
+        this.requestId = (traceId != null && !traceId.isEmpty())
+                ? traceId : UUID.randomUUID().toString().replace("-", "");
         this.timestamp = System.currentTimeMillis();
     }
 

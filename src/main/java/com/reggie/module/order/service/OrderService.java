@@ -70,6 +70,15 @@ public interface OrderService extends IService<Orders> {
     List<Orders> userList();
 
     /**
+     * 收银台待收银订单列表
+     * 筛选条件：本租户下 status=STATUS_ORDERED 且无收银记录（CashierRecord）的订单
+     *
+     * @param tenantId 租户ID
+     * @return 待收银订单列表（按创建时间倒序）
+     */
+    List<Orders> listPendingCheckout(Long tenantId);
+
+    /**
      * 再来一单，根据历史订单重新下单
      *
      * @param orderId 历史订单ID

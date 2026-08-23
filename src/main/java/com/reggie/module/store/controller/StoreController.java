@@ -3,6 +3,7 @@ import com.reggie.common.utils.PageUtils;
 
 import cn.hutool.core.util.StrUtil;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequiresAdmin;
 import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.store.model.StoreInfo;
@@ -62,6 +63,7 @@ public class StoreController {
      * @return 分页结果
      */
     @PostMapping("/page")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "分页搜索门店", description = "分页搜索门店列表，支持多条件筛选与排序")
     @Parameter(name = "dto", description = "搜索条件（关键字、门店类型、状态等）", required = true)
     public R<Map<String, Object>> pageStores(@RequestBody StoreSearchDTO dto) {
@@ -111,6 +113,7 @@ public class StoreController {
      * @return 门店信息
      */
     @PostMapping("/create")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "创建门店", description = "创建新门店并关联租户和管理员账号")
     @Parameter(name = "body", description = "门店信息（包含门店名称、编码、类型、联系方式、管理员账号等）", required = true)
     public R<StoreInfo> createStore(@Valid @RequestBody Map<String, Object> body) {
@@ -146,6 +149,7 @@ public class StoreController {
      * @return 操作结果
      */
     @PutMapping("/update/{tenantId}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "编辑门店", description = "根据tenantId更新门店信息")
     @Parameter(name = "tenantId", description = "租户ID", required = true)
     @Parameter(name = "updateData", description = "门店更新数据", required = true)
@@ -162,6 +166,7 @@ public class StoreController {
      * @return 门店信息
      */
     @PostMapping("/switch/{tenantId}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "切换门店", description = "切换当前会话的租户门店")
     @Parameter(name = "tenantId", description = "目标租户ID", required = true)
     public R<Map<String, Object>> switchStore(@PathVariable Long tenantId,
@@ -177,6 +182,7 @@ public class StoreController {
      * PUT /store/{tenantId}/status
      */
     @PutMapping("/{tenantId}/status")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新门店状态", description = "根据tenantId更新门店启用/停用状态")
     @Parameter(name = "tenantId", description = "租户ID", required = true)
     @Parameter(name = "status", description = "状态值（1=启用 0=停用）", required = true)
@@ -192,6 +198,7 @@ public class StoreController {
      * @return 操作结果
      */
     @PutMapping("/batch/status")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量更新门店状态", description = "批量更新门店启用/停用状态（上下架）")
     @Parameter(name = "body", description = "批量操作数据（tenantIds状态列表、目标状态）", required = true)
     public R<Map<String, Object>> batchUpdateStatus(@RequestBody Map<String, Object> body) {
@@ -212,6 +219,7 @@ public class StoreController {
      * @param response HTTP响应
      */
     @PostMapping("/export")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "导出门店数据", description = "导出门店数据为CSV文件")
     @Parameter(name = "dto", description = "搜索条件（关键字、门店类型、状态等）", required = true)
     public void exportStores(@RequestBody StoreSearchDTO dto, HttpServletResponse response) {
@@ -300,18 +308,14 @@ public class StoreController {
      * @return 同步结果
      */
     @PostMapping("/sync/dishes")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "同步菜品", description = "将指定菜品从源门店同步到目标门店")
     @Parameter(name = "body", description = "同步数据（sourceTenantId, targetTenantId, dishIds, operatorId）", required = true)
     public R<Map<String, Object>> syncDishes(@RequestBody Map<String, Object> body) {
-        Long sourceTenantId = Long.valueOf(body.get("sourceTenantId").toString());
-        Long targetTenantId = Long.valueOf(body.get("targetTenantId").toString());
-        Long operatorId = body.get("operatorId") != null ?
-                Long.valueOf(body.get("operatorId").toString()) : null;
-
-        @SuppressWarnings("unchecked") // JSON反序列化类型转换，Integer转Long由调用方保证
-        List<Long> dishIds = body.get("dishIds") != null ?
-                ((List<Integer>) body.get("dishIds")).stream()
-                        .map(Long::valueOf).collect(java.util.stream.Collectors.toList()) : null;
+        Long sourceTenantId = parseLongParam(body, "sourceTenantId");
+        Long targetTenantId = parseLongParam(body, "targetTenantId");
+        Long operatorId = parseLongParam(body, "operatorId");
+        List<Long> dishIds = parseLongIds(body, "dishIds");
 
         Map<String, Object> result = storeSyncService.syncDishes(sourceTenantId, targetTenantId, dishIds, operatorId);
         return R.success(result);
@@ -323,13 +327,13 @@ public class StoreController {
      * @return 同步结果
      */
     @PostMapping("/sync/categories")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "同步分类", description = "将分类从源门店同步到目标门店")
     @Parameter(name = "body", description = "同步数据（sourceTenantId, targetTenantId, operatorId）", required = true)
     public R<Map<String, Object>> syncCategories(@RequestBody Map<String, Object> body) {
-        Long sourceTenantId = Long.valueOf(body.get("sourceTenantId").toString());
-        Long targetTenantId = Long.valueOf(body.get("targetTenantId").toString());
-        Long operatorId = body.get("operatorId") != null ?
-                Long.valueOf(body.get("operatorId").toString()) : null;
+        Long sourceTenantId = parseLongParam(body, "sourceTenantId");
+        Long targetTenantId = parseLongParam(body, "targetTenantId");
+        Long operatorId = parseLongParam(body, "operatorId");
 
         Map<String, Object> result = storeSyncService.syncCategories(sourceTenantId, targetTenantId, operatorId);
         return R.success(result);
@@ -341,21 +345,48 @@ public class StoreController {
      * @return 同步结果
      */
     @PostMapping("/sync/setmeals")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "同步套餐", description = "将套餐从源门店同步到目标门店")
     @Parameter(name = "body", description = "同步数据（sourceTenantId, targetTenantId, setmealIds, operatorId）", required = true)
     public R<Map<String, Object>> syncSetmeals(@RequestBody Map<String, Object> body) {
-        Long sourceTenantId = Long.valueOf(body.get("sourceTenantId").toString());
-        Long targetTenantId = Long.valueOf(body.get("targetTenantId").toString());
-        Long operatorId = body.get("operatorId") != null ?
-                Long.valueOf(body.get("operatorId").toString()) : null;
-
-        @SuppressWarnings("unchecked") // JSON反序列化类型转换，Integer转Long由调用方保证
-        List<Long> setmealIds = body.get("setmealIds") != null ?
-                ((List<Integer>) body.get("setmealIds")).stream()
-                        .map(Long::valueOf).collect(java.util.stream.Collectors.toList()) : null;
+        Long sourceTenantId = parseLongParam(body, "sourceTenantId");
+        Long targetTenantId = parseLongParam(body, "targetTenantId");
+        Long operatorId = parseLongParam(body, "operatorId");
+        List<Long> setmealIds = parseLongIds(body, "setmealIds");
 
         Map<String, Object> result = storeSyncService.syncSetmeals(sourceTenantId, targetTenantId, setmealIds, operatorId);
         return R.success(result);
+    }
+
+    /**
+     * 从请求体中解析 Long 类型参数
+     *
+     * @param body 请求体
+     * @param key  参数名
+     * @return 参数值，缺失时为 null
+     */
+    private Long parseLongParam(Map<String, Object> body, String key) {
+        Object value = body.get(key);
+        return value != null ? Long.valueOf(value.toString()) : null;
+    }
+
+    /**
+     * 从请求体中解析 Long 列表参数
+     * <p>JSON 反序列化后数字默认是 Integer，此处统一转为 Long</p>
+     *
+     * @param body 请求体
+     * @param key  参数名
+     * @return Long 列表，缺失时为 null
+     */
+    @SuppressWarnings("unchecked") // JSON反序列化类型转换，Integer转Long由调用方保证
+    private List<Long> parseLongIds(Map<String, Object> body, String key) {
+        Object value = body.get(key);
+        if (value == null) {
+            return null;
+        }
+        return ((List<Integer>) value).stream()
+                .map(Long::valueOf)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     /**

@@ -37,7 +37,6 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -113,7 +112,7 @@ public class DishController {
      * @return 分页结果
      */
     @RequireEmployee
-        @GetMapping("/page")
+    @GetMapping("/page")
     @Operation(summary = "菜品分页查询", description = "分页查询菜品列表，支持按名称模糊搜索、状态筛选和分类筛选，自动关联分类名称")
     @Parameter(name = "page", description = "页码，从1开始", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
@@ -379,7 +378,7 @@ public class DishController {
      * @return 统计数据（total/active/inactive/lowStock/soldOut）
      */
     @RequireEmployee
-        @GetMapping("/stats")
+    @GetMapping("/stats")
     @Operation(summary = "菜品统计", description = "获取菜品统计数据（总数、起售数、停售数、低库存数、售罄数），轻量COUNT查询")
     public R<Map<String, Object>> stats() {
         Map<String, Object> stats = dishService.getStats();
@@ -394,7 +393,7 @@ public class DishController {
      * @return 操作结果
      */
     @RequireEmployee
-        @PutMapping("/stock/{id}")
+    @PutMapping("/stock/{id}")
     @Operation(summary = "更新菜品库存", description = "更新菜品的库存数量和最低库存预警值")
     @Parameter(name = "id", description = "菜品ID", required = true)
     @Parameter(name = "stockQty", description = "库存数量（不能小于0）", required = true)

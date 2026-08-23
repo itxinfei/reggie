@@ -18,10 +18,10 @@
     .payment-page .container { flex: 1; background: transparent; padding: 24px 32px 32px;
       min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
     .payment-page .tableBar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
-      background: var(--bg-surface); padding: 16px 24px; border-radius: 14px; margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+      background: var(--bg-surface); padding: 16px 24px; border-radius: var(--radius-lg); margin-bottom: 20px;
+      box-shadow: var(--shadow-sm); border: 1px solid var(--el-border-light);
       transition: box-shadow 0.3s; }
-    .payment-page .tableBar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .payment-page .tableBar:hover { box-shadow: var(--shadow-lg); }
     .payment-page .tableBar .fl-label { font-size:var(--font-size-base); color: var(--el-text-regular); font-weight: 500; flex-shrink: 0; }
     .payment-page .tableBar .fl-spacer { flex: 1; min-width: 0; }
     .payment-page .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -217,7 +217,7 @@
             var dates = data.dates || [];
             var makeAreaGrad = function(c) { return c; };
             this.trendChart.setOption({
-              tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)',
+              tooltip: { trigger: 'axis', backgroundColor: RgPalette.white,
                 borderColor: RgPalette.borderLighter2, borderWidth: 1, textStyle: { color: RgPalette.textPrimary, fontSize: 13 } },
               legend: { data: ['微信支付', '支付宝', '余额支付'], bottom: 8, textStyle: { fontSize: 12, color: RgPalette.textRegular } },
               // 修改点：增大左/底部 padding 防止标签被裁剪
@@ -271,13 +271,13 @@
                 itemStyle: { color: CHANNEL_COLOR[r.key] || RgPalette.textSecondary } }; });
             this.pieChart.setOption({
               color: [RgPalette.wechatGreen,RgPalette.alipayBlue,RgPalette.warning,RgPalette.textSecondary],
-              tooltip: { trigger: 'item', backgroundColor: 'rgba(255,255,255,0.96)',
+              tooltip: { trigger: 'item', backgroundColor: RgPalette.white,
                 borderColor: RgPalette.borderLighter2, borderWidth: 1, textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                 formatter: function(p) { return '<b>' + p.name + '</b><br/>' + p.marker + ' 笔数：<b>' + p.value + '</b>（' + p.percent + '%）'; } },
               legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10,
                 textStyle: { color: RgPalette.textRegular, fontSize: 12 } },
               series: [{ type: 'pie', radius: ['45%','68%'], center: ['50%','44%'],
-                avoidLabelOverlap: false, itemStyle: { borderRadius: 6, borderColor: RgPalette.white, borderWidth: 3 },
+                avoidLabelOverlap: false, itemStyle: { borderRadius: RgPalette.radiusMd borderColor: RgPalette.white, borderWidth: 3 },
                 label: { position: 'outside', formatter: '{b}\n{d}%', fontSize: 13, lineHeight: 18, color: RgPalette.textRegular },
                 labelLine: { length: 25, length2: 20, lineStyle: { color: RgPalette.borderBase } },
                 emphasis: { scaleSize: 10, label: { fontSize: 16, fontWeight: 'bold' } },
@@ -296,7 +296,7 @@
             var barW = names.length <= 2 ? 48 : names.length <= 3 ? 36 : 24;
             this.barChart.setOption({
               tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-                backgroundColor: 'rgba(255,255,255,0.96)', borderColor: RgPalette.borderLighter2, borderWidth: 1,
+                backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
                 textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                 formatter: function(ps) {
                   var h = '<b>' + ps[0].axisValue + '</b><br/>';
@@ -323,7 +323,7 @@
               ].filter(function(y) { return Object.keys(y).length; }),
               series: [
                 { name: '交易笔数', type: 'bar', data: counts, barWidth: barW,
-                  itemStyle: { borderRadius: [8, 8, 0, 0],
+                  itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0],
                     color: function(p) { var key = Object.keys(CHANNEL_COLOR)[p.dataIndex]; return CHANNEL_COLOR[key] || RgPalette.textSecondary; } },
                   label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c} 笔' } },
                 hasAmount ? { name: '交易金额', type: 'line', yAxisIndex: 1, data: amounts,

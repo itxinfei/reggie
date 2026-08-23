@@ -1,6 +1,7 @@
 package com.reggie.module.member.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.module.member.mapper.MemberMapper;
 import com.reggie.module.member.mapper.RechargeRecordMapper;
@@ -38,6 +39,11 @@ public class RechargeRecordServiceImpl extends ServiceImpl<RechargeRecordMapper,
         Member member = memberService.getById(memberId);
         if (member == null) {
             throw new CustomException("会员不存在");
+        }
+        // 租户归属校验：防止跨租户盗充
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(member.getTenantId())) {
+            throw new CustomException("无权操作其他租户的会员储值");
         }
 
         int rows = memberMapper.addBalance(memberId, amount, giftAmount);

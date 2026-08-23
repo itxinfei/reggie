@@ -17,7 +17,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 限流切面
@@ -41,6 +40,17 @@ public class RateLimitAspect {
      * 是否启用限流
      */
     private final boolean enabled;
+
+    /**
+     * Redis 瞬态故障熔断标记：Redis 异常时降级放行（限流失效），
+     * 避免每次请求都重复打印 error 日志。熔断持续 30s 后自动恢复探测。
+     */
+    private volatile long redisCircuitOpenUntil = 0;
+
+    /**
+     * 熔断持续时间（毫秒）
+     */
+    private static final long CIRCUIT_OPEN_DURATION_MS = 30_000L;
 
     /**
      * 匿名用户标识
@@ -115,7 +125,7 @@ public class RateLimitAspect {
             // 使用Lua脚本原子性执行increment+expire
             Long count = redisTemplate.execute(rateLimitScript,
                     Collections.singletonList(limitKey),
-                    1); // 过期时间1秒
+                    rateLimit.time());
 
             // 判断是否超过限流阈值
             if (count != null && count > rateLimit.maxRequestsPerSecond()) {
@@ -127,11 +137,18 @@ public class RateLimitAspect {
             // 放行
             return point.proceed();
         } catch (RateLimitExceededException e) {
-            // 限流异常直接抛出，不允许放行
+            // 限流命中：直接向上抛出，由 GlobalExceptionHandler 返回 429
             throw e;
         } catch (Exception e) {
-            // Redis 异常降级：记录日志后放行，避免因限流组件故障影响业务
-            log.error("限流检查异常（Redis连接问题），已降级放行：{}", e.getMessage());
+            // Redis 异常降级：瞬态故障熔断（与 BruteForceProtectionFilter 一致），
+            // 30s 内静默放行降低噪声，之后恢复探测；异常首次发生时打 error 便于定位。
+            long now = System.currentTimeMillis();
+            if (now < redisCircuitOpenUntil) {
+                return point.proceed();
+            }
+            redisCircuitOpenUntil = now + CIRCUIT_OPEN_DURATION_MS;
+            log.error("限流检查异常（Redis连接问题），已降级放行并熔断30s（限流临时失效）：{}",
+                    e.getMessage(), e);
             return point.proceed();
         }
     }

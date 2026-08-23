@@ -7,7 +7,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
-import com.reggie.module.member.mapper.MemberMapper;
+import com.reggie.common.RateLimit;
+import com.reggie.common.LogMaskUtils;
 import com.reggie.dto.DeductBalanceDTO;
 import com.reggie.dto.RechargeDTO;
 import com.reggie.module.member.model.CouponUser;
@@ -56,16 +57,13 @@ public class MemberController {
     private final RechargeRecordService rechargeRecordService;
     private final MemberLevelService memberLevelService;
     private final CouponUserService couponUserService;
-    private final MemberMapper memberMapper;
 
     public MemberController(MemberService memberService, RechargeRecordService rechargeRecordService,
-                            MemberLevelService memberLevelService, CouponUserService couponUserService,
-                            MemberMapper memberMapper) {
+                            MemberLevelService memberLevelService, CouponUserService couponUserService) {
         this.memberService = memberService;
         this.rechargeRecordService = rechargeRecordService;
         this.memberLevelService = memberLevelService;
         this.couponUserService = couponUserService;
-        this.memberMapper = memberMapper;
     }
 
     /**
@@ -124,9 +122,10 @@ public class MemberController {
                 .le(Member::getCreatedTime, monthEnd));
 
         // 3. 按等级聚合（level_id 可能为 NULL，单独计入 noLevelCount）
+        // 域4 改造：原始 SQL 执行下沉到 MemberService.countByLevel()，Controller 仅做结果展开
         Map<Long, Long> levelCountMap = new LinkedHashMap<>();
         long noLevelCount = 0;
-        for (Map<String, Object> row : memberMapper.countByLevel()) {
+        for (Map<String, Object> row : memberService.countByLevel()) {
             Object lid = row.get("levelId");
             long cnt = row.get("cnt") instanceof Number ? ((Number) row.get("cnt")).longValue() : 0L;
             if (lid == null) {
@@ -151,9 +150,10 @@ public class MemberController {
      */
     @PostMapping
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增会员", description = "根据手机号注册新会员，自动生成会员卡号")
     public R<Member> save(@Valid @RequestBody Member member) {
-        log.info("新增会员: {}", member.getPhone());
+        log.info("新增会员: {}", LogMaskUtils.maskPhone(member.getPhone()));
         Member result = memberService.registerByPhone(member.getPhone(), member.getName());
         return R.success(result);
     }
@@ -165,6 +165,7 @@ public class MemberController {
      */
     @PutMapping
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改会员", description = "更新会员基本信息")
     public R<String> update(@Valid @RequestBody Member member) {
         if (member.getId() == null) {
@@ -219,14 +220,44 @@ public class MemberController {
     }
 
     /**
+     * 收银台：按手机号识别会员
+     * <p>门店收银时录入会员手机号，返回会员信息（含积分、余额），用于积分发放与储值抵扣。</p>
+     */
+    @GetMapping("/by-phone")
+    @RequireEmployee
+    @Operation(summary = "按手机号查询会员", description = "收银台会员识别：传入手机号返回会员信息")
+    @Parameter(name = "phone", description = "会员手机号", required = true)
+    public R<Member> getByPhone(@RequestParam String phone) {
+        if (phone == null || phone.trim().isEmpty()) {
+            return R.error("手机号不能为空");
+        }
+        Member member = memberService.lambdaQuery().eq(Member::getPhone, phone.trim()).one();
+        if (member != null) {
+            memberService.fillLevelName(Collections.singletonList(member));
+            return R.success(member);
+        }
+        return R.error("未找到该手机号的会员");
+    }
+
+    /**
      * 会员充值
+     * <p>租户安全：先校验会员归属当前租户，防止越权为其他租户会员充值。</p>
      * @param dto 充值请求
      * @return 操作结果
      */
     @PostMapping("/recharge")
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "会员充值", description = "为会员账户充值，支持赠送金额")
     public R<String> recharge(@Validated @RequestBody RechargeDTO dto) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        Member member = memberService.getById(dto.getMemberId());
+        if (member == null) {
+            return R.error("会员不存在");
+        }
+        if (currentTenantId != null && !currentTenantId.equals(member.getTenantId())) {
+            return R.error("无权操作其他租户的会员");
+        }
         rechargeRecordService.recharge(dto.getMemberId(), dto.getAmount(), dto.getGiftAmount(), dto.getPaymentMethod());
         log.info("会员充值: memberId={}, amount={}", dto.getMemberId(), dto.getAmount());
         return R.success("充值成功");
@@ -234,13 +265,23 @@ public class MemberController {
 
     /**
      * 扣减会员余额
+     * <p>租户安全：先校验会员归属当前租户，防止越权扣减其他租户会员余额。</p>
      * @param dto 余额扣减请求
      * @return 操作结果
      */
     @PostMapping("/deduct-balance")
     @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "扣减余额", description = "扣减会员账户余额（用于订单抵扣等）")
     public R<String> deductBalance(@Validated @RequestBody DeductBalanceDTO dto) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        Member member = memberService.getById(dto.getMemberId());
+        if (member == null) {
+            return R.error("会员不存在");
+        }
+        if (currentTenantId != null && !currentTenantId.equals(member.getTenantId())) {
+            return R.error("无权操作其他租户的会员");
+        }
         boolean ok = memberService.deductBalance(dto.getMemberId(), dto.getAmount());
         if (ok) {
             return R.success("扣减成功");
@@ -292,7 +333,7 @@ public class MemberController {
         LambdaQueryWrapper<CouponUser> couponQw = new LambdaQueryWrapper<>();
         couponQw.eq(CouponUser::getMemberId, member.getId());
         if (tenantId != null) couponQw.eq(CouponUser::getTenantId, tenantId);
-        couponQw.eq(CouponUser::getStatus, "UNUSED");
+        couponQw.eq(CouponUser::getStatus, "unused");
         int couponCount = (int) couponUserService.count(couponQw);
         result.put("couponCount", couponCount);
 

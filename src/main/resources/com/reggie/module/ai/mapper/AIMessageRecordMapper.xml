@@ -8,6 +8,7 @@
                feedback, dish_ids, tokens_used, is_deleted, create_time, tenant_id
         FROM ai_message
         WHERE conversation_id = #{conversationId}
+          AND tenant_id = #{tenantId}
           AND is_deleted = #{isDeleted}
         ORDER BY create_time ASC
     </select>

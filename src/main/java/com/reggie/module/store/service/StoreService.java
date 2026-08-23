@@ -139,5 +139,14 @@ public interface StoreService {
      * @return 统计Map：totalStores/activeStores/inactiveStores/todayTotalStores
      */
     Map<String, Object> getStoreStats();
+
+    /**
+     * 根据租户 ID 查询门店信息（含营业时间等）
+     * <p>域4 改造：从 RestaurantController 下沉</p>
+     *
+     * @param tenantId 租户 ID
+     * @return 门店信息，不存在返回 null
+     */
+    StoreInfo findByTenantId(Long tenantId);
 }
 

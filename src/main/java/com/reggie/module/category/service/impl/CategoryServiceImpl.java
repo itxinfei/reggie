@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 
 /**
  * 分类服务实现类
@@ -71,6 +70,22 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
 
         // 修改点：先删DB成功
         super.removeById(id);
+    }
+
+    /**
+     * 批量删除分类——逐条校验关联性，任一失败整体回滚
+     *
+     * @param ids 分类ID列表
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void remove(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        for (Long id : ids) {
+            this.remove(id);
+        }
     }
 
     /**

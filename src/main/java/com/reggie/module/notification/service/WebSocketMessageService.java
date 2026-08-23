@@ -1,9 +1,12 @@
 package com.reggie.module.notification.service;
 
+import com.reggie.common.BaseContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -27,7 +30,7 @@ public class WebSocketMessageService {
      * Send order notification
      */
     public void sendOrderNotification(Long orderId, String orderNumber, String type, String message) {
-        Map<String, Object> notification = new ConcurrentHashMap<>();
+        Map<String, Object> notification = new HashMap<>();
         notification.put("orderId", orderId);
         notification.put("orderNumber", orderNumber);
         notification.put("type", type);
@@ -36,7 +39,11 @@ public class WebSocketMessageService {
         notification.put("read", false);
 
         // Store for polling
-        Long tenantId = 1L; // Default tenant
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            log.warn("通知发送失败：租户上下文为空，orderId={}, type={}", orderId, type);
+            return;
+        }
         tenantNotifications.computeIfAbsent(tenantId, k -> new CopyOnWriteArrayList<>()).add(notification);
         
         // Keep only recent notifications
@@ -52,7 +59,7 @@ public class WebSocketMessageService {
      * Send kitchen notification
      */
     public void sendKitchenNotification(Long orderId, String orderNumber, String items, String type) {
-        Map<String, Object> notification = new ConcurrentHashMap<>();
+        Map<String, Object> notification = new HashMap<>();
         notification.put("orderId", orderId);
         notification.put("orderNumber", orderNumber);
         notification.put("items", items);
@@ -60,7 +67,11 @@ public class WebSocketMessageService {
         notification.put("timestamp", LocalDateTime.now().toString());
         notification.put("category", "kitchen");
 
-        Long tenantId = 1L;
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            log.warn("通知发送失败：租户上下文为空，orderId={}, type={}", orderId, type);
+            return;
+        }
         tenantNotifications.computeIfAbsent(tenantId, k -> new CopyOnWriteArrayList<>()).add(notification);
         log.info("Kitchen notification stored: orderId={}, type={}", orderId, type);
     }
@@ -69,14 +80,18 @@ public class WebSocketMessageService {
      * Send system notification
      */
     public void sendSystemNotification(String type, String title, String message) {
-        Map<String, Object> notification = new ConcurrentHashMap<>();
+        Map<String, Object> notification = new HashMap<>();
         notification.put("type", type);
         notification.put("title", title);
         notification.put("message", message);
         notification.put("timestamp", LocalDateTime.now().toString());
         notification.put("category", "system");
 
-        Long tenantId = 1L;
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            log.warn("通知发送失败：租户上下文为空，type={}, title={}", type, title);
+            return;
+        }
         tenantNotifications.computeIfAbsent(tenantId, k -> new CopyOnWriteArrayList<>()).add(notification);
         log.info("System notification stored: type={}, title={}", type, title);
     }
@@ -85,7 +100,8 @@ public class WebSocketMessageService {
      * Get notifications for tenant (for polling)
      */
     public List<Map<String, Object>> getNotifications(Long tenantId) {
-        return tenantNotifications.getOrDefault(tenantId, new CopyOnWriteArrayList<>());
+        List<Map<String, Object>> list = tenantNotifications.getOrDefault(tenantId, new CopyOnWriteArrayList<>());
+        return new ArrayList<>(list);
     }
 
     /**

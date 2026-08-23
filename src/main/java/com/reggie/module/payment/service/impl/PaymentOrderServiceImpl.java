@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.reggie.module.payment.model.PaymentOrder.STATUS_FAIL;
 import static com.reggie.module.payment.model.PaymentOrder.STATUS_PENDING;
@@ -37,34 +38,53 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     @Autowired
     private OrderService orderService;
 
+    /** 用于串行化同一订单的并发创建请求，防止 TOCTOU 竞态导致重复 PENDING 支付单 */
+    private final ConcurrentHashMap<Long, Object> createOrderLock = new ConcurrentHashMap<>();
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PaymentOrder createPaymentOrder(Long orderId, String channel, BigDecimal amount) {
-        // 重复支付检查：同一订单已存在 SUCCESS 支付单则拒绝
-        int successCount = baseMapper.countByOrderIdAndStatuses(orderId, "'" + STATUS_SUCCESS + "'");
-        if (successCount > 0) {
-            throw new CustomException("该订单已支付成功，请勿重复支付");
+        // 租户归属校验：防止跨租户越权创建支付单
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        Orders order = orderService.getById(orderId);
+        if (order == null) {
+            throw new CustomException("订单不存在");
         }
-        // 存在 PENDING 支付单则复用返回，避免重复创建支付单和重复调用渠道
-        PaymentOrder existPending = lambdaQuery()
-                .eq(PaymentOrder::getOrderId, orderId)
-                .eq(PaymentOrder::getStatus, STATUS_PENDING)
-                .one();
-        if (existPending != null) {
-            log.info("复用待支付订单: tradeNo={}, orderId={}", existPending.getTradeNo(), orderId);
-            return existPending;
+        if (currentTenantId != null && !currentTenantId.equals(order.getTenantId())) {
+            throw new CustomException("无权对其他租户的订单发起支付");
         }
 
-        PaymentOrder po = new PaymentOrder();
-        po.setOrderId(orderId);
-        po.setTenantId(BaseContext.getCurrentTenantId());
-        po.setTradeNo(generateTradeNo());
-        po.setChannel(channel);
-        po.setAmount(amount);
-        po.setStatus(STATUS_PENDING);
-        save(po);
-        log.info("创建支付订单: tradeNo={}, orderId={}, channel={}, amount={}", po.getTradeNo(), orderId, channel, amount);
-        return po;
+        // synchronized 串行化同一订单的并发创建请求，防止 TOCTOU 竞态
+        Object lock = createOrderLock.computeIfAbsent(orderId, k -> new Object());
+        synchronized (lock) {
+            // 重复支付检查：同一订单已存在 SUCCESS 支付单则拒绝
+            java.util.List<String> statusList = new java.util.ArrayList<>();
+            statusList.add(STATUS_SUCCESS);
+            int successCount = baseMapper.countByOrderIdAndStatuses(orderId, statusList);
+            if (successCount > 0) {
+                throw new CustomException("该订单已支付成功，请勿重复支付");
+            }
+            // 存在 PENDING 支付单则复用返回，避免重复创建支付单和重复调用渠道
+            PaymentOrder existPending = lambdaQuery()
+                    .eq(PaymentOrder::getOrderId, orderId)
+                    .eq(PaymentOrder::getStatus, STATUS_PENDING)
+                    .one();
+            if (existPending != null) {
+                log.info("复用待支付订单: tradeNo={}, orderId={}", existPending.getTradeNo(), orderId);
+                return existPending;
+            }
+
+            PaymentOrder po = new PaymentOrder();
+            po.setOrderId(orderId);
+            po.setTenantId(BaseContext.getCurrentTenantId());
+            po.setTradeNo(generateTradeNo());
+            po.setChannel(channel);
+            po.setAmount(amount);
+            po.setStatus(STATUS_PENDING);
+            save(po);
+            log.info("创建支付订单: tradeNo={}, orderId={}, channel={}, amount={}", po.getTradeNo(), orderId, channel, amount);
+            return po;
+        }
     }
 
     @Override
@@ -95,10 +115,18 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
         Orders order = orderService.getById(po.getOrderId());
         if (order != null && order.getStatus() != null) {
             if (Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
-                order.setStatus(Orders.STATUS_ORDERED);
-                order.setCheckoutTime(LocalDateTime.now());
-                orderService.updateById(order);
-                log.info("支付成功联动更新订单: orderId={}, orderStatus=待接单", po.getOrderId());
+                // 原子更新（CAS 状态机保护）：仅当订单状态为 PENDING_PAY 时才更新为 ORDERED，避免覆盖并发写入
+                boolean updated = orderService.lambdaUpdate()
+                        .eq(Orders::getId, order.getId())
+                        .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
+                        .set(Orders::getStatus, Orders.STATUS_ORDERED)
+                        .set(Orders::getCheckoutTime, LocalDateTime.now())
+                        .update();
+                if (updated) {
+                    log.info("支付成功联动更新订单: orderId={}, orderStatus=待接单", po.getOrderId());
+                } else {
+                    log.warn("支付成功但订单状态已被他人变更，跳过联动更新: orderId={}", po.getOrderId());
+                }
             } else {
                 log.warn("支付成功但订单状态非待付款，跳过联动更新: orderId={}, currentStatus={}",
                         po.getOrderId(), order.getStatus());
@@ -126,14 +154,23 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
         BaseContext.setCurrentTenantId(po.getTenantId());
         // 仅当订单为待付款时才联动取消，避免覆盖已配送/已完成订单（状态机校验）
         Orders order = orderService.getById(po.getOrderId());
-        if (order != null && order.getStatus() != null
-                && Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
-            order.setStatus(Orders.STATUS_CANCELLED);
-            orderService.updateById(order);
-            log.warn("支付失败联动取消订单: orderId={}, reason={}", po.getOrderId(), errorMsg);
-        } else if (order != null) {
-            log.warn("支付失败但订单状态非待付款，跳过联动取消: orderId={}, currentStatus={}",
-                    po.getOrderId(), order.getStatus());
+        if (order != null && order.getStatus() != null) {
+            if (Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
+                // 原子更新（CAS 状态机保护）：仅当订单状态为 PENDING_PAY 时才更新为 CANCELLED，避免覆盖并发写入
+                boolean updated = orderService.lambdaUpdate()
+                        .eq(Orders::getId, order.getId())
+                        .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
+                        .set(Orders::getStatus, Orders.STATUS_CANCELLED)
+                        .update();
+                if (updated) {
+                    log.warn("支付失败联动取消订单: orderId={}, reason={}", po.getOrderId(), errorMsg);
+                } else {
+                    log.warn("支付失败但订单状态已被他人变更，跳过联动取消: orderId={}", po.getOrderId());
+                }
+            } else {
+                log.warn("支付失败但订单状态非待付款，跳过联动取消: orderId={}, currentStatus={}",
+                        po.getOrderId(), order.getStatus());
+            }
         }
     }
 

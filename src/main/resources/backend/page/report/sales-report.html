@@ -15,34 +15,12 @@
       margin: 0;
       padding: 0;
       overflow-y: auto;
-      background: var(--el-bg-subtle);
+      background: var(--bg-page);
     }
     .container {
       padding: 24px 32px;
       max-width: 1400px;
       margin: 0 auto;
-    }
-    .tableBar {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      background: var(--bg-surface);
-      padding: 16px 24px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-    }
-    .tableBar .toolbar-label {
-      font-size:var(--font-size-base);
-      color: var(--el-text-regular);
-      font-weight: 500;
-    }
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-      margin-bottom: 20px;
     }
     .chart-row {
       display: grid;
@@ -52,9 +30,9 @@
     }
     .chart-card {
       background: var(--bg-surface);
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-sm);
     }
     .chart-title {
       font-size:var(--font-size-lg);
@@ -65,18 +43,12 @@
     .chart-container {
       height: 300px;
     }
-    .table-card {
-      background: var(--bg-surface);
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-    }
   </style>
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#app" class="skip-link">跳转到主内容</a>
- <div id="app" class="container" role="main" aria-label="页面主要内容">
+ <div id="app" class="container ds-page" role="main" aria-label="页面主要内容">
     <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
     <header class="ds-page-header">
       <div class="ds-page-header__titles">
@@ -85,78 +57,42 @@
       </div>
       <div class="ds-page-header__actions"></div>
     </header>
-    <!-- 工具栏 -->
-    <div class="tableBar">
-      <span class="toolbar-label">报表类型：</span>
-      <el-radio-group v-model="reportType" @change="handleTypeChange">
-        <el-radio-button label="weekly">周报</el-radio-button>
-        <el-radio-button label="monthly">月报</el-radio-button>
-        <el-radio-button label="yearly">年报</el-radio-button>
-      </el-radio-group>
-      
-      <template v-if="reportType === 'weekly'">
-        <span class="toolbar-label" style="margin-left: 20px;">年份：</span>
-        <el-date-picker v-model="year" type="year" value-format="yyyy" style="width: 100px;"></el-date-picker>
-        <span class="toolbar-label">周数：</span>
-        <el-input-number v-model="week" :min="1" :max="53" style="width: 100px;"></el-input-number>
-      </template>
-      
-      <template v-if="reportType === 'monthly'">
-        <span class="toolbar-label" style="margin-left: 20px;">年份：</span>
-        <el-date-picker v-model="year" type="year" value-format="yyyy" style="width: 100px;"></el-date-picker>
-        <span class="toolbar-label">月份：</span>
-        <el-select v-model="month" style="width: 80px;">
-          <el-option v-for="i in 12" :key="i" :label="i + '月'" :value="i"></el-option>
-        </el-select>
-      </template>
-      
-      <template v-if="reportType === 'yearly'">
-        <span class="toolbar-label" style="margin-left: 20px;">年份：</span>
-        <el-date-picker v-model="year" type="year" value-format="yyyy" style="width: 100px;"></el-date-picker>
-      </template>
-      
-      <el-button type="primary" icon="el-icon-search" aria-label="搜索" @click="fetchData" style="margin-left: 20px;">查询</el-button>
-    </div>
 
     <!-- 统计卡片 -->
-    <div class="stats-row">
-      <div class="stats-card">
-        <div class="stats-card-icon" style="background: var(--el-color-primary-lighter);">
-          <i class="el-icon-money" style="color: var(--el-color-primary);"></i>
-        </div>
-        <div class="stats-card-content">
-          <div class="stats-card-value">¥{{ formatMoney(report.totalRevenue) }}</div>
-          <div class="stats-card-label">总营业额</div>
-        </div>
-      </div>
-      <div class="stats-card">
-        <div class="stats-card-icon" style="background: var(--el-color-success-lighter);">
-          <i class="el-icon-document" style="color: var(--el-color-success);"></i>
-        </div>
-        <div class="stats-card-content">
-          <div class="stats-card-value">{{ report.totalOrders }}</div>
-          <div class="stats-card-label">总订单数</div>
-        </div>
-      </div>
-      <div class="stats-card">
-        <div class="stats-card-icon" style="background: var(--el-color-warning-lighter);">
-          <i class="el-icon-data-analysis" style="color: var(--el-color-warning);"></i>
-        </div>
-        <div class="stats-card-content">
-          <div class="stats-card-value">¥{{ formatMoney(report.avgOrderValue) }}</div>
-          <div class="stats-card-label">平均客单价</div>
-        </div>
-      </div>
-      <div class="stats-card">
-        <div class="stats-card-icon" style="background: var(--el-color-info-lighter);">
-          <i class="el-icon-trend-charts" style="color: var(--el-color-info);"></i>
-        </div>
-        <div class="stats-card-content">
-          <div class="stats-card-value">{{ report.completedCount }}</div>
-          <div class="stats-card-label">完成订单</div>
-        </div>
-      </div>
-    </div>
+    <stat-cards :cards="statsCards"></stat-cards>
+
+    <!-- 工具栏 -->
+    <table-bar
+      :search-items="searchConfig"
+      :actions="actionConfig"
+      @search="fetchData"
+      @reset="resetForm"
+      @action="onAction"
+    >
+      <template slot="search-extra">
+        <el-radio-group v-model="reportType" @change="handleTypeChange" size="small">
+          <el-radio-button label="weekly">周报</el-radio-button>
+          <el-radio-button label="monthly">月报</el-radio-button>
+          <el-radio-button label="yearly">年报</el-radio-button>
+        </el-radio-group>
+
+        <template v-if="reportType === 'weekly'">
+          <el-date-picker v-model="year" type="year" value-format="yyyy" size="small" style="width: 100px;" placeholder="年份"></el-date-picker>
+          <el-input-number v-model="week" :min="1" :max="53" size="small" style="width: 100px;" placeholder="周数"></el-input-number>
+        </template>
+
+        <template v-if="reportType === 'monthly'">
+          <el-date-picker v-model="year" type="year" value-format="yyyy" size="small" style="width: 100px;" placeholder="年份"></el-date-picker>
+          <el-select v-model="month" size="small" style="width: 80px;" placeholder="月份">
+            <el-option v-for="i in 12" :key="i" :label="i + '月'" :value="i"></el-option>
+          </el-select>
+        </template>
+
+        <template v-if="reportType === 'yearly'">
+          <el-date-picker v-model="year" type="year" value-format="yyyy" size="small" style="width: 100px;" placeholder="年份"></el-date-picker>
+        </template>
+      </template>
+    </table-bar>
 
     <!-- 图表行 -->
     <div class="chart-row">
@@ -173,24 +109,17 @@
     </div>
 
     <!-- 详情表格 -->
-    <div class="table-card">
-      <div class="chart-title">详细数据</div>
-      <el-table aria-label="数据表格" :data="detailData" border stripe style="width: 100%" v-loading="loading">
-        <el-table-column prop="label" label="时间" min-width="120" align="center"></el-table-column>
-        <el-table-column prop="revenue" label="营业额" width="120" align="right">
-          <template slot-scope="scope">
-            ¥{{ formatMoney(scope.row.revenue) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="orderCount" label="订单数" width="100" align="center"></el-table-column>
-        <el-table-column prop="completedCount" label="完成数" width="100" align="center"></el-table-column>
-        <el-table-column prop="avgOrderValue" label="客单价" width="120" align="right">
-          <template slot-scope="scope">
-            ¥{{ formatMoney(scope.row.avgOrderValue) }}
-          </template>
-        </el-table-column>
-      </el-table>
-    </div>
+    <crud-table
+      :data="detailData"
+      :columns="tableColumns"
+      :loading="loading"
+      :show-pagination="false"
+      :stripe="true"
+      :border="true"
+      aria-label="销售报表数据"
+      empty-hint="暂无数据，试试调整筛选条件"
+    >
+    </crud-table>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -220,12 +149,37 @@
           },
           detailData: [],
           revenueChart: null,
-          orderChart: null
+          orderChart: null,
+          // 搜索配置
+          searchConfig: [],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'query', text: '查询', type: 'primary', icon: 'el-icon-search' }
+          ],
+          // 表格列配置
+          tableColumns: [
+            { prop: 'label', label: '时间', width: 120, align: 'center' },
+            { prop: 'revenue', label: '营业额', width: 120, type: 'money' },
+            { prop: 'orderCount', label: '订单数', width: 100, align: 'center', type: 'number' },
+            { prop: 'completedCount', label: '完成数', width: 100, align: 'center', type: 'number' },
+            { prop: 'avgOrderValue', label: '客单价', width: 120, type: 'money' }
+          ]
         }
       },
       mounted() {
         this.initCharts()
         this.fetchData()
+      },
+      computed: {
+        statsCards: function() {
+          var self = this;
+          return [
+            { key: '营业额', icon: '💰', label: '总营业额', value: '¥' + self.formatMoney(self.report.totalRevenue), color: 'primary' },
+            { key: '订单数', icon: '📋', label: '总订单数', value: self.report.totalOrders, color: 'success' },
+            { key: '客单价', icon: '🏷️', label: '平均客单价', value: '¥' + self.formatMoney(self.report.avgOrderValue), color: 'warning' },
+            { key: '完成数', icon: '✅', label: '完成订单', value: self.report.completedCount, color: 'info' }
+          ]
+        }
       },
       methods: {
         getWeekNumber(date) {
@@ -242,7 +196,7 @@
         initCharts() {
           this.revenueChart = echarts.init(document.getElementById('revenueChart'))
           this.orderChart = echarts.init(document.getElementById('orderChart'))
-          
+
           window.addEventListener('resize', () => {
             this.revenueChart && this.revenueChart.resize()
             this.orderChart && this.orderChart.resize()
@@ -250,6 +204,19 @@
         },
         handleTypeChange() {
           this.fetchData()
+        },
+        onAction(payload) {
+          if (payload.key === 'query') {
+            this.fetchData();
+          }
+        },
+        resetForm() {
+          const now = new Date();
+          this.reportType = 'weekly';
+          this.year = String(now.getFullYear());
+          this.month = now.getMonth() + 1;
+          this.week = this.getWeekNumber(now);
+          this.fetchData();
         },
         async fetchData() {
           this.loading = true
@@ -290,7 +257,6 @@
               this.updateCharts()
             }
           } catch (err) {
-            console.error('Failed to fetch data', err)
             ReggieUI.error('获取数据失败')
           } finally {
             this.loading = false

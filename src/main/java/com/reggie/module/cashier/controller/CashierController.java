@@ -1,7 +1,12 @@
 package com.reggie.module.cashier.controller;
 
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.module.auth.model.Employee;
+import com.reggie.module.auth.service.EmployeeService;
 import com.reggie.module.cashier.model.CashierRecord;
 import com.reggie.module.cashier.model.DailySettlement;
 import com.reggie.module.cashier.service.CashierService;
@@ -36,10 +41,14 @@ import java.util.Map;
 @RestController
 @RequestMapping("/cashier")
 @Tag(name = "收银管理")
+@RequireEmployee
 public class CashierController {
 
     @Autowired
     private CashierService cashierService;
+
+    @Autowired
+    private EmployeeService employeeService;
 
     // ==================== 收银记录管理 ====================
 
@@ -64,6 +73,7 @@ public class CashierController {
     }
 
     @PostMapping("/record")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存收银记录")
     public R<String> saveCashierRecord(@RequestBody CashierRecord cashierRecord) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -75,29 +85,48 @@ public class CashierController {
     }
 
     @PostMapping("/cash-payment")
-    @Operation(summary = "现金收银")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "收银收款")
     public R<CashierRecord> cashPayment(
                         @Parameter(description = "订单ID") @RequestParam Long orderId,
             @Parameter(description = "订单号") @RequestParam String orderNumber,
             @Parameter(description = "收银金额") @RequestParam BigDecimal amount,
-            @Parameter(description = "实收金额") @RequestParam BigDecimal actualAmount,
+            @Parameter(description = "实收金额（现金收银填写，其他支付方式等于收银金额）") @RequestParam BigDecimal actualAmount,
+            @Parameter(description = "支付方式 1现金 2微信 3支付宝 4银行卡 5会员储值") @RequestParam(required = false, defaultValue = "1") Integer payType,
+            @Parameter(description = "使用的优惠券ID（会员权益核销）") @RequestParam(required = false) Long usedCouponId,
+            @Parameter(description = "会员关联用户ID（会员识别后传入，用于发放积分）") @RequestParam(required = false) Long memberUserId,
             @Parameter(description = "备注") @RequestParam(required = false) String remark) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long userId = BaseContext.getCurrentId();
 
+        // P0-3：从员工表取真实姓名，不再硬编码"收银员"
+        String cashierName = null;
+        try {
+            Employee emp = employeeService.getById(userId);
+            if (emp != null && emp.getName() != null) {
+                cashierName = emp.getName();
+            }
+        } catch (Exception ex) {
+            log.warn("查询收银员姓名失败，userId={}", userId, ex);
+        }
+        cashierName = cashierName != null ? cashierName : "收银员";
+
         try {
             CashierRecord record = cashierService.cashPayment(orderId, orderNumber, amount, actualAmount,
-                    userId, "收银员", remark);
+                    payType, userId, cashierName, usedCouponId, memberUserId, remark);
             return R.success(record);
-        } catch (Exception e) {
-            log.error("现金收银失败", e);
+        } catch (CustomException e) {
+            log.warn("收银收款业务错误：{}", e.getMessage(), e);
             return R.error(e.getMessage());
+        } catch (Exception e) {
+            log.error("收银收款失败", e);
+            return R.error("收银收款失败，请稍后重试");
         }
     }
 
     @DeleteMapping("/record/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除收银记录")
-    @Parameter(description = "I d")
     public R<String> deleteCashierRecord(@PathVariable Long id) {
         boolean success = cashierService.deleteCashierRecord(id);
         return success ? R.success("删除成功") : R.error("删除失败");
@@ -125,6 +154,7 @@ public class CashierController {
     }
 
     @PostMapping("/settlement/execute")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "执行日结")
     public R<DailySettlement> executeDailySettlement(
                         @Parameter(description = "结算日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate settlementDate) {
@@ -134,13 +164,17 @@ public class CashierController {
         try {
             DailySettlement settlement = cashierService.executeDailySettlement(settlementDate, userId, "操作员", tenantId);
             return R.success(settlement);
+        } catch (CustomException e) {
+            log.warn("日结业务错误：{}", e.getMessage(), e);
+            return R.error(e.getMessage());
         } catch (Exception e) {
             log.error("日结失败", e);
-            return R.error(e.getMessage());
+            return R.error("日结失败，请稍后重试");
         }
     }
 
     @PostMapping("/settlement/cancel")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "取消日结")
     public R<String> cancelDailySettlement(
                         @Parameter(description = "结算日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate settlementDate) {
@@ -149,15 +183,18 @@ public class CashierController {
         try {
             boolean success = cashierService.cancelDailySettlement(settlementDate, tenantId);
             return success ? R.success("取消成功") : R.error("取消失败");
+        } catch (CustomException e) {
+            log.warn("取消日结业务错误：{}", e.getMessage(), e);
+            return R.error(e.getMessage());
         } catch (Exception e) {
             log.error("取消日结失败", e);
-            return R.error(e.getMessage());
+            return R.error("取消日结失败，请稍后重试");
         }
     }
 
     @DeleteMapping("/settlement/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除日结")
-    @Parameter(description = "I d")
     public R<String> deleteDailySettlement(@PathVariable Long id) {
         boolean success = cashierService.deleteDailySettlement(id);
         return success ? R.success("删除成功") : R.error("删除失败");

@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Configuration;
 
 import javax.servlet.ServletContext;
 import java.util.Collections;
-import java.util.Set;
 import javax.servlet.SessionTrackingMode;
 
 /**

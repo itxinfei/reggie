@@ -1,7 +1,16 @@
 package com.reggie.module.payment.channel;
 
+import com.reggie.module.payment.config.PaymentConfigProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,6 +34,10 @@ public class AlipayChannel implements PaymentChannel {
     private static final String PAY_URL_PREFIX = "https://pay.alipay.com/pay/";
     /** 二维码URL前缀 */
     private static final String QR_CODE_URL_PREFIX = "https://qr.alipay.com/";
+
+    /** 支付配置（回调验签所需支付宝公钥、mock-mode 开关） */
+    @Autowired
+    private PaymentConfigProperties paymentConfig;
 
     /**
      * 创建支付订单
@@ -89,29 +102,69 @@ public class AlipayChannel implements PaymentChannel {
     }
 
     /**
-     * 校验支付宝回调签名。
+     * 校验支付宝回调签名（RSA2）。
      * <p>
-     * STUB 实现：仅校验必要参数（out_trade_no、sign）存在性。生产环境必须替换为
-     * {@code AlipaySignature.rsaCheckV1(params, alipayPublicKey, "UTF-8", "RSA2")}
-     * 配合支付宝公钥进行真实签名校验，严禁保留此恒真逻辑上线。
+     * 真实校验：剔除 sign、sign_type 后，其余参数按 key 字典序拼接
+     * {@code k1=v1&k2=v2...}，用支付宝公钥做 SHA256withRSA 验签。
+     * </p>
+     * <p>
+     * 安全开关：mock-mode=true（开发/演示）时跳过验签仅告警；
+     * mock-mode=false（生产）时必须配置支付宝公钥，否则<b>拒绝回调</b>（fail-closed），
+     * 严禁恒真放行。
      * </p>
      *
      * @param params 回调参数
-     * @return true=必要参数齐全（待替换为真实签名校验）；false=参数缺失
+     * @return true=签名校验通过；false=校验失败
      */
     @Override
     public boolean verifyNotifySign(Map<String, String> params) {
-        if (params == null) {
+        if (params == null || params.isEmpty()) {
             return false;
         }
-        String outTradeNo = params.get("out_trade_no");
         String sign = params.get("sign");
-        if (outTradeNo == null || outTradeNo.trim().isEmpty() || sign == null || sign.trim().isEmpty()) {
-            log.warn("Alipay 回调签名校验失败：缺少 out_trade_no 或 sign 参数，params={}", params);
+        if (sign == null || sign.trim().isEmpty()) {
+            log.warn("Alipay 回调签名校验失败：缺少 sign 参数，params={}", params);
             return false;
         }
-        // TODO(生产环境必须替换): 使用 AlipaySignature.rsaCheckV1 进行真实 RSA2 签名校验
-        log.warn("Alipay 回调签名校验为 STUB 实现，仅校验参数存在性，生产环境必须替换为真实签名校验");
-        return true;
+        if (paymentConfig.isMockMode()) {
+            log.warn("Alipay 回调签名校验已跳过（mock-mode=true，仅限开发/演示），生产环境必须关闭 mock-mode 并配置支付宝公钥");
+            return true;
+        }
+        String publicKey = paymentConfig.getAlipayPublicKey();
+        if (publicKey == null || publicKey.trim().isEmpty()) {
+            log.error("Alipay 生产模式未配置支付宝公钥（reggie.payment.alipay-public-key），拒绝回调（fail-closed）");
+            return false;
+        }
+        try {
+            // 1. 构建待验签串：剔除 sign、sign_type，其余参数按 key 字典序拼接 k1=v1&k2=v2
+            StringBuilder content = new StringBuilder();
+            params.entrySet().stream()
+                    .filter(e -> !"sign".equals(e.getKey()) && !"sign_type".equals(e.getKey()))
+                    .filter(e -> e.getValue() != null && !e.getValue().trim().isEmpty())
+                    .sorted(java.util.Map.Entry.comparingByKey())
+                    .forEach(e -> {
+                        if (content.length() > 0) {
+                            content.append("&");
+                        }
+                        content.append(e.getKey()).append("=").append(e.getValue());
+                    });
+            // 2. 解码支付宝公钥（Base64 X.509）与签名
+            byte[] keyBytes = Base64.getDecoder().decode(publicKey);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyBytes);
+            PublicKey pubKey = KeyFactory.getInstance("RSA").generatePublic(keySpec);
+            byte[] signBytes = Base64.getDecoder().decode(sign);
+            // 3. SHA256withRSA 验签
+            Signature signature = Signature.getInstance("SHA256withRSA");
+            signature.initVerify(pubKey);
+            signature.update(content.toString().getBytes(StandardCharsets.UTF_8));
+            boolean ok = signature.verify(signBytes);
+            if (!ok) {
+                log.warn("Alipay 回调签名校验失败（RSA2 验签不通过），out_trade_no={}", params.get("out_trade_no"));
+            }
+            return ok;
+        } catch (Exception e) {
+            log.error("Alipay 回调签名校验异常: {}", e.getMessage(), e);
+            return false;
+        }
     }
 }

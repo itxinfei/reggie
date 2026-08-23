@@ -80,7 +80,7 @@
       @close="handleClose"
     >
       <!-- 修改点：补全 ref/:model/:rules 启用 Element 校验（复杂条件校验仍保留在 submitForm） -->
-      <el-form ref="couponForm" :model="formData" :rules="couponRules" label-width="80px" size="small">
+      <el-form ref="couponForm" :model="formData" :rules="couponRules" label-width="100px" size="small">
         <el-form-item label="优惠券名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入优惠券名称" maxlength="30"></el-input>
         </el-form-item>

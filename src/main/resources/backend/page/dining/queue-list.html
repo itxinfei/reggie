@@ -4,86 +4,273 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>排队管理 - 瑞吉外卖管理端</title>
+  <title>排队叫号 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
-    <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+  <style>
+    .queue-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
+
+    /* 筛选栏 */
+    .filter-bar { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: flex-end; gap: var(--space-4); margin-bottom: var(--space-6); flex-wrap: wrap }
+    .filter-bar__label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap }
+    .filter-bar__col { display: flex; flex-direction: column; gap: 4px }
+    .filter-bar__input { height: 36px }
+    .filter-bar__btn { height: 36px; font-size: var(--font-size-base) }
+
+    /* 统计卡片行 */
+    .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-4); margin-bottom: var(--space-6) }
+    @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(3, 1fr) } }
+    @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr) } }
+    @media (max-width: 520px) { .stats-grid { grid-template-columns: 1fr } }
+    .stat-card { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: var(--space-4); transition: box-shadow var(--transition-base) }
+    .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12) }
+    .stat-card__icon { font-size: 28px; line-height: 1 }
+    .stat-card__body { flex: 1 }
+    .stat-card__label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px }
+    .stat-card__value { font-size: 24px; font-weight: 600; color: var(--text-primary); line-height: 1.2 }
+    .stat-card__sub { font-size: 12px; color: var(--text-muted); margin-top: 2px }
+    .stat-card.danger .stat-card__value { color: var(--color-danger) }
+    .stat-card.warning .stat-card__value { color: var(--color-warning) }
+    .stat-card.success .stat-card__value { color: var(--color-success) }
+    .stat-card.info .stat-card__value { color: var(--text-muted) }
+    .stat-card.brand .stat-card__value { color: var(--color-brand-500) }
+
+    /* 叫号操作栏 */
+    .call-bar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--el-bg-ghost); border-radius: var(--radius-md) }
+    .call-bar__seat { display: flex; align-items: center; gap: var(--space-2) }
+    .call-bar__seat-label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap }
+    .call-bar__tip { font-size: 12px; color: var(--text-muted) }
+    .call-bar__reset { font-size: 12px }
+
+    /* 取号弹窗 */
+    .take-dialog__form { margin-top: var(--space-2) }
+
+    /* 入座弹窗 */
+    .seat-detail { padding: var(--space-3); background: var(--el-bg-ghost); border-radius: var(--radius-sm); margin-bottom: var(--space-3) }
+    .seat-detail__row { display: flex; justify-content: space-between; padding: var(--space-1) 0; font-size: var(--font-size-base) }
+    .seat-detail__label { color: var(--text-muted) }
+    .seat-detail__value { color: var(--text-primary); font-weight: 500; font-variant-numeric: tabular-nums }
+
+    /* 空态 */
+    .empty-state { text-align: center; padding: var(--space-15) var(--space-4); color: var(--text-muted); font-size: var(--font-size-base) }
+    .empty-state__icon { font-size: 48px; line-height: 1; margin-bottom: var(--space-4) }
+    .empty-state__desc { font-size: 12px; color: var(--text-muted); margin-top: var(--space-2) }
+
+    /* 状态标签 */
+    .status-tag { font-weight: 500 }
+
+    /* 响应式筛选栏 */
+    @media (max-width: 768px) {
+      .filter-bar { flex-direction: column; align-items: stretch }
+      .filter-bar__col { flex: 1 }
+      .filter-bar__input { width: 100% }
+    }
+  </style>
 </head>
 <body>
-  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
- <a href="#main-content" class="skip-link">跳转到主内容</a>
- <div class="dashboard-container" id="queue-app">
-    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
-      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="queue-app">
+    <div class="container queue-container" id="main-content" role="main" aria-label="排队叫号看板">
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
           <h1 class="ds-page-header__title" id="page-title">排队叫号</h1>
-          <p class="ds-page-header__subtitle">管理堂食排队与叫号</p>
+          <p class="ds-page-header__subtitle">堂食排队取号、叫号、入座全流程管理</p>
         </div>
-        <div class="ds-page-header__actions"></div>
       </header>
-      <!-- 数据统计卡片 -->
-      <stat-cards
-        :cards="statsCards"
-        :active-key.sync="activeFilter"
-        @card-click="onCardClick"
-      ></stat-cards>
 
-      <!-- 搜索 + 操作栏 -->
-      <table-bar
-        ref="tableBar"
-        :search-items="searchConfig"
-        :actions="actionConfig"
-        @search="onSearch"
-        @reset="onReset"
-        @action="onAction"
-      ></table-bar>
+      <!-- 筛选栏 -->
+      <div class="filter-bar">
+        <div class="filter-bar__col">
+          <span class="filter-bar__label">手机号：</span>
+          <el-input v-model="searchPhone" class="filter-bar__input" style="width:200px" clearable placeholder="请输入手机号" aria-label="手机号" @keyup.enter.native="onSearch"></el-input>
+        </div>
+        <div class="filter-bar__col">
+          <span class="filter-bar__label">状态：</span>
+          <el-select v-model="searchStatus" class="filter-bar__input" style="width:150px" clearable aria-label="状态" placeholder="全部状态">
+            <el-option value="WAITING" label="等待中"></el-option>
+            <el-option value="CALLED" label="已叫号"></el-option>
+            <el-option value="SEATED" label="已入座"></el-option>
+            <el-option value="CANCELLED" label="已取消"></el-option>
+          </el-select>
+        </div>
+        <el-button type="primary" size="small" @click="onSearch" class="filter-bar__btn">查询</el-button>
+        <el-button size="small" @click="onReset">重置</el-button>
+      </div>
+
+      <!-- 统计卡片 -->
+      <div class="stats-grid" v-loading="statsLoading">
+        <div class="stat-card brand">
+          <div class="stat-card__icon">📋</div>
+          <div class="stat-card__body">
+            <div class="stat-card__label">排队总数</div>
+            <div class="stat-card__value">{{ stats.totalQueues || 0 }}</div>
+            <div class="stat-card__sub">今日累计</div>
+          </div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-card__icon">⏳</div>
+          <div class="stat-card__body">
+            <div class="stat-card__label">等待中</div>
+            <div class="stat-card__value">{{ stats.waitingCount || 0 }}</div>
+            <div class="stat-card__sub">尚未叫号</div>
+          </div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-card__icon">🔔</div>
+          <div class="stat-card__body">
+            <div class="stat-card__label">已叫号</div>
+            <div class="stat-card__value">{{ stats.calledCount || 0 }}</div>
+            <div class="stat-card__sub">待安排入座</div>
+          </div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-card__icon">✅</div>
+          <div class="stat-card__body">
+            <div class="stat-card__label">已入座</div>
+            <div class="stat-card__value">{{ stats.seatedCount || 0 }}</div>
+            <div class="stat-card__sub">完成就座</div>
+          </div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-card__icon">⛔</div>
+          <div class="stat-card__body">
+            <div class="stat-card__label">已取消</div>
+            <div class="stat-card__value">{{ stats.cancelledCount || 0 }}</div>
+            <div class="stat-card__sub">主动/超时取消</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 叫号操作栏 -->
+      <div class="call-bar" v-if="stats.waitingCount > 0">
+        <el-button
+          type="primary"
+          size="small"
+          :loading="callLoading"
+          :disabled="callLoading"
+          @click="callNext"
+        >叫下一位</el-button>
+        <div class="call-bar__seat">
+          <span class="call-bar__seat-label">按座位数：</span>
+          <el-select v-model="callSeatCount" style="width:130px" clearable aria-label="按座位数筛选" size="small" placeholder="不限人数">
+            <el-option :value="2" label="2人"></el-option>
+            <el-option :value="4" label="4人"></el-option>
+            <el-option :value="6" label="6人"></el-option>
+            <el-option :value="8" label="8人"></el-option>
+            <el-option :value="10" label="10人"></el-option>
+            <el-option :value="12" label="12人"></el-option>
+          </el-select>
+        </div>
+        <el-button type="text" size="small" @click="showTakeDialog" aria-label="新增取号">+ 取号</el-button>
+        <el-button type="text" size="small" class="call-bar__reset" @click="callSeatCount = null">重置筛选</el-button>
+        <span class="call-bar__tip" v-if="callSeatCount">按 {{ callSeatCount }} 人桌筛选下一位</span>
+        <span class="call-bar__tip" v-else>呼叫等待队列中的下一位顾客</span>
+      </div>
 
       <!-- 数据表格 -->
       <crud-table
         ref="crudTable"
-        empty-hint="试试调整筛选条件"
+        empty-hint="暂无排队记录"
         :data="tableData"
         :columns="columns"
-        :loading="loading"
+        :loading="tableLoading"
         :page="page"
         :page-size="pageSize"
+        :page-sizes="[10,20,30,40]"
         :total="counts"
         :show-index="true"
         :show-actions="true"
-        :actions-width="180"
+        :actions-width="160"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
         <template #col-status="{ row }">
-          <el-tag :type="row.status === 'WAITING' ? 'warning' : row.status === 'CALLED' ? 'primary' : row.status === 'SEATED' ? 'success' : 'info'" size="small">
-            {{ row.status === 'WAITING' ? '等待中' : row.status === 'CALLED' ? '已叫号' : row.status === 'SEATED' ? '已入座' : '已取消' }}
+          <el-tag :type="statusTagType(row.status)" size="small" class="status-tag">
+            {{ statusLabel(row.status) }}
           </el-tag>
         </template>
+        <template #col-phone="{ row }">
+          <span v-if="row.phone">{{ row.phone.substring(0,3) }}****{{ row.phone.substring(7) }}</span>
+        </template>
         <template #actions="{ row }">
-          <el-button type="text" size="small" class="btn-view" @click="callHandle(row.id)" v-if="row.status === 'WAITING'">叫号</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(row.id)" v-if="row.status !== 'SEATED' && row.status !== 'CANCELLED'">取消</el-button>
+          <el-button type="text" size="small" @click="seatHandle(row)" v-if="row.status === 'CALLED'" style="color:var(--color-brand-500)" :aria-label="'安排入座 ' + (row.queueNo || '排队记录')">入座</el-button>
+          <el-button type="text" size="small" @click="recallHandle(row)" v-if="row.status === 'CALLED'" :aria-label="'退回等待 ' + (row.queueNo || '')">退回</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(row.id)" v-if="row.status === 'WAITING' || row.status === 'CALLED'" :aria-label="'取消排队 ' + (row.queueNo || '')">取消</el-button>
+          <el-button type="text" size="small" @click="reactivateHandle(row.id)" v-if="row.status === 'CANCELLED'" :aria-label="'恢复排队 ' + (row.queueNo || '')" style="color:var(--color-warning)">恢复</el-button>
         </template>
       </crud-table>
+
+      <div v-if="counts === 0 && !tableLoading && tableData.length === 0" class="empty-state">
+        <div class="empty-state__icon">📋</div>
+        <div>暂无排队记录</div>
+        <div class="empty-state__desc">点击上方"取号"为顾客创建排队记录</div>
+      </div>
     </div>
 
     <!-- 取号弹窗 -->
     <crud-dialog
       title="取号"
-      :visible.sync="dialog.visible"
-      :submit-loading="submitting"
+      :visible.sync="takeForm.dialogVisible"
+      :submit-loading="takeLoading"
       width="420px"
       submit-text="确 定"
+      aria-label="取号表单"
       @submit="submitTake"
-      @close="dialog.visible = false"
+      @close="handleTakeClose"
     >
-      <!-- 修改点：补全 :rules，启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
-      <el-form ref="form" :model="form" :rules="queueRules" label-width="100px">
-        <el-form-item label="手机号：" prop="phone">
-          <el-input v-model="form.phone" placeholder="请输入手机号" maxlength="11" />
+      <el-form ref="takeFormRef" :model="takeForm" :rules="takeRules" label-width="80px" class="take-dialog__form">
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="takeForm.phone" placeholder="请输入顾客手机号" maxlength="11" size="small"></el-input>
         </el-form-item>
-        <el-form-item label="就餐人数：" prop="seatCount">
-          <el-input v-model="form.seatCount" type="number" placeholder="请输入就餐人数" />
+        <el-form-item label="就餐人数" prop="seatCount">
+          <el-input-number v-model="takeForm.seatCount" :min="1" :max="20" size="small" style="width:180px"></el-input-number>
+          <span style="margin-left:8px; font-size:12px; color:var(--text-muted)">人</span>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 入座弹窗 -->
+    <crud-dialog
+      title="安排入座"
+      :visible.sync="seatForm.dialogVisible"
+      :submit-loading="seatLoading"
+      width="560px"
+      submit-text="确 认 入 座"
+      aria-label="安排入座表单"
+      @submit="submitSeat"
+      @close="handleSeatClose"
+    >
+      <div class="seat-detail">
+        <div class="seat-detail__row">
+          <span class="seat-detail__label">排队号</span>
+          <span class="seat-detail__value">{{ seatForm.queueNo }}</span>
+        </div>
+        <div class="seat-detail__row">
+          <span class="seat-detail__label">手机号</span>
+          <span class="seat-detail__value">{{ seatForm.phoneDisplay }}</span>
+        </div>
+        <div class="seat-detail__row">
+          <span class="seat-detail__label">就餐人数</span>
+          <span class="seat-detail__value">{{ seatForm.seatCount }} 人</span>
+        </div>
+        <div class="seat-detail__row">
+          <span class="seat-detail__label">取号时间</span>
+          <span class="seat-detail__value">{{ seatForm.createdTimeDisplay }}</span>
+        </div>
+      </div>
+      <el-form :model="seatForm" label-width="80px">
+        <el-form-item label="关联桌台">
+          <el-select v-model="seatForm.tableId" style="width:240px" clearable placeholder="选择桌台（可选）" size="small">
+            <el-option
+              v-for="t in tableOptions"
+              :key="t.value"
+              :label="t.label"
+              :value="t.value"
+              :disabled="t.disabled"
+            ></el-option>
+          </el-select>
+          <span style="margin-left:8px; font-size:12px; color:var(--text-muted)">未选则不关联桌台</span>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -100,190 +287,263 @@
   <script>
     new Vue({
       el: '#queue-app',
-      data() {
+      data: function() {
         return {
-          loading: false,
-          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
-          counts: 0,
+          // 筛选
+          searchPhone: '',
+          searchStatus: '',
+          // 统计
+          statsLoading: false,
+          stats: { totalQueues: 0, waitingCount: 0, calledCount: 0, seatedCount: 0, cancelledCount: 0 },
+          // 表格
+          tableLoading: false,
           page: 1,
           pageSize: 10,
+          counts: 0,
           tableData: [],
-          // 统计数据
-          stats: { totalQueues: 0, waitingCount: 0, calledCount: 0, seatedCount: 0, cancelledCount: 0 },
-          activeFilter: '',
-          // 搜索配置
-          searchConfig: [
-            { type: 'input', field: 'phone', placeholder: '请输入手机号', width: '200px' },
-            { type: 'select', field: 'status', placeholder: '请选择状态', width: '150px',
-              options: [
-                { label: '等待中', value: 'WAITING' },
-                { label: '已叫号', value: 'CALLED' },
-                { label: '已入座', value: 'SEATED' },
-                { label: '已取消', value: 'CANCELLED' }
-              ] }
-          ],
-          // 操作按钮配置
-          actionConfig: [
-            { key: 'take', text: '+ 取号', type: 'primary' }
-          ],
-          // 表格列配置
           columns: [
-            { prop: 'queueNo', label: '排队号', width: 80, align: 'center' },
-            { prop: 'phone', label: '手机号', width: 120, align: 'center' },
-            { prop: 'seatCount', label: '人数', width: 60, type: 'number' },
-            { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
-            { prop: 'createdTime', label: '取号时间', width: 140, align: 'center' }
+            { prop: 'queueNo', label: '排队号', width: 90, align: 'center' },
+            { prop: 'phone', label: '手机号', slot: true, width: 130, align: 'center' },
+            { prop: 'seatCount', label: '人数', width: 70, align: 'center', type: 'number' },
+            { prop: 'status', label: '状态', slot: true, width: 90, align: 'center' },
+            { prop: 'createdTime', label: '取号时间', width: 160, align: 'center' }
           ],
+          // 叫号
+          callLoading: false,
+          callSeatCount: null,
           // 取号弹窗
-          dialog: { visible: false },
-          form: { phone: '', seatCount: '' },
-          // 修改点：取号表单校验规则（配合 el-form :rules + validate()）
-          queueRules: {
+          takeLoading: false,
+          takeForm: { dialogVisible: false, phone: '', seatCount: 2 },
+          takeRules: {
             phone: [
               { required: true, message: '请输入手机号', trigger: 'blur' },
               { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
             ],
             seatCount: [{ required: true, message: '请输入就餐人数', trigger: 'blur' }]
           },
-          lastSearch: {}
+          // 入座弹窗
+          seatLoading: false,
+          seatForm: {
+            dialogVisible: false,
+            queueId: null,
+            queueNo: '',
+            phoneDisplay: '',
+            seatCount: 0,
+            createdTimeDisplay: '',
+            tableId: null
+          },
+          tableOptions: []
         }
       },
-      created() {
-        this.init(true)
-      },
-      computed: {
-        statsCards: function() {
-          var self = this
-          return [
-            { key: '', icon: '📋', label: '排队总数', value: self.stats.totalQueues, color: 'primary', clickable: true, active: self.activeFilter === '' },
-            { key: 'CALLED', icon: '🔔', label: '已叫号', value: self.stats.calledCount, color: 'info', clickable: true, active: self.activeFilter === 'CALLED' },
-            { key: 'SEATED', icon: '✅', label: '已入座', value: self.stats.seatedCount, color: 'success', clickable: true, active: self.activeFilter === 'SEATED' },
-            { key: 'CANCELLED', icon: '❌', label: '已取消', value: self.stats.cancelledCount, color: 'danger', clickable: true, active: self.activeFilter === 'CANCELLED' }
-          ]
-        }
+      created: function() {
+        this.loadStats()
+        this.loadTable()
+        this.loadTableOptions()
       },
       methods: {
-        async init(reloadStats = true) {
-          this.loading = true
-          var ls = this.lastSearch || {}
-          var params = {
-            page: this.page,
-            pageSize: this.pageSize,
-            phone: ls.phone || undefined,
-            status: ls.status || undefined
-          }
-          // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-          var requests = [queuePage(params)]
-          if (reloadStats) { requests.push(this.loadQueueStats()) }
-          var results = await Promise.all(requests)
-          var queueRes = results[0]
-          if (String(queueRes.code) === '1') {
-            this.tableData = queueRes.data.records || []
-            this.counts = queueRes.data.total
-          } else {
-            ReggieUI.error(queueRes.msg || '操作失败')
-          }
-          if (reloadStats) {
-            var statsRes = results[1]
-            if (statsRes && String(statsRes.code) === '1') {
-              this.stats = statsRes.data || this.stats
+        // 状态标签映射
+        statusTagType: function(status) {
+          if (status === 'WAITING') return 'warning'
+          if (status === 'CALLED') return 'danger'
+          if (status === 'SEATED') return 'success'
+          return 'info'
+        },
+        statusLabel: function(status) {
+          var map = { WAITING: '等待中', CALLED: '已叫号', SEATED: '已入座', CANCELLED: '已取消' }
+          return map[status] || '未知'
+        },
+        // 加载统计
+        loadStats: function() {
+          var self = this
+          self.statsLoading = true
+          queueStats().then(function(res) {
+            self.statsLoading = false
+            if (res.code === 1 && res.data) {
+              self.stats = res.data
             }
+          }).catch(function(err) {
+            self.statsLoading = false
+            console.warn('加载排队统计失败:', err)
+          })
+        },
+        // 加载表格
+        loadTable: function() {
+          var self = this
+          self.tableLoading = true
+          var params = {
+            page: self.page,
+            pageSize: self.pageSize
           }
-          this.loading = false
+          if (self.searchPhone && self.searchPhone.trim()) { params.phone = self.searchPhone.trim() }
+          if (self.searchStatus) { params.status = self.searchStatus }
+          queuePage(params).then(function(res) {
+            self.tableLoading = false
+            if (res.code === 1) {
+              self.tableData = res.data.records || []
+              self.counts = res.data.total
+            } else {
+              ReggieUI.error(res.msg || '加载失败')
+            }
+          }).catch(function(err) {
+            self.tableLoading = false
+            ReggieUI.error('请求失败：' + err)
+          })
         },
-        async loadQueueStats() {
-          try {
-            // 修改点：使用 pageSize=1 × 5 轻量查询替代 pageSize=1000 拉全量，直接取 total 避免数据截断
-            var results = await Promise.all([
-              queuePage({ page: 1, pageSize: 1 }),
-              queuePage({ page: 1, pageSize: 1, status: 'WAITING' }),
-              queuePage({ page: 1, pageSize: 1, status: 'CALLED' }),
-              queuePage({ page: 1, pageSize: 1, status: 'SEATED' }),
-              queuePage({ page: 1, pageSize: 1, status: 'CANCELLED' })
-            ])
-            return { code: 1, data: {
-              totalQueues: (String(results[0].code) === '1') ? (results[0].data.total || 0) : 0,
-              waitingCount: (String(results[1].code) === '1') ? (results[1].data.total || 0) : 0,
-              calledCount: (String(results[2].code) === '1') ? (results[2].data.total || 0) : 0,
-              seatedCount: (String(results[3].code) === '1') ? (results[3].data.total || 0) : 0,
-              cancelledCount: (String(results[4].code) === '1') ? (results[4].data.total || 0) : 0
-            }}
-          } catch (err) { console.warn('加载排队统计失败:', err) }
-          return { code: 0 }
+        // 加载桌台选项（入座弹窗用）
+        loadTableOptions: function() {
+          var self = this
+          tablePage({ page: 1, pageSize: 200 }).then(function(res) {
+            if (res.code === 1 && res.data && res.data.records) {
+              self.tableOptions = res.data.records.map(function(t) {
+                return {
+                  value: t.id,
+                  label: (t.name || '桌台') + '（' + (t.areaName || '未知区域') + '，' + (t.seatCount || 0) + '座）',
+                  disabled: t.status !== 'FREE'
+                }
+              })
+            }
+          }).catch(function() { /* 桌台加载失败不影响主流程 */ })
         },
-        // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
-        onCardClick: function(payload) {
-          this.activeFilter = payload.activeKey
-          this.lastSearch = this.activeFilter ? { status: this.activeFilter } : {}
+        // 筛选
+        onSearch: function() {
           this.page = 1
-          this.init(false)
+          this.loadTable()
         },
-        onSearch(searchParams) {
-          this.activeFilter = ''
-          this.lastSearch = searchParams
+        onReset: function() {
+          this.searchPhone = ''
+          this.searchStatus = ''
           this.page = 1
-          this.init(false)
+          this.loadTable()
         },
-        onReset() {
-          this.activeFilter = ''
-          this.lastSearch = {}
-          this.page = 1
-          this.init(false)
-        },
-        onAction(payload) {
-          if (payload.key === 'take') {
-            this.form.phone = ''
-            this.form.seatCount = ''
-            this.dialog.visible = true
-          }
-        },
-        onPageChange(payload) {
+        onPageChange: function(payload) {
           this.page = payload.page
-          this.init(false)
+          this.loadTable()
         },
-        onSizeChange(payload) {
+        onSizeChange: function(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
-          this.init(false)
+          this.page = 1
+          this.loadTable()
         },
-        submitTake() {
-          if (this.submitting) return // 提交防重
-          const self = this
-          let passed = false
-          self.$refs.form.validate(function(valid) { passed = valid })
-          if (!passed) {
-            ReggieUI.warning('请完善表单必填项')
-            return
-          }
-          self.submitting = true
-          queueTake({ phone: self.form.phone, seatCount: self.form.seatCount }).then(res => {
-            self.submitting = false
+        // 叫下一位
+        callNext: function() {
+          var self = this
+          if (self.callLoading) return
+          self.callLoading = true
+          var body = {}
+          if (self.callSeatCount) { body.seatCount = self.callSeatCount }
+          queueCall(body).then(function(res) {
+            self.callLoading = false
+            if (res.code === 1 && res.data) {
+              ReggieUI.success('叫号成功！排队号：' + res.data.queueNo)
+              self.loadStats()
+              self.loadTable()
+            } else {
+              ReggieUI.warning(res.msg || '没有等待中的顾客')
+            }
+          }).catch(function(err) {
+            self.callLoading = false
+            ReggieUI.error('请求失败：' + err)
+          })
+        },
+        // 单独叫号（已移除行操作按钮，全局"叫下一位"按钮替代）
+        // 取号弹窗
+        showTakeDialog: function() {
+          this.takeForm.phone = ''
+          this.takeForm.seatCount = 2
+          this.takeForm.dialogVisible = true
+        },
+        handleTakeClose: function() {
+          this.takeForm.dialogVisible = false
+          this.$refs.takeFormRef && this.$refs.takeFormRef.resetFields()
+        },
+        submitTake: function() {
+          if (this.takeLoading) return
+          var self = this
+          var passed = false
+          self.$refs.takeFormRef.validate(function(valid) { passed = valid })
+          if (!passed) return
+          self.takeLoading = true
+          queueTake({ phone: self.takeForm.phone, seatCount: self.takeForm.seatCount }).then(function(res) {
+            self.takeLoading = false
             if (res.code === 1) {
               ReggieUI.success('取号成功！排队号：' + (res.data ? res.data.queueNo : ''))
-              self.dialog.visible = false
-              self.init()
+              self.takeForm.dialogVisible = false
+              self.loadStats()
+              self.loadTable()
             } else {
               ReggieUI.error(res.msg || '操作失败')
             }
-          }).catch(err => { self.submitting = false; ReggieUI.error('请求失败：' + err) })
+          }).catch(function(err) {
+            self.takeLoading = false
+            ReggieUI.error('请求失败：' + err)
+          })
         },
-        callHandle(id) {
+        // 入座弹窗
+        seatHandle: function(row) {
+          this.seatForm.queueId = row.id
+          this.seatForm.queueNo = row.queueNo || ''
+          this.seatForm.phoneDisplay = row.phone ? (row.phone.substring(0,3) + '****' + row.phone.substring(7)) : ''
+          this.seatForm.seatCount = row.seatCount || 0
+          this.seatForm.createdTimeDisplay = row.createdTime || ''
+          this.seatForm.tableId = null
+          this.seatForm.dialogVisible = true
+        },
+        handleSeatClose: function() {
+          this.seatForm.dialogVisible = false
+        },
+        submitSeat: function() {
+          if (this.seatLoading) return
           var self = this
-          ReggieUI.confirm('确认叫号该排队记录?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          self.seatLoading = true
+          var data = { queueId: self.seatForm.queueId }
+          if (self.seatForm.tableId) { data.tableId = self.seatForm.tableId }
+          queueSeat(data).then(function(res) {
+            self.seatLoading = false
+            if (res.code === 1) {
+              ReggieUI.success('安排入座成功！')
+              self.seatForm.dialogVisible = false
+              self.loadStats()
+              self.loadTable()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(function(err) {
+            self.seatLoading = false
+            ReggieUI.error('请求失败：' + err)
+          })
+        },
+        // CALLED → WAITING（退回等待，用于误叫号纠错）
+        recallHandle: function(row) {
+          var self = this
+          ReggieUI.confirm('确认将 ' + (row.queueNo || '该记录') + ' 退回等待？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
-              queueCall({ id: id }).then(res => {
-                if (res.code === 1) { ReggieUI.success('叫号成功！'); self.init() }
+              var id = row.id || row.queueId
+              if (id) { recallQueue(id).then(function(res) {
+                if (res.code === 1) { ReggieUI.success('已退回等待'); self.loadStats(); self.loadTable() }
                 else { ReggieUI.error(res.msg || '操作失败') }
-              }).catch(err => { ReggieUI.error('请求失败：' + err) })
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) }) }
             })
         },
-        cancelHandle(id) {
+        // CANCELLED → WAITING（恢复排队，用于误取消纠错）
+        reactivateHandle: function(id) {
           var self = this
-          ReggieUI.confirm('确认取消该排队?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确认恢复该排队记录？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
-              queueCancel(id).then(res => {
-                if (res.code === 1) { ReggieUI.success('已取消！'); self.init() }
+              reactivateQueue(id).then(function(res) {
+                if (res.code === 1) { ReggieUI.success('已恢复排队'); self.loadStats(); self.loadTable() }
                 else { ReggieUI.error(res.msg || '操作失败') }
-              }).catch(err => { ReggieUI.error('请求失败：' + err) })
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
+            })
+        },
+        // 取消排队
+        cancelHandle: function(id) {
+          var self = this
+          ReggieUI.confirm('确认取消该排队记录？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              queueCancel(id).then(function(res) {
+                if (res.code === 1) { ReggieUI.success('已取消！'); self.loadStats(); self.loadTable() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
         }
       }
@@ -291,20 +551,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

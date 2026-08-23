@@ -70,16 +70,24 @@
             <when test="sortBy != null and sortBy != ''">
                 <choose>
                     <when test="sortBy == 'storeName'">
-                        ORDER BY t.name ${sortOrder}
+                        ORDER BY t.name
+                        <if test="sortOrder == 'ASC'">ASC</if>
+                        <if test="sortOrder == 'DESC'">DESC</if>
                     </when>
                     <when test="sortBy == 'todayOrders'">
-                        ORDER BY today_orders ${sortOrder}
+                        ORDER BY today_orders
+                        <if test="sortOrder == 'ASC'">ASC</if>
+                        <if test="sortOrder == 'DESC'">DESC</if>
                     </when>
                     <when test="sortBy == 'todayAmount'">
-                        ORDER BY today_amount ${sortOrder}
+                        ORDER BY today_amount
+                        <if test="sortOrder == 'ASC'">ASC</if>
+                        <if test="sortOrder == 'DESC'">DESC</if>
                     </when>
                     <when test="sortBy == 'createTime'">
-                        ORDER BY t.create_time ${sortOrder}
+                        ORDER BY t.create_time
+                        <if test="sortOrder == 'ASC'">ASC</if>
+                        <if test="sortOrder == 'DESC'">DESC</if>
                     </when>
                     <otherwise>
                         ORDER BY t.create_time DESC

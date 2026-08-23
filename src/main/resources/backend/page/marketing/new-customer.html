@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新客优惠管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="app">
+    <main class="container ds-page" id="main-content" role="main">
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">新客优惠</h1>
+          <p class="ds-page-header__subtitle">管理新客专享优惠活动</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
+
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      ></table-bar>
+
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :selection="false"
+        :show-actions="true"
+        :actions-width="180"
+        :actions-fixed="true"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        aria-label="新客优惠列表"
+      >
+        <template #col-discountType="{ row }">
+          <el-tag :type="row.discountType === 2 ? 'success' : ''" size="small">
+            {{ row.discountType === 1 ? '固定金额' : '按比例' }}
+          </el-tag>
+        </template>
+        <template #col-discountValue="{ row }">
+          <span v-if="row.discountType === 1">¥{{ formatMoney(row.discountValue) }}</span>
+          <span v-else>{{ Number(row.discountValue).toFixed(1) }}%</span>
+        </template>
+        <template #col-maxDiscountAmount="{ row }">
+          <span>{{ row.maxDiscountAmount ? '¥' + formatMoney(row.maxDiscountAmount) : '不限' }}</span>
+        </template>
+        <template #col-minOrderAmount="{ row }">
+          <span>{{ row.minOrderAmount ? '满¥' + formatMoney(row.minOrderAmount) : '不限' }}</span>
+        </template>
+        <template #col-validDays="{ row }">
+          <span>{{ row.validDays || '不限' }}</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+            {{ row.status === 1 ? '启用' : '禁用' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="handleEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" @click="handleToggleStatus(row)">
+            {{ row.status === 1 ? '禁用' : '启用' }}
+          </el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <crud-dialog
+      :size="'md'"
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      :close-on-click-modal="false"
+      :submit-loading="submitLoading"
+      @submit="handleSubmit"
+    >
+      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px" size="small">
+        <el-form-item label="优惠名称" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入优惠名称"></el-input>
+        </el-form-item>
+        <el-form-item label="优惠类型" prop="discountType">
+          <el-radio-group v-model="formData.discountType">
+            <el-radio :label="1">固定金额</el-radio>
+            <el-radio :label="2">按比例</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item :label="formData.discountType === 1 ? '优惠金额(元)' : '优惠比例(%)'" prop="discountValue">
+          <el-input-number
+            v-model="formData.discountValue"
+            :precision="2"
+            :min="formData.discountType === 1 ? 0.01 : 1"
+            :max="formData.discountType === 2 ? 99 : 99999"
+            style="width: 100%;">
+          </el-input-number>
+        </el-form-item>
+        <el-form-item v-if="formData.discountType === 2" label="最大优惠金额">
+          <el-input-number v-model="formData.maxDiscountAmount" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+          <div class="form-tip">按比例时必填，防止大额订单优惠过高</div>
+        </el-form-item>
+        <el-form-item label="起送金额">
+          <el-input-number v-model="formData.minOrderAmount" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+          <div class="form-tip">留空表示不限制</div>
+        </el-form-item>
+        <el-form-item label="有效天数" prop="validDays">
+          <el-input-number v-model="formData.validDays" :min="1" :max="365" style="width: 100%;"></el-input-number>
+          <div class="form-tip">用户注册后 N 天内有效</div>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="formData.remark" type="textarea" :rows="2" placeholder="请输入备注"></el-input>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="formData.status" :active-value="1" :inactive-value="0"></el-switch>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/components.js"></script>
+  <script src="../../js/common.js"></script>
+  <script src="../../api/marketing.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data: function() {
+        return {
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          loading: false,
+          activeFilter: '',
+          tableData: [],
+          searchConfig: [
+            { type: 'input', field: 'name', placeholder: '请输入优惠名称', width: '200px' }
+          ],
+          actionConfig: [
+            { key: 'add', text: '+ 新增新客优惠', type: 'primary' }
+          ],
+          columns: [
+            { prop: 'id', label: 'ID', width: 80, align: 'center' },
+            { prop: 'name', label: '优惠名称', width: 180, showOverflowTooltip: true },
+            { prop: 'discountType', label: '优惠类型', slot: true, width: 110, align: 'center' },
+            { prop: 'discountValue', label: '优惠值', slot: true, width: 120, align: 'right' },
+            { prop: 'maxDiscountAmount', label: '最大优惠', slot: true, width: 120, type: 'money' },
+            { prop: 'minOrderAmount', label: '起送金额', slot: true, width: 130, type: 'money' },
+            { prop: 'validDays', label: '有效天数', slot: true, width: 100, align: 'center' },
+            { prop: 'status', label: '状态', slot: true, width: 90, align: 'center' }
+          ],
+          stats: { total: 0, active: 0, inactive: 0 },
+          lastSearch: {},
+          dialogVisible: false,
+          dialogTitle: '新增新客优惠',
+          submitLoading: false,
+          formData: {
+            id: null,
+            name: '',
+            discountType: 1,
+            discountValue: 0,
+            maxDiscountAmount: null,
+            minOrderAmount: null,
+            validDays: 7,
+            status: 1,
+            remark: ''
+          },
+          formRules: {
+            name: [{ required: true, message: '请输入优惠名称', trigger: 'blur' }],
+            discountType: [{ required: true, message: '请选择优惠类型', trigger: 'change' }],
+            discountValue: [{ required: true, message: '请输入优惠值', trigger: 'blur' }],
+            validDays: [{ required: true, message: '请输入有效天数', trigger: 'blur' }]
+          }
+        }
+      },
+      computed: {
+        statsCards: function() {
+          var self = this
+          return [
+            { key: '', icon: 'ri-user-add-line', label: '全部优惠', value: self.stats.total, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '1', icon: 'ri-checkbox-circle-line', label: '已启用', value: self.stats.active, color: 'success', clickable: true, active: self.activeFilter === '1' },
+            { key: '0', icon: 'ri-pause-circle-line', label: '已禁用', value: self.stats.inactive, color: 'warning', clickable: true, active: self.activeFilter === '0' }
+          ]
+        }
+      },
+      created: function() {
+        this.init()
+        this.loadStats()
+      },
+      methods: {
+        formatMoney: function(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        async init() {
+          this.loading = true
+          var self = this
+          var params = { page: this.page, pageSize: this.pageSize }
+          if (self.lastSearch.name) {
+            params.name = self.lastSearch.name
+          }
+          if (self.activeFilter && self.activeFilter !== '') {
+            params.status = self.activeFilter
+          }
+          try {
+            var res = await getNewCustomerDiscounts(params)
+            if (String(res.code) === '1') {
+              self.tableData = res.data || []
+              self.counts = res.total || (res.data ? res.data.length : 0)
+            }
+          } catch (err) {
+            ReggieUI.error('获取新客优惠列表失败')
+          }
+          self.loading = false
+        },
+        async loadStats() {
+          try {
+            var results = await Promise.all([
+              getNewCustomerDiscounts({ page: 1, pageSize: 1, status: '1' }),
+              getNewCustomerDiscounts({ page: 1, pageSize: 1, status: '0' })
+            ])
+            var activeCount = (String(results[0].code) === '1') ? (results[0].total || results[0].data.length || 0) : 0
+            var inactiveCount = (String(results[1].code) === '1') ? (results[1].total || results[1].data.length || 0) : 0
+            this.stats = {
+              total: activeCount + inactiveCount,
+              active: activeCount,
+              inactive: inactiveCount
+            }
+          } catch (err) {
+            console.warn('加载新客优惠统计失败:', err)
+          }
+        },
+        onCardClick: function(payload) {
+          var self = this
+          self.activeFilter = payload.activeKey
+          self.lastSearch = {}
+          self.page = 1
+          self.init()
+        },
+        onSearch: function(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
+          this.page = 1
+          this.init()
+        },
+        onReset: function() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.page = 1
+          this.init()
+        },
+        onAction: function(payload) {
+          switch (payload.key) {
+            case 'add': this.handleAdd(); break
+          }
+        },
+        onPageChange: function(payload) {
+          this.page = payload.page
+          this.init()
+        },
+        onSizeChange: function(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+          this.init()
+        },
+        handleAdd: function() {
+          this.dialogTitle = '新增新客优惠'
+          this.formData = {
+            id: null,
+            name: '',
+            discountType: 1,
+            discountValue: 0,
+            maxDiscountAmount: null,
+            minOrderAmount: null,
+            validDays: 7,
+            status: 1,
+            remark: ''
+          }
+          this.dialogVisible = true
+          this.$nextTick(function() {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          }.bind(this))
+        },
+        handleEdit: function(row) {
+          this.dialogTitle = '编辑新客优惠'
+          this.formData = Object.assign({}, row)
+          this.dialogVisible = true
+          this.$nextTick(function() {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          }.bind(this))
+        },
+        async handleToggleStatus(row) {
+          try {
+            var newStatus = row.status === 1 ? 0 : 1
+            var res = await updateNewCustomerDiscount(Object.assign({}, row, { status: newStatus }))
+            if (res.code === 1) {
+              ReggieUI.success(newStatus === 1 ? '已启用' : '已禁用')
+              this.init()
+              this.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          } catch (err) {
+            ReggieUI.error('操作失败')
+          }
+        },
+        async handleDelete(row) {
+          try {
+            await ReggieUI.confirm('确定要删除该新客优惠吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            var res = await deleteNewCustomerDiscount(row.id)
+            if (res.code === 1) {
+              ReggieUI.success('删除成功')
+              this.init()
+              this.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '删除失败')
+            }
+          } catch (err) {
+            if (err !== 'cancel') {
+              ReggieUI.error('删除失败')
+            }
+          }
+        },
+        handleSubmit: function() {
+          var self = this
+          var passed = false
+          this.$refs.ruleForm.validate(function(valid) { passed = valid })
+          if (!passed) return
+          if (self.formData.discountType === 2 && (!self.formData.maxDiscountAmount || self.formData.maxDiscountAmount <= 0)) {
+            ReggieUI.error('按比例优惠必须填写最大优惠金额')
+            return
+          }
+          self.submitLoading = true
+          var apiCall = self.formData.id ? updateNewCustomerDiscount(self.formData) : saveNewCustomerDiscount(self.formData)
+          apiCall.then(function(res) {
+            if (res.code === 1) {
+              ReggieUI.success(self.formData.id ? '更新成功' : '新增成功')
+              self.dialogVisible = false
+              self.init()
+              self.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(function(err) {
+            ReggieUI.error('操作失败')
+          }).finally(function() {
+            self.submitLoading = false
+          })
+        }
+      }
+    })
+  </script>
+</body>
+</html>

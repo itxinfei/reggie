@@ -2,6 +2,8 @@ package com.reggie.module.customer.service.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.customer.service.model.CsSession;
 import com.reggie.module.customer.service.model.CsMessage;
 import com.reggie.module.customer.service.model.Complaint;
@@ -32,6 +34,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/cs")
+@RequireEmployee
 @Tag(name = "Customer Service Management")
 public class CustomerServiceController {
 
@@ -41,6 +44,7 @@ public class CustomerServiceController {
     // ==================== Session Management ====================
 
     @PostMapping("/session/create")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Create customer service session")
     public R<CsSession> createSession(
                         @Parameter(description = "Session type") @RequestParam Integer sessionType,
@@ -63,13 +67,13 @@ public class CustomerServiceController {
 
     @GetMapping("/session/{id}")
     @Operation(summary = "Get session by ID")
-    @Parameter(description = "I d")
     public R<CsSession> getSessionById(@PathVariable Long id) {
         CsSession session = customerService.getSessionById(id);
         return R.success(session);
     }
 
     @PostMapping("/session/{id}/assign")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Assign agent to session")
     public R<String> assignAgent(
             @Parameter(description = "ID")
@@ -81,6 +85,7 @@ public class CustomerServiceController {
     }
 
     @PostMapping("/session/{id}/close")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Close session")
     public R<String> closeSession(
             @Parameter(description = "ID")
@@ -94,6 +99,7 @@ public class CustomerServiceController {
     // ==================== Message Management ====================
 
     @PostMapping("/message/send")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Send message")
     public R<CsMessage> sendMessage(
                         @Parameter(description = "Session ID") @RequestParam Long sessionId,
@@ -127,6 +133,7 @@ public class CustomerServiceController {
     }
 
     @PostMapping("/message/read/{sessionId}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Mark messages as read")
     public R<String> markMessagesAsRead(
             @Parameter(description = "sessionId")
@@ -139,6 +146,7 @@ public class CustomerServiceController {
     // ==================== Complaint Management ====================
 
     @PostMapping("/complaint/create")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Create complaint")
     public R<Complaint> createComplaint(@RequestBody Complaint complaint) {
         Long userId = BaseContext.getCurrentId();
@@ -161,13 +169,13 @@ public class CustomerServiceController {
 
     @GetMapping("/complaint/{id}")
     @Operation(summary = "Get complaint by ID")
-    @Parameter(description = "I d")
     public R<Complaint> getComplaintById(@PathVariable Long id) {
         Complaint complaint = customerService.getComplaintById(id);
         return R.success(complaint);
     }
 
     @PostMapping("/complaint/{id}/handle")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Handle complaint")
     public R<String> handleComplaint(
             @Parameter(description = "ID")
@@ -181,14 +189,15 @@ public class CustomerServiceController {
     }
 
     @PostMapping("/complaint/{id}/close")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Close complaint")
-    @Parameter(description = "I d")
     public R<String> closeComplaint(@PathVariable Long id) {
         boolean success = customerService.closeComplaint(id);
         return success ? R.success("Complaint closed") : R.error("Close failed");
     }
 
     @PostMapping("/complaint/{id}/rate")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Rate complaint handling")
     public R<String> rateComplaint(
             @Parameter(description = "ID")

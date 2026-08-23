@@ -85,6 +85,11 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         if (sc == null) {
             throw new CustomException("盘点单不存在");
         }
+        // 租户归属校验：防止跨租户越权完成盘点并篡改库存
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(sc.getTenantId())) {
+            throw new CustomException("无权操作其他租户的盘点单");
+        }
         if (!StockCheckStatus.DRAFT.getValue().equals(sc.getStatus()) && !StockCheckStatus.IN_PROGRESS.getValue().equals(sc.getStatus())) {
             throw new CustomException("盘点单状态不允许完成");
         }
@@ -138,8 +143,7 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         casUpdate.eq(StockCheck::getId, checkId)
                 .in(StockCheck::getStatus, StockCheckStatus.DRAFT.getValue(), StockCheckStatus.IN_PROGRESS.getValue())
                 .set(StockCheck::getStatus, StockCheckStatus.DONE.getValue())
-                .set(StockCheck::getTotalDiffAmount, finalDiff)
-                .set(StockCheck::getProfitLoss, finalDiff);
+                .set(StockCheck::getTotalDiffAmount, finalDiff);
         int updated = baseMapper.update(null, casUpdate);
         if (updated == 0) {
             throw new CustomException("盘点单已被他人完成或状态已变更");

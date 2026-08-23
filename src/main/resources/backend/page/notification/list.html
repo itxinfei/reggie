@@ -28,14 +28,14 @@
         .tab-btn.active { color: var(--antd-primary); border-bottom-color: var(--antd-primary); font-weight: 600; }
         .tab-btn:hover { color: var(--antd-primary); }
         .tab-content { display: none; background: var(--bg-surface); border-radius: 0 0 8px 8px; padding: 20px;
-                       box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+                       box-shadow: var(--shadow-xs); }
         .tab-content.active { display: block; }
 
         /* 用户选择区 */
         .user-select-panel { display: flex; gap: 16px; min-height: 400px; }
-        .user-select-left { flex: 1; border: 1px solid var(--antd-border-light); border-radius: 6px; overflow: hidden;
+        .user-select-left { flex: 1; border: 1px solid var(--antd-border-light); border-radius: var(--radius-md); overflow: hidden;
                             display: flex; flex-direction: column; }
-        .user-select-right { width: 380px; border: 1px solid var(--antd-border-light); border-radius: 6px;
+        .user-select-right { width: 380px; border: 1px solid var(--antd-border-light); border-radius: var(--radius-md);
                              display: flex; flex-direction: column; }
 
         .panel-header { padding: 10px 14px; border-bottom: 1px solid var(--el-bg-lighter); background: var(--el-bg-base);
@@ -45,8 +45,7 @@
 
         /* 搜索栏 */
         .search-bar { padding: 8px 12px; display: flex; gap: 8px; border-bottom: 1px solid var(--el-bg-lighter); flex-wrap: wrap; }
-        .search-bar input, .search-bar select { padding: 5px 10px; border: 1px solid var(--antd-border);
-                border-radius: 4px; font-size:var(--font-size-sm); }
+        border-radius: var(--radius-sm);
         .search-bar input { width: 140px; }
         .search-bar select { width: 100px; }
 
@@ -63,7 +62,7 @@
         .user-pagination { padding: 8px 12px; border-top: 1px solid var(--el-bg-lighter); display: flex;
                            justify-content: center; align-items: center; gap: 6px; font-size:var(--font-size-xs); }
         .user-pagination button { padding: 3px 10px; border: 1px solid var(--antd-border); background: var(--bg-surface);
-                                   border-radius: 3px; cursor: pointer; font-size:var(--font-size-xs); }
+                                   border-radius: var(--radius-sm); cursor: pointer; font-size:var(--font-size-xs); }
         .user-pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
 
         /* 已选用户列表 */
@@ -72,17 +71,16 @@
                 padding: 6px 12px; font-size:var(--font-size-sm); border-bottom: 1px solid var(--el-bg-light); }
         .selected-user-item .remove-btn { color: var(--antd-error); cursor: pointer; font-size:var(--font-size-base);
                                            background: none; border: none; padding: 2px 6px; }
-        .selected-user-item .remove-btn:hover { background: var(--antd-error-bg); border-radius: 3px; }
+        .selected-user-item .remove-btn:hover { background: var(--antd-error-bg); border-radius: var(--radius-sm); }
 
         /* 消息编辑区 */
         .msg-compose { padding: 12px; border-top: 1px solid var(--antd-border-light); }
-        .msg-compose textarea, .msg-compose input { width: 100%; padding: 7px 10px;
-                border: 1px solid var(--antd-border); border-radius: 4px; font-size:var(--font-size-sm); resize: vertical; }
+        border-radius: var(--radius-sm);
         .msg-compose textarea { min-height: 60px; }
         .msg-compose .field-label { font-size:var(--font-size-xs); color: var(--gray-999); margin-bottom: 3px; display: block; }
 
         /* 发送结果弹窗 */
-        .send-result { margin-top: 12px; padding: 12px 16px; border-radius: 6px; font-size:var(--font-size-sm); }
+        .send-result { margin-top: 12px; padding: 12px 16px; border-radius: var(--radius-md); font-size:var(--font-size-sm); }
         .send-result.success { background: var(--antd-success-bg); border: 1px solid var(--antd-success-l); color: var(--antd-success-d); }
         .send-result.partial { background: var(--antd-warning-bg2); border: 1px solid var(--antd-warning-l2b); color: var(--antd-warning-d); }
         .send-result.error { background: var(--antd-error-bg); border: 1px solid var(--antd-error-l2); color: var(--antd-error-d); }
@@ -96,29 +94,27 @@
         td { padding: 10px 12px; font-size:var(--font-size-sm); border-bottom: 1px solid var(--el-bg-lighter); }
         tr:hover td { background: var(--blue-50); }
 
-        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size:var(--font-size-xs); }
+        .status-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-md); font-size:var(--font-size-xs); }
         .status-on { background: var(--antd-success-bg); color: var(--antd-success); border: 1px solid var(--antd-success-l); }
         .status-off { background: var(--antd-error-bg); color: var(--antd-error); border: 1px solid var(--antd-error-l2); }
 
-        .channel-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size:var(--font-size-xs); }
+        border-radius: var(--radius-sm);
         .channel-sms { background: var(--antd-info-bg); color: var(--antd-primary); }
         .channel-push { background: var(--color-brand-50); color: var(--color-brand-500); }
         .channel-both { background: var(--antd-warning-bg); color: var(--antd-warning); }
 
         .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 8px;
                       margin-top: 16px; font-size:var(--font-size-sm); }
-        .pagination button { padding: 4px 12px; border: 1px solid var(--antd-border); background: var(--bg-surface);
-                            border-radius: 4px; cursor: pointer; }
+        border-radius: var(--radius-sm);
         .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
         .pagination span { color: var(--gray-666); }
 
         .empty-state { text-align: center; padding: 40px; color: var(--gray-999); }
 
         .toolbar { display: flex; gap: 10px; margin-bottom: var(--space-5); flex-wrap: wrap; align-items: center; }
-        .toolbar select, .toolbar input { padding: 6px 12px; border: 1px solid var(--antd-border); border-radius: 4px;
-                font-size:var(--font-size-sm); }
+        border-radius: var(--radius-sm);
 
-        .mock-banner { background: var(--antd-warning-bg2); border: 1px solid var(--antd-warning-l2b); border-radius: 6px; padding: 8px 14px;
+        .mock-banner { background: var(--antd-warning-bg2); border: 1px solid var(--antd-warning-l2b); border-radius: var(--radius-md); padding: 8px 14px;
                        margin-bottom: 16px; font-size:var(--font-size-sm); color: var(--amber-800); display: flex; align-items: center; gap: 6px; }
     </style>
 </head>
@@ -233,8 +229,8 @@
                         </div>
                         <!-- 消息编辑 -->
                         <div class="msg-compose">
-                            <label class="field-label">消息内容（短信最多70字）</label>
-                            <textarea v-model="smsForm.content" rows="4"
+                            <label class="field-label" for="inp-sms-content">消息内容（短信最多70字）</label>
+                            <textarea id="inp-sms-content" v-model="smsForm.content" rows="4"
                                       placeholder="请输入短信内容...&#10;示例：尊敬的顾客，您的外卖订单已开始配送，预计30分钟内送达。"
                                       maxlength="200"></textarea>
                             <div class="hint" style="text-align:right;">
@@ -507,13 +503,13 @@
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>模板名称 *</label>
-                        <input v-model="templateModal.form.templateName" placeholder="如：订单确认通知" />
+                        <label for="inp-tpl-name">模板名称 *</label>
+                        <input id="inp-tpl-name" v-model="templateModal.form.templateName" placeholder="如：订单确认通知" />
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>业务类型 *</label>
-                            <select v-model="templateModal.form.bizType">
+                            <label for="sel-tpl-biztype">业务类型 *</label>
+                            <select id="sel-tpl-biztype" v-model="templateModal.form.bizType">
                                 <option value="ORDER_NOTICE">订单通知</option>
                                 <option value="PROMOTION">营销推送</option>
                                 <option value="VERIFY_CODE">验证码</option>
@@ -522,8 +518,8 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>发送渠道 *</label>
-                            <select v-model="templateModal.form.channel">
+                            <label for="sel-tpl-channel">发送渠道 *</label>
+                            <select id="sel-tpl-channel" v-model="templateModal.form.channel">
                                 <option :value="1">短信</option>
                                 <option :value="2">APP推送</option>
                                 <option :value="3">短信+APP推送</option>
@@ -531,31 +527,31 @@
                         </div>
                     </div>
                     <div class="form-group" v-if="templateModal.form.channel !== 2">
-                        <label>外部模板编码（阿里云SMS模板CODE）</label>
-                        <input v-model="templateModal.form.templateCode" placeholder="如: SMS_ORDER_CONFIRM" />
+                        <label for="inp-tpl-code">外部模板编码（阿里云SMS模板CODE）</label>
+                        <input id="inp-tpl-code" v-model="templateModal.form.templateCode" placeholder="如: SMS_ORDER_CONFIRM" />
                     </div>
                     <div class="form-group" v-if="templateModal.form.channel !== 2">
-                        <label>短信签名</label>
-                        <input v-model="templateModal.form.signName" placeholder="如: 瑞吉外卖" />
+                        <label for="inp-tpl-sign">短信签名</label>
+                        <input id="inp-tpl-sign" v-model="templateModal.form.signName" placeholder="如: 瑞吉外卖" />
                     </div>
                     <div class="form-group" v-if="templateModal.form.channel !== 1">
-                        <label>推送标题（APP推送用）</label>
-                        <input v-model="templateModal.form.title" placeholder="如: 订单已确认" />
+                        <label for="inp-notify-title">推送标题（APP推送用）</label>
+                        <input id="inp-notify-title" v-model="templateModal.form.title" placeholder="如: 订单已确认" />
                     </div>
                     <div class="form-group">
-                        <label>模板内容 *（支持占位符 ${paramName}）</label>
-                        <textarea v-model="templateModal.form.content" rows="4"
+                        <label for="inp-tpl-content">模板内容 *（支持占位符 ${paramName}）</label>
+                        <textarea id="inp-tpl-content" v-model="templateModal.form.content" rows="4"
                                   placeholder="尊敬的${userName}，您的订单${orderNo}已确认，预计${deliveryTime}送达。"></textarea>
                     </div>
                     <div class="form-group">
-                        <label>参数列表（JSON数组）</label>
-                        <input v-model="templateModal.form.paramList"
+                        <label for="inp-tpl-params">参数列表（JSON数组）</label>
+                        <input id="inp-tpl-params" v-model="templateModal.form.paramList"
                                placeholder='["userName","orderNo","deliveryTime"]' />
                         <div class="hint">对应模板内容中的占位符变量名</div>
                     </div>
                     <div class="form-group">
-                        <label>备注</label>
-                        <input v-model="templateModal.form.remark" placeholder="模板使用说明" />
+                        <label for="inp-tpl-remark">备注</label>
+                        <input id="inp-tpl-remark" v-model="templateModal.form.remark" placeholder="模板使用说明" />
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -672,7 +668,7 @@
                             self.userTotal = res.data.total || 0;
                         }
                     }).catch(function(err) {
-                        console.error('加载用户失败:', err);
+                        ReggieUI.error('加载用户失败');
                     });
                 },
 
@@ -728,7 +724,7 @@
                             self.pushUserTotal = res.data.total || 0;
                         }
                     }).catch(function(err) {
-                        console.error('加载推送用户失败:', err);
+                        ReggieUI.error('加载推送用户失败');
                     });
                 },
 
@@ -814,7 +810,7 @@
                                 failReason: res ? res.msg : '发送失败' };
                         }
                     }).catch(function(err) {
-                        console.error('短信发送异常:', err);
+                        ReggieUI.error('短信发送异常');
                         self.smsForm.result = { status: 3, successCount: 0, failCount: phones.length,
                             failReason: '网络异常，请重试' };
                     }).finally(function() {
@@ -860,7 +856,7 @@
                                 failReason: res ? res.msg : '推送失败' };
                         }
                     }).catch(function(err) {
-                        console.error('推送异常:', err);
+                        ReggieUI.error('推送异常');
                         self.pushForm.result = { status: 3, successCount: 0, failCount: userIds.length,
                             failReason: '网络异常，请重试' };
                     }).finally(function() {
@@ -882,7 +878,7 @@
                             self.recordTotal = res.data.total || 0;
                         }
                     }).catch(function(err) {
-                        console.error('加载记录失败:', err);
+                        ReggieUI.error('加载记录失败');
                     });
                 },
 
@@ -926,7 +922,7 @@
                             self.templateTotal = res.data.total || 0;
                         }
                     }).catch(function(err) {
-                        console.error('加载模板失败:', err);
+                        ReggieUI.error('加载模板失败');
                     });
                 },
 
@@ -962,7 +958,6 @@
                             ReggieUI.error(res ? res.msg : '保存失败');
                         }
                     }).catch(function(err) {
-                        console.error('保存模板异常:', err);
                         ReggieUI.error('保存失败，请检查网络连接');
                     });
                 },
@@ -974,13 +969,13 @@
                             t.status = newStatus;
                         }
                     }).catch(function(err) {
-                        console.error('切换模板状态异常:', err);
+                        ReggieUI.error('切换模板状态异常');
                     });
                 },
 
                 deleteTemplate: function(id) {
                     var self = this;
-                    self.$confirm('确定删除该模板吗？', '提示', {
+                    ReggieUI.confirm('确定删除该模板吗？', '提示', {
                         confirmButtonText: '确定',
                         cancelButtonText: '取消',
                         type: 'warning'
@@ -990,7 +985,7 @@
                                 self.loadTemplates(self.templatePage);
                             }
                         }).catch(function(err) {
-                            console.error('删除模板异常:', err);
+                            ReggieUI.error('删除模板异常');
                         });
                     }).catch(function() {});
                 },

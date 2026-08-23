@@ -245,14 +245,33 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         drQw.eq(DiscountRule::getStatus, 1);
         List<DiscountRule> allDrRules = discountRuleMapper.selectList(drQw);
 
+        // 一次性批量查询当前用户在该租户下所有满减规则的使用记录
+        // 然后用内存中的 groupingBy 统计 (campaignId, ruleId) -> 使用次数，避免 N+1 查询
+        List<CampaignUsageRecord> allUsageRecords;
+        if (userId != null && tenantId != null) {
+            LambdaQueryWrapper<CampaignUsageRecord> usageQw = new LambdaQueryWrapper<>();
+            usageQw.eq(CampaignUsageRecord::getUserId, userId);
+            usageQw.eq(CampaignUsageRecord::getTenantId, tenantId);
+            usageQw.eq(CampaignUsageRecord::getRuleType, 1); // 只查满减类型的记录
+            allUsageRecords = usageRecordMapper.selectList(usageQw);
+        } else {
+            allUsageRecords = new ArrayList<>();
+        }
+        Map<String, Integer> usageCountMap = new HashMap<>();
+        for (CampaignUsageRecord record : allUsageRecords) {
+            String key = record.getCampaignId() + "_" + record.getRuleId();
+            usageCountMap.put(key, usageCountMap.getOrDefault(key, 0) + 1);
+        }
+
         // 计算满减优惠
         BigDecimal frDiscount = BigDecimal.ZERO;
         FullReductionRule bestFrRule = null;
         for (FullReductionRule rule : allFrRules) {
             if (orderAmount.compareTo(rule.getMinAmount()) >= 0) {
-                // 检查每人限用次数
+                // 检查每人限用次数（从内存 Map 中获取，避免逐条数据库查询）
                 if (rule.getPerUserLimit() != null && rule.getPerUserLimit() > 0) {
-                    int usageCount = getUserUsageCount(rule.getCampaignId(), rule.getId(), userId, tenantId);
+                    String usageKey = rule.getCampaignId() + "_" + rule.getId();
+                    int usageCount = usageCountMap.getOrDefault(usageKey, 0);
                     if (usageCount >= rule.getPerUserLimit()) {
                         continue;
                     }
@@ -308,13 +327,6 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
     }
 
     // ==================== 使用记录 ====================
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public boolean saveUsageRecord(CampaignUsageRecord record) {
-        record.setCreateTime(LocalDateTime.now());
-        return usageRecordMapper.insert(record) > 0;
-    }
 
     @Override
     public List<CampaignUsageRecord> getUsageRecords(Long campaignId, LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
@@ -440,26 +452,49 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         List<BigDecimal> discounts = new ArrayList<>();
         List<Integer> counts = new ArrayList<>();
 
-        // 按天统计
+        // 一次性查询整个时间范围内的所有使用记录，然后在内存中按日期分组统计
+        // 避免每天的 while 循环中都执行一次数据库查询（N+1 问题）
+        LambdaQueryWrapper<CampaignUsageRecord> qw = new LambdaQueryWrapper<>();
+        qw.ge(CampaignUsageRecord::getUseTime, startDate);
+        qw.le(CampaignUsageRecord::getUseTime, endDate);
+        if (tenantId != null) {
+            qw.eq(CampaignUsageRecord::getTenantId, tenantId);
+        }
+        List<CampaignUsageRecord> allRecords = usageRecordMapper.selectList(qw);
+
+        // 按日期字符串分组统计折扣金额和使用次数
+        Map<String, List<CampaignUsageRecord>> recordsByDay = new HashMap<>();
+        for (CampaignUsageRecord record : allRecords) {
+            LocalDateTime useTime = record.getUseTime();
+            if (useTime != null) {
+                String dayStr = useTime.toLocalDate().toString();
+                List<CampaignUsageRecord> dayList = recordsByDay.get(dayStr);
+                if (dayList == null) {
+                    dayList = new ArrayList<>();
+                    recordsByDay.put(dayStr, dayList);
+                }
+                dayList.add(record);
+            }
+        }
+
+        // 遍历日期范围，从内存分组中取出每天的统计数据
         LocalDateTime current = startDate;
         while (!current.isAfter(endDate)) {
-            dates.add(current.toLocalDate().toString());
+            String dayStr = current.toLocalDate().toString();
+            dates.add(dayStr);
 
-            LambdaQueryWrapper<CampaignUsageRecord> qw = new LambdaQueryWrapper<>();
-            qw.ge(CampaignUsageRecord::getUseTime, current.toLocalDate().atStartOfDay());
-            qw.le(CampaignUsageRecord::getUseTime, current.toLocalDate().atTime(23, 59, 59));
-            if (tenantId != null) {
-                qw.eq(CampaignUsageRecord::getTenantId, tenantId);
+            List<CampaignUsageRecord> dayRecords = recordsByDay.get(dayStr);
+            if (dayRecords == null) {
+                discounts.add(BigDecimal.ZERO);
+                counts.add(0);
+            } else {
+                BigDecimal dayDiscount = BigDecimal.ZERO;
+                for (CampaignUsageRecord record : dayRecords) {
+                    dayDiscount = dayDiscount.add(record.getDiscountAmount() != null ? record.getDiscountAmount() : BigDecimal.ZERO);
+                }
+                discounts.add(dayDiscount);
+                counts.add(dayRecords.size());
             }
-            List<CampaignUsageRecord> records = usageRecordMapper.selectList(qw);
-
-            BigDecimal dayDiscount = BigDecimal.ZERO;
-            for (CampaignUsageRecord record : records) {
-                dayDiscount = dayDiscount.add(record.getDiscountAmount() != null ? record.getDiscountAmount() : BigDecimal.ZERO);
-            }
-
-            discounts.add(dayDiscount);
-            counts.add(records.size());
 
             current = current.plusDays(1);
         }
@@ -507,4 +542,3 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         return result;
     }
 }
-

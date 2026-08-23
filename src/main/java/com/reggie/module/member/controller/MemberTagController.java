@@ -5,8 +5,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.BatchRemoveMemberTagDTO;
-import com.reggie.enums.MemberBizTag;
 import com.reggie.module.member.model.Member;
 import com.reggie.module.member.model.MemberTag;
 import com.reggie.module.member.service.MemberService;
@@ -24,7 +25,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/member/member-tag")
 @Tag(name = "会员标签管理")
+@RequireEmployee
 public class MemberTagController {
 
     @Autowired
@@ -59,6 +60,7 @@ public class MemberTagController {
      * @return 操作结果
      */
     @PostMapping("/member/{memberId}/tags")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "为会员添加标签", description = "为指定会员添加业务标签")
     public R<String> addTag(
             @Parameter(name = "memberId", description = "会员ID", required = true)
@@ -87,6 +89,7 @@ public class MemberTagController {
      * @return 操作结果
      */
     @DeleteMapping("/member/{memberId}/tags/{tagId}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除会员标签", description = "删除指定会员的指定标签")
     public R<String> removeTag(
             @Parameter(name = "memberId", description = "会员ID", required = true)
@@ -115,6 +118,7 @@ public class MemberTagController {
      * @return 操作结果
      */
     @DeleteMapping("/member/{memberId}/tags/batch")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量删除标签", description = "批量删除指定会员的标签")
     public R<String> batchRemoveTags(
             @Parameter(name = "memberId", description = "会员ID", required = true)
@@ -226,6 +230,7 @@ public class MemberTagController {
      * @return 操作结果
      */
     @PostMapping("/auto-generate")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "自动生成标签", description = "根据会员消费行为自动生成标签（定时任务调用）")
     public R<String> autoGenerateTags() {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -243,5 +248,4 @@ public class MemberTagController {
         return map;
     }
 }
-
 

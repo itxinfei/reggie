@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.reggie.common.SecurityConstants;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import javax.validation.constraints.NotBlank;
@@ -37,9 +38,14 @@ public class Employee implements Serializable {
     @Size(max = 50, message = "姓名不能超过50位")
     private String name;
 
+    @JsonIgnore
     @Schema(description = "密码", example = "123456", required = true)
     private String password;
 
+    // 修改点：password/passwordType 加 @JsonIgnore，防止 MyBatis-Plus 返回 employee 实体时
+    // 密码明文落日志或被前端序列化泄露。@JsonIgnore 仅影响 Jackson 序列化，
+    // 不影响 MyBatis-Plus 的 insert/updateById（这些操作走列名映射，不走 Jackson）。
+    @JsonIgnore
     @Schema(description = "密码加密类型", example = "BCRYPT")
     private String passwordType = SecurityConstants.PASSWORD_TYPE_BCRYPT;
 

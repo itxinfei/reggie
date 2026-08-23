@@ -1,6 +1,8 @@
 package com.reggie.common;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -96,6 +98,18 @@ public class GlobalExceptionHandler {
                            .map(error -> error.getField() + ": " + error.getDefaultMessage())
                            .collect(Collectors.joining(", "));
         return R.error("参数校验失败：" + message);
+    }
+
+    /**
+     * 处理限流异常（RateLimitExceededException 在 RateLimitAspect 中抛出）
+     * 返回 429 Too Many Requests，与 HTTP 标准对齐
+     */
+    @ExceptionHandler(RateLimitAspect.RateLimitExceededException.class)
+    @ResponseBody
+    public ResponseEntity<R<String>> handleRateLimitExceededException(RateLimitAspect.RateLimitExceededException ex) {
+        log.warn("接口限流：{}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(R.error(ex.getMessage()));
     }
 
     /**

@@ -39,6 +39,8 @@ class EmployeeLoginSecurityTest {
         admin.setPasswordType("MD5");
         admin.setStatus(1);
         admin.setTenantId(1L);
+        admin.setCreateUser(1L);
+        admin.setUpdateUser(1L);
         employeeService.save(admin);
     }
 

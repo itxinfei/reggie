@@ -136,13 +136,13 @@
         :submit-loading="cancelLoading"
         :close-on-click-modal="true"
         @submit="confirmCancel"
-        @close="cancelForm = {}"
+        @close="cancelForm = {}; $refs.cancelForm && $refs.cancelForm.clearValidate()"
       >
-        <el-form :model="cancelForm" label-width="80px" size="small">
+        <el-form :model="cancelForm" :rules="cancelRules" ref="cancelForm" label-width="80px" size="small">
           <el-form-item label="订单号">
             <span>{{ cancelForm.platformOrderId }}</span>
           </el-form-item>
-          <el-form-item label="取消原因">
+          <el-form-item label="取消原因" prop="reason">
             <el-select v-model="cancelForm.reason" placeholder="请选择取消原因" style="width:100%" clearable filterable>
               <el-option label="商品售罄" value="商品售罄"></el-option>
               <el-option label="店铺休息" value="店铺休息"></el-option>
@@ -211,6 +211,9 @@
           cancelVisible: false,
           cancelLoading: false,
           cancelForm: {},
+          cancelRules: {
+            reason: [{ required: true, message: '请选择取消原因', trigger: 'change' }]
+          },
           // 同步loading
           syncLoading: false,
           // 状态映射表
@@ -267,7 +270,6 @@
           } catch (err) {
             if (err.message === 'NOTLOGIN') return
             this.optionsLoadError = true
-            console.error('加载筛选选项失败:', err)
             ReggieUI.error('加载筛选选项失败，请刷新页面重试')
           } finally {
             this.optionsLoading = false
@@ -303,7 +305,6 @@
             }
           } catch (err) {
             if (err.message === 'NOTLOGIN') return
-            console.error('加载订单列表失败:', err)
             ReggieUI.error('加载订单列表失败，请刷新页面重试')
           } finally {
             this.loading = false
@@ -417,24 +418,23 @@
           this.cancelVisible = true
         },
         confirmCancel: function() {
-          if (!this.cancelForm.reason) {
-            ReggieUI.warning('请选择取消原因')
-            return
-          }
           var self = this
-          this.cancelLoading = true
-          deliveryUpdateStatus({ id: this.cancelForm.id, status: 'CANCELLED', remark: this.cancelForm.reason })
-            .then(function(res) {
-              if (String(res.code) === '1') {
-                ReggieUI.success('订单已取消')
-                self.cancelVisible = false
-                self.search()
-              } else {
-                ReggieUI.error(res.msg || '操作失败')
-              }
-            })
-            .catch(function(err) { ReggieUI.error('请求失败：' + err) })
-            .finally(function() { self.cancelLoading = false })
+          this.$refs.cancelForm.validate(function(valid) {
+            if (!valid) return
+            self.cancelLoading = true
+            deliveryUpdateStatus({ id: self.cancelForm.id, status: 'CANCELLED', remark: self.cancelForm.reason })
+              .then(function(res) {
+                if (String(res.code) === '1') {
+                  ReggieUI.success('订单已取消')
+                  self.cancelVisible = false
+                  self.search()
+                } else {
+                  ReggieUI.error(res.msg || '操作失败')
+                }
+              })
+              .catch(function(err) { ReggieUI.error('请求失败：' + err) })
+              .finally(function() { self.cancelLoading = false })
+          })
         },
         // ==================== 详情弹窗 ====================
         showDetail: async function(row) {

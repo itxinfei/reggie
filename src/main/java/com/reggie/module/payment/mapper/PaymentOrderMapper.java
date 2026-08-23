@@ -63,12 +63,18 @@ public interface PaymentOrderMapper extends BaseMapper<PaymentOrder> {
      * 否则已删除的 SUCCESS 支付单会错误阻止用户重新支付。
      *
      * @param orderId 业务订单ID
-     * @param statuses 状态集合（逗号分隔，已拼接为 IN 参数）
+     * @param statuses 状态集合
      * @return 数量
      */
     @InterceptorIgnore(tenantLine = "true")
-    @Select("SELECT COUNT(*) FROM payment_order WHERE order_id = #{orderId} AND status IN (${statuses}) AND is_deleted = 0")
-    int countByOrderIdAndStatuses(@Param("orderId") Long orderId, @Param("statuses") String statuses);
+    @Select("<script>" +
+            "SELECT COUNT(*) FROM payment_order WHERE order_id = #{orderId} AND status IN " +
+            "<foreach item='status' collection='statuses' open='(' separator=',' close=')'>" +
+            "#{status}" +
+            "</foreach>" +
+            " AND is_deleted = 0" +
+            "</script>")
+    int countByOrderIdAndStatuses(@Param("orderId") Long orderId, @Param("statuses") java.util.List<String> statuses);
 
     /**
      * 查询某支付单已成功退款的总金额（用于退款累计超额校验，忽略租户拦截）。
@@ -82,4 +88,18 @@ public interface PaymentOrderMapper extends BaseMapper<PaymentOrder> {
     @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT COALESCE(SUM(amount),0) FROM refund_record WHERE payment_order_id = #{paymentOrderId} AND status = #{successCode} AND is_deleted = 0")
     BigDecimal sumRefundedAmount(@Param("paymentOrderId") Long paymentOrderId, @Param("successCode") String successCode);
+
+    /**
+     * 原子行锁查询：在事务内锁定支付单行，防止并发退款时各自读到过期数据。
+     * 使用 SELECT ... FOR UPDATE 让 MySQL InnoDB 对 payment_order 目标行加排他锁，
+     * 并发退款请求会被阻塞，串行执行"读累计退款 → 判断 → 写入退款记录"流程。
+     * 注意：原生注解 SQL 不会自动应用 @TableLogic 逻辑删除过滤，需手动添加 is_deleted = 0。
+     *
+     * @param paymentOrderId 支付单ID
+     * @param successCode    期望的支付成功状态码
+     * @return 支付金额（null 表示行不存在或状态不匹配）
+     */
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT amount FROM payment_order WHERE id = #{paymentOrderId} AND status = #{successCode} AND is_deleted = 0 FOR UPDATE")
+    BigDecimal selectPaymentAmountForUpdate(@Param("paymentOrderId") Long paymentOrderId, @Param("successCode") String successCode);
 }

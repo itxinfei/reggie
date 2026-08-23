@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerIntercept
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import com.reggie.common.BaseContext;
+import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
 import org.springframework.context.annotation.Bean;
@@ -22,6 +23,7 @@ import java.util.Set;
  * @author 心飞为你飞
  * @since 2026-07-09
  */
+@Slf4j
 @Configuration
 public class MybatisPlusConfig {
 
@@ -50,9 +52,8 @@ public class MybatisPlusConfig {
             public Expression getTenantId() {
                 Long tenantId = BaseContext.getCurrentTenantId();
                 if (tenantId == null) {
-                    // MP 3.4.2 的 TenantLineInnerInterceptor 不检查 null，
-                    // 正常情况在 ignoreTable 中已跳过过滤，此处保留 fail-closed
-                    // 作为兜底，避免意外生成 tenant_id = null 的 SQL。
+                    // fail-closed：租户上下文为空时返回无效ID，避免生成 tenant_id = null 的 SQL
+                    // 正常业务接口均有登录态，租户上下文非空；告警逻辑见 ignoreTable 中的兜底 warn
                     return new LongValue(-1L);
                 }
                 return new LongValue(tenantId);
@@ -65,13 +66,18 @@ public class MybatisPlusConfig {
 
             @Override
             public boolean ignoreTable(String tableName) {
-                // 无租户上下文（公开端点/匿名调用，如 C 端浏览菜品、用户登录）时
-                // 跳过租户过滤，避免注入 tenant_id = -1 导致查询返回空集。
-                // 需要隔离的接口均有员工/用户登录态，租户上下文非空。
-                if (BaseContext.getCurrentTenantId() == null) {
-                    return true;
+                // 仅忽略无 tenant_id 列的表，不跳过所有过滤
+                // 修复说明：原实现在此处判断 tenantId == null 时返回 true（跳过过滤），
+                // 与 getTenantId 的 fail-closed 逻辑自相矛盾，导致租户上下文为空时隔离完全失效。
+                // 现修复为仅做白名单判断，租户为空时由 getTenantId 返回 -1L 兜底，实现 fail-closed。
+                boolean ignored = IGNORE_TABLES.contains(tableName);
+                if (!ignored && BaseContext.getCurrentTenantId() == null) {
+                    // 兜底告警：表不在白名单但租户上下文为空，getTenantId 将返回 -1L 导致查询返回空集，
+                    // 用于及时发现白名单漏网或匿名访问未走预期路径的表
+                    log.warn("租户上下文为空且表[{}]不在白名单，SQL 将追加 tenant_id=-1（返回空集），请检查是否需加入白名单",
+                            tableName);
                 }
-                return IGNORE_TABLES.contains(tableName);
+                return ignored;
             }
         }));
         mybatisPlusInterceptor.addInnerInterceptor(new PaginationInnerInterceptor());

@@ -11,17 +11,17 @@
   <style>
     /* ---- 图表区 ---- */
     .chart-panels { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
-    .chart-panel { flex: 1; min-width: 380px; background: var(--bg-surface); border-radius: 14px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06); padding: 18px 20px; }
+    .chart-panel { flex: 1; min-width: 380px; background: var(--bg-surface); border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm); padding: 18px 20px; }
     .chart-panel .panel-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 12px;
       padding-bottom: 10px; border-bottom: 1px solid var(--el-bg-lighter); display: flex; align-items: center; gap: 8px; }
     .chart-box { width: 100%; height: 320px; }
 
     /* ---- 筛选区 ---- */
-    .filter-bar { background: var(--bg-surface); border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .filter-bar { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 16px;
+      box-shadow: var(--shadow-xs); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .filter-bar .el-select, .filter-bar .el-input { width: 180px; }
-    .type-tag { cursor: pointer; padding: 5px 14px; border-radius: 20px; font-size:var(--font-size-sm);
+    .type-tag { cursor: pointer; padding: 5px 14px; border-radius: var(--radius-lg); font-size:var(--font-size-sm);
       border: 1px solid var(--el-border-lighter2); color: var(--el-text-regular); transition: all 0.2s; user-select: none; }
     .type-tag.active { color: var(--el-color-primary); border-color: var(--el-color-primary); background: var(--el-color-primary-lighter); }
     .type-tag:hover { color: var(--el-color-primary); border-color: var(--el-color-primary-light); }
@@ -67,9 +67,9 @@
           <i slot="prefix" class="el-input__icon el-icon-search"></i>
         </el-input>
         <span style="color:var(--color-info);font-size:var(--font-size-sm);">类型：</span>
-        <span :class="['type-tag', input.type === '' ? 'active' : '']" @click="setType('')">全部</span>
-        <span :class="['type-tag', input.type === 'IN' ? 'active' : '']" @click="setType('IN')">🟢 获取</span>
-        <span :class="['type-tag', input.type === 'OUT' ? 'active' : '']" @click="setType('OUT')">🔴 消费</span>
+        <span :class="['type-tag', input.type === '' ? 'active' : '']" role="button" tabindex="0" @click="setType('')" @keydown.enter="setType('')" :aria-pressed="input.type === ''">全部</span>
+        <span :class="['type-tag', input.type === 'IN' ? 'active' : '']" role="button" tabindex="0" @click="setType('IN')" @keydown.enter="setType('IN')" :aria-pressed="input.type === 'IN'" aria-label="获取类型">🟢 获取</span>
+        <span :class="['type-tag', input.type === 'OUT' ? 'active' : '']" role="button" tabindex="0" @click="setType('OUT')" @keydown.enter="setType('OUT')" :aria-pressed="input.type === 'OUT'" aria-label="消费类型">🔴 消费</span>
         <el-button type="primary" size="small" @click="handleQuery">查询</el-button>
         <el-button size="small" @click="reset">重置</el-button>
       </div>
@@ -210,9 +210,9 @@
               yAxis: { type: 'value' },
               series: [
                 { name: '获取', type: 'line', data: acquired, smooth: true, symbol: 'none',
-                  lineStyle: { color: '#22c55e', width: 2 }, areaStyle: { color: 'rgba(34,197,94,0.15)' } },
+                  lineStyle: { color: RgPalette.emerald, width: 2 }, areaStyle: { color: RgPalette.emeraldArea } },
                 { name: '消耗', type: 'line', data: consumed, smooth: true, symbol: 'none',
-                  lineStyle: { color: '#f97316', width: 2 }, areaStyle: { color: 'rgba(249,115,22,0.15)' } }
+                  lineStyle: { color: RgPalette.orange500, width: 2 }, areaStyle: { color: RgPalette.orange500Area } }
               ]
             })
           }
@@ -224,11 +224,11 @@
               series: [{
                 type: 'pie', radius: ['48%', '72%'], center: ['50%', '48%'], avoidLabelOverlap: false,
                 label: { show: false }, emphasis: { label: { show: true, fontWeight: 'bold' } },
-                itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 3 },
+                itemStyle: { borderRadius: RgPalette.radiusMd borderColor: RgPalette.white, borderWidth: 3 },
                 data: [
-                  { value: self.stats.totalAcquired || 0, name: '累计获取', itemStyle: { color: '#22c55e' } },
-                  { value: self.stats.totalConsumed || 0, name: '累计消耗', itemStyle: { color: '#f97316' } },
-                  { value: Math.max(0, (self.stats.totalPoints||0) - (self.stats.totalAcquired||0) + (self.stats.totalConsumed||0)), name: '初始积分', itemStyle: { color: '#3b82f6' } }
+                  { value: self.stats.totalAcquired || 0, name: '累计获取', itemStyle: { color: RgPalette.emerald } },
+                  { value: self.stats.totalConsumed || 0, name: '累计消耗', itemStyle: { color: RgPalette.orange500 } },
+                  { value: Math.max(0, (self.stats.totalPoints||0) - (self.stats.totalAcquired||0) + (self.stats.totalConsumed||0)), name: '初始积分', itemStyle: { color: RgPalette.blue500 } }
                 ]
               }]
             })

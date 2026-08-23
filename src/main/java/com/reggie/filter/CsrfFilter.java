@@ -1,6 +1,7 @@
 package com.reggie.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.AuthConstants;
 import com.reggie.common.ObjectMapperHolder;
 import com.reggie.common.CsrfTokenUtil;
 import com.reggie.common.R;
@@ -48,25 +49,8 @@ public class CsrfFilter implements Filter {
     /** 响应头名称 */
     private static final String CSRF_HEADER_NAME = "X-CSRF-Token";
 
-    /** 不需要CSRF校验的路径（使用 Ant 通配符，避免 startsWith 匹配过宽） */
-    private static final String[] EXCLUDE_URLS = new String[]{
-        "/employee/login",
-        "/employee/logout",
-        "/employee/forgot-password",
-        "/user/sendMsg",
-        "/user/login",
-        "/user/loginout",
-        "/tenant/register",
-        "/api/ai/**",  // AI模块有自己的验证机制
-        "/swagger-ui",
-        "/swagger-ui/**",
-        "/v3/api-docs",
-        "/v3/api-docs/**",
-        "/actuator",
-        "/actuator/**",
-        "/doc.html",
-        "/webjars/**"
-    };
+    /** 不需要CSRF校验的路径（引用 AuthConstants，保持单一来源） */
+    private static final String[] EXCLUDE_URLS = AuthConstants.CSRF_EXCLUDE_URLS;
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
@@ -84,7 +68,7 @@ public class CsrfFilter implements Filter {
         String requestURI = request.getRequestURI();
 
         // GET等安全方法：生成并返回CSRF Token（如果Session中有用户）
-        if (!"POST".equals(method) && !"PUT".equals(method) && !"DELETE".equals(method)) {
+        if (!"POST".equals(method) && !"PUT".equals(method) && !"DELETE".equals(method) && !"PATCH".equals(method)) {
             // 在doFilter之前设置CSRF Token响应头，避免响应提交后无法设置
             setCsrfTokenHeader(request, response);
             filterChain.doFilter(request, response);

@@ -67,7 +67,7 @@
             :src="getImage(row.image)"
             :preview-src-list="[getImage(row.image)]">
             <div slot="error" class="image-slot">
-              <img src="./../../images/noImg.png" class="cell-img">
+              <img src="./../../images/noImg.png" class="cell-img" alt="暂无图片">
             </div>
           </el-image>
         </template>
@@ -95,6 +95,7 @@
           <el-button type="text" size="small" class="btn-view" @click="statusHandle(row)">{{ row.status == '0' ? '启售' : '停售' }}</el-button>
           <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', row.id)">删除</el-button>
           <el-button type="text" size="small" @click="editStock(row)">库存</el-button>
+          <el-button type="text" size="small" @click="editBOM(row)">配方</el-button>
         </template>
       </crud-table>
     </main>
@@ -143,7 +144,7 @@
             :on-change="onChange"
             ref="upload"
           >
-            <img v-if="dishForm.imageUrl" :src="dishForm.imageUrl" class="avatar" style="border-radius: 4px;"></img>
+            <img v-if="dishForm.imageUrl" :src="dishForm.imageUrl" class="avatar" style="border-radius: var(--radius-sm);" alt="菜品图片">
             <i v-else class="el-icon-plus avatar-uploader-icon"></i>
           </el-upload>
         </el-form-item>
@@ -202,6 +203,54 @@
         </el-form-item>
       </el-form>
     </crud-dialog>
+
+    <!-- 配方编辑弹窗（统一 crud-dialog 组件，M2） -->
+    <crud-dialog
+      :size="'lg'"
+      :title="'编辑配方 - ' + (bomDialog.dishName || '')"
+      :visible.sync="bomDialog.visible"
+      :close-on-click-modal="false"
+      :submit-loading="bomSubmitting"
+      custom-class="bom-dialog"
+      @submit="submitBOM"
+    >
+      <div style="margin-bottom: 12px;">
+        <el-button type="primary" size="small" icon="el-icon-plus" @click="addBOMItem">添加食材</el-button>
+        <el-button size="small" @click="loadBOMItems">刷新</el-button>
+      </div>
+      <el-table :data="bomItems" size="small" border style="width: 100%;">
+        <el-table-column label="食材名称" width="180">
+          <template slot-scope="scope">
+            <el-select v-model="scope.row.materialId" placeholder="请选择食材" size="small" filterable
+              @change="onMaterialChange(scope.row, $event)" style="width: 100%;">
+              <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id">
+                <span>{{ m.name }}</span>
+                <span style="color: #9ca3af; margin-left: 8px; font-size: 12px;">{{ m.unit }}</span>
+              </el-option>
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="用量" width="140" align="right">
+          <template slot-scope="scope">
+            <el-input-number v-model="scope.row.usageQty" :min="0.001" :precision="3"
+              controls-position="right" size="small" style="width: 100%;" />
+          </template>
+        </el-table-column>
+        <el-table-column label="单位" width="80" align="center">
+          <template slot-scope="scope">
+            <span style="color: var(--text-secondary);">{{ scope.row.materialUnit || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" align="center" width="80">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" class="btn-delete" @click="delBOMItem(scope.$index)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div style="margin-top: 12px; color: var(--text-muted); font-size: 12px;">
+        提示：点击"保存"将提交全部食材配方（已保存的更新、新增的创建、删除的移除）。
+      </div>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -212,6 +261,7 @@
   <script src="../../js/performance-utils.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../api/food.js"></script>
+  <script src="../../api/inventory.js"></script>
   <script src="../../api/export.js"></script>
   <script>
     new Vue({
@@ -273,7 +323,12 @@
           stockEditRules: {
             newStockQty: [{ required: true, message: '请输入库存数量', trigger: 'blur' }],
             newMinStock: [{ required: true, message: '请输入最低库存预警值', trigger: 'blur' }]
-          }
+          },
+          // 配方编辑
+          bomDialog: { visible: false, dishId: null, dishName: '' },
+          bomItems: [],
+          materialOptions: [],
+          bomSubmitting: false
         }
       },
       computed: {
@@ -316,7 +371,7 @@
           try {
             var dishRes = await getDishPage(params)
             if (String(dishRes.code) === '1') { self.tableData = dishRes.data.records || []; self.counts = dishRes.data.total }
-          } catch (err) { console.error('加载菜品列表失败:', err) }
+          } catch (err) { ReggieUI.error('加载菜品列表失败:') }
           self.loading = false
         },
         // 修改点：F9 列表 + 统计一起刷新（仅在增删改/上下架等会改变全局计数的操作后调用）
@@ -350,11 +405,11 @@
           var self = this
           getCategoryList({ type: 1 }).then(function(res) {
             if (res.code === 1) { self.categoryOptions = res.data || []; self.searchConfig[1].options = self.categoryOptions.map(function(c) { return { label: c.name, value: c.id } }) }
-          }).catch(function(err) { console.error('加载分类选项失败:', err) })
+          }).catch(function(err) { ReggieUI.error('加载分类选项失败:') })
         },
         getDishList: function() {
           var self = this
-          getCategoryList({ type: 1 }).then(function(res) { if (res.code === 1) { self.dishList = res.data || [] } }).catch(function(err) { console.error('加载菜品分类失败:', err) })
+          getCategoryList({ type: 1 }).then(function(res) { if (res.code === 1) { self.dishList = res.data || [] } }).catch(function(err) { ReggieUI.error('加载菜品分类失败:') })
         },
         getImage: function(image) { return '/common/download?name=' + image },
         // stat-cards 点击
@@ -548,6 +603,90 @@
             exportApi.downloadFile(apiCall, '菜品数据.' + ext)
             ReggieUI.success('导出成功，文件已开始下载')
           } catch (err) { ReggieUI.error('导出失败：' + (err.message || err)) }
+        },
+        // ========== 配方编辑 ==========
+        editBOM: function(row) {
+          var self = this
+          self.bomDialog = { visible: true, dishId: row.id, dishName: row.name }
+          self.loadMaterialOptions()
+          self.loadBOMItems()
+        },
+        loadMaterialOptions: function() {
+          var self = this
+          materialList().then(function(res) {
+            if (res.code === 1) { self.materialOptions = res.data || [] }
+          }).catch(function(err) { ReggieUI.error('加载食材列表失败：' + err) })
+        },
+        loadBOMItems: function() {
+          var self = this
+          var dishId = self.bomDialog.dishId
+          if (!dishId) { return }
+          dishMaterialListByDish(dishId).then(function(res) {
+            if (res.code === 1) {
+              var data = res.data || []
+              self.bomItems = data.map(function(item) {
+                return {
+                  id: item.id || null,
+                  dishId: item.dishId || dishId,
+                  materialId: item.materialId || null,
+                  usageQty: item.usageQty != null ? parseFloat(item.usageQty) : 0.001,
+                  sort: item.sort || 0,
+                  materialUnit: item.materialUnit || ''
+                }
+              })
+              if (self.bomItems.length === 0) { self.addBOMItem() }
+            } else { ReggieUI.error(res.msg || '加载配方失败') }
+          }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
+        },
+        addBOMItem: function() {
+          this.bomItems.push({
+            id: null,
+            dishId: this.bomDialog.dishId,
+            materialId: null,
+            usageQty: 0.001,
+            sort: this.bomItems.length,
+            materialUnit: ''
+          })
+        },
+        delBOMItem: function(index) {
+          if (this.bomItems.length <= 1) { ReggieUI.warning('至少保留一条'); return }
+          this.bomItems.splice(index, 1)
+        },
+        onMaterialChange: function(row, value) {
+          for (var i = 0; i < this.materialOptions.length; i++) {
+            if (this.materialOptions[i].id === value) {
+              row.materialUnit = this.materialOptions[i].unit || ''
+              break
+            }
+          }
+        },
+        submitBOM: function() {
+          if (this.bomSubmitting) return
+          var self = this
+          // 校验：所有行必须选食材且用量 > 0
+          for (var i = 0; i < self.bomItems.length; i++) {
+            var item = self.bomItems[i]
+            if (!item.materialId) { ReggieUI.warning('第 ' + (i + 1) + ' 行未选择食材'); return }
+            if (!item.usageQty || item.usageQty <= 0) { ReggieUI.warning('第 ' + (i + 1) + ' 行用量必须大于 0'); return }
+          }
+          var items = self.bomItems.map(function(it) {
+            return {
+              dishId: self.bomDialog.dishId,
+              materialId: it.materialId,
+              usageQty: it.usageQty,
+              sort: it.sort
+            }
+          })
+          var params = { dishId: self.bomDialog.dishId, items: items }
+          self.bomSubmitting = true
+          dishMaterialBatchSave(params).then(function(res) {
+            self.bomSubmitting = false
+            if (res.code === 1) {
+              ReggieUI.success('配方保存成功！')
+              self.bomDialog.visible = false
+              self.bomItems = []
+            } else { ReggieUI.error(res.msg || '保存失败') }
+          }).catch(function(err) { self.bomSubmitting = false; ReggieUI.error('请求失败：' + err) })
         }
       }
     })

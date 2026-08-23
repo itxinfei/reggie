@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -67,10 +69,11 @@ public class OpenAICompatibleClient implements AIClient {
                     .build();
         }
 
+        HttpURLConnection conn = null;
         try {
             String apiUrl = aiConfig.getBaseUrl() + "/chat/completions";
             URL url = new URL(apiUrl);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setRequestProperty("Authorization", "Bearer " + aiConfig.getApiKey());
@@ -103,7 +106,10 @@ public class OpenAICompatibleClient implements AIClient {
 
             int responseCode = conn.getResponseCode();
             if (responseCode == 200) {
-                JsonNode root = OBJECT_MAPPER.readTree(conn.getInputStream());
+                JsonNode root;
+                try (InputStream is = conn.getInputStream()) {
+                    root = OBJECT_MAPPER.readTree(is);
+                }
                 JsonNode choices = root.get("choices");
                 if (choices != null && choices.isArray() && choices.size() > 0) {
                     String content = choices.get(0).get("message").get("content").asText();
@@ -123,23 +129,39 @@ public class OpenAICompatibleClient implements AIClient {
                         .model(aiConfig.getModel())
                         .build();
             } else {
-                JsonNode errorBody = OBJECT_MAPPER.readTree(conn.getErrorStream());
-                String errorMsg = errorBody.has("error")
-                        ? errorBody.get("error").get("message").asText()
-                        : "HTTP " + responseCode;
-                log.error("AI请求失败: code={}, error={}", responseCode, errorMsg);
+                String errorMsg;
+                try (InputStream es = conn.getErrorStream()) {
+                    if (es != null) {
+                        JsonNode errorBody = OBJECT_MAPPER.readTree(es);
+                        errorMsg = errorBody.has("error")
+                                ? errorBody.get("error").get("message").asText()
+                                : "HTTP " + responseCode;
+                    } else {
+                        errorMsg = "HTTP " + responseCode;
+                    }
+                } catch (IOException ioEx) {
+                    errorMsg = "HTTP " + responseCode;
+                    log.warn("AI错误响应读取失败", ioEx);
+                }
+                // 修改点：errorMsg 截断 200 字，防止 token 回显或超长响应体落盘
+                log.error("AI请求失败: code={}, error={}", responseCode,
+                        truncateError(errorMsg));
 
                 return AIChatResponse.builder()
-                        .content("AI服务暂时不可用，请稍后重试。（" + errorMsg + "）")
+                        .content("AI服务暂时不可用，请稍后重试。")
                         .model(aiConfig.getModel())
                         .build();
             }
         } catch (Exception e) {
             log.error("AI请求异常", e);
             return AIChatResponse.builder()
-                    .content("AI服务连接失败：" + e.getMessage())
+                    .content("AI服务暂时不可用，请稍后重试。")
                     .model(aiConfig.getModel())
                     .build();
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
     }
 
@@ -161,6 +183,14 @@ public class OpenAICompatibleClient implements AIClient {
     @Override
     public String getDefaultModel() {
         return aiConfig.getModel();
+    }
+
+    // 日志脱敏：错误响应体截断到 200 字，防止 token 回显或超长响应体落盘
+    private String truncateError(String errorMsg) {
+        if (errorMsg == null) {
+            return "";
+        }
+        return errorMsg.length() > 200 ? errorMsg.substring(0, 200) + "..." : errorMsg;
     }
 }
 

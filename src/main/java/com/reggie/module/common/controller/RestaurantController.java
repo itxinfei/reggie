@@ -2,8 +2,9 @@ package com.reggie.module.common.controller;
 
 import com.reggie.common.R;
 import com.reggie.common.BaseContext;
-import com.reggie.module.store.mapper.StoreInfoMapper;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.store.model.StoreInfo;
+import com.reggie.module.store.service.StoreService;
 import org.springframework.beans.factory.annotation.Autowired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,11 +25,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/restaurant")
 @Slf4j
+@RequireEmployee
 @Tag(name = "商家信息", description = "获取商家基本信息、配送参数等")
 public class RestaurantController {
 
-    @Autowired(required = false)
-    private StoreInfoMapper storeInfoMapper;
+    @Autowired
+    private StoreService storeService;
 
 
     /**
@@ -43,8 +45,8 @@ public class RestaurantController {
         String businessHours = "09:00-22:00"; // 默认值
         try {
             Long tenantId = BaseContext.getCurrentTenantId();
-            if (tenantId != null && storeInfoMapper != null) {
-                StoreInfo storeInfo = storeInfoMapper.findByTenantId(tenantId);
+            if (tenantId != null && storeService != null) {
+                StoreInfo storeInfo = storeService.findByTenantId(tenantId);
                 if (storeInfo != null && storeInfo.getBusinessHours() != null && !storeInfo.getBusinessHours().isEmpty()) {
                     businessHours = storeInfo.getBusinessHours();
                 }

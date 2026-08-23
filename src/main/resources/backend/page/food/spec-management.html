@@ -28,9 +28,9 @@
       gap: 12px;
       background: var(--bg-surface);
       padding: 16px 24px;
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-sm);
     }
     .tableBar .toolbar-spacer {
       flex: 1;
@@ -42,9 +42,9 @@
     }
     .table-card {
       background: var(--bg-surface);
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-sm);
     }
     .card-title {
       font-size:var(--font-size-lg);
@@ -56,7 +56,7 @@
     }
     .type-tag {
       padding: 4px 8px;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       font-size:var(--font-size-xs);
     }
     .type-tag.single {
@@ -69,7 +69,7 @@
     }
     .status-tag {
       padding: 4px 8px;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       font-size:var(--font-size-xs);
     }
     .status-tag.active {
@@ -130,9 +130,9 @@
         <el-table-column prop="name" label="规格组名称" min-width="120" align="center"></el-table-column>
           <el-table-column prop="type" label="类型" width="80" align="center">
             <template slot-scope="scope">
-              <span class="type-tag" :class="scope.row.type === 1 ? 'single' : 'multi'">
+              <el-tag :type="scope.row.type === 1 ? 'primary' : 'success'" size="small">
                 {{ scope.row.type === 1 ? '单选' : '多选' }}
-              </span>
+              </el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="required" label="必选" width="60" align="center">
@@ -142,9 +142,9 @@
           </el-table-column>
           <el-table-column prop="status" label="状态" width="80" align="center">
             <template slot-scope="scope">
-              <span class="status-tag" :class="scope.row.status === 1 ? 'active' : 'disabled'">
+              <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'" size="small">
                 {{ scope.row.status === 1 ? '启用' : '禁用' }}
-              </span>
+              </el-tag>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="150" align="center" fixed="right">
@@ -188,9 +188,9 @@
             </el-table-column>
             <el-table-column prop="status" label="状态" width="80" align="center">
               <template slot-scope="scope">
-                <span class="status-tag" :class="scope.row.status === 1 ? 'active' : 'disabled'">
+                <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'" size="small">
                   {{ scope.row.status === 1 ? '启用' : '禁用' }}
-                </span>
+                </el-tag>
               </template>
             </el-table-column>
         <el-table-column label="操作" width="150" align="center" fixed="right">
@@ -205,7 +205,7 @@
     </div>
 
     <!-- 规格组编辑对话框 -->
-    <crud-dialog :title="groupDialogTitle" :visible.sync="groupDialogVisible" width="500px" @submit="handleGroupSubmit">
+    <crud-dialog :title="groupDialogTitle" :visible.sync="groupDialogVisible" size="md" @submit="handleGroupSubmit">
       <el-form :model="groupForm" :rules="groupRules" ref="groupForm" label-width="100px">
         <el-form-item label="规格组名称" prop="name">
           <el-input v-model="groupForm.name" placeholder="如：份量、辣度、温度"></el-input>
@@ -235,7 +235,7 @@
     </crud-dialog>
 
     <!-- 规格选项编辑对话框 -->
-    <crud-dialog :title="optionDialogTitle" :visible.sync="optionDialogVisible" width="500px" @submit="handleOptionSubmit">
+    <crud-dialog :title="optionDialogTitle" :visible.sync="optionDialogVisible" size="md" @submit="handleOptionSubmit">
       <el-form :model="optionForm" :rules="optionRules" ref="optionForm" label-width="100px">
         <el-form-item label="选项名称" prop="name">
           <el-input v-model="optionForm.name" placeholder="如：大份、中份、小份"></el-input>
@@ -336,7 +336,6 @@
               this.groupList = res.data || []
             }
           } catch (err) {
-            console.error('获取规格组列表失败', err)
             ReggieUI.error('获取数据失败')
           } finally {
             this.groupLoading = false
@@ -350,7 +349,6 @@
               this.optionList = res.data || []
             }
           } catch (err) {
-            console.error('获取规格选项列表失败', err)
             ReggieUI.error('获取数据失败')
           } finally {
             this.optionLoading = false
@@ -391,7 +389,7 @@
         },
         async handleDeleteGroup(row) {
           try {
-            await this.$confirm('删除规格组将同时删除关联的选项，确定要删除吗？', '提示', {
+            await ReggieUI.confirm('删除规格组将同时删除关联的选项，确定要删除吗？', '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
               type: 'warning'
@@ -408,34 +406,27 @@
             }
           } catch (err) {
             if (err !== 'cancel') {
-              console.error('删除失败', err)
               ReggieUI.error('删除失败')
             }
           }
         },
         handleGroupSubmit() {
-          this.$refs.groupForm.validate(async (valid) => {
-            if (!valid) return
-            
-            try {
-              let res
-              if (this.groupForm.id) {
-                res = await updateSpecGroup(this.groupForm)
-              } else {
-                res = await saveSpecGroup(this.groupForm)
-              }
-              
-              if (res.code === 1) {
-                ReggieUI.success(this.groupForm.id ? '更新成功' : '新增成功')
-                this.groupDialogVisible = false
-                await this.fetchGroups()
-              } else {
-                ReggieUI.error(res.msg || '操作失败')
-              }
-            } catch (err) {
-              console.error('提交失败', err)
-              ReggieUI.error('操作失败')
+          let passed = false
+          this.$refs.groupForm.validate(function(valid) { passed = valid })
+          if (!passed) return
+
+          var self = this
+          var apiCall = self.groupForm.id ? updateSpecGroup(self.groupForm) : saveSpecGroup(self.groupForm)
+          apiCall.then(function(res) {
+            if (res.code === 1) {
+              ReggieUI.success(self.groupForm.id ? '更新成功' : '新增成功')
+              self.groupDialogVisible = false
+              self.fetchGroups()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
             }
+          }).catch(function(err) {
+            ReggieUI.error('操作失败')
           })
         },
         handleAddOption() {
@@ -468,7 +459,7 @@
         },
         async handleDeleteOption(row) {
           try {
-            await this.$confirm('确定要删除该规格选项吗？', '提示', {
+            await ReggieUI.confirm('确定要删除该规格选项吗？', '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
               type: 'warning'
@@ -485,36 +476,29 @@
             }
           } catch (err) {
             if (err !== 'cancel') {
-              console.error('删除失败', err)
               ReggieUI.error('删除失败')
             }
           }
         },
         handleOptionSubmit() {
-          this.$refs.optionForm.validate(async (valid) => {
-            if (!valid) return
-            
-            try {
-              let res
-              if (this.optionForm.id) {
-                res = await updateSpecOption(this.optionForm)
-              } else {
-                res = await saveSpecOption(this.optionForm)
+          let passed = false
+          this.$refs.optionForm.validate(function(valid) { passed = valid })
+          if (!passed) return
+
+          var self = this
+          var apiCall = self.optionForm.id ? updateSpecOption(self.optionForm) : saveSpecOption(self.optionForm)
+          apiCall.then(function(res) {
+            if (res.code === 1) {
+              ReggieUI.success(self.optionForm.id ? '更新成功' : '新增成功')
+              self.optionDialogVisible = false
+              if (self.currentGroup) {
+                self.fetchOptions(self.currentGroup.id)
               }
-              
-              if (res.code === 1) {
-                ReggieUI.success(this.optionForm.id ? '更新成功' : '新增成功')
-                this.optionDialogVisible = false
-                if (this.currentGroup) {
-                  await this.fetchOptions(this.currentGroup.id)
-                }
-              } else {
-                ReggieUI.error(res.msg || '操作失败')
-              }
-            } catch (err) {
-              console.error('提交失败', err)
-              ReggieUI.error('操作失败')
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
             }
+          }).catch(function(err) {
+            ReggieUI.error('操作失败')
           })
         }
       }

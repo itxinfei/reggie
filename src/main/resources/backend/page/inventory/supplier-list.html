@@ -92,7 +92,7 @@
     :title="dialogTitle"
     :visible.sync="dialogVisible"
     :submit-loading="submitting"
-    width="600px"
+    size="lg"
     @submit="submitForm"
     @close="resetForm"
   >
@@ -348,12 +348,11 @@
         /** 表单提交（校验通过后执行保存） */
         submitForm() {
           if (this.submitting) return // 提交防重
-          var fd = this.formData
-          if (!fd.name) {
-            ReggieUI.error('请输入供应商名称')
-            return
-          }
-          this.doSave()
+          var self = this
+          let passed = false
+          self.$refs.supplierForm.validate(function (valid) { passed = valid })
+          if (!passed) return
+          self.doSave()
         },
 
         /** 执行新增/修改保存 */

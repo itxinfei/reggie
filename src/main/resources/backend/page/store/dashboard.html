@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css" />
     <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
     <script src="../../plugins/echarts/echarts.min.js"></script>
     <style>
@@ -37,11 +38,9 @@
 
         /* ========== 图表面板 ========== */
         .chart-panel {
-            background: var(--bg-surface); border-radius: 16px; padding: 24px;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
-            transition: all 0.3s; display: flex; flex-direction: column; min-width: 0;
+            padding: 24px;
+            display: flex; flex-direction: column; min-width: 0;
         }
-        .chart-panel:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
         .chart-panel .panel-title {
             font-size:var(--font-size-lg); font-weight: 600; color: var(--el-text-primary);
             margin-bottom: 8px; padding-bottom: 16px;
@@ -53,11 +52,8 @@
 
         /* ========== 门店排行 ========== */
         .ranking-panel {
-            background: var(--bg-surface); border-radius: 16px; padding: 24px;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
-            transition: all 0.3s; min-width: 0;
+            padding: 24px; min-width: 0;
         }
-        .ranking-panel:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
         .ranking-panel .panel-title {
             font-size:var(--font-size-lg); font-weight: 600; color: var(--el-text-primary);
             margin-bottom: 20px; padding-bottom: 16px;
@@ -69,10 +65,10 @@
             display: flex; align-items: center; padding: 16px 0;
             border-bottom: 1px solid var(--el-bg-light); transition: all 0.2s; gap: 14px;
         }
-        .rank-item:hover { background: var(--el-bg-ghost); margin: 0 -12px; padding-left: 12px; padding-right: 12px; border-radius: 10px; }
+        .rank-item:hover { background: var(--el-bg-ghost); margin: 0 -12px; padding-left: 12px; padding-right: 12px; border-radius: var(--radius-md); }
         .rank-item:last-child { border-bottom: none; padding-bottom: 0; }
         .rank-num {
-            width: 36px; height: 36px; border-radius: 10px;
+            width: 36px; height: 36px; border-radius: var(--radius-md);
             display: flex; align-items: center; justify-content: center;
             font-size:var(--font-size-base); font-weight: 700; flex-shrink: 0;
         }
@@ -83,11 +79,11 @@
         .rank-info { flex: 1; min-width: 0; }
         .rank-name { font-size:var(--font-size-base); font-weight: 600; color: var(--el-text-primary); display: flex; align-items: center; gap: 8px; }
         .rank-store-code {
-            font-size: 11px; color: var(--el-border-base); background: var(--el-bg-subtle);
-            padding: 2px 8px; border-radius: 4px; font-weight: 500;
+            font-size: var(--font-size-xs); color: var(--el-border-base); background: var(--el-bg-subtle);
+            padding: 2px 8px; border-radius: var(--radius-sm); font-weight: 500;
         }
-        .rank-bar-wrap { width: 120px; height: 8px; background: var(--el-bg-page); border-radius: 4px; overflow: hidden; flex-shrink: 0; }
-        .rank-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); background: var(--color-brand-500); }
+        .rank-bar-wrap { width: 120px; height: 8px; background: var(--el-bg-page); border-radius: var(--radius-sm); overflow: hidden; flex-shrink: 0; }
+        .rank-bar-fill { height: 100%; border-radius: var(--radius-sm); transition: width 0.8s cubic-bezier(0.4,0,0.2,1); background: var(--color-brand-500); }
         .rank-stats { text-align: right; flex-shrink: 0; min-width: 80px; }
         .rank-orders { font-size:var(--font-size-lg); font-weight: 700; color: var(--el-text-primary); }
         .rank-amount { font-size:var(--font-size-sm); color: var(--color-danger); font-weight: 600; }
@@ -114,13 +110,13 @@
             .stats-cards { grid-template-columns: repeat(2, 1fr); gap: 14px; }
             .content-grid { grid-template-columns: 1fr; gap: 20px; }
             .stat-card { min-height: 120px; }
-            .stat-card .stat-value { font-size: 30px; }
+            .stat-card .stat-value { font-size: var(--font-size-4xl); }
         }
         @media (max-width: 768px) {
             .container { padding: 12px 16px 16px !important; }
             .stats-cards { grid-template-columns: 1fr; gap: 12px; }
             .stat-card { padding: 18px; min-height: 100px; }
-            .stat-card .stat-value { font-size: 26px; }
+            .stat-card .stat-value { font-size: var(--font-size-3xl); }
             .chart-box { min-height: 300px; }
         }
     </style>
@@ -177,7 +173,7 @@
             </div>
 
             <!-- 门店排行 -->
-            <div class="ranking-panel">
+            <div class="ranking-panel chart-panel">
                 <div class="panel-title">🏆 门店实时排行</div>
                 <div v-if="dashboard && dashboard.storeRanking && dashboard.storeRanking.length > 0">
                     <ul class="rank-list">
@@ -273,8 +269,8 @@
             var orders = hasData ? stores.map(function(s) { return s.todayOrders || 0; }) : [0];
             var amounts = hasData ? stores.map(function(s) { return s.todayAmount || 0; }) : [0];
             // 修改点：协调配色（品牌金为主 + 蓝/青/绿/紫/橙辅），避免前几根红橙像报错
-            var colors = [RgPalette.brand, '#5470c6', '#73c0de', '#91cc75', '#9a60b4',
-                          '#fc8452', '#36a3f5', '#ea7ccc', '#3ba272', '#ee6666'];
+            var colors = [RgPalette.brand, RgPalette.seriesBlue, RgPalette.seriesSky, RgPalette.seriesGreen, RgPalette.seriesViolet,
+                          RgPalette.seriesOrange, RgPalette.seriesCyan, RgPalette.seriesMagenta, RgPalette.seriesGreen2, RgPalette.seriesPink];
 
             // 门店名过长时截断，避免 x 轴标签溢出重叠
             function truncate(name) {
@@ -287,7 +283,7 @@
                 color: colors,
                 tooltip: {
                     trigger: 'axis', axisPointer: { type: 'shadow' },
-                    backgroundColor: 'rgba(255,255,255,0.96)', borderColor: RgPalette.borderLighter2, borderWidth: 1,
+                    backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
                     textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                     formatter: function(params) {
                         var html = '<b>' + params[0].axisValue + '</b><br/>';
@@ -323,7 +319,7 @@
                         name: '订单数', type: 'bar', data: orders,
                         barWidth: 28, barGap: '20%',
                         itemStyle: {
-                            borderRadius: [8, 8, 0, 0],
+                            borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0],
                             color: function(p) { return colors[p.dataIndex % colors.length]; }
                         },
                         label: { show: hasData, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c}' }

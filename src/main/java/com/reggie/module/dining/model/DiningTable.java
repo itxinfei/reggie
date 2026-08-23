@@ -12,6 +12,10 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Positive;
+
 /**
  * 用餐桌台信息
  *
@@ -33,6 +37,7 @@ public class DiningTable implements Serializable {
     private Long tenantId;
 
     @Schema(description = "区域ID", example = "1")
+    @NotNull(message = "区域ID不能为空")
     private Long areaId;
 
     @Schema(description = "区域名称（非数据库字段，用于关联查询）", example = "大厅")
@@ -40,12 +45,16 @@ public class DiningTable implements Serializable {
     private String areaName;
 
     @Schema(description = "桌台名称/编号", example = "A01")
+    @NotBlank(message = "桌台名称不能为空")
     private String name;
 
     @Schema(description = "座位数", example = "4")
+    @NotNull(message = "座位数不能为空")
+    @Positive(message = "座位数必须大于0")
     private Integer seatCount;
 
-    @Schema(description = "桌台状态：FREE=空闲，OCCUPIED=使用中，RESERVED=已预订", example = "FREE")
+    @Schema(description = "桌台状态：FREE=空闲，OCCUPIED=使用中，RESERVED=已预订，CLEANING=清洁中", example = "FREE")
+    @NotBlank(message = "状态不能为空")
     private String status;
 
     @Schema(description = "最低消费金额（元）", example = "50.00")

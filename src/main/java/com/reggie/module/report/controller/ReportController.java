@@ -2,6 +2,8 @@ package com.reggie.module.report.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.report.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -13,7 +15,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,7 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.reggie.module.category.model.Category;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +38,7 @@ import java.util.Map;
 @Slf4j
 @Tag(name = "经营报表")
 @Validated
+@RequireEmployee
 public class ReportController {
 
     @Autowired
@@ -292,7 +293,7 @@ public class ReportController {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             return new ResponseEntity<>(
-                    R.error("报表导出失败: " + e.getMessage()), headers, HttpStatus.INTERNAL_SERVER_ERROR);
+                    R.error("报表导出失败，请稍后重试"), headers, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -312,12 +313,12 @@ public class ReportController {
      * @return 操作结果
      */
     @DeleteMapping("/export/history")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "清除导出历史", description = "清除所有经营报表导出历史记录")
     public R<String> clearExportHistory() {
         reportService.clearExportHistory();
         return R.success("导出历史记录已清除");
     }
 }
-
 
 

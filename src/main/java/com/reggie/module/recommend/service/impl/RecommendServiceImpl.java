@@ -8,7 +8,6 @@ import com.reggie.common.ObjectMapperHolder;
 import com.reggie.module.category.model.Category;
 import com.reggie.module.category.service.CategoryService;
 import com.reggie.module.dish.model.Dish;
-import com.reggie.module.dish.model.DishFlavor;
 import com.reggie.module.dish.service.DishService;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
@@ -22,7 +21,9 @@ import com.reggie.module.recommend.model.BrowseHistory;
 import com.reggie.module.recommend.model.RecommendationCache;
 import com.reggie.module.recommend.model.RecommendationFeedback;
 import com.reggie.module.recommend.model.UserPreferenceTag;
+import com.reggie.module.recommend.service.PreferenceAnalysisService;
 import com.reggie.module.recommend.service.RecommendService;
+import com.reggie.module.recommend.service.analytics.RecommendationAnalyticsService;
 import com.reggie.module.setmeal.model.Setmeal;
 import com.reggie.module.setmeal.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
@@ -82,10 +83,6 @@ public class RecommendServiceImpl implements RecommendService {
     private static final int HYBRID_TIMEOUT_SECONDS = 3;
     /** 相似用户至少共同购买菜品数 */
     private static final int MIN_SHARED_DISHES = 3;
-    /** 概览统计窗口天数（近7天） */
-    private static final int STATS_WINDOW_DAYS = 7;
-    /** 算法对比统计窗口天数（近30天） */
-    private static final int ALGO_COMPARE_DAYS = 30;
     /** 内容匹配评分：品类命中 */
     private static final double SCORE_CATEGORY_MATCH = 0.5;
     /** 内容匹配评分：口味命中 */
@@ -98,6 +95,8 @@ public class RecommendServiceImpl implements RecommendService {
     private static final double PRICE_ECONOMY_MAX = 20;
     private static final double PRICE_AFFORDABLE_MAX = 40;
     private static final double PRICE_MID_RANGE_MAX = 80;
+    /** 新品推荐：最近 N 天上架的菜品视为新品 */
+    private static final long ALGO_COMPARE_DAYS = 30;
     /** 推荐缓存置信度：各算法基础置信度 */
     private static final double CONFIDENCE_HYBRID = 0.85;
     private static final double CONFIDENCE_CF = 0.70;
@@ -123,7 +122,7 @@ public class RecommendServiceImpl implements RecommendService {
     private RecommendationFeedbackMapper feedbackMapper;
     /** 用户偏好分析服务 */
     @Autowired
-    private PreferenceAnalysisServiceImpl preferenceAnalysisService;
+    private PreferenceAnalysisService preferenceAnalysisService;
 
     // 核心业务依赖：
     /** 订单服务 */
@@ -144,6 +143,10 @@ public class RecommendServiceImpl implements RecommendService {
 
     /** JSON序列化工具 */
     private final ObjectMapper objectMapper = ObjectMapperHolder.getDefault();
+
+    /** 概览页统计分析服务（从1117行超类拆分出的独立职责单元） */
+    @Autowired
+    private RecommendationAnalyticsService analyticsService;
 
     /**
      * 应用启动时清理过期缓存
@@ -248,7 +251,7 @@ public class RecommendServiceImpl implements RecommendService {
                .eq(Dish::getStatus, 1)
                .ge(Dish::getCreateTime, thirtyDaysAgo)
                .orderByDesc(Dish::getCreateTime)
-               .last("LIMIT " + limit * 2);
+               .last("LIMIT " + sanitizeLimit(limit * 2));
 
         List<Dish> newDishes = dishService.list(wrapper);
 
@@ -343,6 +346,26 @@ public class RecommendServiceImpl implements RecommendService {
         wrapper.eq(tenantId != null, Dish::getTenantId, tenantId)
                .eq(Dish::getStatus, 1);
         List<Dish> candidateDishes = dishService.list(wrapper);
+        if (candidateDishes.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 预加载所有品类（消除逐个 getById 的 N+1 查询）
+        Set<Long> categoryIds = new HashSet<>();
+        for (Dish dish : candidateDishes) {
+            if (dish.getCategoryId() != null) {
+                categoryIds.add(dish.getCategoryId());
+            }
+        }
+        Map<Long, String> categoryNameMap = new HashMap<>();
+        if (!categoryIds.isEmpty()) {
+            List<Category> categories = categoryService.listByIds(categoryIds);
+            if (categories != null) {
+                for (Category c : categories) {
+                    categoryNameMap.put(c.getId(), c.getName());
+                }
+            }
+        }
 
         // 5. 基于内容匹配评分
         Map<Dish, Double> scoredDishes = new HashMap<>();
@@ -350,7 +373,7 @@ public class RecommendServiceImpl implements RecommendService {
             if (purchasedIds.contains(dish.getId())) {
                 continue;
             }
-            double score = calculateContentScore(dish, tastePrefs, categoryPrefs, tags);
+            double score = calculateContentScore(dish, tastePrefs, categoryPrefs, tags, categoryNameMap);
             if (score > 0) {
                 scoredDishes.put(dish, score);
             }
@@ -463,247 +486,30 @@ public class RecommendServiceImpl implements RecommendService {
         log.info("[推荐引擎] 刷新用户{}的推荐缓存完成", userId);
     }
 
+    // 域4 结构优化：概览统计方法已拆分至 RecommendationAnalyticsService
     @Override
     public Map<String, Object> calculateStats() {
-        Long tenantId = BaseContext.getCurrentTenantId();
-        Map<String, Object> stats = new LinkedHashMap<>();
-
-        try {
-            // 1. 总用户数（有订单记录的用户）
-            LambdaQueryWrapper<Orders> orderWrapper = new LambdaQueryWrapper<>();
-            if (tenantId != null) {
-                orderWrapper.eq(Orders::getTenantId, tenantId);
-            }
-            int totalOrderUsers = (int) orderService.count(orderWrapper);
-
-            // 2. 有推荐缓存的用户数 → 覆盖率
-            LambdaQueryWrapper<RecommendationCache> cacheWrapper = new LambdaQueryWrapper<>();
-            cacheWrapper.gt(RecommendationCache::getExpireTime, LocalDateTime.now());
-            if (tenantId != null) {
-                cacheWrapper.eq(RecommendationCache::getTenantId, tenantId);
-            }
-            int cachedUsers = (int) cacheMapper.selectCount(cacheWrapper);
-            int hybridRate = totalOrderUsers > 0 ? (int) (cachedUsers * 100.0 / totalOrderUsers) : 0;
-
-            // 3. 推荐反馈统计 → 点击率(click) / 转化率(order)
-            LambdaQueryWrapper<RecommendationFeedback> feedbackWrapper =
-                    new LambdaQueryWrapper<>();
-            LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(STATS_WINDOW_DAYS);
-            feedbackWrapper.ge(RecommendationFeedback::getCreateTime, sevenDaysAgo);
-            if (tenantId != null) {
-                feedbackWrapper.eq(RecommendationFeedback::getTenantId, tenantId);
-            }
-            List<RecommendationFeedback> feedbacks = feedbackMapper.selectList(feedbackWrapper);
-
-            long totalFeedback = feedbacks.size();
-            long clickCount = feedbacks.stream()
-                    .filter(f -> f.getFeedbackType() == RecommendationFeedback.FEEDBACK_CLICK)
-                    .count();
-            long orderCount = feedbacks.stream()
-                    .filter(f -> f.getFeedbackType() == RecommendationFeedback.FEEDBACK_ORDER)
-                    .count();
-
-            int clickRate = totalFeedback > 0 ? (int) (clickCount * 100.0 / totalFeedback) : 0;
-            int conversionRate = totalFeedback > 0 ? (int) (orderCount * 100.0 / totalFeedback) : 0;
-
-            // 4. 推荐贡献GMV：近7天通过推荐反馈产生的订单金额
-            double recommendGMV = 0;
-            if (orderCount > 0) {
-                Set<Long> feedbackUserIds = feedbacks.stream()
-                        .filter(f -> f.getFeedbackType() == RecommendationFeedback.FEEDBACK_ORDER)
-                        .map(RecommendationFeedback::getUserId)
-                        .collect(Collectors.toSet());
-                LambdaQueryWrapper<Orders> gmvWrapper = new LambdaQueryWrapper<>();
-                gmvWrapper.in(Orders::getUserId, feedbackUserIds)
-                        .ge(Orders::getCreateTime, sevenDaysAgo)
-                        .eq(Orders::getStatus, Orders.STATUS_COMPLETED); // 已完成订单
-                if (tenantId != null) {
-                    gmvWrapper.eq(Orders::getTenantId, tenantId);
-                }
-                List<Orders> orders = orderService.list(gmvWrapper);
-                recommendGMV = orders.stream()
-                        .mapToDouble(o -> o.getAmount() != null ? o.getAmount().doubleValue() : 0)
-                        .sum();
-            }
-
-            stats.put("hybridRate", hybridRate);
-            stats.put("clickRate", clickRate);
-            stats.put("conversionRate", conversionRate);
-            stats.put("recommendGMV", Math.round(recommendGMV));
-            stats.put("cachedUsers", cachedUsers);
-            stats.put("totalOrderUsers", totalOrderUsers);
-        } catch (Exception e) {
-            log.warn("[推荐引擎] 统计数据计算异常", e);
-            stats.put("hybridRate", 0);
-            stats.put("clickRate", 0);
-            stats.put("conversionRate", 0);
-            stats.put("recommendGMV", 0);
-        }
-
-        return stats;
+        return analyticsService.calculateStats();
     }
-
-    // ==================== 修改点：概览页真实统计方法（替换Math.random()假数据） ====================
 
     @Override
     public Map<String, Integer> getFeedbackStats(int days) {
-        Map<String, Integer> stats = new LinkedHashMap<>();
-        stats.put("click", 0);
-        stats.put("favorite", 0);
-        stats.put("cart", 0);
-        stats.put("order", 0);
-        stats.put("unlike", 0);
-
-        try {
-            String startTime = LocalDateTime.now().minusDays(days).toString();
-            Long tenantId = BaseContext.getCurrentTenantId();
-            List<Map<String, Object>> rows = feedbackMapper.countByTypeSince(startTime, tenantId);
-
-            for (Map<String, Object> row : rows) {
-                Integer type = (Integer) row.get("feedback_type");
-                Long cnt = ((Number) row.get("cnt")).longValue();
-                switch (type) {
-                    case RecommendationFeedback.FEEDBACK_CLICK:
-                        stats.put("click", cnt.intValue());
-                        break;
-                    case RecommendationFeedback.FEEDBACK_FAVORITE:
-                        stats.put("favorite", cnt.intValue());
-                        break;
-                    case RecommendationFeedback.FEEDBACK_ADD_CART:
-                        stats.put("cart", cnt.intValue());
-                        break;
-                    case RecommendationFeedback.FEEDBACK_ORDER:
-                        stats.put("order", cnt.intValue());
-                        break;
-                    case RecommendationFeedback.FEEDBACK_NOT_INTERESTED:
-                        stats.put("unlike", cnt.intValue());
-                        break;
-                    default:
-                        break;
-                }
-            }
-            log.debug("[推荐引擎] 反馈分布统计: days={}, stats={}", days, stats);
-        } catch (Exception e) {
-            log.warn("[推荐引擎] 反馈分布统计异常", e);
-        }
-        return stats;
+        return analyticsService.getFeedbackStats(days);
     }
 
     @Override
     public List<Map<String, Object>> getPreferenceDistribution() {
-        try {
-            List<Map<String, Object>> result = userPreferenceMapper.countTasteDistribution();
-            if (result != null && !result.isEmpty()) {
-                log.debug("[推荐引擎] 口味偏好分布: count={}", result.size());
-                return result;
-            }
-        } catch (Exception e) {
-            log.warn("[推荐引擎] 偏好分布查询异常", e);
-        }
-        return Collections.emptyList();
+        return analyticsService.getPreferenceDistribution();
     }
 
     @Override
     public Map<String, Object> getAlgoCompare() {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("algos", Arrays.asList("协同过滤", "内容推荐", "热门排行", "混合推荐"));
-        result.put("ctRates", Arrays.asList(0.0, 0.0, 0.0, 0.0));
-        result.put("cvRates", Arrays.asList(0.0, 0.0, 0.0, 0.0));
-
-        try {
-            String startTime = LocalDateTime.now().minusDays(ALGO_COMPARE_DAYS).toString();
-            Long tenantId = BaseContext.getCurrentTenantId();
-            List<Map<String, Object>> rows = feedbackMapper.countByAlgorithmSince(startTime, tenantId);
-
-            // 算法名 -> 索引映射
-            Map<String, Integer> algoIndex = new HashMap<>();
-            algoIndex.put("CF", 0);
-            algoIndex.put("CONTENT", 1);
-            algoIndex.put("HOT", 2);
-            algoIndex.put("HYBRID", 3);
-
-            double[] ctRates = new double[]{0.0, 0.0, 0.0, 0.0};
-            double[] cvRates = new double[]{0.0, 0.0, 0.0, 0.0};
-
-            for (Map<String, Object> row : rows) {
-                String algo = (String) row.get("algo_name");
-                Long clickCnt = ((Number) row.get("click_cnt")).longValue();
-                Long orderCnt = ((Number) row.get("order_cnt")).longValue();
-                Long totalCnt = ((Number) row.get("total_cnt")).longValue();
-
-                Integer idx = algoIndex.getOrDefault(algo, -1);
-                if (idx >= 0 && totalCnt > 0) {
-                    ctRates[idx] = Math.round(clickCnt * 1000.0 / totalCnt) / 10.0;
-                    cvRates[idx] = Math.round(orderCnt * 1000.0 / totalCnt) / 10.0;
-                }
-            }
-
-            List<Double> ctList = new ArrayList<>();
-            List<Double> cvList = new ArrayList<>();
-            for (int i = 0; i < 4; i++) {
-                ctList.add(ctRates[i]);
-                cvList.add(cvRates[i]);
-            }
-            result.put("ctRates", ctList);
-            result.put("cvRates", cvList);
-
-            log.debug("[推荐引擎] 算法效果对比: ct={}, cv={}", ctList, cvList);
-        } catch (Exception e) {
-            log.warn("[推荐引擎] 算法对比查询异常", e);
-        }
-        return result;
+        return analyticsService.getAlgoCompare();
     }
 
     @Override
     public Map<String, Object> getBrowseTrend(int days) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        List<String> dates = new ArrayList<>();
-        List<Integer> browseCount = new ArrayList<>();
-        List<Integer> cartCount = new ArrayList<>();
-
-        try {
-            String startTime = LocalDateTime.now().minusDays(days).toString();
-            List<Map<String, Object>> rows = browseHistoryMapper.countDailyTrend(startTime, BaseContext.getCurrentTenantId());
-
-            // 构建日期索引Map，方便按日期查找
-            Map<String, Map<String, Object>> dateMap = new LinkedHashMap<>();
-            for (Map<String, Object> row : rows) {
-                String date = row.get("date").toString();
-                dateMap.put(date, row);
-            }
-
-            // 按日期顺序填充，缺失日期补0
-            for (int i = days - 1; i >= 0; i--) {
-                java.time.LocalDate d = java.time.LocalDate.now().minusDays(i);
-                String dateKey = d.toString();
-                String label = d.toString().substring(5); // MM-DD 格式
-                dates.add(label);
-
-                Map<String, Object> row = dateMap.get(dateKey);
-                if (row != null) {
-                    browseCount.add(((Number) row.get("browse_count")).intValue());
-                    cartCount.add(((Number) row.get("cart_count")).intValue());
-                } else {
-                    browseCount.add(0);
-                    cartCount.add(0);
-                }
-            }
-
-            log.debug("[推荐引擎] 浏览趋势: dates size={}, browse={}, cart={}", dates.size(), browseCount, cartCount);
-        } catch (Exception e) {
-            log.warn("[推荐引擎] 浏览趋势查询异常", e);
-            // 异常时返回空日期+0值
-            for (int i = days - 1; i >= 0; i--) {
-                java.time.LocalDate d = java.time.LocalDate.now().minusDays(i);
-                dates.add(d.toString().substring(5));
-                browseCount.add(0);
-                cartCount.add(0);
-            }
-        }
-        result.put("dates", dates);
-        result.put("browseCount", browseCount);
-        result.put("cartCount", cartCount);
-        return result;
+        return analyticsService.getBrowseTrend(days);
     }
 
     // ==================== 私有方法：核心算法逻辑 ====================
@@ -785,13 +591,14 @@ public class RecommendServiceImpl implements RecommendService {
      */
     private double calculateContentScore(Dish dish, List<String> tastePrefs,
                                           List<String> categoryPrefs,
-                                          List<UserPreferenceTag> allTags) {
+                                          List<UserPreferenceTag> allTags,
+                                          Map<Long, String> categoryNameMap) {
         double score = 0.0;
 
-        // 品类匹配
-        if (dish.getCategoryId() != null) {
-            Category category = categoryService.getById(dish.getCategoryId());
-            if (category != null && categoryPrefs.contains(category.getName())) {
+        // 品类匹配（使用预加载的品类Map，避免N+1查询）
+        if (dish.getCategoryId() != null && categoryNameMap != null) {
+            String categoryName = categoryNameMap.get(dish.getCategoryId());
+            if (categoryName != null && categoryPrefs.contains(categoryName)) {
                 score += SCORE_CATEGORY_MATCH;
             }
         }
@@ -978,39 +785,68 @@ public class RecommendServiceImpl implements RecommendService {
     }
 
     /**
-     * 构建菜品结果列表
+     * 构建菜品结果列表（批量加载，避免N+1查询）
      */
     private List<Map<String, Object>> buildDishResultList(List<Long> dishIds, int limit) {
-        return dishIds.stream()
-                .limit(limit)
-                .map(id -> {
-                    Dish dish = dishService.getById(id);
-                    return dish != null ? dishToMap(dish) : null;
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        if (dishIds == null || dishIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> limitedIds = dishIds.size() <= limit
+                ? dishIds
+                : new ArrayList<>(dishIds.subList(0, limit));
+        // 批量查询，避免逐个 getById 导致的 N+1
+        List<Dish> dishes = dishService.listByIds(limitedIds);
+        if (dishes == null || dishes.isEmpty()) {
+            return Collections.emptyList();
+        }
+        java.util.Map<Long, Dish> dishMap = new java.util.LinkedHashMap<>();
+        for (Dish d : dishes) {
+            dishMap.put(d.getId(), d);
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Long id : limitedIds) {
+            Dish dish = dishMap.get(id);
+            if (dish != null) {
+                result.add(dishToMap(dish));
+            }
+        }
+        return result;
     }
 
     /**
-     * 构建套餐结果列表
+     * 构建套餐结果列表（批量加载，避免N+1查询）
      */
     private List<Map<String, Object>> buildSetmealResultList(List<Long> ids, int limit) {
-        return ids.stream()
-                .limit(limit)
-                .map(id -> {
-                    Setmeal setmeal = setmealService.getById(id);
-                    if (setmeal == null) return null;
-                    Map<String, Object> map = new LinkedHashMap<>();
-                    map.put("id", setmeal.getId());
-                    map.put("name", setmeal.getName());
-                    map.put("image", setmeal.getImage());
-                    map.put("price", setmeal.getPrice());
-                    map.put("description", setmeal.getDescription());
-                    map.put("type", "setmeal");
-                    return map;
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> limitedIds = ids.size() <= limit
+                ? ids
+                : new ArrayList<>(ids.subList(0, limit));
+        // 批量查询，避免逐个 getById 导致的 N+1
+        List<Setmeal> setmeals = setmealService.listByIds(limitedIds);
+        if (setmeals == null || setmeals.isEmpty()) {
+            return Collections.emptyList();
+        }
+        java.util.Map<Long, Setmeal> setmealMap = new java.util.LinkedHashMap<>();
+        for (Setmeal s : setmeals) {
+            setmealMap.put(s.getId(), s);
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Long id : limitedIds) {
+            Setmeal setmeal = setmealMap.get(id);
+            if (setmeal != null) {
+                Map<String, Object> map = new LinkedHashMap<>();
+                map.put("id", setmeal.getId());
+                map.put("name", setmeal.getName());
+                map.put("image", setmeal.getImage());
+                map.put("price", setmeal.getPrice());
+                map.put("description", setmeal.getDescription());
+                map.put("type", "setmeal");
+                result.add(map);
+            }
+        }
+        return result;
     }
 
     /**
@@ -1037,7 +873,7 @@ public class RecommendServiceImpl implements RecommendService {
         wrapper.eq(Setmeal::getCategoryId, targetId)
                .eq(Setmeal::getStatus, 1)
                .orderByDesc(Setmeal::getUpdateTime)
-               .last("LIMIT " + limit);
+               .last("LIMIT " + sanitizeLimit(limit));
         return setmealService.list(wrapper).stream()
                 .map(Setmeal::getId)
                 .collect(Collectors.toList());
@@ -1051,10 +887,19 @@ public class RecommendServiceImpl implements RecommendService {
         wrapper.eq(tenantId != null, Setmeal::getTenantId, tenantId)
                .eq(Setmeal::getStatus, 1)
                .orderByDesc(Setmeal::getUpdateTime)
-               .last("LIMIT " + limit);
+               .last("LIMIT " + sanitizeLimit(limit));
         return setmealService.list(wrapper).stream()
                 .map(Setmeal::getId)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 校验 LIMIT 参数，防止负值/过大值导致查询异常
+     * 修复说明：原实现 .last("LIMIT " + limit) 中 limit 为 int 类型，
+     * 虽不存在字符串注入，但负值/超大值（如 limit * 2 溢出）会生成非法或性能恶化的 SQL。
+     */
+    private static int sanitizeLimit(int limit) {
+        return Math.max(1, Math.min(limit, 100));
     }
 }
 

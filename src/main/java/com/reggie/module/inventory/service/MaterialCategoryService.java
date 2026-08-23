@@ -2,8 +2,6 @@ package com.reggie.module.inventory.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.reggie.module.category.service.CategoryService;
-import com.reggie.module.category.model.Category;
 import com.reggie.module.inventory.model.MaterialCategory;
 
 /**
@@ -26,5 +24,4 @@ public interface MaterialCategoryService extends IService<MaterialCategory> {
      */
     Page<MaterialCategory> pageQuery(int page, int pageSize);
 }
-
 

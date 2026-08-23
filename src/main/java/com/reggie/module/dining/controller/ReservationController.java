@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.CreateReservationDTO;
 import com.reggie.module.dining.model.Reservation;
 import com.reggie.module.dining.service.ReservationService;
@@ -13,7 +14,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,9 +22,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.reggie.common.RateLimit;
 
 import javax.validation.Valid;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
@@ -38,6 +38,7 @@ import java.time.format.DateTimeFormatter;
 @RestController
 @RequestMapping("/api/dining/reservation")
 @Tag(name = "预订管理")
+@RequireEmployee
 public class ReservationController {
 
     @Autowired
@@ -95,6 +96,7 @@ public class ReservationController {
      * @return 预订记录
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增预订", description = "创建新的预订记录，支持指定桌台和人数")
     public R<Reservation> create(@Valid @RequestBody CreateReservationDTO dto) {
         log.info("新增预订: customerName={}, phone={}", dto.getCustomerName(),
@@ -111,6 +113,7 @@ public class ReservationController {
      * @return 操作结果
      */
     @PutMapping("/confirm/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "确认预订", description = "确认预订信息，标记为已确认状态")
     @Parameter(name = "id", description = "预订ID", required = true)
     public R<String> confirm(@PathVariable Long id) {
@@ -125,6 +128,7 @@ public class ReservationController {
      * @return 操作结果
      */
     @PutMapping("/cancel/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "取消预订", description = "取消指定预订记录")
     @Parameter(name = "id", description = "预订ID", required = true)
     public R<String> cancel(@PathVariable Long id) {
@@ -139,6 +143,7 @@ public class ReservationController {
      * @return 操作结果
      */
     @PutMapping("/arrive/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "到店", description = "标记顾客已到店")
     @Parameter(name = "id", description = "预订ID", required = true)
     public R<String> arrive(@PathVariable Long id) {

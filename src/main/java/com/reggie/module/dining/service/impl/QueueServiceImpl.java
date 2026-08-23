@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.module.dining.mapper.QueueMapper;
 import com.reggie.module.dining.model.QueueRecord;
+import com.reggie.module.dining.vo.QueueStatsVO;
 import com.reggie.enums.QueueRecordStatus;
 import com.reggie.module.dining.service.QueueService;
 import lombok.extern.slf4j.Slf4j;
@@ -114,7 +115,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
             log.warn("[排队取号] 获取锁被中断：{}", lockKey);
         } catch (Exception e) {
             // Redis 连接异常时降级放行（测试环境或无 Redis 时）
-            log.warn("[排队取号] 获取锁异常，降级放行：{}, error={}", lockKey, e.getMessage());
+            log.warn("[排队取号] 获取锁异常，降级放行：{}, error={}", lockKey, e.getMessage(), e);
         }
         return true; // 异常时降级放行，避免阻塞业务
     }
@@ -130,7 +131,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
         try {
             redisTemplate.delete(lockKey);
         } catch (Exception e) {
-            log.warn("[排队取号] 释放锁失败：{}, error={}", lockKey, e.getMessage());
+            log.warn("[排队取号] 释放锁失败：{}, error={}", lockKey, e.getMessage(), e);
         }
     }
 
@@ -175,6 +176,161 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
         if (!success) {
             log.warn("[排队取消] 取消失败，当前状态非WAITING或记录不存在: id={}", id);
         }
+    }
+
+    /**
+     * 退回等待：CALLED → WAITING（用于误叫号纠错）
+     *
+     * @param id 排队记录ID
+     */
+    @Override
+    public void recallQueue(Long id) {
+        if (id == null) {
+            log.warn("[退回等待] id为空，跳过");
+            return;
+        }
+        QueueRecord record = getById(id);
+        if (record == null) {
+            log.warn("[退回等待] 记录不存在: id={}", id);
+            return;
+        }
+        // 租户归属校验
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(record.getTenantId())) {
+            log.warn("[退回等待] 无权操作其他租户的排队记录: id={}", id);
+            return;
+        }
+        if (!QueueRecordStatus.CALLED.getValue().equals(record.getStatus())) {
+            log.warn("[退回等待] 当前状态非CALLED，无法退回: id={}, status={}",
+                    id, record.getStatus());
+            return;
+        }
+        boolean success = lambdaUpdate()
+                .eq(QueueRecord::getId, id)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.CALLED.getValue())
+                .set(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
+                .update();
+        if (success) {
+            log.info("[退回等待] 排队记录已退回等待: id={}, queueNo={}", id, record.getQueueNo());
+        } else {
+            log.warn("[退回等待] CAS更新失败: id={}", id);
+        }
+    }
+
+    /**
+     * 恢复排队：CANCELLED → WAITING（用于误取消纠错）
+     *
+     * @param id 排队记录ID
+     */
+    @Override
+    public void reactivateQueue(Long id) {
+        if (id == null) {
+            log.warn("[恢复排队] id为空，跳过");
+            return;
+        }
+        QueueRecord record = getById(id);
+        if (record == null) {
+            log.warn("[恢复排队] 记录不存在: id={}", id);
+            return;
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(record.getTenantId())) {
+            log.warn("[恢复排队] 无权操作其他租户的排队记录: id={}", id);
+            return;
+        }
+        if (!QueueRecordStatus.CANCELLED.getValue().equals(record.getStatus())) {
+            log.warn("[恢复排队] 当前状态非CANCELLED，无法恢复: id={}, status={}",
+                    id, record.getStatus());
+            return;
+        }
+        boolean success = lambdaUpdate()
+                .eq(QueueRecord::getId, id)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.CANCELLED.getValue())
+                .set(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
+                .update();
+        if (success) {
+            log.info("[恢复排队] 排队记录已恢复: id={}, queueNo={}", id, record.getQueueNo());
+        } else {
+            log.warn("[恢复排队] CAS更新失败: id={}", id);
+        }
+    }
+
+    /**
+     * 安排入座：CALLED → SEATED
+     * CAS 乐观更新，仅当状态为 CALLED 时才允许入座
+     *
+     * @param queueId 排队记录ID
+     * @param tableId 桌台ID（可选，暂存但不写库，前端可展示）
+     */
+    @Override
+    public void seatCustomer(Long queueId, Long tableId) {
+        if (queueId == null) {
+            log.warn("[安排入座] queueId为空，跳过");
+            return;
+        }
+        QueueRecord record = getById(queueId);
+        if (record == null) {
+            log.warn("[安排入座] 排队记录不存在: queueId={}", queueId);
+            return;
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(record.getTenantId())) {
+            log.warn("[安排入座] 无权操作其他租户的排队记录: queueId={}", queueId);
+            return;
+        }
+        if (!QueueRecordStatus.CALLED.getValue().equals(record.getStatus())) {
+            log.warn("[安排入座] 当前状态非CALLED，无法入座: queueId={}, status={}",
+                    queueId, record.getStatus());
+            return;
+        }
+        // CAS 更新：CALLED → SEATED
+        boolean success = lambdaUpdate()
+                .eq(QueueRecord::getId, queueId)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.CALLED.getValue())
+                .set(QueueRecord::getStatus, QueueRecordStatus.SEATED.getValue())
+                .update();
+        if (success) {
+            log.info("[安排入座] 排队记录已入座: queueId={}, queueNo={}, tableId={}",
+                    queueId, record.getQueueNo(), tableId);
+        } else {
+            log.warn("[安排入座] CAS更新失败，记录已被其他线程修改: queueId={}", queueId);
+        }
+    }
+
+    /**
+     * 排队统计：按状态分类计数
+     * 使用 LambdaQueryWrapper + count() 单次查询各状态数量
+     */
+    @Override
+    public QueueStatsVO queueStats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        QueueStatsVO stats = new QueueStatsVO();
+
+        // 总数
+        long total = lambdaQuery()
+                .eq(QueueRecord::getTenantId, tenantId)
+                .count();
+        stats.setTotalQueues(total);
+
+        // 各状态计数
+        stats.setWaitingCount(Long.valueOf(lambdaQuery()
+                .eq(QueueRecord::getTenantId, tenantId)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
+                .count()));
+        stats.setCalledCount(Long.valueOf(lambdaQuery()
+                .eq(QueueRecord::getTenantId, tenantId)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.CALLED.getValue())
+                .count()));
+        stats.setSeatedCount(Long.valueOf(lambdaQuery()
+                .eq(QueueRecord::getTenantId, tenantId)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.SEATED.getValue())
+                .count()));
+        stats.setCancelledCount(Long.valueOf(lambdaQuery()
+                .eq(QueueRecord::getTenantId, tenantId)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.CANCELLED.getValue())
+                .count()));
+
+        return stats;
     }
 }
 

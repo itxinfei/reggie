@@ -79,7 +79,7 @@ public class PermissionServiceImpl implements PermissionService {
                 return cached;
             }
         } catch (Exception e) {
-            log.warn("[权限缓存] 读取缓存失败，降级查数据库：{}", e.getMessage());
+            log.warn("[权限缓存] 读取缓存失败，降级查数据库：{}", e.getMessage(), e);
         }
 
         // 查询该角色的所有权限
@@ -90,7 +90,7 @@ public class PermissionServiceImpl implements PermissionService {
             try {
                 redisTemplate.opsForValue().set(cacheKey, keys, CACHE_TTL_HOURS, TimeUnit.HOURS);
             } catch (Exception e) {
-                log.warn("[权限缓存] 写入缓存失败：{}", e.getMessage());
+                log.warn("[权限缓存] 写入缓存失败：{}", e.getMessage(), e);
             }
         }
         return keys;
@@ -121,7 +121,7 @@ public class PermissionServiceImpl implements PermissionService {
             redisTemplate.delete(cacheKey);
             log.info("[权限缓存] 已清除角色权限缓存：roleId={}", roleId);
         } catch (Exception e) {
-            log.warn("[权限缓存] 清除缓存失败：roleId={}, error={}", roleId, e.getMessage());
+            log.warn("[权限缓存] 清除缓存失败：roleId={}, error={}", roleId, e.getMessage(), e);
         }
     }
 
@@ -161,7 +161,7 @@ public class PermissionServiceImpl implements PermissionService {
                 log.info("[权限缓存] 已清除所有权限缓存，共{}条", keys.size());
             }
         } catch (Exception e) {
-            log.warn("[权限缓存] 清除所有缓存失败：{}", e.getMessage());
+            log.warn("[权限缓存] 清除所有缓存失败：{}", e.getMessage(), e);
         }
     }
 

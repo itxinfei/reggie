@@ -28,10 +28,7 @@
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
   font-size: var(--font-size-sm);
-  padding-bottom: var(--space-2);
   line-height: 1.5;
-  display: flex;
-  align-items: center;
 }
 
 /* 表单项内容样式 */
@@ -50,8 +47,8 @@
 }
 
 .el-input__inner {
-  height: 36px;
-  line-height: 36px;
+  height: 32px;
+  line-height: 32px;
   padding: 0 var(--space-3);
   font-size: var(--font-size-sm);
   border-radius: var(--radius-md);
@@ -83,7 +80,7 @@
 }
 
 .el-input__icon {
-  line-height: 36px;
+  line-height: 32px;
 }
 
 /* ========== 文本域样式优化 ========== */
@@ -309,8 +306,8 @@
 .el-input-number .el-input-number__decrease,
 .el-input-number .el-input-number__increase {
   width: 30px;
-  height: 36px;
-  line-height: 36px;
+  height: 32px;
+  line-height: 32px;
   color: var(--text-muted);
   transition: var(--transition-color);
 }

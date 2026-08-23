@@ -8,6 +8,7 @@
                is_deleted, create_time, update_time, tenant_id
         FROM ai_conversation
         WHERE user_id = #{userId}
+          AND tenant_id = #{tenantId}
           AND is_deleted = #{isDeleted}
         ORDER BY update_time DESC
         LIMIT #{offset}, #{limit}

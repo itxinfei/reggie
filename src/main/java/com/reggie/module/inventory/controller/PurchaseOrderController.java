@@ -4,6 +4,7 @@ import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.AddPurchaseDetailDTO;
 import com.reggie.dto.CreatePurchaseOrderDTO;
@@ -23,7 +24,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -75,6 +75,7 @@ public class PurchaseOrderController {
      * @return 采购单信息
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "创建采购单", description = "创建新的采购单并关联供应商")
     public R<PurchaseOrder> create(@Validated @RequestBody CreatePurchaseOrderDTO dto) {
         PurchaseOrder po = purchaseOrderService.createOrder(dto.getSupplierId(), dto.getOperator(), dto.getRemark());
@@ -111,6 +112,7 @@ public class PurchaseOrderController {
      * @return 操作结果
      */
     @PostMapping("/addDetail")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "添加明细", description = "为采购单添加食材明细项")
     public R<String> addDetail(@Validated @RequestBody AddPurchaseDetailDTO dto) {
         purchaseOrderService.addDetail(dto.getOrderId(), dto.getMaterialId(), dto.getQty(), dto.getUnitPrice());
@@ -123,6 +125,7 @@ public class PurchaseOrderController {
      * @return 操作结果
      */
     @PutMapping("/receive/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "收货", description = "确认采购单收货并自动增加库存")
     @Parameter(name = "id", description = "采购单ID", required = true)
     public R<String> receive(@PathVariable Long id) {
@@ -136,6 +139,7 @@ public class PurchaseOrderController {
      * @return 操作结果
      */
     @PutMapping("/cancel/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "取消", description = "取消采购单")
     @Parameter(name = "id", description = "采购单ID", required = true)
     public R<String> cancel(@PathVariable Long id) {
@@ -149,6 +153,7 @@ public class PurchaseOrderController {
      * @return 操作结果
      */
     @PutMapping("/approve/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "审核通过", description = "审核通过采购单，将草稿状态转为已下单状态，允许后续收货")
     @Parameter(name = "id", description = "采购单ID", required = true)
     public R<String> approve(@PathVariable Long id) {

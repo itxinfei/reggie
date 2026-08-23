@@ -8,6 +8,7 @@ import com.aliyuncs.exceptions.ClientException;
 import com.aliyuncs.profile.DefaultProfile;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.LogMaskUtils;
 import com.reggie.common.ObjectMapperHolder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,6 +42,11 @@ public final class SMSUtils {
     private static volatile String accessKeySecret;
 
     /**
+     * 阿里云短信客户端（线程安全，复用实例避免每次创建）
+     */
+    private static volatile IAcsClient acsClient;
+
+    /**
      * JSON序列化工具（线程安全，复用实例）
      */
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
@@ -54,6 +60,13 @@ public final class SMSUtils {
     public static void init(String keyId, String keySecret) {
         accessKeyId = keyId;
         accessKeySecret = keySecret;
+        // 初始化或更新客户端实例
+        if (keyId != null && !keyId.isEmpty() && keySecret != null && !keySecret.isEmpty()) {
+            DefaultProfile profile = DefaultProfile.getProfile("cn-hangzhou", keyId, keySecret);
+            acsClient = new DefaultAcsClient(profile);
+        } else {
+            acsClient = null;
+        }
         log.info("SMS凭证已初始化, accessKeyId={}", maskKey(keyId));
     }
 
@@ -68,11 +81,13 @@ public final class SMSUtils {
 	public static void sendMessage(String signName, String templateCode,String phoneNumbers,String param){
 	    if (accessKeyId == null || accessKeyId.isEmpty() || accessKeySecret == null || accessKeySecret.isEmpty()) {
 	        log.warn("[短信Mock] 未配置SMS凭证，模拟发送: phone={}, sign={}, template={}, param={}",
-	                phoneNumbers, signName, templateCode, param);
+	                LogMaskUtils.maskPhone(phoneNumbers), signName, templateCode, param);
 	        return;
 	    }
-		DefaultProfile profile = DefaultProfile.getProfile("cn-hangzhou", accessKeyId, accessKeySecret);
-		IAcsClient client = new DefaultAcsClient(profile);
+	    if (acsClient == null) {
+	        log.error("[短信] 客户端未初始化，请先调用 init() 方法");
+	        throw new RuntimeException("短信客户端未初始化");
+	    }
 
 		SendSmsRequest request = new SendSmsRequest();
 		request.setSysRegionId("cn-hangzhou");
@@ -85,20 +100,20 @@ public final class SMSUtils {
 		try {
 			request.setTemplateParam(OBJECT_MAPPER.writeValueAsString(templateParams));
 		} catch (JsonProcessingException e) {
-			log.error("短信模板参数JSON序列化失败，phone={}, param={}", phoneNumbers, param, e);
+			log.error("短信模板参数JSON序列化失败，phone={}, param={}", LogMaskUtils.maskPhone(phoneNumbers), param, e);
 			throw new RuntimeException("短信参数序列化失败: " + e.getMessage(), e);
 		}
 		try {
-			SendSmsResponse response = client.getAcsResponse(request);
+			SendSmsResponse response = acsClient.getAcsResponse(request);
 			if ("OK".equals(response.getCode())) {
-				log.info("短信发送成功，phone={}, bizId={}", phoneNumbers, response.getBizId());
+				log.info("短信发送成功，phone={}, bizId={}", LogMaskUtils.maskPhone(phoneNumbers), response.getBizId());
 			} else {
-				log.error("短信发送失败，phone={}, code={}, message={}", 
-					phoneNumbers, response.getCode(), response.getMessage());
+				log.error("短信发送失败，phone={}, code={}, message={}",
+					LogMaskUtils.maskPhone(phoneNumbers), response.getCode(), response.getMessage());
 				throw new RuntimeException("短信发送失败: " + response.getMessage());
 			}
 		}catch (ClientException e) {
-			log.error("短信发送异常，phone={}", phoneNumbers, e);
+			log.error("短信发送异常，phone={}", LogMaskUtils.maskPhone(phoneNumbers), e);
 			throw new RuntimeException("短信发送异常: " + e.getMessage(), e);
 		}
 	}
@@ -113,6 +128,16 @@ public final class SMSUtils {
 	    if (key == null || key.length() <= 8) return "***";
 	    return key.substring(0, 4) + "****" + key.substring(key.length() - 4);
 	}
+
+    /**
+     * 获取阿里云短信客户端实例（线程安全，可复用）
+     * 供其他模块调用，避免重复创建客户端
+     *
+     * @return 客户端实例，未初始化时返回null
+     */
+    public static IAcsClient getClient() {
+        return acsClient;
+    }
 
 }
 

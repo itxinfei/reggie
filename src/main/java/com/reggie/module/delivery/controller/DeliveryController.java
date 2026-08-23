@@ -3,6 +3,8 @@ import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.AcceptOrderDTO;
 import com.reggie.dto.SyncMenuDTO;
 import com.reggie.dto.SyncStockDTO;
@@ -38,6 +40,7 @@ import java.util.Map;
 @RequestMapping("/api/delivery")
 @Validated
 @Tag(name = "外卖平台对接")
+@RequireEmployee
 public class DeliveryController {
 
     @Autowired
@@ -52,7 +55,6 @@ public class DeliveryController {
      */
     @GetMapping("/orders/{id}")
     @Operation(summary = "查询外卖订单详情", description = "根据主键ID查询配送订单完整信息")
-    @Parameter(description = "I d")
     public R<DeliveryOrder> getOrderDetail(@PathVariable Long id) {
         DeliveryOrder order = deliveryService.getById(String.valueOf(id));
         if (order == null) {
@@ -92,6 +94,7 @@ public class DeliveryController {
      * @return 操作结果
      */
     @PostMapping("/accept")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "接单", description = "确认接单外卖订单（PENDING → ACCEPTED）")
     public R<String> acceptOrder(@Valid @RequestBody AcceptOrderDTO dto) {
         boolean result = deliveryService.acceptOrder(dto.getPlatform(), dto.getPlatformOrderId());
@@ -106,9 +109,9 @@ public class DeliveryController {
      * @return 操作结果
      */
     @PutMapping("/status")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新配送状态", description = "更新配送订单状态，支持完整生命周期：接单->取餐->配送->送达->取消")
     public R<String> updateStatus(
-            @Parameter(description = "I d")
             @Parameter(description = "订单ID", required = true) @RequestParam @NotNull(message = "订单ID不能为空") Long id,
             @Parameter(description = "目标状态", required = true) @RequestParam @NotBlank(message = "目标状态不能为空") String status,
             @Parameter(description = "备注（可选）") @RequestParam(required = false) String remark) {
@@ -156,6 +159,7 @@ public class DeliveryController {
      * @return 操作结果
      */
     @PostMapping("/sync/menu")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "同步菜品", description = "同步菜单到外卖平台")
     public R<String> syncMenu(@Valid @RequestBody SyncMenuDTO dto) {
         boolean result = deliveryService.syncMenu(dto.getPlatform(), dto.getDishes());
@@ -168,6 +172,7 @@ public class DeliveryController {
      * @return 操作结果
      */
     @PostMapping("/sync/stock")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "同步库存", description = "同步库存到外卖平台")
     public R<String> syncStock(@Valid @RequestBody SyncStockDTO dto) {
         boolean result = deliveryService.syncStock(dto.getPlatform(), dto.getStock());
@@ -202,6 +207,7 @@ public class DeliveryController {
      * @return 处理结果
      */
     @PostMapping("/callback/{platform}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "平台回调通知", description = "接收外卖平台回调：新订单通知、状态变更、取消通知")
     public R<String> callback(
                         @Parameter(description = "外卖平台标识", required = true) @PathVariable String platform,

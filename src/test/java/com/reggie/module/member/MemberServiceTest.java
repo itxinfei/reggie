@@ -159,7 +159,7 @@ public class MemberServiceTest {
         CouponUser cu = userCoupons.get(0);
         assertEquals(member.getId(), cu.getMemberId());
         assertEquals(template.getId(), cu.getTemplateId());
-        assertEquals("UNUSED", cu.getStatus());
+        assertEquals("unused", cu.getStatus());
         assertNotNull(cu.getCode());
     }
 
@@ -181,11 +181,11 @@ public class MemberServiceTest {
         List<CouponUser> userCoupons = couponUserService.list();
         CouponUser cu = userCoupons.get(0);
 
-        boolean ok = couponTemplateService.useCoupon(cu.getId(), 999L);
+        boolean ok = couponUserService.useCoupon(member.getId(), cu.getId(), 999L);
         assertTrue(ok);
 
         CouponUser updated = couponUserService.getById(cu.getId());
-        assertEquals("USED", updated.getStatus());
+        assertEquals("used", updated.getStatus());
         assertEquals(Long.valueOf(999L), updated.getOrderId());
         assertNotNull(updated.getUsedTime());
     }

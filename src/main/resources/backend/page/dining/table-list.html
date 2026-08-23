@@ -12,7 +12,7 @@
     /* 卡片视图切换 */
     .table-grid-toggle { display: flex; align-items: center; gap: 8px; }
     .table-grid-toggle .toggle-btn {
-      padding: 6px 12px; border: 1px solid var(--el-border-default); border-radius: 4px;
+      padding: 6px 12px; border: 1px solid var(--el-border-default); border-radius: var(--radius-sm);
       background: var(--bg-surface); cursor: pointer; font-size:var(--font-size-base); color: var(--el-text-regular);
       transition: all 0.2s; display: flex; align-items: center; gap: 4px;
     }
@@ -21,15 +21,16 @@
     /* 卡片模式 */
     .table-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
     .table-card {
-      background: var(--bg-surface); border-radius: 10px; padding: 18px;
+      background: var(--bg-surface); border-radius: var(--radius-md); padding: 18px;
       border: 1px solid var(--el-border-light); transition: all 0.3s;
       position: relative; cursor: pointer;
     }
-    .table-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+    .table-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
     .table-card .card-status-dot { position: absolute; top: 12px; right: 14px; width: 10px; height: 10px; border-radius: 50%; }
     .table-card .card-status-dot.free    { background: var(--color-success); }
     .table-card .card-status-dot.occupied { background: var(--color-danger); animation: pulse 1.5s infinite; }
     .table-card .card-status-dot.reserved { background: var(--color-warning); }
+    .table-card .card-status-dot.cleaning { background: var(--color-info); animation: pulse 1.8s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     .table-card .card-name { font-size:var(--font-size-lg); font-weight: 600; color: var(--el-text-primary); margin-bottom: 8px; }
     .table-card .card-meta { display: flex; flex-direction: column; gap: 4px; }
@@ -41,9 +42,10 @@
     .qrcode-content { text-align: center; padding: 20px 0; }
     .qrcode-content .qrcode-title { font-size:var(--font-size-lg); font-weight: 600; color: var(--el-text-primary); margin-bottom: 4px; }
     .qrcode-content .qrcode-subtitle { font-size:var(--font-size-sm); color: var(--color-info); margin-bottom: 16px; }
-    .qrcode-content .qrcode-img-wrap { background: var(--bg-surface); border: 1px solid var(--el-border-light); border-radius: 8px; padding: 16px; display: inline-block; }
+    .qrcode-content .qrcode-img-wrap { background: var(--bg-surface); border: 1px solid var(--el-border-light); border-radius: var(--radius-md); padding: 16px; display: inline-block; }
     .qrcode-content .qrcode-img-wrap img { width: 200px; height: 200px; display: block; }
     .qrcode-content .qrcode-tip { margin-top: 12px; font-size:var(--font-size-xs); color: var(--color-info); }
+    .qrcode-content .qrcode-actions { margin-top: 16px; display: flex; justify-content: center; gap: var(--space-4); }
   </style>
 </head>
 <body>
@@ -80,8 +82,8 @@
       >
         <!-- 视图切换按钮（table-bar 默认插槽） -->
         <div class="table-grid-toggle" style="margin-left:auto;">
-          <div class="toggle-btn" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'">列表</div>
-          <div class="toggle-btn" :class="{ active: viewMode === 'card' }" @click="viewMode = 'card'">卡片</div>
+          <div class="toggle-btn" role="button" tabindex="0" aria-pressed="{{ viewMode === 'table' }}" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'" @keydown.enter="viewMode = 'table'">列表</div>
+          <div class="toggle-btn" role="button" tabindex="0" aria-pressed="{{ viewMode === 'card' }}" :class="{ active: viewMode === 'card' }" @click="viewMode = 'card'" @keydown.enter="viewMode = 'card'">卡片</div>
         </div>
       </table-bar>
 
@@ -107,13 +109,14 @@
           </template>
           <template #col-status="{ row }">
             <el-select v-model="row.status" size="mini" style="width:72px;" @change="(val) => quickChangeStatus(row, val)">
-              <el-option label="空闲" value="FREE"></el-option>
-              <el-option label="占用" value="OCCUPIED"></el-option>
-              <el-option label="预留" value="RESERVED"></el-option>
+              <el-option label="空闲" value="FREE" :disabled="!canTransition(row.status, 'FREE')"></el-option>
+              <el-option label="占用" value="OCCUPIED" :disabled="!canTransition(row.status, 'OCCUPIED')"></el-option>
+              <el-option label="预留" value="RESERVED" :disabled="!canTransition(row.status, 'RESERVED')"></el-option>
+              <el-option label="清洁中" value="CLEANING" :disabled="!canTransition(row.status, 'CLEANING')"></el-option>
             </el-select>
           </template>
           <template #col-tag="{ row }">
-            <el-tag :type="row.status === 'FREE' ? 'success' : row.status === 'OCCUPIED' ? 'danger' : 'warning'" size="small">
+            <el-tag :type="tagType(row.status)" size="small">
               {{ statusLabels[row.status] || row.status }}
             </el-tag>
           </template>
@@ -132,7 +135,7 @@
       <div v-if="viewMode === 'card'">
         <div v-loading="loading" class="table-cards">
           <div class="table-card" v-for="row in tableData" :key="row.id" @dblclick="editHandle(row)">
-            <div class="card-status-dot" :class="row.status === 'FREE' ? 'free' : row.status === 'OCCUPIED' ? 'occupied' : 'reserved'"></div>
+            <div class="card-status-dot" :class="row.status === 'FREE' ? 'free' : row.status === 'OCCUPIED' ? 'occupied' : row.status === 'RESERVED' ? 'reserved' : 'cleaning'"></div>
             <div class="card-name">{{ row.name }}</div>
             <div class="card-meta">
               <span>区域：<strong>{{ row.areaName || '-' }}</strong></span>
@@ -146,9 +149,10 @@
               <el-dropdown trigger="click" @command="(val) => quickChangeStatus(row, val)" @click.native.stop>
                 <el-button type="text" size="small">切换状态</el-button>
                 <el-dropdown-menu slot="dropdown">
-                  <el-dropdown-item command="FREE" :disabled="row.status === 'FREE'">设为空闲</el-dropdown-item>
-                  <el-dropdown-item command="OCCUPIED" :disabled="row.status === 'OCCUPIED'">设为占用</el-dropdown-item>
-                  <el-dropdown-item command="RESERVED" :disabled="row.status === 'RESERVED'">设为预留</el-dropdown-item>
+                  <el-dropdown-item command="FREE" :disabled="!canTransition(row.status, 'FREE')">设为空闲</el-dropdown-item>
+                  <el-dropdown-item command="OCCUPIED" :disabled="!canTransition(row.status, 'OCCUPIED')">设为占用</el-dropdown-item>
+                  <el-dropdown-item command="RESERVED" :disabled="!canTransition(row.status, 'RESERVED')">设为预留</el-dropdown-item>
+                  <el-dropdown-item command="CLEANING" :disabled="!canTransition(row.status, 'CLEANING')">设为清洁中</el-dropdown-item>
                 </el-dropdown-menu>
               </el-dropdown>
               <el-button type="text" size="small" class="btn-delete" @click.stop="deleteHandle(row.id)">删除</el-button>
@@ -177,7 +181,7 @@
       :title="dialog.title"
       :visible.sync="dialog.visible"
       :submit-loading="submitting"
-      width="520px"
+      size="md"
       @submit="submitForm"
       @close="dialog.visible = false"
     >
@@ -201,6 +205,7 @@
             <el-option label="空闲" value="FREE"></el-option>
             <el-option label="占用" value="OCCUPIED"></el-option>
             <el-option label="预留" value="RESERVED"></el-option>
+            <el-option label="清洁中" value="CLEANING"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="排序" prop="sort">
@@ -217,10 +222,15 @@
         <div class="qrcode-img-wrap">
           <img v-if="qrcodeDialog.imageUrl" :src="qrcodeDialog.imageUrl" alt="桌台二维码" />
           <div v-else style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:var(--el-border-base);">
-            <i class="el-icon-loading" style="font-size:24px;"></i>
+            <i class="el-icon-loading" style="font-size:var(--font-size-3xl);"></i>
           </div>
         </div>
         <div class="qrcode-tip">顾客扫码即可点餐</div>
+        <div class="qrcode-actions">
+          <el-button type="primary" size="small" @click="downloadQrcode" :disabled="!qrcodeDialog.imageUrl">
+            <i class="el-icon-download"></i> 下载二维码
+          </el-button>
+        </div>
       </div>
     </crud-dialog>
   </div>
@@ -246,7 +256,7 @@
           pageSize: 10,
           tableData: [],
           viewMode: 'table',
-          statusLabels: { FREE: '空闲', OCCUPIED: '占用', RESERVED: '预留' },
+          statusLabels: { FREE: '空闲', OCCUPIED: '占用', RESERVED: '预留', CLEANING: '清洁中' },
           // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
           tableColumns: [
             { prop: 'name', label: '桌台名称', width: 100, align: 'center' },
@@ -258,7 +268,7 @@
             { prop: 'sort', label: '排序', width: 50, align: 'center' }
           ],
           // 统计
-          stats: { totalTables: 0, freeTables: 0, occupiedTables: 0, reservedTables: 0 },
+          stats: { totalTables: 0, freeTables: 0, occupiedTables: 0, reservedTables: 0, cleaningTables: 0 },
           activeFilter: '',
           // 搜索配置
           searchConfig: [
@@ -266,7 +276,8 @@
             { type: 'select', field: 'areaId', placeholder: '请选择区域', width: '150px', options: [] },
             { type: 'select', field: 'status', placeholder: '桌台状态', width: '130px',
               options: [
-                { label: '空闲', value: 'FREE' }, { label: '占用', value: 'OCCUPIED' }, { label: '预留', value: 'RESERVED' }
+                { label: '空闲', value: 'FREE' }, { label: '占用', value: 'OCCUPIED' },
+                { label: '预留', value: 'RESERVED' }, { label: '清洁中', value: 'CLEANING' }
               ] }
           ],
           // 操作按钮
@@ -294,8 +305,9 @@
           return [
             { key: '', icon: '🪑', label: '桌台总数', value: self.stats.totalTables, color: 'primary', clickable: true, active: self.activeFilter === '', flex: true },
             { key: 'FREE', icon: '✓', label: '空闲桌台', value: self.stats.freeTables, color: 'success', clickable: true, active: self.activeFilter === 'FREE', flex: true },
-            { key: 'OCCUPIED', icon: '👥', label: '占用桌台', value: self.stats.occupiedTables, color: 'warning', clickable: true, active: self.activeFilter === 'OCCUPIED', flex: true },
-            { key: 'RESERVED', icon: '📅', label: '预留桌台', value: self.stats.reservedTables, color: 'danger', clickable: true, active: self.activeFilter === 'RESERVED', flex: true }
+            { key: 'OCCUPIED', icon: '👥', label: '占用桌台', value: self.stats.occupiedTables, color: 'danger', clickable: true, active: self.activeFilter === 'OCCUPIED', flex: true },
+            { key: 'RESERVED', icon: '📅', label: '预留桌台', value: self.stats.reservedTables, color: 'warning', clickable: true, active: self.activeFilter === 'RESERVED', flex: true },
+            { key: 'CLEANING', icon: '🧹', label: '清洁中', value: self.stats.cleaningTables, color: 'info', clickable: true, active: self.activeFilter === 'CLEANING', flex: true }
           ]
         }
       },
@@ -309,7 +321,7 @@
             name: self.lastSearch.name || undefined, areaId: self.lastSearch.areaId || undefined, status: self.lastSearch.status || undefined }
           self.loading = true
           var requests = [tablePage(params)]
-          if (reloadStats) { requests.push(self.loadTableStats(params)) }
+          if (reloadStats) { requests.push(self.loadTableStats()) }
           Promise.all(requests).then(function(results) {
             var tableRes = results[0]
             if (String(tableRes.code) === '1') { self.tableData = tableRes.data.records || []; self.counts = tableRes.data.total || 0 }
@@ -319,17 +331,11 @@
             }
           }).catch(function(err) { ReggieUI.error('加载失败：' + (err.message || err)) }).finally(function() { self.loading = false })
         },
-        loadTableStats: function(params) {
-          // 修改点：改用 pageSize:1 多状态并发查询取 total，避免 pageSize:1000 拉全量导致统计截断
-          return Promise.all([
-            tablePage({ page: 1, pageSize: 1, name: params.name, areaId: params.areaId, status: params.status }),
-            tablePage({ page: 1, pageSize: 1, name: params.name, areaId: params.areaId, status: 'FREE' }),
-            tablePage({ page: 1, pageSize: 1, name: params.name, areaId: params.areaId, status: 'OCCUPIED' }),
-            tablePage({ page: 1, pageSize: 1, name: params.name, areaId: params.areaId, status: 'RESERVED' })
-          ]).then(function(results) {
-            var totalRes = results[0]; var freeRes = results[1]; var occRes = results[2]; var resRes = results[3]
-            if (String(totalRes.code) === '1') {
-              return { code: 1, data: { totalTables: totalRes.data.total || 0, freeTables: freeRes.data.total || 0, occupiedTables: occRes.data.total || 0, reservedTables: resRes.data.total || 0 } }
+        loadTableStats: function() {
+          // 修改点（域⑩-A）：改用后端 /stats 端点替代 pageSize:1 多状态并发查询 hack
+          return tableStats().then(function(res) {
+            if (res && res.code === 1 && res.data) {
+              return { code: 1, data: res.data }
             }
             return { code: 0 }
           }).catch(function() { return { code: 0 } })
@@ -434,6 +440,30 @@
           this.page = p.page
           if (p.pageSize) this.pageSize = p.pageSize
           this.init(false)
+        },
+        // 状态流转白名单（与后端 ALLOWED_TABLE_TRANSITIONS 一致）
+        canTransition: function(current, target) {
+          if (current === target) return false
+          var rules = {
+            FREE: ['OCCUPIED', 'RESERVED', 'CLEANING'],
+            OCCUPIED: ['FREE', 'CLEANING'],
+            RESERVED: ['OCCUPIED', 'FREE'],
+            CLEANING: ['FREE']
+          }
+          var allowed = rules[current]
+          if (!allowed) return false
+          for (var i = 0; i < allowed.length; i++) {
+            if (allowed[i] === target) return true
+          }
+          return false
+        },
+        // 状态标签颜色
+        tagType: function(status) {
+          if (status === 'FREE') return 'success'
+          if (status === 'OCCUPIED') return 'danger'
+          if (status === 'RESERVED') return 'warning'
+          if (status === 'CLEANING') return 'info'
+          return 'info'
         }
       }
     })

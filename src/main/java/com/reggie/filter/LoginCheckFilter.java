@@ -1,10 +1,12 @@
 package com.reggie.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.AuthConstants;
 import com.reggie.common.ObjectMapperHolder;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.util.AntPathMatcher;
 
 import javax.servlet.Filter;
@@ -34,6 +36,7 @@ import java.io.IOException;
  */
 @WebFilter(filterName = "loginCheckFilter",urlPatterns = "/*", asyncSupported = true)
 @Slf4j
+@Order(3) // 在 CsrfFilter(@Order(1)) 之后，保证先过 CSRF 再过登录校验
 public class LoginCheckFilter implements Filter{
     /** 路径匹配器，支持通配符 */
     public static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
@@ -41,54 +44,8 @@ public class LoginCheckFilter implements Filter{
     /** JSON序列化工具 */
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
 
-    /** 不需要处理的请求路径（唯一来源，避免重复维护） */
-    private static final String[] EXCLUDE_URLS = new String[]{
-        // 登录/登出/忘记密码接口（匿名访问）
-        "/employee/login",
-        "/employee/logout",
-        "/employee/forgot-password",
-        "/user/sendMsg",
-        "/user/login",
-        "/user/loginout",
-        "/tenant/register",
-        // 公开的商家信息接口（首页匿名访问）
-        "/restaurant/info",
-        "/restaurant/status",
-        // AI模块健康检查（匿名访问）
-        "/api/ai/health",
-        // 公开菜品/套餐接口（C端菜单浏览）
-        "/category/list",
-        "/category/options",
-        "/dish/list",
-        "/dish/options",
-        "/setmeal/list",
-        "/setmeal/options",
-        // 推荐模块公开接口
-        "/recommend/dishes",
-        "/recommend/hot",
-        "/recommend/new-arrivals",
-        "/recommend/setmeals",
-        // 静态资源目录（图片、上传文件）
-        "/images/**",
-        "/uploads/**",
-        // 前端静态资源（后台管理系统和用户端）
-        "/backend/**",
-        "/front/**",
-        // API文档相关路径
-        "/swagger-ui/**",
-        "/swagger-ui.html",
-        "/swagger-ui/",
-        "/v3/api-docs/**",
-        "/v3/api-docs",
-        "/swagger-resources/**",
-        "/webjars/**",
-        "/doc.html",
-        // Spring Boot Actuator 监控端点
-        "/actuator/**",
-        // 公共资源接口（文件上传预览）
-        "/common/download",
-        "/common/download/**"
-    };
+    /** 不需要处理的请求路径（引用 AuthConstants，保持单一来源） */
+    private static final String[] EXCLUDE_URLS = AuthConstants.LOGIN_EXCLUDE_URLS;
 
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.notification.model.NotificationTemplate;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -25,7 +26,7 @@ public interface NotificationTemplateService extends IService<NotificationTempla
      * @param bizType  业务类型（可空）
      * @return 分页结果
      */
-    Page<NotificationTemplate> pageTemplates(int page, int pageSize, String bizType);
+    Page<NotificationTemplate> pageTemplates(int page, int pageSize, String bizType, Long tenantId);
 
     /**
      * 模板列表查询
@@ -73,4 +74,64 @@ public interface NotificationTemplateService extends IService<NotificationTempla
      * @param id 模板ID
      */
     void removeTemplate(Long id);
+
+    /**
+     * 查询模板并校验租户归属
+     * <p>域4 改造：从 NotificationController 下沉，内置租户校验</p>
+     *
+     * @param id       模板ID
+     * @param tenantId 当前租户ID
+     * @return 校验结果：key="ok"/"error"，ok 时附 template，error 时附 message
+     */
+    Map<String, Object> getTemplateWithTenantCheck(Long id, Long tenantId);
+
+    /**
+     * 新增模板并自动设置租户ID
+     * <p>域4 改造：从 NotificationController 下沉</p>
+     *
+     * @param template 模板信息
+     * @param tenantId 当前租户ID
+     */
+    void addTemplateWithTenant(NotificationTemplate template, Long tenantId);
+
+    /**
+     * 修改模板并校验租户归属
+     * <p>域4 改造：从 NotificationController 下沉，内置租户校验</p>
+     *
+     * @param template 模板信息
+     * @param tenantId 当前租户ID
+     * @return 校验结果：key="ok"/"error"，error 时附 message
+     */
+    Map<String, Object> updateTemplateWithTenant(NotificationTemplate template, Long tenantId);
+
+    /**
+     * 启用/停用模板并校验租户归属
+     * <p>域4 改造：从 NotificationController 下沉，内置租户校验</p>
+     *
+     * @param id       模板ID
+     * @param status   状态
+     * @param tenantId 当前租户ID
+     * @return 校验结果：key="ok"/"error"，ok 时附 message（"已启用"/"已停用"），error 时附 message
+     */
+    Map<String, Object> toggleStatusWithTenant(Long id, Integer status, Long tenantId);
+
+    /**
+     * 删除模板并校验租户归属
+     * <p>域4 改造：从 NotificationController 下沉，内置租户校验</p>
+     *
+     * @param id       模板ID
+     * @param tenantId 当前租户ID
+     * @return 校验结果：key="ok"/"error"，error 时附 message
+     */
+    Map<String, Object> removeTemplateWithTenant(Long id, Long tenantId);
+
+    /**
+     * 按业务类型查询启用的模板（含租户过滤）
+     * <p>域4 改造：从 NotificationController 的 sendNotification 下沉</p>
+     *
+     * @param bizType  业务类型
+     * @param tenantId 当前租户ID
+     * @return 匹配的启用模板（可能为空）
+     */
+    NotificationTemplate findByBizTypeAndTenant(String bizType, Long tenantId);
 }

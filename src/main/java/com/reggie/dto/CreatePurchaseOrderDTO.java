@@ -3,9 +3,7 @@ package com.reggie.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.NotNull;
-import java.math.BigDecimal;
 
 /**
  * 创建采购单请求DTO

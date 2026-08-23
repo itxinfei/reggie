@@ -4,7 +4,9 @@ import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.dining.model.TableArea;
 import com.reggie.module.dining.service.TableAreaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.reggie.common.RateLimit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -39,6 +42,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RestController
 @RequestMapping("/api/dining/area")
 @Tag(name = "堂食区域管理")
+@RequireEmployee
 public class TableAreaController {
 
     @Autowired
@@ -68,6 +72,7 @@ public class TableAreaController {
      * @return 新增区域信息
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增区域", description = "创建新的桌台区域")
     public R<TableArea> save(@RequestBody TableArea area) {
         log.info("新增区域: {}", area.getName());
@@ -78,22 +83,52 @@ public class TableAreaController {
 
     /**
      * 修改桌台区域
-     * @param area 区域信息
+     * <p>租户安全：接收实体后剥离 tenantId，再校验归属当前租户后更新业务字段。</p>
+     *
+     * @param area 区域信息（tenantId 字段被服务端覆盖）
      * @return 操作结果
      */
     @PutMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改区域", description = "更新桌台区域信息")
     public R<String> update(@RequestBody TableArea area) {
         log.info("修改区域: {}", area.getId());
-        tableAreaService.updateById(area);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        // 先查询现有记录并校验归属
+        TableArea exist = tableAreaService.getById(area.getId());
+        if (exist == null) {
+            throw new CustomException("桌台区域不存在");
+        }
+        if (!tenantId.equals(exist.getTenantId())) {
+            throw new CustomException("桌台区域不属于当前租户");
+        }
+        // 仅更新业务字段，强制覆盖 tenantId 为当前租户
+        exist.setName(area.getName());
+        exist.setSort(area.getSort());
+        tableAreaService.updateById(exist);
         return R.success("修改区域成功");
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除区域", description = "根据ID删除桌台区域")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "删除区域", description = "根据ID删除桌台区域（先校验租户归属）")
     @Parameter(name = "id", description = "区域ID", required = true)
     public R<String> delete(@PathVariable Long id) {
         log.info("删除区域: {}", id);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        TableArea exist = tableAreaService.getById(id);
+        if (exist == null) {
+            throw new CustomException("桌台区域不存在");
+        }
+        if (!tenantId.equals(exist.getTenantId())) {
+            throw new CustomException("桌台区域不属于当前租户");
+        }
         tableAreaService.removeById(id);
         return R.success("删除区域成功");
     }

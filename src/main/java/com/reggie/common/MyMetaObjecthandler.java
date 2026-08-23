@@ -26,6 +26,8 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
 
         LocalDateTime now = LocalDateTime.now();
         this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, now);
+        // 兼容历史实体字段命名 createdTime（与 createTime 并存，strictInsertFill 对不存在的字段自动跳过）
+        this.strictInsertFill(metaObject, "createdTime", LocalDateTime.class, now);
         this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, now);
 
         Long currentId = BaseContext.getCurrentId();

@@ -1,10 +1,8 @@
 package com.reggie.module.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
-import com.reggie.common.CustomException;
 import com.reggie.enums.MemberBizTag;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.member.mapper.MemberTagMapper;
@@ -48,24 +46,6 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
         LambdaQueryWrapper<MemberTag> qw = new LambdaQueryWrapper<>();
         qw.eq(MemberTag::getTenantId, tenantId);
         qw.eq(MemberTag::getMemberId, memberId);
-        qw.orderByDesc(MemberTag::getCreateTime);
-        return this.list(qw);
-    }
-
-    @Override
-    public List<MemberTag> listByTagType(Long tenantId, String tagType) {
-        LambdaQueryWrapper<MemberTag> qw = new LambdaQueryWrapper<>();
-        qw.eq(MemberTag::getTenantId, tenantId);
-        qw.eq(MemberTag::getTagType, tagType);
-        qw.orderByDesc(MemberTag::getCreateTime);
-        return this.list(qw);
-    }
-
-    @Override
-    public List<MemberTag> listByBizTag(Long tenantId, String bizTag) {
-        LambdaQueryWrapper<MemberTag> qw = new LambdaQueryWrapper<>();
-        qw.eq(MemberTag::getTenantId, tenantId);
-        qw.eq(MemberTag::getBizTag, bizTag);
         qw.orderByDesc(MemberTag::getCreateTime);
         return this.list(qw);
     }

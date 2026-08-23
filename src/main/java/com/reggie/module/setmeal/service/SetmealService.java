@@ -5,6 +5,7 @@ import com.reggie.dto.SetmealDto;
 import com.reggie.module.setmeal.model.Setmeal;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -52,5 +53,12 @@ public interface SetmealService extends IService<Setmeal> {
      * @param ids 套餐ID列表
      */
     public void updateStatus(Integer status, List<Long> ids);
+
+    /**
+     * 获取套餐统计数据
+     *
+     * @return 统计数据（total/active/inactive）
+     */
+    public Map<String, Object> getStats();
 }
 

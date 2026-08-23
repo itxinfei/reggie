@@ -1,6 +1,8 @@
 package com.reggie.module.cost.controller;
 
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.cost.model.DishCost;
 import com.reggie.module.cost.model.CostRecord;
 import com.reggie.module.cost.model.LaborCost;
@@ -36,6 +38,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/cost")
 @Tag(name = "成本核算管理")
+@RequireEmployee
 public class CostController {
 
     @Autowired
@@ -61,6 +64,7 @@ public class CostController {
     }
 
     @PostMapping("/dish")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存菜品成本")
     public R<String> saveDishCost(@RequestBody DishCost dishCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
@@ -70,6 +74,7 @@ public class CostController {
     }
 
     @PutMapping("/dish")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新菜品成本")
     public R<String> updateDishCost(@RequestBody DishCost dishCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
@@ -79,14 +84,15 @@ public class CostController {
     }
 
     @DeleteMapping("/dish/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除菜品成本")
-    @Parameter(description = "I d")
     public R<String> deleteDishCost(@PathVariable Long id) {
         boolean success = costService.deleteDishCost(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
 
     @PostMapping("/dish/batch")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量更新菜品成本")
     public R<String> batchUpdateDishCost(@RequestBody List<DishCost> dishCosts) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
@@ -111,6 +117,7 @@ public class CostController {
     }
 
     @PostMapping("/record")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存成本记录")
     public R<String> saveCostRecord(@RequestBody CostRecord costRecord) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
@@ -121,8 +128,8 @@ public class CostController {
     }
 
     @DeleteMapping("/record/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除成本记录")
-    @Parameter(description = "I d")
     public R<String> deleteCostRecord(@PathVariable Long id) {
         boolean success = costService.deleteCostRecord(id);
         return success ? R.success("删除成功") : R.error("删除失败");
@@ -140,6 +147,7 @@ public class CostController {
     }
 
     @PostMapping("/labor")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存人工成本")
     public R<String> saveLaborCost(@RequestBody LaborCost laborCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
@@ -149,6 +157,7 @@ public class CostController {
     }
 
     @PutMapping("/labor")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新人工成本")
     public R<String> updateLaborCost(@RequestBody LaborCost laborCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
@@ -158,14 +167,15 @@ public class CostController {
     }
 
     @DeleteMapping("/labor/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除人工成本")
-    @Parameter(description = "I d")
     public R<String> deleteLaborCost(@PathVariable Long id) {
         boolean success = costService.deleteLaborCost(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
 
     @PostMapping("/labor/batch")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量保存人工成本")
     public R<String> batchSaveLaborCost(@RequestBody List<LaborCost> laborCosts) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
@@ -190,6 +200,7 @@ public class CostController {
     }
 
     @PostMapping("/other")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存其他成本")
     public R<String> saveOtherCost(@RequestBody OtherCost otherCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
@@ -199,6 +210,7 @@ public class CostController {
     }
 
     @PutMapping("/other")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新其他成本")
     public R<String> updateOtherCost(@RequestBody OtherCost otherCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
@@ -208,8 +220,8 @@ public class CostController {
     }
 
     @DeleteMapping("/other/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除其他成本")
-    @Parameter(description = "I d")
     public R<String> deleteOtherCost(@PathVariable Long id) {
         boolean success = costService.deleteOtherCost(id);
         return success ? R.success("删除成功") : R.error("删除失败");

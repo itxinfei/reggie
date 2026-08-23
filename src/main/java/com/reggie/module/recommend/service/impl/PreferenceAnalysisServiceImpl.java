@@ -70,7 +70,7 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
     private DishFlavorService dishFlavorService;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public boolean analyzeUserPreferences(Long userId) {
         if (userId == null) return false;
         Long tenantId = BaseContext.getCurrentTenantId();

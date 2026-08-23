@@ -33,7 +33,7 @@ public class CashierRecord implements Serializable {
     @Schema(description = "订单号")
     private String orderNumber;
 
-    @Schema(description = "收银类型：1-现金，2-微信，3-支付宝，4-银行卡，5-其他")
+    @Schema(description = "收银类型：1-现金，2-微信，3-支付宝，4-银行卡，5-会员储值")
     private Integer payType;
 
     @Schema(description = "收银金额")

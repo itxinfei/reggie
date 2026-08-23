@@ -3,7 +3,6 @@ package com.reggie.module.dish.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.reggie.common.RedisCacheUtil;
 import com.reggie.dto.DishDto;
 import com.reggie.module.category.model.Category;
 import com.reggie.module.dish.model.Dish;
@@ -16,6 +15,7 @@ import com.reggie.module.dish.service.DishFlavorService;
 import com.reggie.module.dish.service.DishService;
 import com.reggie.module.setmeal.service.SetmealDishService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -198,7 +198,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
             List<String> referencedNames = dishes.stream()
                 .map(Dish::getName)
                 .collect(Collectors.toList());
-            throw new CustomException("以下菜品正在被套餐引用，无法删除：" + String.join("、", referencedNames));
+            throw new CustomException("以下菜品正在被套餐引用，无法删除：" + StringUtils.join(referencedNames, "、"));
         }
 
         // 2. 清理套餐关联残留

@@ -8,7 +8,6 @@ import com.reggie.module.inventory.mapper.MaterialCategoryMapper;
 import com.reggie.module.inventory.model.MaterialCategory;
 import com.reggie.module.inventory.service.MaterialCategoryService;
 import org.springframework.stereotype.Service;
-import com.reggie.module.category.model.Category;
 import org.springframework.transaction.annotation.Transactional;
 
 /**

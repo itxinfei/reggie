@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
  * 订单明细
  */
 @Data
+@TableName("order_detail")
 @Schema(description = "订单明细")
 public class OrderDetail implements Serializable {
 
@@ -88,5 +89,4 @@ public class OrderDetail implements Serializable {
     private Integer isDeleted;
 
 }
-
 

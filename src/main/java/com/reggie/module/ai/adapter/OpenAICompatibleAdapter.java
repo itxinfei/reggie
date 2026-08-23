@@ -82,9 +82,12 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                 return parseResponse(conn, config);
             } else {
                 String errorBody = readErrorBody(conn);
-                log.error("AI请求[{} / {}]失败: url={}, code={}, error={}, requestBody={}",
-                        config.getProviderCode(), FORMAT_ID, apiUrl, responseCode, errorBody,
-                        truncate(jsonBody, 500));
+                // 修改点：移除 requestBody（jsonBody）参数——requestBody 含用户 prompt 明文，
+// 即使截断 500 字仍会泄露用户输入原文；同时截断 errorBody 到 200 字，
+// 防止 token 回显或超长响应体落盘。
+                log.error("AI请求[{} / {}]失败: url={}, code={}, error={}",
+                        config.getProviderCode(), FORMAT_ID, apiUrl, responseCode,
+                        truncate(errorBody, 200));
                 String userMsg = buildUserFriendlyError(config.getProviderName(), errorBody);
                 return errorResponse(userMsg, config);
             }
@@ -155,8 +158,9 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                 return successResponse(responseNode.asText(""), config.getModelName(), 0);
             }
 
-            log.warn("AI响应[{} / {}]无法解析: body={}", config.getProviderCode(), FORMAT_ID,
-                    truncate(rawBody, 300));
+            // 修改点：rawBody 截断 300→50 字，防止响应体泄露
+            log.warn("AI响应[{} / {}]无法解析: bodyPreview={}", config.getProviderCode(), FORMAT_ID,
+                    truncate(rawBody, 50));
             return errorResponse(config.getProviderName() + "返回了无法识别的响应格式", config);
 
         } catch (com.fasterxml.jackson.core.JsonParseException e) {
@@ -214,7 +218,7 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             int responseCode = conn.getResponseCode();
             if (responseCode != 200) {
                 String errorBody = readErrorBody(conn);
-                log.error("AI流式请求失败: code={}, error={}", responseCode, truncate(errorBody, 500));
+                log.error("AI流式请求失败: code={}, error={}", responseCode, truncate(errorBody, 200));
                 callback.onToken("AI服务请求失败：" + responseCode, true);
                 return null;
             }

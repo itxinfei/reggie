@@ -249,6 +249,24 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         return flashSaleMapper.selectList(qw);
     }
 
+    /**
+     * 计算秒杀价格（查询方法，不扣库存）。
+     *
+     * 并发安全说明：
+     * 本方法仅为价格查询/计算，内部读取库存快照判断是否可售。
+     * 高并发场景下存在"读-检查"竞态条件：多个请求可能同时读到有库存后放行，
+     * 但真正库存扣减并未在此执行，因此此处不会产生实际超卖。
+     *
+     * 真正的原子扣减必须在下单时执行，请调用 FlashSaleMapper.deductStock() 方法：
+     * 该方法利用 SQL WHERE 条件 (total_quantity - sold_quantity) >= qty 实现
+     * 数据库行级锁的 CAS 乐观扣减，保证并发安全、绝不超卖。
+     * 扣减失败（返回 0 行受影响）时应回滚订单并提示"库存不足"。
+     *
+     * @param flashSaleId 秒杀活动ID
+     * @param userId      用户ID
+     * @param quantity    购买数量
+     * @return 价格计算结果
+     */
     @Override
     public Map<String, Object> calculateFlashSalePrice(Long flashSaleId, Long userId, int quantity) {
         Map<String, Object> result = new HashMap<>();

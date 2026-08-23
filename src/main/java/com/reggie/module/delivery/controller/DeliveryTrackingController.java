@@ -2,6 +2,8 @@ package com.reggie.module.delivery.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.delivery.model.Rider;
 import com.reggie.module.delivery.model.RiderLocationRecord;
 import com.reggie.module.delivery.model.DeliveryTimeRecord;
@@ -35,6 +37,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/delivery/tracking")
 @Tag(name = "Delivery Tracking Management")
+@RequireEmployee
 public class DeliveryTrackingController {
 
     @Autowired
@@ -53,13 +56,13 @@ public class DeliveryTrackingController {
 
     @GetMapping("/rider/{id}")
     @Operation(summary = "Get rider by ID")
-    @Parameter(description = "I d")
     public R<Rider> getRiderById(@PathVariable Long id) {
         Rider rider = deliveryTrackingService.getRiderById(id);
         return R.success(rider);
     }
 
     @PostMapping("/rider")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Save rider")
     public R<String> saveRider(@RequestBody Rider rider) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -69,6 +72,7 @@ public class DeliveryTrackingController {
     }
 
     @PutMapping("/rider")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update rider")
     public R<String> updateRider(@RequestBody Rider rider) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -78,14 +82,15 @@ public class DeliveryTrackingController {
     }
 
     @DeleteMapping("/rider/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Delete rider")
-    @Parameter(description = "I d")
     public R<String> deleteRider(@PathVariable Long id) {
         boolean success = deliveryTrackingService.deleteRider(id);
         return success ? R.success("Deleted successfully") : R.error("Delete failed");
     }
 
     @PostMapping("/rider/{id}/status")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update rider status")
     public R<String> updateRiderStatus(
             @Parameter(description = "ID")
@@ -98,6 +103,7 @@ public class DeliveryTrackingController {
     // ==================== Location Tracking ====================
 
     @PostMapping("/location/update")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update rider location")
     public R<String> updateRiderLocation(
                         @Parameter(description = "Rider ID") @RequestParam Long riderId,
@@ -138,6 +144,7 @@ public class DeliveryTrackingController {
     // ==================== Delivery Time Management ====================
 
     @PostMapping("/time/record")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Create delivery time record")
     public R<String> createDeliveryTimeRecord(@RequestBody DeliveryTimeRecord record) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -147,6 +154,7 @@ public class DeliveryTrackingController {
     }
 
     @PutMapping("/time/record")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Update delivery time record")
     public R<String> updateDeliveryTimeRecord(@RequestBody DeliveryTimeRecord record) {
         boolean success = deliveryTrackingService.updateDeliveryTimeRecord(record);
@@ -162,6 +170,7 @@ public class DeliveryTrackingController {
     }
 
     @PostMapping("/time/estimate")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "Estimate delivery time")
     public R<Integer> estimateDeliveryTime(
                         @Parameter(description = "Distance (meters)") @RequestParam BigDecimal distance,

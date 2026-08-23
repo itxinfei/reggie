@@ -10,9 +10,16 @@ import java.util.stream.Collectors;
  * 集合转换工具类，提供类型安全的集合映射操作
  * </p>
  *
+ * <p>
+ * 域3 改造标记：当前零引用，属于死代码，计划由域4（代码结构优化）统一清理。
+ * 保留但标记 {@code @Deprecated}，防止被误引入。
+ * </p>
+ *
  * @author 心飞为你飞
  * @since 2026-07-09
+ * @deprecated 零引用死代码，域4 清理
  */
+@Deprecated
 public class CollectionUtils {
 
     /**

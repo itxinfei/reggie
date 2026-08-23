@@ -2,7 +2,9 @@ package com.reggie.module.sys.controller;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequiresAdmin;
 import com.reggie.module.notification.model.NotificationTemplate;
 import com.reggie.module.notification.service.NotificationTemplateService;
@@ -55,7 +57,7 @@ public class SysNotificationTemplateController {
             @Parameter(description = "页码") int page,
             @Parameter(description = "每页条数") int pageSize,
             @Parameter(description = "业务类型") String bizType) {
-        return R.success(templateService.pageTemplates(page, PageUtils.cap(pageSize), bizType));
+        return R.success(templateService.pageTemplates(page, PageUtils.cap(pageSize), bizType, BaseContext.getCurrentTenantId()));
     }
 
     /**
@@ -78,7 +80,6 @@ public class SysNotificationTemplateController {
     @GetMapping("/{id}")
     @Operation(summary = "模板详情", description = "获取通知模板的详细信息")
     public R<NotificationTemplate> detail(
-            @Parameter(description = "I d")
             @Parameter(description = "模板ID") @PathVariable Long id) {
         return R.success(templateService.getTemplate(id));
     }
@@ -89,6 +90,7 @@ public class SysNotificationTemplateController {
      * @return 操作结果
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增模板", description = "创建通知模板")
     public R<String> add(
             @Parameter(description = "模板信息") @RequestBody NotificationTemplate template) {
@@ -102,6 +104,7 @@ public class SysNotificationTemplateController {
      * @return 操作结果
      */
     @PutMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改模板", description = "更新通知模板信息")
     public R<String> update(
             @Parameter(description = "模板信息") @RequestBody NotificationTemplate template) {
@@ -116,9 +119,9 @@ public class SysNotificationTemplateController {
      * @return 操作结果
      */
     @PutMapping("/{id}/toggle")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "切换模板状态", description = "启用或停用通知模板")
     public R<String> toggle(
-            @Parameter(description = "I d")
             @Parameter(description = "模板ID") @PathVariable Long id,
             @Parameter(description = "状态：1启用 0停用") @RequestParam Integer status) {
         templateService.toggleStatus(id, status);
@@ -131,9 +134,9 @@ public class SysNotificationTemplateController {
      * @return 操作结果
      */
     @DeleteMapping("/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除模板", description = "逻辑删除通知模板")
     public R<String> delete(
-            @Parameter(description = "I d")
             @Parameter(description = "模板ID") @PathVariable Long id) {
         templateService.removeTemplate(id);
         return R.success("模板删除成功");

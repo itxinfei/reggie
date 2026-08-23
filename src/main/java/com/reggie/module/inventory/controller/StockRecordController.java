@@ -4,6 +4,7 @@ import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.StockInDTO;
 import com.reggie.dto.StockOutDTO;
@@ -20,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -93,6 +93,7 @@ public class StockRecordController {
      * @return 操作结果
      */
     @PostMapping("/stockIn")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "入库", description = "食材入库操作，增加库存数量")
     public R<String> stockIn(@Validated @RequestBody StockInDTO dto) {
         stockRecordService.stockIn(dto.getMaterialId(), dto.getQty(), dto.getUnitPrice(),
@@ -106,6 +107,7 @@ public class StockRecordController {
      * @return 操作结果
      */
     @PostMapping("/stockOut")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "出库", description = "食材出库操作，减少库存数量")
     public R<String> stockOut(@Validated @RequestBody StockOutDTO dto) {
         stockRecordService.stockOut(dto.getMaterialId(), dto.getQty(), dto.getBizId(),

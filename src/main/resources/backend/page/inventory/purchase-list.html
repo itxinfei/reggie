@@ -11,7 +11,7 @@
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
     /* ========== 采购管理专用样式 ========== */
-    .purchase-chart { background: var(--bg-surface); border-radius: 14px; padding: 20px 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px; height: 340px; }
+    .purchase-chart { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px 24px; box-shadow: var(--shadow-sm); margin-bottom: 20px; height: 340px; }
     .detail-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
     @media (max-width: 1200px) {
       .stats-cards { grid-template-columns: repeat(2, 1fr); }
@@ -283,7 +283,7 @@
                 { type: 'value', name: '单数' }
               ],
               series: [
-                { name: '采购金额', type: 'bar', data: amounts, barWidth: 14, itemStyle: { borderRadius: [6,6,0,0], color: 'var(--color-brand-500)' } },
+                { name: '采购金额', type: 'bar', data: amounts, barWidth: 14, itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0], color: 'var(--color-brand-500)' } },
                 { name: '采购单数', type: 'line', yAxisIndex: 1, data: counts, smooth: true, lineStyle: { width: 2, color: 'var(--color-success)' }, symbol: 'circle', symbolSize: 6 }
               ]
             })

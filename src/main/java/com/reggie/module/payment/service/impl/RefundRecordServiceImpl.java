@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.enums.RefundStatus;
 import com.reggie.module.payment.mapper.PaymentOrderMapper;
 import com.reggie.module.payment.mapper.RefundRecordMapper;
+import com.reggie.module.payment.model.PaymentOrder;
 import com.reggie.module.payment.model.RefundRecord;
 import com.reggie.module.payment.service.RefundRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,9 +48,19 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
 
     @Override
     public RefundRecord createRefund(Long paymentOrderId, BigDecimal amount, String reason) {
+        // 租户归属校验：防止跨租户越权创建退款记录
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        PaymentOrder paymentOrder = paymentOrderMapper.selectById(paymentOrderId);
+        if (paymentOrder == null) {
+            throw new CustomException("支付单不存在");
+        }
+        if (currentTenantId != null && !currentTenantId.equals(paymentOrder.getTenantId())) {
+            throw new CustomException("无权对其他租户的支付单发起退款");
+        }
+
         RefundRecord record = new RefundRecord();
         record.setPaymentOrderId(paymentOrderId);
-        record.setTenantId(BaseContext.getCurrentTenantId());
+        record.setTenantId(currentTenantId);
         record.setRefundNo(generateRefundNo());
         record.setAmount(amount);
         record.setReason(reason);
@@ -60,7 +72,18 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
 
     @Override
     public void markRefundSuccess(String refundNo) {
-        // 将退款记录从 PENDING 更新为 SUCCESS，修复原先记录永远停留在 PENDING 的问题
+        // 租户归属校验：先查询再更新，防止跨租户越权标记退款成功
+        RefundRecord record = lambdaQuery()
+                .eq(RefundRecord::getRefundNo, refundNo)
+                .one();
+        if (record == null) {
+            throw new CustomException("退款记录不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(record.getTenantId())) {
+            throw new CustomException("无权操作其他租户的退款记录");
+        }
+        // 将退款记录从 PENDING 更新为 SUCCESS
         this.update(new LambdaUpdateWrapper<RefundRecord>()
                 .eq(RefundRecord::getRefundNo, refundNo)
                 .eq(RefundRecord::getStatus, RefundStatus.PENDING.getCode())

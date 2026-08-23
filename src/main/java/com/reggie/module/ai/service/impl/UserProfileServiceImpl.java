@@ -2,7 +2,7 @@ package com.reggie.module.ai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.reggie.module.dish.model.Dish;
+import com.reggie.common.BaseContext;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.dish.mapper.DishMapper;
@@ -17,6 +17,7 @@ import com.reggie.module.recommend.mapper.UserPreferenceMapper;
 import com.reggie.module.recommend.model.UserPreferenceTag;
 import com.reggie.module.recommend.service.PreferenceAnalysisService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -76,10 +77,12 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
     @Override
     public UserProfile getOrCreateProfile(Long userId) {
         if (userId == null) return null;
-        UserProfile profile = userProfileMapper.selectByUserId(userId);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        UserProfile profile = userProfileMapper.selectByUserId(userId, tenantId);
         if (profile == null) {
             profile = new UserProfile();
             profile.setUserId(userId);
+            profile.setTenantId(tenantId);
             profile.setConfidence(new BigDecimal("0.1"));
             profile.setTotalConversations(0);
             profile.setTotalFeedbacks(0);
@@ -89,7 +92,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
                 userProfileMapper.insert(profile);
             } catch (DuplicateKeyException e) {
                 log.warn("并发创建用户画像冲突，重新查询已创建的画像 userId={}", userId);
-                profile = userProfileMapper.selectByUserId(userId);
+                profile = userProfileMapper.selectByUserId(userId, tenantId);
             }
         }
         return profile;
@@ -249,19 +252,25 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
 
         if (recentOrders.isEmpty()) return Collections.emptyList();
 
-        // 统计菜品出现频率
-        Map<Long, Integer> dishCount = new HashMap<>();
-        for (Orders order : recentOrders) {
-            // 使用 MP 查询订单明细
-            List<OrderDetail> details = orderDetailMapper.selectList(
+        // 收集所有订单ID，批量查询订单明细，避免 N+1 查询
+        List<Long> orderIds = recentOrders.stream()
+                .map(Orders::getId)
+                .collect(Collectors.toList());
+        List<OrderDetail> allDetails = orderDetailMapper.selectList(
                 new LambdaQueryWrapper<OrderDetail>()
-                    .eq(OrderDetail::getOrderId, order.getId())
-            );
-            if (details != null) {
-                for (OrderDetail detail : details) {
-                    if (detail.getDishId() != null) {
-                        dishCount.merge(detail.getDishId(), 1, Integer::sum);
-                    }
+                        .in(OrderDetail::getOrderId, orderIds)
+        );
+
+        if (allDetails == null || allDetails.isEmpty()) return Collections.emptyList();
+
+        // 按订单ID分组，统计菜品出现频率
+        Map<Long, List<OrderDetail>> detailsByOrder = allDetails.stream()
+                .collect(Collectors.groupingBy(OrderDetail::getOrderId));
+        Map<Long, Integer> dishCount = new HashMap<>();
+        for (List<OrderDetail> details : detailsByOrder.values()) {
+            for (OrderDetail detail : details) {
+                if (detail.getDishId() != null) {
+                    dishCount.merge(detail.getDishId(), 1, Integer::sum);
                 }
             }
         }
@@ -311,10 +320,10 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
         }
 
         if (!goodTastes.isEmpty()) {
-            profile.setTasteTags(String.join(",", goodTastes));
+            profile.setTasteTags(StringUtils.join(goodTastes, ","));
         }
         if (!badTastes.isEmpty()) {
-            profile.setDislikedTags(String.join(",", badTastes));
+            profile.setDislikedTags(StringUtils.join(badTastes, ","));
         }
 
         // 同时从推荐模块获取品类偏好

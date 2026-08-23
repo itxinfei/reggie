@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequiresPermission;
 import com.reggie.module.dish.model.DishEvaluation;
 import com.reggie.module.dish.service.DishEvaluationService;
@@ -26,8 +27,6 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +52,7 @@ public class DishEvaluationController {
      * @return 新增结果
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增菜品评价", description = "用户对已购买菜品进行评价，需登录")
     @Parameter(name = "evaluation", description = "评价信息（订单ID、菜品ID、评分、内容等）", required = true)
     public R<DishEvaluation> addEvaluation(@Valid @RequestBody DishEvaluation evaluation) {
@@ -154,6 +154,7 @@ public class DishEvaluationController {
      * @return 回复结果
      */
     @PutMapping("/{id}/reply")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "商家回复评价", description = "商家对已通过审核的评价进行回复，需商家/管理员权限")
     @Parameter(name = "id", description = "评价ID", required = true)
     @RequiresPermission("evaluation:reply")
@@ -189,6 +190,7 @@ public class DishEvaluationController {
      * @return 审核结果
      */
     @PutMapping("/{id}/status")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "审核评价", description = "商家/管理员审核评价，通过或拒绝，需商家/管理员权限")
     @Parameter(name = "id", description = "评价ID", required = true)
     @RequiresPermission("evaluation:audit")
@@ -310,6 +312,7 @@ public class DishEvaluationController {
      * @return 删除结果
      */
     @DeleteMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除自己的评价", description = "用户删除自己未审核的评价，需登录")
     public R<String> deleteMyEvaluation(@RequestBody Map<String, Long> params) {
         Long id = params.get("id");

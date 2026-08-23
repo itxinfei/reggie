@@ -14,24 +14,24 @@
 
         /* 图表行 */
         .charts-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
-        .chart-panel { background: var(--bg-surface); border-radius: 10px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+        .chart-panel { background: var(--bg-surface); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-xs); }
         .panel-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 16px;
             padding-bottom: 12px; border-bottom: 1px solid var(--el-border-light); display: flex; align-items: center; gap: 8px; }
         .panel-title .el-icon { color: var(--el-color-primary); }
         .chart-box { width: 100%; height: 300px; }
 
         /* 热门排行 */
-        .hot-section { background: var(--bg-surface); border-radius: 10px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+        .hot-section { background: var(--bg-surface); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-xs); }
         .dish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-        .dish-card { border: 1px solid var(--el-border-light); border-radius: 8px; overflow: hidden; cursor: pointer; transition: all 0.2s; }
-        .dish-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }
+        .dish-card { border: 1px solid var(--el-border-light); border-radius: var(--radius-md); overflow: hidden; cursor: pointer; transition: all 0.2s; }
+        .dish-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
         .dish-img { width: 100%; height: 120px; object-fit: cover; background: var(--el-bg-subtle); }
         .dish-body { padding: 10px 12px; }
         .dish-name { font-size:var(--font-size-base); font-weight: 500; color: var(--el-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .dish-price { font-size:var(--font-size-md); font-weight: 600; color: var(--color-brand-700); margin-top: 4px; }
         .dish-desc { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .dish-sales { font-size: 11px; color: var(--color-success); margin-top: 4px; }
-        .rank-badge { position: absolute; top: 0; left: 0; padding: 2px 8px; font-size: 11px; font-weight: 700;
+        .dish-sales { font-size: var(--font-size-xs); color: var(--color-success); margin-top: 4px; }
+        .rank-badge { position: absolute; top: 0; left: 0; padding: 2px 8px; font-size: var(--font-size-xs); font-weight: 700;
             border-radius: 0 0 6px 0; z-index: 1; }
         .rank-badge.r1 { background: var(--color-danger); color: var(--bg-surface); }
         .rank-badge.r2 { background: var(--color-brand-500); color: var(--bg-surface); }
@@ -42,7 +42,7 @@
 
         /* 推荐算法标签 */
         .algo-tags { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-        .algo-tag { padding: 4px 12px; border-radius: 20px; font-size:var(--font-size-xs); border: 1px solid var(--el-border-lighter2);
+        .algo-tag { padding: 4px 12px; border-radius: var(--radius-lg); font-size:var(--font-size-xs); border: 1px solid var(--el-border-lighter2);
             cursor: pointer; transition: all 0.2s; color: var(--el-text-regular); }
         .algo-tag.active { background: var(--el-color-primary); color: var(--bg-surface); border-color: var(--el-color-primary); }
         .algo-tag:hover:not(.active) { border-color: var(--el-color-primary); color: var(--el-color-primary); }
@@ -117,15 +117,15 @@
             <el-button type="primary" size="small" @click="refreshHotRank" :loading="loadingHot">刷新排行</el-button>
         </div>
         <div class="algo-tags">
-            <span class="algo-tag" :class="{active: algoType === 'all'}" @click="loadHotByAlgo('all')">全部算法</span>
-            <span class="algo-tag" :class="{active: algoType === 'cf'}" @click="loadHotByAlgo('cf')">协同过滤</span>
-            <span class="algo-tag" :class="{active: algoType === 'content'}" @click="loadHotByAlgo('content')">内容推荐</span>
-            <span class="algo-tag" :class="{active: algoType === 'hot'}" @click="loadHotByAlgo('hot')">热门排行</span>
+            <span class="algo-tag" :class="{active: algoType === 'all'}" role="button" tabindex="0" @click="loadHotByAlgo('all')" @keydown.enter="loadHotByAlgo('all')" :aria-pressed="algoType === 'all'">全部算法</span>
+            <span class="algo-tag" :class="{active: algoType === 'cf'}" role="button" tabindex="0" @click="loadHotByAlgo('cf')" @keydown.enter="loadHotByAlgo('cf')" :aria-pressed="algoType === 'cf'">协同过滤</span>
+            <span class="algo-tag" :class="{active: algoType === 'content'}" role="button" tabindex="0" @click="loadHotByAlgo('content')" @keydown.enter="loadHotByAlgo('content')" :aria-pressed="algoType === 'content'">内容推荐</span>
+            <span class="algo-tag" :class="{active: algoType === 'hot'}" role="button" tabindex="0" @click="loadHotByAlgo('hot')" @keydown.enter="loadHotByAlgo('hot')" :aria-pressed="algoType === 'hot'">热门排行</span>
         </div>
         <div v-if="!loadingHot" class="dish-grid">
             <div class="dish-card" v-for="(dish, idx) in hotDishes" :key="dish.id" style="position:relative;">
                 <span v-if="idx < 3" :class="['rank-badge', 'r' + (idx + 1)]">TOP{{ idx + 1 }}</span>
-                <img :src="dish.image ? getImageUrl(dish.image) : '../images/noImg.png'" class="dish-img" />
+                <img :src="dish.image ? getImageUrl(dish.image) : '../images/noImg.png'" class="dish-img" alt="热销菜品图片" />
                 <div class="dish-body">
                     <div class="dish-name">{{ dish.name }}</div>
                     <div class="dish-price">¥{{ formatPrice(dish.price) }}</div>
@@ -135,11 +135,11 @@
             </div>
         </div>
         <div v-else class="loading-wrap">
-            <i class="el-icon-loading" style="font-size:32px; color:var(--color-info);"></i>
+            <i class="el-icon-loading" style="font-size:var(--font-size-4xl); color:var(--color-info);"></i>
             <p>加载热门数据中...</p>
         </div>
         <div v-if="!loadingHot && hotDishes.length === 0" class="loading-wrap">
-            <i class="el-icon-document" style="font-size:32px; color:var(--el-border-base);"></i>
+            <i class="el-icon-document" style="font-size:var(--font-size-4xl); color:var(--el-border-base);"></i>
             <p>暂无数据，请先确保有订单和浏览数据</p>
         </div>
     </div>
@@ -243,7 +243,7 @@
             if (!this.feedbackChart) return;
             var names = ['点击', '收藏', '加购', '下单', '不感兴趣'];
             var values = [data.click || 0, data.favorite || 0, data.cart || 0, data.order || 0, data.unlike || 0];
-            var colors = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#c0c4cc'];
+            var colors = [RgPalette.seriesBlue, RgPalette.seriesGreen, RgPalette.seriesGold, RgPalette.seriesPink, RgPalette.borderBase];
             this.feedbackChart.setOption({
                 tooltip: { trigger: 'axis' },
                 grid: { left: 50, right: 20, top: 10, bottom: 40 },
@@ -251,7 +251,7 @@
                 yAxis: { type: 'value', name: '次数' },
                 series: [{
                     type: 'bar', data: values.map((v, i) => ({ value: v, itemStyle: { color: colors[i],
-                        borderRadius: [6, 6, 0, 0] } })), barWidth: 30,
+                        borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] } })), barWidth: 30,
                     label: { show: true, position: 'top', fontSize: 12, fontWeight: 600 }
                 }]
             }, true);
@@ -284,7 +284,7 @@
                 tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
                 series: [{
                     type: 'pie', radius: ['50%', '75%'], center: ['50%', '50%'],
-                    itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+                    itemStyle: { borderRadius: RgPalette.radiusMd borderColor: RgPalette.white, borderWidth: 2 },
                     label: { fontSize: 12, formatter: '{b}\n{d}%' },
                     emphasis: { scaleSize: 8, label: { fontSize: 14, fontWeight: 'bold' } },
                     data: names.map(function(n, i) { return { name: n, value: values[i] }; })
@@ -324,10 +324,10 @@
                 yAxis: { type: 'value', name: '%', max: 100 },
                 series: [
                     { name: '点击率%', type: 'bar', data: ctRates, barWidth: 20,
-                        itemStyle: { color: '#5470c6', borderRadius: [6, 6, 0, 0] },
+                        itemStyle: { color: RgPalette.seriesBlue, borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] },
                         label: { show: true, position: 'top', fontSize: 11, formatter: '{c}%' } },
                     { name: '转化率%', type: 'bar', data: cvRates, barWidth: 20,
-                        itemStyle: { color: '#91cc75', borderRadius: [6, 6, 0, 0] },
+                        itemStyle: { color: RgPalette.seriesGreen, borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] },
                         label: { show: true, position: 'top', fontSize: 11, formatter: '{c}%' } }
                 ]
             }, true);
@@ -371,12 +371,12 @@
                 series: [
                     { name: '浏览次数', type: 'line', data: browseCount, smooth: true,
                         symbol: 'circle', symbolSize: 6,
-                        lineStyle: { color: '#5470c6', width: 3 },
-                        areaStyle: { color: 'rgba(84,112,198,0.15)' } },
+                        lineStyle: { color: RgPalette.seriesBlue, width: 3 },
+                        areaStyle: { color: RgPalette.seriesBlueArea } },
                     { name: '加购次数', type: 'line', data: cartCount, smooth: true,
                         symbol: 'circle', symbolSize: 6,
-                        lineStyle: { color: '#91cc75', width: 3 },
-                        areaStyle: { color: 'rgba(145,204,117,0.15)' } }
+                        lineStyle: { color: RgPalette.seriesGreen, width: 3 },
+                        areaStyle: { color: RgPalette.seriesGreenArea } }
                 ]
             }, true);
         },
@@ -399,7 +399,7 @@
                     this.hotDishes = res.data || [];
                 }
             }).catch(err => {
-                console.error('加载热门排行失败:', err);
+                ReggieUI.error('加载热门排行失败');
             }).finally(() => { this.loadingHot = false; });
         },
         refreshHotRank() {

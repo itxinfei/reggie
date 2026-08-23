@@ -1,7 +1,6 @@
 package com.reggie.module.member.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.reggie.module.member.model.Member;
 import com.reggie.module.member.model.MemberTag;
 
 import java.util.List;
@@ -25,24 +24,6 @@ public interface MemberTagService extends IService<MemberTag> {
      * @return 标签列表
      */
     List<MemberTag> listByMemberId(Long tenantId, Long memberId);
-
-    /**
-     * 根据标签类型查询标签列表
-     *
-     * @param tenantId 租户ID
-     * @param tagType  标签类型（1手动添加 2自动生成）
-     * @return 标签列表
-     */
-    List<MemberTag> listByTagType(Long tenantId, String tagType);
-
-    /**
-     * 根据业务标签查询标签列表
-     *
-     * @param tenantId 租户ID
-     * @param bizTag   业务标签
-     * @return 标签列表
-     */
-    List<MemberTag> listByBizTag(Long tenantId, String bizTag);
 
     /**
      * 按业务标签分组统计标签数量

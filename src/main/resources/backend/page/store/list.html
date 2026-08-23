@@ -11,7 +11,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: var(--bg-page); padding: 20px; font-family: var(--font-family-base); }
         .dashboard-container { max-width: 1400px; margin: 0 auto; }
-        .container { background: var(--bg-surface); border-radius: 8px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+        .container { background: var(--bg-surface); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-xs); }
 
         /* 工具栏 */
         .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--el-border-light); margin-bottom: var(--space-5); }
@@ -21,8 +21,8 @@
         /* 表格 */
         .store-table { margin-top: 4px; }
         .store-table .cell-status { display: flex; align-items: center; gap: 6px; }
-        .tag-active { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size:var(--font-size-xs); font-weight: 500; background: var(--color-success-light); color: var(--color-success); }
-        .tag-inactive { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size:var(--font-size-xs); font-weight: 500; background: var(--color-danger-light); color: var(--color-danger); }
+        .tag-active { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size:var(--font-size-xs); font-weight: 500; background: var(--color-success-light); color: var(--color-success); }
+        .tag-inactive { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size:var(--font-size-xs); font-weight: 500; background: var(--color-danger-light); color: var(--color-danger); }
         .amount-highlight { color: var(--color-warning); font-weight: 600; }
         .order-count { font-weight: 600; color: var(--el-color-primary); }
 
@@ -39,10 +39,10 @@
         /* 门店详情弹窗 */
         .store-detail .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
         .store-detail .detail-title { font-size: var(--font-size-lg); font-weight: 600; color: var(--el-text-primary); }
-        .store-detail .detail-code { font-size: var(--font-size-xs); color: var(--text-muted); background: var(--bg-subtle); padding: 2px 8px; border-radius: 3px; }
+        .store-detail .detail-code { font-size: var(--font-size-xs); color: var(--text-muted); background: var(--bg-subtle); padding: 2px 8px; border-radius: var(--radius-sm); }
         .store-detail .form-section-title:first-of-type { margin-top: 4px; }
         /* 详情字段网格（替代未注册的 el-descriptions） */
-        .store-detail .detail-grid { border: 1px solid var(--el-border-extra-light); border-radius: 6px; overflow: hidden; margin-bottom: 4px; }
+        .store-detail .detail-grid { border: 1px solid var(--el-border-extra-light); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 4px; }
         .store-detail .detail-grid .el-col {
             display: flex; align-items: center;
             padding: 9px 12px; border-bottom: 1px solid var(--el-border-extra-light);
@@ -588,7 +588,7 @@
             var self = this;
             var ids = self.selection.map(function(r) { return r.tenantId; });
             if (ids.length === 0) { ReggieUI.warning('请选择门店'); return; }
-            self.$confirm('确认' + label + '已选的 ' + ids.length + ' 个门店吗？', '提示', {
+            ReggieUI.confirm('确认' + label + '已选的 ' + ids.length + ' 个门店吗？', '提示', {
                 confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
             }).then(function() {
                 batchUpdateStatus(ids, status).then(function(res) {

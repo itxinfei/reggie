@@ -3,18 +3,16 @@ package com.reggie.module.export.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.auth.service.EmployeeService;
 import com.reggie.module.auth.model.Employee;
 import com.reggie.module.order.model.Orders;
-import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.dish.model.Dish;
 import com.reggie.module.category.model.Category;
-import com.reggie.module.setmeal.model.Setmeal;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.dish.service.DishService;
 import com.reggie.module.category.service.CategoryService;
-import com.reggie.module.setmeal.service.SetmealService;
 import com.reggie.enums.OrderStatus;
 import com.reggie.module.export.util.ExportUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -55,6 +53,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/export")
 @Tag(name = "数据导出", description = "订单、菜品、员工等业务数据的Excel/PDF导出功能")
+@RequireEmployee
 public class ExportController {
 
     /** 订单服务 */

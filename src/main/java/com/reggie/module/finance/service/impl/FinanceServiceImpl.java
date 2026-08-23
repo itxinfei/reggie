@@ -2,6 +2,8 @@ package com.reggie.module.finance.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.module.finance.mapper.WithdrawalApplicationMapper;
 import com.reggie.module.finance.mapper.ReconciliationStatementMapper;
 import com.reggie.module.finance.mapper.ProfitAnalysisMapper;
@@ -75,7 +77,16 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
 
     @Override
     public WithdrawalApplication getWithdrawalById(Long id) {
-        return withdrawalMapper.selectById(id);
+        WithdrawalApplication application = withdrawalMapper.selectById(id);
+        if (application == null) {
+            return null;
+        }
+        // 租户隔离校验：防止跨租户读取提现单敏感信息
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(application.getTenantId())) {
+            throw new IllegalArgumentException("无权查看其他租户的提现单");
+        }
+        return application;
     }
 
     @Override
@@ -95,6 +106,19 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         if (application == null) {
             return false;
         }
+        // 租户隔离校验：禁止跨租户审批
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(application.getTenantId())) {
+            throw new IllegalArgumentException("无权审批其他租户的提现申请");
+        }
+        // 状态机校验：仅待审批状态可审批
+        if (application.getStatus() != WithdrawalApplication.STATUS_PENDING) {
+            throw new IllegalArgumentException("仅待审批状态的提现申请可审批");
+        }
+        // 审批结果校验：仅允许审批通过或拒绝
+        if (status != WithdrawalApplication.STATUS_APPROVED && status != WithdrawalApplication.STATUS_REJECTED) {
+            throw new IllegalArgumentException("无效的审批结果");
+        }
 
         application.setStatus(status);
         application.setReviewerId(reviewerId);
@@ -110,8 +134,17 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
     @Transactional(rollbackFor = Exception.class)
     public boolean processWithdrawalPayment(Long id, String paymentNo) {
         WithdrawalApplication application = withdrawalMapper.selectById(id);
-        if (application == null || application.getStatus() != WithdrawalApplication.STATUS_APPROVED) {
+        if (application == null) {
             return false;
+        }
+        // 租户隔离校验：禁止跨租户付款
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(application.getTenantId())) {
+            throw new IllegalArgumentException("无权操作其他租户的提现单");
+        }
+        // 状态机校验：仅已审批状态可付款
+        if (application.getStatus() != WithdrawalApplication.STATUS_APPROVED) {
+            throw new IllegalArgumentException("仅已审批状态的提现申请可付款");
         }
 
         application.setStatus(WithdrawalApplication.STATUS_PAID);
@@ -126,8 +159,16 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
     @Transactional(rollbackFor = Exception.class)
     public boolean cancelWithdrawal(Long id) {
         WithdrawalApplication application = withdrawalMapper.selectById(id);
-        if (application == null || application.getStatus() != WithdrawalApplication.STATUS_PENDING) {
+        if (application == null) {
             return false;
+        }
+        // 租户隔离校验：禁止跨租户取消
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(application.getTenantId())) {
+            throw new IllegalArgumentException("无权操作其他租户的提现单");
+        }
+        if (application.getStatus() != WithdrawalApplication.STATUS_PENDING) {
+            throw new IllegalArgumentException("仅待审批状态的提现申请可取消");
         }
 
         application.setStatus(WithdrawalApplication.STATUS_CANCELLED);
@@ -165,7 +206,16 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
 
     @Override
     public ReconciliationStatement getReconciliationById(Long id) {
-        return reconciliationMapper.selectById(id);
+        ReconciliationStatement statement = reconciliationMapper.selectById(id);
+        if (statement == null) {
+            return null;
+        }
+        // 租户归属校验：防止跨租户越权查看对账单
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(statement.getTenantId())) {
+            throw new CustomException("无权查看其他租户的对账单");
+        }
+        return statement;
     }
 
     @Override
@@ -236,6 +286,11 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         if (statement == null) {
             return false;
         }
+        // 租户归属校验：防止跨租户越权确认对账单
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(statement.getTenantId())) {
+            throw new CustomException("无权确认其他租户的对账单");
+        }
 
         // Calculate difference
         BigDecimal difference = statement.getSystemAmount().subtract(statement.getPlatformAmount());
@@ -253,6 +308,15 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteReconciliation(Long id) {
+        ReconciliationStatement statement = reconciliationMapper.selectById(id);
+        if (statement == null) {
+            return false;
+        }
+        // 租户归属校验：防止跨租户越权删除对账单
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(statement.getTenantId())) {
+            throw new CustomException("无权删除其他租户的对账单");
+        }
         return reconciliationMapper.deleteById(id) > 0;
     }
 

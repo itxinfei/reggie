@@ -1,7 +1,6 @@
 package com.reggie.module.tenant.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.reggie.module.auth.model.Employee;
 import com.reggie.module.tenant.model.Tenant;
 
 import javax.servlet.http.HttpSession;

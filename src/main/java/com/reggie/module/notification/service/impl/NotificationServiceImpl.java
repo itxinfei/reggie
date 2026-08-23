@@ -7,10 +7,11 @@ import com.aliyuncs.IAcsClient;
 import com.aliyuncs.dysmsapi.model.v20170525.SendSmsRequest;
 import com.aliyuncs.dysmsapi.model.v20170525.SendSmsResponse;
 import com.aliyuncs.profile.DefaultProfile;
+import com.reggie.utils.SMSUtils;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.ObjectMapperHolder;
-import com.reggie.common.utils.PageUtils;
+import com.reggie.common.LogMaskUtils;
 import com.reggie.module.user.model.User;
 import com.reggie.module.user.mapper.UserMapper;
 import com.reggie.module.notification.mapper.NotificationRecordMapper;
@@ -48,7 +49,6 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class NotificationServiceImpl implements NotificationService {
 
     /** JSON序列化工具 */
@@ -97,6 +97,7 @@ public class NotificationServiceImpl implements NotificationService {
     private static final String SMS_REGION = "cn-hangzhou";
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public NotificationRecord sendByBizType(String bizType, List<String> targets, Integer channel,
                                             Map<String, String> params) {
         if (bizType == null || targets == null || targets.isEmpty()) {
@@ -163,6 +164,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public NotificationRecord batchSend(Long templateId, List<String> targets, Integer channel,
                                         Integer targetType, Map<String, String> params,
                                         LocalDateTime sendTime) {
@@ -236,20 +238,24 @@ public class NotificationServiceImpl implements NotificationService {
 
         if (smsMockMode) {
             log.info("[短信Mock] phone={}, sign={}, template={}, content={}",
-                    phone, signName, templateCode, params);
+                    LogMaskUtils.maskPhone(phone), signName, templateCode, params);
             return true;
         }
 
         if (templateCode == null || templateCode.isEmpty()) {
-            log.info("[短信-简易模式] phone={}, sign={}, content={}", phone, signName, params);
+            log.info("[短信-简易模式] phone={}, sign={}, content={}", LogMaskUtils.maskPhone(phone), signName, params);
             // 简易模式下，生产环境需配置通用短信模板后取消下面注释
             // return sendSmsWithContent(phone, signName, params);
             return true;
         }
 
         try {
-            DefaultProfile profile = DefaultProfile.getProfile(SMS_REGION, smsAccessKey, smsSecretKey);
-            IAcsClient client = new DefaultAcsClient(profile);
+            // 复用SMSUtils的客户端实例，避免每次创建新实例导致资源泄漏
+            IAcsClient client = SMSUtils.getClient();
+            if (client == null) {
+                log.error("[短信] 客户端未初始化，请检查SMS凭证配置");
+                return false;
+            }
 
             SendSmsRequest request = new SendSmsRequest();
             request.setSysRegionId(SMS_REGION);
@@ -260,15 +266,15 @@ public class NotificationServiceImpl implements NotificationService {
 
             SendSmsResponse response = client.getAcsResponse(request);
             if ("OK".equals(response.getCode())) {
-                log.info("短信发送成功: phone={}, bizId={}", phone, response.getBizId());
+                log.info("短信发送成功: phone={}, bizId={}", LogMaskUtils.maskPhone(phone), response.getBizId());
                 return true;
             } else {
                 log.warn("短信发送失败: phone={}, code={}, msg={}",
-                        phone, response.getCode(), response.getMessage());
+                        LogMaskUtils.maskPhone(phone), response.getCode(), response.getMessage());
                 return false;
             }
         } catch (Exception e) {
-            log.error("短信发送异常: phone={}", phone, e);
+            log.error("短信发送异常: phone={}", LogMaskUtils.maskPhone(phone), e);
             return false;
         }
     }
@@ -643,6 +649,7 @@ public class NotificationServiceImpl implements NotificationService {
      * 同时将消息内容同步写入用户消息中心
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public NotificationRecord sendSimpleMessage(Integer channel, List<String> targets,
                                                  String title, String content) {
         if (targets == null || targets.isEmpty()) {
@@ -722,6 +729,7 @@ public class NotificationServiceImpl implements NotificationService {
      * 查询所有状态正常的用户，集体发送通知并同步写入消息中心
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public NotificationRecord sendToAllUsers(String bizType, Integer channel, Map<String, String> params) {
         if (bizType == null) {
             log.warn("sendToAllUsers参数无效: bizType=null");

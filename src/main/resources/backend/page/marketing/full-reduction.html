@@ -7,161 +7,111 @@
   <title>满减活动管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
-    <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow-y: auto;
-      background: var(--el-bg-subtle);
-    }
-    .container {
-      padding: 24px 32px;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    .tableBar {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      background: var(--bg-surface);
-      padding: 16px 24px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-    }
-    .tableBar .toolbar-label {
-      font-size:var(--font-size-base);
-      color: var(--el-text-regular);
-      font-weight: 500;
-    }
-    .tableBar .toolbar-spacer {
-      flex: 1;
-    }
-    .table-card {
-      background: var(--bg-surface);
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-    }
-    .rule-type-tag {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size:var(--font-size-xs);
-    }
-    .rule-type-tag.reduce {
-      background: var(--el-color-primary-lighter);
-      color: var(--el-color-primary);
-    }
-    .rule-type-tag.discount {
-      background: var(--el-color-success-lighter);
-      color: var(--el-color-success);
-    }
-    .rule-type-tag.gift {
-      background: var(--el-color-warning-lighter);
-      color: var(--el-color-warning);
-    }
-    .status-tag {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size:var(--font-size-xs);
-    }
-    .status-tag.active {
-      background: var(--el-color-success-lighter);
-      color: var(--el-color-success);
-    }
-    .status-tag.disabled {
-      background: var(--el-color-danger-lighter);
-      color: var(--el-color-danger);
-    }
+    body { overflow-x: visible; }
   </style>
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
- <a href="#app" class="skip-link">跳转到主内容</a>
- <div id="app" class="container" role="main" aria-label="页面主要内容">
-    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-    <header class="ds-page-header">
-      <div class="ds-page-header__titles">
-        <h1 class="ds-page-header__title" id="page-title">满减活动</h1>
-        <p class="ds-page-header__subtitle">管理满减优惠活动</p>
-      </div>
-      <div class="ds-page-header__actions"></div>
-    </header>
-    <!-- 工具栏 -->
-    <div class="tableBar">
-      <span class="toolbar-label">活动ID：</span>
-      <el-input v-model="searchCampaignId" placeholder="请输入活动ID" clearable style="width: 150px;"></el-input>
-      <el-button type="primary" icon="el-icon-search" aria-label="搜索" @click="fetchData">查询</el-button>
-      <el-button icon="el-icon-refresh" aria-label="重置" @click="resetSearch">重置</el-button>
-      <div class="toolbar-spacer"></div>
-      <el-button type="primary" icon="el-icon-plus" aria-label="新增" @click="handleAdd">新增满减规则</el-button>
-    </div>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
 
-    <!-- 表格 -->
-    <div class="table-card">
-      <el-table aria-label="数据表格"
+  <div class="dashboard-container" id="app">
+    <main class="container ds-page" id="main-content" role="main">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">满减活动</h1>
+          <p class="ds-page-header__subtitle">管理满减优惠活动</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
+
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <!-- 搜索 + 操作栏 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      ></table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
         :data="tableData"
-        border
-        stripe
-        style="width: 100%"
-        v-loading="loading">
-        <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
-        <el-table-column prop="campaignId" label="活动ID" width="100" align="center"></el-table-column>
-        <el-table-column prop="ruleName" label="规则名称" min-width="150" align="center"></el-table-column>
-        <el-table-column prop="discountType" label="优惠类型" width="120" align="center">
-          <template slot-scope="scope">
-            <span class="rule-type-tag" :class="getDiscountTypeClass(scope.row.discountType)">
-              {{ getDiscountTypeText(scope.row.discountType) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="minAmount" label="满减门槛" width="120" align="right">
-          <template slot-scope="scope">
-            满¥{{ formatMoney(scope.row.minAmount) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="discountValue" label="优惠值" width="120" align="right">
-          <template slot-scope="scope">
-            <span v-if="scope.row.discountType === 1">减¥{{ formatMoney(scope.row.discountValue) }}</span>
-            <span v-else-if="scope.row.discountType === 2">{{ (scope.row.discountValue * 10).toFixed(1) }}折</span>
-            <span v-else>赠品</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="maxDiscountAmount" label="最大优惠" width="120" align="right">
-          <template slot-scope="scope">
-            {{ scope.row.maxDiscountAmount ? '¥' + formatMoney(scope.row.maxDiscountAmount) : '不限' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="perUserLimit" label="每人限用" width="100" align="center">
-          <template slot-scope="scope">
-            {{ scope.row.perUserLimit || '不限' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100" align="center">
-          <template slot-scope="scope">
-            <span class="status-tag" :class="scope.row.status === 1 ? 'active' : 'disabled'">
-              {{ scope.row.status === 1 ? '启用' : '禁用' }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="180" align="center" fixed="right">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" @click="handleEdit(scope.row)">编辑</el-button>
-            <el-button type="text" size="small" @click="handleToggleStatus(scope.row)">
-              {{ scope.row.status === 1 ? '禁用' : '启用' }}
-            </el-button>
-            <el-button type="text" size="small" style="color: var(--el-color-danger);" @click="handleDelete(scope.row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </div>
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :selection="false"
+        :show-actions="true"
+        :actions-width="180"
+        :actions-fixed="true"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        aria-label="满减活动列表"
+      >
+        <!-- 优惠类型列 -->
+        <template #col-discountType="{ row }">
+          <el-tag :type="getDiscountTypeTagType(row.discountType)" size="small">
+            {{ getDiscountTypeText(row.discountType) }}
+          </el-tag>
+        </template>
+        <!-- 满减门槛列 -->
+        <template #col-minAmount="{ row }">
+          <span>满¥{{ formatMoney(row.minAmount) }}</span>
+        </template>
+        <!-- 优惠值列 -->
+        <template #col-discountValue="{ row }">
+          <span v-if="row.discountType === 1">减¥{{ formatMoney(row.discountValue) }}</span>
+          <span v-else-if="row.discountType === 2">{{ (row.discountValue * 10).toFixed(1) }}折</span>
+          <span v-else>赠品</span>
+        </template>
+        <!-- 最大优惠列 -->
+        <template #col-maxDiscountAmount="{ row }">
+          <span>{{ row.maxDiscountAmount ? '¥' + formatMoney(row.maxDiscountAmount) : '不限' }}</span>
+        </template>
+        <!-- 每人限用列 -->
+        <template #col-perUserLimit="{ row }">
+          <span>{{ row.perUserLimit || '不限' }}</span>
+        </template>
+        <!-- 状态列 -->
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+            {{ row.status === 1 ? '启用' : '禁用' }}
+          </el-tag>
+        </template>
+        <!-- 操作按钮 -->
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="handleEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" @click="handleToggleStatus(row)">
+            {{ row.status === 1 ? '禁用' : '启用' }}
+          </el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
+    </main>
 
     <!-- 新增/编辑对话框 -->
-    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="600px" @submit="handleSubmit">
-      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px">
+    <crud-dialog
+      :size="'md'"
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      :close-on-click-modal="false"
+      :submit-loading="submitLoading"
+      @submit="handleSubmit"
+    >
+      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px" size="small">
         <el-form-item label="活动ID" prop="campaignId">
           <el-input-number v-model="formData.campaignId" :min="1" style="width: 100%;"></el-input-number>
         </el-form-item>
@@ -179,10 +129,10 @@
           <el-input-number v-model="formData.minAmount" :precision="2" :min="0" style="width: 100%;"></el-input-number>
         </el-form-item>
         <el-form-item :label="formData.discountType === 2 ? '折扣率' : '优惠金额'" prop="discountValue">
-          <el-input-number 
-            v-model="formData.discountValue" 
-            :precision="formData.discountType === 2 ? 4 : 2" 
-            :min="0" 
+          <el-input-number
+            v-model="formData.discountValue"
+            :precision="formData.discountType === 2 ? 4 : 2"
+            :min="0"
             :max="formData.discountType === 2 ? 1 : 99999"
             style="width: 100%;">
           </el-input-number>
@@ -209,20 +159,48 @@
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
-  <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/components.js"></script>
   <script src="../../js/common.js"></script>
   <script src="../../api/marketing.js"></script>
   <script>
     new Vue({
       el: '#app',
-      data() {
+      data: function() {
         return {
+          counts: 0,
+          page: 1,
+          pageSize: 10,
           loading: false,
-          searchCampaignId: '',
+          activeFilter: '',
           tableData: [],
+          // 搜索配置
+          searchConfig: [
+            { type: 'input', field: 'campaignId', placeholder: '请输入活动ID', width: '150px' }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'add', text: '+ 新增满减规则', type: 'primary' }
+          ],
+          // 表格列配置
+          columns: [
+            { prop: 'id', label: 'ID', width: 80, align: 'center' },
+            { prop: 'campaignId', label: '活动ID', width: 100, align: 'center' },
+            { prop: 'ruleName', label: '规则名称', width: 150, showOverflowTooltip: true },
+            { prop: 'discountType', label: '优惠类型', slot: true, width: 120, align: 'center' },
+            { prop: 'minAmount', label: '满减门槛', slot: true, width: 120, type: 'money' },
+            { prop: 'discountValue', label: '优惠值', slot: true, width: 120, type: 'money' },
+            { prop: 'maxDiscountAmount', label: '最大优惠', slot: true, width: 120, type: 'money' },
+            { prop: 'perUserLimit', label: '每人限用', slot: true, width: 100, align: 'center' },
+            { prop: 'status', label: '状态', slot: true, width: 100, align: 'center' }
+          ],
+          // 统计
+          stats: { total: 0, active: 0, inactive: 0 },
+          // 缓存搜索参数
+          lastSearch: {},
           dialogVisible: false,
           dialogTitle: '新增满减规则',
           submitLoading: false,
@@ -247,43 +225,105 @@
           }
         }
       },
-      created() {
-        this.fetchData()
+      computed: {
+        statsCards: function() {
+          var self = this
+          return [
+            { key: '', icon: 'ri-coupon-3-line', label: '全部规则', value: self.stats.total, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '1', icon: 'ri-checkbox-circle-line', label: '已启用', value: self.stats.active, color: 'success', clickable: true, active: self.activeFilter === '1' },
+            { key: '0', icon: 'ri-pause-circle-line', label: '已禁用', value: self.stats.inactive, color: 'warning', clickable: true, active: self.activeFilter === '0' }
+          ]
+        }
+      },
+      created: function() {
+        this.init()
+        this.loadStats()
       },
       methods: {
         formatMoney(value) {
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
         },
-        getDiscountTypeClass(type) {
-          const map = { 1: 'reduce', 2: 'discount', 3: 'gift' }
-          return map[type] || 'reduce'
+        getDiscountTypeTagType(type) {
+          var map = { 1: '', 2: 'success', 3: 'warning' }
+          return map[type] || ''
         },
         getDiscountTypeText(type) {
-          const map = { 1: '减固定金额', 2: '打折', 3: '赠品' }
+          var map = { 1: '减固定金额', 2: '打折', 3: '赠品' }
           return map[type] || '未知'
         },
-        async fetchData() {
+        async init() {
           this.loading = true
+          var self = this
+          var params = { page: this.page, pageSize: this.pageSize }
+          if (self.lastSearch.campaignId) {
+            params.campaignId = self.lastSearch.campaignId
+          }
+          if (self.activeFilter && self.activeFilter !== '') {
+            params.status = self.activeFilter
+          }
           try {
-            const params = {}
-            if (this.searchCampaignId) {
-              params.campaignId = this.searchCampaignId
-            }
-            const res = await getFullReductionRules(params)
-            if (res.code === 1) {
-              this.tableData = res.data || []
+            var res = await getFullReductionRules(params)
+            if (String(res.code) === '1') {
+              self.tableData = res.data || []
+              self.counts = res.total || (res.data ? res.data.length : 0)
             }
           } catch (err) {
-            console.error('获取满减规则列表失败', err)
-            ReggieUI.error('获取数据失败')
-          } finally {
-            this.loading = false
+            ReggieUI.error('获取满减规则列表失败:')
+          }
+          self.loading = false
+        },
+        async loadStats() {
+          try {
+            var results = await Promise.all([
+              getFullReductionRules({ page: 1, pageSize: 1, status: '1' }),
+              getFullReductionRules({ page: 1, pageSize: 1, status: '0' })
+            ])
+            var activeCount = (String(results[0].code) === '1') ? (results[0].total || results[0].data.length || 0) : 0
+            var inactiveCount = (String(results[1].code) === '1') ? (results[1].total || results[1].data.length || 0) : 0
+            this.stats = {
+              total: activeCount + inactiveCount,
+              active: activeCount,
+              inactive: inactiveCount
+            }
+          } catch (err) {
+            console.warn('加载满减统计数据失败:', err)
           }
         },
-        resetSearch() {
-          this.searchCampaignId = ''
-          this.fetchData()
+        // stat-cards 点击
+        onCardClick: function(payload) {
+          var self = this
+          self.activeFilter = payload.activeKey
+          self.lastSearch = {}
+          self.page = 1
+          self.init()
+        },
+        // table-bar 回调
+        onSearch: function(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
+          this.page = 1
+          this.init()
+        },
+        onReset: function() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.page = 1
+          this.init()
+        },
+        onAction: function(payload) {
+          switch (payload.key) {
+            case 'add': this.handleAdd(); break
+          }
+        },
+        onPageChange: function(payload) {
+          this.page = payload.page
+          this.init()
+        },
+        onSizeChange: function(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+          this.init()
         },
         handleAdd() {
           this.dialogTitle = '新增满减规则'
@@ -306,7 +346,7 @@
         },
         handleEdit(row) {
           this.dialogTitle = '编辑满减规则'
-          this.formData = { ...row }
+          this.formData = Object.assign({}, row)
           this.dialogVisible = true
           this.$nextTick(() => {
             this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
@@ -314,67 +354,60 @@
         },
         async handleToggleStatus(row) {
           try {
-            const newStatus = row.status === 1 ? 0 : 1
-            const res = await updateFullReductionRule({ ...row, status: newStatus })
+            var newStatus = row.status === 1 ? 0 : 1
+            var res = await updateFullReductionRule(Object.assign({}, row, { status: newStatus }))
             if (res.code === 1) {
               ReggieUI.success(newStatus === 1 ? '已启用' : '已禁用')
-              this.fetchData()
+              this.init()
+              this.loadStats()
             } else {
               ReggieUI.error(res.msg || '操作失败')
             }
           } catch (err) {
-            console.error('操作失败', err)
             ReggieUI.error('操作失败')
           }
         },
         async handleDelete(row) {
           try {
-            await this.$confirm('确定要删除该满减规则吗？', '提示', {
+            await ReggieUI.confirm('确定要删除该满减规则吗？', '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
               type: 'warning'
             })
-            
-            const res = await deleteFullReductionRule(row.id)
+            var res = await deleteFullReductionRule(row.id)
             if (res.code === 1) {
               ReggieUI.success('删除成功')
-              this.fetchData()
+              this.init()
+              this.loadStats()
             } else {
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
             if (err !== 'cancel') {
-              console.error('删除失败', err)
               ReggieUI.error('删除失败')
             }
           }
         },
         handleSubmit() {
-          this.$refs.ruleForm.validate(async (valid) => {
-            if (!valid) return
-            
-            this.submitLoading = true
-            try {
-              let res
-              if (this.formData.id) {
-                res = await updateFullReductionRule(this.formData)
-              } else {
-                res = await saveFullReductionRule(this.formData)
-              }
-              
-              if (res.code === 1) {
-                ReggieUI.success(this.formData.id ? '更新成功' : '新增成功')
-                this.dialogVisible = false
-                this.fetchData()
-              } else {
-                ReggieUI.error(res.msg || '操作失败')
-              }
-            } catch (err) {
-              console.error('提交失败', err)
-              ReggieUI.error('操作失败')
-            } finally {
-              this.submitLoading = false
+          var self = this
+          let passed = false
+          this.$refs.ruleForm.validate(function(valid) { passed = valid })
+          if (!passed) return
+          self.submitLoading = true
+          var apiCall = self.formData.id ? updateFullReductionRule(self.formData) : saveFullReductionRule(self.formData)
+          apiCall.then(function(res) {
+            if (res.code === 1) {
+              ReggieUI.success(self.formData.id ? '更新成功' : '新增成功')
+              self.dialogVisible = false
+              self.init()
+              self.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
             }
+          }).catch(function(err) {
+            ReggieUI.error('操作失败')
+          }).finally(function() {
+            self.submitLoading = false
           })
         }
       }
@@ -382,7 +415,3 @@
   </script>
 </body>
 </html>
-
-
-
-

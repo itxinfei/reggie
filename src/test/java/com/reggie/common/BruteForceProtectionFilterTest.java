@@ -1,35 +1,20 @@
 package com.reggie.common;
 
-import com.reggie.module.auth.model.Employee;
-import com.reggie.module.auth.service.EmployeeService;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * BruteForceProtectionFilter 集成测试
+ * BruteForceProtectionFilter 单元测试
+ * <p>
+ * 纯 Mockito 单测：不加载 Spring 容器，直接构造 filter 验证暴力破解防护逻辑。
  *
  * @author itxinfei
  */
 @SuppressWarnings("unchecked")
-@SpringBootTest(classes = com.reggie.ReggieApplication.class)
-@ActiveProfiles("test")
 class BruteForceProtectionFilterTest {
-
-    @MockBean
-    private RedisTemplate<String, Object> redisTemplate;
-
-    @Autowired
-    private BruteForceProtectionFilter bruteForceProtectionFilter;
-
-    @Autowired
-    private EmployeeService employeeService;
 
     @Test
     void testBruteForceDisabledWhenRedisNull() {
@@ -41,6 +26,7 @@ class BruteForceProtectionFilterTest {
     @Test
     void testBruteForceEnabledWhenRedisAvailable() {
         // Redis 可用时，暴力破解防护应该启用
+        RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
         BruteForceProtectionFilter filter = new BruteForceProtectionFilter(redisTemplate);
         assertTrue(filter.isEnabled(), "Redis 可用时应该启用暴力破解防护");
     }
@@ -48,7 +34,9 @@ class BruteForceProtectionFilterTest {
     @Test
     void testRecordLoginFailureWithMockRedis() {
         // 模拟 Redis 操作（使用 Lua 脚本执行）
-        org.springframework.data.redis.core.ValueOperations valueOps = mock(org.springframework.data.redis.core.ValueOperations.class);
+        RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
+        org.springframework.data.redis.core.ValueOperations<String, Object> valueOps =
+                mock(org.springframework.data.redis.core.ValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
         // Lua 脚本执行后返回 1（第一次失败）
         when(redisTemplate.execute(any(), anyList(), any())).thenReturn(1L);
@@ -63,6 +51,7 @@ class BruteForceProtectionFilterTest {
     @Test
     void testResetLoginAttemptsWithMockRedis() {
         // 模拟 Redis 操作
+        RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
         when(redisTemplate.opsForValue()).thenReturn(mock(org.springframework.data.redis.core.ValueOperations.class));
         when(redisTemplate.delete(anyString())).thenReturn(true);
 
@@ -77,7 +66,10 @@ class BruteForceProtectionFilterTest {
     @Test
     void testGetFailedAttemptsWithMockRedis() {
         // 模拟 Redis 操作
-        when(redisTemplate.opsForValue()).thenReturn(mock(org.springframework.data.redis.core.ValueOperations.class));
+        RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
+        org.springframework.data.redis.core.ValueOperations<String, Object> valueOps =
+                mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
         when(redisTemplate.opsForValue().get(anyString())).thenReturn(3);
 
         BruteForceProtectionFilter filter = new BruteForceProtectionFilter(redisTemplate);
@@ -91,6 +83,7 @@ class BruteForceProtectionFilterTest {
     @Test
     void testGracefulDegradationWhenRedisUnavailable() {
         // 模拟 Redis 异常
+        RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
         when(redisTemplate.opsForValue()).thenThrow(new RuntimeException("Redis connection failed"));
 
         BruteForceProtectionFilter filter = new BruteForceProtectionFilter(redisTemplate);
@@ -107,6 +100,7 @@ class BruteForceProtectionFilterTest {
 
     @Test
     void testIsLoginRequest() {
+        RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
         BruteForceProtectionFilter filter = new BruteForceProtectionFilter(redisTemplate);
 
         // 可以通过反射调用私有方法验证登录请求识别
@@ -114,5 +108,3 @@ class BruteForceProtectionFilterTest {
         assertTrue(filter.isEnabled());
     }
 }
-
-

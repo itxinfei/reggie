@@ -5,7 +5,6 @@ import com.reggie.module.ai.model.AIConversation;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -29,6 +28,7 @@ public interface AIConversationMapper extends BaseMapper<AIConversation> {
      * @return 会话列表
      */
     List<AIConversation> selectUserConversations(@Param("userId") Long userId,
+                                                  @Param("tenantId") Long tenantId,
                                                   @Param("isDeleted") Integer isDeleted,
                                                   @Param("offset") int offset,
                                                   @Param("limit") int limit);

@@ -1,8 +1,6 @@
 package com.reggie.module.ai.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.io.Serializable;
 import java.util.List;
@@ -14,23 +12,29 @@ import java.util.Map;
  * @author reggie
  * @since 2026-07-09
  */
+@Schema(description = "AI 聊天响应")
 public class AIChatResponse implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     /** 回复内容 */
+    @Schema(description = "AI 回复内容")
     private String content;
 
     /** 推荐菜品列表（点餐场景专用） */
+    @Schema(description = "推荐菜品列表（点餐场景专用）")
     private List<AIRecommendedDish> dishes;
 
     /** 使用的模型 */
+    @Schema(description = "使用的模型")
     private String model;
 
     /** Token使用量 */
+    @Schema(description = "Token 使用量")
     private Integer tokensUsed;
 
     /** 附加数据 */
+    @Schema(description = "附加数据")
     private Map<String, Object> data;
 
     public AIChatResponse() {}

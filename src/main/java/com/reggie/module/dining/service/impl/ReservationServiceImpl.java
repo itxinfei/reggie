@@ -2,6 +2,7 @@ package com.reggie.module.dining.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.module.dining.mapper.ReservationMapper;
 import com.reggie.module.dining.model.Reservation;
 import com.reggie.enums.ReservationStatus;
@@ -47,39 +48,52 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
     @Transactional(rollbackFor = Exception.class)
     public void confirmReservation(Long id) {
         Reservation r = getById(id);
-        if (r != null) {
-            // 确认预订时锁定桌台：FREE → RESERVED
-            if (r.getTableId() != null) {
-                diningTableService.changeStatus(r.getTableId(), DiningTableStatus.RESERVED.getValue());
-            }
-            r.setStatus(ReservationStatus.CONFIRMED.getValue());
-            updateById(r);
+        if (r == null) {
+            throw new CustomException("预订不存在");
         }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(r.getTenantId())) {
+            throw new CustomException("无权操作其他租户的预订");
+        }
+        if (r.getTableId() != null) {
+            diningTableService.changeStatus(r.getTableId(), DiningTableStatus.RESERVED.getValue());
+        }
+        r.setStatus(ReservationStatus.CONFIRMED.getValue());
+        updateById(r);
     }
 
     @Override
     public void cancelReservation(Long id) {
         Reservation r = getById(id);
-        if (r != null) {
-            r.setStatus(ReservationStatus.CANCELLED.getValue());
-            updateById(r);
+        if (r == null) {
+            throw new CustomException("预订不存在");
         }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(r.getTenantId())) {
+            throw new CustomException("无权操作其他租户的预订");
+        }
+        r.setStatus(ReservationStatus.CANCELLED.getValue());
+        updateById(r);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void arrive(Long id) {
         Reservation r = getById(id);
-        if (r != null) {
-            r.setStatus(ReservationStatus.ARRIVED.getValue());
-            updateById(r);
-            if (r.getTableId() != null) {
-                try {
-                    diningTableService.changeStatus(r.getTableId(), DiningTableStatus.OCCUPIED.getValue());
-                } catch (Exception e) {
-                    // 桌台状态变更失败不回滚预订状态，仅记录日志
-                    log.warn("[预订到店] 桌台状态变更失败，不回滚预订状态: tableId={}, error={}", r.getTableId(), e.getMessage());
-                }
+        if (r == null) {
+            throw new CustomException("预订不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(r.getTenantId())) {
+            throw new CustomException("无权操作其他租户的预订");
+        }
+        r.setStatus(ReservationStatus.ARRIVED.getValue());
+        updateById(r);
+        if (r.getTableId() != null) {
+            try {
+                diningTableService.changeStatus(r.getTableId(), DiningTableStatus.OCCUPIED.getValue());
+            } catch (Exception e) {
+                log.warn("[预订到店] 桌台状态变更失败: tableId={}, error={}", r.getTableId(), e.getMessage(), e);
             }
         }
     }

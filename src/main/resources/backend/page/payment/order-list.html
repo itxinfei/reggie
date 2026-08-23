@@ -10,13 +10,13 @@
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     /* ========== Payment Detail Dialog ========== */
-    .pay-detail-dialog { border-radius: 12px; overflow: hidden; animation: none !important; }
+    .pay-detail-dialog { border-radius: var(--radius-lg); overflow: hidden; animation: none !important; }
     .pay-detail-dialog .el-dialog__header { padding: 0; display: none; }
     .pay-detail-dialog .el-dialog__body { padding: 0; }
     .pay-detail-dialog .dialog-footer { text-align: right; padding: 14px 20px 18px; }
     .pay-detail-dialog .el-dialog__headerbtn { z-index: 10; }
 
-    .pd-wrap { background: var(--bg-surface); border-radius: 12px; overflow: hidden; }
+    .pd-wrap { background: var(--bg-surface); border-radius: var(--radius-lg); overflow: hidden; }
 
     /* Header bar */
     .pd-header {
@@ -35,22 +35,22 @@
       display: flex; align-items: center; gap: 14px;
       margin: 16px 20px 0; padding: 20px 24px;
       background: var(--color-brand-50);
-      border: 1px solid var(--color-brand-100); border-radius: 10px;
+      border: 1px solid var(--color-brand-100); border-radius: var(--radius-md);
     }
     .pd-amount-icon {
-      width: 48px; height: 48px; border-radius: 14px;
+      width: 48px; height: 48px; border-radius: var(--radius-lg);
       background: var(--color-brand-500);
-      color: var(--bg-surface); font-size: 22px; font-weight: 700;
+      color: var(--bg-surface); font-size: var(--font-size-2xl); font-weight: 700;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .pd-amount-label { font-size:var(--font-size-xs); color: var(--color-info); margin-bottom: 2px; }
-    .pd-amount-value { font-size: 26px; font-weight: 800; color: var(--color-brand-500); letter-spacing: -0.5px; }
+    .pd-amount-value { font-size: var(--font-size-3xl); font-weight: 800; color: var(--color-brand-500); letter-spacing: -0.5px; }
 
     /* Info grid */
     .pd-info-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 0;
       margin: 16px 20px 0;
-      border: 1px solid var(--el-border-light); border-radius: 8px; overflow: hidden;
+      border: 1px solid var(--el-border-light); border-radius: var(--radius-md); overflow: hidden;
     }
     .pd-info-item {
       display: flex; align-items: flex-start; gap: 10px;
@@ -65,7 +65,7 @@
     /* Trade numbers */
     .pd-trade-section {
       margin: 16px 20px 0; padding: 16px 18px;
-      background: var(--el-bg-ghost); border: 1px solid var(--el-border-light); border-radius: 8px;
+      background: var(--el-bg-ghost); border: 1px solid var(--el-border-light); border-radius: var(--radius-md);
     }
     .pd-trade-title { font-size:var(--font-size-sm); font-weight: 700; color: var(--el-text-regular); margin-bottom: 10px; }
     .pd-trade-row { display: flex; align-items: center; padding: 6px 0; font-size:var(--font-size-sm); }
@@ -74,12 +74,12 @@
 
     /* Close button */
     .pd-close-btn {
-      width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15);
-      color: var(--bg-surface); border-radius: 8px; cursor: pointer; font-size:var(--font-size-xl);
+      width: 28px; height: 28px; border: none; background: var(--el-bg-lighter);
+      color: var(--el-text-regular); border-radius: var(--radius-md); cursor: pointer; font-size:var(--font-size-xl);
       display: flex; align-items: center; justify-content: center;
       transition: background 0.2s, transform 0.2s;
     }
-    .pd-close-btn:hover { background: rgba(255,255,255,0.3); transform: rotate(90deg); }
+    .pd-close-btn:hover { background: var(--el-border-lighter); transform: rotate(90deg); }
   </style>
 </head>
 <body>
@@ -229,7 +229,7 @@
       @submit="submitRefund"
       @close="refundVisible = false"
     >
-      <el-form label-width="100px">
+      <el-form :model="refundForm" :rules="refundRules" ref="refundFormRef" label-width="100px">
         <el-form-item label="支付订单号：">
           <span>{{ refundForm.id }}</span>
         </el-form-item>
@@ -288,6 +288,10 @@
           // 统计数据
           stats: { todayPayments: 0, successPayments: 0, pendingPayments: 0, failedPayments: 0 },
           activeFilter: '',
+          refundRules: {
+            amount: [{ required: true, type: 'number', message: '请输入有效的退款金额', trigger: 'blur' }],
+            reason: [{ required: true, message: '请输入退款原因', trigger: 'blur' }]
+          },
           // 搜索配置（下拉框 value 使用中文，后端已兼容中文映射）
           searchConfig: [
             { type: 'input', field: 'orderId', placeholder: '请输入订单号', width: '200px' },
@@ -441,19 +445,20 @@
         submitRefund: function() {
           if (this.submitting) return // 提交防重
           var self = this
-          if (!self.refundForm.amount || self.refundForm.amount <= 0) { ReggieUI.error('请输入有效的退款金额'); return }
-          if (self.refundForm.amount > self.refundForm.maxAmount) { ReggieUI.error('退款金额不能超过支付金额'); return }
-          if (!self.refundForm.reason) { ReggieUI.error('请输入退款原因'); return }
-          ReggieUI.confirm('确认退款 ¥' + self.refundForm.amount + '?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
-            .then(function() {
-              self.submitting = true
-              // 修改点：id → paymentOrderId，与后端 RefundRequestDTO 字段对齐
-              paymentRefund({ paymentOrderId: self.refundForm.id, amount: self.refundForm.amount, reason: self.refundForm.reason }).then(function(res) {
-                self.submitting = false
-                if (res && res.code === 1) { ReggieUI.success('退款成功！'); self.refundVisible = false; self.init() }
-                else { ReggieUI.error(res ? res.msg : '退款失败') }
-              }).catch(function(err) { self.submitting = false; ReggieUI.error('请求失败：' + (err.message || err)) })
-            }).catch(function() { /* user cancelled */ })
+          this.$refs.refundFormRef.validate(function(valid) {
+            if (!valid) { return }
+            if (self.refundForm.amount > self.refundForm.maxAmount) { ReggieUI.error('退款金额不能超过支付金额'); return }
+            ReggieUI.confirm('确认退款 ¥' + self.refundForm.amount + '?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+              .then(function() {
+                self.submitting = true
+                // 修改点：id → paymentOrderId，与后端 RefundRequestDTO 字段对齐
+                paymentRefund({ paymentOrderId: self.refundForm.id, amount: self.refundForm.amount, reason: self.refundForm.reason }).then(function(res) {
+                  self.submitting = false
+                  if (res && res.code === 1) { ReggieUI.success('退款成功！'); self.refundVisible = false; self.init() }
+                  else { ReggieUI.error(res ? res.msg : '退款失败') }
+                }).catch(function(err) { self.submitting = false; ReggieUI.error('请求失败：' + (err.message || err)) })
+              }).catch(function() { /* user cancelled */ })
+          })
         }
       }
     })

@@ -37,7 +37,7 @@ public class AddressBookControllerTest {
 
     @Test
     void testSave() throws Exception {
-        mockMvc.perform(post("/addressBook")
+        mockMvc.perform(post("/address-book")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"userId\":1,\"consignee\":\"新地址联系人\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"detail\":\"科技园路1号\",\"label\":\"公司\"}"))
@@ -63,7 +63,7 @@ public class AddressBookControllerTest {
         addressBookService.save(address);
         long generatedId = address.getId();
 
-        mockMvc.perform(put("/addressBook")
+        mockMvc.perform(put("/address-book")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":" + generatedId + ",\"userId\":1,\"consignee\":\"李四\",\"phone\":\"13900139000\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"detail\":\"新地址\",\"label\":\"公司\"}"))
@@ -83,7 +83,7 @@ public class AddressBookControllerTest {
         addressBookService.save(address);
         long generatedId = address.getId();
 
-        mockMvc.perform(delete("/addressBook")
+        mockMvc.perform(delete("/address-book")
                 .param("ids", String.valueOf(generatedId))
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
@@ -101,7 +101,7 @@ public class AddressBookControllerTest {
         address.setDetail("最近地址");
         addressBookService.save(address);
 
-        mockMvc.perform(get("/addressBook/lastUpdate")
+        mockMvc.perform(get("/address-book/lastUpdate")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -128,7 +128,7 @@ public class AddressBookControllerTest {
         addressBookService.save(addr2);
         long id2 = addr2.getId();
 
-        mockMvc.perform(put("/addressBook/default")
+        mockMvc.perform(put("/address-book/default")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":" + id2 + "}"))
@@ -149,7 +149,7 @@ public class AddressBookControllerTest {
         addressBookService.save(address);
         long generatedId = address.getId();
 
-        mockMvc.perform(get("/addressBook/" + generatedId)
+        mockMvc.perform(get("/address-book/" + generatedId)
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -158,7 +158,7 @@ public class AddressBookControllerTest {
 
     @Test
     void testGetByIdNotFound() throws Exception {
-        mockMvc.perform(get("/addressBook/999")
+        mockMvc.perform(get("/address-book/999")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
@@ -174,7 +174,7 @@ public class AddressBookControllerTest {
         address.setIsDefault(1);
         addressBookService.save(address);
 
-        mockMvc.perform(get("/addressBook/default")
+        mockMvc.perform(get("/address-book/default")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -183,7 +183,7 @@ public class AddressBookControllerTest {
 
     @Test
     void testGetDefaultNotFound() throws Exception {
-        mockMvc.perform(get("/addressBook/default")
+        mockMvc.perform(get("/address-book/default")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
@@ -205,7 +205,7 @@ public class AddressBookControllerTest {
         addr2.setDetail("地址二详情");
         addressBookService.save(addr2);
 
-        mockMvc.perform(get("/addressBook/list")
+        mockMvc.perform(get("/address-book/list")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))

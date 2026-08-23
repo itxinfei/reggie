@@ -26,16 +26,6 @@ public interface DishEvaluationService extends IService<DishEvaluation> {
     DishEvaluation getById(Long id);
 
     /**
-     * 根据菜品ID查询评价列表
-     *
-     * @param tenantId 租户ID
-     * @param dishId   菜品ID
-     * @param status   审核状态（null表示查询已通过的）
-     * @return 评价列表
-     */
-    List<DishEvaluation> listByDishId(Long tenantId, Long dishId, Integer status);
-
-    /**
      * 根据菜品ID分页查询评价列表
      *
      * @param tenantId  租户ID
@@ -109,24 +99,6 @@ public interface DishEvaluationService extends IService<DishEvaluation> {
     Map<String, Object> getDishRatingStats(Long tenantId, Long dishId);
 
     /**
-     * 获取菜品评分分布（各分数段评价数量）
-     *
-     * @param tenantId 租户ID
-     * @param dishId   菜品ID
-     * @return 评分分布列表
-     */
-    List<Map<String, Object>> getDishRatingDistribution(Long tenantId, Long dishId);
-
-    /**
-     * 获取菜品平均评分
-     *
-     * @param tenantId 租户ID
-     * @param dishId   菜品ID
-     * @return 平均评分
-     */
-    Double getAverageRating(Long tenantId, Long dishId);
-
-    /**
      * 根据订单ID查询评价列表
      *
      * @param tenantId 租户ID
@@ -144,14 +116,5 @@ public interface DishEvaluationService extends IService<DishEvaluation> {
      * @return 是否删除成功
      */
     boolean deleteMyEvaluation(Long id, Long userId, Long tenantId);
-
-    /**
-     * 统计指定状态的评价数量
-     *
-     * @param tenantId 租户ID
-     * @param status   审核状态
-     * @return 评价数量
-     */
-    int countByStatus(Long tenantId, Integer status);
 }
 

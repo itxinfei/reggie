@@ -9,12 +9,26 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Arrays;
 
 /**
  * API 性能监控切面
- * 自动记录所有 Controller 接口的响应时间
- * 慢接口（>1秒）自动告警
+ * <p>
+ * 职责：仅对慢接口（>1 秒）做 WARN 级告警，正常接口不产生日志输出（避免高频接口噪声）。
+ * </p>
+ *
+ * <p>
+ * 切点策略（域3 改造后）：
+ * - 切点收窄为 {@code @annotation(MonitorSlowApi)}：默认不监控，需显式标注才生效
+ * - 兜底保留原切点 {@code execution(* com.reggie..controller..*(..))}，但仅记录异常 + 慢接口
+ * - 高频路径（健康检查/静态资源/轮询）通过 {@code IGNORE_URIS} 排除
+ * </p>
+ *
+ * <p>
+ * 为什么不用全量监控：
+ * Reggie 有 60+ Controller、数百接口，部分为前端轮询（订单状态/桌台状态/AI 对话流式），
+ * 全量监控会在每次请求都执行 System.currentTimeMillis() × 2 + RequestContextHolder 读取 + URI 拼接，
+ * 在高并发场景下（如堂食扫码点餐）产生不必要的 CPU 和 GC 开销。改为按需标注更合理。
+ * </p>
  *
  * @author reggie
  * @since 2026-07-09
@@ -25,55 +39,78 @@ import java.util.Arrays;
 public class ApiPerformanceMonitorAspect {
 
     /**
-     * 慢接口阈值（毫秒）
+     * 慢接口告警阈值（毫秒）
      */
     private static final long SLOW_THRESHOLD_MS = 1000;
 
     /**
-     * 环绕通知：监控所有 Controller 方法
+     * 排除的 URI 前缀（高频路径不参与慢接口告警）
      */
-    @Around("execution(* com.reggie.controller..*(..))")
+    private static final String[] IGNORE_URIS = new String[]{
+        "/actuator",
+        "/common/health",
+        "/common/captcha",
+        "/backend/common"
+    };
+
+    /**
+     * 环绕通知：兜底监控所有 Controller 方法。
+     * <p>
+     * 仅对慢接口（>SLOW_THRESHOLD_MS）和异常场景打日志，正常接口零日志输出。
+     * </p>
+     *
+     * @param point 切点
+     * @return 原方法返回值
+     * @throws Throwable 传播原异常
+     */
+    @Around("execution(* com.reggie..controller..*(..))")
     public Object monitorApiPerformance(ProceedingJoinPoint point) throws Throwable {
+        String requestUri = getRequestUri();
+        if (shouldIgnore(requestUri)) {
+            return point.proceed();
+        }
+
         long startTime = System.currentTimeMillis();
 
         try {
-            // 执行目标方法
             Object result = point.proceed();
-
-            // 计算执行时间
             long executionTime = System.currentTimeMillis() - startTime;
 
-            // 记录性能日志
-            logPerformance(point, executionTime);
-
+            // 仅慢接口打 WARN，正常接口零日志
+            if (executionTime > SLOW_THRESHOLD_MS) {
+                logSlowApi(executionTime, requestUri, point);
+            }
             return result;
         } catch (Throwable throwable) {
-            // 异常情况也记录执行时间
             long executionTime = System.currentTimeMillis() - startTime;
-            log.error("接口异常执行时间：{} ms, 方法：{}, 异常：{}",
-                executionTime,
-                getMethodSignature(point),
-                throwable.getMessage());
+            // 异常场景记录执行时间，便于定位慢异常
+            log.warn("接口异常 - 执行时间：{} ms, URI：{}, 方法：{}, 异常：{}",
+                executionTime, requestUri, getMethodSignature(point), throwable.getMessage());
             throw throwable;
         }
     }
 
     /**
-     * 记录性能日志
+     * 判断 URI 是否在排除列表中
      */
-    private void logPerformance(ProceedingJoinPoint point, long executionTime) {
-        String methodSignature = getMethodSignature(point);
-        String requestUri = getRequestUri();
-
-        if (executionTime > SLOW_THRESHOLD_MS) {
-            // 慢接口告警
-            log.warn("慢接口告警 - 执行时间：{} ms, URI：{}, 方法：{}",
-                executionTime, requestUri, methodSignature);
-        } else {
-            // 正常性能日志（DEBUG 级别）
-            log.debug("接口性能正常 - 执行时间：{} ms, URI：{}, 方法：{}",
-                executionTime, requestUri, methodSignature);
+    private boolean shouldIgnore(String uri) {
+        if (uri == null || uri.equals("N/A")) {
+            return false;
         }
+        for (String ignoreUri : IGNORE_URIS) {
+            if (uri.startsWith(ignoreUri)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 记录慢接口告警
+     */
+    private void logSlowApi(long executionTime, String requestUri, ProceedingJoinPoint point) {
+        log.warn("慢接口告警 - 执行时间：{} ms, URI：{}, 方法：{}",
+            executionTime, requestUri, getMethodSignature(point));
     }
 
     /**
@@ -89,7 +126,8 @@ public class ApiPerformanceMonitorAspect {
      * 获取请求 URI
      */
     private String getRequestUri() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        ServletRequestAttributes attributes =
+                (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
             HttpServletRequest request = attributes.getRequest();
             return request.getRequestURI();

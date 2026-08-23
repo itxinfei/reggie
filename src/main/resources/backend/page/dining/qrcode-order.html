@@ -18,7 +18,7 @@
     .category-tab { padding: 12px 20px; cursor: pointer; white-space: nowrap; font-size:var(--font-size-base); color: var(--el-text-regular); border-bottom: 2px solid transparent; transition: all 0.2s; }
     .category-tab.active { color: var(--legacy-ff6b35); border-bottom-color: var(--legacy-ff6b35); font-weight: 600; }
     .dish-list { padding: 8px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-    .dish-card { background: var(--color-white); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s; }
+    border-radius: var(--radius-md); box-shadow: var(--shadow-xs); cursor: pointer; transition: all 0.2s; }
     .dish-card:active { transform: scale(0.98); }
     .dish-card.sold-out { opacity: 0.6; }
     .dish-img { width: 100%; height: 120px; object-fit: cover; display: block; background: var(--el-bg-subtle); }
@@ -27,19 +27,20 @@
     .dish-price { font-size:var(--font-size-lg); font-weight: 700; color: var(--legacy-ff6b35); margin-top: 4px; }
     .dish-price::before { content: '￥'; font-size:var(--font-size-xs); }
     .sold-out-tag { position: relative; }
-    .sold-out-tag::after { content: '售罄'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); font-size:var(--font-size-2xl); color: var(--color-danger); font-weight: 700; border: 2px solid var(--color-danger); padding: 2px 8px; border-radius: 4px; }
+    .sold-out-tag::after { content: '售罄'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); font-size:var(--font-size-2xl); color: var(--color-danger); font-weight: 700; border: 2px solid var(--color-danger); border-radius: var(--radius-sm);
     /* 购物车栏 */
     .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--color-white); border-top: 1px solid var(--el-border-light); padding: 10px 16px; display: flex; align-items: center; gap: 12px; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.06); }
-    .cart-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--legacy-ff6b35); color: var(--color-white); display: flex; align-items: center; justify-content: center; font-size: 22px; position: relative; }
-    .cart-badge { position: absolute; top: -4px; right: -4px; background: var(--color-danger); color: var(--color-white); font-size: 11px; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+    .cart-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--legacy-ff6b35); color: var(--color-white); display: flex; align-items: center; justify-content: center; font-size: var(--font-size-2xl); position: relative; }
+    .cart-badge { position: absolute; top: -4px; right: -4px; background: var(--color-danger); color: var(--color-white); font-size: var(--font-size-xs); min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
     .cart-info { flex: 1; }
     .cart-total { font-size:var(--font-size-xl); font-weight: 700; color: var(--el-text-primary); }
     .cart-total::before { content: '￥'; font-size:var(--font-size-xs); }
     .cart-hint { font-size:var(--font-size-xs); color: var(--color-info); }
-    .cart-btn { background: var(--legacy-ff6b35); color: var(--color-white); border: none; padding: 10px 24px; border-radius: 20px; font-size:var(--font-size-md); font-weight: 600; cursor: pointer; }
+    .cart-btn { background: var(--color-brand-500); color: var(--text-on-brand); border: none; padding: 10px 24px; border-radius: var(--radius-lg); font-size:var(--font-size-md); font-weight: 600; cursor: pointer; }
+    .cart-btn:hover { background: var(--color-brand-400); }
     .cart-btn:disabled { background: var(--el-border-base); cursor: not-allowed; }
     /* 购物车弹窗 */
-    .cart-dialog .el-dialog { border-radius: 12px; }
+    .cart-dialog .el-dialog { border-radius: var(--radius-lg); }
     .cart-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--el-border-lighter); }
     .cart-item-name { flex: 1; font-size:var(--font-size-base); }
     .cart-item-price { color: var(--legacy-ff6b35); font-weight: 600; margin-right: 12px; }
@@ -48,14 +49,14 @@
     .qty-btn:disabled { color: var(--el-border-base); cursor: not-allowed; }
     .qty-num { font-size:var(--font-size-base); min-width: 20px; text-align: center; }
     /* 提交订单弹窗 */
-    .submit-dialog .el-dialog { border-radius: 12px; }
+    .submit-dialog .el-dialog { border-radius: var(--radius-lg); }
     .empty-cart { text-align: center; padding: 40px; color: var(--el-border-base); }
 
     /* 提取的内联样式类 */
     .qr-title { font-size:var(--font-size-base); color: var(--el-text-regular); margin-bottom: 12px; }
     .qr-label { font-size:var(--font-size-sm); color: var(--el-text-regular); display: block; margin-bottom: 4px; }
-    .qr-input { width: 100%; padding: 8px 12px; border: 1px solid var(--el-border-default); border-radius: 4px; font-size:var(--font-size-base); }
-    .qr-textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--el-border-default); border-radius: 4px; font-size:var(--font-size-base); resize: vertical; }
+    .qr-input { width: 100%; padding: 8px 12px; border: 1px solid var(--el-border-default); border-radius: var(--radius-sm); font-size:var(--font-size-base); }
+    .qr-textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--el-border-default); border-radius: var(--radius-sm); font-size:var(--font-size-base); resize: vertical; }
     .qr-flex-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
   </style>
 </head>
@@ -76,16 +77,16 @@
     </div>
 
     <!-- 分类Tab -->
-    <div class="category-tabs" v-if="!loading">
-      <div class="category-tab" :class="{active: activeCategory === 0}" @click="switchCategory(0)">全部</div>
-      <div class="category-tab" v-for="cat in categories" :key="cat.id" :class="{active: activeCategory === cat.id}" @click="switchCategory(cat.id)">
+    <div class="category-tabs" v-if="!loading" role="tablist">
+      <div role="tab" class="category-tab" tabindex="0" :class="{active: activeCategory === 0}" @click="switchCategory(0)" @keydown.enter="switchCategory(0)">全部</div>
+      <div role="tab" v-for="cat in categories" :key="cat.id" class="category-tab" tabindex="0" :class="{active: activeCategory === cat.id}" @click="switchCategory(cat.id)" @keydown.enter="switchCategory(cat.id)">
         {{ cat.name }}
       </div>
     </div>
 
     <!-- 菜品列表 -->
     <div class="dish-list" v-if="!loading">
-      <div class="dish-card" v-for="dish in filteredDishes" :key="dish.id" :class="{'sold-out': dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)}" @click="addToCart(dish)">
+      <div class="dish-card" v-for="dish in filteredDishes" :key="dish.id" role="button" tabindex="0" :aria-label="(dish.name + '，价格' + Number(dish.price).toFixed(2) + '元')" :class="{'sold-out': dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)}" @click="addToCart(dish)" @keydown.enter="addToCart(dish)">
         <div style="position:relative;">
           <img :src="getImage(dish.image)" class="dish-img" :alt="dish.name || '菜品图片'" />
           <div v-if="dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)" class="sold-out-tag"></div>
@@ -105,7 +106,7 @@
 
     <!-- 购物车栏 -->
     <div class="cart-bar" v-if="!loading && cartTotal() > 0">
-      <div class="cart-icon" @click="showCartDialog">
+      <div class="cart-icon" role="button" tabindex="0" :aria-label="('购物车，共' + cartTotal() + '件商品')" @click="showCartDialog" @keydown.enter="showCartDialog">
         🛒
         <div class="cart-badge" v-if="cartTotal() > 0">{{ cartTotal() }}</div>
       </div>
@@ -123,9 +124,9 @@
         <div class="cart-item-name">{{ item.name }}</div>
         <div class="cart-item-price">￥{{ Number(item.price).toFixed(2) }}</div>
         <div class="qty-control">
-          <button class="qty-btn" @click="changeQty(item, -1)" :disabled="item.qty <= 1">-</button>
+          <button class="qty-btn" @click="changeQty(item, -1)" :disabled="item.qty <= 1" aria-label="减少数量">-</button>
           <span class="qty-num">{{ item.qty }}</span>
-          <button class="qty-btn" @click="changeQty(item, 1)">+</button>
+          <button class="qty-btn" @click="changeQty(item, 1)" aria-label="增加数量">+</button>
         </div>
       </div>
     </crud-dialog>
@@ -140,20 +141,20 @@
         <div class="qr-title">
           共 <strong>{{ cartTotal() }}</strong> 件商品
         </div>
-        <div style="font-size:20px;font-weight:700;color:var(--legacy-ff6b35);margin-bottom:16px;">
+        <div style="font-size:var(--font-size-2xl);font-weight:700;color:var(--legacy-ff6b35);margin-bottom:16px;">
           合计：￥{{ cartAmount().toFixed(2) }}
         </div>
         <div class="form-group">
-          <label class="qr-label">联系人 <span style="color:var(--color-danger);">*</span></label>
-          <input v-model="submitForm.contactName" placeholder="请输入联系人姓名" class="qr-input" />
+          <label class="qr-label" for="qrContactName">联系人 <span style="color:var(--color-danger);">*</span></label>
+          <input id="qrContactName" v-model="submitForm.contactName" placeholder="请输入联系人姓名" class="qr-input" />
         </div>
         <div class="form-group">
-          <label class="qr-label">手机号 <span style="color:var(--color-danger);">*</span></label>
-          <input v-model="submitForm.contactPhone" placeholder="请输入手机号" type="tel" maxlength="11" class="qr-input" />
+          <label class="qr-label" for="qrContactPhone">手机号 <span style="color:var(--color-danger);">*</span></label>
+          <input id="qrContactPhone" v-model="submitForm.contactPhone" placeholder="请输入手机号" type="tel" maxlength="11" class="qr-input" />
         </div>
         <div class="form-group">
-          <label class="qr-label">备注</label>
-          <textarea v-model="submitForm.remark" placeholder="如有特殊需求请备注" rows="2" class="qr-textarea"></textarea>
+          <label class="qr-label" for="qrRemark">备注</label>
+          <textarea id="qrRemark" v-model="submitForm.remark" placeholder="如有特殊需求请备注" rows="2" class="qr-textarea"></textarea>
         </div>
       </div>
     </crud-dialog>
@@ -218,7 +219,7 @@
               this.categories = catRes.data || []
             }
           } catch (err) {
-            console.error('加载数据失败:', err)
+            ReggieUI.error('加载数据失败:')
           }
           this.loading = false
         },
@@ -229,7 +230,7 @@
               this.tableInfo = res.data
             }
           } catch (err) {
-            console.error('加载桌台信息失败:', err)
+            ReggieUI.error('加载桌台信息失败:')
           }
         },
         getImage(img) {

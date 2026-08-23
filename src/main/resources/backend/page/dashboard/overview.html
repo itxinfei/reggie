@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <!-- 性能优化：ECharts(~1MB)改为 preload 提前并行下载，运行时动态注入，不再阻塞首屏渲染 -->
   <link rel="preload" as="script" href="../../plugins/echarts/echarts.min.js" />
   <style>
@@ -93,14 +94,14 @@
       flex-shrink: 0;
     }
     .redis-flow-tag span {
-      background: rgba(255,255,255,0.15);
+      background: color-mix(in srgb, var(--bg-surface) 15%, transparent);
       padding: 4px 12px;
-      border-radius: 20px;
+      border-radius: var(--radius-lg);
       font-weight: 500;
       transition: all 0.2s;
     }
     .redis-flow-tag span:hover {
-      background: rgba(255,255,255,0.25);
+      background: color-mix(in srgb, var(--bg-surface) 25%, transparent);
       transform: translateY(-1px);
     }
 
@@ -196,7 +197,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 28px;
+      font-size: var(--font-size-3xl);
       transition: all 0.3s;
     }
 
@@ -215,7 +216,7 @@
 
     /* 数值（纯色令牌，符合"禁止渐变"规范） */
     .kpi-card .kpi-value {
-      font-size: 28px;
+      font-size: var(--font-size-3xl);
       font-weight: 700;
       line-height: 1.1;
       font-variant-numeric: tabular-nums;
@@ -240,8 +241,8 @@
       align-items: center;
       gap: 4px;
       padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 11px;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-xs);
       font-weight: 600;
     }
     .kpi-trend.up {
@@ -258,11 +259,7 @@
     }
 
     /* 缓存标签 */
-    .cache-tag {
-      display: inline-block;
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 4px;
+    border-radius: var(--radius-sm);
       font-weight: 500;
     }
     .cache-tag.redis { background: var(--color-success-light); color: var(--color-success); }
@@ -271,23 +268,23 @@
     /* 主题配色（纯色令牌，符合"禁止渐变"规范） */
     .kpi-card.primary {
       --stat-color: var(--color-brand-600);
-      --icon-bg: rgba(255, 194, 0, 0.1);
+      --icon-bg: color-mix(in srgb, var(--color-brand-500) 10%, transparent);
     }
     .kpi-card.success {
       --stat-color: var(--color-success);
-      --icon-bg: rgba(103, 194, 58, 0.1);
+      --icon-bg: color-mix(in srgb, var(--color-success) 10%, transparent);
     }
     .kpi-card.warning {
       --stat-color: var(--color-warning);
-      --icon-bg: rgba(230, 162, 60, 0.1);
+      --icon-bg: color-mix(in srgb, var(--color-warning) 10%, transparent);
     }
     .kpi-card.danger {
       --stat-color: var(--color-danger);
-      --icon-bg: rgba(245, 108, 108, 0.1);
+      --icon-bg: color-mix(in srgb, var(--color-danger) 10%, transparent);
     }
     .kpi-card.info {
       --stat-color: var(--color-gray-600);
-      --icon-bg: rgba(144, 147, 153, 0.1);
+      --icon-bg: color-mix(in srgb, var(--color-gray-600) 10%, transparent);
     }
 
     /* ========== 图表区域 ========== */
@@ -299,20 +296,10 @@
     }
 
     .chart-panel {
-      background: var(--bg-surface);
-      border-radius: 16px;
       padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.8);
       display: flex;
       flex-direction: column;
       min-width: 0;
-      transition: all 0.3s;
-    }
-
-    .chart-panel:hover {
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-      transform: translateY(-2px);
     }
 
     .chart-panel .chart-title {
@@ -342,18 +329,8 @@
     }
 
     .bottom-panel {
-      background: var(--bg-surface);
-      border-radius: 16px;
       padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.8);
       min-width: 0;
-      transition: all 0.3s;
-    }
-
-    .bottom-panel:hover {
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-      transform: translateY(-2px);
     }
 
     .bottom-panel .panel-title {
@@ -376,23 +353,13 @@
       border-bottom: 1px solid var(--el-bg-light);
       transition: all 0.2s;
     }
-    .hot-dish-list .hot-dish-item:hover {
-      background: var(--el-bg-ghost);
-      margin: 0 -12px;
-      padding-left: 12px;
-      padding-right: 12px;
-      border-radius: 8px;
+    border-radius: var(--radius-md);
     }
     .hot-dish-list .hot-dish-item:last-child {
       border-bottom: none;
       padding-bottom: 0;
     }
-    .hot-dish-rank {
-      width: 28px;
-      height: 28px;
-      line-height: 28px;
-      text-align: center;
-      border-radius: 8px;
+    border-radius: var(--radius-md);
       font-size:var(--font-size-sm);
       font-weight: 700;
       margin-right: 14px;
@@ -431,7 +398,7 @@
       width: 100px;
       height: 8px;
       background: var(--el-bg-page);
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       margin-left: 16px;
       flex-shrink: 0;
       overflow: hidden;
@@ -439,7 +406,7 @@
     .hot-dish-bar-fill {
       height: 100%;
       background: var(--color-brand-500);
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -451,7 +418,7 @@
     }
     .ops-metric {
       background: var(--el-bg-ghost);
-      border-radius: 10px;
+      border-radius: var(--radius-md);
       padding: 14px 12px;
       border: 1px solid var(--el-bg-page);
       transition: all 0.2s;
@@ -489,13 +456,13 @@
     .ops-progress-bar {
       height: 8px;
       background: var(--el-bg-page);
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       overflow: hidden;
       margin-bottom: 4px;
     }
     .ops-progress-fill {
       height: 100%;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .ops-progress-label {
@@ -566,7 +533,7 @@
         min-height: 90px;
       }
       .kpi-card .kpi-value {
-        font-size: 24px;
+        font-size: var(--font-size-3xl);
       }
       .charts-row {
         grid-template-columns: 1fr;
@@ -597,7 +564,7 @@
         min-height: 80px;
       }
       .kpi-card .kpi-value {
-        font-size: 22px;
+        font-size: var(--font-size-2xl);
       }
       .kpi-card .kpi-label {
         font-size:var(--font-size-xs);
@@ -619,10 +586,10 @@
         font-size:var(--font-size-xs);
       }
       .kpi-card .kpi-value {
-        font-size: 26px;
+        font-size: var(--font-size-3xl);
       }
       .kpi-card .kpi-sub {
-        font-size: 11px;
+        font-size: var(--font-size-xs);
       }
     }
   </style>
@@ -673,7 +640,7 @@
         <div class="kpi-card info">
           <div class="kpi-icon-wrapper">👥</div>
           <div class="kpi-label">注册用户 / 在职员工</div>
-          <div class="kpi-value">{{ overview.totalUsers || 0 }} <span style="font-size:18px;color:var(--el-border-base);-webkit-text-fill-color:var(--el-border-base);">/</span> {{ overview.activeEmployees || 0 }}</div>
+          <div class="kpi-value">{{ overview.totalUsers || 0 }} <span style="font-size:var(--font-size-xl);color:var(--el-border-base);-webkit-text-fill-color:var(--el-border-base);">/</span> {{ overview.activeEmployees || 0 }}</div>
           <div class="kpi-sub">
             数据来源: {{ overview.cacheSource || 'MySQL' }}
           </div>
@@ -684,7 +651,7 @@
       <!-- 修改点：集成库存预警，显示低库存食材名称 -->
       <div v-if="inventoryAlert && inventoryAlert.lowStockCount > 0" class="inventory-alert">
         <div style="display:flex;align-items:center;gap:12px;">
-          <span style="font-size:24px;">⚠️</span>
+          <span style="font-size:var(--font-size-3xl);">⚠️</span>
           <div>
             <div class="inventory-alert__title">库存预警：{{ inventoryAlert.lowStockCount }} 种食材库存不足</div>
             <div class="inventory-alert__desc">
@@ -711,7 +678,7 @@
 
       <!-- ========== 底部: 热销菜品 + 系统健康 ========== -->
       <div class="bottom-row">
-        <div class="bottom-panel">
+        <div class="bottom-panel chart-panel">
           <div class="panel-title">🔥 今日热销菜品 Top {{ hotDishes.length }}</div>
           <div class="hot-dish-list" v-if="hotDishes.length > 0">
             <div class="hot-dish-item" v-for="(item, index) in hotDishes" :key="index">
@@ -726,7 +693,7 @@
           <div v-else style="text-align:center;padding:40px;color:var(--el-border-base);">今日暂无订单</div>
         </div>
 
-        <div class="bottom-panel">
+        <div class="bottom-panel chart-panel">
           <div class="panel-title">📋 今日运营速览</div>
           <div class="ops-summary-grid">
             <!-- 订单完成度 -->
@@ -1008,7 +975,7 @@
             tooltip: {
               trigger: 'axis',
               axisPointer: { type: 'cross', crossStyle: { color: this.cssVar('--gray-999') || RgPalette.gray999 } },
-              backgroundColor: 'rgba(255,255,255,0.96)',
+              backgroundColor: RgPalette.white,
               borderColor: this.cssVar('--el-border-lighter2') || RgPalette.borderLighter2,
               borderWidth: 1,
               textStyle: { color: this.cssVar('--el-text-primary') || RgPalette.textPrimary, fontSize: 13 },
@@ -1071,7 +1038,7 @@
                 barWidth: 28,
                 barGap: '20%',
                 itemStyle: {
-                  borderRadius: [8, 8, 0, 0],
+                  borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0],
                   color: RgPalette.brand
                 },
                 label: {
@@ -1103,7 +1070,7 @@
                   borderWidth: 2
                 },
                 areaStyle: {
-                  color: 'rgba(103,194,58,0.15)'
+                  color: RgPalette.successArea
                 },
                 label: {
                   show: !emptyData,
@@ -1153,7 +1120,7 @@
             color: colorPalette,
             tooltip: {
               trigger: 'item',
-              backgroundColor: 'rgba(255,255,255,0.96)',
+              backgroundColor: RgPalette.white,
               borderColor: this.cssVar('--el-border-lighter2') || RgPalette.borderLighter2,
               borderWidth: 1,
               textStyle: { color: this.cssVar('--el-text-primary') || RgPalette.textPrimary, fontSize: 13 },
@@ -1177,7 +1144,7 @@
               center: ['50%', '46%'],
               avoidLabelOverlap: false,
               itemStyle: {
-                borderRadius: 6,
+                borderRadius: RgPalette.radiusMd
                 borderColor: RgPalette.white,
                 borderWidth: 3
               },

@@ -127,14 +127,6 @@ public interface MarketingService extends IService<FullReductionRule> {
     // ==================== 使用记录 ====================
 
     /**
-     * 保存使用记录
-     *
-     * @param record 使用记录
-     * @return 是否成功
-     */
-    boolean saveUsageRecord(CampaignUsageRecord record);
-
-    /**
      * 获取使用记录列表
      *
      * @param campaignId 活动ID

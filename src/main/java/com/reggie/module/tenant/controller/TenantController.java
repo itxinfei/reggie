@@ -1,6 +1,7 @@
 package com.reggie.module.tenant.controller;
 
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
 import com.reggie.common.SecurityConstants;
 import com.reggie.common.CustomException;
 import com.reggie.module.tenant.model.Tenant;
@@ -45,6 +46,7 @@ public class TenantController {
      * @return 注册结果
      */
     @PostMapping("/register")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "租户注册", description = "注册新租户并创建管理员账号")
     @Parameter(name = "tenant", description = "租户信息", required = true)
     @Parameter(name = "username", description = "管理员用户名", required = true)
@@ -71,7 +73,7 @@ public class TenantController {
             tenantService.registerWithAdmin(tenant, username, password, phone, verifyCode, session);
             return R.success("注册成功");
         } catch (CustomException e) {
-            log.warn("租户注册失败：{}", e.getMessage());
+            log.warn("租户注册失败：{}", e.getMessage(), e);
             return R.error("注册失败：" + e.getMessage());
         } catch (Exception e) {
             log.error("租户注册异常", e);

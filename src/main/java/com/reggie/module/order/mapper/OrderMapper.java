@@ -79,4 +79,25 @@ public interface OrderMapper extends BaseMapper<Orders> {
     BigDecimal sumAmount(@Param("tenantId") Long tenantId,
                          @Param("status") int status,
                          @Param("startTime") LocalDateTime startTime);
+
+    /**
+     * 聚合指定门店租户、状态、时间区间内的订单数与金额（加盟分账结算用）
+     * 总部租户聚合加盟门店数据属于跨租户场景，必须 @InterceptorIgnore 绕开租户拦截，
+     * 由 tenantId 参数显式过滤，否则拦截器会追加总部 tenant_id 条件导致查不到加盟店订单。
+     * 注意：原生注解 SQL 不会自动应用 @TableLogic 逻辑删除过滤，需手动添加 is_deleted = 0。
+     *
+     * @param tenantId 门店租户ID
+     * @param status 订单状态（已完成）
+     * @param startTime 起始时间（含）
+     * @param endTime 结束时间（含）
+     * @return 聚合结果：cnt=订单数，amt=金额总和
+     */
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT COUNT(*) AS cnt, COALESCE(SUM(amount), 0) AS amt FROM orders "
+            + "WHERE tenant_id = #{tenantId} AND status = #{status} "
+            + "AND order_time >= #{startTime} AND order_time <= #{endTime} AND is_deleted = 0")
+    Map<String, Object> sumOrdersByTenantAndPeriod(@Param("tenantId") Long tenantId,
+                                                   @Param("status") int status,
+                                                   @Param("startTime") LocalDateTime startTime,
+                                                   @Param("endTime") LocalDateTime endTime);
 }

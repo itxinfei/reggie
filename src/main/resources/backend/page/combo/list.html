@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     /* 提取的内联样式类 */
-    .combo-img-btn { width: auto; height: 40px; border: none; cursor: pointer; border-radius: 4px; }
+    .combo-img-btn { width: auto; height: 40px; border: none; cursor: pointer; border-radius: var(--radius-sm); }
     .text-ellipsis { display: inline-block; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   </style>
 </head>
@@ -74,7 +74,7 @@
           :preview-src-list="[`/common/download?name=${row.image}`]"
         >
           <div slot="error" class="image-slot">
-            <img src="./../../images/noImg.png" class="combo-img-btn">
+            <img src="./../../images/noImg.png" class="combo-img-btn" alt="暂无图片">
           </div>
         </el-image>
       </template>
@@ -121,9 +121,9 @@
       </el-form-item>
       <el-form-item label="套餐菜品:" prop="dishList">
         <div class="addDish">
-          <span v-if="comboDishTable.length == 0" class="addBut" @click="openDishSelectDialog">+ 添加菜品</span>
+          <span v-if="comboDishTable.length == 0" class="addBut" role="button" tabindex="0" @click="openDishSelectDialog" @keydown.enter="openDishSelectDialog" aria-label="添加菜品">+ 添加菜品</span>
           <div v-if="comboDishTable.length != 0" class="content">
-            <div class="addBut addBut-mb" @click="openDishSelectDialog">+ 添加菜品</div>
+            <div class="addBut addBut-mb" role="button" tabindex="0" @click="openDishSelectDialog" @keydown.enter="openDishSelectDialog" aria-label="添加菜品">+ 添加菜品</div>
             <div class="table">
               <el-table aria-label="数据表格" :data="comboDishTable" border size="small" class="tableBox">
                 <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
@@ -135,7 +135,7 @@
                     <el-input-number v-model="scope.row.copies" size="small" :min="1" :max="99" controls-position="right" />
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="120" align="center">
+                <el-table-column label="操作" width="120" align="center" fixed="right">
                   <template slot-scope="scope">
                     <el-button type="text" size="small" class="btn-delete" @click="removeComboDish(scope.$index)">删除</el-button>
                   </template>
@@ -154,7 +154,7 @@
           :on-change="onChange"
           ref="comboUpload"
         >
-          <img v-if="comboForm.imageUrl" :src="comboForm.imageUrl" class="avatar" style="border-radius: 4px;">
+          <img v-if="comboForm.imageUrl" :src="comboForm.imageUrl" class="avatar" style="border-radius: var(--radius-sm);" alt="套餐图片">
           <i v-else class="el-icon-plus avatar-uploader-icon"></i>
         </el-upload>
       </el-form-item>
@@ -173,7 +173,7 @@
   <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，footer 插槽保留"取消/确定" -->
   <crud-dialog
     title="添加菜品"
-    class="dishSelectDialog"
+    customClass="dishSelectDialog"
     :visible.sync="dishSelectDialog.visible"
     size="xl"
     @close="handleDishSelectClose"
@@ -188,7 +188,7 @@
       @input="debounceSearch"
       @keydown.esc="handleSearchEsc"
     >
-      <i slot="prefix" class="el-input__icon el-icon-search" @click="searchDish"></i>
+      <i slot="prefix" class="el-input__icon el-icon-search" @click="searchDish" role="button" aria-label="搜索菜品" tabindex="0"></i>
     </el-input>
 
     <div class="dishSelectContent">
@@ -199,7 +199,12 @@
             v-for="(item, index) in dishTypeList"
             :key="index"
             :class="{ act: index === activeDishTypeIndex }"
+            role="button"
+            tabindex="0"
             @click="selectDishType(index, item.id)"
+            @keydown.enter="selectDishType(index, item.id)"
+            :aria-label="item.name"
+            :aria-pressed="index === activeDishTypeIndex"
           >{{ item.name }}</span>
         </div>
         <div class="tabList">
@@ -230,8 +235,8 @@
           <div v-for="(item, ind) in selectedDishList" :key="ind" class="item">
             <span>{{ item.dishName }}</span>
             <span class="price">￥{{ item.price }}</span>
-            <span class="del" @click="removeSelectedDish(ind)">
-              <img src="../../images/icons/btn_clean@2x.png" alt="">
+            <span class="del" @click="removeSelectedDish(ind)" role="button" aria-label="移除该菜品" tabindex="0">
+              <img src="../../images/icons/btn_clean@2x.png" alt="" aria-hidden="true">
             </span>
           </div>
         </div>
@@ -418,7 +423,6 @@ new Vue({
           return
         }
         this.optionsLoadError = true
-        console.error('加载套餐选项失败:', err)
         ReggieUI.error('加载筛选选项失败，请刷新页面重试')
       } finally {
         this.optionsLoading = false

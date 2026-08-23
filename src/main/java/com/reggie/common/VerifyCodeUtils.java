@@ -82,7 +82,7 @@ public class VerifyCodeUtils {
                 log.debug("验证码已保存到 Redis - key: {}, expire: {}s", key, VERIFY_CODE_EXPIRE_SECONDS);
                 return;
             } catch (Exception e) {
-                log.warn("保存验证码到 Redis 失败，降级到本地内存: key={}, error={}", key, e.getMessage());
+                log.warn("保存验证码到 Redis 失败，降级到本地内存: key={}, error={}", key, e.getMessage(), e);
                 // Redis 保存失败，降级到本地内存
             }
         }
@@ -121,7 +121,7 @@ public class VerifyCodeUtils {
                     return true;
                 }
             } catch (Exception e) {
-                log.warn("从 Redis 获取验证码失败，降级到本地内存: key={}, error={}", key, e.getMessage());
+                log.warn("从 Redis 获取验证码失败，降级到本地内存: key={}, error={}", key, e.getMessage(), e);
             }
         }
 
@@ -163,7 +163,7 @@ public class VerifyCodeUtils {
                 String redisKey = VERIFY_CODE_KEY_PREFIX + key;
                 return redisTemplate.hasKey(redisKey);
             } catch (Exception e) {
-                log.warn("检查 Redis 验证码失败，降级到本地内存: key={}, error={}", key, e.getMessage());
+                log.warn("检查 Redis 验证码失败，降级到本地内存: key={}, error={}", key, e.getMessage(), e);
             }
         }
 

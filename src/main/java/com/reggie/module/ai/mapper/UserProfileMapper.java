@@ -20,7 +20,8 @@ public interface UserProfileMapper extends BaseMapper<UserProfile> {
      * 根据用户ID查询画像
      *
      * @param userId 用户ID
+     * @param tenantId 租户ID
      * @return 用户画像
      */
-    UserProfile selectByUserId(@Param("userId") Long userId);
+    UserProfile selectByUserId(@Param("userId") Long userId, @Param("tenantId") Long tenantId);
 }

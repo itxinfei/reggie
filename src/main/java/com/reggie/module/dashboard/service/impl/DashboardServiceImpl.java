@@ -8,7 +8,6 @@ import com.reggie.module.user.model.User;
 import com.reggie.module.order.mapper.OrderMapper;
 import com.reggie.module.dashboard.service.DashboardService;
 import com.reggie.module.auth.service.EmployeeService;
-import com.reggie.module.order.service.OrderService;
 import com.reggie.module.user.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -550,6 +549,7 @@ public class DashboardServiceImpl implements DashboardService {
                 redisOk = "ok".equals(checkVal);
                 redisInfo = redisOk ? "正常" : "读写异常";
             } catch (Exception e) {
+                log.warn("Dashboard Redis 健康检查异常：{}", e.getMessage(), e);
                 redisInfo = "异常: " + e.getMessage();
             }
         }
@@ -563,6 +563,7 @@ public class DashboardServiceImpl implements DashboardService {
             dbOk = userCount >= 0;
             health.put("dbInfo", "正常 (" + userCount + " 用户)");
         } catch (Exception e) {
+            log.warn("Dashboard 数据库健康检查异常：{}", e.getMessage(), e);
             health.put("dbInfo", "异常: " + e.getMessage());
         }
         health.put("dbAvailable", dbOk);

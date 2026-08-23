@@ -57,6 +57,27 @@ public interface BrowseHistoryMapper extends BaseMapper<BrowseHistory> {
     int countByUserSince(@Param("userId") Long userId, @Param("startTime") String startTime);
 
     /**
+     * 批量统计多个用户在某时间范围内的浏览记录数
+     * 用于批量推送时一次性获取所有用户的浏览活跃度，避免 N+1 查询
+     *
+     * @param userIds 用户ID列表
+     * @param startTime 起始时间（字符串格式，如 "2024-01-01 00:00:00"）
+     * @return 每行: user_id, browse_count
+     */
+    @Select("<script>" +
+            "SELECT user_id, COUNT(*) as browse_count " +
+            "FROM user_browse_history " +
+            "WHERE user_id IN " +
+            "<foreach collection='userIds' item='uid' open='(' separator=',' close=')'>" +
+            "#{uid}" +
+            "</foreach> " +
+            "AND create_time >= #{startTime} " +
+            "GROUP BY user_id" +
+            "</script>")
+    List<Map<String, Object>> countByUsersSince(@Param("userIds") List<Long> userIds,
+                                                 @Param("startTime") String startTime);
+
+    /**
      * 统计每日浏览行为趋势（按日期分组）
      * 用于概览页浏览趋势折线图
      * <p>

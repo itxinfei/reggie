@@ -3,7 +3,9 @@ import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.recommend.model.MarketingCampaign;
 import com.reggie.module.recommend.service.MarketingCampaignService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.reggie.common.RateLimit;
 import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,6 +44,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/marketing")
 @Tag(name = "营销管理", description = "营销活动CRUD、推送、自动发券等接口")
+@RequireEmployee
 public class MarketingCampaignController {
 
     @Autowired
@@ -69,13 +73,21 @@ public class MarketingCampaignController {
 
     /**
      * 创建新的营销活动
+     * <p>租户安全：强制设置 tenantId；仅保留业务字段。</p>
+     *
      * @param campaign 营销活动信息
      * @return 创建的活动
      */
     @PostMapping("/campaigns")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "创建营销活动", description = "创建新的营销活动，初始状态为草稿")
     public R<MarketingCampaign> createCampaign(
             @Parameter(description = "营销活动信息", required = true) @Valid @RequestBody MarketingCampaign campaign) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        campaign.setTenantId(tenantId);
         campaign.setStatus(MarketingCampaign.STATUS_DRAFT);
         campaign.setCurrentParticipants(0);
         marketingCampaignService.save(campaign);
@@ -85,50 +97,104 @@ public class MarketingCampaignController {
 
     /**
      * 更新营销活动
+     * <p>租户安全：先校验归属，再更新业务字段。</p>
+     *
      * @param campaign 营销活动信息
      * @return 更新后的活动
      */
     @PutMapping("/campaigns")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新营销活动", description = "更新营销活动信息")
     public R<MarketingCampaign> updateCampaign(
             @Parameter(description = "营销活动信息", required = true) @Valid @RequestBody MarketingCampaign campaign) {
-        marketingCampaignService.updateById(campaign);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        MarketingCampaign exist = marketingCampaignService.getById(campaign.getId());
+        if (exist == null) {
+            throw new CustomException("营销活动不存在");
+        }
+        if (!tenantId.equals(exist.getTenantId())) {
+            throw new CustomException("营销活动不属于当前租户");
+        }
+        exist.setName(campaign.getName());
+        exist.setDescription(campaign.getDescription());
+        exist.setCampaignType(campaign.getCampaignType());
+        exist.setTargetType(campaign.getTargetType());
+        exist.setTargetValue(campaign.getTargetValue());
+        exist.setRuleJson(campaign.getRuleJson());
+        exist.setStatus(campaign.getStatus());
+        exist.setPriority(campaign.getPriority());
+        exist.setStartTime(campaign.getStartTime());
+        exist.setEndTime(campaign.getEndTime());
+        exist.setMaxParticipants(campaign.getMaxParticipants());
+        exist.setCouponTemplateId(campaign.getCouponTemplateId());
+        marketingCampaignService.updateById(exist);
         log.info("[营销管理] 更新活动: id={}", campaign.getId());
-        return R.success(campaign);
+        return R.success(exist);
     }
 
     /**
      * 批量删除营销活动
+     * <p>租户安全：每条记录先校验租户归属再删除。</p>
+     *
      * @param body 活动ID列表
      * @return 操作结果
      */
     @PostMapping("/campaigns/batch-delete")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量删除营销活动", description = "批量删除指定的营销活动")
     public R<String> batchDeleteCampaigns(
             @Parameter(description = "活动ID列表", required = true) @RequestBody Map<String, Object> body) {
-        @SuppressWarnings("unchecked") // JSON反序列化类型转换，Number转Long由调用方保证
+        @SuppressWarnings("unchecked")
         List<Number> rawIds = (List<Number>) body.get("ids");
         if (rawIds == null || rawIds.isEmpty()) {
             return R.error("请选择要删除的活动");
         }
-        List<Long> ids = new ArrayList<>();
-        for (Number n : rawIds) {
-            ids.add(n.longValue());
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
         }
-        int count = marketingCampaignService.batchDeleteCampaigns(ids);
-        log.info("[营销管理] 批量删除活动: count={}", count);
-        return R.success("成功删除 " + count + " 个活动");
+        int deleted = 0;
+        for (Number n : rawIds) {
+            MarketingCampaign campaign = marketingCampaignService.getById(n.longValue());
+            if (campaign == null) {
+                continue;
+            }
+            if (!tenantId.equals(campaign.getTenantId())) {
+                throw new CustomException("营销活动中存在不属于当前租户的记录");
+            }
+            marketingCampaignService.removeById(n.longValue());
+            deleted++;
+        }
+        log.info("[营销管理] 批量删除活动: count={}", deleted);
+        return R.success("成功删除 " + deleted + " 个活动");
     }
 
     /**
      * 删除指定营销活动
+     * <p>租户安全：先校验归属。</p>
+     *
      * @param id 活动ID
      * @return 操作结果
      */
     @DeleteMapping("/campaigns/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除营销活动", description = "删除指定的营销活动")
     public R<String> deleteCampaign(
             @Parameter(description = "活动ID", required = true) @PathVariable Long id) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        MarketingCampaign campaign = marketingCampaignService.getById(id);
+        if (campaign == null) {
+            throw new CustomException("营销活动不存在");
+        }
+        if (!tenantId.equals(campaign.getTenantId())) {
+            throw new CustomException("营销活动不属于当前租户");
+        }
         marketingCampaignService.removeById(id);
         log.info("[营销管理] 删除活动: id={}", id);
         return R.success("删除成功");
@@ -149,16 +215,26 @@ public class MarketingCampaignController {
 
     /**
      * 发布活动（草稿转为进行中）
+     * <p>租户安全：先校验归属。</p>
+     *
      * @param id 活动ID
      * @return 操作结果
      */
     @PutMapping("/campaigns/{id}/publish")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "发布营销活动", description = "将草稿状态的活动发布为进行中状态")
     public R<String> publishCampaign(
             @Parameter(description = "活动ID", required = true) @PathVariable Long id) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
         MarketingCampaign campaign = marketingCampaignService.getById(id);
         if (campaign == null) {
             return R.error("活动不存在");
+        }
+        if (!tenantId.equals(campaign.getTenantId())) {
+            throw new CustomException("营销活动不属于当前租户");
         }
         campaign.setStatus(MarketingCampaign.STATUS_ACTIVE);
         marketingCampaignService.updateById(campaign);
@@ -168,16 +244,26 @@ public class MarketingCampaignController {
 
     /**
      * 暂停/结束营销活动
+     * <p>租户安全：先校验归属。</p>
+     *
      * @param id 活动ID
      * @return 操作结果
      */
     @PutMapping("/campaigns/{id}/pause")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "暂停营销活动", description = "暂停（结束）指定的营销活动")
     public R<String> pauseCampaign(
             @Parameter(description = "活动ID", required = true) @PathVariable Long id) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
         MarketingCampaign campaign = marketingCampaignService.getById(id);
         if (campaign == null) {
             return R.error("活动不存在");
+        }
+        if (!tenantId.equals(campaign.getTenantId())) {
+            throw new CustomException("营销活动不属于当前租户");
         }
         campaign.setStatus(MarketingCampaign.STATUS_PAUSED);
         marketingCampaignService.updateById(campaign);
@@ -192,6 +278,7 @@ public class MarketingCampaignController {
      * @return 操作结果
      */
     @PostMapping("/push/{campaignId}/{userId}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "推送营销消息", description = "向指定用户推送营销活动消息")
     public R<String> pushMessage(
             @Parameter(description = "活动ID", required = true) @PathVariable Long campaignId,
@@ -207,6 +294,7 @@ public class MarketingCampaignController {
      * @return 操作结果
      */
     @PostMapping("/auto-dispatch-coupons")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "自动发放优惠券", description = "根据用户画像自动为当前用户发放匹配的优惠券")
     public R<String> autoDispatchCoupons(
             @Parameter(description = "用户ID", required = true) @RequestParam Long userId) {
@@ -236,6 +324,7 @@ public class MarketingCampaignController {
      * @return 推送结果
      */
     @PostMapping("/batch-push/{campaignId}")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量推送营销消息", description = "根据活动目标人群自动匹配用户并批量推送营销消息")
     public R<String> batchPush(
             @Parameter(description = "活动ID", required = true) @PathVariable Long campaignId,

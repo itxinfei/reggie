@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.RateLimitType;
 import com.reggie.dto.PayRequestDTO;
 import com.reggie.dto.RefundRequestDTO;
 import com.reggie.module.order.model.Orders;
@@ -73,7 +75,13 @@ public class PaymentController {
     private DashboardService dashboardService;
 
     @Autowired
+    private com.reggie.module.member.service.MemberRewardService memberRewardService;
+
+    @Autowired
     private PlatformTransactionManager transactionManager;
+
+    @Autowired
+    private com.reggie.module.payment.mapper.PaymentOrderMapper paymentOrderMapper;
 
     /**
      * 创建支付订单
@@ -81,6 +89,7 @@ public class PaymentController {
      * @return 支付渠道响应（支付链接或二维码）
      */
     @PostMapping("/pay")
+    @RateLimit(maxRequestsPerSecond = 3, type = RateLimitType.USER)
     @Operation(summary = "创建支付订单", description = "创建支付订单并调用支付渠道生成支付链接或二维码")
     public R<PayResponse> pay(
             @Parameter(description = "支付请求参数", required = true) @Validated @RequestBody PayRequestDTO dto) {
@@ -215,7 +224,12 @@ public class PaymentController {
                 if (latest == null || !STATUS_SUCCESS.equals(latest.getStatus())) {
                     throw new CustomException("支付单状态已变更，退款失败");
                 }
-                // 事务内二次累计退款校验
+                // 事务内二次累计退款校验（用 SELECT ... FOR UPDATE 锁定支付单行，阻塞并发退款）
+                // 先对 payment_order 行加排他锁，再查询累计退款——两阶段串行化防突破上限
+                BigDecimal lockedAmount = paymentOrderMapper.selectPaymentAmountForUpdate(latest.getId(), STATUS_SUCCESS);
+                if (lockedAmount == null || lockedAmount.compareTo(latest.getAmount()) != 0) {
+                    throw new CustomException("支付单状态已变更，退款失败");
+                }
                 BigDecimal refunded = refundRecordService.sumRefundedAmount(latest.getId());
                 if (refunded.add(fRefundAmount).compareTo(latest.getAmount()) > 0) {
                     throw new CustomException("累计退款金额超过支付金额（已退：" + refunded + "元）");
@@ -246,6 +260,13 @@ public class PaymentController {
                                 Orders.STATUS_ORDERED, Orders.STATUS_DELIVERING, Orders.STATUS_COMPLETED).contains(curStatus)) {
                             order.setStatus(Orders.STATUS_REFUNDED);
                             orderService.updateById(order);
+                            // 全额退款后回退会员权益（积分回退 + 优惠券恢复）
+                            try {
+                                memberRewardService.reverseRewards(latest.getOrderId(), latest.getTenantId());
+                                log.info("[会员权益回退] 退款触发权益回退: orderId={}, tenantId={}", latest.getOrderId(), latest.getTenantId());
+                            } catch (Exception e) {
+                                log.error("[会员权益回退] 退款后权益回退失败，需人工核查: orderId={}", latest.getOrderId(), e);
+                            }
                             log.info("退款成功联动更新订单: orderId={}, orderStatus=已退款", latest.getOrderId());
                         } else if (curStatus != null && curStatus == Orders.STATUS_REFUNDED) {
                             log.info("订单已为已退款状态，幂等跳过联动更新: orderId={}", latest.getOrderId());
@@ -261,7 +282,7 @@ public class PaymentController {
             // 渠道已退款但本地落库失败——资金已出、数据未同步，必须告警人工核对
             log.error("【严重】渠道退款成功但本地数据更新失败，需人工核对对账！paymentOrderId={}, refundAmount={}, reason={}",
                     dto.getPaymentOrderId(), refundAmount, e.getMessage());
-            return R.error("退款已提交渠道但本地更新失败，请联系管理员核对: " + e.getMessage());
+            return R.error("退款已提交渠道但本地更新失败，请联系管理员核对");
         }
 
         // 退款成功后清除 Dashboard 缓存，确保今日订单/营业额数据实时准确
@@ -276,6 +297,7 @@ public class PaymentController {
      * @return 支付订单信息
      */
     @GetMapping("/query/{tradeNo}")
+    @RequireEmployee
     @Operation(summary = "查询支付状态", description = "根据交易号查询支付订单状态")
     public R<PaymentOrder> query(
                         @Parameter(description = "交易号", required = true) @PathVariable String tradeNo) {
@@ -338,7 +360,7 @@ public class PaymentController {
             if (dashboardService != null && tenantId != null) {
                 dashboardService.clearOverviewCache(tenantId);
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.warn("清除Dashboard缓存失败", e);
         }
     }

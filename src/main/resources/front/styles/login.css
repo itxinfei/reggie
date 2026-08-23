@@ -511,7 +511,7 @@ body.login-page {
 }
 
 #login .agreementCheckbox:hover {
-  background: rgba(255, 194, 0, 0.1);
+  background: var(--color-primary-tint);
 }
 
 #login .checkIcon {

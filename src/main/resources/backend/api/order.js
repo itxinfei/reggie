@@ -25,6 +25,14 @@ const getOrderList = (params) => {
   })
 }
 
+// 收银台待收银订单列表（管理端专用）
+const getPendingCheckoutList = () => {
+  return $axios({
+    url: '/order/pendingCheckout',
+    method: 'get'
+  })
+}
+
 // 查询用户订单分页
 const getUserOrderPage = (params) => {
   return $axios({
@@ -65,7 +73,7 @@ const cancelOrder = (params) => {
   return $axios({
     url: '/order/cancel',
     method: 'put',
-    data: { ...params }
+    params: params
   })
 }
 
@@ -74,7 +82,7 @@ const confirmOrder = (params) => {
   return $axios({
     url: '/order/confirm',
     method: 'put',
-    data: { ...params }
+    params: params
   })
 }
 
@@ -83,7 +91,7 @@ const rejectOrder = (params) => {
   return $axios({
     url: '/order/reject',
     method: 'put',
-    data: { ...params }
+    params: params
   })
 }
 
@@ -92,7 +100,7 @@ const completeOrder = (params) => {
   return $axios({
     url: '/order/complete',
     method: 'put',
-    data: { ...params }
+    params: params
   })
 }
 

@@ -22,6 +22,11 @@ public class BaseContext {
     private static final ThreadLocal<Long> TENANT_THREAD_LOCAL = new ThreadLocal<>();
 
     /**
+     * 当前请求traceId存储（由 TraceIdFilter 注入，供业务层查询）
+     */
+    private static final ThreadLocal<String> TRACE_ID_THREAD_LOCAL = new ThreadLocal<>();
+
+    /**
      * 设置当前用户ID
      *
      * @param id 用户ID
@@ -61,10 +66,36 @@ public class BaseContext {
     }
 
     /**
+     * 设置当前请求traceId
+     *
+     * @param traceId 请求追踪ID
+     */
+    public static void setCurrentTraceId(String traceId) {
+        TRACE_ID_THREAD_LOCAL.set(traceId);
+    }
+
+    /**
+     * 获取当前请求traceId
+     *
+     * @return traceId
+     */
+    public static String getCurrentTraceId() {
+        return TRACE_ID_THREAD_LOCAL.get();
+    }
+
+    /**
+     * 清除当前请求traceId
+     */
+    public static void removeTraceId() {
+        TRACE_ID_THREAD_LOCAL.remove();
+    }
+
+    /**
      * 清除ThreadLocal中的数据，防止内存泄漏
      */
     public static void remove() {
         THREAD_LOCAL.remove();
         TENANT_THREAD_LOCAL.remove();
+        TRACE_ID_THREAD_LOCAL.remove();
     }
 }

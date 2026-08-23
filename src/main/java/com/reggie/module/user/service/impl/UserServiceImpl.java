@@ -3,7 +3,6 @@ package com.reggie.module.user.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
-import com.reggie.common.PasswordUtils;
 import com.reggie.module.user.model.User;
 import com.reggie.module.user.mapper.UserMapper;
 import com.reggie.module.user.service.UserService;

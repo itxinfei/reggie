@@ -1,25 +1,24 @@
 package com.reggie.module.order.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
-import com.reggie.common.event.OrderCancelledEvent;
 import com.reggie.common.utils.PageUtils;
-import com.reggie.common.event.OrderCompletedEvent;
 import com.reggie.dto.OrderDto;
 import com.reggie.module.address.model.AddressBook;
+import com.reggie.module.cashier.mapper.CashierRecordMapper;
+import com.reggie.module.cashier.model.CashierRecord;
 import com.reggie.module.dish.model.Dish;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.statusflow.OrderStatusFlowService;
 import com.reggie.module.setmeal.model.SetmealDish;
 import com.reggie.module.setmeal.model.Setmeal;
 import com.reggie.module.shopping.model.ShoppingCart;
 import com.reggie.module.user.model.User;
-import com.reggie.enums.OrderStatus;
 import com.reggie.module.order.mapper.OrderMapper;
 import com.reggie.module.address.service.AddressBookService;
 import com.reggie.module.dish.service.DishService;
@@ -34,7 +33,6 @@ import com.reggie.module.dining.service.DiningTableService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +42,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -88,6 +87,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     @Autowired
     private SetmealService setmealService;
 
+    /** 状态流转服务（接单/拒单/完成/取消等） */
+    @Autowired
+    private OrderStatusFlowService statusFlowService;
+
     /**
      * 打印服务（可选注入，无打印机配置时降级跳过）
      */
@@ -101,16 +104,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     private DiningTableService diningTableService;
 
     /**
-     * 事件发布器
+     * 收银记录 Mapper（用于查询订单是否已有收银记录，判断待收银状态）
      */
-    @Autowired
-    private ApplicationEventPublisher eventPublisher;
+    @Autowired(required = false)
+    private CashierRecordMapper cashierRecordMapper;
 
     /**
      * Redis 模板（可选，用于下单幂等性 SETNX 抢占，防止 check-then-act 竞态）
      */
     @Autowired(required = false)
     private org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
+
+    /** 下单幂等锁过期时间（分钟） */
+    private static final long IDEMPOTENCY_TTL_MINUTES = 30;
 
     /**
      * 用户下单（从购物车生成订单）
@@ -198,7 +204,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         String lockKey = "order:idem:" + idempotencyKey;
         boolean lockAcquired = false;
         if (redisTemplate != null && idempotencyKey != null && !idempotencyKey.trim().isEmpty()) {
-            Boolean ok = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", 30, java.util.concurrent.TimeUnit.MINUTES);
+            Boolean ok = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", IDEMPOTENCY_TTL_MINUTES, java.util.concurrent.TimeUnit.MINUTES);
             lockAcquired = ok != null && ok;
             if (!lockAcquired) {
                 // 并发请求或已下单：查询既有订单并回填，避免重复落库
@@ -245,7 +251,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 printerService.printOrder(finalOrderId, "KITCHEN");
             } catch (Exception e) {
                 // 打印失败不影响下单结果
-                log.warn("[打印] 自动打印触发失败，订单ID={}, 原因={}", finalOrderId, e.getMessage());
+                log.warn("[打印] 自动打印触发失败，订单ID={}, 原因={}", finalOrderId, e.getMessage(), e);
             }
         }
     }
@@ -272,10 +278,39 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             throw new CustomException("桌台信息缺失，请重新扫码");
         }
 
+        // 修复堂食并发重复下单：用 Redis SETNX 原子抢占幂等令牌，防止同一桌台并发扫码重复下单
+        // 幂等键基于 tableId + userId，防止同一桌台同一用户短时间内重复提交订单
+        Long eatInUserId = BaseContext.getCurrentId();
+        String eatInIdemKey = (eatInUserId != null ? eatInUserId.toString() : "unknown")
+                + "_" + (tableId != null ? tableId.toString() : "unknown")
+                + "_" + java.util.UUID.randomUUID().toString().substring(0, 8);
+        orders.setIdempotencyKey(eatInIdemKey);
+        String lockKey = "order:eatin:idem:" + tableId + ":" + (eatInUserId != null ? eatInUserId : "unknown");
+        boolean eatInLockAcquired = false;
+        if (redisTemplate != null) {
+            Boolean ok = redisTemplate.opsForValue().setIfAbsent(lockKey, eatInIdemKey, IDEMPOTENCY_TTL_MINUTES, java.util.concurrent.TimeUnit.MINUTES);
+            eatInLockAcquired = ok != null && ok;
+            if (!eatInLockAcquired) {
+                Orders existing = checkIdempotency(eatInIdemKey);
+                if (existing != null) {
+                    orders.setId(existing.getId());
+                    orders.setNumber(existing.getNumber());
+                    orders.setAmount(existing.getAmount());
+                    orders.setStatus(existing.getStatus());
+                    return;
+                }
+                throw new CustomException("堂食订单正在处理中，请勿重复提交");
+            }
+        }
+
         // 查询桌台信息（用于填充桌台名称）
         if (diningTableService != null) {
             com.reggie.module.dining.model.DiningTable table = diningTableService.getById(tableId);
             if (table != null) {
+                Long currentTenantId = BaseContext.getCurrentTenantId();
+                if (currentTenantId != null && !currentTenantId.equals(table.getTenantId())) {
+                    throw new CustomException("无权使用其他门店的桌台");
+                }
                 orders.setTableName(table.getName());
             }
         }
@@ -285,21 +320,45 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         // 计算总金额（价格从菜品/套餐表服务端查询，防止客户端篡改）
         BigDecimal totalAmount = BigDecimal.ZERO;
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+
+        // N+1 修复：批量预加载菜品和套餐，避免循环内 getById
+        java.util.List<Long> dishIds = new java.util.ArrayList<>();
+        java.util.List<Long> setmealIds = new java.util.ArrayList<>();
+        for (OrderDetail detail : orderDetails) {
+            if (detail.getDishId() != null) dishIds.add(detail.getDishId());
+            else if (detail.getSetmealId() != null) setmealIds.add(detail.getSetmealId());
+        }
+        java.util.Map<Long, Dish> dishMap = new java.util.HashMap<>();
+        if (!dishIds.isEmpty()) {
+            for (Dish d : dishService.listByIds(dishIds)) { dishMap.put(d.getId(), d); }
+        }
+        java.util.Map<Long, Setmeal> setmealMap = new java.util.HashMap<>();
+        if (!setmealIds.isEmpty()) {
+            for (Setmeal s : setmealService.listByIds(setmealIds)) { setmealMap.put(s.getId(), s); }
+        }
+
         for (OrderDetail detail : orderDetails) {
             detail.setOrderId(orderId);
             BigDecimal unitPrice;
             String dishName;
             if (detail.getDishId() != null) {
-                Dish dish = dishService.getById(detail.getDishId());
+                Dish dish = dishMap.get(detail.getDishId());
                 if (dish == null) {
                     throw new CustomException("菜品不存在，ID：" + detail.getDishId());
+                }
+                if (currentTenantId != null && !currentTenantId.equals(dish.getTenantId())) {
+                    throw new CustomException("无权使用其他门店的菜品");
                 }
                 unitPrice = dish.getPrice() != null ? dish.getPrice() : BigDecimal.ZERO;
                 dishName = dish.getName();
             } else if (detail.getSetmealId() != null) {
-                Setmeal setmeal = setmealService.getById(detail.getSetmealId());
+                Setmeal setmeal = setmealMap.get(detail.getSetmealId());
                 if (setmeal == null) {
                     throw new CustomException("套餐不存在，ID：" + detail.getSetmealId());
+                }
+                if (currentTenantId != null && !currentTenantId.equals(setmeal.getTenantId())) {
+                    throw new CustomException("无权使用其他门店的套餐");
                 }
                 unitPrice = setmeal.getPrice() != null ? setmeal.getPrice() : BigDecimal.ZERO;
                 dishName = setmeal.getName();
@@ -321,18 +380,28 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         orders.setAmount(totalAmount.setScale(2, java.math.RoundingMode.HALF_UP));
         orders.setUserId(userId);
         orders.setNumber(String.valueOf(orderId));
-        orders.setIdempotencyKey(generateIdempotencyKey(userId));
         orders.setUserName(orders.getUserName() != null ? orders.getUserName() : "堂食顾客");
         orders.setConsignee(orders.getConsignee() != null ? orders.getConsignee() : orders.getUserName());
         orders.setPhone(orders.getPhone() != null ? orders.getPhone() : "");
         orders.setAddress(orders.getTableName() != null ? "堂食-" + orders.getTableName() : "堂食");
         orders.setAddressBookId(null); // 堂食无地址簿
 
-        this.save(orders);
-        orderDetailService.saveBatch(orderDetails);
-
-        // 扣减库存
-        this.deductStockForOrderDetails(orderDetails);
+        try {
+            this.save(orders);
+            orderDetailService.saveBatch(orderDetails);
+            // 扣减库存
+            this.deductStockForOrderDetails(orderDetails);
+        } catch (RuntimeException e) {
+            // 落库失败时释放幂等锁，允许用户重试
+            if (eatInLockAcquired && redisTemplate != null) {
+                try {
+                    redisTemplate.delete(lockKey);
+                } catch (Exception ignored) {
+                    // 释放锁失败不影响异常抛出
+                }
+            }
+            throw e;
+        }
 
         // 更新桌台状态为占用
         if (diningTableService != null) {
@@ -340,7 +409,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 diningTableService.changeStatus(tableId, com.reggie.enums.DiningTableStatus.OCCUPIED.getValue());
                 log.info("[堂食] 桌台已标记为占用: tableId={}, orderId={}", tableId, orderId);
             } catch (Exception e) {
-                log.warn("[堂食] 更新桌台状态失败: tableId={}, error={}", tableId, e.getMessage());
+                log.warn("[堂食] 更新桌台状态失败: tableId={}, error={}", tableId, e.getMessage(), e);
             }
         }
 
@@ -351,7 +420,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 printerService.printOrder(finalOrderId, "BILL");
                 printerService.printOrder(finalOrderId, "KITCHEN");
             } catch (Exception e) {
-                log.warn("[打印] 堂食订单打印触发失败，订单ID={}, 原因={}", finalOrderId, e.getMessage());
+                log.warn("[打印] 堂食订单打印触发失败，订单ID={}, 原因={}", finalOrderId, e.getMessage(), e);
             }
         }
     }
@@ -425,20 +494,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
     }
 
-    /**
-     * 回退库存操作（订单明细维度）
-     */
-    private boolean refundStockForOrderDetails(List<OrderDetail> orderDetails) {
-        boolean allSuccess = true;
-        for (OrderDetail detail : orderDetails) {
-            int number = detail.getNumber() != null ? detail.getNumber() : 1;
-            BigDecimal qty = new BigDecimal(number);
-            if (!processStockForItems(detail.getDishId(), detail.getSetmealId(), qty, this::refundStockAtomic)) {
-                allSuccess = false;
-            }
-        }
-        return allSuccess;
-    }
 
     /**
      * 扣减库存原子操作（void 版本，失败时抛异常）
@@ -460,24 +515,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         dishService.autoToggleSoldOut(dishId);
     }
 
-    /**
-     * 回退库存原子操作（boolean 版本，失败时记录日志但不抛异常）
-     * @return 是否成功
-     */
-    private boolean refundStockAtomic(Long dishId, BigDecimal qty) {
-        if (dishId == null || qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
-            return true;
-        }
-        try {
-            dishService.addStock(dishId, qty);
-            dishService.autoToggleSoldOut(dishId);
-            log.info("[库存回退] 菜品ID={} 回退{}份", dishId, qty);
-            return true;
-        } catch (Exception e) {
-            log.error("[库存回退失败] 菜品ID={} 回退{}份失败: {}", dishId, qty, e.getMessage(), e);
-            return false;
-        }
-    }
 
     /**
      * 后台分页查询订单
@@ -570,6 +607,40 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         return result;
     }
 
+    @Override
+    public List<Orders> listPendingCheckout(Long tenantId) {
+        // 查本租户下所有 STATUS_ORDERED 且未设置 payMethod（即未收款）的订单
+        LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
+        qw.eq(Orders::getTenantId, tenantId)
+                .eq(Orders::getStatus, Orders.STATUS_ORDERED)
+                .isNull(Orders::getPayMethod)
+                .orderByDesc(Orders::getOrderTime);
+        List<Orders> orders = this.list(qw);
+        // 二次过滤：排除已有收银记录的订单（payMethod 设 null 但有收银记录的情况）
+        List<Long> orderIds = new ArrayList<>();
+        for (Orders o : orders) {
+            orderIds.add(o.getId());
+        }
+        if (orderIds.isEmpty()) {
+            return orders;
+        }
+        LambdaQueryWrapper<CashierRecord> crQw = new LambdaQueryWrapper<>();
+        crQw.select(CashierRecord::getOrderId)
+                .in(CashierRecord::getOrderId, orderIds);
+        List<CashierRecord> records = cashierRecordMapper.selectList(crQw);
+        Set<Long> checkedOutIds = new HashSet<>();
+        for (CashierRecord cr : records) {
+            checkedOutIds.add(cr.getOrderId());
+        }
+        List<Orders> result = new ArrayList<>();
+        for (Orders o : orders) {
+            if (!checkedOutIds.contains(o.getId())) {
+                result.add(o);
+            }
+        }
+        return result;
+    }
+
     /**
      * 再来一单（将历史订单商品添加到购物车）
      * 自动合并购物车中已存在的商品（累加数量）
@@ -577,6 +648,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      * @param orderId 原订单ID
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void again(Long orderId) {
         LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(OrderDetail::getOrderId, orderId);
@@ -604,6 +676,22 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         java.util.List<ShoppingCart> toAdd = new java.util.ArrayList<>();
         java.util.List<ShoppingCart> toUpdate = new java.util.ArrayList<>();
 
+        // N+1 修复：批量预加载菜品和套餐，避免循环内 4 次 getById
+        java.util.List<Long> batchDishIds = new java.util.ArrayList<>();
+        java.util.List<Long> batchSetmealIds = new java.util.ArrayList<>();
+        for (OrderDetail d : details) {
+            if (d.getDishId() != null) batchDishIds.add(d.getDishId());
+            else if (d.getSetmealId() != null) batchSetmealIds.add(d.getSetmealId());
+        }
+        java.util.Map<Long, Dish> batchDishMap = new java.util.HashMap<>();
+        if (!batchDishIds.isEmpty()) {
+            for (Dish d : dishService.listByIds(batchDishIds)) { batchDishMap.put(d.getId(), d); }
+        }
+        java.util.Map<Long, Setmeal> batchSetmealMap = new java.util.HashMap<>();
+        if (!batchSetmealIds.isEmpty()) {
+            for (Setmeal s : setmealService.listByIds(batchSetmealIds)) { batchSetmealMap.put(s.getId(), s); }
+        }
+
         for (OrderDetail d : details) {
             String key = d.getDishId() != null
                 ? "dishId:" + d.getDishId()
@@ -614,14 +702,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 // 已存在，累加数量，并刷新为最新价格（修复 toUpdate 分支未刷新价格，防止历史购物车项沿用旧价）
                 existing.setNumber(existing.getNumber() + (d.getNumber() != null ? d.getNumber() : 0));
                 if (d.getDishId() != null) {
-                    Dish dish = dishService.getById(d.getDishId());
+                    Dish dish = batchDishMap.get(d.getDishId());
                     if (dish != null && dish.getPrice() != null) {
                         existing.setAmount(dish.getPrice());
                         existing.setName(dish.getName());
                         existing.setImage(dish.getImage());
                     }
                 } else if (d.getSetmealId() != null) {
-                    Setmeal setmeal = setmealService.getById(d.getSetmealId());
+                    Setmeal setmeal = batchSetmealMap.get(d.getSetmealId());
                     if (setmeal != null && setmeal.getPrice() != null) {
                         existing.setAmount(setmeal.getPrice());
                         existing.setName(setmeal.getName());
@@ -644,14 +732,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
                 // 重新从数据库查询最新价格
                 if (d.getDishId() != null) {
-                    Dish dish = dishService.getById(d.getDishId());
+                    Dish dish = batchDishMap.get(d.getDishId());
                     if (dish != null && dish.getPrice() != null) {
                         cart.setAmount(dish.getPrice());
                         cart.setName(dish.getName());
                         cart.setImage(dish.getImage());
                     }
                 } else if (d.getSetmealId() != null) {
-                    Setmeal setmeal = setmealService.getById(d.getSetmealId());
+                    Setmeal setmeal = batchSetmealMap.get(d.getSetmealId());
                     if (setmeal != null && setmeal.getPrice() != null) {
                         cart.setAmount(setmeal.getPrice());
                         cart.setName(setmeal.getName());
@@ -671,152 +759,34 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
     }
 
-    /**
-     * 更新订单状态
-     *
-     * @param status 目标状态
-     * @param id 订单ID
-     */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Integer status, Long id) {
-        if (status == null || id == null) {
-            throw new CustomException("参数缺失，无法更新订单状态");
-        }
-        // 修复状态机跳跃：按目标状态复用合法流转方法，禁止任意跳转
-        if (Objects.equals(status, Orders.STATUS_DELIVERING)) {
-            confirmOrder(id);
-        } else if (Objects.equals(status, Orders.STATUS_COMPLETED)) {
-            completeOrder(id);
-        } else if (Objects.equals(status, Orders.STATUS_CANCELLED)) {
-            cancelOrder(id, null);
-        } else {
-            throw new CustomException("非法的目标状态：" + getStatusName(status)
-                    + "，仅支持流转为配送中(3)/已完成(4)/已取消(5)，请通过专用接口操作");
-        }
+        statusFlowService.updateStatus(status, id);
     }
 
     // ==================== 后台订单管理 ====================
 
-    /**
-     * 接单：待接单(2) → 配送中(3)
-     */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void confirmOrder(Long id) {
-        Orders order = this.getById(id);
-        if (order == null) {
-            throw new CustomException("订单不存在");
-        }
-        if (!Objects.equals(order.getStatus(), Orders.STATUS_ORDERED)) {
-            throw new CustomException("订单状态不正确，当前状态：" + getStatusName(order.getStatus()) + "，无法接单");
-        }
-        order.setStatus(Orders.STATUS_DELIVERING);
-        this.updateById(order);
-        log.info("订单已接单: id={}, number={}", id, order.getNumber());
+        statusFlowService.confirmOrder(id);
     }
 
-    /**
-     * 拒单：待接单(2) → 已取消(5)，同时回退库存
-     */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void rejectOrder(Long id) {
-        Orders order = this.getById(id);
-        if (order == null) {
-            throw new CustomException("订单不存在");
-        }
-        if (!Objects.equals(order.getStatus(), Orders.STATUS_ORDERED)) {
-            throw new CustomException("订单状态不正确，当前状态：" + getStatusName(order.getStatus()) + "，无法拒单");
-        }
-        order.setStatus(Orders.STATUS_CANCELLED);
-        this.updateById(order);
-
-        // 拒单时回退库存（部分失败也允许，补偿任务会重试）
-        boolean refundOk = refundStockByOrderId(id);
-        if (refundOk) {
-            order.setStockRefunded(1);
-            this.updateById(order);
-            log.warn("订单已拒单（库存已回退）: id={}, number={}", id, order.getNumber());
-        } else {
-            log.error("订单已拒单，但库存回退部分失败，补偿任务将重试: id={}, number={}", id, order.getNumber());
-        }
+        statusFlowService.rejectOrder(id);
     }
 
-    /**
-     * 完成订单：配送中(3) → 已完成(4)
-     */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void completeOrder(Long id) {
-        Orders order = this.getById(id);
-        if (order == null) {
-            throw new CustomException("订单不存在");
-        }
-        if (!Objects.equals(order.getStatus(), Orders.STATUS_DELIVERING)) {
-            throw new CustomException("订单状态不正确，当前状态：" + getStatusName(order.getStatus()) + "，无法完成");
-        }
-        order.setStatus(Orders.STATUS_COMPLETED);
-        order.setCheckoutTime(LocalDateTime.now());
-        this.updateById(order);
-        log.info("订单已完成: id={}, number={}", id, order.getNumber());
-
-        // 发布订单完成事件（推荐、积分等模块异步响应）
-        eventPublisher.publishEvent(new OrderCompletedEvent(this, id, order.getTenantId()));
+        statusFlowService.completeOrder(id);
     }
 
-    /**
-     * 取消订单：任意非完成/取消状态 → 已取消(5)，同时回退库存
-     * @param id 订单ID
-     * @param reason 取消原因
-     */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Long id, String reason) {
-        Orders order = this.getById(id);
-        if (order == null) {
-            throw new CustomException("订单不存在");
-        }
-        if (Objects.equals(order.getStatus(), Orders.STATUS_COMPLETED)) {
-            throw new CustomException("订单已完成，无法取消");
-        }
-        if (Objects.equals(order.getStatus(), Orders.STATUS_CANCELLED)) {
-            throw new CustomException("订单已取消，无需重复操作");
-        }
-        order.setStatus(Orders.STATUS_CANCELLED);
-        if (reason != null && !reason.trim().isEmpty()) {
-            order.setRemark(reason);
-        }
-        this.updateById(order);
-
-        // 取消订单时回退库存（部分失败也允许，补偿任务会重试）
-        boolean refundOk = refundStockByOrderId(id);
-        if (refundOk) {
-            order.setStockRefunded(1);
-            this.updateById(order);
-            log.warn("订单已取消（库存已回退）: id={}, number={}, reason={}", id, order.getNumber(), reason);
-        } else {
-            log.error("订单已取消，但库存回退部分失败，补偿任务将重试: id={}, number={}, reason={}", id, order.getNumber(), reason);
-        }
-
-        // 发布订单取消事件（通知、推荐等模块异步响应）
-        eventPublisher.publishEvent(new OrderCancelledEvent(this, id, order.getTenantId(), reason));
+        statusFlowService.cancelOrder(id, reason);
     }
 
-    /**
-     * 根据订单ID回退库存
-     * 查询订单明细，逐项回退菜品/套餐库存
-     * @return 是否全部回退成功
-     */
-    private boolean refundStockByOrderId(Long orderId) {
-        LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(OrderDetail::getOrderId, orderId);
-        List<OrderDetail> details = orderDetailService.list(wrapper);
-        if (details != null && !details.isEmpty()) {
-            return refundStockForOrderDetails(details);
-        }
-        return true; // 无明细视为成功
-    }
+
 
     /**
      * 订单统计：今日各状态订单数量汇总
@@ -866,14 +836,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         return stats;
     }
 
-    /**
-     * 订单状态中文名称（委托给 {@link OrderStatus} 枚举）
-     */
-    private String getStatusName(Integer status) {
-        if (status == null) return "未知";
-        OrderStatus orderStatus = OrderStatus.fromCode(status);
-        return orderStatus != null ? orderStatus.getDesc() : "其他(" + status + ")";
-    }
 
     // ==================== 幂等性保护 ====================
 

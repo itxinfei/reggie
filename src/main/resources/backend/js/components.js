@@ -625,12 +625,12 @@ Vue.component('crud-table', {
         '<template slot-scope="scope">' +
           '<slot v-if="col.slot" :name="\'col-\' + col.prop" :row="scope.row" :col="col" :$index="scope.$index">' +
             '<span v-if="typeof col.formatter === \'function\'">{{ col.formatter(scope.row[col.prop], scope.row, col) }}</span>' +
-            '<span v-else-if="col.type === \'money\'">{{ formatMoney(scope.row[col.prop]) }}</span>' +
+            '<span v-else-if="col.type === \'money\'">¥{{ formatMoney(scope.row[col.prop]) }}</span>' +
             '<span v-else-if="col.type === \'number\'">{{ formatNumber(scope.row[col.prop]) }}</span>' +
             '<span v-else>{{ scope.row[col.prop] }}</span>' +
           '</slot>' +
           '<span v-else-if="typeof col.formatter === \'function\'">{{ col.formatter(scope.row[col.prop], scope.row, col) }}</span>' +
-          '<span v-else-if="col.type === \'money\'">{{ formatMoney(scope.row[col.prop]) }}</span>' +
+          '<span v-else-if="col.type === \'money\'">¥{{ formatMoney(scope.row[col.prop]) }}</span>' +
           '<span v-else-if="col.type === \'number\'">{{ formatNumber(scope.row[col.prop]) }}</span>' +
           '<span v-else>{{ scope.row[col.prop] }}</span>' +
         '</template>' +
@@ -812,6 +812,17 @@ Vue.component('crud-dialog', {
     customClass: {
       type: String,
       default: ''
+    },
+    /**
+     * 未保存守卫（可选）：关闭前校验，防止误关丢失表单数据。
+     * - 不传：保持原行为（直接关闭）。
+     * - 传函数：返回 false 中止关闭；返回 Promise 时，resolve(false) 中止、其余放行。
+     *   X 按钮、ESC、取消按钮均走此守卫；遮罩点击仍由 closeOnClickModal 控制。
+     * 例：:before-close="() => !formDirty"
+     */
+    beforeClose: {
+      type: Function,
+      default: null
     }
   },
   computed: {
@@ -840,6 +851,7 @@ Vue.component('crud-dialog', {
     '  :visible.sync="visible"' +
     '  :width="resolvedWidth"' +
     '  :close-on-click-modal="closeOnClickModal"' +
+    '  :before-close="onBeforeClose"' +
     '  :close-on-press-escape="true"' +
     '  :destroy-on-close="true"' +
     '  :append-to-body="true"' +
@@ -850,7 +862,7 @@ Vue.component('crud-dialog', {
       // 底部按钮区
       '<span slot="footer" class="dialog-footer">' +
         '<slot name="footer">' +
-          '<el-button v-if="showCancel" size="medium" @click="handleClose">{{ cancelText }}</el-button>' +
+          '<el-button v-if="showCancel" size="medium" @click="requestClose">{{ cancelText }}</el-button>' +
           '<el-button v-if="showSubmit" type="primary" size="medium" :loading="submitLoading" @click="$emit(\'submit\')">{{ submitText }}</el-button>' +
         '</slot>' +
       '</span>' +
@@ -859,6 +871,38 @@ Vue.component('crud-dialog', {
     handleClose: function () {
       this.$emit('update:visible', false)
       this.$emit('close')
+    },
+    /**
+     * 取消按钮 / 外部关闭请求：先跑未保存守卫，通过才真正关闭。
+     * 守卫返回 false 中止；返回 Promise 时 resolve(false) 中止、其余放行。
+     */
+    requestClose: function () {
+      var self = this
+      if (typeof this.beforeClose === 'function') {
+        var r = this.beforeClose()
+        if (r && typeof r.then === 'function') {
+          r.then(function (ok) { if (ok !== false) self.handleClose() })
+          return
+        }
+        if (r === false) return
+      }
+      this.handleClose()
+    },
+    /**
+     * 接入 el-dialog 原生 before-close：X 按钮与 ESC 关闭时触发。
+     * 不调用 done() 即中止关闭（守卫返回 false 或 Promise resolve(false)）。
+     */
+    onBeforeClose: function (done) {
+      var self = this
+      if (typeof this.beforeClose === 'function') {
+        var r = this.beforeClose()
+        if (r && typeof r.then === 'function') {
+          r.then(function (ok) { if (ok !== false) done() }).catch(function () { /* 异常时保持打开 */ })
+          return
+        }
+        if (r === false) return
+      }
+      done()
     },
     /** 外部调用打开弹窗 */
     open: function () {
@@ -1028,6 +1072,30 @@ window.RgPalette = (function () {
     antdOrange:    '#ff7a45',
     brand600:      '#e6ae00',
     brand800:      '#a67600',
+    // 圆角令牌（ECharts canvas 无法使用 CSS var，运行时从 tokens.css 读取）
+    radiusSm:      parseInt(read('--radius-sm', '4'), 10),
+    radiusMd:      parseInt(read('--radius-md', '8'), 10),
+    radiusLg:      parseInt(read('--radius-lg', '12'), 10),
+    // Member 中心图表用色（Tailwind 风格语义色）
+    emerald:       '#22c55e',
+    orange500:     '#f97316',
+    blue500:       '#3b82f6',
+    amber500:      '#f59e0b',
+    violet500:     '#8b5cf6',
+    // 半透明区域色（ECharts areaStyle 专用，无法用 CSS 变量直接读取后合成）
+    seriesBlueArea:  'rgba(84,112,198,0.15)',
+    seriesGreenArea: 'rgba(145,204,117,0.15)',
+    successArea:     'rgba(103,194,58,0.15)',
+    emeraldArea:     'rgba(34,197,94,0.15)',
+    orange500Area:   'rgba(249,115,22,0.15)',
+    // 会员等级进度条配色（Tailwind 风格，供 level-list.html 的 getBarColor 使用）
+    slate200:      '#e2e8f0',
+    violet400:     '#a78bfa',
+    indigo400:     '#818cf8',
+    blue400:       '#60a5fa',
+    emerald400:    '#34d399',
+    amber400:      '#fbbf24',
+    red500:        '#ef4444',
     gray999:       '#999999',
     bgLight:       '#f2f3f5',
     blueSoft:      '#f0f4ff',

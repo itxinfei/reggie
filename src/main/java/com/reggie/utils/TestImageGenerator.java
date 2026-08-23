@@ -3,6 +3,7 @@ package com.reggie.utils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
@@ -28,11 +29,17 @@ import java.util.Map;
  * 测试图片生成器（仅开发环境启用），启动时自动下载或生成测试菜品图片。
  * </p>
  *
+ * <p>
+ * 域3 改造后：使用 {@code @Profile(\"dev\")} 条件化，生产环境（prod）完全不会加载该类，
+ * 避免启动期无意义 HTTP 请求、减少启动依赖。
+ * </p>
+ *
  * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j
 @Component
+@Profile("dev")
 public class TestImageGenerator implements CommandLineRunner {
 
     /**
@@ -405,7 +412,7 @@ public class TestImageGenerator implements CommandLineRunner {
             return true;
 
         } catch (IOException e) {
-            log.warn("❌ {} 下载异常: {}", dishName, e.getMessage());
+            log.warn("❌ {} 下载异常: {}", dishName, e.getMessage(), e);
             // 清理不完整的文件
             if (targetFile.exists()) {
                 targetFile.delete();

@@ -1,6 +1,8 @@
 package com.reggie.module.common.controller;
 
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,6 +37,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/common")
 @Slf4j
+@RequireEmployee
 @Tag(name = "公共接口", description = "文件上传下载等公共接口")
 public class CommonController {
 
@@ -87,6 +90,7 @@ public class CommonController {
      * @return 上传后的文件路径
      */
     @PostMapping("/upload")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "文件上传", description = "上传图片文件（支持jpg、jpeg、png、gif，最大5MB），需要登录")
     @Parameter(name = "file", description = "上传的文件", required = true)
     public R<String> upload(MultipartFile file, HttpServletRequest request) {

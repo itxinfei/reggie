@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>出库管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+  <style lang="less" scoped>
+    /* ========== 出库单卡片 ========== */
+    .out-form-card {
+      margin-bottom: var(--space-6);
+    }
+    .out-form-card .el-form {
+      padding: var(--space-2) var(--space-4) var(--space-4);
+    }
+    .out-form-card .el-form-item {
+      margin-bottom: var(--space-3);
+    }
+    .out-form-card .el-form-item__label {
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+    .out-form-card .el-input__inner,
+    .out-form-card .el-select .el-input__inner {
+      width: 293px;
+    }
+    .out-form-card .el-input-number {
+      width: 220px;
+    }
+    .out-form-card .el-date-editor {
+      width: 320px;
+    }
+    .out-form-actions {
+      display: flex;
+      gap: var(--space-3);
+      justify-content: flex-end;
+      margin-top: var(--space-4);
+      padding-top: var(--space-3);
+      border-top: var(--border-width-thin) solid var(--border-subtle);
+    }
+    .out-form-actions .el-button--primary {
+      background-color: var(--color-brand-500);
+      border-color: var(--color-brand-500);
+      color: var(--text-on-brand);
+      font-weight: var(--font-weight-semibold);
+    }
+    .out-form-actions .el-button--primary:hover {
+      background-color: var(--color-brand-400);
+      border-color: var(--color-brand-400);
+    }
+    .out-form-tips {
+      margin-top: var(--space-3);
+      color: var(--text-muted);
+      font-size: var(--font-size-xs);
+      line-height: 1.5;
+    }
+
+    /* ========== 出库记录区标题 ========== */
+    .record-section-title {
+      display: flex;
+      align-items: center;
+      margin-bottom: var(--space-4);
+    }
+    .record-section-title h2 {
+      margin: 0;
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .record-section-title .section-hint {
+      margin-left: var(--space-3);
+      color: var(--text-muted);
+      font-size: var(--font-size-xs);
+    }
+    .record-section-title .section-badge {
+      margin-left: var(--space-4);
+    }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="stock-out-app">
+    <div class="container" id="main-content" role="main" aria-label="出库管理">
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">出库管理</h1>
+          <p class="ds-page-header__subtitle">领用 / 损耗 / 调拨出库，自动扣减库存</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
+
+      <!-- 出库单 -->
+      <el-card class="out-form-card" shadow="hover">
+        <div slot="header" class="el-card-header">
+          <span class="el-card-header-title"><i class="ri-arrow-up-box-line"></i> 出库单</span>
+        </div>
+        <el-form
+          ref="outForm"
+          :model="outForm"
+          :rules="outRules"
+          label-width="80px"
+          size="small"
+        >
+          <el-row :gutter="24">
+            <el-col :xs="24" :sm="12" :md="8">
+              <el-form-item label="食材" prop="materialId">
+                <el-select
+                  v-model="outForm.materialId"
+                  placeholder="请选择食材"
+                  filterable
+                  clearable
+                  style="width:293px"
+                  @change="onMaterialChange"
+                >
+                  <el-option
+                    v-for="item in materialOptions"
+                    :key="item.id"
+                    :label="item.name + (item.unit ? (' / ' + item.unit) : '')"
+                    :value="item.id"
+                  ></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :xs="24" :sm="12" :md="8">
+              <el-form-item label="出库数量" prop="qty">
+                <el-input-number
+                  v-model="outForm.qty"
+                  :min="0.01"
+                  :step="0.1"
+                  :precision="3"
+                  controls-position="right"
+                  style="width:220px"
+                ></el-input-number>
+                <span style="margin-left:8px;color:var(--text-muted);font-size:12px" v-if="outForm.unit">{{ outForm.unit }}</span>
+              </el-form-item>
+            </el-col>
+            <el-col :xs="24" :sm="12" :md="8">
+              <el-form-item label="业务单号" prop="bizId">
+                <el-input
+                  v-model="outForm.bizId"
+                  placeholder="选填：关联采购单/订单号"
+                  clearable
+                  style="width:293px"
+                ></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="24">
+            <el-col :xs="24" :sm="12" :md="12">
+              <el-form-item label="备注" prop="remark">
+                <el-input
+                  v-model="outForm.remark"
+                  placeholder="选填：说明出库原因"
+                  clearable
+                  style="width:360px"
+                ></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :xs="24" :sm="12" :md="12">
+              <el-form-item label="操作人" prop="operator">
+                <el-input
+                  v-model="outForm.operator"
+                  placeholder="请输入操作人姓名"
+                  clearable
+                  style="width:293px"
+                ></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <div class="out-form-actions">
+            <el-button @click="resetForm">重置</el-button>
+            <el-button
+              type="primary"
+              @click="submitOut"
+              :loading="submitting"
+            >提交出库</el-button>
+          </div>
+          <div class="out-form-tips">
+            <i class="ri-information-line"></i> 提示：提交后将立即扣减该食材库存，并写入库存流水记录。食材下拉支持按名称搜索，连续出库时食材将保留选中状态，方便多次操作。
+          </div>
+        </el-form>
+      </el-card>
+
+      <!-- 出库记录 -->
+      <div class="record-section-title">
+        <h2>出库记录</h2>
+        <span class="section-hint">近 <el-tag size="mini" type="danger" effect="plain">{{ counts }}</el-tag> 条记录，支持按食材 / 时间筛选</span>
+      </div>
+
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @search="handleQuery"
+        @reset="resetFilter">
+        <template slot="search-extra">
+          <el-select v-model="input.materialId" placeholder="食材" class="el-select--narrow" clearable filterable @change="handleQuery">
+            <el-option v-for="item in materialOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
+          </el-select>
+          <el-date-picker
+            v-model="input.dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="yyyy-MM-dd"
+            class="el-date-editor--md"
+            @change="handleQuery"
+            size="small"
+          ></el-date-picker>
+        </template>
+      </table-bar>
+
+      <crud-table
+        empty-hint="暂无出库记录，请在上方提交出库单"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :page-sizes="[10,20,30,40]"
+        :total="counts"
+        :show-actions="false"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      ></crud-table>
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../api/inventory.js"></script>
+  <script src="../../js/components.js"></script>
+  <script>
+    new Vue({
+      el: '#stock-out-app',
+      data() {
+        return {
+          loading: false,
+          submitting: false,
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          materialOptions: [],
+          // 出库单表单
+          outForm: {
+            materialId: '',
+            qty: 1,
+            unit: '',
+            bizId: '',
+            remark: '领用出库',
+            operator: ''
+          },
+          outRules: {
+            materialId: [{ required: true, message: '请选择食材', trigger: 'change' }],
+            qty: [{ required: true, message: '请输入出库数量', trigger: 'blur' }],
+            operator: [{ required: true, whitespace: true, message: '请输入操作人', trigger: 'blur' }]
+          },
+          // 出库记录列
+          columns: [
+            { prop: 'materialName', label: '食材名称', width: 120, showOverflowTooltip: true },
+            { prop: 'quantity', label: '数量', width: 80, align: 'right', type: 'number' },
+            { prop: 'operator', label: '操作员', width: 80, align: 'center' },
+            { prop: 'bizId', label: '业务单号', width: 100, align: 'center', showOverflowTooltip: true },
+            { prop: 'remark', label: '备注', width: 120, showOverflowTooltip: true },
+            { prop: 'createdTime', label: '出库时间', width: 140, align: 'center' }
+          ],
+          tableSearchItems: [
+            { key: 'materialId', label: '食材', type: 'select', placeholder: '请选择' },
+            { key: 'dateRange', label: '出库时间', type: 'dateRange' }
+          ],
+          tableActions: [
+            { label: '查询', type: 'primary', icon: 'el-icon-search', method: 'handleQuery' },
+            { label: '重置', icon: 'el-icon-refresh', method: 'resetFilter' }
+          ],
+          input: { materialId: '', type: 'OUT', dateRange: '' }
+        }
+      },
+      created() {
+        this.loadMaterialOptions()
+        this.fetchRecords()
+      },
+      methods: {
+        loadMaterialOptions() {
+          if (this.materialOptions.length > 0) return
+          materialList().then(res => {
+            if (res.code === 1) {
+              this.materialOptions = res.data || []
+            }
+          })
+        },
+        onMaterialChange(materialId) {
+          // 选中食材时，带入单位；重置数量为 1
+          var mat = this.materialOptions.filter(function(m) { return m.id === materialId })[0]
+          this.outForm.unit = mat ? (mat.unit || '') : ''
+          this.outForm.qty = 1
+        },
+        async submitOut() {
+          var self = this
+          self.$refs.outForm.validate(async function(valid) {
+            if (!valid) return
+            var fd = self.outForm
+            if (self.submitting) return
+            self.submitting = true
+            try {
+              var bizId = fd.bizId ? Number(fd.bizId) : undefined
+              var params = {
+                materialId: fd.materialId,
+                qty: fd.qty,
+                bizId: bizId,
+                remark: fd.remark || '领用出库',
+                operator: fd.operator.trim()
+              }
+              var res = await stockOut(params)
+              if (res.code === 1) {
+                ReggieUI.success('出库成功')
+                self.resetAfterSubmit()
+                self.page = 1
+                self.fetchRecords()
+              } else {
+                ReggieUI.error(res.msg || '出库失败')
+              }
+            } catch (e) {
+              ReggieUI.error('出库失败，请重试')
+            } finally {
+              self.submitting = false
+            }
+          })
+        },
+        resetAfterSubmit() {
+          // 保留食材选择，方便连续出库；其他字段重置
+          this.outForm.qty = 1
+          this.outForm.bizId = ''
+          this.outForm.remark = '领用出库'
+          this.outForm.operator = ''
+        },
+        resetForm() {
+          this.outForm.materialId = ''
+          this.outForm.qty = 1
+          this.outForm.unit = ''
+          this.outForm.bizId = ''
+          this.outForm.remark = '领用出库'
+          this.outForm.operator = ''
+          this.$refs.outForm.resetFields()
+        },
+        async fetchRecords() {
+          this.loading = true
+          try {
+            var params = { page: this.page, pageSize: this.pageSize, type: 'OUT' }
+            if (this.input.materialId) params.materialId = this.input.materialId
+            if (this.input.dateRange && this.input.dateRange.length === 2) {
+              params.startDate = this.input.dateRange[0]
+              params.endDate = this.input.dateRange[1]
+            }
+            var res = await stockRecordPage(params)
+            if (String(res.code) === '1') {
+              this.tableData = res.data.records || []
+              this.counts = Number(res.data.total) || 0
+            } else {
+              ReggieUI.error(res.msg || '加载出库记录失败')
+            }
+          } catch (e) {
+            ReggieUI.error('加载出库记录失败')
+          } finally {
+            this.loading = false
+          }
+        },
+        handleQuery() {
+          this.page = 1
+          this.fetchRecords()
+        },
+        resetFilter() {
+          this.input.materialId = ''
+          this.input.dateRange = ''
+          this.page = 1
+          this.fetchRecords()
+        },
+        onPageChange({ page, pageSize }) {
+          this.page = page
+          this.pageSize = pageSize
+          this.fetchRecords()
+        },
+        onSizeChange(val) {
+          this.pageSize = val
+          this.page = 1
+          this.fetchRecords()
+        }
+      }
+    })
+  </script>
+</body>
+</html>

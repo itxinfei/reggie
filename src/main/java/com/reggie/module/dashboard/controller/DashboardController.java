@@ -2,6 +2,7 @@ package com.reggie.module.dashboard.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.dashboard.service.DashboardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -38,6 +39,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/dashboard")
 @Slf4j
+@RequireEmployee
 @Tag(name = "数据概览仪表盘", description = "后台管理首页实时统计数据接口，支持Redis缓存加速")
 public class DashboardController {
 
@@ -175,7 +177,7 @@ public class DashboardController {
         Map<String, Object> map = new HashMap<>();
         map.put("totalOrders", 0);
         map.put("totalRevenue", 0);
-        map.put("errorMsg", moduleName + "异常: " + (e.getMessage() != null ? e.getMessage() : "未知错误"));
+        map.put("errorMsg", moduleName + "数据获取异常，请稍后重试");
         map.put("cacheSource", "Error");
         return map;
     }
@@ -185,7 +187,7 @@ public class DashboardController {
         map.put("redisAvailable", false);
         map.put("redisInfo", "异常");
         map.put("dbAvailable", false);
-        map.put("dbInfo", "异常: " + (e.getMessage() != null ? e.getMessage() : "未知"));
+        map.put("dbInfo", "异常");
         map.put("javaVersion", System.getProperty("java.version"));
         map.put("osName", System.getProperty("os.name"));
         map.put("availableProcessors", Runtime.getRuntime().availableProcessors());

@@ -8,6 +8,23 @@
   --color-primary-dark: #ff9a00;
   --color-primary-light: #ffd54f;
   --color-primary-gradient: linear-gradient(135deg, #ffc200 0%, #ff9a00 100%);
+  /* 会员中心专属深金渐变（头图 / 会员卡），收敛硬编码为令牌，视觉与 v5 一致 */
+  --color-primary-gradient-deep: linear-gradient(160deg, #e0a800 0%, #d89b00 40%, #b87d00 100%);
+  --color-primary-gradient-card: linear-gradient(135deg, #ffd54f 0%, #ffb300 50%, #e09000 100%);
+
+  /* ---- 金色表面（金底上的文字/点缀，替代页面硬编码 rgba） ---- */
+  /* 金底文字三档层级：强（标题）/ 常规（正文）/ 弱（说明），alpha 让金底透出 */
+  --gold-text-strong: rgba(51,51,51,0.85);
+  --gold-text:        rgba(51,51,51,0.65);
+  --gold-text-muted:  rgba(51,51,51,0.6);
+  /* 金色点缀底（徽标/激活态/头像底），alpha 金 */
+  --color-primary-tint:       rgba(255, 194, 0, 0.1);
+  --color-primary-tint-strong: rgba(255, 194, 0, 0.12);
+
+  /* ---- 外部平台品牌色（配送单平台标签，语义化收敛硬编码 hex） ---- */
+  --platform-meituan: #ffc200; /* 美团黄（同品牌金） */
+  --platform-eleme:   #0096ff; /* 饿了么蓝 */
+  --platform-douyin:  #fe2c55; /* 抖音红 */
 
   /* ---- 文字色 ---- */
   --color-text-primary: #333333;
@@ -394,4 +411,40 @@ i {
     margin: 0 auto;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.12);
   }
+}
+
+/* ================================================================
+   Vant 主按钮品牌化：Vant 默认微信绿 (#07c160) 统一为品牌金
+   ----------------------------------------------------------------
+   覆盖点（vant.min.css 中）：
+     .van-button--primary{color:#fff;background-color:#07c160;border:1px solid #07c160}
+     .van-button--plain.van-button--primary{color:#07c160}
+   说明：
+     - index.css 在部分页面先于 vant.min.css 加载、部分页面后加载，
+       故一律使用 !important 保证覆盖稳定生效。
+     - 金色背景配深色文字（--color-text-primary），与后台 .el-button--primary
+       （金底深字）及前端其它金色区域（quick-header 等）一致，满足可读性。
+   ================================================================ */
+.van-button--primary {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-text-primary) !important;
+}
+.van-button--primary:active {
+  background-color: var(--color-primary-dark) !important;
+  border-color: var(--color-primary-dark) !important;
+  color: var(--color-text-primary) !important;
+}
+/* 描边态：白底 + 金边 + 金字 */
+.van-button--primary.van-button--plain {
+  background-color: var(--color-text-white) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary-dark) !important;
+}
+/* 禁用态 */
+.van-button--primary.van-button--disabled,
+.van-button--primary[disabled] {
+  background-color: var(--color-text-disabled) !important;
+  border-color: var(--color-text-disabled) !important;
+  color: var(--color-text-white) !important;
 }

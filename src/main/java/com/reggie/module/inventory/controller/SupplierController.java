@@ -3,7 +3,10 @@ import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.inventory.model.Supplier;
 import com.reggie.module.inventory.service.SupplierService;
@@ -67,32 +70,65 @@ public class SupplierController {
 
     /**
      * 新增供应商
-     * @param supplier 供应商信息
-     * @return 操作结果
+     * <p>租户安全：强制设置 tenantId。</p>
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增供应商", description = "创建新的供应商信息")
     public R<String> save(@RequestBody Supplier supplier) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        supplier.setTenantId(tenantId);
         supplierService.save(supplier);
         return R.success("新增供应商成功");
     }
 
     /**
      * 修改供应商
-     * @param supplier 供应商信息
-     * @return 操作结果
+     * <p>租户安全：先校验归属，再更新业务字段。</p>
      */
     @PutMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改供应商", description = "更新供应商信息")
     public R<String> update(@RequestBody Supplier supplier) {
-        supplierService.updateById(supplier);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        Supplier exist = supplierService.getById(supplier.getId());
+        if (exist == null) {
+            throw new CustomException("供应商不存在");
+        }
+        if (!tenantId.equals(exist.getTenantId())) {
+            throw new CustomException("供应商不属于当前租户");
+        }
+        exist.setName(supplier.getName());
+        exist.setContact(supplier.getContact());
+        exist.setPhone(supplier.getPhone());
+        exist.setAddress(supplier.getAddress());
+        exist.setStatus(supplier.getStatus());
+        supplierService.updateById(exist);
         return R.success("修改供应商成功");
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除供应商", description = "根据ID删除供应商")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "删除供应商", description = "根据ID删除供应商（先校验租户归属）")
     @Parameter(name = "id", description = "供应商ID", required = true)
     public R<String> delete(@PathVariable Long id) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        Supplier exist = supplierService.getById(id);
+        if (exist == null) {
+            throw new CustomException("供应商不存在");
+        }
+        if (!tenantId.equals(exist.getTenantId())) {
+            throw new CustomException("供应商不属于当前租户");
+        }
         supplierService.removeById(id);
         return R.success("删除供应商成功");
     }

@@ -4,8 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 外卖订单接单请求DTO

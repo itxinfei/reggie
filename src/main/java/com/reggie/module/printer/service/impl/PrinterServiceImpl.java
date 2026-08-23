@@ -18,7 +18,6 @@ import com.reggie.module.printer.service.PrinterService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,10 +27,15 @@ import java.util.List;
  *
  * @author reggie
  * @since 2026-07-09
+ *
+ * <p>注意：本类<b>禁止</b>类级 @Transactional。
+ * 历史实现曾用类级事务，导致下单流程中 printOrder 抛异常（如打印机表缺失、打印失败）时，
+ * 内层事务被标记 rollback-only，即使被调用方 try-catch 吞掉，外层订单事务提交仍抛
+ * UnexpectedRollbackException——整笔下单被打印故障拖垮，与"打印失败不影响下单"的语义相悖。
+ * 本类方法均为查询 + 单条日志插入，无需强事务。</p>
  */
 @Slf4j
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class PrinterServiceImpl implements PrinterService {
 
     /** 订单服务 */

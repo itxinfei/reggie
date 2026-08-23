@@ -49,19 +49,23 @@ public interface CashierService extends IService<CashierRecord> {
     boolean saveCashierRecord(CashierRecord cashierRecord);
 
     /**
-     * 现金收银
+     * 收银收款
      *
      * @param orderId      订单ID
      * @param orderNumber  订单号
      * @param amount       收银金额
      * @param actualAmount 实收金额
+     * @param payType      支付方式（1现金 2微信 3支付宝 4银行卡 5会员储值），当前仅现金/会员储值走真实记账
      * @param cashierId    收银员ID
      * @param cashierName  收银员姓名
+     * @param usedCouponId 使用的优惠券ID
+     * @param memberUserId 会员用户ID
      * @param remark       备注
      * @return 收银记录
      */
     CashierRecord cashPayment(Long orderId, String orderNumber, BigDecimal amount, BigDecimal actualAmount,
-                              Long cashierId, String cashierName, String remark);
+                              Integer payType, Long cashierId, String cashierName,
+                              Long usedCouponId, Long memberUserId, String remark);
 
     /**
      * 删除收银记录

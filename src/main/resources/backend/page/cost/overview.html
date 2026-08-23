@@ -7,7 +7,8 @@
   <title>成本核算 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
-    <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
@@ -41,16 +42,10 @@
       gap: 12px;
       background: var(--bg-surface);
       padding: 16px 24px;
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.8);
-    }
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--el-border-light);
     }
     .chart-row {
       display: grid;
@@ -60,10 +55,10 @@
     }
     .chart-card {
       background: var(--bg-surface);
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--el-border-light);
     }
     .chart-title {
       font-size:var(--font-size-lg);
@@ -76,10 +71,10 @@
     }
     .alert-list {
       background: var(--bg-surface);
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       padding: 20px;
-      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--el-border-light);
     }
     .alert-item {
       display: flex;
@@ -92,7 +87,7 @@
     }
     .alert-level {
       padding: 4px 8px;
-      border-radius: 4px;
+border-radius: var(--radius-sm);
       font-size:var(--font-size-xs);
       font-weight: 600;
       margin-right: 12px;
@@ -147,45 +142,8 @@
         <el-button type="success" icon="el-icon-download" @click="exportReport">导出报表</el-button>
       </div>
 
-      <!-- 统计卡片 -->
-      <div class="stats-row">
-        <div class="stats-card">
-          <div class="stats-card-icon" style="background: var(--el-color-primary-lighter);">
-            <i class="el-icon-money" style="color: var(--el-color-primary);"></i>
-          </div>
-          <div class="stats-card-content">
-            <div class="stats-card-value">{{ formatMoney(summary.totalCost) }}</div>
-            <div class="stats-card-label">总成本</div>
-          </div>
-        </div>
-        <div class="stats-card">
-          <div class="stats-card-icon" style="background: var(--el-color-success-lighter);">
-            <i class="el-icon-food" style="color: var(--el-color-success);"></i>
-          </div>
-          <div class="stats-card-content">
-            <div class="stats-card-value">{{ formatMoney(summary.materialCost) }}</div>
-            <div class="stats-card-label">食材成本</div>
-          </div>
-        </div>
-        <div class="stats-card">
-          <div class="stats-card-icon" style="background: var(--el-color-warning-lighter);">
-            <i class="el-icon-user" style="color: var(--el-color-warning);"></i>
-          </div>
-          <div class="stats-card-content">
-            <div class="stats-card-value">{{ formatMoney(summary.laborCost) }}</div>
-            <div class="stats-card-label">人工成本</div>
-          </div>
-        </div>
-        <div class="stats-card">
-          <div class="stats-card-icon" style="background: var(--el-color-info-lighter);">
-            <i class="el-icon-more" style="color: var(--el-color-info);"></i>
-          </div>
-          <div class="stats-card-content">
-            <div class="stats-card-value">{{ formatMoney(summary.otherCost) }}</div>
-            <div class="stats-card-label">其他成本</div>
-          </div>
-        </div>
-      </div>
+      <!-- 统计卡片 - 使用统一的 <stat-cards> 组件 -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- 图表行 -->
       <div class="chart-row">
@@ -201,23 +159,22 @@
         </div>
       </div>
 
-      <!-- 菜品成本排行和预警 -->
-      <div class="chart-row">
-        <!-- 菜品成本排行 -->
-        <div class="chart-card">
-          <div class="chart-title">菜品成本排行 Top10</div>
-          <div id="rankingChart" class="chart-container"></div>
+      <!-- 成本排名 -->
+      <div class="chart-card" style="margin-bottom: 20px;">
+        <div class="chart-title">菜品成本排名</div>
+        <div id="rankingChart" class="chart-container"></div>
+      </div>
+
+      <!-- 成本预警 -->
+      <div class="alert-list">
+        <div class="chart-title">成本预警</div>
+        <div v-if="alerts.length === 0" style="text-align: center; padding: 20px; color: var(--el-text-secondary);">
+          暂无预警信息
         </div>
-        <!-- 成本预警 -->
-        <div class="alert-list">
-          <div class="chart-title">成本预警</div>
-          <div v-if="alerts.length === 0" style="text-align: center; color: var(--el-text-secondary); padding: 40px 0;">
-            暂无预警信息
-          </div>
-          <div v-for="(item, index) in alerts" :key="index" class="alert-item">
-            <span class="alert-level" :class="getAlertClass(item.alertLevel)">{{ item.alertLevel }}</span>
-            <span style="flex: 1;">{{ item.dishName }}</span>
-            <span style="color: var(--el-text-secondary);">毛利率：{{ item.profitRate }}%</span>
+        <div v-else>
+          <div v-for="(alert, index) in alerts" :key="index" class="alert-item">
+            <span class="alert-level" :class="alert.level">{{ alert.levelText }}</span>
+            <span>{{ alert.message }}</span>
           </div>
         </div>
       </div>
@@ -226,6 +183,7 @@
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
@@ -237,6 +195,7 @@
       el: '#app',
       data() {
         return {
+          loading: false,
           dateRange: [],
           summary: {
             totalCost: 0,
@@ -259,6 +218,45 @@
           rankingChart: null
         }
       },
+      computed: {
+        // 统计卡片配置 - 使用统一的 <stat-cards> 组件
+        statsCards() {
+          return [
+            {
+              key: 'totalCost',
+              icon: 'el-icon-money',
+              label: '总成本',
+              value: '¥' + this.formatMoney(this.summary.totalCost),
+              color: 'primary',
+              flex: true
+            },
+            {
+              key: 'materialCost',
+              icon: 'el-icon-food',
+              label: '食材成本',
+              value: '¥' + this.formatMoney(this.summary.materialCost),
+              color: 'success',
+              flex: true
+            },
+            {
+              key: 'laborCost',
+              icon: 'el-icon-user',
+              label: '人工成本',
+              value: '¥' + this.formatMoney(this.summary.laborCost),
+              color: 'warning',
+              flex: true
+            },
+            {
+              key: 'otherCost',
+              icon: 'el-icon-more',
+              label: '其他成本',
+              value: '¥' + this.formatMoney(this.summary.otherCost),
+              color: 'info',
+              flex: true
+            }
+          ]
+        }
+      },
       created() {
         // 默认查询最近7天
         const end = new Date()
@@ -278,20 +276,11 @@
           const year = date.getFullYear()
           const month = String(date.getMonth() + 1).padStart(2, '0')
           const day = String(date.getDate()).padStart(2, '0')
-          return `${year}-${month}-${day}`
+          return year + '-' + month + '-' + day
         },
         formatMoney(value) {
-          if (!value && value !== 0) return '¥0.00'
-          return '¥' + Number(value).toFixed(2)
-        },
-        getAlertClass(level) {
-          const map = {
-            '严重': 'critical',
-            '警告': 'warning',
-            '注意': 'info',
-            '正常': 'normal'
-          }
-          return map[level] || 'normal'
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
         },
         initCharts() {
           this.trendChart = echarts.init(document.getElementById('trendChart'))
@@ -305,22 +294,17 @@
           })
         },
         async fetchData() {
-          if (!this.dateRange || this.dateRange.length !== 2) {
-            ReggieUI.warning('请选择日期范围')
-            return
-          }
-          
-          const startDate = this.dateRange[0]
-          const endDate = this.dateRange[1]
-          
+          this.loading = true
           try {
-            // 并行请求数据
+            const startDate = this.dateRange[0]
+            const endDate = this.dateRange[1]
+            
             const [summaryRes, trendRes, structureRes, rankingRes, alertRes] = await Promise.all([
               getCostSummary({ startDate, endDate }),
               getCostTrend({ startDate, endDate }),
               getCostStructure({ startDate, endDate }),
-              getDishCostRanking({ limit: 10 }),
-              getCostAlert({ threshold: 20 })
+              getCostRanking({ startDate, endDate }),
+              getCostAlerts({ startDate, endDate })
             ])
             
             if (summaryRes.code === 1) {
@@ -333,12 +317,12 @@
             }
             
             if (structureRes.code === 1) {
-              this.structureData = structureRes.data.structure || []
+              this.structureData = structureRes.data
               this.updateStructureChart()
             }
             
             if (rankingRes.code === 1) {
-              this.rankingData = rankingRes.data || []
+              this.rankingData = rankingRes.data
               this.updateRankingChart()
             }
             
@@ -346,8 +330,9 @@
               this.alerts = alertRes.data || []
             }
           } catch (err) {
-            console.error('获取成本数据失败', err)
             ReggieUI.error('获取数据失败')
+          } finally {
+            this.loading = false
           }
         },
         updateTrendChart() {
@@ -428,7 +413,7 @@
                 radius: ['40%', '70%'],
                 avoidLabelOverlap: false,
                 itemStyle: {
-                  borderRadius: 10,
+                  borderRadius: RgPalette.radiusMd
                   borderColor: RgPalette.white,
                   borderWidth: 2
                 },
@@ -514,6 +499,3 @@
   </script>
 </body>
 </html>
-
-
-

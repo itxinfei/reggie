@@ -1,6 +1,9 @@
 package com.reggie.module.ai.controller;
 
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.RateLimitType;
 import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.provider.AiProviderManager;
 import com.reggie.module.ai.service.AiProviderConfigService;
@@ -32,6 +35,7 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/admin/ai/provider")
+@RequireEmployee
 @Tag(name = "AI供应商管理", description = "配置和切换大模型供应商")
 public class AiProviderController {
 
@@ -46,11 +50,7 @@ public class AiProviderController {
     public R<List<AiProviderConfig>> list() {
         List<AiProviderConfig> list = providerConfigService.list();
         // 脱敏API密钥
-        list.forEach(p -> {
-            if (p.getApiKey() != null && p.getApiKey().length() > 8) {
-                p.setApiKey(p.getApiKey().substring(0, 4) + "****" + p.getApiKey().substring(p.getApiKey().length() - 4));
-            }
-        });
+        list.forEach(p -> maskSensitiveFields(p));
         return R.success(list);
     }
 
@@ -58,13 +58,12 @@ public class AiProviderController {
     @Operation(summary = "当前激活供应商", description = "获取当前正在使用的AI供应商")
     public R<AiProviderConfig> getActive() {
         AiProviderConfig config = providerConfigService.getActiveProvider();
-        if (config != null && config.getApiKey() != null && config.getApiKey().length() > 8) {
-            config.setApiKey(config.getApiKey().substring(0, 4) + "****" + config.getApiKey().substring(config.getApiKey().length() - 4));
-        }
+        if (config != null) maskSensitiveFields(config);
         return R.success(config);
     }
 
     @PostMapping("/add")
+    @RateLimit(maxRequestsPerSecond = 5)
     @Operation(summary = "添加或更新供应商", description = "新增AI供应商配置，若providerCode已存在则自动更新")
     public R<Map<String, Object>> add(
             @Parameter(description = "供应商配置信息", required = true) @RequestBody AiProviderConfig config) {
@@ -97,6 +96,7 @@ public class AiProviderController {
     }
 
     @PostMapping("/update")
+    @RateLimit(maxRequestsPerSecond = 5)
     @Operation(summary = "更新供应商配置", description = "修改AI供应商配置信息")
     public R<String> update(
             @Parameter(description = "供应商配置信息", required = true) @RequestBody AiProviderConfig config) {
@@ -126,9 +126,9 @@ public class AiProviderController {
     }
 
     @DeleteMapping("/delete/{id}")
+    @RateLimit(maxRequestsPerSecond = 5)
     @Operation(summary = "删除供应商", description = "软删除AI供应商配置，不能删除当前激活的供应商")
     public R<String> delete(
-            @Parameter(description = "I d")
             @Parameter(description = "供应商配置ID", required = true) @PathVariable Long id) {
         AiProviderConfig config = providerConfigService.getById(id);
         if (config != null && Boolean.TRUE.equals(config.getIsActive())) {
@@ -139,8 +139,8 @@ public class AiProviderController {
     }
 
     @PostMapping("/activate/{id}")
+    @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "切换供应商", description = "激活指定供应商（切换后AI将使用该供应商）")
-    @Parameter(description = "I d")
     public R<String> activate(@PathVariable Long id) {
         AiProviderConfig target = providerConfigService.getById(id);
         if (target == null) {
@@ -163,23 +163,18 @@ public class AiProviderController {
 
     @GetMapping("/get/{id}")
     @Operation(summary = "获取单个供应商", description = "获取指定供应商的配置（API密钥已脱敏）")
-    @Parameter(description = "I d")
     public R<AiProviderConfig> getDetail(@PathVariable Long id) {
         AiProviderConfig config = providerConfigService.getById(id);
         if (config == null) {
             return R.error("供应商配置不存在");
         }
-        // 脱敏：不返回完整 API 密钥
-        if (config.getApiKey() != null && config.getApiKey().length() > 8) {
-            config.setApiKey(config.getApiKey().substring(0, 4) + "****"
-                    + config.getApiKey().substring(config.getApiKey().length() - 4));
-        }
+        maskSensitiveFields(config);
         return R.success(config);
     }
 
     @GetMapping("/test/{id}")
+    @RateLimit(maxRequestsPerSecond = 2)
     @Operation(summary = "测试连通性", description = "测试指定AI供应商的连接是否正常")
-    @Parameter(description = "I d")
     public R<Map<String, String>> test(@PathVariable Long id) {
         String result = providerConfigService.testProvider(id);
         Map<String, String> resp = new HashMap<>();
@@ -191,6 +186,7 @@ public class AiProviderController {
     // ==================== 修改点：从供应商API拉取模型列表 ====================
 
     @PostMapping("/fetch-models")
+    @RateLimit(maxRequestsPerSecond = 2)
     @Operation(summary = "拉取模型列表", description = "调用AI供应商的 /models 接口获取可用模型列表（参考ChatBox/NextChat交互模式）")
     public R<List<String>> fetchModels(@RequestBody Map<String, String> params) {
         String baseUrl = params.get("baseUrl");
@@ -213,22 +209,6 @@ public class AiProviderController {
         return R.success(models);
     }
 
-    // ==================== 预设供应商快捷初始化 ====================
-
-    @PostMapping("/init-presets")
-    @Operation(summary = "初始化预设供应商", description = "批量添加国产大模型预设配置（仅当无配置时生效）")
-    public R<String> initPresets() {
-        if (providerConfigService.count() > 0) {
-            return R.error("已存在供应商配置，如需重置请先清空");
-        }
-
-        List<AiProviderConfig> presets = getPresetProviders();
-        for (AiProviderConfig preset : presets) {
-            providerConfigService.save(preset);
-        }
-        return R.success("已初始化 " + presets.size() + " 个预设供应商，请在后台配置API密钥后启用");
-    }
-
     /**
      * 校验供应商配置完整性
      */
@@ -246,6 +226,37 @@ public class AiProviderController {
             return "模型名称不能为空";
         }
         return null;
+    }
+
+    /**
+     * 脱敏敏感字段：API密钥、extraHeaders（可能含API Key等凭证）
+     */
+    private void maskSensitiveFields(AiProviderConfig config) {
+        if (config.getApiKey() != null && config.getApiKey().length() > 8) {
+            config.setApiKey(config.getApiKey().substring(0, 4) + "****"
+                    + config.getApiKey().substring(config.getApiKey().length() - 4));
+        }
+        // extraHeaders 可能包含 {"api-key": "xxx"} 等凭证信息，直接置空防止泄露
+        if (config.getExtraHeaders() != null && !config.getExtraHeaders().isEmpty()) {
+            config.setExtraHeaders("");
+        }
+    }
+
+    // ==================== 预设供应商快捷初始化 ====================
+
+    @PostMapping("/init-presets")
+    @RateLimit(maxRequestsPerSecond = 1)
+    @Operation(summary = "初始化预设供应商", description = "批量添加国产大模型预设配置（仅当无配置时生效）")
+    public R<String> initPresets() {
+        if (providerConfigService.count() > 0) {
+            return R.error("已存在供应商配置，如需重置请先清空");
+        }
+
+        List<AiProviderConfig> presets = getPresetProviders();
+        for (AiProviderConfig preset : presets) {
+            providerConfigService.save(preset);
+        }
+        return R.success("已初始化 " + presets.size() + " 个预设供应商，请在后台配置API密钥后启用");
     }
 
     /**

@@ -12,6 +12,7 @@
                create_time, update_time, create_user, update_user, is_deleted
         FROM ai_user_profile
         WHERE user_id = #{userId}
+          AND tenant_id = #{tenantId}
           AND is_deleted = 0
         LIMIT 1
     </select>

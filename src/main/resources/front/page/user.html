@@ -14,7 +14,7 @@
         .member-card {
             margin: 0 12rem 12rem;
             background: var(--color-primary-gradient);
-            border-radius: 14rem;
+            border-radius: var(--radius-xl);
             padding: 16rem 18rem;
             position: relative;
             overflow: hidden;
@@ -32,12 +32,12 @@
         .member-card .card-level-badge {
             background: rgba(255,255,255,0.45);
             color: var(--color-text-primary); font-size: 11rem; font-weight: 700;
-            padding: 3rem 10rem; border-radius: 20rem; letter-spacing: 0.5rem;
+            padding: 3rem 10rem; border-radius: var(--radius-round); letter-spacing: 0.5rem;
         }
         .member-card .card-level-badge.standard {
             background: rgba(51,51,51,0.12); color: var(--color-text-primary);
         }
-        .member-card .card-arrow { color: rgba(51,51,51,0.6); font-size: 14rem; }
+        .member-card .card-arrow { color: var(--gold-text); font-size: 14rem; }
         .member-card .card-stats {
             display: flex; gap: 0; position: relative; z-index: 1;
         }
@@ -54,10 +54,10 @@
             font-family: var(--font-family-number);
         }
         .member-card .card-stat .lbl {
-            font-size: 11rem; color: rgba(51,51,51,0.65); margin-top: 2rem;
+            font-size: 11rem; color: var(--gold-text); margin-top: 2rem;
         }
         .member-card .card-coupon-tag {
-            margin-top: 10rem; font-size: 12rem; color: rgba(51,51,51,0.7);
+            margin-top: 10rem; font-size: 12rem; color: var(--gold-text);
             display: flex; align-items: center; gap: 6rem; position: relative; z-index: 1;
         }
         .member-card .card-coupon-tag .coupon-count {
@@ -65,7 +65,7 @@
             padding: 3rem 8rem; color: var(--color-text-primary); font-weight: 600;
         }
         .member-card .non-member-tip {
-            text-align: center; color: rgba(51,51,51,0.7); font-size: 13rem;
+            text-align: center; color: var(--gold-text); font-size: 13rem;
             padding: 6rem 0; position: relative; z-index: 1;
         }
     </style>

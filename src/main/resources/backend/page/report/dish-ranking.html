@@ -20,10 +20,10 @@
 
     /* 工具栏 */
     .tableBar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
-      background: var(--bg-surface); padding: 16px 24px; border-radius: 14px; margin-bottom: 20px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.8);
+      background: var(--bg-surface); padding: 16px 24px; border-radius: var(--radius-lg); margin-bottom: 20px;
+      box-shadow: var(--shadow-sm); border: 1px solid var(--el-border-light);
       transition: box-shadow 0.3s; }
-    .tableBar:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .tableBar:hover { box-shadow: var(--shadow-lg); }
     .tableBar .toolbar-label { font-size:var(--font-size-base); color: var(--el-text-regular); font-weight: 500; flex-shrink: 0; }
     .tableBar .toolbar-spacer { flex: 1; min-width: 0; }
 
@@ -39,7 +39,7 @@
 
     /* 排名徽章 */
     .rank-badge { display: inline-flex; align-items: center; justify-content: center;
-      width: 24px; height: 24px; border-radius: 6px; font-size:var(--font-size-xs); font-weight: 700; }
+      width: 24px; height: 24px; border-radius: var(--radius-md); font-size:var(--font-size-xs); font-weight: 700; }
     .rank-badge.r1 { background: var(--color-danger); color: var(--bg-surface); }
     .rank-badge.r2 { background: var(--color-brand-500); color: var(--bg-surface); }
     .rank-badge.r3 { background: var(--color-warning); color: var(--bg-surface); }
@@ -64,24 +64,21 @@
 
       <stat-cards :cards="statsCards"></stat-cards>
 
-      <div class="tableBar">
-        <span class="toolbar-label"><i class="el-icon-date" style="margin-right:4px;"></i>日期范围</span>
-        <el-date-picker v-model="dateRange" clearable value-format="yyyy-MM-dd"
-          type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
-          size="small"></el-date-picker>
-        <span class="toolbar-label" style="margin-left:8px;">数量</span>
-        <el-input-number v-model="limit" :min="5" :max="50" :step="5"
-          size="small" controls-position="right" style="width:100px;"></el-input-number>
-        <span class="toolbar-label">条</span>
-        <el-select v-model="categoryFilter" placeholder="菜品分类" size="small" clearable
-          @change="loadData" style="width:150px;">
-          <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
-        </el-select>
-        <span class="toolbar-spacer"></span>
-        <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
-        <el-button size="small" class="btn-reset" icon="el-icon-refresh" @click="reset">重置</el-button>
-        <el-button type="success" size="small" icon="el-icon-download" @click="handleExport">导出 CSV</el-button>
-      </div>
+      <table-bar
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="loadData"
+        @reset="reset"
+        @action="onAction"
+      >
+        <template slot="search-extra">
+          <el-date-picker v-model="dateRange" clearable value-format="yyyy-MM-dd"
+            type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
+            size="small"></el-date-picker>
+          <el-input-number v-model="limit" :min="5" :max="50" :step="5"
+            size="small" controls-position="right" style="width:100px;" placeholder="数量"></el-input-number>
+        </template>
+      </table-bar>
 
       <!-- 图表并排 -->
       <div class="charts-row">
@@ -136,6 +133,14 @@
         return {
           loading: false, dateRange: [], limit: 10, categoryFilter: null,
           categories: [], tableData: [],
+          // 搜索配置
+          searchConfig: [
+            { type: 'select', field: 'categoryId', placeholder: '菜品分类', width: '150px', options: [] }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'export', text: '导出 CSV', type: 'success', icon: 'el-icon-download' }
+          ],
           // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
           dishColumns: [
             { prop: 'rank', label: '排名', width: 80, align: 'center', slot: true },
@@ -198,8 +203,17 @@
         loadCategories: function() {
           var self = this;
           $axios.get('/category/list').then(function(res) {
-            if (res.code === 1 && res.data) self.categories = res.data || [];
+            if (res.code === 1 && res.data) {
+              self.categories = res.data || [];
+              // 更新搜索配置中的分类选项
+              self.searchConfig[0].options = self.categories.map(function(c) { return { label: c.name, value: c.id } });
+            }
           }).catch(function() {});
+        },
+        onAction: function(payload) {
+          if (payload.key === 'export') {
+            this.handleExport();
+          }
         },
         loadData: function() {
           var self = this;
@@ -280,7 +294,7 @@
             };
           });
           this.trendChart.setOption({
-            tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)',
+            tooltip: { trigger: 'axis', backgroundColor: RgPalette.white,
               borderColor: RgPalette.borderLighter2, borderWidth: 1, textStyle: { color: RgPalette.textPrimary, fontSize: 13 } },
             legend: { data: (data.series || []).map(function(s) { return s.name; }),
               bottom: 8, textStyle: { fontSize: 12, color: RgPalette.textRegular } },
@@ -322,7 +336,7 @@
           var barWidth = names.length <= 5 ? 26 : names.length <= 10 ? 22 : 18;
           this.chart.setOption({
             tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-              backgroundColor: 'rgba(255,255,255,0.96)', borderColor: RgPalette.borderLighter2, borderWidth: 1,
+              backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
               textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
               formatter: function(p) { return '<b>' + p[0].name + '</b><br/>' + p[0].marker + ' 销量：<b>' + p[0].value + ' 份</b>'; } },
             grid: { left: 130, right: 70, top: 16, bottom: 30 },
@@ -333,7 +347,7 @@
               axisLabel: { color: RgPalette.textRegular, interval: 0, width: 110, overflow: 'truncate', fontSize: 13 } },
             series: [{ type: 'bar', data: counts, barMaxWidth: barWidth,
               itemStyle: {
-                borderRadius: [0, 6, 6, 0],
+                borderRadius: [0, RgPalette.radiusMd, RgPalette.radiusMd, 0],
                 color: function(params) {
                   var v = params.value, r = v / maxVal;
                   if (r > 0.8) return RgPalette.seriesRed;

@@ -26,6 +26,7 @@ import com.reggie.module.ai.adapter.AiModelAdapter.StreamCallback;
 import com.reggie.module.ai.service.AIChatService;
 import com.reggie.module.ai.service.ConversationContextService;
 import com.reggie.module.ai.service.AICacheService;
+import com.reggie.module.ai.service.conversation.AIConversationManagementService;
 import com.reggie.module.recommend.service.PreferenceAnalysisService;
 import com.reggie.module.ai.service.UserProfileService;
 import lombok.extern.slf4j.Slf4j;
@@ -106,6 +107,10 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     /** AI异步任务线程池 */
     @Resource
     private Executor aiExecutor;
+
+    /** 对话管理服务（对话 CRUD / 反馈 / 权限校验） */
+    @Resource
+    private AIConversationManagementService conversationManagementService;
 
     // ==================== 流式对话 ====================
 
@@ -381,106 +386,32 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         return response != null ? response.getContent() : null;
     }
 
-    // ==================== 对话管理 ====================
+    // ==================== 对话管理（委托给 conversationManagementService） ====================
 
     @Override
     public List<AIConversation> getUserConversations(Long userId, int page, int pageSize) {
-        LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AIConversation::getUserId, userId)
-                .eq(AIConversation::getIsDeleted, 0)
-                .eq(AIConversation::getTenantId, BaseContext.getCurrentTenantId())
-                .orderByDesc(AIConversation::getUpdateTime);
-        Page<AIConversation> pageObj = PageUtils.of(page, pageSize);
-        conversationMapper.selectPage(pageObj, wrapper);
-        return pageObj.getRecords();
+        return conversationManagementService.getUserConversations(userId, page, pageSize);
     }
 
     @Override
     public List<AIMessageRecord> getConversationMessages(String conversationId) {
-        if (conversationId == null || conversationId.isEmpty()) {
-            return Collections.emptyList();
-        }
-        Long currentUserId = BaseContext.getCurrentId();
-        if (currentUserId == null) {
-            return Collections.emptyList();
-        }
-        LambdaQueryWrapper<AIConversation> convWrapper = new LambdaQueryWrapper<>();
-        convWrapper.select(AIConversation::getUserId)
-                .eq(AIConversation::getConversationId, conversationId)
-                .eq(AIConversation::getIsDeleted, 0)
-                .eq(AIConversation::getTenantId, BaseContext.getCurrentTenantId());
-        AIConversation conv = conversationMapper.selectOne(convWrapper);
-        if (conv == null || !currentUserId.equals(conv.getUserId())) {
-            return Collections.emptyList();
-        }
-        LambdaQueryWrapper<AIMessageRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AIMessageRecord::getConversationId, conversationId)
-                .eq(AIMessageRecord::getIsDeleted, 0)
-                .orderByAsc(AIMessageRecord::getCreateTime);
-        return messageRecordMapper.selectList(wrapper);
+        return conversationManagementService.getConversationMessages(conversationId);
     }
 
     @Override
     public AIConversation createConversation(Long userId, String title, String scene) {
-        AIConversation conv = new AIConversation();
-        conv.setConversationId(UUID.randomUUID().toString().replace("-", "").substring(0, 24));
-        conv.setUserId(userId);
-        conv.setTitle(title != null ? title : "新对话");
-        conv.setScene(scene);
-        conv.setMessageCount(0);
-        conv.setIsDeleted(0);
-        conv.setCreateTime(LocalDateTime.now());
-        conv.setUpdateTime(LocalDateTime.now());
-        conversationMapper.insert(conv);
-        return conv;
+        return conversationManagementService.createConversation(userId, title, scene);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteConversation(String conversationId, Long userId) {
-        LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AIConversation::getConversationId, conversationId)
-                .eq(AIConversation::getUserId, userId)
-                .eq(AIConversation::getIsDeleted, 0)
-                .eq(AIConversation::getTenantId, BaseContext.getCurrentTenantId());
-        AIConversation conv = conversationMapper.selectOne(wrapper);
-        if (conv != null) {
-            conv.setIsDeleted(1);
-            conversationMapper.updateById(conv);
-            LambdaUpdateWrapper<AIMessageRecord> msgUpdateWrapper = new LambdaUpdateWrapper<>();
-            msgUpdateWrapper.eq(AIMessageRecord::getConversationId, conversationId)
-                    .eq(AIMessageRecord::getIsDeleted, 0)
-                    .set(AIMessageRecord::getIsDeleted, 1);
-            messageRecordMapper.update(null, msgUpdateWrapper);
-            // 清除上下文缓存
-            conversationContextService.clearContext(conversationId);
-        }
-    }
-
-    @Override
-    public void saveMessage(AIMessageRecord record) {
-        if (record.getConversationId() == null) {
-            return;
-        }
-        if (record.getCreateTime() == null) {
-            record.setCreateTime(LocalDateTime.now());
-        }
-        messageRecordMapper.insert(record);
-        updateMessageCount(record.getConversationId());
+        conversationManagementService.deleteConversation(conversationId, userId);
     }
 
     @Override
     public void recordFeedback(Long messageId, String feedbackType, Long userId) {
-        if (messageId == null) return;
-        // 修改点：按 id + tenantId 查询校验归属，防止跨租户篡改反馈
-        LambdaQueryWrapper<AIMessageRecord> fbWrapper = new LambdaQueryWrapper<>();
-        fbWrapper.eq(AIMessageRecord::getId, messageId)
-                .eq(AIMessageRecord::getTenantId, BaseContext.getCurrentTenantId());
-        AIMessageRecord record = messageRecordMapper.selectOne(fbWrapper);
-        if (record != null && (record.getUserId() == null || record.getUserId().equals(userId))) {
-            record.setFeedback(feedbackType);
-            messageRecordMapper.updateById(record);
-        }
+        conversationManagementService.recordFeedback(messageId, feedbackType, userId);
     }
 
     // ==================== 内部方法 ====================
@@ -504,7 +435,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             if (ctxMessages.isEmpty()) {
                 // 缓存未命中，从 DB 加载并重建上下文
                 try {
-                    List<AIMessageRecord> dbHistory = getRecentMessages(request.getConversationId());
+                    List<AIMessageRecord> dbHistory = conversationManagementService.getConversationMessages(request.getConversationId());
                     List<AIMessage> historyMessages = new ArrayList<>();
                     for (AIMessageRecord record : dbHistory) {
                         if (record.getContent() != null) {
@@ -765,31 +696,15 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 || lower.startsWith("模型返回了空响应");
     }
 
-    // ==================== 消息持久化方法 ====================
+    // ==================== 私有辅助方法 ====================
 
     /**
-     * 从数据库加载会话最近的历史消息（用于多轮对话上下文）
-     */
-    private List<AIMessageRecord> getRecentMessages(String conversationId) {
-        if (conversationId == null || conversationId.isEmpty()) {
-            return Collections.emptyList();
-        }
-        LambdaQueryWrapper<AIMessageRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AIMessageRecord::getConversationId, conversationId)
-                .eq(AIMessageRecord::getIsDeleted, 0)
-                .eq(AIMessageRecord::getTenantId, BaseContext.getCurrentTenantId())
-                .orderByDesc(AIMessageRecord::getCreateTime);
-        Page<AIMessageRecord> pageObj = PageUtils.of(1, MAX_HISTORY_MESSAGES);
-        messageRecordMapper.selectPage(pageObj, wrapper);
-        List<AIMessageRecord> records = pageObj.getRecords();
-        // 反转列表，使消息按时间正序排列（最早的在前）
-        Collections.reverse(records);
-        return records;
-    }
-
-    /**
-     * 保存用户消息到数据库（含去重检查，防止SSE重连/重复请求导致的消息双写）
-     * <p>同时将消息注入上下文记忆服务。
+     * 保存AI回复消息到数据库（含去重检查）
+     * <p>
+     * 设计说明：insert + addMessage(cache) + updateMessageCount 三步非事务绑定，
+     * 异步调用上下文不生效。消息已去重（按conversationId+role+content+时间窗口），
+     * 重复调用安全。缓存/计数失败通过各自catch降级，不影响主数据。
+     * </p>
      *
      * @return 保存后的消息ID
      */
@@ -838,7 +753,10 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
     /**
      * 保存AI回复消息到数据库（含去重检查）
-     * <p>同时将消息注入上下文记忆服务。
+     * <p>
+     * 设计说明：与 {@link #saveUserMessage} 一致，异步非事务设计，
+     * 重复调用安全（去重保护），缓存/计数失败降级不影响主数据。
+     * </p>
      *
      * @return 保存后的消息ID
      */
@@ -941,12 +859,22 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
     @Override
     public Map<String, Object> getContextStats(String conversationId) {
-        return conversationContextService.getStats(conversationId);
+        return conversationManagementService.getContextStats(conversationId);
     }
 
     @Override
     public void resetContext(String conversationId) {
-        conversationContextService.clearContext(conversationId);
+        conversationManagementService.resetContext(conversationId);
+    }
+
+    @Override
+    public List<AIConversation> searchConversations(Long userId, String keyword, int page, int pageSize) {
+        return conversationManagementService.searchConversations(userId, keyword, page, pageSize);
+    }
+
+    @Override
+    public Long validateConversationOwnership(String conversationId) {
+        return conversationManagementService.validateConversationOwnership(conversationId);
     }
 }
 

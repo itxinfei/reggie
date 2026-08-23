@@ -4,6 +4,7 @@ import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.printer.model.PrinterLog;
 import com.reggie.module.printer.service.PrinterLogService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +30,7 @@ import java.time.LocalTime;
 @RestController
 @RequestMapping("/printer/log")
 @Tag(name = "打印机日志")
+@RequireEmployee
 public class PrinterLogController {
 
     @Autowired

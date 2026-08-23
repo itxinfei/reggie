@@ -3,13 +3,10 @@ package com.reggie.module.report.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.model.OrderDetail;
-import com.reggie.module.dish.model.Dish;
 import com.reggie.module.cost.service.CostService;
-import com.reggie.module.finance.service.FinanceService;
 import com.reggie.module.report.service.ReportEnhancedService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.order.service.OrderDetailService;
-import com.reggie.module.dish.service.DishService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,14 +15,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.IsoFields;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.reggie.module.category.model.Category;
 import java.util.stream.Collectors;
 
 /**
@@ -85,25 +80,64 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         List<BigDecimal> revenues = new ArrayList<>();
         List<BigDecimal> rates = new ArrayList<>();
 
-        LocalDate current = LocalDate.parse(startDate);
+        LocalDate start = LocalDate.parse(startDate);
         LocalDate end = LocalDate.parse(endDate);
 
-        while (!current.isAfter(end)) {
-            dates.add(current.toString());
+        // 生成日期序列
+        List<String> dateKeys = new ArrayList<>();
+        LocalDate d = start;
+        while (!d.isAfter(end)) {
+            dateKeys.add(d.toString());
+            d = d.plusDays(1);
+        }
 
-            Map<String, Object> costSummary = costService.getCostSummary(current, current, tenantId);
-            BigDecimal dayCost = (BigDecimal) costSummary.getOrDefault("materialCost", BigDecimal.ZERO);
-            BigDecimal dayRevenue = getRevenueForPeriod(current, current, tenantId);
+        // 一次性查询整个日期范围的成本趋势（按天返回），避免每天调用 getCostSummary
+        Map<String, Object> costTrend = costService.getCostTrend(start, end, tenantId);
+        List<String> trendDates = (List<String>) costTrend.getOrDefault("dates", new ArrayList<>());
+        List<BigDecimal> trendMaterialCosts = (List<BigDecimal>) costTrend.getOrDefault("materialCosts", new ArrayList<>());
+        // 构建 date -> materialCost 映射
+        Map<String, BigDecimal> dailyCostMap = new HashMap<>();
+        for (int i = 0; i < trendDates.size(); i++) {
+            dailyCostMap.put(trendDates.get(i),
+                    trendMaterialCosts.size() > i ? trendMaterialCosts.get(i) : BigDecimal.ZERO);
+        }
 
+        // 一次性查询整个日期范围内的订单，按日聚合营收
+        LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+        orderQw.ge(Orders::getOrderTime, start.atStartOfDay());
+        orderQw.le(Orders::getOrderTime, end.atTime(LocalTime.MAX));
+        orderQw.eq(Orders::getStatus, Orders.STATUS_COMPLETED);
+        if (tenantId != null) {
+            orderQw.eq(Orders::getTenantId, tenantId);
+        }
+        orderQw.select(Orders::getOrderTime, Orders::getAmount);
+        List<Orders> allOrders = orderService.list(orderQw);
+
+        Map<String, BigDecimal> dailyRevenueMap = new HashMap<>();
+        for (String dateKey : dateKeys) {
+            dailyRevenueMap.put(dateKey, BigDecimal.ZERO);
+        }
+        for (Orders o : allOrders) {
+            if (o.getOrderTime() != null) {
+                String dayKey = o.getOrderTime().toLocalDate().toString();
+                if (dailyRevenueMap.containsKey(dayKey)) {
+                    BigDecimal amt = o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO;
+                    dailyRevenueMap.put(dayKey, dailyRevenueMap.get(dayKey).add(amt));
+                }
+            }
+        }
+
+        // 构建返回结果
+        for (String dateKey : dateKeys) {
+            dates.add(dateKey);
+            BigDecimal dayCost = dailyCostMap.getOrDefault(dateKey, BigDecimal.ZERO);
+            BigDecimal dayRevenue = dailyRevenueMap.getOrDefault(dateKey, BigDecimal.ZERO);
             costs.add(dayCost);
             revenues.add(dayRevenue);
-
             BigDecimal dayRate = dayRevenue.compareTo(BigDecimal.ZERO) > 0 ?
                     dayCost.divide(dayRevenue, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")) :
                     BigDecimal.ZERO;
             rates.add(dayRate);
-
-            current = current.plusDays(1);
         }
 
         result.put("dates", dates);
@@ -518,16 +552,42 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
     public Map<String, Object> getRevenueForecast(int days, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
 
-        // Get recent 30 days data for forecast
+        // Get recent 30 days data for forecast — 一次性查询整个区间，内存按日聚合
         LocalDate endDate = LocalDate.now().minusDays(1);
         LocalDate startDate = endDate.minusDays(29);
 
+        LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+        orderQw.ge(Orders::getOrderTime, startDate.atStartOfDay());
+        orderQw.le(Orders::getOrderTime, endDate.atTime(LocalTime.MAX));
+        orderQw.eq(Orders::getStatus, Orders.STATUS_COMPLETED);
+        if (tenantId != null) {
+            orderQw.eq(Orders::getTenantId, tenantId);
+        }
+        orderQw.select(Orders::getOrderTime, Orders::getAmount);
+        List<Orders> allOrders = orderService.list(orderQw);
+
+        // 按日聚合营收
+        Map<String, BigDecimal> dailyRevenueMap = new HashMap<>();
+        LocalDate dd = startDate;
+        while (!dd.isAfter(endDate)) {
+            dailyRevenueMap.put(dd.toString(), BigDecimal.ZERO);
+            dd = dd.plusDays(1);
+        }
+        for (Orders o : allOrders) {
+            if (o.getOrderTime() != null) {
+                String dayKey = o.getOrderTime().toLocalDate().toString();
+                if (dailyRevenueMap.containsKey(dayKey)) {
+                    BigDecimal amt = o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO;
+                    dailyRevenueMap.put(dayKey, dailyRevenueMap.get(dayKey).add(amt));
+                }
+            }
+        }
+
         List<BigDecimal> recentRevenues = new ArrayList<>();
-        LocalDate current = startDate;
-        while (!current.isAfter(endDate)) {
-            BigDecimal dayRevenue = getRevenueForPeriod(current, current, tenantId);
-            recentRevenues.add(dayRevenue);
-            current = current.plusDays(1);
+        dd = startDate;
+        while (!dd.isAfter(endDate)) {
+            recentRevenues.add(dailyRevenueMap.get(dd.toString()));
+            dd = dd.plusDays(1);
         }
 
         // Simple moving average forecast
@@ -647,7 +707,6 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         return summary;
     }
 }
-
 
 
 

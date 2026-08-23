@@ -44,13 +44,17 @@ public interface DeliveryPlatform {
 
     /**
      * 校验平台回调签名（防伪造回调）。
-     * 默认实现返回 true（不校验），各平台适配器应按平台签名规则覆写。
+     * <p>
      * 回调是外部请求无登录态，必须通过签名校验防止伪造。
+     * <b>默认 fail-closed（返回 false）</b>：未实现验签的平台一律拒绝回调，
+     * 严禁恒真放行。具体平台应继承 {@link AbstractDeliveryPlatform}，
+     * 由其按 mock-mode / 凭证配置统一处理。
+     * </p>
      *
      * @param params 回调参数（含签名、时间戳等）
      * @return true=签名合法，false=签名不匹配
      */
     default boolean verifyCallback(Map<String, String> params) {
-        return true;
+        return false;
     }
 }

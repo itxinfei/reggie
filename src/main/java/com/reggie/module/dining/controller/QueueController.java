@@ -1,13 +1,17 @@
 package com.reggie.module.dining.controller;
-import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.RateLimit;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.dto.CallNextDTO;
 import com.reggie.dto.TakeNumberDTO;
+import com.reggie.module.dining.dto.SeatCustomerDTO;
 import com.reggie.module.dining.model.QueueRecord;
 import com.reggie.module.dining.service.QueueService;
+import com.reggie.module.dining.vo.QueueStatsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,6 +40,7 @@ import javax.validation.Valid;
 @RestController
 @RequestMapping("/api/dining/queue")
 @Tag(name = "排队管理")
+@RequireEmployee
 public class QueueController {
 
     @Autowired
@@ -73,6 +78,7 @@ public class QueueController {
      * @return 排队记录
      */
     @PostMapping("/take")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "取号", description = "顾客取号排队，支持指定座位数和手机号")
     public R<QueueRecord> takeNumber(@Valid @RequestBody TakeNumberDTO dto) {
         log.info("取号: seatCount={}, phone={}", dto.getSeatCount(),
@@ -87,8 +93,9 @@ public class QueueController {
      * @return 排队记录
      */
     @PutMapping("/call")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "叫号", description = "呼叫下一位顾客，支持按座位数筛选")
-    public R<QueueRecord> callNext(@Validated(org.springframework.validation.Validator.class) @RequestBody(required = false) CallNextDTO dto) {
+    public R<QueueRecord> callNext(@RequestBody(required = false) CallNextDTO dto) {
         Integer seatCount = dto != null ? dto.getSeatCount() : null;
         log.info("叫号: seatCount={}", seatCount);
         QueueRecord record = queueService.callNext(seatCount);
@@ -101,6 +108,7 @@ public class QueueController {
      * @return 操作结果
      */
     @PutMapping("/cancel/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "取消排队", description = "取消指定排队记录")
     @Parameter(name = "id", description = "排队记录ID", required = true)
     public R<String> cancel(@PathVariable Long id) {
@@ -108,5 +116,59 @@ public class QueueController {
         queueService.cancelQueue(id);
         return R.success("取消排队成功");
     }
-}
 
+    /**
+     * 安排入座：CALLED → SEATED
+     * @param dto 入座请求
+     * @return 操作结果
+     */
+    @PutMapping("/seat")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "安排入座", description = "将已叫号顾客安排入座（CALLED→SEATED）")
+    public R<String> seatCustomer(@Valid @RequestBody SeatCustomerDTO dto) {
+        log.info("安排入座: queueId={}, tableId={}", dto.getQueueId(), dto.getTableId());
+        queueService.seatCustomer(dto.getQueueId(), dto.getTableId());
+        return R.success("安排入座成功");
+    }
+
+    /**
+     * 退回等待：CALLED → WAITING
+     * @param id 排队记录ID
+     * @return 操作结果
+     */
+    @PutMapping("/recall/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "退回等待", description = "将已叫号记录退回等待队列（用于误叫号纠错）")
+    @Parameter(name = "id", description = "排队记录ID", required = true)
+    public R<String> recall(@PathVariable Long id) {
+        log.info("退回等待: {}", id);
+        queueService.recallQueue(id);
+        return R.success("退回等待成功");
+    }
+
+    /**
+     * 恢复排队：CANCELLED → WAITING
+     * @param id 排队记录ID
+     * @return 操作结果
+     */
+    @PutMapping("/reactivate/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "恢复排队", description = "将已取消记录恢复至等待队列（用于误取消纠错）")
+    @Parameter(name = "id", description = "排队记录ID", required = true)
+    public R<String> reactivate(@PathVariable Long id) {
+        log.info("恢复排队: {}", id);
+        queueService.reactivateQueue(id);
+        return R.success("恢复排队成功");
+    }
+
+    /**
+     * 排队统计：按状态分类计数
+     * @return 排队统计
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "排队统计", description = "按状态分类统计排队数量")
+    public R<QueueStatsVO> queueStats() {
+        QueueStatsVO stats = queueService.queueStats();
+        return R.success(stats);
+    }
+}

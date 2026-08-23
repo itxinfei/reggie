@@ -3,7 +3,10 @@ import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.inventory.model.MaterialCategory;
 import com.reggie.module.inventory.service.MaterialCategoryService;
@@ -20,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.reggie.module.category.model.Category;
 import java.util.List;
 
 /**
@@ -64,32 +66,62 @@ public class MaterialCategoryController {
 
     /**
      * 新增食材分类
-     * @param category 食材分类信息
-     * @return 操作结果
+     * <p>租户安全：强制设置 tenantId。</p>
      */
     @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增分类", description = "创建新的食材分类")
     public R<String> save(@RequestBody MaterialCategory category) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        category.setTenantId(tenantId);
         materialCategoryService.save(category);
         return R.success("新增分类成功");
     }
 
     /**
      * 修改食材分类
-     * @param category 食材分类信息
-     * @return 操作结果
+     * <p>租户安全：先校验归属，再更新业务字段。</p>
      */
     @PutMapping
+    @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改分类", description = "更新食材分类信息")
     public R<String> update(@RequestBody MaterialCategory category) {
-        materialCategoryService.updateById(category);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        MaterialCategory exist = materialCategoryService.getById(category.getId());
+        if (exist == null) {
+            throw new CustomException("食材分类不存在");
+        }
+        if (!tenantId.equals(exist.getTenantId())) {
+            throw new CustomException("食材分类不属于当前租户");
+        }
+        exist.setName(category.getName());
+        exist.setSort(category.getSort());
+        materialCategoryService.updateById(exist);
         return R.success("修改分类成功");
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除分类", description = "根据ID删除食材分类")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "删除分类", description = "根据ID删除食材分类（先校验租户归属）")
     @Parameter(name = "id", description = "分类ID", required = true)
     public R<String> delete(@PathVariable Long id) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        MaterialCategory exist = materialCategoryService.getById(id);
+        if (exist == null) {
+            throw new CustomException("食材分类不存在");
+        }
+        if (!tenantId.equals(exist.getTenantId())) {
+            throw new CustomException("食材分类不属于当前租户");
+        }
         materialCategoryService.removeById(id);
         return R.success("删除分类成功");
     }
@@ -122,5 +154,4 @@ public class MaterialCategoryController {
         return R.success(materialCategoryService.list(qw));
     }
 }
-
 

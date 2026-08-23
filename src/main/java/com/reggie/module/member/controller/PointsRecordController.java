@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.member.model.Member;
 import com.reggie.module.member.model.PointsRecord;
 import com.reggie.module.member.service.MemberService;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/member/points")
 @Tag(name = "积分记录")
+@RequireEmployee
 public class PointsRecordController {
 
     @Autowired

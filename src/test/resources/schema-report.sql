@@ -45,6 +45,7 @@ CREATE TABLE order_detail (
   dish_flavor varchar(50) NULL DEFAULT NULL COMMENT '口味',
   number int NOT NULL DEFAULT 1 COMMENT '数量',
   amount decimal(10,2) NOT NULL COMMENT '单价',
+  remark varchar(255) NULL DEFAULT NULL COMMENT '订单明细备注',
   image varchar(255) NULL DEFAULT NULL COMMENT '图片',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
   create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
