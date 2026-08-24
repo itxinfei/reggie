@@ -155,15 +155,20 @@ docs/*.md
 node_modules/
 tests/node_modules/
 tests/allure-results/
-tests/reports/
+tests/allure-report/
+tests/playwright-report/
 tests/tests/reports/
+tests/reports/
 tests/test-results/
+tests/report/
 *.tsbuildinfo
 
 # ----------------------------------------------------------
 # 根目录本地维护文档 (与代码运行无关,不进版本库)
 # ----------------------------------------------------------
 REVIEW_COLLECT.md
+CODE_REVIEW_REPORT.md
 
-/scripts/
-/.mvn/
+# 禁止误提交一次性/本地脚本（已在一次性工具脚本段覆盖，此处兜底）
+*.py.bak
+scripts/
