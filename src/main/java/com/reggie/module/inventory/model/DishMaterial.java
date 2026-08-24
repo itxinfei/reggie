@@ -27,7 +27,7 @@ public class DishMaterial implements Serializable {
     private Long id;
 
     @Schema(description = "租户ID")
-    @TableField("tenant_id")
+    @TableField(value = "tenant_id", fill = FieldFill.INSERT)
     private Long tenantId;
 
     @Schema(description = "菜品ID")

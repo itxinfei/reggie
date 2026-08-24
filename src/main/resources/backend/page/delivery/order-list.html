@@ -280,7 +280,7 @@
         async search(reloadStats = true) {
           this.loading = true
           try {
-            const params = {$2}
+            const params = {}
             const requests = [deliveryOrderPage(params)]
             if (reloadStats) { requests.push(deliveryStats({ platform: params.platform, startDate: params.startDate, endDate: params.endDate })) }
             const results = await Promise.all(requests)
@@ -389,7 +389,7 @@
           const self = this
           const label = this.statusLabelMap[targetStatus] || targetStatus
           const confirmText = '确认将【' + row.platformOrderId + '】状态更新为"' + label + '"？'
-          const typeMap = {$2}
+          const typeMap = {}
           const confirmType = typeMap[targetStatus] || 'info'
           ReggieUI.confirm(confirmText, '状态更新', {
             confirmButtonText: '确定', cancelButtonText: '取消', type: confirmType

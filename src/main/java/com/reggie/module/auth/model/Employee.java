@@ -67,6 +67,7 @@ public class Employee implements Serializable {
     private Integer role = 2;
 
     @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     @Schema(description = "创建时间", example = "2024-01-01 12:00:00")

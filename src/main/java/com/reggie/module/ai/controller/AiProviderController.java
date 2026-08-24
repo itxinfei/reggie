@@ -7,6 +7,7 @@ import com.reggie.common.RateLimitType;
 import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.provider.AiProviderManager;
 import com.reggie.module.ai.service.AiProviderConfigService;
+import com.reggie.module.ai.util.AiKeyEncryptor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -115,6 +116,13 @@ public class AiProviderController {
         config.setIsActive(existing.getIsActive());
         if (config.getApiKey() == null || config.getApiKey().trim().isEmpty()) {
             config.setApiKey(existing.getApiKey());
+        } else {
+            // 修复 P0-6：存入数据库前加密 apiKey
+            String encrypted = AiKeyEncryptor.encrypt(config.getApiKey());
+            if (encrypted == null) {
+                return R.error("API密钥加密失败，请检查 REGGIE_AI_KEY 环境变量");
+            }
+            config.setApiKey(encrypted);
         }
         providerConfigService.updateById(config);
 

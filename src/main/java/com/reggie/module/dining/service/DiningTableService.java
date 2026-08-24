@@ -2,6 +2,8 @@ package com.reggie.module.dining.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.reggie.module.dining.dto.OpenTableDTO;
+import com.reggie.module.dining.dto.TransferTableDTO;
 import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.vo.TableStatsVO;
 
@@ -25,6 +27,20 @@ public interface DiningTableService extends IService<DiningTable> {
      * @param status  目标状态
      */
     void changeStatus(Long tableId, String status);
+
+    /**
+     * 开台：绑定订单到桌台，桌台状态改为占用
+     *
+     * @param dto 开台请求
+     */
+    void openTable(OpenTableDTO dto);
+
+    /**
+     * 转台：订单从原桌台迁移到新桌台
+     *
+     * @param dto 转台请求
+     */
+    void transferTable(TransferTableDTO dto);
 
     /**
      * 分页查询桌台信息（关联区域名称）

@@ -30,6 +30,7 @@ public class MaterialCategory implements Serializable {
     private Long id;
 
     @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     @Schema(description = "分类名称", example = "蔬菜类", required = true)

@@ -115,7 +115,7 @@
   <script src="../../js/chart-panel.js"></script>
   <script>
     (function() {
-      const COLORS = [$2];
+      const COLORS = [];
       new Vue({
         el: '#report-timeslot-app',
         data: function() {
@@ -229,8 +229,8 @@
           },
           renderHeatmap: function(data) {
             if (!this.heatmapChart) return;
-            const days = [$2];
-            const slots = [$2];
+            const days = [];
+            const slots = [];
             var heatData = (data.data || []).map(function(d) { return [d.slotIdx || 0, d.dayIdx || 0, d.value || 0]; });
             const maxVal = data.maxVal || 100;
             this.heatmapChart.setOption({
@@ -338,7 +338,7 @@
               legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10,
                 textStyle: { color: RgPalette.textRegular, fontSize: 12 } },
               series: [{ type: 'pie', radius: isEmpty ? ['0%','55%'] : ['45%','68%'], center: ['50%','44%'],
-                avoidLabelOverlap: false, itemStyle: { borderRadius: RgPalette.radiusMd borderColor: RgPalette.white, borderWidth: 3 },
+                avoidLabelOverlap: false, itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 3 },
                 label: { show: !isEmpty, position: 'outside', formatter: '{b}\n{d}%',
                   fontSize: 13, lineHeight: 18, color: RgPalette.textRegular },
                 labelLine: { show: !isEmpty, length: 25, length2: 20, lineStyle: { color: RgPalette.borderBase } },

@@ -4,6 +4,7 @@ import com.reggie.common.JacksonObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -52,6 +53,21 @@ public class WebMvcConfig implements WebMvcConfigurer {
         log.info("扩展消息转换器...");
         MappingJackson2HttpMessageConverter messageConverter = new MappingJackson2HttpMessageConverter();
         messageConverter.setObjectMapper(new JacksonObjectMapper());
-        converters.add(0, messageConverter);
+        // 插入到 StringHttpMessageConverter（默认位于列表首位，负责纯文本/字符串响应，
+        // 如 springdoc 的 /v3/api-docs 字符串响应）之后、默认 Jackson 转换器之前。
+        // 这样业务对象由自定义 Jackson 处理（Long→String 防精度丢失），
+        // 而字符串型响应由 StringHttpMessageConverter 原样输出，避免被二次 JSON 序列化（双重转义）。
+        int stringConverterIndex = -1;
+        for (int i = 0; i < converters.size(); i++) {
+            if (converters.get(i) instanceof StringHttpMessageConverter) {
+                stringConverterIndex = i;
+                break;
+            }
+        }
+        if (stringConverterIndex >= 0) {
+            converters.add(stringConverterIndex + 1, messageConverter);
+        } else {
+            converters.add(0, messageConverter);
+        }
     }
 }

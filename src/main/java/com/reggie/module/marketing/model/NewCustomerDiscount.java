@@ -1,8 +1,10 @@
 package com.reggie.module.marketing.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -61,6 +63,7 @@ public class NewCustomerDiscount implements Serializable {
     private String remark;
 
     @Schema(description = "Tenant ID")
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     @Schema(description = "Create Time")

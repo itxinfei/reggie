@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品平台映射 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/consistency.css" />
+</head>
+<body>
+<div class="dashboard-container" id="dish-mapping-app">
+  <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <!-- 页头：标题 + 营业状态同步 -->
+    <header class="ds-page-header">
+      <div class="ds-page-header__titles">
+        <h1 class="ds-page-header__title">商品平台映射</h1>
+        <p class="ds-page-header__subtitle">管理菜品与外卖平台的映射关系，并手动触发上/下架、库存与营业状态同步</p>
+      </div>
+      <div class="ds-page-header__actions">
+        <span class="ds-action-label">营业状态同步：</span>
+        <el-select v-model="businessPlatform" placeholder="选择平台" size="small" style="width:130px;margin-right:8px;">
+          <el-option label="美团" value="MEITUAN"></el-option>
+          <el-option label="饿了么" value="ELEME"></el-option>
+          <el-option label="抖音" value="DOUYIN"></el-option>
+          <el-option label="自营" value="SELF"></el-option>
+          <el-option label="其他" value="OTHER"></el-option>
+        </el-select>
+        <el-button size="small" type="success" :loading="bizLoading" @click="syncBusiness(true)">设为营业</el-button>
+        <el-button size="small" @click="syncBusiness(false)">设为休息</el-button>
+      </div>
+    </header>
+
+    <!-- 筛选区 -->
+    <el-card shadow="never" class="ds-card ds-card--filter">
+      <el-form :inline="true" :model="filters" @submit.native.prevent class="ds-filter-form">
+        <el-form-item label="平台">
+          <el-select v-model="filters.platformType" placeholder="全部平台" clearable size="small" style="width:140px;">
+            <el-option label="美团" value="MEITUAN"></el-option>
+            <el-option label="饿了么" value="ELEME"></el-option>
+            <el-option label="抖音" value="DOUYIN"></el-option>
+            <el-option label="自营" value="SELF"></el-option>
+            <el-option label="其他" value="OTHER"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="菜品ID">
+          <el-input v-model="filters.dishId" placeholder="本系统菜品ID" size="small" clearable style="width:160px;"></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" size="small" @click="search">查询</el-button>
+          <el-button size="small" @click="resetFilters">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- 映射表格 -->
+    <el-card shadow="never" class="ds-card">
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="200"
+        :actions-fixed="true"
+        @page-change="handlePageChange"
+        @size-change="handleSizeChange"
+      >
+        <template #col-platformType="{ row }">
+          <el-tag size="mini">{{ platformTypeText(row.platformType) }}</el-tag>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'info'" size="mini">
+            {{ row.status === 1 ? '上架' : '下架' }}
+          </el-tag>
+        </template>
+        <template #col-price="{ row }">
+          <span class="ds-money">{{ row.price != null ? '￥' + row.price.toFixed(2) : '-' }}</span>
+        </template>
+        <template #actions="{ row }">
+          <el-button v-if="row.status !== 1" size="mini" type="text" class="btn-view" @click="syncDish(row, 'on_shelf')">上架</el-button>
+          <el-button v-if="row.status === 1" size="mini" type="text" class="btn-warning" @click="syncDish(row, 'off_shelf')">下架</el-button>
+        </template>
+      </crud-table>
+
+      <div v-if="!loading && tableData.length === 0" class="ds-empty">
+        暂无菜品平台映射，请先在菜品编辑中建立平台映射
+      </div>
+    </el-card>
+  </div>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js"></script>
+<script src="../../js/components.js"></script>
+<script src="../../api/platform.js"></script>
+<script>
+  new Vue({
+    el: '#dish-mapping-app',
+    mixins: [window.ReggieListMixin],
+    data() {
+      return {
+        filters: { platformType: '', dishId: '' },
+        columns: [
+          { prop: 'platformType', label: '平台', width: 100, align: 'center', slot: true },
+          { prop: 'dishId', label: '菜品ID', width: 100, align: 'center' },
+          { prop: 'platformDishId', label: '平台菜品ID', minWidth: 160, align: 'center' },
+          { prop: 'platformShopId', label: '平台门店ID', minWidth: 140, align: 'center' },
+          { prop: 'price', label: '平台价', width: 110, align: 'right', type: 'money', slot: true },
+          { prop: 'status', label: '状态', width: 80, align: 'center', slot: true }
+        ],
+        businessPlatform: 'MEITUAN',
+        bizLoading: false
+      }
+    },
+    created() {
+      this.fetchData()
+    },
+    methods: {
+      async fetchData() {
+        this.loading = true
+        try {
+          const params = { page: this.page, pageSize: this.pageSize }
+          if (this.filters.platformType) params.platformType = this.filters.platformType
+          if (this.filters.dishId) params.dishId = this.filters.dishId
+          const res = await window.platformApi.mappingPage(params)
+          if (String(res.code) === '1' && res.data) {
+            this.tableData = res.data.records || []
+            this.counts = Number(res.data.total) || 0
+          } else {
+            ReggieUI.error((res && res.msg) || '加载映射失败')
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') {
+            ReggieUI.error('加载映射失败，请刷新重试')
+          }
+        } finally {
+          this.loading = false
+        }
+      },
+      search() {
+        this.page = 1
+        this.fetchData()
+      },
+      resetFilters() {
+        this.filters = { platformType: '', dishId: '' }
+        this.page = 1
+        this.fetchData()
+      },
+      handlePageChange(p) {
+        this.page = p
+        this.fetchData()
+      },
+      handleSizeChange(s) {
+        this.pageSize = s
+        this.page = 1
+        this.fetchData()
+      },
+      platformTypeText(type) {
+        const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音', SELF: '自营', OTHER: '其他' }
+        return map[type] || type
+      },
+      // 修改点：同步菜品上/下架到平台（带二次确认 + 成功后更新本地状态）
+      syncDish(row, action) {
+        const self = this
+        const tip = action === 'on_shelf' ? '确认将该菜品上架到 ' + this.platformTypeText(row.platformType) + '？' : '确认将该菜品下架？'
+        this.$confirm(tip, '商品同步', { type: 'warning' }).then(async () => {
+          try {
+            const res = await window.platformApi.syncDish(row.platformType, row.dishId, action)
+            if (res && String(res.code) === '1') {
+              ReggieUI.success(action === 'on_shelf' ? '已上架并回传平台' : '已下架并回传平台')
+              row.status = action === 'on_shelf' ? 1 : 0
+            } else {
+              ReggieUI.error((res && res.msg) || '同步失败')
+            }
+          } catch (err) {
+            ReggieUI.error('同步失败，请检查网络或平台配置')
+          }
+        }).catch(() => {})
+      },
+      // 修改点：同步营业状态到平台
+      async syncBusiness(open) {
+        if (!this.businessPlatform) {
+          ReggieUI.warning('请先选择平台')
+          return
+        }
+        this.bizLoading = true
+        try {
+          const res = await window.platformApi.syncBusiness(this.businessPlatform, open)
+          if (res && String(res.code) === '1') {
+            ReggieUI.success(open ? '已设为营业并同步平台' : '已设为休息并同步平台')
+          } else {
+            ReggieUI.error((res && res.msg) || '同步失败')
+          }
+        } catch (err) {
+          ReggieUI.error('营业状态同步失败')
+        } finally {
+          this.bizLoading = false
+        }
+      }
+    }
+  })
+</script>
+<style>
+  .ds-filter-form { padding: 4px 0; }
+  .ds-action-label { font-size: 14px; color: var(--el-text-secondary); }
+  .ds-money { font-variant-numeric: tabular-nums; color: var(--el-text-primary); }
+  .ds-empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--el-text-secondary);
+    font-size: 14px;
+  }
+</style>
+</body>
+</html>

@@ -426,7 +426,7 @@
               }
             },
             {
-              text: '杩?澶?,
+              text: '近7天',
               onClick(picker) {
                 const end = new Date();
                 const start = new Date();
@@ -435,7 +435,7 @@
               }
             },
             {
-              text: '杩?0澶?,
+              text: '近30天',
               onClick(picker) {
                 const end = new Date();
                 const start = new Date();
@@ -478,10 +478,10 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: '璁㈠崟', icon: '馃搵', label: '璁㈠崟鎬绘暟', value: self.dailyData.totalOrders || 0, color: 'primary' },
-            { key: '钀ヤ笟棰?, icon: '馃挵', label: '钀ヤ笟棰濓紙鍏冿級', value: '楼' + self.formatMoney(self.dailyData.totalAmount), color: 'success' },
-            { key: '瀹㈠崟浠?, icon: '馃彿锔?, label: '瀹㈠崟浠凤紙鍏冿級', value: '楼' + self.formatMoney(self.dailyData.avgAmount), color: 'warning' },
-            { key: '瀹屾垚鐜?, icon: '馃搳', label: '瀹屾垚 / 鍙栨秷', value: (self.dailyData.completedOrders || 0) + ' / ' + (self.dailyData.cancelledOrders || 0), color: 'danger' }
+            { key: '订单', icon: '📊', label: '订单总数', value: self.dailyData.totalOrders || 0, color: 'primary' },
+            { key: '营业额', icon: '📈', label: '营业额（元）', value: '¥' + self.formatMoney(self.dailyData.totalAmount), color: 'success' },
+            { key: '客单价', icon: '💰', label: '客单价（元）', value: '¥' + self.formatMoney(self.dailyData.avgAmount), color: 'warning' },
+            { key: '完成率', icon: '✅', label: '完成 / 取消', value: (self.dailyData.completedOrders || 0) + ' / ' + (self.dailyData.cancelledOrders || 0), color: 'danger' }
           ]
         }
       },
@@ -623,15 +623,15 @@
               formatter(params) {
                 let html = '<b>' + params[0].axisValue + '</b><br/>'
                 params.forEach(p => {
-                  const val = p.seriesName === '钀ヤ笟棰?
-                    ? '楼' + Number(p.value).toFixed(2)
-                    : p.value + ' 鍗?
+            const val = p.seriesName === '营业额'
+              ? '¥' + Number(p.value).toFixed(2)
+              : p.value + ' 单'
                   html += p.marker + ' ' + p.seriesName + '锛?b>' + val + '</b><br/>'
                 })
                 return html
               }
             },
-            legend: { data: ['璁㈠崟鏁?, '钀ヤ笟棰?], bottom: 8, textStyle: { color: RgPalette.textRegular, fontSize: 13 } },
+            legend: { data: ['订单数', '营业额'], bottom: 8, textStyle: { color: RgPalette.textRegular, fontSize: 13 } },
             // 淇敼鐐癸細澧炲ぇ top/bottom/right 闃叉鍙孻杞存爣绛惧拰 legend 琚鍓?
             grid: { left: 50, right: 65, top: 30, bottom: 52 },
             xAxis: {
@@ -652,14 +652,14 @@
               {
                 type: 'value', name: '钀ヤ笟棰?鍏?',
                 nameTextStyle: { color: RgPalette.textSecondary, fontSize: 12 },
-                axisLabel: { color: RgPalette.textSecondary, fontSize: 12, formatter: '楼{value}' },
+              axisLabel: { color: RgPalette.textSecondary, fontSize: 12, formatter: '¥{value}' },
                 splitLine: { show: false },
                 axisLine: { show: false }, axisTick: { show: false }
               }
             ],
             series: [
               {
-                name: '璁㈠崟鏁?, type: 'bar', data: hasData ? orders : [0],
+            name: '订单数', type: 'bar', data: hasData ? orders : [0],
                 barWidth: barW, barGap: '20%',
                 itemStyle: {
                   borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0],
@@ -668,7 +668,7 @@
                 label: { show: hasData, position: 'top', color: RgPalette.seriesBlue, fontSize: 12, fontWeight: 600, formatter: '{c}' }
               },
               {
-                name: '钀ヤ笟棰?, type: 'line', yAxisIndex: 1, data: hasData ? amounts : [0],
+            name: '营业额', type: 'line', yAxisIndex: 1, data: hasData ? amounts : [0],
                 smooth: true, symbol: 'emptyCircle', symbolSize: 8,
                 lineStyle: { color: RgPalette.seriesGreen, width: 3 },
                 itemStyle: { color: RgPalette.seriesGreen, borderColor: RgPalette.white, borderWidth: 2 },
@@ -677,7 +677,7 @@
                 },
                 label: {
                   show: hasData, position: 'top', color: RgPalette.successDark, fontSize: 12, fontWeight: 700,
-                  formatter: p => '楼' + Number(p.value).toFixed(0)
+              formatter: p => '¥' + Number(p.value).toFixed(0)
                 }
               }
             ]
@@ -706,7 +706,7 @@
               radius: ['45%', '72%'],
               // 淇敼鐐癸細center top 浠?48% 鎻愯嚦 44%锛屼负搴曢儴 legend 鐣欏嚭绌洪棿
               center: ['50%', '44%'],
-              itemStyle: { borderRadius: RgPalette.radiusMd borderColor: RgPalette.white, borderWidth: 2 },
+              itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 2 },
               label: { fontSize: 12, formatter: '{b}\n{d}%' },
               emphasis: { scaleSize: 8, label: { fontSize: 15, fontWeight: 'bold' } },
               data: data.map(function(item, i) {
@@ -803,9 +803,9 @@
               title: '瀵煎嚭鎴愬姛',
               dangerouslyUseHTMLString: true,
               message: '<div style="line-height:1.8;">'
-                + '<div><i class="el-icon-document" style="margin-right:6px;color:var(--el-color-primary);"></i>鏂囦欢锛? + fileName + '</div>'
-                + '<div><i class="el-icon-coin" style="margin-right:6px;color:var(--color-success);"></i>澶у皬锛? + sizeStr + '</div>'
-                + '<div><i class="el-icon-time" style="margin-right:6px;color:var(--color-warning);"></i>鏃堕棿锛? + now + '</div>'
+                + '<div><i class="el-icon-document" style="margin-right:6px;color:var(--el-color-primary);"></i>文件：' + fileName + '</div>'
+                + '<div><i class="el-icon-coin" style="margin-right:6px;color:var(--color-success);"></i>大小：' + sizeStr + '</div>'
+                + '<div><i class="el-icon-time" style="margin-right:6px;color:var(--color-warning);"></i>时间：' + now + '</div>'
                 + '</div>',
               type: 'success',
               duration: 5000,
@@ -833,9 +833,9 @@
               title: '瀵煎嚭澶辫触',
               dangerouslyUseHTMLString: true,
               message: '<div style="line-height:1.8;">'
-                + '<div><i class="el-icon-warning-outline" style="margin-right:6px;color:var(--color-danger);"></i>鏍煎紡锛? + format.toUpperCase() + '</div>'
-                + '<div><i class="el-icon-info" style="margin-right:6px;color:var(--color-info);"></i>鍘熷洜锛? + (err.message || String(err)) + '</div>'
-                + '<div style="color:var(--el-border-base);font-size:var(--font-size-xs);">鏃堕棿锛? + now + '</div>'
+                + '<div><i class="el-icon-warning-outline" style="margin-right:6px;color:var(--color-danger);"></i>格式：' + format.toUpperCase() + '</div>'
+                + '<div><i class="el-icon-info" style="margin-right:6px;color:var(--color-info);"></i>原因：' + (err.message || String(err)) + '</div>'
+                + '<div style="color:var(--el-border-base);font-size:var(--font-size-xs);">时间：' + now + '</div>'
                 + '</div>',
               type: 'error',
               duration: 8000,
@@ -849,7 +849,7 @@
         // 閲嶆柊涓嬭浇
         reDownload(record) {
           if (!record.blob) {
-            ReggieUI.warning('鏂囦欢鏁版嵁宸茶繃鏈燂紝璇烽噸鏂板鍑?)
+            ReggieUI.warning('文件数据已过期，请重新导出')
             return
           }
           try {
@@ -864,15 +864,15 @@
               document.body.removeChild(a)
               window.URL.revokeObjectURL(url)
             }, 200)
-            ReggieUI.success('姝ｅ湪涓嬭浇锛? + record.fileName)
+            ReggieUI.success('正在下载：' + record.fileName)
           } catch (err) {
-            ReggieUI.error('涓嬭浇澶辫触锛? + err.message)
+            ReggieUI.error('下载失败：' + err.message)
           }
         },
 
         // 鍒犻櫎瀵煎嚭璁板綍
         deleteRecord(index) {
-          ReggieUI.confirm('纭鍒犻櫎璇ユ潯瀵煎嚭璁板綍锛?, '鎻愮ず', {
+            ReggieUI.confirm('确认删除该条导出记录？', '提示', {
             confirmButtonText: '鍒犻櫎',
             cancelButtonText: '鍙栨秷',
             type: 'warning'
@@ -887,7 +887,7 @@
               } catch (e) { /* ignore */ }
             }
             this.exportRecords.splice(index, 1)
-            ReggieUI.success('璁板綍宸插垹闄?)
+            ReggieUI.success('记录已删除')
           }).catch(() => {
             // 鐢ㄦ埛鍙栨秷锛屼笉鍋氬鐞?
           })

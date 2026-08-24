@@ -1,6 +1,7 @@
 package com.reggie.module.inventory.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
@@ -28,6 +29,7 @@ public class StockCheckDetail implements Serializable {
     private Long id;
 
     @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     @Schema(description = "盘点单ID", example = "1")

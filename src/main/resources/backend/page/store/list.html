@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>闂ㄥ簵绠＄悊 - 鐟炲悏澶栧崠绠＄悊绔?/title>
+    <title>门店管理 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
@@ -13,12 +13,12 @@
         .dashboard-container { max-width: 1400px; margin: 0 auto; }
         .container { background: var(--bg-surface); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-xs); }
 
-        /* 宸ュ叿鏍?*/
+        /* 工具栏 */
         .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--el-border-light); margin-bottom: var(--space-5); }
         .toolbar .el-input, .toolbar .el-select { width: 180px; }
         .toolbar .spacer { flex: 1; }
 
-        /* 琛ㄦ牸 */
+        /* 表格 */
         .store-table { margin-top: 4px; }
         .store-table .cell-status { display: flex; align-items: center; gap: 6px; }
         .tag-active { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size:var(--font-size-xs); font-weight: 500; background: var(--color-success-light); color: var(--color-success); }
@@ -26,22 +26,22 @@
         .amount-highlight { color: var(--color-warning); font-weight: 600; }
         .order-count { font-weight: 600; color: var(--el-color-primary); }
 
-        /* 缂栬緫寮圭獥 */
+        /* 编辑弹窗 */
         .form-section-title { font-size:var(--font-size-base); font-weight: 600; color: var(--el-text-primary); margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px dashed var(--el-border-lighter2); }
         .form-section-title:first-child { margin-top: 0; }
         .footer-actions { text-align: right; padding-top: 8px; }
 
-        /* 绌虹姸鎬?*/
+        /* 空状态 */
         .empty-wrap { text-align: center; padding: 60px 0; color: var(--color-info); }
 
         .sync-section { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
 
-        /* 闂ㄥ簵璇︽儏寮圭獥 */
+        /* 门店详情弹窗 */
         .store-detail .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
         .store-detail .detail-title { font-size: var(--font-size-lg); font-weight: 600; color: var(--el-text-primary); }
         .store-detail .detail-code { font-size: var(--font-size-xs); color: var(--text-muted); background: var(--bg-subtle); padding: 2px 8px; border-radius: var(--radius-sm); }
         .store-detail .form-section-title:first-of-type { margin-top: 4px; }
-        /* 璇︽儏瀛楁缃戞牸锛堟浛浠ｆ湭娉ㄥ唽鐨?el-descriptions锛?*/
+        /* 详情字段网格（替代未注册的 el-descriptions） */
         .store-detail .detail-grid { border: 1px solid var(--el-border-extra-light); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 4px; }
         .store-detail .detail-grid .el-col {
             display: flex; align-items: center;
@@ -57,52 +57,52 @@
     </style>
 </head>
 <body>
-<!-- 閿洏鐢ㄦ埛锛氳烦杞埌涓诲唴瀹癸紙WCAG 2.4.1锛?-->
-<a href="#main-content" class="skip-link">璺宠浆鍒颁富鍐呭</a>
+<!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
 <div id="app">
     <div class="dashboard-container">
-        <div class="container" id="main-content" role="main" aria-label="椤甸潰涓昏鍐呭">
-            <!-- 椤靛ご锛氭爣棰?+ 鍓爣棰橈紙涓庡叏绔?ds-page-header 瑙勮寖涓€鑷达級 -->
+        <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+            <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
             <header class="ds-page-header">
                 <div class="ds-page-header__titles">
-                    <h1 class="ds-page-header__title" id="page-title">闂ㄥ簵绠＄悊</h1>
-                    <p class="ds-page-header__subtitle">绠＄悊闂ㄥ簵淇℃伅涓庤惀涓氱姸鎬?/p>
+                    <h1 class="ds-page-header__title" id="page-title">门店管理</h1>
+                    <p class="ds-page-header__subtitle">管理门店信息与营业状态</p>
                 </div>
                 <div class="ds-page-header__actions"></div>
             </header>
-            <!-- 淇敼鐐癸細浣跨敤 <stat-cards> 缁熶竴缁勪欢鏇夸唬鎵嬪啓 HTML锛屾敮鎸佺偣鍑昏繃婊?-->
+            <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
             <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
-            <!-- ===== 楂樼骇鎼滅储 + 鎿嶄綔鎸夐挳 ===== -->
+            <!-- ===== 高级搜索 + 操作按钮 ===== -->
             <div class="toolbar">
-                <el-input v-model="search.keyword" placeholder="闂ㄥ簵鍚嶇О / 缂栫爜" clearable size="small" @clear="doSearch" @keyup.enter.native="doSearch">
+                <el-input v-model="search.keyword" placeholder="门店名称 / 编码" clearable size="small" @clear="doSearch" @keyup.enter.native="doSearch">
                     <i slot="prefix" class="el-input__icon el-icon-search"></i>
                 </el-input>
-                <el-select v-model="search.storeType" placeholder="闂ㄥ簵绫诲瀷" clearable size="small" @change="doSearch">
-                    <el-option label="鍏ㄩ儴绫诲瀷" :value="null"></el-option>
-                    <el-option label="鐩磋惀鎬诲簵" :value="1"></el-option>
-                    <el-option label="鐩磋惀鍒嗗簵" :value="2"></el-option>
-                    <el-option label="鍔犵洘搴? :value="3"></el-option>
+                <el-select v-model="search.storeType" placeholder="门店类型" clearable size="small" @change="doSearch">
+                    <el-option label="全部类型" :value="null"></el-option>
+                    <el-option label="直营总店" :value="1"></el-option>
+                    <el-option label="直营分店" :value="2"></el-option>
+                    <el-option label="加盟店" :value="3"></el-option>
                 </el-select>
-                <el-select v-model="search.status" placeholder="闂ㄥ簵鐘舵€? clearable size="small" @change="doSearch">
-                    <el-option label="鍏ㄩ儴鐘舵€? :value="null"></el-option>
-                    <el-option label="宸插惎鐢? :value="1"></el-option>
-                    <el-option label="宸插仠鐢? :value="0"></el-option>
+                <el-select v-model="search.status" placeholder="门店状态" clearable size="small" @change="doSearch">
+                    <el-option label="全部状态" :value="null"></el-option>
+                    <el-option label="已启用" :value="1"></el-option>
+                    <el-option label="已停用" :value="0"></el-option>
                 </el-select>
-                <el-button size="small" type="primary" icon="el-icon-search" @click="doSearch">鎼滅储</el-button>
-                <el-button size="small" icon="el-icon-refresh-left" @click="resetSearch">閲嶇疆</el-button>
+                <el-button size="small" type="primary" icon="el-icon-search" @click="doSearch">搜索</el-button>
+                <el-button size="small" icon="el-icon-refresh-left" @click="resetSearch">重置</el-button>
 
                 <span class="spacer"></span>
 
-                <el-button size="small" type="success" icon="el-icon-plus" @click="openCreateDialog">鏂板缓闂ㄥ簵</el-button>
-                <el-button size="small" type="warning" icon="el-icon-upload2" @click="batchEnable" :disabled="selection.length === 0">鎵归噺鍚敤</el-button>
-                <el-button size="small" type="info" icon="el-icon-download" @click="batchDisable" :disabled="selection.length === 0">鎵归噺鍋滅敤</el-button>
-                <el-button size="small" icon="el-icon-download" @click="doExport">瀵煎嚭鏁版嵁</el-button>
+                <el-button size="small" type="success" icon="el-icon-plus" @click="openCreateDialog">新建门店</el-button>
+                <el-button size="small" type="warning" icon="el-icon-upload2" @click="batchEnable" :disabled="selection.length === 0">批量启用</el-button>
+                <el-button size="small" type="info" icon="el-icon-download" @click="batchDisable" :disabled="selection.length === 0">批量停用</el-button>
+                <el-button size="small" icon="el-icon-download" @click="doExport">导出数据</el-button>
             </div>
 
-            <!-- ===== 鏁版嵁琛ㄦ牸 ===== -->
+            <!-- ===== 数据表格 ===== -->
             <div v-loading="loading" class="store-table">
-                <el-table aria-label="鏁版嵁琛ㄦ牸"
+                <el-table aria-label="数据表格"
                     :data="tableData"
                     border
                     stripe
@@ -114,21 +114,21 @@
                     :default-sort="{prop: 'createTime', order: 'descending'}"
                     style="width:100%">
                     <el-table-column type="selection" width="45" fixed="left"></el-table-column>
-                    <el-table-column label="搴忓彿" type="index" width="46" align="center"></el-table-column>
-                    <el-table-column prop="storeName" label="闂ㄥ簵鍚嶇О" min-width="150" align="center" sortable="custom" show-overflow-tooltip>
+                    <el-table-column label="序号" type="index" width="46" align="center"></el-table-column>
+                    <el-table-column prop="storeName" label="门店名称" min-width="150" align="center" sortable="custom" show-overflow-tooltip>
                         <template slot-scope="{row}">
                             <el-tag :type="storeTypeTag(row.storeType)" size="mini" effect="plain">{{ storeTypeName(row.storeType) }}</el-tag>
                             <span style="margin-left:6px; font-weight:500;">{{ row.storeName }}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="storeCode" label="闂ㄥ簵缂栫爜" width="92" align="center" sortable="custom" show-overflow-tooltip></el-table-column>
-                    <el-table-column label="鑱旂郴浜?/ 鐢佃瘽" min-width="140" align="center" show-overflow-tooltip>
+                    <el-table-column prop="storeCode" label="门店编码" width="92" align="center" sortable="custom" show-overflow-tooltip></el-table-column>
+                    <el-table-column label="联系人 / 电话" min-width="140" align="center" show-overflow-tooltip>
                         <template slot-scope="{row}">
-                            <span>{{ row.contactPerson || '鈥? }}</span>
-                            <span style="margin-left:8px; color:var(--text-muted);">{{ row.contactPhone || '鈥? }}</span>
+                            <span>{{ row.contactPerson || '—' }}</span>
+                            <span style="margin-left:8px; color:var(--text-muted);">{{ row.contactPhone || '—' }}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column label="鐘舵€? width="60" align="center">
+                    <el-table-column label="状态" width="60" align="center">
                         <template slot-scope="{row}">
                             <el-switch
                                 v-model="row.status"
@@ -140,27 +140,27 @@
                             </el-switch>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="todayOrders" label="浠婃棩璁㈠崟" width="80" align="center" sortable="custom">
+                    <el-table-column prop="todayOrders" label="今日订单" width="80" align="center" sortable="custom">
                         <template slot-scope="{row}">
                             <span class="order-count">{{ row.todayOrders || 0 }}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="todayAmount" label="浠婃棩钀ユ敹" width="100" align="right" sortable="custom">
+                    <el-table-column prop="todayAmount" label="今日营收" width="100" align="right" sortable="custom">
                         <template slot-scope="{row}">
                             <span class="amount-highlight">&yen;{{ fmtAmount(row.todayAmount) }}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column label="鎿嶄綔" width="210" align="center" fixed="right">
+                    <el-table-column label="操作" width="210" align="center" fixed="right">
                         <template slot-scope="{row}">
-                            <el-button type="text" size="mini" icon="el-icon-document" @click.stop="openDetail(row)">璇︽儏</el-button>
-                            <el-button type="text" size="mini" icon="el-icon-edit" @click.stop="openEditDialog(row)">缂栬緫</el-button>
-                            <el-button type="text" size="mini" icon="el-icon-switch-button" @click.stop="switchToStore(row)">鍒囨崲</el-button>
-                            <el-button type="text" size="mini" icon="el-icon-refresh" @click.stop="openSyncDialog(row)">鍚屾</el-button>
+                            <el-button type="text" size="mini" icon="el-icon-document" @click.stop="openDetail(row)">详情</el-button>
+                            <el-button type="text" size="mini" icon="el-icon-edit" @click.stop="openEditDialog(row)">编辑</el-button>
+                            <el-button type="text" size="mini" icon="el-icon-switch-button" @click.stop="switchToStore(row)">切换</el-button>
+                            <el-button type="text" size="mini" icon="el-icon-refresh" @click.stop="openSyncDialog(row)">同步</el-button>
                         </template>
                     </el-table-column>
                 </el-table>
 
-                <!-- 鍒嗛〉 -->
+                <!-- 分页 -->
                 <el-pagination
                     v-if="pagination.total > 0"
                     style="margin-top:16px; text-align:right;"
@@ -173,17 +173,17 @@
                     @current-change="onPageChange">
                 </el-pagination>
 
-                <!-- 绌虹姸鎬?-->
+                <!-- 空状态 -->
                 <div v-if="!loading && tableData.length === 0" class="empty-wrap">
-                    <i class="el-icon-s-shop" style="font-size: var(--font-size-4xl);"></i>
-                    <p style="margin-top:12px;">鏆傛棤闂ㄥ簵鏁版嵁</p>
-                    <el-button type="primary" size="small" style="margin-top:12px;" @click="openCreateDialog">鍒涘缓绗竴瀹堕棬搴?/el-button>
+                    <i class="el-icon-s-shop" style="font-size:48px;"></i>
+                    <p style="margin-top:12px;">暂无门店数据</p>
+                    <el-button type="primary" size="small" style="margin-top:12px;" @click="openCreateDialog">创建第一家门店</el-button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== 鏂板缓/缂栬緫闂ㄥ簵瀵硅瘽妗?===== -->
+    <!-- ===== 新建/编辑门店对话框 ===== -->
     <crud-dialog
       :title="dialogTitle"
       :visible.sync="formDialogVisible"
@@ -194,111 +194,111 @@
       @close="resetForm"
     >
         <el-form :model="form" ref="formRef" label-width="100px" size="small" :rules="formRules">
-            <div class="form-section-title">鍩烘湰淇℃伅</div>
+            <div class="form-section-title">基本信息</div>
             <el-row :gutter="16">
                 <el-col :span="12">
-                    <el-form-item label="闂ㄥ簵鍚嶇О" prop="storeName">
-                        <el-input v-model="form.storeName" placeholder="濡傦細鐟炲悏澶栧崠-鏈濋槼搴? maxlength="100" />
+                    <el-form-item label="门店名称" prop="storeName">
+                        <el-input v-model="form.storeName" placeholder="如：瑞吉外卖-朝阳店" maxlength="100" />
                     </el-form-item>
                 </el-col>
                 <el-col :span="12">
-                    <el-form-item label="闂ㄥ簵缂栫爜" prop="storeCode">
-                        <el-input v-model="form.storeCode" placeholder="濡傦細BJ001" maxlength="32" />
+                    <el-form-item label="门店编码" prop="storeCode">
+                        <el-input v-model="form.storeCode" placeholder="如：BJ001" maxlength="32" />
                     </el-form-item>
                 </el-col>
             </el-row>
             <el-row :gutter="16">
                 <el-col :span="12">
-                    <el-form-item label="闂ㄥ簵绫诲瀷" prop="storeType">
+                    <el-form-item label="门店类型" prop="storeType">
                         <el-select v-model="form.storeType" style="width:100%">
-                            <el-option label="鐩磋惀鎬诲簵" :value="1" />
-                            <el-option label="鐩磋惀鍒嗗簵" :value="2" />
-                            <el-option label="鍔犵洘搴? :value="3" />
+                            <el-option label="直营总店" :value="1" />
+                            <el-option label="直营分店" :value="2" />
+                            <el-option label="加盟店" :value="3" />
                         </el-select>
                     </el-form-item>
                 </el-col>
                 <el-col :span="12">
-                    <el-form-item label="钀ヤ笟鏃堕棿" prop="businessHours">
+                    <el-form-item label="营业时间" prop="businessHours">
                         <el-time-picker
                             v-model="form.businessHoursRange"
                             is-range
-                            range-separator="鑷?
-                            start-placeholder="寮€濮?
-                            end-placeholder="缁撴潫"
+                            range-separator="至"
+                            start-placeholder="开始"
+                            end-placeholder="结束"
                             format="HH:mm"
                             value-format="HH:mm"
                             style="width:100%"
-                            placeholder="閫夋嫨钀ヤ笟鏃堕棿">
+                            placeholder="选择营业时间">
                         </el-time-picker>
                     </el-form-item>
                 </el-col>
             </el-row>
 
-            <div class="form-section-title">鑱旂郴淇℃伅</div>
+            <div class="form-section-title">联系信息</div>
             <el-row :gutter="16">
                 <el-col :span="12">
-                    <el-form-item label="鑱旂郴浜? prop="contactPerson">
-                        <el-input v-model="form.contactPerson" placeholder="闂ㄥ簵鑱旂郴浜? maxlength="64" />
+                    <el-form-item label="联系人" prop="contactPerson">
+                        <el-input v-model="form.contactPerson" placeholder="门店联系人" maxlength="64" />
                     </el-form-item>
                 </el-col>
                 <el-col :span="12">
-                    <el-form-item label="鑱旂郴鐢佃瘽" prop="contactPhone">
-                        <el-input v-model="form.contactPhone" placeholder="鑱旂郴鐢佃瘽" maxlength="20" />
+                    <el-form-item label="联系电话" prop="contactPhone">
+                        <el-input v-model="form.contactPhone" placeholder="联系电话" maxlength="20" />
                     </el-form-item>
                 </el-col>
             </el-row>
-            <el-form-item label="闂ㄥ簵鍦板潃" prop="address">
-                <el-input v-model="form.address" placeholder="闂ㄥ簵璇︾粏鍦板潃" maxlength="200" />
+            <el-form-item label="门店地址" prop="address">
+                <el-input v-model="form.address" placeholder="门店详细地址" maxlength="200" />
             </el-form-item>
 
-            <div class="form-section-title">杩愯惀璁剧疆</div>
+            <div class="form-section-title">运营设置</div>
             <el-row :gutter="16">
                 <el-col :span="8">
-                    <el-form-item label="閰嶉€佸崐寰?m)">
+                    <el-form-item label="配送半径(m)">
                         <el-input-number v-model="form.deliveryRadius" :min="500" :max="20000" :step="500" controls-position="right" style="width:100%" />
                     </el-form-item>
                 </el-col>
                 <el-col :span="8">
-                    <el-form-item label="璧烽€侀噾棰?>
+                    <el-form-item label="起送金额">
                         <el-input-number v-model="form.minDeliveryAmount" :min="0" :max="200" :precision="2" :step="1" controls-position="right" style="width:100%" />
                     </el-form-item>
                 </el-col>
                 <el-col :span="8">
-                    <el-form-item label="閰嶉€佽垂">
+                    <el-form-item label="配送费">
                         <el-input-number v-model="form.deliveryFee" :min="0" :max="50" :precision="2" :step="0.5" controls-position="right" style="width:100%" />
                     </el-form-item>
                 </el-col>
             </el-row>
             <el-row :gutter="16">
                 <el-col :span="8">
-                    <el-form-item label="鏀寔澶栧崠">
+                    <el-form-item label="支持外卖">
                         <el-switch v-model="form.isDeliveryEnabled" :active-value="1" :inactive-value="0" active-color="var(--legacy-13ce66)" />
                     </el-form-item>
                 </el-col>
                 <el-col :span="8">
-                    <el-form-item label="鏀寔鍫傞">
+                    <el-form-item label="支持堂食">
                         <el-switch v-model="form.isDineInEnabled" :active-value="1" :inactive-value="0" active-color="var(--color-brand-500)" />
                     </el-form-item>
                 </el-col>
                 <el-col :span="8">
-                    <el-form-item label="闂ㄥ簵鐘舵€?>
-                        <el-switch v-model="form.status" :active-value="1" :inactive-value="0" active-text="鍚敤" inactive-text="鍋滅敤" />
+                    <el-form-item label="门店状态">
+                        <el-switch v-model="form.status" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="停用" />
                     </el-form-item>
                 </el-col>
             </el-row>
 
-            <!-- 鏂板缓鏃舵樉绀虹鐞嗗憳淇℃伅 -->
+            <!-- 新建时显示管理员信息 -->
             <template v-if="isCreate">
-                <div class="form-section-title">绠＄悊鍛樿处鍙?/div>
+                <div class="form-section-title">管理员账号</div>
                 <el-row :gutter="16">
                     <el-col :span="12">
-                        <el-form-item label="绠＄悊鍛樿处鍙? prop="adminUsername">
-                            <el-input v-model="form.adminUsername" placeholder="闂ㄥ簵绠＄悊鍛樼櫥褰曡处鍙? maxlength="32" />
+                        <el-form-item label="管理员账号" prop="adminUsername">
+                            <el-input v-model="form.adminUsername" placeholder="门店管理员登录账号" maxlength="32" />
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item label="绠＄悊鍛樺瘑鐮? prop="adminPassword">
-                            <el-input v-model="form.adminPassword" type="password" placeholder="鍒濆瀵嗙爜锛岃嚦灏?浣? maxlength="32" show-password />
+                        <el-form-item label="管理员密码" prop="adminPassword">
+                            <el-input v-model="form.adminPassword" type="password" placeholder="初始密码，至少6位" maxlength="32" show-password />
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -306,94 +306,94 @@
         </el-form>
     </crud-dialog>
 
-    <!-- ===== 闂ㄥ簵璇︽儏瀵硅瘽妗嗭紙鐐瑰嚮琛?/ 璇︽儏鎸夐挳鎵撳紑锛屽睍绀哄畬鏁翠俊鎭紝閬垮厤鍒楄〃鍒楄繃澶氾級 ===== -->
+    <!-- ===== 门店详情对话框（点击行 / 详情按钮打开，展示完整信息，避免列表列过多） ===== -->
     <crud-dialog
-      title="闂ㄥ簵璇︽儏"
+      title="门店详情"
       :visible.sync="detailDialogVisible"
       size="lg"
       :show-submit="false"
-      cancel-text="鍏?闂?
+      cancel-text="关 闭"
       :close-on-click-modal="true"
       @close="detailData=null">
         <div v-if="detailData" class="store-detail">
-            <!-- 澶撮儴姒傝 -->
+            <!-- 头部概要 -->
             <div class="detail-header">
                 <el-tag :type="storeTypeTag(detailData.storeType)" size="small" effect="plain">{{ storeTypeName(detailData.storeType) }}</el-tag>
                 <span class="detail-title">{{ detailData.storeName }}</span>
                 <span class="detail-code">{{ detailData.storeCode }}</span>
                 <el-tag :type="detailData.status === 1 ? 'success' : 'info'" size="small" effect="light">
-                    {{ detailData.status === 1 ? '宸插惎鐢? : '宸插仠鐢? }}
+                    {{ detailData.status === 1 ? '已启用' : '已停用' }}
                 </el-tag>
             </div>
 
-            <!-- 鍩烘湰淇℃伅 -->
-            <div class="form-section-title">鍩烘湰淇℃伅</div>
+            <!-- 基本信息 -->
+            <div class="form-section-title">基本信息</div>
             <el-row :gutter="0" class="detail-grid">
-                <el-col :span="12"><span class="dt-label">闂ㄥ簵鍚嶇О</span><span class="dt-value">{{ detailData.storeName || '鈥? }}</span></el-col>
-                <el-col :span="12"><span class="dt-label">闂ㄥ簵缂栫爜</span><span class="dt-value">{{ detailData.storeCode || '鈥? }}</span></el-col>
-                <el-col :span="12"><span class="dt-label">闂ㄥ簵绫诲瀷</span><span class="dt-value">{{ storeTypeName(detailData.storeType) }}</span></el-col>
-                <el-col :span="12"><span class="dt-label">钀ヤ笟鏃堕棿</span><span class="dt-value">{{ detailData.businessHours || '鈥? }}</span></el-col>
-                <el-col :span="12"><span class="dt-label">鑱旂郴浜?/span><span class="dt-value">{{ detailData.contactPerson || '鈥? }}</span></el-col>
-                <el-col :span="12"><span class="dt-label">鑱旂郴鐢佃瘽</span><span class="dt-value">{{ detailData.contactPhone || '鈥? }}</span></el-col>
-                <el-col :span="24"><span class="dt-label">闂ㄥ簵鍦板潃</span><span class="dt-value">{{ detailData.address || '鈥? }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">门店名称</span><span class="dt-value">{{ detailData.storeName || '—' }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">门店编码</span><span class="dt-value">{{ detailData.storeCode || '—' }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">门店类型</span><span class="dt-value">{{ storeTypeName(detailData.storeType) }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">营业时间</span><span class="dt-value">{{ detailData.businessHours || '—' }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">联系人</span><span class="dt-value">{{ detailData.contactPerson || '—' }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">联系电话</span><span class="dt-value">{{ detailData.contactPhone || '—' }}</span></el-col>
+                <el-col :span="24"><span class="dt-label">门店地址</span><span class="dt-value">{{ detailData.address || '—' }}</span></el-col>
             </el-row>
 
-            <!-- 杩愯惀璁剧疆 -->
-            <div class="form-section-title">杩愯惀璁剧疆</div>
+            <!-- 运营设置 -->
+            <div class="form-section-title">运营设置</div>
             <el-row :gutter="0" class="detail-grid">
-                <el-col :span="8"><span class="dt-label">閰嶉€佸崐寰?/span><span class="dt-value">{{ detailData.deliveryRadius || 0 }} m</span></el-col>
-                <el-col :span="8"><span class="dt-label">璧烽€侀噾棰?/span><span class="dt-value">&yen;{{ fmtAmount(detailData.minDeliveryAmount) }}</span></el-col>
-                <el-col :span="8"><span class="dt-label">閰嶉€佽垂</span><span class="dt-value">&yen;{{ fmtAmount(detailData.deliveryFee) }}</span></el-col>
+                <el-col :span="8"><span class="dt-label">配送半径</span><span class="dt-value">{{ detailData.deliveryRadius || 0 }} m</span></el-col>
+                <el-col :span="8"><span class="dt-label">起送金额</span><span class="dt-value">&yen;{{ fmtAmount(detailData.minDeliveryAmount) }}</span></el-col>
+                <el-col :span="8"><span class="dt-label">配送费</span><span class="dt-value">&yen;{{ fmtAmount(detailData.deliveryFee) }}</span></el-col>
                 <el-col :span="8">
-                    <span class="dt-label">鏀寔澶栧崠</span>
-                    <span class="dt-value"><el-tag :type="detailData.isDeliveryEnabled === 1 ? 'success' : 'info'" size="mini">{{ detailData.isDeliveryEnabled === 1 ? '鏀寔' : '涓嶆敮鎸? }}</el-tag></span>
+                    <span class="dt-label">支持外卖</span>
+                    <span class="dt-value"><el-tag :type="detailData.isDeliveryEnabled === 1 ? 'success' : 'info'" size="mini">{{ detailData.isDeliveryEnabled === 1 ? '支持' : '不支持' }}</el-tag></span>
                 </el-col>
                 <el-col :span="8">
-                    <span class="dt-label">鏀寔鍫傞</span>
-                    <span class="dt-value"><el-tag :type="detailData.isDineInEnabled === 1 ? 'success' : 'info'" size="mini">{{ detailData.isDineInEnabled === 1 ? '鏀寔' : '涓嶆敮鎸? }}</el-tag></span>
+                    <span class="dt-label">支持堂食</span>
+                    <span class="dt-value"><el-tag :type="detailData.isDineInEnabled === 1 ? 'success' : 'info'" size="mini">{{ detailData.isDineInEnabled === 1 ? '支持' : '不支持' }}</el-tag></span>
                 </el-col>
                 <el-col :span="8">
-                    <span class="dt-label">鏁版嵁瀹屽杽搴?/span>
+                    <span class="dt-label">数据完善度</span>
                     <span class="dt-value"><el-progress :percentage="toNumber(detailData.dataCompleteRate)" :stroke-width="12" :color="progressColor(detailData.dataCompleteRate)"></el-progress></span>
                 </el-col>
             </el-row>
 
-            <!-- 鏃堕棿淇℃伅 -->
-            <div class="form-section-title">鏃堕棿淇℃伅</div>
+            <!-- 时间信息 -->
+            <div class="form-section-title">时间信息</div>
             <el-row :gutter="0" class="detail-grid">
-                <el-col :span="12"><span class="dt-label">鍒涘缓鏃堕棿</span><span class="dt-value">{{ formatDateTime(detailData.createTime) }}</span></el-col>
-                <el-col :span="12"><span class="dt-label">鏇存柊鏃堕棿</span><span class="dt-value">{{ formatDateTime(detailData.updateTime) }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">创建时间</span><span class="dt-value">{{ formatDateTime(detailData.createTime) }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">更新时间</span><span class="dt-value">{{ formatDateTime(detailData.updateTime) }}</span></el-col>
             </el-row>
 
             <div class="footer-actions">
-                <el-button size="small" type="primary" icon="el-icon-edit" @click="openEditDialog(detailData)">缂栬緫</el-button>
-                <el-button size="small" icon="el-icon-switch-button" @click="switchToStore(detailData)">鍒囨崲闂ㄥ簵</el-button>
-                <el-button size="small" icon="el-icon-refresh" @click="openSyncDialog(detailData)">鏁版嵁鍚屾</el-button>
+                <el-button size="small" type="primary" icon="el-icon-edit" @click="openEditDialog(detailData)">编辑</el-button>
+                <el-button size="small" icon="el-icon-switch-button" @click="switchToStore(detailData)">切换门店</el-button>
+                <el-button size="small" icon="el-icon-refresh" @click="openSyncDialog(detailData)">数据同步</el-button>
             </div>
         </div>
     </crud-dialog>
 
-    <!-- ===== 鏁版嵁鍚屾瀵硅瘽妗?===== -->
+    <!-- ===== 数据同步对话框 ===== -->
     <crud-dialog
-      title="鏁版嵁鍚屾"
+      title="数据同步"
       :visible.sync="syncDialogVisible"
       size="md"
       :show-submit="false"
-      cancel-text="鍏?闂?
+      cancel-text="关 闭"
       :close-on-click-modal="true"
       @close="syncResult=null"
     >
         <p style="margin-bottom:14px; color:var(--el-text-regular); font-size:var(--font-size-sm);">
-            灏嗘€婚儴鏁版嵁鍚屾鍒?<b style="color:var(--el-text-primary);">{{ syncTargetName }}</b>
+            将总部数据同步到 <b style="color:var(--el-text-primary);">{{ syncTargetName }}</b>
         </p>
         <div class="sync-section">
-            <el-button size="small" type="primary" @click="doSync('dishes')" :loading="syncing.dishes" icon="el-icon-sell">鍚屾鑿滃搧</el-button>
-            <el-button size="small" type="success" @click="doSync('categories')" :loading="syncing.categories" icon="el-icon-menu">鍚屾鍒嗙被</el-button>
-            <el-button size="small" type="warning" @click="doSync('setmeals')" :loading="syncing.setmeals" icon="el-icon-s-grid">鍚屾濂楅</el-button>
+            <el-button size="small" type="primary" @click="doSync('dishes')" :loading="syncing.dishes" icon="el-icon-sell">同步菜品</el-button>
+            <el-button size="small" type="success" @click="doSync('categories')" :loading="syncing.categories" icon="el-icon-menu">同步分类</el-button>
+            <el-button size="small" type="warning" @click="doSync('setmeals')" :loading="syncing.setmeals" icon="el-icon-s-grid">同步套餐</el-button>
         </div>
         <el-alert
             v-if="syncResult"
-            :title='鍚屾瀹屾垚锛氭垚鍔?' + syncResult.synced + ' 鏉★紝澶辫触 ' + syncResult.failed + ' 鏉?
+            :title='同步完成：成功 ' + syncResult.synced + ' 条，失败 ' + syncResult.failed + ' 条'
             :type="syncResult.failed > 0 ? 'warning' : 'success'"
             :closable="false"
             style="margin-top:14px;">
@@ -419,23 +419,23 @@
     data: {
         loading: false,
         submitting: false,
-        // 琛ㄦ牸鏁版嵁
+        // 表格数据
         tableData: [],
-        selection: [],           // 宸查€夎
-        // 缁熻
+        selection: [],           // 已选行
+        // 统计
         stats: { totalStores: 0, activeStores: 0, inactiveStores: 0, todayTotalStores: 0 },
         activeFilter: '',
-        // 鎼滅储鏉′欢
+        // 搜索条件
         search: { keyword: '', storeType: null, status: null },
-        // 鎺掑簭
+        // 排序
         sort: { sortBy: 'createTime', sortOrder: 'desc' },
-        // 鍒嗛〉
+        // 分页
         pagination: { current: 1, size: 10, total: 0, pages: 0 },
-        // 琛ㄥ崟
+        // 表单
         formDialogVisible: false,
         isCreate: true,
         editTenantId: null,
-        // 璇︽儏
+        // 详情
         detailDialogVisible: false,
         detailData: null,
         form: {
@@ -447,19 +447,19 @@
             adminUsername: '', adminPassword: ''
         },
         formRules: {
-            storeName: [{ required: true, message: '璇疯緭鍏ラ棬搴楀悕绉?, trigger: 'blur' }],
-            storeCode: [{ required: true, message: '璇疯緭鍏ラ棬搴楃紪鐮?, trigger: 'blur' }],
-            storeType: [{ required: true, message: '璇烽€夋嫨闂ㄥ簵绫诲瀷', trigger: 'change' }],
+            storeName: [{ required: true, message: '请输入门店名称', trigger: 'blur' }],
+            storeCode: [{ required: true, message: '请输入门店编码', trigger: 'blur' }],
+            storeType: [{ required: true, message: '请选择门店类型', trigger: 'change' }],
             contactPhone: [
-                { pattern: /^1[3-9]\d{9}$/, message: '璇疯緭鍏ユ纭殑鎵嬫満鍙?, trigger: 'blur' }
+                { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
             ],
-            adminUsername: [{ required: true, message: '璇疯緭鍏ョ鐞嗗憳璐﹀彿', trigger: 'blur' }],
+            adminUsername: [{ required: true, message: '请输入管理员账号', trigger: 'blur' }],
             adminPassword: [
-                { required: true, message: '璇疯緭鍏ョ鐞嗗憳瀵嗙爜', trigger: 'blur' },
-                { min: 6, message: '瀵嗙爜鑷冲皯6浣?, trigger: 'blur' }
+                { required: true, message: '请输入管理员密码', trigger: 'blur' },
+                { min: 6, message: '密码至少6位', trigger: 'blur' }
             ]
         },
-        // 鍚屾
+        // 同步
         syncDialogVisible: false,
         syncTargetId: null,
         syncTargetName: '',
@@ -467,55 +467,63 @@
         syncResult: null
     },
     computed: {
-        dialogTitle: function() { return this.isCreate ? '鏂板缓闂ㄥ簵' : '缂栬緫闂ㄥ簵'; },
-        // 淇敼鐐癸細statsCards 缁熶竴鍗＄墖閰嶇疆锛堜緵 <stat-cards> 缁勪欢浣跨敤锛?
+        dialogTitle: function() { return this.isCreate ? '新建门店' : '编辑门店'; },
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
-            const self = this;
+            var self = this;
             return [
-                { key: '', icon: '馃彔', label: '闂ㄥ簵鎬绘暟', value: self.stats.totalStores, color: 'primary', clickable: true, active: self.activeFilter === '' },
-                { key: 'active', icon: '鉁?, label: '宸插惎鐢?, value: self.stats.activeStores, color: 'success', clickable: true, active: self.activeFilter === 'active' },
-                { key: 'inactive', icon: '鈴?, label: '宸插仠鐢?, value: self.stats.inactiveStores, color: 'warning', clickable: true, active: self.activeFilter === 'inactive' },
-                { key: 'today', icon: '馃挵', label: '浠婃棩鏈夎惀鏀堕棬搴?, value: self.stats.todayTotalStores, color: 'info', unit: '瀹? }
+                { key: '', icon: '🏠', label: '门店总数', value: self.stats.totalStores, color: 'primary', clickable: true, active: self.activeFilter === '' },
+                { key: 'active', icon: '✅', label: '已启用', value: self.stats.activeStores, color: 'success', clickable: true, active: self.activeFilter === 'active' },
+                { key: 'inactive', icon: '⏸', label: '已停用', value: self.stats.inactiveStores, color: 'warning', clickable: true, active: self.activeFilter === 'inactive' },
+                { key: 'today', icon: '💰', label: '今日有营收门店', value: self.stats.todayTotalStores, color: 'info', unit: '家' }
             ]
         }
     },
     created: function() { this.loadData(true); },
     methods: {
-        // ========== 鏁版嵁鍔犺浇 ==========
+        // ========== 数据加载 ==========
         loadData: function(reloadStats) {
             if (reloadStats === undefined) { reloadStats = true; }
-            const self = this;
+            var self = this;
             self.loading = true;
-            const params = {$2};
-            // 濡傛灉閫変簡缁熻鍗＄墖绛涢€夛紝瑕嗙洊status
+            var params = {
+                keyword: self.search.keyword || null,
+                storeType: self.search.storeType,
+                status: self.search.status,
+                page: self.pagination.current,
+                pageSize: self.pagination.size,
+                sortBy: self.sort.sortBy,
+                sortOrder: self.sort.sortOrder
+            };
+            // 如果选了统计卡片筛选，覆盖status
             if (self.activeFilter === 'active') { params.status = 1; }
             else if (self.activeFilter === 'inactive') { params.status = 0; }
 
             pageStores(params).then(function(res) {
                 if (res && res.code === 1 && res.data) {
                     self.tableData = (res.data.records || []).map(function(r) {
-                        // 淇敼鐐癸細鍓嶇琛ュ叏"鏁版嵁瀹屽杽搴?鐧惧垎姣旓紙0-100 鏁存暟锛夛紝渚?el-progress 灞曠ず
+                        // 修改点：前端补全"数据完善度"百分比（0-100 整数），供 el-progress 展示
                         r.dataCompleteRate = self.calcCompleteRate(r);
                         return r;
                     });
-                    // 淇敼鐐癸細鍒嗛〉瀛楁寮哄埗 Number锛岄伩鍏嶅悗绔繑鍥炲瓧绗︿覆瀵艰嚧 ElPagination 绫诲瀷鏍￠獙澶辫触
+                    // 修改点：分页字段强制 Number，避免后端返回字符串导致 ElPagination 类型校验失败
                     self.pagination.total = Number(res.data.total) || 0;
                     self.pagination.pages = Number(res.data.pages) || 0;
                     self.pagination.current = Number(res.data.current) || 1;
                     self.pagination.size = Number(res.data.size) || 10;
-                    // 淇敼鐐癸細F9 鎬ц兘 鈥?鍏ㄥ眬缁熻涓庡垎椤靛垪琛ㄥ垎绂伙紝浠呮暟鎹獊鍙樺悗閲嶈浇锛岀炕椤?鎼滅储涓嶉噸绠?
+                    // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
                     if (reloadStats) { self.updateStats(); }
                 }
             }).catch(function(err) {
-                ReggieUI.error('鍔犺浇闂ㄥ簵鏁版嵁澶辫触');
+                ReggieUI.error('加载门店数据失败');
             }).finally(function() { self.loading = false; });
         },
         updateStats: function() {
-            const self = this;
-            // 淇敼鐐癸細鏀逛负璋冪敤鍚庣 /store/stats SQL 鑱氬悎鎺ュ彛锛屾浛浠?listStores 鎷夊叏閲忓悗 filter 缁熻锛堟秷闄?N+1 涓庡叏閲忓唴瀛樿绠楋級
+            var self = this;
+            // 修改点：改为调用后端 /store/stats SQL 聚合接口，替代 listStores 拉全量后 filter 统计（消除 N+1 与全量内存计算）
             storeStats().then(function(res) {
                 if (res && res.code === 1 && res.data) {
-                    const d = res.data;
+                    var d = res.data;
                     self.stats.totalStores = Number(d.totalStores) || 0;
                     self.stats.activeStores = Number(d.activeStores) || 0;
                     self.stats.inactiveStores = Number(d.inactiveStores) || 0;
@@ -524,13 +532,13 @@
             }).catch(function() {});
         },
 
-        // 淇敼鐐癸細stat-cards 鐐瑰嚮锛坧ayload.activeKey 涓?.sync 鏇存柊鍚庣殑鍊硷級
+        // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
             this.activeFilter = payload.activeKey
             this.pagination.current = 1
             this.loadData(false)
         },
-        // ========== 鎼滅储 ==========
+        // ========== 搜索 ==========
         doSearch: function() {
             this.pagination.current = 1;
             this.activeFilter = '';
@@ -544,7 +552,7 @@
             this.loadData(false);
         },
 
-        // ========== 鎺掑簭 ==========
+        // ========== 排序 ==========
         onSortChange: function(sortInfo) {
             if (sortInfo.prop) {
                 this.sort.sortBy = sortInfo.prop;
@@ -555,7 +563,7 @@
             this.loadData(false);
         },
 
-        // ========== 鍒嗛〉 ==========
+        // ========== 分页 ==========
         onPageChange: function(page) {
             this.pagination.current = page;
             this.loadData(false);
@@ -566,113 +574,117 @@
             this.loadData(false);
         },
 
-        // ========== 閫夋嫨 ==========
+        // ========== 选择 ==========
         onSelectionChange: function(val) { this.selection = val; },
 
-        // ========== 鎵归噺鎿嶄綔 ==========
+        // ========== 批量操作 ==========
         batchEnable: function() {
-            this.batchConfirm(1, '鎵归噺鍚敤');
+            this.batchConfirm(1, '批量启用');
         },
         batchDisable: function() {
-            this.batchConfirm(0, '鎵归噺鍋滅敤');
+            this.batchConfirm(0, '批量停用');
         },
         batchConfirm: function(status, label) {
-            const self = this;
+            var self = this;
             var ids = self.selection.map(function(r) { return r.tenantId; });
-            if (ids.length === 0) { ReggieUI.warning('璇烽€夋嫨闂ㄥ簵'); return; }
-            ReggieUI.confirm('纭' + label + '宸查€夌殑 ' + ids.length + ' 涓棬搴楀悧锛?, '鎻愮ず', {
-                confirmButtonText: '纭畾', cancelButtonText: '鍙栨秷', type: 'warning'
+            if (ids.length === 0) { ReggieUI.warning('请选择门店'); return; }
+            ReggieUI.confirm('确认' + label + '已选的 ' + ids.length + ' 个门店吗？', '提示', {
+                confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
             }).then(function() {
                 batchUpdateStatus(ids, status).then(function(res) {
                     if (res && res.code === 1) {
-                        const result = res.data;
-                        ReggieUI.success(label + '鎴愬姛锛? + result.successCount + '/' + result.total);
+                        var result = res.data;
+                        ReggieUI.success(label + '成功：' + result.successCount + '/' + result.total);
                         self.loadData();
                     } else {
-                        ReggieUI.error(label + '澶辫触');
+                        ReggieUI.error(label + '失败');
                     }
-                }).catch(function() { ReggieUI.error(label + '澶辫触'); });
+                }).catch(function() { ReggieUI.error(label + '失败'); });
             }).catch(function() {});
         },
         doExport: function() {
-            const self = this;
-            const params = {$2};
-            ReggieUI.message({ message: '姝ｅ湪瀵煎嚭锛岃绋嶅€?..', type: 'info', duration: 2000 });
+            var self = this;
+            var params = {
+                keyword: self.search.keyword || null,
+                storeType: self.search.storeType,
+                status: self.search.status
+            };
+            ReggieUI.message({ message: '正在导出，请稍候...', type: 'info', duration: 2000 });
             exportStores(params).then(function(res) {
-                const blob = new Blob([res], { type: 'text/csv;charset=utf-8' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
+                var blob = new Blob([res], { type: 'text/csv;charset=utf-8' });
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
                 a.href = url;
                 a.download = 'store_export_' + new Date().toISOString().slice(0,10) + '.csv';
                 a.click();
                 window.URL.revokeObjectURL(url);
-                ReggieUI.success('瀵煎嚭鎴愬姛');
+                ReggieUI.success('导出成功');
             }).catch(function() {
-                ReggieUI.error('瀵煎嚭澶辫触');
+                ReggieUI.error('导出失败');
             });
         },
 
-        // ========== 鍗曡鎿嶄綔 ==========
+        // ========== 单行操作 ==========
         toggleSingleStatus: function(row) {
-            const self = this;
+            var self = this;
             updateStatus(row.tenantId, row.status).then(function(res) {
                 if (res && res.code === 1) {
-                    ReggieUI.success('鐘舵€佸凡鏇存柊');
+                    ReggieUI.success('状态已更新');
                 }
             }).catch(function() { self.loadData(); });
         },
         switchToStore: function(row) {
-            const self = this;
+            var self = this;
             switchStore(row.tenantId).then(function(res) {
                 if (res && res.code === 1) {
-                    ReggieUI.success('宸插垏鎹㈠埌闂ㄥ簵锛? + row.storeName);
+                    ReggieUI.success('已切换到门店：' + row.storeName);
                     self.loadData();
                 }
             });
         },
 
-        // ========== 璇︽儏 ==========
+        // ========== 详情 ==========
         openDetail: function(row) {
-            const self = this;
-            // 淇鐐癸細鍒楄〃鏁版嵁鍙兘涓嶅惈鍏ㄩ儴瀛楁锛岀粺涓€璧?/store/detail 鑾峰彇瀹屾暣淇℃伅
+            var self = this;
+            // 修复点：列表数据可能不含全部字段，统一走 /store/detail 获取完整信息
             getStoreDetail(row.tenantId).then(function(res) {
                 if (res && res.code === 1 && res.data) {
-                    const d = res.data;
+                    var d = res.data;
                     d.dataCompleteRate = self.calcCompleteRate(d);
                     self.detailData = d;
                     self.detailDialogVisible = true;
                 } else {
-                    ReggieUI.error('鑾峰彇闂ㄥ簵璇︽儏澶辫触');
+                    ReggieUI.error('获取门店详情失败');
                 }
             }).catch(function() {
-                ReggieUI.error('鑾峰彇闂ㄥ簵璇︽儏澶辫触');
+                ReggieUI.error('获取门店详情失败');
             });
         },
-        // 鐐瑰嚮琛屾墦寮€璇︽儏锛堟帓闄ょ偣鍑绘搷浣滄寜閽?/ 澶嶉€夋 / 鐘舵€佸紑鍏崇瓑浜や簰鍏冪礌鏃剁殑璇Е鍙戯級
+        // 点击行打开详情（排除点击操作按钮 / 复选框 / 状态开关等交互元素时的误触发）
         onRowClick: function(row, column, event) {
             if (!event || !event.target) return;
-            const t = event.target;
+            var t = event.target;
             if (t.closest('.el-button') || t.closest('.el-checkbox') || t.closest('.el-switch') || t.closest('.cell')) {
-                // 鎿嶄綔鍒?/ 閫夋嫨鍒?/ 鐘舵€佸垪鐐瑰嚮涓嶈Е鍙戣鎯咃紙cell 鍐呭彲鑳藉惈鎸夐挳锛?
+                // 操作列 / 选择列 / 状态列点击不触发详情（cell 内可能含按钮）
             }
-            // 浠呭綋鐐瑰嚮鐨勬槸涓绘暟鎹崟鍏冩牸锛堥潪鎿嶄綔/閫夋嫨/鐘舵€佸垪锛夋椂鎵撳紑璇︽儏
-            const cell = t.closest('.el-table__row td');
+            // 仅当点击的是主数据单元格（非操作/选择/状态列）时打开详情
+            var cell = t.closest('.el-table__row td');
             if (!cell) return;
-            const cls = cell.getAttribute('class') || '';
+            var cls = cell.getAttribute('class') || '';
             if (cls.indexOf('el-table-column--selection') > -1) return;
             if (cls.indexOf('crud-actions-col') > -1) return;
             if (t.closest('.el-switch')) return;
             this.openDetail(row);
         },
 
-        // ========== 缂栬緫 ==========
+        // ========== 编辑 ==========
         openEditDialog: function(row) {
-            const self = this;
+            var self = this;
             self.isCreate = false;
             self.editTenantId = row.tenantId;
             getStoreDetail(row.tenantId).then(function(res) {
                 if (res && res.code === 1 && res.data) {
-                    const d = res.data;
+                    var d = res.data;
                     self.form = {
                         storeName: d.storeName || '',
                         storeCode: d.storeCode || '',
@@ -693,11 +705,11 @@
                     self.formDialogVisible = true;
                 }
             }).catch(function() {
-                ReggieUI.error('鑾峰彇闂ㄥ簵璇︽儏澶辫触');
+                ReggieUI.error('获取门店详情失败');
             });
         },
 
-        // ========== 鏂板缓 ==========
+        // ========== 新建 ==========
         openCreateDialog: function() {
             this.isCreate = true;
             this.editTenantId = null;
@@ -716,18 +728,32 @@
             if (this.$refs.formRef) this.$refs.formRef.clearValidate();
         },
         submitForm: function() {
-            const self = this;
+            var self = this;
             self.$refs.formRef.validate(function(valid) {
                 if (!valid) return;
                 self.submitting = true;
 
-                // 澶勭悊钀ヤ笟鏃堕棿
-                const businessHours = self.form.businessHours;
+                // 处理营业时间
+                var businessHours = self.form.businessHours;
                 if (self.form.businessHoursRange && self.form.businessHoursRange.length === 2) {
                     businessHours = self.form.businessHoursRange[0] + '-' + self.form.businessHoursRange[1];
                 }
 
-                const payload = {$2};
+                var payload = {
+                    storeName: self.form.storeName,
+                    storeCode: self.form.storeCode,
+                    storeType: self.form.storeType,
+                    contactPerson: self.form.contactPerson,
+                    contactPhone: self.form.contactPhone,
+                    address: self.form.address,
+                    businessHours: businessHours,
+                    deliveryRadius: self.form.deliveryRadius,
+                    minDeliveryAmount: self.form.minDeliveryAmount,
+                    deliveryFee: self.form.deliveryFee,
+                    isDeliveryEnabled: self.form.isDeliveryEnabled,
+                    isDineInEnabled: self.form.isDineInEnabled,
+                    status: self.form.status
+                };
 
                 var apiCall;
                 if (self.isCreate) {
@@ -740,19 +766,19 @@
 
                 apiCall.then(function(res) {
                     if (res && res.code === 1) {
-                        ReggieUI.success(self.isCreate ? '闂ㄥ簵鍒涘缓鎴愬姛' : '缂栬緫鎴愬姛');
+                        ReggieUI.success(self.isCreate ? '门店创建成功' : '编辑成功');
                         self.formDialogVisible = false;
                         self.loadData();
                     } else {
-                        ReggieUI.error(res.msg || '鎿嶄綔澶辫触');
+                        ReggieUI.error(res.msg || '操作失败');
                     }
                 }).catch(function(err) {
-                    ReggieUI.error('鎿嶄綔澶辫触: ' + (err.response && err.response.data && err.response.data.msg || err.message));
+                    ReggieUI.error('操作失败: ' + (err.response && err.response.data && err.response.data.msg || err.message));
                 }).finally(function() { self.submitting = false; });
             });
         },
 
-        // ========== 鍚屾 ==========
+        // ========== 同步 ==========
         openSyncDialog: function(row) {
             this.syncTargetId = row.tenantId;
             this.syncTargetName = row.storeName;
@@ -760,33 +786,33 @@
             this.syncDialogVisible = true;
         },
         doSync: function(type) {
-            const self = this;
-            const sourceTenantId = $2;
+            var self = this;
+            var sourceTenantId = null;
             if (self.tableData.length > 0) sourceTenantId = self.tableData[0].tenantId;
             var apiMap = {
                 dishes: syncDishes({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, dishIds: null, operatorId: 1 }),
                 categories: syncCategories({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, operatorId: 1 }),
                 setmeals: syncSetmeals({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, setmealIds: null, operatorId: 1 })
             };
-            const apiCall = apiMap[type];
+            var apiCall = apiMap[type];
             if (!apiCall) return;
             self.syncing[type] = true;
             apiCall.then(function(res) {
                 if (res && res.code === 1) {
                     self.syncResult = res.data;
-                    ReggieUI.success('鍚屾瀹屾垚');
+                    ReggieUI.success('同步完成');
                 }
             }).catch(function() {
-                ReggieUI.error('鍚屾澶辫触');
+                ReggieUI.error('同步失败');
             }).finally(function() { self.syncing[type] = false; });
         },
 
-        // ========== 宸ュ叿鏂规硶 ==========
+        // ========== 工具方法 ==========
         storeTypeTag: function(type) {
             return type === 1 ? 'danger' : type === 2 ? 'success' : 'warning';
         },
         storeTypeName: function(type) {
-            const map = {$2};
+            var map = { 1: '总店', 2: '直营', 3: '加盟' };
             return map[type] || String(type);
         },
         fmtAmount: function(val) {
@@ -794,16 +820,16 @@
             if (typeof val === 'number') return val.toFixed(2);
             return Number(val).toFixed(2);
         },
-        // 淇敼鐐癸細缁熶竴绫诲瀷杞崲宸ュ叿锛岃В鍐崇粍浠跺睘鎬х被鍨嬫牎楠屽け璐ラ棶棰?
-        // 灏嗕换鎰忓€硷紙瀛楃涓?鏁板瓧/绌猴級杞崲涓?Number锛汦lProgress.percentage 蹇呴』 Number
+        // 修改点：统一类型转换工具，解决组件属性类型校验失败问题
+        // 将任意值（字符串/数字/空）转换为 Number；ElProgress.percentage 必须 Number
         toNumber: function(val) {
-            const n = Number(val);
+            var n = Number(val);
             if (isNaN(n)) return 0;
             return n;
         },
-        // 淇敼鐐癸細鍒涘缓鏃堕棿瀹夊叏鏍煎紡鍖栵紝鍏煎鍚庣杩斿洖鐨勫绉嶅舰鎬?
-        // 鍚庣 LocalDateTime(t.create_time) 缁?Jackson 搴忓垪鍖栧彲鑳戒负锛氬瓧绗︿覆 / 鏃堕棿鎴虫暟瀛?/ 鏁扮粍([骞?鏈?鏃?...]) / 瀵硅薄
-        // 鐩存帴璋冪敤 substring 鍦ㄩ潪瀛楃涓插舰鎬佷笅浼氭姏 "row.createTime.substring is not a function"锛屾澶勭粺涓€杞崲
+        // 修改点：创建时间安全格式化，兼容后端返回的多种形态
+        // 后端 LocalDateTime(t.create_time) 经 Jackson 序列化可能为：字符串 / 时间戳数字 / 数组([年,月,日,...]) / 对象
+        // 直接调用 substring 在非字符串形态下会抛 "row.createTime.substring is not a function"，此处统一转换
         formatDate: function(val) {
             if (val === null || val === undefined || val === '') return '';
             if (typeof val === 'string') return val.substring(0, 10);
@@ -815,32 +841,37 @@
             }
             return String(val).substring(0, 10);
         },
-        // 淇敼鐐癸細璇︽儏寮圭獥鐢紝淇濈暀瀹屾暣鏃ユ湡鏃堕棿锛堝勾-鏈?鏃?鏃?鍒?绉掞級
+        // 修改点：详情弹窗用，保留完整日期时间（年-月-日 时:分:秒）
         formatDateTime: function(val) {
-            if (val === null || val === undefined || val === '') return '鈥?;
+            if (val === null || val === undefined || val === '') return '—';
             if (typeof val === 'string') return val.replace('T', ' ').substring(0, 19);
             if (typeof val === 'number') return new Date(val).toISOString().replace('T', ' ').substring(0, 19);
             return String(val);
         },
-        // 淇敼鐐癸細el-progress 棰滆壊闅忓畬鍠勫害鍙樺寲锛堢豢/姗?鐏帮級锛岀粺涓€璧拌涔変护鐗?
+        // 修改点：el-progress 颜色随完善度变化（绿/橙/灰），统一走语义令牌
         progressColor: function(val) {
-            const n = this.toNumber(val);
+            var n = this.toNumber(val);
             if (n >= 80) return 'var(--color-success)';
             if (n >= 50) return 'var(--color-warning)';
             return 'var(--color-info)';
         },
-        // 淇敼鐐癸細鏍规嵁瀛楁濉啓鎯呭喌璁＄畻鏁版嵁瀹屽杽搴︼紙0-100 鏁存暟锛夛紝椹卞姩 el-progress
+        // 修改点：根据字段填写情况计算数据完善度（0-100 整数），驱动 el-progress
         calcCompleteRate: function(row) {
-            const fields = [$2];
-            const filled = $2;
-            for (let i = 0; i < fields.length; i++) {
+            var fields = [
+                row.storeName, row.storeCode, row.contactPerson, row.contactPhone,
+                row.address, row.businessHours, row.deliveryRadius,
+                row.minDeliveryAmount, row.deliveryFee,
+                row.isDeliveryEnabled, row.isDineInEnabled
+            ];
+            var filled = 0;
+            for (var i = 0; i < fields.length; i++) {
                 if (fields[i] !== null && fields[i] !== undefined && fields[i] !== '') filled++;
             }
             return Math.round((filled / fields.length) * 100);
         },
         parseBusinessHours: function(val) {
             if (!val) return null;
-            const parts = val.split('-');
+            var parts = val.split('-');
             if (parts.length === 2) return [parts[0], parts[1]];
             return null;
         }

@@ -165,7 +165,7 @@
         async fetchData(reloadStats = true) {
           this.loading = true
           const self = this
-          const params = {$2}
+          const params = {}
           try {
           const requests = [printerLogPage(params)]
           if (reloadStats) { requests.push(self.loadLogStats()) }
@@ -183,7 +183,7 @@
               if (statsRes && String(statsRes.code) === '1') {
                 const stats = statsRes.data || {}
                 // 修改点：打印类型数基于当前列表真实数据去重 printType，替代恒为 0/1 的估算假数据
-                const typeSet = {$2}
+                const typeSet = {}
                 const recs = (logRes.data && logRes.data.records) || []
                 recs.forEach(function (r) {
                   if (r.printType !== undefined && r.printType !== null && r.printType !== '') typeSet[r.printType] = true

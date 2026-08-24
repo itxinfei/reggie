@@ -279,11 +279,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
 
         // 修复堂食并发重复下单：用 Redis SETNX 原子抢占幂等令牌，防止同一桌台并发扫码重复下单
-        // 幂等键基于 tableId + userId，防止同一桌台同一用户短时间内重复提交订单
+        // 修复 P0-3：幂等键去掉 UUID（原实现拼入随机值导致每次 key 不同，Redis SETNX 防重完全失效）
         Long eatInUserId = BaseContext.getCurrentId();
         String eatInIdemKey = (eatInUserId != null ? eatInUserId.toString() : "unknown")
-                + "_" + (tableId != null ? tableId.toString() : "unknown")
-                + "_" + java.util.UUID.randomUUID().toString().substring(0, 8);
+                + "_" + (tableId != null ? tableId.toString() : "unknown");
         orders.setIdempotencyKey(eatInIdemKey);
         String lockKey = "order:eatin:idem:" + tableId + ":" + (eatInUserId != null ? eatInUserId : "unknown");
         boolean eatInLockAcquired = false;
@@ -961,6 +960,33 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 }
             }
         }
+    }
+
+    // ==================== 平台订单支持 ====================
+
+    @Override
+    public Orders getByPlatformOrder(String platformType, String platformOrderId) {
+        LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Orders::getPlatformType, platformType)
+                .eq(Orders::getPlatformOrderId, platformOrderId)
+                .eq(Orders::getIsDeleted, 0)
+                .last("LIMIT 1");
+        return this.getOne(wrapper, false);
+    }
+
+    @Override
+    public Page<Orders> platformOrderPage(int page, int pageSize, String platformType, Integer status) {
+        Page<Orders> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Orders::getIsDeleted, 0);
+        if (StringUtils.isNotBlank(platformType)) {
+            wrapper.eq(Orders::getPlatformType, platformType);
+        }
+        if (status != null) {
+            wrapper.eq(Orders::getStatus, status);
+        }
+        wrapper.orderByDesc(Orders::getOrderTime);
+        return this.page(pageParam, wrapper);
     }
 }
 

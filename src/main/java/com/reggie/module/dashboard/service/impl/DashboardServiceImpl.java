@@ -188,12 +188,12 @@ public class DashboardServiceImpl implements DashboardService {
             // User实体已添加createTime字段，按今日注册时间过滤
             LambdaQueryWrapper<User> userQw = new LambdaQueryWrapper<>();
             userQw.between(User::getCreateTime, todayStart, todayEnd);
-            int totalUsers = userService.count(userQw);
+            int totalUsers = (int) userService.count(userQw);
 
             // 有效员工数
             LambdaQueryWrapper<Employee> empQw = new LambdaQueryWrapper<>();
             empQw.eq(Employee::getStatus, 1);
-            int activeEmployees = employeeService.count(empQw);
+            int activeEmployees = (int) employeeService.count(empQw);
 
             BigDecimal completionRate = totalOrders > 0
                     ? BigDecimal.valueOf(completedOrders).divide(BigDecimal.valueOf(totalOrders), 4, RoundingMode.HALF_UP)
@@ -559,7 +559,7 @@ public class DashboardServiceImpl implements DashboardService {
         // 数据库状态：通过简单查询验证
         boolean dbOk = false;
         try {
-            int userCount = userService.count();
+            int userCount = (int) userService.count();
             dbOk = userCount >= 0;
             health.put("dbInfo", "正常 (" + userCount + " 用户)");
         } catch (Exception e) {

@@ -33,6 +33,7 @@ public class CouponTemplate implements Serializable {
     private Long id;
 
     @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     @Schema(description = "模板名称", example = "新人满减券")

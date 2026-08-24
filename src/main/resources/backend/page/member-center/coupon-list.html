@@ -198,7 +198,7 @@
       },
       computed: {
         statsCards: function() {
-          const self = this
+          var self = this
           return [
             { key: '', icon: '🎫', label: '优惠券模板', value: self.stats.totalCoupons, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: 'enabled', icon: '✅', label: '已启用', value: self.stats.enabledCount, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
@@ -210,13 +210,19 @@
       methods: {
         async init(reloadStats = true) {
           this.loading = true
-          const sv = this.searchValues || {}
-          const params = {$2}
+          var sv = this.searchValues || {}
+          var params = {
+            page: this.page,
+            pageSize: this.pageSize,
+            name: sv.name || undefined,
+            type: sv.type || undefined,
+            status: sv.status || undefined
+          }
           // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-          const requests = [couponTemplatePage(params)]
+          var requests = [couponTemplatePage(params)]
           if (reloadStats) { requests.push(this.loadCouponStats()) }
-          const results = await Promise.all(requests)
-          const couponRes = results[0]
+          var results = await Promise.all(requests)
+          var couponRes = results[0]
           if (String(couponRes.code) === '1') {
             this.tableData = couponRes.data.records || []
             this.counts = couponRes.data.total
@@ -224,7 +230,7 @@
             ReggieUI.error(couponRes.msg || '操作失败')
           }
           if (reloadStats) {
-            const statsRes = results[1]
+            var statsRes = results[1]
             if (statsRes && String(statsRes.code) === '1') {
               this.stats = statsRes.data || this.stats
             }
@@ -234,16 +240,16 @@
         async loadCouponStats() {
           try {
             // 修改点：改为调用后端聚合接口 /stats，避免 pageSize=1000 拉全量后在浏览器聚合
-            const res = await couponStats()
+            var res = await couponStats()
             if (String(res.code) === '1') {
-              return { code: 1, data: res.data  || {}}
+              return { code: 1, data: res.data || {} }
             }
           } catch (err) { console.warn('加载优惠券统计失败:', err) }
           return { code: 0 }
         },
         // stat-cards 点击
         onCardClick: function(payload) {
-          const self = this
+          var self = this
           if (payload.key === '') {
             self.activeFilter = ''
             self.searchValues = { name: '', type: '', status: '' }
@@ -313,8 +319,8 @@
         },
         submitForm() {
           if (this.submitting) return // 提交防重
-          const self = this
-          const passed = false
+          var self = this
+          var passed = false
           self.$refs.couponForm.validate(function(valid) { passed = valid })
           if (!passed) {
             ReggieUI.warning('请完善表单必填项')
@@ -348,8 +354,17 @@
           if (this.formData.validDays === '' || Number(this.formData.validDays) <= 0) {
             ReggieUI.error('请输入有效天数'); return
           }
-          const data = {$2}
-          const self = this
+          var data = {
+            name: this.formData.name,
+            type: this.formData.type,
+            conditionAmount: this.formData.conditionAmount || null,
+            discountAmount: this.formData.discountAmount || null,
+            discountRate: this.formData.discountRate || null,
+            totalCount: this.formData.totalCount,
+            validDays: this.formData.validDays,
+            status: this.formData.status
+          }
+          var self = this
           self.submitting = true
           if (this.action === 'add') {
             addCouponTemplate(data).then(res => {
@@ -377,7 +392,7 @@
           }
         },
         deleteHandle(id) {
-          const self = this
+          var self = this
           ReggieUI.confirm('此操作将永久删除该优惠券, 是否继续?', '提示', {
             confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
           }).then(function() {

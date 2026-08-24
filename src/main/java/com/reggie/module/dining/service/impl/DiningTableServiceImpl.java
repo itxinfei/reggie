@@ -8,12 +8,18 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.utils.PageUtils;
 import com.reggie.enums.DiningTableStatus;
+import com.reggie.enums.OrderStatus;
+import com.reggie.module.dining.dto.OpenTableDTO;
+import com.reggie.module.dining.dto.TransferTableDTO;
 import com.reggie.module.dining.mapper.DiningTableMapper;
 import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.model.TableArea;
 import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.module.dining.service.TableAreaService;
 import com.reggie.module.dining.vo.TableStatsVO;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.OrderService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +38,7 @@ import java.util.Set;
  * @author reggie
  * @since 2026-07-09
  */
+@Slf4j
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, DiningTable> implements DiningTableService {
@@ -39,6 +46,10 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
     /** 桌台区域服务 */
     @Autowired
     private TableAreaService tableAreaService;
+
+    /** 订单服务 */
+    @Autowired
+    private OrderService orderService;
 
     @Autowired
     private DiningTableMapper diningTableMapper;
@@ -207,6 +218,157 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
         result.put("totalTables", total);
         result.put("maxTablesArea", maxArea);
         return result;
+    }
+
+    /**
+     * 开台：将桌台状态改为占用，并绑定订单
+     * <p>
+     * 流程：
+     * 1. 校验桌台存在且属于当前租户
+     * 2. 校验桌台状态为空闲（FREE），否则不允许开台
+     * 3. 校验订单存在且属于当前租户，状态为初始态（未支付/待接单）
+     * 4. 更新桌台：状态 → OCCUPIED，绑定 currentOrderId
+     * 5. 更新订单：绑定 tableId
+     * </p>
+     *
+     * @param dto 开台请求
+     */
+    @Override
+    public void openTable(OpenTableDTO dto) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("无操作权限，租户上下文缺失");
+        }
+
+        // 1. 校验桌台
+        LambdaQueryWrapper<DiningTable> tableQw = new LambdaQueryWrapper<>();
+        tableQw.eq(DiningTable::getId, dto.getTableId())
+               .eq(DiningTable::getTenantId, tenantId);
+        DiningTable table = getOne(tableQw);
+        if (table == null) {
+            throw new CustomException("桌台不存在或无权操作");
+        }
+
+        // 2. 校验桌台状态必须为空闲
+        if (!DiningTableStatus.FREE.getValue().equals(table.getStatus())) {
+            throw new CustomException("桌台当前状态为[" + table.getStatus() + "]，无法开台");
+        }
+
+        // 3. 校验订单
+        Orders order = orderService.getById(dto.getOrderId());
+        if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+        if (!tenantId.equals(order.getTenantId())) {
+            throw new CustomException("订单不属于当前租户");
+        }
+        // 只允许初始态订单开台（待付款状态，value=1）
+        if (order.getStatus() != null && !order.getStatus().equals(OrderStatus.PENDING_PAYMENT.getValue())) {
+            throw new CustomException("订单状态为[" + order.getStatus() + "]，无法开台");
+        }
+
+        // 4. 更新桌台状态为占用，绑定订单
+        LambdaUpdateWrapper<DiningTable> tableUw = new LambdaUpdateWrapper<>();
+        tableUw.eq(DiningTable::getId, dto.getTableId())
+               .eq(DiningTable::getTenantId, tenantId)
+               .eq(DiningTable::getStatus, DiningTableStatus.FREE.getValue())
+               .set(DiningTable::getStatus, DiningTableStatus.OCCUPIED.getValue())
+               .set(DiningTable::getCurrentOrderId, dto.getOrderId());
+        boolean tableOk = update(tableUw);
+        if (!tableOk) {
+            throw new CustomException("桌台状态已被变更，请刷新后重试");
+        }
+
+        // 5. 更新订单绑定桌台
+        LambdaUpdateWrapper<Orders> orderUw = new LambdaUpdateWrapper<>();
+        orderUw.eq(Orders::getId, dto.getOrderId())
+               .eq(Orders::getTenantId, tenantId)
+               .set(Orders::getTableId, dto.getTableId());
+        orderService.update(orderUw);
+
+        log.info("开台成功: tableId={}, orderId={}", dto.getTableId(), dto.getOrderId());
+    }
+
+    /**
+     * 转台：订单从原桌台迁移到新桌台
+     * <p>
+     * 流程：
+     * 1. 校验原桌台存在且为占用状态，且有绑定订单
+     * 2. 校验目标桌台存在且为空闲状态
+     * 3. 将原桌台状态改为空闲，清空 currentOrderId
+     * 4. 将目标桌台状态改为占用，绑定同一订单
+     * </p>
+     *
+     * @param dto 转台请求
+     */
+    @Override
+    public void transferTable(TransferTableDTO dto) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("无操作权限，租户上下文缺失");
+        }
+
+        // 1. 校验原桌台
+        LambdaQueryWrapper<DiningTable> fromQw = new LambdaQueryWrapper<>();
+        fromQw.eq(DiningTable::getId, dto.getFromTableId())
+              .eq(DiningTable::getTenantId, tenantId);
+        DiningTable fromTable = getOne(fromQw);
+        if (fromTable == null) {
+            throw new CustomException("原桌台不存在或无权操作");
+        }
+        if (!DiningTableStatus.OCCUPIED.getValue().equals(fromTable.getStatus())) {
+            throw new CustomException("原桌台当前状态为[" + fromTable.getStatus() + "]，无法转台");
+        }
+        if (fromTable.getCurrentOrderId() == null) {
+            throw new CustomException("原桌台未绑定订单，无法转台");
+        }
+
+        // 2. 校验目标桌台
+        LambdaQueryWrapper<DiningTable> toQw = new LambdaQueryWrapper<>();
+        toQw.eq(DiningTable::getId, dto.getToTableId())
+            .eq(DiningTable::getTenantId, tenantId);
+        DiningTable toTable = getOne(toQw);
+        if (toTable == null) {
+            throw new CustomException("目标桌台不存在或无权操作");
+        }
+        if (!DiningTableStatus.FREE.getValue().equals(toTable.getStatus())) {
+            throw new CustomException("目标桌台当前状态为[" + toTable.getStatus() + "]，无法转入");
+        }
+
+        Long orderId = fromTable.getCurrentOrderId();
+
+        // 3. 原桌台 → 空闲，清空绑定
+        LambdaUpdateWrapper<DiningTable> fromUw = new LambdaUpdateWrapper<>();
+        fromUw.eq(DiningTable::getId, dto.getFromTableId())
+              .eq(DiningTable::getTenantId, tenantId)
+              .eq(DiningTable::getStatus, DiningTableStatus.OCCUPIED.getValue())
+              .set(DiningTable::getStatus, DiningTableStatus.FREE.getValue())
+              .set(DiningTable::getCurrentOrderId, null);
+        boolean fromOk = update(fromUw);
+        if (!fromOk) {
+            throw new CustomException("原桌台状态已被变更，请刷新后重试");
+        }
+
+        // 4. 目标桌台 → 占用，绑定订单
+        LambdaUpdateWrapper<DiningTable> toUw = new LambdaUpdateWrapper<>();
+        toUw.eq(DiningTable::getId, dto.getToTableId())
+            .eq(DiningTable::getTenantId, tenantId)
+            .eq(DiningTable::getStatus, DiningTableStatus.FREE.getValue())
+            .set(DiningTable::getStatus, DiningTableStatus.OCCUPIED.getValue())
+            .set(DiningTable::getCurrentOrderId, orderId);
+        boolean toOk = update(toUw);
+        if (!toOk) {
+            throw new CustomException("目标桌台状态已被变更，请刷新后重试");
+        }
+
+        // 5. 更新订单的 tableId
+        LambdaUpdateWrapper<Orders> orderUw = new LambdaUpdateWrapper<>();
+        orderUw.eq(Orders::getId, orderId)
+               .eq(Orders::getTenantId, tenantId)
+               .set(Orders::getTableId, dto.getToTableId());
+        orderService.update(orderUw);
+
+        log.info("转台成功: fromTableId={}, toTableId={}, orderId={}", dto.getFromTableId(), dto.getToTableId(), orderId);
     }
 }
 

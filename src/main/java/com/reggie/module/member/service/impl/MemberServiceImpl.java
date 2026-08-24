@@ -13,6 +13,7 @@ import com.reggie.enums.PointsRecordType;
 import com.reggie.module.member.service.MemberLevelService;
 import com.reggie.module.member.service.MemberService;
 import com.reggie.module.member.service.PointsRecordService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
  * @author reggie
  * @since 2026-07-09
  */
+@Slf4j
 @Service
 public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> implements MemberService {
 
@@ -141,14 +143,23 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         record.setBizId(bizId);
         pointsRecordService.save(record);
 
-        // 检查是否升级等级
+        // 检查是否升级等级（CAS：条件包含当前 levelId，避免并发升级覆盖）
         MemberLevel newLevel = memberLevelService.findLevelByPoints(updatedMember.getPoints());
-        if (newLevel != null && (updatedMember.getLevelId() == null || !updatedMember.getLevelId().equals(newLevel.getId()))) {
+        if (newLevel != null
+                && (updatedMember.getLevelId() == null || !updatedMember.getLevelId().equals(newLevel.getId()))) {
             LambdaUpdateWrapper<Member> levelUpdate = new LambdaUpdateWrapper<>();
             levelUpdate.eq(Member::getId, memberId)
                     .set(Member::getLevelId, newLevel.getId())
                     .set(Member::getUpdateTime, LocalDateTime.now());
-            update(levelUpdate);
+            // 修复 P1-1：添加 CAS 条件，防止并发升级时覆盖他人已更新的等级
+            if (updatedMember.getLevelId() != null) {
+                levelUpdate.eq(Member::getLevelId, updatedMember.getLevelId());
+            } else {
+                levelUpdate.isNull(Member::getLevelId);
+            }
+            boolean updated = baseMapper.update(new Member(), levelUpdate) > 0;
+            log.info("会员等级更新: memberId={}, oldLevel={}, newLevel={}, updated={}",
+                    memberId, updatedMember.getLevelId(), newLevel.getId(), updated);
         }
     }
 

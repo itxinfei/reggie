@@ -653,7 +653,7 @@
                 loadUsers: function(page) {
                     const self = this;
                     self.userPage = page;
-                    const params = {$2};
+                    const params = {};
                     if (self.userSearch.name) params.name = self.userSearch.name;
                     if (self.userSearch.phone) params.phone = self.userSearch.phone;
 
@@ -709,7 +709,7 @@
                 loadPushUsers: function(page) {
                     const self = this;
                     self.pushUserPage = page;
-                    const params = {$2};
+                    const params = {};
                     if (self.pushUserSearch.name) params.name = self.pushUserSearch.name;
                     if (self.pushUserSearch.phone) params.phone = self.pushUserSearch.phone;
 
@@ -774,17 +774,17 @@
                     self.smsForm.result = null;
 
                     // 构造模板参数，用户名为占位符值
-                    const params = {$2};
+                    const params = {};
                     if (self.smsForm.content.indexOf('${') < 0) {
                         // 无占位符，直接作为模板内容发送
                         params = { content: self.smsForm.content };
                     }
 
-                    const data = {$2};
+                    const data = {};
 
                     // 先用模板渲染方式：直接将输入内容作为模板
                     // 修改点：新增简单短信发送，无需依赖阿里云模板
-                    const sendData = {$2};
+                    const sendData = {};
 
                     notificationApi.sendSimpleMessage(sendData).then(function(res) {
                         if (res && res.code === 1 && res.data) {
@@ -826,7 +826,7 @@
                     var userIds = self.pushSelectedUsers.map(function(u) { return u.id; });
 
                     // 修改点：修正推送数据格式，title和content提到顶层（后端sendSimpleMessage直接读取）
-                    const data = {$2};
+                    const data = {};
 
                     notificationApi.sendSimpleMessage(data).then(function(res) {
                         if (res && res.code === 1 && res.data) {
@@ -849,7 +849,7 @@
                 loadRecords: function(page) {
                     const self = this;
                     self.recordPage = page;
-                    const params = {$2};
+                    const params = {};
                     if (self.recordForm.status !== '') params.status = self.recordForm.status;
                     if (self.recordForm.channel) params.channel = self.recordForm.channel;
 
@@ -894,7 +894,7 @@
                 loadTemplates: function(page) {
                     const self = this;
                     self.templatePage = page;
-                    const params = {$2};
+                    const params = {};
                     if (self.templateFilter.bizType) params.bizType = self.templateFilter.bizType;
 
                     notificationApi.getTemplatePage(params).then(function(res) {
@@ -973,17 +973,17 @@
 
                 // ==================== 工具方法 ====================
                 bizTypeName: function(type) {
-                    const map = {$2};
+                    const map = {};
                     return map[type] || '未知类型';
                 },
 
                 channelName: function(ch) {
-                    const map = {$2};
+                    const map = {};
                     return map[ch] || '未知';
                 },
 
                 recordStatusName: function(st) {
-                    const map = {$2};
+                    const map = {};
                     return map[st] || '未知';
                 },
 

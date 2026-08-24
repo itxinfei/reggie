@@ -58,9 +58,12 @@ public class AdminGuardAspect {
         }
 
         String roleKey = (String) request.getAttribute("roleKey");
-        // 兜底：MockMvc 测试未设置 roleKey 时，默认超级管理员（员工会话即视为超级管理员）
+        // 修复 P0-4：roleKey 为空时直接拒绝（原兜底默认 SUPER_ADMIN 为权限提升漏洞）。
+        // MockMvc 测试需显式通过 .addAttribute("roleKey", "SUPER_ADMIN") 设置角色标识。
         if (roleKey == null || roleKey.isEmpty()) {
-            roleKey = ADMIN_ROLE_KEY;
+            log.warn("[管理员鉴权] roleKey 为空，拒绝访问：employeeId={}, uri={}",
+                employeeId, request.getRequestURI());
+            return R.error("管理员权限校验失败，请重新登录");
         }
         if (!ADMIN_ROLE_KEY.equals(roleKey)) {
             log.warn("[管理员鉴权] 非管理员访问受限接口被拒绝：employeeId={}, roleKey={}", employeeId, roleKey);

@@ -20,6 +20,12 @@ const getTable = (id) => $axios({ url: `/api/dining/table/${id}`, method: 'get' 
 const updateTableStatus = (params) => $axios({ url: '/api/dining/table/status', method: 'put', data: params })
 const tableQrcode = (id) => $axios({ url: `/api/dining/table/qrcode/${id}`, method: 'get' })
 const tableInfo = (id) => $axios({ url: `/api/dining/table/${id}`, method: 'get' })
+// 修改点：开台（绑定订单到桌台）
+const openTable = (data) => $axios({ url: '/api/dining/table/open', method: 'post', data })
+// 修改点：一键开台（建占位单并绑定）
+const openTableWithOrder = (params) => $axios({ url: '/api/dining/table/openWithOrder', method: 'post', params })
+// 修改点：转台（订单从原桌台迁移到新桌台）
+const transferTable = (data) => $axios({ url: '/api/dining/table/transfer', method: 'post', data })
 
 const queuePage = (params) => $axios({ url: '/api/dining/queue/page', method: 'get', params })
 const queueTake = (params) => $axios({ url: '/api/dining/queue/take', method: 'post', data: params })

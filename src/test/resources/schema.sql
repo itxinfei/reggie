@@ -199,18 +199,24 @@ CREATE TABLE orders (
   idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等键',
   stock_refunded int NULL DEFAULT 0 COMMENT '已退库存数量',
   used_coupon_id bigint NULL DEFAULT NULL COMMENT '本单使用的优惠券ID（用户优惠券记录ID），未使用为 NULL',
+  platform_type varchar(32) NULL DEFAULT NULL COMMENT '平台来源 MEITUAN/ELEME/DOUYIN/SELF/OTHER',
+  platform_order_id varchar(128) NULL DEFAULT NULL COMMENT '平台订单号(用于去重)',
+  platform_shop_id varchar(128) NULL DEFAULT NULL COMMENT '平台侧门店ID',
+  platform_raw longtext NULL COMMENT '平台原始订单JSON(用于排查)',
   create_time datetime NOT NULL COMMENT '创建时间',
   update_time datetime NOT NULL COMMENT '更新时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建人',
   update_user bigint NULL DEFAULT NULL COMMENT '修改人',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '是否删除',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
+  version int NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
   PRIMARY KEY (id)
 );
 CREATE INDEX idx_order_user ON orders(user_id, order_time);
 CREATE INDEX idx_order_number ON orders(number);
 CREATE INDEX idx_order_status ON orders(status);
 CREATE INDEX idx_order_tenant ON orders(tenant_id);
+CREATE UNIQUE INDEX uq_orders_platform ON orders(tenant_id, platform_type, platform_order_id);
 
 -- ==================== 订单明细表 ====================
 CREATE TABLE order_detail (
@@ -459,3 +465,26 @@ CREATE TABLE store_sync_log (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
+
+-- ==================== 外卖平台接入配置 ====================
+DROP TABLE IF EXISTS platform_config;
+CREATE TABLE platform_config (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  platform_type varchar(32) NOT NULL COMMENT '平台类型 MEITUAN/ELEME/DOUYIN/SELF/OTHER',
+  platform_name varchar(128) NULL DEFAULT NULL COMMENT '平台展示名称',
+  shop_id varchar(128) NULL DEFAULT NULL COMMENT '平台侧门店ID',
+  app_key varchar(512) NULL DEFAULT NULL COMMENT '应用标识(加密)',
+  app_secret varchar(512) NULL DEFAULT NULL COMMENT '应用密钥(加密)',
+  access_token varchar(512) NULL DEFAULT NULL COMMENT '访问令牌(加密)',
+  enabled int NOT NULL DEFAULT 1 COMMENT '是否启用 0停用 1启用',
+  sync_scope int NOT NULL DEFAULT 1 COMMENT '同步范围位标记 1订单2商品4库存8营业状态',
+  remark varchar(500) NULL DEFAULT NULL COMMENT '备注',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_platform_type_shop ON platform_config(platform_type, shop_id);
+CREATE INDEX idx_platform_tenant ON platform_config(tenant_id);
+

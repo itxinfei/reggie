@@ -9,6 +9,7 @@ import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.CreateReservationDTO;
 import com.reggie.common.CustomException;
 import com.reggie.module.dining.model.Reservation;
+import com.reggie.common.LogMaskUtils;
 import com.reggie.module.dining.service.ReservationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -103,7 +104,7 @@ public class ReservationController {
     @Operation(summary = "新增预订", description = "创建新的预订记录，支持指定桌台和人数")
     public R<Reservation> create(@Valid @RequestBody CreateReservationDTO dto) {
         log.info("新增预订: customerName={}, phone={}", dto.getCustomerName(),
-            dto.getPhone().replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2"));
+            LogMaskUtils.maskPhone(dto.getPhone()));
         Reservation r = reservationService.createReservation(
             dto.getCustomerName(), dto.getPhone(), dto.getReservedTime(),
             dto.getSeatCount(), dto.getTableId(), dto.getRemark());

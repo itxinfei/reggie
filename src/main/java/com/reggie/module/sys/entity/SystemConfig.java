@@ -1,8 +1,10 @@
 package com.reggie.module.sys.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
@@ -33,6 +35,7 @@ public class SystemConfig implements Serializable {
     private Long id;
 
     @Schema(description = "租户ID（NULL表示全局配置）", example = "1")
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     @Schema(description = "配置键", example = "order.auto_cancel_minutes", required = true)

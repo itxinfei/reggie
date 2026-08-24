@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>鎬婚儴鎺у埗鍙?- 鐟炲悏澶栧崠绠＄悊绔?/title>
+    <title>总部控制台 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
     <script src="../../plugins/echarts/echarts.min.js"></script>
     <style>
-        /* ========== 鍩虹閲嶇疆 ========== */
+        /* ========== 基础重置 ========== */
         html, body {
             height: 100%; margin: 0; padding: 0;
             overflow-y: auto; overflow-x: hidden;
@@ -25,18 +25,18 @@
             min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%;
         }
 
-        /* ========== KPI 鍗＄墖锛堜娇鐢?components-stats-card.css 缁熶竴鏍峰紡锛?========== */
+        /* ========== KPI 卡片（使用 components-stats-card.css 统一样式） ========== */
         .stats-cards {
             display: grid; grid-template-columns: repeat(4, 1fr);
             gap: 20px; margin-bottom: 24px;
         }
 
-        /* ========== 鍥捐〃 + 鎺掕 鍙屾爮 ========== */
+        /* ========== 图表 + 排行 双栏 ========== */
         .content-grid {
             display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;
         }
 
-        /* ========== 鍥捐〃闈㈡澘 ========== */
+        /* ========== 图表面板 ========== */
         .chart-panel {
             padding: 24px;
             display: flex; flex-direction: column; min-width: 0;
@@ -50,7 +50,7 @@
         .panel-sub { font-size:var(--font-size-xs); color: var(--color-info); margin: -8px 0 12px; }
         .chart-box { width: 100%; min-height: 400px; flex: 1; }
 
-        /* ========== 闂ㄥ簵鎺掕 ========== */
+        /* ========== 门店排行 ========== */
         .ranking-panel {
             padding: 24px; min-width: 0;
         }
@@ -89,22 +89,22 @@
         .rank-amount { font-size:var(--font-size-sm); color: var(--color-danger); font-weight: 600; }
         .rank-list { list-style: none; padding: 0; margin: 0; max-height: 372px; overflow-y: auto; }
 
-        /* ========== 绌虹姸鎬?========== */
+        /* ========== 空状态 ========== */
         .empty-state {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 80px 20px; color: var(--el-border-base); text-align: center;
         }
-        .empty-state .empty-icon { font-size: var(--font-size-4xl); margin-bottom: 16px; opacity: 0.45; }
+        .empty-state .empty-icon { font-size: 56px; margin-bottom: 16px; opacity: 0.45; }
         .empty-state .empty-text { font-size:var(--font-size-md); margin-bottom: 8px; }
         .empty-state .empty-hint { font-size:var(--font-size-xs); opacity: 0.7; }
 
-        /* ========== 鎺掕椤佃剼 ========== */
+        /* ========== 排行页脚 ========== */
         .ranking-footer {
             margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--el-bg-light);
             font-size:var(--font-size-xs); color: var(--color-info); text-align: center;
         }
 
-        /* ========== 鍝嶅簲寮?========== */
+        /* ========== 响应式 ========== */
         @media (max-width: 1200px) {
             .container { padding: 16px 20px 20px !important; }
             .stats-cards { grid-template-columns: repeat(2, 1fr); gap: 14px; }
@@ -122,59 +122,59 @@
     </style>
 </head>
 <body>
-<!-- 閿洏鐢ㄦ埛锛氳烦杞埌涓诲唴瀹癸紙WCAG 2.4.1锛?-->
-<a href="#main-content" class="skip-link">璺宠浆鍒颁富鍐呭</a>
+<!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="store-dashboard" id="store-dash-app" v-loading="loading">
-    <div class="container" id="main-content" role="main" aria-label="椤甸潰涓昏鍐呭">
-      <!-- 椤靛ご锛氭爣棰?+ 鍓爣棰橈紙涓庡叏绔?ds-page-header 瑙勮寖涓€鑷达級 -->
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">鎬婚儴鎺у埗鍙?/h1>
-          <p class="ds-page-header__subtitle">鏌ョ湅闂ㄥ簵缁忚惀鎬昏</p>
+          <h1 class="ds-page-header__title" id="page-title">总部控制台</h1>
+          <p class="ds-page-header__subtitle">查看门店经营总览</p>
         </div>
         <div class="ds-page-header__actions"></div>
       </header>
 
-        <!-- ========== KPI 鎸囨爣鍗＄墖 ========== -->
+        <!-- ========== KPI 指标卡片 ========== -->
         <div class="stats-cards" v-if="dashboard">
             <div class="stat-card primary">
-                <div class="stat-icon">馃彧</div>
-                <div class="stat-label">闂ㄥ簵鎬绘暟</div>
+                <div class="stat-icon">🏪</div>
+                <div class="stat-label">门店总数</div>
                 <div class="stat-value">{{ dashboard.totalStores || 0 }}</div>
-                <div class="sub">杩愯惀涓棬搴?/div>
+                <div class="sub">运营中门店</div>
             </div>
             <div class="stat-card success">
-                <div class="stat-icon">馃搵</div>
-                <div class="stat-label">浠婃棩鎬昏鍗?/div>
+                <div class="stat-icon">📋</div>
+                <div class="stat-label">今日总订单</div>
                 <div class="stat-value">{{ dashboard.todayTotalOrders || 0 }}</div>
-                <div class="sub">鍏ㄩ儴闂ㄥ簵璁㈠崟姹囨€?/div>
+                <div class="sub">全部门店订单汇总</div>
             </div>
             <div class="stat-card warning">
-                <div class="stat-icon">馃挵</div>
-                <div class="stat-label">浠婃棩鎬昏惀鏀?/div>
-                <div class="stat-value">楼{{ formatMoney(dashboard.todayTotalAmount) }}</div>
-                <div class="sub">瀹㈠崟浠?楼{{ formatMoney(dashboard.avgOrderAmount) }}</div>
+                <div class="stat-icon">💰</div>
+                <div class="stat-label">今日总营收</div>
+                <div class="stat-value">¥{{ formatMoney(dashboard.todayTotalAmount) }}</div>
+                <div class="sub">客单价 ¥{{ formatMoney(dashboard.avgOrderAmount) }}</div>
             </div>
             <div class="stat-card info">
-                <div class="stat-icon">馃懁</div>
-                <div class="stat-label">浠婃棩鏂板鐢ㄦ埛</div>
+                <div class="stat-icon">👤</div>
+                <div class="stat-label">今日新增用户</div>
                 <div class="stat-value">{{ dashboard.todayNewUsers || 0 }}</div>
-                <div class="sub">鍏ㄥ钩鍙版柊娉ㄥ唽鐢ㄦ埛</div>
+                <div class="sub">全平台新注册用户</div>
             </div>
         </div>
 
-        <!-- ========== 鍥捐〃 + 鎺掕 鍙屾爮 ========== -->
+        <!-- ========== 图表 + 排行 双栏 ========== -->
         <div class="content-grid">
-            <!-- 闂ㄥ簵钀ユ敹鏌辩姸鍥?-->
+            <!-- 门店营收柱状图 -->
             <div class="chart-panel">
-                <div class="panel-title">馃搳 鍚勯棬搴楄惀鏀跺姣旓紙浠婃棩锛?/div>
-                <div class="panel-sub">浠呭睍绀鸿鍗曢噺鍓?10 鍚嶉棬搴?路 瀹屾暣姒滃崟瑙佸彸渚ф帓琛?/div>
+                <div class="panel-title">📊 各门店营收对比（今日）</div>
+                <div class="panel-sub">仅展示订单量前 10 名门店 · 完整榜单见右侧排行</div>
                 <div class="chart-box" id="storeBarChart"></div>
             </div>
 
-            <!-- 闂ㄥ簵鎺掕 -->
+            <!-- 门店排行 -->
             <div class="ranking-panel chart-panel">
-                <div class="panel-title">馃弳 闂ㄥ簵瀹炴椂鎺掕</div>
+                <div class="panel-title">🏆 门店实时排行</div>
                 <div v-if="dashboard && dashboard.storeRanking && dashboard.storeRanking.length > 0">
                     <ul class="rank-list">
                         <li class="rank-item" v-for="(store, idx) in dashboard.storeRanking" :key="store.tenantId">
@@ -191,17 +191,17 @@
                                 <div class="rank-bar-fill" :style="{ width: rankBarWidth(idx) }"></div>
                             </div>
                             <div class="rank-stats">
-                                <div class="rank-orders">{{ store.todayOrders || 0 }} 鍗?/div>
-                                <div class="rank-amount">楼{{ formatMoney(store.todayAmount) }}</div>
+                                <div class="rank-orders">{{ store.todayOrders || 0 }} 单</div>
+                                <div class="rank-amount">¥{{ formatMoney(store.todayAmount) }}</div>
                             </div>
                         </li>
                     </ul>
-                    <div class="ranking-footer">鍏?{{ dashboard.storeRanking.length }} 瀹堕棬搴?路 鎸変粖鏃ヨ鍗曢噺鎺掑簭</div>
+                    <div class="ranking-footer">共 {{ dashboard.storeRanking.length }} 家门店 · 按今日订单量排序</div>
                 </div>
                 <div v-else class="empty-state">
-                    <div class="empty-icon">馃摥</div>
-                    <div class="empty-text">鏆傛棤闂ㄥ簵鏁版嵁</div>
-                    <div class="empty-hint">璇峰厛鍒涘缓闂ㄥ簵骞跺畬鎴愰厤缃?/div>
+                    <div class="empty-icon">📭</div>
+                    <div class="empty-text">暂无门店数据</div>
+                    <div class="empty-hint">请先创建门店并完成配置</div>
                 </div>
             </div>
         </div>
@@ -218,8 +218,8 @@
 <script src="../../api/store.js"></script>
 <script src="../../js/components.js"></script>
 <script>
-  // 鍥捐〃璇箟鑹茬粺涓€寮曠敤鍏ㄥ眬 window.RgPalette锛坈omponents.js 浠?tokens.css 杩愯鏃惰В鏋愶紝
-  // canvas 鏃犳硶浣跨敤 CSS 鍙橀噺锛孯gPalette 涓?JS 渚у敮涓€棰滆壊鏉ユ簮锛夛紱澶氳壊绯诲垪鏁版嵁鑹蹭繚鐣欏浘琛ㄨ皟鑹叉澘
+  // 图表语义色统一引用全局 window.RgPalette（components.js 从 tokens.css 运行时解析，
+  // canvas 无法使用 CSS 变量，RgPalette 为 JS 侧唯一颜色来源）；多色系列数据色保留图表调色板
   new Vue({
     el: '#store-dash-app',
     data: {
@@ -228,8 +228,8 @@
         barChart: null,
         resizeHandler: null,
         lastUpdated: null,
-        brandColor: RgPalette.brand, // 涓?--color-brand-500 涓€鑷达紙CH 瀹氫箟瑙佽剼鏈《閮級
-        topN: 10 // 鏌辩姸鍥句粎灞曠ず璁㈠崟閲忓墠 N 鍚嶏紝閬垮厤闂ㄥ簵杩囧鏃舵嫢鎸?
+        brandColor: RgPalette.brand, // 与 --color-brand-500 一致（CH 定义见脚本顶部）
+        topN: 10 // 柱状图仅展示订单量前 N 名，避免门店过多时拥挤
     },
     created() {
         this.loadDashboard();
@@ -244,39 +244,40 @@
     },
     methods: {
         loadDashboard() {
-            const self = this;
+            var self = this;
             getDashboardOverview().then(res => {
                 if (res.code === 1) {
                     self.dashboard = res.data;
                     self.lastUpdated = new Date();
                     self.$nextTick(() => { self.renderBarChart(); });
                 } else {
-                    ReggieUI.error(res.msg || '鍔犺浇鏁版嵁澶辫触');
+                    ReggieUI.error(res.msg || '加载数据失败');
                 }
             }).catch(err => {
-                ReggieUI.error('鍔犺浇澶辫触锛? + (err.message || '缃戠粶寮傚父'));
+                ReggieUI.error('加载失败：' + (err.message || '网络异常'));
             }).finally(() => { self.loading = false; });
         },
         renderBarChart() {
-            const self = this;
+            var self = this;
             if (!self.dashboard || !self.dashboard.storeRanking) return;
-            const stores = self.dashboard.storeRanking.slice(0, self.topN);
-            const dom = document.getElementById('storeBarChart');
+            var stores = self.dashboard.storeRanking.slice(0, self.topN);
+            var dom = document.getElementById('storeBarChart');
             if (!dom) return;
             if (!this.barChart) this.barChart = echarts.init(dom);
-            const hasData = stores.length > 0;
-            var names = hasData ? stores.map(function(s) { return s.storeName; }) : ['鏆傛棤鏁版嵁'];
+            var hasData = stores.length > 0;
+            var names = hasData ? stores.map(function(s) { return s.storeName; }) : ['暂无数据'];
             var orders = hasData ? stores.map(function(s) { return s.todayOrders || 0; }) : [0];
             var amounts = hasData ? stores.map(function(s) { return s.todayAmount || 0; }) : [0];
-            // 淇敼鐐癸細鍗忚皟閰嶈壊锛堝搧鐗岄噾涓轰富 + 钃?闈?缁?绱?姗欒緟锛夛紝閬垮厤鍓嶅嚑鏍圭孩姗欏儚鎶ラ敊
-            const colors = [$2];
+            // 修改点：协调配色（品牌金为主 + 蓝/青/绿/紫/橙辅），避免前几根红橙像报错
+            var colors = [RgPalette.brand, RgPalette.seriesBlue, RgPalette.seriesSky, RgPalette.seriesGreen, RgPalette.seriesViolet,
+                          RgPalette.seriesOrange, RgPalette.seriesCyan, RgPalette.seriesMagenta, RgPalette.seriesGreen2, RgPalette.seriesPink];
 
-            // 闂ㄥ簵鍚嶈繃闀挎椂鎴柇锛岄伩鍏?x 杞存爣绛炬孩鍑洪噸鍙?
+            // 门店名过长时截断，避免 x 轴标签溢出重叠
             function truncate(name) {
                 if (!name) return '';
-                return name.length > 6 ? name.substring(0, 6) + '鈥? : name;
+                return name.length > 6 ? name.substring(0, 6) + '…' : name;
             }
-            const labels = names.map(truncate);
+            var labels = names.map(truncate);
 
             this.barChart.setOption({
                 color: colors,
@@ -285,15 +286,15 @@
                     backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
                     textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                     formatter: function(params) {
-                        const html = '<b>' + params[0].axisValue + '</b><br/>';
+                        var html = '<b>' + params[0].axisValue + '</b><br/>';
                         params.forEach(function(p) {
-                            const val = p.seriesName === '钀ユ敹' ? '楼' + Number(p.value).toFixed(2) : p.value + ' 鍗?;
-                            html += p.marker + ' ' + p.seriesName + '锛?b>' + val + '</b><br/>';
+                            var val = p.seriesName === '营收' ? '¥' + Number(p.value).toFixed(2) : p.value + ' 单';
+                            html += p.marker + ' ' + p.seriesName + '：<b>' + val + '</b><br/>';
                         });
                         return html;
                     }
                 },
-                legend: { data: ['璁㈠崟鏁?, '钀ユ敹'], bottom: 8, textStyle: { color: RgPalette.textRegular, fontSize: 13 } },
+                legend: { data: ['订单数', '营收'], bottom: 8, textStyle: { color: RgPalette.textRegular, fontSize: 13 } },
                 grid: { left: 55, right: 55, top: 20, bottom: 56 },
                 xAxis: {
                     type: 'category', data: labels,
@@ -305,17 +306,17 @@
                     }
                 },
                 yAxis: [
-                    { type: 'value', name: '璁㈠崟閲?鍗?', nameTextStyle: { color: RgPalette.info, fontSize: 12 },
+                    { type: 'value', name: '订单量(单)', nameTextStyle: { color: RgPalette.info, fontSize: 12 },
                       axisLabel: { color: RgPalette.info, fontSize: 12 },
                       splitLine: { lineStyle: { color: RgPalette.borderLighter2, type: 'dashed' } },
                       axisLine: { show: false }, axisTick: { show: false } },
-                    { type: 'value', name: '钀ユ敹(鍏?', nameTextStyle: { color: RgPalette.info, fontSize: 12 },
-                      axisLabel: { color: RgPalette.info, fontSize: 12, formatter: '楼{value}' },
+                    { type: 'value', name: '营收(元)', nameTextStyle: { color: RgPalette.info, fontSize: 12 },
+                      axisLabel: { color: RgPalette.info, fontSize: 12, formatter: '¥{value}' },
                       splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false } }
                 ],
                 series: [
                     {
-                        name: '璁㈠崟鏁?, type: 'bar', data: orders,
+                        name: '订单数', type: 'bar', data: orders,
                         barWidth: 28, barGap: '20%',
                         itemStyle: {
                             borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0],
@@ -324,13 +325,13 @@
                         label: { show: hasData, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c}' }
                     },
                     {
-                        name: '钀ユ敹', type: 'line', yAxisIndex: 1, data: amounts,
+                        name: '营收', type: 'line', yAxisIndex: 1, data: amounts,
                         smooth: true, symbol: 'emptyCircle', symbolSize: 8,
                         lineStyle: { color: RgPalette.brand, width: 3 },
                         itemStyle: { color: RgPalette.brand, borderColor: RgPalette.white, borderWidth: 2 },
                         label: {
                             show: hasData, position: 'top', fontSize: 12, fontWeight: 700, color: RgPalette.brandDark,
-                            formatter: function(p) { return '楼' + Number(p.value).toFixed(0); }
+                            formatter: function(p) { return '¥' + Number(p.value).toFixed(0); }
                         }
                     }
                 ]
@@ -338,11 +339,11 @@
         },
         rankBarWidth(idx) {
             if (!this.dashboard || !this.dashboard.storeRanking || !this.dashboard.storeRanking.length) return '0%';
-            const maxOrders = this.dashboard.storeRanking[0].todayOrders || 1;
-            const orders = this.dashboard.storeRanking[idx].todayOrders || 0;
+            var maxOrders = this.dashboard.storeRanking[0].todayOrders || 1;
+            var orders = this.dashboard.storeRanking[idx].todayOrders || 0;
             return Math.max((orders / maxOrders * 100), 8) + '%';
         },
-        // 淇敼鐐癸細澶嶇敤鍏ㄥ眬 RgFormat.formatMoney锛坈omponents.js 宸叉寕杞斤級锛屼笉鍐嶉噸澶嶅疄鐜?formatAmount
+        // 修改点：复用全局 RgFormat.formatMoney（components.js 已挂载），不再重复实现 formatAmount
         formatMoney(val) {
             return (window.RgFormat && window.RgFormat.formatMoney)
                 ? window.RgFormat.formatMoney(val)

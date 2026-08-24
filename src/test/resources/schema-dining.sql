@@ -22,7 +22,7 @@ CREATE TABLE dining_area (
 );
 
 -- DiningTable entity (table name from class: dining_table)
--- Columns: id, tenantId, areaId, name, seatCount, status, minAmount, qrCodeUrl, sort, createdTime, updateTime
+-- Columns: id, tenantId, areaId, name, seatCount, status, minAmount, qrCodeUrl, currentOrderId, sort, createdTime, updateTime
 -- areaName is @TableField(exist=false), not persisted
 CREATE TABLE dining_table (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -33,6 +33,7 @@ CREATE TABLE dining_table (
   status varchar(20) NULL DEFAULT NULL COMMENT '状态 FREE/OCCUPIED/RESERVED/CLEANING',
   min_amount decimal(10,2) NULL DEFAULT NULL COMMENT '最低消费',
   qr_code_url varchar(255) NULL DEFAULT NULL COMMENT '二维码URL',
+  current_order_id bigint NULL DEFAULT NULL COMMENT '当前关联订单ID（开台后绑定）',
   sort int NULL DEFAULT 0 COMMENT '排序',
   create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',

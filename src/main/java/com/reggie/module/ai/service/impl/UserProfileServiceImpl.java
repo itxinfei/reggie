@@ -412,14 +412,14 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
         LambdaQueryWrapper<AIMessageRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AIMessageRecord::getUserId, userId)
                 .eq(AIMessageRecord::getRole, "user");
-        return Math.max(aiMessageRecordMapper.selectCount(wrapper) / 2, 0);
+        return Math.max(aiMessageRecordMapper.selectCount(wrapper).intValue() / 2, 0);
     }
 
     private int countUserFeedbacks(Long userId) {
         LambdaQueryWrapper<AIMessageRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AIMessageRecord::getUserId, userId)
                 .isNotNull(AIMessageRecord::getFeedback);
-        return (int) aiMessageRecordMapper.selectCount(wrapper);
+        return aiMessageRecordMapper.selectCount(wrapper).intValue();
     }
 
     private BigDecimal calculateConfidence(UserProfile profile) {

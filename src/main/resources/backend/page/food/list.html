@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>鑿滃搧绠＄悊 - 鐟炲悏澶栧崠绠＄悊绔?/title>
+  <title>菜品管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
@@ -13,27 +13,27 @@
   </style>
 </head>
 <body>
-  <!-- 閿洏鐢ㄦ埛锛氳烦杞埌涓诲唴瀹癸紙WCAG 2.4.1锛?-->
-  <a href="#main-content" class="skip-link">璺宠浆鍒颁富鍐呭</a>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
 
   <div class="dashboard-container" id="food-app">
     <main class="container ds-page" id="main-content" role="main">
-      <!-- 椤靛ご锛氭爣棰?+ 鍓爣棰橈紙涓庡叏绔?ds-page-header 瑙勮寖涓€鑷达級 -->
+      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">鑿滃搧绠＄悊</h1>
-          <p class="ds-page-header__subtitle">绠＄悊鑿滃搧淇℃伅銆佸簱瀛樹笌鍞崠鐘舵€?/p>
+          <h1 class="ds-page-header__title" id="page-title">菜品管理</h1>
+          <p class="ds-page-header__subtitle">管理菜品信息、库存与售卖状态</p>
         </div>
         <div class="ds-page-header__actions"></div>
       </header>
-      <!-- 鏁版嵁缁熻鍗＄墖 -->
+      <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
         :active-key.sync="activeFilter"
         @card-click="onCardClick"
       ></stat-cards>
 
-      <!-- 鎼滅储 + 鎿嶄綔鏍忥紙鎵归噺鎸夐挳 + 鏂板 + 瀵煎嚭閫氳繃 actions 浼犲叆锛?-->
+      <!-- 搜索 + 操作栏（批量按钮 + 新增 + 导出通过 actions 传入） -->
       <table-bar
         ref="tableBar"
         :search-items="searchConfig"
@@ -43,7 +43,7 @@
         @action="onAction"
       ></table-bar>
 
-      <!-- 鏁版嵁琛ㄦ牸锛堝閫?+ 鑷畾涔夊浘鐗?鐘舵€?搴撳瓨鍒?+ 鎿嶄綔鍒楋級 -->
+      <!-- 数据表格（多选 + 自定义图片/状态/库存列 + 操作列） -->
       <crud-table
         ref="crudTable"
         :data="tableData"
@@ -59,48 +59,48 @@
         @page-change="onPageChange"
         @size-change="onSizeChange"
         @selection-change="onSelection"
-        aria-label="鑿滃搧鍒楄〃"
+        aria-label="菜品列表"
       >
-        <!-- 鍥剧墖鍒?-->
+        <!-- 图片列 -->
         <template #col-image="{ row }">
           <el-image class="cell-img"
             :src="getImage(row.image)"
             :preview-src-list="[getImage(row.image)]">
             <div slot="error" class="image-slot">
-              <img src="./../../images/noImg.png" class="cell-img" alt="鏆傛棤鍥剧墖">
+              <img src="./../../images/noImg.png" class="cell-img" alt="暂无图片">
             </div>
           </el-image>
         </template>
-        <!-- 鍞环鍒楋紙淇敼鐐癸細F10 鐢?formatMoney 缁熶竴涓や綅灏忔暟鏄剧ず锛?-->
+        <!-- 售价列（修改点：F10 用 formatMoney 统一两位小数显示） -->
         <template #col-price="{ row }">
-          <span>锟{ formatMoney(row.price) }}</span>
+          <span>￥{{ formatMoney(row.price) }}</span>
         </template>
-        <!-- 鐘舵€佸垪 -->
+        <!-- 状态列 -->
         <template #col-status="{ row }">
           <el-tag :type="row.status == '0' ? 'info' : 'success'" size="small">
-            {{ row.status == '0' ? '鍋滃敭' : '鍚敭' }}
+            {{ row.status == '0' ? '停售' : '启售' }}
           </el-tag>
         </template>
-        <!-- 搴撳瓨鍒?-->
+        <!-- 库存列 -->
         <template #col-stock="{ row }">
           <span :style="{ color: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? 'var(--color-danger)' : 'var(--el-text-primary)', fontWeight: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? '600' : '400' }">
             {{ row.stockQty != null ? row.stockQty : '-' }}
           </span>
-          <el-tag v-if="row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock && row.stockQty > 0" type="danger" size="mini" effect="plain" style="margin-left:4px;">浣?/el-tag>
-          <el-tag v-if="row.stockQty != null && row.stockQty == 0" type="danger" size="mini">鍞絼</el-tag>
+          <el-tag v-if="row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock && row.stockQty > 0" type="danger" size="mini" effect="plain" style="margin-left:4px;">低</el-tag>
+          <el-tag v-if="row.stockQty != null && row.stockQty == 0" type="danger" size="mini">售罄</el-tag>
         </template>
-        <!-- 鎿嶄綔鎸夐挳 -->
+        <!-- 操作按钮 -->
         <template #actions="{ row }">
-          <el-button type="text" size="small" class="btn-view" @click="addFoodtype(row.id)">淇敼</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="statusHandle(row)">{{ row.status == '0' ? '鍚敭' : '鍋滃敭' }}</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('鍗曞垹', row.id)">鍒犻櫎</el-button>
-          <el-button type="text" size="small" @click="editStock(row)">搴撳瓨</el-button>
-          <el-button type="text" size="small" @click="editBOM(row)">閰嶆柟</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="addFoodtype(row.id)">修改</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="statusHandle(row)">{{ row.status == '0' ? '启售' : '停售' }}</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', row.id)">删除</el-button>
+          <el-button type="text" size="small" @click="editStock(row)">库存</el-button>
+          <el-button type="text" size="small" @click="editBOM(row)">配方</el-button>
         </template>
       </crud-table>
     </main>
 
-    <!-- 鏂板/淇敼鑿滃搧寮圭獥锛堢粺涓€ crud-dialog 缁勪欢锛孧2锛?-->
+    <!-- 新增/修改菜品弹窗（统一 crud-dialog 组件，M2） -->
     <crud-dialog
       :size="'xl'"
       :title="dishDialog.title"
@@ -111,30 +111,30 @@
       @submit="submitDishForm"
     >
       <el-form ref="dishForm" :model="dishForm" :rules="dishRules" label-width="100px" size="small">
-        <el-form-item label="鑿滃搧鍚嶇О:" prop="name">
-          <el-input v-model="dishForm.name" placeholder="璇峰～鍐欒彍鍝佸悕绉? maxlength="20" />
+        <el-form-item label="菜品名称:" prop="name">
+          <el-input v-model="dishForm.name" placeholder="请填写菜品名称" maxlength="20" />
         </el-form-item>
-        <el-form-item label="鍟嗗搧鐮?" prop="code">
-          <el-input v-model="dishForm.code" placeholder="璇疯緭鍏ュ晢鍝佺爜锛堝鏉″舰鐮侊級" maxlength="64" />
+        <el-form-item label="商品码:" prop="code">
+          <el-input v-model="dishForm.code" placeholder="请输入商品码（如条形码）" maxlength="64" />
         </el-form-item>
-        <el-form-item label="鑿滃搧鍒嗙被:" prop="categoryId">
-          <el-select v-model="dishForm.categoryId" placeholder="璇烽€夋嫨鑿滃搧鍒嗙被">
+        <el-form-item label="菜品分类:" prop="categoryId">
+          <el-select v-model="dishForm.categoryId" placeholder="请选择菜品分类">
             <el-option v-for="item in dishList" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="鑿滃搧浠锋牸:" prop="price" size="small">
-          <el-input v-model="dishForm.price" placeholder="璇疯缃彍鍝佷环鏍? />
+        <el-form-item label="菜品价格:" prop="price" size="small">
+          <el-input v-model="dishForm.price" placeholder="请设置菜品价格" />
         </el-form-item>
-        <el-form-item label="鎺掑簭:" prop="sort">
-          <el-input-number v-model="dishForm.sort" :min="0" :max="999" placeholder="鎺掑簭鍊硷紝瓒婂皬瓒婇潬鍓? />
+        <el-form-item label="排序:" prop="sort">
+          <el-input-number v-model="dishForm.sort" :min="0" :max="999" placeholder="排序值，越小越靠前" />
         </el-form-item>
-        <el-form-item label="褰撳墠搴撳瓨:">
-          <el-input-number v-model="dishForm.stockQty" :min="0" :precision="0" placeholder="涓嶉檺搴撳瓨鍒欎笉濉? style="width: 100%;" />
+        <el-form-item label="当前库存:">
+          <el-input-number v-model="dishForm.stockQty" :min="0" :precision="0" placeholder="不限库存则不填" style="width: 100%;" />
         </el-form-item>
-        <el-form-item label="鏈€浣庡簱瀛橀璀?">
-          <el-input-number v-model="dishForm.minStock" :min="0" :precision="0" placeholder="搴撳瓨浣庝簬姝ゅ€兼椂棰勮" style="width: 100%;" />
+        <el-form-item label="最低库存预警:">
+          <el-input-number v-model="dishForm.minStock" :min="0" :precision="0" placeholder="库存低于此值时预警" style="width: 100%;" />
         </el-form-item>
-        <el-form-item label="鑿滃搧鍥剧墖:" prop="image" class="uploadImg">
+        <el-form-item label="菜品图片:" prop="image" class="uploadImg">
           <el-upload
             class="avatar-uploader"
             action="/common/upload"
@@ -144,24 +144,24 @@
             :on-change="onChange"
             ref="upload"
           >
-            <img v-if="dishForm.imageUrl" :src="dishForm.imageUrl" class="avatar" style="border-radius: var(--radius-sm);" alt="鑿滃搧鍥剧墖">
+            <img v-if="dishForm.imageUrl" :src="dishForm.imageUrl" class="avatar" style="border-radius: var(--radius-sm);" alt="菜品图片">
             <i v-else class="el-icon-plus avatar-uploader-icon"></i>
           </el-upload>
         </el-form-item>
-        <el-form-item label="鑿滃搧鎻忚堪:">
-          <el-input v-model="dishForm.description" type="textarea" :rows="3" placeholder="鑿滃搧鎻忚堪锛屾渶闀?00瀛? maxlength="200" />
+        <el-form-item label="菜品描述:">
+          <el-input v-model="dishForm.description" type="textarea" :rows="3" placeholder="菜品描述，最长200字" maxlength="200" />
         </el-form-item>
-        <el-form-item label="鍙ｅ懗鍋氭硶:">
+        <el-form-item label="口味做法:">
           <div class="flavorBox-dialog">
             <div v-if="dishFlavors.length === 0" class="flavor-empty-dialog">
-              <el-button type="text" icon="el-icon-plus" @click="addDialogFlavor">娣诲姞鍙ｅ懗閰嶇疆</el-button>
+              <el-button type="text" icon="el-icon-plus" @click="addDialogFlavor">添加口味配置</el-button>
             </div>
             <div v-else class="flavor-list-dialog">
               <div v-for="(item, index) in dishFlavors" :key="index" class="flavor-item-dialog">
                 <div class="flavor-header-dialog">
                   <span class="flavor-index">{{ index + 1 }}</span>
-                  <el-input v-model="item.name" size="small" placeholder="鍙ｅ懗鍚嶇О锛堝锛氳荆搴︺€佹俯搴︼級" maxlength="10" style="width: 140px;"></el-input>
-                  <el-button type="text" size="small" class="btn-delete" @click="delDialogFlavor(index)">鍒犻櫎</el-button>
+                  <el-input v-model="item.name" size="small" placeholder="口味名称（如：辣度、温度）" maxlength="10" style="width: 140px;"></el-input>
+                  <el-button type="text" size="small" class="btn-delete" @click="delDialogFlavor(index)">删除</el-button>
                 </div>
                 <div class="flavor-tags-dialog">
                   <el-tag v-for="(tag, tIdx) in item.value" :key="tIdx" size="small" closable type="info"
@@ -169,45 +169,45 @@
                   <el-input v-if="item.inputVisible" v-model="item.inputValue" size="mini"
                     :ref="'dialogTagInput' + index" style="width: 80px;" maxlength="10"
                     @keyup.enter.native="confirmDialogTag(index)" @blur="confirmDialogTag(index)"></el-input>
-                  <el-button v-else size="mini" type="text" icon="el-icon-plus" @click="showDialogTagInput(index)">娣诲姞鏍囩</el-button>
+                  <el-button v-else size="mini" type="text" icon="el-icon-plus" @click="showDialogTagInput(index)">添加标签</el-button>
                 </div>
               </div>
-              <el-button type="text" icon="el-icon-plus" size="small" @click="addDialogFlavor" style="margin-top: 8px;">娣诲姞鏂板彛鍛?/el-button>
+              <el-button type="text" icon="el-icon-plus" size="small" @click="addDialogFlavor" style="margin-top: 8px;">添加新口味</el-button>
             </div>
           </div>
         </el-form-item>
       </el-form>
     </crud-dialog>
 
-    <!-- 搴撳瓨缂栬緫寮圭獥锛堢粺涓€ crud-dialog 缁勪欢锛孧2锛?-->
+    <!-- 库存编辑弹窗（统一 crud-dialog 组件，M2） -->
     <crud-dialog
       :size="'sm'"
-      title="缂栬緫搴撳瓨"
+      title="编辑库存"
       :visible.sync="stockDialog.visible"
       :close-on-click-modal="false"
       @submit="submitStockForm"
     >
-      <!-- 淇敼鐐癸細琛ュ叏 ref/:rules 鍚敤 Element 鏍￠獙锛堝師浠呮墜鍐?if 鍒ゆ柇锛屽睘"鍋囧繀濉?锛?-->
+      <!-- 修改点：补全 ref/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
       <el-form ref="stockEditForm" :model="stockForm" :rules="stockEditRules" label-width="80px" size="small">
-        <el-form-item label="鑿滃搧鍚嶇О">
+        <el-form-item label="菜品名称">
           <span>{{ stockForm.name }}</span>
         </el-form-item>
-        <el-form-item label="褰撳墠搴撳瓨">
+        <el-form-item label="当前库存">
           <span>{{ stockForm.stockQty }}</span>
         </el-form-item>
-        <el-form-item label="搴撳瓨鏁伴噺" prop="newStockQty">
-          <el-input v-model="stockForm.newStockQty" type="number" placeholder="璇疯緭鍏ュ簱瀛樻暟閲? />
+        <el-form-item label="库存数量" prop="newStockQty">
+          <el-input v-model="stockForm.newStockQty" type="number" placeholder="请输入库存数量" />
         </el-form-item>
-        <el-form-item label="鏈€浣庡簱瀛橀璀? prop="newMinStock">
-          <el-input v-model="stockForm.newMinStock" type="number" placeholder="璇疯緭鍏ユ渶浣庡簱瀛橀璀﹀€? />
+        <el-form-item label="最低库存预警" prop="newMinStock">
+          <el-input v-model="stockForm.newMinStock" type="number" placeholder="请输入最低库存预警值" />
         </el-form-item>
       </el-form>
     </crud-dialog>
 
-    <!-- 閰嶆柟缂栬緫寮圭獥锛堢粺涓€ crud-dialog 缁勪欢锛孧2锛?-->
+    <!-- 配方编辑弹窗（统一 crud-dialog 组件，M2） -->
     <crud-dialog
       :size="'lg'"
-      :title="'缂栬緫閰嶆柟 - ' + (bomDialog.dishName || '')"
+      :title="'编辑配方 - ' + (bomDialog.dishName || '')"
       :visible.sync="bomDialog.visible"
       :close-on-click-modal="false"
       :submit-loading="bomSubmitting"
@@ -215,40 +215,40 @@
       @submit="submitBOM"
     >
       <div style="margin-bottom: 12px;">
-        <el-button type="primary" size="small" icon="el-icon-plus" @click="addBOMItem">娣诲姞椋熸潗</el-button>
-        <el-button size="small" @click="loadBOMItems">鍒锋柊</el-button>
+        <el-button type="primary" size="small" icon="el-icon-plus" @click="addBOMItem">添加食材</el-button>
+        <el-button size="small" @click="loadBOMItems">刷新</el-button>
       </div>
       <el-table :data="bomItems" size="small" border style="width: 100%;">
-        <el-table-column label="椋熸潗鍚嶇О" width="180">
+        <el-table-column label="食材名称" width="180">
           <template slot-scope="scope">
-            <el-select v-model="scope.row.materialId" placeholder="璇烽€夋嫨椋熸潗" size="small" filterable
+            <el-select v-model="scope.row.materialId" placeholder="请选择食材" size="small" filterable
               @change="onMaterialChange(scope.row, $event)" style="width: 100%;">
               <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id">
                 <span>{{ m.name }}</span>
-                <span style="color: var(--text-muted); margin-left: 8px; font-size: var(--font-size-xs);">{{ m.unit }}</span>
+                <span style="color: #9ca3af; margin-left: 8px; font-size: 12px;">{{ m.unit }}</span>
               </el-option>
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column label="鐢ㄩ噺" width="140" align="right">
+        <el-table-column label="用量" width="140" align="right">
           <template slot-scope="scope">
             <el-input-number v-model="scope.row.usageQty" :min="0.001" :precision="3"
               controls-position="right" size="small" style="width: 100%;" />
           </template>
         </el-table-column>
-        <el-table-column label="鍗曚綅" width="80" align="center">
+        <el-table-column label="单位" width="80" align="center">
           <template slot-scope="scope">
             <span style="color: var(--text-secondary);">{{ scope.row.materialUnit || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="鎿嶄綔" align="center" width="80">
+        <el-table-column label="操作" align="center" width="80">
           <template slot-scope="scope">
-            <el-button type="text" size="small" class="btn-delete" @click="delBOMItem(scope.$index)">鍒犻櫎</el-button>
+            <el-button type="text" size="small" class="btn-delete" @click="delBOMItem(scope.$index)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <div style="margin-top: 12px; color: var(--text-muted); font-size: var(--font-size-xs);">
-        鎻愮ず锛氱偣鍑?淇濆瓨"灏嗘彁浜ゅ叏閮ㄩ鏉愰厤鏂癸紙宸蹭繚瀛樼殑鏇存柊銆佹柊澧炵殑鍒涘缓銆佸垹闄ょ殑绉婚櫎锛夈€?
+      <div style="margin-top: 12px; color: var(--text-muted); font-size: 12px;">
+        提示：点击"保存"将提交全部食材配方（已保存的更新、新增的创建、删除的移除）。
       </div>
     </crud-dialog>
   </div>
@@ -269,62 +269,62 @@
       data: function() {
         return {
           counts: 0,
-          submitting: false, // 鎻愪氦闃查噸锛氳姹傛湡闂撮攣瀹氬脊绐楃‘璁ゆ寜閽?
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
           page: 1,
           pageSize: 10,
           tableData: [],
           loading: false,
           dishState: '',
           checkList: [],
-          // 缁熻
+          // 统计
           stats: { totalDishes: 0, activeDishes: 0, inactiveDishes: 0, deletedDishes: 0 },
           activeFilter: '',
           categoryId: '',
           categoryOptions: [],
-          // 鎼滅储閰嶇疆
+          // 搜索配置
           searchConfig: [
-            { type: 'input', field: 'name', placeholder: '璇疯緭鍏ヨ彍鍝佸悕绉?, width: '200px' },
-            { type: 'input', field: 'code', placeholder: '璇疯緭鍏ュ晢鍝佺爜', width: '160px' },
-            { type: 'select', field: 'categoryId', placeholder: '鍏ㄩ儴鍒嗙被', width: '160px', options: [] }
+            { type: 'input', field: 'name', placeholder: '请输入菜品名称', width: '200px' },
+            { type: 'input', field: 'code', placeholder: '请输入商品码', width: '160px' },
+            { type: 'select', field: 'categoryId', placeholder: '全部分类', width: '160px', options: [] }
           ],
-          // 鎿嶄綔鎸夐挳閰嶇疆
+          // 操作按钮配置
           actionConfig: [
-            { key: 'batchDelete', text: '鎵归噺鍒犻櫎', type: 'danger' },
-            { key: 'batchStart', text: '鎵归噺鍚敭', type: 'success' },
-            { key: 'batchStop', text: '鎵归噺鍋滃敭', type: 'warning' },
-            { key: 'add', text: '+ 鏂板缓鑿滃搧', type: 'primary' },
-            { key: 'export', text: '瀵煎嚭', type: 'success', icon: 'el-icon-download' }
+            { key: 'batchDelete', text: '批量删除', type: 'danger' },
+            { key: 'batchStart', text: '批量启售', type: 'success' },
+            { key: 'batchStop', text: '批量停售', type: 'warning' },
+            { key: 'add', text: '+ 新建菜品', type: 'primary' },
+            { key: 'export', text: '导出', type: 'success', icon: 'el-icon-download' }
           ],
-          // 琛ㄦ牸鍒楅厤缃?
+          // 表格列配置
           columns: [
-            { prop: 'name', label: '鑿滃搧鍚嶇О', width: 140, showOverflowTooltip: true },
-            { prop: 'categoryName', label: '鍒嗙被', width: 80, align: 'center' },
-            { prop: 'price', label: '鍞环', slot: true, width: 80, type: 'money' },
-            { prop: 'status', label: '鐘舵€?, slot: true, width: 70, align: 'center' },
-            { prop: 'stock', label: '搴撳瓨', slot: true, width: 70, type: 'number' },
-            { prop: 'sort', label: '鎺掑簭', width: 60, type: 'number' },
-            { prop: 'description', label: '鎻忚堪', width: 120, showOverflowTooltip: true },
-            { prop: 'updateTime', label: '鏇存柊鏃堕棿', width: 140 }
+            { prop: 'name', label: '菜品名称', width: 140, showOverflowTooltip: true },
+            { prop: 'categoryName', label: '分类', width: 80, align: 'center' },
+            { prop: 'price', label: '售价', slot: true, width: 80, type: 'money' },
+            { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
+            { prop: 'stock', label: '库存', slot: true, width: 70, type: 'number' },
+            { prop: 'sort', label: '排序', width: 60, type: 'number' },
+            { prop: 'description', label: '描述', width: 120, showOverflowTooltip: true },
+            { prop: 'updateTime', label: '更新时间', width: 140 }
           ],
-          // 缂撳瓨鎼滅储鍙傛暟
+          // 缓存搜索参数
           lastSearch: {},
-          // 寮圭獥鐩稿叧
-          dishDialog: { title: '娣诲姞鑿滃搧', visible: false, actionType: 'add', loading: false },
+          // 弹窗相关
+          dishDialog: { title: '添加菜品', visible: false, actionType: 'add', loading: false },
           dishForm: { name: '', code: '', categoryId: '', price: '', sort: 0, image: '', imageUrl: '', description: '', status: true },
           dishList: [],
           dishFlavors: [],
           dishFlavorsData: [],
           inputStyle: { 'flex': 1 },
           index: 0,
-          // 搴撳瓨缂栬緫
+          // 库存编辑
           stockDialog: { visible: false },
           stockForm: { id: '', name: '', stockQty: '', minStock: '', newStockQty: '', newMinStock: '' },
-          // 淇敼鐐癸細搴撳瓨缂栬緫琛ㄥ崟鏍￠獙瑙勫垯锛堥厤鍚?el-form :rules + validate()锛?
+          // 修改点：库存编辑表单校验规则（配合 el-form :rules + validate()）
           stockEditRules: {
-            newStockQty: [{ required: true, message: '璇疯緭鍏ュ簱瀛樻暟閲?, trigger: 'blur' }],
-            newMinStock: [{ required: true, message: '璇疯緭鍏ユ渶浣庡簱瀛橀璀﹀€?, trigger: 'blur' }]
+            newStockQty: [{ required: true, message: '请输入库存数量', trigger: 'blur' }],
+            newMinStock: [{ required: true, message: '请输入最低库存预警值', trigger: 'blur' }]
           },
-          // 閰嶆柟缂栬緫
+          // 配方编辑
           bomDialog: { visible: false, dishId: null, dishName: '' },
           bomItems: [],
           materialOptions: [],
@@ -333,26 +333,26 @@
       },
       computed: {
         statsCards: function() {
-        const self = this
+        var self = this
         return [
-          { key: '', icon: 'ri-restaurant-line', label: '鑿滃搧鎬绘暟', value: self.stats.totalDishes, color: 'primary', clickable: true, active: self.activeFilter === '' },
-          { key: '1', icon: 'ri-checkbox-circle-line', label: '宸插惎鍞?, value: self.stats.activeDishes, color: 'success', clickable: true, active: self.activeFilter === '1' },
-          { key: '0', icon: 'ri-pause-circle-line', label: '宸插仠鍞?, value: self.stats.inactiveDishes, color: 'warning', clickable: true, active: self.activeFilter === '0' },
-          { key: 'deleted', icon: 'ri-delete-bin-line', label: '宸插垹闄?, value: self.stats.deletedDishes, color: 'danger', clickable: true, active: self.activeFilter === 'deleted' }
+          { key: '', icon: 'ri-restaurant-line', label: '菜品总数', value: self.stats.totalDishes, color: 'primary', clickable: true, active: self.activeFilter === '' },
+          { key: '1', icon: 'ri-checkbox-circle-line', label: '已启售', value: self.stats.activeDishes, color: 'success', clickable: true, active: self.activeFilter === '1' },
+          { key: '0', icon: 'ri-pause-circle-line', label: '已停售', value: self.stats.inactiveDishes, color: 'warning', clickable: true, active: self.activeFilter === '0' },
+          { key: 'deleted', icon: 'ri-delete-bin-line', label: '已删除', value: self.stats.deletedDishes, color: 'danger', clickable: true, active: self.activeFilter === 'deleted' }
         ]
       },
         dishRules: function() {
-          const self = this
+          var self = this
           return {
-            name: [{ required: true, message: '璇峰～鍐欒彍鍝佸悕绉?, trigger: 'blur' }],
-            categoryId: [{ required: true, message: '璇烽€夋嫨鑿滃搧鍒嗙被', trigger: 'change' }],
+            name: [{ required: true, message: '请填写菜品名称', trigger: 'blur' }],
+            categoryId: [{ required: true, message: '请选择菜品分类', trigger: 'change' }],
             price: [{
               required: true,
               validator: function(rule, value, callback) {
-                if (!value) { callback(new Error('璇峰～鍐欒彍鍝佷环鏍?)); return }
-                const reg = $2
-                if (!reg.test(value)) { callback(new Error('鑿滃搧浠锋牸鏍煎紡鍙兘涓烘暟瀛?涓旀渶澶氫繚鐣欎袱浣嶅皬鏁?)); return }
-                if (value >= 10000) { callback(new Error('鑿滃搧浠锋牸灏忎簬10000')); return }
+                if (!value) { callback(new Error('请填写菜品价格')); return }
+                var reg = /^\d+(\.\d{0,2})?$/
+                if (!reg.test(value)) { callback(new Error('菜品价格格式只能为数字,且最多保留两位小数')); return }
+                if (value >= 10000) { callback(new Error('菜品价格小于10000')); return }
                 callback()
               }, trigger: 'blur'
             }]
@@ -362,59 +362,64 @@
       created: function() { this.init(); this.loadDishStats() },
       mounted: function() { this.loadCategoryOptions() },
       methods: {
-        // 淇敼鐐癸細F9 鎬ц兘鈥斺€斿垪琛ㄥ彧鏌ュ綋鍓嶉〉鏁版嵁锛岀粺璁′负鍏ㄥ眬鑱氬悎鐢?loadDishStats 鐙珛鍔犺浇锛屼笉闅忕炕椤?绛涢€夐噸绠?
+        // 修改点：F9 性能——列表只查当前页数据，统计为全局聚合由 loadDishStats 独立加载，不随翻页/筛选重算
         async init() {
           this.loading = true
-          const self = this
-          const params = {$2}
+          var self = this
+          var params = { page: this.page, pageSize: this.pageSize, name: self.lastSearch.name || undefined, code: self.lastSearch.code || undefined, categoryId: self.lastSearch.categoryId || undefined }
           if (self.activeFilter && self.activeFilter !== '') { params.status = self.activeFilter }
           try {
-            const dishRes = await getDishPage(params)
+            var dishRes = await getDishPage(params)
             if (String(dishRes.code) === '1') { self.tableData = dishRes.data.records || []; self.counts = dishRes.data.total }
-          } catch (err) { ReggieUI.error('鍔犺浇鑿滃搧鍒楄〃澶辫触:') }
+          } catch (err) { ReggieUI.error('加载菜品列表失败:') }
           self.loading = false
         },
-        // 淇敼鐐癸細F9 鍒楄〃 + 缁熻涓€璧峰埛鏂帮紙浠呭湪澧炲垹鏀?涓婁笅鏋剁瓑浼氭敼鍙樺叏灞€璁℃暟鐨勬搷浣滃悗璋冪敤锛?
+        // 修改点：F9 列表 + 统计一起刷新（仅在增删改/上下架等会改变全局计数的操作后调用）
         refreshAll: function() {
           this.init()
           this.loadDishStats()
         },
         async loadDishStats() {
           try {
-            // 淇敼鐐癸細骞惰鏌ヨ鍚勭姸鎬佽彍鍝佹€绘暟锛屾浛浠ｇ‖缂栫爜 deletedDishes=0锛涚粨鏋滆嚜璧嬪€硷紝璋冪敤鏂规棤闇€鍐嶅彇杩斿洖鍊?
-            const results = await Promise.all([
+            // 修改点：并行查询各状态菜品总数，替代硬编码 deletedDishes=0；结果自赋值，调用方无需再取返回值
+            var results = await Promise.all([
               getDishPage({ page: 1, pageSize: 1, status: '1' }),
               getDishPage({ page: 1, pageSize: 1, status: '0' }),
               getDishPage({ page: 1, pageSize: 1, isDeleted: 1 })
             ])
-            const activeCount = (String(results[0].code) === '1') ? (results[0].data.total || 0) : 0
-            const inactiveCount = (String(results[1].code) === '1') ? (results[1].data.total || 0) : 0
-            const deletedCount = (String(results[2].code) === '1') ? (results[2].data.total || 0) : 0
-            const stats = {$2}
+            var activeCount = (String(results[0].code) === '1') ? (results[0].data.total || 0) : 0
+            var inactiveCount = (String(results[1].code) === '1') ? (results[1].data.total || 0) : 0
+            var deletedCount = (String(results[2].code) === '1') ? (results[2].data.total || 0) : 0
+            var stats = {
+              totalDishes: activeCount + inactiveCount,
+              activeDishes: activeCount,
+              inactiveDishes: inactiveCount,
+              deletedDishes: deletedCount
+            }
             this.stats = stats
             return { code: 1, data: stats }
-          } catch (err) { console.warn('鍔犺浇鑿滃搧缁熻鏁版嵁澶辫触:', err) }
+          } catch (err) { console.warn('加载菜品统计数据失败:', err) }
           return { code: 0 }
         },
         loadCategoryOptions: function() {
-          const self = this
+          var self = this
           getCategoryList({ type: 1 }).then(function(res) {
             if (res.code === 1) { self.categoryOptions = res.data || []; self.searchConfig[1].options = self.categoryOptions.map(function(c) { return { label: c.name, value: c.id } }) }
-          }).catch(function(err) { ReggieUI.error('鍔犺浇鍒嗙被閫夐」澶辫触:') })
+          }).catch(function(err) { ReggieUI.error('加载分类选项失败:') })
         },
         getDishList: function() {
-          const self = this
-          getCategoryList({ type: 1 }).then(function(res) { if (res.code === 1) { self.dishList = res.data || [] } }).catch(function(err) { ReggieUI.error('鍔犺浇鑿滃搧鍒嗙被澶辫触:') })
+          var self = this
+          getCategoryList({ type: 1 }).then(function(res) { if (res.code === 1) { self.dishList = res.data || [] } }).catch(function(err) { ReggieUI.error('加载菜品分类失败:') })
         },
         getImage: function(image) { return '/common/download?name=' + image },
-        // stat-cards 鐐瑰嚮
+        // stat-cards 点击
         onCardClick: function(payload) {
-          const self = this
+          var self = this
           self.activeFilter = payload.activeKey
           self.lastSearch = {}
           self.page = 1; self.init()
         },
-        // table-bar 鍥炶皟
+        // table-bar 回调
         onSearch: function(searchParams) {
           this.activeFilter = ''
           this.lastSearch = searchParams
@@ -426,9 +431,9 @@
           this.page = 1; this.init()
         },
         onAction: function(payload) {
-          const self = this
+          var self = this
           switch (payload.key) {
-            case 'batchDelete': self.deleteHandle('鎵归噺', null); break
+            case 'batchDelete': self.deleteHandle('批量', null); break
             case 'batchStart': self.statusHandle('1'); break
             case 'batchStop': self.statusHandle('0'); break
             case 'add': self.addFoodtype('add'); break
@@ -438,29 +443,29 @@
         onPageChange: function(payload) { this.page = payload.page; this.init() },
         onSizeChange: function(payload) { this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload; this.page = 1; this.init() },
         onSelection: function(payload) { this.checkList = payload.ids || [] },
-        // ========== 鑿滃搧寮圭獥 ==========
+        // ========== 菜品弹窗 ==========
         addFoodtype: function(st) {
           this.resetDishForm()
-          if (st === 'add') { this.dishDialog.title = '娣诲姞鑿滃搧'; this.dishDialog.actionType = 'add'; this.dishDialog.visible = true; this.getDishList() }
-          else { this.dishDialog.title = '淇敼鑿滃搧'; this.dishDialog.actionType = 'edit'; this.dishDialog.visible = true; this.getDishList(); this.initDishForm(st) }
+          if (st === 'add') { this.dishDialog.title = '添加菜品'; this.dishDialog.actionType = 'add'; this.dishDialog.visible = true; this.getDishList() }
+          else { this.dishDialog.title = '修改菜品'; this.dishDialog.actionType = 'edit'; this.dishDialog.visible = true; this.getDishList(); this.initDishForm(st) }
         },
         async initDishForm(id) {
-          const self = this
+          var self = this
           try {
-            const res = await queryDishById(id)
+            var res = await queryDishById(id)
             if (String(res.code) === '1') {
-              const data = res.data
+              var data = res.data
               self.dishForm = { id: data.id, name: data.name, code: data.code || '', categoryId: data.categoryId, price: String(data.price), sort: data.sort || 0, stockQty: data.stockQty != null ? String(data.stockQty) : '', minStock: data.minStock != null ? String(data.minStock) : '', image: data.image, imageUrl: '/common/download?name=' + data.image, description: data.description || '', status: String(data.status) === '1' }
               self.dishFlavors = data.flavors && data.flavors.map(function(obj) {
-                const parsedValue = []
+                var parsedValue = []
                 if (obj.value) {
                   try { parsedValue = JSON.parse(obj.value) }
                   catch (e) { parsedValue = typeof obj.value === 'string' ? obj.value.split(',').map(function(s) { return s.trim() }).filter(Boolean) : [obj.value] }
                 }
                 return { name: obj.name, value: parsedValue, showOption: false, inputVisible: false, inputValue: '' }
               }) || []
-            } else { ReggieUI.error(res.msg || '鑾峰彇鑿滃搧淇℃伅澶辫触') }
-          } catch (err) { ReggieUI.error('璇锋眰澶辫触锛? + err) }
+            } else { ReggieUI.error(res.msg || '获取菜品信息失败') }
+          } catch (err) { ReggieUI.error('请求失败：' + err) }
         },
         resetDishForm: function() {
           this.dishForm = { name: '', code: '', categoryId: '', price: '', sort: 0, stockQty: '', minStock: '', image: '', imageUrl: '', description: '', status: true }
@@ -468,7 +473,7 @@
           if (this.$refs.dishForm) { this.$refs.dishForm.resetFields() }
         },
         handleDialogClose: function() { this.dishDialog.visible = false; this.resetDishForm() },
-        // ========== 搴撳瓨缂栬緫 ==========
+        // ========== 库存编辑 ==========
         editStock: function(row) {
           this.stockForm = {
             id: row.id,
@@ -481,135 +486,144 @@
           this.stockDialog.visible = true
         },
         async submitStockForm() {
-          if (this.submitting) return // 鎻愪氦闃查噸
-          const self = this
-          const passed = false
+          if (this.submitting) return // 提交防重
+          var self = this
+          var passed = false
           self.$refs.stockEditForm.validate(function(valid) { passed = valid })
           if (!passed) {
-            ReggieUI.warning('璇峰畬鍠勮〃鍗曞繀濉」')
+            ReggieUI.warning('请完善表单必填项')
             return
           }
-          const form = self.stockForm
+          var form = self.stockForm
           self.submitting = true
           try {
             var res = await updateDishStock(form.id, { stockQty: form.newStockQty, minStock: form.newMinStock })
             self.submitting = false
-            if (res.code === 1) { ReggieUI.success('搴撳瓨鏇存柊鎴愬姛'); self.stockDialog.visible = false; self.refreshAll() }
-            else { ReggieUI.error(res.msg || '搴撳瓨鏇存柊澶辫触') }
-          } catch (err) { self.submitting = false; ReggieUI.error('璇锋眰澶辫触锛? + err) }
+            if (res.code === 1) { ReggieUI.success('库存更新成功'); self.stockDialog.visible = false; self.refreshAll() }
+            else { ReggieUI.error(res.msg || '库存更新失败') }
+          } catch (err) { self.submitting = false; ReggieUI.error('请求失败：' + err) }
         },
-        // 鍙ｅ懗缂栬緫鏂规硶
+        // 口味编辑方法
         addDialogFlavor: function() { this.dishFlavors.push({ name: '', value: [], inputVisible: false, inputValue: '' }) },
         delDialogFlavor: function(index) { this.dishFlavors.splice(index, 1) },
         delDialogFlavorLabel: function(index, tIdx) { this.dishFlavors[index].value.splice(tIdx, 1) },
         showDialogTagInput: function(index) {
           this.dishFlavors[index].inputVisible = true
-          const self = this
-          this.$nextTick(function() { const ref = self.$refs['dialogTagInput' + index]; if (ref && ref[0]) ref[0].$refs.input.focus() })
+          var self = this
+          this.$nextTick(function() { var ref = self.$refs['dialogTagInput' + index]; if (ref && ref[0]) ref[0].$refs.input.focus() })
         },
         confirmDialogTag: function(index) {
-          const inputValue = this.dishFlavors[index].inputValue
-          if (inputValue && inputValue.trim()) { const trimmed = inputValue.trim(); if (!this.dishFlavors[index].value.includes(trimmed)) { this.dishFlavors[index].value.push(trimmed) } }
+          var inputValue = this.dishFlavors[index].inputValue
+          if (inputValue && inputValue.trim()) { var trimmed = inputValue.trim(); if (!this.dishFlavors[index].value.includes(trimmed)) { this.dishFlavors[index].value.push(trimmed) } }
           this.dishFlavors[index].inputVisible = false; this.dishFlavors[index].inputValue = ''
         },
         submitDishForm: function(st) {
-          if (this.submitting) return // 鎻愪氦闃查噸
-          const self = this
+          if (this.submitting) return // 提交防重
+          var self = this
           this.$refs.dishForm.validate(function(valid) {
             if (!valid) return
             self.submitting = true
-            const params = {$2}
+            var params = {
+              name: self.dishForm.name,
+              code: self.dishForm.code,
+              categoryId: self.dishForm.categoryId,
+              price: self.dishForm.price,
+              sort: self.dishForm.sort || 0,
+              image: self.dishForm.image,
+              description: self.dishForm.description,
+              status: self.dishForm.status ? 1 : 0
+            }
             params.flavors = self.dishFlavors.map(function(obj) { return { name: obj.name, value: JSON.stringify(obj.value) } })
             if (self.dishForm.stockQty !== null && self.dishForm.stockQty !== undefined && self.dishForm.stockQty !== '') { params.stockQty = parseFloat(self.dishForm.stockQty) }
             if (self.dishForm.minStock !== null && self.dishForm.minStock !== undefined && self.dishForm.minStock !== '') { params.minStock = parseFloat(self.dishForm.minStock) }
-            if (!params.image) { self.submitting = false; ReggieUI.error('璇蜂笂浼犺彍鍝佸浘鐗?); return }
+            if (!params.image) { self.submitting = false; ReggieUI.error('请上传菜品图片'); return }
             if (self.dishDialog.actionType === 'add') {
               addDish(params).then(function(res) {
                 self.submitting = false
                 if (res.code === 1) {
-                  ReggieUI.success('鑿滃搧娣诲姞鎴愬姛锛?)
+                  ReggieUI.success('菜品添加成功！')
                   self.dishDialog.visible = false
                   self.refreshAll()
                   if (st === 'continue') { self.resetDishForm(); self.dishDialog.visible = true }
-                } else { ReggieUI.error(res.msg || '鎿嶄綔澶辫触') }
-              }).catch(function(err) { self.submitting = false; ReggieUI.error('璇锋眰澶辫触锛? + err) })
+                } else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.submitting = false; ReggieUI.error('请求失败：' + err) })
             } else {
               params.id = self.dishForm.id
               editDish(params).then(function(res) {
                 self.submitting = false
-                if (res.code === 1) { ReggieUI.success('鑿滃搧淇敼鎴愬姛锛?); self.dishDialog.visible = false; self.refreshAll() }
-                else { ReggieUI.error(res.msg || '鎿嶄綔澶辫触') }
-              }).catch(function(err) { self.submitting = false; ReggieUI.error('璇锋眰澶辫触锛? + err) })
+                if (res.code === 1) { ReggieUI.success('菜品修改成功！'); self.dishDialog.visible = false; self.refreshAll() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { self.submitting = false; ReggieUI.error('请求失败：' + err) })
             }
           })
         },
         handleAvatarSuccess: function(response) {
-          if (response.code === 0 && response.msg === '鏈櫥褰?) { window.top.location.href = '/backend/page/login/login.html' }
+          if (response.code === 0 && response.msg === '未登录') { window.top.location.href = '/backend/page/login/login.html' }
           else { this.dishForm.imageUrl = '/common/download?name=' + response.data; this.dishForm.image = response.data }
         },
         onChange: function(file) {
           if (file) {
-            const suffix = file.name.split('.')[1]; const size = file.size / 1024 / 1024 < 2
-            if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) { ReggieUI.error('涓婁紶鍥剧墖鍙敮鎸?png銆乯peg銆乯pg 鏍煎紡锛?); this.$refs.upload.clearFiles(); return false }
-            if (!size) { ReggieUI.error('涓婁紶鏂囦欢澶у皬涓嶈兘瓒呰繃 2MB!'); return false }
+            var suffix = file.name.split('.')[1]; var size = file.size / 1024 / 1024 < 2
+            if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) { ReggieUI.error('上传图片只支持 png、jpeg、jpg 格式！'); this.$refs.upload.clearFiles(); return false }
+            if (!size) { ReggieUI.error('上传文件大小不能超过 2MB!'); return false }
             return file
           }
         },
         deleteHandle: function(type, id) {
-          const self = this
-          if (type === '鎵归噺' && id === null) { if (self.checkList.length === 0) { ReggieUI.error('璇烽€夋嫨鍒犻櫎瀵硅薄'); return } }
-          ReggieUI.confirm('纭鍒犻櫎璇ヨ彍鍝? 鏄惁缁х画?', '纭畾鍒犻櫎', { confirmButtonText: '纭畾', cancelButtonText: '鍙栨秷', type: 'warning' })
+          var self = this
+          if (type === '批量' && id === null) { if (self.checkList.length === 0) { ReggieUI.error('请选择删除对象'); return } }
+          ReggieUI.confirm('确认删除该菜品, 是否继续?', '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
-              deleteDish(type === '鎵归噺' ? self.checkList.join(',') : id).then(function(res) {
-                if (res.code === 1) { ReggieUI.success('鍒犻櫎鎴愬姛锛?); self.refreshAll() }
-                else { ReggieUI.error(res.msg || '鎿嶄綔澶辫触') }
-              }).catch(function(err) { ReggieUI.error('璇锋眰澶辫触锛? + err) })
+              deleteDish(type === '批量' ? self.checkList.join(',') : id).then(function(res) {
+                if (res.code === 1) { ReggieUI.success('删除成功！'); self.refreshAll() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
         },
         statusHandle: function(row) {
-          const self = this
-          const params = {$2}
+          var self = this
+          var params = {}
           if (typeof row === 'string') {
-            if (self.checkList.length === 0) { ReggieUI.error('鎵归噺鎿嶄綔锛岃鍏堝嬀閫夋搷浣滆彍鍝侊紒'); return false }
+            if (self.checkList.length === 0) { ReggieUI.error('批量操作，请先勾选操作菜品！'); return false }
             params.id = self.checkList.join(','); params.status = row
           } else { params.id = row.id; params.status = row.status ? '0' : '1' }
           self.dishState = params
-          ReggieUI.confirm('纭鏇存敼璇ヨ彍鍝佺姸鎬?', '鎻愮ず', { confirmButtonText: '纭畾', cancelButtonText: '鍙栨秷', type: 'warning' })
+          ReggieUI.confirm('确认更改该菜品状态?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               dishStatusByStatus(self.dishState).then(function(res) {
-                if (res.code === 1) { ReggieUI.success('鑿滃搧鐘舵€佸凡缁忔洿鏀规垚鍔燂紒'); self.refreshAll() }
-                else { ReggieUI.error(res.msg || '鎿嶄綔澶辫触') }
-              }).catch(function(err) { ReggieUI.error('璇锋眰澶辫触锛? + err) })
+                if (res.code === 1) { ReggieUI.success('菜品状态已经更改成功！'); self.refreshAll() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
         },
         exportDishes: function(format) {
           try {
-            const ext = format === 'excel' ? 'xlsx' : 'pdf'
+            var ext = format === 'excel' ? 'xlsx' : 'pdf'
             var apiCall = format === 'excel' ? exportApi.exportDishesExcel({}) : exportApi.exportDishesPdf({})
-            exportApi.downloadFile(apiCall, '鑿滃搧鏁版嵁.' + ext)
-            ReggieUI.success('瀵煎嚭鎴愬姛锛屾枃浠跺凡寮€濮嬩笅杞?)
-          } catch (err) { ReggieUI.error('瀵煎嚭澶辫触锛? + (err.message || err)) }
+            exportApi.downloadFile(apiCall, '菜品数据.' + ext)
+            ReggieUI.success('导出成功，文件已开始下载')
+          } catch (err) { ReggieUI.error('导出失败：' + (err.message || err)) }
         },
-        // ========== 閰嶆柟缂栬緫 ==========
+        // ========== 配方编辑 ==========
         editBOM: function(row) {
-          const self = this
+          var self = this
           self.bomDialog = { visible: true, dishId: row.id, dishName: row.name }
           self.loadMaterialOptions()
           self.loadBOMItems()
         },
         loadMaterialOptions: function() {
-          const self = this
+          var self = this
           materialList().then(function(res) {
             if (res.code === 1) { self.materialOptions = res.data || [] }
-          }).catch(function(err) { ReggieUI.error('鍔犺浇椋熸潗鍒楄〃澶辫触锛? + err) })
+          }).catch(function(err) { ReggieUI.error('加载食材列表失败：' + err) })
         },
         loadBOMItems: function() {
-          const self = this
-          const dishId = self.bomDialog.dishId
+          var self = this
+          var dishId = self.bomDialog.dishId
           if (!dishId) { return }
           dishMaterialListByDish(dishId).then(function(res) {
             if (res.code === 1) {
-              const data = res.data || []
+              var data = res.data || []
               self.bomItems = data.map(function(item) {
                 return {
                   id: item.id || null,
@@ -621,8 +635,8 @@
                 }
               })
               if (self.bomItems.length === 0) { self.addBOMItem() }
-            } else { ReggieUI.error(res.msg || '鍔犺浇閰嶆柟澶辫触') }
-          }).catch(function(err) { ReggieUI.error('璇锋眰澶辫触锛? + err) })
+            } else { ReggieUI.error(res.msg || '加载配方失败') }
+          }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
         },
         addBOMItem: function() {
           this.bomItems.push({
@@ -635,11 +649,11 @@
           })
         },
         delBOMItem: function(index) {
-          if (this.bomItems.length <= 1) { ReggieUI.warning('鑷冲皯淇濈暀涓€鏉?); return }
+          if (this.bomItems.length <= 1) { ReggieUI.warning('至少保留一条'); return }
           this.bomItems.splice(index, 1)
         },
         onMaterialChange: function(row, value) {
-          for (let i = 0; i < this.materialOptions.length; i++) {
+          for (var i = 0; i < this.materialOptions.length; i++) {
             if (this.materialOptions[i].id === value) {
               row.materialUnit = this.materialOptions[i].unit || ''
               break
@@ -648,12 +662,12 @@
         },
         submitBOM: function() {
           if (this.bomSubmitting) return
-          const self = this
-          // 鏍￠獙锛氭墍鏈夎蹇呴』閫夐鏉愪笖鐢ㄩ噺 > 0
-          for (let i = 0; i < self.bomItems.length; i++) {
-            const item = self.bomItems[i]
-            if (!item.materialId) { ReggieUI.warning('绗?' + (i + 1) + ' 琛屾湭閫夋嫨椋熸潗'); return }
-            if (!item.usageQty || item.usageQty <= 0) { ReggieUI.warning('绗?' + (i + 1) + ' 琛岀敤閲忓繀椤诲ぇ浜?0'); return }
+          var self = this
+          // 校验：所有行必须选食材且用量 > 0
+          for (var i = 0; i < self.bomItems.length; i++) {
+            var item = self.bomItems[i]
+            if (!item.materialId) { ReggieUI.warning('第 ' + (i + 1) + ' 行未选择食材'); return }
+            if (!item.usageQty || item.usageQty <= 0) { ReggieUI.warning('第 ' + (i + 1) + ' 行用量必须大于 0'); return }
           }
           var items = self.bomItems.map(function(it) {
             return {
@@ -663,16 +677,16 @@
               sort: it.sort
             }
           })
-          const params = {$2}
+          var params = { dishId: self.bomDialog.dishId, items: items }
           self.bomSubmitting = true
           dishMaterialBatchSave(params).then(function(res) {
             self.bomSubmitting = false
             if (res.code === 1) {
-              ReggieUI.success('閰嶆柟淇濆瓨鎴愬姛锛?)
+              ReggieUI.success('配方保存成功！')
               self.bomDialog.visible = false
               self.bomItems = []
-            } else { ReggieUI.error(res.msg || '淇濆瓨澶辫触') }
-          }).catch(function(err) { self.bomSubmitting = false; ReggieUI.error('璇锋眰澶辫触锛? + err) })
+            } else { ReggieUI.error(res.msg || '保存失败') }
+          }).catch(function(err) { self.bomSubmitting = false; ReggieUI.error('请求失败：' + err) })
         }
       }
     })

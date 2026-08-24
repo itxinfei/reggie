@@ -356,7 +356,7 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         if (tenantId != null) {
             qw.eq(CampaignUsageRecord::getTenantId, tenantId);
         }
-        return (int) usageRecordMapper.selectCount(qw);
+        return usageRecordMapper.selectCount(qw).intValue();
     }
 
     // ==================== 统计分析 ====================

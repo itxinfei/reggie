@@ -258,17 +258,17 @@
           return Number(value).toFixed(2)
         },
         getScopeTagType(scope) {
-          const map = {$2}
+          const map = {}
           return map[scope] || ''
         },
         getScopeText(scope) {
-          const map = {$2}
+          const map = {}
           return map[scope] || '未知'
         },
         async init() {
           this.loading = true
           const self = this
-          const params = {$2}
+          const params = {}
           if (self.lastSearch.campaignId) {
             params.campaignId = self.lastSearch.campaignId
           }

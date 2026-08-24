@@ -124,6 +124,9 @@
             <span>{{ row.minAmount ? '￥' + row.minAmount : '-' }}</span>
           </template>
           <template #actions="{ row }">
+            <el-button v-if="row.status === 'FREE'" type="text" size="small" class="btn-view" @click="openTableHandle(row)">开台</el-button>
+            <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click="transferHandle(row)">转台</el-button>
+            <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click="checkoutHandle(row)">结账</el-button>
             <el-button type="text" size="small" @click="editHandle(row)">修改</el-button>
             <el-button type="text" size="small" @click="showQrcode(row)">二维码</el-button>
             <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
@@ -144,6 +147,9 @@
               <span>状态：<strong>{{ statusLabels[row.status] || row.status }}</strong></span>
             </div>
             <div class="card-actions">
+              <el-button v-if="row.status === 'FREE'" type="text" size="small" class="btn-view" @click.stop="openTableHandle(row)">开台</el-button>
+              <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click.stop="transferHandle(row)">转台</el-button>
+              <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click.stop="checkoutHandle(row)">结账</el-button>
               <el-button type="text" size="small" @click.stop="editHandle(row)">修改</el-button>
               <el-button type="text" size="small" @click.stop="showQrcode(row)">二维码</el-button>
               <el-dropdown trigger="click" @command="(val) => quickChangeStatus(row, val)" @click.native.stop>
@@ -233,6 +239,35 @@
         </div>
       </div>
     </crud-dialog>
+
+    <!-- 开台弹窗 -->
+    <crud-dialog title="开台" :visible.sync="openDialog.visible" size="sm" :submit-loading="openDialog.loading" @submit="submitOpen">
+      <el-form :model="openForm" label-width="80px" size="small">
+        <el-form-item label="桌台">
+          <el-input :value="openDialog.tableName" disabled />
+        </el-form-item>
+        <el-form-item label="用餐人数">
+          <el-input-number v-model="openForm.customerCount" :min="1" :max="50" style="width:100%;" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="openForm.remark" type="textarea" :rows="2" maxlength="200" placeholder="如：生日宴、少辣" />
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 转台弹窗 -->
+    <crud-dialog title="转台" :visible.sync="transferDialog.visible" size="sm" :submit-loading="transferDialog.loading" @submit="submitTransfer">
+      <el-form :model="transferForm" label-width="80px" size="small">
+        <el-form-item label="原桌台">
+          <el-input :value="transferDialog.fromName" disabled />
+        </el-form-item>
+        <el-form-item label="目标桌台" prop="toTableId">
+          <el-select v-model="transferForm.toTableId" placeholder="选择空闲桌台" style="width:100%;" filterable>
+            <el-option v-for="t in freeTables" :key="t.id" :label="t.name + (t.areaName ? '（' + t.areaName + '）' : '')" :value="t.id" :disabled="t.id === transferDialog.fromId" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -296,7 +331,14 @@
             seatCount: [{ required: true, message: '请输入座位数', trigger: 'blur' }],
             status: [{ required: true, message: '请选择状态', trigger: 'change' }]
           },
-          qrcodeDialog: { visible: false, tableName: '', tableId: null, imageUrl: '' }
+          qrcodeDialog: { visible: false, tableName: '', tableId: null, imageUrl: '' },
+          // 修改点：开台弹窗
+          openDialog: { visible: false, tableId: null, tableName: '', loading: false },
+          openForm: { customerCount: 2, remark: '' },
+          // 修改点：转台弹窗
+          transferDialog: { visible: false, fromId: null, fromName: '', loading: false },
+          transferForm: { toTableId: null },
+          freeTables: []
         }
       },
       computed: {
@@ -317,7 +359,7 @@
         init: function(reloadStats) {
           if (reloadStats === undefined) reloadStats = true
           const self = this
-          const params = {$2}
+          const params = {}
           self.loading = true
           const requests = [tablePage(params)]
           if (reloadStats) { requests.push(self.loadTableStats()) }
@@ -382,7 +424,7 @@
           this.$refs.tableForm.validate(function(valid) {
             if (!valid) return
             self.submitting = true
-            const data = {$2}
+            const data = {}
             if (self.action === 'add') {
               addTable(data).then(function(res) {
                 self.submitting = false
@@ -443,13 +485,82 @@
         // 状态流转白名单（与后端 ALLOWED_TABLE_TRANSITIONS 一致）
         canTransition: function(current, target) {
           if (current === target) return false
-          const rules = {$2}
+          const rules = {}
           const allowed = rules[current]
           if (!allowed) return false
           for (let i = 0; i < allowed.length; i++) {
             if (allowed[i] === target) return true
           }
           return false
+        },
+        // 修改点：开台
+        openTableHandle: function(row) {
+          this.openDialog = { visible: true, tableId: row.id, tableName: row.name, loading: false }
+          this.openForm = { customerCount: 2, remark: '' }
+        },
+        submitOpen: function() {
+          if (this.openDialog.loading) return
+          const self = this
+          this.openDialog.loading = true
+          openTableWithOrder({
+            tableId: this.openDialog.tableId,
+            customerCount: this.openForm.customerCount,
+            remark: this.openForm.remark
+          }).then(function(res) {
+            self.openDialog.loading = false
+            if (res.code === 1) {
+              ReggieUI.success('开台成功，订单号：' + (res.data && res.data.orderNumber))
+              self.openDialog.visible = false
+              self.init()
+            } else {
+              ReggieUI.error(res.msg || '开台失败')
+            }
+          }).catch(function(err) {
+            self.openDialog.loading = false
+            ReggieUI.error('开台失败：' + (err.message || err))
+          })
+        },
+        // 修改点：转台
+        loadFreeTables: function() {
+          const self = this
+          tablePage({ page: 1, pageSize: 200, status: 'FREE' }).then(function(res) {
+            if (res.code === 1 && res.data) { self.freeTables = res.data.records || [] }
+          }).catch(function() {})
+        },
+        transferHandle: function(row) {
+          this.transferDialog = { visible: true, fromId: row.id, fromName: row.name, loading: false }
+          this.transferForm = { toTableId: null }
+          this.loadFreeTables()
+        },
+        submitTransfer: function() {
+          if (!this.transferForm.toTableId) { ReggieUI.warning('请选择目标桌台'); return }
+          if (this.transferDialog.loading) return
+          const self = this
+          this.transferDialog.loading = true
+          transferTable({ fromTableId: this.transferDialog.fromId, toTableId: this.transferForm.toTableId }).then(function(res) {
+            self.transferDialog.loading = false
+            if (res.code === 1) {
+              ReggieUI.success('转台成功')
+              self.transferDialog.visible = false
+              self.init()
+            } else {
+              ReggieUI.error(res.msg || '转台失败')
+            }
+          }).catch(function(err) {
+            self.transferDialog.loading = false
+            ReggieUI.error('转台失败：' + (err.message || err))
+          })
+        },
+        // 修改点：结账（跳转收银台，按桌台当前订单收款）
+        checkoutHandle: function(row) {
+          const self = this
+          tableInfo(row.id).then(function(res) {
+            if (res.code === 1 && res.data && res.data.currentOrderId) {
+              window.open('cashier/index.html#/order/' + res.data.currentOrderId, '_blank')
+            } else {
+              ReggieUI.warning('该桌台未绑定订单，无法结账')
+            }
+          }).catch(function() { ReggieUI.error('获取桌台信息失败') })
         },
         // 状态标签颜色
         tagType: function(status) {

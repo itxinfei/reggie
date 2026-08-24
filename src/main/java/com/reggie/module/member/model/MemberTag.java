@@ -45,7 +45,7 @@ public class MemberTag implements Serializable {
     private String tagColor;
 
     /** 创建时间 */
-    @TableField(fill = FieldFill.INSERT)
+    @TableField(value = "created_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
     /** 创建用户ID */

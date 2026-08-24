@@ -31,6 +31,7 @@ public class StockCheck implements Serializable {
     private Long id;
 
     @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     @Schema(description = "盘点单号", example = "SC20260709001")

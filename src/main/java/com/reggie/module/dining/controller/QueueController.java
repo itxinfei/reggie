@@ -11,6 +11,7 @@ import com.reggie.dto.TakeNumberDTO;
 import com.reggie.module.dining.dto.SeatCustomerDTO;
 import com.reggie.module.dining.model.QueueRecord;
 import com.reggie.module.dining.service.QueueService;
+import com.reggie.common.LogMaskUtils;
 import com.reggie.module.dining.vo.QueueStatsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -84,7 +85,7 @@ public class QueueController {
     @Operation(summary = "取号", description = "顾客取号排队，支持指定座位数和手机号")
     public R<QueueRecord> takeNumber(@Valid @RequestBody TakeNumberDTO dto) {
         log.info("取号: seatCount={}, phone={}", dto.getSeatCount(),
-            dto.getPhone().replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2"));
+            LogMaskUtils.maskPhone(dto.getPhone()));
         QueueRecord record = queueService.takeNumber(dto.getSeatCount(), dto.getPhone());
         return R.success(record);
     }

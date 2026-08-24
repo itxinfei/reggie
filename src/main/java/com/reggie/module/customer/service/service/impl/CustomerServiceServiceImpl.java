@@ -151,7 +151,7 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         } else { // Agent - count user messages
             qw.eq(CsMessage::getSenderType, CsMessage.SENDER_USER);
         }
-        return (int) messageMapper.selectCount(qw);
+        return messageMapper.selectCount(qw).intValue();
     }
 
     @Override

@@ -3,6 +3,7 @@ import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
@@ -258,16 +259,27 @@ public class PaymentController {
                         Integer curStatus = order.getStatus();
                         if (curStatus != null && Arrays.asList(
                                 Orders.STATUS_ORDERED, Orders.STATUS_DELIVERING, Orders.STATUS_COMPLETED).contains(curStatus)) {
-                            order.setStatus(Orders.STATUS_REFUNDED);
-                            orderService.updateById(order);
-                            // 全额退款后回退会员权益（积分回退 + 优惠券恢复）
-                            try {
-                                memberRewardService.reverseRewards(latest.getOrderId(), latest.getTenantId());
-                                log.info("[会员权益回退] 退款触发权益回退: orderId={}, tenantId={}", latest.getOrderId(), latest.getTenantId());
-                            } catch (Exception e) {
-                                log.error("[会员权益回退] 退款后权益回退失败，需人工核查: orderId={}", latest.getOrderId(), e);
+                            // 修复 P2-5：CAS 乐观锁更新订单状态，防止并发退款覆盖
+                            LambdaUpdateWrapper<Orders> orderUpdateWrapper = new LambdaUpdateWrapper<>();
+                            orderUpdateWrapper.eq(Orders::getId, order.getId())
+                                    .eq(Orders::getStatus, curStatus);
+                            Orders updateEntity = new Orders();
+                            updateEntity.setStatus(Orders.STATUS_REFUNDED);
+                            updateEntity.setUpdateTime(java.time.LocalDateTime.now());
+                            boolean updated = orderService.update(updateEntity, orderUpdateWrapper);
+                            if (!updated) {
+                                log.warn("订单状态已变更，跳过联动退款更新: orderId={}, expectedStatus={}",
+                                        latest.getOrderId(), curStatus);
+                            } else {
+                                // 全额退款后回退会员权益（积分回退 + 优惠券恢复）
+                                try {
+                                    memberRewardService.reverseRewards(latest.getOrderId(), latest.getTenantId());
+                                    log.info("[会员权益回退] 退款触发权益回退: orderId={}, tenantId={}", latest.getOrderId(), latest.getTenantId());
+                                } catch (Exception e) {
+                                    log.error("[会员权益回退] 退款后权益回退失败，需人工核查: orderId={}", latest.getOrderId(), e);
+                                }
+                                log.info("退款成功联动更新订单: orderId={}, orderStatus=已退款", latest.getOrderId());
                             }
-                            log.info("退款成功联动更新订单: orderId={}, orderStatus=已退款", latest.getOrderId());
                         } else if (curStatus != null && curStatus == Orders.STATUS_REFUNDED) {
                             log.info("订单已为已退款状态，幂等跳过联动更新: orderId={}", latest.getOrderId());
                         } else {

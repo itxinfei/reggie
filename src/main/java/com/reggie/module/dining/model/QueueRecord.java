@@ -23,6 +23,7 @@ public class QueueRecord implements Serializable {
     private Long id;
 
     /** 租户ID */
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     /** 排队号码 */

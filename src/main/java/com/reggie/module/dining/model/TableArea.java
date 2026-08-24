@@ -23,6 +23,7 @@ public class TableArea implements Serializable {
     private Long id;
 
     /** 租户ID */
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     /** 区域名称 */

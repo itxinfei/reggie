@@ -89,6 +89,10 @@ public final class AuthConstants {
         // 前端静态资源（后台管理系统和用户端）
         "/backend/**",
         "/front/**",
+        // 根路径导航页（纯链接集合，无敏感数据，允许匿名访问）
+        "/",
+        "/index.html",
+        "/favicon.ico",
         // API文档相关路径
         "/swagger-ui/**",
         "/swagger-ui.html",

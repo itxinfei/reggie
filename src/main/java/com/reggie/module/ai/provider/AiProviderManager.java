@@ -13,6 +13,7 @@ import com.reggie.module.ai.mapper.AiProviderConfigMapper;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
+import com.reggie.module.ai.util.AiKeyEncryptor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -129,6 +130,8 @@ public class AiProviderManager implements AIClient {
             );
 
             if (config != null) {
+                // 修复 P0-6：解密数据库中加密存储的 apiKey
+                AiKeyEncryptor.decryptApiKeyInPlace(config);
                 // 配置校验
                 String validationError = validateConfig(config);
                 if (validationError != null) {

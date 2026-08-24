@@ -4,70 +4,70 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>鎶曟斁鏄庣粏 - 鐟炲悏澶栧崠绠＄悊绔?/title>
+  <title>投放明细 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
-    /* 鍏ㄩ儴浣跨敤 tokens.css 璁捐浠ょ墝 */
+    /* 全部使用 tokens.css 设计令牌 */
     .detail-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
 
-    /* 椤堕儴妯℃澘閫夋嫨鍖?*/
+    /* 顶部模板选择区 */
     .select-panel { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: flex-end; gap: var(--space-4); margin-bottom: var(--space-6) }
     .select-panel__label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap }
     .select-panel__select { flex: 1; max-width: 420px }
     .select-panel__btn { height: 36px; font-size: var(--font-size-base) }
-    .select-panel__tip { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 4px }
+    .select-panel__tip { font-size: 12px; color: var(--text-muted); margin-top: 4px }
 
-    /* 鏁堟灉缁熻鍗＄墖琛?*/
+    /* 效果统计卡片行 */
     .effect-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-6) }
     @media (max-width: 900px) { .effect-grid { grid-template-columns: repeat(2, 1fr) } }
     @media (max-width: 520px) { .effect-grid { grid-template-columns: 1fr } }
     .effect-card { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); text-align: center }
-    .effect-card__label { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: var(--space-2) }
-    .effect-card__value { font-size: var(--font-size-3xl); font-weight: 600; color: var(--text-primary); line-height: 1.2 }
-    .effect-card__sub { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-2) }
+    .effect-card__label { font-size: 12px; color: var(--text-muted); margin-bottom: var(--space-2) }
+    .effect-card__value { font-size: 26px; font-weight: 600; color: var(--text-primary); line-height: 1.2 }
+    .effect-card__sub { font-size: 12px; color: var(--text-muted); margin-top: var(--space-2) }
     .effect-card.primary .effect-card__value { color: var(--color-brand-500) }
-    .effect-card.success .effect-card__value { color: var(--color-success) }
-    .effect-card.warning .effect-card__value { color: var(--color-warning) }
-    .effect-card.danger .effect-card__value { color: var(--color-danger) }
+    .effect-card.success .effect-card__value { color: #67c23a }
+    .effect-card.warning .effect-card__value { color: #e6a23c }
+    .effect-card.danger .effect-card__value { color: #f56c6c }
 
-    /* 鐘舵€佸垎甯冭 */
+    /* 状态分布行 */
     .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6) }
     @media (max-width: 700px) { .status-grid { grid-template-columns: 1fr } }
     .status-card { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between }
     .status-card__label { font-size: var(--font-size-base); color: var(--text-secondary) }
-    .status-card__value { font-size: var(--font-size-2xl); font-weight: 600; line-height: 1.2 }
-    .status-card__value--used { color: var(--color-success) }
+    .status-card__value { font-size: 22px; font-weight: 600; line-height: 1.2 }
+    .status-card__value--used { color: #67c23a }
     .status-card__value--unused { color: var(--color-brand-500) }
-    .status-card__value--expired { color: var(--color-danger) }
+    .status-card__value--expired { color: #f56c6c }
 
-    /* 绌虹姸鎬?*/
+    /* 空状态 */
     .empty-state { text-align: center; padding: 60px var(--space-4); color: var(--text-muted); font-size: var(--font-size-base) }
-    .empty-state__icon { font-size: var(--font-size-4xl); line-height: 1; margin-bottom: var(--space-4) }
-    .empty-state__desc { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-2) }
+    .empty-state__icon { font-size: 48px; line-height: 1; margin-bottom: var(--space-4) }
+    .empty-state__desc { font-size: 12px; color: var(--text-muted); margin-top: var(--space-2) }
 
-    /* 鏃堕棿鍒楁牱寮?*/
-    .time-cell { font-size: var(--font-size-xs); color: var(--text-secondary); text-align: center }
+    /* 时间列样式 */
+    .time-cell { font-size: 12px; color: var(--text-secondary); text-align: center }
     .time-cell--muted { color: var(--text-muted) }
   </style>
 </head>
 <body>
-  <a href="#main-content" class="skip-link">璺宠浆鍒颁富鍐呭</a>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="detail-app">
-    <div class="container detail-container" id="main-content" role="main" aria-label="鎶曟斁鏄庣粏涓庢晥鏋滆拷婧?>
+    <div class="container detail-container" id="main-content" role="main" aria-label="投放明细与效果追溯">
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">鎶曟斁鏄庣粏</h1>
-          <p class="ds-page-header__subtitle">杩芥函鍚勪紭鎯犲埜妯℃澘鐨勫彂鏀炬儏鍐典笌鏁堟灉</p>
+          <h1 class="ds-page-header__title" id="page-title">投放明细</h1>
+          <p class="ds-page-header__subtitle">追溯各优惠券模板的发放情况与效果</p>
         </div>
       </header>
 
-      <!-- 妯℃澘閫夋嫨 -->
+      <!-- 模板选择 -->
       <div class="select-panel">
-        <div class="select-panel__label">閫夋嫨妯℃澘锛?/div>
+        <div class="select-panel__label">选择模板：</div>
         <div class="select-panel__select">
-          <el-select v-model="templateId" placeholder="璇烽€夋嫨浼樻儬鍒告ā鏉? filterable style="width: 100%" @change="onTemplateChange" aria-label="閫夋嫨浼樻儬鍒告ā鏉?>
+          <el-select v-model="templateId" placeholder="请选择优惠券模板" filterable style="width: 100%" @change="onTemplateChange" aria-label="选择优惠券模板">
             <el-option
               v-for="t in templateOptions"
               :key="t.value"
@@ -76,63 +76,63 @@
               :disabled="t.status !== 1"
             >
               <span>{{ t.label }}</span>
-              <span style="display:flex; flex-direction:column; align-items:flex-end; margin-left:8px">
-                鎬绘暟 {{ t.totalCount }} / 鍓╀綑 {{ t.remainCount }}
+              <span style="float:right; color:var(--text-muted); font-size:12px; margin-left:8px">
+                总数 {{ t.totalCount }} / 剩余 {{ t.remainCount }}
               </span>
             </el-option>
           </el-select>
-          <div class="select-panel__tip">璇烽€夋嫨宸插惎鐢ㄧ殑浼樻儬鍒告ā鏉挎煡璇㈡姇鏀炬槑缁嗕笌鏁堟灉</div>
+          <div class="select-panel__tip">请选择已启用的优惠券模板查询投放明细与效果</div>
         </div>
-        <el-button type="primary" size="small" @click="onTemplateChange" class="select-panel__btn">鏌ヨ</el-button>
-        <el-button size="small" @click="loadTemplates">鍒锋柊鍒楄〃</el-button>
+        <el-button type="primary" size="small" @click="onTemplateChange" class="select-panel__btn">查询</el-button>
+        <el-button size="small" @click="loadTemplates">刷新列表</el-button>
       </div>
 
-      <!-- 鏁版嵁鍖猴紙浠呴€夋嫨妯℃澘鍚庢樉绀猴級 -->
+      <!-- 数据区（仅选择模板后显示） -->
       <div v-if="selected">
 
-        <!-- 鏁堟灉鎸囨爣鍗?-->
+        <!-- 效果指标卡 -->
         <div class="effect-grid" v-loading="effectLoading">
           <div class="effect-card primary">
-            <div class="effect-card__label">鍙戞斁鐜?/div>
+            <div class="effect-card__label">发放率</div>
             <div class="effect-card__value">{{ effectData.issueRate }}</div>
             <div class="effect-card__sub">{{ effectData.issuedCount }} / {{ effectData.totalCount }}</div>
           </div>
           <div class="effect-card success">
-            <div class="effect-card__label">浣跨敤鐜?/div>
+            <div class="effect-card__label">使用率</div>
             <div class="effect-card__value">{{ effectData.usageRate }}</div>
             <div class="effect-card__sub">{{ effectData.usedCount }} / {{ effectData.issuedCount }}</div>
           </div>
           <div class="effect-card warning">
-            <div class="effect-card__label">娲昏穬鐜?/div>
+            <div class="effect-card__label">活跃率</div>
             <div class="effect-card__value">{{ effectData.activeRate }}</div>
             <div class="effect-card__sub">{{ effectData.usedCount }} / {{ effectData.totalCount }}</div>
           </div>
           <div class="effect-card danger">
-            <div class="effect-card__label">浼樻儬鎬婚</div>
+            <div class="effect-card__label">优惠总额</div>
             <div class="effect-card__value">
-              楼{{ effectData.discountAmount | toDecimal }}
+              ¥{{ effectData.discountAmount | toDecimal }}
             </div>
-            <div class="effect-card__sub">鏉′欢 楼{{ effectData.conditionAmount | toDecimal }}</div>
+            <div class="effect-card__sub">条件 ¥{{ effectData.conditionAmount | toDecimal }}</div>
           </div>
         </div>
 
-        <!-- 鐘舵€佸垎甯?-->
+        <!-- 状态分布 -->
         <div class="status-grid">
           <div class="status-card">
-            <span class="status-card__label">宸蹭娇鐢?/span>
+            <span class="status-card__label">已使用</span>
             <span class="status-card__value status-card__value--used">{{ effectData.usedCount }}</span>
           </div>
           <div class="status-card">
-            <span class="status-card__label">鏈娇鐢?/span>
+            <span class="status-card__label">未使用</span>
             <span class="status-card__value status-card__value--unused">{{ effectData.unusedCount }}</span>
           </div>
           <div class="status-card">
-            <span class="status-card__label">宸茶繃鏈?/span>
+            <span class="status-card__label">已过期</span>
             <span class="status-card__value status-card__value--expired">{{ effectData.expiredCount }}</span>
           </div>
         </div>
 
-        <!-- 鍙戞斁浼氬憳鏄庣粏琛ㄦ牸 -->
+        <!-- 发放会员明细表格 -->
         <crud-table
           ref="crudTable"
           :data="tableData"
@@ -155,11 +155,11 @@
         </crud-table>
       </div>
 
-      <!-- 鏈€夋嫨妯℃澘鎻愮ず -->
+      <!-- 未选择模板提示 -->
       <div v-else class="empty-state">
-        <div class="empty-state__icon">馃搳</div>
-        <div>璇烽€夋嫨浼樻儬鍒告ā鏉挎煡鐪嬫姇鏀炬槑缁嗕笌鏁堟灉</div>
-        <div class="empty-state__desc">鏀寔杩芥函鍙戞斁鎬绘暟銆佷娇鐢ㄥ垎甯冦€佷細鍛樻槑缁?/div>
+        <div class="empty-state__icon">📊</div>
+        <div>请选择优惠券模板查看投放明细与效果</div>
+        <div class="empty-state__desc">支持追溯发放总数、使用分布、会员明细</div>
       </div>
     </div>
   </div>
@@ -180,7 +180,7 @@
           templateId: null,
           templateOptions: [],
           selected: false,
-          // 鎶曟斁鏁堟灉
+          // 投放效果
           effectLoading: false,
           effectData: {
             totalCount: 0, remainCount: 0, issuedCount: 0,
@@ -188,22 +188,22 @@
             issueRate: '0%', usageRate: '0%', activeRate: '0%',
             discountAmount: 0, conditionAmount: 0
           },
-          // 浼氬憳鏄庣粏琛ㄦ牸
+          // 会员明细表格
           tableLoading: false,
           page: 1,
           pageSize: 10,
           counts: 0,
           tableData: [],
           columns: [
-            { prop: 'memberName', label: '浼氬憳濮撳悕', width: 110 },
-            { prop: 'memberPhone', label: '浼氬憳鎵嬫満', width: 140 },
-            { prop: 'levelName', label: '浼氬憳绛夌骇', width: 110 },
-            { prop: 'couponStatus', label: '鐢ㄥ埜鐘舵€?, slot: true, width: 100, align: 'center' },
-            { prop: 'createdTime', label: '棰嗗彇鏃堕棿', width: 180, align: 'center',
+            { prop: 'memberName', label: '会员姓名', width: 110 },
+            { prop: 'memberPhone', label: '会员手机', width: 140 },
+            { prop: 'levelName', label: '会员等级', width: 110 },
+            { prop: 'couponStatus', label: '用券状态', slot: true, width: 100, align: 'center' },
+            { prop: 'createdTime', label: '领取时间', width: 180, align: 'center',
               formatter: function(row) { return row.createdTime || '-' } },
-            { prop: 'usedTime', label: '浣跨敤鏃堕棿', width: 180, align: 'center',
+            { prop: 'usedTime', label: '使用时间', width: 180, align: 'center',
               formatter: function(row) { return row.usedTime || '-' } },
-            { prop: 'expireTime', label: '杩囨湡鏃堕棿', width: 180, align: 'center',
+            { prop: 'expireTime', label: '过期时间', width: 180, align: 'center',
               formatter: function(row) { return row.expireTime || '-' } }
           ]
         }
@@ -219,16 +219,16 @@
       },
       methods: {
         statusLabel(status) {
-          if (status === 'used') return '宸蹭娇鐢?
-          if (status === 'unused') return '鏈娇鐢?
-          if (status === 'expired') return '宸茶繃鏈?
+          if (status === 'used') return '已使用'
+          if (status === 'unused') return '未使用'
+          if (status === 'expired') return '已过期'
           return status || '-'
         },
         async loadTemplates() {
           try {
-            const res = await couponTemplateList()
+            var res = await couponTemplateList()
             if (String(res.code) === '1') {
-              const records = res.data.records || []
+              var records = res.data.records || []
               this.templateOptions = records.map(function(t) {
                 return {
                   value: t.id,
@@ -240,7 +240,7 @@
               })
             }
           } catch (e) {
-            console.warn('鍔犺浇妯℃澘鍒楄〃澶辫触:', e)
+            console.warn('加载模板列表失败:', e)
           }
         },
         onTemplateChange() {
@@ -257,9 +257,9 @@
           if (!this.templateId) return
           this.effectLoading = true
           try {
-            const res = await couponEffect(this.templateId)
+            var res = await couponEffect(this.templateId)
             if (String(res.code) === '1' && res.data) {
-              const d = res.data
+              var d = res.data
               this.effectData = {
                 totalCount: d.totalCount || 0,
                 remainCount: d.remainCount || 0,
@@ -275,7 +275,7 @@
               }
             }
           } catch (e) {
-            console.warn('鍔犺浇鎶曟斁鏁堟灉澶辫触:', e)
+            console.warn('加载投放效果失败:', e)
           } finally {
             this.effectLoading = false
           }
@@ -284,18 +284,21 @@
           if (!this.templateId) return
           this.tableLoading = true
           try {
-            const params = {$2}
-            const res = await couponIssued(this.templateId, params)
+            var params = {
+              page: this.page,
+              pageSize: this.pageSize
+            }
+            var res = await couponIssued(this.templateId, params)
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
               this.counts = res.data.total
             } else {
               this.tableData = []
               this.counts = 0
-              ReggieUI.error(res.msg || '鍔犺浇澶辫触')
+              ReggieUI.error(res.msg || '加载失败')
             }
           } catch (e) {
-            console.warn('鍔犺浇浼氬憳鏄庣粏澶辫触:', e)
+            console.warn('加载会员明细失败:', e)
           } finally {
             this.tableLoading = false
           }

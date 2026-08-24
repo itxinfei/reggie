@@ -57,6 +57,28 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
         if (currentTenantId != null && !currentTenantId.equals(paymentOrder.getTenantId())) {
             throw new CustomException("无权对其他租户的支付单发起退款");
         }
+        // 修复 P2-4：校验累计已退款金额 + 本次金额不超过支付金额，防止超额退款
+        if (amount != null && paymentOrder.getAmount() != null) {
+            BigDecimal paid = paymentOrder.getAmount();
+            if (amount.compareTo(paid) > 0) {
+                throw new CustomException("退款金额超过支付金额");
+            }
+            // 查询该支付单累计已退款金额（排除本条待创建记录）
+            BigDecimal refunded = this.lambdaQuery()
+                    .eq(RefundRecord::getPaymentOrderId, paymentOrderId)
+                    .eq(RefundRecord::getTenantId, currentTenantId)
+                    .eq(RefundRecord::getStatus, RefundStatus.SUCCESS.getCode())
+                    .select(RefundRecord::getAmount)
+                    .list()
+                    .stream()
+                    .map(RefundRecord::getAmount)
+                    .filter(a -> a != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            if (refunded.add(amount).compareTo(paid) > 0) {
+                throw new CustomException("累计退款金额超过支付金额，当前已退款:"
+                        + refunded + "，本次退款:" + amount);
+            }
+        }
 
         RefundRecord record = new RefundRecord();
         record.setPaymentOrderId(paymentOrderId);

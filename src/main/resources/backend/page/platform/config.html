@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>外卖平台对接 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/consistency.css" />
+</head>
+<body>
+<div class="dashboard-container" id="platform-app">
+  <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <!-- 页头：标题 + 主操作 -->
+    <header class="ds-page-header">
+      <div class="ds-page-header__titles">
+        <h1 class="ds-page-header__title">外卖平台对接</h1>
+        <p class="ds-page-header__subtitle">统一管理外卖平台接入，灵活配置对接平台与同步范围</p>
+      </div>
+      <div class="ds-page-header__actions">
+        <el-button type="primary" size="small" @click="openAdd">添加平台</el-button>
+      </div>
+    </header>
+
+    <!-- 数据区：卡片容器 + 标准表格 -->
+    <el-card shadow="never" class="ds-card">
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="220"
+        :actions-fixed="true"
+        @page-change="handlePageChange"
+        @size-change="handleSizeChange"
+      >
+        <!-- 平台类型：标签展示 -->
+        <template #col-platformType="{ row }">
+          <el-tag size="mini">{{ platformTypeText(row.platformType) }}</el-tag>
+        </template>
+        <!-- 同步范围：位标记拆解为标签 -->
+        <template #col-syncScope="{ row }">
+          <el-tag v-for="s in scopeBits(row.syncScope)" :key="s" size="mini" type="info" class="scope-tag">{{ s }}</el-tag>
+          <span v-if="!scopeBits(row.syncScope).length" class="ds-text-secondary">—</span>
+        </template>
+        <!-- 状态：启用/停用 -->
+        <template #col-enabled="{ row }">
+          <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="mini">
+            {{ row.enabled === 1 ? '启用' : '停用' }}
+          </el-tag>
+        </template>
+        <!-- 操作列 -->
+        <template #actions="{ row }">
+          <el-button size="mini" type="text" @click="openEdit(row)">编辑</el-button>
+          <el-button size="mini" type="text" :type="row.enabled === 1 ? 'warning' : 'success'" @click="toggle(row)">
+            {{ row.enabled === 1 ? '停用' : '启用' }}
+          </el-button>
+          <el-button size="mini" type="text" class="danger-link" @click="remove(row)">删除</el-button>
+        </template>
+      </crud-table>
+
+      <!-- 空状态 -->
+      <div v-if="!loading && tableData.length === 0" class="ds-empty">
+        暂无平台配置，点击右上角「添加平台」开始接入外卖平台
+      </div>
+    </el-card>
+  </div>
+
+  <!-- 新增/编辑对话框 -->
+  <crud-dialog
+    :title="dialogTitle"
+    :visible.sync="dialogVisible"
+    size="lg"
+    :close-on-click-modal="false"
+    :submit-loading="submitting"
+    @submit="submit"
+  >
+    <el-form :model="form" :rules="formRules" ref="formRef" label-width="100px">
+      <el-row :gutter="16">
+        <el-col :span="12">
+          <el-form-item label="平台类型" prop="platformType">
+            <el-select v-model="form.platformType" placeholder="请选择平台类型" style="width:100%;">
+              <el-option label="美团外卖" value="MEITUAN"></el-option>
+              <el-option label="饿了么" value="ELEME"></el-option>
+              <el-option label="抖音本地生活" value="DOUYIN"></el-option>
+              <el-option label="自营小程序" value="SELF"></el-option>
+              <el-option label="其他" value="OTHER"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="平台名称" prop="platformName">
+            <el-input v-model="form.platformName" placeholder="如：美团外卖-总店" maxlength="128"></el-input>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-form-item label="门店ID" prop="shopId">
+        <el-input v-model="form.shopId" placeholder="平台侧门店 ID" maxlength="128"></el-input>
+      </el-form-item>
+      <el-row :gutter="16">
+        <el-col :span="12">
+          <el-form-item label="AppKey">
+            <el-input v-model="form.appKey" placeholder="留空则不修改原值" maxlength="512"></el-input>
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="AccessToken">
+            <el-input v-model="form.accessToken" placeholder="留空则不修改原值" maxlength="512"></el-input>
+          </el-form-item>
+        </el-row>
+      <el-form-item label="AppSecret">
+        <el-input v-model="form.appSecret" type="password" placeholder="留空则不修改原值" maxlength="512"></el-input>
+      </el-form-item>
+      <el-form-item label="同步范围" prop="syncScope">
+        <el-checkbox-group v-model="scopeBitsModel">
+          <el-checkbox label="1">订单</el-checkbox>
+          <el-checkbox label="2">商品</el-checkbox>
+          <el-checkbox label="4">库存</el-checkbox>
+          <el-checkbox label="8">营业状态</el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
+      <el-form-item label="启用">
+        <el-switch v-model="form.enabled" :active-value="1" :inactive-value="0"></el-switch>
+      </el-form-item>
+      <el-form-item label="备注">
+        <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="500"></el-input>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button size="medium" @click="dialogVisible = false">取 消</el-button>
+      <el-button type="primary" size="medium" :loading="submitting" @click="submit">确 定</el-button>
+    </template>
+  </crud-dialog>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js"></script>
+<script src="../../js/components.js"></script>
+<script src="../../api/platform.js"></script>
+<script>
+  new Vue({
+    el: '#platform-app',
+    // 引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
+    mixins: [window.ReggieListMixin],
+    data() {
+      return {
+        // 修改点：列配置（供 <crud-table> 使用，对齐走 resolveColAlign 单一来源）
+        columns: [
+          { prop: 'platformName', label: '平台名称', minWidth: 160, align: 'center' },
+          { prop: 'platformType', label: '平台类型', width: 120, align: 'center', slot: true },
+          { prop: 'shopId', label: '门店ID', minWidth: 140, align: 'center' },
+          { prop: 'syncScope', label: '同步范围', minWidth: 200, align: 'center', slot: true },
+          { prop: 'enabled', label: '状态', width: 100, align: 'center', slot: true }
+        ],
+        // 修改点：对话框与表单状态
+        action: '',
+        submitting: false,
+        dialogVisible: false,
+        scopeBitsModel: ['1'],
+        form: this.emptyForm(),
+        // 修改点：表单校验规则（Element UI el-form :rules）
+        formRules: {
+          platformType: [{ required: true, message: '请选择平台类型', trigger: 'change' }],
+          platformName: [
+            { required: true, message: '请输入平台名称', trigger: 'blur' },
+            { max: 128, message: '平台名称最多128个字符', trigger: 'blur' }
+          ],
+          shopId: [
+            { required: true, message: '请输入门店ID', trigger: 'blur' },
+            { max: 128, message: '门店ID最多128个字符', trigger: 'blur' }
+          ]
+        }
+      }
+    },
+    computed: {
+      // 修改点：对话框标题
+      dialogTitle() {
+        return this.action === 'edit' ? '编辑平台配置' : '添加平台配置'
+      }
+    },
+    created() {
+      this.fetchData()
+    },
+    methods: {
+      // 修改点：表单初始值
+      emptyForm() {
+        return {
+          id: null, platformType: 'MEITUAN', platformName: '', shopId: '',
+          appKey: '', appSecret: '', accessToken: '', syncScope: 1, enabled: 1, remark: ''
+        }
+      },
+      // 修改点：列表数据拉取（后端分页，返回 records/total）
+      async fetchData() {
+        this.loading = true
+        try {
+          const res = await window.platformApi.list({ page: this.page, pageSize: this.pageSize })
+          if (String(res.code) === '1' && res.data) {
+            this.tableData = res.data.records || []
+            this.counts = Number(res.data.total) || 0
+          } else {
+            ReggieUI.error((res && res.msg) || '加载平台配置失败')
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') {
+            ReggieUI.error('加载平台配置失败，请刷新重试')
+          }
+        } finally {
+          this.loading = false
+        }
+      },
+      // 修改点：翻页/改页大小（ReggieListMixin 已更新 page/pageSize，重新拉取）
+      handlePageChange(p) {
+        this.page = p
+        this.fetchData()
+      },
+      handleSizeChange(s) {
+        this.pageSize = s
+        this.page = 1
+        this.fetchData()
+      },
+      platformTypeText(type) {
+        const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音', SELF: '自营', OTHER: '其他' }
+        return map[type] || type
+      },
+      // 修改点：位标记拆解
+      scopeBits(scope) {
+        if (scope == null) return []
+        const map = { 1: '订单', 2: '商品', 4: '库存', 8: '营业状态' }
+        const res = []
+        ;[1, 2, 4, 8].forEach(function (b) { if (scope & b) res.push(map[b]) })
+        return res
+      },
+      // 修改点：打开新增
+      openAdd() {
+        this.action = 'add'
+        this.form = this.emptyForm()
+        this.scopeBitsModel = ['1']
+        this.dialogVisible = true
+        this.$nextTick(() => {
+          this.$refs.formRef && this.$refs.formRef.clearValidate()
+        })
+      },
+      // 修改点：打开编辑（凭据留空，提交时不修改原密文）
+      openEdit(row) {
+        this.action = 'edit'
+        this.form = {
+          id: row.id, platformType: row.platformType, platformName: row.platformName,
+          shopId: row.shopId, appKey: '', appSecret: '', accessToken: '',
+          syncScope: row.syncScope, enabled: row.enabled, remark: row.remark
+        }
+        this.scopeBitsModel = this.scopeBits(row.syncScope).map(function (b) {
+          return ({ '订单': '1', '商品': '2', '库存': '4', '营业状态': '8' })[b]
+        })
+        this.dialogVisible = true
+        this.$nextTick(() => {
+          this.$refs.formRef && this.$refs.formRef.clearValidate()
+        })
+      },
+      // 修改点：提交（新增/更新统一入口）
+      async submit() {
+        this.$refs.formRef.validate(async (valid) => {
+          if (!valid) return
+          const payload = Object.assign({}, this.form, {
+            syncScope: this.scopeBitsModel.reduce(function (a, b) { return a + Number(b) }, 0)
+          })
+          this.submitting = true
+          try {
+            const api = this.action === 'edit' ? window.platformApi.update : window.platformApi.add
+            const res = await api(payload)
+            if (res && String(res.code) === '1') {
+              ReggieUI.success('保存成功')
+              this.dialogVisible = false
+              this.fetchData()
+            } else {
+              ReggieUI.error((res && res.msg) || '保存失败')
+            }
+          } catch (err) {
+            ReggieUI.error('保存失败，请重试')
+          } finally {
+            this.submitting = false
+          }
+        })
+      },
+      // 修改点：启用/停用切换（带二次确认）
+      toggle(row) {
+        const enabled = row.enabled === 1 ? 0 : 1
+        const tip = enabled === 1 ? '确认启用该平台配置？' : '确认停用该平台配置？'
+        this.$confirm(tip, '提示', { type: 'warning' }).then(async () => {
+          const res = await window.platformApi.toggle(row.id, enabled)
+          if (res && String(res.code) === '1') {
+            ReggieUI.success(enabled === 1 ? '已启用' : '已停用')
+            this.fetchData()
+          } else {
+            ReggieUI.error('操作失败')
+          }
+        }).catch(() => {})
+      },
+      // 修改点：删除（高危二次确认）
+      remove(row) {
+        this.$confirm('确认删除该平台配置？删除后不可恢复。', '提示', { type: 'warning' }).then(async () => {
+          const res = await window.platformApi.remove(row.id)
+          if (res && String(res.code) === '1') {
+            ReggieUI.success('已删除')
+            this.fetchData()
+          } else {
+            ReggieUI.error('删除失败')
+          }
+        }).catch(() => {})
+      }
+    }
+  })
+</script>
+<style>
+  /* 修改点：作用域样式，仅覆盖本页局部细节，主视觉走 tokens.css */
+  .scope-tag { margin-right: 4px; }
+  .ds-empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--el-text-secondary);
+    font-size: 14px;
+  }
+  .danger-link { color: var(--el-color-danger); }
+</style>
+</body>
+</html>

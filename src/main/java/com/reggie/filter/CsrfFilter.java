@@ -45,6 +45,10 @@ public class CsrfFilter implements Filter {
 
     /** CSRF Token Session Key */
     private static final String CSRF_TOKEN_KEY = "csrfToken";
+    /** Token 时间戳 Session Key（用于过期校验） */
+    private static final String CSRF_TOKEN_TIME_KEY = "csrfTokenTime";
+    /** Token 有效期：30 分钟（与会话超时一致） */
+    private static final long CSRF_TOKEN_MAX_AGE_MS = 30L * 60 * 1000;
 
     /** 响应头名称 */
     private static final String CSRF_HEADER_NAME = "X-CSRF-Token";
@@ -99,16 +103,28 @@ public class CsrfFilter implements Filter {
         }
 
         // 验证CSRF Token
-        if (sessionToken == null || requestToken == null || !sessionToken.equals(requestToken)) {
-            log.warn("CSRF验证失败 - URI: {}, sessionToken: {}, requestToken: {}",
-                requestURI,
-                sessionToken != null ? "exists" : "null",
-                requestToken != null ? "exists" : "null");
-
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write(OBJECT_MAPPER.writeValueAsString(
-                R.error("CSRF验证失败，请刷新页面后重试")));
+        // 修复 P1-3：使用常量时间比较，防止时序侧信道攻击
+        // 修复 P1-4：校验 Token 过期（30 分钟），防止长期不销毁
+        if (sessionToken == null || requestToken == null) {
+            log.warn("CSRF验证失败(token为空) - URI: {}", requestURI);
+            rejectCsrf(request, response, requestURI);
+            return;
+        }
+        // P1-4：检查 Token 是否过期
+        if (!CsrfTokenUtil.isTokenNotExpired(sessionToken, CSRF_TOKEN_MAX_AGE_MS)) {
+            log.warn("CSRF Token 已过期 - URI: {}", requestURI);
+            // 过期后自动刷新：生成新 Token 存入 Session
+            String newToken = CsrfTokenUtil.generateToken();
+            session.setAttribute(CSRF_TOKEN_KEY, newToken);
+            response.setHeader(CSRF_HEADER_NAME, newToken);
+            // 但本次请求仍拒绝（过期 Token 不可用）
+            rejectCsrf(request, response, requestURI);
+            return;
+        }
+        // P1-3：常量时间比较
+        if (!CsrfTokenUtil.validateToken(requestToken, sessionToken)) {
+            log.warn("CSRF验证失败(不匹配) - URI: {}", requestURI);
+            rejectCsrf(request, response, requestURI);
             return;
         }
 
@@ -135,6 +151,7 @@ public class CsrfFilter implements Filter {
 
     /**
      * 在响应头中设置CSRF Token（仅对已登录用户）
+     * 修复 P1-4：同时检查 Token 是否过期，过期时自动刷新
      */
     private void setCsrfTokenHeader(HttpServletRequest request, HttpServletResponse response) {
         HttpSession session = request.getSession(false);
@@ -148,8 +165,8 @@ public class CsrfFilter implements Filter {
         }
 
         String token = (String) session.getAttribute(CSRF_TOKEN_KEY);
-        if (token == null) {
-            // 生成新的CSRF Token
+        if (token == null || !CsrfTokenUtil.isTokenNotExpired(token, CSRF_TOKEN_MAX_AGE_MS)) {
+            // 修复 P1-4：Token 过期，重新生成
             token = CsrfTokenUtil.generateToken();
             session.setAttribute(CSRF_TOKEN_KEY, token);
             log.debug("为用户生成新的CSRF Token");
@@ -159,17 +176,31 @@ public class CsrfFilter implements Filter {
         response.setHeader(CSRF_HEADER_NAME, token);
     }
 
+
+    /**
+     * 拒绝 CSRF 验证失败的请求
+     */
+    private void rejectCsrf(HttpServletRequest request, HttpServletResponse response, String requestURI)
+            throws IOException {
+        log.warn("CSRF验证失败 - URI: {}", requestURI);
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(OBJECT_MAPPER.writeValueAsString(
+                R.error("CSRF验证失败，请刷新页面后重试")));
+    }
+
     
 
     /**
      * 获取当前用户的CSRF Token（供Controller调用）
+     * 修复 P1-4：Token 过期时自动刷新
      */
     public static String getCsrfToken(HttpSession session) {
         if (session == null) {
             return null;
         }
         String token = (String) session.getAttribute(CSRF_TOKEN_KEY);
-        if (token == null) {
+        if (token == null || !CsrfTokenUtil.isTokenNotExpired(token, CSRF_TOKEN_MAX_AGE_MS)) {
             token = CsrfTokenUtil.generateToken();
             session.setAttribute(CSRF_TOKEN_KEY, token);
         }

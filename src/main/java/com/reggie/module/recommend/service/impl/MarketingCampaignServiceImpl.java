@@ -284,7 +284,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         LambdaQueryWrapper<MarketingMessage> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MarketingMessage::getUserId, userId)
                .eq(MarketingMessage::getStatus, MarketingMessage.STATUS_SENT);
-        return (int) messageMapper.selectCount(wrapper);
+        return messageMapper.selectCount(wrapper).intValue();
     }
 
     @Override

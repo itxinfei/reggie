@@ -34,6 +34,7 @@ public class DiningTable implements Serializable {
     private Long id;
 
     @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     @Schema(description = "区域ID", example = "1")
@@ -60,6 +61,9 @@ public class DiningTable implements Serializable {
 
     @Schema(description = "桌台二维码URL", example = "https://xxx.com/qr/A01.png")
     private String qrCodeUrl;
+
+    @Schema(description = "当前关联订单ID（开台后绑定）", example = "1")
+    private Long currentOrderId;
 
     @Schema(description = "排序号（升序）", example = "1")
     private Integer sort;

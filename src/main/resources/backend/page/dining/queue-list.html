@@ -4,63 +4,63 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>閹烘帡妲﹂崣顐㈠娇 - 閻熺偛鎮忔径鏍у礌缁狅紕鎮婄粩?/title>
+  <title>排队叫号 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     .queue-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
 
-    /* 缁涙盯鈧鐖?*/
+    /* 筛选栏 */
     .filter-bar { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: flex-end; gap: var(--space-4); margin-bottom: var(--space-6); flex-wrap: wrap }
     .filter-bar__label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap }
     .filter-bar__col { display: flex; flex-direction: column; gap: 4px }
     .filter-bar__input { height: 36px }
     .filter-bar__btn { height: 36px; font-size: var(--font-size-base) }
 
-    /* 缂佺喕顓搁崡锛勫鐞?*/
+    /* 统计卡片行 */
     .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-4); margin-bottom: var(--space-6) }
     @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(3, 1fr) } }
     @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr) } }
     @media (max-width: 520px) { .stats-grid { grid-template-columns: 1fr } }
     .stat-card { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: var(--space-4); transition: box-shadow var(--transition-base) }
-    .stat-card:hover { box-shadow: var(--shadow-md);
-    .stat-card__icon { font-size: var(--font-size-3xl); line-height: 1 }
+    .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12) }
+    .stat-card__icon { font-size: 28px; line-height: 1 }
     .stat-card__body { flex: 1 }
-    .stat-card__label { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px }
-    .stat-card__value { font-size: var(--font-size-3xl); font-weight: 600; color: var(--text-primary); line-height: 1.2 }
-    .stat-card__sub { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 2px }
+    .stat-card__label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px }
+    .stat-card__value { font-size: 24px; font-weight: 600; color: var(--text-primary); line-height: 1.2 }
+    .stat-card__sub { font-size: 12px; color: var(--text-muted); margin-top: 2px }
     .stat-card.danger .stat-card__value { color: var(--color-danger) }
     .stat-card.warning .stat-card__value { color: var(--color-warning) }
     .stat-card.success .stat-card__value { color: var(--color-success) }
     .stat-card.info .stat-card__value { color: var(--text-muted) }
     .stat-card.brand .stat-card__value { color: var(--color-brand-500) }
 
-    /* 閸欘偄褰块幙宥勭稊閺?*/
+    /* 叫号操作栏 */
     .call-bar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--el-bg-ghost); border-radius: var(--radius-md) }
     .call-bar__seat { display: flex; align-items: center; gap: var(--space-2) }
     .call-bar__seat-label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap }
-    .call-bar__tip { font-size: var(--font-size-xs); color: var(--text-muted) }
-    .call-bar__reset { font-size: var(--font-size-xs) }
+    .call-bar__tip { font-size: 12px; color: var(--text-muted) }
+    .call-bar__reset { font-size: 12px }
 
-    /* 閸欐牕褰垮鍦崶 */
+    /* 取号弹窗 */
     .take-dialog__form { margin-top: var(--space-2) }
 
-    /* 閸忋儱楠囧鍦崶 */
+    /* 入座弹窗 */
     .seat-detail { padding: var(--space-3); background: var(--el-bg-ghost); border-radius: var(--radius-sm); margin-bottom: var(--space-3) }
     .seat-detail__row { display: flex; justify-content: space-between; padding: var(--space-1) 0; font-size: var(--font-size-base) }
     .seat-detail__label { color: var(--text-muted) }
     .seat-detail__value { color: var(--text-primary); font-weight: 500; font-variant-numeric: tabular-nums }
 
-    /* 缁岀儤鈧?*/
+    /* 空态 */
     .empty-state { text-align: center; padding: var(--space-15) var(--space-4); color: var(--text-muted); font-size: var(--font-size-base) }
-    .empty-state__icon { font-size: var(--font-size-4xl); line-height: 1; margin-bottom: var(--space-4) }
-    .empty-state__desc { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-2) }
+    .empty-state__icon { font-size: 48px; line-height: 1; margin-bottom: var(--space-4) }
+    .empty-state__desc { font-size: 12px; color: var(--text-muted); margin-top: var(--space-2) }
 
-    /* 閻樿埖鈧焦鐖ｇ粵?*/
+    /* 状态标签 */
     .status-tag { font-weight: 500 }
 
-    /* 閸濆秴绨插蹇曠摣闁鐖?*/
+    /* 响应式筛选栏 */
     @media (max-width: 768px) {
       .filter-bar { flex-direction: column; align-items: stretch }
       .filter-bar__col { flex: 1 }
@@ -69,80 +69,80 @@
   </style>
 </head>
 <body>
-  <a href="#main-content" class="skip-link">鐠哄疇娴嗛崚棰佸瘜閸愬懎顔?/a>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="queue-app">
-    <div class="container queue-container" id="main-content" role="main" aria-label="閹烘帡妲﹂崣顐㈠娇閻婢?>
+    <div class="container queue-container" id="main-content" role="main" aria-label="排队叫号看板">
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">閹烘帡妲﹂崣顐㈠娇</h1>
-          <p class="ds-page-header__subtitle">閸倿顥ら幒鎺楁Е閸欐牕褰块妴浣稿建閸欐灚鈧礁鍙嗘惔褍鍙忓ù浣衡柤缁狅紕鎮?/p>
+          <h1 class="ds-page-header__title" id="page-title">排队叫号</h1>
+          <p class="ds-page-header__subtitle">堂食排队取号、叫号、入座全流程管理</p>
         </div>
       </header>
 
-      <!-- 缁涙盯鈧鐖?-->
+      <!-- 筛选栏 -->
       <div class="filter-bar">
         <div class="filter-bar__col">
-          <span class="filter-bar__label">閹靛婧€閸欏嚖绱?/span>
-          <el-input v-model="searchPhone" class="filter-bar__input" style="width:200px" clearable placeholder="鐠囩柉绶崗銉﹀閺堝搫褰? aria-label="閹靛婧€閸? @keyup.enter.native="onSearch"></el-input>
+          <span class="filter-bar__label">手机号：</span>
+          <el-input v-model="searchPhone" class="filter-bar__input" style="width:200px" clearable placeholder="请输入手机号" aria-label="手机号" @keyup.enter.native="onSearch"></el-input>
         </div>
         <div class="filter-bar__col">
-          <span class="filter-bar__label">閻樿埖鈧緤绱?/span>
-          <el-select v-model="searchStatus" class="filter-bar__input" style="width:150px" clearable aria-label="閻樿埖鈧? placeholder="閸忋劑鍎撮悩鑸碘偓?>
-            <el-option value="WAITING" label="缁涘绶熸稉?></el-option>
-            <el-option value="CALLED" label="瀹告彃褰ㄩ崣?></el-option>
-            <el-option value="SEATED" label="瀹告彃鍙嗘惔?></el-option>
-            <el-option value="CANCELLED" label="瀹告彃褰囧☉?></el-option>
+          <span class="filter-bar__label">状态：</span>
+          <el-select v-model="searchStatus" class="filter-bar__input" style="width:150px" clearable aria-label="状态" placeholder="全部状态">
+            <el-option value="WAITING" label="等待中"></el-option>
+            <el-option value="CALLED" label="已叫号"></el-option>
+            <el-option value="SEATED" label="已入座"></el-option>
+            <el-option value="CANCELLED" label="已取消"></el-option>
           </el-select>
         </div>
-        <el-button type="primary" size="small" @click="onSearch" class="filter-bar__btn">閺屻儴顕?/el-button>
-        <el-button size="small" @click="onReset">闁插秶鐤?/el-button>
+        <el-button type="primary" size="small" @click="onSearch" class="filter-bar__btn">查询</el-button>
+        <el-button size="small" @click="onReset">重置</el-button>
       </div>
 
-      <!-- 缂佺喕顓搁崡锛勫 -->
+      <!-- 统计卡片 -->
       <div class="stats-grid" v-loading="statsLoading">
         <div class="stat-card brand">
-          <div class="stat-card__icon">棣冩惖</div>
+          <div class="stat-card__icon">📋</div>
           <div class="stat-card__body">
-            <div class="stat-card__label">閹烘帡妲﹂幀缁樻殶</div>
+            <div class="stat-card__label">排队总数</div>
             <div class="stat-card__value">{{ stats.totalQueues || 0 }}</div>
-            <div class="stat-card__sub">娴犲﹥妫╃槐顖濐吀</div>
+            <div class="stat-card__sub">今日累计</div>
           </div>
         </div>
         <div class="stat-card warning">
-          <div class="stat-card__icon">閳?/div>
+          <div class="stat-card__icon">⏳</div>
           <div class="stat-card__body">
-            <div class="stat-card__label">缁涘绶熸稉?/div>
+            <div class="stat-card__label">等待中</div>
             <div class="stat-card__value">{{ stats.waitingCount || 0 }}</div>
-            <div class="stat-card__sub">鐏忔碍婀崣顐㈠娇</div>
+            <div class="stat-card__sub">尚未叫号</div>
           </div>
         </div>
         <div class="stat-card danger">
-          <div class="stat-card__icon">棣冩晜</div>
+          <div class="stat-card__icon">🔔</div>
           <div class="stat-card__body">
-            <div class="stat-card__label">瀹告彃褰ㄩ崣?/div>
+            <div class="stat-card__label">已叫号</div>
             <div class="stat-card__value">{{ stats.calledCount || 0 }}</div>
-            <div class="stat-card__sub">瀵板懎鐣ㄩ幒鎺戝弳鎼?/div>
+            <div class="stat-card__sub">待安排入座</div>
           </div>
         </div>
         <div class="stat-card success">
-          <div class="stat-card__icon">閴?/div>
+          <div class="stat-card__icon">✅</div>
           <div class="stat-card__body">
-            <div class="stat-card__label">瀹告彃鍙嗘惔?/div>
+            <div class="stat-card__label">已入座</div>
             <div class="stat-card__value">{{ stats.seatedCount || 0 }}</div>
-            <div class="stat-card__sub">鐎瑰本鍨氱亸鍗為獓</div>
+            <div class="stat-card__sub">完成就座</div>
           </div>
         </div>
         <div class="stat-card info">
-          <div class="stat-card__icon">閴€?/div>
+          <div class="stat-card__icon">⛔</div>
           <div class="stat-card__body">
-            <div class="stat-card__label">瀹告彃褰囧☉?/div>
+            <div class="stat-card__label">已取消</div>
             <div class="stat-card__value">{{ stats.cancelledCount || 0 }}</div>
-            <div class="stat-card__sub">娑撹濮?鐡掑懏妞傞崣鏍ㄧХ</div>
+            <div class="stat-card__sub">主动/超时取消</div>
           </div>
         </div>
       </div>
 
-      <!-- 閸欘偄褰块幙宥勭稊閺?-->
+      <!-- 叫号操作栏 -->
       <div class="call-bar" v-if="stats.waitingCount > 0">
         <el-button
           type="primary"
@@ -150,28 +150,28 @@
           :loading="callLoading"
           :disabled="callLoading"
           @click="callNext"
-        >閸欘偂绗呮稉鈧担?/el-button>
+        >叫下一位</el-button>
         <div class="call-bar__seat">
-          <span class="call-bar__seat-label">閹稿楠囨担宥嗘殶閿?/span>
-          <el-select v-model="callSeatCount" style="width:130px" clearable aria-label="閹稿楠囨担宥嗘殶缁涙盯鈧? size="small" placeholder="娑撳秹妾烘禍鐑樻殶">
-            <el-option :value="2" label="2娴?></el-option>
-            <el-option :value="4" label="4娴?></el-option>
-            <el-option :value="6" label="6娴?></el-option>
-            <el-option :value="8" label="8娴?></el-option>
-            <el-option :value="10" label="10娴?></el-option>
-            <el-option :value="12" label="12娴?></el-option>
+          <span class="call-bar__seat-label">按座位数：</span>
+          <el-select v-model="callSeatCount" style="width:130px" clearable aria-label="按座位数筛选" size="small" placeholder="不限人数">
+            <el-option :value="2" label="2人"></el-option>
+            <el-option :value="4" label="4人"></el-option>
+            <el-option :value="6" label="6人"></el-option>
+            <el-option :value="8" label="8人"></el-option>
+            <el-option :value="10" label="10人"></el-option>
+            <el-option :value="12" label="12人"></el-option>
           </el-select>
         </div>
-        <el-button type="text" size="small" @click="showTakeDialog" aria-label="閺傛澘顤冮崣鏍у娇">+ 閸欐牕褰?/el-button>
-        <el-button type="text" size="small" class="call-bar__reset" @click="callSeatCount = null">闁插秶鐤嗙粵娑⑩偓?/el-button>
-        <span class="call-bar__tip" v-if="callSeatCount">閹?{{ callSeatCount }} 娴滅儤顢戠粵娑⑩偓澶夌瑓娑撯偓娴?/span>
-        <span class="call-bar__tip" v-else>閸涚厧褰ㄧ粵澶婄窡闂冪喎鍨稉顓犳畱娑撳绔存担宥夈€愮€?/span>
+        <el-button type="text" size="small" @click="showTakeDialog" aria-label="新增取号">+ 取号</el-button>
+        <el-button type="text" size="small" class="call-bar__reset" @click="callSeatCount = null">重置筛选</el-button>
+        <span class="call-bar__tip" v-if="callSeatCount">按 {{ callSeatCount }} 人桌筛选下一位</span>
+        <span class="call-bar__tip" v-else>呼叫等待队列中的下一位顾客</span>
       </div>
 
-      <!-- 閺佺増宓佺悰銊︾壐 -->
+      <!-- 数据表格 -->
       <crud-table
         ref="crudTable"
-        empty-hint="閺嗗倹妫ら幒鎺楁Е鐠佹澘缍?
+        empty-hint="暂无排队记录"
         :data="tableData"
         :columns="columns"
         :loading="tableLoading"
@@ -194,74 +194,74 @@
           <span v-if="row.phone">{{ row.phone.substring(0,3) }}****{{ row.phone.substring(7) }}</span>
         </template>
         <template #actions="{ row }">
-          <el-button type="text" size="small" @click="seatHandle(row)" v-if="row.status === 'CALLED'" style="color:var(--color-brand-500)" :aria-label="'鐎瑰甯撻崗銉ラ獓 ' + (row.queueNo || '閹烘帡妲︾拋鏉跨秿')">閸忋儱楠?/el-button>
-          <el-button type="text" size="small" @click="recallHandle(row)" v-if="row.status === 'CALLED'" :aria-label="'闁偓閸ョ偟鐡戝?' + (row.queueNo || '')">闁偓閸?/el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(row.id)" v-if="row.status === 'WAITING' || row.status === 'CALLED'" :aria-label="'閸欐牗绉烽幒鎺楁Е ' + (row.queueNo || '')">閸欐牗绉?/el-button>
-          <el-button type="text" size="small" @click="reactivateHandle(row.id)" v-if="row.status === 'CANCELLED'" :aria-label="'閹垹顦查幒鎺楁Е ' + (row.queueNo || '')" style="color:var(--color-warning)">閹垹顦?/el-button>
+          <el-button type="text" size="small" @click="seatHandle(row)" v-if="row.status === 'CALLED'" style="color:var(--color-brand-500)" :aria-label="'安排入座 ' + (row.queueNo || '排队记录')">入座</el-button>
+          <el-button type="text" size="small" @click="recallHandle(row)" v-if="row.status === 'CALLED'" :aria-label="'退回等待 ' + (row.queueNo || '')">退回</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(row.id)" v-if="row.status === 'WAITING' || row.status === 'CALLED'" :aria-label="'取消排队 ' + (row.queueNo || '')">取消</el-button>
+          <el-button type="text" size="small" @click="reactivateHandle(row.id)" v-if="row.status === 'CANCELLED'" :aria-label="'恢复排队 ' + (row.queueNo || '')" style="color:var(--color-warning)">恢复</el-button>
         </template>
       </crud-table>
 
       <div v-if="counts === 0 && !tableLoading && tableData.length === 0" class="empty-state">
-        <div class="empty-state__icon">棣冩惖</div>
-        <div>閺嗗倹妫ら幒鎺楁Е鐠佹澘缍?/div>
-        <div class="empty-state__desc">閻愮懓鍤稉濠冩煙"閸欐牕褰?娑撴椽銆愮€广垹鍨卞鐑樺笓闂冪喕顔囪ぐ?/div>
+        <div class="empty-state__icon">📋</div>
+        <div>暂无排队记录</div>
+        <div class="empty-state__desc">点击上方"取号"为顾客创建排队记录</div>
       </div>
     </div>
 
-    <!-- 閸欐牕褰垮鍦崶 -->
+    <!-- 取号弹窗 -->
     <crud-dialog
-      title="閸欐牕褰?
+      title="取号"
       :visible.sync="takeForm.dialogVisible"
       :submit-loading="takeLoading"
       width="420px"
-      submit-text="绾?鐎?
-      aria-label="閸欐牕褰跨悰銊ュ礋"
+      submit-text="确 定"
+      aria-label="取号表单"
       @submit="submitTake"
       @close="handleTakeClose"
     >
       <el-form ref="takeFormRef" :model="takeForm" :rules="takeRules" label-width="80px" class="take-dialog__form">
-        <el-form-item label="閹靛婧€閸? prop="phone">
-          <el-input v-model="takeForm.phone" placeholder="鐠囩柉绶崗銉┿€愮€广垺澧滈張鍝勫娇" maxlength="11" size="small"></el-input>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="takeForm.phone" placeholder="请输入顾客手机号" maxlength="11" size="small"></el-input>
         </el-form-item>
-        <el-form-item label="鐏忛亶顦垫禍鐑樻殶" prop="seatCount">
+        <el-form-item label="就餐人数" prop="seatCount">
           <el-input-number v-model="takeForm.seatCount" :min="1" :max="20" size="small" style="width:180px"></el-input-number>
-          <span style="margin-left:8px; font-size: var(--font-size-xs); color:var(--text-muted)">娴?/span>
+          <span style="margin-left:8px; font-size:12px; color:var(--text-muted)">人</span>
         </el-form-item>
       </el-form>
     </crud-dialog>
 
-    <!-- 閸忋儱楠囧鍦崶 -->
+    <!-- 入座弹窗 -->
     <crud-dialog
-      title="鐎瑰甯撻崗銉ラ獓"
+      title="安排入座"
       :visible.sync="seatForm.dialogVisible"
       :submit-loading="seatLoading"
       width="560px"
-      submit-text="绾?鐠?閸?鎼?
-      aria-label="鐎瑰甯撻崗銉ラ獓鐞涖劌宕?
+      submit-text="确 认 入 座"
+      aria-label="安排入座表单"
       @submit="submitSeat"
       @close="handleSeatClose"
     >
       <div class="seat-detail">
         <div class="seat-detail__row">
-          <span class="seat-detail__label">閹烘帡妲﹂崣?/span>
+          <span class="seat-detail__label">排队号</span>
           <span class="seat-detail__value">{{ seatForm.queueNo }}</span>
         </div>
         <div class="seat-detail__row">
-          <span class="seat-detail__label">閹靛婧€閸?/span>
+          <span class="seat-detail__label">手机号</span>
           <span class="seat-detail__value">{{ seatForm.phoneDisplay }}</span>
         </div>
         <div class="seat-detail__row">
-          <span class="seat-detail__label">鐏忛亶顦垫禍鐑樻殶</span>
-          <span class="seat-detail__value">{{ seatForm.seatCount }} 娴?/span>
+          <span class="seat-detail__label">就餐人数</span>
+          <span class="seat-detail__value">{{ seatForm.seatCount }} 人</span>
         </div>
         <div class="seat-detail__row">
-          <span class="seat-detail__label">閸欐牕褰块弮鍫曟？</span>
+          <span class="seat-detail__label">取号时间</span>
           <span class="seat-detail__value">{{ seatForm.createdTimeDisplay }}</span>
         </div>
       </div>
       <el-form :model="seatForm" label-width="80px">
-        <el-form-item label="閸忓疇浠堝灞藉酱">
-          <el-select v-model="seatForm.tableId" style="width:240px" clearable placeholder="闁瀚ㄥ灞藉酱閿涘牆褰查柅澶涚礆" size="small">
+        <el-form-item label="关联桌台">
+          <el-select v-model="seatForm.tableId" style="width:240px" clearable placeholder="选择桌台（可选）" size="small">
             <el-option
               v-for="t in tableOptions"
               :key="t.value"
@@ -270,7 +270,7 @@
               :disabled="t.disabled"
             ></el-option>
           </el-select>
-          <span style="margin-left:8px; font-size: var(--font-size-xs); color:var(--text-muted)">閺堫亪鈧鍨稉宥呭彠閼辨梹顢戦崣?/span>
+          <span style="margin-left:8px; font-size:12px; color:var(--text-muted)">未选则不关联桌台</span>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -289,35 +289,39 @@
       el: '#queue-app',
       data: function() {
         return {
-          // 缁涙盯鈧?          searchPhone: '',
+          // 筛选
+          searchPhone: '',
           searchStatus: '',
-          // 缂佺喕顓?          statsLoading: false,
+          // 统计
+          statsLoading: false,
           stats: { totalQueues: 0, waitingCount: 0, calledCount: 0, seatedCount: 0, cancelledCount: 0 },
-          // 鐞涖劍鐗?          tableLoading: false,
+          // 表格
+          tableLoading: false,
           page: 1,
           pageSize: 10,
           counts: 0,
           tableData: [],
           columns: [
-            { prop: 'queueNo', label: '閹烘帡妲﹂崣?, width: 90, align: 'center' },
-            { prop: 'phone', label: '閹靛婧€閸?, slot: true, width: 130, align: 'center' },
-            { prop: 'seatCount', label: '娴滅儤鏆?, width: 70, align: 'center', type: 'number' },
-            { prop: 'status', label: '閻樿埖鈧?, slot: true, width: 90, align: 'center' },
-            { prop: 'createdTime', label: '閸欐牕褰块弮鍫曟？', width: 160, align: 'center' }
+            { prop: 'queueNo', label: '排队号', width: 90, align: 'center' },
+            { prop: 'phone', label: '手机号', slot: true, width: 130, align: 'center' },
+            { prop: 'seatCount', label: '人数', width: 70, align: 'center', type: 'number' },
+            { prop: 'status', label: '状态', slot: true, width: 90, align: 'center' },
+            { prop: 'createdTime', label: '取号时间', width: 160, align: 'center' }
           ],
-          // 閸欘偄褰?          callLoading: false,
+          // 叫号
+          callLoading: false,
           callSeatCount: null,
-          // 閸欐牕褰垮鍦崶
+          // 取号弹窗
           takeLoading: false,
           takeForm: { dialogVisible: false, phone: '', seatCount: 2 },
           takeRules: {
             phone: [
-              { required: true, message: '鐠囩柉绶崗銉﹀閺堝搫褰?, trigger: 'blur' },
-              { pattern: /^1[3-9]\d{9}$/, message: '閹靛婧€閸欓攱鐗稿蹇庣瑝濮濓絿鈥?, trigger: 'blur' }
+              { required: true, message: '请输入手机号', trigger: 'blur' },
+              { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
             ],
-            seatCount: [{ required: true, message: '鐠囩柉绶崗銉ユ皑妞佹劒姹夐弫?, trigger: 'blur' }]
+            seatCount: [{ required: true, message: '请输入就餐人数', trigger: 'blur' }]
           },
-          // 閸忋儱楠囧鍦崶
+          // 入座弹窗
           seatLoading: false,
           seatForm: {
             dialogVisible: false,
@@ -337,19 +341,20 @@
         this.loadTableOptions()
       },
       methods: {
-        // 閻樿埖鈧焦鐖ｇ粵鐐Ё鐏?        statusTagType: function(status) {
+        // 状态标签映射
+        statusTagType: function(status) {
           if (status === 'WAITING') return 'warning'
           if (status === 'CALLED') return 'danger'
           if (status === 'SEATED') return 'success'
           return 'info'
         },
         statusLabel: function(status) {
-          const map = {$2}
-          return map[status] || '閺堫亞鐓?
+          var map = { WAITING: '等待中', CALLED: '已叫号', SEATED: '已入座', CANCELLED: '已取消' }
+          return map[status] || '未知'
         },
-        // 閸旂姾娴囩紒鐔活吀
+        // 加载统计
         loadStats: function() {
-          const self = this
+          var self = this
           self.statsLoading = true
           queueStats().then(function(res) {
             self.statsLoading = false
@@ -358,14 +363,17 @@
             }
           }).catch(function(err) {
             self.statsLoading = false
-            console.warn('閸旂姾娴囬幒鎺楁Е缂佺喕顓告径杈Е:', err)
+            console.warn('加载排队统计失败:', err)
           })
         },
-        // 閸旂姾娴囩悰銊︾壐
+        // 加载表格
         loadTable: function() {
-          const self = this
+          var self = this
           self.tableLoading = true
-          const params = {$2}
+          var params = {
+            page: self.page,
+            pageSize: self.pageSize
+          }
           if (self.searchPhone && self.searchPhone.trim()) { params.phone = self.searchPhone.trim() }
           if (self.searchStatus) { params.status = self.searchStatus }
           queuePage(params).then(function(res) {
@@ -374,28 +382,30 @@
               self.tableData = res.data.records || []
               self.counts = res.data.total
             } else {
-              ReggieUI.error(res.msg || '閸旂姾娴囨径杈Е')
+              ReggieUI.error(res.msg || '加载失败')
             }
           }).catch(function(err) {
             self.tableLoading = false
-            ReggieUI.error('鐠囬攱鐪版径杈Е閿? + err)
+            ReggieUI.error('请求失败：' + err)
           })
         },
-        // 閸旂姾娴囧灞藉酱闁銆嶉敍鍫濆弳鎼囱冭剨缁愭鏁ら敍?        loadTableOptions: function() {
-          const self = this
+        // 加载桌台选项（入座弹窗用）
+        loadTableOptions: function() {
+          var self = this
           tablePage({ page: 1, pageSize: 200 }).then(function(res) {
             if (res.code === 1 && res.data && res.data.records) {
               self.tableOptions = res.data.records.map(function(t) {
                 return {
                   value: t.id,
-                  label: (t.name || '濡楀苯褰?) + '閿? + (t.areaName || '閺堫亞鐓￠崠鍝勭厵') + '閿? + (t.seatCount || 0) + '鎼囱嶇礆',
+                  label: (t.name || '桌台') + '（' + (t.areaName || '未知区域') + '，' + (t.seatCount || 0) + '座）',
                   disabled: t.status !== 'FREE'
                 }
               })
             }
-          }).catch(function() { /* 濡楀苯褰撮崝鐘烘祰婢惰精瑙︽稉宥呭閸濆秳瀵屽ù浣衡柤 */ })
+          }).catch(function() { /* 桌台加载失败不影响主流程 */ })
         },
-        // 缁涙盯鈧?        onSearch: function() {
+        // 筛选
+        onSearch: function() {
           this.page = 1
           this.loadTable()
         },
@@ -414,27 +424,29 @@
           this.page = 1
           this.loadTable()
         },
-        // 閸欘偂绗呮稉鈧担?        callNext: function() {
-          const self = this
+        // 叫下一位
+        callNext: function() {
+          var self = this
           if (self.callLoading) return
           self.callLoading = true
-          const body = {$2}
+          var body = {}
           if (self.callSeatCount) { body.seatCount = self.callSeatCount }
           queueCall(body).then(function(res) {
             self.callLoading = false
             if (res.code === 1 && res.data) {
-              ReggieUI.success('閸欘偄褰块幋鎰閿涗焦甯撻梼鐔峰娇閿? + res.data.queueNo)
+              ReggieUI.success('叫号成功！排队号：' + res.data.queueNo)
               self.loadStats()
               self.loadTable()
             } else {
-              ReggieUI.warning(res.msg || '濞屸剝婀佺粵澶婄窡娑擃厾娈戞い鎯ь吂')
+              ReggieUI.warning(res.msg || '没有等待中的顾客')
             }
           }).catch(function(err) {
             self.callLoading = false
-            ReggieUI.error('鐠囬攱鐪版径杈Е閿? + err)
+            ReggieUI.error('请求失败：' + err)
           })
         },
-        // 閸楁洜瀚崣顐㈠娇閿涘牆鍑＄粔濠氭珟鐞涘本鎼锋担婊勫瘻闁筋噯绱濋崗銊ョ湰"閸欘偂绗呮稉鈧担?閹稿鎸抽弴澶稿敩閿?        // 閸欐牕褰垮鍦崶
+        // 单独叫号（已移除行操作按钮，全局"叫下一位"按钮替代）
+        // 取号弹窗
         showTakeDialog: function() {
           this.takeForm.phone = ''
           this.takeForm.seatCount = 2
@@ -446,27 +458,27 @@
         },
         submitTake: function() {
           if (this.takeLoading) return
-          const self = this
-          const passed = false
+          var self = this
+          var passed = false
           self.$refs.takeFormRef.validate(function(valid) { passed = valid })
           if (!passed) return
           self.takeLoading = true
           queueTake({ phone: self.takeForm.phone, seatCount: self.takeForm.seatCount }).then(function(res) {
             self.takeLoading = false
             if (res.code === 1) {
-              ReggieUI.success('閸欐牕褰块幋鎰閿涗焦甯撻梼鐔峰娇閿? + (res.data ? res.data.queueNo : ''))
+              ReggieUI.success('取号成功！排队号：' + (res.data ? res.data.queueNo : ''))
               self.takeForm.dialogVisible = false
               self.loadStats()
               self.loadTable()
             } else {
-              ReggieUI.error(res.msg || '閹垮秳缍旀径杈Е')
+              ReggieUI.error(res.msg || '操作失败')
             }
           }).catch(function(err) {
             self.takeLoading = false
-            ReggieUI.error('鐠囬攱鐪版径杈Е閿? + err)
+            ReggieUI.error('请求失败：' + err)
           })
         },
-        // 閸忋儱楠囧鍦崶
+        // 入座弹窗
         seatHandle: function(row) {
           this.seatForm.queueId = row.id
           this.seatForm.queueNo = row.queueNo || ''
@@ -481,56 +493,57 @@
         },
         submitSeat: function() {
           if (this.seatLoading) return
-          const self = this
+          var self = this
           self.seatLoading = true
-          const data = {$2}
+          var data = { queueId: self.seatForm.queueId }
           if (self.seatForm.tableId) { data.tableId = self.seatForm.tableId }
           queueSeat(data).then(function(res) {
             self.seatLoading = false
             if (res.code === 1) {
-              ReggieUI.success('鐎瑰甯撻崗銉ラ獓閹存劕濮涢敍?)
+              ReggieUI.success('安排入座成功！')
               self.seatForm.dialogVisible = false
               self.loadStats()
               self.loadTable()
             } else {
-              ReggieUI.error(res.msg || '閹垮秳缍旀径杈Е')
+              ReggieUI.error(res.msg || '操作失败')
             }
           }).catch(function(err) {
             self.seatLoading = false
-            ReggieUI.error('鐠囬攱鐪版径杈Е閿? + err)
+            ReggieUI.error('请求失败：' + err)
           })
         },
-        // CALLED 閳?WAITING閿涘牓鈧偓閸ョ偟鐡戝鍜冪礉閻劋绨拠顖氬建閸欓绫傞柨娆欑礆
+        // CALLED → WAITING（退回等待，用于误叫号纠错）
         recallHandle: function(row) {
-          const self = this
-          ReggieUI.confirm('绾喛顓荤亸?' + (row.queueNo || '鐠囥儴顔囪ぐ?) + ' 闁偓閸ョ偟鐡戝鍜冪吹', '閹绘劗銇?, { confirmButtonText: '绾喖鐣?, cancelButtonText: '閸欐牗绉?, type: 'warning' })
+          var self = this
+          ReggieUI.confirm('确认将 ' + (row.queueNo || '该记录') + ' 退回等待？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
-              const id = row.id || row.queueId
+              var id = row.id || row.queueId
               if (id) { recallQueue(id).then(function(res) {
-                if (res.code === 1) { ReggieUI.success('瀹告煡鈧偓閸ョ偟鐡戝?); self.loadStats(); self.loadTable() }
-                else { ReggieUI.error(res.msg || '閹垮秳缍旀径杈Е') }
-              }).catch(function(err) { ReggieUI.error('鐠囬攱鐪版径杈Е閿? + err) }) }
+                if (res.code === 1) { ReggieUI.success('已退回等待'); self.loadStats(); self.loadTable() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) }) }
             })
         },
-        // CANCELLED 閳?WAITING閿涘牊浠径宥嗗笓闂冪噦绱濋悽銊ょ艾鐠囶垰褰囧☉鍫㈢眰闁挎瑱绱?        reactivateHandle: function(id) {
-          const self = this
-          ReggieUI.confirm('绾喛顓婚幁銏狀槻鐠囥儲甯撻梼鐔活唶瑜版洩绱?, '閹绘劗銇?, { confirmButtonText: '绾喖鐣?, cancelButtonText: '閸欐牗绉?, type: 'warning' })
+        // CANCELLED → WAITING（恢复排队，用于误取消纠错）
+        reactivateHandle: function(id) {
+          var self = this
+          ReggieUI.confirm('确认恢复该排队记录？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               reactivateQueue(id).then(function(res) {
-                if (res.code === 1) { ReggieUI.success('瀹稿弶浠径宥嗗笓闂?); self.loadStats(); self.loadTable() }
-                else { ReggieUI.error(res.msg || '閹垮秳缍旀径杈Е') }
-              }).catch(function(err) { ReggieUI.error('鐠囬攱鐪版径杈Е閿? + err) })
+                if (res.code === 1) { ReggieUI.success('已恢复排队'); self.loadStats(); self.loadTable() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
         },
-        // 閸欐牗绉烽幒鎺楁Е
+        // 取消排队
         cancelHandle: function(id) {
-          const self = this
-          ReggieUI.confirm('绾喛顓婚崣鏍ㄧХ鐠囥儲甯撻梼鐔活唶瑜版洩绱?, '閹绘劗銇?, { confirmButtonText: '绾喖鐣?, cancelButtonText: '閸欐牗绉?, type: 'warning' })
+          var self = this
+          ReggieUI.confirm('确认取消该排队记录？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               queueCancel(id).then(function(res) {
-                if (res.code === 1) { ReggieUI.success('瀹告彃褰囧☉鍫磼'); self.loadStats(); self.loadTable() }
-                else { ReggieUI.error(res.msg || '閹垮秳缍旀径杈Е') }
-              }).catch(function(err) { ReggieUI.error('鐠囬攱鐪版径杈Е閿? + err) })
+                if (res.code === 1) { ReggieUI.success('已取消！'); self.loadStats(); self.loadTable() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
         }
       }

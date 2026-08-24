@@ -253,7 +253,7 @@
         async fetchData(reloadStats = true) {
           this.loading = true
           // 修改点：传递类型筛选参数 + 名称搜索参数到后端
-          const params = {$2}
+          const params = {}
           if (this.activeFilter) { params.type = this.activeFilter }
           // 修改点：搜索名称去除首尾空格后传递，空字符串不传
           const name = (this.searchName || '').trim()

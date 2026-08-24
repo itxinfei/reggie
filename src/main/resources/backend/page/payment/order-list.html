@@ -254,8 +254,8 @@
   <script>
     // ========== 支付状态常量映射（统一来源） ==========
     // 修改点：新增 PAID → 已支付 映射，与后端 PaymentOrder 状态常量完全对齐
-    const PAYMENT_STATUS = {$2}
-    const PAYMENT_STATUS_TAG = {$2}
+    const PAYMENT_STATUS = {}
+    const PAYMENT_STATUS_TAG = {}
     // 修改点：normalizePayment 现在直接将 status 转为中文（不再依赖 _statusLabel 间接字段）
     function normalizePayment(row) {
       if (!row) return row
@@ -333,7 +333,7 @@
         async init(reloadStats = true) {
           this.loading = true
           const self = this
-          const params = {$2}
+          const params = {}
           const requests = [paymentPage(params)]
           if (reloadStats) { requests.push(self.loadPaymentStats()) }
           const results = await Promise.all(requests)
@@ -402,7 +402,7 @@
         statusTagType: function(status) {
           if (!status) return ''
           // 中文直查
-          const byLabel = {$2}
+          const byLabel = {}
           if (byLabel[status]) return byLabel[status]
           // 兜底：英文 key 查
           return PAYMENT_STATUS_TAG[(status || '').toUpperCase()] || ''

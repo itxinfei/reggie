@@ -133,7 +133,7 @@
         async init(reloadStats = true) {
           this.loading = true
           const ls = this.lastSearch || {};
-          const params = {$2}
+          const params = {}
           // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
           const requests = [reservationPage(params)]
           if (reloadStats) { requests.push(this.loadReservationStats()) }

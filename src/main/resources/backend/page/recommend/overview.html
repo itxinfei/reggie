@@ -241,9 +241,9 @@
 
         renderFeedbackChart(data) {
             if (!this.feedbackChart) return;
-            const names = [$2];
-            const values = [$2];
-            const colors = [$2];
+            const names = [];
+            const values = [];
+            const colors = [];
             this.feedbackChart.setOption({
                 tooltip: { trigger: 'axis' },
                 grid: { left: 50, right: 20, top: 10, bottom: 40 },
@@ -284,7 +284,7 @@
                 tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
                 series: [{
                     type: 'pie', radius: ['50%', '75%'], center: ['50%', '50%'],
-                    itemStyle: { borderRadius: RgPalette.radiusMd borderColor: RgPalette.white, borderWidth: 2 },
+                    itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 2 },
                     label: { fontSize: 12, formatter: '{b}\n{d}%' },
                     emphasis: { scaleSize: 8, label: { fontSize: 14, fontWeight: 'bold' } },
                     data: names.map(function(n, i) { return { name: n, value: values[i] }; })

@@ -306,7 +306,7 @@
         async init(reloadStats = true) {
           this.loading = true
           const self = this
-          const params = {$2}
+          const params = {}
           if (self.activeFilter === 'pending') params.status = 2
           const requests = [getOrderDetailPage(params)]
           if (reloadStats) { requests.push(self.loadOrderStats()) }
@@ -368,17 +368,17 @@
         onSizeChange: function(payload) { this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload; this.page = 1; this.init(false) },
         // 状态工具方法
         getOrderType: function(row) {
-          const map = {$2}
+          const map = {}
           return map[row.status] || ''
         },
         getOrderTagType: function(row) {
-          const map = {$2}
+          const map = {}
           return map[row.status] || 'info'
         },
         // 就餐方式枚举转换（订单详情弹窗使用）
         formatDiningType: function(val) {
           if (!val) return '-'
-          const map = {$2}
+          const map = {}
           return map[val] || '未知方式'
         },
         // 订单详情表格：表头样式（背景/文字走令牌，与全局表头规范一致）
@@ -449,7 +449,7 @@
           self.refundLoading = false
         },
         exportOrders: async function(format) {
-          const params = {$2}
+          const params = {}
           if (this.lastSearch.beginTime) params.startDate = this.lastSearch.beginTime
           if (this.lastSearch.endTime) params.endDate = this.lastSearch.endTime
           if (this.lastSearch.number) params.number = this.lastSearch.number

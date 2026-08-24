@@ -245,17 +245,17 @@
           return Number(value).toFixed(2)
         },
         getDiscountTypeTagType(type) {
-          const map = {$2}
+          const map = {}
           return map[type] || ''
         },
         getDiscountTypeText(type) {
-          const map = {$2}
+          const map = {}
           return map[type] || '未知'
         },
         async init() {
           this.loading = true
           const self = this
-          const params = {$2}
+          const params = {}
           if (self.lastSearch.campaignId) {
             params.campaignId = self.lastSearch.campaignId
           }

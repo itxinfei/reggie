@@ -1,5 +1,7 @@
 package com.reggie.module.urgency.model;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -47,5 +49,6 @@ public class UrgencyOrder implements Serializable {
     private Integer progressPercent;
 
     /** 租户ID */
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }

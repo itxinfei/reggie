@@ -59,7 +59,10 @@ public class CouponUserServiceImpl extends ServiceImpl<CouponUserMapper, CouponU
         }
         if (couponUser.getExpireTime() != null
                 && couponUser.getExpireTime().isBefore(LocalDateTime.now())) {
+            // 修复 P2-6：UPDATE 附加 expire_time < NOW() 条件，防止误标记未过期券
             lambdaUpdate().eq(CouponUser::getId, couponId)
+                    .eq(CouponUser::getExpireTime, couponUser.getExpireTime())
+                    .lt(CouponUser::getExpireTime, LocalDateTime.now())
                     .set(CouponUser::getStatus, "expired")
                     .update();
             return false;

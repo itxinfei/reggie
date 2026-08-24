@@ -69,7 +69,6 @@
                 </span>
                 <div class="header-scenes">
                     <span v-for="scene in scenes"
-                          :key="scene.value"
                           :class="['scene-tag', { active: currentScene === scene.value }]"
                           role="button" tabindex="0"
                           @click="switchScene(scene.value)" @keydown.enter="switchScene(scene.value)"
@@ -198,13 +197,13 @@
         function safeFormatContent(content) {
             if (!content) return [];
             if (typeof content !== 'string') return [{ type: 'text', text: String(content) }];
-            const parts = $2;
-            const lines = content.split('\n');
-            for (let li = 0; li < lines.length; li++) {
-                const line = lines[li];
+            var parts = [];
+            var lines = content.split('\n');
+            for (var li = 0; li < lines.length; li++) {
+                var line = lines[li];
                 if (li > 0) parts.push({ type: 'text', text: '\n' });
-                const boldRegex = /\*\*(.*?)\*\*/g;
-                const lastIndex = 0, match;
+                var boldRegex = /\*\*(.*?)\*\*/g;
+                var lastIndex = 0, match;
                 while ((match = boldRegex.exec(line)) !== null) {
                     if (match.index > lastIndex) {
                         parts.push({ type: 'text', text: line.substring(lastIndex, match.index) });
@@ -216,10 +215,10 @@
                     parts.push({ type: 'text', text: line.substring(lastIndex) });
                 }
                 if ((line.trim().startsWith('- ') || line.trim().startsWith('· ')) && parts.length > 0) {
-                    const listItems = $2;
+                    var listItems = [];
                     listItems.push(line.trim().replace(/^[-·]\s*/, ''));
-                    for (let ni = li + 1; ni < lines.length; ni++) {
-                        const nextLine = lines[ni].trim();
+                    for (var ni = li + 1; ni < lines.length; ni++) {
+                        var nextLine = lines[ni].trim();
                         if (nextLine.startsWith('- ') || nextLine.startsWith('· ')) {
                             listItems.push(nextLine.replace(/^[-·]\s*/, ''));
                         } else { break; }
@@ -230,8 +229,8 @@
                 }
             }
             if (parts.length === 0) return [{ type: 'text', text: content }];
-            const merged = $2;
-            for (let i = 0; i < parts.length; i++) {
+            var merged = [];
+            for (var i = 0; i < parts.length; i++) {
                 if (i > 0 && parts[i].type === 'text' && merged[merged.length - 1].type === 'text') {
                     merged[merged.length - 1].text += parts[i].text;
                 } else { merged.push(parts[i]); }
@@ -243,16 +242,21 @@
         function formatConvTime(dateStr) {
             if (!dateStr) return '';
             if (typeof dateStr === 'string' && dateStr.indexOf('T') > -1) {
-                const parts = dateStr.split('T');
-                const date = parts[0];
-                const time = parts[1] ? parts[1].substring(0, 5) : '';
+                var parts = dateStr.split('T');
+                var date = parts[0];
+                var time = parts[1] ? parts[1].substring(0, 5) : '';
                 return date + ' ' + time;
             }
             return String(dateStr);
         }
 
         /** 场景图标映射 */
-        const sceneIcons = {$2};
+        var sceneIcons = {
+            business_analysis: '📊',
+            dish_desc: '📝',
+            marketing: '📢',
+            order_assistant: '🍽️'
+        };
 
         new Vue({
             el: '#ai-app',
@@ -313,18 +317,22 @@
                     return this.quickTipsMap[this.currentScene] || [];
                 },
                 inputPlaceholder: function() {
-                    const map = {$2};
+                    var map = {
+                        business_analysis: '输入经营相关问题...',
+                        dish_desc: '输入菜名，生成美食描述...',
+                        marketing: '输入营销需求...'
+                    };
                     return map[this.currentScene] || '输入消息...';
                 },
                 hasStreamingMessage: function() {
-                    const self = this;
+                    var self = this;
                     return self.messages.some(function(m) {
                         return m.role === 'assistant' && m.streaming === true;
                     });
                 },
                 /** 当前选中的对话对象 */
                 currentConversation: function() {
-                    const self = this;
+                    var self = this;
                     if (!self.currentConversationId || !self.conversations) return null;
                     var found = self.conversations.filter(function(c) {
                         return c.conversationId === self.currentConversationId;
@@ -343,10 +351,10 @@
 
                 /** 加载对话列表 */
                 loadConversations: function() {
-                    const self = this;
+                    var self = this;
                     self.sidebarLoading = true;
                     aiBackendApi.getConversations(1, 50).then(function(res) {
-                        const data = res.$2 || res;
+                        var data = res.data || res;
                         self.conversations = (data && data.code === 1 ? data.data : data) || [];
                         // 修改点：如果有对话，自动选中最近一条
                         if (self.conversations.length > 0 && !self.currentConversationId) {
@@ -363,7 +371,7 @@
                 /** 选择对话并加载历史消息 */
                 selectConversation: function(conv) {
                     if (!conv || !conv.conversationId) return;
-                    const self = this;
+                    var self = this;
                     // 如果已经是当前对话，不重复加载
                     if (self.currentConversationId === conv.conversationId && self.messages.length > 0) {
                         return;
@@ -375,15 +383,24 @@
 
                 /** 加载指定对话的消息历史 */
                 loadConversationMessages: function(conversationId) {
-                    const self = this;
+                    var self = this;
                     self.messages = [];
                     self.loadingHistory = true;
                     aiBackendApi.getConversationDetail(conversationId).then(function(res) {
-                        const data = res.$2 || res;
-                        const records = (data && data.code === 1 ? data.data : data) || [];
+                        var data = res.data || res;
+                        var records = (data && data.code === 1 ? data.data : data) || [];
                         // 将数据库记录转换为消息格式
                         self.messages = records.map(function(record) {
-                            const msg = {$2};
+                            var msg = {
+                                _key: 'msg_' + (record.id || Date.now() + Math.random()),
+                                dbMessageId: record.id,
+                                role: record.role || 'user',
+                                content: record.content || '',
+                                showFeedback: record.role === 'assistant',
+                                feedback: record.feedback || null,
+                                streaming: false,
+                                timestamp: record.createTime ? new Date(record.createTime).getTime() : Date.now()
+                            };
                             // 安全渲染
                             if (msg.role === 'assistant') {
                                 msg.renderedParts = safeFormatContent(msg.content);
@@ -413,7 +430,7 @@
 
                 /** 删除对话 */
                 handleDeleteConv: function(conv) {
-                    const self = this;
+                    var self = this;
                     ReggieUI.confirm('确定要删除对话"' + (conv.title || '新对话') + '"吗？删除后不可恢复。', '提示', {
                         confirmButtonText: '确定',
                         cancelButtonText: '取消',
@@ -452,18 +469,33 @@
                 // ==================== 消息发送 ====================
 
                 sendMessage: function() {
-                    const text = this.inputText.trim();
+                    var text = this.inputText.trim();
                     if (!text || this.loading) return;
 
-                    const self = this;
+                    var self = this;
                     self.currentRequestId++;
-                    const requestId = self.currentRequestId;
+                    var requestId = self.currentRequestId;
 
                     // 用户消息
-                    const userMsg = {$2};
+                    var userMsg = {
+                        _key: 'user_' + Date.now(),
+                        role: 'user',
+                        content: text,
+                        timestamp: Date.now()
+                    };
 
                     // AI 占位消息（流式模式）
-                    const assistantMsg = {$2};
+                    var assistantMsg = {
+                        _key: 'ai_' + (Date.now() + 1),
+                        role: 'assistant',
+                        content: '',
+                        renderedParts: [],
+                        streaming: true,
+                        showFeedback: false,
+                        feedback: null,
+                        error: false,
+                        timestamp: Date.now()
+                    };
 
                     self.messages.push(userMsg);
                     self.messages.push(assistantMsg);
@@ -473,11 +505,14 @@
 
                     // 修改点：使用SSE流式对话替代普通POST
                     try {
-                        const params = [$2];
+                        var params = [
+                            'message=' + encodeURIComponent(text),
+                            'scene=' + encodeURIComponent(self.currentScene)
+                        ];
                         if (self.currentConversationId) {
                             params.push('conversationId=' + encodeURIComponent(self.currentConversationId));
                         }
-                        const eventSource = new EventSource('/api/ai/chat/stream?' + params.join('&'));
+                        var eventSource = new EventSource('/api/ai/chat/stream?' + params.join('&'));
 
                         eventSource.addEventListener('message', function(event) {
                             if (requestId !== self.currentRequestId) {
@@ -485,7 +520,7 @@
                                 return;
                             }
                             try {
-                                const chunk = JSON.parse($2);
+                                var chunk = JSON.parse(event.data);
                                 assistantMsg.content += chunk.text || '';
                                 assistantMsg.renderedParts = safeFormatContent(assistantMsg.content);
                                 // 记录服务端返回的 messageId
@@ -504,7 +539,7 @@
                             eventSource.close();
                             if (requestId !== self.currentRequestId) return;
                             try {
-                                const doneData = JSON.parse($2);
+                                var doneData = JSON.parse(event.data);
                                 if (doneData.messageId) {
                                     assistantMsg.dbMessageId = doneData.messageId;
                                 }
@@ -523,7 +558,7 @@
                         eventSource.addEventListener('dishes', function(event) {
                             // 点餐场景：处理推荐菜品（前端暂不展示，仅记录）
                             try {
-                                const dishes = JSON.parse($2);
+                                var dishes = JSON.parse(event.data);
                                 assistantMsg._dishes = dishes;
                             } catch (e) { /* ignore */ }
                         });
@@ -532,7 +567,7 @@
                             eventSource.close();
                             if (requestId !== self.currentRequestId) return;
                             try {
-                                const errorData = JSON.parse($2);
+                                var errorData = JSON.parse(event.data);
                                 assistantMsg.content = errorData.message || '服务暂时不可用，请稍后重试';
                             } catch (e) {
                                 assistantMsg.content = '服务暂时不可用，请稍后重试';
@@ -575,15 +610,15 @@
                 },
 
                 retryMessage: function(msg) {
-                    const self = this;
-                    const idx = self.messages.indexOf(msg);
+                    var self = this;
+                    var idx = self.messages.indexOf(msg);
                     if (idx > 0) {
                         // 删除失败的 AI 消息及其前面的用户消息
                         self.messages.splice(idx - 1, 2);
                     }
                     // 用之前的用户消息内容重新发送
                     if (idx > 0) {
-                        const prevUser = self.messages[idx - 2];
+                        var prevUser = self.messages[idx - 2];
                         if (prevUser && prevUser.role === 'user') {
                             self.inputText = prevUser.content;
                             self.sendMessage();
@@ -616,11 +651,11 @@
                 // ==================== 健康检查（修改点：新增） ====================
 
                 checkHealth: function() {
-                    const self = this;
+                    var self = this;
                     self.connectionStatus.checking = true;
                     aiBackendApi.health().then(function(res) {
-                        const data = (res.data || res);
-                        const healthData = (data && data.code === 1 ? data.data : data)  || {}
+                        var data = (res.data || res);
+                        var healthData = (data && data.code === 1 ? data.data : data) || {};
                         self.connectionStatus.model = healthData.model || 'unknown';
                         self.connectionStatus.connected = healthData.available === true;
                         self.connectionStatus.checking = false;
@@ -634,7 +669,7 @@
 
                 sendFeedback: function(msg, type) {
                     if (!msg.dbMessageId) return;
-                    const self = this;
+                    var self = this;
                     msg.feedback = type;
                     aiBackendApi.recordFeedback({
                         messageId: msg.dbMessageId,
@@ -647,9 +682,9 @@
                 // ==================== 工具 ====================
 
                 scrollToBottom: function() {
-                    const self = this;
+                    var self = this;
                     this.$nextTick(function() {
-                        const el = self.$refs.$2;
+                        var el = self.$refs.chatBody;
                         if (el) el.scrollTop = el.scrollHeight;
                     });
                 }

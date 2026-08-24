@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -29,6 +30,7 @@ public class RefundRecord implements Serializable {
     /** 支付订单ID */
     private Long paymentOrderId;
     /** 租户ID */
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
     /** 退款流水号 */
     private String refundNo;
@@ -47,4 +49,8 @@ public class RefundRecord implements Serializable {
     /** 是否删除：0=未删除，1=已删除 */
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
+
+    /** 乐观锁版本号 */
+    @Version
+    private Integer version;
 }

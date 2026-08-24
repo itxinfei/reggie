@@ -212,9 +212,9 @@
             { id: 4, name: '赵六', avatar: '赵', type: 'late', statusText: '迟到', detail: '签到 12:45，超出 45 分钟', daysBack: 4 },
             { id: 5, name: '钱七', avatar: '钱', type: 'late', statusText: '迟到', detail: '签到 08:15，超出 15 分钟', daysBack: 1 }
           ]
-          const typeMap = {$2}
-          const textMap = {$2}
-          const type2key = {$2}
+          const typeMap = {}
+          const textMap = {}
+          const type2key = {}
           self.abnormalList = items.map(function (it) {
             const dt = new Date(now)
             dt.setDate(dt.getDate() - it.daysBack)
@@ -258,7 +258,7 @@
           const today = new Date()
           const weeks = []
           const dayCounter = 1
-          const dayStatuses = {$2}
+          const dayStatuses = {}
           // 使用后端数据或 mock
           if (backendDays && backendDays.length) {
             backendDays.forEach(function (d) {

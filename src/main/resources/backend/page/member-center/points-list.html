@@ -166,7 +166,7 @@
         // 修改点：F9 性能 — 列表查询与全局统计分离，reloadStats=true 才重算
         async fetchData(reloadStats = true) {
           this.loading = true
-          const params = {$2}
+          const params = {}
           try {
             const requests = [pointsPage(params)]
             if (reloadStats) { requests.push(pointsStats()) }
@@ -224,7 +224,7 @@
               series: [{
                 type: 'pie', radius: ['48%', '72%'], center: ['50%', '48%'], avoidLabelOverlap: false,
                 label: { show: false }, emphasis: { label: { show: true, fontWeight: 'bold' } },
-                itemStyle: { borderRadius: RgPalette.radiusMd borderColor: RgPalette.white, borderWidth: 3 },
+                itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 3 },
                 data: [
                   { value: self.stats.totalAcquired || 0, name: '累计获取', itemStyle: { color: RgPalette.emerald } },
                   { value: self.stats.totalConsumed || 0, name: '累计消耗', itemStyle: { color: RgPalette.orange500 } },

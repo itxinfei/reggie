@@ -218,7 +218,7 @@
         loadData: function() {
           const self = this;
           self.loading = true;
-          const params = {$2};
+          const params = {};
           if (self.dateRange && self.dateRange.length >= 2) {
             params.startDate = self.dateRange[0]; params.endDate = self.dateRange[1];
           }
@@ -281,7 +281,7 @@
             const b = parseInt(h.substring(4,6), 16);
             return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
           };
-          const colors = [$2];
+          const colors = [];
           const dates = data.dates || [];
           var series = (data.series || []).map(function(s, i) {
             const col = colors[i] || RgPalette.textSecondary;

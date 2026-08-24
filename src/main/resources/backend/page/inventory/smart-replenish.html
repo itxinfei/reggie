@@ -195,7 +195,7 @@
           <div class="stat-card__icon">馃摝</div>
           <div class="stat-card__body">
             <div class="stat-card__label">浠婃棩寤鸿琛ヨ揣閲戦</div>
-            <div class="stat-card__value">楼{{ (statsData.totalAmount || 0).toFixed(2) }}</div>
+            <div class="stat-card__value">¥{{ (statsData.totalAmount || 0).toFixed(2) }}</div>
             <div class="stat-card__sub">娑夊強 {{ tableData.length || 0 }} 绉嶉鏉?/div>
           </div>
         </div>
@@ -294,7 +294,7 @@
           <span style="font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-danger)">{{ (row.suggestQty || 0).toFixed(1) }} <span style="font-size: var(--font-size-xs);color:var(--text-muted);font-weight:400">{{ row.unit }}</span></span>
         </template>
         <template #col-estimatedCost="{ row }">
-          <span style="font-variant-numeric:tabular-nums">楼{{ (row.suggestQty * (row.unitPrice || 0)).toFixed(2) }}</span>
+          <span style="font-variant-numeric:tabular-nums">¥{{ (row.suggestQty * (row.unitPrice || 0)).toFixed(2) }}</span>
         </template>
         <template #actions="{ row }">
           <el-button
@@ -352,10 +352,10 @@
               :style="{ width: '220px' }"
             ></el-input-number>
             <span class="restock-item__unit">{{ singleForm.unit }}</span>
-            <span style="margin-left:8px;font-size: var(--font-size-xs);color:var(--text-muted)">鍗曚环 楼{{ (singleForm.unitPrice || 0).toFixed(2) }}</span>
+            <span style="margin-left:8px;font-size: var(--font-size-xs);color:var(--text-muted)">鍗曚环 ¥{{ (singleForm.unitPrice || 0).toFixed(2) }}</span>
           </el-form-item>
           <el-form-item label="棰勮鑺辫垂">
-            <span style="font-weight:600;font-size: var(--font-size-lg);color:var(--color-brand-700);font-variant-numeric:tabular-nums">楼{{ ((singleForm.qty || 0) * (singleForm.unitPrice || 0)).toFixed(2) }}</span>
+            <span style="font-weight:600;font-size: var(--font-size-lg);color:var(--color-brand-700);font-variant-numeric:tabular-nums">¥{{ ((singleForm.qty || 0) * (singleForm.unitPrice || 0)).toFixed(2) }}</span>
           </el-form-item>
           <el-form-item label="澶囨敞">
             <el-input v-model="singleForm.remark" type="textarea" :rows="2" placeholder="琛ヨ揣澶囨敞锛堝彲閫夛級"></el-input>
@@ -394,7 +394,7 @@
         </div>
         <div class="restock-summary">
           <span>棰勮琛ヨ揣鎬昏姳璐癸細</span>
-          <span class="restock-summary__total">楼{{ batchTotalAmount.toFixed(2) }}</span>
+          <span class="restock-summary__total">¥{{ batchTotalAmount.toFixed(2) }}</span>
           <span style="margin-left:auto;font-size: var(--font-size-xs);color:var(--text-muted)">鍏?{{ batchForm.items.length }} 椤?/span>
         </div>
         <el-form :model="batchForm" label-width="60px" style="margin-top:12px">
@@ -491,9 +491,9 @@
           columns: [
             { prop: 'name', label: '椋熸潗鍚嶇О', width: 130, showOverflowTooltip: true },
             { prop: 'categoryName', label: '鍒嗙被', width: 90 },
-            { prop: 'supplierName', label: '渚涘簲鍟?, width: 110, showOverflowTooltip: true },
+            { prop: 'supplierName', label: '供应商', width: 110, showOverflowTooltip: true },
             { prop: 'stockQty', label: '褰撳墠搴撳瓨', slot: true, width: 90, align: 'right' },
-            { prop: 'dailyUsage', label: '鏃ュ潎娑堣€?, slot: true, width: 100, align: 'right' },
+            { prop: 'dailyUsage', label: '日均消耗', slot: true, width: 100, align: 'right' },
             { prop: 'estimatedDays', label: '棰勮澶╂暟', slot: true, width: 130, align: 'center' },
             { prop: 'suggestQty', label: '寤鸿閲囪喘', slot: true, width: 90, align: 'right' },
             { prop: 'estimatedCost', label: '棰勮鑺辫垂', slot: true, width: 100, align: 'right' },
@@ -570,10 +570,10 @@
           return 'success'
         },
         urgencyText: function (urgency) {
-          if (urgency === 'URGENT') return '绱ф€?
-          if (urgency === 'CRITICAL') return '绱ц揩'
-          if (urgency === 'WARNING') return '鍏虫敞'
-          return '鍏呰冻'
+          if (urgency === 'URGENT') return '紧急';
+          if (urgency === 'CRITICAL') return '告急';
+          if (urgency === 'WARNING') return '关注';
+          return '充足';
         },
         urgencyColor: function (urgency) {
           if (urgency === 'URGENT') return 'var(--color-danger)'
@@ -626,7 +626,7 @@
         loadTable: function () {
           const self = this
           this.tableLoading = true
-          const params = {$2}
+          const params = { current: self.page, size: self.pageSize }
           smartReplenishSuggest(params).then(function (res) {
             if (String(res.code) === '1') {
               const data = res.data || []
@@ -644,7 +644,8 @@
             }
           }).catch(function (e) {
             console.warn('鏅鸿兘琛ヨ揣寤鸿涓嶅彲鐢紝闄嶇骇鍔犺浇:', e)
-            // 闄嶇骇锛氳皟鐢ㄥ師鏈夎ˉ璐у缓璁帴鍙?            const fallbackParams = {$2}
+            // 降级：调用原有补货建议接口
+            const fallbackParams = { current: self.page, size: self.pageSize }
             materialReplenishSuggest(fallbackParams).then(function (res2) {
               if (String(res2.code) === '1' && Array.isArray(res2.data)) {
                 self.tableData = res2.data
@@ -705,7 +706,7 @@
         },
         submitSingleRestock: function () {
           const self = this
-          const item = {$2}
+          const item = { materialId: self.singleForm.materialId, quantity: self.singleForm.qty, unitPrice: self.singleForm.unitPrice }
           self.singleLoading = true
           materialBatchRestock({
             materialIds: [self.singleForm.materialId],
@@ -713,7 +714,7 @@
             remark: self.singleForm.remark
           }).then(function (res) {
             if (String(res.code) === '1') {
-              self.$message.success('琛ヨ揣鎴愬姛锛屽凡鐢熸垚閲囪喘鍗曞苟鑷姩鍏ュ簱锛岄噰璐崟ID=' + res.data)
+              self.$message.success('补货成功，已生成采购单并自动入库，采购单ID=' + res.data)
               self.singleDialogVisible = false
               self.loadDashboard()
               self.loadTable()
@@ -735,7 +736,7 @@
         // ---- 鎵归噺琛ヨ揣 ----
         openBatchRestock: function () {
           if (this.selectedRows.length === 0) {
-            this.$message.warning('鏈嬀閫変换浣曢鏉?)
+          this.$message.warning('未勾选任何食材');
             return
           }
           const self = this
@@ -759,7 +760,7 @@
         onBatchQtyChange: function () {},
         submitBatchRestock: function () {
           if (this.batchForm.items.length === 0) {
-            this.$message.warning('鏃犺ˉ璐ф槑缁?)
+          this.$message.warning('无补货明细');
             return
           }
           const self = this

@@ -161,7 +161,7 @@
         async init() {
           this.loading = true
           const sv = this.searchValues || {};
-          const params = {$2}
+          const params = {}
           try {
             const res = await franchiseePage(params)
             if (String(res.code) === '1') {
@@ -235,7 +235,7 @@
           if (!self.formData.name || !self.formData.name.trim()) {
             ReggieUI.error('请输入加盟商名称'); return
           }
-          const data = {$2}
+          const data = {}
           self.submitting = true
           if (this.action === 'add') {
             addFranchisee(data).then(res => {

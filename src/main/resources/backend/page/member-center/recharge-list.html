@@ -159,7 +159,7 @@
         // 修改点：F9 性能 — 列表查询与全局统计分离，reloadStats=true 才重算
         async fetchData(reloadStats = true) {
           this.loading = true
-          const params = {$2}
+          const params = {}
           try {
             const requests = [rechargePage(params)]
             if (reloadStats) { requests.push(rechargeStats()) }
@@ -218,7 +218,7 @@
               tooltip: { trigger: 'item', formatter: '{b}: ¥{c} ({d}%)' },
               series: [{
                 type: 'pie', radius: ['50%', '75%'], center: ['50%', '50%'],
-                avoidLabelOverlap: false, itemStyle: { borderRadius: RgPalette.radiusMd borderColor: RgPalette.white, borderWidth: 3 },
+                avoidLabelOverlap: false, itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 3 },
                 label: { show: true, formatter: '{b}\n{d}%' },
                 data: pieData, color: colors
               }]

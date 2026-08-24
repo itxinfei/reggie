@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
@@ -42,6 +43,7 @@ public class PaymentOrder implements Serializable {
     private Long orderId;
 
     @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     @Schema(description = "内部交易流水号", example = "TX20260709001")
@@ -76,4 +78,8 @@ public class PaymentOrder implements Serializable {
     /** 逻辑删除标识 0:未删除 1:已删除 */
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
+
+    @Schema(description = "乐观锁版本号")
+    @Version
+    private Integer version;
 }

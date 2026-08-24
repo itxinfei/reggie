@@ -311,7 +311,7 @@
             self.submitting = true
             try {
               const bizId = fd.bizId ? Number(fd.bizId) : undefined
-              const params = {$2}
+              const params = {}
               const res = await stockOut(params)
               if (res.code === 1) {
                 ReggieUI.success('出库成功')
@@ -347,7 +347,7 @@
         async fetchRecords() {
           this.loading = true
           try {
-            const params = {$2}
+            const params = {}
             if (this.input.materialId) params.materialId = this.input.materialId
             if (this.input.dateRange && this.input.dateRange.length === 2) {
               params.startDate = this.input.dateRange[0]

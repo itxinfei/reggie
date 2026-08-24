@@ -23,6 +23,7 @@ public class Reservation implements Serializable {
     private Long id;
 
     /** 租户ID */
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     /** 预订桌台ID */

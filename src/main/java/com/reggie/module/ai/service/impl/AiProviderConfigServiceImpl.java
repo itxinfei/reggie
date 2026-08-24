@@ -9,6 +9,7 @@ import com.reggie.module.ai.mapper.AiProviderConfigMapper;
 import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.provider.AiProviderManager;
 import com.reggie.module.ai.service.AiProviderConfigService;
+import com.reggie.module.ai.util.AiKeyEncryptor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -50,6 +51,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
     private static final int HTTP_FORBIDDEN = 403;
     private static final int HTTP_NOT_FOUND = 404;
 
+    // ==================== API Key 加密（AES-256-GCM）====================
     // ==================== 查询 ====================
 
     @Override
@@ -60,7 +62,11 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                 .eq(AiProviderConfig::getIsDeleted, 0)
                 .orderByDesc(AiProviderConfig::getSort)
                 .last("LIMIT 1");
-        return this.getOne(wrapper);
+        AiProviderConfig config = this.getOne(wrapper);
+        if (config != null) {
+            decryptApiKeyInPlace(config);
+        }
+        return config;
     }
 
     @Override
@@ -69,7 +75,20 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
         wrapper.eq(AiProviderConfig::getEnabled, true)
                 .eq(AiProviderConfig::getIsDeleted, 0)
                 .orderByAsc(AiProviderConfig::getSort);
-        return this.list(wrapper);
+        List<AiProviderConfig> list = this.list(wrapper);
+        for (AiProviderConfig config : list) {
+            decryptApiKeyInPlace(config);
+        }
+        return list;
+    }
+
+    /**
+     * 解密实体中的 apiKey 字段（原地修改）
+     */
+    private void decryptApiKeyInPlace(AiProviderConfig config) {
+        if (config.getApiKey() != null && !config.getApiKey().isEmpty()) {
+            AiKeyEncryptor.decryptApiKeyInPlace(config);
+        }
     }
 
     // ==================== 切换 ====================
@@ -122,6 +141,8 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             return "FAIL: 供应商配置不存在";
         }
 
+        // 解密数据库中的加密 apiKey
+        decryptApiKeyInPlace(config);
         String apiKey = config.getApiKey();
         String apiFormat = config.getApiFormat();
 
@@ -358,6 +379,13 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             config.setIsActive(existing.getIsActive() != null ? existing.getIsActive() : false);
             if (config.getApiKey() == null || config.getApiKey().trim().isEmpty()) {
                 config.setApiKey(existing.getApiKey());
+            } else {
+                // 修复 P0-6：存入数据库前加密 apiKey
+                String encrypted = AiKeyEncryptor.encrypt(config.getApiKey());
+                if (encrypted == null) {
+                    throw new RuntimeException("API密钥加密失败，请检查 REGGIE_AI_KEY 环境变量");
+                }
+                config.setApiKey(encrypted);
             }
             this.updateById(config);
             log.info("供应商已更新（upsert）: code={}, id={}, name={}", providerCode, existing.getId(), config.getProviderName());
@@ -366,6 +394,14 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             config.setProviderCode(providerCode);
             config.setIsActive(config.getIsActive() != null ? config.getIsActive() : false);
             config.setIsDeleted(0);
+            // 修复 P0-6：新增时也加密 apiKey
+            if (config.getApiKey() != null && !config.getApiKey().trim().isEmpty()) {
+                String encrypted = AiKeyEncryptor.encrypt(config.getApiKey());
+                if (encrypted == null) {
+                    throw new RuntimeException("API密钥加密失败，请检查 REGGIE_AI_KEY 环境变量");
+                }
+                config.setApiKey(encrypted);
+            }
             this.save(config);
             log.info("供应商已新增（upsert）: code={}, name={}", providerCode, config.getProviderName());
         }
@@ -428,6 +464,11 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
 
     @Override
+    public String encryptApiKey(String plainApiKey) {
+        return AiKeyEncryptor.encrypt(plainApiKey);
+    }
+
+    @Override
     public List<String> fetchModelList(String baseUrl, String apiKey) {
         if (baseUrl == null || baseUrl.trim().isEmpty()) {
             log.warn("fetchModelList: baseUrl 为空");
@@ -464,6 +505,24 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                     conn.setReadTimeout(15000);
 
                     int code = conn.getResponseCode();
+                    // 修复 P3-1：连接建立后二次验证 IP，防止 DNS 重绑定攻击
+                    // 通过反射调用 getConnectedAddress()，兼容 JDK 1.8 不同子版本
+                    InetAddress connectedAddr = null;
+                    try {
+                        java.lang.reflect.Method m = conn.getClass().getMethod("getConnectedAddress");
+                        connectedAddr = (InetAddress) m.invoke(conn);
+                    } catch (Exception e) {
+                        log.debug("fetchModelList: 无法获取连接地址", e);
+                    }
+                    if (connectedAddr != null
+                            && (connectedAddr.isSiteLocalAddress()
+                            || connectedAddr.isLoopbackAddress()
+                            || connectedAddr.isLinkLocalAddress()
+                            || connectedAddr.isAnyLocalAddress())) {
+                        log.warn("fetchModelList: DNS重绑定检测到内网地址, ip={}, url={}",
+                                connectedAddr.getHostAddress(), modelUrl);
+                        throw new java.net.ConnectException("禁止访问内网地址（DNS重绑定）");
+                    }
                     if (code == HTTP_OK) {
                         List<String> models = parseModelListResponse(conn);
                         allModels.addAll(models);

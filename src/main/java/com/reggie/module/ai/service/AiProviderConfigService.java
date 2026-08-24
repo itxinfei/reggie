@@ -54,4 +54,13 @@ public interface AiProviderConfigService extends IService<AiProviderConfig> {
      * @return 模型 ID 列表，失败时返回空列表
      */
     List<String> fetchModelList(String baseUrl, String apiKey);
+
+    /**
+     * 修复 P0-6：加密明文 API Key 后存储
+     * <p>供 Controller 层在 updateById 前加密 apiKey 字段使用</p>
+     *
+     * @param plainApiKey 明文密钥
+     * @return 加密后的 Base64 字符串，失败返回 null
+     */
+    String encryptApiKey(String plainApiKey);
 }

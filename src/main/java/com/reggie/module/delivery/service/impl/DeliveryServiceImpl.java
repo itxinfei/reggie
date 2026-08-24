@@ -1,6 +1,7 @@
 package com.reggie.module.delivery.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.utils.PageUtils;
@@ -140,15 +141,15 @@ public class DeliveryServiceImpl implements DeliveryService {
         qw.eq(DeliveryOrder::getPlatform, platform);
         qw.eq(DeliveryOrder::getPlatformOrderId, platformOrderId);
         qw.eq(DeliveryOrder::getTenantId, tenantId);
-        DeliveryOrder order = deliveryOrderMapper.selectOne(qw);
+        DeliveryOrder order = deliveryOrderMapper.selectOne(qw.last("LIMIT 1"));
 
         if (order == null) {
             log.warn("订单不存在: platform={}, platformOrderId={}", platform, platformOrderId);
             return false;
         }
 
-        // #46 状态机校验：仅当当前状态为 PENDING 时允许接单，禁止对终态/中间态订单接单
         String currentStatus = order.getStatus();
+        // #46 状态机校验：仅当当前状态为 PENDING 时允许接单，禁止对终态/中间态订单接单
         Set<String> allowed = ALLOWED_TRANSITIONS.get(currentStatus);
         if (allowed == null || !allowed.contains(DeliveryOrderStatus.ACCEPTED.getValue())) {
             log.warn("接单失败，订单当前状态不允许接单: platformOrderId={}, currentStatus={}", platformOrderId, currentStatus);
@@ -157,9 +158,18 @@ public class DeliveryServiceImpl implements DeliveryService {
 
         boolean success = dp.acceptOrder(platformOrderId);
         if (success) {
-            order.setStatus(DeliveryOrderStatus.ACCEPTED.getValue());
-            order.setUpdateTime(LocalDateTime.now());
-            deliveryOrderMapper.updateById(order);
+            // 修复 P1-5：接单也使用 CAS 更新，防止并发接单覆盖状态
+            DeliveryOrder acceptEntity = new DeliveryOrder();
+            acceptEntity.setStatus(DeliveryOrderStatus.ACCEPTED.getValue());
+            acceptEntity.setUpdateTime(LocalDateTime.now());
+            LambdaUpdateWrapper<DeliveryOrder> acceptWrapper = new LambdaUpdateWrapper<>();
+            acceptWrapper.eq(DeliveryOrder::getId, order.getId())
+                    .eq(DeliveryOrder::getStatus, currentStatus);
+            int rows = deliveryOrderMapper.update(acceptEntity, acceptWrapper);
+            if (rows == 0) {
+                log.warn("接单失败：订单状态已被其他请求更新: id={}", order.getId());
+                return false;
+            }
         }
         return success;
     }
@@ -198,7 +208,18 @@ public class DeliveryServiceImpl implements DeliveryService {
 
         order.setStatus(status);
         order.setUpdateTime(LocalDateTime.now());
-        deliveryOrderMapper.updateById(order);
+        // 修复 P1-5：添加 CAS 条件（WHERE status = currentStatus），防止并发更新覆盖状态
+        DeliveryOrder updateEntity = new DeliveryOrder();
+        updateEntity.setStatus(status);
+        updateEntity.setUpdateTime(order.getUpdateTime());
+        LambdaUpdateWrapper<DeliveryOrder> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(DeliveryOrder::getId, order.getId())
+                .eq(DeliveryOrder::getStatus, currentStatus);
+        int rows = deliveryOrderMapper.update(updateEntity, updateWrapper);
+        if (rows == 0) {
+            log.warn("订单状态已被其他请求更新，更新失败: id={}, expectedStatus={}", id, currentStatus);
+            return false;
+        }
         log.info("订单状态更新: id={}, {} -> {}, 备注: {}", id, currentStatus, status, remark);
         return true;
     }

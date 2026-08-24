@@ -155,7 +155,7 @@
       computed: {
         statsCards: function() {
           const self = this
-          const typeLabels = {$2}
+          const typeLabels = {}
           const typeKeys = ['type1', 'type2', 'type3', 'type4']
           return [
             { key: '', icon: '⚙️', label: '配置总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
@@ -169,7 +169,7 @@
         async init(reloadStats = true) {
           this.loading = true
           const ls = this.lastSearch || {}
-          const params = {$2}
+          const params = {}
           const requests = [sysApi.configList()]
           if (reloadStats) { requests.push(this.loadConfigStats()) }
           const results = await Promise.all(requests)
@@ -195,7 +195,7 @@
             const res = await sysApi.configList()
             if (res && res.code === 1) {
               const list = res.data || []
-              const stats = {$2}
+              const stats = {}
               list.forEach(function(item) {
                 const t = String(item.configType || '4')
                 if (stats.hasOwnProperty('type' + t)) stats['type' + t]++
@@ -213,7 +213,7 @@
           this.init(false)
         },
         buildFilterParams(key) {
-          const map = {$2}
+          const map = {}
           return map[key] ? { configType: map[key] } : {}
         },
         // table-bar 回调
@@ -243,11 +243,11 @@
           this.init(false)
         },
         typeName(type) {
-          const map = {$2}
+          const map = {}
           return map[type] || '其他'
         },
         typeTagType(type) {
-          const map = {$2}
+          const map = {}
           return map[type] || ''
         },
         openDialog() {

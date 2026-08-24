@@ -260,11 +260,11 @@
           return year + '-' + month + '-' + day + ' ' + hour + ':' + min
         },
         statusTagType: function(status) {
-          const map = {$2}
+          const map = {}
           return map[String(status)] || 'info'
         },
         statusText: function(status) {
-          const map = {$2}
+          const map = {}
           return map[String(status)] || '未知'
         },
         loadDishOptions: function() {
@@ -283,7 +283,7 @@
         async init() {
           this.loading = true
           const self = this
-          const params = {$2}
+          const params = {}
           if (self.lastSearch.name) {
             params.name = self.lastSearch.name
           }

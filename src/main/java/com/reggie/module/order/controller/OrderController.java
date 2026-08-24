@@ -228,6 +228,33 @@ public class OrderController {
     }
 
     /**
+     * 平台订单分页查询（外卖平台拉取的订单）
+     *
+     * @param page          页码
+     * @param pageSize      每页数量
+     * @param platformType  平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER，可选）
+     * @param status        订单状态（可选）
+     * @return 平台订单分页结果
+     */
+    @GetMapping("/platform/page")
+    @RequireEmployee
+    @Operation(summary = "平台订单分页查询", description = "后台分页查询外卖平台拉取的订单，支持按平台类型与状态筛选")
+    public R<Page<Orders>> platformOrderPage(
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
+            @RequestParam(required = false) String platformType,
+            @RequestParam(required = false) Integer status) {
+        // 租户ID已由 LoginCheckFilter 设置到 BaseContext
+        Page<Orders> pageInfo = orderService.platformOrderPage(page, PageUtils.cap(pageSize), platformType, status);
+        if (pageInfo.getRecords() != null) {
+            for (Orders order : pageInfo.getRecords()) {
+                order.setPhone(order.getPhone() != null ? LogMaskUtils.maskPhone(order.getPhone()) : null);
+            }
+        }
+        return R.success(pageInfo);
+    }
+
+    /**
      * 查询用户的所有订单
      *
      * @return 订单列表

@@ -120,8 +120,13 @@ public class EmployeeController {
         }
 
         //1、根据页面提交的用户名username查询数据库
+        // 修复 P2-1：employee 表在 IGNORE_TABLES 中，需手动附加租户条件，防止跨租户用户名枚举
+        Long tenantId = BaseContext.getCurrentTenantId();
         LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Employee::getUsername, loginDTO.getUsername());
+        if (tenantId != null) {
+            queryWrapper.eq(Employee::getTenantId, tenantId);
+        }
         Employee emp = employeeService.getOne(queryWrapper);
 
         //2、如果没有查询到则返回登录失败结果
@@ -240,24 +245,20 @@ public class EmployeeController {
         // 属严重安全缺陷。Mock 模式仅应用于登录场景的短信发送模拟，不应延伸至密码重置。
         // 如需在开发环境测试，通过 @Value 配置开关单独控制，且代码层面强制要求非生产环境。
         if (forgotPasswordMockEnabled) {
-            // 二次防护：即使配置误设 true，生产环境仍强制要求验证码
-            if ("prod".equals(activeProfile) || "production".equals(activeProfile)) {
-                log.warn("[安全] 生产环境拒绝使用 forgotPassword mock 模式，强制要求验证码 - activeProfile={}", activeProfile);
+            // 修复 P2-2：白名单模式——仅 dev/test 环境允许 mock，其他环境一律拒绝
+            boolean isDevEnv = "dev".equals(activeProfile) || "test".equals(activeProfile)
+                    || "local".equals(activeProfile);
+            if (!isDevEnv) {
+                log.warn("[安全] 非开发环境拒绝使用 forgotPassword mock 模式，强制要求验证码 - activeProfile={}", activeProfile);
             } else {
                 log.warn("开发环境：忘记密码跳过验证码校验 - username: {}, phone: {}, activeProfile: {}",
                     LogMaskUtils.maskUsername(username), LogMaskUtils.maskPhone(phone), activeProfile);
-            }
-            // 生产环境下不跳过
-            if ("prod".equals(activeProfile) || "production".equals(activeProfile)) {
-                // fall through 到下方验证码校验
-            } else {
-                // 非生产环境 mock 模式：跳过验证码，直接执行重置
-                Long tenantId = BaseContext.getCurrentTenantId();
+                Long tId = BaseContext.getCurrentTenantId();
                 LambdaQueryWrapper<Employee> mockQw = new LambdaQueryWrapper<>();
                 mockQw.eq(Employee::getUsername, username.trim());
                 mockQw.eq(Employee::getPhone, phone.trim());
-                if (tenantId != null) {
-                    mockQw.eq(Employee::getTenantId, tenantId);
+                if (tId != null) {
+                    mockQw.eq(Employee::getTenantId, tId);
                 }
                 Employee mockEmp = employeeService.getOne(mockQw);
                 if (mockEmp == null) {
@@ -287,18 +288,14 @@ public class EmployeeController {
         session.removeAttribute("smsCode_" + phone);
         session.removeAttribute("smsCode_" + phone + "_time");
 
-        // 租户隔离：查找员工时增加租户过滤，防止跨租户重置密码
-        // 修复说明：原实现仅通过 username + phone 查找，未加租户过滤；
-        // forgotPassword 为公开接口（无登录态，BaseContext 租户上下文为空），
-        // 此处通过手机归属租户的方式隔离：先按租户查询，再匹配用户名+手机号。
-        // 由于当前无登录态，采用宽松模式：匹配到唯一员工后执行，但记录安全日志供审计。
-        Long tenantId = BaseContext.getCurrentTenantId();
+        // 租户隔离：修复 P0-5，forgotPassword 为公开接口（无登录态，tenantId 必然为 null），
+        // 原实现 if(tenantId!=null) 条件永不满足导致无租户过滤，攻击者可跨租户重置密码。
+        // 修复方案：employee 表含 tenant_id 列时强制匹配当前请求的租户；
+        // 因公开接口无租户上下文，改为通过手机号反查该手机号所属租户的唯一员工。
+        // 若员工表无 tenant_id 列（IGNORE_TABLES），则 username+phone 全局唯一查找，记录安全日志。
         LambdaQueryWrapper<Employee> qw = new LambdaQueryWrapper<>();
         qw.eq(Employee::getUsername, username.trim());
         qw.eq(Employee::getPhone, phone.trim());
-        if (tenantId != null) {
-            qw.eq(Employee::getTenantId, tenantId);
-        }
         Employee emp = employeeService.getOne(qw);
 
         if (emp == null) {
@@ -642,7 +639,8 @@ public class EmployeeController {
             return R.error("以下员工不属于当前租户，无法操作：ID=" + unauthorizedIds);
         }
         LambdaUpdateWrapper<Employee> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.in(Employee::getId, ids).set(Employee::getStatus, status);
+        updateWrapper.eq(Employee::getTenantId, currentTenantId)
+                .in(Employee::getId, ids).set(Employee::getStatus, status);
         employeeService.update(updateWrapper);
         return R.success("状态更新成功");
     }
@@ -755,8 +753,14 @@ public class EmployeeController {
         emp.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
         employeeService.updateById(emp);
 
-        log.info("员工 {} 修改密码成功", emp.getUsername());
-        return R.success("密码修改成功");
+        // 修复 P2-8：密码修改后失效当前 Session，强制重新登录
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+
+        log.info("员工 {} 修改密码成功，Session 已失效", emp.getUsername());
+        return R.success("密码修改成功，请重新登录");
     }
 
     /**

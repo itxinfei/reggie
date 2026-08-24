@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import javax.validation.constraints.DecimalMin;
@@ -145,6 +146,26 @@ public class Orders implements Serializable {
     @Schema(description = "幂等令牌（防止重复下单）", example = "uuid-xxxx-xxxx")
     private String idempotencyKey;
 
+    /** 平台类型：MEITUAN / ELEME / DOUYIN / SELF / OTHER，平台订单使用 */
+    @Schema(description = "平台来源：MEITUAN/ELEME/DOUYIN/SELF/OTHER", example = "MEITUAN")
+    @TableField("platform_type")
+    private String platformType;
+
+    /** 平台订单号（唯一键，用于去重和状态回传） */
+    @Schema(description = "平台订单号（各平台原始订单号，用于去重）", example = "MT202608240001")
+    @TableField("platform_order_id")
+    private String platformOrderId;
+
+    /** 平台侧门店 ID */
+    @Schema(description = "平台侧门店ID", example = "shop_001")
+    @TableField("platform_shop_id")
+    private String platformShopId;
+
+    /** 平台原始订单 JSON（便于排查与字段补全） */
+    @Schema(description = "平台原始订单JSON(用于排查)")
+    @TableField("platform_raw")
+    private String platformRaw;
+
     @Schema(description = "库存是否已回退：0=否，1=是", example = "0")
     @TableField("stock_refunded")
     private Integer stockRefunded;
@@ -152,5 +173,9 @@ public class Orders implements Serializable {
     @Schema(description = "本单使用的优惠券ID（用户优惠券记录ID），未使用为 null", example = "1")
     @TableField("used_coupon_id")
     private Long usedCouponId;
+
+    @Schema(description = "乐观锁版本号")
+    @Version
+    private Integer version;
 }
 

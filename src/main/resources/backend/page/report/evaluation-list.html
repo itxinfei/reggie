@@ -317,7 +317,7 @@
           loadData: function() {
             const self = this; self.loading = true;
             // 修改点：过滤null/undefined参数，避免传空字符串导致后端空查询
-            const params = {$2};
+            const params = {};
             if (self.filters.dishName) params.dishName = self.filters.dishName;
             if (self.filters.status != null) params.status = self.filters.status;
             if (self.filters.starRating != null) params.starRating = self.filters.starRating;
@@ -331,7 +331,7 @@
           loadStats: function() {
             const self = this;
             // 修改点：使用Promise.all批量请求，减少网络往返
-            const ps = [$2];
+            const ps = [];
             Promise.all(ps.map(function(p) { return p.catch(function() { return null; }); }))
               .then(function(results) {
                 if (results[0] && String(results[0].code) === '1') self.stats.total = results[0].data.total || 0;
@@ -413,7 +413,7 @@
           statusClass: function(status) {
             if (status === 0) return 'pending'; if (status === 1) return 'approved'; if (status === 2) return 'rejected'; return '';
           },
-          statusText: function(status) { const m = {$2}; return m[status] != null ? m[status] : '未知'; },
+          statusText: function(status) { const m = {}; return m[status] != null ? m[status] : '未知'; },
           formatDate: function(d) { if (!d) return '-'; return d.replace('T', ' ').substring(0, 19); },
           previewImage: function(url) { this.previewUrl = url; this.previewVisible = true; }
         }

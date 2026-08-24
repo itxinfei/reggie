@@ -108,8 +108,8 @@
   <script src="../../js/components.js"></script>
   <script src="../../js/chart-panel.js"></script>
   <script>
-    const CHANNEL_LABEL = {$2};
-    const CHANNEL_COLOR = {$2};
+    const CHANNEL_LABEL = {};
+    const CHANNEL_COLOR = {};
 
     (function() {
       new Vue({
@@ -277,7 +277,7 @@
               legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10,
                 textStyle: { color: RgPalette.textRegular, fontSize: 12 } },
               series: [{ type: 'pie', radius: ['45%','68%'], center: ['50%','44%'],
-                avoidLabelOverlap: false, itemStyle: { borderRadius: RgPalette.radiusMd borderColor: RgPalette.white, borderWidth: 3 },
+                avoidLabelOverlap: false, itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 3 },
                 label: { position: 'outside', formatter: '{b}\n{d}%', fontSize: 13, lineHeight: 18, color: RgPalette.textRegular },
                 labelLine: { length: 25, length2: 20, lineStyle: { color: RgPalette.borderBase } },
                 emphasis: { scaleSize: 10, label: { fontSize: 16, fontWeight: 'bold' } },

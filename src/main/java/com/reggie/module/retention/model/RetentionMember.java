@@ -1,5 +1,7 @@
 package com.reggie.module.retention.model;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -45,5 +47,6 @@ public class RetentionMember {
     private String tag;
 
     /** 租户ID */
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }

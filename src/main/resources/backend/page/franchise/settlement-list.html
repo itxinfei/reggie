@@ -232,7 +232,7 @@
             if (String(res.code) === '1') {
               const list = res.data || []
               this.franchiseeOptions = list
-              const map = {$2}
+              const map = {}
               list.forEach(function(f) { map[f.id] = f })
               this.franchiseeMap = map
               this.searchConfig[2].options = list.map(function(f) { return { label: f.name, value: String(f.id) } })
@@ -254,7 +254,7 @@
         async init() {
           this.loading = true
           const sv = this.searchValues || {};
-          const params = {$2}
+          const params = {}
           try {
             const res = await settlementPage(params)
             if (String(res.code) === '1') {

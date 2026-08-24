@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>平台订单 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/consistency.css" />
+</head>
+<body>
+<div class="dashboard-container" id="platform-order-app">
+  <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <!-- 页头：标题 + 即时拉单主操作 -->
+    <header class="ds-page-header">
+      <div class="ds-page-header__titles">
+        <h1 class="ds-page-header__title">平台订单</h1>
+        <p class="ds-page-header__subtitle">查看外卖平台拉取的订单（实时同步至本地统一管理）</p>
+      </div>
+      <div class="ds-page-header__actions">
+        <el-button type="primary" size="small" :loading="pulling" @click="openPull">
+          <i class="el-icon-refresh"></i> 即时拉单
+        </el-button>
+      </div>
+    </header>
+
+    <!-- 筛选表单区 -->
+    <el-card shadow="never" class="ds-card ds-card--filter">
+      <el-form :inline="true" :model="filters" @submit.native.prevent class="ds-filter-form">
+        <el-form-item label="平台">
+          <el-select v-model="filters.platformType" placeholder="全部平台" clearable size="small" style="width:140px;">
+            <el-option label="美团" value="MEITUAN"></el-option>
+            <el-option label="饿了么" value="ELEME"></el-option>
+            <el-option label="抖音" value="DOUYIN"></el-option>
+            <el-option label="自营" value="SELF"></el-option>
+            <el-option label="其他" value="OTHER"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="filters.status" placeholder="全部状态" clearable size="small" style="width:140px;">
+            <el-option v-for="s in statusOptions" :key="s.value" :label="s.label" :value="s.value"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="平台订单号">
+          <el-input v-model="filters.platformOrderId" placeholder="模糊匹配" size="small" clearable style="width:180px;"></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" size="small" @click="search">查询</el-button>
+          <el-button size="small" @click="resetFilters">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- 数据表格 -->
+    <el-card shadow="never" class="ds-card">
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="120"
+        :actions-fixed="true"
+        @page-change="handlePageChange"
+        @size-change="handleSizeChange"
+      >
+        <template #col-platformType="{ row }">
+          <el-tag size="mini">{{ platformTypeText(row.platformType) }}</el-tag>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="statusTagType(row.status)" size="mini">{{ statusText(row.status) }}</el-tag>
+        </template>
+        <template #col-amount="{ row }">
+          <span class="ds-money">￥{{ formatMoney(row.amount) }}</span>
+        </template>
+        <template #actions="{ row }">
+          <el-button size="mini" type="text" @click="openDetail(row)">查看</el-button>
+          <el-button v-if="row.status === 2" size="mini" type="text" class="btn-view" @click="pushStatus(row, 'accept')">接单</el-button>
+          <el-button v-if="row.status === 2" size="mini" type="text" class="btn-warning" @click="pushStatus(row, 'reject')">拒单</el-button>
+          <el-button v-if="row.status === 3" size="mini" type="text" class="btn-view" @click="pushStatus(row, 'prepare')">出餐</el-button>
+          <el-button v-if="row.status === 3" size="mini" type="text" class="btn-view" @click="pushStatus(row, 'complete')">完成</el-button>
+          <el-button v-if="row.status === 3" size="mini" type="text" class="btn-delete" @click="pushStatus(row, 'cancel')">取消</el-button>
+        </template>
+      </crud-table>
+
+      <div v-if="!loading && tableData.length === 0" class="ds-empty">
+        暂无平台订单，点击右上角「即时拉单」从外卖平台获取
+      </div>
+    </el-card>
+  </div>
+
+  <!-- 订单详情弹窗 -->
+  <crud-dialog
+    title="平台订单详情"
+    :visible.sync="detailVisible"
+    size="lg"
+    :show-submit="false"
+    cancel-text="关 闭"
+    :close-on-click-modal="true"
+  >
+    <div v-if="detail" class="po-detail">
+      <el-descriptions :column="2" border size="small">
+        <el-descriptions-item label="平台">{{ platformTypeText(detail.platformType) }}</el-descriptions-item>
+        <el-descriptions-item label="状态">{{ statusText(detail.status) }}</el-descriptions-item>
+        <el-descriptions-item label="平台订单号">{{ detail.platformOrderId || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="本地订单号">{{ detail.number || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="金额">￥{{ formatMoney(detail.amount) }}</el-descriptions-item>
+        <el-descriptions-item label="下单时间">{{ detail.orderTime || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="顾客">{{ detail.userName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="电话">{{ detail.phone || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="地址" :span="2">{{ detail.address || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="备注" :span="2">{{ detail.remark || '无' }}</el-descriptions-item>
+      </el-descriptions>
+
+      <div class="po-detail__items-title">菜品明细</div>
+      <el-table :data="detail.orderDetails || []" size="small" border class="po-detail__table">
+        <el-table-column prop="name" label="菜品" min-width="140"></el-table-column>
+        <el-table-column prop="dishFlavor" label="规格" min-width="120" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="number" label="数量" width="80" align="center"></el-table-column>
+        <el-table-column label="金额" width="100" align="right">
+          <template #default="{ row }">￥{{ formatMoney(row.amount) }}</template>
+        </el-table-column>
+      </el-table>
+    </div>
+  </crud-dialog>
+
+  <!-- 即时拉单弹窗 -->
+  <crud-dialog
+    title="即时拉单"
+    :visible.sync="pullVisible"
+    size="sm"
+    :submit-loading="pulling"
+    submit-text="开始拉取"
+    @submit="confirmPull"
+  >
+    <el-form :model="pullForm" label-width="90px">
+      <el-form-item label="平台">
+        <el-select v-model="pullForm.platformType" placeholder="选择平台" style="width:100%;">
+          <el-option label="美团" value="MEITUAN"></el-option>
+          <el-option label="饿了么" value="ELEME"></el-option>
+          <el-option label="抖音" value="DOUYIN"></el-option>
+          <el-option label="自营" value="SELF"></el-option>
+          <el-option label="其他" value="OTHER"></el-option>
+        </el-select>
+      </el-form-item>
+      <el-form-item label="回溯时间">
+        <el-select v-model="pullForm.minutes" style="width:100%;">
+          <el-option label="最近 15 分钟" :value="15"></el-option>
+          <el-option label="最近 30 分钟" :value="30"></el-option>
+          <el-option label="最近 1 小时" :value="60"></el-option>
+          <el-option label="最近 3 小时" :value="180"></el-option>
+        </el-select>
+      </el-form-item>
+      <p class="po-pull-tip">仅拉取已配置且启用的平台，新订单将自动落库去重。</p>
+    </el-form>
+  </crud-dialog>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js"></script>
+<script src="../../js/components.js"></script>
+<script src="../../api/order.js"></script>
+<script src="../../api/platform.js"></script>
+<script>
+  new Vue({
+    el: '#platform-order-app',
+    mixins: [window.ReggieListMixin],
+    data() {
+      return {
+        // 修改点：筛选条件
+        filters: { platformType: '', status: '', platformOrderId: '' },
+        // 修改点：列配置（对齐走 resolveColAlign 单一来源，金额右对齐）
+        columns: [
+          { prop: 'platformType', label: '平台', width: 100, align: 'center', slot: true },
+          { prop: 'platformOrderId', label: '平台订单号', minWidth: 160, align: 'center' },
+          { prop: 'number', label: '本地单号', minWidth: 140, align: 'center' },
+          { prop: 'status', label: '状态', width: 90, align: 'center', slot: true },
+          { prop: 'amount', label: '金额', width: 110, align: 'right', type: 'money', slot: true },
+          { prop: 'userName', label: '顾客', minWidth: 100, align: 'center' },
+          { prop: 'orderTime', label: '下单时间', minWidth: 150, align: 'center' }
+        ],
+        statusOptions: [
+          { value: 2, label: '待接单' },
+          { value: 3, label: '已接单' },
+          { value: 4, label: '已完成' },
+          { value: 5, label: '已取消' },
+          { value: 6, label: '已退款' }
+        ],
+        // 修改点：详情弹窗
+        detailVisible: false,
+        detail: {},
+        // 修改点：拉单弹窗
+        pullVisible: false,
+        pulling: false,
+        pullForm: { platformType: 'MEITUAN', minutes: 30 }
+      }
+    },
+    created() {
+      this.fetchData()
+    },
+    methods: {
+      // 修改点：列表数据拉取（复用后端 platformOrderPage，返回 records/total）
+      async fetchData() {
+        this.loading = true
+        try {
+          const params = { page: this.page, pageSize: this.pageSize }
+          if (this.filters.platformType) params.platformType = this.filters.platformType
+          if (this.filters.status !== '') params.status = this.filters.status
+          if (this.filters.platformOrderId) params.platformOrderId = this.filters.platformOrderId
+          const res = await getPlatformOrderPage(params)
+          if (String(res.code) === '1' && res.data) {
+            this.tableData = res.data.records || []
+            this.counts = Number(res.data.total) || 0
+          } else {
+            ReggieUI.error((res && res.msg) || '加载平台订单失败')
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') {
+            ReggieUI.error('加载平台订单失败，请刷新重试')
+          }
+        } finally {
+          this.loading = false
+        }
+      },
+      search() {
+        this.page = 1
+        this.fetchData()
+      },
+      resetFilters() {
+        this.filters = { platformType: '', status: '', platformOrderId: '' }
+        this.page = 1
+        this.fetchData()
+      },
+      handlePageChange(p) {
+        this.page = p
+        this.fetchData()
+      },
+      handleSizeChange(s) {
+        this.pageSize = s
+        this.page = 1
+        this.fetchData()
+      },
+      platformTypeText(type) {
+        const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音', SELF: '自营', OTHER: '其他' }
+        return map[type] || type
+      },
+      statusText(status) {
+        const map = { 1: '待付款', 2: '待接单', 3: '已接单', 4: '已完成', 5: '已取消', 6: '已退款' }
+        return map[status] || '未知'
+      },
+      statusTagType(status) {
+        const map = { 1: 'info', 2: 'warning', 3: 'primary', 4: 'success', 5: 'info', 6: 'danger' }
+        return map[status] || 'info'
+      },
+      formatMoney(val) {
+        const n = Number(val)
+        return isNaN(n) ? '0.00' : n.toFixed(2)
+      },
+      // 修改点：打开详情（先预填行数据，再异步补全菜品明细）
+      openDetail(row) {
+        this.detailVisible = true
+        this.detail = Object.assign({}, row)
+        const self = this
+        $axios.get('/order/' + row.id).then(function (res) {
+          if (res && res.code === 1 && res.data) {
+            self.detail = res.data
+          }
+        }).catch(function () {})
+      },
+      // 修改点：打开拉单弹窗
+      openPull() {
+        this.pullVisible = true
+      },
+      // 修改点：确认拉单
+      async confirmPull() {
+        this.pulling = true
+        try {
+          const res = await window.platformApi.pull(this.pullForm.platformType, this.pullForm.minutes)
+          if (res && String(res.code) === '1' && res.data) {
+            const d = res.data
+            ReggieUI.success('拉取 ' + (d.pulled || 0) + ' 单，新增 ' + (d.inserted || 0) + ' 单')
+            this.pullVisible = false
+            this.fetchData()
+          } else {
+            ReggieUI.error((res && res.msg) || '拉单失败')
+          }
+        } catch (err) {
+          ReggieUI.error('拉单失败，请检查平台配置或网络')
+        } finally {
+          this.pulling = false
+        }
+      },
+      // 修改点：状态回传动作文案（action -> {文案, 本地目标状态}）
+      pushMeta(action) {
+        const map = {
+          accept: { text: '接单', status: 3 },
+          reject: { text: '拒单', status: 5 },
+          prepare: { text: '出餐', status: 3 },
+          complete: { text: '完成', status: 4 },
+          cancel: { text: '取消', status: 5 }
+        }
+        return map[action] || { text: action, status: null }
+      },
+      // 修改点：回传订单状态到平台（带二次确认；成功后同步本地订单状态）
+      pushStatus(row, action) {
+        const meta = this.pushMeta(action)
+        const self = this
+        let confirmTip = '确认将订单「' + (row.platformOrderId || row.number) + '」' + meta.text + '并回传平台？'
+        if (action === 'complete' || action === 'cancel') {
+          confirmTip = '确认「' + meta.text + '」该订单并回传平台？'
+        }
+        this.$confirm(confirmTip, '状态回传', { type: 'warning' }).then(async () => {
+          // 拒单/取消/完成需同步本地订单状态（接单/出餐保持本地流转一致由后端返回驱动，这里乐观更新）
+          const localStatus = meta.status
+          try {
+            const res = await window.platformApi.pushStatus(row.platformType, row.platformOrderId, action)
+            if (res && String(res.code) === '1') {
+              ReggieUI.success(meta.text + '成功，已回传平台')
+              // 同步本地订单状态（拒单=5、完成=4、取消=5）
+              if (localStatus !== null && localStatus !== 3) {
+                try { await editOrderDetail({ id: row.id, status: localStatus }) } catch (e) { /* 本地流转失败不影响回传结果 */ }
+              }
+              self.fetchData()
+            } else {
+              ReggieUI.error((res && res.msg) || (meta.text + '失败'))
+            }
+          } catch (err) {
+            ReggieUI.error(meta.text + '失败，请检查网络或平台配置')
+          }
+        }).catch(() => {})
+      }
+    }
+  })
+</script>
+<style>
+  .ds-filter-form { padding: 4px 0; }
+  .ds-money { font-variant-numeric: tabular-nums; color: var(--el-text-primary); }
+  .ds-empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--el-text-secondary);
+    font-size: 14px;
+  }
+  .po-detail__items-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin: 16px 0 8px;
+    color: var(--el-text-primary);
+  }
+  .po-pull-tip {
+    font-size: 12px;
+    color: var(--el-text-secondary);
+    margin: 8px 0 0;
+  }
+</style>
+</body>
+</html>

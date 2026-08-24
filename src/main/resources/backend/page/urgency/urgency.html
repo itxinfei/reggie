@@ -366,7 +366,7 @@
           </el-table-column>
           <el-table-column label="閼挎粌鎼? min-width="200">
             <template slot-scope="{ row }">
-              <span class="dish-cell" :title="row.dishNames.join('閵?)">{{ row.displayDishes }}</span>
+            <span class="dish-cell" :title="row.dishNames.join('、')">{{ row.displayDishes }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="orderTime" label="娑撳宕熼弮鍫曟？" width="140" align="center"></el-table-column>
@@ -641,8 +641,8 @@
             {
               orderId: 'ORD20260823001',
               tableNo: '03',
-              dishNames: ['鐎诡偂绻氭ウ鈥茬', '妤硅锕╃挒鍡氬帿', '缁娊銈?],
-              displayDishes: '鐎诡偂绻氭ウ鈥茬閵嗕線澶繝鍡氱湸閼垫劏鈧?,
+              dishNames: ['黄焖鸡', '干煸四季豆', '生菜'],
+              displayDishes: '黄焖鸡、干煸四季豆、生菜',
               orderTime: '2026-08-23 11:35:20',
               orderTimeMs: Date.now() - 18 * 60 * 1000,
               status: 'COOKING',
@@ -651,8 +651,8 @@
             {
               orderId: 'ORD20260823002',
               tableNo: '05',
-              dishNames: ['缁俱垻鍎抽懖?],
-              displayDishes: '缁俱垻鍎抽懖?,
+              dishNames: ['糖醋里脊'],
+              displayDishes: '糖醋里脊',
               orderTime: '2026-08-23 11:40:15',
               orderTimeMs: Date.now() - 13 * 60 * 1000,
               status: 'COOKING',
@@ -661,8 +661,8 @@
             {
               orderId: 'ORD20260823003',
               tableNo: '07',
-              dishNames: ['濮樺鍙滄ジ?, '閽傛粏鎼查悽鐔诲綅'],
-              displayDishes: '濮樺鍙滄ジ绗衡偓浣芥審閽冨鏁撻懣?,
+              dishNames: ['宫保鸡丁', '酸辣土豆丝'],
+              displayDishes: '宫保鸡丁、酸辣土豆丝',
               orderTime: '2026-08-23 11:42:00',
               orderTimeMs: Date.now() - 11 * 60 * 1000,
               status: 'WAITING_CALL',
@@ -671,8 +671,8 @@
             {
               orderId: 'ORD20260823004',
               tableNo: '08',
-              dishNames: ['缁牠鍞婚柌宀冨墾', '鐟楄法瀛╅弻鑳巢濮?],
-              displayDishes: '缁牠鍞婚柌宀冨墾閵嗕浇銈跨痪銏＄唵閾斿鍫?,
+              dishNames: ['麻婆豆腐', '回锅肉'],
+              displayDishes: '麻婆豆腐、回锅肉',
               orderTime: '2026-08-23 11:45:30',
               orderTimeMs: Date.now() - 9 * 60 * 1000,
               status: 'COOKING',
@@ -681,8 +681,8 @@
             {
               orderId: 'ORD20260823005',
               tableNo: '10',
-              dishNames: ['闁版瓕褰嶆ジ?, '楠炶尙鍚€鐠炲棜顫?, '閻愭帡銈?],
-              displayDishes: '闁版瓕褰嶆ジ绗衡偓浣稿叡閻撴瓕鐪寸憴鎺嗏偓?,
+              dishNames: ['红烧排骨', '清炒时蔬', '紫菜蛋花汤'],
+              displayDishes: '红烧排骨、清炒时蔬、紫菜蛋花汤',
               orderTime: '2026-08-23 11:48:10',
               orderTimeMs: Date.now() - 6 * 60 * 1000,
               status: 'COOKING',
@@ -691,8 +691,8 @@
             {
               orderId: 'ORD20260823006',
               tableNo: '12',
-              dishNames: ['閻戙倗绻€'],
-              displayDishes: '閻戙倗绻€',
+              dishNames: ['鱼香肉丝'],
+              displayDishes: '鱼香肉丝',
               orderTime: '2026-08-23 11:50:00',
               orderTimeMs: Date.now() - 4 * 60 * 1000,
               status: 'WAITING_CALL',
@@ -701,8 +701,8 @@
             {
               orderId: 'ORD20260823007',
               tableNo: '02',
-              dishNames: ['閸ョ偤鏀ㄩ懖?, '閹峰秹绮嶉悺?],
-              displayDishes: '閸ョ偤鏀ㄩ懖澶堚偓浣瑰姒涘嫮鎽?,
+              dishNames: ['水煮鱼', '番茄炒蛋'],
+              displayDishes: '水煮鱼、番茄炒蛋',
               orderTime: '2026-08-23 11:30:00',
               orderTimeMs: Date.now() - 23 * 60 * 1000,
               status: 'DONE',
@@ -711,8 +711,8 @@
             {
               orderId: 'ORD20260823008',
               tableNo: '15',
-              dishNames: ['閻忣偊鏀ㄦ惔鏇熸灐', '濮ｆ稖鍊?, '妤︻叀顢?, '闁叉垿鎷￠懣?],
-              displayDishes: '閻忣偊鏀ㄦ惔鏇熸灐閵嗕焦鐦洪懖姘ｂ偓?,
+              dishNames: ['剁椒鱼头', '清蒸鲈鱼', '蒜蓉西兰花', '冬瓜排骨汤'],
+              displayDishes: '剁椒鱼头、清蒸鲈鱼、蒜蓉西兰花、冬瓜排骨汤',
               orderTime: '2026-08-23 11:52:30',
               orderTimeMs: Date.now() - 3 * 60 * 1000,
               status: 'COOKING',
@@ -782,9 +782,9 @@
         truncateDishes: function (names) {
           if (!names || names.length === 0) return ''
           if (names.length <= 2) {
-            return names.join('閵?)
+            return names.join('、');
           }
-          return names[0] + '閵? + names[1] + '閳?
+            return names[0] + '、' + names[1] + '等';
         },
 
         statusTagType: function (status) {
@@ -795,8 +795,8 @@
         },
 
         statusLabel: function (status) {
-          const map = {$2}
-          return map[status] || '閺堫亞鐓?
+          const map = { WAITING_CALL: '待上菜', COOKING: '制作中', SERVING: '上菜中', DONE: '已完成' };
+          return map[status] || '未知';
         },
 
         tableRowClassName: function () {
@@ -826,18 +826,18 @@
               .then(function () {
                 self.urgeLoading = false
                 self.urgeDialogVisible = false
-                self.$message.success('閸岊剙宕熼幋鎰閿涘苯鍑￠柅姘辩叀閸樸劍鍩ч崝鐘斥偓銉ヮ槱閻?)
+          self.$message.success('模拟催单已发送');
                 self.loadStats()
               })
               .catch(function () {
                 self.urgeLoading = false
                 self.urgeDialogVisible = false
-                self.$message.success('閸岊剙宕熷鍙夊絹娴溿倧绱欏鏃傘仛濡€崇础閿?)
+          self.$message.success('模拟操作已完成');
               })
           } catch (e) {
             self.urgeLoading = false
             self.urgeDialogVisible = false
-            self.$message.success('閸岊剙宕熷鍙夊絹娴溿倧绱欏鏃傘仛濡€崇础閿?)
+          self.$message.success('模拟操作已完成');
           }
         }
       }

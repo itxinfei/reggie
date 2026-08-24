@@ -144,8 +144,8 @@ public class FrontCouponController {
         qw.eq(CouponUser::getMemberId, member.getId());
         qw.eq(CouponUser::getStatus, CouponStatus.UNUSED.getValue());
         qw.lt(CouponUser::getExpireTime, LocalDateTime.now());
-        Integer cnt = couponUserService.count(qw);
-        return R.success(cnt != null ? cnt : 0);
+        Long cnt = couponUserService.count(qw);
+        return R.success(cnt != null ? cnt.intValue() : 0);
     }
 
     /**

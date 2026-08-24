@@ -73,7 +73,7 @@ public class RecommendationAnalyticsServiceImpl implements RecommendationAnalyti
             if (tenantId != null) {
                 cacheWrapper.eq(RecommendationCache::getTenantId, tenantId);
             }
-            int cachedUsers = (int) cacheMapper.selectCount(cacheWrapper);
+            int cachedUsers = cacheMapper.selectCount(cacheWrapper).intValue();
             int hybridRate = totalOrderUsers > 0 ? (int) (cachedUsers * 100.0 / totalOrderUsers) : 0;
 
             LambdaQueryWrapper<RecommendationFeedback> feedbackWrapper = new LambdaQueryWrapper<>();

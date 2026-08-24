@@ -185,7 +185,7 @@
                 // 修改点：只存储非敏感的用户基本信息，避免localStorage泄露完整用户信息
                 // 不存储密码、手机号、身份证等敏感字段
                 // 修改点：使用后端返回的role字段判断权限，避免硬编码admin字符串
-                const safeUserInfo = {$2}
+                const safeUserInfo = { id: res.data.id, username: res.data.username, name: res.data.name, role: res.data.role }
                 localStorage.setItem('userInfo', JSON.stringify(safeUserInfo))
                 window.location.href = '/backend/index.html'
               } else {

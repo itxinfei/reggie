@@ -329,21 +329,21 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         if (tenantId != null) {
             ncdQw.eq(NewCustomerDiscount::getTenantId, tenantId);
         }
-        int newCustomerDiscountCount = (int) newCustomerDiscountMapper.selectCount(ncdQw);
+        int newCustomerDiscountCount = newCustomerDiscountMapper.selectCount(ncdQw).intValue();
 
         // Buy get free count
         LambdaQueryWrapper<BuyGetFree> bgfQw = new LambdaQueryWrapper<>();
         if (tenantId != null) {
             bgfQw.eq(BuyGetFree::getTenantId, tenantId);
         }
-        int buyGetFreeCount = (int) buyGetFreeMapper.selectCount(bgfQw);
+        int buyGetFreeCount = buyGetFreeMapper.selectCount(bgfQw).intValue();
 
         // Flash sale count
         LambdaQueryWrapper<FlashSale> fsQw = new LambdaQueryWrapper<>();
         if (tenantId != null) {
             fsQw.eq(FlashSale::getTenantId, tenantId);
         }
-        int flashSaleCount = (int) flashSaleMapper.selectCount(fsQw);
+        int flashSaleCount = flashSaleMapper.selectCount(fsQw).intValue();
 
         // Active flash sales
         List<FlashSale> activeFlashSales = getActiveFlashSales(tenantId);

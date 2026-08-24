@@ -1,5 +1,6 @@
 package com.reggie.module.dining.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
@@ -31,14 +32,31 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
 
     @Override
     public Reservation createReservation(String customerName, String phone, LocalDateTime reservedTime, Integer seatCount, Long tableId, String remark) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        // 修复 P2-3：时间冲突检测——同一桌台同一时间窗口（±1小时）已被预订则拒绝
+        if (tableId != null && reservedTime != null) {
+            LambdaQueryWrapper<Reservation> conflictQw = new LambdaQueryWrapper<>();
+            conflictQw.eq(Reservation::getTableId, tableId)
+                    .eq(Reservation::getTenantId, currentTenantId)
+                    .in(Reservation::getStatus,
+                            ReservationStatus.PENDING.getValue(),
+                            ReservationStatus.CONFIRMED.getValue())
+                    .ge(Reservation::getReservedTime, reservedTime.minusHours(1))
+                    .le(Reservation::getReservedTime, reservedTime.plusHours(1));
+            long conflictCount = count(conflictQw);
+            if (conflictCount > 0) {
+                throw new CustomException("该桌台在相近时段已被预订，请选择其他桌台或时间");
+            }
+        }
         Reservation r = new Reservation();
-        r.setTenantId(BaseContext.getCurrentTenantId());
+        r.setTenantId(currentTenantId);
         r.setCustomerName(customerName);
         r.setPhone(phone);
         r.setReservedTime(reservedTime);
         r.setSeatCount(seatCount);
         r.setTableId(tableId);
         r.setRemark(remark);
+        r.setUpdateTime(LocalDateTime.now());
         r.setStatus(ReservationStatus.PENDING.getValue());
         save(r);
         return r;

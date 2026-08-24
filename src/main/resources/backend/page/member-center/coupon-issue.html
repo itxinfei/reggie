@@ -4,36 +4,36 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>瀹氬悜鍙戝埜 - 鐟炲悏澶栧崠绠＄悊绔?/title>
+  <title>定向发券 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
-    /* 椤靛唴甯冨眬鈥斺€斿叏閮ㄥ紩鐢?tokens.css 璁捐浠ょ墝 */
+    /* 页内布局——全部引用 tokens.css 设计令牌 */
     .issue-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
     .issue-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); margin-top: var(--space-6) }
     @media (max-width: 1200px) { .issue-grid { grid-template-columns: 1fr } }
 
     .issue-card { padding: var(--space-4); border-radius: var(--radius-md); background: var(--bg-surface); box-shadow: var(--shadow-sm) }
-    .issue-card__title { font-size: var(--font-size-lg); font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2) }
+    .issue-card__title { font-size: var(--font-size-h3, 16px); font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2, 8px) }
 
-    .mode-tabs { display: flex; gap: 0; border: 1px solid var(--border-default); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: var(--space-4) }
+    .mode-tabs { display: flex; gap: 0; border: 1px solid var(--border-default); border-radius: var(--radius-sm, 4px); overflow: hidden; margin-bottom: var(--space-4) }
     .mode-tab { flex: 1; padding: 10px 16px; text-align: center; font-size: var(--font-size-base); color: var(--text-secondary); border: none; background: var(--bg-surface); cursor: pointer; transition: all var(--transition-base); border-right: 1px solid var(--border-default) }
     .mode-tab:last-child { border-right: none }
     .mode-tab.active { background: var(--color-brand-500); color: var(--text-primary); font-weight: 500 }
-    .mode-tab:hover:not(.active) { background: var(--color-brand-100) }
+    .mode-tab:hover:not(.active) { background: #fff8e1 }
 
-    .template-row { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4); padding: var(--space-4); background: var(--el-bg-base); border-radius: var(--radius-sm); border: 1px solid var(--border-default) }
+    .template-row { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4); padding: var(--space-4); background: #fafafa; border-radius: var(--radius-sm, 4px); border: 1px solid var(--border-default) }
     .template-row__label { font-size: var(--font-size-base); color: var(--text-secondary); white-space: nowrap }
     .template-select { flex: 1 }
-    .template-info { font-size: var(--font-size-xs); color: var(--text-muted); margin-left: var(--space-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px }
+    .template-info { font-size: 12px; color: var(--text-muted); margin-left: var(--space-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px }
 
     .ids-input { width: 100%; min-height: 100px; margin-bottom: var(--space-2) }
-    .ids-tip { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: var(--space-4) }
+    .ids-tip { font-size: 12px; color: var(--text-muted); margin-bottom: var(--space-4) }
     .ids-preview { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4) }
     .ids-count { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500 }
-    .ids-count .num { color: var(--color-brand-500); font-size: var(--font-size-xl); font-weight: 600 }
-    .ids-tag { color: var(--text-muted); font-size: var(--font-size-xs) }
+    .ids-count .num { color: var(--color-brand-500); font-size: 18px; font-weight: 600 }
+    .ids-tag { color: var(--text-muted); font-size: 12px }
 
     .condition-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-4) }
     @media (max-width: 768px) { .condition-row { grid-template-columns: 1fr } }
@@ -41,40 +41,40 @@
     .btn-issue { width: 100%; margin-top: var(--space-4); font-size: var(--font-size-base); height: 40px }
 
     .result-panel { margin-top: var(--space-6); padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border-left: 4px solid var(--color-brand-500) }
-    .result-panel__title { font-size: var(--font-size-lg); font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2) }
+    .result-panel__title { font-size: var(--font-size-h3, 16px); font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2) }
     .result-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4) }
     @media (max-width: 768px) { .result-stats { grid-template-columns: repeat(2, 1fr) } }
-    .result-stat { text-align: center; padding: var(--space-4); background: var(--el-bg-base); border-radius: var(--radius-sm) }
-    .result-stat__value { font-size: var(--font-size-3xl); font-weight: 600; color: var(--text-primary); line-height: 1.2 }
-    .result-stat__label { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-2) }
-    .result-stat.success .result-stat__value { color: var(--color-success) }
-    .result-stat.danger .result-stat__value { color: var(--color-danger) }
-    .result-stat.warning .result-stat__value { color: var(--color-warning) }
+    .result-stat { text-align: center; padding: var(--space-4); background: #fafafa; border-radius: var(--radius-sm, 4px) }
+    .result-stat__value { font-size: 28px; font-weight: 600; color: var(--text-primary); line-height: 1.2 }
+    .result-stat__label { font-size: 12px; color: var(--text-muted); margin-top: var(--space-2) }
+    .result-stat.success .result-stat__value { color: #67c23a }
+    .result-stat.danger .result-stat__value { color: #f56c6c }
+    .result-stat.warning .result-stat__value { color: #e6a23c }
     .result-stat.primary .result-stat__value { color: var(--color-brand-500) }
-    .result-time { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-3); text-align: center }
+    .result-time { font-size: 12px; color: var(--text-muted); margin-top: var(--space-3, 12px); text-align: center }
 
     .history-panel { margin-top: var(--space-6) }
-    .history-panel__title { font-size: var(--font-size-lg); font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2) }
+    .history-panel__title { font-size: var(--font-size-h3, 16px); font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2) }
     .empty-history { text-align: center; padding: var(--space-6) var(--space-4); color: var(--text-muted); font-size: var(--font-size-base) }
     .history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px var(--space-4); border-bottom: 1px solid var(--border-default); font-size: var(--font-size-base) }
     .history-item:last-child { border-bottom: none }
     .history-item__info { display: flex; flex-direction: column; gap: var(--space-2) }
     .history-item__info-1 { color: var(--text-primary) }
-    .history-item__info-2 { font-size: var(--font-size-xs); color: var(--text-muted) }
-    .history-item__stats { display: flex; align-items: center; gap: var(--space-3) }
-    .history-mode-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size: var(--font-size-xs); font-weight: 500 }
-    .history-mode-badge.mode-a { background: var(--color-success-light); color: var(--color-success) }
-    .history-mode-badge.mode-b { background: var(--color-warning-light); color: var(--color-warning-dark) }
+    .history-item__info-2 { font-size: 12px; color: var(--text-muted) }
+    .history-item__stats { display: flex; align-items: center; gap: var(--space-3, 12px) }
+    .history-mode-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm, 4px); font-size: 12px; font-weight: 500 }
+    .history-mode-badge.mode-a { background: #e8f5e9; color: #2e7d32 }
+    .history-mode-badge.mode-b { background: #fff8e1; color: #f57f17 }
   </style>
 </head>
 <body>
-  <a href="#main-content" class="skip-link">璺宠浆鍒颁富鍐呭</a>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="issue-app">
-    <div class="container issue-container" id="main-content" role="main" aria-label="椤甸潰涓昏鍐呭">
+    <div class="container issue-container" id="main-content" role="main" aria-label="页面主要内容">
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">瀹氬悜鍙戝埜</h1>
-          <p class="ds-page-header__subtitle">閫夋嫨浼樻儬鍒告ā鏉垮悗锛屾寜浼氬憳鍒楄〃鎴栨潯浠剁簿鍑嗗彂鏀?/p>
+          <h1 class="ds-page-header__title" id="page-title">定向发券</h1>
+          <p class="ds-page-header__subtitle">选择优惠券模板后，按会员列表或条件精准发放</p>
         </div>
       </header>
 
@@ -84,77 +84,79 @@
       ></stat-cards>
 
       <div class="issue-grid">
-        <!-- 宸﹀崱锛氶€夋嫨妯℃澘 + 涓ょ鍙戝埜妯″紡 -->
+        <!-- 左卡：选择模板 + 两种发券模式 -->
         <div class="issue-card">
-          <div class="issue-card__title">馃幆 瀹氬悜鍙戞斁</div>
+          <div class="issue-card__title">🎯 定向发放</div>
 
           <div class="template-row">
-            <div class="template-row__label">浼樻儬鍒告ā鏉匡細</div>
+            <div class="template-row__label">优惠券模板：</div>
             <div class="template-select">
-              <el-select v-model="form.templateId" filterable placeholder="璇烽€夋嫨浼樻儬鍒告ā鏉? style="width: 293px" @change="onTemplateChange">
-                <el-option v-for="t in templateList" :key="t.id" :label="t.name + ' (浣? + t.remainCount + '寮?'" :value="t.id" :disabled="t.remainCount <= 0"></el-option>
+              <el-select v-model="form.templateId" filterable placeholder="请选择优惠券模板" style="width: 293px" @change="onTemplateChange">
+                <el-option v-for="t in templateList" :key="t.id" :label="t.name + ' (余' + t.remainCount + '张)'" :value="t.id" :disabled="t.remainCount <= 0"></el-option>
               </el-select>
             </div>
             <div class="template-info" v-if="currentTemplate">
-              鍓╀綑 <span style="color: var(--color-brand-500); font-weight: 500">{{ currentTemplate.remainCount }}</span> 寮?            </div>
+              剩余 <span style="color: var(--color-brand-500); font-weight: 500">{{ currentTemplate.remainCount }}</span> 张
+            </div>
           </div>
 
           <div class="mode-tabs">
             <button class="mode-tab" :class="{ active: form.mode === 'members' }" @click="switchMode('members')">
-              馃搵 鎸変細鍛業D
+              📋 按会员ID
             </button>
             <button class="mode-tab" :class="{ active: form.mode === 'condition' }" @click="switchMode('condition')">
-              馃帥锔?鎸夋潯浠剁瓫閫?            </button>
+              🎛️ 按条件筛选
+            </button>
           </div>
 
-          <!-- 妯″紡鈶狅細鎸変細鍛業D鍒楄〃 -->
+          <!-- 模式①：按会员ID列表 -->
           <div v-show="form.mode === 'members'">
             <el-input
               v-model="form.memberIdsText"
               type="textarea"
               class="ids-input"
-              placeholder="璇疯緭鍏ヤ細鍛業D锛屽涓狪D浠ラ€楀彿銆佺┖鏍兼垨鎹㈣鍒嗛殧&#10;渚嬪锛?, 2, 3"
+              placeholder="请输入会员ID，多个ID以逗号、空格或换行分隔&#10;例如：1, 2, 3"
               :rows="4"
               @input="onIdsTextChange"
             ></el-input>
-            <div class="ids-tip">鏀寔閫楀彿銆佺┖鏍笺€佹崲琛屽垎闅旓紱鑷姩鍘婚噸</div>
+            <div class="ids-tip">支持逗号、空格、换行分隔；自动去重</div>
             <div class="ids-preview">
-              <span class="ids-count">瑙ｆ瀽鍒?<span class="num">{{ parsedMemberIds.length }}</span> 涓細鍛業D</span>
-              <span class="ids-tag" v-if="parsedMemberIds.length > 0">(宸插幓閲?</span>
+              <span class="ids-count">解析到 <span class="num">{{ parsedMemberIds.length }}</span> 个会员ID</span>
+              <span class="ids-tag" v-if="parsedMemberIds.length > 0">(已去重)</span>
             </div>
           </div>
 
-          <!-- 妯″紡鈶★細鎸夋潯浠剁瓫閫?-->
+          <!-- 模式②：按条件筛选 -->
           <div v-show="form.mode === 'condition'">
             <el-form :model="form.condition" label-width="100px" size="small">
               <div class="condition-row">
-                <el-form-item label="浼氬憳绛夌骇锛?>
-                  <el-select v-model="form.condition.levelId" placeholder="涓嶉檺" clearable style="width: 100%">
+                <el-form-item label="会员等级：">
+                  <el-select v-model="form.condition.levelId" placeholder="不限" clearable style="width: 100%">
                     <el-option v-for="lv in levelList" :key="lv.id" :label="lv.name" :value="lv.id"></el-option>
                   </el-select>
                 </el-form-item>
-                <el-form-item label="鏂颁細鍛?澶?锛?>
-                  <el-input-number v-model="form.condition.newMemberDays" :min="1" :max="365" placeholder="濡?0" controls-position="right" style="width: 100%"></el-input-number>
+                <el-form-item label="新会员(天)：">
+                  <el-input-number v-model="form.condition.newMemberDays" :min="1" :max="365" placeholder="如30" controls-position="right" style="width: 100%"></el-input-number>
                 </el-form-item>
               </div>
               <div class="condition-row">
-                <el-form-item label="鏈€灏忕Н鍒嗭細">
+                <el-form-item label="最小积分：">
                   <el-input-number v-model="form.condition.minPoints" :min="0" controls-position="right" style="width: 100%"></el-input-number>
                 </el-form-item>
-                <el-form-item label="鏈€澶хН鍒嗭細">
+                <el-form-item label="最大积分：">
                   <el-input-number v-model="form.condition.maxPoints" :min="0" controls-position="right" style="width: 100%"></el-input-number>
                 </el-form-item>
               </div>
               <div class="condition-row">
-                <el-form-item label="鏈€灏忔秷璐癸細">
+                <el-form-item label="最小消费：">
                   <el-input-number v-model="form.condition.minConsumption" :min="0" :precision="2" controls-position="right" style="width: 100%"></el-input-number>
                 </el-form-item>
-                <el-form-item label="鏈€澶ф秷璐癸細">
+                <el-form-item label="最大消费：">
                   <el-input-number v-model="form.condition.maxConsumption" :min="0" :precision="2" controls-position="right" style="width: 100%"></el-input-number>
                 </el-form-item>
               </div>
             </el-form>
-            <div class="ids-tip">鐣欑┖琛ㄧず涓嶉檺锛涙湭璁剧疆浠绘剰鏉′欢鏃堕粯璁ゆ寜绛夌骇绛涢€夊惎鐢ㄤ細鍛?/div>
+            <div class="ids-tip">留空表示不限；未设置任意条件时默认按等级筛选启用会员</div>
           </div>
 
           <el-button
@@ -164,18 +166,18 @@
             :disabled="!canIssue"
             @click="doIssue"
           >
-            {{ issuing ? '鍙戞斁涓?..' : '馃殌 涓€閿彂鏀? }}
+            {{ issuing ? '发放中...' : '🚀 一键发放' }}
           </el-button>
         </div>
 
-        <!-- 鍙冲崱锛氬巻鍙插彂鏀捐褰?-->
+        <!-- 右卡：历史发放记录 -->
         <div class="issue-card">
-          <div class="issue-card__title">馃摐 鍙戞斁鍘嗗彶</div>
+          <div class="issue-card__title">📜 发放历史</div>
 
           <div v-if="historyList.length === 0" class="empty-history">
-            <div style="font-size: var(--font-size-4xl); margin-bottom: var(--space-4); opacity: 0.5">馃摥</div>
-            <div>鏆傛棤鍙戞斁璁板綍</div>
-            <div style="font-size: var(--font-size-xs); margin-top: var(--space-2)">瀹屾垚涓€娆″畾鍚戝彂鏀惧悗锛岃褰曞皢鍦ㄦ灞曠ず</div>
+            <div style="font-size: 48px; margin-bottom: var(--space-4); opacity: 0.5">📭</div>
+            <div>暂无发放记录</div>
+            <div style="font-size: 12px; margin-top: var(--space-2)">完成一次定向发放后，记录将在此展示</div>
           </div>
 
           <div v-else>
@@ -183,45 +185,45 @@
               <div class="history-item__info">
                 <div class="history-item__info-1">
                   <span class="history-mode-badge" :class="item.mode === 'members' ? 'mode-a' : 'mode-b'">
-                    {{ item.mode === 'members' ? '鎸変細鍛業D' : '鎸夋潯浠? }}
+                    {{ item.mode === 'members' ? '按会员ID' : '按条件' }}
                   </span>
                   <span style="margin-left: var(--space-2)">{{ item.templateName }}</span>
                 </div>
                 <div class="history-item__info-2">{{ item.time }}</div>
               </div>
               <div class="history-item__stats">
-                <el-tag type="success" size="small">鎴愬姛 {{ item.successCount }}</el-tag>
-                <el-tag v-if="item.alreadyIssuedCount > 0" type="warning" size="small">宸查杩?{{ item.alreadyIssuedCount }}</el-tag>
-                <el-tag v-if="item.failCount > 0" type="danger" size="small">澶辫触 {{ item.failCount }}</el-tag>
+                <el-tag type="success" size="small">成功 {{ item.successCount }}</el-tag>
+                <el-tag v-if="item.alreadyIssuedCount > 0" type="warning" size="small">已领过 {{ item.alreadyIssuedCount }}</el-tag>
+                <el-tag v-if="item.failCount > 0" type="danger" size="small">失败 {{ item.failCount }}</el-tag>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 鍙戞斁缁撴灉闈㈡澘 -->
+      <!-- 发放结果面板 -->
       <div class="result-panel" v-if="lastResult">
-        <div class="result-panel__title">馃搳 鏈€杩戜竴娆″彂鏀剧粨鏋?/div>
+        <div class="result-panel__title">📊 最近一次发放结果</div>
         <div class="result-stats">
           <div class="result-stat success">
             <div class="result-stat__value">{{ lastResult.successCount }}</div>
-            <div class="result-stat__label">鍙戞斁鎴愬姛</div>
+            <div class="result-stat__label">发放成功</div>
           </div>
           <div class="result-stat warning">
             <div class="result-stat__value">{{ lastResult.alreadyIssuedCount }}</div>
-            <div class="result-stat__label">宸查杩?/div>
+            <div class="result-stat__label">已领过</div>
           </div>
           <div class="result-stat danger">
             <div class="result-stat__value">{{ lastResult.failCount }}</div>
-            <div class="result-stat__label">鍙戞斁澶辫触</div>
+            <div class="result-stat__label">发放失败</div>
           </div>
           <div class="result-stat primary">
             <div class="result-stat__value">{{ lastResult.total }}</div>
-            <div class="result-stat__label">澶勭悊鎬绘暟</div>
+            <div class="result-stat__label">处理总数</div>
           </div>
         </div>
         <div class="result-time">
-          妯℃澘锛歿{ lastResult.templateName }} 锝?妯″紡锛歿{ lastResult.mode === 'members' ? '鎸変細鍛業D' : '鎸夋潯浠剁瓫閫? }} 锝?鏃堕棿锛歿{ lastResult.time }}
+          模板：{{ lastResult.templateName }} ｜ 模式：{{ lastResult.mode === 'members' ? '按会员ID' : '按条件筛选' }} ｜ 时间：{{ lastResult.time }}
         </div>
       </div>
     </div>
@@ -242,11 +244,12 @@
           issuing: false,
           activeFilter: '',
 
-          // 浼樻儬鍒告ā鏉垮垪琛?          templateList: [],
-          // 浼氬憳绛夌骇鍒楄〃
+          // 优惠券模板列表
+          templateList: [],
+          // 会员等级列表
           levelList: [],
 
-          // 琛ㄥ崟
+          // 表单
           form: {
             mode: 'members',
             templateId: null,
@@ -261,57 +264,60 @@
             }
           },
 
-          // 缁熻鏁版嵁
+          // 统计数据
           stats: { totalCoupons: 0, enabledCount: 0, disabledCount: 0, claimedCount: 0, usageRate: '0%' },
 
-          // 鏈€杩戜竴娆″彂鏀剧粨鏋?          lastResult: null,
+          // 最近一次发放结果
+          lastResult: null,
 
-          // 鍙戞斁鍘嗗彶
+          // 发放历史
           historyList: []
         }
       },
       computed: {
-        // 瑙ｆ瀽浼氬憳ID鍒楄〃
+        // 解析会员ID列表
         parsedMemberIds: function() {
-          const text = this.form.memberIdsText || ''
+          var text = this.form.memberIdsText || ''
           if (!text.trim()) return []
-          // 鎸夐€楀彿銆佺┖鏍笺€佹崲琛岀瓑鍒嗛殧
+          // 按逗号、空格、换行等分隔
           var raw = text.split(/[,\s\n\r]+/).map(function(s) { return s.trim() }).filter(function(s) { return s.length > 0 })
-          // 杞暣鏁板苟鍘婚噸
-          const set = {$2}
-          for (let i = 0; i < raw.length; i++) {
-            const n = parseInt(raw[i], 10)
+          // 转整数并去重
+          var set = {}
+          for (var i = 0; i < raw.length; i++) {
+            var n = parseInt(raw[i], 10)
             if (!isNaN(n) && n > 0) set[n] = true
           }
-          const list = []
-          for (let k in set) { list.push(parseInt(k, 10)) }
+          var list = []
+          for (var k in set) { list.push(parseInt(k, 10)) }
           return list
         },
 
-        // 褰撳墠閫変腑鐨勬ā鏉?        currentTemplate: function() {
-          for (let i = 0; i < this.templateList.length; i++) {
+        // 当前选中的模板
+        currentTemplate: function() {
+          for (var i = 0; i < this.templateList.length; i++) {
             if (this.templateList[i].id === this.form.templateId) return this.templateList[i]
           }
           return null
         },
 
-        // 鑳藉惁鍙戞斁
+        // 能否发放
         canIssue: function() {
           if (!this.form.templateId) return false
           if (this.form.mode === 'members') return this.parsedMemberIds.length > 0
-          // 鎸夋潯浠讹細鑷冲皯璁剧疆涓€涓潯浠?          const c = this.form.condition
+          // 按条件：至少设置一个条件
+          var c = this.form.condition
           return c.levelId != null || c.newMemberDays != null ||
                  c.minPoints != null || c.maxPoints != null ||
                  c.minConsumption != null || c.maxConsumption != null
         },
 
         statsCards: function() {
-          const self = this
+          var self = this
           return [
-            { key: '', icon: '馃帿', label: '浼樻儬鍒告ā鏉?, value: self.stats.totalCoupons, color: 'primary', clickable: false },
-            { key: '', icon: '鉁?, label: '宸插惎鐢?, value: self.stats.enabledCount, color: 'success', clickable: false },
-            { key: '', icon: '鈴革笍', label: '宸茬鐢?, value: self.stats.disabledCount, color: 'warning', clickable: false },
-            { key: '', icon: '馃摛', label: '宸查瀹?, value: self.stats.exhaustedCount || 0, color: 'danger', clickable: false }
+            { key: '', icon: '🎫', label: '优惠券模板', value: self.stats.totalCoupons, color: 'primary', clickable: false },
+            { key: '', icon: '✅', label: '已启用', value: self.stats.enabledCount, color: 'success', clickable: false },
+            { key: '', icon: '⏸️', label: '已禁用', value: self.stats.disabledCount, color: 'warning', clickable: false },
+            { key: '', icon: '📤', label: '已领完', value: self.stats.exhaustedCount || 0, color: 'danger', clickable: false }
           ]
         }
       },
@@ -323,7 +329,7 @@
       methods: {
         async loadStats() {
           try {
-            const res = await couponStats()
+            var res = await couponStats()
             if (String(res.code) === '1') {
               this.stats = res.data || {}
             }
@@ -331,12 +337,12 @@
         },
         async loadTemplates() {
           try {
-            const res = await couponTemplateList()
+            var res = await couponTemplateList()
             if (String(res.code) === '1') {
-              // 鍙睍绀哄惎鐢ㄧ姸鎬佺殑妯℃澘
-              const records = res.data && res.data.records ? res.data.records : []
+              // 只展示启用状态的模板
+              var records = res.data && res.data.records ? res.data.records : []
               this.templateList = []
-              for (let i = 0; i < records.length; i++) {
+              for (var i = 0; i < records.length; i++) {
                 if (records[i].status === 1) {
                   this.templateList.push(records[i])
                 }
@@ -346,11 +352,11 @@
         },
         async loadLevels() {
           try {
-            const res = await levelPage({$3})
+            var res = await levelPage({ page: 1, pageSize: 100 })
             if (String(res.code) === '1') {
-              const records = res.data && res.data.records ? res.data.records : []
+              var records = res.data && res.data.records ? res.data.records : []
               this.levelList = []
-              for (let i = 0; i < records.length; i++) {
+              for (var i = 0; i < records.length; i++) {
                 if (records[i].status === 1) {
                   this.levelList.push(records[i])
                 }
@@ -361,7 +367,7 @@
         switchMode: function(mode) {
           this.form.mode = mode
           if (mode === 'condition') {
-            // 榛樿涓嶉檺鍒讹紝鐢ㄦ埛鑷濉啓
+            // 默认不限制，用户自行填写
             this.form.condition = { levelId: null, newMemberDays: null, minPoints: null, maxPoints: null, minConsumption: null, maxConsumption: null }
           }
         },
@@ -369,10 +375,10 @@
         onIdsTextChange: function() {},
 
         doIssue: function() {
-          const self = this
-          this.$confirm('纭鍙戞斁浼樻儬鍒稿埌鐩爣浼氬憳锛熷彂鏀惧悗涓嶅彲鎾ら攢銆?, '纭鍙戞斁', {
-            confirmButtonText: '纭鍙戞斁',
-            cancelButtonText: '鍙栨秷',
+          var self = this
+          this.$confirm('确认发放优惠券到目标会员？发放后不可撤销。', '确认发放', {
+            confirmButtonText: '确认发放',
+            cancelButtonText: '取消',
             type: 'warning'
           }).then(function() {
             self.issueCoupon()
@@ -389,8 +395,8 @@
                 memberIds: this.parsedMemberIds
               })
             } else {
-              const c = {$2}
-              const cond = this.form.condition
+              var c = {}
+              var cond = this.form.condition
               if (cond.levelId != null) c.levelId = cond.levelId
               if (cond.newMemberDays != null) c.newMemberDays = cond.newMemberDays
               if (cond.minPoints != null) c.minPoints = cond.minPoints
@@ -405,10 +411,10 @@
             }
 
             if (String(res.code) === '1') {
-              const data = res.data || {};
-              const name = this.currentTemplate ? this.currentTemplate.name : ''
-              const now = new Date()
-              const timeStr = now.getFullYear() + '-' +
+              var data = res.data || {}
+              var name = this.currentTemplate ? this.currentTemplate.name : ''
+              var now = new Date()
+              var timeStr = now.getFullYear() + '-' +
                 String(now.getMonth() + 1).padStart(2, '0') + '-' +
                 String(now.getDate()).padStart(2, '0') + ' ' +
                 String(now.getHours()).padStart(2, '0') + ':' +
@@ -425,7 +431,7 @@
                 time: timeStr
               }
 
-              // 杩藉姞鍘嗗彶璁板綍
+              // 追加历史记录
               this.historyList.unshift({
                 successCount: data.successCount || 0,
                 failCount: data.failCount || 0,
@@ -436,16 +442,16 @@
                 time: timeStr
               })
 
-              const msg = '鍙戞斁瀹屾垚锛氭垚鍔?' + (data.successCount || 0) + '锛屽凡棰嗚繃 ' + (data.alreadyIssuedCount || 0) + '锛屽け璐?' + (data.failCount || 0)
+              var msg = '发放完成：成功 ' + (data.successCount || 0) + '，已领过 ' + (data.alreadyIssuedCount || 0) + '，失败 ' + (data.failCount || 0)
               this.$message.success(msg)
               this.loadStats()
               this.loadTemplates()
             } else {
-              this.$message.error(res.message || '鍙戞斁澶辫触')
+              this.$message.error(res.message || '发放失败')
             }
           } catch (e) {
             console.error(e)
-            this.$message.error('鍙戞斁璇锋眰澶辫触锛? + (e.message || '鏈煡閿欒'))
+            this.$message.error('发放请求失败：' + (e.message || '未知错误'))
           } finally {
             this.issuing = false
           }

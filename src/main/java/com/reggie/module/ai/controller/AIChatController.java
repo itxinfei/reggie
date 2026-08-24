@@ -285,6 +285,16 @@ public class AIChatController {
     @Operation(summary = "获取对话详情", description = "获取指定对话的消息历史")
     @Parameter(description = "ConversationId")
     public R<List<AIMessageRecord>> getConversationDetail(@PathVariable String conversationId) {
+        // 修复 P2-9：校验 conversationId 属于当前用户，防止 IDOR 越权
+        Long userId = BaseContext.getCurrentId();
+        LambdaQueryWrapper<AIConversation> convWrapper = new LambdaQueryWrapper<>();
+        convWrapper.select(AIConversation::getUserId)
+                .eq(AIConversation::getConversationId, conversationId)
+                .eq(AIConversation::getIsDeleted, 0);
+        AIConversation conv = conversationMapper.selectOne(convWrapper);
+        if (conv == null || !userId.equals(conv.getUserId())) {
+            return R.error("对话不存在或无权访问");
+        }
         List<AIMessageRecord> messages = aiChatService.getConversationMessages(conversationId);
         return R.success(messages);
     }

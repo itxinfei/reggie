@@ -7,10 +7,13 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.ChangeTableStatusDTO;
+import com.reggie.module.dining.dto.OpenTableDTO;
+import com.reggie.module.dining.dto.TransferTableDTO;
 import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.model.TableArea;
 import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.module.dining.vo.TableStatsVO;
+import com.reggie.module.order.model.Orders;
 import com.reggie.utils.QRCodeUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,6 +35,8 @@ import com.reggie.common.RateLimit;
 import javax.validation.Valid;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Max;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +57,9 @@ public class DiningTableController {
 
     @Autowired
     private DiningTableService diningTableService;
+
+    @Autowired
+    private com.reggie.module.order.service.OrderService orderService;
 
     @Autowired
     private QRCodeUtil qrCodeUtil;
@@ -263,6 +271,99 @@ public class DiningTableController {
     @Operation(summary = "桌台区域统计", description = "聚合统计桌台总数与最大容量区域")
     public R<Map<String, Object>> areaStats() {
         return R.success(diningTableService.areaStats());
+    }
+
+    /**
+     * 开台：绑定订单到桌台，桌台状态改为占用
+     *
+     * @param dto 开台请求
+     * @return 操作结果
+     */
+    @PostMapping("/open")
+    @RateLimit(maxRequestsPerSecond = 5)
+    @Operation(summary = "开台", description = "将桌台状态从空闲改为占用，并绑定订单")
+    public R<String> openTable(@Valid @RequestBody OpenTableDTO dto) {
+        log.info("开台请求: tableId={}, orderId={}", dto.getTableId(), dto.getOrderId());
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        diningTableService.openTable(dto);
+        return R.success("开台成功");
+    }
+
+    /**
+     * 一键开台：先创建堂食占位订单（待付款），再绑定到桌台
+     *
+     * @param tableId       桌台ID
+     * @param customerCount 用餐人数（可选）
+     * @param remark        备注（可选）
+     * @return 开台结果（含新建订单ID）
+     */
+    @PostMapping("/openWithOrder")
+    @RateLimit(maxRequestsPerSecond = 5)
+    @Operation(summary = "一键开台", description = "创建堂食占位订单并绑定到桌台，桌台状态改为占用")
+    public R<Map<String, Object>> openWithOrder(@RequestParam Long tableId,
+                                                @RequestParam(required = false) Integer customerCount,
+                                                @RequestParam(required = false) String remark) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        // 1. 校验桌台存在且空闲
+        DiningTable table = diningTableService.getById(tableId);
+        if (table == null || !tenantId.equals(table.getTenantId())) {
+            return R.error("桌台不存在或无权操作");
+        }
+        if (!"FREE".equals(table.getStatus())) {
+            return R.error("桌台当前状态为[" + table.getStatus() + "]，无法开台");
+        }
+        // 2. 创建堂食占位订单（待付款、金额为0，后续加菜/结账时更新）
+        Orders order = new Orders();
+        order.setNumber(System.currentTimeMillis() + "");
+        order.setStatus(Orders.STATUS_PENDING_PAY);
+        order.setAmount(BigDecimal.ZERO);
+        order.setSource("EAT_IN");
+        order.setTableName(table.getName());
+        order.setCustomerCount(customerCount != null ? customerCount : 0);
+        order.setRemark(remark);
+        order.setOrderTime(LocalDateTime.now());
+        order.setTenantId(tenantId);
+        Long operatorId = BaseContext.getCurrentId() != null ? BaseContext.getCurrentId() : 0L;
+        order.setUserId(operatorId);
+        order.setUserName("堂食-" + table.getName());
+        order.setConsignee("堂食-" + table.getName());
+        order.setPhone("-");
+        orderService.save(order);
+        // 3. 绑定桌台
+        OpenTableDTO openDto = new OpenTableDTO();
+        openDto.setTableId(tableId);
+        openDto.setOrderId(order.getId());
+        diningTableService.openTable(openDto);
+        Map<String, Object> result = new HashMap<>(4);
+        result.put("tableId", tableId);
+        result.put("orderId", order.getId());
+        result.put("orderNumber", order.getNumber());
+        return R.success(result);
+    }
+
+    /**
+     * 转台：订单从原桌台迁移到新桌台
+     *
+     * @param dto 转台请求
+     * @return 操作结果
+     */
+    @PostMapping("/transfer")
+    @RateLimit(maxRequestsPerSecond = 5)
+    @Operation(summary = "转台", description = "将订单从原桌台迁移到新桌台")
+    public R<String> transferTable(@Valid @RequestBody TransferTableDTO dto) {
+        log.info("转台请求: fromTableId={}, toTableId={}", dto.getFromTableId(), dto.getToTableId());
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        diningTableService.transferTable(dto);
+        return R.success("转台成功");
     }
 
     /**

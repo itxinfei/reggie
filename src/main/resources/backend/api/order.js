@@ -16,6 +16,15 @@ const getOrderDetailPage = (params) => {
   })
 }
 
+// 平台订单分页查询（外卖平台拉取的订单）
+const getPlatformOrderPage = (params) => {
+  return $axios({
+    url: '/order/platform/page',
+    method: 'get',
+    params
+  })
+}
+
 // 查询所有订单（不分页）
 const getOrderList = (params) => {
   return $axios({

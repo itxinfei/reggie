@@ -431,7 +431,7 @@ new Vue({
     // ========== 数据加载 ==========
     async fetchData(reloadStats = true) {
       this.loading = true
-      const params = {$2}
+      const params = {}
       if (this.activeFilter) {
         params.status = this.activeFilter
       }
@@ -534,7 +534,7 @@ new Vue({
 
     // ========== 状态变更（启售 / 停售） ==========
     statusHandle(row) {
-      const params = {$2}
+      const params = {}
       if (typeof row === 'string') {
         if (this.checkList.length === 0) {
           ReggieUI.error('批量操作，请先勾选操作套餐！')
@@ -637,7 +637,7 @@ new Vue({
       this.$refs.comboForm.validate(function (valid) {
         if (valid) {
           self.submitting = true
-          const params = {$2}
+          const params = {}
           params.setmealDishes = self.comboDishTable.map(function (obj) {
             return {
               copies: obj.copies,

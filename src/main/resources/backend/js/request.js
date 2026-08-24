@@ -100,6 +100,11 @@
         }
         return Promise.reject(new Error('NOTLOGIN'))  // 修改点：阻止Promise继续进入then回调
       } else {
+        // 修改点(2026-08-24)：业务失败（code=0 且非 NOTLOGIN）时，reject 让请求进入页面 catch，
+        // 由页面统一错误提示，避免页面静默拿到空数据却不报错（表现为"打开了但没数据"）。
+        if (res.data && res.data.code === 0) {
+          return Promise.reject(new Error(res.data.msg || '业务处理失败'))
+        }
         return res.data
       }
     },

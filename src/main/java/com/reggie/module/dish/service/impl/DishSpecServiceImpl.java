@@ -278,19 +278,19 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
         if (tenantId != null) {
             groupQw.eq(DishSpecGroup::getTenantId, tenantId);
         }
-        int totalGroups = (int) specGroupMapper.selectCount(groupQw);
+        int totalGroups = specGroupMapper.selectCount(groupQw).intValue();
 
         LambdaQueryWrapper<DishSpecOption> optionQw = new LambdaQueryWrapper<>();
         if (tenantId != null) {
             optionQw.eq(DishSpecOption::getTenantId, tenantId);
         }
-        int totalOptions = (int) specOptionMapper.selectCount(optionQw);
+        int totalOptions = specOptionMapper.selectCount(optionQw).intValue();
 
         LambdaQueryWrapper<DishSpecRelation> relationQw = new LambdaQueryWrapper<>();
         if (tenantId != null) {
             relationQw.eq(DishSpecRelation::getTenantId, tenantId);
         }
-        int totalRelations = (int) specRelationMapper.selectCount(relationQw);
+        int totalRelations = specRelationMapper.selectCount(relationQw).intValue();
 
         // 统计使用规格的菜品数量
         Set<Long> uniqueDishes = new HashSet<>();

@@ -29,6 +29,7 @@ public class Supplier implements Serializable {
     private Long id;
 
     @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     @Schema(description = "供应商名称", example = "北京蔬菜批发市场")

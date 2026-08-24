@@ -189,7 +189,7 @@
           const s = this.lastSearch || {}
           try {
             // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-            const requests = [$2]
+            const requests = []
             if (reloadStats) { requests.push(levelStats()) }
             const results = await Promise.all(requests)
             const res = results[0]
@@ -251,7 +251,7 @@
           this.$refs.levelForm.validate(function(valid) {
             if (!valid) { ReggieUI.warning('请完善表单信息'); return false }
             self.submitting = true
-            const data = {$2}
+            const data = {}
             if (self.action === 'add') {
               addLevel(data).then(function(res) {
                 self.submitting = false

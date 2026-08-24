@@ -30,6 +30,7 @@ public class RechargeRecord implements Serializable {
     private Long id;
 
     @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
     @Schema(description = "会员ID", example = "1")

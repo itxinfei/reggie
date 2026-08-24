@@ -133,5 +133,27 @@ public interface OrderService extends IService<Orders> {
      * @param order 订单实体
      */
     void backfillUserInfo(Orders order);
+
+    // ==================== 平台订单支持 ====================
+
+    /**
+     * 根据平台类型和平台订单号查询订单（用于去重）
+     *
+     * @param platformType    平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER）
+     * @param platformOrderId 平台订单号
+     * @return 订单实体，不存在返回 null
+     */
+    Orders getByPlatformOrder(String platformType, String platformOrderId);
+
+    /**
+     * 按平台类型分页查询订单
+     *
+     * @param page         页码
+     * @param pageSize     每页条数
+     * @param platformType 平台类型（可选）
+     * @param status       订单状态（可选）
+     * @return 分页订单列表
+     */
+    Page<Orders> platformOrderPage(int page, int pageSize, String platformType, Integer status);
 }
 
