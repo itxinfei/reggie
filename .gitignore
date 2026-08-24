@@ -116,6 +116,7 @@ download_images.py
 patch_provider.py
 update_mapper_javadoc.py
 fresh.yaml
+tmp_scan.py
 
 # ----------------------------------------------------------
 # 本地维护文档 (非对外发布用)

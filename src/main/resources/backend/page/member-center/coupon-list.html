@@ -210,7 +210,7 @@
       methods: {
         async init(reloadStats = true) {
           this.loading = true
-          var sv = this.searchValues || {}
+          const sv = this.searchValues || {}
           const params = {$2}
           // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
           const requests = [couponTemplatePage(params)]
@@ -236,7 +236,7 @@
             // 修改点：改为调用后端聚合接口 /stats，避免 pageSize=1000 拉全量后在浏览器聚合
             const res = await couponStats()
             if (String(res.code) === '1') {
-              return { code: 1, data: res.data || {} }
+              return { code: 1, data: res.data  || {}}
             }
           } catch (err) { console.warn('加载优惠券统计失败:', err) }
           return { code: 0 }

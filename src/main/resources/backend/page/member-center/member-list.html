@@ -209,10 +209,10 @@
             // 仅保留等级积分门槛的分级逻辑（用 levelOptions + 后端返回的 levelCountMap 聚合计数）
             const res = await memberStats()
             if (String(res.code) !== '1') return { code: 0 }
-            var d = res.data || {}
+            const d = res.data || {}
             const total = d.totalMembers || 0
             const newThisMonth = d.newMembersThisMonth || 0
-            var levelCountMap = d.levelCountMap || {}
+            var levelCountMap = d.levelCountMap || {};
             const noLevelCount = d.noLevelCount || 0
             const levels = this.levelOptions || []
             // 按积分门槛分类（分级阈值规则与原前端逻辑保持一致）

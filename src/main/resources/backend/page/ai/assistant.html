@@ -620,7 +620,7 @@
                     self.connectionStatus.checking = true;
                     aiBackendApi.health().then(function(res) {
                         const data = (res.data || res);
-                        var healthData = (data && data.code === 1 ? data.data : data) || {};
+                        const healthData = (data && data.code === 1 ? data.data : data)  || {}
                         self.connectionStatus.model = healthData.model || 'unknown';
                         self.connectionStatus.connected = healthData.available === true;
                         self.connectionStatus.checking = false;

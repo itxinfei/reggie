@@ -253,7 +253,7 @@
         },
         async init() {
           this.loading = true
-          var sv = this.searchValues || {}
+          const sv = this.searchValues || {};
           const params = {$2}
           try {
             const res = await settlementPage(params)
@@ -356,7 +356,7 @@
           const self = this
           getSettlement(row.id).then(res => {
             if (res.code === 1) {
-              var d = res.data || {}
+              const d = res.data || {}
               // 附带合同编号便于展示
               var c = (self.contractOptions || []).find(function(x) { return x.id === d.contractId })
               d.contractNo = c ? c.contractNo : ''

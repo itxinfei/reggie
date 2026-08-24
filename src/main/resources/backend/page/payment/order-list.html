@@ -259,7 +259,7 @@
     // 修改点：normalizePayment 现在直接将 status 转为中文（不再依赖 _statusLabel 间接字段）
     function normalizePayment(row) {
       if (!row) return row
-      var r = Object.assign({}, row)
+      const r = Object.assign({}, row)
       if (r.status) {
         const upper = r.status.toUpperCase()
         r.status = PAYMENT_STATUS[upper] || r.status

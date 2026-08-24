@@ -390,7 +390,7 @@
             const res = await materialWarningStats()
             if (String(res.code) === '1' && res.data) {
               const d = res.data
-              var bySev = d.bySeverity || {}
+              const bySev = d.bySeverity || {}
               this.statsData = {
                 totalCount: d.totalCount || 0,
                 bySeverity: {
@@ -415,7 +415,7 @@
             if (this.severity) params.severity = this.severity
             const res = await materialWarningPage(params)
             if (String(res.code) === '1') {
-              var data = res.data || {}
+              const data = res.data || {};
               this.tableData = data.records || []
               this.counts = data.total || 0
             } else {

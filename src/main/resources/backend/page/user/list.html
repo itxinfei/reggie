@@ -205,7 +205,7 @@
         // 修改点：<stat-cards> 组件统一卡片点击分发
         // <stat-cards> 点击（使用 payload.activeKey 判断，避免 .sync 导致的 toggle 反转）
         onCardClick: function(payload) {
-          var s = this.lastSearch || {}
+          const s = this.lastSearch || {}
           if (payload.activeKey !== '' && payload.activeKey != null) {
             // 有激活卡片：按卡片 key 过滤
             this.lastSearch = { status: payload.activeKey === '' ? undefined : Number(payload.activeKey) }
@@ -275,7 +275,7 @@
         // 获取用户分页列表（优先使用 lastSearch，回退到 input）
         async getUserPage() {
           try {
-            const s = this.lastSearch || {}
+            const s = this.lastSearch || {};
             const params = {
               page: this.page,
               pageSize: this.pageSize,

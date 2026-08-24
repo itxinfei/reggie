@@ -249,7 +249,7 @@
           },
           convertToArray: function(data) {
             return Object.keys(CHANNEL_LABEL).filter(function(k) { return data[k] != null; })
-              .map(function(k) { var item = data[k] || {}; return { key: k, channel: CHANNEL_LABEL[k],
+              .map(function(k) { const item = data[k] || {}; return { key: k, channel: CHANNEL_LABEL[k],
                 transactionCount: item.count || 0, amount: item.amount != null ? item.amount : null }; });
           },
           calcPercent: function(count) { if (!this.totalCount) return 0; return Math.round(count / this.totalCount * 100); },

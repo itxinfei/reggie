@@ -160,7 +160,7 @@
       methods: {
         async init() {
           this.loading = true
-          var sv = this.searchValues || {}
+          const sv = this.searchValues || {};
           const params = {$2}
           try {
             const res = await franchiseePage(params)

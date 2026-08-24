@@ -186,7 +186,7 @@
         },
         async fetchData(reloadStats = true) {
           this.loading = true
-          var s = this.lastSearch || {}
+          const s = this.lastSearch || {}
           try {
             // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
             const requests = [$2]
@@ -221,7 +221,7 @@
         },
         // <table-bar> @search 回调（table-bar 已管理搜索条件，通过 searchParams 传入）
         handleQuery: function(searchParams) {
-          this.lastSearch = searchParams || {}
+          this.lastSearch = searchParams || {};
           this.page = 1
           this.fetchData(false)
         },

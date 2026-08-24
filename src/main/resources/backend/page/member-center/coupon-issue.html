@@ -405,7 +405,7 @@
             }
 
             if (String(res.code) === '1') {
-              var data = res.data || {}
+              const data = res.data || {};
               const name = this.currentTemplate ? this.currentTemplate.name : ''
               const now = new Date()
               const timeStr = now.getFullYear() + '-' +

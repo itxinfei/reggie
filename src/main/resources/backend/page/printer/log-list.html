@@ -181,7 +181,7 @@
             if (reloadStats) {
               const statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') {
-                var stats = statsRes.data || {}
+                const stats = statsRes.data || {}
                 // 修改点：打印类型数基于当前列表真实数据去重 printType，替代恒为 0/1 的估算假数据
                 const typeSet = {$2}
                 const recs = (logRes.data && logRes.data.records) || []

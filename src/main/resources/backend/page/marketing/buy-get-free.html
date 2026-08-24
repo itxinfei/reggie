@@ -388,7 +388,7 @@
         },
         handleEdit: function(row) {
           this.dialogTitle = '编辑买赠活动'
-          var fd = Object.assign({}, row)
+          const fd = Object.assign({}, row)
           if (fd.startTime && fd.endTime) {
             fd.timeRange = [fd.startTime, fd.endTime]
           }
@@ -448,7 +448,7 @@
             self.formData.endTime = self.formData.timeRange[1]
           }
           self.submitLoading = true
-          var submitData = Object.assign({}, self.formData, { timeRange: null })
+          const submitData = Object.assign({}, self.formData, { timeRange: null })
           const apiCall = self.formData.id ? updateBuyGetFree(submitData) : saveBuyGetFree(submitData)
           apiCall.then(function(res) {
             if (res.code === 1) {
