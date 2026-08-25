@@ -206,7 +206,7 @@
               printerLogPage({ page: 1, pageSize: 1, status: 0 })
             ])
             const totalRes = results[0], successRes = results[1], failRes = results[2]
-            const total = 0, successCount = 0, failCount = 0
+            let total = 0, successCount = 0, failCount = 0
             if (String(totalRes.code) === '1' && totalRes.data) total = totalRes.data.total || 0
             if (String(successRes.code) === '1' && successRes.data) successCount = successRes.data.total || 0
             if (String(failRes.code) === '1' && failRes.data) failCount = failRes.data.total || 0

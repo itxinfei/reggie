@@ -422,7 +422,7 @@
                 api.then(function(res) {
                     if (res.code === 1) {
                         // 修改点：add 接口返回 { action:"新增"/"更新", msg }，update 返回简单字符串
-                        const msg = res.msg || '';
+                        let msg = res.msg || '';
                         if (res.data && res.data.msg) {
                             msg = res.data.msg;
                         }

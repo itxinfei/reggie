@@ -774,7 +774,7 @@
                     self.smsForm.result = null;
 
                     // 构造模板参数，用户名为占位符值
-                    const params = {};
+                    let params = {};
                     if (self.smsForm.content.indexOf('${') < 0) {
                         // 无占位符，直接作为模板内容发送
                         params = { content: self.smsForm.content };

@@ -226,7 +226,7 @@
         submitForm() {
           if (this.submitting) return // 提交防重
           const self = this
-          const passed = false
+          let passed = false
           self.$refs.franchiseeForm.validate(function(valid) { passed = valid })
           if (!passed) {
             ReggieUI.warning('请完善表单必填项')

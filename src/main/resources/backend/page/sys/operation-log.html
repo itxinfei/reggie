@@ -167,7 +167,7 @@
               sysApi.logPage({ page: 1, pageSize: 1, isSuccess: 1 }),
               sysApi.logPage({ page: 1, pageSize: 1, isSuccess: 0 })
             ])
-            const data = {}
+            let data = {}
             if (statsRes && String(statsRes.code) === '1') {
               data = Object.assign({}, data, statsRes.data  || {})
             }

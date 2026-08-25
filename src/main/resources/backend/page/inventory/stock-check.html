@@ -251,16 +251,16 @@
         async loadStats() {
           try {
             const self = this
-            const totalRes = await stockCheckPage({$3})
-            const pendingRes = await stockCheckPage({$3})
-            const doneRes = await stockCheckPage({$3})
+            const totalRes = await stockCheckPage({ page: 1, pageSize: 1 })
+            const pendingRes = await stockCheckPage({ page: 1, pageSize: 1, status: 'IN_PROGRESS' })
+            const doneRes = await stockCheckPage({ page: 1, pageSize: 1, status: 'DONE' })
             self.stats.totalChecks = (String(totalRes.code) === '1' && totalRes.data) ? (totalRes.data.total || 0) : 0
             self.stats.pendingChecks = (String(pendingRes.code) === '1' && pendingRes.data) ? (pendingRes.data.total || 0) : 0
             self.stats.completedChecks = (String(doneRes.code) === '1' && doneRes.data) ? (doneRes.data.total || 0) : 0
             // diffCount: 查询已完成的盘点，检查是否有差异项
             self.stats.diffCount = 0
             try {
-              const diffRes = await stockCheckPage({$3})
+              const diffRes = await stockCheckPage({ page: 1, pageSize: 100, status: 'DONE' })
               if (String(diffRes.code) === '1' && diffRes.data && diffRes.data.records) {
                 const records = diffRes.data.records
                 for (let i = 0; i < records.length; i++) {
@@ -314,7 +314,7 @@
         },
         submitCreate() {
           const self = this
-          const passed = false
+          let passed = false
           self.$refs.createForm.validate(function(valid) { passed = valid })
           if (!passed) {
             ReggieUI.error('请输入操作人')

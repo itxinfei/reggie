@@ -406,7 +406,7 @@
           return this.filteredData.slice(start, start + this.pageSize)
         },
         filteredData() {
-          const data = this.allData
+          let data = this.allData
           const params = this.searchParams
           if (params.ruleName) {
             data = data.filter(function(item) { return item.ruleName && item.ruleName.indexOf(params.ruleName) > -1 })

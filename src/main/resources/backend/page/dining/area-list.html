@@ -234,8 +234,8 @@
               tableAreaStats()
             ])
             const totalAreas = (areaRes && areaRes.data) ? (areaRes.data.total || 0) : 0
-            const totalTables = 0
-            const maxTablesArea = '-'
+            let totalTables = 0
+            let maxTablesArea = '-'
             if (String(tableStatsRes.code) === '1' && tableStatsRes.data) {
               totalTables = Number(tableStatsRes.data.totalTables) || 0
               maxTablesArea = tableStatsRes.data.maxTablesArea || '-'

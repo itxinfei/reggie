@@ -392,7 +392,7 @@
             summary: { total: 0, active: 0, draft: 0, ended: 0, paused: 0, totalParticipants: 0, totalPushed: 0 },
             // 修改点(2026-07-10)：新增 recentDates 用于图表的 X 轴
             recentDates: (function() {
-                const arr = $2;
+                const arr = [];
                 for (let i = 6; i >= 0; i--) {
                     const d = new Date();
                     d.setDate(d.getDate() - i);

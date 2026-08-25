@@ -459,7 +459,7 @@ new Vue({
           getCategoryList({ type: 2 })
         ])
         if (String(totalRes.code) === '1') {
-          const catCount = 0
+          let catCount = 0
           try {
             catCount = catRes ? (catRes.data || []).length : 0
           } catch (e) {

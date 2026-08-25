@@ -440,7 +440,7 @@
         },
         handleSubmit: function() {
           const self = this
-          const passed = false
+          let passed = false
           this.$refs.ruleForm.validate(function(valid) { passed = valid })
           if (!passed) return
           if (self.formData.timeRange && self.formData.timeRange.length === 2) {

@@ -274,7 +274,7 @@
             }, true); return;
           }
           var hexToRgba = function(hex, alpha) {
-            const h = hex.replace('#','');
+            let h = hex.replace('#','');
             if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
             const r = parseInt(h.substring(0,2), 16);
             const g = parseInt(h.substring(2,4), 16);

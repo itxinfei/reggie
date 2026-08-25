@@ -703,7 +703,7 @@
       },
       computed: {
         filteredMembers: function () {
-          const list = this.memberList
+          let list = this.memberList
           if (this.filterLevel !== 'ALL') {
             list = list.filter(function (m) { return m.level === this.filterLevel }.bind(this))
           }
@@ -833,7 +833,7 @@
         loadMemberList: function () {
           const self = this
           self.memberLoading = true
-          const params = {$2}
+          const params = {}
           if (self.filterLevel !== 'ALL') params.level = self.filterLevel
           if (self.filterStatus !== 'ALL') params.status = self.filterStatus
           try {

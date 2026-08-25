@@ -301,7 +301,7 @@
         submitGenerate() {
           if (this.generating) return // 提交防重
           const self = this
-          const passed = false
+          let passed = false
           self.$refs.genForm.validate(function(valid) { passed = valid })
           if (!passed) {
             ReggieUI.warning('请选择合同与结算周期')

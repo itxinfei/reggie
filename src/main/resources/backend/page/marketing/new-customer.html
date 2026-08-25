@@ -348,7 +348,7 @@
         },
         handleSubmit: function() {
           const self = this
-          const passed = false
+          let passed = false
           this.$refs.ruleForm.validate(function(valid) { passed = valid })
           if (!passed) return
           if (self.formData.discountType === 2 && (!self.formData.maxDiscountAmount || self.formData.maxDiscountAmount <= 0)) {

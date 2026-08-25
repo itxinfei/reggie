@@ -428,7 +428,7 @@
         async submitRefund() {
           const self = this
           if (!self.refundForm.amount || parseFloat(self.refundForm.amount) <= 0) { ReggieUI.warning('请输入有效的退款金额'); return }
-          const reason = self.refundForm.reasonType
+          let reason = self.refundForm.reasonType
           if (!reason) { ReggieUI.warning('请选择退款原因'); return }
           if (reason === '其他原因') {
             if (!self.refundForm.reasonDetail) { ReggieUI.warning('请填写详细退款原因'); return }
@@ -437,12 +437,12 @@
           self.refundLoading = true
           try {
             var paymentRes = await $axios.get('/api/payment/page', { params: { page: 1, pageSize: 1, orderId: self.refundForm.id } })
-            const paymentOrderId = null
+            let paymentOrderId = null
             if (paymentRes && paymentRes.code === 1 && paymentRes.data && paymentRes.data.records && paymentRes.data.records.length > 0) {
               paymentOrderId = paymentRes.data.records[0].id
             }
             if (!paymentOrderId) { ReggieUI.error('未找到对应支付订单，无法退款'); self.refundLoading = false; return }
-            const res = await paymentRefund({$3})
+            const res = await paymentRefund({ paymentOrderId: paymentOrderId, amount: parseFloat(self.refundForm.amount), reason: reason })
             if (res && res.code === 1) { ReggieUI.success('退款成功'); self.refundVisible = false; self.init() }
             else { ReggieUI.error(res ? res.msg : '退款失败') }
           } catch (err) { ReggieUI.error('退款请求失败：' + err) }

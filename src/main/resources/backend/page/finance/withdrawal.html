@@ -349,7 +349,7 @@
           return this.filteredData.slice(start, start + this.pageSize)
         },
         filteredData() {
-          const data = this.allData
+          let data = this.allData
           const params = this.searchParams
           if (params.status !== undefined && params.status !== '') {
             data = data.filter(function(item) { return item.status === params.status })
