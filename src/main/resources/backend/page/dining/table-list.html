@@ -46,6 +46,13 @@
     .qrcode-content .qrcode-img-wrap img { width: 200px; height: 200px; display: block; }
     .qrcode-content .qrcode-tip { margin-top: 12px; font-size:var(--font-size-xs); color: var(--color-info); }
     .qrcode-content .qrcode-actions { margin-top: 16px; display: flex; justify-content: center; gap: var(--space-4); }
+    /* 空状态提示 */
+    .empty-hint {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: var(--font-size-sm);
+      padding: var(--space-6) 0;
+    }
   </style>
 </head>
 <body>
@@ -165,7 +172,7 @@
             </div>
           </div>
         </div>
-        <el-empty v-if="!loading && tableData.length === 0" description="暂无桌台数据，请点击上方「新增桌台」添加"></el-empty>
+        <div v-if="!loading && tableData.length === 0" class="empty-hint">暂无桌台数据，请点击上方「新增桌台」添加</div>
       </div>
 
       <!-- 卡片视图分页（表格视图由 crud-table 内置分页接管） -->

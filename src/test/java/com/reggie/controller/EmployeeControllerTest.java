@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-public class EmployeeControllerTest {
+public class EmployeeControllerTest extends BaseControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -104,11 +104,17 @@ public class EmployeeControllerTest {
 
     @Test
     void testSave() throws Exception {
-        mockMvc.perform(post("/employee")
+        org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder builder = post("/employee")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"newemp\",\"name\":\"新员工\",\"phone\":\"13700137000\",\"sex\":\"0\"}"))
+                .content("{\"username\":\"newemp\",\"name\":\"新员工\",\"phone\":\"13700137000\",\"sex\":\"0\"}")
+                .with(request -> {
+                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("roleKey", "SUPER_ADMIN");
+                    return request;
+                });
+        mockMvc.perform(withCsrfToken(mockMvc, builder))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.消息").value("新增员工成功，初始密码已通过短信/邮件发送给用户"));
@@ -141,11 +147,16 @@ public class EmployeeControllerTest {
 
     @Test
     void testUpdate() throws Exception {
-        mockMvc.perform(put("/employee")
+        mockMvc.perform(withCsrfToken(mockMvc, put("/employee")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
+                .with(request -> {
+                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("roleKey", "SUPER_ADMIN");
+                    return request;
+                })
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":1,\"name\":\"修改后管理员\",\"phone\":\"13600136000\"}"))
+                .content("{\"id\":1,\"name\":\"修改后管理员\",\"phone\":\"13600136000\"}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("员工信息修改成功"));

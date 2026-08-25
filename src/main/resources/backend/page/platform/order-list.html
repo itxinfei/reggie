@@ -101,18 +101,40 @@
     :close-on-click-modal="true"
   >
     <div v-if="detail" class="po-detail">
-      <el-descriptions :column="2" border size="small">
-        <el-descriptions-item label="平台">{{ platformTypeText(detail.platformType) }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ statusText(detail.status) }}</el-descriptions-item>
-        <el-descriptions-item label="平台订单号">{{ detail.platformOrderId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="本地订单号">{{ detail.number || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="金额">￥{{ formatMoney(detail.amount) }}</el-descriptions-item>
-        <el-descriptions-item label="下单时间">{{ detail.orderTime || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="顾客">{{ detail.userName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="电话">{{ detail.phone || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="地址" :span="2">{{ detail.address || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="备注" :span="2">{{ detail.remark || '无' }}</el-descriptions-item>
-      </el-descriptions>
+      <el-form label-width="90px" size="small">
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="平台">{{ platformTypeText(detail.platformType) }}</el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="状态">{{ statusText(detail.status) }}</el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="平台订单号">{{ detail.platformOrderId || '-' }}</el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="本地订单号">{{ detail.number || '-' }}</el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="金额">￥{{ formatMoney(detail.amount) }}</el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="下单时间">{{ detail.orderTime || '-' }}</el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="顾客">{{ detail.userName || '-' }}</el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="电话">{{ detail.phone || '-' }}</el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="地址">{{ detail.address || '-' }}</el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="备注">{{ detail.remark || '无' }}</el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
 
       <div class="po-detail__items-title">菜品明细</div>
       <el-table :data="detail.orderDetails || []" size="small" border class="po-detail__table">

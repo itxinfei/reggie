@@ -225,7 +225,7 @@
               @change="onMaterialChange(scope.row, $event)" style="width: 100%;">
               <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id">
                 <span>{{ m.name }}</span>
-                <span style="color: #9ca3af; margin-left: 8px; font-size: 12px;">{{ m.unit }}</span>
+                <span style="color: var(--text-muted); margin-left: 8px; font-size: 12px;">{{ m.unit }}</span>
               </el-option>
             </el-select>
           </template>

@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-public class ShoppingCartControllerTest {
+public class ShoppingCartControllerTest extends BaseControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -33,14 +33,15 @@ public class ShoppingCartControllerTest {
     @BeforeEach
     void setUp() {
         BaseContext.setCurrentId(1L);
+        BaseContext.setCurrentTenantId(1L);
     }
 
     @Test
     void testAddDish() throws Exception {
-        mockMvc.perform(post("/shopping-cart/add")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/shopping-cart/add")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"dishId\":1,\"name\":\"测试菜品\",\"number\":1,\"amount\":10.00,\"image\":\"test.jpg\"}"))
+                .content("{\"dishId\":1,\"name\":\"测试菜品\",\"number\":1,\"amount\":10.00,\"image\":\"test.jpg\"}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.number").value(1));
@@ -58,10 +59,10 @@ public class ShoppingCartControllerTest {
         cart.setImage("test.jpg");
         shoppingCartService.save(cart);
 
-        mockMvc.perform(post("/shopping-cart/add")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/shopping-cart/add")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"dishId\":1,\"name\":\"测试菜品\",\"number\":1,\"amount\":10.00,\"image\":\"test.jpg\"}"))
+                .content("{\"dishId\":1,\"name\":\"测试菜品\",\"number\":1,\"amount\":10.00,\"image\":\"test.jpg\"}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.number").value(3));
@@ -69,10 +70,10 @@ public class ShoppingCartControllerTest {
 
     @Test
     void testAddSetmeal() throws Exception {
-        mockMvc.perform(post("/shopping-cart/add")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/shopping-cart/add")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"setmealId\":1,\"name\":\"测试套餐\",\"number\":1,\"amount\":50.00,\"image\":\"setmeal.jpg\"}"))
+                .content("{\"setmealId\":1,\"name\":\"测试套餐\",\"number\":1,\"amount\":50.00,\"image\":\"setmeal.jpg\"}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.number").value(1));
@@ -118,10 +119,10 @@ public class ShoppingCartControllerTest {
         cart.setAmount(new BigDecimal("10.00"));
         shoppingCartService.save(cart);
 
-        mockMvc.perform(post("/shopping-cart/sub")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/shopping-cart/sub")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"dishId\":2}")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.number").value(2));
@@ -138,10 +139,10 @@ public class ShoppingCartControllerTest {
         cart.setAmount(new BigDecimal("5.00"));
         shoppingCartService.save(cart);
 
-        mockMvc.perform(post("/shopping-cart/sub")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/shopping-cart/sub")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"dishId\":3}")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }
@@ -157,8 +158,8 @@ public class ShoppingCartControllerTest {
         cart.setAmount(new BigDecimal("8.00"));
         shoppingCartService.save(cart);
 
-        mockMvc.perform(delete("/shopping-cart/clean")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+        mockMvc.perform(withCsrfToken(mockMvc, delete("/shopping-cart/clean")
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("清空购物车成功"));

@@ -86,7 +86,8 @@ public class WechatPayChannel implements PaymentChannel {
         log.info("WechatPay handleNotify: params={}", params);
         PayResponse response = new PayResponse();
         response.setSuccess(true);
-        response.setChannelTradeNo(params.get("trade_no"));
+        // 修复 P1：微信支付回调字段名为 transaction_id（平台流水号），非 trade_no（商户订单号=out_trade_no）
+        response.setChannelTradeNo(params.get("transaction_id"));
         return response;
     }
 

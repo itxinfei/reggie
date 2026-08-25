@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-public class SetmealControllerTest {
+public class SetmealControllerTest extends BaseControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -87,11 +87,11 @@ public class SetmealControllerTest {
         dishes.add(dish);
         dto.setSetmealDishes(dishes);
 
-        mockMvc.perform(post("/setmeal")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/setmeal")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                .content(objectMapper.writeValueAsString(dto))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("新增套餐成功"));
@@ -151,11 +151,11 @@ public class SetmealControllerTest {
         dishes.add(dish);
         dto.setSetmealDishes(dishes);
 
-        mockMvc.perform(put("/setmeal")
+        mockMvc.perform(withCsrfToken(mockMvc, put("/setmeal")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                .content(objectMapper.writeValueAsString(dto))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("修改套餐成功"));
@@ -174,11 +174,11 @@ public class SetmealControllerTest {
         setmeal.setStatus(1);
         setmealService.save(setmeal);
 
-        mockMvc.perform(post("/setmeal/status/0")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/setmeal/status/0")
                 .param("ids", "2")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("操作成功"));
@@ -216,10 +216,10 @@ public class SetmealControllerTest {
         setmeal2.setStatus(0);
         setmealService.save(setmeal2);
 
-        mockMvc.perform(delete("/setmeal")
+        mockMvc.perform(withCsrfToken(mockMvc, delete("/setmeal")
                 .param("ids", "3")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("套餐数据删除成功"));

@@ -182,8 +182,18 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         orders.setId(orderId);
         orders.setOrderTime(LocalDateTime.now());
-        orders.setCheckoutTime(LocalDateTime.now());
-        orders.setStatus(Orders.STATUS_ORDERED);
+        // 修复：下单状态按支付方式分流，避免支付主链路断裂。
+        // - COD(货到付款, payMethod=3)：无需线上支付，直接 STATUS_ORDERED + 立即接单处理
+        // - WeChat/Alipay(payMethod=1/2) 或未传 payMethod：需线上支付，STATUS_PENDING_PAY，
+        //   支付成功后由 PaymentOrderServiceImpl.handlePaymentSuccess() 流转为 ORDERED 并回填 checkoutTime
+        // 此前无条件设 STATUS_ORDERED 导致 PaymentController.pay() 拒绝支付（要求 PENDING_PAY）
+        if (orders.getPayMethod() != null && orders.getPayMethod() == 3) {
+            orders.setCheckoutTime(LocalDateTime.now());
+            orders.setStatus(Orders.STATUS_ORDERED);
+        } else {
+            orders.setCheckoutTime(null);
+            orders.setStatus(Orders.STATUS_PENDING_PAY);
+        }
         orders.setAmount(totalAmount.setScale(2, java.math.RoundingMode.HALF_UP));//总金额（精确计算）
         orders.setUserId(userId);
         orders.setNumber(String.valueOf(orderId));
@@ -374,8 +384,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         // 设置订单字段
         orders.setId(orderId);
         orders.setOrderTime(LocalDateTime.now());
-        orders.setCheckoutTime(LocalDateTime.now());
-        orders.setStatus(Orders.STATUS_ORDERED);
+        // 修复：堂食订单按支付方式分流
+        // - payMethod=3(COD/线下收银)：已"付过款"，直接 STATUS_ORDERED
+        // - payMethod=1(微信)/2(支付宝) 或未传：需线上支付，STATUS_PENDING_PAY
+        if (orders.getPayMethod() != null && orders.getPayMethod() == 3) {
+            orders.setCheckoutTime(LocalDateTime.now());
+            orders.setStatus(Orders.STATUS_ORDERED);
+        } else {
+            orders.setCheckoutTime(null);
+            orders.setStatus(Orders.STATUS_PENDING_PAY);
+        }
         orders.setAmount(totalAmount.setScale(2, java.math.RoundingMode.HALF_UP));
         orders.setUserId(userId);
         orders.setNumber(String.valueOf(orderId));
@@ -614,11 +632,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
     @Override
     public List<Orders> listPendingCheckout(Long tenantId) {
-        // 查本租户下所有 STATUS_ORDERED 且未设置 payMethod（即未收款）的订单
+        // 查本租户下所有待收银订单，两类场景都要覆盖：
+        // 1. STATUS_PENDING_PAY 且 source=EAT_IN（堂食扫码/开台订单，待线上支付或线下收银）
+        // 2. STATUS_ORDERED 且 payMethod 为空（历史堂食下单，尚未完成收款）
         LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
         qw.eq(Orders::getTenantId, tenantId)
-                .eq(Orders::getStatus, Orders.STATUS_ORDERED)
-                .isNull(Orders::getPayMethod)
+                .and(w -> w.eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
+                                  .eq(Orders::getSource, "EAT_IN")
+                        .or()
+                        .eq(Orders::getStatus, Orders.STATUS_ORDERED)
+                                  .isNull(Orders::getPayMethod))
                 .orderByDesc(Orders::getOrderTime);
         List<Orders> orders = this.list(qw);
         // 二次过滤：排除已有收银记录的订单（payMethod 设 null 但有收银记录的情况）

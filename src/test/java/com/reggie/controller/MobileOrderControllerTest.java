@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-public class MobileOrderControllerTest {
+public class MobileOrderControllerTest extends BaseControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -103,10 +103,10 @@ public class MobileOrderControllerTest {
         detail.setAmount(new BigDecimal("59.00"));
         orderDetailService.save(detail);
 
-        mockMvc.perform(post("/order/again")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/order/again")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":2}")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }

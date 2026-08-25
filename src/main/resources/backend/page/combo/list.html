@@ -130,7 +130,7 @@
                 <el-table-column prop="price" label="原价" width="180" align="right">
                   <template slot-scope="scope">￥{{ scope.row.price }}</template>
                 </el-table-column>
-                <el-table-column prop="copies" label="份数" align="center">
+                <el-table-column prop="copies" label="份数" width="100" align="center">
                   <template slot-scope="scope">
                     <el-input-number v-model="scope.row.copies" size="small" :min="1" :max="99" controls-position="right" />
                   </template>

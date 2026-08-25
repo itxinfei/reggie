@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-public class DishControllerTest {
+public class DishControllerTest extends BaseControllerTest {
 
     @MockBean
     private RedisCacheUtil redisCacheUtil;
@@ -98,11 +98,11 @@ public class DishControllerTest {
 
         com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
-        mockMvc.perform(post("/dish")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/dish")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                .content(objectMapper.writeValueAsString(dto))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("新增菜品成功"));
@@ -165,11 +165,11 @@ public class DishControllerTest {
 
         com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
-        mockMvc.perform(put("/dish")
+        mockMvc.perform(withCsrfToken(mockMvc, put("/dish")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                .content(objectMapper.writeValueAsString(dto))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("修改菜品成功"));
@@ -190,10 +190,10 @@ public class DishControllerTest {
         dish2.setSort(2);
         dishService.save(dish2);
 
-        mockMvc.perform(delete("/dish")
+        mockMvc.perform(withCsrfToken(mockMvc, delete("/dish")
                 .param("ids", "2")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("删除成功"));
@@ -203,11 +203,11 @@ public class DishControllerTest {
 
     @Test
     void testUpdateStatus() throws Exception {
-        mockMvc.perform(post("/dish/status/0")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/dish/status/0")
                 .param("ids", "1")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("操作成功"));
@@ -229,11 +229,11 @@ public class DishControllerTest {
         dish2.setSort(2);
         dishService.save(dish2);
 
-        mockMvc.perform(post("/dish/status/0")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/dish/status/0")
                 .param("ids", "1,2")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 

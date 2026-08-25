@@ -41,7 +41,7 @@
                 </div>
                 <el-tag :type="item.statusType" size="small">{{ item.statusText }}</el-tag>
               </div>
-              <el-empty v-if="!loading && todayList.length === 0" description="今日暂无排班" :image-size="60"></el-empty>
+              <div v-if="!loading && todayList.length === 0" class="empty-hint">今日暂无排班</div>
             </div>
           </el-card>
         </el-col>
@@ -61,7 +61,7 @@
                 <el-tag :type="item.type" size="small">{{ item.statusText }}</el-tag>
                 <div class="abnormal-detail">{{ item.detail }}</div>
               </div>
-              <el-empty v-if="!loading && abnormalList.length === 0" description="本周无异常记录" :image-size="60"></el-empty>
+              <div v-if="!loading && abnormalList.length === 0" class="empty-hint">本周无异常记录</div>
             </div>
           </el-card>
         </el-col>
@@ -331,6 +331,14 @@
 
     /* 通用卡片 */
     .section-card { padding: var(--space-4); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+
+    /* 空状态提示 */
+    .empty-hint {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: var(--font-size-sm);
+      padding: var(--space-6) 0;
+    }
 
     .section-header {
       display: flex;

@@ -75,8 +75,7 @@ public class PrinterServiceTest {
 
         testDetails = new ArrayList<>();
         OrderDetail d1 = new OrderDetail();
-        d1.setId(100L);
-        d1.setOrderId(100L);
+        d1.setOrderId(testOrder.getId());
         d1.setName("宫保鸡丁");
         d1.setNumber(2);
         d1.setAmount(new BigDecimal("36.00"));
@@ -84,12 +83,15 @@ public class PrinterServiceTest {
         testDetails.add(d1);
 
         OrderDetail d2 = new OrderDetail();
-        d2.setId(101L);
-        d2.setOrderId(100L);
+        d2.setOrderId(testOrder.getId());
         d2.setName("米饭");
         d2.setNumber(2);
         d2.setAmount(new BigDecimal("6.00"));
         testDetails.add(d2);
+
+        BaseContext.setCurrentId(1L);
+        BaseContext.setCurrentTenantId(1L);
+        orderService.save(testOrder);
     }
 
     @Test
@@ -151,13 +153,11 @@ public class PrinterServiceTest {
 
     @Test
     void testPrintOrder() {
-        orderService.save(testOrder);
         for (OrderDetail d : testDetails) {
             orderDetailService.save(d);
         }
 
         PrinterConfig printer = new PrinterConfig();
-        printer.setId(1L);
         printer.setTenantId(1L);
         printer.setName("测试打印机");
         printer.setType("USB");
@@ -167,7 +167,7 @@ public class PrinterServiceTest {
         printer.setStatus(1);
         printerConfigService.save(printer);
 
-        printerService.printOrder(100L, "BILL");
+        printerService.printOrder(testOrder.getId(), "BILL");
     }
 
     @Test

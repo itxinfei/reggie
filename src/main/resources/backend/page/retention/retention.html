@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>娴兼艾鎲抽悾娆忕摠閼奉亜濮╅崠鏍吀閻?- 閻熺偛鎮忔径鏍у礌缁狅紕鎮婄粩?/title>
+  <title>会员挽留 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
@@ -17,7 +17,7 @@
       padding: 0 var(--space-5);
     }
 
-    /* ============ 妞ゅ爼鍎寸紒鐔活吀閸楋紕澧栫悰?============ */
+    /* ============ 统计卡片区 ============ */
     .retention-stats {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -58,17 +58,12 @@
       font-variant-numeric: tabular-nums;
       color: var(--text-primary);
     }
-    .retention-stat-card__unit {
-      font-size: var(--font-size-base);
-      font-weight: var(--font-weight-regular);
-      margin-left: var(--space-1);
-    }
     .retention-stat-card.brand .retention-stat-card__value { color: var(--color-brand-500) }
     .retention-stat-card.success .retention-stat-card__value { color: var(--color-success) }
     .retention-stat-card.warning .retention-stat-card__value { color: var(--color-warning) }
     .retention-stat-card.danger .retention-stat-card__value { color: var(--color-danger) }
 
-    /* ============ 闁氨鏁ら崠鍝勬健閺嶅洭顣?============ */
+    /* ============ 区块标题 ============ */
     .section-header {
       display: flex;
       align-items: center;
@@ -85,16 +80,22 @@
       color: var(--text-muted);
     }
 
-    /* ============ 闁氨鏁ら崡锛勫鐎圭懓娅?============ */
+    /* ============ 面板卡片 ============ */
     .panel-card {
-      padding: var(--space-4);
-      background: var(--bg-surface);
+      border: none;
       border-radius: var(--radius-md);
       box-shadow: var(--shadow-sm);
       margin-bottom: var(--space-6);
+      transition: box-shadow var(--transition-base);
+    }
+    .panel-card:hover {
+      box-shadow: var(--shadow-md);
+    }
+    .panel-card .el-card__body {
+      padding: var(--space-5);
     }
 
-    /* ============ 娴兼艾鎲抽崚鍡楃湴 + 閹烘帟顢戝?娑撱倖鐖?============ */
+    /* ============ 等级概览 + 积分排行 双栏 ============ */
     .top-grid {
       display: grid;
       grid-template-columns: 1fr 1.4fr;
@@ -103,14 +104,13 @@
     }
     @media (max-width: 1100px) { .top-grid { grid-template-columns: 1fr } }
 
-    /* ============ 娴兼艾鎲抽崚鍡楃湴閻滎垰鑸扮紒鐔活吀 ============ */
+    /* ============ 等级统计 ============ */
     .level-stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: var(--space-3);
       margin-bottom: var(--space-4);
     }
-
     .level-stat {
       text-align: center;
       padding: var(--space-3) var(--space-2);
@@ -169,7 +169,7 @@
       margin-top: var(--space-1);
     }
 
-    /* ============ 缁夘垰鍨庨幒鎺曨攽鐞涖劍鐗?============ */
+    /* ============ 积分排行 ============ */
     .ranking-table {
       transition: background-color var(--transition-base);
     }
@@ -202,7 +202,7 @@
       color: var(--text-primary);
     }
 
-    /* ============ 濞翠礁銇戞０鍕劅閸楋紕澧?============ */
+    /* ============ 流失预警 ============ */
     .warning-table {
       transition: background-color var(--transition-base);
     }
@@ -221,7 +221,7 @@
       transform: translateY(-1px);
     }
 
-    /* ============ 閺呴缚鍏橀幒銊ㄥ礃閸楋紕澧?============ */
+    /* ============ 挽留建议 + 会员列表 ============ */
     .bottom-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -261,7 +261,7 @@
       flex-shrink: 0;
     }
 
-    /* ============ 缁涙盯鈧顢?============ */
+    /* ============ 筛选 ============ */
     .filter-row {
       display: flex;
       align-items: center;
@@ -283,7 +283,7 @@
       color: var(--text-muted);
     }
 
-    /* ============ 缁岀儤鈧?============ */
+    /* ============ 空状态 ============ */
     .empty-state {
       text-align: center;
       padding: 48px var(--space-4);
@@ -303,111 +303,112 @@
   </style>
 </head>
 <body>
-  <a href="#main-content" class="skip-link">鐠哄疇娴嗛崚棰佸瘜閸愬懎顔?/a>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1）-->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="retention-app">
-    <div class="container retention-container" id="main-content" role="main" aria-label="娴兼艾鎲抽悾娆忕摠閼奉亜濮╅崠鏍吀閻?>
+    <div class="container retention-container" id="main-content" role="main" aria-label="会员挽留看板">
 
-      <!-- 妞ょ敻娼伴弽鍥暯 -->
+      <!-- 页头：标题 + 副标题 -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">娴兼艾鎲抽悾娆忕摠閼奉亜濮╅崠?/h1>
-          <p class="ds-page-header__subtitle">閸掑棗鐪扮粻锛勬倞閵嗕焦绁︽径閬嶎暕鐠€锔跨瑢閺呴缚鍏橀崣鎴濆煖閿涘本褰侀崡鍥︾窗閸涙ɑ妞跨捄鍐ㄥ</p>
+          <h1 class="ds-page-header__title" id="page-title">会员挽留</h1>
+          <p class="ds-page-header__subtitle">识别近期未下单的高价值会员，自动生成挽留建议与优惠券发放</p>
         </div>
       </header>
 
-      <!-- 1. 妞ゅ爼鍎寸紒鐔活吀閸楋紕澧?-->
+      <!-- 1. 统计卡片区 -->
       <div class="retention-stats" v-loading="statsLoading">
         <div class="retention-stat-card brand">
-          <div class="retention-stat-card__icon">棣冩啱</div>
+          <div class="retention-stat-card__icon">👥</div>
           <div class="retention-stat-card__body">
-            <div class="retention-stat-card__label">娴兼艾鎲抽幀缁樻殶</div>
+            <div class="retention-stat-card__label">会员总数</div>
             <div class="retention-stat-card__value">{{ stats.totalCount || 0 }}</div>
           </div>
         </div>
         <div class="retention-stat-card success">
-          <div class="retention-stat-card__icon">棣冩暉</div>
+          <div class="retention-stat-card__icon">🟢</div>
           <div class="retention-stat-card__body">
-            <div class="retention-stat-card__label">濞叉槒绌导姘喅</div>
+            <div class="retention-stat-card__label">活跃会员</div>
             <div class="retention-stat-card__value">{{ stats.activeCount || 0 }}</div>
           </div>
         </div>
         <div class="retention-stat-card warning">
-          <div class="retention-stat-card__icon">棣冩寵</div>
+          <div class="retention-stat-card__icon">🌙</div>
           <div class="retention-stat-card__body">
-            <div class="retention-stat-card__label">濞屽娼导姘喅</div>
+            <div class="retention-stat-card__label">沉睡会员</div>
             <div class="retention-stat-card__value">{{ stats.dormantCount || 0 }}</div>
           </div>
         </div>
         <div class="retention-stat-card danger">
-          <div class="retention-stat-card__icon">棣冩瘑</div>
+          <div class="retention-stat-card__icon">⚠️</div>
           <div class="retention-stat-card__body">
-            <div class="retention-stat-card__label">濞翠礁銇戞导姘喅</div>
+            <div class="retention-stat-card__label">流失会员</div>
             <div class="retention-stat-card__value">{{ stats.churnedCount || 0 }}</div>
           </div>
         </div>
       </div>
 
-      <!-- 2. 娴兼艾鎲抽崚鍡楃湴 + 缁夘垰鍨庨幒鎺曨攽 -->
+      <!-- 2. 等级概览 + 积分排行 Top10 -->
       <div class="top-grid">
-        <!-- 瀹革缚鏅堕敍姘窗閸涙ê鍨庣仦?-->
+        <!-- 等级概览 -->
         <el-card class="panel-card" shadow="never">
           <div class="section-header">
-            <span class="section-header__title">娴兼艾鎲抽崚鍡楃湴</span>
-            <span class="section-header__hint">閹稿鐡戠痪褍鍨庣敮?/span>
+            <span class="section-header__title">等级概览</span>
+            <span class="section-header__hint">各等级会员分布与状态</span>
           </div>
 
           <div class="level-stats" v-loading="levelLoading">
             <div class="level-stat gold">
-              <div class="level-stat__icon">棣冾殞</div>
+              <div class="level-stat__icon">🥇</div>
               <div class="level-stat__value">{{ stats.goldCount || 0 }}</div>
-              <div class="level-stat__label">闁叉垹澧濇导姘喅</div>
+              <div class="level-stat__label">黄金会员</div>
             </div>
             <div class="level-stat silver">
-              <div class="level-stat__icon">棣冾殟</div>
+              <div class="level-stat__icon">🥈</div>
               <div class="level-stat__value">{{ stats.silverCount || 0 }}</div>
-              <div class="level-stat__label">闁惧墎澧濇导姘喅</div>
+              <div class="level-stat__label">白银会员</div>
             </div>
             <div class="level-stat normal">
-              <div class="level-stat__icon">棣冾殠</div>
+              <div class="level-stat__icon">🥉</div>
               <div class="level-stat__value">{{ stats.normalCount || 0 }}</div>
-              <div class="level-stat__label">閺咁噣鈧矮绱伴崨?/div>
+              <div class="level-stat__label">普通会员</div>
             </div>
             <div class="level-stat brand">
-              <div class="level-stat__icon">鐚?/div>
+              <div class="level-stat__icon">⭐</div>
               <div class="level-stat__value">{{ stats.avgPoints || 0 }}</div>
-              <div class="level-stat__label">楠炲啿娼庣粔顖氬瀻</div>
+              <div class="level-stat__label">平均积分</div>
             </div>
           </div>
 
           <div class="level-summary-row">
             <div class="level-summary-item brand">
               <div class="level-summary-item__value">{{ stats.goldCount || 0 }}</div>
-              <div class="level-summary-item__label">闁叉垹澧?/div>
+              <div class="level-summary-item__label">黄金</div>
             </div>
             <div class="level-summary-item">
               <div class="level-summary-item__value" style="color:var(--color-info)">{{ stats.silverCount || 0 }}</div>
-              <div class="level-summary-item__label">闁惧墎澧?/div>
+              <div class="level-summary-item__label">白银</div>
             </div>
             <div class="level-summary-item">
               <div class="level-summary-item__value">{{ stats.normalCount || 0 }}</div>
-              <div class="level-summary-item__label">閺咁噣鈧?/div>
+              <div class="level-summary-item__label">普通</div>
             </div>
             <div class="level-summary-item success">
               <div class="level-summary-item__value">{{ stats.activeCount || 0 }}</div>
-              <div class="level-summary-item__label">濞叉槒绌?/div>
+              <div class="level-summary-item__label">活跃</div>
             </div>
             <div class="level-summary-item danger">
               <div class="level-summary-item__value">{{ stats.churnedCount || 0 }}</div>
-              <div class="level-summary-item__label">濞翠礁銇?/div>
+              <div class="level-summary-item__label">流失</div>
             </div>
           </div>
         </el-card>
 
-        <!-- 閸欏厖鏅堕敍姘毙濋崚鍡樺笓鐞?Top10 -->
+        <!-- 积分排行 Top10 -->
         <el-card class="panel-card" shadow="never">
           <div class="section-header">
-            <span class="section-header__title">缁夘垰鍨庨幒鎺曨攽 Top10</span>
-            <span class="section-header__hint">閸?閸氬秹鍣鹃柧鍫曟憪閺嶅洩顔?/span>
+            <span class="section-header__title">积分排行 Top10</span>
+            <span class="section-header__hint">按积分展示前 10 名会员</span>
           </div>
 
           <el-table
@@ -417,29 +418,29 @@
             class="ranking-table"
             size="small"
           >
-            <el-table-column label="閹烘帒鎮? width="70" align="center">
+            <el-table-column label="排名" width="70" align="center">
               <template slot-scope="{ row, $index }">
                 <span class="ranking-medal" :class="medalClass($index)">
                   {{ $index + 1 }}
                 </span>
               </template>
             </el-table-column>
-            <el-table-column label="娴兼艾鎲抽崥宥囆? min-width="140">
+            <el-table-column label="会员名称" min-width="140">
               <template slot-scope="{ row }">
                 <span class="member-name-cell" :title="row.memberName">{{ row.memberName }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="缁涘楠? width="90" align="center">
+            <el-table-column label="等级" width="90" align="center">
               <template slot-scope="{ row }">
                 <el-tag :type="levelTagType(row.level)" size="mini">{{ levelLabel(row.level) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="缁夘垰鍨? width="120" align="right">
+            <el-table-column label="积分" width="120" align="right">
               <template slot-scope="{ row }">
                 <span class="points-cell">{{ row.points || 0 }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="鏉?0婢垛晞顓归崡? width="110" align="right">
+            <el-table-column label="近30天下单" width="110" align="right">
               <template slot-scope="{ row }">
                 <span class="points-cell">{{ row.recentOrders || 0 }}</span>
               </template>
@@ -447,17 +448,17 @@
           </el-table>
 
           <div v-if="rankingList.length === 0 && !rankingLoading" class="empty-state">
-            <div class="empty-state__icon">棣冨汲</div>
-            <div>閺嗗倹妫ら幒鎺曨攽閺佺増宓?/div>
+            <div class="empty-state__icon">🏆</div>
+            <div>暂无积分排行</div>
           </div>
         </el-card>
       </div>
 
-      <!-- 3. 濞翠礁銇戞０鍕劅 -->
+      <!-- 3. 流失预警 -->
       <el-card class="panel-card" shadow="never">
         <div class="section-header">
-          <span class="section-header__title">濞翠礁銇戞０鍕劅</span>
-          <span class="section-header__hint">鐡?30 婢垛晜婀稉瀣礋閻ㄥ嫪绱伴崨姗堢礉瀵ら缚顔呴崣濠冩閸欐垵鍩滈幐鐣屾殌</span>
+          <span class="section-header__title">流失预警</span>
+          <span class="section-header__hint">会员已超 30 天未下单，建议发送优惠券挽留</span>
         </div>
 
         <el-table
@@ -467,79 +468,79 @@
           class="warning-table"
           size="small"
         >
-          <el-table-column label="娴兼艾鎲矷D" width="100" align="center">
+          <el-table-column label="会员ID" width="100" align="center">
             <template slot-scope="{ row }">
               <span style="font-variant-numeric:tabular-nums">{{ row.memberId }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="娴兼艾鎲抽崥宥囆? min-width="140">
+          <el-table-column label="会员名称" min-width="140">
             <template slot-scope="{ row }">
               <span class="member-name-cell" :title="row.memberName">{{ row.memberName }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="缁涘楠? width="90" align="center">
+          <el-table-column label="等级" width="90" align="center">
             <template slot-scope="{ row }">
               <el-tag :type="levelTagType(row.level)" size="mini">{{ levelLabel(row.level) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="閺堚偓閸氬氦顓归崡鏇熸闂? width="160" align="center">
+          <el-table-column label="最近下单时间" width="160" align="center">
             <template slot-scope="{ row }">
               <span>{{ row.lastOrderTime }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="濞屽娼径鈺傛殶" width="100" align="right">
+          <el-table-column label="沉睡天数" width="100" align="right">
             <template slot-scope="{ row }">
               <span class="dormant-days" :class="dormantClass(row.daysSinceLastOrder)">
                 {{ row.daysSinceLastOrder || 0 }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="缁夘垰鍨? width="100" align="right">
+          <el-table-column label="积分" width="100" align="right">
             <template slot-scope="{ row }">
               <span class="points-cell">{{ row.points || 0 }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="閻樿埖鈧? width="100" align="center">
+          <el-table-column label="状态" width="100" align="center">
             <template slot-scope="{ row }">
               <el-tag :type="warningTagType(row.daysSinceLastOrder)" size="mini">
                 {{ warningTagLabel(row.daysSinceLastOrder) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="閹垮秳缍? width="100" align="center" fixed="right">
+          <el-table-column label="操作" width="100" align="center" fixed="right">
             <template slot-scope="{ row }">
               <el-button
                 type="primary"
                 size="mini"
                 class="btn-send-coupon"
                 @click="sendCouponHandle(row)"
-                :aria-label="'缂?' + row.memberName + ' 閸欐垵鍩?"
-              >閸欐垵鍩?/el-button>
+                :aria-label="'发送优惠券给' + row.memberName"
+              >发券</el-button>
             </template>
           </el-table-column>
         </el-table>
 
         <div v-if="warningList.length === 0 && !warningLoading" class="empty-state">
-          <div class="empty-state__icon">閴?/div>
-          <div>閺嗗倹妫ゅù浣搞亼妫板嫯顒熸导姘喅</div>
-          <div class="empty-state__desc">閹碘偓閺堝绱伴崨妯烘綆閸?30 婢垛晛鍞撮張澶庣箖娑撳宕熺拋鏉跨秿</div>
+          <div class="empty-state__icon">🎉</div>
+          <div>暂无流失预警会员</div>
+          <div class="empty-state__desc">所有会员均保持活跃，未出现超 30 天未下单情况</div>
         </div>
       </el-card>
 
-      <!-- 4. 閺呴缚鍏橀幒銊ㄥ礃 + 閹靛綊鍣洪幙宥勭稊 -->
+      <!-- 4. 挽留建议 + 会员列表 -->
       <div class="bottom-grid">
-        <!-- 閺呴缚鍏橀幒銊ㄥ礃 -->
+        <!-- 挽留建议 -->
         <el-card class="panel-card" shadow="never">
           <div class="section-header">
-            <span class="section-header__title">閺呴缚鍏橀幒銊ㄥ礃</span>
-            <span class="section-header__hint">閸╄桨绨悰灞艰礋閸掑棙鐎介惃鍕閼宠棄褰傞崚绋跨紦鐠?/span>
+            <span class="section-header__title">挽留建议</span>
+            <span class="section-header__hint">针对高流失风险会员生成</span>
           </div>
 
           <div v-loading="recommendLoading">
             <div class="recommend-item" v-for="item in recommendList" :key="item.memberId">
               <div class="recommend-item__info">
                 <div class="recommend-item__name" :title="item.memberName">{{ item.memberName }}</div>
-                <div class="recommend-item__reason">{{ item.reason || '缁崵绮洪幒銊ㄥ礃' }}</div>
+                <div class="recommend-item__reason">{{ item.reason || '长期未下单，建议发放优惠券' }}</div>
               </div>
               <div class="recommend-item__action">
                 <el-button
@@ -547,43 +548,43 @@
                   size="mini"
                   class="btn-send-coupon"
                   @click="sendCouponHandle(item)"
-                  :aria-label="'閹恒劏宕橀崣鎴濆煖缂?' + item.memberName"
-                >閹恒劏宕橀崣鎴濆煖</el-button>
+                  :aria-label="'发送优惠券给' + item.memberName"
+                >发送优惠券</el-button>
               </div>
             </div>
           </div>
 
           <div v-if="recommendList.length === 0 && !recommendLoading" class="empty-state" style="padding:24px 0">
-            <div class="empty-state__desc">閺嗗倹妫ら弲楦垮厴閹恒劏宕?/div>
+            <div class="empty-state__desc">暂无挽留建议</div>
           </div>
         </el-card>
 
-        <!-- 娴兼艾鎲抽崚妤勩€冪粵娑⑩偓?-->
+        <!-- 会员列表 -->
         <el-card class="panel-card" shadow="never">
           <div class="section-header">
-            <span class="section-header__title">娴兼艾鎲抽崚妤勩€?/span>
-            <span class="section-header__hint">閺€顖涘瘮閹稿鐡戠痪褍鎷伴悩鑸碘偓浣虹摣闁?/span>
+            <span class="section-header__title">会员列表</span>
+            <span class="section-header__hint">按等级与状态筛选</span>
           </div>
 
           <div class="filter-row">
-            <span class="filter-row__label">缁涘楠囬敍?/span>
-            <el-radio-group v-model="filterLevel" size="small" @change="onMemberFilterChange" aria-label="娴兼艾鎲崇粵澶岄獓缁涙盯鈧?>
-              <el-radio-button label="ALL">閸忋劑鍎?/el-radio-button>
-              <el-radio-button label="GOLD">闁叉垹澧?/el-radio-button>
-              <el-radio-button label="SILVER">闁惧墎澧?/el-radio-button>
-              <el-radio-button label="NORMAL">閺咁噣鈧?/el-radio-button>
+            <span class="filter-row__label">会员等级</span>
+            <el-radio-group v-model="filterLevel" size="small" @change="onMemberFilterChange" aria-label="按会员等级筛选">
+              <el-radio-button label="ALL">全部</el-radio-button>
+              <el-radio-button label="GOLD">黄金</el-radio-button>
+              <el-radio-button label="SILVER">白银</el-radio-button>
+              <el-radio-button label="NORMAL">普通</el-radio-button>
             </el-radio-group>
           </div>
 
           <div class="filter-row" style="margin-bottom:0;padding-bottom:0;border-bottom:none">
-            <span class="filter-row__label">閻樿埖鈧緤绱?/span>
-            <el-radio-group v-model="filterStatus" size="small" @change="onMemberFilterChange" aria-label="娴兼艾鎲抽悩鑸碘偓浣虹摣闁?>
-              <el-radio-button label="ALL">閸忋劑鍎?/el-radio-button>
-              <el-radio-button label="ACTIVE">濞叉槒绌?/el-radio-button>
-              <el-radio-button label="DORMANT">濞屽娼?/el-radio-button>
-              <el-radio-button label="CHURNED">濞翠礁銇?/el-radio-button>
+            <span class="filter-row__label">会员状态</span>
+            <el-radio-group v-model="filterStatus" size="small" @change="onMemberFilterChange" aria-label="按会员状态筛选">
+              <el-radio-button label="ALL">全部</el-radio-button>
+              <el-radio-button label="ACTIVE">活跃</el-radio-button>
+              <el-radio-button label="DORMANT">沉睡</el-radio-button>
+              <el-radio-button label="CHURNED">流失</el-radio-button>
             </el-radio-group>
-            <span class="filter-row__tip">閸?{{ filteredMembers.length }} 閺?/span>
+            <span class="filter-row__tip">共 {{ filteredMembers.length }} 人</span>
           </div>
 
           <el-table
@@ -593,22 +594,22 @@
             size="mini"
             max-height="280"
           >
-            <el-table-column label="閸氬秶袨" min-width="120">
+            <el-table-column label="会员名称" min-width="120">
               <template slot-scope="{ row }">
                 <span class="member-name-cell" :title="row.memberName">{{ row.memberName }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="缁涘楠? width="80" align="center">
+            <el-table-column label="等级" width="80" align="center">
               <template slot-scope="{ row }">
                 <el-tag :type="levelTagType(row.level)" size="mini">{{ levelLabel(row.level) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="閻樿埖鈧? width="80" align="center">
+            <el-table-column label="状态" width="80" align="center">
               <template slot-scope="{ row }">
                 <el-tag :type="statusTagType(row.status)" size="mini">{{ statusLabel(row.status) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="缁夘垰鍨? width="80" align="right">
+            <el-table-column label="积分" width="80" align="right">
               <template slot-scope="{ row }">
                 <span class="points-cell">{{ row.points || 0 }}</span>
               </template>
@@ -616,35 +617,35 @@
           </el-table>
 
           <div v-if="filteredMembers.length === 0 && !memberLoading" class="empty-state" style="padding:24px 0">
-            <div class="empty-state__desc">閺嗗倹妫ゆ导姘喅閺佺増宓?/div>
+            <div class="empty-state__desc">暂无匹配的会员</div>
           </div>
         </el-card>
       </div>
 
-      <!-- 閸欐垵鍩滅涵顔款吇瀵湱鐛?-->
+      <!-- 优惠券发放弹窗 -->
       <crud-dialog
-        title="閸欐垵鍩滅涵顔款吇"
+        title="发放优惠券"
         :visible.sync="couponDialogVisible"
         :submit-loading="couponLoading"
         width="420px"
-        submit-text="绾喛顓婚崣鎴濆煖"
+        submit-text="确认发放"
         custom-class=""
-        aria-label="閸欐垵鍩滅涵顔款吇瀵湱鐛?
+        aria-label="优惠券发放弹窗"
         @submit="confirmSendCoupon"
       >
         <div style="padding: var(--space-3) 0; font-size: var(--font-size-base); color: var(--text-secondary); line-height: var(--line-height-relaxed)">
-          <p>绾喖鐣剧憰浣告倻娴犮儰绗呮导姘喅閸欐垿鈧椒绱幆鐘插煖閸氭绱?/p>
+          <p>确认后将向该会员发放一张挽留优惠券</p>
           <div style="margin-top:var(--space-3); padding:var(--space-3); background:var(--bg-subtle); border-radius:var(--radius-sm)">
             <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1)">
-              <span style="color:var(--text-muted)">娴兼艾鎲抽崥宥囆?/span>
+              <span style="color:var(--text-muted)">会员姓名</span>
               <span style="color:var(--text-primary);font-weight:500">{{ couponTarget.memberName }}</span>
             </div>
             <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1)">
-              <span style="color:var(--text-muted)">娴兼艾鎲崇粵澶岄獓</span>
+              <span style="color:var(--text-muted)">会员等级</span>
               <span style="color:var(--text-primary);font-weight:500">{{ couponTarget.levelLabel }}</span>
             </div>
             <div style="display:flex;justify-content:space-between">
-              <span style="color:var(--text-muted)">閹恒劏宕橀悶鍡欐暠</span>
+              <span style="color:var(--text-muted)">挽留原因</span>
               <span style="color:var(--text-secondary);font-weight:500">{{ couponTarget.reason }}</span>
             </div>
           </div>
@@ -664,13 +665,15 @@
 
   <script>
     /**
-     * 娴兼艾鎲抽悾娆忕摠閼奉亜濮╅崠鏍吀閻炲棝銆夐棃?     * API 閸撳秶绱戦敍?api/retention
+     * 会员挽留页面
+     * 流失预警：调用 /api/retention 系列接口，接口不可用时回退 Mock 数据
      */
     new Vue({
       el: '#retention-app',
       data: function () {
         return {
-          // 缂佺喕顓?          statsLoading: false,
+          // 统计卡片
+          statsLoading: false,
           levelLoading: false,
           stats: {
             totalCount: 0,
@@ -682,20 +685,21 @@
             churnedCount: 0,
             avgPoints: 0
           },
-          // 缁夘垰鍨庨幒鎺曨攽
+          // 积分排行
           rankingLoading: false,
           rankingList: [],
-          // 濞翠礁銇戞０鍕劅
+          // 流失预警
           warningLoading: false,
           warningList: [],
-          // 閺呴缚鍏橀幒銊ㄥ礃
+          // 挽留建议
           recommendLoading: false,
           recommendList: [],
-          // 娴兼艾鎲抽崚妤勩€?          memberLoading: false,
+          // 会员列表
+          memberLoading: false,
           memberList: [],
           filterLevel: 'ALL',
           filterStatus: 'ALL',
-          // 閸欐垵鍩滃鍦崶
+          // 优惠券弹窗
           couponDialogVisible: false,
           couponLoading: false,
           couponTarget: { memberId: '', memberName: '', levelLabel: '', reason: '' }
@@ -717,7 +721,7 @@
         this.loadAllData()
       },
       methods: {
-        // ============ 閺佺増宓侀崝鐘烘祰 ============
+        // ============ 数据加载 ============
         loadAllData: function () {
           const self = this
           self.loadStats()
@@ -860,7 +864,7 @@
           }
         },
 
-        // ============ Mock 閺佺増宓?============
+        // ============ Mock 数据 ============
         applyMockStats: function () {
           this.stats = {
             totalCount: 1280,
@@ -876,7 +880,7 @@
         applyMockRanking: function () {
           this.rankingList = [
             { memberId: 1001, memberName: '蜜枣糕', level: 'GOLD', points: 8888, recentOrders: 23 },
-            { memberId: 1002, memberName: '蜜枣糕', level: 'GOLD', points: 7654, recentOrders: 20 },
+            { memberId: 1002, memberName: '芝麻酥', level: 'GOLD', points: 7654, recentOrders: 20 },
             { memberId: 1003, memberName: '奶茶', level: 'GOLD', points: 6521, recentOrders: 18 },
             { memberId: 1004, memberName: '蛋挞', level: 'SILVER', points: 5432, recentOrders: 15 },
             { memberId: 1005, memberName: '桃酥', level: 'SILVER', points: 4321, recentOrders: 14 },
@@ -892,15 +896,15 @@
             { memberId: 2001, memberName: '张伟', level: 'SILVER', lastOrderTime: '2026-07-15 14:30', daysSinceLastOrder: 39, points: 3200, status: 'DORMANT' },
             { memberId: 2002, memberName: '王芳', level: 'NORMAL', lastOrderTime: '2026-07-01 09:20', daysSinceLastOrder: 53, points: 1800, status: 'DORMANT' },
             { memberId: 2003, memberName: '李娜', level: 'GOLD', lastOrderTime: '2026-06-20 18:45', daysSinceLastOrder: 64, points: 5400, status: 'DORMANT' },
-            { memberId: 2004, memberName: '鐎涙瑤绡€', level: 'NORMAL', lastOrderTime: '2026-06-10 11:00', daysSinceLastOrder: 74, points: 900, status: 'CHURNED' },
+            { memberId: 2004, memberName: '赵敏', level: 'NORMAL', lastOrderTime: '2026-06-10 11:00', daysSinceLastOrder: 74, points: 900, status: 'CHURNED' },
             { memberId: 2005, memberName: '陈晨', level: 'SILVER', lastOrderTime: '2026-05-25 20:30', daysSinceLastOrder: 90, points: 2100, status: 'CHURNED' }
           ]
         },
         applyMockRecommend: function () {
           this.recommendList = [
             { memberId: 3001, memberName: '杨洋', level: 'GOLD', reason: '连续60天未下单，建议发放积分翻倍券', couponType: 'POINT_BOOST' },
-            { memberId: 3002, memberName: '赵磊', level: 'SILVER', reason: '鏉╃偟鐢?3 婢垛晜婀稉瀣礋閿涘苯缂撶拋顔煎絺闁焦寮ч崙蹇撳煖', couponType: 'DISCOUNT' },
-            { memberId: 3003, memberName: '黄敏', level: 'NORMAL', reason: '閺€鎯版閺堫亣鍠橀崯鍡楁惂 5 娴犺绱濆楦款唴閸欐垿鈧礁鎼х猾璇插煖', couponType: 'CATEGORY' },
+            { memberId: 3002, memberName: '赵磊', level: 'SILVER', reason: '连续 3 个月未下单，建议发放折扣券', couponType: 'DISCOUNT' },
+            { memberId: 3003, memberName: '黄敏', level: 'NORMAL', reason: '连续 5 周未到店，建议发放品类券', couponType: 'CATEGORY' },
             { memberId: 3004, memberName: '周涛', level: 'SILVER', reason: '生日月复购预警，建议发放生日专享券', couponType: 'BIRTHDAY' }
           ]
         },
@@ -914,11 +918,11 @@
             { memberId: 1008, memberName: '牛角包', level: 'NORMAL', status: 'ACTIVE', points: 1980 },
             { memberId: 2001, memberName: '张伟', level: 'SILVER', status: 'DORMANT', points: 3200 },
             { memberId: 2002, memberName: '王芳', level: 'NORMAL', status: 'DORMANT', points: 1800 },
-            { memberId: 2004, memberName: '鐎涙瑤绡€', level: 'NORMAL', status: 'CHURNED', points: 900 }
+            { memberId: 2004, memberName: '赵敏', level: 'NORMAL', status: 'CHURNED', points: 900 }
           ]
         },
 
-        // ============ 瀹搞儱鍙块弬瑙勭《 ============
+        // ============ 数据规范化 ============
         medalClass: function (index) {
           if (index === 0) return 'gold'
           if (index === 1) return 'silver'
@@ -967,13 +971,13 @@
           return ''
         },
 
-        // ============ 閹垮秳缍?============
+        // ============ 操作 ============
         sendCouponHandle: function (row) {
           this.couponTarget = {
             memberId: row.memberId,
             memberName: row.memberName,
             levelLabel: row.level ? this.levelLabel(row.level) : '',
-            reason: row.reason || ('濞屽娼?' + (row.daysSinceLastOrder || 0) + ' 婢垛晪绱濆楦款唴閹哥晫鏆€')
+            reason: row.reason || ('沉睡 ' + (row.daysSinceLastOrder || 0) + ' 天未下单，建议发送优惠券')
           }
           this.couponDialogVisible = true
         },

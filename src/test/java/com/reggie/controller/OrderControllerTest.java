@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-public class OrderControllerTest {
+public class OrderControllerTest extends BaseControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -92,11 +92,11 @@ public class OrderControllerTest {
     @Test
     void testSubmit() throws Exception {
         // 控制器返回 Map（id/number/amount/status/duplicate），不再是纯字符串
-        mockMvc.perform(post("/order/submit")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/order/submit")
                 .sessionAttr("user", 1L)
                 .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"addressBookId\":1}"))
+                .content("{\"addressBookId\":1}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.id").exists())
@@ -108,11 +108,11 @@ public class OrderControllerTest {
     void testSubmitEmptyCart() throws Exception {
         shoppingCartService.remove(null);
 
-        mockMvc.perform(post("/order/submit")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/order/submit")
                 .sessionAttr("user", 1L)
                 .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"addressBookId\":1}"))
+                .content("{\"addressBookId\":1}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -218,11 +218,11 @@ public class OrderControllerTest {
         detail.setImage("test.jpg");
         orderDetailService.save(detail);
 
-        mockMvc.perform(post("/order/again")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/order/again")
                 .sessionAttr("user", 1L)
                 .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":40}"))
+                .content("{\"id\":40}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("添加购物车成功"));
@@ -236,13 +236,14 @@ public class OrderControllerTest {
         order.setStatus(2);
         order.setAmount(new BigDecimal("200.00"));
         order.setUserId(1L);
+        order.setOrderTime(LocalDateTime.now());
         orderService.save(order);
 
-        mockMvc.perform(put("/order")
+        mockMvc.perform(withCsrfToken(mockMvc, put("/order")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":50,\"status\":3}"))
+                .content("{\"id\":50,\"status\":3}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("操作成功"));

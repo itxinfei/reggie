@@ -187,3 +187,20 @@ CODE_REVIEW_REPORT.md
 # 禁止误提交一次性/本地脚本（已在一次性工具脚本段覆盖，此处兜底）
 *.py.bak
 scripts/
+
+# ----------------------------------------------------------
+# 临时调试脚本 / 一次性工具（各会话产生的 .py/.sh/.js/.txt 残留）
+# ----------------------------------------------------------
+*.py
+*.sh
+*_report.txt
+audit_pages.js
+fix_placeholders.js
+locate_err.js
+_*_reversed.html
+_old_assistant.html
+_qrcode_*.html
+_merged/
+_old_pages/
+_pre/
+db_snapshot_live.sql

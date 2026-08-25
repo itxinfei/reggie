@@ -131,6 +131,7 @@ public class PaymentController {
      * @return 处理结果
      */
     @PostMapping("/notify/{channel}")
+    @RateLimit(maxRequestsPerSecond = 10, type = RateLimitType.IP)
     @Operation(summary = "支付回调通知", description = "接收支付渠道的异步通知，更新订单支付状态")
     public R<String> notify(
                         @Parameter(description = "支付渠道：WECHAT-微信、ALIPAY-支付宝", required = true) @PathVariable String channel,
@@ -151,6 +152,29 @@ public class PaymentController {
         if (exist == null) {
             log.warn("支付回调 tradeNo 不存在，拒绝处理：channel={}, tradeNo={}", channel, tradeNo);
             return R.error("回调交易号不存在");
+        }
+        // 修复 P1：渠道一致性校验 — 防止用 WECHAT 回调参数（含有效签名）伪造 ALIPAY 支付单
+        if (!channel.equals(exist.getChannel())) {
+            log.warn("支付回调渠道不一致，拒绝处理：pathChannel={}, orderChannel={}, tradeNo={}",
+                    channel, exist.getChannel(), tradeNo);
+            return R.error("支付渠道不匹配");
+        }
+        // 修复 P2：金额一致性校验 — 回调 total_fee（分）与支付单金额比对，防回调金额篡改
+        String totalFee = params.get("total_fee");
+        if (totalFee != null && !totalFee.trim().isEmpty()) {
+            try {
+                // total_fee 单位为分，支付单 amount 单位为元
+                BigDecimal notifyAmount = new BigDecimal(totalFee).divide(new BigDecimal("100"), 2,
+                        java.math.RoundingMode.HALF_UP);
+                if (notifyAmount.compareTo(exist.getAmount()) != 0) {
+                    log.warn("支付回调金额不一致，拒绝处理：notifyAmount={}, orderAmount={}, tradeNo={}",
+                            notifyAmount, exist.getAmount(), tradeNo);
+                    return R.error("支付金额不一致");
+                }
+            } catch (NumberFormatException e) {
+                log.warn("支付回调 total_fee 格式非法，拒绝处理：total_fee={}, tradeNo={}", totalFee, tradeNo);
+                return R.error("支付金额格式非法");
+            }
         }
         PayResponse response = paymentChannel.handleNotify(params);
         if (response.isSuccess()) {

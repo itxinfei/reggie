@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-public class AddressBookControllerTest {
+public class AddressBookControllerTest extends BaseControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -37,10 +37,10 @@ public class AddressBookControllerTest {
 
     @Test
     void testSave() throws Exception {
-        mockMvc.perform(post("/address-book")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/address-book")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"userId\":1,\"consignee\":\"新地址联系人\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"detail\":\"科技园路1号\",\"label\":\"公司\"}"))
+                .content("{\"userId\":1,\"consignee\":\"新地址联系人\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"detail\":\"科技园路1号\",\"label\":\"公司\"}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.consignee").value("新地址联系人"));
@@ -63,10 +63,10 @@ public class AddressBookControllerTest {
         addressBookService.save(address);
         long generatedId = address.getId();
 
-        mockMvc.perform(put("/address-book")
+        mockMvc.perform(withCsrfToken(mockMvc, put("/address-book")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":" + generatedId + ",\"userId\":1,\"consignee\":\"李四\",\"phone\":\"13900139000\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"detail\":\"新地址\",\"label\":\"公司\"}"))
+                .content("{\"id\":" + generatedId + ",\"userId\":1,\"consignee\":\"李四\",\"phone\":\"13900139000\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"detail\":\"新地址\",\"label\":\"公司\"}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -83,9 +83,9 @@ public class AddressBookControllerTest {
         addressBookService.save(address);
         long generatedId = address.getId();
 
-        mockMvc.perform(delete("/address-book")
+        mockMvc.perform(withCsrfToken(mockMvc, delete("/address-book")
                 .param("ids", String.valueOf(generatedId))
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -128,10 +128,10 @@ public class AddressBookControllerTest {
         addressBookService.save(addr2);
         long id2 = addr2.getId();
 
-        mockMvc.perform(put("/address-book/default")
+        mockMvc.perform(withCsrfToken(mockMvc, put("/address-book/default")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":" + id2 + "}"))
+                .content("{\"id\":" + id2 + "}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 

@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>钀ヤ笟鏃ユ姤 - 鐟炲悏澶栧崠绠＄悊绔?/title>
+  <title>营业日报 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
-    <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
-    /* ========== 鍩虹閲嶇疆 ========== */
+    /* ========== 基础重置 ========== */
     html, body {
       height: 100%;
       margin: 0;
@@ -22,7 +22,7 @@
       font-family: var(--font-family-base);
     }
 
-    /* ========== 涓诲鍣?========== */
+    /* ========== 主容器 ========== */
     .daily-container {
       min-height: 100%;
       display: flex;
@@ -38,7 +38,7 @@
       width: 100%;
     }
 
-    /* ========== 宸ュ叿鏍?========== */
+    /* ========== 工具栏 ========== */
     .tableBar {
       display: flex;
       align-items: center;
@@ -56,7 +56,7 @@
       box-shadow: var(--shadow-lg);
     }
     .tableBar .toolbar-label {
-      font-size:var(--font-size-base);
+      font-size: var(--font-size-base);
       color: var(--el-text-regular);
       font-weight: 500;
       margin-right: 4px;
@@ -67,9 +67,9 @@
       min-width: 0;
     }
 
-    /* ========== KPI 鍗＄墖锛堜娇鐢?components-stats-card.css 缁熶竴鏍峰紡锛?========== */
+    /* ========== KPI 卡片（使用 stat-cards 统一样式）========== */
 
-    /* ========== 瀵煎嚭璁板綍鎶樺彔闈㈡澘 ========== */
+    /* ========== 导出记录折叠面板 ========== */
     .export-records-panel {
       background: var(--bg-surface);
       border-radius: var(--radius-lg);
@@ -94,7 +94,7 @@
       background: var(--el-bg-ghost);
     }
     .export-records-panel .panel-title {
-      font-size:var(--font-size-md);
+      font-size: var(--font-size-md);
       font-weight: 600;
       color: var(--el-text-primary);
       flex: 1;
@@ -113,7 +113,7 @@
     .export-records-panel .expand-icon {
       transition: transform 0.3s;
       color: var(--el-border-base);
-      font-size:var(--font-size-base);
+      font-size: var(--font-size-base);
     }
     .export-records-panel .expand-icon.is-expanded {
       transform: rotate(180deg);
@@ -123,17 +123,17 @@
       transition: all 0.3s;
     }
 
-    /* ========== 瀵煎嚭璁板綍琛ㄦ牸 ========== */
+    /* ========== 导出记录表格 ========== */
     .record-table {
       width: 100%;
       border-collapse: collapse;
-      font-size:var(--font-size-sm);
+      font-size: var(--font-size-sm);
     }
     .record-table thead th {
       background: var(--el-bg-ghost);
       color: var(--color-info);
       font-weight: 600;
-      font-size:var(--font-size-xs);
+      font-size: var(--font-size-xs);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       padding: 12px 16px;
@@ -160,7 +160,7 @@
       align-items: center;
       padding: 3px 10px;
       border-radius: var(--radius-md);
-      font-size:var(--font-size-xs);
+      font-size: var(--font-size-xs);
       font-weight: 600;
     }
     .format-tag.excel {
@@ -177,7 +177,7 @@
       gap: 4px;
       padding: 3px 10px;
       border-radius: var(--radius-md);
-      font-size:var(--font-size-xs);
+      font-size: var(--font-size-xs);
       font-weight: 600;
     }
     .status-tag.success {
@@ -207,17 +207,14 @@
       opacity: 0.4;
     }
     .empty-state .empty-text {
-      font-size:var(--font-size-base);
+      font-size: var(--font-size-base);
     }
 
-    /* ========== 鍝嶅簲寮?========== */
-    @media (max-width: 1400px) {
-      .kpi-cards { grid-template-columns: repeat(2, 1fr); }
-    }
+    /* ========== 响应式 ========== */
     @media (max-width: 1200px) {
       .container { padding: 20px 28px 28px !important; }
       .tableBar { padding: 14px 20px; }
-      /* 淇敼鐐癸細涓瓑灞忓箷涓嬪弻鍥炬敼涓哄崟鍒?*/
+      /* 中等屏幕下双图改为单列 */
       .daily-two-col { grid-template-columns: 1fr !important; }
     }
     @media (max-width: 768px) {
@@ -235,24 +232,24 @@
   </style>
 </head>
 <body>
-  <!-- 閿洏鐢ㄦ埛锛氳烦杞埌涓诲唴瀹癸紙WCAG 2.4.1锛?-->
-  <a href="#main-content" class="skip-link">璺宠浆鍒颁富鍐呭</a>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1）-->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
 
   <div class="dashboard-container daily-container" id="report-daily-app">
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
-      <!-- 椤靛ご锛氭爣棰?+ 鍓爣棰?+ 椤电骇鎿嶄綔 -->
+      <!-- 页头：标题 + 副标题 + 页级操作 -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">钀ヤ笟鏃ユ姤</h1>
-          <p class="ds-page-header__subtitle">鏌ョ湅姣忔棩钀ヤ笟鏁版嵁鍜屽鍑烘姤琛?/p>
+          <h1 class="ds-page-header__title" id="page-title">营业日报</h1>
+          <p class="ds-page-header__subtitle">查看每日营业数据和导出报表</p>
         </div>
         <div class="ds-page-header__actions"></div>
       </header>
 
-      <!-- 淇敼鐐癸細浣跨敤 <stat-cards> 缁熶竴缁勪欢鏇夸唬鎵嬪啓 stat-card -->
+      <!-- 统计卡片（统一组件） -->
       <stat-cards :cards="statsCards"></stat-cards>
 
-      <!-- 淇敼鐐癸細浣跨敤 <table-bar> 缁熶竴缁勪欢鏇夸唬鎵嬪啓 tableBar -->
+      <!-- 筛选栏：日期范围 + 导出操作 -->
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
@@ -263,9 +260,9 @@
           <el-date-picker
             v-model="queryDate"
             type="daterange"
-            range-separator="鑷?
-            start-placeholder="寮€濮嬫棩鏈?
-            end-placeholder="缁撴潫鏃ユ湡"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
             value-format="yyyy-MM-dd"
             :shortcuts="dateShortcuts"
             @change="onDateChange"
@@ -274,33 +271,32 @@
         </template>
       </table-bar>
 
-      <!-- ========== 瓒嬪娍鍥?+ 鍒嗙被閿€鍞?鍙屽浘 ========== -->
-      <!-- 淇敼鐐癸細鍥捐〃瀹瑰櫒澧炲姞 min-height 闃叉鍙樺舰锛岀粺涓€ class 渚夸簬鍝嶅簲寮?-->
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;" class="daily-two-col">
-      <chart-panel style="margin-bottom:0;" padding="24px" margin-bottom="0">
-        <template #title>
-          <i class="el-icon-data-line" style="color:var(--el-color-primary);"></i>
-          钀ユ敹瓒嬪娍
-          <span style="font-size:var(--font-size-xs);color:var(--el-border-base);font-weight:400;margin-left:4px;">锛堣繎7澶╋級</span>
-        </template>
-        <div style="flex:1;min-height:360px;" id="trendChart"></div>
-      </chart-panel>
-      <chart-panel style="margin-bottom:0;" padding="24px" margin-bottom="0">
-        <template #title>
-          <i class="el-icon-pie-chart" style="color:var(--color-warning);"></i>
-          鑿滃搧鍒嗙被閿€鍞崰姣?
-          <span style="font-size:var(--font-size-xs);color:var(--el-border-base);font-weight:400;margin-left:4px;">锛堝熀浜庡凡閫夋棩鏈燂級</span>
-        </template>
-        <div style="flex:1;min-height:360px;" id="categoryChart"></div>
-      </chart-panel>
+      <!-- ========== 趋势图 + 分类销售 双图 ========== -->
+      <div class="daily-two-col" style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <chart-panel style="margin-bottom:0;" padding="24px" margin-bottom="0">
+          <template #title>
+            <i class="el-icon-data-line" style="color:var(--el-color-primary);"></i>
+            营收趋势
+            <span style="font-size:var(--font-size-xs);color:var(--el-border-base);font-weight:400;margin-left:4px;">（近7日）</span>
+          </template>
+          <div style="flex:1;min-height:360px;" id="trendChart"></div>
+        </chart-panel>
+        <chart-panel style="margin-bottom:0;" padding="24px" margin-bottom="0">
+          <template #title>
+            <i class="el-icon-pie-chart" style="color:var(--color-warning);"></i>
+            菜品分类销售占比
+            <span style="font-size:var(--font-size-xs);color:var(--el-border-base);font-weight:400;margin-left:4px;">（基于已选日期）</span>
+          </template>
+          <div style="flex:1;min-height:360px;" id="categoryChart"></div>
+        </chart-panel>
       </div>
 
-      <!-- ========== 瀵煎嚭璁板綍鎶樺彔闈㈡澘 ========== -->
+      <!-- ========== 导出记录折叠面板 ========== -->
       <div class="export-records-panel">
-        <div class="panel-header" role="button" tabindex="0" @click="toggleRecords" @keydown.enter="toggleRecords" :aria-expanded="recordsExpanded" aria-label="瀵煎嚭璁板綍闈㈡澘">
+        <div class="panel-header" role="button" tabindex="0" @click="toggleRecords" @keydown.enter="toggleRecords" :aria-expanded="recordsExpanded" aria-label="导出记录面板">
           <div class="panel-title">
             <i class="el-icon-s-order" style="color:var(--color-success);"></i>
-            瀵煎嚭璁板綍
+            导出记录
             <span class="record-count-badge" v-if="exportRecords.length > 0">{{ exportRecords.length }}</span>
           </div>
           <i
@@ -309,20 +305,20 @@
         </div>
         <div class="panel-body" v-show="recordsExpanded">
           <div v-if="exportRecords.length === 0" class="empty-state">
-            <div class="empty-icon">馃摥</div>
-            <div class="empty-text">鏆傛棤瀵煎嚭璁板綍</div>
+            <div class="empty-icon">📥</div>
+            <div class="empty-text">暂无导出记录</div>
           </div>
           <div v-else style="overflow-x:auto;">
             <table class="record-table">
               <thead>
                 <tr>
-                  <th>搴忓彿</th>
-                  <th>瀵煎嚭鏃堕棿</th>
-                  <th>鏃ユ湡鑼冨洿</th>
-                  <th>鏍煎紡</th>
-                  <th>鏂囦欢澶у皬</th>
-                  <th>鐘舵€?/th>
-                  <th>鎿嶄綔</th>
+                  <th>序号</th>
+                  <th>导出时间</th>
+                  <th>日期范围</th>
+                  <th>格式</th>
+                  <th>文件大小</th>
+                  <th>状态</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -339,7 +335,7 @@
                   <td>
                     <span :class="['status-tag', record.status]">
                       <span :class="['status-dot', record.status]"></span>
-                      {{ record.status === 'success' ? '鎴愬姛' : '澶辫触' }}
+                      {{ record.status === 'success' ? '成功' : '失败' }}
                     </span>
                   </td>
                   <td>
@@ -349,14 +345,14 @@
                         size="mini"
                         icon="el-icon-download"
                         @click="reDownload(record)"
-                      >閲嶆柊涓嬭浇</el-button>
+                      >重新下载</el-button>
                       <el-button
                         type="text"
                         size="mini"
                         icon="el-icon-delete"
                         style="color:var(--color-danger);"
                         @click="deleteRecord(index)"
-                      >鍒犻櫎</el-button>
+                      >删除</el-button>
                     </template>
                     <span v-else style="color:var(--el-border-base);font-size:var(--font-size-xs);">--</span>
                   </td>
@@ -369,8 +365,8 @@
 
     </main>
 
-    <!-- ========== 鍏ㄥ睆瀵煎嚭 Loading 閬僵 ========== -->
-    <div v-loading="exporting" element-loading-text="姝ｅ湪瀵煎嚭..." element-loading-background="rgba(0,0,0,0.5)"></div>
+    <!-- ========== 全屏导出 Loading 遮罩 ========== -->
+    <div v-loading="exporting" element-loading-text="正在导出..." element-loading-background="rgba(0,0,0,0.5)"></div>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -387,7 +383,7 @@
     new Vue({
       el: '#report-daily-app',
       data() {
-        // 鏃ユ湡蹇嵎閫夐」锛氫粖澶┿€佽繎7澶┿€佽繎30澶┿€佹湰鏈堛€佷笂鏈?
+        // 日期快捷选项：今天、近7天、近30天、本月、上月
         const formatDate = function(d) {
           return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
         };
@@ -398,28 +394,24 @@
         const day7Str = formatDate(day7);
         const day30 = new Date(today);
         day30.setDate(day30.getDate() - 29);
-        // 鏈湀绗竴澶?
         const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-        // 涓婃湀
-        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
 
         return {
           loading: false,
           exporting: false,
-          queryDate: [day7Str, todayStr], // 榛樿鑼冨洿锛氳繎7澶╋紙宸叉牸寮忓寲涓?yyyy-MM-dd 瀛楃涓诧級
+          queryDate: [day7Str, todayStr], // 默认范围：近7天（已格式化为字符串）
           dailyData: {},
           chart: null,
           categoryChart: null,
           resizeHandler: null,
-          // 瀵煎嚭璁板綍
+          // 导出记录
           exportRecords: [],
           recordsExpanded: false,
-          // 鎴愬姛瀵煎嚭鐨?Blob 缂撳瓨锛堢敤浜庨噸鏂颁笅杞斤級
+          // 成功导出的 Blob 缓存（用于重新下载）
           _blobCache: {},
           dateShortcuts: [
             {
-              text: '浠婂ぉ',
+              text: '今天',
               onClick(picker) {
                 const d = new Date();
                 picker.$emit('pick', [d, d]);
@@ -444,14 +436,14 @@
               }
             },
             {
-              text: '鏈湀',
+              text: '本月',
               onClick(picker) {
                 const start = new Date(today.getFullYear(), today.getMonth(), 1);
                 picker.$emit('pick', [start, today]);
               }
             },
             {
-              text: '涓婃湀',
+              text: '上月',
               onClick(picker) {
                 const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                 const end = new Date(today.getFullYear(), today.getMonth(), 0);
@@ -459,11 +451,11 @@
               }
             }
           ],
-          // 淇敼鐐癸細<table-bar> 缁熶竴缁勪欢閰嶇疆
+          // table-bar 统一组件配置
           tableSearchItems: [],
           tableActions: [
-            { key: 'exportExcel', text: '瀵煎嚭 Excel', type: 'success' },
-            { key: 'exportPdf', text: '瀵煎嚭 PDF', type: 'warning' }
+            { key: 'exportExcel', text: '导出 Excel', type: 'success' },
+            { key: 'exportPdf', text: '导出 PDF', type: 'warning' }
           ]
         }
       },
@@ -474,7 +466,7 @@
           if (!total) return '0.0'
           return (completed / total * 100).toFixed(1)
         },
-        // 淇敼鐐癸細statsCards 缁熶竴鍗＄墖閰嶇疆锛堜緵 <stat-cards> 缁勪欢浣跨敤锛?
+        // statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
           const self = this;
           return [
@@ -485,16 +477,13 @@
           ]
         }
       },
-      created() {
-        // queryDate 榛樿鍊煎凡閫氳繃 data() 涓棴鍖呰缃?
-      },
       mounted() {
         const self = this;
         this.$nextTick(() => {
-          // 淇敼鐐癸細瀹夊叏鍒濆鍖栧浘琛紝澧炲姞瀹瑰櫒瀛樺湪鍒ゆ柇
+          // 安全初始化图表，增加容器存在判断
           var initChart = function(id) {
             const el = document.getElementById(id);
-            if (!el) { console.warn('[daily] 鍥捐〃瀹瑰櫒鏈壘鍒?', id); return null; }
+            if (!el) { console.warn('[daily] 图表容器未找到:', id); return null; }
             return echarts.init(el);
           };
           this.chart = initChart('trendChart');
@@ -504,7 +493,7 @@
             if (this.categoryChart && !this.categoryChart.isDisposed()) this.categoryChart.resize();
           };
           window.addEventListener('resize', this.resizeHandler);
-          // 淇敼鐐癸細寤惰繜 resize 纭繚 Chart 瀹瑰櫒宸叉拺寮€
+          // 延迟 resize 确保 Chart 容器已撑开
           setTimeout(function() {
             if (self.chart) self.chart.resize();
             if (self.categoryChart) self.categoryChart.resize();
@@ -518,20 +507,20 @@
         if (this.categoryChart) { try { this.categoryChart.dispose(); } catch(e) {} }
       },
       methods: {
-        // 淇敼鐐癸細<table-bar> 缁勪欢缁熶竴鎿嶄綔鍒嗗彂
-        onTableAction: function(payload) {
+        // <table-bar> 组件统一操作分发
+        onTableAction(payload) {
           if (payload.key === 'exportExcel') { this.handleExport('excel'); }
           else if (payload.key === 'exportPdf') { this.handleExport('pdf'); }
         },
-        // 鏍煎紡鍖栨棩鏈熶负 yyyy-MM-dd
-        formatDateStr(date) {
+        // 格式化日期为 yyyy-MM-dd
+        formatDate(date) {
           const y = date.getFullYear()
           const m = String(date.getMonth() + 1).padStart(2, '0')
           const d = String(date.getDate()).padStart(2, '0')
           return y + '-' + m + '-' + d
         },
 
-        // table-bar @reset 鈥?閲嶇疆鏃ユ湡鍒颁粖澶?
+        // table-bar @reset — 重置日期到今天
         onTableReset: function() {
           const today = new Date()
           const y = today.getFullYear()
@@ -546,29 +535,29 @@
           }
         },
 
-        // 鍔犺浇鏃ユ姤鏁版嵁 + 瓒嬪娍鍥?
+        // 加载日报数据 + 趋势图
         async loadData() {
           if (!this.queryDate || this.queryDate.length < 2) {
-            ReggieUI.warning('璇烽€夋嫨鏃ユ湡鑼冨洿')
+            ReggieUI.warning('请选择日期范围')
             return
           }
           const [startDate, endDate] = this.queryDate
           this.loading = true
           try {
-            // 鏃ユ姤鏁版嵁锛堜娇鐢ㄥ紑濮嬫棩鏈熶綔涓烘棩鎶ユ棩鏈熷弬鏁帮級
+            // 日报数据（使用开始日期作为日报日期参数）
             const dailyRes = await reportDaily({ date: startDate })
             if (String(dailyRes.code) === '1') {
               this.dailyData = dailyRes.data || {}
             } else {
               ReggieUI.notify({
-                title: '鏃ユ姤鍔犺浇澶辫触',
-                message: dailyRes.msg || '鏃犳硶鑾峰彇鏃ユ姤鏁版嵁锛岃閲嶈瘯',
+                title: '日报加载失败',
+                message: dailyRes.msg || '无法获取日报数据，请重试',
                 type: 'error',
                 duration: 5000
               })
             }
 
-            // 瓒嬪娍鏁版嵁
+            // 趋势数据
             const trendRes = await $axios.get('/api/dashboard/trend')
             if (String(trendRes.code) === '1') {
               this.renderChart(trendRes.data || [])
@@ -576,10 +565,8 @@
               this.renderChart([])
             }
 
-            // 鍒嗙被閿€鍞暟鎹?
-            const catRes = await $axios.get('/api/report/category-sales', {
-              params: { startDate: this.queryDate[0], endDate: this.queryDate[1] }
-            })
+            // 分类销售数据
+            const catRes = await reportCategorySales({ startDate: this.queryDate[0], endDate: this.queryDate[1] })
             if (String(catRes.code) === '1') {
               this.renderCategoryChart(catRes.data || [])
             } else {
@@ -587,7 +574,7 @@
             }
           } catch (err) {
             ReggieUI.notify({
-              title: '璇锋眰澶辫触',
+              title: '请求失败',
               message: err.message || String(err),
               type: 'error',
               duration: 6000
@@ -601,7 +588,7 @@
           if (!this.chart) return
           if (!trendData || trendData.length === 0) {
             this.chart.setOption({
-              title: { text: '鏆傛棤瓒嬪娍鏁版嵁', left: 'center', top: 'center',
+              title: { text: '暂无趋势数据', left: 'center', top: 'center',
                 textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
             }, true)
             return
@@ -610,7 +597,7 @@
           const orders  = trendData.map(t => t.orderCount || 0)
           const amounts = trendData.map(t => Number(t.revenue) || 0)
           const hasData = dates.length > 0
-          // 淇敼鐐癸細鏍规嵁鏁版嵁閲忚嚜閫傚簲鏌卞锛岄槻姝㈠浘琛ㄦ嫢鎸ゅ彉褰?
+          // 根据数据量自适应柱宽，防止图表拥挤变形
           const barW = dates.length <= 5 ? 32 : dates.length <= 10 ? 26 : 20;
           this.chart.setOption({
             tooltip: {
@@ -623,43 +610,43 @@
               formatter(params) {
                 let html = '<b>' + params[0].axisValue + '</b><br/>'
                 params.forEach(p => {
-            const val = p.seriesName === '营业额'
-              ? '¥' + Number(p.value).toFixed(2)
-              : p.value + ' 单'
-                  html += p.marker + ' ' + p.seriesName + '锛?b>' + val + '</b><br/>'
+                  const val = p.seriesName === '营业额'
+                    ? '¥' + Number(p.value).toFixed(2)
+                    : p.value + ' 单'
+                  html += p.marker + ' ' + p.seriesName + '：<b>' + val + '</b><br/>'
                 })
                 return html
               }
             },
             legend: { data: ['订单数', '营业额'], bottom: 8, textStyle: { color: RgPalette.textRegular, fontSize: 13 } },
-            // 淇敼鐐癸細澧炲ぇ top/bottom/right 闃叉鍙孻杞存爣绛惧拰 legend 琚鍓?
+            // 增大 top/bottom/right 防止双Y轴标签和 legend 被裁剪
             grid: { left: 50, right: 65, top: 30, bottom: 52 },
             xAxis: {
               type: 'category',
-              data: hasData ? dates : ['鏆傛棤鏁版嵁'],
+              data: hasData ? dates : ['暂无数据'],
               axisLine: { lineStyle: { color: RgPalette.borderLighter2 } },
               axisTick: { show: false },
               axisLabel: { color: RgPalette.textSecondary, fontSize: 12, rotate: dates.length > 7 ? 30 : 0 }
             },
             yAxis: [
               {
-                type: 'value', name: '璁㈠崟閲?鍗?',
+                type: 'value', name: '订单量(单)',
                 nameTextStyle: { color: RgPalette.textSecondary, fontSize: 12 },
                 axisLabel: { color: RgPalette.textSecondary, fontSize: 12 },
                 splitLine: { lineStyle: { color: RgPalette.bgLight, type: 'dashed' } },
                 axisLine: { show: false }, axisTick: { show: false }
               },
               {
-                type: 'value', name: '钀ヤ笟棰?鍏?',
+                type: 'value', name: '营业额(元)',
                 nameTextStyle: { color: RgPalette.textSecondary, fontSize: 12 },
-              axisLabel: { color: RgPalette.textSecondary, fontSize: 12, formatter: '¥{value}' },
+                axisLabel: { color: RgPalette.textSecondary, fontSize: 12, formatter: '¥{value}' },
                 splitLine: { show: false },
                 axisLine: { show: false }, axisTick: { show: false }
               }
             ],
             series: [
               {
-            name: '订单数', type: 'bar', data: hasData ? orders : [0],
+                name: '订单数', type: 'bar', data: hasData ? orders : [0],
                 barWidth: barW, barGap: '20%',
                 itemStyle: {
                   borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0],
@@ -668,7 +655,7 @@
                 label: { show: hasData, position: 'top', color: RgPalette.seriesBlue, fontSize: 12, fontWeight: 600, formatter: '{c}' }
               },
               {
-            name: '营业额', type: 'line', yAxisIndex: 1, data: hasData ? amounts : [0],
+                name: '营业额', type: 'line', yAxisIndex: 1, data: hasData ? amounts : [0],
                 smooth: true, symbol: 'emptyCircle', symbolSize: 8,
                 lineStyle: { color: RgPalette.seriesGreen, width: 3 },
                 itemStyle: { color: RgPalette.seriesGreen, borderColor: RgPalette.white, borderWidth: 2 },
@@ -677,34 +664,34 @@
                 },
                 label: {
                   show: hasData, position: 'top', color: RgPalette.successDark, fontSize: 12, fontWeight: 700,
-              formatter: p => '¥' + Number(p.value).toFixed(0)
+                  formatter: p => '¥' + Number(p.value).toFixed(0)
                 }
               }
             ]
           }, true)
-          // 淇敼鐐癸細娓叉煋鍚庡欢杩?resize 纭繚鍦?flex 甯冨眬涓昂瀵告纭?
+          // 渲染后延迟 resize 确保在 flex 布局中尺寸正确
           const self = this;
           setTimeout(function() { if (self.chart && !self.chart.isDisposed()) self.chart.resize(); }, 200);
         },
 
-        // 娓叉煋鍒嗙被閿€鍞ゼ鍥?
+        // 渲染分类销售饼图
         renderCategoryChart(data) {
           if (!this.categoryChart) return
           if (!data || data.length === 0) {
             this.categoryChart.setOption({
-              title: { text: '鏆傛棤鍒嗙被鏁版嵁', left: 'center', top: 'center',
+              title: { text: '暂无分类数据', left: 'center', top: 'center',
                 textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
             }, true)
             return
           }
           const colors = [RgPalette.seriesBlue,RgPalette.seriesGreen,RgPalette.seriesGold,RgPalette.seriesPink,RgPalette.seriesSky,RgPalette.seriesOrange,RgPalette.seriesViolet,RgPalette.seriesMagenta]
           this.categoryChart.setOption({
-            tooltip: { trigger: 'item', formatter: '{b}: {c} 浠?({d}%)' },
+            tooltip: { trigger: 'item', formatter: '{b}: {c} 元({d}%)' },
             legend: { bottom: 4, textStyle: { fontSize: 12 } },
             series: [{
               type: 'pie',
               radius: ['45%', '72%'],
-              // 淇敼鐐癸細center top 浠?48% 鎻愯嚦 44%锛屼负搴曢儴 legend 鐣欏嚭绌洪棿
+              // center top 从 48% 提至 44%，为底部 legend 留出空间
               center: ['50%', '44%'],
               itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 2 },
               label: { fontSize: 12, formatter: '{b}\n{d}%' },
@@ -716,13 +703,13 @@
           }, true)
         },
 
-        // 鏍煎紡鍖栭噾棰?
+        // 格式化金额
         formatMoney(val) {
           if (val === null || val === undefined) return '0.00'
           return Number(val).toFixed(2)
         },
 
-        // 鏍煎紡鍖栨枃浠跺ぇ灏?
+        // 格式化文件大小
         formatFileSize(bytes) {
           if (bytes === 0) return '0 B'
           const k = 1024
@@ -732,12 +719,12 @@
           return (bytes / Math.pow(k, idx)).toFixed(idx > 0 ? 2 : 0) + ' ' + sizes[idx]
         },
 
-        // 鐢熸垚鍞竴 ID
+        // 生成唯一 ID
         genId() {
           return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
         },
 
-        // 鑾峰彇褰撳墠鏃堕棿瀛楃涓?
+        // 获取当前时间字符串
         getNowStr() {
           const now = new Date()
           const pad = n => String(n).padStart(2, '0')
@@ -745,21 +732,21 @@
             + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds())
         },
 
-        // 鍒囨崲瀵煎嚭璁板綍鎶樺彔
+        // 切换导出记录折叠
         toggleRecords() {
           this.recordsExpanded = !this.recordsExpanded
         },
 
-        // 瀵煎嚭澶勭悊
+        // 导出处理
         async handleExport(format) {
           if (!this.queryDate || this.queryDate.length < 2) {
-            ReggieUI.warning('璇峰厛閫夋嫨鏃ユ湡鑼冨洿')
+            ReggieUI.warning('请先选择日期范围')
             return
           }
           const [startDate, endDate] = this.queryDate
           const now = this.getNowStr()
           const dateRangeLabel = startDate + ' ~ ' + endDate
-          const fileName = '钀ヤ笟鏃ユ姤_' + startDate.replace(/-/g, '') + '_' + endDate.replace(/-/g, '') + '.' + format
+          const fileName = '营业日报_' + startDate.replace(/-/g, '') + '_' + endDate.replace(/-/g, '') + '.' + format
 
           this.exporting = true
           try {
@@ -770,17 +757,17 @@
               blob = await exportApi.exportReportPdf({ startDate, endDate })
             }
 
-            // 浣跨敤 downloadFile 涓嬭浇
+            // 使用 downloadFile 下载
             await exportApi.downloadFile(
               Promise.resolve({ data: blob }),
               fileName
             )
 
-            // 璁＄畻鏂囦欢澶у皬
+            // 计算文件大小
             const fileSize = blob ? blob.size : 0
             const sizeStr = this.formatFileSize(fileSize)
 
-            // 璁板綍瀵煎嚭鍘嗗彶
+            // 记录导出历史
             const record = {
               id: this.genId(),
               exportTime: now,
@@ -795,12 +782,12 @@
             this.exportRecords.unshift(record)
             this._blobCache[record.id] = blob
 
-            // 灞曞紑瀵煎嚭璁板綍闈㈡澘
+            // 展开导出记录面板
             this.recordsExpanded = true
 
-            // 鍙充笂瑙掑瘜鏂囨湰閫氱煡
+            // 右上角富文本通知
             ReggieUI.notify({
-              title: '瀵煎嚭鎴愬姛',
+              title: '导出成功',
               dangerouslyUseHTMLString: true,
               message: '<div style="line-height:1.8;">'
                 + '<div><i class="el-icon-document" style="margin-right:6px;color:var(--el-color-primary);"></i>文件：' + fileName + '</div>'
@@ -812,7 +799,7 @@
               position: 'top-right'
             })
           } catch (err) {
-            // 瀵煎嚭澶辫触璁板綍
+            // 导出失败记录
             const record = {
               id: this.genId(),
               exportTime: now,
@@ -828,9 +815,9 @@
             this.exportRecords.unshift(record)
             this.recordsExpanded = true
 
-            // 鍙充笂瑙掗敊璇€氱煡
+            // 右上角错误通知
             ReggieUI.notify({
-              title: '瀵煎嚭澶辫触',
+              title: '导出失败',
               dangerouslyUseHTMLString: true,
               message: '<div style="line-height:1.8;">'
                 + '<div><i class="el-icon-warning-outline" style="margin-right:6px;color:var(--color-danger);"></i>格式：' + format.toUpperCase() + '</div>'
@@ -846,7 +833,7 @@
           }
         },
 
-        // 閲嶆柊涓嬭浇
+        // 重新下载
         reDownload(record) {
           if (!record.blob) {
             ReggieUI.warning('文件数据已过期，请重新导出')
@@ -870,26 +857,25 @@
           }
         },
 
-        // 鍒犻櫎瀵煎嚭璁板綍
+        // 删除导出记录
         deleteRecord(index) {
-            ReggieUI.confirm('确认删除该条导出记录？', '提示', {
-            confirmButtonText: '鍒犻櫎',
-            cancelButtonText: '鍙栨秷',
+          ReggieUI.confirm('确认删除该导出记录？', '提示', {
+            confirmButtonText: '删除',
+            cancelButtonText: '取消',
             type: 'warning'
           }).then(() => {
             const record = this.exportRecords[index]
             if (record && record.id && this._blobCache[record.id]) {
-              // 閲婃斁 Blob URL
+              // 释放 Blob 缓存
               try {
-                // Blob 鏈韩涓嶉渶瑕?revokeObjectURL锛圲RL.createObjectURL 杩斿洖鐨勬墠闇€瑕侊級
-                // 閲嶆柊涓嬭浇鏃舵墠浼氬垱寤烘柊 URL锛岃繖閲屾竻鐞嗙紦瀛樺嵆鍙?
+                // Blob 本身无需 revokeObjectURL（URL.createObjectURL 返回的才需要）
                 delete this._blobCache[record.id]
               } catch (e) { /* ignore */ }
             }
             this.exportRecords.splice(index, 1)
             ReggieUI.success('记录已删除')
           }).catch(() => {
-            // 鐢ㄦ埛鍙栨秷锛屼笉鍋氬鐞?
+            // 用户取消，不做处理
           })
         }
       }
@@ -897,7 +883,3 @@
   </script>
 </body>
 </html>
-
-
-
-

@@ -149,8 +149,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
                 && (updatedMember.getLevelId() == null || !updatedMember.getLevelId().equals(newLevel.getId()))) {
             LambdaUpdateWrapper<Member> levelUpdate = new LambdaUpdateWrapper<>();
             levelUpdate.eq(Member::getId, memberId)
-                    .set(Member::getLevelId, newLevel.getId())
-                    .set(Member::getUpdateTime, LocalDateTime.now());
+                    .set(Member::getLevelId, newLevel.getId());
             // 修复 P1-1：添加 CAS 条件，防止并发升级时覆盖他人已更新的等级
             if (updatedMember.getLevelId() != null) {
                 levelUpdate.eq(Member::getLevelId, updatedMember.getLevelId());

@@ -1,6 +1,7 @@
 package com.reggie.module.delivery;
 
 import com.reggie.common.BaseContext;
+import com.reggie.controller.BaseControllerTest;
 import com.reggie.module.delivery.model.DeliveryOrder;
 import com.reggie.module.delivery.service.DeliveryService;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 @Sql(scripts = "classpath:schema-delivery.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-public class DeliveryServiceTest {
+public class DeliveryServiceTest extends BaseControllerTest {
 
     @Autowired
     private DeliveryService deliveryService;
@@ -145,11 +146,11 @@ public class DeliveryServiceTest {
     @Test
     void testControllerAcceptOrder() throws Exception {
         String createParams = "{\"type\":\"new_order\",\"platformOrderId\":\"MT123456\",\"dishSummary\":\"测试\",\"amount\":\"10.00\",\"userName\":\"王五\",\"phone\":\"13600136000\",\"address\":\"测试地址\",\"tenantId\":\"1\"}";
-        mockMvc.perform(post("/api/delivery/callback/MEITUAN")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/api/delivery/callback/MEITUAN")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createParams)
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -176,11 +177,11 @@ public class DeliveryServiceTest {
     @Test
     void testTrackingByOrderId() throws Exception {
         String createParams = "{\"type\":\"new_order\",\"platformOrderId\":\"MT_TRACK_001\",\"dishSummary\":\"麻婆豆腐\",\"amount\":\"18.00\",\"userName\":\"赵六\",\"phone\":\"13500135000\",\"address\":\"北京市西城区xxx\",\"tenantId\":\"1\"}";
-        mockMvc.perform(post("/api/delivery/callback/MEITUAN")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/api/delivery/callback/MEITUAN")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createParams)
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 

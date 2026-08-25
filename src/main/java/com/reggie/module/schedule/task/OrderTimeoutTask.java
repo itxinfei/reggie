@@ -114,7 +114,9 @@ public class OrderTimeoutTask {
      */
     private int cancelTimeoutOrdersForTenant(LocalDateTime timeoutThreshold) {
         LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Orders::getStatus, Orders.STATUS_ORDERED)
+        // 修复：覆盖两种超时场景 — PENDING_PAY（用户下单未付款）和 ORDERED（已付款/线下支付但未接单）。
+        // 此前只查 ORDERED，新增的 PENDING_PAY 订单若用户长期不支付会变为孤儿单，需同样取消并回退库存。
+        wrapper.in(Orders::getStatus, Orders.STATUS_PENDING_PAY, Orders.STATUS_ORDERED)
                .lt(Orders::getOrderTime, timeoutThreshold)
                .eq(Orders::getTenantId, BaseContext.getCurrentTenantId());
 

@@ -257,7 +257,7 @@
           <span class="suggest-item__label">最低:</span>
           <span class="suggest-item__value" style="color:var(--text-muted)">{{ item.minStock }}</span>
           <span class="suggest-item__label" style="font-weight:500;color:var(--text-primary)">建议:</span>
-          <span class="suggest-item__value" :style="{ color: item.suggestQty > 0 ? '#f56c6c' : '#67c23a', fontWeight: 600 }">{{ (item.suggestQty || 0).toFixed(2) }} {{ item.unit || '' }}</span>
+          <span class="suggest-item__value" :style="{ color: item.suggestQty > 0 ? 'var(--color-danger)' : 'var(--color-success)', fontWeight: 600 }">{{ (item.suggestQty || 0).toFixed(2) }} {{ item.unit || '' }}</span>
         </div>
         <div v-if="suggestList.length === 0 && !suggestLoading" style="text-align:center;padding:30px;color:var(--text-muted);font-size:var(--font-size-base)">
           暂无预警食材，无需补货建议

@@ -177,15 +177,23 @@ public class DeliveryServiceImpl implements DeliveryService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateOrderStatus(Long id, String status, String remark) {
-        DeliveryOrder order = deliveryOrderMapper.selectById(id);
+        // 修复 P2：先获取租户上下文，再用 id + tenantId 联合查询，消除 selectById 的 IDOR 窗口
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            log.warn("订单状态更新失败：租户上下文缺失");
+            return false;
+        }
+        LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
+        qw.eq(DeliveryOrder::getId, id)
+          .eq(DeliveryOrder::getTenantId, tenantId);
+        DeliveryOrder order = deliveryOrderMapper.selectOne(qw);
         if (order == null) {
-            log.warn("订单不存在: id={}", id);
+            log.warn("订单不存在: id={}, tenantId={}", id, tenantId);
             return false;
         }
 
-        // 租户校验（fail-closed）
-        Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId == null || !tenantId.equals(order.getTenantId())) {
+        // 租户归属二次校验（防御性，联合查询已保证，此处作为 fail-closed 兜底）
+        if (!tenantId.equals(order.getTenantId())) {
             log.warn("跨租户操作拒绝: id={}, currentTenant={}, orderTenant={}", id, tenantId, order.getTenantId());
             return false;
         }
@@ -465,9 +473,20 @@ public class DeliveryServiceImpl implements DeliveryService {
         if (currentStatus != null && currentStatus.equals(status)) {
             return;
         }
-        order.setStatus(status);
-        order.setUpdateTime(LocalDateTime.now());
-        deliveryOrderMapper.updateById(order);
+        // 修复 P1：CAS 条件更新（WHERE status = currentStatus），防止并发回调覆盖状态
+        // 与 acceptOrder()/updateOrderStatus() 保持一致，避免终态回退和状态被并发覆盖
+        DeliveryOrder updateEntity = new DeliveryOrder();
+        updateEntity.setStatus(status);
+        updateEntity.setUpdateTime(LocalDateTime.now());
+        LambdaUpdateWrapper<DeliveryOrder> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(DeliveryOrder::getId, order.getId())
+                .eq(DeliveryOrder::getStatus, currentStatus);
+        int rows = deliveryOrderMapper.update(updateEntity, updateWrapper);
+        if (rows == 0) {
+            log.warn("回调更新订单状态失败：状态已被其他请求更新: id={}, expectedStatus={}, targetStatus={}",
+                    order.getId(), currentStatus, status);
+            return;
+        }
         log.info("回调更新订单状态: platformOrderId={} -> {}", order.getPlatformOrderId(), status);
     }
 }

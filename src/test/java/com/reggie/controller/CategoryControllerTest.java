@@ -24,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-public class CategoryControllerTest {
+public class CategoryControllerTest extends BaseControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -52,11 +52,11 @@ public class CategoryControllerTest {
         category.setType(2);
         category.setSort(2);
 
-        mockMvc.perform(post("/category")
+        mockMvc.perform(withCsrfToken(mockMvc, post("/category")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"新增分类\",\"type\":2,\"sort\":2}"))
+                .content("{\"name\":\"新增分类\",\"type\":2,\"sort\":2}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("新增分类成功"));
@@ -83,9 +83,9 @@ public class CategoryControllerTest {
         categoryService.save(cat2);
         long generatedId = cat2.getId();
 
-        mockMvc.perform(delete("/category/" + generatedId)
+        mockMvc.perform(withCsrfToken(mockMvc, delete("/category/" + generatedId)
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("分类删除成功"));
@@ -93,11 +93,11 @@ public class CategoryControllerTest {
 
     @Test
     void testUpdate() throws Exception {
-        mockMvc.perform(put("/category")
+        mockMvc.perform(withCsrfToken(mockMvc, put("/category")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":1,\"name\":\"修改后分类\",\"type\":1,\"sort\":1}"))
+                .content("{\"id\":1,\"name\":\"修改后分类\",\"type\":1,\"sort\":1}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("分类修改成功"));

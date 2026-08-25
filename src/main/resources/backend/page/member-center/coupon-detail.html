@@ -28,9 +28,9 @@
     .effect-card__value { font-size: 26px; font-weight: 600; color: var(--text-primary); line-height: 1.2 }
     .effect-card__sub { font-size: 12px; color: var(--text-muted); margin-top: var(--space-2) }
     .effect-card.primary .effect-card__value { color: var(--color-brand-500) }
-    .effect-card.success .effect-card__value { color: #67c23a }
-    .effect-card.warning .effect-card__value { color: #e6a23c }
-    .effect-card.danger .effect-card__value { color: #f56c6c }
+    .effect-card.success .effect-card__value { color: var(--color-success) }
+    .effect-card.warning .effect-card__value { color: var(--color-warning) }
+    .effect-card.danger .effect-card__value { color: var(--color-danger) }
 
     /* 状态分布行 */
     .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6) }
@@ -38,9 +38,9 @@
     .status-card { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between }
     .status-card__label { font-size: var(--font-size-base); color: var(--text-secondary) }
     .status-card__value { font-size: 22px; font-weight: 600; line-height: 1.2 }
-    .status-card__value--used { color: #67c23a }
+    .status-card__value--used { color: var(--color-success) }
     .status-card__value--unused { color: var(--color-brand-500) }
-    .status-card__value--expired { color: #f56c6c }
+    .status-card__value--expired { color: var(--color-danger) }
 
     /* 空状态 */
     .empty-state { text-align: center; padding: 60px var(--space-4); color: var(--text-muted); font-size: var(--font-size-base) }
@@ -75,9 +75,11 @@
               :value="t.value"
               :disabled="t.status !== 1"
             >
-              <span>{{ t.label }}</span>
-              <span style="float:right; color:var(--text-muted); font-size:12px; margin-left:8px">
-                总数 {{ t.totalCount }} / 剩余 {{ t.remainCount }}
+              <span style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                <span>{{ t.label }}</span>
+                <span style="color:var(--text-muted); font-size:12px; margin-left:8px; white-space:nowrap;">
+                  总数 {{ t.totalCount }} / 剩余 {{ t.remainCount }}
+                </span>
               </span>
             </el-option>
           </el-select>

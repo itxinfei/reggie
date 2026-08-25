@@ -26,6 +26,7 @@ CREATE TABLE delivery_order (
   created_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
   update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  version int NULL DEFAULT NULL COMMENT '乐观锁版本号',
   PRIMARY KEY (id)
 );
 

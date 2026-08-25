@@ -34,6 +34,11 @@ CREATE TABLE orders (
   idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等键',
   stock_refunded int NULL DEFAULT 0 COMMENT '已退库存数量',
   used_coupon_id bigint NULL DEFAULT NULL COMMENT '优惠券ID',
+  platform_type varchar(32) NULL DEFAULT NULL COMMENT '平台来源',
+  platform_order_id varchar(64) NULL DEFAULT NULL COMMENT '平台订单号',
+  platform_shop_id varchar(64) NULL DEFAULT NULL COMMENT '平台门店ID',
+  platform_raw text NULL DEFAULT NULL COMMENT '平台原始订单JSON',
+  version int NULL DEFAULT NULL COMMENT '乐观锁版本号',
   PRIMARY KEY (id)
 );
 
