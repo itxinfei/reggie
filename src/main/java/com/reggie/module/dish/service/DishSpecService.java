@@ -22,9 +22,10 @@ public interface DishSpecService extends IService<DishSpecGroup> {
      * 获取规格组列表
      *
      * @param tenantId 租户ID
+     * @param status   状态过滤（null=全部，0=禁用，1=启用）
      * @return 规格组列表
      */
-    List<DishSpecGroup> getSpecGroups(Long tenantId);
+    List<DishSpecGroup> getSpecGroups(Long tenantId, Integer status);
 
     /**
      * 根据ID获取规格组
@@ -57,9 +58,10 @@ public interface DishSpecService extends IService<DishSpecGroup> {
      *
      * @param groupId  规格组ID
      * @param tenantId 租户ID
+     * @param status   状态过滤（null=全部，0=禁用，1=启用）
      * @return 规格选项列表
      */
-    List<DishSpecOption> getSpecOptions(Long groupId, Long tenantId);
+    List<DishSpecOption> getSpecOptions(Long groupId, Long tenantId, Integer status);
 
     /**
      * 保存或更新规格选项

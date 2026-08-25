@@ -44,12 +44,14 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
     // ==================== 规格组管理 ====================
 
     @Override
-    public List<DishSpecGroup> getSpecGroups(Long tenantId) {
+    public List<DishSpecGroup> getSpecGroups(Long tenantId, Integer status) {
         LambdaQueryWrapper<DishSpecGroup> qw = new LambdaQueryWrapper<>();
         if (tenantId != null) {
             qw.eq(DishSpecGroup::getTenantId, tenantId);
         }
-        qw.eq(DishSpecGroup::getStatus, 1);
+        if (status != null) {
+            qw.eq(DishSpecGroup::getStatus, status);
+        }
         qw.orderByAsc(DishSpecGroup::getSortOrder);
         return specGroupMapper.selectList(qw);
     }
@@ -91,7 +93,7 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
     // ==================== 规格选项管理 ====================
 
     @Override
-    public List<DishSpecOption> getSpecOptions(Long groupId, Long tenantId) {
+    public List<DishSpecOption> getSpecOptions(Long groupId, Long tenantId, Integer status) {
         LambdaQueryWrapper<DishSpecOption> qw = new LambdaQueryWrapper<>();
         if (groupId != null) {
             qw.eq(DishSpecOption::getGroupId, groupId);
@@ -99,7 +101,9 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
         if (tenantId != null) {
             qw.eq(DishSpecOption::getTenantId, tenantId);
         }
-        qw.eq(DishSpecOption::getStatus, 1);
+        if (status != null) {
+            qw.eq(DishSpecOption::getStatus, status);
+        }
         qw.orderByAsc(DishSpecOption::getSortOrder);
         return specOptionMapper.selectList(qw);
     }

@@ -44,9 +44,10 @@ public class DishSpecController {
 
     @GetMapping("/group/list")
     @Operation(summary = "获取规格组列表")
-    public R<List<DishSpecGroup>> getSpecGroups() {
+    public R<List<DishSpecGroup>> getSpecGroups(
+            @Parameter(description = "状态过滤，不传返回全部") @RequestParam(required = false) Integer status) {
         Long tenantId = BaseContext.getCurrentTenantId();
-        List<DishSpecGroup> groups = dishSpecService.getSpecGroups(tenantId);
+        List<DishSpecGroup> groups = dishSpecService.getSpecGroups(tenantId, status);
         return R.success(groups);
     }
 
@@ -90,9 +91,10 @@ public class DishSpecController {
     @GetMapping("/option/list")
     @Operation(summary = "获取规格选项列表")
     public R<List<DishSpecOption>> getSpecOptions(
-                        @Parameter(description = "规格组ID") @RequestParam Long groupId) {
+            @Parameter(description = "规格组ID") @RequestParam Long groupId,
+            @Parameter(description = "状态过滤，不传返回全部") @RequestParam(required = false) Integer status) {
         Long tenantId = BaseContext.getCurrentTenantId();
-        List<DishSpecOption> options = dishSpecService.getSpecOptions(groupId, tenantId);
+        List<DishSpecOption> options = dishSpecService.getSpecOptions(groupId, tenantId, status);
         return R.success(options);
     }
 

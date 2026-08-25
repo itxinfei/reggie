@@ -2,258 +2,366 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>菜品规格管理 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-    <link rel="stylesheet" href="../../styles/main.css" />
+  <title>规格管理 - 瑞吉外卖</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css">
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css">
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/main.css">
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow-y: auto;
-      background: var(--el-bg-subtle);
+    /* ===== 规格管理页专有样式（前缀 spec- 避免污染全局） ===== */
+    .spec-main { margin-top: 24px; }
+
+    .spec-card {
+      background: var(--el-color-white, #fff);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      min-height: 540px;
     }
-    .container {
-      padding: 24px 32px;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    .tableBar {
+    .spec-card__head {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 12px;
-      background: var(--bg-surface);
-      padding: 16px 24px;
-      border-radius: var(--radius-lg);
-      margin-bottom: 20px;
-      box-shadow: var(--shadow-sm);
-    }
-    .tableBar .toolbar-spacer {
-      flex: 1;
-    }
-    .content-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-    .table-card {
-      background: var(--bg-surface);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-    }
-    .card-title {
-      font-size:var(--font-size-lg);
-      font-weight: 600;
-      color: var(--el-text-primary);
+      gap: 8px;
       margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--el-border-lighter);
     }
-    .type-tag {
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      font-size:var(--font-size-xs);
+    .spec-card__title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--el-text-primary);
+      margin: 0;
+      line-height: 1.5;
     }
-    .type-tag.single {
-      background: var(--el-color-primary-lighter);
-      color: var(--el-color-primary);
-    }
-    .type-tag.multi {
-      background: var(--el-color-success-lighter);
-      color: var(--el-color-success);
-    }
-    .status-tag {
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      font-size:var(--font-size-xs);
-    }
-    .status-tag.active {
-      background: var(--el-color-success-lighter);
-      color: var(--el-color-success);
-    }
-    .status-tag.disabled {
-      background: var(--el-color-danger-lighter);
-      color: var(--el-color-danger);
-    }
-    .price-adjust {
-      font-weight: 600;
-    }
-    .price-adjust.positive {
-      color: var(--el-color-danger);
-    }
-    .price-adjust.negative {
-      color: var(--el-color-success);
-    }
-    .price-adjust.zero {
+    .spec-card__sub {
+      font-size: 12px;
+      font-weight: 400;
       color: var(--el-text-secondary);
+      margin-left: 4px;
+    }
+    .spec-card__filters {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      flex-wrap: wrap;
+    }
+    .spec-search { width: 170px; }
+    .spec-status-select { width: 104px; }
+    .spec-card__table { flex: 1; }
+    .spec-card__pager {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 12px;
+    }
+    .spec-card__tip {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--el-text-secondary);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+    .spec-price-up { color: var(--color-danger); }
+    .spec-price-down { color: var(--color-success); }
+    .spec-price-flat { color: var(--el-text-secondary); }
+    .spec-empty-guide {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--el-text-secondary);
+      font-size: 13px;
+      padding: 48px 0;
+    }
+    .spec-empty-guide .el-icon {
+      font-size: 40px;
+      color: var(--el-color-primary-light-7);
+    }
+    .spec-dialog-tip {
+      font-size: 12px;
+      color: var(--el-text-secondary);
+      line-height: 1.5;
+      margin-top: 4px;
+    }
+    @media (max-width: 1200px) {
+      .spec-search { width: 130px; }
+    }
+    @media (max-width: 768px) {
+      .spec-main { margin-top: 16px; }
+      .spec-card { min-height: auto; }
     }
   </style>
 </head>
 <body>
-  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
- <a href="#app" class="skip-link">跳转到主内容</a>
- <div id="app" class="container" role="main" aria-label="页面主要内容">
+  <a href="#app" class="skip-link">跳转到主内容</a>
+  <div id="app" class="container" role="main" aria-label="页面主要内容">
     <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
     <header class="ds-page-header">
       <div class="ds-page-header__titles">
         <h1 class="ds-page-header__title" id="page-title">规格管理</h1>
-        <p class="ds-page-header__subtitle">管理菜品规格与加价</p>
+        <p class="ds-page-header__subtitle">统一维护菜品规格组与规格选项，支持加价、必选、单选/多选等配置</p>
       </div>
-      <div class="ds-page-header__actions"></div>
+      <div class="ds-page-header__actions">
+        <el-button icon="el-icon-refresh" @click="refreshAll">刷新</el-button>
+        <el-button type="primary" icon="el-icon-plus" @click="openGroupDialog()">新增规格组</el-button>
+      </div>
     </header>
-    <!-- 工具栏 -->
-    <div class="tableBar">
-      <el-button type="primary" icon="el-icon-plus" aria-label="新增" @click="handleAddGroup">新增规格组</el-button>
-      <div class="toolbar-spacer"></div>
-      <el-button icon="el-icon-refresh" aria-label="重置" @click="fetchData">刷新</el-button>
-    </div>
 
-    <!-- 内容区 -->
-    <div class="content-row">
-      <!-- 左侧：规格组列表 -->
-      <div class="table-card">
-        <div class="card-title">规格组列表</div>
-        <el-table aria-label="数据表格"
-          :data="groupList"
-          border
-          stripe
-          style="width: 100%"
-          highlight-current-row
-          @current-change="handleGroupSelect"
-          v-loading="groupLoading">
-        <el-table-column prop="id" label="ID" width="60" align="center"></el-table-column>
-        <el-table-column prop="name" label="规格组名称" min-width="120" align="center"></el-table-column>
-          <el-table-column prop="type" label="类型" width="80" align="center">
-            <template slot-scope="scope">
-              <el-tag :type="scope.row.type === 1 ? 'primary' : 'success'" size="small">
-                {{ scope.row.type === 1 ? '单选' : '多选' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="required" label="必选" width="60" align="center">
-            <template slot-scope="scope">
-              {{ scope.row.required === 1 ? '是' : '否' }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="status" label="状态" width="80" align="center">
-            <template slot-scope="scope">
-              <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'" size="small">
-                {{ scope.row.status === 1 ? '启用' : '禁用' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="150" align="center" fixed="right">
-            <template slot-scope="scope">
-              <el-button type="text" size="small" @click.stop="handleEditGroup(scope.row)">编辑</el-button>
-              <el-button type="text" size="small" style="color: var(--el-color-danger);" @click.stop="handleDeleteGroup(scope.row)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
+    <!-- 统计概览 -->
+    <stat-cards :cards="statsCards" aria-label="规格数据概览"></stat-cards>
 
-      <!-- 右侧：规格选项列表 -->
-      <div class="table-card">
-        <div class="card-title">
-          规格选项列表
-          <span v-if="currentGroup" style="font-weight: normal; font-size:var(--font-size-base); color: var(--el-text-secondary);">
-            （{{ currentGroup.name }}）
-          </span>
-        </div>
-        <div v-if="!currentGroup" style="text-align: center; padding: 60px; color: var(--el-text-secondary);">
-          请先选择左侧的规格组
-        </div>
-        <template v-else>
-          <div style="margin-bottom: 12px;">
-            <el-button type="primary" size="small" icon="el-icon-plus" @click="handleAddOption">新增选项</el-button>
-          </div>
-          <el-table aria-label="数据表格"
-            :data="optionList"
-            border
-            stripe
-            style="width: 100%"
-            v-loading="optionLoading">
-            <el-table-column prop="id" label="ID" width="60" align="center"></el-table-column>
-            <el-table-column prop="name" label="选项名称" min-width="100" align="center"></el-table-column>
-            <el-table-column prop="priceAdjust" label="价格调整" width="100" align="right">
-              <template slot-scope="scope">
-                <span class="price-adjust" :class="getPriceAdjustClass(scope.row.priceAdjust)">
-                  {{ formatPriceAdjust(scope.row.priceAdjust) }}
-                </span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="status" label="状态" width="80" align="center">
-              <template slot-scope="scope">
-                <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'" size="small">
-                  {{ scope.row.status === 1 ? '启用' : '禁用' }}
+    <!-- 主内容：左侧规格组 + 右侧规格选项 -->
+    <div class="spec-main">
+      <el-row :gutter="20">
+        <!-- 左栏：规格组 -->
+        <el-col :xs="24" :lg="9">
+          <section class="spec-card" aria-label="规格组列表">
+            <div class="spec-card__head">
+              <h2 class="spec-card__title">规格组</h2>
+              <div class="spec-card__filters">
+                <el-input
+                  v-model="groupKeyword"
+                  class="spec-search"
+                  prefix-icon="el-icon-search"
+                  placeholder="搜索规格组"
+                  clearable
+                  size="small"
+                  @input="groupPage = 1">
+                </el-input>
+                <el-select
+                  v-model="groupStatusFilter"
+                  class="spec-status-select"
+                  size="small"
+                  aria-label="按状态筛选规格组"
+                  @change="groupPage = 1">
+                  <el-option label="全部" value=""></el-option>
+                  <el-option label="启用" :value="1"></el-option>
+                  <el-option label="禁用" :value="0"></el-option>
+                </el-select>
+                <el-button type="primary" icon="el-icon-plus" size="small" @click="openGroupDialog()">新增</el-button>
+              </div>
+            </div>
+
+            <div class="spec-card__table">
+              <el-table
+                ref="groupTable"
+                aria-label="规格组数据表格"
+                :data="paginatedGroups"
+                border
+                stripe
+                style="width: 100%"
+                highlight-current-row
+                v-loading="groupLoading"
+                @current-change="handleGroupSelect">
+                <el-table-column prop="name" label="规格组名称" min-width="130" :align="resolveColAlign({})" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="type" label="类型" width="76" :align="resolveColAlign({})">
+                  <template slot-scope="scope">
+                    <el-tag :type="scope.row.type === 1 ? 'primary' : 'success'" size="small">
+                      {{ scope.row.type === 1 ? '单选' : '多选' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="required" label="必选" width="64" :align="resolveColAlign({})">
+                  <template slot-scope="scope">
+                    <span :class="scope.row.required === 1 ? '' : 'spec-price-flat'">{{ scope.row.required === 1 ? '是' : '否' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="状态" width="84" :align="resolveColAlign({})">
+                  <template slot-scope="scope">
+                    <el-switch
+                      v-model="scope.row.status"
+                      :active-value="1"
+                      :inactive-value="0"
+                      :aria-label="'切换规格组「' + scope.row.name + '」启用状态'"
+                      @change="toggleGroupStatus(scope.row)">
+                    </el-switch>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="104" :align="resolveColAlign({})" fixed="right">
+                  <template slot-scope="scope">
+                    <el-button type="text" size="small" @click.stop="openGroupDialog(scope.row)">编辑</el-button>
+                    <el-button type="text" size="small" class="btn-danger-text" @click.stop="handleDeleteGroup(scope.row)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+
+            <div class="spec-card__pager">
+              <el-pagination
+                background
+                small
+                layout="total, prev, pager, next"
+                :total="filteredGroups.length"
+                :page-size="groupPageSize"
+                :current-page="groupPage"
+                @current-change="groupPage = $event">
+              </el-pagination>
+            </div>
+            <div class="spec-card__tip">点击规格组行可切换，右侧同步显示该组下的规格选项。</div>
+          </section>
+        </el-col>
+
+        <!-- 右栏：规格选项 -->
+        <el-col :xs="24" :lg="15">
+          <section class="spec-card" aria-label="规格选项列表">
+            <div class="spec-card__head">
+              <h2 class="spec-card__title">规格选项</h2>
+              <template v-if="currentGroup">
+                <el-tag :type="currentGroup.status === 1 ? 'success' : 'danger'" size="small">
+                  {{ currentGroup.status === 1 ? '启用中' : '已禁用' }}
                 </el-tag>
+                <span class="spec-card__sub">{{ currentGroup.name }} · 共 {{ filteredOptions.length }} 项</span>
               </template>
-            </el-table-column>
-        <el-table-column label="操作" width="150" align="center" fixed="right">
-              <template slot-scope="scope">
-                <el-button type="text" size="small" @click="handleEditOption(scope.row)">编辑</el-button>
-                <el-button type="text" size="small" style="color: var(--el-color-danger);" @click="handleDeleteOption(scope.row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </template>
-      </div>
+              <div class="spec-card__filters">
+                <el-select
+                  v-model="optionStatusFilter"
+                  class="spec-status-select"
+                  size="small"
+                  aria-label="按状态筛选规格选项"
+                  @change="optionPage = 1">
+                  <el-option label="全部" value=""></el-option>
+                  <el-option label="启用" :value="1"></el-option>
+                  <el-option label="禁用" :value="0"></el-option>
+                </el-select>
+                <el-button
+                  type="primary"
+                  icon="el-icon-plus"
+                  size="small"
+                  :disabled="!currentGroup"
+                  @click="openOptionDialog()">
+                  新增选项
+                </el-button>
+              </div>
+            </div>
+
+            <div class="spec-card__table">
+              <div v-if="!currentGroup" class="spec-empty-guide">
+                <i class="el-icon-mouse" aria-hidden="true"></i>
+                <span>从左侧选择规格组后，在此维护该组下的规格选项</span>
+              </div>
+              <el-table
+                v-else
+                ref="optionTable"
+                aria-label="规格选项数据表格"
+                :data="paginatedOptions"
+                border
+                stripe
+                style="width: 100%"
+                v-loading="optionLoading">
+                <el-table-column prop="name" label="选项名称" min-width="150" :align="resolveColAlign({})" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="priceAdjust" label="价格调整" width="130" :align="resolveColAlign({ type: 'number' })">
+                  <template slot-scope="scope">
+                    <span :class="priceAdjustClass(scope.row.priceAdjust)">{{ formatPriceAdjust(scope.row.priceAdjust) }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="sortOrder" label="排序" width="70" :align="resolveColAlign({})"></el-table-column>
+                <el-table-column label="状态" width="84" :align="resolveColAlign({})">
+                  <template slot-scope="scope">
+                    <el-switch
+                      v-model="scope.row.status"
+                      :active-value="1"
+                      :inactive-value="0"
+                      :aria-label="'切换选项「' + scope.row.name + '」启用状态'"
+                      @change="toggleOptionStatus(scope.row)">
+                    </el-switch>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="104" :align="resolveColAlign({})" fixed="right">
+                  <template slot-scope="scope">
+                    <el-button type="text" size="small" @click="openOptionDialog(scope.row)">编辑</el-button>
+                    <el-button type="text" size="small" class="btn-danger-text" @click="handleDeleteOption(scope.row)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+
+            <div class="spec-card__pager">
+              <el-pagination
+                background
+                small
+                layout="total, prev, pager, next"
+                :total="filteredOptions.length"
+                :page-size="optionPageSize"
+                :current-page="optionPage"
+                @current-change="optionPage = $event">
+              </el-pagination>
+            </div>
+          </section>
+        </el-col>
+      </el-row>
     </div>
 
-    <!-- 规格组编辑对话框 -->
-    <crud-dialog :title="groupDialogTitle" :visible.sync="groupDialogVisible" size="md" @submit="handleGroupSubmit">
-      <el-form :model="groupForm" :rules="groupRules" ref="groupForm" label-width="100px">
+    <!-- 规格组弹窗 -->
+    <crud-dialog :title="groupDialogTitle" :visible.sync="groupDialogVisible" size="md" @submit="submitGroupForm">
+      <el-form ref="groupForm" :model="groupForm" :rules="groupRules" label-width="92px">
         <el-form-item label="规格组名称" prop="name">
-          <el-input v-model="groupForm.name" placeholder="如：份量、辣度、温度"></el-input>
+          <el-input v-model="groupForm.name" placeholder="如：辣度 / 口味 / 杯型" maxlength="20" show-word-limit></el-input>
         </el-form-item>
-        <el-form-item label="类型" prop="type">
+        <el-form-item label="选择方式" prop="type">
           <el-radio-group v-model="groupForm.type">
             <el-radio :label="1">单选</el-radio>
             <el-radio :label="2">多选</el-radio>
           </el-radio-group>
+          <div class="spec-dialog-tip">单选：顾客只能选择其中一项；多选：顾客可勾选多项。</div>
         </el-form-item>
-        <el-form-item label="是否必选">
-          <el-switch v-model="groupForm.required" :active-value="1" :inactive-value="0"></el-switch>
+        <el-form-item v-if="groupForm.type === 2" label="最大可选数" prop="maxSelect">
+          <el-input-number v-model="groupForm.maxSelect" :min="0" :max="99" controls-position="right"></el-input-number>
+          <div class="spec-dialog-tip">0 表示不限制选择数量。</div>
         </el-form-item>
-        <el-form-item v-if="groupForm.type === 2" label="最大可选数">
-          <el-input-number v-model="groupForm.maxSelect" :min="1" :max="10"></el-input-number>
+        <el-form-item label="是否必选" prop="required">
+          <el-radio-group v-model="groupForm.required">
+            <el-radio :label="1">必选</el-radio>
+            <el-radio :label="0">选填</el-radio>
+          </el-radio-group>
         </el-form-item>
-        <el-form-item label="排序">
-          <el-input-number v-model="groupForm.sortOrder" :min="0"></el-input-number>
+        <el-form-item label="排序" prop="sortOrder">
+          <el-input-number v-model="groupForm.sortOrder" :min="0" :max="9999" controls-position="right"></el-input-number>
+          <div class="spec-dialog-tip">数值越小越靠前。</div>
         </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="groupForm.status" :active-value="1" :inactive-value="0"></el-switch>
+        <el-form-item label="启用状态" prop="status">
+          <el-radio-group v-model="groupForm.status">
+            <el-radio :label="1">启用</el-radio>
+            <el-radio :label="0">禁用</el-radio>
+          </el-radio-group>
         </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="groupForm.remark" type="textarea" :rows="2"></el-input>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="groupForm.remark" type="textarea" :rows="2" placeholder="选填，内部备注" maxlength="100" show-word-limit></el-input>
         </el-form-item>
       </el-form>
     </crud-dialog>
 
-    <!-- 规格选项编辑对话框 -->
-    <crud-dialog :title="optionDialogTitle" :visible.sync="optionDialogVisible" size="md" @submit="handleOptionSubmit">
-      <el-form :model="optionForm" :rules="optionRules" ref="optionForm" label-width="100px">
+    <!-- 规格选项弹窗 -->
+    <crud-dialog :title="optionDialogTitle" :visible.sync="optionDialogVisible" size="md" @submit="submitOptionForm">
+      <el-form ref="optionForm" :model="optionForm" :rules="optionRules" label-width="92px">
         <el-form-item label="选项名称" prop="name">
-          <el-input v-model="optionForm.name" placeholder="如：大份、中份、小份"></el-input>
+          <el-input v-model="optionForm.name" placeholder="如：微辣 / 中辣 / 大杯" maxlength="20" show-word-limit></el-input>
         </el-form-item>
-        <el-form-item label="价格调整">
-          <el-input-number v-model="optionForm.priceAdjust" :precision="2" :step="1"></el-input-number>
-          <div class="form-tip">
-            正数为加价，负数为减价，0为不调整
-          </div>
+        <el-form-item label="价格调整" prop="priceAdjust">
+          <el-input-number
+            v-model="optionForm.priceAdjust"
+            :precision="2"
+            :step="0.5"
+            :min="-9999"
+            :max="9999"
+            controls-position="right">
+          </el-input-number>
+          <div class="spec-dialog-tip">正数为加价、负数为减价（元）。如不加不减填 0。</div>
         </el-form-item>
-        <el-form-item label="排序">
-          <el-input-number v-model="optionForm.sortOrder" :min="0"></el-input-number>
+        <el-form-item label="排序" prop="sortOrder">
+          <el-input-number v-model="optionForm.sortOrder" :min="0" :max="9999" controls-position="right"></el-input-number>
+          <div class="spec-dialog-tip">数值越小越靠前。</div>
         </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="optionForm.status" :active-value="1" :inactive-value="0"></el-switch>
+        <el-form-item label="启用状态" prop="status">
+          <el-radio-group v-model="optionForm.status">
+            <el-radio :label="1">启用</el-radio>
+            <el-radio :label="0">禁用</el-radio>
+          </el-radio-group>
         </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="optionForm.remark" type="textarea" :rows="2"></el-input>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="optionForm.remark" type="textarea" :rows="2" placeholder="选填，内部备注" maxlength="100" show-word-limit></el-input>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -270,242 +378,325 @@
   <script>
     new Vue({
       el: '#app',
-      data() {
+      data: function () {
+        var vm = this
         return {
+          // 数据
           groupLoading: false,
           optionLoading: false,
           groupList: [],
           optionList: [],
           currentGroup: null,
-          
-          // 规格组表单
+          stats: { totalGroups: 0, totalOptions: 0, dishesWithSpec: 0 },
+          // 筛选与分页（本地处理，接口返回全量）
+          groupKeyword: '',
+          groupStatusFilter: '',
+          groupPage: 1,
+          groupPageSize: 10,
+          optionStatusFilter: '',
+          optionPage: 1,
+          optionPageSize: 10,
+          // 规格组弹窗
           groupDialogVisible: false,
-          groupDialogTitle: '新增规格组',
-          groupForm: {
-            id: null,
-            name: '',
-            type: 1,
-            required: 0,
-            maxSelect: null,
-            sortOrder: 0,
-            status: 1,
-            remark: ''
-          },
+          groupDialogTitle: '',
+          groupForm: { id: null, name: '', type: 1, required: 1, maxSelect: 0, sortOrder: 0, status: 1, remark: '' },
           groupRules: {
-            name: [{ required: true, message: '请输入规格组名称', trigger: 'blur' }],
-            type: [{ required: true, message: '请选择类型', trigger: 'change' }]
+            name: [
+              { required: true, message: '请输入规格组名称', trigger: 'blur' },
+              { validator: function (rule, value, cb) { return vm.validateGroupNameUnique(rule, value, cb) }, trigger: 'blur' }
+            ],
+            type: [{ required: true, message: '请选择选择方式', trigger: 'change' }]
           },
-          
-          // 规格选项表单
+          // 规格选项弹窗
           optionDialogVisible: false,
-          optionDialogTitle: '新增规格选项',
-          optionForm: {
-            id: null,
-            groupId: null,
-            name: '',
-            priceAdjust: 0,
-            sortOrder: 0,
-            status: 1,
-            remark: ''
-          },
+          optionDialogTitle: '',
+          optionForm: { id: null, groupId: null, name: '', priceAdjust: 0, sortOrder: 0, status: 1, remark: '' },
           optionRules: {
-            name: [{ required: true, message: '请输入选项名称', trigger: 'blur' }]
+            name: [
+              { required: true, message: '请输入选项名称', trigger: 'blur' },
+              { validator: function (rule, value, cb) { return vm.validateOptionNameUnique(rule, value, cb) }, trigger: 'blur' }
+            ]
           }
         }
       },
-      created() {
-        this.fetchData()
+      computed: {
+        statsCards: function () {
+          return [
+            { key: 'groups', icon: 'ri-archive-2-line', label: '规格组', value: this.stats.totalGroups, color: 'primary' },
+            { key: 'options', icon: 'ri-list-check-2', label: '选项总数', value: this.stats.totalOptions, color: 'success' },
+            { key: 'dishes', icon: 'ri-restaurant-line', label: '已关联菜品', value: this.stats.dishesWithSpec, color: 'warning' }
+          ]
+        },
+        filteredGroups: function () {
+          var kw = (this.groupKeyword || '').trim().toLowerCase()
+          var st = this.groupStatusFilter
+          var list = this.groupList.slice()
+          if (kw) {
+            list = list.filter(function (g) { return g.name && g.name.toLowerCase().indexOf(kw) !== -1 })
+          }
+          if (st !== '') {
+            list = list.filter(function (g) { return g.status === st })
+          }
+          return list
+        },
+        paginatedGroups: function () {
+          var start = (this.groupPage - 1) * this.groupPageSize
+          return this.filteredGroups.slice(start, start + this.groupPageSize)
+        },
+        filteredOptions: function () {
+          var st = this.optionStatusFilter
+          if (st === '') { return this.optionList.slice() }
+          return this.optionList.filter(function (o) { return o.status === st })
+        },
+        paginatedOptions: function () {
+          var start = (this.optionPage - 1) * this.optionPageSize
+          return this.filteredOptions.slice(start, start + this.optionPageSize)
+        }
       },
       methods: {
-        formatPriceAdjust(value) {
-          if (!value || value === 0) return '不调整'
-          return value > 0 ? '+' + Number(value).toFixed(2) : Number(value).toFixed(2)
+        /**
+         * 列对齐：与 components.js resolveColAlign 默认规则保持一致
+         * 文本列居中、金额/数字列右对齐（规格页为裸 el-table，按同一规则收敛）
+         */
+        resolveColAlign: function (col) {
+          if (col && col.align) { return col.align }
+          if (col && (col.type === 'money' || col.type === 'number')) { return 'right' }
+          return 'center'
         },
-        getPriceAdjustClass(value) {
-          if (!value || value === 0) return 'zero'
-          return value > 0 ? 'positive' : 'negative'
+        formatPriceAdjust: function (val) {
+          var n = Number(val) || 0
+          var s = n.toFixed(2)
+          return n > 0 ? '+' + s : s
         },
-        async fetchData() {
-          await this.fetchGroups()
+        priceAdjustClass: function (val) {
+          var n = Number(val) || 0
+          if (n > 0) { return 'spec-price-up' }
+          if (n < 0) { return 'spec-price-down' }
+          return 'spec-price-flat'
         },
-        async fetchGroups() {
-          this.groupLoading = true
-          try {
-            const res = await getSpecGroups()
-            if (res.code === 1) {
-              this.groupList = res.data || []
+        // ===== 数据加载 =====
+        fetchStatistics: function () {
+          getSpecStatistics().then(function (res) {
+            if (res.code === 1 && res.data) {
+              this.stats.totalGroups = res.data.totalGroups || 0
+              this.stats.totalOptions = res.data.totalOptions || 0
+              this.stats.dishesWithSpec = res.data.dishesWithSpec || 0
             }
-          } catch (err) {
-            ReggieUI.error('获取数据失败')
-          } finally {
-            this.groupLoading = false
-          }
+          }.bind(this)).catch(function () {})
         },
-        async fetchOptions(groupId) {
+        fetchGroups: function () {
+          this.groupLoading = true
+          getSpecGroups({}).then(function (res) {
+            this.groupLoading = false
+            if (res.code === 1) {
+              var prevId = this.currentGroup ? this.currentGroup.id : null
+              this.groupList = res.data || []
+              // 刷新后保持当前选中组
+              if (prevId) {
+                var hit = this.groupList.filter(function (g) { return g.id === prevId })[0]
+                this.currentGroup = hit || null
+              } else if (this.groupList.length && !this.currentGroup) {
+                this.currentGroup = this.groupList[0]
+              }
+              this.$nextTick(function () {
+                if (this.currentGroup && this.$refs.groupTable) {
+                  this.$refs.groupTable.setCurrentRow(this.currentGroup)
+                }
+              }.bind(this))
+              if (this.currentGroup) { this.fetchOptions() } else { this.optionList = [] }
+            }
+          }.bind(this)).catch(function () { this.groupLoading = false }.bind(this))
+        },
+        fetchOptions: function () {
+          if (!this.currentGroup) { this.optionList = []; return }
           this.optionLoading = true
-          try {
-            const res = await getSpecOptions({ groupId })
+          getSpecOptions({ groupId: this.currentGroup.id }).then(function (res) {
+            this.optionLoading = false
             if (res.code === 1) {
               this.optionList = res.data || []
+              this.optionPage = 1
             }
-          } catch (err) {
-            ReggieUI.error('获取数据失败')
-          } finally {
-            this.optionLoading = false
-          }
+          }.bind(this)).catch(function () { this.optionLoading = false }.bind(this))
         },
-        handleGroupSelect(row) {
+        handleGroupSelect: function (row) {
+          if (!row) { return }
+          if (this.currentGroup && this.currentGroup.id === row.id) { return }
           this.currentGroup = row
-          if (row) {
-            this.fetchOptions(row.id)
-          } else {
-            this.optionList = []
-          }
+          this.fetchOptions()
         },
-        handleAddGroup() {
-          this.groupDialogTitle = '新增规格组'
-          this.groupForm = {
-            id: null,
-            name: '',
-            type: 1,
-            required: 0,
-            maxSelect: null,
-            sortOrder: 0,
-            status: 1,
-            remark: ''
-          }
-          this.groupDialogVisible = true
-          this.$nextTick(() => {
-            this.$refs.groupForm && this.$refs.groupForm.clearValidate()
-          })
+        refreshAll: function () {
+          this.fetchGroups()
+          this.fetchStatistics()
         },
-        handleEditGroup(row) {
-          this.groupDialogTitle = '编辑规格组'
-          this.groupForm = { ...row }
-          this.groupDialogVisible = true
-          this.$nextTick(() => {
-            this.$refs.groupForm && this.$refs.groupForm.clearValidate()
-          })
-        },
-        async handleDeleteGroup(row) {
-          try {
-            await ReggieUI.confirm('删除规格组将同时删除关联的选项，确定要删除吗？', '提示', {
-              confirmButtonText: '确定',
-              cancelButtonText: '取消',
-              type: 'warning'
-            })
-            
-            const res = await deleteSpecGroup(row.id)
-            if (res.code === 1) {
-              ReggieUI.success('删除成功')
-              this.currentGroup = null
-              this.optionList = []
-              await this.fetchGroups()
-            } else {
-              ReggieUI.error(res.msg || '删除失败')
+        // ===== 规格组 CRUD =====
+        openGroupDialog: function (group) {
+          this.groupDialogTitle = group ? '编辑规格组' : '新增规格组'
+          this.groupForm = group
+            ? {
+              id: group.id, name: group.name, type: group.type,
+              required: group.required, maxSelect: group.maxSelect == null ? 0 : group.maxSelect,
+              sortOrder: group.sortOrder, status: group.status, remark: group.remark || ''
             }
-          } catch (err) {
-            if (err !== 'cancel') {
-              ReggieUI.error('删除失败')
-            }
-          }
+            : { id: null, name: '', type: 1, required: 1, maxSelect: 0, sortOrder: this.groupList.length + 1, status: 1, remark: '' }
+          this.groupDialogVisible = true
+          this.$nextTick(function () {
+            if (this.$refs.groupForm) { this.$refs.groupForm.clearValidate() }
+          }.bind(this))
         },
-        handleGroupSubmit() {
-          let passed = false
-          this.$refs.groupForm.validate(function(valid) { passed = valid })
-          if (!passed) return
-
-          const self = this
-          const apiCall = self.groupForm.id ? updateSpecGroup(self.groupForm) : saveSpecGroup(self.groupForm)
-          apiCall.then(function(res) {
-            if (res.code === 1) {
-              ReggieUI.success(self.groupForm.id ? '更新成功' : '新增成功')
-              self.groupDialogVisible = false
-              self.fetchGroups()
+        submitGroupForm: function () {
+          this.$refs.groupForm.validate(function (valid) {
+            if (!valid) { return }
+            var payload = Object.assign({}, this.groupForm)
+            if (payload.type === 1) { payload.maxSelect = null }
+            else { payload.maxSelect = payload.maxSelect || 0 }
+            var done = function () {
+              this.groupDialogVisible = false
+              this.fetchGroups()
+              this.fetchStatistics()
+            }.bind(this)
+            if (payload.id) {
+              updateSpecGroup(payload).then(function (res) {
+                if (res.code === 1) { ReggieUI.success('规格组已更新'); done() }
+                else { ReggieUI.error(res.msg || '更新失败') }
+              }).catch(function () { ReggieUI.error('更新失败，请重试') })
             } else {
+              saveSpecGroup(payload).then(function (res) {
+                if (res.code === 1) { ReggieUI.success('规格组已创建'); done() }
+                else { ReggieUI.error(res.msg || '创建失败') }
+              }).catch(function () { ReggieUI.error('创建失败，请重试') })
+            }
+          }.bind(this))
+        },
+        toggleGroupStatus: function (row) {
+          var target = row.status
+          updateSpecGroup(Object.assign({}, row, { status: target })).then(function (res) {
+            if (res.code === 1) {
+              ReggieUI.success(target === 1 ? '已启用' : '已禁用')
+              this.fetchGroups()
+              this.fetchStatistics()
+            } else {
+              row.status = target === 1 ? 0 : 1
               ReggieUI.error(res.msg || '操作失败')
             }
-          }).catch(function(err) {
-            ReggieUI.error('操作失败')
+          }.bind(this)).catch(function () {
+            row.status = target === 1 ? 0 : 1
+            ReggieUI.error('操作失败，请重试')
           })
         },
-        handleAddOption() {
+        handleDeleteGroup: function (group) {
+          ReggieUI.confirm(
+            '确定删除规格组「' + group.name + '」吗？该组下的所有规格选项与菜品关联将一并删除。',
+            '删除规格组',
+            { confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'warning' }
+          ).then(function () {
+            deleteSpecGroup(group.id).then(function (res) {
+              if (res.code === 1) {
+                ReggieUI.success('已删除')
+                if (this.currentGroup && this.currentGroup.id === group.id) {
+                  this.currentGroup = null
+                  this.optionList = []
+                }
+                this.fetchGroups()
+                this.fetchStatistics()
+              } else { ReggieUI.error(res.msg || '删除失败') }
+            }.bind(this)).catch(function () { ReggieUI.error('删除失败，请重试') })
+          }.bind(this)).catch(function () {})
+        },
+        validateGroupNameUnique: function (rule, value, callback) {
+          if (!value || !this.groupList.length) { callback(); return }
+          var hit = this.groupList.filter(function (g) {
+            return g.name === value && g.id !== this.groupForm.id
+          }.bind(this))[0]
+          if (hit) { callback(new Error('规格组名称已存在')); return }
+          callback()
+        },
+        // ===== 规格选项 CRUD =====
+        openOptionDialog: function (option) {
           if (!this.currentGroup) {
-            ReggieUI.warning('请先选择规格组')
+            ReggieUI.warning('请先选择左侧规格组')
             return
           }
-          this.optionDialogTitle = '新增规格选项'
-          this.optionForm = {
-            id: null,
-            groupId: this.currentGroup.id,
-            name: '',
-            priceAdjust: 0,
-            sortOrder: 0,
-            status: 1,
-            remark: ''
-          }
-          this.optionDialogVisible = true
-          this.$nextTick(() => {
-            this.$refs.optionForm && this.$refs.optionForm.clearValidate()
-          })
-        },
-        handleEditOption(row) {
-          this.optionDialogTitle = '编辑规格选项'
-          this.optionForm = { ...row }
-          this.optionDialogVisible = true
-          this.$nextTick(() => {
-            this.$refs.optionForm && this.$refs.optionForm.clearValidate()
-          })
-        },
-        async handleDeleteOption(row) {
-          try {
-            await ReggieUI.confirm('确定要删除该规格选项吗？', '提示', {
-              confirmButtonText: '确定',
-              cancelButtonText: '取消',
-              type: 'warning'
-            })
-            
-            const res = await deleteSpecOption(row.id)
-            if (res.code === 1) {
-              ReggieUI.success('删除成功')
-              if (this.currentGroup) {
-                await this.fetchOptions(this.currentGroup.id)
-              }
-            } else {
-              ReggieUI.error(res.msg || '删除失败')
+          this.optionDialogTitle = option ? '编辑规格选项' : '新增规格选项'
+          this.optionForm = option
+            ? {
+              id: option.id, groupId: option.groupId, name: option.name,
+              priceAdjust: option.priceAdjust == null ? 0 : Number(option.priceAdjust),
+              sortOrder: option.sortOrder, status: option.status, remark: option.remark || ''
             }
-          } catch (err) {
-            if (err !== 'cancel') {
-              ReggieUI.error('删除失败')
-            }
-          }
+            : { id: null, groupId: this.currentGroup.id, name: '', priceAdjust: 0, sortOrder: this.optionList.length + 1, status: 1, remark: '' }
+          this.optionDialogVisible = true
+          this.$nextTick(function () {
+            if (this.$refs.optionForm) { this.$refs.optionForm.clearValidate() }
+          }.bind(this))
         },
-        handleOptionSubmit() {
-          let passed = false
-          this.$refs.optionForm.validate(function(valid) { passed = valid })
-          if (!passed) return
-
-          const self = this
-          const apiCall = self.optionForm.id ? updateSpecOption(self.optionForm) : saveSpecOption(self.optionForm)
-          apiCall.then(function(res) {
-            if (res.code === 1) {
-              ReggieUI.success(self.optionForm.id ? '更新成功' : '新增成功')
-              self.optionDialogVisible = false
-              if (self.currentGroup) {
-                self.fetchOptions(self.currentGroup.id)
-              }
+        submitOptionForm: function () {
+          this.$refs.optionForm.validate(function (valid) {
+            if (!valid) { return }
+            var payload = Object.assign({}, this.optionForm)
+            if (!payload.groupId && this.currentGroup) { payload.groupId = this.currentGroup.id }
+            var done = function () {
+              this.optionDialogVisible = false
+              this.fetchOptions()
+              this.fetchStatistics()
+            }.bind(this)
+            if (payload.id) {
+              updateSpecOption(payload).then(function (res) {
+                if (res.code === 1) { ReggieUI.success('选项已更新'); done() }
+                else { ReggieUI.error(res.msg || '更新失败') }
+              }).catch(function () { ReggieUI.error('更新失败，请重试') })
             } else {
+              saveSpecOption(payload).then(function (res) {
+                if (res.code === 1) { ReggieUI.success('选项已创建'); done() }
+                else { ReggieUI.error(res.msg || '创建失败') }
+              }).catch(function () { ReggieUI.error('创建失败，请重试') })
+            }
+          }.bind(this))
+        },
+        toggleOptionStatus: function (row) {
+          var target = row.status
+          updateSpecOption(Object.assign({}, row, { status: target })).then(function (res) {
+            if (res.code === 1) {
+              ReggieUI.success(target === 1 ? '已启用' : '已禁用')
+              this.fetchOptions()
+              this.fetchStatistics()
+            } else {
+              row.status = target === 1 ? 0 : 1
               ReggieUI.error(res.msg || '操作失败')
             }
-          }).catch(function(err) {
-            ReggieUI.error('操作失败')
+          }.bind(this)).catch(function () {
+            row.status = target === 1 ? 0 : 1
+            ReggieUI.error('操作失败，请重试')
           })
+        },
+        handleDeleteOption: function (option) {
+          ReggieUI.confirm(
+            '确定删除选项「' + option.name + '」吗？',
+            '删除选项',
+            { confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'warning' }
+          ).then(function () {
+            deleteSpecOption(option.id).then(function (res) {
+              if (res.code === 1) {
+                ReggieUI.success('已删除')
+                this.fetchOptions()
+                this.fetchStatistics()
+              } else { ReggieUI.error(res.msg || '删除失败') }
+            }.bind(this)).catch(function () { ReggieUI.error('删除失败，请重试') })
+          }.bind(this)).catch(function () {})
+        },
+        validateOptionNameUnique: function (rule, value, callback) {
+          if (!value || !this.optionList.length) { callback(); return }
+          var hit = this.optionList.filter(function (o) {
+            return o.name === value && o.id !== this.optionForm.id
+          }.bind(this))[0]
+          if (hit) { callback(new Error('当前组内已存在同名选项')); return }
+          callback()
         }
+      },
+      created: function () {
+        this.fetchGroups()
+        this.fetchStatistics()
       }
     })
   </script>
 </body>
 </html>
-
-
-

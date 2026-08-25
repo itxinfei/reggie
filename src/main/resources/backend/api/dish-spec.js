@@ -1,7 +1,7 @@
 // 菜品规格 API
 
 // 规格组管理
-const getSpecGroups = () => $axios({ url: '/dish/spec/group/list', method: 'get' })
+const getSpecGroups = (params) => $axios({ url: '/dish/spec/group/list', method: 'get', params })
 const getSpecGroupById = (id) => $axios({ url: `/dish/spec/group/${id}`, method: 'get' })
 const saveSpecGroup = (data) => $axios({ url: '/dish/spec/group', method: 'post', data })
 const updateSpecGroup = (data) => $axios({ url: '/dish/spec/group', method: 'put', data })
