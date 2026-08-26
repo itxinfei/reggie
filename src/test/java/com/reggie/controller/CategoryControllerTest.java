@@ -1,6 +1,7 @@
 package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
+import com.reggie.test.TestDatabaseCleaner;
 import com.reggie.module.category.model.Category;
 import com.reggie.module.category.service.CategoryService;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,8 +33,12 @@ public class CategoryControllerTest extends BaseControllerTest {
     @Autowired
     private CategoryService categoryService;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("category");
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 

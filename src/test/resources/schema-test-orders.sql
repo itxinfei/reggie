@@ -1,4 +1,8 @@
--- Test orders data (H2 compatible)
+-- Test orders data (MySQL compatible)
+-- 只插入数据，不创建表（生产 schema 已存在）
+
+DELETE FROM order_detail WHERE order_id IN (1, 2, 3);
+DELETE FROM orders WHERE id IN (1, 2, 3);
 
 INSERT INTO orders (id, number, status, user_id, address_book_id, order_time, checkout_time, pay_method, amount, remark, phone, address, user_name, consignee, dining_type, create_time, update_time, create_user, update_user, is_deleted, tenant_id)
 VALUES (1, 'TEST001', 5, 1, 1, '2026-07-01 08:00:00', '2026-07-01 08:30:00', 1, 100.00, NULL, '13900139001', '测试地址', '测试用户', '测试用户', 'OUTSIDE', '2026-07-01 08:00:00', '2026-07-01 08:30:00', 1, 1, 0, 1);

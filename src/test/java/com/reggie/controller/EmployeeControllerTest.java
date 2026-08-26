@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import com.reggie.test.TestDatabaseCleaner;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -31,8 +32,13 @@ public class EmployeeControllerTest extends BaseControllerTest {
     @Autowired
     private EmployeeService employeeService;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("employee");
+
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 
@@ -43,6 +49,7 @@ public class EmployeeControllerTest extends BaseControllerTest {
         employee.setPassword(PasswordUtils.encodePassword("123456"));
         employee.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
         employee.setPhone("13800138000");
+        employee.setIdNumber("110101199001011234");
         employee.setStatus(1);
         employee.setSex("1");
         employee.setRole(1);

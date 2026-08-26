@@ -1,6 +1,7 @@
 package com.reggie.module.payment;
 
 import com.reggie.common.BaseContext;
+import com.reggie.test.TestDatabaseCleaner;
 import com.reggie.module.payment.channel.*;
 import com.reggie.module.payment.model.PaymentOrder;
 import com.reggie.module.payment.model.RefundRecord;
@@ -32,8 +33,12 @@ public class PaymentServiceTest {
     @Autowired
     private PaymentChannelFactory paymentChannelFactory;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("refund_record", "payment_order");
         BaseContext.setCurrentTenantId(1L);
     }
 

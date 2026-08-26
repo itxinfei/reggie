@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import com.reggie.test.TestDatabaseCleaner;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -50,8 +51,13 @@ public class DishControllerTest extends BaseControllerTest {
     @Autowired
     private CategoryService categoryService;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("dish_flavor", "dish", "category");
+
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 

@@ -1,3 +1,7 @@
+-- 清理平台订单残留数据（之前测试运行插入的订单），避免 @DirtiesContext 重启后数据残留导致去重误判
+DELETE FROM order_detail WHERE order_id IN (SELECT id FROM orders WHERE platform_type IS NOT NULL);
+DELETE FROM orders WHERE platform_type IS NOT NULL;
+
 -- 外卖平台接入配置 测试库建表（H2 / MySQL 兼容）
 DROP TABLE IF EXISTS platform_config;
 CREATE TABLE platform_config (

@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import com.reggie.test.TestDatabaseCleaner;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -28,8 +29,13 @@ class EmployeeLoginSecurityTest {
     @Autowired
     private EmployeeService employeeService;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("employee");
+
         // 创建测试用户 admin，密码为 123456 的 MD5 加密
         Employee admin = new Employee();
         admin.setId(1L);
@@ -37,6 +43,9 @@ class EmployeeLoginSecurityTest {
         admin.setName("管理员");
         admin.setPassword("e10adc3949ba59abbe56e057f20f883e");
         admin.setPasswordType("MD5");
+        admin.setPhone("13800138000");
+        admin.setSex("1");
+        admin.setIdNumber("110101199001011234");
         admin.setStatus(1);
         admin.setTenantId(1L);
         admin.setCreateUser(1L);

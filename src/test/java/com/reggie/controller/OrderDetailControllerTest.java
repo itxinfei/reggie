@@ -1,6 +1,7 @@
 package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
+import com.reggie.test.TestDatabaseCleaner;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.service.OrderDetailService;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,8 +32,12 @@ public class OrderDetailControllerTest {
     @Autowired
     private OrderDetailService orderDetailService;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("order_detail", "orders");
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
     }

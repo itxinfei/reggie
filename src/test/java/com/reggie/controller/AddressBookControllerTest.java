@@ -1,6 +1,7 @@
 package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
+import com.reggie.test.TestDatabaseCleaner;
 import com.reggie.module.address.model.AddressBook;
 import com.reggie.module.address.service.AddressBookService;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,8 +30,12 @@ public class AddressBookControllerTest extends BaseControllerTest {
     @Autowired
     private AddressBookService addressBookService;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("address_book");
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
     }

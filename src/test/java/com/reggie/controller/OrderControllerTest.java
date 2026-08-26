@@ -1,6 +1,7 @@
 package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
+import com.reggie.test.TestDatabaseCleaner;
 import com.reggie.module.address.model.AddressBook;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
@@ -51,8 +52,12 @@ public class OrderControllerTest extends BaseControllerTest {
     @Autowired
     private OrderDetailService orderDetailService;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("order_detail", "orders", "dish", "dish_flavor", "category", "shopping_cart", "address_book", "user");
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 
@@ -62,8 +67,8 @@ public class OrderControllerTest extends BaseControllerTest {
         // 插入分类和菜品（submit 会查询菜品并扣减库存，dish 表不在租户忽略列表中，需设置 tenant_id）
         jdbcTemplate.update("INSERT INTO category (id, name, type, sort, create_time, update_time, create_user, update_user, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 1L, "测试分类", 1, 1, java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 1L);
-        jdbcTemplate.update("INSERT INTO dish (id, category_id, name, price, status, stock_qty, create_time, update_time, create_user, update_user, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                1L, 1L, "测试菜品", new BigDecimal("10.00"), 1, new BigDecimal("100"), java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 1L);
+        jdbcTemplate.update("INSERT INTO dish (id, category_id, name, code, price, status, stock_qty, image, description, create_time, update_time, create_user, update_user, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                1L, 1L, "测试菜品", "001", new BigDecimal("10.00"), 1, new BigDecimal("100"), "test.jpg", "测试", java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 1L);
 
         AddressBook address = new AddressBook();
         address.setId(1L);

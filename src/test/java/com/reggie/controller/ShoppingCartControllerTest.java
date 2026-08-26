@@ -1,6 +1,7 @@
 package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
+import com.reggie.test.TestDatabaseCleaner;
 import com.reggie.module.shopping.model.ShoppingCart;
 import com.reggie.module.shopping.service.ShoppingCartService;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,8 +31,12 @@ public class ShoppingCartControllerTest extends BaseControllerTest {
     @Autowired
     private ShoppingCartService shoppingCartService;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("shopping_cart");
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
     }

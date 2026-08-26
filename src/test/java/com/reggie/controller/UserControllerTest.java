@@ -1,6 +1,7 @@
 package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
+import com.reggie.test.TestDatabaseCleaner;
 import com.reggie.module.user.model.User;
 import com.reggie.module.user.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,8 +35,12 @@ public class UserControllerTest {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("user");
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 

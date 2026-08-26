@@ -1,6 +1,7 @@
 package com.reggie.controller;
 
 import com.reggie.common.BaseContext;
+import com.reggie.test.TestDatabaseCleaner;
 import com.reggie.common.R;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.model.OrderDetail;
@@ -42,8 +43,12 @@ public class MobileOrderControllerTest extends BaseControllerTest {
     @Autowired
     private OrderDetailService orderDetailService;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("order_detail", "orders");
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
     }

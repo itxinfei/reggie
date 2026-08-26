@@ -2,6 +2,7 @@ package com.reggie.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.BaseContext;
+import com.reggie.test.TestDatabaseCleaner;
 import com.reggie.dto.SetmealDto;
 import com.reggie.module.category.model.Category;
 import com.reggie.module.setmeal.model.Setmeal;
@@ -45,10 +46,14 @@ public class SetmealControllerTest extends BaseControllerTest {
     @Autowired
     private CategoryService categoryService;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("setmeal_dish", "setmeal", "category");
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 

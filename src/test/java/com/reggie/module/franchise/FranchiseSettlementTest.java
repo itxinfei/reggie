@@ -1,6 +1,7 @@
 package com.reggie.module.franchise;
 
 import com.reggie.common.BaseContext;
+import com.reggie.test.TestDatabaseCleaner;
 import com.reggie.module.franchise.model.FranchiseContract;
 import com.reggie.module.franchise.model.FranchiseSettlement;
 import com.reggie.module.franchise.model.Franchisee;
@@ -47,8 +48,14 @@ public class FranchiseSettlementTest {
     @Autowired
     private OrderService orderService;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("franchise_settlement", "franchise_contract", "franchisee");
+        cleaner.cleanByCondition("orders", "tenant_id = ?", 2L);
+        cleaner.cleanByCondition("order_detail", "tenant_id = ?", 2L);
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
     }

@@ -1,6 +1,7 @@
 package com.reggie.module.printer;
 
 import com.reggie.common.BaseContext;
+import com.reggie.test.TestDatabaseCleaner;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.printer.adapter.WindowsSystemPrinterAdapter;
@@ -53,11 +54,15 @@ public class PrinterServiceTest {
     @Autowired
     private WindowsSystemPrinterAdapter windowsSystemPrinterAdapter;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     private Orders testOrder;
     private List<OrderDetail> testDetails;
 
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("order_detail", "orders", "printer_log", "printer_template", "printer_config");
         BaseContext.setCurrentTenantId(1L);
         testOrder = new Orders();
         testOrder.setId(100L);
