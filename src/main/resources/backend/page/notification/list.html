@@ -562,6 +562,7 @@
     <script src="../../js/request.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
+    <script src="../../api/user.js"></script>
     <script src="../../js/components.js"></script>
     <script src="../../api/notification.js"></script>
     <script>
@@ -657,7 +658,7 @@
                     if (self.userSearch.name) params.name = self.userSearch.name;
                     if (self.userSearch.phone) params.phone = self.userSearch.phone;
 
-                    $axios.get('/user/page', { params: params }).then(function(res) {
+                    userPage(params).then(function(res) {
                         if (res && res.code === 1 && res.data) {
                             self.users = res.data.records || [];
                             self.userTotal = res.data.total || 0;
@@ -713,7 +714,7 @@
                     if (self.pushUserSearch.name) params.name = self.pushUserSearch.name;
                     if (self.pushUserSearch.phone) params.phone = self.pushUserSearch.phone;
 
-                    $axios.get('/user/page', { params: params }).then(function(res) {
+                    userPage(params).then(function(res) {
                         if (res && res.code === 1 && res.data) {
                             self.pushUsers = res.data.records || [];
                             self.pushUserTotal = res.data.total || 0;

@@ -116,6 +116,7 @@
   <script src="../../js/request.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
+  <script src="../../api/user.js"></script>
   <script src="../../js/components.js"></script>
   <script>
     new Vue({
@@ -283,7 +284,7 @@
               phone: s.phone || this.input.phone || undefined,
               status: s.status != null ? (s.status === '' ? undefined : Number(s.status)) : (this.input.status != null ? this.input.status : undefined)
             }
-            const res = await $axios.get('/user/page', { params })
+            const res = await userPage(params)
             return res
           } catch (err) {
             ReggieUI.error('请求失败：' + err)
@@ -295,7 +296,7 @@
         // 修改点：改为调用后端 /user/stats 聚合接口（count 查询），避免 pageSize:1000 全量拉取与截断风险
         async loadUserStats() {
           try {
-            const res = await $axios.get('/user/stats')
+            const res = await userStats()
             if (String(res.code) === '1') {
               this.stats = res.data
               return res
@@ -341,11 +342,9 @@
           if (this.submitting) return // 提交防重
           this.submitting = true
           try {
-            const res = await $axios.put('/user/status', null, {
-              params: {
-                id: this.statusDialog.userId,
-                status: this.statusDialog.newStatus
-              }
+            const res = await userStatus({
+              id: this.statusDialog.userId,
+              status: this.statusDialog.newStatus
             })
             this.submitting = false
             if (String(res.code) === '1') {
@@ -376,9 +375,7 @@
             type: 'warning'
           }).then(async () => {
             try {
-              const res = await $axios.delete('/user', {
-                params: { id }
-              })
+              const res = await userDelete(id)
               if (String(res.code) === '1') {
                 ReggieUI.success('删除成功')
                 this.refreshAll()

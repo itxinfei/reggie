@@ -223,7 +223,7 @@
           },
           loadHeatmap: function() {
             const self = this; if (!self.heatmapChart) return;
-            $axios.get('/api/report/time-slot/heatmap', { params: { startDate: self.dateRange[0], endDate: self.dateRange[1] } })
+            reportTimeSlotHeatmap({ startDate: self.dateRange[0], endDate: self.dateRange[1] })
               .then(function(res) { if (res.code === 1 && res.data) self.renderHeatmap(res.data); })
               .catch(function() {});
           },

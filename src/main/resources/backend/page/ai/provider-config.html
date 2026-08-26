@@ -258,8 +258,8 @@
             loadData: function() {
                 const self = this;
                 Promise.all([
-                    $axios.get('/admin/ai/provider/list'),
-                    $axios.get('/admin/ai/provider/active')
+                    window.aiBackendApi.providerList(),
+                    window.aiBackendApi.providerActive()
                 ]).then(function(results) {
                     if (results[0].code === 1) {
                         self.providers = results[0].data || [];
@@ -286,7 +286,7 @@
                     confirmButtonText: '确定切换',
                     type: 'warning'
                 }).then(function() {
-                    $axios.post('/admin/ai/provider/activate/' + id).then(function(res) {
+                    window.aiBackendApi.providerActivate(id).then(function(res) {
                         if (res.code === 1) {
                             ReggieUI.success('切换成功');
                             self.loadData();
@@ -312,7 +312,7 @@
                 });
                 const startTime = Date.now();
 
-                $axios.get('/admin/ai/provider/test/' + id).then(function(res) {
+                window.aiBackendApi.providerTest(id).then(function(res) {
                     loadingMsg.close();
                     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
                     if (res.code === 1) {
@@ -345,7 +345,7 @@
                     confirmButtonText: '确定删除',
                     type: 'warning'
                 }).then(function() {
-                    $axios.delete('/admin/ai/provider/delete/' + id).then(function(res) {
+                    window.aiBackendApi.providerDelete(id).then(function(res) {
                         if (res.code === 1) {
                             ReggieUI.success('删除成功');
                             self.loadData();
@@ -382,7 +382,7 @@
                 this.dialogTitle = '编辑模型 - ' + (provider.providerName || provider.providerCode);
                 this.dialogVisible = true;
 
-                $axios.get('/admin/ai/provider/get/' + provider.id).then(function(res) {
+                window.aiBackendApi.providerGet(provider.id).then(function(res) {
                     if (res.code === 1 && res.data) {
                         self.form.apiKey = res.data.apiKey || '';
                         self.form._hasExistingKey = !!(res.data.apiKey);
@@ -416,8 +416,8 @@
                 delete payload._hasExistingKey;
 
                 const api = this.form.id
-                    ? $axios.post('/admin/ai/provider/update', payload)
-                    : $axios.post('/admin/ai/provider/add', payload);
+                    ? window.aiBackendApi.providerUpdate(payload)
+                    : window.aiBackendApi.providerAdd(payload);
 
                 api.then(function(res) {
                     if (res.code === 1) {
@@ -449,7 +449,7 @@
                     '初始化预设',
                     { confirmButtonText: '确定初始化', type: 'info' }
                 ).then(function() {
-                    $axios.post('/admin/ai/provider/init-presets').then(function(res) {
+                    window.aiBackendApi.providerInitPresets().then(function(res) {
                         if (res.code === 1) {
                             ReggieUI.success(res.msg || '初始化成功');
                             self.loadData();
@@ -473,10 +473,10 @@
                 this.modelFetchError = '';
                 this.modelList = [];
 
-                $axios.post('/admin/ai/provider/fetch-models', {
-                    baseUrl: this.form.baseUrl,
-                    apiKey: this.form.apiKey
-                }).then(function(res) {
+                window.aiBackendApi.providerFetchModels(
+                    this.form.baseUrl,
+                    this.form.apiKey
+                ).then(function(res) {
                     if (res.code === 1) {
                         self.modelList = res.data || [];
                         if (self.modelList.length === 0) {

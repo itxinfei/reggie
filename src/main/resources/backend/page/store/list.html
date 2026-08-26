@@ -102,63 +102,50 @@
 
             <!-- ===== 数据表格 ===== -->
             <div v-loading="loading" class="store-table">
-                <el-table aria-label="数据表格"
+                <crud-table aria-label="数据表格"
                     :data="tableData"
-                    border
-                    stripe
-                    size="small"
+                    :columns="columns"
+                    :loading="loading"
+                    :show-actions="true"
+                    :actions-width="210"
+                    :selection="true"
+                    :index-col="true"
+                    :highlight-current-row="true"
+                    :default-sort="{prop: 'createTime', order: 'descending'}"
+                    border stripe size="small"
                     @selection-change="onSelectionChange"
                     @sort-change="onSortChange"
-                    @row-click="onRowClick"
-                    highlight-current-row
-                    :default-sort="{prop: 'createTime', order: 'descending'}"
-                    style="width:100%">
-                    <el-table-column type="selection" width="45" fixed="left"></el-table-column>
-                    <el-table-column label="序号" type="index" width="46" align="center"></el-table-column>
-                    <el-table-column prop="storeName" label="门店名称" min-width="150" align="center" sortable="custom" show-overflow-tooltip>
-                        <template slot-scope="{row}">
-                            <el-tag :type="storeTypeTag(row.storeType)" size="mini" effect="plain">{{ storeTypeName(row.storeType) }}</el-tag>
-                            <span style="margin-left:6px; font-weight:500;">{{ row.storeName }}</span>
-                        </template>
-                    </el-table-column>
-                    <el-table-column prop="storeCode" label="门店编码" width="92" align="center" sortable="custom" show-overflow-tooltip></el-table-column>
-                    <el-table-column label="联系人 / 电话" min-width="140" align="center" show-overflow-tooltip>
-                        <template slot-scope="{row}">
-                            <span>{{ row.contactPerson || '—' }}</span>
-                            <span style="margin-left:8px; color:var(--text-muted);">{{ row.contactPhone || '—' }}</span>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="状态" width="60" align="center">
-                        <template slot-scope="{row}">
-                            <el-switch
-                                v-model="row.status"
-                                :active-value="1"
-                                :inactive-value="0"
-                                @change="toggleSingleStatus(row)"
-                                active-color="var(--color-success)"
-                                inactive-color="var(--color-gray-300)">
-                            </el-switch>
-                        </template>
-                    </el-table-column>
-                    <el-table-column prop="todayOrders" label="今日订单" width="80" align="center" sortable="custom">
-                        <template slot-scope="{row}">
-                            <span class="order-count">{{ row.todayOrders || 0 }}</span>
-                        </template>
-                    </el-table-column>
-                    <el-table-column prop="todayAmount" label="今日营收" width="100" align="right" sortable="custom">
-                        <template slot-scope="{row}">
-                            <span class="amount-highlight">&yen;{{ fmtAmount(row.todayAmount) }}</span>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="操作" width="210" align="center" fixed="right">
-                        <template slot-scope="{row}">
-                            <el-button type="text" size="mini" icon="el-icon-document" @click.stop="openDetail(row)">详情</el-button>
-                            <el-button type="text" size="mini" icon="el-icon-edit" @click.stop="openEditDialog(row)">编辑</el-button>
-                            <el-button type="text" size="mini" icon="el-icon-switch-button" @click.stop="switchToStore(row)">切换</el-button>
-                            <el-button type="text" size="mini" icon="el-icon-refresh" @click.stop="openSyncDialog(row)">同步</el-button>
-                        </template>
-                    </el-table-column>
-                </el-table>
+                    @row-click="onRowClick">
+                    <template #col-storeName="{ row }">
+                        <el-tag :type="storeTypeTag(row.storeType)" size="mini" effect="plain">{{ storeTypeName(row.storeType) }}</el-tag>
+                        <span style="margin-left:6px; font-weight:500;">{{ row.storeName }}</span>
+                    </template>
+                    <template #col-contact="{ row }">
+                        <span>{{ row.contactPerson || '—' }}</span>
+                        <span style="margin-left:8px; color:var(--text-muted);">{{ row.contactPhone || '—' }}</span>
+                    </template>
+                    <template #col-status="{ row }">
+                        <el-switch
+                            v-model="row.status"
+                            :active-value="1"
+                            :inactive-value="0"
+                            @change="toggleSingleStatus(row)"
+                            active-color="var(--color-success)"
+                            inactive-color="var(--color-gray-300)"></el-switch>
+                    </template>
+                    <template #col-todayOrders="{ row }">
+                        <span class="order-count">{{ row.todayOrders || 0 }}</span>
+                    </template>
+                    <template #col-todayAmount="{ row }">
+                        <span class="amount-highlight">&yen;{{ fmtAmount(row.todayAmount) }}</span>
+                    </template>
+                    <template #actions="{ row }">
+                        <el-button type="text" size="mini" icon="el-icon-document" @click.stop="openDetail(row)">详情</el-button>
+                        <el-button type="text" size="mini" icon="el-icon-edit" @click.stop="openEditDialog(row)">编辑</el-button>
+                        <el-button type="text" size="mini" icon="el-icon-switch-button" @click.stop="switchToStore(row)">切换</el-button>
+                        <el-button type="text" size="mini" icon="el-icon-refresh" @click.stop="openSyncDialog(row)">同步</el-button>
+                    </template>
+                </crud-table>
 
                 <!-- 分页 -->
                 <el-pagination
@@ -421,6 +408,14 @@
         submitting: false,
         // 表格数据
         tableData: [],
+        columns: [
+          { prop: 'storeName', label: '门店名称', min-width: 180, align: 'center', slot: 'col-storeName', sortable: 'custom' },
+          { prop: 'storeCode', label: '门店编码', width: 92, align: 'center', sortable: 'custom' },
+          { prop: 'contactPerson', label: '联系人 / 电话', min-width: 140, align: 'center', slot: 'col-contact' },
+          { prop: 'status', label: '状态', width: 60, align: 'center', slot: 'col-status' },
+          { prop: 'todayOrders', label: '今日订单', width: 80, align: 'center', slot: 'col-todayOrders', sortable: 'custom' },
+          { prop: 'todayAmount', label: '今日营收', width: 100, align: 'right', slot: 'col-todayAmount', sortable: 'custom' }
+        ],
         selection: [],           // 已选行
         // 统计
         stats: { totalStores: 0, activeStores: 0, inactiveStores: 0, todayTotalStores: 0 },

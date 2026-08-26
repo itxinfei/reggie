@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/consistency.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
 <div class="dashboard-container" id="platform-order-app">
@@ -23,6 +24,9 @@
         </el-button>
       </div>
     </header>
+
+    <!-- 统计卡片 -->
+    <stat-cards :cards="statsCards"></stat-cards>
 
     <!-- 筛选表单区 -->
     <el-card shadow="never" class="ds-card ds-card--filter">
@@ -224,6 +228,16 @@
     created() {
       this.fetchData()
     },
+    computed: {
+      statsCards() {
+        return [
+          { key: 'total', icon: 'el-icon-shopping-cart-full', label: '订单总数', value: this.counts || 0, color: 'primary' },
+          { key: 'pending', icon: 'el-icon-time', label: '待接单', value: this.tableData.filter(function(r){ return r.status === 2 }).length, color: 'warning' },
+          { key: 'completed', icon: 'el-icon-circle-check', label: '已完成', value: this.tableData.filter(function(r){ return r.status === 4 }).length, color: 'success' },
+          { key: 'amount', icon: 'el-icon-money', label: '订单金额', value: '¥' + this.tableData.reduce(function(s, r){ return s + (Number(r.amount) || 0) }, 0).toFixed(2), color: 'info' }
+        ]
+      }
+    },
     methods: {
       // 修改点：列表数据拉取（复用后端 platformOrderPage，返回 records/total）
       async fetchData() {
@@ -287,7 +301,7 @@
         this.detailVisible = true
         this.detail = Object.assign({}, row)
         const self = this
-        $axios.get('/order/' + row.id).then(function (res) {
+        queryOrderDetailById(row.id).then(function (res) {
           if (res && res.code === 1 && res.data) {
             self.detail = res.data
           }

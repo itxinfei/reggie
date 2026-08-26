@@ -24,6 +24,7 @@
       word-break: break-all;
     }
   </style>
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -38,6 +39,9 @@
         </div>
         <div class="ds-page-header__actions"></div>
       </header>
+
+      <!-- 统计卡片 -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- 搜索 + 操作栏 -->
       <table-bar
@@ -210,6 +214,14 @@
         activeContracts() {
           const self = this
           return (self.contractOptions || []).filter(function(c) { return c.status === 1 })
+        },
+        statsCards() {
+          return [
+            { key: 'total', icon: 'el-icon-document', label: '结算单总数', value: this.counts || 0, color: 'primary' },
+            { key: 'pending', icon: 'el-icon-time', label: '待确认', value: this.tableData.filter(function(r){ return r.status === 0 }).length, color: 'warning' },
+            { key: 'confirmed', icon: 'el-icon-circle-check', label: '已确认', value: this.tableData.filter(function(r){ return r.status === 1 }).length, color: 'success' },
+            { key: 'settled', icon: 'el-icon-finished', label: '已结算', value: this.tableData.filter(function(r){ return r.status === 2 }).length, color: 'info' }
+          ]
         }
       },
       created() {

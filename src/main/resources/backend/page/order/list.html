@@ -221,6 +221,7 @@
   <script src="../../js/components.js"></script>
   <script src="../../api/order.js"></script>
   <script src="../../api/payment.js"></script>
+  <script src="../../api/dashboard.js"></script>
   <script src="../../api/export.js"></script>
   <script>
     new Vue({
@@ -322,7 +323,7 @@
         async loadOrderStats() {
           try {
             const results = await Promise.all([
-              $axios.get('/api/dashboard/all', { params: { hotDishLimit: 10 } }),
+              dashboardAll({ hotDishLimit: 10 }),
               getOrderDetailPage({ page: 1, pageSize: 1 })
             ])
             const dashRes = results[0]
@@ -395,7 +396,7 @@
           this.diaForm = { ...row }
           // 异步获取完整订单详情（含 orderDetails 菜品明细），静默更新不触发额外重排
           const self = this
-          $axios.get('/order/' + row.id).then(function(res) {
+          queryOrderDetailById(row.id).then(function(res) {
             if (res && res.code === 1 && res.data) {
               self.diaForm = res.data
             }
@@ -436,7 +437,7 @@
           }
           self.refundLoading = true
           try {
-            var paymentRes = await $axios.get('/api/payment/page', { params: { page: 1, pageSize: 1, orderId: self.refundForm.id } })
+            var paymentRes = await paymentPage({ page: 1, pageSize: 1, orderId: self.refundForm.id })
             let paymentOrderId = null
             if (paymentRes && paymentRes.code === 1 && paymentRes.data && paymentRes.data.records && paymentRes.data.records.length > 0) {
               paymentOrderId = paymentRes.data.records[0].id

@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+<link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -22,6 +23,9 @@
         </div>
         <div class="ds-page-header__actions"></div>
       </header>
+
+      <!-- 统计卡片 -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- 搜索 + 操作栏 -->
       <table-bar
@@ -202,6 +206,16 @@
       created() {
         this.loadFranchisees()
         this.init()
+      },
+      computed: {
+        statsCards() {
+          return [
+            { key: 'total', icon: 'el-icon-document', label: '合同总数', value: this.counts || 0, color: 'primary' },
+            { key: 'active', icon: 'el-icon-circle-check', label: '生效中', value: this.tableData.filter(function(r){ return r.status === 1 }).length, color: 'success' },
+            { key: 'expired', icon: 'el-icon-circle-close', label: '已终止', value: this.tableData.filter(function(r){ return r.status === 0 }).length, color: 'info' },
+            { key: 'franchisees', icon: 'el-icon-office-building', label: '关联加盟商', value: this.tableData.length, color: 'warning' }
+          ]
+        }
       },
       methods: {
         formatMoney(v) {

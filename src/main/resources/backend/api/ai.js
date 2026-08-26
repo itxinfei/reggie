@@ -117,6 +117,39 @@
          */
         getProfile: function() {
             return $axios.get('/api/ai/profile/summary');
+        },
+
+        // ==================== AI供应商管理 ====================
+
+        providerList: function() {
+            return $axios.get('/admin/ai/provider/list');
+        },
+        providerActive: function() {
+            return $axios.get('/admin/ai/provider/active');
+        },
+        providerActivate: function(id) {
+            return $axios.post('/admin/ai/provider/activate/' + id);
+        },
+        providerTest: function(id) {
+            return $axios.get('/admin/ai/provider/test/' + id);
+        },
+        providerDelete: function(id) {
+            return $axios.delete('/admin/ai/provider/delete/' + id);
+        },
+        providerGet: function(id) {
+            return $axios.get('/admin/ai/provider/get/' + id);
+        },
+        providerUpdate: function(data) {
+            return $axios.post('/admin/ai/provider/update', data);
+        },
+        providerAdd: function(data) {
+            return $axios.post('/admin/ai/provider/add', data);
+        },
+        providerInitPresets: function() {
+            return $axios.post('/admin/ai/provider/init-presets');
+        },
+        providerFetchModels: function(baseUrl, apiKey) {
+            return $axios.post('/admin/ai/provider/fetch-models', { baseUrl: baseUrl, apiKey: apiKey });
         }
     };
 

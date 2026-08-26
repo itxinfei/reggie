@@ -775,6 +775,7 @@
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../api/inventory.js"></script>
+  <script src="../../api/dashboard.js"></script>
   <script src="../../js/components.js"></script>
 
   <script>
@@ -859,9 +860,7 @@
           this.loading = true;
           try {
             // 性能优化：概览数据与库存预警无依赖，并行请求，避免串行等待
-            const dashPromise = $axios.get('/api/dashboard/all', {
-              params: { hotDishLimit: 10 }
-            });
+            const dashPromise = dashboardAll({ hotDishLimit: 10 });
             const invPromise = inventoryStatsOverview().catch(() => null);
             const [res, invRes] = await Promise.all([dashPromise, invPromise]);
 

@@ -56,3 +56,6 @@ const calculateFlashSalePrice = (params) => $axios({ url: '/marketing/tool/flash
 
 // 营销工具统计
 const getMarketingToolStatistics = (params) => $axios({ url: '/marketing/tool/statistics', method: 'get', params })
+
+// 推送预览
+const getPushPreview = (campaignId, params) => $axios({ url: `/marketing/push-preview/${campaignId}`, method: 'get', params })

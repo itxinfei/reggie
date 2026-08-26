@@ -120,5 +120,23 @@ var recommendBackendApi = {
      */
     getPushCount: function(campaignId) {
         return $axios.get('/marketing/campaigns/' + campaignId + '/push-count');
+    },
+
+    // ==================== 推荐分析 ====================
+
+    getFeedbackStats: function(params) {
+        return $axios.get('/recommend/feedback/stats', { params: params });
+    },
+
+    getPreferenceDistribution: function() {
+        return $axios.get('/recommend/preference/distribution');
+    },
+
+    getAlgoCompare: function() {
+        return $axios.get('/recommend/algo/compare');
+    },
+
+    getBrowseTrend: function(params) {
+        return $axios.get('/recommend/browse/trend', { params: params });
     }
 };

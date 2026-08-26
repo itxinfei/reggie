@@ -158,32 +158,14 @@
     <!-- 排行表格 -->
     <div class="table-card">
       <div class="chart-title">菜品食材成本排行</div>
-      <el-table aria-label="数据表格" :data="rankingData" border stripe style="width: 100%" v-loading="loading">
-        <el-table-column type="index" label="排名" width="80" align="center"></el-table-column>
-        <el-table-column prop="dishName" label="菜品名称" min-width="150" align="center"></el-table-column>
-        <el-table-column prop="materialCost" label="食材成本" width="120" align="right">
-          <template slot-scope="scope">
-            ¥{{ formatMoney(scope.row.materialCost) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="totalCost" label="总成本" width="120" align="right">
-          <template slot-scope="scope">
-            ¥{{ formatMoney(scope.row.totalCost) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="salePrice" label="售价" width="120" align="right">
-          <template slot-scope="scope">
-            ¥{{ formatMoney(scope.row.salePrice) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="profitRate" label="毛利率" width="100" align="center">
-          <template slot-scope="scope">
-            <span :style="{ color: scope.row.profitRate >= 30 ? 'var(--el-color-success)' : scope.row.profitRate >= 10 ? 'var(--el-color-warning)' : 'var(--el-color-danger)' }">
-              {{ scope.row.profitRate }}%
-            </span>
-          </template>
-        </el-table-column>
-      </el-table>
+      <crud-table aria-label="数据表格" :data="rankingData" :columns="columns" :loading="loading"
+        border stripe size="small">
+        <template #col-profitRate="{ row }">
+          <span :style="{ color: row.profitRate >= 30 ? 'var(--el-color-success)' : row.profitRate >= 10 ? 'var(--el-color-warning)' : 'var(--el-color-danger)' }">
+            {{ row.profitRate }}%
+          </span>
+        </template>
+      </crud-table>
     </div>
   </div>
 
@@ -214,6 +196,13 @@
             rates: []
           },
           rankingData: [],
+          columns: [
+            { prop: 'dishName', label: '菜品名称', min-width: 150, align: 'center' },
+            { prop: 'materialCost', label: '食材成本', width: 120, align: 'right', type: 'money' },
+            { prop: 'totalCost', label: '总成本', width: 120, align: 'right', type: 'money' },
+            { prop: 'salePrice', label: '售价', width: 120, align: 'right', type: 'money' },
+            { prop: 'profitRate', label: '毛利率', width: 100, align: 'center', slot: 'col-profitRate' }
+          ],
           trendChart: null,
           rateChart: null
         }

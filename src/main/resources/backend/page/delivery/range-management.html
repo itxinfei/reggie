@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
+<link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
     html, body {
       height: 100%;
@@ -103,6 +104,9 @@
       </div>
       <div class="ds-page-header__actions"></div>
     </header>
+    <!-- 统计卡片 -->
+    <stat-cards :cards="statsCards"></stat-cards>
+
     <!-- 搜索 + 操作栏 -->
     <table-bar
       :search-items="searchItems"
@@ -401,6 +405,14 @@
         }
       },
       computed: {
+        statsCards() {
+          return [
+            { key: 'total', icon: 'el-icon-shopping-cart-full', label: '配送规则', value: this.allData.length, color: 'primary' },
+            { key: 'circle', icon: 'el-icon-circle-check', label: '圆形范围', value: this.allData.filter(function(r){ return r.rangeType === 1 }).length, color: 'success' },
+            { key: 'polygon', icon: 'el-icon-office-building', label: '多边形范围', value: this.allData.filter(function(r){ return r.rangeType === 2 }).length, color: 'info' },
+            { key: 'active', icon: 'el-icon-time', label: '启用中', value: this.allData.filter(function(r){ return r.status === 1 }).length, color: 'warning' }
+          ]
+        },
         pagedData() {
           const start = (this.page - 1) * this.pageSize
           return this.filteredData.slice(start, start + this.pageSize)

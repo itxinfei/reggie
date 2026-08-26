@@ -10,6 +10,9 @@ const getCategoryPage = (params) => {
   })
 }
 
+// 查询全部分类列表（不分页，用于报表下拉）
+const categoryList = () => $axios({ url: '/category/list', method: 'get' })
+
 // 修改点：分类统计数据（后端直接查DB，准确无分页限制）
 const getCategoryStats = () => $axios({ url: '/category/stats', method: 'get' })
 

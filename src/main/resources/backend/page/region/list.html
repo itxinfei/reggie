@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
+    <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -22,6 +23,8 @@
         </div>
         <div class="ds-page-header__actions"></div>
       </header>
+      <!-- 统计卡片 - 使用统一的 <stat-cards> 组件 -->
+      <stat-cards :cards="statsCards"></stat-cards>
       <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
       <table-bar
         :search-items="tableSearchItems"
@@ -156,6 +159,40 @@
       created() {
         this.loadFilterOptions()
         this.fetchData()
+      },
+      computed: {
+        statsCards() {
+          return [
+            {
+              key: 'province',
+              icon: 'el-icon-office-building',
+              label: '省份',
+              value: this.counts ? Math.ceil(this.counts / 4) : 0,
+              color: 'primary'
+            },
+            {
+              key: 'city',
+              icon: 'el-icon-location',
+              label: '城市',
+              value: 0,
+              color: 'success'
+            },
+            {
+              key: 'district',
+              icon: 'el-icon-map-location',
+              label: '区/县',
+              value: 0,
+              color: 'warning'
+            },
+            {
+              key: 'total',
+              icon: 'el-icon-data-analysis',
+              label: '总计',
+              value: this.counts || 0,
+              color: 'info'
+            }
+          ]
+        }
       },
       watch: {
         'formData.level': function(newVal) {

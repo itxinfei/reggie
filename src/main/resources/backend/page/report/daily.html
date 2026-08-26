@@ -377,6 +377,7 @@
   <script src="../../js/performance-utils.js"></script>
   <script src="../../api/export.js"></script>
   <script src="../../api/report.js"></script>
+  <script src="../../api/dashboard.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../js/chart-panel.js"></script>
   <script>
@@ -558,7 +559,7 @@
             }
 
             // 趋势数据
-            const trendRes = await $axios.get('/api/dashboard/trend')
+            const trendRes = await dashboardTrend()
             if (String(trendRes.code) === '1') {
               this.renderChart(trendRes.data || [])
             } else {

@@ -124,6 +124,7 @@
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../api/report.js"></script>
+  <script src="../../api/category.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../js/chart-panel.js"></script>
   <script>
@@ -202,7 +203,7 @@
       methods: {
         loadCategories: function() {
           const self = this;
-          $axios.get('/category/list').then(function(res) {
+          categoryList().then(function(res) {
             if (res.code === 1 && res.data) {
               self.categories = res.data || [];
               // 更新搜索配置中的分类选项
@@ -255,12 +256,10 @@
           if (!self.tableData || self.tableData.length === 0 || !self.trendChart) return;
           var top3Names = self.tableData.slice(0, 3).map(function(d) { return d.name; });
           if (top3Names.length === 0) return;
-          $axios.get('/api/report/dish-trend', {
-            params: {
-              names: top3Names.join(','),
-              startDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[0] : '',
-              endDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[1] : ''
-            }
+          reportDishTrend({
+            names: top3Names.join(','),
+            startDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[0] : '',
+            endDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[1] : ''
           }).then(function(res) {
             if (res.code === 1 && res.data) self.renderTrendChart(res.data);
           }).catch(function() {});

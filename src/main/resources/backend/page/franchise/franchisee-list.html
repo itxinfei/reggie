@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -22,6 +23,9 @@
         </div>
         <div class="ds-page-header__actions"></div>
       </header>
+
+      <!-- 统计卡片 -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- 搜索 + 操作栏 -->
       <table-bar
@@ -156,6 +160,16 @@
       },
       created() {
         this.init()
+      },
+      computed: {
+        statsCards() {
+          return [
+            { key: 'total', icon: 'el-icon-office-building', label: '加盟商总数', value: this.counts || 0, color: 'primary' },
+            { key: 'enabled', icon: 'el-icon-circle-check', label: '已启用', value: this.tableData.filter(function(r){ return r.status === 1 }).length, color: 'success' },
+            { key: 'disabled', icon: 'el-icon-circle-close', label: '已禁用', value: this.tableData.filter(function(r){ return r.status === 0 }).length, color: 'info' },
+            { key: 'contracts', icon: 'el-icon-document', label: '合同关联', value: this.tableData.length, color: 'warning' }
+          ]
+        }
       },
       methods: {
         async init() {

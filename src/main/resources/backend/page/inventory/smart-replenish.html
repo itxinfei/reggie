@@ -802,10 +802,8 @@
         // ---- 导出 ----
         exportList: function () {
           this.$message.info('导出补货清单，请等待...')
-          $axios.get('/api/inventory/replenish/suggest/export', {
-            params: { days: this.suggestDays, replenishCycle: this.replenishCycle },
-            responseType: 'blob'
-          }).then(function (res) {
+          replenishSuggestExport({ days: this.suggestDays, replenishCycle: this.replenishCycle })
+            .then(function (res) {
             const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')

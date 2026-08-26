@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/consistency.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
 <div class="dashboard-container" id="platform-app">
@@ -21,6 +22,9 @@
         <el-button type="primary" size="small" @click="openAdd">添加平台</el-button>
       </div>
     </header>
+
+    <!-- 统计卡片 -->
+    <stat-cards :cards="statsCards"></stat-cards>
 
     <!-- 数据区：卡片容器 + 标准表格 -->
     <el-card shadow="never" class="ds-card">
@@ -181,6 +185,14 @@
       // 修改点：对话框标题
       dialogTitle() {
         return this.action === 'edit' ? '编辑平台配置' : '添加平台配置'
+      },
+      // 统计卡片
+      statsCards() {
+        return [
+          { key: 'total', icon: 'el-icon-office-building', label: '平台总数', value: this.counts || 0, color: 'primary' },
+          { key: 'enabled', icon: 'el-icon-circle-check', label: '已启用', value: this.tableData.filter(function(r){ return r.enabled === 1 }).length, color: 'success' },
+          { key: 'disabled', icon: 'el-icon-circle-close', label: '已停用', value: this.tableData.filter(function(r){ return r.enabled === 0 }).length, color: 'info' }
+        ]
       }
     },
     created() {

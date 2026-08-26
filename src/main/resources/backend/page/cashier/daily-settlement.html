@@ -117,56 +117,35 @@
 
     <!-- 表格 -->
     <div class="table-card">
-      <el-table aria-label="数据表格"
+      <crud-table aria-label="数据表格"
         :data="tableData"
-        border
-        stripe
-        style="width: 100%"
-        v-loading="loading">
-        <el-table-column prop="settlementDate" label="结算日期" width="120" align="center"></el-table-column>
-        <el-table-column prop="totalRevenue" label="营业额" width="120" align="right">
-          <template slot-scope="scope">
-            ¥{{ formatMoney(scope.row.totalRevenue) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="orderCount" label="订单数" width="100" align="center"></el-table-column>
-        <el-table-column prop="refundAmount" label="退款金额" width="120" align="right">
-          <template slot-scope="scope">
-            <span style="color: var(--el-color-danger);">¥{{ formatMoney(scope.row.refundAmount) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="netIncome" label="净收入" width="120" align="right">
-          <template slot-scope="scope">
-            <strong>¥{{ formatMoney(scope.row.netIncome) }}</strong>
-          </template>
-        </el-table-column>
-        <el-table-column prop="totalCost" label="总成本" width="120" align="right">
-          <template slot-scope="scope">
-            ¥{{ formatMoney(scope.row.totalCost) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="grossProfit" label="毛利润" width="120" align="right">
-          <template slot-scope="scope">
-            <span :style="{ color: scope.row.grossProfit >= 0 ? 'var(--el-color-success)' : 'var(--el-color-danger)' }">
-              ¥{{ formatMoney(scope.row.grossProfit) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100" align="center">
-          <template slot-scope="scope">
-            <span class="status-tag" :class="scope.row.status === 1 ? 'settled' : 'unsettled'">
-              {{ scope.row.status === 1 ? '已结算' : '未结算' }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="180" align="center">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" class="btn-view" @click="handleViewDetail(scope.row)">查看</el-button>
-            <el-button type="text" size="small" class="btn-warning" @click="handleCancelSettlement(scope.row)" v-if="scope.row.status === 1">取消</el-button>
-            <el-button type="text" size="small" class="btn-delete" @click="handleDelete(scope.row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+        :columns="columns"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="180"
+        border stripe size="small">
+        <template #col-refundAmount="{ row }">
+          <span style="color: var(--el-color-danger);">¥{{ formatMoney(row.refundAmount) }}</span>
+        </template>
+        <template #col-netIncome="{ row }">
+          <strong>¥{{ formatMoney(row.netIncome) }}</strong>
+        </template>
+        <template #col-grossProfit="{ row }">
+          <span :style="{ color: row.grossProfit >= 0 ? 'var(--el-color-success)' : 'var(--el-color-danger)' }">
+            ¥{{ formatMoney(row.grossProfit) }}
+          </span>
+        </template>
+        <template #col-status="{ row }">
+          <span class="status-tag" :class="row.status === 1 ? 'settled' : 'unsettled'">
+            {{ row.status === 1 ? '已结算' : '未结算' }}
+          </span>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="handleViewDetail(row)">查看</el-button>
+          <el-button type="text" size="small" class="btn-warning" @click="handleCancelSettlement(row)" v-if="row.status === 1">取消</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
     </div>
 
     <!-- 详情弹窗 -->
@@ -225,6 +204,16 @@
           loading: false,
           dateRange: [],
           tableData: [],
+          columns: [
+            { prop: 'settlementDate', label: '结算日期', width: 120, align: 'center' },
+            { prop: 'totalRevenue', label: '营业额', width: 120, align: 'right', type: 'money' },
+            { prop: 'orderCount', label: '订单数', width: 100, align: 'center' },
+            { prop: 'refundAmount', label: '退款金额', width: 120, align: 'right', slot: 'col-refundAmount' },
+            { prop: 'netIncome', label: '净收入', width: 120, align: 'right', slot: 'col-netIncome' },
+            { prop: 'totalCost', label: '总成本', width: 120, align: 'right', type: 'money' },
+            { prop: 'grossProfit', label: '毛利润', width: 120, align: 'right', slot: 'col-grossProfit' },
+            { prop: 'status', label: '状态', width: 100, align: 'center', slot: 'col-status' }
+          ],
           summary: {
             totalRevenue: 0,
             totalNetIncome: 0,

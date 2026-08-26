@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/consistency.css" />
+<link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
 <div class="dashboard-container" id="dish-mapping-app">
@@ -30,6 +31,9 @@
         <el-button size="small" @click="syncBusiness(false)">设为休息</el-button>
       </div>
     </header>
+
+    <!-- 统计卡片 -->
+    <stat-cards :cards="statsCards"></stat-cards>
 
     <!-- 筛选区 -->
     <el-card shadow="never" class="ds-card ds-card--filter">
@@ -119,6 +123,16 @@
     },
     created() {
       this.fetchData()
+    },
+    computed: {
+      statsCards() {
+        return [
+          { key: 'total', icon: 'el-icon-shopping-cart-full', label: '映射总数', value: this.counts || 0, color: 'primary' },
+          { key: 'online', icon: 'el-icon-circle-check', label: '已上架', value: this.tableData.filter(function(r){ return r.status === 1 }).length, color: 'success' },
+          { key: 'offline', icon: 'el-icon-circle-close', label: '已下架', value: this.tableData.filter(function(r){ return r.status === 0 }).length, color: 'info' },
+          { key: 'platforms', icon: 'el-icon-office-building', label: '覆盖平台', value: this.counts ? 4 : 0, color: 'warning' }
+        ]
+      }
     },
     methods: {
       async fetchData() {

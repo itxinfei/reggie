@@ -85,53 +85,25 @@
 
     <!-- 表格 -->
     <div class="table-card">
-      <el-table aria-label="数据表格"
+      <crud-table
         :data="filteredTableData"
+        :columns="columns"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="160"
         border
         stripe
-        style="width: 100%"
-        v-loading="loading">
-        <el-table-column prop="dishName" label="菜品名称" min-width="150" align="center"></el-table-column>
-        <el-table-column prop="materialCost" label="食材成本" width="120" align="right">
-          <template slot-scope="scope">
-            ¥{{ formatMoney(scope.row.materialCost) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="laborCost" label="人工成本" width="120" align="right">
-          <template slot-scope="scope">
-            ¥{{ formatMoney(scope.row.laborCost) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="otherCost" label="其他成本" width="120" align="right">
-          <template slot-scope="scope">
-            ¥{{ formatMoney(scope.row.otherCost) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="totalCost" label="总成本" width="120" align="right">
-          <template slot-scope="scope">
-            <strong>¥{{ formatMoney(scope.row.totalCost) }}</strong>
-          </template>
-        </el-table-column>
-        <el-table-column prop="salePrice" label="售价" width="120" align="right">
-          <template slot-scope="scope">
-            ¥{{ formatMoney(scope.row.salePrice) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="profitRate" label="毛利率" width="120" align="center">
-          <template slot-scope="scope">
-            <span class="profit-rate" :class="getProfitRateClass(scope.row.profitRate)">
-              {{ scope.row.profitRate }}%
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="150" align="center" show-overflow-tooltip></el-table-column>
-        <el-table-column label="操作" width="180" align="center" fixed="right">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" @click="handleEdit(scope.row)">编辑</el-button>
-            <el-button type="text" size="small" style="color: var(--el-color-danger);" @click="handleDelete(scope.row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+        aria-label="数据表格">
+        <template #col-profitRate="{ row }">
+          <span class="profit-rate" :class="getProfitRateClass(row.profitRate)">
+            {{ row.profitRate }}%
+          </span>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-edit" @click="handleEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
     </div>
 
     <!-- 新增/编辑对话框 -->
@@ -191,6 +163,16 @@
           loading: false,
           searchName: '',
           tableData: [],
+          columns: [
+            { prop: 'dishName', label: '菜品名称', width: 160, align: 'left' },
+            { prop: 'materialCost', label: '食材成本', width: 110, align: 'right', type: 'money' },
+            { prop: 'laborCost', label: '人工成本', width: 110, align: 'right', type: 'money' },
+            { prop: 'otherCost', label: '其他成本', width: 110, align: 'right', type: 'money' },
+            { prop: 'totalCost', label: '总成本', width: 110, align: 'right', type: 'money' },
+            { prop: 'salePrice', label: '售价', width: 110, align: 'right', type: 'money' },
+            { prop: 'profitRate', label: '毛利率', width: 100, align: 'center', slot: 'col-profitRate' },
+            { prop: 'remark', label: '备注', min-width: 180, align: 'left' }
+          ],
           dialogVisible: false,
           dialogTitle: '新增菜品成本',
           submitLoading: false,

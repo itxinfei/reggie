@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style lang="less" scoped>
     /* ========== 出库单卡片 ========== */
     .out-form-card {
@@ -91,6 +92,9 @@
         </div>
         <div class="ds-page-header__actions"></div>
       </header>
+
+      <!-- 统计卡片 -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- 出库单 -->
       <el-card class="out-form-card" shadow="hover">
@@ -286,6 +290,15 @@
       created() {
         this.loadMaterialOptions()
         this.fetchRecords()
+      },
+      computed: {
+        statsCards() {
+          return [
+            { key: 'total', icon: 'el-icon-shopping-cart-full', label: '出库记录', value: this.counts || 0, color: 'primary' },
+            { key: 'qty', icon: 'el-icon-truck', label: '出库数量', value: this.tableData.reduce(function(s, r){ return s + (Number(r.quantity) || 0) }, 0), color: 'success' },
+            { key: 'materials', icon: 'el-icon-office-building', label: '涉及食材', value: this.tableData.length, color: 'info' }
+          ]
+        }
       },
       methods: {
         loadMaterialOptions() {

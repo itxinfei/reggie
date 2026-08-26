@@ -72,10 +72,11 @@ public interface OrderMapper extends BaseMapper<Orders> {
     /**
      * 聚合指定租户、状态、起始时间之后的订单金额总和（替代全量加载内存求和）
      * 使用 @InterceptorIgnore 避免租户拦截器重复追加 tenant_id 条件，由参数自行过滤
+     * 注意：原生注解 SQL 不会自动应用 @TableLogic 逻辑删除过滤，需手动添加 is_deleted = 0。
      */
     @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT COALESCE(SUM(amount), 0) FROM orders "
-            + "WHERE tenant_id = #{tenantId} AND status = #{status} AND order_time >= #{startTime}")
+            + "WHERE tenant_id = #{tenantId} AND status = #{status} AND order_time >= #{startTime} AND is_deleted = 0")
     BigDecimal sumAmount(@Param("tenantId") Long tenantId,
                          @Param("status") int status,
                          @Param("startTime") LocalDateTime startTime);

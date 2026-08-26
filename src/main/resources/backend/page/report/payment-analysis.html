@@ -204,7 +204,7 @@
           loadPaymentTrend: function() {
             const self = this;
             if (!self.trendChart) return;
-            $axios.get('/api/report/payment/trend', { params: { startDate: self.dateRange[0], endDate: self.dateRange[1] } })
+            reportPaymentTrend({ startDate: self.dateRange[0], endDate: self.dateRange[1] })
               .then(function(res) { if (res.code === 1 && res.data) self.renderPaymentTrend(res.data); })
               .catch(function() {});
           },

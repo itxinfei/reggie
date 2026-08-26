@@ -51,3 +51,6 @@ function queryEmployeeById (id) {
     method: 'get'
   })
 }
+
+// 优惠券模板分页
+const couponTemplatePage = (params) => $axios({ url: '/api/member/coupon-template/page', method: 'get', params })

@@ -230,7 +230,7 @@
 
         // 加载反馈分布
         loadFeedback() {
-            $axios.get('/recommend/feedback/stats', { params: { days: 7 } }).then(res => {
+            recommendBackendApi.getFeedbackStats({ days: 7 }).then(res => {
                 if (res.code === 1 && res.data) {
                     this.renderFeedbackChart(res.data);
                 } else {
@@ -267,7 +267,7 @@
 
         // 加载偏好分布
         loadPreferences() {
-            $axios.get('/recommend/preference/distribution').then(res => {
+            recommendBackendApi.getPreferenceDistribution().then(res => {
                 if (res.code === 1 && res.data && res.data.length > 0) {
                     this.renderPreferenceChart(res.data);
                 } else {
@@ -302,7 +302,7 @@
 
         // 算法效果对比
         loadAlgoCompare() {
-            $axios.get('/recommend/algo/compare').then(res => {
+            recommendBackendApi.getAlgoCompare().then(res => {
                 if (res.code === 1 && res.data) {
                     this.renderAlgoChart(res.data);
                 } else {
@@ -343,7 +343,7 @@
 
         // 浏览趋势
         loadBrowseTrend() {
-            $axios.get('/recommend/browse/trend', { params: { days: 7 } }).then(res => {
+            recommendBackendApi.getBrowseTrend({ days: 7 }).then(res => {
                 if (res.code === 1 && res.data) {
                     this.renderBrowseChart(res.data);
                 } else {
