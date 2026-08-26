@@ -99,6 +99,8 @@ public class PlatformOrderPersistServiceImpl implements PlatformOrderPersistServ
         order.setNumber(generateOrderNumber());
         order.setStatus(PLATFORM_ORDER_STATUS);
         order.setAmount(po.getAmount() != null ? po.getAmount() : BigDecimal.ZERO);
+        // 平台订单无本地用户，userId 置 0 以通过字段非空校验和数据库约束
+        order.setUserId(0L);
         order.setPayMethod(PLATFORM_PAY_METHOD);
         order.setRemark(StringUtils.isNotBlank(po.getRemark()) ? po.getRemark() : "平台外卖订单");
         order.setSource("TAKEOUT");
