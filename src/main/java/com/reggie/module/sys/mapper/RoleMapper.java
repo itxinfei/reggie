@@ -1,7 +1,7 @@
 package com.reggie.module.sys.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.reggie.module.sys.entity.Role;
+import com.reggie.module.sys.model.Role;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -54,3 +54,4 @@ public interface RoleMapper extends BaseMapper<Role> {
             + "FROM role r WHERE r.is_deleted = 0")
     Map<String, Object> statRoles();
 }
+

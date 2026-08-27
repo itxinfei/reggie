@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.reggie.module.urgency.mapper.UrgencyMapper">
+
+    <resultMap id="UrgencyRecordResultMap" type="com.reggie.module.urgency.model.UrgencyRecord">
+        <id property="id" column="id"/>
+        <result property="orderId" column="order_id"/>
+        <result property="memberId" column="member_id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="times" column="times"/>
+        <result property="status" column="status"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <select id="listByMemberId" resultMap="UrgencyRecordResultMap">
+        SELECT *
+        FROM urgency_record
+        WHERE member_id = #{memberId}
+          AND tenant_id = #{tenantId}
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countTodayByMember" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM urgency_record
+        WHERE member_id = #{memberId}
+          AND tenant_id = #{tenantId}
+          AND DATE(create_time) = #{date}
+    </select>
+
+    <select id="getUrgencyStats" resultType="java.util.Map">
+        SELECT
+            COUNT(*) AS totalUrgency,
+            SUM(CASE WHEN DATE(create_time) = CURDATE() THEN 1 ELSE 0 END) AS todayUrgency,
+            SUM(CASE WHEN create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS weekUrgency
+        FROM urgency_record
+        WHERE tenant_id = #{tenantId}
+    </select>
+
+    <select id="countToday" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM urgency_record
+        WHERE tenant_id = #{tenantId}
+          AND DATE(create_time) = #{date}
+    </select>
+
+    <select id="countWeek" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM urgency_record
+        WHERE tenant_id = #{tenantId}
+          AND create_time &gt;= #{weekStart}
+    </select>
+
+</mapper>

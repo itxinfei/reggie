@@ -2,7 +2,7 @@ package com.reggie.module.sys.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
-import com.reggie.module.sys.entity.SystemConfig;
+import com.reggie.module.sys.model.SystemConfig;
 import com.reggie.module.sys.mapper.SystemConfigMapper;
 import com.reggie.module.sys.service.SystemConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -179,6 +179,7 @@ public class SystemConfigServiceImpl extends com.baomidou.mybatisplus.extension.
         return this.removeById(id);
     }
 }
+
 
 
 

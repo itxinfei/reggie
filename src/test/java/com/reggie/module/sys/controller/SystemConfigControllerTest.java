@@ -2,7 +2,7 @@ package com.reggie.module.sys.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
-import com.reggie.module.sys.entity.SystemConfig;
+import com.reggie.module.sys.model.SystemConfig;
 import com.reggie.module.sys.service.SystemConfigService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

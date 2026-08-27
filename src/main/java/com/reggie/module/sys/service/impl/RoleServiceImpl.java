@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
-import com.reggie.module.sys.entity.Role;
-import com.reggie.module.sys.entity.RolePermission;
+import com.reggie.module.sys.model.Role;
+import com.reggie.module.sys.model.RolePermission;
 import com.reggie.module.sys.mapper.RoleMapper;
 import com.reggie.module.sys.mapper.RolePermissionMapper;
 import com.reggie.module.sys.service.RoleService;
@@ -235,3 +235,4 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         return true;
     }
 }
+

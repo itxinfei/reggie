@@ -1,6 +1,6 @@
 package com.reggie.module.sys.service.impl;
 
-import com.reggie.module.sys.entity.Permission;
+import com.reggie.module.sys.model.Permission;
 import com.reggie.module.sys.mapper.PermissionMapper;
 import com.reggie.module.sys.service.PermissionService;
 import lombok.extern.slf4j.Slf4j;
@@ -227,6 +227,7 @@ public class PermissionServiceImpl implements PermissionService {
         return tree;
     }
 }
+
 
 
 

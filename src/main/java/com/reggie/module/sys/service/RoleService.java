@@ -1,7 +1,7 @@
 package com.reggie.module.sys.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.reggie.module.sys.entity.Role;
+import com.reggie.module.sys.model.Role;
 
 import java.util.List;
 import java.util.Map;
@@ -111,3 +111,4 @@ public interface RoleService extends IService<Role> {
      */
     boolean deleteTenantRole(Long roleId);
 }
+

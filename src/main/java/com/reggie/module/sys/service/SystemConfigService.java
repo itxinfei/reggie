@@ -1,7 +1,7 @@
 package com.reggie.module.sys.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.reggie.module.sys.entity.SystemConfig;
+import com.reggie.module.sys.model.SystemConfig;
 
 import java.util.List;
 import java.util.Map;
@@ -106,3 +106,4 @@ public interface SystemConfigService extends IService<SystemConfig> {
      */
     boolean deleteTenantConfig(Long id);
 }
+

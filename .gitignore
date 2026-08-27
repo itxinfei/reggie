@@ -31,6 +31,8 @@ compile-errors*.txt
 *.myi
 # 例外：H2 内存库测试 Schema（纯 DDL，无数据，单元测试依赖）
 !src/test/resources/*.sql
+# 例外：数据库迁移脚本（Flyway 格式，随代码版本管理）
+!src/main/resources/db/migration/*.sql
 
 # ----------------------------------------------------------
 # 日志文件
@@ -207,3 +209,4 @@ _pre/
 db_snapshot_live.sql
 # 完整 mysqldump 转储（本地调试用，160KB+，不提交）
 schema-mysql.sql
+review-report.html

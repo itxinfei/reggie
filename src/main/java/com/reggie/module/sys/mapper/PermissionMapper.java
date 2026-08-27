@@ -1,7 +1,7 @@
 package com.reggie.module.sys.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.reggie.module.sys.entity.Permission;
+import com.reggie.module.sys.model.Permission;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -65,3 +65,4 @@ public interface PermissionMapper extends BaseMapper<Permission> {
             + "</script>")
     List<Permission> listByRoleIds(@Param("roleIds") List<Long> roleIds);
 }
+

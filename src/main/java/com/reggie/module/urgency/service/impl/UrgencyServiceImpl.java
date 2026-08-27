@@ -1,12 +1,23 @@
 package com.reggie.module.urgency.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.module.urgency.dto.UrgencyFrequencyVO;
+import com.reggie.module.urgency.dto.UrgencyRecordVO;
+import com.reggie.module.urgency.dto.UrgencyStatsVO;
+import com.reggie.module.urgency.mapper.UrgencyMapper;
 import com.reggie.module.urgency.model.UrgencyOrder;
+import com.reggie.module.urgency.model.UrgencyRecord;
 import com.reggie.module.urgency.service.UrgencyService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,7 +26,7 @@ import java.util.Map;
 
 /**
  * 催单服务实现
- * 当前使用 Mock 数据填充，待后续接入真实订单数据源
+ * 提供催单记录持久化、频率控制、催单统计等能力
  *
  * @author reggie
  * @since 2026-08-23
@@ -24,13 +35,21 @@ import java.util.Map;
 @Service
 public class UrgencyServiceImpl implements UrgencyService {
 
+    @Autowired
+    private UrgencyMapper urgencyMapper;
+
+    /** 每人每天最大催单次数 */
+    private static final int MAX_URGENCY_PER_DAY = 3;
+
+    /** 记录列表查询上限 */
+    private static final int RECORD_QUERY_LIMIT = 50;
+
     /** Mock 订单数据 */
     private static final List<UrgencyOrder> MOCK_ORDERS = new ArrayList<>();
 
     static {
         LocalDateTime now = LocalDateTime.now();
 
-        // 订单1：制作中，已催单
         UrgencyOrder order1 = new UrgencyOrder();
         order1.setId(1001L);
         order1.setOrderId(2001L);
@@ -45,7 +64,6 @@ public class UrgencyServiceImpl implements UrgencyService {
         order1.setTenantId(1L);
         MOCK_ORDERS.add(order1);
 
-        // 订单2：制作中，超时可催
         UrgencyOrder order2 = new UrgencyOrder();
         order2.setId(1002L);
         order2.setOrderId(2002L);
@@ -60,7 +78,6 @@ public class UrgencyServiceImpl implements UrgencyService {
         order2.setTenantId(1L);
         MOCK_ORDERS.add(order2);
 
-        // 订单3：等待叫号，超时可催
         UrgencyOrder order3 = new UrgencyOrder();
         order3.setId(1003L);
         order3.setOrderId(2003L);
@@ -75,7 +92,6 @@ public class UrgencyServiceImpl implements UrgencyService {
         order3.setTenantId(1L);
         MOCK_ORDERS.add(order3);
 
-        // 订单4：制作中，正常进行
         UrgencyOrder order4 = new UrgencyOrder();
         order4.setId(1004L);
         order4.setOrderId(2004L);
@@ -90,7 +106,6 @@ public class UrgencyServiceImpl implements UrgencyService {
         order4.setTenantId(1L);
         MOCK_ORDERS.add(order4);
 
-        // 订单5：已完成
         UrgencyOrder order5 = new UrgencyOrder();
         order5.setId(1005L);
         order5.setOrderId(2005L);
@@ -105,7 +120,6 @@ public class UrgencyServiceImpl implements UrgencyService {
         order5.setTenantId(1L);
         MOCK_ORDERS.add(order5);
 
-        // 订单6：制作中，已催单
         UrgencyOrder order6 = new UrgencyOrder();
         order6.setId(1006L);
         order6.setOrderId(2006L);
@@ -120,7 +134,6 @@ public class UrgencyServiceImpl implements UrgencyService {
         order6.setTenantId(1L);
         MOCK_ORDERS.add(order6);
 
-        // 订单7：等待叫号
         UrgencyOrder order7 = new UrgencyOrder();
         order7.setId(1007L);
         order7.setOrderId(2007L);
@@ -135,7 +148,6 @@ public class UrgencyServiceImpl implements UrgencyService {
         order7.setTenantId(1L);
         MOCK_ORDERS.add(order7);
 
-        // 订单8：制作中，超时可催
         UrgencyOrder order8 = new UrgencyOrder();
         order8.setId(1008L);
         order8.setOrderId(2008L);
@@ -151,6 +163,189 @@ public class UrgencyServiceImpl implements UrgencyService {
         MOCK_ORDERS.add(order8);
     }
 
+    // ==================== 催单记录持久化与频率控制 ====================
+
+    /**
+     * 发起催单操作，含频率控制
+     * 每人每天最多催单 MAX_URGENCY_PER_DAY 次，超出则返回错误
+     *
+     * @param orderId  订单ID
+     * @param memberId 会员ID
+     * @param orderNo  订单号
+     * @return 催单结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public R<Map<String, Object>> triggerUrgency(Long orderId, Long memberId, String orderNo) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        log.info("[催单] 发起催单: orderId={}, memberId={}, orderNo={}, tenantId={}", orderId, memberId, orderNo, tenantId);
+
+        if (orderId == null) {
+            return R.error("订单ID不能为空");
+        }
+        if (memberId == null) {
+            return R.error("会员ID不能为空");
+        }
+        if (orderNo == null || orderNo.trim().isEmpty()) {
+            return R.error("订单号不能为空");
+        }
+
+        // 频率控制检查
+        LocalDate today = LocalDate.now();
+        Integer todayCount = urgencyMapper.countTodayByMember(memberId, tenantId, today);
+
+        if (todayCount != null && todayCount >= MAX_URGENCY_PER_DAY) {
+            log.warn("[催单] 频率限制: memberId={} 今日已催单{}次, 上限{}", memberId, todayCount, MAX_URGENCY_PER_DAY);
+            Map<String, Object> data = new HashMap<>();
+            data.put("canUrgency", false);
+            data.put("todayCount", todayCount);
+            data.put("maxAllowed", MAX_URGENCY_PER_DAY);
+            return R.error("催单过于频繁，今日剩余次数不足（今日最多" + MAX_URGENCY_PER_DAY + "次）");
+        }
+
+        // 查询该订单是否已有催单记录
+        LambdaQueryWrapper<UrgencyRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UrgencyRecord::getOrderId, orderId)
+                .eq(UrgencyRecord::getTenantId, tenantId);
+        UrgencyRecord existingRecord = urgencyMapper.selectOne(wrapper);
+
+        if (existingRecord != null && "SENT".equals(existingRecord.getStatus())) {
+            // 已有未处理记录，次数+1
+            existingRecord.setTimes(existingRecord.getTimes() + 1);
+            existingRecord.setUpdateTime(LocalDateTime.now());
+            urgencyMapper.updateById(existingRecord);
+            log.info("[催单] 更新催单记录: id={}, times={}", existingRecord.getId(), existingRecord.getTimes());
+        } else {
+            // 新建催单记录
+            UrgencyRecord record = new UrgencyRecord();
+            record.setOrderId(orderId);
+            record.setMemberId(memberId);
+            record.setOrderNo(orderNo);
+            record.setTimes(1);
+            record.setStatus("SENT");
+            record.setTenantId(tenantId);
+            record.setCreateTime(LocalDateTime.now());
+            record.setUpdateTime(LocalDateTime.now());
+            urgencyMapper.insert(record);
+            log.info("[催单] 新增催单记录: id={}, orderId={}, memberId={}", record.getId(), orderId, memberId);
+        }
+
+        // 返回催单结果
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("orderId", orderId);
+        result.put("memberId", memberId);
+        result.put("orderNo", orderNo);
+        result.put("todayCount", todayCount + 1);
+        result.put("maxAllowed", MAX_URGENCY_PER_DAY);
+        result.put("remainCount", MAX_URGENCY_PER_DAY - (todayCount + 1));
+        return R.success(result);
+    }
+
+    /**
+     * 查询催单记录列表
+     *
+     * @param memberId 会员ID
+     * @return 催单记录列表
+     */
+    @Override
+    public R<Map<String, Object>> getUrgencyRecords(Long memberId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        log.info("[催单] 查询催单记录: memberId={}, tenantId={}", memberId, tenantId);
+
+        if (memberId == null) {
+            return R.error("会员ID不能为空");
+        }
+
+        List<UrgencyRecord> records = urgencyMapper.listByMemberId(memberId, tenantId, RECORD_QUERY_LIMIT);
+
+        List<Map<String, Object>> recordList = new ArrayList<>();
+        for (UrgencyRecord record : records) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", record.getId());
+            item.put("orderId", record.getOrderId());
+            item.put("orderNo", record.getOrderNo());
+            item.put("times", record.getTimes());
+            item.put("status", record.getStatus());
+            item.put("createTime", record.getCreateTime());
+            recordList.add(item);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", recordList);
+        result.put("total", recordList.size());
+        return R.success(result);
+    }
+
+    /**
+     * 获取催单统计数据
+     *
+     * @return 催单统计数据
+     */
+    @Override
+    public R<Map<String, Object>> getUrgencyStats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        log.info("[催单] 获取催单统计: tenantId={}", tenantId);
+
+        List<Map<String, Object>> statsList = urgencyMapper.getUrgencyStats(tenantId);
+
+        Integer totalUrgency = 0;
+        Integer todayUrgency = 0;
+        Integer weekUrgency = 0;
+        if (statsList != null && !statsList.isEmpty()) {
+            Map<String, Object> stats = statsList.get(0);
+            totalUrgency = getIntValue(stats, "totalUrgency");
+            todayUrgency = getIntValue(stats, "todayUrgency");
+            weekUrgency = getIntValue(stats, "weekUrgency");
+        }
+
+        // 计算平均响应时间
+        BigDecimal avgResponse = urgencyMapper.avgResponseTime(tenantId);
+        Double avgResponseTime = (avgResponse != null) ? avgResponse.doubleValue() : 0.0;
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalUrgency", totalUrgency);
+        result.put("todayUrgency", todayUrgency);
+        result.put("weekUrgency", weekUrgency);
+        result.put("avgResponseTime", avgResponseTime);
+        return R.success(result);
+    }
+
+    /**
+     * 频率检查
+     *
+     * @param memberId 会员ID
+     * @return 频率控制信息
+     */
+    @Override
+    public R<Map<String, Object>> checkFrequency(Long memberId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        log.info("[催单] 检查频率: memberId={}, tenantId={}", memberId, tenantId);
+
+        if (memberId == null) {
+            return R.error("会员ID不能为空");
+        }
+
+        LocalDate today = LocalDate.now();
+        Integer todayCount = urgencyMapper.countTodayByMember(memberId, tenantId, today);
+        if (todayCount == null) {
+            todayCount = 0;
+        }
+
+        boolean canUrgency = todayCount < MAX_URGENCY_PER_DAY;
+        int remainCount = Math.max(0, MAX_URGENCY_PER_DAY - todayCount);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("memberId", memberId);
+        result.put("todayCount", todayCount);
+        result.put("maxAllowed", MAX_URGENCY_PER_DAY);
+        result.put("canUrgency", canUrgency);
+        result.put("remainCount", remainCount);
+        return R.success(result);
+    }
+
+    // ==================== 以下保留原有 Mock 业务逻辑 ====================
+
     @Override
     public Map<String, Object> getUrgencyOverview(Long tenantId) {
         Map<String, Object> overview = new HashMap<>();
@@ -160,19 +355,16 @@ public class UrgencyServiceImpl implements UrgencyService {
         long waitingCallCount = orders.stream().filter(o -> "WAITING_CALL".equals(o.getStatus())).count();
         long completedCount = orders.stream().filter(o -> "COMPLETED".equals(o.getStatus())).count();
 
-        // 超时可催：超过15分钟且未完成
         long overdueCount = orders.stream()
                 .filter(o -> !"COMPLETED".equals(o.getStatus()))
                 .filter(o -> Duration.between(o.getCreateTime(), LocalDateTime.now()).toMinutes() >= 15)
                 .count();
 
-        // 催单中订单（制作中且已超过10分钟）
         long urgentCount = orders.stream()
                 .filter(o -> "COOKING".equals(o.getStatus()))
                 .filter(o -> Duration.between(o.getCreateTime(), LocalDateTime.now()).toMinutes() >= 10)
                 .count();
 
-        // 平均等待时间（仅未完成的订单）
         List<UrgencyOrder> pendingOrders = new ArrayList<>();
         for (UrgencyOrder order : orders) {
             if (!"COMPLETED".equals(order.getStatus())) {
@@ -222,7 +414,6 @@ public class UrgencyServiceImpl implements UrgencyService {
             orders = filtered;
         }
 
-        // 按等待时间降序排列
         orders = sortByWaitTimeDesc(orders);
 
         LocalDateTime now = LocalDateTime.now();
@@ -254,7 +445,7 @@ public class UrgencyServiceImpl implements UrgencyService {
             return R.error("订单ID不能为空");
         }
 
-        // 模拟催单操作
+        // 对指定订单发起催单操作
         log.info("[催单] 催单操作成功: orderId={}", orderId);
         return R.success(null);
     }
@@ -285,13 +476,11 @@ public class UrgencyServiceImpl implements UrgencyService {
                 LocalDateTime now = LocalDateTime.now();
                 detail.put("waitMinutes", Duration.between(order.getCreateTime(), now).toMinutes());
 
-                // 预估剩余时间
                 if (order.getEstimatedFinishTime() != null) {
                     long remainSeconds = Duration.between(now, order.getEstimatedFinishTime()).getSeconds();
                     detail.put("estimatedRemainSeconds", remainSeconds > 0 ? remainSeconds : 0);
                 }
 
-                // 是否超时可催
                 long waitMinutes = Duration.between(order.getCreateTime(), now).toMinutes();
                 detail.put("isOverdue", waitMinutes >= 15);
 
@@ -302,35 +491,6 @@ public class UrgencyServiceImpl implements UrgencyService {
         return detail;
     }
 
-    /**
-     * 按租户过滤订单
-     */
-    private List<UrgencyOrder> filterByTenant(Long tenantId) {
-        List<UrgencyOrder> filtered = new ArrayList<>();
-        for (UrgencyOrder order : MOCK_ORDERS) {
-            if (tenantId == null || tenantId.equals(order.getTenantId())) {
-                filtered.add(order);
-            }
-        }
-        return filtered;
-    }
-
-    /**
-     * 按等待时间降序排列
-     */
-    private List<UrgencyOrder> sortByWaitTimeDesc(List<UrgencyOrder> orders) {
-        List<UrgencyOrder> sorted = new ArrayList<>(orders);
-        sorted.sort((a, b) -> {
-            long timeA = Duration.between(a.getCreateTime(), LocalDateTime.now()).toMinutes();
-            long timeB = Duration.between(b.getCreateTime(), LocalDateTime.now()).toMinutes();
-            return Long.compare(timeB, timeA);
-        });
-        return sorted;
-    }
-
-    /**
-     * 获取叫号排队列表（Mock 数据）
-     */
     @Override
     public Map<String, Object> getQueueList(Long tenantId) {
         Map<String, Object> queue = new HashMap<>();
@@ -362,9 +522,6 @@ public class UrgencyServiceImpl implements UrgencyService {
         return queue;
     }
 
-    /**
-     * 获取催单统计汇总（Mock 数据）
-     */
     @Override
     public Map<String, Object> getUrgencySummary(Long tenantId) {
         Map<String, Object> summary = new HashMap<>();
@@ -376,6 +533,34 @@ public class UrgencyServiceImpl implements UrgencyService {
         return summary;
     }
 
+    // ==================== 私有方法 ====================
+
+    /**
+     * 按租户过滤订单
+     */
+    private List<UrgencyOrder> filterByTenant(Long tenantId) {
+        List<UrgencyOrder> filtered = new ArrayList<>();
+        for (UrgencyOrder order : MOCK_ORDERS) {
+            if (tenantId == null || tenantId.equals(order.getTenantId())) {
+                filtered.add(order);
+            }
+        }
+        return filtered;
+    }
+
+    /**
+     * 按等待时间降序排列
+     */
+    private List<UrgencyOrder> sortByWaitTimeDesc(List<UrgencyOrder> orders) {
+        List<UrgencyOrder> sorted = new ArrayList<>(orders);
+        sorted.sort((a, b) -> {
+            long timeA = Duration.between(a.getCreateTime(), LocalDateTime.now()).toMinutes();
+            long timeB = Duration.between(b.getCreateTime(), LocalDateTime.now()).toMinutes();
+            return Long.compare(timeB, timeA);
+        });
+        return sorted;
+    }
+
     /**
      * 状态描述
      */
@@ -383,15 +568,30 @@ public class UrgencyServiceImpl implements UrgencyService {
         if (status == null) {
             return "";
         }
-        switch (status) {
-            case "COOKING":
-                return "制作中";
-            case "WAITING_CALL":
-                return "等待叫号";
-            case "COMPLETED":
-                return "已完成";
-            default:
-                return "未知状态";
+        if ("COOKING".equals(status)) {
+            return "制作中";
+        } else if ("WAITING_CALL".equals(status)) {
+            return "等待叫号";
+        } else if ("COMPLETED".equals(status)) {
+            return "已完成";
         }
+        return "未知状态";
+    }
+
+    /**
+     * 从 Map 中安全获取 Integer 值
+     */
+    private Integer getIntValue(Map<String, Object> map, String key) {
+        if (map == null || map.get(key) == null) {
+            return 0;
+        }
+        Object val = map.get(key);
+        if (val instanceof Integer) {
+            return (Integer) val;
+        }
+        if (val instanceof Long) {
+            return ((Long) val).intValue();
+        }
+        return Integer.parseInt(val.toString());
     }
 }

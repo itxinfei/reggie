@@ -3,7 +3,7 @@ package com.reggie.common.aspect;
 import com.reggie.common.R;
 import com.reggie.common.BaseContext;
 import com.reggie.common.annotation.RequiresPermission;
-import com.reggie.module.sys.entity.Role;
+import com.reggie.module.sys.model.Role;
 import com.reggie.module.sys.mapper.RoleMapper;
 import com.reggie.module.sys.service.PermissionService;
 import lombok.extern.slf4j.Slf4j;
@@ -279,3 +279,4 @@ public class PermissionAspect {
         }
     }
 }
+

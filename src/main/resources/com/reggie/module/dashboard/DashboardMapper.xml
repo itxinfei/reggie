@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    仪表盘聚合查询 Mapper XML
+    所有查询均通过 @InterceptorIgnore 绕过租户拦截器，由 SQL 中显式拼接 tenant_id 参数保证租户隔离。
+    注意：orders/member 表有 is_deleted 逻辑删除字段，所有查询需手动添加 is_deleted = 0 条件。
+-->
+<mapper namespace="com.reggie.module.dashboard.mapper.DashboardMapper">
+
+    <!-- ==================== 销售概览 ==================== -->
+    <select id="getSalesOverview" resultType="java.util.HashMap">
+        SELECT
+            COALESCE(SUM(CASE
+                WHEN o.status NOT IN (5, 6)
+                THEN o.amount ELSE 0 END), 0) AS totalSales,
+            COALESCE(SUM(CASE
+                WHEN o.order_time BETWEEN #{todayStart} AND #{todayEnd}
+                AND o.status NOT IN (5, 6)
+                THEN o.amount ELSE 0 END), 0) AS todaySales,
+            COALESCE(SUM(CASE
+                WHEN o.order_time &gt;= #{todayEnd} - INTERVAL 1 DAY
+                AND o.order_time &lt; #{todayStart}
+                AND o.status NOT IN (5, 6)
+                THEN o.amount ELSE 0 END), 0) AS yesterdaySales,
+            COALESCE(SUM(CASE
+                WHEN o.order_time &gt;= #{weekStart}
+                AND o.order_time &lt;= #{todayEnd}
+                AND o.status NOT IN (5, 6)
+                THEN o.amount ELSE 0 END), 0) AS weekSales,
+            COALESCE(SUM(CASE
+                WHEN o.order_time &gt;= #{monthStart}
+                AND o.order_time &lt;= #{todayEnd}
+                AND o.status NOT IN (5, 6)
+                THEN o.amount ELSE 0 END), 0) AS monthSales
+        FROM orders o
+        WHERE o.tenant_id = #{tenantId}
+          AND o.is_deleted = 0
+    </select>
+
+    <!-- ==================== 订单概览 ==================== -->
+    <select id="getOrderOverview" resultType="java.util.HashMap">
+        SELECT
+            COUNT(*) AS totalOrders,
+            SUM(CASE
+                WHEN o.order_time BETWEEN #{todayStart} AND #{todayEnd}
+                THEN 1 ELSE 0 END) AS todayOrders,
+            SUM(CASE
+                WHEN o.order_time &gt;= #{weekStart}
+                AND o.order_time &lt;= #{todayEnd}
+                THEN 1 ELSE 0 END) AS weekOrders,
+            SUM(CASE
+                WHEN o.status IN (1, 2)
+                THEN 1 ELSE 0 END) AS pendingOrders,
+            SUM(CASE
+                WHEN o.status = 4
+                THEN 1 ELSE 0 END) AS completedOrders,
+            SUM(CASE
+                WHEN o.status = 5
+                THEN 1 ELSE 0 END) AS cancelOrders
+        FROM orders o
+        WHERE o.tenant_id = #{tenantId}
+          AND o.is_deleted = 0
+    </select>
+
+    <!-- ==================== 收入趋势 ==================== -->
+    <select id="getRevenueTrend" resultType="java.util.HashMap">
+        SELECT
+            DATE(o.order_time) AS date,
+            COUNT(*) AS orderCount,
+            COALESCE(SUM(CASE
+                WHEN o.status = 4
+                THEN o.amount ELSE 0 END), 0) AS revenue
+        FROM orders o
+        WHERE o.tenant_id = #{tenantId}
+          AND o.is_deleted = 0
+          AND DATE(o.order_time) BETWEEN #{startDate} AND #{endDate}
+        GROUP BY DATE(o.order_time)
+        ORDER BY DATE(o.order_time) ASC
+    </select>
+
+    <!-- ==================== 热销菜品 ==================== -->
+    <select id="getTopProducts" resultType="java.util.HashMap">
+        SELECT
+            d.id AS dishId,
+            d.name AS dishName,
+            c.name AS category,
+            COALESCE(SUM(od.number), 0) AS salesCount,
+            COALESCE(SUM(od.amount), 0) AS revenue
+        FROM order_detail od
+        INNER JOIN orders o ON o.id = od.order_id
+        INNER JOIN dish d ON d.id = od.dish_id
+        LEFT JOIN category c ON c.id = d.category_id
+        WHERE od.tenant_id = #{tenantId}
+          AND o.tenant_id = #{tenantId}
+          AND od.is_deleted = 0
+          AND o.is_deleted = 0
+          AND d.is_deleted = 0
+        GROUP BY od.dish_id, d.name, c.name
+        ORDER BY salesCount DESC, revenue DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- ==================== 会员概览 ==================== -->
+    <select id="getMemberOverview" resultType="java.util.HashMap">
+        SELECT
+            COUNT(*) AS totalMembers,
+            SUM(CASE
+                WHEN m.created_time &gt;= #{monthStart}
+                AND m.created_time &lt;= #{monthEnd}
+                THEN 1 ELSE 0 END) AS newMembersThisMonth
+        FROM member m
+        WHERE m.tenant_id = #{tenantId}
+          AND m.is_deleted = 0
+    </select>
+
+</mapper>

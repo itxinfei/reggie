@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
 import com.reggie.common.RateLimit;
-import com.reggie.module.sys.entity.Permission;
-import com.reggie.module.sys.entity.Role;
+import com.reggie.module.sys.model.Permission;
+import com.reggie.module.sys.model.Role;
 import com.reggie.common.annotation.RequiresAdmin;
 import com.reggie.common.aspect.PermissionAspect;
 import com.reggie.module.sys.service.PermissionService;
@@ -235,6 +235,7 @@ public class RoleController {
         return R.success(result);
     }
 }
+
 
 
 

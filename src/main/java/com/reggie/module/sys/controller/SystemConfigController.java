@@ -7,7 +7,7 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequiresAdmin;
-import com.reggie.module.sys.entity.SystemConfig;
+import com.reggie.module.sys.model.SystemConfig;
 import com.reggie.module.sys.service.SystemConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -178,6 +178,7 @@ public class SystemConfigController {
         return R.success("配置删除成功");
     }
 }
+
 
 
 

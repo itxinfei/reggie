@@ -2,8 +2,8 @@ package com.reggie.module.sys.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
-import com.reggie.module.sys.entity.Permission;
-import com.reggie.module.sys.entity.Role;
+import com.reggie.module.sys.model.Permission;
+import com.reggie.module.sys.model.Role;
 import com.reggie.module.sys.mapper.PermissionMapper;
 import com.reggie.module.sys.service.PermissionService;
 import com.reggie.module.sys.service.RoleService;

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.reggie.module.retention.mapper.RetentionMapper">
+
+    <!-- retention_member 表尚未创建，所有查询直接返回空结果 -->
+
+    <select id="listActiveMembers" resultType="com.reggie.module.retention.model.RetentionMember">
+        SELECT id, member_name, phone, level, points, last_order_date,
+               total_orders, total_spent, status, tag, tenant_id
+        FROM retention_member
+        WHERE 1 = 0
+          AND tenant_id = #{tenantId}
+        LIMIT #{limit}
+    </select>
+
+    <select id="listChurnRiskMembers" resultType="com.reggie.module.retention.model.RetentionMember">
+        SELECT id, member_name, phone, level, points, last_order_date,
+               total_orders, total_spent, status, tag, tenant_id
+        FROM retention_member
+        WHERE 1 = 0
+          AND tenant_id = #{tenantId}
+    </select>
+
+    <select id="getRetentionTrend" resultType="java.util.Map">
+        SELECT 1 AS date FROM DUAL WHERE 1 = 0
+    </select>
+
+    <select id="listByLevel" resultType="com.reggie.module.retention.model.RetentionMember">
+        SELECT id, member_name, phone, level, points, last_order_date,
+               total_orders, total_spent, status, tag, tenant_id
+        FROM retention_member
+        WHERE 1 = 0
+          AND tenant_id = #{tenantId}
+          AND level = #{level}
+    </select>
+
+    <select id="countByLevel" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM retention_member
+        WHERE 1 = 0
+          AND tenant_id = #{tenantId}
+          AND level = #{level}
+    </select>
+
+</mapper>

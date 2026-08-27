@@ -1,7 +1,7 @@
 package com.reggie.module.sys.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.reggie.module.sys.entity.SystemConfig;
+import com.reggie.module.sys.model.SystemConfig;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -40,3 +40,4 @@ public interface SystemConfigMapper extends BaseMapper<SystemConfig> {
     @Select("SELECT * FROM system_config WHERE tenant_id = #{tenantId} OR tenant_id IS NULL ORDER BY config_type ASC, id ASC")
     List<SystemConfig> listByTenantId(@Param("tenantId") Long tenantId);
 }
+

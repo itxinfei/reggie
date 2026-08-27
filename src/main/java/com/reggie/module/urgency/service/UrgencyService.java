@@ -63,4 +63,38 @@ public interface UrgencyService {
      * @return 催单统计（今日总数/完成率/平均响应时间）
      */
     Map<String, Object> getUrgencySummary(Long tenantId);
+
+    /**
+     * 发起催单操作（含频率控制）
+     * 每人每天最多催单次数受限，超出返回错误
+     *
+     * @param orderId  订单ID
+     * @param memberId 会员ID
+     * @param orderNo  订单号
+     * @return 催单结果
+     */
+    R<Map<String, Object>> triggerUrgency(Long orderId, Long memberId, String orderNo);
+
+    /**
+     * 查询催单记录列表
+     *
+     * @param memberId 会员ID
+     * @return 催单记录列表
+     */
+    R<Map<String, Object>> getUrgencyRecords(Long memberId);
+
+    /**
+     * 获取催单统计数据
+     *
+     * @return 催单统计（总次数/今日/本周/平均响应时间）
+     */
+    R<Map<String, Object>> getUrgencyStats();
+
+    /**
+     * 频率检查
+     *
+     * @param memberId 会员ID
+     * @return 频率控制信息
+     */
+    R<Map<String, Object>> checkFrequency(Long memberId);
 }

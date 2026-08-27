@@ -1,6 +1,6 @@
 package com.reggie.module.sys.service;
 
-import com.reggie.module.sys.entity.Permission;
+import com.reggie.module.sys.model.Permission;
 
 import java.util.List;
 import java.util.Map;
@@ -62,3 +62,4 @@ public interface PermissionService {
      */
     void clearPermissionCache(Long roleId);
 }
+
