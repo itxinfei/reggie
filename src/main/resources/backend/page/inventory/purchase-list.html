@@ -160,12 +160,12 @@
           cardFilter: '',
           // 修改点：crud-table 列配置（替代手写 el-table-column）
           columns: [
-            { prop: 'orderNo', label: '采购单号', width: 140, showOverflowTooltip: true },
-            { prop: 'supplierName', label: '供应商', width: 120, showOverflowTooltip: true },
+            { prop: 'orderNo', label: '采购单号', minWidth: 140 },
+            { prop: 'supplierName', label: '供应商', minWidth: 120 },
             { prop: 'totalAmount', label: '总金额', width: 90, align: 'right', slot: true, type: 'money' },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
             { prop: 'operator', label: '操作员', width: 80, align: 'center' },
-            { prop: 'remark', label: '备注', width: 100, showOverflowTooltip: true },
+            { prop: 'remark', label: '备注', minWidth: 100 },
             { prop: 'createdTime', label: '创建时间', width: 140, align: 'center' }
           ],
           // 修改点：<table-bar> 统一组件配置

@@ -129,11 +129,11 @@
           tableActions: [],
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
-            { prop: 'orderId', label: '订单号', width: 140, showOverflowTooltip: true },
+            { prop: 'orderId', label: '订单号', minWidth: 140 },
             { prop: 'printType', label: '类型', width: 70, align: 'center', slot: true },
             { prop: 'printerId', label: '打印机ID', width: 80, align: 'center' },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
-            { prop: 'errorMsg', label: '错误信息', width: 100, showOverflowTooltip: true },
+            { prop: 'errorMsg', label: '错误信息', minWidth: 100 },
             { prop: 'createdTime', label: '打印时间', width: 140, align: 'center' }
           ],
         }

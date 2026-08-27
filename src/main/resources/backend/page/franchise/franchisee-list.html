@@ -133,12 +133,12 @@
           ],
           // 表格列配置（对齐由 components.js resolveColAlign 统一控制：文本居中、金额/数字右对齐）
           columns: [
-            { prop: 'name', label: '加盟商名称', minWidth: 140, showOverflowTooltip: true },
+            { prop: 'name', label: '加盟商名称', minWidth: 140 },
             { prop: 'contactPerson', label: '联系人', width: 100 },
             { prop: 'contactPhone', label: '联系电话', width: 130 },
-            { prop: 'address', label: '联系地址', minWidth: 180, showOverflowTooltip: true },
+            { prop: 'address', label: '联系地址', minWidth: 180 },
             { prop: 'status', label: '状态', slot: true, width: 80 },
-            { prop: 'remark', label: '备注', minWidth: 120, showOverflowTooltip: true }
+            { prop: 'remark', label: '备注', minWidth: 120 }
           ],
           // 弹窗表单
           formData: {

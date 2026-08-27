@@ -269,11 +269,11 @@
           },
           // 出库记录列
           columns: [
-            { prop: 'materialName', label: '食材名称', width: 120, showOverflowTooltip: true },
+            { prop: 'materialName', label: '食材名称', minWidth: 120 },
             { prop: 'quantity', label: '数量', width: 80, align: 'right', type: 'number' },
             { prop: 'operator', label: '操作员', width: 80, align: 'center' },
-            { prop: 'bizId', label: '业务单号', width: 100, align: 'center', showOverflowTooltip: true },
-            { prop: 'remark', label: '备注', width: 120, showOverflowTooltip: true },
+            { prop: 'bizId', label: '业务单号', width: 100, align: 'center' },
+            { prop: 'remark', label: '备注', minWidth: 120 },
             { prop: 'createdTime', label: '出库时间', width: 140, align: 'center' }
           ],
           tableSearchItems: [

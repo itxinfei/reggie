@@ -173,14 +173,14 @@
           ],
           // 表格列配置（对齐由 components.js resolveColAlign 统一控制：文本居中、金额/数字右对齐）
           columns: [
-            { prop: 'contractNo', label: '合同编号', width: 160, showOverflowTooltip: true },
-            { prop: 'franchiseeId', label: '加盟商', slot: true, minWidth: 120, showOverflowTooltip: true },
+            { prop: 'contractNo', label: '合同编号', minWidth: 160 },
+            { prop: 'franchiseeId', label: '加盟商', slot: true, minWidth: 120 },
             { prop: 'commissionType', label: '抽成方式', slot: true, width: 100 },
             { prop: 'commission', label: '抽成规则', slot: true, minWidth: 120 },
             { prop: 'startDate', label: '开始日期', width: 110 },
             { prop: 'endDate', label: '结束日期', width: 110 },
             { prop: 'status', label: '状态', slot: true, width: 90 },
-            { prop: 'remark', label: '备注', minWidth: 120, showOverflowTooltip: true }
+            { prop: 'remark', label: '备注', minWidth: 120 }
           ],
           // 弹窗表单
           formData: {

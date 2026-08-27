@@ -134,10 +134,10 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'configKey', label: '配置键', width: 180, showOverflowTooltip: true },
-            { prop: 'configValue', label: '配置值', width: 160, showOverflowTooltip: true },
+            { prop: 'configKey', label: '配置键', minWidth: 180 },
+            { prop: 'configValue', label: '配置值', minWidth: 160 },
             { prop: 'configType', label: '类型', width: 80, align: 'center', slot: true },
-            { prop: 'description', label: '说明', width: 120, showOverflowTooltip: true }
+            { prop: 'description', label: '说明', minWidth: 120 }
           ],
           // 弹窗表单
           formData: {

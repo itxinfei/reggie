@@ -202,12 +202,12 @@
           ],
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
-            { prop: 'name', label: '名称', width: 120, showOverflowTooltip: true },
+            { prop: 'name', label: '名称', minWidth: 120 },
             { prop: 'brand', label: '品牌', width: 80, align: 'center' },
             { prop: 'type', label: '类型', width: 80, align: 'center' },
             { prop: 'ipAddress', label: 'IP地址', width: 120, align: 'center' },
             { prop: 'port', label: '端口', width: 60, align: 'center' },
-            { prop: 'printTypes', label: '打印类型', width: 120, slot: true, showOverflowTooltip: true },
+            { prop: 'printTypes', label: '打印类型', width: 120, slot: true },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
           ],
           stats: {

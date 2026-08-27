@@ -106,7 +106,7 @@
           tableData: [],
           // 修改点：crud-table 列配置（替代手写 el-table-column）
           columns: [
-            { prop: 'name', label: '分类名称', width: 160, showOverflowTooltip: true },
+            { prop: 'name', label: '分类名称', minWidth: 160 },
             { prop: 'sort', label: '排序', width: 70, align: 'center' },
             { prop: 'materialCount', label: '食材数量', width: 90, slot: true, type: 'number' }
           ],

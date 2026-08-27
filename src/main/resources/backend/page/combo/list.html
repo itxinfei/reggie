@@ -300,12 +300,12 @@ new Vue({
       ],
       // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
       columns: [
-        { prop: 'name', label: '套餐名称', width: 140, showOverflowTooltip: true },
+        { prop: 'name', label: '套餐名称', minWidth: 140 },
         { prop: 'image', label: '图片', width: 70, align: 'center', slot: true },
         { prop: 'categoryName', label: '分类', width: 80, align: 'center' },
         { prop: 'price', label: '价格', width: 80, slot: true, type: 'money' },
         { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
-        { prop: 'description', label: '描述', width: 120, showOverflowTooltip: true },
+        { prop: 'description', label: '描述', minWidth: 120 },
         { prop: 'updateTime', label: '更新时间', width: 140, align: 'center' }
       ],
       // 套餐弹窗

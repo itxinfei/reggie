@@ -89,14 +89,14 @@
           tableData: [],
           // 修改点：crud-table 列配置（替代手写 el-table-column）
           columns: [
-            { prop: 'materialName', label: '食材名称', width: 120, showOverflowTooltip: true },
+            { prop: 'materialName', label: '食材名称', minWidth: 120 },
             { prop: 'type', label: '类型', width: 70, align: 'center', slot: true },
             { prop: 'quantity', label: '数量', width: 70, type: 'number' },
             { prop: 'unitPrice', label: '单价', width: 80, align: 'right', slot: true, type: 'money' },
             { prop: 'totalAmount', label: '总金额', width: 90, align: 'right', slot: true, type: 'money' },
             
             { prop: 'operator', label: '操作员', width: 80, align: 'center' },
-            { prop: 'remark', label: '备注', width: 100, showOverflowTooltip: true },
+            { prop: 'remark', label: '备注', minWidth: 100 },
             { prop: 'createdTime', label: '操作时间', width: 140, align: 'center' }
           ],
           // 统计
