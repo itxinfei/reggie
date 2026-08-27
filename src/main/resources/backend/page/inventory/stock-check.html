@@ -312,14 +312,14 @@
             remark: ''
           }
         },
-        submitCreate() {
+        async submitCreate() {
           const self = this
-          let passed = false
-          self.$refs.createForm.validate(function(valid) { passed = valid })
-          if (!passed) {
+          await new Promise(function(resolve, reject) {
+            self.$refs.createForm.validate(function(valid) { valid ? resolve() : reject() })
+          }).catch(function() {
             ReggieUI.error('请输入操作人')
             return
-          }
+          })
           const fd = self.formData
           addStockCheck({ operator: fd.operator.trim(), remark: (fd.remark || '').trim() }).then(function(res) {
             if (res.code === 1) {

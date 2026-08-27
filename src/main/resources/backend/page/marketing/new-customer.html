@@ -346,11 +346,13 @@
             }
           }
         },
-        handleSubmit: function() {
+        async handleSubmit: function() {
           const self = this
-          let passed = false
-          this.$refs.ruleForm.validate(function(valid) { passed = valid })
-          if (!passed) return
+          await new Promise(function(resolve, reject) {
+            this.$refs.ruleForm.validate(function(valid) { valid ? resolve() : reject() })
+          }).catch(function() {
+            return
+          })
           if (self.formData.discountType === 2 && (!self.formData.maxDiscountAmount || self.formData.maxDiscountAmount <= 0)) {
             ReggieUI.error('按比例优惠必须填写最大优惠金额')
             return

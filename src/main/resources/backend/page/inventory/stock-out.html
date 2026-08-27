@@ -324,7 +324,14 @@
             self.submitting = true
             try {
               const bizId = fd.bizId ? Number(fd.bizId) : undefined
-              const params = {}
+              const params = {
+                materialId: fd.materialId,
+                qty: fd.qty,
+                unit: fd.unit,
+                bizId: bizId,
+                remark: fd.remark,
+                operator: fd.operator
+              }
               const res = await stockOut(params)
               if (res.code === 1) {
                 ReggieUI.success('出库成功')

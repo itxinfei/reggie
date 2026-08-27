@@ -17,9 +17,14 @@ DROP TABLE IF EXISTS setmeal;
 -- 分类
 DROP TABLE IF EXISTS category;
 
+-- 系统配置
+DROP TABLE IF EXISTS system_config;
+
 -- 员工/权限
 DROP TABLE IF EXISTS employee;
+DROP TABLE IF EXISTS role_permission;
 DROP TABLE IF EXISTS role;
+DROP TABLE IF EXISTS permission;
 DROP TABLE IF EXISTS menu;
 
 -- 操作日志
@@ -283,15 +288,65 @@ CREATE INDEX idx_employee_tenant ON employee(tenant_id);
 -- ==================== 角色表 ====================
 CREATE TABLE role (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
-  name varchar(50) NOT NULL COMMENT '角色名称',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
+  role_name varchar(50) NOT NULL COMMENT '角色名称',
   role_key varchar(50) NOT NULL COMMENT '角色权限字符串',
+  description varchar(200) NULL DEFAULT NULL COMMENT '角色描述',
+  sort int NOT NULL DEFAULT 0 COMMENT '排序',
   status tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态 0:禁用 1:启用',
   create_time datetime NOT NULL COMMENT '创建时间',
   update_time datetime NOT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '修改人',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '是否删除',
   PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX idx_role_key ON role(role_key);
+
+-- ==================== 权限表 ====================
+CREATE TABLE permission (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  permission_name varchar(50) NOT NULL COMMENT '权限名称',
+  permission_key varchar(100) NOT NULL COMMENT '权限标识',
+  permission_type int NOT NULL DEFAULT 1 COMMENT '权限类型 1:菜单 2:按钮 3:数据',
+  parent_id bigint NULL DEFAULT 0 COMMENT '父权限ID',
+  route_path varchar(200) NULL DEFAULT NULL COMMENT '路由路径',
+  icon varchar(100) NULL DEFAULT NULL COMMENT '菜单图标',
+  sort int NOT NULL DEFAULT 0 COMMENT '排序',
+  status int NOT NULL DEFAULT 1 COMMENT '状态 0:禁用 1:启用',
+  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX idx_permission_key ON permission(permission_key);
+CREATE INDEX idx_permission_parent ON permission(parent_id);
+
+-- ==================== 角色权限关联表 ====================
+CREATE TABLE role_permission (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  role_id bigint NOT NULL COMMENT '角色id',
+  permission_id bigint NOT NULL COMMENT '权限id',
+  create_time datetime NOT NULL COMMENT '创建时间',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_role_permission_role ON role_permission(role_id);
+CREATE INDEX idx_role_permission_permission ON role_permission(permission_id);
+
+-- ==================== 系统配置表 ====================
+CREATE TABLE system_config (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户id(NULL表示全局)',
+  config_key varchar(100) NOT NULL COMMENT '配置键',
+  config_value varchar(500) NOT NULL COMMENT '配置值',
+  config_type int NOT NULL DEFAULT 1 COMMENT '配置类型 1:功能开关 2:运营参数 3:显示设置 4:其他',
+  description varchar(200) NULL DEFAULT NULL COMMENT '配置说明',
+  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '修改人',
+  PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX idx_system_config_key_tenant ON system_config(config_key, tenant_id);
 
 -- ==================== 菜单表 ====================
 CREATE TABLE menu (
@@ -311,6 +366,9 @@ CREATE TABLE menu (
   PRIMARY KEY (id)
 );
 CREATE INDEX idx_menu_parent ON menu(parent_id);
+
+-- AI供应商配置
+DROP TABLE IF EXISTS ai_provider_config;
 
 -- ==================== 操作日志表 ====================
 CREATE TABLE log (
@@ -335,6 +393,38 @@ CREATE TABLE log (
 CREATE INDEX idx_log_user ON log(operate_user);
 CREATE INDEX idx_log_time ON log(create_time);
 CREATE INDEX idx_log_tenant ON log(tenant_id);
+
+-- ==================== AI供应商配置表 ====================
+CREATE TABLE ai_provider_config (
+  id bigint NOT NULL COMMENT '主键(snowflake)',
+  provider_code varchar(50) NOT NULL COMMENT '供应商编码',
+  provider_name varchar(100) NOT NULL COMMENT '供应商名称',
+  base_url varchar(500) NULL DEFAULT NULL COMMENT 'API基础URL',
+  model_name varchar(100) NULL DEFAULT NULL COMMENT '模型名称',
+  api_key varchar(500) NULL DEFAULT NULL COMMENT 'API密钥',
+  timeout int NULL DEFAULT 30 COMMENT '请求超时时间(秒)',
+  max_tokens int NULL DEFAULT 2048 COMMENT '最大Token数',
+  temperature double NULL DEFAULT 0.7 COMMENT '温度参数',
+  api_format varchar(50) NULL DEFAULT NULL COMMENT 'API格式类型',
+  extra_headers text NULL DEFAULT NULL COMMENT '额外请求头(JSON)',
+  request_template text NULL DEFAULT NULL COMMENT '请求模板(JSON)',
+  response_path varchar(200) NULL DEFAULT NULL COMMENT '响应解析路径(JSONPath)',
+  icon_url varchar(500) NULL DEFAULT NULL COMMENT '供应商图标URL',
+  enabled int NOT NULL DEFAULT 1 COMMENT '是否启用 0:否 1:是',
+  is_active int NOT NULL DEFAULT 0 COMMENT '是否激活 0:否 1:是',
+  last_test_time datetime NULL DEFAULT NULL COMMENT '最后测试时间',
+  last_test_result varchar(50) NULL DEFAULT NULL COMMENT '最后测试结果',
+  sort int NOT NULL DEFAULT 0 COMMENT '排序号',
+  remark varchar(500) NULL DEFAULT NULL COMMENT '备注',
+  create_time datetime NOT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '修改人',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '是否删除',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_ai_provider_config_code ON ai_provider_config(provider_code);
+CREATE INDEX idx_ai_provider_config_active ON ai_provider_config(is_active);
 
 -- ==================== 区域表 ====================
 CREATE TABLE region (

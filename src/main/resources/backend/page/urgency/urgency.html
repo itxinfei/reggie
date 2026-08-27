@@ -578,8 +578,9 @@
           try {
             self.$axios({ url: '/api/urgency/overview', method: 'get' })
               .then(function (res) {
-                if (res.data && res.data.code === 1 && res.data.data) {
-                  self.stats = Object.assign(self.stats, res.data.data)
+                var payload = res.data || {};
+                if (res.code === 1 && payload) {
+                  self.stats = Object.assign(self.stats, payload)
                 } else {
                   self.applyMockStats()
                 }
@@ -598,12 +599,12 @@
           try {
             self.$axios({ url: '/api/urgency/list', method: 'get' })
               .then(function (res) {
-                if (res.data && res.data.code === 1 && res.data.data) {
-                  const data = res.data.data
-                  if (Array.isArray(data)) {
-                    self.orders = data
-                  } else if (Array.isArray(data.records)) {
-                    self.orders = data.records
+                var payload = res.data;
+                if (res.code === 1 && payload) {
+                  if (Array.isArray(payload)) {
+                    self.orders = payload
+                  } else if (payload.records && Array.isArray(payload.records)) {
+                    self.orders = payload.records
                   } else {
                     self.applyMockOrders()
                   }
@@ -632,10 +633,10 @@
           try {
             self.$axios({ url: '/api/urgency/queue', method: 'get' })
               .then(function (res) {
-                if (res.data && res.data.code === 1 && res.data.data) {
-                  const data = res.data.data
-                  if (Array.isArray(data)) {
-                    self.queueList = data
+                var payload = res.data;
+                if (res.code === 1 && payload) {
+                  if (Array.isArray(payload)) {
+                    self.queueList = payload
                   } else {
                     self.applyMockQueue()
                   }
@@ -654,8 +655,9 @@
           try {
             self.$axios({ url: '/api/urgency/summary', method: 'get' })
               .then(function (res) {
-                if (res.data && res.data.code === 1 && res.data.data) {
-                  self.summary = Object.assign(self.summary, res.data.data)
+                var payload = res.data || {};
+                if (res.code === 1 && payload) {
+                  self.summary = Object.assign(self.summary, payload)
                 } else {
                   self.applyMockSummary()
                 }

@@ -7,12 +7,14 @@ import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.report.service.ReportService;
+import com.reggie.test.TestDatabaseCleaner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
@@ -30,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 @Sql(scripts = "classpath:schema-report.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class ReportServiceTest {
 
@@ -45,8 +48,12 @@ public class ReportServiceTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
     @BeforeEach
     void setUp() {
+        cleaner.cleanTables("order_detail", "orders");
         BaseContext.setCurrentTenantId(1L);
 
         Orders o1 = new Orders();

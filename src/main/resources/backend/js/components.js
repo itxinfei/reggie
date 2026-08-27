@@ -618,7 +618,12 @@ Vue.component('crud-table', {
       '  :class-name="(col.type === \'money\' ? \'ds-money\' : (col.type === \'number\' ? \'ds-num\' : \'\')) + (col.className ? \' \' + col.className : \'\')"' +
       '  :fixed="col.fixed"' +
       '  :sortable="col.sortable ? \'custom\' : false"' +
-      '  :show-overflow-tooltip="col.showOverflowTooltip !== false"' +
+      // 修改点(2026-08-27)：showOverflowTooltip 默认行为从"默认开启"反转为"默认关闭"。
+// - 此前 `!== false`：页面未显式设置时列内容超出 min-width 即截断为省略号 + tooltip，
+//   导致用户看到的是一堆"……"，数据不完整，需悬停 tooltip 才能看到全文，违背"完整展示数据"的需求。
+// - 现在 `=== true`：默认关闭 tooltip，内容超出时自然换行 + 行高自适应（配合 components.css / page.css 的 min-height:48px + height:auto），
+//   超长内容（身份证、地址、备注）通过换行完整呈现；仅在 URL、错误信息等确实不适合换行的列显式 `showOverflowTooltip: true`。
+'  :show-overflow-tooltip="col.showOverflowTooltip === true"' +
       '>' +
         // 修改点：合并为单一 template，避免 v-if/v-else 多片段在 el-table-column 中渲染异常；
         // money/number 列在无自定义 formatter 时自动千分位格式化，保证金额展示统一

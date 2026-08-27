@@ -637,16 +637,17 @@ new Vue({
       this.$refs.comboForm.validate(function (valid) {
         if (valid) {
           self.submitting = true
-          const params = {}
-          params.setmealDishes = self.comboDishTable.map(function (obj) {
-            return {
-              copies: obj.copies,
-              dishId: obj.dishId || obj.id,
-              name: obj.name,
-              price: obj.price
-            }
+          const params = Object.assign({}, self.comboForm, {
+            setmealDishes: self.comboDishTable.map(function (obj) {
+              return {
+                copies: obj.copies,
+                dishId: obj.dishId || obj.id,
+                name: obj.name,
+                price: obj.price
+              }
+            }),
+            status: 1
           })
-          params.status = 1
 
           if (params.setmealDishes.length < 1) {
             self.submitting = false

@@ -175,7 +175,7 @@
         async init() {
           this.loading = true
           const sv = this.searchValues || {};
-          const params = {}
+          const params = Object.assign({}, sv, { page: this.page, pageSize: this.pageSize })
           try {
             const res = await franchiseePage(params)
             if (String(res.code) === '1') {
@@ -237,19 +237,26 @@
           this.formData.remark = row.remark
           this.formData.dialogVisible = true
         },
-        submitForm() {
+        async submitForm() {
           if (this.submitting) return // 提交防重
           const self = this
-          let passed = false
-          self.$refs.franchiseeForm.validate(function(valid) { passed = valid })
-          if (!passed) {
+          await new Promise(function(resolve, reject) {
+            self.$refs.franchiseeForm.validate(function(valid) { valid ? resolve() : reject() })
+          }).catch(function() {
             ReggieUI.warning('请完善表单必填项')
             return
-          }
+          })
           if (!self.formData.name || !self.formData.name.trim()) {
             ReggieUI.error('请输入加盟商名称'); return
           }
-          const data = {}
+          const data = {
+            name: self.formData.name.trim(),
+            contactPerson: self.formData.contactPerson,
+            contactPhone: self.formData.contactPhone,
+            address: self.formData.address,
+            status: self.formData.status,
+            remark: self.formData.remark
+          }
           self.submitting = true
           if (this.action === 'add') {
             addFranchisee(data).then(res => {

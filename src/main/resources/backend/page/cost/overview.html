@@ -191,6 +191,20 @@ border-radius: var(--radius-sm);
   <script src="../../js/common.js"></script>
   <script src="../../api/cost.js"></script>
   <script>
+    // 颜色调色板（供 ECharts 图表使用，与设计令牌保持一致）
+    const RgPalette = {
+      success: '#67c23a',
+      warning: '#e6a23c',
+      danger: '#f56c6c',
+      info: '#909399',
+      primary: '#ffc200',
+      linkBlue: '#1677ff',
+      textSecondary: '#606266',
+      textMuted: '#9ca3af',
+      white: '#ffffff',
+      radiusMd: 8
+    }
+
     new Vue({
       el: '#app',
       data() {

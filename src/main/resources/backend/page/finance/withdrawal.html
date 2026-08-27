@@ -447,11 +447,16 @@
             this.$refs.addForm && this.$refs.addForm.clearValidate()
           })
         },
-        handleAddSubmit() {
+        async handleAddSubmit() {
           const self = this
-          let passed = false
-          this.$refs.addForm.validate(function(valid) { passed = valid })
-          if (!passed) return
+          try {
+            await new Promise(function(resolve, reject) {
+              self.$refs.addForm.validate(function(valid) { valid ? resolve() : reject() })
+            })
+          } catch (e) {
+            ReggieUI.warning('请完善表单必填项')
+            return
+          }
 
           self.submitLoading = true
           createWithdrawal(self.addForm).then(function(res) {

@@ -488,8 +488,9 @@
         async submitStockForm() {
           if (this.submitting) return // 提交防重
           var self = this
-          var passed = false
-          self.$refs.stockEditForm.validate(function(valid) { passed = valid })
+          var passed = await new Promise(function(resolve) {
+            self.$refs.stockEditForm.validate(function(valid) { resolve(valid) })
+          })
           if (!passed) {
             ReggieUI.warning('请完善表单必填项')
             return

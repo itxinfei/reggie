@@ -106,6 +106,9 @@
       data() {
         return {
           loading: false,
+          page: 1,
+          pageSize: 10,
+          counts: 0,
           tableData: [],
           // 统计数据
           stats: { total: 0, type1: 0, type2: 0, type3: 0, type4: 0 },
@@ -213,7 +216,7 @@
           this.init(false)
         },
         buildFilterParams(key) {
-          const map = {}
+          const map = { type1: 1, type2: 2, type3: 3 }
           return map[key] ? { configType: map[key] } : {}
         },
         // table-bar 回调
@@ -243,11 +246,11 @@
           this.init(false)
         },
         typeName(type) {
-          const map = {}
+          const map = { 1: '功能开关', 2: '运营参数', 3: '显示设置' }
           return map[type] || '其他'
         },
         typeTagType(type) {
-          const map = {}
+          const map = { 1: 'success', 2: 'warning', 3: 'info' }
           return map[type] || ''
         },
         openDialog() {

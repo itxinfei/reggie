@@ -366,7 +366,7 @@
         init: function(reloadStats) {
           if (reloadStats === undefined) reloadStats = true
           const self = this
-          const params = {}
+          const params = Object.assign({}, self.lastSearch || {}, { page: self.page, pageSize: self.pageSize })
           self.loading = true
           const requests = [tablePage(params)]
           if (reloadStats) { requests.push(self.loadTableStats()) }
@@ -431,7 +431,14 @@
           this.$refs.tableForm.validate(function(valid) {
             if (!valid) return
             self.submitting = true
-            const data = {}
+            const data = {
+              name: self.form.name,
+              areaId: self.form.areaId,
+              seatCount: self.form.seatCount,
+              minAmount: self.form.minAmount,
+              status: self.form.status,
+              sort: self.form.sort
+            }
             if (self.action === 'add') {
               addTable(data).then(function(res) {
                 self.submitting = false

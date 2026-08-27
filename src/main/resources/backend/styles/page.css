@@ -462,9 +462,11 @@
   padding: 13px 0;
 }
 
-/* 表格行高统一（与 crud-table 的 48px 视觉密度一致，保证手写 el-table 与 crud 表格对齐） */
+/* 表格行高：min-height 48px + height auto —— 与 components.css 的 crud-table 规范对齐，
+   保证手写 el-table 与 crud-table 行高一致；多行内容自动增长不被截断 */
 .tableBox.el-table .el-table__row {
-  height: 48px;
+  min-height: 48px;
+  height: auto;
 }
 
 /* 增强斑马纹对比度（与 crud 表格一致） */

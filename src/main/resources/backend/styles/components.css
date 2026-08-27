@@ -327,9 +327,12 @@
 .crud-table-wrapper .tableBox.el-table .crud-actions-col .el-button:hover {
   opacity: var(--opacity-hover);
 }
-/* 表格行高（视觉密度统一） */
+/* 表格行高：min-height 48px + height auto —— 单行内容保持 48px 视觉密度，
+   多行内容（换行后的地址/备注/描述等）自动增长，不会被固定高度截断。
+   配合 components.js 的 showOverflowTooltip 默认关闭，单元格内容完整展示。 */
 .crud-table-wrapper .tableBox .el-table__row {
-  height: 48px;
+  min-height: 48px;
+  height: auto;
 }
 
 /* ========== 响应式 ========== */

@@ -738,8 +738,11 @@
           try {
             self.$axios({ url: '/api/retention/overview', method: 'get' })
               .then(function (res) {
-                if (res.data && res.data.code === 1 && res.data.data) {
-                  self.stats = Object.assign(self.stats, res.data.data)
+                // 修改点(2026-08-27)：拦截器已 return res.data，此时 res = {code, data, msg}
+                // 旧代码误用 res.data.code / res.data.data（多套了一层），导致判断永远失败、数据不回填
+                var payload = res.data || {};
+                if (res.code === 1 && payload) {
+                  self.stats = Object.assign(self.stats, payload)
                 } else {
                   self.applyMockStats()
                 }
@@ -759,12 +762,12 @@
           try {
             self.$axios({ url: '/api/retention/ranking', method: 'get' })
               .then(function (res) {
-                if (res.data && res.data.code === 1 && res.data.data) {
-                  const data = res.data.data
-                  if (Array.isArray(data)) {
-                    self.rankingList = data.slice(0, 10)
-                  } else if (Array.isArray(data.records)) {
-                    self.rankingList = data.records.slice(0, 10)
+                var payload = res.data;
+                if (res.code === 1 && payload) {
+                  if (Array.isArray(payload)) {
+                    self.rankingList = payload.slice(0, 10)
+                  } else if (payload.records && Array.isArray(payload.records)) {
+                    self.rankingList = payload.records.slice(0, 10)
                   } else {
                     self.applyMockRanking()
                   }
@@ -786,12 +789,12 @@
           try {
             self.$axios({ url: '/api/retention/warning', method: 'get' })
               .then(function (res) {
-                if (res.data && res.data.code === 1 && res.data.data) {
-                  const data = res.data.data
-                  if (Array.isArray(data)) {
-                    self.warningList = data
-                  } else if (Array.isArray(data.records)) {
-                    self.warningList = data.records
+                var payload = res.data;
+                if (res.code === 1 && payload) {
+                  if (Array.isArray(payload)) {
+                    self.warningList = payload
+                  } else if (payload.records && Array.isArray(payload.records)) {
+                    self.warningList = payload.records
                   } else {
                     self.applyMockWarning()
                   }
@@ -813,12 +816,12 @@
           try {
             self.$axios({ url: '/api/retention/recommend', method: 'get' })
               .then(function (res) {
-                if (res.data && res.data.code === 1 && res.data.data) {
-                  const data = res.data.data
-                  if (Array.isArray(data)) {
-                    self.recommendList = data.slice(0, 8)
-                  } else if (Array.isArray(data.records)) {
-                    self.recommendList = data.records.slice(0, 8)
+                var payload = res.data;
+                if (res.code === 1 && payload) {
+                  if (Array.isArray(payload)) {
+                    self.recommendList = payload.slice(0, 8)
+                  } else if (payload.records && Array.isArray(payload.records)) {
+                    self.recommendList = payload.records.slice(0, 8)
                   } else {
                     self.applyMockRecommend()
                   }
@@ -843,12 +846,12 @@
           try {
             self.$axios({ url: '/api/retention/list', method: 'get', params: params })
               .then(function (res) {
-                if (res.data && res.data.code === 1 && res.data.data) {
-                  const data = res.data.data
-                  if (Array.isArray(data)) {
-                    self.memberList = data.slice(0, 15)
-                  } else if (Array.isArray(data.records)) {
-                    self.memberList = data.records.slice(0, 15)
+                var payload = res.data;
+                if (res.code === 1 && payload) {
+                  if (Array.isArray(payload)) {
+                    self.memberList = payload.slice(0, 15)
+                  } else if (payload.records && Array.isArray(payload.records)) {
+                    self.memberList = payload.records.slice(0, 15)
                   } else {
                     self.applyMockMembers()
                   }

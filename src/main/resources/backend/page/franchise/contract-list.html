@@ -246,7 +246,7 @@
         async init() {
           this.loading = true
           const sv = this.searchValues || {};
-          const params = {}
+          const params = Object.assign({}, sv, { page: this.page, pageSize: this.pageSize })
           try {
             const res = await contractPage(params)
             if (String(res.code) === '1') {
@@ -314,15 +314,15 @@
           this.formData.remark = row.remark
           this.formData.dialogVisible = true
         },
-        submitForm() {
+        async submitForm() {
           if (this.submitting) return // 提交防重
           const self = this
-          let passed = false
-          self.$refs.contractForm.validate(function(valid) { passed = valid })
-          if (!passed) {
+          await new Promise(function(resolve, reject) {
+            self.$refs.contractForm.validate(function(valid) { valid ? resolve() : reject() })
+          }).catch(function() {
             ReggieUI.warning('请完善表单必填项')
             return
-          }
+          })
           if (!self.formData.franchiseeId) {
             ReggieUI.error('请选择加盟商'); return
           }

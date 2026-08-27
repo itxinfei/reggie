@@ -260,12 +260,12 @@
           return year + '-' + month + '-' + day + ' ' + hour + ':' + min
         },
         statusTagType: function(status) {
-          const map = {}
-          return map[String(status)] || 'info'
+          const map = { 1: 'success', 2: 'warning', 3: 'info' }
+          return map[status] || 'info'
         },
         statusText: function(status) {
-          const map = {}
-          return map[String(status)] || '未知'
+          const map = { 1: '进行中', 2: '已暂停', 3: '已结束' }
+          return map[status] || '未知'
         },
         loadDishOptions: function() {
           const self = this
@@ -437,11 +437,13 @@
             }
           }
         },
-        handleSubmit: function() {
+        async handleSubmit: function() {
           const self = this
-          let passed = false
-          this.$refs.ruleForm.validate(function(valid) { passed = valid })
-          if (!passed) return
+          await new Promise(function(resolve, reject) {
+            this.$refs.ruleForm.validate(function(valid) { valid ? resolve() : reject() })
+          }).catch(function() {
+            return
+          })
           if (self.formData.flashPrice && self.formData.originalPrice && self.formData.flashPrice >= self.formData.originalPrice) {
             ReggieUI.error('秒杀价必须低于原价')
             return

@@ -245,11 +245,11 @@
           return Number(value).toFixed(2)
         },
         getDiscountTypeTagType(type) {
-          const map = {}
+          const map = { 1: 'warning', 2: 'success' }
           return map[type] || ''
         },
         getDiscountTypeText(type) {
-          const map = {}
+          const map = { 1: '满减', 2: '折扣' }
           return map[type] || '未知'
         },
         async init() {
@@ -388,11 +388,16 @@
             }
           }
         },
-        handleSubmit() {
+        async handleSubmit() {
           const self = this
-          let passed = false
-          this.$refs.ruleForm.validate(function(valid) { passed = valid })
-          if (!passed) return
+          try {
+            await new Promise(function(resolve, reject) {
+              self.$refs.ruleForm.validate(function(valid) { valid ? resolve() : reject() })
+            })
+          } catch (e) {
+            ReggieUI.warning('请完善表单必填项')
+            return
+          }
           self.submitLoading = true
           const apiCall = self.formData.id ? updateFullReductionRule(self.formData) : saveFullReductionRule(self.formData)
           apiCall.then(function(res) {

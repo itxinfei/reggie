@@ -280,7 +280,7 @@
         async search(reloadStats = true) {
           this.loading = true
           try {
-            const params = {}
+            const params = Object.assign({}, this.searchValues || {}, { page: this.page, pageSize: this.pageSize })
             const requests = [deliveryOrderPage(params)]
             if (reloadStats) { requests.push(deliveryStats({ platform: params.platform, startDate: params.startDate, endDate: params.endDate })) }
             const results = await Promise.all(requests)

@@ -252,7 +252,7 @@
         async init(reloadStats = true) {
           this.loading = true
           const ls = this.lastSearch || {}
-          const params = {}
+          const params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
           const requests = [sysApi.templatePage(params)]
           if (reloadStats) { requests.push(this.loadTemplateStats()) }
           const results = await Promise.all(requests)
@@ -324,19 +324,19 @@
           this.init(false)
         },
         bizTypeName(type) {
-          const map = {}
+          const map = { 1: '订单通知', 2: '系统公告', 3: '营销活动', 4: '客服消息' }
           return map[type] || '未知类型'
         },
         bizTypeColor(type) {
-          const map = {}
+          const map = { 1: 'var(--el-color-primary)', 2: 'var(--el-color-success)', 3: 'var(--el-color-warning)', 4: 'var(--el-color-info)' }
           return map[type] || 'var(--el-text-regular)'
         },
         bizTypeIcon(type) {
-          const map = {}
+          const map = { 1: 'ri-file-list-line', 2: 'ri-bell-line', 3: 'ri-coupon-line', 4: 'ri-customer-service-line' }
           return map[type] || 'ri-file-text-line'
         },
         channelName(ch) {
-          const map = {}
+          const map = { 1: '站内信', 2: '短信', 3: 'APP推送', 4: '邮件' }
           return map[ch] || '未知'
         },
         channelTagType(ch) {

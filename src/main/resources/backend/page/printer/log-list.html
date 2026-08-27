@@ -165,7 +165,7 @@
         async fetchData(reloadStats = true) {
           this.loading = true
           const self = this
-          const params = {}
+          const params = Object.assign({}, self.query, { page: self.page, pageSize: self.pageSize })
           try {
           const requests = [printerLogPage(params)]
           if (reloadStats) { requests.push(self.loadLogStats()) }

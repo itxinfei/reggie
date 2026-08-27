@@ -781,11 +781,12 @@
                         params = { content: self.smsForm.content };
                     }
 
-                    const data = {};
-
-                    // 先用模板渲染方式：直接将输入内容作为模板
                     // 修改点：新增简单短信发送，无需依赖阿里云模板
-                    const sendData = {};
+                    const sendData = {
+                        phoneNumbers: phones,
+                        content: self.smsForm.content.trim(),
+                        type: 'SMS'
+                    };
 
                     notificationApi.sendSimpleMessage(sendData).then(function(res) {
                         if (res && res.code === 1 && res.data) {
@@ -827,7 +828,12 @@
                     var userIds = self.pushSelectedUsers.map(function(u) { return u.id; });
 
                     // 修改点：修正推送数据格式，title和content提到顶层（后端sendSimpleMessage直接读取）
-                    const data = {};
+                    const data = {
+                        userIds: userIds,
+                        title: self.pushForm.title.trim(),
+                        content: self.pushForm.content.trim(),
+                        type: 'PUSH'
+                    };
 
                     notificationApi.sendSimpleMessage(data).then(function(res) {
                         if (res && res.code === 1 && res.data) {
@@ -974,17 +980,17 @@
 
                 // ==================== 工具方法 ====================
                 bizTypeName: function(type) {
-                    const map = {};
+                    const map = { 1: '订单通知', 2: '系统公告', 3: '营销活动', 4: '客服消息' };
                     return map[type] || '未知类型';
                 },
 
                 channelName: function(ch) {
-                    const map = {};
+                    const map = { 1: '站内信', 2: '短信', 3: 'APP推送', 4: '邮件' };
                     return map[ch] || '未知';
                 },
 
                 recordStatusName: function(st) {
-                    const map = {};
+                    const map = { 1: '发送中', 2: '已发送', 3: '发送失败' };
                     return map[st] || '未知';
                 },
 

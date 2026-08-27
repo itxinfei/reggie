@@ -258,11 +258,11 @@
           return Number(value).toFixed(2)
         },
         getScopeTagType(scope) {
-          const map = {}
+          const map = { 1: 'info', 2: 'warning', 3: 'success' }
           return map[scope] || ''
         },
         getScopeText(scope) {
-          const map = {}
+          const map = { 1: '全场', 2: '指定菜品', 3: '指定套餐' }
           return map[scope] || '未知'
         },
         async init() {
@@ -404,11 +404,16 @@
             }
           }
         },
-        handleSubmit() {
+        async handleSubmit() {
           const self = this
-          let passed = false
-          this.$refs.ruleForm.validate(function(valid) { passed = valid })
-          if (!passed) return
+          try {
+            await new Promise(function(resolve, reject) {
+              self.$refs.ruleForm.validate(function(valid) { valid ? resolve() : reject() })
+            })
+          } catch (e) {
+            ReggieUI.warning('请完善表单必填项')
+            return
+          }
           self.submitLoading = true
           const apiCall = self.formData.id ? updateDiscountRule(self.formData) : saveDiscountRule(self.formData)
           apiCall.then(function(res) {

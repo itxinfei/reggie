@@ -266,7 +266,7 @@
         async init() {
           this.loading = true
           const sv = this.searchValues || {};
-          const params = {}
+          const params = Object.assign({}, sv, { page: this.page, pageSize: this.pageSize })
           try {
             const res = await settlementPage(params)
             if (String(res.code) === '1') {
@@ -310,15 +310,15 @@
           this.genData.settlePeriod = ''
           this.genData.dialogVisible = true
         },
-        submitGenerate() {
+        async submitGenerate() {
           if (this.generating) return // 提交防重
           const self = this
-          let passed = false
-          self.$refs.genForm.validate(function(valid) { passed = valid })
-          if (!passed) {
+          await new Promise(function(resolve, reject) {
+            self.$refs.genForm.validate(function(valid) { valid ? resolve() : reject() })
+          }).catch(function() {
             ReggieUI.warning('请选择合同与结算周期')
             return
-          }
+          })
           self.generating = true
           generateSettlement(self.genData.contractId, self.genData.settlePeriod).then(res => {
             self.generating = false

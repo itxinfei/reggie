@@ -428,15 +428,15 @@
               ReggieUI.error('请求失败：' + err)
             })
           },
-          submitForm() {
+          async submitForm() {
             if (this.submitting) return // 提交防重
             const self = this
-            let passed = false
-            self.$refs.materialForm.validate(function(valid) { passed = valid })
-            if (!passed) {
+            await new Promise(function(resolve, reject) {
+              self.$refs.materialForm.validate(function(valid) { valid ? resolve() : reject() })
+            }).catch(function() {
               ReggieUI.warning('请完善表单必填项')
               return
-            }
+            })
             self.submitting = true
             const fd = self.formData
             const params = {

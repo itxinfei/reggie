@@ -184,7 +184,8 @@
         },
         async init(reloadStats = true) {
           this.loading = true
-          const params = {}
+          const sv = this.searchValues || {}
+          const params = Object.assign({}, sv, { page: this.page, pageSize: this.pageSize })
           const self = this
           try {
             // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
@@ -272,15 +273,15 @@
           }).catch(function(e) { ReggieUI.error('请求失败：' + e) })
         },
         showRecharge: function(row) { this.rechargeMember = row; this.rechargeForm = { amount: '', giftAmount: '0', paymentMethod: 'WECHAT' }; this.rechargeDialogVisible = true },
-        submitRecharge: function() {
+        async submitRecharge() {
           if (this.submitting) return // 提交防重
           const self = this
-          let passed = false
-          self.$refs.rechargeFormRef.validate(function(valid) { passed = valid })
-          if (!passed) {
+          await new Promise(function(resolve, reject) {
+            self.$refs.rechargeFormRef.validate(function(valid) { valid ? resolve() : reject() })
+          }).catch(function() {
             ReggieUI.warning('请完善表单必填项')
             return
-          }
+          })
           if (!self.rechargeForm.amount || self.rechargeForm.amount <= 0) { ReggieUI.error('请输入有效的充值金额'); return }
           self.submitting = true
           memberRecharge({ memberId: self.rechargeMember.id, amount: self.rechargeForm.amount, giftAmount: self.rechargeForm.giftAmount || 0, paymentMethod: self.rechargeForm.paymentMethod }).then(function(res) {

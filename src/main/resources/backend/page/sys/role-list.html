@@ -226,7 +226,7 @@
         async init(reloadStats = true) {
           this.loading = true
           const ls = this.lastSearch || {}
-          const params = {}
+          const params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
           const requests = [sysApi.rolePage(params)]
           if (reloadStats) { requests.push(this.loadRoleStats()) }
           const results = await Promise.all(requests)

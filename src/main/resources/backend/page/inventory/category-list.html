@@ -244,12 +244,14 @@
         handleClose() {
           this.formData.dialogVisible = false
         },
-        submitForm() {
+        async submitForm() {
           if (this.submitting) return // 提交防重
           const self = this
-          let passed = false
-          self.$refs.categoryForm.validate(function(valid) { passed = valid })
-          if (!passed) {
+          try {
+            await new Promise(function(resolve, reject) {
+              self.$refs.categoryForm.validate(function(valid) { valid ? resolve() : reject() })
+            })
+          } catch (e) {
             ReggieUI.warning('请完善表单必填项')
             return
           }

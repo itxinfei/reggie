@@ -293,8 +293,9 @@
 
         async submitForm() {
           const self = this
-          let passed = false
-          self.$refs.regionForm.validate(function(valid) { passed = valid })
+          const passed = await new Promise(resolve => {
+            self.$refs.regionForm.validate(function(valid) { resolve(valid) })
+          })
           if (!passed) {
             ReggieUI.warning('请完善表单必填项')
             return

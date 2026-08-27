@@ -396,17 +396,19 @@
 
             submitForm: function() {
                 const self = this;
-                self.$refs.providerForm.validate(function(valid) {
-                    if (!valid) {
-                        ReggieUI.warning('请完善表单必填项');
-                        return;
-                    }
-                    if (!self.form.id && !self.form.apiKey) {
-                        ReggieUI.warning('请输入 API 密钥');
-                        return;
-                    }
+                // 修改点：crud-dialog 内 el-dialog 设了 append-to-body，
+                // 表单被移出组件树，this.$refs.providerForm 取不到，故改本地校验。
+                const errMsg = self.validateForm();
+                if (errMsg) {
+                    ReggieUI.warning(errMsg);
+                    return;
+                }
+                if (!self.form.id && !self.form.apiKey) {
+                    ReggieUI.warning('请输入 API 密钥');
+                    return;
+                }
 
-                    self.submitting = true;
+                self.submitting = true;
 
                 const payload = JSON.parse(JSON.stringify(self.form));
                 if (self.form.id && self.form._hasExistingKey && !self.form.apiKey) {
@@ -439,7 +441,32 @@
                 }).finally(function() {
                     self.submitting = false;
                 });
-            });
+            },
+
+            // 修改点：本地必填校验（替代 el-form.validate，因表单被 append-to-body 移出组件树）
+            validateForm: function() {
+                const form = this.form || {};
+                const rules = this.providerRules || {};
+                const labels = {
+                    providerName: '供应商名称',
+                    providerCode: '供应商编码',
+                    baseUrl: 'API 地址',
+                    modelName: '模型名称'
+                };
+                for (const key in rules) {
+                    if (!rules.hasOwnProperty(key)) continue;
+                    const rule = rules[key];
+                    const required = Array.isArray(rule)
+                        ? rule.some(function(r) { return r.required; })
+                        : rule.required;
+                    if (required) {
+                        const val = form[key];
+                        if (val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
+                            return '请输入' + (labels[key] || key);
+                        }
+                    }
+                }
+                return '';
             },
 
             initPresets: function() {

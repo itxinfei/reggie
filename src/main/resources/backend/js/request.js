@@ -105,7 +105,20 @@
         if (res.data && res.data.code === 0) {
           return Promise.reject(new Error(res.data.msg || '业务处理失败'))
         }
-        return res.data
+        // 修改点(2026-08-27)：分页响应 records→list 别名 + data 兜底（修复"页面无数据展示"根因）。
+        // - 后端 MyBatis-Plus IPage 序列化结果：{code:1, msg:"success", data:{records:[...], total:N, current:1, size:10, pages:N}}
+        // - 前端 48 处列表页读取 this.tableData = res.data.list（list 字段不存在→undefined→表格为空）
+        // - 此处将 records 别名到 list，同时兼容后端已返回 list 的情况；对非分页响应（data 非对象、无 records）无副作用。
+        // - data 兜底：后端偶发返回 data:null 时，6 处页面（dining/queue-list, franchise/*-list, member-center/*）裸访问 res.data.total 会 TypeError。
+        var payload = res.data;
+        if (payload && typeof payload === 'object') {
+          if (payload.records && !payload.list) {
+            payload.list = payload.records;
+          }
+        } else {
+          payload = {};
+        }
+        return payload
       }
     },
     error => {

@@ -1,6 +1,7 @@
 package com.reggie.module.sys.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
@@ -219,18 +220,18 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         LambdaQueryWrapper<RolePermission> delWrapper = new LambdaQueryWrapper<>();
         delWrapper.eq(RolePermission::getRoleId, roleId);
         rolePermissionMapper.delete(delWrapper);
-        // 逻辑删除
-        existing.setIsDeleted(1);
-        existing.setUpdateTime(java.time.LocalDateTime.now());
-        existing.setUpdateUser(BaseContext.getCurrentId());
-        this.updateById(existing);
+        // 逻辑删除：用 UpdateWrapper.set() 强制写入 is_deleted
+        // MyBatis-Plus @TableLogic 会自动从普通 update 的 SET 子句中移除 is_deleted，
+        // 但 UpdateWrapper.set() 显式设置的列不会被过滤
+        UpdateWrapper<Role> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id", roleId)
+                     .eq("tenant_id", tenantId)
+                     .eq("is_deleted", 0)
+                     .set("is_deleted", 1)
+                     .set("update_time", java.time.LocalDateTime.now())
+                     .set("update_user", BaseContext.getCurrentId());
+        roleMapper.update(null, updateWrapper);
         log.info("[角色删除] 租户{} 逻辑删除角色{}，同时清理权限关联", tenantId, roleId);
         return true;
     }
 }
-
-
-
-
-
-

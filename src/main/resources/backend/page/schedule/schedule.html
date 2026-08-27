@@ -378,7 +378,7 @@
           return this.scheduleData[empId] && this.scheduleData[empId][day] || null
         },
         getShiftTagType: function (shift) {
-          const map = {}
+          const map = { morning: 'info', noon: 'warning', night: 'danger', full: 'success', rest: '' }
           return map[shift] || 'info'
         },
 
@@ -392,8 +392,15 @@
           self.$refs.scheduleForm.validate(function (valid) {
             if (!valid) return
             self.submitting = true
-            const data = {}
-            scheduleSave(data).then(function () {
+            const data = {
+            employeeId: self.form.employeeId,
+            date: self.form.date,
+            shift: self.form.shift,
+            startTime: self.form.startTime,
+            endTime: self.form.endTime,
+            remark: self.form.remark
+          }
+          scheduleSave(data).then(function () {
               self.submitting = false
               self.dialog.visible = false
               self.$message.success('排班添加成功')
@@ -414,7 +421,7 @@
           })
         },
         editCell: function (emp, dayLabel) {
-          this.form = { employeeId: emp.id, date: this.scheduleMonth + '-0' + dayLabel.split('(')[0], shift: 'morning', startTime: '', endTime: '', remark: '' }
+          this.form = { employeeId: emp.id, date: this.scheduleMonth + '-' + pad2(dayLabel.split('(')[0]), shift: 'morning', startTime: '', endTime: '', remark: '' }
           const cell = this.getCell(emp.id, dayLabel)
           if (cell) {
             this.form.shift = cell.shift

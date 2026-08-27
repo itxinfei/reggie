@@ -251,7 +251,7 @@
           this.$refs.levelForm.validate(function(valid) {
             if (!valid) { ReggieUI.warning('请完善表单信息'); return false }
             self.submitting = true
-            const data = {}
+            const data = Object.assign({}, self.formData)
             if (self.action === 'add') {
               addLevel(data).then(function(res) {
                 self.submitting = false

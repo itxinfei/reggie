@@ -345,14 +345,14 @@
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
           }).catch(() => {})
         },
-        submitForm() {
+        async submitForm() {
           const self = this
-          let passed = false
-          self.$refs.purchaseForm.validate(function(valid) { passed = valid })
-          if (!passed) {
+          await new Promise(function(resolve, reject) {
+            self.$refs.purchaseForm.validate(function(valid) { valid ? resolve() : reject() })
+          }).catch(function() {
             ReggieUI.warning('请完善表单必填项')
             return
-          }
+          })
           const fd = self.formData
           if (!fd.details.length || !fd.details[0].materialId) { ReggieUI.error('请添加至少一条采购明细'); return }
           // 创建采购单

@@ -148,6 +148,7 @@
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
@@ -239,7 +240,7 @@
           if (query !== '') {
             this.dishLoading = true
             try {
-              const res = await getDishList({ name: query })
+              const res = await queryDishList({ name: query })
               if (res.code === 1) {
                 this.dishOptions = res.data || []
               }
@@ -319,11 +320,14 @@
             }
           }
         },
-        handleSubmit() {
+        async handleSubmit() {
           const self = this
-          let passed = false
-          this.$refs.costForm.validate(function(valid) { passed = valid })
-          if (!passed) return
+          await new Promise(function(resolve, reject) {
+            self.$refs.costForm.validate(function(valid) { valid ? resolve() : reject() })
+          }).catch(function() {
+            ReggieUI.warning('请完善表单必填项')
+            return
+          })
 
           self.submitLoading = true
           const apiCall = self.formData.id ? updateDishCost(self.formData) : saveDishCost(self.formData)

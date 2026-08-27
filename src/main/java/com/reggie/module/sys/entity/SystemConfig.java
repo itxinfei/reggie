@@ -51,14 +51,18 @@ public class SystemConfig implements Serializable {
     private String description;
 
     @Schema(description = "创建时间")
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
     @Schema(description = "更新时间")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
     @Schema(description = "创建人ID")
+    @TableField(fill = FieldFill.INSERT)
     private Long createUser;
 
     @Schema(description = "修改人ID")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateUser;
 }
