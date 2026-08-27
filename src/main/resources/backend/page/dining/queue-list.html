@@ -459,23 +459,23 @@
         submitTake: function() {
           if (this.takeLoading) return
           var self = this
-          var passed = false
-          self.$refs.takeFormRef.validate(function(valid) { passed = valid })
-          if (!passed) return
           self.takeLoading = true
-          queueTake({ phone: self.takeForm.phone, seatCount: self.takeForm.seatCount }).then(function(res) {
-            self.takeLoading = false
-            if (res.code === 1) {
-              ReggieUI.success('取号成功！排队号：' + (res.data ? res.data.queueNo : ''))
-              self.takeForm.dialogVisible = false
-              self.loadStats()
-              self.loadTable()
-            } else {
-              ReggieUI.error(res.msg || '操作失败')
-            }
-          }).catch(function(err) {
-            self.takeLoading = false
-            ReggieUI.error('请求失败：' + err)
+          self.$refs.takeFormRef.validate(function(valid) {
+            if (!valid) { self.takeLoading = false; return }
+            queueTake({ phone: self.takeForm.phone, seatCount: self.takeForm.seatCount }).then(function(res) {
+              self.takeLoading = false
+              if (res.code === 1) {
+                ReggieUI.success('取号成功！排队号：' + (res.data ? res.data.queueNo : ''))
+                self.takeForm.dialogVisible = false
+                self.loadStats()
+                self.loadTable()
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(function(err) {
+              self.takeLoading = false
+              ReggieUI.error('请求失败：' + err)
+            })
           })
         },
         // 入座弹窗

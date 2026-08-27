@@ -317,7 +317,7 @@
         },
         async submitOut() {
           const self = this
-          self.$refs.outForm.validate(async function(valid) {
+          self.$refs.outForm.validate(function(valid) {
             if (!valid) return
             const fd = self.outForm
             if (self.submitting) return

@@ -320,54 +320,53 @@
         submitForm() {
           if (this.submitting) return // 提交防重
           var self = this
-          var passed = false
-          self.$refs.couponForm.validate(function(valid) { passed = valid })
-          if (!passed) {
-            ReggieUI.warning('请完善表单必填项')
-            return
-          }
-          // 修改点：前端表单校验，与后端 validateCoupon 保持一致，拦截非法提交
-          if (!self.formData.name || !self.formData.name.trim()) {
-            ReggieUI.error('请输入优惠券名称'); return
-          }
-          if (!this.formData.type) {
-            ReggieUI.error('请选择优惠券类型'); return
-          }
-          if (this.formData.type === 'FULL_REDUCTION') {
-            if (!this.formData.conditionAmount || Number(this.formData.conditionAmount) <= 0) {
-              ReggieUI.error('请输入有效的条件金额'); return
-            }
-            if (!this.formData.discountAmount || Number(this.formData.discountAmount) <= 0) {
-              ReggieUI.error('请输入有效的优惠金额'); return
-            }
-            if (Number(this.formData.discountAmount) >= Number(this.formData.conditionAmount)) {
-              ReggieUI.error('优惠金额必须小于条件金额'); return
-            }
-          } else if (this.formData.type === 'DISCOUNT') {
-            if (!this.formData.discountRate || Number(this.formData.discountRate) <= 0 || Number(this.formData.discountRate) >= 1) {
-              ReggieUI.error('折扣率必须在0~1之间（如0.85表示8.5折）'); return
-            }
-          }
-          if (!this.formData.totalCount || Number(this.formData.totalCount) <= 0) {
-            ReggieUI.error('请输入发放总数'); return
-          }
-          if (this.formData.validDays === '' || Number(this.formData.validDays) <= 0) {
-            ReggieUI.error('请输入有效天数'); return
-          }
-          var data = {
-            name: this.formData.name,
-            type: this.formData.type,
-            conditionAmount: this.formData.conditionAmount || null,
-            discountAmount: this.formData.discountAmount || null,
-            discountRate: this.formData.discountRate || null,
-            totalCount: this.formData.totalCount,
-            validDays: this.formData.validDays,
-            status: this.formData.status
-          }
-          var self = this
           self.submitting = true
-          if (this.action === 'add') {
-            addCouponTemplate(data).then(res => {
+          self.$refs.couponForm.validate(function(valid) {
+            if (!valid) {
+              self.submitting = false
+              ReggieUI.warning('请完善表单必填项')
+              return
+            }
+            // 修改点：前端表单校验，与后端 validateCoupon 保持一致，拦截非法提交
+            if (!self.formData.name || !self.formData.name.trim()) {
+              self.submitting = false; ReggieUI.error('请输入优惠券名称'); return
+            }
+            if (!self.formData.type) {
+              self.submitting = false; ReggieUI.error('请选择优惠券类型'); return
+            }
+            if (self.formData.type === 'FULL_REDUCTION') {
+              if (!self.formData.conditionAmount || Number(self.formData.conditionAmount) <= 0) {
+                self.submitting = false; ReggieUI.error('请输入有效的条件金额'); return
+              }
+              if (!self.formData.discountAmount || Number(self.formData.discountAmount) <= 0) {
+                self.submitting = false; ReggieUI.error('请输入有效的优惠金额'); return
+              }
+              if (Number(self.formData.discountAmount) >= Number(self.formData.conditionAmount)) {
+                self.submitting = false; ReggieUI.error('优惠金额必须小于条件金额'); return
+              }
+            } else if (self.formData.type === 'DISCOUNT') {
+              if (!self.formData.discountRate || Number(self.formData.discountRate) <= 0 || Number(self.formData.discountRate) >= 1) {
+                self.submitting = false; ReggieUI.error('折扣率必须在0~1之间（如0.85表示8.5折）'); return
+              }
+            }
+            if (!self.formData.totalCount || Number(self.formData.totalCount) <= 0) {
+              self.submitting = false; ReggieUI.error('请输入发放总数'); return
+            }
+            if (self.formData.validDays === '' || Number(self.formData.validDays) <= 0) {
+              self.submitting = false; ReggieUI.error('请输入有效天数'); return
+            }
+            var data = {
+              name: self.formData.name,
+              type: self.formData.type,
+              conditionAmount: self.formData.conditionAmount || null,
+              discountAmount: self.formData.discountAmount || null,
+              discountRate: self.formData.discountRate || null,
+              totalCount: self.formData.totalCount,
+              validDays: self.formData.validDays,
+              status: self.formData.status
+            }
+            if (self.action === 'add') {
+              addCouponTemplate(data).then(res => {
               self.submitting = false
               if (res.code === 1) {
                 ReggieUI.success('优惠券添加成功！')
@@ -377,19 +376,20 @@
                 ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(err => { self.submitting = false; ReggieUI.error('请求失败：' + err) })
-          } else {
-            data.id = this.formData.id
-            updateCouponTemplate(data).then(res => {
-              self.submitting = false
-              if (res.code === 1) {
-                ReggieUI.success('优惠券修改成功！')
-                self.formData.dialogVisible = false
-                self.init()
-              } else {
-                ReggieUI.error(res.msg || '操作失败')
-              }
-            }).catch(err => { self.submitting = false; ReggieUI.error('请求失败：' + err) })
-          }
+            } else {
+              data.id = self.formData.id
+              updateCouponTemplate(data).then(res => {
+                self.submitting = false
+                if (res.code === 1) {
+                  ReggieUI.success('优惠券修改成功！')
+                  self.formData.dialogVisible = false
+                  self.init()
+                } else {
+                  ReggieUI.error(res.msg || '操作失败')
+                }
+              }).catch(err => { self.submitting = false; ReggieUI.error('请求失败：' + err) })
+            }
+          })
         },
         deleteHandle(id) {
           var self = this

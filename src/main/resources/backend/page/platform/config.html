@@ -275,7 +275,7 @@
       },
       // 修改点：提交（新增/更新统一入口）
       async submit() {
-        this.$refs.formRef.validate(async (valid) => {
+        this.$refs.formRef.validate((valid) => {
           if (!valid) return
           const payload = Object.assign({}, this.form, {
             syncScope: this.scopeBitsModel.reduce(function (a, b) { return a + Number(b) }, 0)
