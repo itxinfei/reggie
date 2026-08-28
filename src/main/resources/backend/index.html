@@ -48,24 +48,24 @@
         transition: all 0.2s ease;
       }
       .topbar .crumb-item {
-        color: #6b7280;
+        color: var(--color-gray-500);
         cursor: default;
       }
       .topbar .crumb-item.clickable {
         cursor: pointer;
       }
       .topbar .crumb-item.clickable:hover {
-        color: #b45309;
-        background: #fef3c7;
+        color: var(--color-warning-dark); /* #b45309 最接近 --color-warning-dark (#b88219)，语义均为深橙色文字 */
+        background: var(--amber-100);
         box-shadow: 0 1px 3px rgba(0,0,0,.08);
       }
       .topbar .crumb-current {
-        color: #1f2937;
+        color: var(--text-primary);
         font-weight: 600;
-        background: #f3f4f6;
+        background: var(--color-gray-100);
       }
       .topbar .crumb-sep {
-        color: #d1d5db;
+        color: var(--color-gray-300);
         font-size: 12px;
         line-height: 1;
         user-select: none;

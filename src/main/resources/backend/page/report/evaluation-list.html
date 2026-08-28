@@ -16,11 +16,6 @@
     .eval-app-wrap { min-height: 100%; display: flex; flex-direction: column; }
     .eval-app-wrap .container { flex: 1; background: transparent; padding: 24px 32px 32px;
       min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
-    /* 修改点：stats-cards 使用 grid 并定义 clickable/active 交互效果 */
-    .eval-app-wrap .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-    .eval-app-wrap .stat-card.clickable { cursor: pointer; user-select: none; transition: all 0.25s ease; }
-    .eval-app-wrap .stat-card.clickable:hover { transform: translateY(-3px); box-shadow: var(--shadow-xl); }
-    .eval-app-wrap .stat-card.clickable.active { border-color: var(--el-color-primary); box-shadow: 0 0 0 2px var(--el-color-primary-lighter); }
     /* 修改点：筛选栏统一样式 */
     .eval-app-wrap .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
       background: var(--bg-surface); padding: 16px 24px; border-radius: var(--radius-lg); margin-bottom: 20px;
@@ -64,7 +59,6 @@
     .eval-app-wrap .image-preview { max-width: 100%; max-height: 450px; border-radius: var(--radius-md); }
     @media (max-width: 1200px) { .eval-app-wrap .container { padding: 16px 20px 20px !important; } }
     @media (max-width: 768px) { .eval-app-wrap .container { padding: 12px 16px 16px !important; }
-      .eval-app-wrap .stats-cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
       .eval-app-wrap .filter-bar { flex-direction: column; align-items: stretch; } }
   </style>
 </head>

@@ -13,9 +13,6 @@
     /* ========== 采购管理专用样式 ========== */
     .purchase-chart { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px 24px; box-shadow: var(--shadow-sm); margin-bottom: 20px; height: 340px; }
     .detail-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
-    @media (max-width: 1200px) {
-      .stats-cards { grid-template-columns: repeat(2, 1fr); }
-    }
   </style>
 </head>
 <body>
@@ -76,7 +73,7 @@
         @expand-change="loadDetails">
         <template #expand="{ row }">
           <el-table aria-label="数据表格" :data="row.details" stripe class="tableBox" v-if="row.details && row.details.length">
-            <el-table-column prop="materialName" label="食材名称" min-width="140" align="center" show-overflow-tooltip />
+            <el-table-column prop="materialName" label="食材名称" min-width="140" align="center" />
             <el-table-column prop="materialId" label="食材ID" width="80" align="center" />
             <el-table-column prop="qty" label="数量" width="80" align="center" />
             <el-table-column label="单价" width="100" align="right">
@@ -88,7 +85,7 @@
             <el-table-column label="小计" width="110" align="right">
               <template slot-scope="scope">￥{{ scope.row.amount }}</template>
             </el-table-column>
-            <el-table-column prop="remark" label="备注" min-width="120" align="center" show-overflow-tooltip />
+            <el-table-column prop="remark" label="备注" min-width="120" align="center" />
           </el-table>
           <div v-else style="text-align:center;padding:16px;color:var(--el-border-base);">暂无明细数据</div>
         </template>

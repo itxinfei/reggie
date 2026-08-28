@@ -216,7 +216,7 @@
               <el-tag size="small">{{ typeTextComplaint(row.complaintType) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="title" label="标题" min-width="150" show-overflow-tooltip></el-table-column>
+          <el-table-column prop="title" label="标题" min-width="150"></el-table-column>
           <el-table-column label="状态" width="90" align="center">
             <template slot-scope="{row}">
               <el-tag :type="statusTagComplaint(row.status)" size="small">{{ statusTextComplaint(row.status) }}</el-tag>

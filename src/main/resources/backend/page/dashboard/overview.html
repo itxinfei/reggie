@@ -129,165 +129,6 @@
       margin-top: 2px;
     }
 
-    /* ========== KPI 卡片 - 4列整行显示（容器使用 stats-cards 统一规范，网格与响应式由
-       components-stats-card.css 提供，此处不再重复定义） ========== */
-
-    .kpi-card {
-      background: var(--bg-surface);
-      border-radius: var(--radius-lg);
-      padding: var(--space-5);
-      min-height: 100px;
-      position: relative;
-      overflow: hidden;
-      cursor: default;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--border-subtle);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .kpi-card:hover {
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-lg);
-      border-color: var(--color-brand-300);
-    }
-
-    /* 顶部主题色装饰条（纯色，符合"禁止渐变"规范） */
-    .kpi-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: var(--stat-color, var(--color-brand-500));
-      opacity: 0.8;
-    }
-
-    /* 背景装饰圆（纯色，低透明度） */
-    .kpi-card::after {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -30%;
-      width: 200px;
-      height: 200px;
-      background: var(--stat-color, var(--color-brand-500));
-      border-radius: 50%;
-      opacity: 0.05;
-      transition: all 0.5s;
-    }
-
-    .kpi-card:hover::after {
-      transform: scale(1.2);
-      opacity: 0.08;
-    }
-
-    /* 卡片图标 */
-    .kpi-card .kpi-icon-wrapper {
-      position: absolute;
-      right: 20px;
-      top: 20px;
-      width: 56px;
-      height: 56px;
-      border-radius: var(--radius-lg);
-      background: var(--icon-bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: var(--font-size-3xl);
-      transition: all 0.3s;
-    }
-
-    .kpi-card:hover .kpi-icon-wrapper {
-      transform: rotate(5deg) scale(1.1);
-    }
-
-    /* 标签 */
-    .kpi-card .kpi-label {
-      font-size:var(--font-size-base);
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-      font-weight: 500;
-      letter-spacing: 0.3px;
-    }
-
-    /* 数值（纯色令牌，符合"禁止渐变"规范） */
-    .kpi-card .kpi-value {
-      font-size: var(--font-size-3xl);
-      font-weight: 700;
-      line-height: 1.1;
-      font-variant-numeric: tabular-nums;
-      margin-bottom: 8px;
-      color: var(--stat-color, var(--color-brand-600));
-    }
-
-    /* 副信息 */
-    .kpi-card .kpi-sub {
-      font-size:var(--font-size-xs);
-      color: var(--text-secondary);
-      margin-top: 0;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    /* 趋势指示器 */
-    .kpi-trend {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 8px;
-      border-radius: var(--radius-md);
-      font-size: var(--font-size-xs);
-      font-weight: 600;
-    }
-    .kpi-trend.up {
-      background: var(--color-success-light);
-      color: var(--color-success);
-    }
-    .kpi-trend.down {
-      background: var(--color-danger-light);
-      color: var(--color-danger);
-    }
-    .kpi-trend.neutral {
-      background: var(--color-info-light);
-      color: var(--text-secondary);
-    }
-
-    /* 缓存标签 */
-    .cache-tag {
-      border-radius: var(--radius-sm);
-      font-weight: 500;
-    }
-    .cache-tag.redis { background: var(--color-success-light); color: var(--color-success); }
-    .cache-tag.mysql { background: var(--color-warning-light); color: var(--color-warning); }
-
-    /* 主题配色（纯色令牌，符合"禁止渐变"规范） */
-    .kpi-card.primary {
-      --stat-color: var(--color-brand-600);
-      --icon-bg: color-mix(in srgb, var(--color-brand-500) 10%, transparent);
-    }
-    .kpi-card.success {
-      --stat-color: var(--color-success);
-      --icon-bg: color-mix(in srgb, var(--color-success) 10%, transparent);
-    }
-    .kpi-card.warning {
-      --stat-color: var(--color-warning);
-      --icon-bg: color-mix(in srgb, var(--color-warning) 10%, transparent);
-    }
-    .kpi-card.danger {
-      --stat-color: var(--color-danger);
-      --icon-bg: color-mix(in srgb, var(--color-danger) 10%, transparent);
-    }
-    .kpi-card.info {
-      --stat-color: var(--color-gray-600);
-      --icon-bg: color-mix(in srgb, var(--color-gray-600) 10%, transparent);
-    }
-
     /* ========== 图表区域 ========== */
     .charts-row {
       display: grid;
@@ -511,11 +352,6 @@
       to { opacity: 1; }
     }
     .redis-status-bar { animation: ds-fade-in 0.4s ease both; }
-    .kpi-card { animation: ds-fade-in 0.5s ease both; }
-    .kpi-card:nth-child(1) { animation-delay: 0.04s; }
-    .kpi-card:nth-child(2) { animation-delay: 0.10s; }
-    .kpi-card:nth-child(3) { animation-delay: 0.16s; }
-    .kpi-card:nth-child(4) { animation-delay: 0.22s; }
     .chart-panel { animation: ds-fade-in 0.5s ease both; }
     .chart-panel:nth-child(1) { animation-delay: 0.26s; }
     .chart-panel:nth-child(2) { animation-delay: 0.32s; }
@@ -528,19 +364,8 @@
       .container {
         padding: 16px 20px 20px !important;
       }
-      .stats-cards {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 14px;
-      }
       .ops-summary-grid {
         grid-template-columns: 1fr 1fr;
-      }
-      .kpi-card {
-        padding: 16px;
-        min-height: 90px;
-      }
-      .kpi-card .kpi-value {
-        font-size: var(--font-size-3xl);
       }
       .charts-row {
         grid-template-columns: 1fr;
@@ -559,44 +384,14 @@
       .container {
         padding: 12px 16px 16px !important;
       }
-      .stats-cards {
-        grid-template-columns: 1fr;
-        gap: 12px;
-      }
       .ops-summary-grid {
         grid-template-columns: 1fr;
-      }
-      .kpi-card {
-        padding: 14px;
-        min-height: 80px;
-      }
-      .kpi-card .kpi-value {
-        font-size: var(--font-size-2xl);
-      }
-      .kpi-card .kpi-label {
-        font-size:var(--font-size-xs);
       }
       .chart-box {
         min-height: 260px;
       }
       .chart-panel, .bottom-panel {
         padding: 16px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .kpi-card {
-        padding: 16px;
-        min-height: 100px;
-      }
-      .kpi-card .kpi-label {
-        font-size:var(--font-size-xs);
-      }
-      .kpi-card .kpi-value {
-        font-size: var(--font-size-3xl);
-      }
-      .kpi-card .kpi-sub {
-        font-size: var(--font-size-xs);
       }
     }
   </style>

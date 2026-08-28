@@ -125,7 +125,7 @@
     <!-- 修改点：使用 <crud-dialog> 统一弹窗组件替代手写 el-dialog（仅展示，隐藏确认按钮） -->
     <crud-dialog title="库存预警" :visible.sync="warningDialogVisible" size="lg" :show-submit="false" cancel-text="关 闭">
       <el-table aria-label="数据表格" :data="warningData" stripe class="tableBox">
-        <el-table-column prop="name" label="食材名称" min-width="160" align="center" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="name" label="食材名称" min-width="160" align="center"></el-table-column>
         <el-table-column label="食材分类" width="100" align="center">
           <template slot-scope="scope">{{ scope.row.categoryName }}</template>
         </el-table-column>

@@ -109,7 +109,13 @@
   <script src="../../js/chart-panel.js"></script>
   <script>
     const CHANNEL_LABEL = { wechat: '微信支付', alipay: '支付宝', balance: '余额支付', unionpay: '云闪付' };
-    const CHANNEL_COLOR = { wechat: '#07c160', alipay: '#1677ff', balance: '#ffc200', unionpay: '#e6a23c' };
+    // 支付渠道配色：wechat/alipay 为平台品牌色（保留 hex），balance/unionpay 引用全局设计令牌
+    const CHANNEL_COLOR = {
+      wechat: '#07c160',       // 微信支付品牌绿（平台色，保留）
+      alipay: '#1677ff',       // 支付宝品牌蓝（平台色，保留）
+      balance: RgPalette.brand, // 余额支付 → 品牌金 #ffc200
+      unionpay: RgPalette.warning // 云闪付 → 警告橙 #e6a23c
+    };
 
     (function() {
       new Vue({

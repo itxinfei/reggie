@@ -156,7 +156,7 @@
                 highlight-current-row
                 v-loading="groupLoading"
                 @current-change="handleGroupSelect">
-                <el-table-column prop="name" label="规格组名称" min-width="130" :align="resolveColAlign({})" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="name" label="规格组名称" min-width="130" :align="resolveColAlign({})"></el-table-column>
                 <el-table-column prop="type" label="类型" width="76" :align="resolveColAlign({})">
                   <template slot-scope="scope">
                     <el-tag :type="scope.row.type === 1 ? 'primary' : 'success'" size="small">
@@ -251,7 +251,7 @@
                 stripe
                 style="width: 100%"
                 v-loading="optionLoading">
-                <el-table-column prop="name" label="选项名称" min-width="150" :align="resolveColAlign({})" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="name" label="选项名称" min-width="150" :align="resolveColAlign({})"></el-table-column>
                 <el-table-column prop="priceAdjust" label="价格调整" width="130" :align="resolveColAlign({ type: 'number' })">
                   <template slot-scope="scope">
                     <span :class="priceAdjustClass(scope.row.priceAdjust)">{{ formatPriceAdjust(scope.row.priceAdjust) }}</span>
