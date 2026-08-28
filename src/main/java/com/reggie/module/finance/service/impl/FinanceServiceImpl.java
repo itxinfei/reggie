@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Finance Service Implementation
@@ -47,6 +48,16 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
 
     @Autowired
     private ProfitAnalysisMapper profitAnalysisMapper;
+
+    /**
+     * 按 tenantId+platform+date 串行化对账生成请求，防止并发重复生成（TOCTOU）
+     */
+    private final ConcurrentHashMap<String, Object> reconciliationLock = new ConcurrentHashMap<>();
+
+    /**
+     * 按 tenantId+date 串行化利润分析生成请求，防止并发重复生成（TOCTOU）
+     */
+    private final ConcurrentHashMap<String, Object> profitAnalysisLock = new ConcurrentHashMap<>();
 
     @Autowired
     private OrderService orderService;
@@ -221,62 +232,67 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ReconciliationStatement generateReconciliation(LocalDate date, String platform, Long tenantId) {
-        // Check if already exists
-        LambdaQueryWrapper<ReconciliationStatement> qw = new LambdaQueryWrapper<>();
-        qw.eq(ReconciliationStatement::getStatementDate, date);
-        qw.eq(ReconciliationStatement::getPlatform, platform);
-        if (tenantId != null) {
-            qw.eq(ReconciliationStatement::getTenantId, tenantId);
-        }
-        ReconciliationStatement existing = reconciliationMapper.selectOne(qw);
-        if (existing != null) {
-            return existing;
-        }
-
-        // Query orders for the date
-        LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
-        orderQw.ge(Orders::getOrderTime, date.atStartOfDay());
-        orderQw.le(Orders::getOrderTime, date.atTime(LocalTime.MAX));
-        if (tenantId != null) {
-            orderQw.eq(Orders::getTenantId, tenantId);
-        }
-        List<Orders> orders = orderService.list(orderQw);
-
-        BigDecimal systemAmount = BigDecimal.ZERO;
-        int orderCount = 0;
-        BigDecimal refundAmount = BigDecimal.ZERO;
-        int refundCount = 0;
-
-        for (Orders order : orders) {
-            if (order.getStatus() == Orders.STATUS_COMPLETED) {
-                orderCount++;
-                systemAmount = systemAmount.add(order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO);
-            } else if (order.getStatus() == Orders.STATUS_REFUNDED) {
-                refundCount++;
-                refundAmount = refundAmount.add(order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO);
+        // 按 tenantId+platform+date 串行化对账生成请求，防止并发重复生成（TOCTOU）
+        String lockKey = (tenantId != null ? tenantId.toString() : "0") + ":" + platform + ":" + date;
+        Object lock = reconciliationLock.computeIfAbsent(lockKey, k -> new Object());
+        synchronized (lock) {
+            // Check if already exists
+            LambdaQueryWrapper<ReconciliationStatement> qw = new LambdaQueryWrapper<>();
+            qw.eq(ReconciliationStatement::getStatementDate, date);
+            qw.eq(ReconciliationStatement::getPlatform, platform);
+            if (tenantId != null) {
+                qw.eq(ReconciliationStatement::getTenantId, tenantId);
             }
+            ReconciliationStatement existing = reconciliationMapper.selectOne(qw);
+            if (existing != null) {
+                return existing;
+            }
+
+            // Query orders for the date
+            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+            orderQw.ge(Orders::getOrderTime, date.atStartOfDay());
+            orderQw.le(Orders::getOrderTime, date.atTime(LocalTime.MAX));
+            if (tenantId != null) {
+                orderQw.eq(Orders::getTenantId, tenantId);
+            }
+            List<Orders> orders = orderService.list(orderQw);
+
+            BigDecimal systemAmount = BigDecimal.ZERO;
+            int orderCount = 0;
+            BigDecimal refundAmount = BigDecimal.ZERO;
+            int refundCount = 0;
+
+            for (Orders order : orders) {
+                if (order.getStatus() == Orders.STATUS_COMPLETED) {
+                    orderCount++;
+                    systemAmount = systemAmount.add(order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO);
+                } else if (order.getStatus() == Orders.STATUS_REFUNDED) {
+                    refundCount++;
+                    refundAmount = refundAmount.add(order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO);
+                }
+            }
+
+            // Create reconciliation statement
+            ReconciliationStatement statement = new ReconciliationStatement();
+            statement.setStatementNo("RC" + date.toString().replace("-", "") + System.currentTimeMillis() % 10000);
+            statement.setStatementDate(date);
+            statement.setPlatform(platform);
+            statement.setSystemAmount(systemAmount);
+            statement.setPlatformAmount(BigDecimal.ZERO); // To be filled manually
+            statement.setDifferenceAmount(BigDecimal.ZERO);
+            statement.setOrderCount(orderCount);
+            statement.setRefundAmount(refundAmount);
+            statement.setRefundCount(refundCount);
+            statement.setFeeAmount(BigDecimal.ZERO);
+            statement.setNetAmount(systemAmount.subtract(refundAmount));
+            statement.setStatus(ReconciliationStatement.STATUS_UNRECONCILED);
+            statement.setTenantId(tenantId);
+            statement.setCreateTime(LocalDateTime.now());
+            statement.setUpdateTime(LocalDateTime.now());
+
+            reconciliationMapper.insert(statement);
+            return statement;
         }
-
-        // Create reconciliation statement
-        ReconciliationStatement statement = new ReconciliationStatement();
-        statement.setStatementNo("RC" + date.toString().replace("-", "") + System.currentTimeMillis() % 10000);
-        statement.setStatementDate(date);
-        statement.setPlatform(platform);
-        statement.setSystemAmount(systemAmount);
-        statement.setPlatformAmount(BigDecimal.ZERO); // To be filled manually
-        statement.setDifferenceAmount(BigDecimal.ZERO);
-        statement.setOrderCount(orderCount);
-        statement.setRefundAmount(refundAmount);
-        statement.setRefundCount(refundCount);
-        statement.setFeeAmount(BigDecimal.ZERO);
-        statement.setNetAmount(systemAmount.subtract(refundAmount));
-        statement.setStatus(ReconciliationStatement.STATUS_UNRECONCILED);
-        statement.setTenantId(tenantId);
-        statement.setCreateTime(LocalDateTime.now());
-        statement.setUpdateTime(LocalDateTime.now());
-
-        reconciliationMapper.insert(statement);
-        return statement;
     }
 
     @Override
@@ -351,77 +367,82 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ProfitAnalysis generateProfitAnalysis(LocalDate date, Long tenantId) {
-        // Check if already exists
-        ProfitAnalysis existing = getProfitAnalysisByDate(date, tenantId);
-        if (existing != null) {
-            return existing;
-        }
+        // 按 tenantId+date 串行化利润分析生成请求，防止并发重复生成（TOCTOU）
+        String lockKey = (tenantId != null ? tenantId.toString() : "0") + ":" + date;
+        Object lock = profitAnalysisLock.computeIfAbsent(lockKey, k -> new Object());
+        synchronized (lock) {
+            // Check if already exists
+            ProfitAnalysis existing = getProfitAnalysisByDate(date, tenantId);
+            if (existing != null) {
+                return existing;
+            }
 
-        // Query orders
-        LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
-        orderQw.ge(Orders::getOrderTime, date.atStartOfDay());
-        orderQw.le(Orders::getOrderTime, date.atTime(LocalTime.MAX));
-        if (tenantId != null) {
-            orderQw.eq(Orders::getTenantId, tenantId);
-        }
-        List<Orders> orders = orderService.list(orderQw);
+            // Query orders
+            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+            orderQw.ge(Orders::getOrderTime, date.atStartOfDay());
+            orderQw.le(Orders::getOrderTime, date.atTime(LocalTime.MAX));
+            if (tenantId != null) {
+                orderQw.eq(Orders::getTenantId, tenantId);
+            }
+            List<Orders> orders = orderService.list(orderQw);
 
-        BigDecimal totalRevenue = BigDecimal.ZERO;
-        int orderCount = 0;
-        Set<Long> uniqueCustomers = new HashSet<>();
+            BigDecimal totalRevenue = BigDecimal.ZERO;
+            int orderCount = 0;
+            Set<Long> uniqueCustomers = new HashSet<>();
 
-        for (Orders order : orders) {
-            if (order.getStatus() == Orders.STATUS_COMPLETED) {
-                orderCount++;
-                totalRevenue = totalRevenue.add(order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO);
-                if (order.getUserId() != null) {
-                    uniqueCustomers.add(order.getUserId());
+            for (Orders order : orders) {
+                if (order.getStatus() == Orders.STATUS_COMPLETED) {
+                    orderCount++;
+                    totalRevenue = totalRevenue.add(order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO);
+                    if (order.getUserId() != null) {
+                        uniqueCustomers.add(order.getUserId());
+                    }
                 }
             }
+
+            // Query costs
+            Map<String, Object> costSummary = costService.getCostSummary(date, date, tenantId);
+            BigDecimal foodCost = (BigDecimal) costSummary.getOrDefault("materialCost", BigDecimal.ZERO);
+            BigDecimal laborCost = (BigDecimal) costSummary.getOrDefault("laborCost", BigDecimal.ZERO);
+            BigDecimal otherCost = (BigDecimal) costSummary.getOrDefault("otherCost", BigDecimal.ZERO);
+            BigDecimal totalCost = foodCost.add(laborCost).add(otherCost);
+
+            // Calculate profit
+            BigDecimal grossProfit = totalRevenue.subtract(totalCost);
+            BigDecimal grossProfitRate = totalRevenue.compareTo(BigDecimal.ZERO) > 0 ?
+                    grossProfit.divide(totalRevenue, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")) : BigDecimal.ZERO;
+
+            BigDecimal operatingExpense = BigDecimal.ZERO; // Simplified
+            BigDecimal netProfit = grossProfit.subtract(operatingExpense);
+            BigDecimal netProfitRate = totalRevenue.compareTo(BigDecimal.ZERO) > 0 ?
+                    netProfit.divide(totalRevenue, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")) : BigDecimal.ZERO;
+
+            BigDecimal averageOrderValue = orderCount > 0 ?
+                    totalRevenue.divide(BigDecimal.valueOf(orderCount), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+
+            // Create profit analysis
+            ProfitAnalysis analysis = new ProfitAnalysis();
+            analysis.setAnalysisDate(date);
+            analysis.setTotalRevenue(totalRevenue);
+            analysis.setFoodCost(foodCost);
+            analysis.setLaborCost(laborCost);
+            analysis.setOtherCost(otherCost);
+            analysis.setTotalCost(totalCost);
+            analysis.setGrossProfit(grossProfit);
+            analysis.setGrossProfitRate(grossProfitRate);
+            analysis.setOperatingExpense(operatingExpense);
+            analysis.setNetProfit(netProfit);
+            analysis.setNetProfitRate(netProfitRate);
+            analysis.setOrderCount(orderCount);
+            analysis.setCustomerCount(uniqueCustomers.size());
+            analysis.setAverageOrderValue(averageOrderValue);
+            analysis.setTenantId(tenantId);
+            analysis.setCreateTime(LocalDateTime.now());
+            analysis.setUpdateTime(LocalDateTime.now());
+
+            profitAnalysisMapper.insert(analysis);
+            return analysis;
         }
-
-        // Query costs
-        Map<String, Object> costSummary = costService.getCostSummary(date, date, tenantId);
-        BigDecimal foodCost = (BigDecimal) costSummary.getOrDefault("materialCost", BigDecimal.ZERO);
-        BigDecimal laborCost = (BigDecimal) costSummary.getOrDefault("laborCost", BigDecimal.ZERO);
-        BigDecimal otherCost = (BigDecimal) costSummary.getOrDefault("otherCost", BigDecimal.ZERO);
-        BigDecimal totalCost = foodCost.add(laborCost).add(otherCost);
-
-        // Calculate profit
-        BigDecimal grossProfit = totalRevenue.subtract(totalCost);
-        BigDecimal grossProfitRate = totalRevenue.compareTo(BigDecimal.ZERO) > 0 ?
-                grossProfit.divide(totalRevenue, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")) : BigDecimal.ZERO;
-
-        BigDecimal operatingExpense = BigDecimal.ZERO; // Simplified
-        BigDecimal netProfit = grossProfit.subtract(operatingExpense);
-        BigDecimal netProfitRate = totalRevenue.compareTo(BigDecimal.ZERO) > 0 ?
-                netProfit.divide(totalRevenue, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")) : BigDecimal.ZERO;
-
-        BigDecimal averageOrderValue = orderCount > 0 ?
-                totalRevenue.divide(BigDecimal.valueOf(orderCount), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
-
-        // Create profit analysis
-        ProfitAnalysis analysis = new ProfitAnalysis();
-        analysis.setAnalysisDate(date);
-        analysis.setTotalRevenue(totalRevenue);
-        analysis.setFoodCost(foodCost);
-        analysis.setLaborCost(laborCost);
-        analysis.setOtherCost(otherCost);
-        analysis.setTotalCost(totalCost);
-        analysis.setGrossProfit(grossProfit);
-        analysis.setGrossProfitRate(grossProfitRate);
-        analysis.setOperatingExpense(operatingExpense);
-        analysis.setNetProfit(netProfit);
-        analysis.setNetProfitRate(netProfitRate);
-        analysis.setOrderCount(orderCount);
-        analysis.setCustomerCount(uniqueCustomers.size());
-        analysis.setAverageOrderValue(averageOrderValue);
-        analysis.setTenantId(tenantId);
-        analysis.setCreateTime(LocalDateTime.now());
-        analysis.setUpdateTime(LocalDateTime.now());
-
-        profitAnalysisMapper.insert(analysis);
-        return analysis;
     }
 
     @Override
