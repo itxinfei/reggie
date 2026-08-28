@@ -196,6 +196,10 @@ scripts/
 # ----------------------------------------------------------
 *.py
 *.sh
+# 临时测试转储 / 调试快照（各会话产生的 .txt 残留，禁止上传）
+test-*.txt
+*_test.txt
+fontsize-files.txt
 *_report.txt
 audit_pages.js
 fix_placeholders.js
