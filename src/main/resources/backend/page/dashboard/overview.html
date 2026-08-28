@@ -129,7 +129,59 @@
       margin-top: 2px;
     }
 
-    /* ========== 图表区域 ========== */
+    /* ========== KPI 卡片子元素样式（补全缺失定义） ==========
+     * 全局 chart-panel.css 定义了 .kpi-card 外层和 .kpi-card--{color} 修饰符
+     * 但页面手写结构使用 .kpi-icon-wrapper/.kpi-label/.kpi-value/.kpi-sub/.kpi-trend
+     * 而非组件标签内部的 BEM 类 .kpi-card__icon/.kpi-card__label 等，
+     * 因此需在页面本地补充这些子元素的排版规则 */
+    .kpi-card {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 20px 24px;
+    }
+    .kpi-icon-wrapper {
+      font-size: 32px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .kpi-label {
+      font-size: var(--font-size-sm);
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .kpi-value {
+      font-size: var(--font-size-2xl);
+      font-weight: 700;
+      color: var(--el-text-primary);
+      line-height: 1.2;
+    }
+    .kpi-sub {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .kpi-trend {
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: var(--font-size-xs);
+    }
+    .kpi-trend.up { color: var(--color-success); background: color-mix(in srgb, var(--color-success) 12%, transparent); }
+    .kpi-trend.down { color: var(--color-danger); background: color-mix(in srgb, var(--color-danger) 12%, transparent); }
+    .cache-tag {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border-default);
+      color: var(--text-muted);
+    }
+    .cache-tag.redis { color: var(--color-success); border-color: var(--color-success); }
+    .cache-tag.mysql { color: var(--color-info); border-color: var(--color-info); }
     .charts-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -194,8 +246,6 @@
       padding: 10px 0;
       border-bottom: 1px solid var(--el-bg-light);
       transition: all 0.2s;
-    }
-    border-radius: var(--radius-md);
     }
     .hot-dish-list .hot-dish-item:last-child {
       border-bottom: none;
