@@ -319,26 +319,34 @@ public class RetentionServiceImpl implements RetentionService {
 
     /**
      * 加载会员数据：优先 Mapper，降级 Mock
+     *
+     * <p>降级路径说明：当 RetentionMember 数据库表尚未创建或无数据时，
+     * 使用 Mock 数据兜底，并将 Mock 记录的 tenantId 重写为当前请求租户，
+     * 确保所有租户在过渡期都能看到代表性数据（而非静默返回空列表）。
      */
     private List<RetentionMember> loadMembers(Long tenantId) {
         List<RetentionMember> activeMembers = retentionMapper.listActiveMembers(tenantId, 100);
         if (!activeMembers.isEmpty()) {
             return activeMembers;
         }
+        if (log.isWarnEnabled()) {
+            log.warn("RetentionMember 数据库无数据(tenantId={})，降级为 Mock 数据", tenantId);
+        }
         return filterByTenant(tenantId);
     }
 
     /**
-     * 按租户过滤 Mock 数据
+     * 按租户过滤 Mock 数据，并将 Mock 记录的 tenantId 重写为请求租户
+     * 避免多租户场景下仅 tenantId=1 能看到 Mock 数据
      */
     private List<RetentionMember> filterByTenant(Long tenantId) {
-        if (tenantId == null) {
-            return new ArrayList<>(MOCK_MEMBERS);
+        List<RetentionMember> copy = new ArrayList<>(MOCK_MEMBERS);
+        if (tenantId != null) {
+            for (RetentionMember m : copy) {
+                m.setTenantId(tenantId);
+            }
         }
-        final Long targetTenant = tenantId;
-        return MOCK_MEMBERS.stream()
-                .filter(m -> targetTenant.equals(m.getTenantId()))
-                .collect(Collectors.toList());
+        return copy;
     }
 
     /**
