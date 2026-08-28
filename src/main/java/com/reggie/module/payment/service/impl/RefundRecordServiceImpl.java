@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 退款记录服务实现
@@ -38,6 +39,9 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
     @Autowired
     private PaymentOrderMapper paymentOrderMapper;
 
+    /** 按 paymentOrderId 串行化退款创建请求，防止并发超额退款 */
+    private final ConcurrentHashMap<Long, Object> refundLock = new ConcurrentHashMap<>();
+
     @Override
     public List<RefundRecord> listByOrderId(Long orderId) {
         return this.list(new LambdaQueryWrapper<RefundRecord>()
@@ -48,6 +52,9 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
 
     @Override
     public RefundRecord createRefund(Long paymentOrderId, BigDecimal amount, String reason) {
+        if (amount == null) {
+            throw new CustomException("退款金额不能为空");
+        }
         // 租户归属校验：防止跨租户越权创建退款记录
         Long currentTenantId = BaseContext.getCurrentTenantId();
         PaymentOrder paymentOrder = paymentOrderMapper.selectById(paymentOrderId);
@@ -57,10 +64,11 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
         if (currentTenantId != null && !currentTenantId.equals(paymentOrder.getTenantId())) {
             throw new CustomException("无权对其他租户的支付单发起退款");
         }
-        // 修复 P2-4：校验累计已退款金额 + 本次金额不超过支付金额，防止超额退款
-        if (amount != null && paymentOrder.getAmount() != null) {
+        // 串行化同一支付单的退款创建请求，防止并发超额退款（TOCTOU）
+        Object lock = refundLock.computeIfAbsent(paymentOrderId, k -> new Object());
+        synchronized (lock) {
             BigDecimal paid = paymentOrder.getAmount();
-            if (amount.compareTo(paid) > 0) {
+            if (paid == null || amount.compareTo(paid) > 0) {
                 throw new CustomException("退款金额超过支付金额");
             }
             // 查询该支付单累计已退款金额（排除本条待创建记录）
@@ -78,18 +86,18 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
                 throw new CustomException("累计退款金额超过支付金额，当前已退款:"
                         + refunded + "，本次退款:" + amount);
             }
-        }
 
-        RefundRecord record = new RefundRecord();
-        record.setPaymentOrderId(paymentOrderId);
-        record.setTenantId(currentTenantId);
-        record.setRefundNo(generateRefundNo());
-        record.setAmount(amount);
-        record.setReason(reason);
-        record.setStatus(RefundStatus.PENDING.getCode());
-        record.setCreatedTime(LocalDateTime.now());
-        this.save(record);
-        return record;
+            RefundRecord record = new RefundRecord();
+            record.setPaymentOrderId(paymentOrderId);
+            record.setTenantId(currentTenantId);
+            record.setRefundNo(generateRefundNo());
+            record.setAmount(amount);
+            record.setReason(reason);
+            record.setStatus(RefundStatus.PENDING.getCode());
+            record.setCreatedTime(LocalDateTime.now());
+            this.save(record);
+            return record;
+        }
     }
 
     @Override

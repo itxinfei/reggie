@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -43,6 +44,11 @@ public class PlatformReconcileTaskServiceImpl extends ServiceImpl<PlatformReconc
     @Autowired
     private PlatformSyncService platformSyncService;
 
+    /**
+     * 按 tenantId+platformType+date 串行化对账任务创建请求，防止并发重复对账（TOCTOU）
+     */
+    private final ConcurrentHashMap<String, Object> reconcileLock = new ConcurrentHashMap<>();
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PlatformReconcileTask reconcile(String platformType, LocalDate date) {
@@ -51,12 +57,16 @@ public class PlatformReconcileTaskServiceImpl extends ServiceImpl<PlatformReconc
             throw new RuntimeException("租户上下文缺失");
         }
 
-        // 检查是否已存在该日期的对账任务
-        PlatformReconcileTask existing = getByDate(platformType, date);
-        if (existing != null) {
-            log.info("对账任务已存在: platformType={}, date={}", platformType, date);
-            return existing;
-        }
+        // 按 tenantId+platformType+date 串行化对账请求，防止并发重复创建
+        String lockKey = tenantId + ":" + platformType + ":" + date;
+        Object lock = reconcileLock.computeIfAbsent(lockKey, k -> new Object());
+        synchronized (lock) {
+            // 检查是否已存在该日期的对账任务
+            PlatformReconcileTask existing = getByDate(platformType, date);
+            if (existing != null) {
+                log.info("对账任务已存在: platformType={}, date={}", platformType, date);
+                return existing;
+            }
 
         // 创建对账任务
         PlatformReconcileTask task = new PlatformReconcileTask();
@@ -134,6 +144,7 @@ public class PlatformReconcileTaskServiceImpl extends ServiceImpl<PlatformReconc
         }
 
         return task;
+        }
     }
 
     @Override

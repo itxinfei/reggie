@@ -28,6 +28,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +84,11 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
      * 收银支付幂等锁过期时间（秒），足够覆盖同一笔订单的重复提交窗口
      */
     private static final long CASHIER_IDEMPOTENCY_TTL_SECONDS = 3600;
+
+    /**
+     * 按 tenantId+date 串行化日结请求，防止并发重复日结（TOCTOU）
+     */
+    private final ConcurrentHashMap<String, Object> settlementLock = new ConcurrentHashMap<>();
 
     // ==================== 收银记录管理 ====================
 
@@ -316,11 +322,15 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DailySettlement executeDailySettlement(LocalDate settlementDate, Long userId, String userName, Long tenantId) {
-        // 1. 检查是否已日结
-        DailySettlement existing = getDailySettlementByDate(settlementDate, tenantId);
-        if (existing != null && existing.getStatus() == 1) {
-            throw new RuntimeException("该日期已日结，不能重复日结");
-        }
+        // 按 tenantId+date 串行化日结请求，防止并发重复日结（TOCTOU）
+        String lockKey = (tenantId != null ? tenantId.toString() : "0") + ":" + settlementDate.toString();
+        Object lock = settlementLock.computeIfAbsent(lockKey, k -> new Object());
+        synchronized (lock) {
+            // 1. 检查是否已日结
+            DailySettlement existing = getDailySettlementByDate(settlementDate, tenantId);
+            if (existing != null && existing.getStatus() == 1) {
+                throw new RuntimeException("该日期已日结，不能重复日结");
+            }
 
         // 2. 查询当日订单
         LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
@@ -427,6 +437,7 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         }
 
         return settlement;
+        }
     }
 
     @Override
