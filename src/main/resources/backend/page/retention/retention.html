@@ -990,7 +990,7 @@
           const memberId = self.couponTarget.memberId
           self.couponLoading = true
           try {
-            self.$axios({ url: '/api/retention/send/' + memberId, method: 'post' })
+            self.$axios({ url: '/api/retention/send', method: 'post', params: { memberId: memberId } })
               .then(function () {
                 self.couponLoading = false
                 self.couponDialogVisible = false

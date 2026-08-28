@@ -744,16 +744,17 @@
 
           this.exporting = true
           try {
-            let blob
-            if (format === 'excel') {
-              blob = await exportApi.exportReportExcel({ startDate, endDate })
-            } else {
-              blob = await exportApi.exportReportPdf({ startDate, endDate })
-            }
+            const apiCall = format === 'excel'
+              ? exportApi.exportReportExcel({ startDate, endDate })
+              : exportApi.exportReportPdf({ startDate, endDate })
 
-            // 使用 downloadFile 下载
+            // 先 await 获取 response，提取 blob 用于大小计算和缓存
+            const res = await apiCall
+            const blob = res.data instanceof Blob ? res.data : new Blob([res.data])
+
+            // 使用 downloadFile 下载（传入已解析的 response，downloadFile 会处理下载）
             await exportApi.downloadFile(
-              Promise.resolve({ data: blob }),
+              Promise.resolve(res),
               fileName
             )
 

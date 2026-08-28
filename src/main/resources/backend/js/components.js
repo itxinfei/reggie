@@ -591,6 +591,7 @@ Vue.component('crud-table', {
       '  @selection-change="onSelectionChange"' +
       '  @sort-change="onSortChange"' +
       '  @expand-change="onExpandChange"' +
+      '  @row-click="onRowClick"' +
       '>' +
       // 展开行（可选）
       '<el-table-column v-if="expand" type="expand" :width="expandWidth">' +
@@ -745,6 +746,10 @@ Vue.component('crud-table', {
     /** 展开行变化：透传给父页面（用于懒加载明细） */
     onExpandChange: function (row, expandedRows) {
       this.$emit('expand-change', row, expandedRows)
+    },
+    /** 行点击：透传给父页面（如打开详情） */
+    onRowClick: function (row, column, event) {
+      this.$emit('row-click', row, column, event)
     },
     onSizeChange: function (val) {
       this.currentPage = 1
