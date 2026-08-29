@@ -98,8 +98,8 @@
               :unique-opened="false"
               :collapse-transition="false"
               background-color="transparent"
-              text-color="#9da3b5"
-              active-text-color="#ffc200"
+              :text-color="menuTextColor"
+              :active-text-color="menuActiveColor"
             >
               <div v-for="item in menuList" :key="item.id">
                 <el-submenu :index="item.id" v-if="item.children && item.children.length>0">
@@ -204,6 +204,7 @@
     <!-- 引入axios -->
     <script src="plugins/axios/axios.min.js"></script>
     <script src="js/request.js"></script>
+    <script src="js/components.js"></script>
     <script src="./api/login.js"></script>
     <script>
 
@@ -216,6 +217,9 @@
             userInfo: {},
             sidebarCollapsed: false,
             sidebarOpen: false,
+            // 菜单颜色统一走 RgPalette（单一来源，不再硬编码）
+            menuTextColor: RgPalette.textSecondary || '#9da3b5',
+            menuActiveColor: RgPalette.brand || '#ffc200',
             menuList: [
               { id: '1', name: '数据概览', url: 'page/dashboard/overview.html', icon: 'ri-dashboard-line' },
               { id: '2', name: '商品管理', icon: 'ri-shopping-bag-3-line', children: [

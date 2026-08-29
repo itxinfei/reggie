@@ -265,8 +265,8 @@
           const categoryRes = results[0]
           // 处理分类列表数据
           if (String(categoryRes.code) === '1') {
-            this.tableData = categoryRes.data.records
-            this.counts = Number(categoryRes.data.total)
+            this.tableData = categoryRes.data.records || []
+            this.counts = Number(categoryRes.data.total) || 0
           } else {
             ReggieUI.error(categoryRes.msg || '操作失败')
           }

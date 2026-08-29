@@ -41,11 +41,14 @@ public interface UserMapper extends BaseMapper<User>{
     /**
      * 按门店(tenant_id)聚合指定时间区间内的新增用户数（总部控制台用）
      * <p>仅在超管视图（tenantId 上下文为空）下跨门店返回全部分组；用于替代逐店 N+1 查询</p>
+     * <p>必须 @InterceptorIgnore 绕开租户拦截器：否则 MyBatis-Plus 会注入
+     * {@code WHERE tenant_id = -1}，导致跨门店聚合完全失效。</p>
      *
      * @param start 起始时间（含）
      * @param end   结束时间（不含）
      * @return 每个 tenantId 的 newUsers
      */
+    @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT tenant_id AS tenantId, COUNT(*) AS newUsers "
             + "FROM `user` WHERE create_time >= #{start} AND create_time < #{end} "
             + "GROUP BY tenant_id")

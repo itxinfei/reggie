@@ -15,6 +15,22 @@ var exportApi = (function() {
     });
 
     service.interceptors.request.use(function(config) {
+        // 修改点：为写操作注入 CSRF Token（与 request.js 保持一致，防止导出接口绕过 CSRF 防护）
+        var method = (config.method || 'get').toLowerCase();
+        if (method === 'post' || method === 'put' || method === 'delete') {
+            var token = null;
+            try {
+                // 优先从 Cookie 读取
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var c = cookies[i].trim();
+                    if (c.indexOf('csrfToken=') === 0) { token = c.substring('csrfToken='.length); break; }
+                }
+                // Cookie 无则读 sessionStorage
+                if (!token) { token = sessionStorage.getItem('csrfToken'); }
+            } catch (e) { token = null; }
+            if (token) { config.headers['X-CSRF-Token'] = token; }
+        }
         return config;
     }, function(error) {
         return Promise.reject(error);

@@ -115,7 +115,8 @@
   <script src="../../js/chart-panel.js"></script>
   <script>
     (function() {
-      const COLORS = ['#ffc200', '#67c23a', '#e6a23c', '#f56c6c', '#409eff', '#9b59b6', '#1abc9c', '#f39c12'];
+      // 修改点：颜色统一走 window.RgPalette（单一来源），不再硬编码 hex
+      const COLORS = [RgPalette.brand, RgPalette.success, RgPalette.warning, RgPalette.danger, RgPalette.linkBlue, RgPalette.seriesViolet, RgPalette.emerald, RgPalette.orange500];
       new Vue({
         el: '#report-timeslot-app',
         data: function() {
