@@ -3,6 +3,7 @@ package com.reggie.module.dining.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.module.dining.mapper.QueueMapper;
 import com.reggie.module.dining.model.QueueRecord;
 import com.reggie.module.dining.vo.QueueStatsVO;
@@ -65,7 +66,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
 
         if (!Boolean.TRUE.equals(acquired)) {
             log.warn("[排队取号] 获取锁失败，系统繁忙: seatCount={}", seatCount);
-            throw new RuntimeException("系统繁忙，请稍后重试");
+            throw new CustomException("系统繁忙，请稍后重试");
         }
 
         try {

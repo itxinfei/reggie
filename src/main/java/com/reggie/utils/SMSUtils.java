@@ -9,6 +9,7 @@ import com.aliyuncs.profile.DefaultProfile;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.LogMaskUtils;
+import com.reggie.common.CustomException;
 import com.reggie.common.ObjectMapperHolder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -86,7 +87,7 @@ public final class SMSUtils {
 	    }
 	    if (acsClient == null) {
 	        log.error("[短信] 客户端未初始化，请先调用 init() 方法");
-	        throw new RuntimeException("短信客户端未初始化");
+	        throw new CustomException("短信服务未就绪，请稍后重试");
 	    }
 
 		SendSmsRequest request = new SendSmsRequest();
@@ -101,7 +102,7 @@ public final class SMSUtils {
 			request.setTemplateParam(OBJECT_MAPPER.writeValueAsString(templateParams));
 		} catch (JsonProcessingException e) {
 			log.error("短信模板参数JSON序列化失败，phone={}, param={}", LogMaskUtils.maskPhone(phoneNumbers), param, e);
-			throw new RuntimeException("短信参数序列化失败: " + e.getMessage(), e);
+			throw new CustomException("短信参数处理失败");
 		}
 		try {
 			SendSmsResponse response = acsClient.getAcsResponse(request);
@@ -110,11 +111,11 @@ public final class SMSUtils {
 			} else {
 				log.error("短信发送失败，phone={}, code={}, message={}",
 					LogMaskUtils.maskPhone(phoneNumbers), response.getCode(), response.getMessage());
-				throw new RuntimeException("短信发送失败: " + response.getMessage());
+				throw new CustomException("短信发送失败，请稍后重试");
 			}
 		}catch (ClientException e) {
 			log.error("短信发送异常，phone={}", LogMaskUtils.maskPhone(phoneNumbers), e);
-			throw new RuntimeException("短信发送异常: " + e.getMessage(), e);
+			throw new CustomException("短信服务异常，请稍后重试");
 		}
 	}
 

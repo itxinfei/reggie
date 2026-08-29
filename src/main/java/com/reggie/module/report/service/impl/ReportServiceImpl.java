@@ -358,7 +358,7 @@ public class ReportServiceImpl implements ReportService {
                     0,
                     "failed"
             );
-            throw new RuntimeException("经营报表导出失败: " + e.getMessage(), e);
+            throw new CustomException("经营报表导出失败: " + e.getMessage());
         } finally {
             BaseContext.setCurrentTenantId(originalTenantId);
         }

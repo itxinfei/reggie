@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.ObjectMapperHolder;
+import com.reggie.common.CustomException;
 import com.reggie.module.ai.mapper.AiProviderConfigMapper;
 import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.provider.AiProviderManager;
@@ -383,7 +384,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                 // 修复 P0-6：存入数据库前加密 apiKey
                 String encrypted = AiKeyEncryptor.encrypt(config.getApiKey());
                 if (encrypted == null) {
-                    throw new RuntimeException("API密钥加密失败，请检查 REGGIE_AI_KEY 环境变量");
+                    throw new CustomException("API密钥加密失败，请检查 REGGIE_AI_KEY 环境变量");
                 }
                 config.setApiKey(encrypted);
             }
@@ -398,7 +399,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             if (config.getApiKey() != null && !config.getApiKey().trim().isEmpty()) {
                 String encrypted = AiKeyEncryptor.encrypt(config.getApiKey());
                 if (encrypted == null) {
-                    throw new RuntimeException("API密钥加密失败，请检查 REGGIE_AI_KEY 环境变量");
+                    throw new CustomException("API密钥加密失败，请检查 REGGIE_AI_KEY 环境变量");
                 }
                 config.setApiKey(encrypted);
             }

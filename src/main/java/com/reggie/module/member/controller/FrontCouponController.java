@@ -1,6 +1,7 @@
 package com.reggie.module.member.controller;
 
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.enums.CouponStatus;
@@ -60,7 +61,7 @@ public class FrontCouponController {
         Long userId = BaseContext.getCurrentId();
         Long tenantId = BaseContext.getCurrentTenantId();
         if (userId == null) {
-            throw new RuntimeException("NOTLOGIN");
+            throw new CustomException("NOTLOGIN");
         }
         LambdaQueryWrapper<Member> qw = new LambdaQueryWrapper<>();
         qw.eq(Member::getUserId, userId);

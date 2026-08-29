@@ -11,6 +11,7 @@ import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import lombok.extern.slf4j.Slf4j;
+import com.reggie.common.CustomException;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -78,7 +79,7 @@ public final class ExportUtil {
             log.info("Excel导出成功: {}, 数据行数: {}", fileName, dataList.size());
         } catch (IOException e) {
             log.error("Excel导出失败: {}", fileName, e);
-            throw new RuntimeException("Excel导出失败", e);
+            throw new CustomException("Excel导出失败");
         }
     }
 
@@ -148,7 +149,7 @@ public final class ExportUtil {
 
         } catch (IOException e) {
             log.error("生成Excel失败", e);
-            throw new RuntimeException("生成Excel文件失败", e);
+            throw new CustomException("Excel导出失败");
         } finally {
             // 清理磁盘临时文件，防止泄漏
             workbook.dispose();
@@ -245,7 +246,7 @@ public final class ExportUtil {
             log.info("PDF导出成功: {}, 数据行数: {}", fileName, dataList.size());
         } catch (Exception e) {
             log.error("PDF导出失败: {}", fileName, e);
-            throw new RuntimeException("PDF导出失败", e);
+            throw new CustomException("PDF导出失败");
         }
     }
 
@@ -365,7 +366,7 @@ public final class ExportUtil {
 
         } catch (Exception e) {
             log.error("生成PDF失败", e);
-            throw new RuntimeException("生成PDF文件失败", e);
+            throw new CustomException("PDF导出失败");
         }
     }
 
@@ -444,7 +445,7 @@ public final class ExportUtil {
             return BaseFont.createFont("Helvetica", BaseFont.WINANSI, BaseFont.NOT_EMBEDDED);
         } catch (Exception e) {
             log.error("无法加载任何PDF字体", e);
-            throw new RuntimeException("PDF字体加载失败，请确认系统已安装中文字体", e);
+            throw new CustomException("PDF导出失败：字体加载异常");
         }
     }
 }

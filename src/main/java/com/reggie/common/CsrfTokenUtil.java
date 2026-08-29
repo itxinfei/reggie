@@ -39,7 +39,7 @@ public class CsrfTokenUtil {
             // Base64 编码
             return Base64.getUrlEncoder().withoutPadding().encodeToString(combined);
         } catch (Exception e) {
-            throw new RuntimeException("生成 CSRF Token 失败", e);
+            throw new CustomException("生成 CSRF Token 失败");
         }
     }
 

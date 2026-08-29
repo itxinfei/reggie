@@ -3,6 +3,7 @@ package com.reggie.module.platform.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.platform.mapper.PlatformReconcileTaskMapper;
@@ -60,7 +61,7 @@ public class PlatformReconcileTaskServiceImpl extends ServiceImpl<PlatformReconc
     public PlatformReconcileTask reconcile(String platformType, LocalDate date) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
-            throw new RuntimeException("租户上下文缺失");
+            throw new CustomException("租户上下文缺失");
         }
 
         // 按 tenantId+platformType+date 串行化对账请求，防止并发重复创建

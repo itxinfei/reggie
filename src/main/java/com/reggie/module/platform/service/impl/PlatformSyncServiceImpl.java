@@ -1,6 +1,7 @@
 package com.reggie.module.platform.service.impl;
 
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.module.platform.adapter.PlatformAdapter;
 import com.reggie.module.platform.adapter.PlatformOrder;
 import com.reggie.module.platform.mapper.PlatformSyncLogMapper;
@@ -75,14 +76,14 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
                 if (retryCount > MAX_RETRY_COUNT) {
                     log.error("[平台重试] 已达最大重试次数，放弃: platformType={}, action={}, error={}",
                             platformType, action, e.getMessage());
-                    throw new RuntimeException(e);
+                    throw new CustomException("平台同步执行失败: " + e.getMessage());
                 }
                 log.warn("[平台重试] 第{}次重试: platformType={}, action={}", retryCount, platformType, action, e);
                 sleep(delayMs);
                 delayMs *= 2; // 指数退避
             }
         }
-        throw new RuntimeException("执行失败");
+        throw new CustomException("平台同步执行失败");
     }
 
     private void sleep(long millis) {

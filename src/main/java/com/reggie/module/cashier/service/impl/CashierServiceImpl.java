@@ -3,6 +3,7 @@ package com.reggie.module.cashier.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.module.cashier.model.CashierRecord;
 import com.reggie.module.cashier.model.DailySettlement;
 import com.reggie.module.order.model.Orders;
@@ -329,7 +330,7 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
             // 1. 检查是否已日结
             DailySettlement existing = getDailySettlementByDate(settlementDate, tenantId);
             if (existing != null && existing.getStatus() == 1) {
-                throw new RuntimeException("该日期已日结，不能重复日结");
+                throw new CustomException("该日期已日结，不能重复日结");
             }
 
         // 2. 查询当日订单
@@ -445,10 +446,10 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
     public boolean cancelDailySettlement(LocalDate settlementDate, Long tenantId) {
         DailySettlement settlement = getDailySettlementByDate(settlementDate, tenantId);
         if (settlement == null) {
-            throw new RuntimeException("日结记录不存在");
+            throw new CustomException("日结记录不存在");
         }
         if (settlement.getStatus() == 0) {
-            throw new RuntimeException("日结已取消，不能重复取消");
+            throw new CustomException("日结已取消，不能重复取消");
         }
 
         settlement.setStatus(0); // 未结账
