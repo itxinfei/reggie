@@ -334,6 +334,8 @@ public class ExportController {
             wrapper.eq(Dish::getCategoryId, categoryId);
         }
         wrapper.orderByDesc(Dish::getCreateTime);
+        // #12 限制最大导出行数，防止全量加载 OOM
+        wrapper.last("LIMIT 100000");
         return dishService.list(wrapper);
     }
 
@@ -344,6 +346,8 @@ public class ExportController {
         LambdaQueryWrapper<Employee> wrapper = new LambdaQueryWrapper<>();
         addTenantFilter(wrapper);
         wrapper.orderByDesc(Employee::getCreateTime);
+        // #12 限制最大导出行数，防止全量加载 OOM
+        wrapper.last("LIMIT 100000");
         return employeeService.list(wrapper);
     }
 
@@ -391,6 +395,8 @@ public class ExportController {
         }
         categoryWrapper.eq(Category::getTenantId, tenantId);
         categoryWrapper.orderByAsc(Category::getSort);
+        // #12 限制最大行数，防止全量加载
+        categoryWrapper.last("LIMIT 100000");
         for (Category c : categoryService.list(categoryWrapper)) {
             categoryMap.put(c.getId(), c.getName());
         }

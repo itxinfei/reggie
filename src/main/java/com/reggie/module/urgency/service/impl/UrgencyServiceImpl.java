@@ -211,7 +211,9 @@ public class UrgencyServiceImpl implements UrgencyService {
 
         if (existingRecord != null && "SENT".equals(existingRecord.getStatus())) {
             // 已有未处理记录，次数+1
-            existingRecord.setTimes(existingRecord.getTimes() + 1);
+            // 防御性 null 检查：times 可能在数据库中为 null（历史数据或外部导入）
+            Integer prevTimes = existingRecord.getTimes();
+            existingRecord.setTimes((prevTimes != null ? prevTimes : 0) + 1);
             existingRecord.setUpdateTime(LocalDateTime.now());
             urgencyMapper.updateById(existingRecord);
             log.info("[催单] 更新催单记录: id={}, times={}", existingRecord.getId(), existingRecord.getTimes());

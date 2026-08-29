@@ -132,8 +132,10 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
             int rows = purchaseOrderDetailMapper.receiveFully(detail.getId(), detail.getQty());
             if (rows > 0) {
                 // 首次收货成功——按未收数量入库（已收数量从内存快照取，CAS 保证仅一个线程入库）
+                // 防御性 null 检查：qty/receivedQty 可能在数据库中为 null（历史数据）
+                BigDecimal qty = detail.getQty() != null ? detail.getQty() : BigDecimal.ZERO;
                 BigDecimal alreadyReceived = detail.getReceivedQty() != null ? detail.getReceivedQty() : BigDecimal.ZERO;
-                BigDecimal toReceive = detail.getQty().subtract(alreadyReceived);
+                BigDecimal toReceive = qty.subtract(alreadyReceived);
                 if (toReceive.compareTo(BigDecimal.ZERO) > 0) {
                     stockRecordService.stockIn(detail.getMaterialId(), toReceive,
                         detail.getUnitPrice(), orderId, "采购入库", po.getOperator());

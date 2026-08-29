@@ -270,7 +270,8 @@ public class ReplenishServiceImpl implements ReplenishService {
             if (existing == null) {
                 existing = BigDecimal.ZERO;
             }
-            dailyOutMap.put(dateKey, existing.add(r.getQty()));
+            BigDecimal qty = r.getQty() != null ? r.getQty() : BigDecimal.ZERO;
+            dailyOutMap.put(dateKey, existing.add(qty));
         }
 
         if (dailyOutMap.isEmpty()) {

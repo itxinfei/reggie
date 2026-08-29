@@ -92,9 +92,12 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         if (application == null) {
             return null;
         }
-        // 租户隔离校验：防止跨租户读取提现单敏感信息
+        // 租户隔离校验：防止跨租户读取提现单敏感信息（租户缺失时 fail-closed）
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (currentTenantId != null && !currentTenantId.equals(application.getTenantId())) {
+        if (currentTenantId == null) {
+            throw new IllegalArgumentException("租户信息缺失，无法查看提现单");
+        }
+        if (!currentTenantId.equals(application.getTenantId())) {
             throw new IllegalArgumentException("无权查看其他租户的提现单");
         }
         return application;
@@ -117,9 +120,12 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         if (application == null) {
             return false;
         }
-        // 租户隔离校验：禁止跨租户审批
+        // 租户隔离校验：禁止跨租户审批（租户缺失时 fail-closed）
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (currentTenantId != null && !currentTenantId.equals(application.getTenantId())) {
+        if (currentTenantId == null) {
+            throw new IllegalArgumentException("租户信息缺失，无法审批提现申请");
+        }
+        if (!currentTenantId.equals(application.getTenantId())) {
             throw new IllegalArgumentException("无权审批其他租户的提现申请");
         }
         // 状态机校验：仅待审批状态可审批
@@ -148,9 +154,12 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         if (application == null) {
             return false;
         }
-        // 租户隔离校验：禁止跨租户付款
+        // 租户隔离校验：禁止跨租户付款（租户缺失时 fail-closed）
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (currentTenantId != null && !currentTenantId.equals(application.getTenantId())) {
+        if (currentTenantId == null) {
+            throw new IllegalArgumentException("租户信息缺失，无法操作提现单");
+        }
+        if (!currentTenantId.equals(application.getTenantId())) {
             throw new IllegalArgumentException("无权操作其他租户的提现单");
         }
         // 状态机校验：仅已审批状态可付款
@@ -173,9 +182,12 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         if (application == null) {
             return false;
         }
-        // 租户隔离校验：禁止跨租户取消
+        // 租户隔离校验：禁止跨租户取消（租户缺失时 fail-closed）
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (currentTenantId != null && !currentTenantId.equals(application.getTenantId())) {
+        if (currentTenantId == null) {
+            throw new IllegalArgumentException("租户信息缺失，无法操作提现单");
+        }
+        if (!currentTenantId.equals(application.getTenantId())) {
             throw new IllegalArgumentException("无权操作其他租户的提现单");
         }
         if (application.getStatus() != WithdrawalApplication.STATUS_PENDING) {
@@ -221,9 +233,12 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         if (statement == null) {
             return null;
         }
-        // 租户归属校验：防止跨租户越权查看对账单
+        // 租户归属校验：租户缺失时 fail-closed（禁止跨租户越权查看对账单）
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (currentTenantId != null && !currentTenantId.equals(statement.getTenantId())) {
+        if (currentTenantId == null) {
+            throw new CustomException("租户信息缺失，无法查看对账单");
+        }
+        if (!currentTenantId.equals(statement.getTenantId())) {
             throw new CustomException("无权查看其他租户的对账单");
         }
         return statement;
@@ -302,14 +317,20 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         if (statement == null) {
             return false;
         }
-        // 租户归属校验：防止跨租户越权确认对账单
+        // 租户归属校验：租户缺失时 fail-closed（不允许确认他人对账单）
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (currentTenantId != null && !currentTenantId.equals(statement.getTenantId())) {
+        if (currentTenantId == null) {
+            throw new CustomException("租户信息缺失，无法操作对账单");
+        }
+        if (!currentTenantId.equals(statement.getTenantId())) {
             throw new CustomException("无权确认其他租户的对账单");
         }
 
         // Calculate difference
-        BigDecimal difference = statement.getSystemAmount().subtract(statement.getPlatformAmount());
+        // 防御性 null 检查：systemAmount/platformAmount 可能在数据库中为 null（历史数据）
+        BigDecimal systemAmount = statement.getSystemAmount() != null ? statement.getSystemAmount() : BigDecimal.ZERO;
+        BigDecimal platformAmount = statement.getPlatformAmount() != null ? statement.getPlatformAmount() : BigDecimal.ZERO;
+        BigDecimal difference = systemAmount.subtract(platformAmount);
         statement.setDifferenceAmount(difference);
         statement.setStatus(Math.abs(difference.doubleValue()) < 0.01 ?
                 ReconciliationStatement.STATUS_RECONCILED : ReconciliationStatement.STATUS_DISCREPANCY);
@@ -328,9 +349,12 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         if (statement == null) {
             return false;
         }
-        // 租户归属校验：防止跨租户越权删除对账单
+        // 租户归属校验：租户缺失时 fail-closed
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (currentTenantId != null && !currentTenantId.equals(statement.getTenantId())) {
+        if (currentTenantId == null) {
+            throw new CustomException("租户信息缺失，无法操作对账单");
+        }
+        if (!currentTenantId.equals(statement.getTenantId())) {
             throw new CustomException("无权删除其他租户的对账单");
         }
         return reconciliationMapper.deleteById(id) > 0;
@@ -402,9 +426,11 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
 
             // Query costs
             Map<String, Object> costSummary = costService.getCostSummary(date, date, tenantId);
-            BigDecimal foodCost = (BigDecimal) costSummary.getOrDefault("materialCost", BigDecimal.ZERO);
-            BigDecimal laborCost = (BigDecimal) costSummary.getOrDefault("laborCost", BigDecimal.ZERO);
-            BigDecimal otherCost = (BigDecimal) costSummary.getOrDefault("otherCost", BigDecimal.ZERO);
+            // 类型安全取值：getOrDefault 若命中 key 但 value 非 BigDecimal（如 Integer/Long），
+            // 直接强转 ClassCastException。此处走安全转换路径，并对 null 兜底。
+            BigDecimal foodCost = toBigDecimal(costSummary.get("materialCost"));
+            BigDecimal laborCost = toBigDecimal(costSummary.get("laborCost"));
+            BigDecimal otherCost = toBigDecimal(costSummary.get("otherCost"));
             BigDecimal totalCost = foodCost.add(laborCost).add(otherCost);
 
             // Calculate profit
@@ -581,6 +607,31 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
 
     private String generateApplicationNo() {
         return "WD" + System.currentTimeMillis();
+    }
+
+    /**
+     * 类型安全的 BigDecimal 取值：null 返回 ZERO；BigDecimal 直接返回；其他 Number 走 toString 构造，
+     * 避免 (BigDecimal) 强转 ClassCastException 与 new BigDecimal(doubleValue()) 精度陷阱。
+     */
+    private BigDecimal toBigDecimal(Object val) {
+        if (val == null) {
+            return BigDecimal.ZERO;
+        }
+        if (val instanceof BigDecimal) {
+            return (BigDecimal) val;
+        }
+        if (val instanceof Number) {
+            try {
+                return new BigDecimal(val.toString());
+            } catch (NumberFormatException e) {
+                return BigDecimal.ZERO;
+            }
+        }
+        try {
+            return new BigDecimal(val.toString());
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
     }
 }
 

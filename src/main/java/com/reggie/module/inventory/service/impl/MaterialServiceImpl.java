@@ -288,7 +288,11 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
             if (outTotal == null) {
                 outTotal = BigDecimal.ZERO;
             }
-            BigDecimal dailyUsage = outTotal.divide(new BigDecimal(days), 2, RoundingMode.HALF_UP);
+            // 除零防护：days 为方法参数，若为 0 或负数会抛 ArithmeticException
+            BigDecimal daysBd = new BigDecimal(days);
+            BigDecimal dailyUsage = daysBd.compareTo(BigDecimal.ZERO) > 0
+                    ? outTotal.divide(daysBd, 2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
 
             BigDecimal minStock = m.getMinStock() != null ? m.getMinStock() : BigDecimal.ZERO;
             BigDecimal stockQty = m.getStockQty() != null ? m.getStockQty() : BigDecimal.ZERO;

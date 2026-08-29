@@ -78,8 +78,10 @@ public class OpenAICompatibleClient implements AIClient {
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setRequestProperty("Authorization", "Bearer " + aiConfig.getApiKey());
             conn.setDoOutput(true);
-            conn.setConnectTimeout(aiConfig.getTimeout() * 1000);
-            conn.setReadTimeout(aiConfig.getTimeout() * 1000);
+            // 防御性取值：timeout 为原始类型 int（默认 60），若配置为 0 或负数则回退到 15 秒
+            int timeoutSec = aiConfig.getTimeout() > 0 ? aiConfig.getTimeout() : 15;
+            conn.setConnectTimeout(timeoutSec * 1000);
+            conn.setReadTimeout(timeoutSec * 1000);
 
             // 构建请求体
             Map<String, Object> requestBody = new LinkedHashMap<>();
@@ -112,9 +114,14 @@ public class OpenAICompatibleClient implements AIClient {
                 }
                 JsonNode choices = root.get("choices");
                 if (choices != null && choices.isArray() && choices.size() > 0) {
-                    String content = choices.get(0).get("message").get("content").asText();
+                    // 防御性 null 检查：AI 服务可能返回非标准 JSON（缺 message 或 content 字段），
+                    // 直接 .get("message").get("content") 会因中间节点为 null 触发 NPE
+                    JsonNode choice0 = choices.get(0);
+                    JsonNode message = choice0 != null ? choice0.get("message") : null;
+                    JsonNode contentNode = message != null ? message.get("content") : null;
+                    String content = contentNode != null ? contentNode.asText() : "";
                     int tokensUsed = root.has("usage")
-                            ? root.get("usage").get("total_tokens").asInt()
+                            ? root.get("usage").path("total_tokens").asInt(0)
                             : 0;
 
                     log.info("AI响应成功: tokensUsed={}, contentLength={}", tokensUsed, content.length());

@@ -98,13 +98,16 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         for (StockCheckItemDTO item : items) {
             Long materialId = item.getMaterialId();
             BigDecimal actualQty = item.getActualStock();
+            if (materialId == null || actualQty == null) {
+                throw new CustomException("盘点明细数据不完整，请检查食材ID和实盘数量");
+            }
 
             Material material = materialService.getById(materialId);
             if (material == null) {
                 throw new CustomException("食材不存在: " + materialId);
             }
 
-            BigDecimal bookQty = material.getStockQty();
+            BigDecimal bookQty = material.getStockQty() != null ? material.getStockQty() : BigDecimal.ZERO;
             BigDecimal diff = actualQty.subtract(bookQty);
             totalDiff = totalDiff.add(diff.multiply(material.getUnitPrice() != null ? material.getUnitPrice() : BigDecimal.ZERO));
 

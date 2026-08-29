@@ -162,10 +162,11 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void removeWithDish(List<Long> ids) {
-        // 一删：写操作前删除缓存
-        if (ids != null) {
-            ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
+        if (ids == null || ids.isEmpty()) {
+            throw new CustomException("套餐ID列表不能为空");
         }
+        // 一删：写操作前删除缓存
+        ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
 
         // 逐条校验：查询传入ID中处于售卖状态的套餐
         LambdaQueryWrapper<Setmeal> enabledQuery = new LambdaQueryWrapper<>();
@@ -192,9 +193,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                if (ids != null) {
-                    ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
-                }
+                ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
             }
         });
     }
@@ -206,10 +205,11 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Integer status, List<Long> ids) {
-        // 一删：写操作前删除缓存
-        if (ids != null) {
-            ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
+        if (ids == null || ids.isEmpty()) {
+            throw new CustomException("套餐ID列表不能为空");
         }
+        // 一删：写操作前删除缓存
+        ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
 
         LambdaUpdateWrapper<Setmeal> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.in(Setmeal::getId, ids);
@@ -220,9 +220,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                if (ids != null) {
-                    ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
-                }
+                ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
             }
         });
     }

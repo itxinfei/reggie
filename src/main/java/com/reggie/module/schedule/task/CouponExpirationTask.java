@@ -134,19 +134,21 @@ public class CouponExpirationTask {
     }
 
     /**
-     * 释放分布式锁：校验 UUID ownership 后删除
+     * 释放分布式锁：Lua 脚本原子校验 + 删除，防止 TTL 过期瞬间 get+delete 的 TOCTOU 竞态。
+     * 与 OrderTimeoutTask / QueueServiceImpl 保持一致的 Lua 脚本模式。
      */
     private void tryReleaseLock(String lockKey, String lockValue) {
-        if (redisTemplate == null) {
+        if (redisTemplate == null || lockValue == null) {
             return;
         }
         try {
-            Object current = redisTemplate.opsForValue().get(lockKey);
-            if (lockValue.equals(current)) {
-                redisTemplate.delete(lockKey);
-            } else {
-                log.warn("[优惠券过期] 锁已不属于当前实例，跳过释放");
-            }
+            // Lua 脚本：比对锁值后才删除，防止误删他人的锁；同时消除 get+delete 之间的竞态窗口
+            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            redisTemplate.execute(
+                    new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
+                    java.util.Collections.singletonList(lockKey),
+                    lockValue
+            );
         } catch (Exception e) {
             log.warn("[优惠券过期] 释放锁失败: {}", e.getMessage(), e);
         }

@@ -2,6 +2,7 @@ package com.reggie.module.report.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.module.category.model.Category;
 import com.reggie.module.dish.model.Dish;
 import com.reggie.module.order.model.OrderDetail;
@@ -22,6 +23,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.IsoFields;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -251,6 +253,14 @@ public class ReportServiceImpl implements ReportService {
     public byte[] exportDailyReport(String startDate, String endDate, Long tenantId, String format) {
         LocalDate start = LocalDate.parse(startDate);
         LocalDate end = LocalDate.parse(endDate);
+        // 限制导出区间跨度，防止超大区间逐日循环触发 CPU/内存异常
+        if (end.isBefore(start)) {
+            throw new CustomException("结束日期不能早于开始日期");
+        }
+        long spanDays = ChronoUnit.DAYS.between(start, end);
+        if (spanDays > 366) {
+            throw new CustomException("导出区间过长（最多支持 366 天）");
+        }
         boolean isExcel = !"pdf".equalsIgnoreCase(format);
 
         Long originalTenantId = BaseContext.getCurrentTenantId();

@@ -122,7 +122,12 @@ public class DashboardController {
             return R.success(data);
         } catch (Exception e) {
             log.error("[Dashboard] 系统健康状态获取异常", e);
-            return R.success(healthErrorPlaceholder(e));
+            // fail-closed：健康检查失败必须返回非成功状态码。
+            // 若返回 success，探活方（K8s/LB/监控）会误判节点健康而不摘除故障实例。
+            // 占位数据仍在 body 中，便于诊断；R.error 的 msg 携带故障原因。
+            R<Map<String, Object>> err = R.error("系统健康检查失败：" + e.getMessage());
+            err.setData(healthErrorPlaceholder(e));
+            return err;
         }
     }
 

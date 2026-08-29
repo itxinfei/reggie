@@ -212,7 +212,9 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         messageMapper.insert(message);
 
         // 更新参与人数
-        campaign.setCurrentParticipants(campaign.getCurrentParticipants() + 1);
+        // 防御性 null 检查：currentParticipants 可能在数据库中为 null（历史数据或外部导入）
+        Integer curParticipants = campaign.getCurrentParticipants();
+        campaign.setCurrentParticipants((curParticipants != null ? curParticipants : 0) + 1);
         updateById(campaign);
 
         log.info("[营销推送] 活动{}推送至用户{}, 状态=SENT", campaignId, userId);
@@ -551,7 +553,9 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         }
 
         // 更新参与人数
-        campaign.setCurrentParticipants(campaign.getCurrentParticipants() + pushed);
+        // 防御性 null 检查：currentParticipants 可能在数据库中为 null（历史数据或外部导入）
+        Integer curParticipants = campaign.getCurrentParticipants();
+        campaign.setCurrentParticipants((curParticipants != null ? curParticipants : 0) + pushed);
         updateById(campaign);
 
         log.info("[批量推送] 活动{}批量推送完成：推送{}/{}人", campaignId, pushed, allUsers.size());

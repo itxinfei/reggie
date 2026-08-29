@@ -124,20 +124,21 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
     }
 
     /**
-     * 释放分布式锁：仅删除自己持有的锁（校验 UUID），防止误删其他线程的锁。
-     * 生产环境建议改用 Lua 脚本原子校验 + 删除。
+     * 释放分布式锁：Lua 脚本原子校验 + 删除，防止 TTL 过期瞬间 get+delete 的 TOCTOU 竞态。
+     * 与 OrderTimeoutTask 的 unlock 保持一致的 Lua 脚本模式。
      */
     private void tryReleaseLock(String lockKey, String lockValue) {
-        if (redisTemplate == null) {
+        if (redisTemplate == null || lockValue == null) {
             return;
         }
         try {
-            Object current = redisTemplate.opsForValue().get(lockKey);
-            if (lockValue.equals(current)) {
-                redisTemplate.delete(lockKey);
-            } else {
-                log.warn("[排队取号] 锁已不属于当前线程，跳过释放: {}", lockKey);
-            }
+            // Lua 脚本：比对锁值后才删除，防止误删他人的锁；同时消除 get+delete 之间的竞态窗口
+            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            redisTemplate.execute(
+                    new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
+                    java.util.Collections.singletonList(lockKey),
+                    lockValue
+            );
         } catch (Exception e) {
             log.warn("[排队取号] 释放锁失败: {}, error={}", lockKey, e.getMessage(), e);
         }

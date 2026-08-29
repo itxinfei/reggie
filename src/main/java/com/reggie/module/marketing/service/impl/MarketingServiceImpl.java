@@ -152,7 +152,7 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
 
         for (FullReductionRule rule : rules) {
             // 检查是否满足最低消费
-            if (orderAmount.compareTo(rule.getMinAmount()) >= 0) {
+            if (rule.getMinAmount() == null || orderAmount.compareTo(rule.getMinAmount()) >= 0) {
                 // 检查用户使用次数
                 if (rule.getPerUserLimit() != null && rule.getPerUserLimit() > 0) {
                     int usageCount = getUserUsageCount(campaignId, rule.getId(), userId, tenantId);
@@ -164,10 +164,11 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
                 BigDecimal discount = BigDecimal.ZERO;
                 if (rule.getDiscountType() == FullReductionRule.TYPE_REDUCE_AMOUNT) {
                     // 减固定金额
-                    discount = rule.getDiscountValue();
+                    discount = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
                 } else if (rule.getDiscountType() == FullReductionRule.TYPE_DISCOUNT) {
                     // 打折
-                    discount = orderAmount.multiply(BigDecimal.ONE.subtract(rule.getDiscountValue()));
+                    BigDecimal discountValue = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
+                    discount = orderAmount.multiply(BigDecimal.ONE.subtract(discountValue));
                     if (rule.getMaxDiscountAmount() != null && discount.compareTo(rule.getMaxDiscountAmount()) > 0) {
                         discount = rule.getMaxDiscountAmount();
                     }
@@ -213,10 +214,12 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
 
             if (rule.getScope() == DiscountRule.SCOPE_ALL) {
                 // 全场折扣
-                discount = orderAmount.multiply(BigDecimal.ONE.subtract(rule.getDiscountRate()));
+                BigDecimal discountRate = rule.getDiscountRate() != null ? rule.getDiscountRate() : BigDecimal.ZERO;
+                discount = orderAmount.multiply(BigDecimal.ONE.subtract(discountRate));
             } else if (rule.getScope() == DiscountRule.SCOPE_DISH && dishIds != null) {
                 // 指定菜品折扣（简化处理，实际需要查询菜品价格）
-                discount = orderAmount.multiply(BigDecimal.ONE.subtract(rule.getDiscountRate()));
+                BigDecimal discountRate = rule.getDiscountRate() != null ? rule.getDiscountRate() : BigDecimal.ZERO;
+                discount = orderAmount.multiply(BigDecimal.ONE.subtract(discountRate));
             }
 
             // 限制最大优惠金额
@@ -267,7 +270,7 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         BigDecimal frDiscount = BigDecimal.ZERO;
         FullReductionRule bestFrRule = null;
         for (FullReductionRule rule : allFrRules) {
-            if (orderAmount.compareTo(rule.getMinAmount()) >= 0) {
+            if (rule.getMinAmount() == null || orderAmount.compareTo(rule.getMinAmount()) >= 0) {
                 // 检查每人限用次数（从内存 Map 中获取，避免逐条数据库查询）
                 if (rule.getPerUserLimit() != null && rule.getPerUserLimit() > 0) {
                     String usageKey = rule.getCampaignId() + "_" + rule.getId();
@@ -278,9 +281,10 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
                 }
                 BigDecimal discount = BigDecimal.ZERO;
                 if (rule.getDiscountType() == FullReductionRule.TYPE_REDUCE_AMOUNT) {
-                    discount = rule.getDiscountValue();
+                    discount = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
                 } else if (rule.getDiscountType() == FullReductionRule.TYPE_DISCOUNT) {
-                    discount = orderAmount.multiply(BigDecimal.ONE.subtract(rule.getDiscountValue()));
+                    BigDecimal discountValue = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
+                    discount = orderAmount.multiply(BigDecimal.ONE.subtract(discountValue));
                     if (rule.getMaxDiscountAmount() != null && discount.compareTo(rule.getMaxDiscountAmount()) > 0) {
                         discount = rule.getMaxDiscountAmount();
                     }
@@ -299,7 +303,8 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
             if (rule.getMinConsumption() != null && orderAmount.compareTo(rule.getMinConsumption()) < 0) {
                 continue;
             }
-            BigDecimal discount = orderAmount.multiply(BigDecimal.ONE.subtract(rule.getDiscountRate()));
+            BigDecimal discountRate = rule.getDiscountRate() != null ? rule.getDiscountRate() : BigDecimal.ZERO;
+            BigDecimal discount = orderAmount.multiply(BigDecimal.ONE.subtract(discountRate));
             if (rule.getMaxDiscountAmount() != null && discount.compareTo(rule.getMaxDiscountAmount()) > 0) {
                 discount = rule.getMaxDiscountAmount();
             }

@@ -453,7 +453,12 @@ public class StoreServiceImpl implements StoreService {
     // 修改点：新增导出方法
     @Override
     public List<Map<String, Object>> exportStores(String keyword, Integer storeType, Integer status) {
+        // fail-closed：租户缺失时拒绝导出。若透传 null 给 XML 的 si.tenant_id = #{tenantId}，
+        // SQL 中 `= NULL` 恒为 unknown，会静默返回空集（fail-open 空结果）。
         Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new com.reggie.common.CustomException("无导出权限，租户上下文缺失");
+        }
         return storeInfoMapper.exportStores(keyword, storeType, status, tenantId);
     }
 

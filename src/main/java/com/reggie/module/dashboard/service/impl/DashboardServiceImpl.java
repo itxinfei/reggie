@@ -607,8 +607,15 @@ public class DashboardServiceImpl implements DashboardService {
         if (val instanceof BigDecimal) {
             return (BigDecimal) val;
         }
+        // 精度陷阱防护：直接 new BigDecimal(double) 会引入二进制浮点误差
+        // （如 12345.67 → 12345.669999999...）。走 toString 字符串构造路径规避该问题，
+        // 对所有 Number 子类（Long/Integer/Double/Float/Short/Byte）均安全。
         if (val instanceof Number) {
-            return new BigDecimal(((Number) val).doubleValue());
+            try {
+                return new BigDecimal(val.toString());
+            } catch (NumberFormatException e) {
+                return BigDecimal.ZERO;
+            }
         }
         try {
             return new BigDecimal(String.valueOf(val));

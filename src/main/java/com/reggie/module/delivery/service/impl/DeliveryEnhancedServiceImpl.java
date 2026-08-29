@@ -203,13 +203,21 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
 
     @Override
     public BigDecimal calculateDeliveryFee(Long ruleId, BigDecimal distance, BigDecimal orderAmount) {
+        if (ruleId == null) {
+            return BigDecimal.ZERO;
+        }
         DeliveryRangeRule rule = rangeRuleMapper.selectById(ruleId);
         if (rule == null) {
             return BigDecimal.ZERO;
         }
 
+        if (distance == null) {
+            distance = BigDecimal.ZERO;
+        }
+
         // 检查是否满足免费配送条件
-        if (rule.getFreeThreshold() != null && orderAmount.compareTo(rule.getFreeThreshold()) >= 0) {
+        if (rule.getFreeThreshold() != null && orderAmount != null
+                && orderAmount.compareTo(rule.getFreeThreshold()) >= 0) {
             return BigDecimal.ZERO;
         }
 
@@ -273,9 +281,12 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
 
     @Override
     public BigDecimal calculateDistance(BigDecimal lon1, BigDecimal lat1, BigDecimal lon2, BigDecimal lat2) {
+        // 防御性 null 检查：坐标参数来自用户输入或数据库，可能为 null
+        if (lon1 == null || lat1 == null || lon2 == null || lat2 == null) {
+            return BigDecimal.ZERO;
+        }
         // 使用 Haversine 公式计算两点间距离
         double earthRadius = 6371000; // 地球半径（米）
-
         double dLat = Math.toRadians(lat2.doubleValue() - lat1.doubleValue());
         double dLon = Math.toRadians(lon2.doubleValue() - lon1.doubleValue());
 
@@ -371,6 +382,9 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
      * 判断点是否在多边形范围内（射线法）
      */
     private boolean isPointInPolygon(BigDecimal pointLon, BigDecimal pointLat, String polygonPointsJson) {
+        if (pointLon == null || pointLat == null) {
+            return false;
+        }
         if (polygonPointsJson == null || polygonPointsJson.isEmpty()) {
             return false;
         }
@@ -421,13 +435,20 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
             return BigDecimal.ZERO;
         }
 
+        if (distance == null) {
+            distance = BigDecimal.ZERO;
+        }
+
         for (DeliveryFeeStep step : steps) {
             if (step.getStartDistance() != null && step.getEndDistance() != null) {
                 if (distance.compareTo(step.getStartDistance()) >= 0 &&
                     distance.compareTo(step.getEndDistance()) <= 0) {
-                    BigDecimal fee = step.getFee();
+                    BigDecimal fee = step.getFee() != null ? step.getFee() : BigDecimal.ZERO;
                     // 计算超出部分的费用
-                    if (step.getIncrementDistance() != null && step.getIncrementFee() != null) {
+                    // 防御性 null 检查：incrementDistance 可能在数据库中为 null 或 0（历史数据或绕过校验）
+                    if (step.getIncrementDistance() != null
+                            && step.getIncrementDistance().compareTo(BigDecimal.ZERO) > 0
+                            && step.getIncrementFee() != null) {
                         BigDecimal extraDistance = distance.subtract(step.getStartDistance());
                         if (extraDistance.compareTo(BigDecimal.ZERO) > 0) {
                             BigDecimal increments = extraDistance.divide(step.getIncrementDistance(), 0, RoundingMode.CEILING);

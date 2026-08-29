@@ -110,7 +110,11 @@ public class PaymentController {
         if (!Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
             return R.error("订单状态不允许支付");
         }
-        BigDecimal payAmount = order.getAmount();
+        // 防御性 null 检查：order.amount 可能在数据库中为 null（历史数据或绕过校验）
+        BigDecimal payAmount = order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO;
+        if (payAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return R.error("订单金额异常");
+        }
 
         PaymentOrder paymentOrder = paymentOrderService.createPaymentOrder(dto.getOrderId(), dto.getChannel(), payAmount);
 
@@ -166,9 +170,16 @@ public class PaymentController {
                 // total_fee 单位为分，支付单 amount 单位为元
                 BigDecimal notifyAmount = new BigDecimal(totalFee).divide(new BigDecimal("100"), 2,
                         java.math.RoundingMode.HALF_UP);
-                if (notifyAmount.compareTo(exist.getAmount()) != 0) {
+                BigDecimal existAmount = exist.getAmount();
+                // 金额校验必须 fail-closed：支付单金额缺失属数据异常，拒绝而非放行
+                // （若在此短路跳过，攻击者可用任意回调金额通过校验篡改支付结果）
+                if (existAmount == null) {
+                    log.warn("支付单金额缺失，拒绝处理：tradeNo={}", tradeNo);
+                    return R.error("支付金额非法");
+                }
+                if (notifyAmount.compareTo(existAmount) != 0) {
                     log.warn("支付回调金额不一致，拒绝处理：notifyAmount={}, orderAmount={}, tradeNo={}",
-                            notifyAmount, exist.getAmount(), tradeNo);
+                            notifyAmount, existAmount, tradeNo);
                     return R.error("支付金额不一致");
                 }
             } catch (NumberFormatException e) {
@@ -217,12 +228,19 @@ public class PaymentController {
         }
         // 退款金额校验：单次不能超过支付金额
         BigDecimal refundAmount = dto.getAmount();
-        if (refundAmount.compareTo(paymentOrder.getAmount()) > 0) {
-            return R.error("退款金额不能大于支付金额（支付金额：" + paymentOrder.getAmount() + "元）");
+        BigDecimal paymentAmount = paymentOrder.getAmount();
+        // 金额校验必须 fail-closed：支付单金额缺失属数据异常，拒绝退款而非跳过校验
+        // （若短路放行，"单次上限"与"累计上限"两道防线同时失效，可对单笔支付单超额退款）
+        if (paymentAmount == null) {
+            log.warn("支付单金额缺失，拒绝退款：paymentOrderId={}", paymentOrder.getId());
+            return R.error("支付金额异常，无法退款");
+        }
+        if (refundAmount.compareTo(paymentAmount) > 0) {
+            return R.error("退款金额不能大于支付金额（支付金额：" + paymentAmount + "元）");
         }
         // 累计退款金额粗校验（事务内还会二次校验防并发）
         BigDecimal alreadyRefunded = refundRecordService.sumRefundedAmount(paymentOrder.getId());
-        if (alreadyRefunded.add(refundAmount).compareTo(paymentOrder.getAmount()) > 0) {
+        if (alreadyRefunded.add(refundAmount).compareTo(paymentAmount) > 0) {
             return R.error("累计退款金额超过支付金额（已退：" + alreadyRefunded + "元）");
         }
 
@@ -252,18 +270,26 @@ public class PaymentController {
                 // 事务内二次累计退款校验（用 SELECT ... FOR UPDATE 锁定支付单行，阻塞并发退款）
                 // 先对 payment_order 行加排他锁，再查询累计退款——两阶段串行化防突破上限
                 BigDecimal lockedAmount = paymentOrderMapper.selectPaymentAmountForUpdate(latest.getId(), STATUS_SUCCESS);
-                if (lockedAmount == null || lockedAmount.compareTo(latest.getAmount()) != 0) {
+                // 行锁后读到的金额是权威值；为 null 属数据异常，fail-closed 拒绝而非跳过校验
+                if (lockedAmount == null) {
+                    throw new CustomException("支付金额异常，退款失败");
+                }
+                BigDecimal latestAmount = latest.getAmount();
+                if (latestAmount == null) {
+                    throw new CustomException("支付金额异常，退款失败");
+                }
+                if (lockedAmount.compareTo(latestAmount) != 0) {
                     throw new CustomException("支付单状态已变更，退款失败");
                 }
                 BigDecimal refunded = refundRecordService.sumRefundedAmount(latest.getId());
-                if (refunded.add(fRefundAmount).compareTo(latest.getAmount()) > 0) {
+                if (refunded.add(fRefundAmount).compareTo(latestAmount) > 0) {
                     throw new CustomException("累计退款金额超过支付金额（已退：" + refunded + "元）");
                 }
                 // 创建退款记录并标记成功（渠道已确认退款，修复原先记录永远停留在 PENDING 的问题）
                 RefundRecord record = refundRecordService.createRefund(latest.getId(), fRefundAmount, fReason);
                 refundRecordService.markRefundSuccess(record.getRefundNo());
                 // 判断是否全额退款：累计已退 + 本次 == 支付金额
-                boolean isFull = refunded.add(fRefundAmount).compareTo(latest.getAmount()) == 0;
+                boolean isFull = refunded.add(fRefundAmount).compareTo(latestAmount) == 0;
                 // CAS 更新支付单状态：仅全额退款时 SUCCESS -> REFUND（原子更新防覆盖）
                 if (isFull) {
                     boolean updated = paymentOrderService.lambdaUpdate()

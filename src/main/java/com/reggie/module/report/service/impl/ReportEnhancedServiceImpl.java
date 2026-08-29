@@ -428,9 +428,12 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
             });
 
             Map<String, Object> item = itemMap.get(itemId);
-            item.put("quantity", (int) item.get("quantity") + detail.getNumber());
+            // 防御性 null 检查：number 可能在数据库中为 null（历史数据或绕过校验）
+            Integer detailNumber = detail.getNumber() != null ? detail.getNumber() : 0;
+            item.put("quantity", (int) item.get("quantity") + detailNumber);
+            BigDecimal detailAmount = detail.getAmount() != null ? detail.getAmount() : BigDecimal.ZERO;
             item.put("revenue", ((BigDecimal) item.get("revenue")).add(
-                    detail.getAmount().multiply(new BigDecimal(detail.getNumber()))));
+                    detailAmount.multiply(new BigDecimal(detailNumber))));
         }
 
         // Sort by quantity and limit
@@ -586,7 +589,7 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         List<BigDecimal> recentRevenues = new ArrayList<>();
         dd = startDate;
         while (!dd.isAfter(endDate)) {
-            recentRevenues.add(dailyRevenueMap.get(dd.toString()));
+            recentRevenues.add(dailyRevenueMap.getOrDefault(dd.toString(), BigDecimal.ZERO));
             dd = dd.plusDays(1);
         }
 

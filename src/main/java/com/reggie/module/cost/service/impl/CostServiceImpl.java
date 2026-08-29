@@ -76,12 +76,14 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         BigDecimal otherCost = dishCost.getOtherCost() != null ? dishCost.getOtherCost() : BigDecimal.ZERO;
         dishCost.setTotalCost(materialCost.add(laborCost).add(otherCost));
 
-        // 计算毛利率
+        // 计算毛利率：售价非正时重置为 0，防止旧毛利率残留造成报表展示过期数据
         if (dishCost.getSalePrice() != null && dishCost.getSalePrice().compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal profit = dishCost.getSalePrice().subtract(dishCost.getTotalCost());
             BigDecimal profitRate = profit.divide(dishCost.getSalePrice(), 4, RoundingMode.HALF_UP)
                     .multiply(new BigDecimal("100"));
             dishCost.setProfitRate(profitRate);
+        } else {
+            dishCost.setProfitRate(BigDecimal.ZERO);
         }
 
         // 保存或更新
@@ -261,12 +263,15 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         BigDecimal otherCostTotal = BigDecimal.ZERO;
 
         for (CostRecord record : costRecords) {
-            if (record.getCostType() == 1) {
-                materialCostTotal = materialCostTotal.add(record.getAmount());
-            } else if (record.getCostType() == 2) {
-                laborCostTotal = laborCostTotal.add(record.getAmount());
-            } else if (record.getCostType() == 3) {
-                otherCostTotal = otherCostTotal.add(record.getAmount());
+            BigDecimal amount = record.getAmount();
+            if (amount != null) {
+                if (record.getCostType() == 1) {
+                    materialCostTotal = materialCostTotal.add(amount);
+                } else if (record.getCostType() == 2) {
+                    laborCostTotal = laborCostTotal.add(amount);
+                } else if (record.getCostType() == 3) {
+                    otherCostTotal = otherCostTotal.add(amount);
+                }
             }
         }
 
@@ -335,12 +340,15 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
             BigDecimal dayOtherCost = BigDecimal.ZERO;
 
             for (CostRecord record : costRecords) {
-                if (record.getCostType() == 1) {
-                    dayMaterialCost = dayMaterialCost.add(record.getAmount());
-                } else if (record.getCostType() == 2) {
-                    dayLaborCost = dayLaborCost.add(record.getAmount());
-                } else if (record.getCostType() == 3) {
-                    dayOtherCost = dayOtherCost.add(record.getAmount());
+                BigDecimal amount = record.getAmount();
+                if (amount != null) {
+                    if (record.getCostType() == 1) {
+                        dayMaterialCost = dayMaterialCost.add(amount);
+                    } else if (record.getCostType() == 2) {
+                        dayLaborCost = dayLaborCost.add(amount);
+                    } else if (record.getCostType() == 3) {
+                        dayOtherCost = dayOtherCost.add(amount);
+                    }
                 }
             }
 

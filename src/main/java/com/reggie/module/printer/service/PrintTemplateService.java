@@ -45,11 +45,15 @@ public class PrintTemplateService {
 
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (OrderDetail detail : details) {
+            BigDecimal detailAmount = detail.getAmount() != null ? detail.getAmount() : BigDecimal.ZERO;
+            // 防御性 null 检查：number 可能在数据库中为 null（历史数据或绕过校验）
+            int detailNumber = detail.getNumber() != null ? detail.getNumber() : 0;
+            BigDecimal lineTotal = detailAmount.multiply(new BigDecimal(detailNumber));
             items.append(String.format("%-12s %4d %8.2f\n",
                     truncateString(detail.getName(), 12),
-                    detail.getNumber(),
-                    detail.getAmount().multiply(new BigDecimal(detail.getNumber()))));
-            totalAmount = totalAmount.add(detail.getAmount().multiply(new BigDecimal(detail.getNumber())));
+                    detailNumber,
+                    lineTotal));
+            totalAmount = totalAmount.add(lineTotal);
         }
 
         items.append("--------------------------------\n");
@@ -57,7 +61,7 @@ public class PrintTemplateService {
 
         // Summary
         receipt.put("totalAmount", totalAmount);
-        receipt.put("totalAmountText", "合计：¥" + totalAmount.setScale(2));
+        receipt.put("totalAmountText", "合计：¥" + totalAmount.setScale(2, java.math.RoundingMode.HALF_UP));
 
         // Customer info
         if (order.getUserName() != null) {
@@ -150,11 +154,11 @@ public class PrintTemplateService {
         content.append("日期：").append(date).append("\n");
         content.append("--------------------------------\n");
         content.append("订单总数：").append(totalOrders).append("\n");
-        content.append("营业总额：¥").append(totalRevenue.setScale(2)).append("\n");
+        content.append("营业总额：¥").append(totalRevenue.setScale(2, java.math.RoundingMode.HALF_UP)).append("\n");
         content.append("--------------------------------\n");
-        content.append("现金收入：¥").append(cashIncome.setScale(2)).append("\n");
-        content.append("微信收入：¥").append(wechatIncome.setScale(2)).append("\n");
-        content.append("支付宝收入：¥").append(alipayIncome.setScale(2)).append("\n");
+        content.append("现金收入：¥").append(cashIncome.setScale(2, java.math.RoundingMode.HALF_UP)).append("\n");
+        content.append("微信收入：¥").append(wechatIncome.setScale(2, java.math.RoundingMode.HALF_UP)).append("\n");
+        content.append("支付宝收入：¥").append(alipayIncome.setScale(2, java.math.RoundingMode.HALF_UP)).append("\n");
         content.append("--------------------------------\n");
 
         receipt.put("content", content.toString());

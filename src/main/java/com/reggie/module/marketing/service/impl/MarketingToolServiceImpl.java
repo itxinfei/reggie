@@ -110,9 +110,10 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
             // Calculate discount
             BigDecimal discountAmount = BigDecimal.ZERO;
             if (discount.getDiscountType() == NewCustomerDiscount.TYPE_FIXED) {
-                discountAmount = discount.getDiscountValue();
+                discountAmount = discount.getDiscountValue() != null ? discount.getDiscountValue() : BigDecimal.ZERO;
             } else if (discount.getDiscountType() == NewCustomerDiscount.TYPE_PERCENTAGE) {
-                discountAmount = orderAmount.multiply(discount.getDiscountValue())
+                BigDecimal discountValue = discount.getDiscountValue() != null ? discount.getDiscountValue() : BigDecimal.ZERO;
+                discountAmount = orderAmount.multiply(discountValue)
                         .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
                 if (discount.getMaxDiscountAmount() != null && discountAmount.compareTo(discount.getMaxDiscountAmount()) > 0) {
                     discountAmount = discount.getMaxDiscountAmount();
@@ -302,14 +303,17 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         // Check remaining stock
         quantity = Math.min(quantity, remaining);
 
-        BigDecimal totalPrice = flashSale.getFlashPrice().multiply(new BigDecimal(quantity));
-        BigDecimal originalTotal = flashSale.getOriginalPrice().multiply(new BigDecimal(quantity));
+        // 防御性 null 检查：flashPrice/originalPrice 可能在数据库中为 null（历史数据或绕过校验）
+        BigDecimal flashPrice = flashSale.getFlashPrice() != null ? flashSale.getFlashPrice() : BigDecimal.ZERO;
+        BigDecimal originalPrice = flashSale.getOriginalPrice() != null ? flashSale.getOriginalPrice() : BigDecimal.ZERO;
+        BigDecimal totalPrice = flashPrice.multiply(new BigDecimal(quantity));
+        BigDecimal originalTotal = originalPrice.multiply(new BigDecimal(quantity));
         BigDecimal savings = originalTotal.subtract(totalPrice);
 
         result.put("eligible", true);
         result.put("quantity", quantity);
-        result.put("flashPrice", flashSale.getFlashPrice());
-        result.put("originalPrice", flashSale.getOriginalPrice());
+        result.put("flashPrice", flashPrice);
+        result.put("originalPrice", originalPrice);
         result.put("totalPrice", totalPrice);
         result.put("savings", savings);
         result.put("remaining", remaining);

@@ -213,7 +213,10 @@ public class RetentionServiceImpl implements RetentionService {
         sorted.sort(new Comparator<RetentionMember>() {
             @Override
             public int compare(RetentionMember o1, RetentionMember o2) {
-                return o2.getPoints().compareTo(o1.getPoints());
+                // 防御性 null 检查：points 可能为 null（数据库中未设置的记录）
+                Integer points1 = o1.getPoints() != null ? o1.getPoints() : 0;
+                Integer points2 = o2.getPoints() != null ? o2.getPoints() : 0;
+                return points2.compareTo(points1);
             }
         });
 

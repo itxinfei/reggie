@@ -689,7 +689,15 @@ public class EmployeeController {
         if (!isAdmin(request)) {
             return R.error("权限不足，仅管理员可删除员工");
         }
-        Long currentEmpId = (Long) request.getSession().getAttribute("employee");
+        if (ids == null || ids.isEmpty()) {
+            return R.error("请选择要删除的员工");
+        }
+        // 空集合传入 MP .in() 会导致 `IN ()` 语法错误
+        Object empAttr = request.getSession().getAttribute("employee");
+        Long currentEmpId = (empAttr instanceof Number) ? ((Number) empAttr).longValue() : null;
+        if (currentEmpId == null) {
+            return R.error("登录状态异常，请重新登录");
+        }
         if (ids.contains(currentEmpId)) {
             return R.error("不允许删除当前登录账号");
         }
