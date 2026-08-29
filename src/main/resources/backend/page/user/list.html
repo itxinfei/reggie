@@ -224,7 +224,7 @@
           this.optionsLoading = true
           this.optionsLoadError = false
           try {
-            const res = await $axios({ url: '/user/options', method: 'get' })
+            const res = await userOptions()
             if (String(res.code) === '1' && res.data) {
               this.filterOptions.names = res.data.names || []
               this.filterOptions.phones = res.data.phones || []

@@ -512,6 +512,7 @@
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../js/components.js"></script>
+  <script src="../../api/urgency.js"></script>
 
   <script>
     /**
@@ -576,7 +577,7 @@
           const self = this
           self.statsLoading = true
           try {
-            self.$axios({ url: '/api/urgency/overview', method: 'get' })
+            getUrgencyOverview()
               .then(function (res) {
                 var payload = res.data || {};
                 if (res.code === 1 && payload) {
@@ -597,7 +598,7 @@
           const self = this
           self.tableLoading = true
           try {
-            self.$axios({ url: '/api/urgency/list', method: 'get' })
+            getUrgencyList()
               .then(function (res) {
                 var payload = res.data;
                 if (res.code === 1 && payload) {
@@ -631,7 +632,7 @@
         loadQueue: function () {
           const self = this
           try {
-            self.$axios({ url: '/api/urgency/queue', method: 'get' })
+            getUrgencyQueue()
               .then(function (res) {
                 var payload = res.data;
                 if (res.code === 1 && payload) {
@@ -653,7 +654,7 @@
         loadSummary: function () {
           const self = this
           try {
-            self.$axios({ url: '/api/urgency/summary', method: 'get' })
+            getUrgencySummary()
               .then(function (res) {
                 var payload = res.data || {};
                 if (res.code === 1 && payload) {
@@ -743,7 +744,7 @@
           const orderId = self.urgeOrder.orderId
           self.urgeLoading = true
           try {
-            self.$axios({ url: '/api/urgency/call/' + orderId, method: 'post' })
+            callOrder(orderId)
               .then(function () {
                 self.urgeLoading = false
                 self.urgeDialogVisible = false

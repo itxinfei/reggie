@@ -662,6 +662,7 @@
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../js/components.js"></script>
+  <script src="../../api/retention.js"></script>
 
   <script>
     /**
@@ -736,7 +737,7 @@
           self.statsLoading = true
           self.levelLoading = true
           try {
-            self.$axios({ url: '/api/retention/overview', method: 'get' })
+            getRetentionOverview()
               .then(function (res) {
                 // 修改点(2026-08-27)：拦截器已 return res.data，此时 res = {code, data, msg}
                 // 旧代码误用 res.data.code / res.data.data（多套了一层），导致判断永远失败、数据不回填
@@ -760,7 +761,7 @@
           const self = this
           self.rankingLoading = true
           try {
-            self.$axios({ url: '/api/retention/ranking', method: 'get' })
+            getPointsRanking()
               .then(function (res) {
                 var payload = res.data;
                 if (res.code === 1 && payload) {
@@ -787,7 +788,7 @@
           const self = this
           self.warningLoading = true
           try {
-            self.$axios({ url: '/api/retention/warning', method: 'get' })
+            getChurnWarning()
               .then(function (res) {
                 var payload = res.data;
                 if (res.code === 1 && payload) {
@@ -814,7 +815,7 @@
           const self = this
           self.recommendLoading = true
           try {
-            self.$axios({ url: '/api/retention/recommend', method: 'get' })
+            getSmartRecommend()
               .then(function (res) {
                 var payload = res.data;
                 if (res.code === 1 && payload) {
@@ -844,7 +845,7 @@
           if (self.filterLevel !== 'ALL') params.level = self.filterLevel
           if (self.filterStatus !== 'ALL') params.status = self.filterStatus
           try {
-            self.$axios({ url: '/api/retention/list', method: 'get', params: params })
+            getMemberList(params)
               .then(function (res) {
                 var payload = res.data;
                 if (res.code === 1 && payload) {
@@ -990,7 +991,7 @@
           const memberId = self.couponTarget.memberId
           self.couponLoading = true
           try {
-            self.$axios({ url: '/api/retention/send', method: 'post', params: { memberId: memberId } })
+            sendCoupon(memberId)
               .then(function () {
                 self.couponLoading = false
                 self.couponDialogVisible = false
