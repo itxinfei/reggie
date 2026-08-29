@@ -89,14 +89,22 @@
         // 修改点(2026-08-12)：统一由顶层窗口跳转登录页。
         // 优先导航顶层窗口；若处于 iframe 且顶层导航被浏览器策略阻止，
         // 则发消息通知父窗口处理，避免登录页被嵌套在当前 iframe（数据区）内
-        try {
-          if (window.top && window.top !== window) {
-            window.top.location.href = '/backend/page/login/login.html'
-          } else {
-            window.location.href = '/backend/page/login/login.html'
-          }
-        } catch (e) {
-          try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch (_) {}
+        // 修改点(2026-08-29)：修正NOTLOGIN顶层跳转逻辑。
+        // 旧逻辑用 `window.top && window.top !== window` 判定是否处于iframe：
+        // window.top 永远是对象引用（非null），跨源时浏览器也返回一个对象，
+        // 因此该判定恒为 true，导致 iframe 内必走 top.location 导航分支。
+        // 而 index.html 的 iframe sandbox 未加 allow-top-navigation，
+        // 顶层导航会被浏览器策略拦截抛异常，仅靠 catch 兜底 postMessage ——
+        // 属"依赖异常控制流"的脆弱写法。
+        // 新逻辑：window.self !== window.top 是明确、正确的 iframe 判定；
+        // 处于 iframe 时首选 postMessage 通知顶层（index.html 已有 handleChildNotLogin 监听），
+        // 非 iframe 时直接当前窗口跳转。
+        if (window.self !== window.top) {
+          try {
+            window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*');
+          } catch (_) {}
+        } else {
+          window.location.href = '/backend/page/login/login.html'
         }
         return Promise.reject(new Error('NOTLOGIN'))  // 修改点：阻止Promise继续进入then回调
       } else {
