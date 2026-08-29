@@ -128,30 +128,30 @@
 
           <!-- 模式②：按条件筛选 -->
           <div v-show="form.mode === 'condition'">
-            <el-form :model="form.condition" label-width="100px" size="small">
+            <el-form ref="conditionForm" :model="form.condition" :rules="conditionRules" label-width="100px" size="small">
               <div class="condition-row">
                 <el-form-item label="会员等级：">
                   <el-select v-model="form.condition.levelId" placeholder="不限" clearable style="width: 100%">
                     <el-option v-for="lv in levelList" :key="lv.id" :label="lv.name" :value="lv.id"></el-option>
                   </el-select>
                 </el-form-item>
-                <el-form-item label="新会员(天)：">
+                <el-form-item label="新会员(天)：" prop="newMemberDays">
                   <el-input-number v-model="form.condition.newMemberDays" :min="1" :max="365" placeholder="如30" controls-position="right" style="width: 100%"></el-input-number>
                 </el-form-item>
               </div>
               <div class="condition-row">
-                <el-form-item label="最小积分：">
+                <el-form-item label="最小积分：" prop="minPoints">
                   <el-input-number v-model="form.condition.minPoints" :min="0" controls-position="right" style="width: 100%"></el-input-number>
                 </el-form-item>
-                <el-form-item label="最大积分：">
+                <el-form-item label="最大积分：" prop="maxPoints">
                   <el-input-number v-model="form.condition.maxPoints" :min="0" controls-position="right" style="width: 100%"></el-input-number>
                 </el-form-item>
               </div>
               <div class="condition-row">
-                <el-form-item label="最小消费：">
+                <el-form-item label="最小消费：" prop="minConsumption">
                   <el-input-number v-model="form.condition.minConsumption" :min="0" :precision="2" controls-position="right" style="width: 100%"></el-input-number>
                 </el-form-item>
-                <el-form-item label="最大消费：">
+                <el-form-item label="最大消费：" prop="maxConsumption">
                   <el-input-number v-model="form.condition.maxConsumption" :min="0" :precision="2" controls-position="right" style="width: 100%"></el-input-number>
                 </el-form-item>
               </div>
@@ -239,6 +239,8 @@
     new Vue({
       el: '#issue-app',
       data: function() {
+        // 闭包捕获 Vue 实例，供 conditionRules 的自定义 validator 跨访问兄弟字段（区间交叉校验）
+        var self = this
         return {
           loading: false,
           issuing: false,
@@ -262,6 +264,46 @@
               minConsumption: null,
               maxConsumption: null
             }
+          },
+
+          // 条件筛选区间校验：字段均为可选，仅当两端都有值时校验交叉关系
+          // 空值代表"不限"，跳过校验（留空是合法语义，见 canIssue）
+          conditionRules: {
+            newMemberDays: [
+              { validator: function(rule, value, callback) {
+                  if (value != null && (value < 1 || value > 365)) {
+                    callback(new Error('新会员天数需在 1-365 之间'))
+                  } else { callback() }
+                }, trigger: 'blur' }
+            ],
+            minPoints: [
+              { validator: function(rule, value, callback) {
+                  if (value != null && self.form.condition.maxPoints != null && value > self.form.condition.maxPoints) {
+                    callback(new Error('最小积分不能大于最大积分'))
+                  } else { callback() }
+                }, trigger: 'change' }
+            ],
+            maxPoints: [
+              { validator: function(rule, value, callback) {
+                  if (value != null && self.form.condition.minPoints != null && value < self.form.condition.minPoints) {
+                    callback(new Error('最大积分不能小于最小积分'))
+                  } else { callback() }
+                }, trigger: 'change' }
+            ],
+            minConsumption: [
+              { validator: function(rule, value, callback) {
+                  if (value != null && self.form.condition.maxConsumption != null && value > self.form.condition.maxConsumption) {
+                    callback(new Error('最小消费不能大于最大消费'))
+                  } else { callback() }
+                }, trigger: 'change' }
+            ],
+            maxConsumption: [
+              { validator: function(rule, value, callback) {
+                  if (value != null && self.form.condition.minConsumption != null && value < self.form.condition.minConsumption) {
+                    callback(new Error('最大消费不能小于最小消费'))
+                  } else { callback() }
+                }, trigger: 'change' }
+            ]
           },
 
           // 统计数据
@@ -376,6 +418,20 @@
 
         doIssue: function() {
           var self = this
+          // 条件模式下先跑区间交叉校验，失败则 inline 报错（不弹确认框）
+          if (this.form.mode === 'condition' && this.$refs.conditionForm) {
+            this.$refs.conditionForm.validate(function(valid) {
+              if (!valid) return
+              self.$confirm('确认发放优惠券到目标会员？发放后不可撤销。', '确认发放', {
+                confirmButtonText: '确认发放',
+                cancelButtonText: '取消',
+                type: 'warning'
+              }).then(function() {
+                self.issueCoupon()
+              }).catch(function() {})
+            })
+            return
+          }
           this.$confirm('确认发放优惠券到目标会员？发放后不可撤销。', '确认发放', {
             confirmButtonText: '确认发放',
             cancelButtonText: '取消',
