@@ -93,12 +93,20 @@ public class SecurityHeaderFilter extends OncePerRequestFilter {
         response.setHeader("X-XSS-Protection", "1; mode=block");
         response.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
 
-        // HSTS: 仅在非开发环境启用（生产环境强制 HTTPS）
+        // HSTS: 仅在【非开发环境】且【请求本身已是 HTTPS】时下发。
+        // 双重条件的原因：
+        // - 非 dev：开发环境本地多为 HTTP，下发 HSTS 会让浏览器记忆 HTTPS 策略，干扰调试。
+        // - 请求已是 HTTPS：HSTS 是"已用 HTTPS 时强制后续也用 HTTPS"的机制。
+        //   若生产误用 prod profile 但走 HTTP 部署，HTTP 请求下发 HSTS 虽被浏览器忽略，
+        //   但一旦某次 HTTPS 访问触发 HSTS 记忆，后续全部强制升级 HTTPS，
+        //   而 SPA 菜单页 iframe 若为 HTTP 混合内容会整块白屏。
+        //   因此仅在确认请求已走 HTTPS 时才下发，HTTP 会话绝不下发，避免误锁死。
         // getEnvironment() 返回 Spring Environment 对象，读取当前 active profile
         org.springframework.core.env.Environment env = getEnvironment();
+        boolean isHttps = request.isSecure();
         if (env != null) {
             List<String> profiles = Arrays.asList(env.getActiveProfiles());
-            if (!profiles.contains("dev")) {
+            if (!profiles.contains("dev") && isHttps) {
                 String hsts = "max-age=" + HSTS_MAX_AGE_SECONDS + "; includeSubDomains";
                 response.setHeader("Strict-Transport-Security", hsts);
             }
