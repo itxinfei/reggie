@@ -159,6 +159,110 @@ public abstract class AbstractDeliveryPlatform implements DeliveryPlatform {
         }
     }
 
+    /**
+     * 回调签名校验的合法时间窗口（秒）：超过该窗口的请求视为过期，拒绝验签，防重放。
+     * 美团/饿了么/抖音开放平台官方均要求回调带 timestamp，5 分钟是通用安全阈值。
+     */
+    private static final long CALLBACK_TIMESTAMP_WINDOW_SECONDS = 5 * 60L;
+
+    /**
+     * 通用回调验签（美团/饿了么/抖音官方签名规范统一实现）。
+     *
+     * <p>规则：
+     * <ol>
+     *   <li>排除 sign 自身、值为空/空白 的参数；</li>
+     *   <li>剩余参数按 key 字典序升序拼接为 {@code k1=v1&k2=v2...}；</li>
+     *   <li>末尾拼接 {@code &key=secret}（secret 为平台回调验签密钥/notifyToken）；</li>
+     *   <li>对整串做 MD5 转大写，与回调 sign 大写比对。</li>
+     * </ol>
+     * 同时校验 timestamp 时效性防重放（缺失或超 5 分钟窗口则拒绝）。</p>
+     *
+     * @param params       回调参数（含 sign、timestamp）
+     * @param secret       平台回调验签密钥（notifyToken）
+     * @param platformLabel 平台日志标签（如"美团"）
+     * @return true=签名合法且未过期；false=校验失败
+     */
+    protected boolean verifyCallbackByToken(Map<String, String> params, String secret, String platformLabel) {
+        if (params == null || params.isEmpty()) {
+            return false;
+        }
+        if (config.isMockMode()) {
+            log.warn("[{}] 回调签名校验已跳过（mock-mode=true，仅限开发/演示），生产环境必须关闭 mock-mode 并配置 notify-token",
+                    platformLabel);
+            return true;
+        }
+        if (isBlank(secret)) {
+            log.error("[{}] 回调签名校验失败：平台未配置 notify-token（fail-closed）", platformLabel);
+            return false;
+        }
+        String sign = params.get("sign");
+        if (sign == null || sign.trim().isEmpty()) {
+            log.warn("[{}] 回调缺少 sign 参数", platformLabel);
+            return false;
+        }
+        // timestamp 防重放：缺失或超 5 分钟窗口则拒绝（官方回调均带 timestamp）
+        if (!checkCallbackTimestamp(params.get("timestamp"), platformLabel)) {
+            return false;
+        }
+        // 按官方规范：除 sign 外非空参数按 key 字典序拼接
+        TreeMap<String, Object> sort = new TreeMap<>();
+        for (Map.Entry<String, String> e : params.entrySet()) {
+            if ("sign".equals(e.getKey())) {
+                continue;
+            }
+            String v = e.getValue();
+            if (v != null && !v.trim().isEmpty()) {
+                sort.put(e.getKey(), v.trim());
+            }
+        }
+        String computed = md5Upper(buildCallbackSignContent(sort) + "&key=" + secret);
+        boolean ok = computed.equals(sign.trim().toUpperCase());
+        if (!ok) {
+            log.warn("[{}] 回调签名校验失败（签名不匹配）", platformLabel);
+        }
+        return ok;
+    }
+
+    /**
+     * 校验回调 timestamp 时效性，防止重放攻击。
+     * timestamp 缺失或无法解析为秒级时间戳时拒绝；与当前时间差超过窗口则拒绝。
+     */
+    private boolean checkCallbackTimestamp(String timestamp, String platformLabel) {
+        if (timestamp == null || timestamp.trim().isEmpty()) {
+            log.warn("[{}] 回调缺少 timestamp 参数，拒绝验签（防重放）", platformLabel);
+            return false;
+        }
+        try {
+            long ts = Long.parseLong(timestamp.trim());
+            // 兼容秒级与毫秒级时间戳
+            if (ts > 1_000_000_000_000L) {
+                ts = ts / 1000;
+            }
+            long now = System.currentTimeMillis() / 1000;
+            if (Math.abs(now - ts) > CALLBACK_TIMESTAMP_WINDOW_SECONDS) {
+                log.warn("[{}] 回调 timestamp 已过期（差值 {} 秒，窗口 {} 秒），拒绝验签",
+                        platformLabel, Math.abs(now - ts), CALLBACK_TIMESTAMP_WINDOW_SECONDS);
+                return false;
+            }
+            return true;
+        } catch (NumberFormatException e) {
+            log.warn("[{}] 回调 timestamp 格式非法: {}，拒绝验签", platformLabel, timestamp);
+            return false;
+        }
+    }
+
+    /** 按官方规范拼接回调签名串：k1=v1&k2=v2...（参数已按 key 字典序排好） */
+    private String buildCallbackSignContent(Map<String, Object> params) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, Object> e : params.entrySet()) {
+            if (sb.length() > 0) {
+                sb.append("&");
+            }
+            sb.append(e.getKey()).append("=").append(e.getValue());
+        }
+        return sb.toString();
+    }
+
     private boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
     }

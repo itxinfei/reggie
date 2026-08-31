@@ -106,59 +106,19 @@ public class MeituanAdapter extends AbstractDeliveryPlatform {
     }
 
     /**
-     * 校验美团回调签名。
-     * mock-mode 跳过验签；生产模式使用 notifyToken 做通用签名校验（MD5 大写比对），
-     * 未配置 notifyToken 时 fail-closed 拒绝。
+     * 校验美团回调签名（按美团开放平台官方签名规范实现）。
+     *
+     * <p>美团官方签名规则：除 sign 外非空参数按 key 字典序升序拼接为 {@code k1=v1&k2=v2...}，
+     * 末尾拼接 {@code &key=notifyToken}，整体 MD5 转大写，与回调 sign 大写比对。
+     * 同时校验 timestamp 时效性防重放（详见基类 {@link #verifyCallbackByToken}）。</p>
      *
      * @param params 回调参数
      * @return true=签名合法；false=校验失败
      */
     @Override
     public boolean verifyCallback(Map<String, String> params) {
-        if (params == null || params.isEmpty()) {
-            return false;
-        }
-        if (config.isMockMode()) {
-            log.warn("[美团] 回调签名校验已跳过（mock-mode=true，仅限开发/演示），生产环境必须关闭 mock-mode 并配置 notify-token");
-            return true;
-        }
         DeliveryPlatformConfigProperties.PlatformConfig pc = getPlatformConfig();
-        if (pc == null || isBlank(pc.getNotifyToken())) {
-            log.error("[美团] 回调签名校验失败：平台未配置 notify-token（fail-closed）");
-            return false;
-        }
-        String sign = params.get("sign");
-        if (sign == null || sign.trim().isEmpty()) {
-            log.warn("[美团] 回调缺少 sign 参数");
-            return false;
-        }
-        // 通用校验：除 sign 外参数按 key 字典序拼接 + &key=notifyToken，MD5 大写比对
-        java.util.TreeMap<String, Object> sort = new java.util.TreeMap<>();
-        for (Map.Entry<String, String> e : params.entrySet()) {
-            if (!"sign".equals(e.getKey()) && e.getValue() != null && !e.getValue().trim().isEmpty()) {
-                sort.put(e.getKey(), e.getValue());
-            }
-        }
-        String computed = md5Upper(buildSignContent(sort) + "&key=" + pc.getNotifyToken());
-        boolean ok = computed.equals(sign.trim().toUpperCase());
-        if (!ok) {
-            log.warn("[美团] 回调签名校验失败（签名不匹配）");
-        }
-        return ok;
-    }
-
-    private String buildSignContent(Map<String, Object> params) {
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, Object> e : params.entrySet()) {
-            if (sb.length() > 0) {
-                sb.append("&");
-            }
-            sb.append(e.getKey()).append("=").append(e.getValue());
-        }
-        return sb.toString();
-    }
-
-    private boolean isBlank(String s) {
-        return s == null || s.trim().isEmpty();
+        String token = pc == null ? null : pc.getNotifyToken();
+        return verifyCallbackByToken(params, token, "美团");
     }
 }
