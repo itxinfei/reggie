@@ -181,5 +181,15 @@ public class Orders implements Serializable {
     @Schema(description = "乐观锁版本号")
     @Version
     private Integer version;
+
+    /** 父订单 ID：AA 分账时指向主订单，子单为 null */
+    @Schema(description = "父订单ID（AA 分账时指向主订单）", example = "100")
+    @TableField("master_order_id")
+    private Long masterOrderId;
+
+    /** 分账份数：AA 分账后主单记录拆分子单数量 */
+    @Schema(description = "分账份数（AA 分账时记录拆分数量）", example = "3")
+    @TableField("split_count")
+    private Integer splitCount;
 }
 

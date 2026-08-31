@@ -39,6 +39,8 @@ CREATE TABLE orders (
   platform_order_id varchar(64) NULL DEFAULT NULL COMMENT '平台订单号',
   platform_shop_id varchar(64) NULL DEFAULT NULL COMMENT '平台门店ID',
   platform_raw text NULL DEFAULT NULL COMMENT '平台原始订单JSON',
+  master_order_id bigint NULL DEFAULT NULL COMMENT '父订单ID（AA分账时指向主订单）',
+  split_count int NULL DEFAULT NULL COMMENT '分账份数（AA分账时记录拆分数量）',
   version int NULL DEFAULT NULL COMMENT '乐观锁版本号',
   PRIMARY KEY (id)
 );

@@ -40,7 +40,12 @@ public enum OrderStatus {
     /**
      * 已退款
      */
-    REFUNDED(6, "已退款");
+    REFUNDED(6, "已退款"),
+
+    /**
+     * 已分账
+     */
+    SPLIT(7, "已分账");
 
     private final int value;
     private final String desc;

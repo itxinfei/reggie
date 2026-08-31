@@ -289,9 +289,9 @@
           size="small"
           header-cell-class-name="urgency-table-head"
         >
-          <el-table-column prop="orderId" label="订单号" width="180" align="center" fixed>
+          <el-table-column prop="orderNo" label="订单号" width="180" align="center" fixed>
             <template slot-scope="{ row }">
-              <span style="font-variant-numeric:tabular-nums">{{ row.orderId }}</span>
+              <span style="font-variant-numeric:tabular-nums">{{ row.orderNo || row.orderId }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="tableNo" label="桌号" width="80" align="center">
@@ -333,7 +333,7 @@
                 size="mini"
                 :disabled="row.status === 'DONE'"
                 @click="urgeHandle(row)"
-                :aria-label="'催菜：' + row.orderId"
+                :aria-label="'催菜：' + (row.orderNo || row.orderId)"
               >催菜</el-button>
             </template>
           </el-table-column>
@@ -409,7 +409,7 @@
           <div style="margin-top:var(--space-3); padding:var(--space-3); background:var(--bg-subtle); border-radius:var(--radius-sm)">
             <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1)">
               <span style="color:var(--text-muted)">订单号</span>
-              <span style="color:var(--text-primary);font-weight:500;font-variant-numeric:tabular-nums">{{ urgeOrder.orderId }}</span>
+              <span style="color:var(--text-primary);font-weight:500;font-variant-numeric:tabular-nums">{{ urgeOrder.orderNo || urgeOrder.orderId }}</span>
             </div>
             <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1)">
               <span style="color:var(--text-muted)">桌号</span>
@@ -669,6 +669,7 @@
         urgeHandle: function (row) {
           this.urgeOrder = {
             orderId: row.orderId,
+            orderNo: row.orderNo,
             tableNo: row.tableNo,
             countdown: row.countdown
           }

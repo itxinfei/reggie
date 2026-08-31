@@ -7,7 +7,9 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.ChangeTableStatusDTO;
+import com.reggie.module.dining.dto.MergeTableDTO;
 import com.reggie.module.dining.dto.OpenTableDTO;
+import com.reggie.module.dining.dto.SplitBillDTO;
 import com.reggie.module.dining.dto.TransferTableDTO;
 import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.model.TableArea;
@@ -40,7 +42,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 /**
  * 堂食桌台管理控制器
  * 提供桌台的增删改查、状态管理、二维码生成等接口
@@ -390,6 +391,67 @@ public class DiningTableController {
             log.error("生成二维码失败: tableId={}", id, e);
             return R.error("生成二维码失败，请稍后重试");
         }
+    }
+
+    /**
+     * 并台：将多个桌台的订单合并到主桌台
+     *
+     * @param dto 并台请求
+     * @return 操作结果
+     */
+    @PostMapping("/merge")
+    @RateLimit(maxRequestsPerSecond = 5)
+    @Operation(summary = "并台", description = "将多个桌台的订单合并到主桌台")
+    public R<String> mergeTables(@Valid @RequestBody MergeTableDTO dto) {
+        log.info("并台请求: masterTableId={}, mergeTableIds={}", dto.getMasterTableId(), dto.getMergeTableIds());
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        diningTableService.mergeTables(dto);
+        return R.success("并台成功");
+    }
+
+    /**
+     * 拆台：将桌台的订单拆分到新桌台
+     *
+     * @param originalTableId 原桌台 ID
+     * @param newTableId      新桌台 ID
+     * @param splitOrderIds   需要拆分出去的订单 ID 列表
+     * @return 操作结果
+     */
+    @PostMapping("/split")
+    @RateLimit(maxRequestsPerSecond = 5)
+    @Operation(summary = "拆台", description = "将桌台的订单拆分到新桌台")
+    public R<String> splitTable(@RequestParam Long originalTableId,
+                                 @RequestParam Long newTableId,
+                                 @RequestParam List<Long> splitOrderIds) {
+        log.info("拆台请求: originalTableId={}, newTableId={}, splitOrderIds={}", originalTableId, newTableId, splitOrderIds);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        diningTableService.splitTable(originalTableId, newTableId, splitOrderIds);
+        return R.success("拆台成功");
+    }
+
+    /**
+     * AA 分账：为指定订单创建拆分子单
+     *
+     * @param dto 分账请求
+     * @return 操作结果
+     */
+    @PostMapping("/splitBill")
+    @RateLimit(maxRequestsPerSecond = 5)
+    @Operation(summary = "AA 分账", description = "为订单创建拆分子单，支持按份数均分")
+    public R<String> splitBill(@Valid @RequestBody SplitBillDTO dto) {
+        log.info("AA 分账请求: orderId={}, parts={}", dto.getOrderId(), dto.getParts());
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        diningTableService.splitBill(dto);
+        return R.success("AA 分账成功");
     }
 }
 
