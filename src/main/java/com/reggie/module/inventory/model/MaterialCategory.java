@@ -50,4 +50,8 @@ public class MaterialCategory implements Serializable {
     @Schema(description = "逻辑删除：0=未删除，1=已删除")
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
+
+    @Schema(description = "该分类下的食材数量（非库字段，列表统计回填）", example = "0")
+    @TableField(exist = false)
+    private Integer materialCount;
 }

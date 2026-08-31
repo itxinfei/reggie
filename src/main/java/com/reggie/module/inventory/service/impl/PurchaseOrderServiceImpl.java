@@ -3,6 +3,7 @@ package com.reggie.module.inventory.service.impl;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.BatchFillHelper;
@@ -168,6 +169,20 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
             fillSupplierName(list);
         }
         return list;
+    }
+
+    /**
+     * 修改点：重写带条件分页（Controller 实际调用 page(pageInfo, qw)），在父类分页结果上回填供应商名称，
+     * 否则采购单列表 supplierName 列空白。IService.page 为泛型方法 <E extends IPage<T>>，子类必须以相同泛型签名重写。
+     */
+    @Override
+    public <E extends IPage<PurchaseOrder>> E page(E page, Wrapper<PurchaseOrder> queryWrapper) {
+        E result = super.page(page, queryWrapper);
+        List<PurchaseOrder> records = result.getRecords();
+        if (!org.springframework.util.CollectionUtils.isEmpty(records)) {
+            fillSupplierName(records);
+        }
+        return result;
     }
 
     @Override

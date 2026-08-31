@@ -3,6 +3,7 @@ package com.reggie.module.inventory.service.impl;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
@@ -153,8 +154,14 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         }
     }
 
-    public Page<StockCheck> page(Page<StockCheck> pageInfo, Wrapper<StockCheck> queryWrapper) {
-        Page<StockCheck> result = super.page(pageInfo, queryWrapper);
+    /**
+     * 修改点：重写带条件分页（Controller 实际调用 page(pageInfo, qw)）。IService.page 为泛型方法
+     * &lt;E extends IPage&lt;T&gt;&gt; E page(E, Wrapper)，必须以相同泛型签名重写，否则经接口引用调用时走泛型父类方法、
+     * 不执行 fillStockCheckInfo，导致 itemCount/profitLoss 列空白。
+     */
+    @Override
+    public <E extends IPage<StockCheck>> E page(E page, Wrapper<StockCheck> queryWrapper) {
+        E result = super.page(page, queryWrapper);
         List<StockCheck> records = result.getRecords();
         if (!CollectionUtils.isEmpty(records)) {
             fillStockCheckInfo(records);
@@ -162,8 +169,12 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         return result;
     }
 
-    public Page<StockCheck> page(Page<StockCheck> pageInfo) {
-        Page<StockCheck> result = super.page(pageInfo);
+    /**
+     * 修改点：重写无条件下分页（与带条件分页一致，确保填充 itemCount/profitLoss）。
+     */
+    @Override
+    public <E extends IPage<StockCheck>> E page(E page) {
+        E result = super.page(page);
         List<StockCheck> records = result.getRecords();
         if (!CollectionUtils.isEmpty(records)) {
             fillStockCheckInfo(records);

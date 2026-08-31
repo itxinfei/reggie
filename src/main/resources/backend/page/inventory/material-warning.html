@@ -345,7 +345,8 @@
             { key: 'warning', icon: 'ri-error-warning-line', label: '警告（30-80%）', value: sev.WARNING || 0, color: 'warning', subText: '建议关注' },
             { key: 'low', icon: 'ri-lightbulb-flash-line', label: '低危（80-100%）', value: sev.LOW || 0, color: 'success', subText: '接近阈值' },
             { key: 'total', icon: 'ri-box-3-line', label: '预警食材总数', value: this.statsData.totalCount || 0, color: 'primary', subText: '涉及分类 ' + cat.length + ' 个' }
-          ],
+          ]
+        },
           // 修改点：列配置改为 computed，关联分类/供应商名称通过已加载的 options 映射，
           // 避免列表接口仅返回 categoryId/supplierId 导致“分类/供应商”列空白（编辑弹窗因下拉回填故有值）
           columns: function () {
