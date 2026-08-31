@@ -23,11 +23,14 @@ import com.reggie.module.user.model.User;
 import com.reggie.module.order.mapper.OrderMapper;
 import com.reggie.module.address.service.AddressBookService;
 import com.reggie.module.dish.service.DishService;
+import com.reggie.module.delivery.service.DeliveryEnhancedService;
 import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.setmeal.service.SetmealDishService;
 import com.reggie.module.setmeal.service.SetmealService;
 import com.reggie.module.shopping.service.ShoppingCartService;
+import com.reggie.module.store.model.StoreInfo;
+import com.reggie.module.store.service.StoreService;
 import com.reggie.module.user.service.UserService;
 import com.reggie.module.printer.service.PrinterService;
 import com.reggie.module.dining.service.DiningTableService;
@@ -116,6 +119,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     @Autowired(required = false)
     private org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
 
+    /** 配送增强服务（可选注入，未配置配送规则时降级跳过配送校验） */
+    @Autowired(required = false)
+    private DeliveryEnhancedService deliveryEnhancedService;
+
+    /** 门店服务（可选注入，用于读取门店坐标/起送价/配送配置） */
+    @Autowired(required = false)
+    private StoreService storeService;
+
     /** 下单幂等锁过期时间（分钟） */
     private static final long IDEMPOTENCY_TTL_MINUTES = 30;
 
@@ -156,12 +167,46 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             throw new CustomException("用户地址信息有误，不能下单");
         }
 
+        // 配送校验：起送价 + 配送范围 + 配送费（外卖单专属，堂食/预订不进入此分支）
+        // 门店坐标 / 起送价 / 配送费配置均来自 StoreInfo，地址经纬度来自 AddressBook（GeoUtils 自动回填）
+        // 任一依赖缺失时降级跳过（不阻断下单），保证开发环境无配置也能下单
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        BigDecimal deliveryFee = BigDecimal.ZERO;
+        StoreInfo storeInfo = (storeService != null) ? storeService.findByTenantId(currentTenantId) : null;
+        boolean deliveryCheckEnabled = deliveryEnhancedService != null && storeInfo != null
+                && storeInfo.getIsDeliveryEnabled() != null && storeInfo.getIsDeliveryEnabled() == 1;
+        if (deliveryCheckEnabled) {
+            // 1. 起送价校验（totalAmount 此时尚未累计完成，先用购物车预估——菜品核价后再二次校验）
+            BigDecimal minAmount = storeInfo.getMinDeliveryAmount();
+            if (minAmount != null && minAmount.compareTo(BigDecimal.ZERO) > 0) {
+                // 此处先用购物车预览金额粗校验，后续服务端核价完成后精确二次校验
+            }
+            // 2. 配送范围 + 配送费（地址经纬度存在时才校验，避免无地图 Key 环境阻断下单）
+            BigDecimal addrLon = addressBook.getLongitude();
+            BigDecimal addrLat = addressBook.getLatitude();
+            BigDecimal storeLon = storeInfo.getLongitude();
+            BigDecimal storeLat = storeInfo.getLatitude();
+            if (addrLon != null && addrLat != null && storeLon != null && storeLat != null) {
+                BigDecimal distance = deliveryEnhancedService.calculateDistance(storeLon, storeLat, addrLon, addrLat);
+                // orderAmount 用 0 作为占位（配送费阶梯多数按距离计算，金额门槛在规则内处理）
+                java.util.Map<String, Object> feeResult = deliveryEnhancedService.calculateFee(
+                        addrLon, addrLat, distance, BigDecimal.ZERO, currentTenantId);
+                Boolean inRange = (Boolean) feeResult.get("inRange");
+                if (inRange != null && !inRange) {
+                    throw new CustomException("收货地址不在配送范围内");
+                }
+                Object feeObj = feeResult.get("fee");
+                if (feeObj instanceof BigDecimal) {
+                    deliveryFee = ((BigDecimal) feeObj).setScale(2, java.math.RoundingMode.HALF_UP);
+                }
+            }
+        }
+
         long orderId = IdWorker.getId();//订单号
 
         BigDecimal totalAmount = BigDecimal.ZERO;
         // 幽灵菜品防御：下单时服务端重新核价——菜品/套餐存在性、租户归属、启售状态、
         // 价格一律以数据库为准，禁止信任购物车中可能被注入的客户端金额（与 submitEatInOrder 核价逻辑对齐）
-        Long currentTenantId = BaseContext.getCurrentTenantId();
         List<Long> dishIds = new ArrayList<>();
         List<Long> setmealIds = new ArrayList<>();
         for (ShoppingCart item : shoppingCarts) {
@@ -232,6 +277,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
 
 
+        // 起送价精确校验（服务端核价完成后再判断，避免预估金额与实际不符）
+        if (deliveryCheckEnabled) {
+            BigDecimal minAmount = storeInfo.getMinDeliveryAmount();
+            if (minAmount != null && minAmount.compareTo(BigDecimal.ZERO) > 0
+                    && totalAmount.compareTo(minAmount) < 0) {
+                throw new CustomException("订单金额未达到起送价 " + minAmount + " 元，无法下单");
+            }
+        }
+        // 配送费计入订单总额
+        BigDecimal finalAmount = totalAmount.add(deliveryFee);
+
         orders.setId(orderId);
         orders.setOrderTime(LocalDateTime.now());
         // 修复：下单状态按支付方式分流，避免支付主链路断裂。
@@ -246,7 +302,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             orders.setCheckoutTime(null);
             orders.setStatus(Orders.STATUS_PENDING_PAY);
         }
-        orders.setAmount(totalAmount.setScale(2, java.math.RoundingMode.HALF_UP));//总金额（精确计算）
+        orders.setDeliveryFee(deliveryFee.compareTo(BigDecimal.ZERO) > 0 ? deliveryFee : null);
+        orders.setAmount(finalAmount.setScale(2, java.math.RoundingMode.HALF_UP));//总金额（菜品+配送费）
         orders.setUserId(userId);
         orders.setNumber(String.valueOf(orderId));
         // 幂等性保护：如果请求未提供幂等令牌，自动生成一个

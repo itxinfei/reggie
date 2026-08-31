@@ -13,6 +13,7 @@ CREATE TABLE orders (
   checkout_time datetime NULL DEFAULT NULL COMMENT '结账时间',
   pay_method int NULL DEFAULT NULL COMMENT '支付方式',
   amount decimal(10,2) NOT NULL COMMENT '实收金额',
+  delivery_fee decimal(10,2) NULL DEFAULT NULL COMMENT '配送费（外卖单配送费，堂食为 null）',
   remark varchar(100) NULL DEFAULT NULL COMMENT '备注',
   expect_delivery_time varchar(20) NULL DEFAULT NULL COMMENT '预计送达时间',
   user_name varchar(50) NULL DEFAULT NULL COMMENT '用户名',

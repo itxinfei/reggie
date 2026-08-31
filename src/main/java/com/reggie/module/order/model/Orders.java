@@ -74,6 +74,10 @@ public class Orders implements Serializable {
     @DecimalMin(value = "0.0", inclusive = false, message = "订单金额必须大于0")
     private BigDecimal amount;
 
+    @Schema(description = "配送费（外卖单独立存储，堂食为0）", example = "5.00")
+    @TableField("delivery_fee")
+    private BigDecimal deliveryFee;
+
     @Schema(description = "备注", example = "少放辣")
     @Size(max = 200, message = "备注不能超过200个字符")
     private String remark;

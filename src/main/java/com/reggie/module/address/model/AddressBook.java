@@ -14,6 +14,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -92,6 +93,12 @@ public class AddressBook implements Serializable {
     @Schema(description = "标签", example = "家")
     @Size(max = 100, message = "标签不能超过100个字符")
     private String label;
+
+    @Schema(description = "经度（高德坐标系，GCJ-02）", example = "116.397428")
+    private BigDecimal longitude;
+
+    @Schema(description = "纬度（高德坐标系，GCJ-02）", example = "39.90923")
+    private BigDecimal latitude;
 
     @Schema(description = "是否默认地址：0=否，1=是", example = "1")
     public static final int NOT_DEFAULT = 0;

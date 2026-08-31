@@ -7,6 +7,7 @@ import com.reggie.common.LogMaskUtils;
 import com.reggie.common.R;
 import com.reggie.module.address.model.AddressBook;
 import com.reggie.module.address.service.AddressBookService;
+import com.reggie.utils.GeoUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -40,6 +42,21 @@ public class AddressBookController {
     @Autowired
     private AddressBookService addressBookService;
 
+    @Autowired
+    private GeoUtils geoUtils;
+
+    /**
+     * 拼接完整地址用于地理编码（省+市+区+详细）
+     */
+    private String buildFullAddress(AddressBook addressBook) {
+        StringBuilder sb = new StringBuilder();
+        if (addressBook.getProvinceName() != null) sb.append(addressBook.getProvinceName());
+        if (addressBook.getCityName() != null) sb.append(addressBook.getCityName());
+        if (addressBook.getDistrictName() != null) sb.append(addressBook.getDistrictName());
+        if (addressBook.getDetail() != null) sb.append(addressBook.getDetail());
+        return sb.toString();
+    }
+
     /**
      * 新增地址
      *
@@ -55,6 +72,12 @@ public class AddressBookController {
         log.info("新增地址，手机号：{}，地址：{}",
             LogMaskUtils.maskPhone(addressBook.getPhone()),
             LogMaskUtils.maskAddress(addressBook.getDetail()));
+        // 自动地理编码回填经纬度（Key 未配置时降级为空，不阻断保存）
+        BigDecimal[] lngLat = geoUtils.geocode(buildFullAddress(addressBook));
+        if (lngLat != null) {
+            addressBook.setLongitude(lngLat[0]);
+            addressBook.setLatitude(lngLat[1]);
+        }
         addressBookService.save(addressBook);
         return R.success(addressBook);
     }
@@ -86,6 +109,15 @@ public class AddressBookController {
         if (addressBook.getDetail() != null) wrapper.set(AddressBook::getDetail, addressBook.getDetail());
         if (addressBook.getLabel() != null) wrapper.set(AddressBook::getLabel, addressBook.getLabel());
         if (addressBook.getIsDefault() != null) wrapper.set(AddressBook::getIsDefault, addressBook.getIsDefault());
+        // 地址内容变化时重新地理编码回填经纬度
+        boolean addressChanged = addressBook.getDetail() != null || addressBook.getProvinceName() != null
+                || addressBook.getCityName() != null || addressBook.getDistrictName() != null;
+        if (addressChanged) {
+            BigDecimal[] lngLat = geoUtils.geocode(buildFullAddress(addressBook));
+            if (lngLat != null) {
+                wrapper.set(AddressBook::getLongitude, lngLat[0]).set(AddressBook::getLatitude, lngLat[1]);
+            }
+        }
         addressBookService.update(wrapper);
         return R.success(addressBook);
     }
