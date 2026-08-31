@@ -184,8 +184,10 @@
           this.loading = true
           const s = this.lastSearch || {}
           try {
-            // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-            const requests = []
+            // 修改点：分页列表必须走 levelPage（原先误用 levelStats 聚合接口，返回无 records 导致等级列表恒空）；
+            // 统计卡片另走 levelStats，仅数据突变后重载，翻页/搜索不重算
+            const params = { page: this.page, pageSize: this.pageSize, name: s.name || undefined }
+            const requests = [levelPage(params)]
             if (reloadStats) { requests.push(levelStats()) }
             const results = await Promise.all(requests)
             const res = results[0]

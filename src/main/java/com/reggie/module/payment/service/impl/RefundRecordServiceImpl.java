@@ -6,12 +6,15 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.enums.RefundStatus;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.OrderService;
 import com.reggie.module.payment.mapper.PaymentOrderMapper;
 import com.reggie.module.payment.mapper.RefundRecordMapper;
 import com.reggie.module.payment.model.PaymentOrder;
 import com.reggie.module.payment.model.RefundRecord;
 import com.reggie.module.payment.service.RefundRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -41,6 +45,11 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
     /** 支付单Mapper（用于累计退款金额查询） */
     @Autowired
     private PaymentOrderMapper paymentOrderMapper;
+
+    /** 订单服务（@Lazy 避免与 OrderServiceImpl 的潜在循环依赖） */
+    @Autowired
+    @Lazy
+    private OrderService orderService;
 
     /** 按 paymentOrderId 串行化退款创建请求，防止并发超额退款 */
     private final ConcurrentHashMap<Long, Object> refundLock = new ConcurrentHashMap<>();
@@ -195,6 +204,79 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
     private String generateRefundNo() {
         return "RF" + LocalDateTime.now().format(REFUND_NO_FMT)
             + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+    }
+
+    @Override
+    public RefundRecord applyUserRefund(Long orderId, String reason) {
+        if (orderId == null) {
+            throw new CustomException("订单ID不能为空");
+        }
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new CustomException("退款原因不能为空");
+        }
+        Long currentUserId = BaseContext.getCurrentId();
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentUserId == null || currentTenantId == null) {
+            throw new CustomException("请先登录");
+        }
+        // 1. 订单存在性 + 归属校验（同租户 + 同用户）
+        Orders order = orderService.getById(orderId);
+        if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+        if (!currentTenantId.equals(order.getTenantId()) || !currentUserId.equals(order.getUserId())) {
+            throw new CustomException("无权对此订单申请售后");
+        }
+        // 2. 状态校验：仅已完成订单可申请售后（防止已取消/已退款重复申请）
+        if (!Objects.equals(order.getStatus(), Orders.STATUS_COMPLETED)) {
+            throw new CustomException("仅已完成订单可申请售后，其他状态请联系客服");
+        }
+        // 3. 重复申请校验：同订单已有 PENDING 售后申请则拒绝
+        long pendingCount = this.count(new LambdaQueryWrapper<RefundRecord>()
+                .eq(RefundRecord::getOrderId, orderId)
+                .eq(RefundRecord::getStatus, RefundStatus.PENDING.getCode()));
+        if (pendingCount > 0) {
+            throw new CustomException("该订单已有售后申请处理中，请勿重复申请");
+        }
+        // 4. 计算售后金额：订单实付 = amount + deliveryFee
+        BigDecimal paidAmount = order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO;
+        if (order.getDeliveryFee() != null) {
+            paidAmount = paidAmount.add(order.getDeliveryFee());
+        }
+        if (paidAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CustomException("订单实付金额为0，无法申请售后");
+        }
+        // 5. 创建售后记录
+        RefundRecord record = new RefundRecord();
+        record.setOrderId(orderId);
+        record.setTenantId(currentTenantId);
+        record.setRefundNo(generateRefundNo());
+        record.setAmount(paidAmount);
+        record.setReason(reason.trim());
+        record.setStatus(RefundStatus.PENDING.getCode());
+        record.setRefundType(1); // 1=整单退款
+        record.setApplyUserId(currentUserId);
+        record.setCreatedTime(LocalDateTime.now());
+        this.save(record);
+        return record;
+    }
+
+    @Override
+    public List<RefundRecord> listUserRefundByOrderId(Long orderId) {
+        if (orderId == null) {
+            return java.util.Collections.emptyList();
+        }
+        Long currentUserId = BaseContext.getCurrentId();
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        // 用户端仅能查自己的订单售后记录
+        Orders order = orderService.getById(orderId);
+        if (order == null || currentTenantId != null && !currentTenantId.equals(order.getTenantId())
+                || currentUserId != null && !currentUserId.equals(order.getUserId())) {
+            throw new CustomException("无权查询此订单的售后记录");
+        }
+        return this.list(new LambdaQueryWrapper<RefundRecord>()
+                .eq(RefundRecord::getOrderId, orderId)
+                .orderByDesc(RefundRecord::getCreatedTime));
     }
 }
 

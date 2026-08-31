@@ -62,13 +62,16 @@ public class MemberLevelController {
             @Parameter(description = "Page")
             @RequestParam(defaultValue = "1") @Min(1) int page,
             @Parameter(description = "PageSize")
-            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize) {
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
+            @Parameter(description = "等级名称（可选，模糊查询）")
+            @RequestParam(required = false) String name) {
         Page<MemberLevel> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<MemberLevel> qw = new LambdaQueryWrapper<>();
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId != null) {
             qw.eq(MemberLevel::getTenantId, tenantId);
         }
+        qw.like(name != null && !name.isEmpty(), MemberLevel::getName, name);
         qw.orderByAsc(MemberLevel::getMinPoints);
         memberLevelService.page(pageInfo, qw);
         return R.success(pageInfo);

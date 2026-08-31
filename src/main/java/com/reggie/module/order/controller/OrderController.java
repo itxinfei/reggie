@@ -67,6 +67,9 @@ public class OrderController {
     @Autowired
     private DashboardService dashboardService;
 
+    @Autowired
+    private com.reggie.module.payment.service.RefundRecordService refundRecordService;
+
     /**
      * 用户下单
      * @param orders 订单信息
@@ -446,6 +449,65 @@ public class OrderController {
         statusFlowService.cancelOrder(id, "用户主动取消");
         return R.success("订单已取消");
     }
+
+    /**
+     * 用户端确认收货：配送中(3) → 已完成(4)
+     * @param id 订单ID
+     * @return 操作结果
+     */
+    @PutMapping("/userConfirmReceipt")
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
+    @Operation(summary = "用户确认收货", description = "用户对配送中订单确认收货，订单状态变为已完成")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<String> userConfirmReceipt(@RequestParam Long id) {
+        Orders existing = orderService.getById(id);
+        if (existing == null) {
+            return R.error("订单不存在");
+        }
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId == null || !Objects.equals(currentUserId, existing.getUserId())) {
+            return R.error("无权操作此订单");
+        }
+        if (!Objects.equals(existing.getStatus(), Orders.STATUS_DELIVERING)) {
+            return R.error("当前订单状态不支持确认收货");
+        }
+        statusFlowService.completeOrder(id);
+        clearDashboardCache();
+        return R.success("确认收货成功");
+    }
+
+    /**
+     * 用户端申请售后（整单退款）
+     * @param id 订单ID
+     * @param reason 退款原因
+     * @return 退款流水号
+     */
+    @PostMapping("/userApplyRefund")
+    @RateLimit(maxRequestsPerSecond = 3, type = RateLimitType.USER)
+    @Operation(summary = "用户申请售后", description = "用户对已完成订单申请整单退款，进入待审核状态")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    @Parameter(name = "reason", description = "退款原因", required = true)
+    public R<Map<String, Object>> userApplyRefund(@RequestParam Long id, @RequestParam String reason) {
+        com.reggie.module.payment.model.RefundRecord record = refundRecordService.applyUserRefund(id, reason);
+        Map<String, Object> data = new HashMap<>();
+        data.put("refundNo", record.getRefundNo());
+        data.put("status", record.getStatus());
+        data.put("amount", record.getAmount());
+        return R.success(data);
+    }
+
+    /**
+     * 用户端查询某订单的售后申请记录
+     * @param id 订单ID
+     * @return 退款记录列表
+     */
+    @GetMapping("/userRefundRecords")
+    @Operation(summary = "用户查询售后记录", description = "查询某订单的全部售后/退款申请记录")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<?> userRefundRecords(@RequestParam Long id) {
+        return R.success(refundRecordService.listUserRefundByOrderId(id));
+    }
+
     /**
      * 清除 Dashboard 缓存（在订单创建或状态变更后调用，确保概览数据实时准确）
      */

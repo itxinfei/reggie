@@ -57,4 +57,24 @@ public interface RefundRecordService extends IService<RefundRecord> {
      * @return 分析结果 Map
      */
     java.util.Map<String, Object> getRefundAnalysis(Long tenantId);
+
+    /**
+     * 用户端发起售后申请（整单退款）。
+     *
+     * <p>校验：订单存在、归属当前用户、状态为已完成；同订单已有 PENDING 申请则拒绝重复申请。
+     * 售后金额取订单实付金额（amount + deliveryFee），售后类型默认整单退款。</p>
+     *
+     * @param orderId 订单ID
+     * @param reason 退款原因
+     * @return 创建的退款记录（含 refundNo，状态 PENDING）
+     */
+    RefundRecord applyUserRefund(Long orderId, String reason);
+
+    /**
+     * 用户端查询某订单的售后申请记录。
+     *
+     * @param orderId 订单ID
+     * @return 退款记录列表（按创建时间倒序）
+     */
+    List<RefundRecord> listUserRefundByOrderId(Long orderId);
 }

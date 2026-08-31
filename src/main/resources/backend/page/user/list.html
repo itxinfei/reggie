@@ -33,8 +33,10 @@
       <!-- 修改点：使用 <table-bar> 统一组件 -->
       <table-bar
         :search-items="tableSearchItems"
+        :actions="actionConfig"
         @search="handleQuery"
-        @reset="reset">
+        @reset="reset"
+        @action="onAction">
         <template slot="search-extra">
           <el-select v-model="input.name" placeholder="请选择用户姓名" class="el-select--narrow-xs" clearable filterable size="small"
             :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">
@@ -119,6 +121,7 @@
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../api/user.js"></script>
+  <script src="../../api/export.js"></script>
   <script src="../../js/components.js"></script>
   <script>
     new Vue({
@@ -160,6 +163,11 @@
             ], width: 130 }
           ],
           tableActions: [],
+          // 修改点：列表操作区按钮（导出），与 table-bar 的 @action 事件联动
+          actionConfig: [
+            { key: 'exportExcel', text: '导出Excel', type: 'success', icon: 'el-icon-download' },
+            { key: 'exportPdf', text: '导出PDF', type: 'danger', icon: 'el-icon-document' }
+          ],
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
             { prop: 'name', label: '姓名', width: 80 },
@@ -391,6 +399,23 @@
         },
 
         // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
+
+        // 列表操作区按钮分发（导出Excel/PDF）
+        onAction: function(payload) {
+          if (payload.key === 'exportExcel') this.exportUsers('excel')
+          else if (payload.key === 'exportPdf') this.exportUsers('pdf')
+        },
+        // 导出C端用户数据（Excel/PDF）
+        exportUsers: async function(format) {
+          try {
+            const ext = format === 'excel' ? 'xlsx' : 'pdf'
+            const apiCall = format === 'excel' ? exportApi.exportUsersExcel({}) : exportApi.exportUsersPdf({})
+            await exportApi.downloadFile(apiCall, '用户数据.' + ext)
+            ReggieUI.success('导出成功，文件已开始下载')
+          } catch (err) {
+            ReggieUI.error('导出失败：' + (err.message || err))
+          }
+        }
       }
     })
   </script>

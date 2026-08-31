@@ -13,6 +13,8 @@ import com.reggie.module.order.service.OrderService;
 import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.dish.service.DishService;
 import com.reggie.module.category.service.CategoryService;
+import com.reggie.module.user.service.UserService;
+import com.reggie.module.user.model.User;
 import com.reggie.enums.OrderStatus;
 import com.reggie.module.export.util.ExportUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -75,6 +77,10 @@ public class ExportController {
     /** 员工服务 */
     @Resource
     private EmployeeService employeeService;
+
+    /** 用户服务（C端用户） */
+    @Resource
+    private UserService userService;
 
     /** 文件名日期格式 */
     private static final DateTimeFormatter FILE_DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
@@ -290,6 +296,64 @@ public class ExportController {
         }
     }
 
+    // ==================== C端用户导出 ====================
+
+    /**
+     * 导出C端用户数据 - Excel
+     *
+     * @return Excel文件流
+     */
+    @GetMapping("/users/excel")
+    @Operation(summary = "导出用户Excel", description = "导出C端用户数据为Excel文件")
+    public ResponseEntity<?> exportUsersExcel() {
+        try {
+            LinkedHashMap<String, String> columns = new LinkedHashMap<>();
+            columns.put("name", "姓名");
+            columns.put("phone", "手机号");
+            columns.put("sex", "性别");
+            columns.put("idNumber", "身份证号");
+            columns.put("status", "状态");
+            columns.put("createTime", "注册时间");
+
+            List<Map<String, Object>> dataList = buildUserDataList(queryUsers());
+            byte[] bytes = ExportUtil.generateExcelBytes(columns, dataList);
+            return buildFileResponse(bytes, "用户数据", "xlsx");
+        } catch (Exception e) {
+            log.error("导出用户Excel失败", e);
+            return buildErrorResponse("用户Excel导出失败，请稍后重试");
+        }
+    }
+
+    /**
+     * 导出C端用户数据 - PDF
+     *
+     * @return PDF文件流
+     */
+    @GetMapping("/users/pdf")
+    @Operation(summary = "导出用户PDF", description = "导出C端用户数据为PDF报表")
+    public ResponseEntity<?> exportUsersPdf() {
+        try {
+            LinkedHashMap<String, String> columns = new LinkedHashMap<>();
+            columns.put("name", "姓名");
+            columns.put("phone", "手机号");
+            columns.put("sex", "性别");
+            columns.put("status", "状态");
+            columns.put("createTime", "注册时间");
+
+            List<Map<String, Object>> dataList = buildUserDataList(queryUsers());
+
+            Map<String, String> summary = new LinkedHashMap<>();
+            summary.put("用户总数", String.valueOf(dataList.size()));
+
+            byte[] bytes = ExportUtil.generatePdfBytes(
+                    "瑞吉外卖 - 用户数据报表", columns, dataList, summary);
+            return buildFileResponse(bytes, "用户报表", "pdf");
+        } catch (Exception e) {
+            log.error("导出用户PDF失败", e);
+            return buildErrorResponse("用户PDF导出失败，请稍后重试");
+        }
+    }
+
     // ==================== 私有数据查询方法 ====================
 
     /**
@@ -349,6 +413,24 @@ public class ExportController {
         // #12 限制最大导出行数，防止全量加载 OOM
         wrapper.last("LIMIT 100000");
         return employeeService.list(wrapper);
+    }
+
+    /**
+     * 查询C端用户列表
+     * employee表在MybatisPlusConfig忽略列表中，必须手动隔离；用户表同样按租户隔离
+     * #11 fail-closed：无租户上下文直接抛异常拒绝导出
+     */
+    private List<User> queryUsers() {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new com.reggie.common.CustomException("无导出权限，租户上下文缺失");
+        }
+        wrapper.eq(User::getTenantId, tenantId);
+        wrapper.orderByDesc(User::getCreateTime);
+        // #12 限制最大行数，防止全量加载 OOM
+        wrapper.last("LIMIT 100000");
+        return userService.list(wrapper);
     }
 
     // ==================== 数据构建方法 ====================
@@ -444,6 +526,24 @@ public class ExportController {
             row.put("sex", "1".equals(emp.getSex()) ? "男" : ("2".equals(emp.getSex()) ? "女" : ""));
             row.put("status", emp.getStatus() == 1 ? "正常" : "禁用");
             row.put("createTime", emp.getCreateTime());
+            dataList.add(row);
+        }
+        return dataList;
+    }
+
+    /**
+     * 构建C端用户数据列表
+     */
+    private List<Map<String, Object>> buildUserDataList(List<User> users) {
+        List<Map<String, Object>> dataList = new ArrayList<>();
+        for (User u : users) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("name", u.getName());
+            row.put("phone", u.getPhone() != null ? u.getPhone() : "");
+            row.put("sex", "1".equals(u.getSex()) ? "男" : ("0".equals(u.getSex()) ? "女" : ""));
+            row.put("idNumber", u.getIdNumber() != null ? u.getIdNumber() : "");
+            row.put("status", u.getStatus() != null && u.getStatus() == 1 ? "正常" : "禁用");
+            row.put("createTime", u.getCreateTime());
             dataList.add(row);
         }
         return dataList;

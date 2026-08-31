@@ -108,6 +108,14 @@ var exportApi = (function() {
         return service.get('/api/report/export', { params: Object.assign({}, params, { format: 'pdf' }), responseType: 'blob' });
     };
 
+    // ==================== C端用户导出 ====================
+    var exportUsersExcel = function(params) {
+        return service.get('/export/users/excel', { params: params, responseType: 'blob' });
+    };
+    var exportUsersPdf = function(params) {
+        return service.get('/export/users/pdf', { params: params, responseType: 'blob' });
+    };
+
     // ==================== 通用下载 ====================
     var downloadFile = function(apiCall, fileName) {
         return apiCall.then(function(res) {
@@ -166,6 +174,8 @@ var exportApi = (function() {
         exportEmployeesPdf: exportEmployeesPdf,
         exportReportExcel: exportReportExcel,
         exportReportPdf: exportReportPdf,
+        exportUsersExcel: exportUsersExcel,
+        exportUsersPdf: exportUsersPdf,
         downloadFile: downloadFile
     };
 })();

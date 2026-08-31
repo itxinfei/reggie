@@ -64,10 +64,78 @@ public class OrderTimeoutTask {
     private static final long ORDER_TIMEOUT_CHECK_INTERVAL = 5 * 60 * 1000L;
     /** 订单超时阈值（分钟）：30分钟未接单自动取消 */
     private static final int ORDER_TIMEOUT_MINUTES = 30;
+    /** 配送超时自动完成阈值（小时）：24小时未确认收货自动完成 */
+    private static final int DELIVERY_TIMEOUT_HOURS = 24;
+    /** 配送超时检查间隔（毫秒）：10分钟 */
+    private static final long DELIVERY_TIMEOUT_CHECK_INTERVAL = 10 * 60 * 1000L;
     /** 库存预警检查间隔（毫秒）：1小时 */
     private static final long INVENTORY_ALERT_CHECK_INTERVAL = 60 * 60 * 1000L;
     /** 分布式锁过期时间（毫秒），应大于任务最大执行时间 */
     private static final long LOCK_TTL_MS = 4 * 60 * 1000L; // 4分钟
+
+    // ──────────────────────────────────────
+    // 配送超时自动确认收货（每 10 分钟）
+    // ──────────────────────────────────────
+    @Scheduled(fixedRate = DELIVERY_TIMEOUT_CHECK_INTERVAL)
+    public void autoCompleteDeliveredOrders() {
+        String lockValue = tryLock("schedule:lock:delivery-timeout", LOCK_TTL_MS);
+        if (lockValue == null) {
+            log.debug("[定时任务] 配送超时自动完成任务正在执行中，跳过本次");
+            return;
+        }
+        try {
+            List<Tenant> tenants = tenantService.listActiveTenants();
+            if (tenants.isEmpty()) {
+                return;
+            }
+            LocalDateTime threshold = LocalDateTime.now().minusHours(DELIVERY_TIMEOUT_HOURS);
+            int totalCompleted = 0;
+            for (Tenant tenant : tenants) {
+                BaseContext.setCurrentTenantId(tenant.getId());
+                try {
+                    totalCompleted += autoCompleteDeliveredOrdersForTenant(threshold);
+                } finally {
+                    BaseContext.remove();
+                }
+            }
+            if (totalCompleted > 0) {
+                log.info("[定时任务] 配送超时自动完成收货完成，共处理 {} 个租户，完成 {} 个订单",
+                    tenants.size(), totalCompleted);
+            }
+        } finally {
+            unlock("schedule:lock:delivery-timeout", lockValue);
+        }
+    }
+
+    /**
+     * 为单个租户执行配送超时自动完成：STATUS_DELIVERING 且下单时间超过阈值则自动确认收货。
+     * 兜底用户忘记点"确认收货"导致订单长期停在配送中的场景，便于结算与统计归档。
+     */
+    private int autoCompleteDeliveredOrdersForTenant(LocalDateTime threshold) {
+        LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Orders::getStatus, Orders.STATUS_DELIVERING)
+               .lt(Orders::getOrderTime, threshold)
+               .eq(Orders::getTenantId, BaseContext.getCurrentTenantId());
+        List<Orders> deliveringOrders = orderService.list(wrapper);
+        if (deliveringOrders.isEmpty()) {
+            return 0;
+        }
+        log.info("[定时任务] 租户 {} 发现 {} 个超时未确认收货订单",
+            BaseContext.getCurrentTenantId(), deliveringOrders.size());
+        int completed = 0;
+        for (Orders order : deliveringOrders) {
+            try {
+                statusFlowService.completeOrder(order.getId());
+                log.warn("[定时任务] 配送超时自动完成收货: orderId={}, number={}, tenantId={}",
+                    order.getId(), order.getNumber(), BaseContext.getCurrentTenantId());
+                completed++;
+            } catch (Exception e) {
+                log.error("[定时任务] 自动完成订单失败: orderId={}, tenantId={}, error={}",
+                    order.getId(), BaseContext.getCurrentTenantId(), e.getMessage());
+            }
+        }
+        return completed;
+    }
 
     // ──────────────────────────────────────
     // 订单超时自动取消（每 5 分钟）

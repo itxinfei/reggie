@@ -27,6 +27,8 @@ public class RefundRecord implements Serializable {
     /** 主键ID */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
+    /** 业务订单ID（用户端售后申请直接关联订单） */
+    private Long orderId;
     /** 支付订单ID */
     private Long paymentOrderId;
     /** 租户ID */
@@ -40,6 +42,10 @@ public class RefundRecord implements Serializable {
     private String reason;
     /** 退款状态 */
     private String status;
+    /** 售后类型：1=整单退款 2=部分退款（用户端申请默认整单） */
+    private Integer refundType;
+    /** 申请人ID（用户端售后申请记录发起人） */
+    private Long applyUserId;
     /** 创建时间 */
     @TableField(value = "created_time", fill = FieldFill.INSERT)
     private LocalDateTime createdTime;

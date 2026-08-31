@@ -58,11 +58,13 @@
                         </div>
                         <div class="btn" v-if="order.status === 2 || order.status === 3">
                             <div class="btnAgain" @click="viewTracking(order)">配送追踪</div>
+                            <div v-if="order.status === 3" class="btnEval" @click="confirmReceipt(order)">确认收货</div>
                         </div>
                         <div class="btn" v-if="order.status === 4">
                             <div class="btnAgain" @click="addOrderAgain(order)">再来一单</div>
                             <div class="btnEval" @click="evaluateOrder(order)">评价</div>
                             <div class="btnShare" @click="shareOrder(order)">分享</div>
+                            <div class="btnCancel" @click="applyRefund(order)">申请售后</div>
                         </div>
                     </van-cell>
                 </van-list>
@@ -285,6 +287,79 @@
                     }).catch(() => {
                         // 用户点取消，什么都不做
                     })
+                },
+                // 修改点：用户确认收货（status=3 → 4）
+                confirmReceipt(order){
+                    if(this.submitting) return;
+                    vant.Dialog.confirm({
+                        title: '确认收货',
+                        message: '确认已收到商品？确认后订单将完成。',
+                        confirmButtonText: '确认收货',
+                        cancelButtonText: '再等等'
+                    }).then(async () => {
+                        this.submitting = true
+                        try {
+                            const res = await confirmReceiptApi({ id: order.id })
+                            if(res && res.code === 1){
+                                vant.Toast.success('已确认收货');
+                                this.paging.page = 1
+                                this.orderList = []
+                                this.finished = false
+                                this.loading = true
+                                this.getList()
+                            }else{
+                                vant.Toast.fail((res && res.msg) || '确认失败');
+                            }
+                        } catch(e) {
+                            vant.Toast.fail('网络异常，请稍后重试');
+                        } finally {
+                            this.submitting = false
+                        }
+                    }).catch(() => {})
+                },
+                // 修改点：用户申请售后（status=4，整单退款申请，需填写原因）
+                applyRefund(order){
+                    if(this.submitting) return;
+                    vant.Dialog.confirm({
+                        title: '申请售后',
+                        message: '确定要为此订单申请售后退款吗？提交后客服将尽快处理。',
+                        confirmButtonText: '提交申请',
+                        cancelButtonText: '取消'
+                    }).then(() => {
+                        vant.Dialog.prompt({
+                            title: '退款原因',
+                            message: '请简要描述退款原因（如商品质量问题、漏送、错送等）',
+                            inputPlaceholder: '请输入退款原因',
+                            inputValidator: (val) => {
+                                if(!val || !val.trim()) return '退款原因不能为空';
+                                if(val.trim().length > 200) return '退款原因不超过 200 字';
+                                return true;
+                            },
+                            confirmButtonText: '提交',
+                            cancelButtonText: '取消'
+                        }).then(async (val) => {
+                            this.submitting = true
+                            try {
+                                const reason = (val && val.trim) ? val.trim() : ('' + val).trim()
+                                const res = await applyRefundApi({ id: order.id, reason: reason })
+                                if(res && res.code === 1){
+                                    const data = res.data || {}
+                                    vant.Toast.success('售后申请已提交：' + (data.refundNo || ''))
+                                    this.paging.page = 1
+                                    this.orderList = []
+                                    this.finished = false
+                                    this.loading = true
+                                    this.getList()
+                                }else{
+                                    vant.Toast.fail((res && res.msg) || '申请失败');
+                                }
+                            } catch(e) {
+                                vant.Toast.fail('网络异常，请稍后重试');
+                            } finally {
+                                this.submitting = false
+                            }
+                        }).catch(() => {})
+                    }).catch(() => {})
                 },
             }
         })

@@ -309,6 +309,8 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
             memberIds.add(cu.getMemberId());
         }
         List<Member> members = memberService.listByIds(memberIds);
+        // 修改点：回填会员等级名称（levelName 为虚拟字段，listByIds 不携带，需显式填充，否则发放记录“会员等级”列恒空）
+        memberService.fillLevelName(members);
         Map<Long, Member> memberMap = new LinkedHashMap<>();
         for (Member m : members) {
             memberMap.put(m.getId(), m);
