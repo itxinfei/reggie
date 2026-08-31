@@ -330,7 +330,7 @@
           stats: { totalSessions: 0, activeSessions: 0, avgFirstResponse: 0, avgSatisfaction: 0 },
           complaintStats: { totalComplaints: 0, pendingComplaints: 0, resolvedComplaints: 0, totalCompensation: '0.00' },
           statsDetail: [],
-          statsDateRange: null,
+          statsDateRange: null, // 修改点：默认 null，有值时才传参；改为今日默认值避免 created 时参数缺失
 
           // 会话
           sessionList: [],
@@ -357,6 +357,11 @@
         }
       },
       created() {
+        // 修改点：初始化日期范围为今天，避免首次调用时缺少必填参数
+        const today = new Date()
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59)
+        this.statsDateRange = [startOfDay, endOfDay]
         this.fetchStatistics()
         this.fetchSessionList()
         this.fetchComplaintList()
