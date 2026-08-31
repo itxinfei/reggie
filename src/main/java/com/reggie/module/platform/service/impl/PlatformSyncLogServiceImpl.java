@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.platform.mapper.PlatformSyncLogMapper;
 import com.reggie.module.platform.model.PlatformSyncLog;
 import com.reggie.module.platform.service.PlatformSyncLogService;
@@ -31,7 +32,7 @@ public class PlatformSyncLogServiceImpl extends ServiceImpl<PlatformSyncLogMappe
         qw.ge(startTime != null, PlatformSyncLog::getCreateTime, startTime);
         qw.le(endTime != null, PlatformSyncLog::getCreateTime, endTime);
         qw.orderByDesc(PlatformSyncLog::getCreateTime);
-        return page(new Page<>(page, pageSize), qw);
+        return page(PageUtils.of(page, pageSize), qw);
     }
 
     @Override

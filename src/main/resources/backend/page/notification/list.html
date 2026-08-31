@@ -656,7 +656,7 @@
                 loadUsers: function(page) {
                     const self = this;
                     self.userPage = page;
-                    const params = {};
+                    const params = { page: self.userPage, pageSize: self.userSize };
                     if (self.userSearch.name) params.name = self.userSearch.name;
                     if (self.userSearch.phone) params.phone = self.userSearch.phone;
 
@@ -712,7 +712,7 @@
                 loadPushUsers: function(page) {
                     const self = this;
                     self.pushUserPage = page;
-                    const params = {};
+                    const params = { page: self.pushUserPage, pageSize: self.pushUserSize };
                     if (self.pushUserSearch.name) params.name = self.pushUserSearch.name;
                     if (self.pushUserSearch.phone) params.phone = self.pushUserSearch.phone;
 

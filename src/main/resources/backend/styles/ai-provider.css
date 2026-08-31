@@ -81,6 +81,7 @@
     transition: all 0.25s;
     cursor: pointer;
     position: relative;
+    min-width: 0; /* 修改点：grid item 允许收缩，避免内容最小宽度把单列网格撑破 */
 }
 .provider-card:hover {
     box-shadow: 0 4px 16px rgba(0,0,0,0.08);
@@ -133,11 +134,13 @@
 .card-meta {
     display: flex; align-items: center; gap: 14px;
     font-size: 12px; color: var(--el-text-regular);
+    flex-wrap: wrap; /* 修改点：窄屏允许 meta 项换行 */
 }
 .card-meta .meta-item { display: flex; align-items: center; gap: 4px; }
 .card-actions {
     display: flex; gap: 8px; margin-top: 14px;
     padding-top: 14px; border-top: 1px solid var(--el-border-light);
+    flex-wrap: wrap; /* 修改点：窄屏允许按钮换行 */
 }
 .card-actions .el-button { flex: 1; }
 

@@ -427,7 +427,7 @@
 
     /* 考勤日历卡片 */
     .calendar-card { padding: var(--space-4); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
-    .calendar-controls { display: flex; align-items: center; }
+    .calendar-controls { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
 
     .calendar-legend {
       display: flex;
@@ -507,6 +507,9 @@
     @media (max-width: 768px) {
       .ds-page { padding-left: var(--space-3); padding-right: var(--space-3); }
       .el-col { margin-bottom: var(--space-4); }
+      /* 小屏下日历筛选控件占满整行，避免 591px 横向溢出 */
+      .calendar-controls .el-select,
+      .calendar-controls .el-date-editor { width: 100% !important; margin-right: 0 !important; }
     }
   </style>
 </body>

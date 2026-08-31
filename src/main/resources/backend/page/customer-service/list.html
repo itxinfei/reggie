@@ -426,8 +426,14 @@
           try {
             var params = {}
             if (this.statsDateRange && this.statsDateRange[0] && this.statsDateRange[1]) {
-              params.startDate = this.statsDateRange[0]
-              params.endDate = this.statsDateRange[1]
+              // 修改点：Date → 'yyyy-MM-dd HH:mm:ss'，后端 @DateTimeFormat(pattern=...) 只认该格式，原 ISO 串(T/Z)直接 500
+              var fmtDate = function(d) {
+                var p = function(n) { return (n < 10 ? '0' : '') + n; };
+                return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+                  ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+              };
+              params.startDate = fmtDate(new Date(this.statsDateRange[0]))
+              params.endDate = fmtDate(new Date(this.statsDateRange[1]))
             }
             var resp = await getCustomerServiceStatistics(params)
             if (resp.code === 1 && resp.data) {

@@ -57,7 +57,9 @@
   /* ---------- 文本色 ---------- */
   --text-primary:   var(--color-gray-800);
   --text-secondary: var(--color-gray-500);
-  --text-muted:     var(--color-gray-400);
+  /* 修改点：辅助/占位文字对比度修复（2026-08-31）：#9ca3af 白底仅 2.54:1，不达 4.5:1。
+     统一升级为 gray-500(#6b7280, 4.83:1)，全站 --text-muted 辅助文字一次生效。 */
+  --text-muted:     var(--color-gray-500);
   --text-on-brand:  var(--color-gray-900); /* 金色背景上的深色文字（a11y：WCAG AA） */
   --text-inverse:   #ffffff;
 
@@ -176,7 +178,9 @@
   /* Element UI 文本 / 边框 / 背景 */
   --el-text-primary:  #303133;
   --el-text-regular:  #606266;
-  --el-text-secondary: #909399;   /* 同 --color-info */
+  /* 修改点：次要文字对比度修复（2026-08-31）：#909399 白底仅 3.08:1，不达 4.5:1 正文线。
+     统一映射到 --text-secondary(#6b7280, 4.83:1)，67 页次要说明文字一次生效。 */
+  --el-text-secondary: var(--text-secondary);
   --el-border-default: #dcdfe6;
   --el-border-base:   #c0c4cc;
   --el-border-light:  #ebeef5;

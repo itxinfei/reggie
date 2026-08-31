@@ -18,6 +18,14 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
+/* 1/2 列布局（卡片数较少时避免被 4 列网格挤压、数值与图标重叠） */
+.stats-cards--col-1 {
+  grid-template-columns: 1fr;
+}
+.stats-cards--col-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 /* flex 行布局（图标在左，文字在右，用于通知管理等页面） */
 .stats-cards--flex {
   display: flex;
@@ -64,7 +72,7 @@
 .stat-card .stat-label,
 .stat-card .label {
   font-size: 13px;
-  color: var(--color-info);
+  color: var(--text-secondary);
   margin-bottom: 8px;
   font-weight: 500;
 }
@@ -88,17 +96,28 @@
   gap: 6px;
 }
 
-/* ========== 颜色主题（纯色令牌，符合"禁止渐变"规范） ========== */
-.stat-card.primary  { --stat-color: var(--color-brand-500); }
-.stat-card.success  { --stat-color: var(--color-success); }
-.stat-card.warning  { --stat-color: var(--color-warning); }
-.stat-card.danger   { --stat-color: var(--color-danger); }
-.stat-card.info     { --stat-color: var(--color-info); }
+/* 经典变体：标签/数值/辅助信息与右上角图标保持间距，避免图标遮挡文字 */
+.stat-card:not(.stat-card--flex) .stat-label,
+.stat-card:not(.stat-card--flex) .stat-value,
+.stat-card:not(.stat-card--flex) .sub {
+  padding-right: 60px;
+}
+
+/* ========== 颜色主题（纯色令牌，符合"禁止渐变"规范） ==========
+ * 对比度修复（2026-08-31）：大字号数值禁用浅语义色（#ffc200 1.62 / #67c23a 2.24 /
+ * #e6a23c 2.19 / #f56c6c 2.90 均不达 WCAG AA 3:1 大文本线），统一使用 --color-*-dark 深色令牌：
+ *   primary→brand-800(#a67600 4.03) / success→success-dark(#529b2e 3.45) /
+ *   warning→warning-dark(#b88219 3.36) / danger→danger-dark(#c45656 4.36) / info→info-dark(#73767a 4.40) */
+.stat-card.primary  { --stat-color: var(--color-brand-800); }
+.stat-card.success  { --stat-color: var(--color-success-dark); }
+.stat-card.warning  { --stat-color: var(--color-warning-dark); }
+.stat-card.danger   { --stat-color: var(--color-danger-dark); }
+.stat-card.info     { --stat-color: var(--color-info-dark); }
 
 /* 别名（兼容使用 blue/green/orange/purple 命名的页面） */
-.stat-card.blue     { --stat-color: var(--color-brand-500); }
-.stat-card.green    { --stat-color: var(--color-success); }
-.stat-card.orange   { --stat-color: var(--color-warning); }
+.stat-card.blue     { --stat-color: var(--color-brand-800); }
+.stat-card.green    { --stat-color: var(--color-success-dark); }
+.stat-card.orange   { --stat-color: var(--color-warning-dark); }
 .stat-card.purple   { --stat-color: var(--purple-legacy2); }
 
 /* 趋势图标（推荐概览等页面右上角浮标） */
@@ -114,9 +133,9 @@
   justify-content: center;
   font-size: 20px;
 }
-.stat-card .trend-icon.blue   { background: rgba(255, 194, 0, 0.1); color: var(--color-brand-500); }
-.stat-card .trend-icon.green  { background: rgba(103, 194, 58, 0.1); color: var(--color-success); }
-.stat-card .trend-icon.orange { background: rgba(230, 162, 60, 0.1); color: var(--color-warning); }
+.stat-card .trend-icon.blue   { background: rgba(255, 194, 0, 0.1); color: var(--color-brand-800); }
+.stat-card .trend-icon.green  { background: rgba(103, 194, 58, 0.1); color: var(--color-success-dark); }
+.stat-card .trend-icon.orange { background: rgba(230, 162, 60, 0.1); color: var(--color-warning-dark); }
 .stat-card .trend-icon.purple { background: rgba(156, 39, 176, 0.1); color: var(--purple-legacy2); }
 
 /* ========== 可点击卡片（筛选用） ========== */
@@ -150,12 +169,12 @@
   flex-shrink: 0;
 }
 
-/* 颜色背景（桌台变体用纯色背景而非渐变文字） */
-.stat-card--flex.primary .stat-icon { background: rgba(255, 194, 0, 0.1); color: var(--color-brand-500); }
-.stat-card--flex.success .stat-icon { background: rgba(103, 194, 58, 0.1); color: var(--color-success); }
-.stat-card--flex.warning .stat-icon { background: rgba(230, 162, 60, 0.1); color: var(--color-warning); }
-.stat-card--flex.danger  .stat-icon { background: rgba(245, 108, 108, 0.1); color: var(--color-danger); }
-.stat-card--flex.info    .stat-icon { background: rgba(144, 147, 153, 0.1); color: var(--color-info); }
+/* 颜色背景（桌台变体用纯色背景而非渐变文字，图标色同步深色令牌） */
+.stat-card--flex.primary .stat-icon { background: rgba(255, 194, 0, 0.1); color: var(--color-brand-800); }
+.stat-card--flex.success .stat-icon { background: rgba(103, 194, 58, 0.1); color: var(--color-success-dark); }
+.stat-card--flex.warning .stat-icon { background: rgba(230, 162, 60, 0.1); color: var(--color-warning-dark); }
+.stat-card--flex.danger  .stat-icon { background: rgba(245, 108, 108, 0.1); color: var(--color-danger-dark); }
+.stat-card--flex.info    .stat-icon { background: rgba(144, 147, 153, 0.1); color: var(--color-info-dark); }
 
 /* 桌台变体：数值用纯色 */
 .stat-card--flex .stat-value {
@@ -165,11 +184,11 @@
   -webkit-text-fill-color: unset;
   background-clip: unset;
 }
-.stat-card--flex.primary .stat-value { color: var(--color-brand-500); }
-.stat-card--flex.success .stat-value { color: var(--color-success); }
-.stat-card--flex.warning .stat-value { color: var(--color-warning); }
-.stat-card--flex.danger  .stat-value { color: var(--color-danger); }
-.stat-card--flex.info    .stat-value { color: var(--color-info); }
+.stat-card--flex.primary .stat-value { color: var(--color-brand-800); }
+.stat-card--flex.success .stat-value { color: var(--color-success-dark); }
+.stat-card--flex.warning .stat-value { color: var(--color-warning-dark); }
+.stat-card--flex.danger  .stat-value { color: var(--color-danger-dark); }
+.stat-card--flex.info    .stat-value { color: var(--color-info-dark); }
 
 /* 桌台变体信息区 */
 .stat-card--flex .stat-info {
@@ -180,6 +199,7 @@
 /* ========== 响应式 ========== */
 @media (max-width: 1400px) {
   .stats-cards,
+  .stats-cards--col-2,
   .stats-cards--col-3 {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -187,6 +207,7 @@
 
 @media (max-width: 768px) {
   .stats-cards,
+  .stats-cards--col-2,
   .stats-cards--col-3 {
     grid-template-columns: 1fr;
   }

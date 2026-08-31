@@ -231,7 +231,7 @@
             const pageRes = results[0]
             if (String(pageRes.code) === '1') {
               this.tableData = pageRes.data.records || []
-              this.counts = pageRes.data.total
+              this.counts = Number(pageRes.data.total) || 0
             } else { ReggieUI.error(pageRes.msg || '操作失败') }
             if (reloadStats) {
               const statsRes = results[1]

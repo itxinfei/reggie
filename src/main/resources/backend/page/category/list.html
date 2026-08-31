@@ -262,28 +262,34 @@
           // 修改点：搜索名称去除首尾空格后传递，空字符串不传
           const name = (this.searchName || '').trim()
           if (name) { params.name = name }
-          // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-          const requests = [getCategoryPage(params)]
-          if (reloadStats) { requests.push(this.loadCategoryStats()) }
-          const results = await Promise.all(requests)
-          const categoryRes = results[0]
-          // 处理分类列表数据
-          if (String(categoryRes.code) === '1') {
-            this.tableData = categoryRes.data.records || []
-            this.counts = Number(categoryRes.data.total) || 0
-          } else {
-            ReggieUI.error(categoryRes.msg || '操作失败')
-          }
-
-          if (reloadStats) {
-            const statsRes = results[1]
-            // 处理统计数据
-            if (statsRes && String(statsRes.code) === '1') {
-              this.stats = statsRes.data || this.stats
+          try {
+            // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+            const requests = [getCategoryPage(params)]
+            if (reloadStats) { requests.push(this.loadCategoryStats()) }
+            const results = await Promise.all(requests)
+            const categoryRes = results[0]
+            // 处理分类列表数据
+            if (String(categoryRes.code) === '1') {
+              this.tableData = categoryRes.data.records || []
+              this.counts = Number(categoryRes.data.total) || 0
+            } else {
+              ReggieUI.error(categoryRes.msg || '操作失败')
             }
-          }
 
-          this.loading = false
+            if (reloadStats) {
+              const statsRes = results[1]
+              // 处理统计数据
+              if (statsRes && String(statsRes.code) === '1') {
+                this.stats = statsRes.data || this.stats
+              }
+            }
+          } catch (err) {
+            // 修改点：加载三态修复（2026-08-31）——异常仅记录，不弹全局遮屏 toast；
+            // loading 由 finally 复位，避免接口异常时骨架屏永不退出
+            console.warn('加载分类列表失败:', err)
+          } finally {
+            this.loading = false
+          }
         },
           // 修改点：加载分类统计数据——使用后端 /stats 接口，数据100%准确
           async loadCategoryStats() {

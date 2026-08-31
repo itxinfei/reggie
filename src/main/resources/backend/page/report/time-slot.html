@@ -261,8 +261,9 @@
             });
           },
           calcPercent: function(count) {
-            const t = this.totalCount; if (!t) return '0.0';
-            return (count / t * 100).toFixed(1);
+            const t = this.totalCount; if (!t) return 0;
+            // 修改点：Number 包裹，避免 toFixed 字符串触发 el-progress percentage 类型告警
+            return Number((count / t * 100).toFixed(1));
           },
           formatMoney: function(val) { return window.RgFormat.formatMoney(val) },
           slotHeatColor: function(row) {

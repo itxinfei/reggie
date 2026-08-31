@@ -60,8 +60,22 @@ Vue.component('stat-cards', {
       default: false
     }
   },
+  computed: {
+    /**
+     * 根据卡片数量自动选择列数布局：
+     * 1~3 张时避免仍用 4 列网格导致卡片过窄、数值与图标重叠；
+     * 4 张及以上保持默认 4 列。
+     */
+    rootClass: function () {
+      var n = Math.min(this.cards.length, 4)
+      if (n <= 1) return 'stats-cards stats-cards--col-1'
+      if (n === 2) return 'stats-cards stats-cards--col-2'
+      if (n === 3) return 'stats-cards stats-cards--col-3'
+      return 'stats-cards'
+    }
+  },
   template:
-    '<div class="stats-cards">' +
+    '<div :class="rootClass">' +
       '<div v-if="loading" class="stats-cards__loading"><i class="ri-loader-4-line"></i></div>' +
       '<div v-for="card in cards" :key="card.key || card.label"' +
         ' :class="cardClasses(card)"' +

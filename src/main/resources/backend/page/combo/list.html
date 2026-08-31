@@ -213,7 +213,7 @@
   <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，footer 插槽保留"取消/确定" -->
   <crud-dialog
     title="添加菜品"
-    customClass="dishSelectDialog"
+    custom-class="dishSelectDialog"
     :visible.sync="dishSelectDialog.visible"
     size="xl"
     @close="handleDishSelectClose"
@@ -488,14 +488,21 @@ new Vue({
       if (this.activeFilter) {
         params.status = this.activeFilter
       }
-      // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-      const comboRes = await getSetmealPage(params)
-      if (reloadStats) { await this.loadComboStats() }
-      if (String(comboRes.code) === '1') {
-        this.tableData = comboRes.data.records || []
-        this.counts = comboRes.data.total
+      try {
+        // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+        const comboRes = await getSetmealPage(params)
+        if (reloadStats) { await this.loadComboStats() }
+        if (String(comboRes.code) === '1') {
+          this.tableData = comboRes.data.records || []
+          this.counts = comboRes.data.total
+        }
+      } catch (err) {
+        // 修改点：加载三态修复（2026-08-31）——异常仅记录，不弹全局遮屏 toast；
+        // loading 由 finally 复位，避免接口异常时骨架屏永不退出
+        console.warn('加载套餐列表失败:', err)
+      } finally {
+        this.loading = false
       }
-      this.loading = false
     },
 
     /**

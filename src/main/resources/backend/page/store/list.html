@@ -22,6 +22,10 @@
 
         /* 表格 */
         .store-table { margin-top: 4px; }
+        /* 修改点：窄屏兜底——外部分页(layout 全功能)在 269px 容器内溢出，允许容器横向滚动 */
+        @media (max-width: 768px) {
+          .store-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        }
         .store-table .cell-status { display: flex; align-items: center; gap: 6px; }
         .tag-active { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size:var(--font-size-xs); font-weight: 500; background: var(--color-success-light); color: var(--color-success); }
         .tag-inactive { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size:var(--font-size-xs); font-weight: 500; background: var(--color-danger-light); color: var(--color-danger); }
@@ -112,6 +116,7 @@
                     :actions-width="250"
                     :selection="true"
                     :show-index="true"
+                    :show-pagination="false"
                     :default-sort="{prop: 'createTime', order: 'descending'}"
                     border stripe size="small"
                     @selection-change="onSelectionChange"

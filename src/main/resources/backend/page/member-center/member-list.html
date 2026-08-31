@@ -39,11 +39,14 @@
     .member-aside__list li:last-child { border-bottom: none; }
     .member-aside__empty-sm { color: var(--text-muted); font-size: var(--font-size-sm); text-align: center; padding: 16px 0; }
     @media (max-width: 1200px) {
-      .member-layout { flex-direction: column; }
+      /* 修改点：flex 换列后需 stretch，否则 align-items:flex-start 让子项按内容宽度(max-content)撑破页面 */
+      .member-layout { flex-direction: column; align-items: stretch; }
       .member-aside { width: 100%; }
     }
     @media (max-width: 900px) {
-      .stat-card { min-width: 140px; flex: 1 1 calc(50% - 8px); }
+      /* 修改点：grid 网格在窄屏降为 2 列并允许收缩（原 min-width:140px 会把 4 列网格撑破容器） */
+      .member-layout__main .stats-cards { grid-template-columns: repeat(2, 1fr); }
+      .member-layout__main .stat-card { min-width: 0; }
     }
   </style>
 </head>
@@ -418,8 +421,13 @@
               const statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
             }
-          } catch(e) { ReggieUI.error('请求失败：' + e) }
-          this.loading = false
+          } catch(e) {
+            // 修改点：加载三态修复（2026-08-31）——列表加载失败仅记录日志、不弹全局遮屏 toast；
+            // loading 由 finally 复位，保证骨架屏正常退出、异常态与空态区分
+            console.warn('加载会员列表失败:', e)
+          } finally {
+            this.loading = false
+          }
         },
         async loadMemberStats() {
           try {

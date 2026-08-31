@@ -165,17 +165,6 @@
             page: 1,
             pageSize: 10,
             tableData: [],
-            // 修改点：crud-table 列配置（替代手写 el-table-column）
-            columns: [
-              { prop: 'name', label: '食材名称', minWidth: 120 },
-              { prop: 'categoryName', label: '分类', width: 80, align: 'center' },
-              { prop: 'unit', label: '单位', width: 60, align: 'center' },
-              { prop: 'stockQty', label: '库存', width: 80, slot: true, type: 'number' },
-              { prop: 'minStock', label: '最低库存', width: 80, type: 'number' },
-              { prop: 'unitPrice', label: '单价', width: 110, align: 'right', slot: true, type: 'money' },
-              { prop: 'supplierName', label: '供应商', width: 100, align: 'center' },
-              { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
-            ],
             // 数据统计
             stats: {
               totalMaterials: 0,
@@ -238,6 +227,33 @@
               { key: '1', icon: 'ri-checkbox-circle-line', label: '启用中', value: self.stats.activeMaterials || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
               { key: 'low', icon: 'ri-error-warning-line', label: '库存预警', value: self.stats.lowStockMaterials || 0, color: 'warning', clickable: true, active: self.activeFilter === 'low' },
               { key: 'categories', icon: 'ri-box-3-line', label: '分类数量', value: self.stats.totalCategories || 0, color: 'danger' }
+            ]
+          },
+          // 修改点：列配置改为 computed，关联分类/供应商名称通过已加载的 options 映射，
+          // 避免列表接口仅返回 categoryId/supplierId 导致“分类/供应商”列空白（编辑弹窗因下拉回填故有值）
+          columns: function () {
+            var self = this
+            function mapName(options, id) {
+              if (id == null) return ''
+              var sid = String(id)
+              for (var i = 0; i < options.length; i++) {
+                if (String(options[i].id) === sid) return options[i].name
+              }
+              return ''
+            }
+            return [
+              { prop: 'name', label: '食材名称', minWidth: 120 },
+              { prop: 'categoryName', label: '分类', width: 80, align: 'center', formatter: function (v, row) {
+                return mapName(self.categoryOptions, row.categoryId) || v || '-'
+              } },
+              { prop: 'unit', label: '单位', width: 60, align: 'center' },
+              { prop: 'stockQty', label: '库存', width: 80, slot: true, type: 'number' },
+              { prop: 'minStock', label: '最低库存', width: 80, type: 'number' },
+              { prop: 'unitPrice', label: '单价', width: 110, align: 'right', slot: true, type: 'money' },
+              { prop: 'supplierName', label: '供应商', width: 100, align: 'center', formatter: function (v, row) {
+                return mapName(self.supplierOptions, row.supplierId) || v || '-'
+              } },
+              { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
             ]
           }
         },

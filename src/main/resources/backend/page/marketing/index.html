@@ -77,6 +77,8 @@
         @media (max-width: 768px) {
             .container { padding: 12px 16px 16px !important; }
             .activity-grid { grid-template-columns: 1fr; }
+            /* 小屏下活动类型 Tab 换行，避免 572px 横向溢出 */
+            .tab-panel .el-tabs__nav { flex-wrap: wrap; }
         }
     </style>
 </head>

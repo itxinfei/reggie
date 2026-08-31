@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -306,8 +307,10 @@ public class UserController {
         @GetMapping("/page")
     @Operation(summary = "用户分页查询", description = "分页查询用户列表，支持按姓名、手机号模糊搜索和状态筛选，自动过滤当前租户数据")
     public R<Page<User>> page(
-            @Parameter(name = "page", description = "页码", required = true, example = "1") int page,
-            @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10") int pageSize,
+            @Parameter(name = "page", description = "页码", required = false, example = "1")
+            @RequestParam(defaultValue = "1") Integer page,
+            @Parameter(name = "pageSize", description = "每页数量", required = false, example = "10")
+            @RequestParam(defaultValue = "10") Integer pageSize,
             @Parameter(name = "name", description = "姓名") String name,
             @Parameter(name = "phone", description = "手机号") String phone,
             @Parameter(name = "status", description = "状态：0禁用 1正常") Integer status) {

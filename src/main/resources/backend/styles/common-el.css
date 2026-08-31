@@ -8596,50 +8596,52 @@
   color: var(--color-white);
   background-color: var(--color-info);
 }
+/* 修改点：el-tag 浅底文字对比度修复（2026-08-31）：浅语义色在浅底上均不达 4.5:1，
+   文字统一改用 --color-*-dark 深色令牌（success-dark 3.09 / warning-dark 3.36 / danger-dark 4.36）。 */
 .el-tag.el-tag--success {
   background-color: var(--color-success-lighter);
   border-color: var(--color-success-lighter);
-  color: var(--color-success);
+  color: var(--color-success-dark);
 }
 .el-tag.el-tag--success.is-hit {
   border-color: var(--color-success);
 }
 .el-tag.el-tag--success .el-tag__close {
-  color: var(--color-success);
+  color: var(--color-success-dark);
 }
 .el-tag.el-tag--success .el-tag__close:hover {
   color: var(--color-white);
-  background-color: var(--color-success);
+  background-color: var(--color-success-dark);
 }
 .el-tag.el-tag--warning {
   background-color: var(--color-warning-lighter);
   border-color: var(--color-warning-lighter);
-  color: var(--color-warning);
+  color: var(--color-warning-dark);
 }
 .el-tag.el-tag--warning.is-hit {
   border-color: var(--color-warning);
 }
 .el-tag.el-tag--warning .el-tag__close {
-  color: var(--color-warning);
+  color: var(--color-warning-dark);
 }
 .el-tag.el-tag--warning .el-tag__close:hover {
   color: var(--color-white);
-  background-color: var(--color-warning);
+  background-color: var(--color-warning-dark);
 }
 .el-tag.el-tag--danger {
   background-color: var(--color-danger-lighter);
   border-color: var(--color-danger-lighter);
-  color: var(--color-danger);
+  color: var(--color-danger-dark);
 }
 .el-tag.el-tag--danger.is-hit {
   border-color: var(--color-danger);
 }
 .el-tag.el-tag--danger .el-tag__close {
-  color: var(--color-danger);
+  color: var(--color-danger-dark);
 }
 .el-tag.el-tag--danger .el-tag__close:hover {
   color: var(--color-white);
-  background-color: var(--color-danger);
+  background-color: var(--color-danger-dark);
 }
 .el-tag .el-icon-close {
   border-radius: 50%;
@@ -8765,47 +8767,47 @@
 .el-tag--plain.el-tag--success {
   background-color: var(--color-white);
   border-color: var(--legacy-c2e7b0);
-  color: var(--color-success);
+  color: var(--color-success-dark);
 }
 .el-tag--plain.el-tag--success.is-hit {
   border-color: var(--color-success);
 }
 .el-tag--plain.el-tag--success .el-tag__close {
-  color: var(--color-success);
+  color: var(--color-success-dark);
 }
 .el-tag--plain.el-tag--success .el-tag__close:hover {
   color: var(--color-white);
-  background-color: var(--color-success);
+  background-color: var(--color-success-dark);
 }
 .el-tag--plain.el-tag--warning {
   background-color: var(--color-white);
   border-color: var(--legacy-ffe19a);
-  color: var(--color-brand-400);
+  color: var(--color-warning-dark);
 }
 .el-tag--plain.el-tag--warning.is-hit {
   border-color: var(--color-brand-400);
 }
 .el-tag--plain.el-tag--warning .el-tag__close {
-  color: var(--color-brand-400);
+  color: var(--color-warning-dark);
 }
 .el-tag--plain.el-tag--warning .el-tag__close:hover {
   color: var(--color-white);
-  background-color: var(--color-brand-400);
+  background-color: var(--color-warning-dark);
 }
 .el-tag--plain.el-tag--danger {
   background-color: var(--color-white);
   border-color: var(--legacy-fbc4c4);
-  color: var(--color-danger);
+  color: var(--color-danger-dark);
 }
 .el-tag--plain.el-tag--danger.is-hit {
   border-color: var(--color-danger);
 }
 .el-tag--plain.el-tag--danger .el-tag__close {
-  color: var(--color-danger);
+  color: var(--color-danger-dark);
 }
 .el-tag--plain.el-tag--danger .el-tag__close:hover {
   color: var(--color-white);
-  background-color: var(--color-danger);
+  background-color: var(--color-danger-dark);
 }
 .el-tag--medium {
   height: 28px;
@@ -10114,6 +10116,9 @@
   background: 0 0;
   padding-left: 0;
   padding-right: 0;
+  /* 修改点：触控目标修复（2026-08-31）——文字按钮最小高度 24px，满足 WCAG 2.2 最小触控目标 */
+  min-height: 24px;
+  line-height: 22px;
 }
 .el-button--text:focus,
 .el-button--text:hover {

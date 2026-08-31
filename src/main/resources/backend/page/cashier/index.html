@@ -59,6 +59,11 @@
       grid-template-columns: 1fr 400px;
       gap: 20px;
     }
+    /* 响应式：小屏切换单列，避免 400px 支付面板溢出 375px 视口 */
+    @media (max-width: 900px) {
+      .cashier-main { grid-template-columns: 1fr; }
+      .cashier-container { padding: 16px; }
+    }
     .order-panel {
       background: var(--bg-surface);
       border-radius: var(--radius-lg);

@@ -719,6 +719,15 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* 修改点：统一分页控件高度（2026-08-31）——sizes select 与 jumper 输入框对齐 36px pager，
+   消除 28/29/36px 三档混杂，全站分页视觉统一 */
+.el-pagination .el-select .el-input__inner,
+.el-pagination__editor.el-input .el-input__inner,
+.el-pagination .el-input__inner {
+  height: 36px;
+  line-height: 36px;
+}
+
 /* ========== 标签增强 ========== */
 .el-tag {
   border-radius: var(--radius-full);

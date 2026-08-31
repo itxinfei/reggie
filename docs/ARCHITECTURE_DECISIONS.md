@@ -308,4 +308,4 @@ module/{模块名}/
 | 2026-08 | 阶段 3：Jasypt 集成（`@Profile("prod")`） |
 | 2026-08 | 全部 `throw new RuntimeException` → `throw new CustomException` 迁移完成 |
 
-**当前测试状态**: 402 个测试全部通过（100%）。
+**当前测试状态**: 414 个测试全部通过（100%，`mvn test` 默认全绿）。

@@ -20,36 +20,45 @@
       display: flex;
       flex-direction: column;
       min-height: 540px;
+      transition: box-shadow var(--transition-base);
     }
+    .spec-card:hover { box-shadow: var(--shadow-md); }
+
     .spec-card__head {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 12px;
       margin-bottom: 16px;
+    }
+    .spec-card__title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-width: 0;
     }
     .spec-card__title {
       font-size: 16px;
       font-weight: 500;
-      color: var(--el-text-primary);
+      color: var(--text-primary);
       margin: 0;
       line-height: 1.5;
     }
     .spec-card__sub {
       font-size: 12px;
       font-weight: 400;
-      color: var(--el-text-secondary);
-      margin-left: 4px;
+      color: var(--text-secondary);
     }
     .spec-card__filters {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-left: auto;
       flex-wrap: wrap;
     }
-    .spec-search { width: 170px; }
-    .spec-status-select { width: 104px; }
+    .spec-search { width: 160px; }
+    .spec-status-select { width: 90px; }
     .spec-card__table { flex: 1; }
     .spec-card__pager {
       display: flex;
@@ -59,20 +68,46 @@
     .spec-card__tip {
       font-size: 12px;
       font-weight: 400;
-      color: var(--el-text-secondary);
+      color: var(--text-secondary);
       margin-top: 8px;
       line-height: 1.5;
     }
+
+    /* 行内操作按钮横向排列，避免上下堆叠撑高行 */
+    .spec-row-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .spec-row-actions .el-button--text {
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    /* 规则标签：类型 + 必选横向紧凑展示，窄列自动换行 */
+    .spec-rule-cell {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    /* 价格调整语义色 */
     .spec-price-up { color: var(--color-danger); }
     .spec-price-down { color: var(--color-success); }
-    .spec-price-flat { color: var(--el-text-secondary); }
+    .spec-price-flat { color: var(--text-secondary); }
+
+    /* 空态引导 */
     .spec-empty-guide {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      color: var(--el-text-secondary);
+      color: var(--text-secondary);
       font-size: 13px;
       padding: 48px 0;
     }
@@ -80,18 +115,30 @@
       font-size: 40px;
       color: var(--el-color-primary-light-7);
     }
+
     .spec-dialog-tip {
       font-size: 12px;
-      color: var(--el-text-secondary);
+      color: var(--text-secondary);
       line-height: 1.5;
       margin-top: 4px;
     }
+
+    /* 表格行 hover 柔和过渡 */
+    .tableBox.el-table .el-table__body tr {
+      transition: background-color var(--transition-base);
+    }
+
     @media (max-width: 1200px) {
       .spec-search { width: 130px; }
     }
     @media (max-width: 768px) {
       .spec-main { margin-top: 16px; }
       .spec-card { min-height: auto; }
+      .spec-card__head { flex-direction: column; align-items: flex-start; }
+      .spec-card__filters { width: 100%; margin-left: 0; }
+      .spec-search { width: 100%; }
+      .spec-status-select { width: 100%; }
+      .spec-card__filters .el-button { flex: 1; }
     }
   </style>
 </head>
@@ -116,8 +163,8 @@
     <!-- 主内容：左侧规格组 + 右侧规格选项 -->
     <div class="spec-main">
       <el-row :gutter="20">
-        <!-- 左栏：规格组 -->
-        <el-col :xs="24" :lg="9">
+        <!-- 左栏：规格组（10/24，比原 9 更宽松） -->
+        <el-col :xs="24" :lg="10">
           <section class="spec-card" aria-label="规格组列表">
             <div class="spec-card__head">
               <h2 class="spec-card__title">规格组</h2>
@@ -148,6 +195,7 @@
             <div class="spec-card__table">
               <el-table
                 ref="groupTable"
+                class="tableBox"
                 aria-label="规格组数据表格"
                 :data="paginatedGroups"
                 border
@@ -156,20 +204,19 @@
                 highlight-current-row
                 v-loading="groupLoading"
                 @current-change="handleGroupSelect">
-                <el-table-column prop="name" label="规格组名称" min-width="130" :align="resolveColAlign({})"></el-table-column>
-                <el-table-column prop="type" label="类型" width="76" :align="resolveColAlign({})">
+                <el-table-column prop="name" label="规格组名称" min-width="150" :align="resolveColAlign({})" :header-align="resolveColAlign({})"></el-table-column>
+                <el-table-column label="规则" width="110" :align="resolveColAlign({})" :header-align="resolveColAlign({})">
                   <template slot-scope="scope">
-                    <el-tag :type="scope.row.type === 1 ? 'primary' : 'success'" size="small">
-                      {{ scope.row.type === 1 ? '单选' : '多选' }}
-                    </el-tag>
+                    <div class="spec-rule-cell">
+                      <el-tag :type="scope.row.type === 1 ? 'primary' : 'success'" size="mini">
+                        {{ scope.row.type === 1 ? '单选' : '多选' }}
+                      </el-tag>
+                      <el-tag v-if="scope.row.required === 1" type="info" size="mini">必选</el-tag>
+                      <span v-else class="spec-card__sub">可选</span>
+                    </div>
                   </template>
                 </el-table-column>
-                <el-table-column prop="required" label="必选" width="64" :align="resolveColAlign({})">
-                  <template slot-scope="scope">
-                    <span :class="scope.row.required === 1 ? '' : 'spec-price-flat'">{{ scope.row.required === 1 ? '是' : '否' }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column label="状态" width="84" :align="resolveColAlign({})">
+                <el-table-column label="状态" width="80" :align="resolveColAlign({})" :header-align="resolveColAlign({})">
                   <template slot-scope="scope">
                     <el-switch
                       v-model="scope.row.status"
@@ -180,10 +227,12 @@
                     </el-switch>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="104" :align="resolveColAlign({})" fixed="right">
+                <el-table-column label="操作" width="120" :align="resolveColAlign({})" :header-align="resolveColAlign({})" fixed="right">
                   <template slot-scope="scope">
-                    <el-button type="text" size="small" @click.stop="openGroupDialog(scope.row)">编辑</el-button>
-                    <el-button type="text" size="small" class="btn-danger-text" @click.stop="handleDeleteGroup(scope.row)">删除</el-button>
+                    <div class="spec-row-actions">
+                      <el-button type="text" size="small" icon="el-icon-edit" @click.stop="openGroupDialog(scope.row)">编辑</el-button>
+                      <el-button type="text" size="small" class="btn-danger-text" icon="el-icon-delete" @click.stop="handleDeleteGroup(scope.row)">删除</el-button>
+                    </div>
                   </template>
                 </el-table-column>
               </el-table>
@@ -206,17 +255,19 @@
           </section>
         </el-col>
 
-        <!-- 右栏：规格选项 -->
-        <el-col :xs="24" :lg="15">
+        <!-- 右栏：规格选项（14/24，与左侧比例更协调） -->
+        <el-col :xs="24" :lg="14">
           <section class="spec-card" aria-label="规格选项列表">
             <div class="spec-card__head">
-              <h2 class="spec-card__title">规格选项</h2>
-              <template v-if="currentGroup">
-                <el-tag :type="currentGroup.status === 1 ? 'success' : 'danger'" size="small">
-                  {{ currentGroup.status === 1 ? '启用中' : '已禁用' }}
-                </el-tag>
-                <span class="spec-card__sub">{{ currentGroup.name }} · 共 {{ filteredOptions.length }} 项</span>
-              </template>
+              <div class="spec-card__title-wrap">
+                <h2 class="spec-card__title">规格选项</h2>
+                <template v-if="currentGroup">
+                  <el-tag :type="currentGroup.status === 1 ? 'success' : 'danger'" size="small">
+                    {{ currentGroup.status === 1 ? '启用中' : '已禁用' }}
+                  </el-tag>
+                  <span class="spec-card__sub">{{ currentGroup.name }} · 共 {{ filteredOptions.length }} 项</span>
+                </template>
+              </div>
               <div class="spec-card__filters">
                 <el-select
                   v-model="optionStatusFilter"
@@ -247,20 +298,21 @@
               <el-table
                 v-else
                 ref="optionTable"
+                class="tableBox"
                 aria-label="规格选项数据表格"
                 :data="paginatedOptions"
                 border
                 stripe
                 style="width: 100%"
                 v-loading="optionLoading">
-                <el-table-column prop="name" label="选项名称" min-width="150" :align="resolveColAlign({})"></el-table-column>
-                <el-table-column prop="priceAdjust" label="价格调整" width="130" :align="resolveColAlign({ type: 'number' })">
+                <el-table-column prop="name" label="选项名称" min-width="160" :align="resolveColAlign({})" :header-align="resolveColAlign({})"></el-table-column>
+                <el-table-column prop="priceAdjust" label="价格调整" width="120" :align="resolveColAlign({ type: 'money' })" :header-align="resolveColAlign({ type: 'money' })">
                   <template slot-scope="scope">
                     <span :class="priceAdjustClass(scope.row.priceAdjust)">{{ formatPriceAdjust(scope.row.priceAdjust) }}</span>
                   </template>
                 </el-table-column>
-                <el-table-column prop="sortOrder" label="排序" width="70" :align="resolveColAlign({})"></el-table-column>
-                <el-table-column label="状态" width="84" :align="resolveColAlign({})">
+                <el-table-column prop="sortOrder" label="排序" width="80" :align="resolveColAlign({ type: 'number' })" :header-align="resolveColAlign({ type: 'number' })"></el-table-column>
+                <el-table-column label="状态" width="80" :align="resolveColAlign({})" :header-align="resolveColAlign({})">
                   <template slot-scope="scope">
                     <el-switch
                       v-model="scope.row.status"
@@ -271,10 +323,12 @@
                     </el-switch>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="104" :align="resolveColAlign({})" fixed="right">
+                <el-table-column label="操作" width="120" :align="resolveColAlign({})" :header-align="resolveColAlign({})" fixed="right">
                   <template slot-scope="scope">
-                    <el-button type="text" size="small" @click="openOptionDialog(scope.row)">编辑</el-button>
-                    <el-button type="text" size="small" class="btn-danger-text" @click="handleDeleteOption(scope.row)">删除</el-button>
+                    <div class="spec-row-actions">
+                      <el-button type="text" size="small" icon="el-icon-edit" @click.stop="openOptionDialog(scope.row)">编辑</el-button>
+                      <el-button type="text" size="small" class="btn-danger-text" icon="el-icon-delete" @click.stop="handleDeleteOption(scope.row)">删除</el-button>
+                    </div>
                   </template>
                 </el-table-column>
               </el-table>
@@ -428,10 +482,12 @@
       },
       computed: {
         statsCards: function () {
+          var requiredCount = this.groupList.filter(function (g) { return g.required === 1 }).length
           return [
             { key: 'groups', icon: 'ri-archive-2-line', label: '规格组', value: this.stats.totalGroups, color: 'primary' },
             { key: 'options', icon: 'ri-list-check-2', label: '选项总数', value: this.stats.totalOptions, color: 'success' },
-            { key: 'dishes', icon: 'ri-restaurant-line', label: '已关联菜品', value: this.stats.dishesWithSpec, color: 'warning' }
+            { key: 'dishes', icon: 'ri-restaurant-line', label: '已关联菜品', value: this.stats.dishesWithSpec, color: 'warning' },
+            { key: 'required', icon: 'ri-lock-2-line', label: '必选规格组', value: requiredCount, color: 'danger' }
           ]
         },
         filteredGroups: function () {
@@ -488,8 +544,9 @@
         },
         formatPriceAdjust: function (val) {
           var n = Number(val) || 0
-          var s = n.toFixed(2)
-          return n > 0 ? '+' + s : s
+          if (n === 0) { return '—' }
+          var s = Math.abs(n).toFixed(2)
+          return n > 0 ? '+¥' + s : '-¥' + s
         },
         priceAdjustClass: function (val) {
           var n = Number(val) || 0

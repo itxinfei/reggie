@@ -50,8 +50,8 @@ public class PrinterLogController {
     @GetMapping("/page")
     @Operation(summary = "分页查询打印日志", description = "分页查询打印日志，支持按订单ID、打印类型、状态、时间范围筛选")
     public R<Page<PrinterLog>> page(
-            @Parameter(description = "页码") int page,
-            @Parameter(description = "每页条数") int pageSize,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "订单ID（可选）") @RequestParam(required = false) Long orderId,
             @Parameter(description = "打印类型（可选）") @RequestParam(required = false) String printType,
             @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status,

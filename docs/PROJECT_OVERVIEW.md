@@ -25,7 +25,7 @@
 |---|---|---|
 | 后端框架 | Spring Boot | 2.4.5 |
 | ORM | MyBatis-Plus | 3.4.2 |
-| 数据库 | MySQL | 8.x（生产） / H2（测试） |
+| 数据库 | MySQL | 8.x（生产与测试均连真实 MySQL） |
 | 连接池 | Alibaba Druid | — |
 | 缓存 | Redis + Commons Pool2 | — |
 | 工具库 | Hutool | 5.8.22 |
@@ -129,7 +129,7 @@ src/main/resources/front/          # C 端用户（原生 JS + Vant）
 
 ```bash
 mvn clean compile              # 编译
-mvn test                       # 运行测试（402 个测试全部通过）
+mvn test                       # 运行测试（414 个测试全部通过）
 mvn package -DskipTests        # 打包
 ```
 
@@ -147,7 +147,7 @@ mvn package -DskipTests        # 打包
 | 持久化实体（`@TableName`） | 117 |
 | 后台页面模块（`backend/page/*`） | 33 |
 | 后台 API 封装（`backend/api/*.js`） | 35 |
-| 自动化测试 | 402（100% 通过） |
+| 自动化测试 | 414（100% 通过） |
 | 前端 CSS 文件 | 21（含 tokens.css 设计令牌） |
 
 ---

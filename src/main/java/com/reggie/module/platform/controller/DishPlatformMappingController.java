@@ -3,6 +3,7 @@ package com.reggie.module.platform.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.platform.model.DishPlatformMapping;
 import com.reggie.module.platform.service.DishPlatformMappingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,7 +37,7 @@ public class DishPlatformMappingController {
             @RequestParam(defaultValue = "20") Integer pageSize,
             @RequestParam(required = false) Long dishId,
             @RequestParam(required = false) String platformType) {
-        Page<DishPlatformMapping> pageParam = new Page<>(page, pageSize);
+        Page<DishPlatformMapping> pageParam = PageUtils.of(page, pageSize);
         // LambdaQueryWrapper 不能在 Page 构造后直接用，通过 service 层封装
         IPage<DishPlatformMapping> result = mappingService.page(pageParam);
         return R.success(result);
