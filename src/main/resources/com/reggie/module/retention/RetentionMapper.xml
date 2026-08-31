@@ -3,14 +3,13 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.reggie.module.retention.mapper.RetentionMapper">
 
-    <!-- retention_member 表尚未创建，所有查询直接返回空结果 -->
+    <!-- 修改点：2026-08-31 已建 retention_member 表，移除 WHERE 1=0 假空查询（MySQL 解析期即报表不存在导致 500） -->
 
     <select id="listActiveMembers" resultType="com.reggie.module.retention.model.RetentionMember">
         SELECT id, member_name, phone, level, points, last_order_date,
                total_orders, total_spent, status, tag, tenant_id
         FROM retention_member
-        WHERE 1 = 0
-          AND tenant_id = #{tenantId}
+        WHERE tenant_id = #{tenantId}
         LIMIT #{limit}
     </select>
 
@@ -18,28 +17,32 @@
         SELECT id, member_name, phone, level, points, last_order_date,
                total_orders, total_spent, status, tag, tenant_id
         FROM retention_member
-        WHERE 1 = 0
-          AND tenant_id = #{tenantId}
+        WHERE tenant_id = #{tenantId}
+          AND (status = 'CHURNED'
+               OR (status != 'ACTIVE' AND last_order_date &lt;= DATE_SUB(CURDATE(), INTERVAL #{daysThreshold} DAY)))
     </select>
 
     <select id="getRetentionTrend" resultType="java.util.Map">
-        SELECT 1 AS date FROM DUAL WHERE 1 = 0
+        SELECT DATE_FORMAT(last_order_date, '%Y-%m-%d') AS date, COUNT(1) AS cnt
+        FROM retention_member
+        WHERE tenant_id = #{tenantId}
+        GROUP BY date
+        ORDER BY date
+        LIMIT 30
     </select>
 
     <select id="listByLevel" resultType="com.reggie.module.retention.model.RetentionMember">
         SELECT id, member_name, phone, level, points, last_order_date,
                total_orders, total_spent, status, tag, tenant_id
         FROM retention_member
-        WHERE 1 = 0
-          AND tenant_id = #{tenantId}
+        WHERE tenant_id = #{tenantId}
           AND level = #{level}
     </select>
 
     <select id="countByLevel" resultType="java.lang.Integer">
         SELECT COUNT(1)
         FROM retention_member
-        WHERE 1 = 0
-          AND tenant_id = #{tenantId}
+        WHERE tenant_id = #{tenantId}
           AND level = #{level}
     </select>
 

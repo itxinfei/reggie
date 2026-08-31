@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @ActiveProfiles("test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Sql(scripts = "classpath:schema-platform.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class PlatformReconcileTaskServiceTest {
 

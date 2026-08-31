@@ -31,6 +31,7 @@ public interface DashboardMapper {
      * @param tenantId 租户ID
      * @param todayStart 今日起始时间（00:00:00）
      * @param todayEnd 今日结束时间（23:59:59）
+     * @param yesterdayStart 昨日起始时间（00:00:00），避免 SQL 内做 "? - INTERVAL 1 DAY" 算术触发 Druid wall 解析异常
      * @param weekStart 近7天起始时间
      * @param monthStart 近30天起始时间
      * @return 聚合结果Map（包含totalSales, todaySales, yesterdaySales, weekSales, monthSales）
@@ -39,6 +40,7 @@ public interface DashboardMapper {
     Map<String, Object> getSalesOverview(@Param("tenantId") Long tenantId,
                                          @Param("todayStart") LocalDateTime todayStart,
                                          @Param("todayEnd") LocalDateTime todayEnd,
+                                         @Param("yesterdayStart") LocalDateTime yesterdayStart,
                                          @Param("weekStart") LocalDateTime weekStart,
                                          @Param("monthStart") LocalDateTime monthStart);
 

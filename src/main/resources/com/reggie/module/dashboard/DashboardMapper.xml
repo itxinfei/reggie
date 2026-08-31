@@ -25,7 +25,7 @@
                 AND o.status NOT IN (5, 6)
                 THEN o.amount ELSE 0 END), 0) AS todaySales,
             COALESCE(SUM(CASE
-                WHEN o.order_time &gt;= #{todayEnd} - INTERVAL 1 DAY
+                WHEN o.order_time &gt;= #{yesterdayStart}
                 AND o.order_time &lt; #{todayStart}
                 AND o.status NOT IN (5, 6)
                 THEN o.amount ELSE 0 END), 0) AS yesterdaySales,
@@ -41,7 +41,7 @@
                 THEN o.amount ELSE 0 END), 0) AS monthSales
         FROM orders o
         WHERE
-          &lt;if test="tenantId != null"&gt;o.tenant_id = #{tenantId} AND &lt;/if&gt;
+          <if test="tenantId != null">o.tenant_id = #{tenantId} AND </if>
           o.is_deleted = 0
     </select>
 
@@ -67,7 +67,7 @@
                 THEN 1 ELSE 0 END) AS cancelOrders
         FROM orders o
         WHERE
-          &lt;if test="tenantId != null"&gt;o.tenant_id = #{tenantId} AND &lt;/if&gt;
+          <if test="tenantId != null">o.tenant_id = #{tenantId} AND </if>
           o.is_deleted = 0
     </select>
 
@@ -81,7 +81,7 @@
                 THEN o.amount ELSE 0 END), 0) AS revenue
         FROM orders o
         WHERE
-          &lt;if test="tenantId != null"&gt;o.tenant_id = #{tenantId} AND &lt;/if&gt;
+          <if test="tenantId != null">o.tenant_id = #{tenantId} AND </if>
           o.is_deleted = 0
           AND DATE(o.order_time) BETWEEN #{startDate} AND #{endDate}
         GROUP BY DATE(o.order_time)
@@ -101,11 +101,11 @@
         INNER JOIN dish d ON d.id = od.dish_id
         LEFT JOIN category c ON c.id = d.category_id
         WHERE
-          &lt;if test="tenantId != null"&gt;
+          <if test="tenantId != null">
             od.tenant_id = #{tenantId}
             AND o.tenant_id = #{tenantId}
             AND
-          &lt;/if&gt;
+          </if>
           od.is_deleted = 0
           AND o.is_deleted = 0
           AND d.is_deleted = 0
@@ -124,7 +124,7 @@
                 THEN 1 ELSE 0 END) AS newMembersThisMonth
         FROM member m
         WHERE
-          &lt;if test="tenantId != null"&gt;m.tenant_id = #{tenantId} AND &lt;/if&gt;
+          <if test="tenantId != null">m.tenant_id = #{tenantId} AND </if>
           m.is_deleted = 0
     </select>
 

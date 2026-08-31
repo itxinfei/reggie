@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Sql(scripts = "classpath:schema-report.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class ReportServiceTest {
 
@@ -60,7 +60,9 @@ public class ReportServiceTest {
         o1.setId(1L);
         o1.setAmount(new BigDecimal("100.00"));
         o1.setStatus(4);
-        o1.setPayMethod(1);
+        // 修改点：payMethod=2(微信)，使 testPaymentAnalysis 的 wechat 统计与 getDailyReport 的 completed 金额一致
+        // 权威枚举：2=微信→wechat，3=支付宝→alipay，其余(1/4/5/6)→balance
+        o1.setPayMethod(2);
         o1.setOrderTime(LocalDateTime.of(2026, 7, 1, 8, 0));
         orderService.save(o1);
 
@@ -68,7 +70,8 @@ public class ReportServiceTest {
         o2.setId(2L);
         o2.setAmount(new BigDecimal("200.00"));
         o2.setStatus(4);
-        o2.setPayMethod(2);
+        // 修改点：payMethod=3(支付宝)，对应 testPaymentAnalysis 的 alipay 断言
+        o2.setPayMethod(3);
         o2.setOrderTime(LocalDateTime.of(2026, 7, 1, 12, 0));
         orderService.save(o2);
 
@@ -76,7 +79,9 @@ public class ReportServiceTest {
         o3.setId(3L);
         o3.setAmount(new BigDecimal("50.00"));
         o3.setStatus(5);
-        o3.setPayMethod(1);
+        // 修改点：payMethod=2(微信)，o3 虽 status=5(取消) 但 getPaymentAnalysis 不过滤 status，
+        // 计入 wechat：合计 100+50=150，与 testPaymentAnalysis 期望 wechat count=2 amount=150 一致
+        o3.setPayMethod(2);
         o3.setOrderTime(LocalDateTime.of(2026, 7, 1, 18, 0));
         orderService.save(o3);
 

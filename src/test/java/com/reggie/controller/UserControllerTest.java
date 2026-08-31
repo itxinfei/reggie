@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.annotation.DirtiesContext;
@@ -19,6 +20,7 @@ import javax.servlet.http.HttpSession;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -26,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class UserControllerTest {
 
     @Autowired
@@ -38,9 +40,17 @@ public class UserControllerTest {
     @Autowired
     private TestDatabaseCleaner cleaner;
 
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
     @BeforeEach
     void setUp() {
         cleaner.cleanTables("user");
+        // 清除限流计数器，避免全量测试中跨方法的 Redis 计数残留导致 sendMsg 返回 429
+        Set<String> rateLimitKeys = redisTemplate.keys("rate_limit:*");
+        if (rateLimitKeys != null && !rateLimitKeys.isEmpty()) {
+            redisTemplate.delete(rateLimitKeys);
+        }
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 

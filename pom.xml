@@ -251,11 +251,15 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.22.2</version>
                 <configuration>
-                    <!-- 每个测试类独立 JVM：彻底隔离上下文，避免 @DirtiesContext 在同一个 JVM 里重启时
-                         被前置测试污染的 JVM 级静态单例（如 Redis 连接池、线程池、缓存等）导致后续
-                         Spring 上下文重建时 Service Bean 无法注册（NoSuchBeanDefinitionException） -->
+                    <!-- 复用 JVM（reuseForks=true）：配合 34 个测试类的 @DirtiesContext(AFTER_CLASS)
+                         与 TestDatabaseCleaner.cleanTables（@BeforeEach 清表）实现数据隔离。
+                         静态单例污染由 AFTER_CLASS 触发上下文重建解决，无需每类独立 JVM。
+                         关键修复：reuseForks=false + JaCoCo agent 频繁 fork 会触发 surefire 2.22.2
+                         的 "forked VM terminated without saying goodbye"（第二轮 fork 时 ClassNotFoundException），
+                         导致全量测试 BUILD FAILURE（仅执行 271/414）。复用 JVM 后 JaCoCo agent
+                         只加载一次，彻底消除 fork 崩溃。 -->
                     <forkCount>1</forkCount>
-                    <reuseForks>false</reuseForks>
+                    <reuseForks>true</reuseForks>
                 </configuration>
             </plugin>
 

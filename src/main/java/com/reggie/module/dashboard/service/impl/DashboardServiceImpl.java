@@ -148,9 +148,11 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDateTime todayEnd = LocalDate.now().atTime(LocalTime.MAX);
         LocalDateTime weekStart = LocalDate.now().minusDays(6).atStartOfDay();
         LocalDateTime monthStart = LocalDate.now().minusDays(29).atStartOfDay();
+        // 修改点：昨日起始在 Java 层计算，避免 "? - INTERVAL 1 DAY" 触发 Druid wall 解析异常（druid 1.2.21）
+        LocalDateTime yesterdayStart = todayStart.minusDays(1);
 
         // 通过 DashboardMapper 聚合销售概览和订单概览（单次查询完成所有聚合，无需 Java 层逐行计算）
-        Map<String, Object> salesMap = dashboardMapper.getSalesOverview(tenantId, todayStart, todayEnd, weekStart, monthStart);
+        Map<String, Object> salesMap = dashboardMapper.getSalesOverview(tenantId, todayStart, todayEnd, yesterdayStart, weekStart, monthStart);
         Map<String, Object> orderMap = dashboardMapper.getOrderOverview(tenantId, todayStart, todayEnd, weekStart);
 
         // 解析销售数据

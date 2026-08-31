@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.Period;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -363,8 +363,8 @@ public class RetentionServiceImpl implements RetentionService {
             if (m.getLastOrderDate() == null) {
                 continue;
             }
-            Period period = Period.between(m.getLastOrderDate(), today);
-            int daysSince = period.getDays();
+            // 修改点：原 Period.getDays() 只返回天数分量（跨月会漏算），改用 ChronoUnit.DAYS 计算完整天数差
+            long daysSince = ChronoUnit.DAYS.between(m.getLastOrderDate(), today);
             if (daysSince > 30) {
                 Map<String, Object> map = memberToMap(m);
                 map.put("daysSinceLastOrder", daysSince);
@@ -387,7 +387,7 @@ public class RetentionServiceImpl implements RetentionService {
      * @param daysSince 距上次下单天数
      * @return 风险评分
      */
-    private int calculateRiskScore(RetentionMember m, int daysSince) {
+    private int calculateRiskScore(RetentionMember m, long daysSince) {
         int score = 0;
 
         // 距今天数权重（50分基础）
