@@ -245,6 +245,9 @@
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
+  <!-- 修改点：补引 axios —— request.js 首行即使用全局 axios，缺失会抛错导致
+       $axios 永不挂载，本页所有接口请求全部失效 -->
+  <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
@@ -271,7 +274,7 @@
           ],
           // 搜索配置
           searchItems: [
-            { key: 'status', label: '状态', type: 'select', placeholder: '全部状态', options: [
+            { field: 'status', label: '状态', type: 'select', placeholder: '全部状态', options: [
               { label: '待审核', value: 0 },
               { label: '审核通过', value: 1 },
               { label: '已打款', value: 2 },
@@ -287,7 +290,7 @@
           columns: [
             { prop: 'applicationNo', label: '申请编号', width: 180, align: 'center' },
             { prop: 'applicantName', label: '申请人', width: 100, align: 'center' },
-            { prop: 'amount', label: '提现金额', width: 120, align: 'right', slot: true },
+            { prop: 'amount', label: '提现金额', width: 120, align: 'right', type: 'money', slot: true },
             { prop: 'withdrawMethod', label: '提现方式', width: 100, align: 'center', slot: true },
             { prop: 'receiveAccount', label: '收款账户', minWidth: 150, align: 'center' },
             { prop: 'status', label: '状态', width: 100, align: 'center', slot: true },

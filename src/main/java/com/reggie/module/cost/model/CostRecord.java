@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -56,4 +57,13 @@ public class CostRecord implements Serializable {
 
     @Schema(description = "创建人")
     private Long createUser;
+
+    /**
+     * 乐观锁版本号：保护 amount（成本金额）的并发更新，防止重复记账/并发修改导致金额漂移。
+     * 更新场景必须走 MP 的 updateById/update(entity, wrapper) 以携带 version 条件，
+     * 数据库列 version 默认值 0，由 OptimisticLockerInnerInterceptor 在 update 时自动 +1。
+     */
+    @Version
+    @Schema(description = "乐观锁版本号", example = "0")
+    private Integer version;
 }

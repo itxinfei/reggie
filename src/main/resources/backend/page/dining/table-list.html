@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>桌台管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
@@ -53,6 +55,35 @@
       font-size: var(--font-size-sm);
       padding: var(--space-6) 0;
     }
+    /* C.6 桌型图视图（8.1.3 可视化桌型图，按区域分组） */
+    .map-layout { display: flex; gap: 16px; align-items: flex-start; }
+    .map-layout__main { flex: 1; min-width: 0; }
+    .map-areas { display: flex; flex-direction: column; gap: 16px; }
+    .map-area { background: var(--bg-surface); border: 1px solid var(--el-border-color); border-radius: var(--radius-lg); padding: 14px 16px; }
+    .map-area__head { display: flex; align-items: center; gap: 8px; font-size: var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 12px; }
+    .map-area__count { font-size: 12px; font-weight: 400; color: var(--text-muted); }
+    .map-area__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+    .map-seat { border: 1px solid var(--el-border-color); border-radius: var(--radius-md); padding: 10px 8px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--bg-surface); position: relative; }
+    .map-seat:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: var(--el-color-primary); }
+    .map-seat--selected { outline: 2px solid var(--el-color-primary); }
+    .map-seat__name { font-size: var(--font-size-md); font-weight: 600; color: var(--el-text-primary); }
+    .map-seat__meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .map-seat--FREE { border-top: 3px solid var(--color-success); }
+    .map-seat--OCCUPIED { border-top: 3px solid var(--color-danger); }
+    .map-seat--RESERVED { border-top: 3px solid var(--color-warning); }
+    .map-seat--CLEANING { border-top: 3px solid var(--color-info); }
+    .map-detail { width: 250px; flex-shrink: 0; background: var(--bg-surface); border: 1px solid var(--el-border-color); border-radius: var(--radius-lg); padding: 16px; position: sticky; top: 12px; }
+    .map-detail__title { font-size: var(--font-size-lg); font-weight: 600; color: var(--el-text-primary); display: flex; align-items: center; gap: 6px; }
+    .map-detail__list { margin: 12px 0; display: flex; flex-direction: column; gap: 8px; }
+    .map-detail__row { display: flex; justify-content: space-between; font-size: var(--font-size-sm); color: var(--text-secondary); }
+    .map-detail__row strong { color: var(--el-text-primary); font-weight: 500; }
+    .map-detail__actions { display: flex; flex-direction: column; gap: 8px; }
+    .map-detail__actions .el-button { margin: 0; width: 100%; }
+    .map-detail__empty { color: var(--text-muted); font-size: var(--font-size-sm); text-align: center; padding: 20px 0; }
+    @media (max-width: 768px) {
+      .map-layout { flex-direction: column; }
+      .map-detail { width: 100%; position: static; }
+    }
   </style>
 </head>
 <body>
@@ -89,8 +120,9 @@
       >
         <!-- 视图切换按钮（table-bar 默认插槽） -->
         <div class="table-grid-toggle" style="margin-left:auto;">
-          <div class="toggle-btn" role="button" tabindex="0" aria-pressed="{{ viewMode === 'table' }}" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'" @keydown.enter="viewMode = 'table'">列表</div>
-          <div class="toggle-btn" role="button" tabindex="0" aria-pressed="{{ viewMode === 'card' }}" :class="{ active: viewMode === 'card' }" @click="viewMode = 'card'" @keydown.enter="viewMode = 'card'">卡片</div>
+          <div class="toggle-btn" role="button" tabindex="0" :aria-pressed="viewMode === 'table'" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'" @keydown.enter="viewMode = 'table'">列表</div>
+          <div class="toggle-btn" role="button" tabindex="0" :aria-pressed="viewMode === 'card'" :class="{ active: viewMode === 'card' }" @click="viewMode = 'card'" @keydown.enter="viewMode = 'card'">卡片</div>
+          <div class="toggle-btn" role="button" tabindex="0" :aria-pressed="viewMode === 'map'" :class="{ active: viewMode === 'map' }" @click="viewMode = 'map'" @keydown.enter="viewMode = 'map'">桌型图</div>
         </div>
       </table-bar>
 
@@ -132,6 +164,7 @@
           </template>
           <template #actions="{ row }">
             <el-button v-if="row.status === 'FREE'" type="text" size="small" class="btn-view" @click="openTableHandle(row)">开台</el-button>
+            <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click="addDishHandle(row)">加菜</el-button>
             <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click="transferHandle(row)">转台</el-button>
             <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click="checkoutHandle(row)">结账</el-button>
             <el-button type="text" size="small" @click="editHandle(row)">修改</el-button>
@@ -155,6 +188,7 @@
             </div>
             <div class="card-actions">
               <el-button v-if="row.status === 'FREE'" type="text" size="small" class="btn-view" @click.stop="openTableHandle(row)">开台</el-button>
+              <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click.stop="addDishHandle(row)">加菜</el-button>
               <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click.stop="transferHandle(row)">转台</el-button>
               <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click.stop="checkoutHandle(row)">结账</el-button>
               <el-button type="text" size="small" @click.stop="editHandle(row)">修改</el-button>
@@ -187,6 +221,62 @@
         :current-page.sync="page"
         @current-change="handleCurrentChange"
       ></el-pagination>
+
+      <!-- ========== 桌型图视图（8.1.3 可视化桌型图，按区域分组） ========== -->
+      <div v-if="viewMode === 'map'">
+        <div v-loading="mapLoading" class="map-layout">
+          <div class="map-layout__main">
+            <div v-if="!mapLoading && mapGrouped.length === 0" class="empty-hint">暂无桌台数据，请点击上方「新增桌台」添加</div>
+            <div class="map-areas">
+              <div v-for="area in mapGrouped" :key="area.key" class="map-area">
+                <div class="map-area__head">
+                  <i class="ri-store-3-line" style="color: var(--el-color-primary);"></i> {{ area.name }}
+                  <span class="map-area__count">{{ area.tables.length }} 桌</span>
+                </div>
+                <div class="map-area__grid">
+                  <div
+                    v-for="t in area.tables"
+                    :key="t.id"
+                    class="map-seat"
+                    :class="['map-seat--' + mapStatusKey(t.status), { 'map-seat--selected': mapSelected && mapSelected.id === t.id }]"
+                    role="button"
+                    tabindex="0"
+                    :aria-label="t.name + ' ' + (statusLabels[t.status] || '')"
+                    @click="selectMapTable(t)"
+                    @keydown.enter="selectMapTable(t)"
+                  >
+                    <div class="map-seat__name">{{ t.name }}</div>
+                    <div class="map-seat__meta">{{ seatCountText(t) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- 右侧栏：所选桌详情 + 快捷操作 -->
+          <aside class="map-detail" aria-label="桌台详情">
+            <template v-if="mapSelected">
+              <div class="map-detail__title"><i :class="mapStatusIcon(mapSelected.status)" :style="{ color: mapStatusColor(mapSelected.status) }"></i> {{ mapSelected.name }}</div>
+              <div class="map-detail__list">
+                <div class="map-detail__row"><span>状态</span><strong :style="{ color: mapStatusColor(mapSelected.status) }">{{ statusLabels[mapSelected.status] || mapSelected.status }}</strong></div>
+                <div class="map-detail__row"><span>区域</span><strong>{{ mapSelected.areaName || '-' }}</strong></div>
+                <div class="map-detail__row"><span>座位</span><strong>{{ mapSelected.seatCount || 0 }} 座</strong></div>
+                <div class="map-detail__row"><span>最低消费</span><strong>{{ mapSelected.minAmount ? '￥' + mapSelected.minAmount : '无' }}</strong></div>
+                <div v-if="mapSelected.status === 'OCCUPIED'" class="map-detail__row"><span>当前订单</span><strong>#{{ mapOrder ? (mapOrder.orderNumber || mapOrder.currentOrderId) : (mapSelected.currentOrderId || '-') }}</strong></div>
+              </div>
+              <div class="map-detail__actions">
+                <el-button v-if="mapSelected.status === 'FREE'" type="primary" size="small" @click="openTableHandle(mapSelected)">开台</el-button>
+                <el-button v-if="mapSelected.status === 'OCCUPIED'" type="primary" size="small" @click="addDishHandle(mapSelected)">加菜</el-button>
+                <el-button v-if="mapSelected.status === 'OCCUPIED'" type="warning" size="small" @click="checkoutHandle(mapSelected)">结账</el-button>
+                <el-button v-if="mapSelected.status === 'OCCUPIED'" type="primary" size="small" plain @click="transferHandle(mapSelected)">转台</el-button>
+                <el-button size="small" @click="editHandle(mapSelected)">修改</el-button>
+                <el-button size="small" @click="showQrcode(mapSelected)">二维码</el-button>
+                <el-button type="danger" size="small" plain @click="deleteHandle(mapSelected.id)">删除</el-button>
+              </div>
+            </template>
+            <div v-else class="map-detail__empty">点击桌号查看详情与快捷操作</div>
+          </aside>
+        </div>
+      </div>
     </main>
 
     <!-- 新增/编辑弹窗 -->
@@ -345,22 +435,48 @@
           // 修改点：转台弹窗
           transferDialog: { visible: false, fromId: null, fromName: '', loading: false },
           transferForm: { toTableId: null },
-          freeTables: []
+          freeTables: [],
+          // C.6 桌型图视图（8.1.3）
+          mapLoading: false,
+          mapData: [],
+          mapSelected: null,
+          mapOrder: null
         }
       },
       computed: {
         statsCards: function() {
           const self = this
           return [
-            { key: '', icon: '🪑', label: '桌台总数', value: self.stats.totalTables, color: 'primary', clickable: true, active: self.activeFilter === '', flex: true },
-            { key: 'FREE', icon: '✓', label: '空闲桌台', value: self.stats.freeTables, color: 'success', clickable: true, active: self.activeFilter === 'FREE', flex: true },
-            { key: 'OCCUPIED', icon: '👥', label: '占用桌台', value: self.stats.occupiedTables, color: 'danger', clickable: true, active: self.activeFilter === 'OCCUPIED', flex: true },
-            { key: 'RESERVED', icon: '📅', label: '预留桌台', value: self.stats.reservedTables, color: 'warning', clickable: true, active: self.activeFilter === 'RESERVED', flex: true },
-            { key: 'CLEANING', icon: '🧹', label: '清洁中', value: self.stats.cleaningTables, color: 'info', clickable: true, active: self.activeFilter === 'CLEANING', flex: true }
+            { key: '', icon: 'ri-parking-box-line', label: '桌台总数', value: self.stats.totalTables, color: 'primary', clickable: true, active: self.activeFilter === '', flex: true },
+            { key: 'FREE', icon: 'ri-checkbox-circle-line', label: '空闲桌台', value: self.stats.freeTables, color: 'success', clickable: true, active: self.activeFilter === 'FREE', flex: true },
+            { key: 'OCCUPIED', icon: 'ri-group-line', label: '占用桌台', value: self.stats.occupiedTables, color: 'danger', clickable: true, active: self.activeFilter === 'OCCUPIED', flex: true },
+            { key: 'RESERVED', icon: 'ri-calendar-check-line', label: '预留桌台', value: self.stats.reservedTables, color: 'warning', clickable: true, active: self.activeFilter === 'RESERVED', flex: true },
+            { key: 'CLEANING', icon: 'ri-brush-3-line', label: '清洁中', value: self.stats.cleaningTables, color: 'info', clickable: true, active: self.activeFilter === 'CLEANING', flex: true }
           ]
+        },
+        // C.6 桌型图：按区域分组（未分区归入"未分区"）
+        mapGrouped: function() {
+          const self = this
+          const map = {}
+          const order = []
+          ;(self.mapData || []).forEach(function(t) {
+            const key = t.areaId || 'none'
+            if (!map[key]) {
+              map[key] = { key: key, name: t.areaName || '未分区', tables: [] }
+              order.push(map[key])
+            }
+            map[key].tables.push(t)
+          })
+          return order
         }
       },
-      created: function() { this.init(); this.loadAreaList() },
+      watch: {
+        // C.6 切到桌型图时拉取全量（过滤条件下限 100 张，餐馆场景足够）
+        viewMode: function(val) {
+          if (val === 'map') this.loadMapData()
+        }
+      },
+      created: function() { this.init(); this.loadAreaList(); this.loadMapData() },
       methods: {
         // 修改点：F9 性能 — 列表与全局统计分离，reloadStats=true 才重算（默认 true，分页传 false）
         init: function(reloadStats) {
@@ -377,7 +493,7 @@
               const statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
             }
-          }).catch(function(err) { ReggieUI.error('加载失败：' + (err.message || err)) }).finally(function() { self.loading = false })
+          }).catch(function(err) { ReggieUI.error('加载失败：' + (err.message || err)) }).finally(function() { self.loading = false; if (self.viewMode === 'map') self.loadMapData() })
         },
         loadTableStats: function() {
           // 修改点（域⑩-A）：改用后端 /stats 端点替代 pageSize:1 多状态并发查询 hack
@@ -393,6 +509,39 @@
           areaList().then(function(res) {
             if (res.code === 1) { self.areaList = res.data || []; self.searchConfig[1].options = self.areaList.map(function(a) { return { label: a.name, value: a.id } }) }
           }).catch(function(err) { ReggieUI.error('区域加载失败：' + err) })
+        },
+        // ========== C.6 桌型图视图（8.1.3） ==========
+        loadMapData: function() {
+          const self = this
+          const params = Object.assign({}, self.lastSearch || {}, { page: 1, pageSize: 100 })
+          self.mapLoading = true
+          tablePage(params).then(function(res) {
+            if (String(res.code) === '1') { self.mapData = (res.data && res.data.records) || [] }
+          }).catch(function(err) { ReggieUI.error('加载桌型图失败：' + (err.message || err)) }).finally(function() { self.mapLoading = false })
+        },
+        selectMapTable: function(row) {
+          this.mapSelected = row
+          this.mapOrder = null
+          if (row.status === 'OCCUPIED') {
+            const self = this
+            tableInfo(row.id).then(function(res) {
+              if (res.code === 1 && res.data) { self.mapOrder = res.data }
+            }).catch(function() {})
+          }
+        },
+        mapStatusKey: function(status) { return status || 'FREE' },
+        seatCountText: function(t) { return (t.seatCount || 0) + ' 座' },
+        mapStatusColor: function(status) {
+          if (status === 'FREE') return 'var(--color-success)'
+          if (status === 'OCCUPIED') return 'var(--color-danger)'
+          if (status === 'RESERVED') return 'var(--color-warning)'
+          return 'var(--color-info)'
+        },
+        mapStatusIcon: function(status) {
+          if (status === 'FREE') return 'ri-checkbox-circle-line'
+          if (status === 'OCCUPIED') return 'ri-group-line'
+          if (status === 'RESERVED') return 'ri-calendar-check-line'
+          return 'ri-brush-3-line'
         },
         // stat-cards 点击
         onCardClick: function(payload) {
@@ -537,7 +686,8 @@
         // 修改点：转台
         loadFreeTables: function() {
           const self = this
-          tablePage({ page: 1, pageSize: 200, status: 'FREE' }).then(function(res) {
+          // 修改点：pageSize 由 200 收敛为 100 —— 后端声明 @Max(100)，传 200 会 400 导致转台下拉为空
+          tablePage({ page: 1, pageSize: 100, status: 'FREE' }).then(function(res) {
             if (res.code === 1 && res.data) { self.freeTables = res.data.records || [] }
           }).catch(function() {})
         },
@@ -564,6 +714,17 @@
             self.transferDialog.loading = false
             ReggieUI.error('转台失败：' + (err.message || err))
           })
+        },
+        // 修改点：加菜（占用桌跳转收银台订单页继续点餐）
+        addDishHandle: function(row) {
+          const self = this
+          tableInfo(row.id).then(function(res) {
+            if (res.code === 1 && res.data && res.data.currentOrderId) {
+              window.open('cashier/index.html#/order/' + res.data.currentOrderId, '_blank')
+            } else {
+              ReggieUI.warning('该桌台未绑定订单，无法加菜')
+            }
+          }).catch(function() {})
         },
         // 修改点：结账（跳转收银台，按桌台当前订单收款）
         checkoutHandle: function(row) {

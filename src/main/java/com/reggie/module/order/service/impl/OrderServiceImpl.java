@@ -8,6 +8,7 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.utils.PageUtils;
 import com.reggie.dto.OrderDto;
+import com.reggie.enums.DishStatus;
 import com.reggie.module.address.model.AddressBook;
 import com.reggie.module.cashier.mapper.CashierRecordMapper;
 import com.reggie.module.cashier.model.CashierRecord;
@@ -158,8 +159,65 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         long orderId = IdWorker.getId();//订单号
 
         BigDecimal totalAmount = BigDecimal.ZERO;
+        // 幽灵菜品防御：下单时服务端重新核价——菜品/套餐存在性、租户归属、启售状态、
+        // 价格一律以数据库为准，禁止信任购物车中可能被注入的客户端金额（与 submitEatInOrder 核价逻辑对齐）
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        List<Long> dishIds = new ArrayList<>();
+        List<Long> setmealIds = new ArrayList<>();
+        for (ShoppingCart item : shoppingCarts) {
+            if (item.getDishId() != null) {
+                dishIds.add(item.getDishId());
+            } else if (item.getSetmealId() != null) {
+                setmealIds.add(item.getSetmealId());
+            } else {
+                throw new CustomException("购物车明细缺少菜品或套餐ID");
+            }
+        }
+        // N+1 规避：批量预加载菜品与套餐
+        Map<Long, Dish> dishMap = new HashMap<>();
+        if (!dishIds.isEmpty()) {
+            for (Dish d : dishService.listByIds(dishIds)) {
+                dishMap.put(d.getId(), d);
+            }
+        }
+        Map<Long, Setmeal> setmealMap = new HashMap<>();
+        if (!setmealIds.isEmpty()) {
+            for (Setmeal s : setmealService.listByIds(setmealIds)) {
+                setmealMap.put(s.getId(), s);
+            }
+        }
 
-        List<OrderDetail> orderDetails = shoppingCarts.stream().map((item) -> {
+        List<OrderDetail> orderDetails = new ArrayList<>();
+        for (ShoppingCart item : shoppingCarts) {
+            BigDecimal unitPrice;
+            if (item.getDishId() != null) {
+                Dish dish = dishMap.get(item.getDishId());
+                if (dish == null) {
+                    throw new CustomException("菜品不存在，ID：" + item.getDishId());
+                }
+                if (currentTenantId != null && !currentTenantId.equals(dish.getTenantId())) {
+                    throw new CustomException("无权使用其他门店的菜品");
+                }
+                if (dish.getStatus() == null || dish.getStatus() != DishStatus.ENABLED.getValue()) {
+                    throw new CustomException("菜品「" + dish.getName() + "」已停售，无法下单");
+                }
+                unitPrice = dish.getPrice() != null ? dish.getPrice() : BigDecimal.ZERO;
+            } else {
+                Setmeal setmeal = setmealMap.get(item.getSetmealId());
+                if (setmeal == null) {
+                    throw new CustomException("套餐不存在，ID：" + item.getSetmealId());
+                }
+                if (currentTenantId != null && !currentTenantId.equals(setmeal.getTenantId())) {
+                    throw new CustomException("无权使用其他门店的套餐");
+                }
+                if (setmeal.getStatus() == null || setmeal.getStatus() != DishStatus.ENABLED.getValue()) {
+                    throw new CustomException("套餐「" + setmeal.getName() + "」已停用，无法下单");
+                }
+                unitPrice = setmeal.getPrice() != null ? setmeal.getPrice() : BigDecimal.ZERO;
+            }
+            // 行小计 = 服务端单价 × 数量（明细金额语义与 submitEatInOrder 对齐）
+            Integer num = item.getNumber() != null ? item.getNumber() : 0;
+            BigDecimal lineTotal = unitPrice.multiply(new BigDecimal(num));
             OrderDetail orderDetail = new OrderDetail();
             orderDetail.setOrderId(orderId);
             orderDetail.setNumber(item.getNumber());
@@ -168,26 +226,20 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             orderDetail.setSetmealId(item.getSetmealId());
             orderDetail.setName(item.getName());
             orderDetail.setImage(item.getImage());
-            orderDetail.setAmount(item.getAmount());
-            return orderDetail;
-        }).collect(Collectors.toList());
-
-        // 使用 BigDecimal 精确计算总金额，避免 intValue() 精度丢失
-        for (ShoppingCart item : shoppingCarts) {
-            BigDecimal itemAmount = item.getAmount() != null ? item.getAmount() : BigDecimal.ZERO;
-            BigDecimal itemNumber = new BigDecimal(item.getNumber() != null ? item.getNumber() : 0);
-            totalAmount = totalAmount.add(itemAmount.multiply(itemNumber));
+            orderDetail.setAmount(lineTotal);
+            orderDetails.add(orderDetail);
+            totalAmount = totalAmount.add(lineTotal);
         }
 
 
         orders.setId(orderId);
         orders.setOrderTime(LocalDateTime.now());
         // 修复：下单状态按支付方式分流，避免支付主链路断裂。
-        // - COD(货到付款, payMethod=3)：无需线上支付，直接 STATUS_ORDERED + 立即接单处理
-        // - WeChat/Alipay(payMethod=1/2) 或未传 payMethod：需线上支付，STATUS_PENDING_PAY，
+        // - 货到付款(COD, payMethod=6)：无需线上支付，直接 STATUS_ORDERED + 立即接单处理
+        // - 微信(2)/支付宝(3) 或未传 payMethod：需线上支付，STATUS_PENDING_PAY，
         //   支付成功后由 PaymentOrderServiceImpl.handlePaymentSuccess() 流转为 ORDERED 并回填 checkoutTime
         // 此前无条件设 STATUS_ORDERED 导致 PaymentController.pay() 拒绝支付（要求 PENDING_PAY）
-        if (orders.getPayMethod() != null && orders.getPayMethod() == 3) {
+        if (orders.getPayMethod() != null && orders.getPayMethod() == 6) {
             orders.setCheckoutTime(LocalDateTime.now());
             orders.setStatus(Orders.STATUS_ORDERED);
         } else {
@@ -385,9 +437,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         orders.setId(orderId);
         orders.setOrderTime(LocalDateTime.now());
         // 修复：堂食订单按支付方式分流
-        // - payMethod=3(COD/线下收银)：已"付过款"，直接 STATUS_ORDERED
-        // - payMethod=1(微信)/2(支付宝) 或未传：需线上支付，STATUS_PENDING_PAY
-        if (orders.getPayMethod() != null && orders.getPayMethod() == 3) {
+        // - payMethod=6(货到付款)：已"付过款"，直接 STATUS_ORDERED
+        // - payMethod=1(现金)/2(微信)/3(支付宝)/4(银行卡)/5(会员储值) 或未传：需线上支付或收银收款，STATUS_PENDING_PAY
+        if (orders.getPayMethod() != null && orders.getPayMethod() == 6) {
             orders.setCheckoutTime(LocalDateTime.now());
             orders.setStatus(Orders.STATUS_ORDERED);
         } else {
@@ -933,6 +985,25 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
+        // 收集需要回填的tableIds（tableName为空）
+        Set<Long> tableIds = orders.stream()
+                .filter(o -> StringUtils.isBlank(o.getTableName()))
+                .map(Orders::getTableId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        // 批量查询table表
+        Map<Long, String> tableNameMap = new HashMap<>();
+        if (!tableIds.isEmpty() && diningTableService != null) {
+            List<com.reggie.module.dining.model.DiningTable> tables =
+                    diningTableService.listByIds(new ArrayList<>(tableIds));
+            for (com.reggie.module.dining.model.DiningTable t : tables) {
+                if (t != null && StringUtils.isNotBlank(t.getName())) {
+                    tableNameMap.put(t.getId(), t.getName());
+                }
+            }
+        }
+
         // 批量查询user表
         Map<Long, User> userMap = new HashMap<>();
         if (!userIds.isEmpty()) {
@@ -953,6 +1024,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         // 回填各订单的空字段
         for (Orders order : orders) {
+            // 回填tableName
+            if (StringUtils.isBlank(order.getTableName()) && order.getTableId() != null) {
+                String tableName = tableNameMap.get(order.getTableId());
+                if (StringUtils.isNotBlank(tableName)) {
+                    order.setTableName(tableName);
+                }
+            }
+
             // 回填userName
             if (StringUtils.isBlank(order.getUserName()) && order.getUserId() != null) {
                 User user = userMap.get(order.getUserId());

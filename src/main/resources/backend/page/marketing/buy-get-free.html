@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>买赠活动管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
@@ -176,6 +178,8 @@
           loading: false,
           activeFilter: '',
           tableData: [],
+          // 修改点：后端返回全量活动，保存全量供本地筛选/切片/统计使用
+          allData: [],
           dishOptions: [],
           searchConfig: [
             { type: 'input', field: 'name', placeholder: '请输入活动名称', width: '200px' }
@@ -235,7 +239,7 @@
         statsCards: function() {
           const self = this
           return [
-            { key: '', icon: 'ri-presents-line', label: '全部活动', value: self.stats.total, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '', icon: 'ri-gift-2-line', label: '全部活动', value: self.stats.total, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: '1', icon: 'ri-checkbox-circle-line', label: '进行中', value: self.stats.active, color: 'success', clickable: true, active: self.activeFilter === '1' },
             { key: '2', icon: 'ri-pause-circle-line', label: '已暂停', value: self.stats.paused, color: 'warning', clickable: true, active: self.activeFilter === '2' },
             { key: '3', icon: 'ri-close-circle-line', label: '已结束', value: self.stats.ended, color: 'info', clickable: true, active: self.activeFilter === '3' }
@@ -270,10 +274,12 @@
           const map = { 0: '草稿', 1: '进行中', 2: '已暂停', 3: '已结束' }
           return map[status] || '未知'
         },
+        // 修改点：/dish/options 返回 Map<String,List<String>>（无 id），赠品需按 id 回写名称，
+        // 故改用 /dish/list 获取带 id 与 name 的菜品列表
         loadDishOptions: function() {
           const self = this
-          dishOptions().then(function(res) {
-            if (res.code === 1 && res.data) {
+          queryDishList({}).then(function(res) {
+            if (res.code === 1 && Array.isArray(res.data)) {
               self.dishOptions = res.data.map(function(d) {
                 return { value: d.id, label: d.name }
               })
@@ -285,42 +291,51 @@
         async init() {
           this.loading = true
           const self = this
-          const params = {}
-          if (self.lastSearch.name) {
-            params.name = self.lastSearch.name
-          }
-          if (self.activeFilter && self.activeFilter !== '') {
-            params.status = self.activeFilter
-          }
           try {
-            const res = await getBuyGetFreeActivities(params)
-            if (String(res.code) === '1') {
-              self.tableData = res.data || []
-              self.counts = res.total || (res.data ? res.data.length : 0)
-            }
+            // 修改点：后端 list 不接收任何参数且返回全量（无分页），
+            // 改为一次拉取全量，由前端完成名称搜索、状态筛选与切片
+            const res = await getBuyGetFreeActivities({})
+            const list = (String(res.code) === '1' && Array.isArray(res.data)) ? res.data : []
+            self.allData = list
+            self.applyFilter()
+            self.loadStats()
           } catch (err) {
             ReggieUI.error('获取买赠活动列表失败')
           }
           self.loading = false
         },
-        async loadStats() {
-          try {
-            const results = await Promise.all([
-              getBuyGetFreeActivities({ page: 1, pageSize: 1, status: '1' }),
-              getBuyGetFreeActivities({ page: 1, pageSize: 1, status: '2' }),
-              getBuyGetFreeActivities({ page: 1, pageSize: 1, status: '3' })
-            ])
-            const activeCount = (String(results[0].code) === '1') ? (results[0].total || results[0].data.length || 0) : 0
-            const pausedCount = (String(results[1].code) === '1') ? (results[1].total || results[1].data.length || 0) : 0
-            const endedCount = (String(results[2].code) === '1') ? (results[2].total || results[2].data.length || 0) : 0
-            this.stats = {
-              total: activeCount + pausedCount + endedCount,
-              active: activeCount,
-              paused: pausedCount,
-              ended: endedCount
-            }
-          } catch (err) {
-            console.warn('加载买赠统计失败:', err)
+        // 修改点：活动名称搜索 + 状态卡片筛选 + 前端切片分页
+        applyFilter: function() {
+          const self = this
+          let list = self.allData || []
+          if (self.lastSearch.name) {
+            const kw = String(self.lastSearch.name).toLowerCase()
+            list = list.filter(function(r) {
+              return r.name && String(r.name).toLowerCase().indexOf(kw) !== -1
+            })
+          }
+          if (self.activeFilter !== '' && self.activeFilter != null) {
+            const st = Number(self.activeFilter)
+            list = list.filter(function(r) { return Number(r.status) === st })
+          }
+          self.counts = list.length
+          const start = (self.page - 1) * self.pageSize
+          self.tableData = list.slice(start, start + self.pageSize)
+        },
+        // 修改点：统计基于全量数据本地计算（原按 status 发三次请求，后端忽略 status 导致三个数字都等于总数）
+        loadStats: function() {
+          const list = this.allData || []
+          const countBy = function(status) {
+            return list.filter(function(r) { return Number(r.status) === status }).length
+          }
+          const active = countBy(1)
+          const paused = countBy(2)
+          const ended = countBy(3)
+          this.stats = {
+            total: list.length,
+            active: active,
+            paused: paused,
+            ended: ended
           }
         },
         onCardClick: function(payload) {
@@ -348,13 +363,14 @@
           }
         },
         onPageChange: function(payload) {
+          // 修改点：数据已在本地全量缓存，翻页直接切片，无需重新请求
           this.page = payload.page
-          this.init()
+          this.applyFilter()
         },
         onSizeChange: function(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.page = 1
-          this.init()
+          this.applyFilter()
         },
         onGiftDishChange: function(id) {
           const self = this
@@ -438,13 +454,20 @@
             }
           }
         },
-        async handleSubmit: function() {
+        // 修改点：`async X: function(){}` 是非法语法（整页 JS 解析失败导致白屏），改为合法的 async 方法简写
+        async handleSubmit() {
           const self = this
-          await new Promise(function(resolve, reject) {
-            this.$refs.ruleForm.validate(function(valid) { valid ? resolve() : reject() })
-          }).catch(function() {
-            return
-          })
+          if (self.submitLoading) return // 提交防重
+          // 修改点：原 catch 吞掉校验失败后仍继续执行提交，改为校验不通过直接中断
+          let valid = false
+          try {
+            valid = await new Promise(function(resolve) {
+              self.$refs.ruleForm.validate(function(v) { resolve(v) })
+            })
+          } catch (e) {
+            valid = false
+          }
+          if (!valid) return
           if (self.formData.timeRange && self.formData.timeRange.length === 2) {
             self.formData.startTime = self.formData.timeRange[0]
             self.formData.endTime = self.formData.timeRange[1]

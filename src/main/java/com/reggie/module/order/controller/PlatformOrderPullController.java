@@ -37,7 +37,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/orders/platform")
+@RequestMapping("/api/platform")
 @Tag(name = "平台订单拉取", description = "从外卖平台手动拉单并落库")
 public class PlatformOrderPullController {
 

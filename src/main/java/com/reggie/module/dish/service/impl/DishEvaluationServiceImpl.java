@@ -116,13 +116,23 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
 
     @Override
     public Page<DishEvaluation> adminPage(Long tenantId, String dishName, Integer status,
-                                           Integer starRating, Integer page, Integer pageSize) {
+                                           Integer starRating, Integer replyStatus, Integer page, Integer pageSize) {
         LambdaQueryWrapper<DishEvaluation> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(DishEvaluation::getTenantId, tenantId)
                 .like(dishName != null && !dishName.isEmpty(), DishEvaluation::getDishName, dishName)
                 .eq(status != null, DishEvaluation::getStatus, status)
-                .eq(starRating != null, DishEvaluation::getStarRating, starRating)
-                .orderByDesc(DishEvaluation::getCreateTime);
+                .eq(starRating != null, DishEvaluation::getStarRating, starRating);
+        // 修改点：按回复状态过滤（0=未回复，1=已回复），8.5.3 评价管理"待回复/已回复"Tab
+        if (replyStatus != null) {
+            if (replyStatus == 1) {
+                queryWrapper.isNotNull(DishEvaluation::getReplyContent)
+                        .ne(DishEvaluation::getReplyContent, "");
+            } else {
+                queryWrapper.and(w -> w.isNull(DishEvaluation::getReplyContent)
+                        .or().eq(DishEvaluation::getReplyContent, ""));
+            }
+        }
+        queryWrapper.orderByDesc(DishEvaluation::getCreateTime);
 
         Page<DishEvaluation> pageObj = PageUtils.of(page, pageSize);
         return this.page(pageObj, queryWrapper);

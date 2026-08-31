@@ -7,12 +7,32 @@
   <title>套餐管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     /* 提取的内联样式类 */
     .combo-img-btn { width: auto; height: 40px; border: none; cursor: pointer; border-radius: var(--radius-sm); }
     .text-ellipsis { display: inline-block; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* ========== 8.2.3 套餐定价试算 ========== */
+    .price-calc {
+      width: 100%;
+      border: 1px solid var(--el-border-color);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      padding: 12px 16px;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .price-calc__item { flex: 1; min-width: 130px; display: flex; flex-direction: column; gap: 2px; }
+    .price-calc__label { font-size: 12px; color: var(--text-secondary); }
+    .price-calc__value { font-size: 18px; font-weight: 600; color: var(--el-text-primary); font-variant-numeric: tabular-nums; }
+    .price-calc__value--brand { color: var(--color-brand-600); }
+    .price-calc__value--success { color: var(--color-success); }
+    .price-calc__value--danger { color: var(--color-danger); }
+    .price-calc__tip { font-size: 12px; color: var(--text-muted); }
   </style>
 </head>
 <body>
@@ -94,7 +114,7 @@
         <el-button type="text" size="small" class="btn-view" @click="statusHandle(row)">
           {{ row.status == '0' ? '启售' : '停售' }}
         </el-button>
-        <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', row.id)">删除</el-button>
+        <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', row)">删除</el-button>
       </template>
     </crud-table>
   </main>
@@ -118,6 +138,26 @@
       </el-form-item>
       <el-form-item label="套餐价格:" prop="price">
         <el-input v-model="comboForm.price" placeholder="请设置套餐价格" />
+      </el-form-item>
+      <!-- 修改点：8.2.3 套餐价格自动试算（选择菜品后实时联动，辅助定价） -->
+      <el-form-item v-if="comboDishTable.length > 0" label="定价试算">
+        <div class="price-calc" role="group" aria-label="套餐定价试算">
+          <div class="price-calc__item">
+            <span class="price-calc__label">明细原价合计</span>
+            <span class="price-calc__value">￥{{ formatMoney(pricingSummary.originTotal) }}</span>
+            <span class="price-calc__tip">顾客单点这些菜的总价（含份数）</span>
+          </div>
+          <div class="price-calc__item">
+            <span class="price-calc__label">建议售价（85折）</span>
+            <span class="price-calc__value price-calc__value--brand">￥{{ formatMoney(pricingSummary.suggestPrice) }}</span>
+            <span class="price-calc__tip">按原价合计 85% 估算，仅供参考</span>
+          </div>
+          <div class="price-calc__item">
+            <span class="price-calc__label">顾客优惠</span>
+            <span class="price-calc__value" :class="pricingSummary.discount >= 0 ? 'price-calc__value--success' : 'price-calc__value--danger'">￥{{ formatMoney(pricingSummary.discount) }}</span>
+            <span class="price-calc__tip">{{ pricingSummary.marginRate > 0 ? '约 ' + Math.round(pricingSummary.marginRate * 100) + ' 折' : '填写套餐售价后计算' }}</span>
+          </div>
+        </div>
       </el-form-item>
       <el-form-item label="套餐菜品:" prop="dishList">
         <div class="addDish">
@@ -303,10 +343,10 @@ new Vue({
         { prop: 'name', label: '套餐名称', minWidth: 140 },
         { prop: 'image', label: '图片', width: 70, align: 'center', slot: true },
         { prop: 'categoryName', label: '分类', width: 80, align: 'center' },
-        { prop: 'price', label: '价格', width: 80, slot: true, type: 'money' },
+        { prop: 'price', label: '价格', width: 110, slot: true, type: 'money' },
         { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
         { prop: 'description', label: '描述', minWidth: 120 },
-        { prop: 'updateTime', label: '更新时间', width: 140, align: 'center' }
+        { prop: 'updateTime', label: '更新时间', width: 160, align: 'center' }
       ],
       // 套餐弹窗
       comboDialog: {
@@ -339,6 +379,19 @@ new Vue({
     }
   },
   computed: {
+    // 修改点：8.2.3 套餐定价试算（依赖套餐菜品与售价，自动联动）
+    pricingSummary: function() {
+      const items = this.comboDishTable || []
+      const originTotal = items.reduce(function(sum, it) {
+        return sum + (Number(it.price) || 0) * (Number(it.copies) || 1)
+      }, 0)
+      const suggestPrice = originTotal > 0 ? Math.round(originTotal * 0.85 * 100) / 100 : 0
+      const sellPrice = parseFloat(this.comboForm.price)
+      const hasPrice = !isNaN(sellPrice) && sellPrice > 0
+      const discount = hasPrice ? Math.round((originTotal - sellPrice) * 100) / 100 : 0
+      const marginRate = hasPrice && originTotal > 0 ? sellPrice / originTotal : 0
+      return { originTotal: Math.round(originTotal * 100) / 100, suggestPrice: suggestPrice, discount: discount, marginRate: marginRate }
+    },
     // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
     statsCards: function() {
       const self = this;
@@ -507,19 +560,22 @@ new Vue({
     },
 
     // ========== 删除 ==========
-    deleteHandle(type, id) {
-      if (type === '批量' && id === null) {
+    // 修改点：删除确认文案含对象名（8.8 危险动作规范）
+    deleteHandle(type, row) {
+      const isBatch = type === '批量'
+      if (isBatch && row === null) {
         if (this.checkList.length === 0) {
           ReggieUI.error('请选择删除对象')
           return
         }
       }
-      ReggieUI.confirm('确定删除该套餐, 是否继续?', '确定删除', {
+      const msg = isBatch ? '确认删除选中的 ' + this.checkList.length + ' 个套餐？' : '确认删除套餐「' + row.name + '」？'
+      ReggieUI.confirm(msg, '确定删除', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        deleteSetmeal(type === '批量' ? this.checkList.join(',') : id).then(res => {
+        deleteSetmeal(isBatch ? this.checkList.join(',') : row.id).then(res => {
           if (res.code === 1) {
             ReggieUI.success('删除成功！')
             this.handleQuery()

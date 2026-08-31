@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>充值记录 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
@@ -18,6 +20,11 @@
     .filter-bar { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 14px 20px; margin-bottom: 16px;
       box-shadow: var(--shadow-xs); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .filter-bar .el-select { width: 150px; }
+    .recharge-member { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%;
+      padding: 10px 14px; background: var(--bg-subtle); border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm); font-size: var(--font-size-base); color: var(--text-primary) }
+    .recharge-member b { font-weight: 600 }
+    .recharge-member .ri-wallet-3-line { color: var(--color-success); font-size: 18px }
     @media (max-width: 900px) {
       .chart-panel { min-width: 100%; }
     }
@@ -34,7 +41,9 @@
           <h1 class="ds-page-header__title" id="page-title">充值记录</h1>
           <p class="ds-page-header__subtitle">查看会员充值流水</p>
         </div>
-        <div class="ds-page-header__actions"></div>
+        <div class="ds-page-header__actions">
+          <el-button type="primary" size="small" icon="el-icon-plus" @click="openRecharge">手动充值</el-button>
+        </div>
       </header>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
       <stat-cards :cards="statsCards"></stat-cards>
@@ -42,11 +51,11 @@
       <!-- ===== 图表区 ===== -->
       <div class="chart-panels">
         <div class="chart-panel">
-          <div class="panel-title">📈 近12月充值趋势</div>
+          <div class="panel-title"><i class="ri-line-chart-line" aria-hidden="true"></i> 近12月充值趋势</div>
           <div class="chart-box" id="trendChart"></div>
         </div>
         <div class="chart-panel">
-          <div class="panel-title">💳 支付方式分布</div>
+          <div class="panel-title"><i class="ri-bank-card-line" aria-hidden="true"></i> 支付方式分布</div>
           <div class="chart-box" id="paymentChart"></div>
         </div>
       </div>
@@ -96,6 +105,45 @@
         </template>
       </crud-table>
     </div>
+
+    <!-- ===== 手动充值弹窗（8.4.3：金额/赠送/支付方式，充值后余额即时更新） ===== -->
+    <crud-dialog title="手动充值" :visible.sync="rechargeForm.dialogVisible" :submit-loading="rechargeLoading" width="480px" @submit="submitRecharge">
+      <el-form :model="rechargeForm" :rules="rechargeRules" ref="rechargeFormRef" label-width="90px" size="small">
+        <el-form-item label="会员手机：" prop="phone">
+          <div style="display:flex;gap:8px;width:100%;">
+            <el-input v-model="rechargeForm.phone" placeholder="输入会员手机号" clearable style="flex:1" @keyup.enter.native="queryRechargeMember"></el-input>
+            <el-button :loading="memberLoading" @click="queryRechargeMember">查询</el-button>
+          </div>
+        </el-form-item>
+        <template v-if="rechargeMember">
+          <el-form-item label="会员信息：">
+            <div class="recharge-member">
+              <i class="ri-wallet-3-line" aria-hidden="true"></i>
+              <span><b>{{ rechargeMember.name }}</b>（{{ rechargeMember.phone }}）</span>
+              <span>当前余额：<b style="color:var(--color-success)">￥{{ formatMoney(rechargeMember.balance) }}</b></span>
+            </div>
+          </el-form-item>
+          <el-form-item label="充值金额：" prop="amount">
+            <el-input-number v-model="rechargeForm.amount" :min="1" :max="999999" :precision="2" :step="100" style="width:100%"></el-input-number>
+          </el-form-item>
+          <el-form-item label="赠送金额：" prop="giftAmount">
+            <el-input-number v-model="rechargeForm.giftAmount" :min="0" :max="99999" :precision="2" :step="10" style="width:100%"></el-input-number>
+          </el-form-item>
+          <el-form-item label="支付方式：" prop="paymentMethod">
+            <el-select v-model="rechargeForm.paymentMethod" style="width:100%">
+              <el-option label="微信支付" value="WECHAT"></el-option>
+              <el-option label="支付宝" value="ALIPAY"></el-option>
+              <el-option label="现金" value="CASH"></el-option>
+            </el-select>
+          </el-form-item>
+        </template>
+        <div v-else-if="rechargeSearched" class="empty-state" style="padding:20px;">
+          <div class="empty-state__icon"><i class="ri-user-unfollow-line" aria-hidden="true"></i></div>
+          <div>未找到该手机号的会员</div>
+          <div class="empty-state__desc">请核对手机号后重新查询</div>
+        </div>
+      </el-form>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -121,6 +169,15 @@
           stats: { totalAmount: 0, totalCount: 0, todayAmount: 0, todayCount: 0,
             monthAmount: 0, monthCount: 0, avgAmount: 0, paymentDistribution: [], trend: [] },
           trendChart: null, paymentChart: null,
+          // 手动充值弹窗（8.4.3）
+          rechargeForm: { dialogVisible: false, phone: '', amount: 100, giftAmount: 0, paymentMethod: 'WECHAT' },
+          rechargeLoading: false, memberLoading: false, rechargeMember: null, rechargeSearched: false,
+          rechargeRules: {
+            phone: [{ required: true, message: '请输入会员手机号', trigger: 'blur' }],
+            amount: [{ required: true, message: '请输入充值金额', trigger: 'change' }],
+            giftAmount: [{ required: true, message: '请输入赠送金额', trigger: 'change' }],
+            paymentMethod: [{ required: true, message: '请选择支付方式', trigger: 'change' }]
+          },
         // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
         columns: [
           { prop: 'memberName', label: '会员名称', width: 100 },
@@ -137,10 +194,10 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: '总额', icon: '💰', label: '累计充值总额', value: '￥' + self.fmtMoney(self.stats.totalAmount), color: 'warning' },
-            { key: '今日', icon: '📅', label: '今日充值', value: '￥' + self.fmtMoney(self.stats.todayAmount), color: 'success' },
-            { key: '本月', icon: '📆', label: '本月充值', value: '￥' + self.fmtMoney(self.stats.monthAmount), color: 'primary' },
-            { key: '平均', icon: '📊', label: '平均单笔充值', value: '￥' + self.fmtMoney(self.stats.avgAmount), color: 'info' }
+            { key: '总额', icon: 'ri-money-cny-circle-line', label: '累计充值总额', value: '￥' + self.fmtMoney(self.stats.totalAmount), color: 'warning' },
+            { key: '今日', icon: 'ri-calendar-check-line', label: '今日充值', value: '￥' + self.fmtMoney(self.stats.todayAmount), color: 'success' },
+            { key: '本月', icon: 'ri-calendar-line', label: '本月充值', value: '￥' + self.fmtMoney(self.stats.monthAmount), color: 'primary' },
+            { key: '平均', icon: 'ri-bar-chart-2-line', label: '平均单笔充值', value: '￥' + self.fmtMoney(self.stats.avgAmount), color: 'info' }
           ]
         }
       },
@@ -159,8 +216,8 @@
         // 修改点：F9 性能 — 列表查询与全局统计分离，reloadStats=true 才重算
         async fetchData(reloadStats = true) {
           this.loading = true
-          var searchValues = this.searchValues || {}
-          const params = Object.assign({}, searchValues, { page: this.page, pageSize: this.pageSize })
+          // 修改点：搜索参数来源统一为 input（原读取未定义的 searchValues，导致手机号/支付方式筛选从未下发）
+          const params = Object.assign({}, this.input, { page: this.page, pageSize: this.pageSize })
           try {
             const requests = [rechargePage(params)]
             if (reloadStats) { requests.push(rechargeStats()) }
@@ -234,6 +291,65 @@
         },
         handleQuery: function() { this.page = 1; this.fetchData(false) },
         reset: function() { this.input = { phone: '', paymentMethod: '' }; this.page = 1; this.fetchData(false) },
+        // ===== 手动充值（8.4.3） =====
+        openRecharge: function() {
+          this.rechargeForm.phone = ''
+          this.rechargeForm.amount = 100
+          this.rechargeForm.giftAmount = 0
+          this.rechargeForm.paymentMethod = 'WECHAT'
+          this.rechargeMember = null
+          this.rechargeSearched = false
+          this.rechargeForm.dialogVisible = true
+          const self = this
+          this.$nextTick(function() { if (self.$refs.rechargeFormRef) self.$refs.rechargeFormRef.clearValidate() })
+        },
+        async queryRechargeMember() {
+          if (!this.rechargeForm.phone || !this.rechargeForm.phone.trim()) {
+            ReggieUI.warning('请输入会员手机号')
+            return
+          }
+          this.memberLoading = true
+          try {
+            const res = await memberByPhone(this.rechargeForm.phone.trim())
+            if (String(res.code) === '1') {
+              this.rechargeMember = res.data
+              this.rechargeSearched = true
+            } else {
+              this.rechargeMember = null
+              this.rechargeSearched = true
+              ReggieUI.warning(res.msg || '未找到该会员')
+            }
+          } catch (e) {
+            console.warn('查询会员失败:', e)
+            ReggieUI.error('查询失败，请重试')
+          } finally {
+            this.memberLoading = false
+          }
+        },
+        submitRecharge: function() {
+          const self = this
+          this.$refs.rechargeFormRef.validate(function(valid) {
+            if (!valid) return
+            if (!self.rechargeMember) {
+              ReggieUI.warning('请先查询并选择会员')
+              return
+            }
+            memberRecharge({
+              memberId: self.rechargeMember.id,
+              amount: self.rechargeForm.amount,
+              giftAmount: self.rechargeForm.giftAmount || 0,
+              paymentMethod: self.rechargeForm.paymentMethod
+            }).then(function(res) {
+              if (String(res.code) === '1') {
+                ReggieUI.success('充值成功，余额已更新')
+                self.rechargeForm.dialogVisible = false
+                self.handleQuery()
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(function(e) { ReggieUI.error('请求失败：' + e) })
+          })
+        },
         // 修改点：F9 性能 — 覆盖 ReggieListMixin 分页方法，翻页不重算全局统计
         onPageChange: function(payload) {
           this.page = payload.page

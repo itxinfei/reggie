@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>销售报表 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
@@ -124,6 +126,9 @@
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
+  <!-- 修改点：补引 axios —— request.js 首行即使用全局 axios，缺失会抛错导致
+       $axios 永不挂载，本页所有接口请求全部失效 -->
+  <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
@@ -170,14 +175,21 @@
         this.initCharts()
         this.fetchData()
       },
+      // 修改点：补清理，避免 resize 监听残留与 echarts 实例泄漏
+      beforeDestroy() {
+        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler)
+        ;[this.revenueChart, this.orderChart].forEach(function(ch) {
+          if (ch && !ch.isDisposed()) { try { ch.dispose() } catch (e) {} }
+        })
+      },
       computed: {
         statsCards: function() {
           const self = this;
           return [
-            { key: '营业额', icon: '💰', label: '总营业额', value: '¥' + self.formatMoney(self.report.totalRevenue), color: 'primary' },
-            { key: '订单数', icon: '📋', label: '总订单数', value: self.report.totalOrders, color: 'success' },
-            { key: '客单价', icon: '🏷️', label: '平均客单价', value: '¥' + self.formatMoney(self.report.avgOrderValue), color: 'warning' },
-            { key: '完成数', icon: '✅', label: '完成订单', value: self.report.completedCount, color: 'info' }
+            { key: '营业额', icon: 'ri-money-cny-circle-line', label: '总营业额', value: '¥' + self.formatMoney(self.report.totalRevenue), color: 'primary' },
+            { key: '订单数', icon: 'ri-file-list-3-line', label: '总订单数', value: self.report.totalOrders, color: 'success' },
+            { key: '客单价', icon: 'ri-price-tag-3-line', label: '平均客单价', value: '¥' + self.formatMoney(self.report.avgOrderValue), color: 'warning' },
+            { key: '完成数', icon: 'ri-checkbox-circle-line', label: '完成订单', value: self.report.completedCount, color: 'info' }
           ]
         }
       },
@@ -197,10 +209,12 @@
           this.revenueChart = echarts.init(document.getElementById('revenueChart'))
           this.orderChart = echarts.init(document.getElementById('orderChart'))
 
-          window.addEventListener('resize', () => {
-            this.revenueChart && this.revenueChart.resize()
-            this.orderChart && this.orderChart.resize()
-          })
+          // 修改点：存引用以便 beforeDestroy 解绑（匿名函数无法 removeEventListener）
+          this.resizeHandler = () => {
+            const charts = [this.revenueChart, this.orderChart]
+            charts.forEach(function(ch) { if (ch && !ch.isDisposed()) ch.resize() })
+          }
+          window.addEventListener('resize', this.resizeHandler)
         },
         handleTypeChange() {
           this.fetchData()

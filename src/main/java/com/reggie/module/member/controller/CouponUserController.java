@@ -32,7 +32,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RestController
 @RequestMapping("/api/member/coupon-user")
 @Tag(name = "用户优惠券")
-@RequireEmployee
 public class CouponUserController {
 
     @Autowired
@@ -46,6 +45,7 @@ public class CouponUserController {
      * @return 分页结果
      */
     @GetMapping("/page")
+    @RequireEmployee
     @Operation(summary = "分页查询", description = "分页查询用户优惠券列表，支持按会员ID筛选")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")

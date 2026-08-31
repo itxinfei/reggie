@@ -94,6 +94,9 @@
       </div>
       <div class="ds-page-header__actions"></div>
     </header>
+    <!-- 统计卡片 - 使用统一的 <stat-cards> 组件 -->
+    <stat-cards :cards="statsCards"></stat-cards>
+
     <!-- 工具栏 -->
     <div class="tableBar">
       <span class="toolbar-label">日期范围：</span>
@@ -111,9 +114,6 @@
       <div class="toolbar-spacer"></div>
       <el-button type="warning" icon="el-icon-date" @click="handleTodaySettlement">今日日结</el-button>
     </div>
-
-    <!-- 统计卡片 - 使用统一的 <stat-cards> 组件 -->
-    <stat-cards :cards="statsCards"></stat-cards>
 
     <!-- 表格 -->
     <div class="table-card">
@@ -205,11 +205,11 @@
           dateRange: [],
           tableData: [],
           columns: [
-            { prop: 'settlementDate', label: '结算日期', width: 120, align: 'center' },
+            { prop: 'settlementDate', label: '结算日期', width: 150, align: 'center' },
             { prop: 'totalRevenue', label: '营业额', width: 120, align: 'right', type: 'money' },
             { prop: 'orderCount', label: '订单数', width: 100, align: 'center' },
-            { prop: 'refundAmount', label: '退款金额', width: 120, align: 'right', slot: 'col-refundAmount' },
-            { prop: 'netIncome', label: '净收入', width: 120, align: 'right', slot: 'col-netIncome' },
+            { prop: 'refundAmount', label: '退款金额', width: 120, align: 'right', type: 'money', slot: 'col-refundAmount' },
+            { prop: 'netIncome', label: '净收入', width: 120, align: 'right', type: 'money', slot: 'col-netIncome' },
             { prop: 'totalCost', label: '总成本', width: 120, align: 'right', type: 'money' },
             { prop: 'grossProfit', label: '毛利润', width: 120, align: 'right', slot: 'col-grossProfit' },
             { prop: 'status', label: '状态', width: 100, align: 'center', slot: 'col-status' }

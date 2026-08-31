@@ -16,7 +16,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.reggie.dto.AdjustPointsDTO;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,7 +48,6 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/member/points")
 @Tag(name = "积分记录")
-@RequireEmployee
 public class PointsRecordController {
 
     @Autowired
@@ -61,6 +64,7 @@ public class PointsRecordController {
      * @return 积分记录分页结果（含关联会员信息）
      */
     @GetMapping("/page")
+    @RequireEmployee
     @Operation(summary = "分页查询", description = "分页查询会员积分记录，支持按手机号搜索，返回关联会员信息（名称、手机号、余额）")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
@@ -142,6 +146,41 @@ public class PointsRecordController {
     }
 
     /**
+     * 积分调整
+     * <p>运营手动调整会员积分：正数发放、负数扣减，并写入积分流水</p>
+     *
+     * @param dto 调整参数（会员ID + 积分变动数 + 说明）
+     * @return 操作结果
+     */
+    @PostMapping("/adjust")
+    @RequireEmployee
+    @Operation(summary = "积分调整", description = "运营手动调整会员积分：正数发放、负数扣减，并写入积分流水")
+    public R<String> adjust(@Validated @RequestBody AdjustPointsDTO dto) {
+        if (dto.getPoints() == null || dto.getPoints() == 0) {
+            return R.error("积分变动数不能为0");
+        }
+        if (dto.getPoints() > 0) {
+            memberService.addPoints(dto.getMemberId(), dto.getPoints(), "ADMIN_ADJUST", null);
+        } else {
+            memberService.deductPoints(dto.getMemberId(), -dto.getPoints(), "ADMIN_ADJUST", null);
+        }
+        // 补记调整说明到最新一条 ADMIN_ADJUST 流水（同一事务内，最新一条即刚写入的记录）
+        if (dto.getRemark() != null && !dto.getRemark().trim().isEmpty()) {
+            PointsRecord latest = pointsRecordService.lambdaQuery()
+                    .eq(PointsRecord::getMemberId, dto.getMemberId())
+                    .eq(PointsRecord::getBizType, "ADMIN_ADJUST")
+                    .orderByDesc(PointsRecord::getCreatedTime)
+                    .last("limit 1")
+                    .one();
+            if (latest != null) {
+                latest.setRemark(dto.getRemark().trim());
+                pointsRecordService.updateById(latest);
+            }
+        }
+        return R.success("积分调整成功");
+    }
+
+    /**
      * 积分统计
      * 返回全平台积分总览数据，包括总积分、今日/本月获取与消耗、近30天趋势
      */
@@ -150,6 +189,7 @@ public class PointsRecordController {
      * @return 全平台积分总览数据（总积分、今日/本月获取与消耗、近30天趋势）
      */
     @GetMapping("/stats")
+    @RequireEmployee
     @Operation(summary = "积分统计", description = "获取全平台积分统计数据：总积分、今日/本月获取与消耗、近30天趋势")
     public R<Map<String, Object>> stats() {
         Long tenantId = BaseContext.getCurrentTenantId();

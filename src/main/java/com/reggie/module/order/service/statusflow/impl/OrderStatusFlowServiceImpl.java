@@ -15,6 +15,9 @@ import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.order.service.statusflow.OrderStatusFlowService;
+import com.reggie.module.payment.model.PaymentOrder;
+import com.reggie.module.payment.service.PaymentOrderService;
+import com.reggie.module.payment.service.RefundService;
 import com.reggie.module.setmeal.model.SetmealDish;
 import com.reggie.module.setmeal.service.SetmealDishService;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +25,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -65,6 +70,14 @@ public class OrderStatusFlowServiceImpl
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
+    /** 支付单服务（已支付订单取消/拒单时检测与联动） */
+    @Autowired
+    private PaymentOrderService paymentOrderService;
+
+    /** 退款服务（已支付订单取消/拒单自动全额退款，资金闭环） */
+    @Autowired
+    private RefundService refundService;
+
     // ==================== 状态流转入口 ====================
 
     @Override
@@ -106,8 +119,29 @@ public class OrderStatusFlowServiceImpl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void rejectOrder(Long id) {
-        Orders order = atomicUpdateStatusIf(id, Orders.STATUS_ORDERED, Orders.STATUS_CANCELLED);
+        Orders order = this.getById(id);
         if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+        // 租户归属校验：防止跨租户越权拒单
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !Objects.equals(currentTenantId, order.getTenantId())) {
+            throw new CustomException("无权操作其他租户的订单");
+        }
+        if (!Objects.equals(order.getStatus(), Orders.STATUS_ORDERED)) {
+            throw new CustomException("订单状态不正确，无法拒单");
+        }
+
+        // 已支付订单拒单（支付成功会把订单 1→2，待接单可能已付款）→ 自动退款，不置已取消
+        if (hasSuccessPaymentOrder(id)) {
+            registerAutoRefund(id, "商家拒单自动退款", order.getTenantId());
+            log.warn("订单拒单（已支付，自动退款）: id={}, number={}", id, order.getNumber());
+            return;
+        }
+
+        // 未支付拒单：待接单(2) → 已取消(5)，同时回退库存
+        Orders rejected = atomicUpdateStatusIf(id, Orders.STATUS_ORDERED, Orders.STATUS_CANCELLED);
+        if (rejected == null) {
             throw new CustomException("订单状态不正确，无法拒单");
         }
 
@@ -172,6 +206,15 @@ public class OrderStatusFlowServiceImpl
             throw new CustomException("订单已取消，无需重复操作");
         }
 
+        // 已支付订单取消（支付成功会把订单 1→2，配送中同样可能已付款）→ 自动退款，不置已取消
+        // 订单状态由退款服务在渠道退款成功后联动为已退款(6)，避免"已取消但已付款"的资金矛盾
+        if (hasSuccessPaymentOrder(id)) {
+            registerAutoRefund(id, reason, order.getTenantId());
+            eventPublisher.publishEvent(new OrderCancelledEvent(this, id, order.getTenantId(), reason));
+            log.warn("订单已取消（已支付，自动退款）: id={}, number={}, reason={}", id, order.getNumber(), reason);
+            return;
+        }
+
         // 行级条件更新：从当前状态进入已取消（防止并发下被接单/拒单覆盖）
         LambdaUpdateWrapper<Orders> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Orders::getId, id)
@@ -203,6 +246,59 @@ public class OrderStatusFlowServiceImpl
 
         // 发布订单取消事件（通知、推荐等模块异步响应）
         eventPublisher.publishEvent(new OrderCancelledEvent(this, id, order.getTenantId(), reason));
+    }
+
+    // ==================== 已支付订单自动退款（资金闭环） ====================
+
+    /**
+     * 是否已存在成功支付的支付单（已支付订单取消/拒单时必须自动退款，禁止"收钱后订单直接取消"）。
+     */
+    private boolean hasSuccessPaymentOrder(Long id) {
+        return paymentOrderService.lambdaQuery()
+                .eq(PaymentOrder::getOrderId, id)
+                .eq(PaymentOrder::getStatus, PaymentOrder.STATUS_SUCCESS)
+                .count() > 0;
+    }
+
+    /**
+     * 已支付订单取消/拒单：主事务提交后自动发起渠道全额退款（外部 HTTP 不放事务内）。
+     * <p>
+     * 时序保证（先退钱再还库存）：
+     * 1. 主事务提交后调用 {@link RefundService#refundByOrder} 走渠道全额退款，成功则支付单置 REFUND、
+     *    订单 CAS 联动为已退款(6)（订单 2/3/4 → 6），并统一回退会员权益；
+     * 2. 退款成功后再回退库存（避免"钱未退、库存先还"造成超卖）；
+     * 3. 任一环节失败记录红色告警，需人工核查（资金对账兜底）。
+     * </p>
+     *
+     * @param id       订单ID
+     * @param reason   退款原因
+     * @param tenantId 租户ID（库存回退标记用）
+     */
+    private void registerAutoRefund(Long id, String reason, Long tenantId) {
+        final String fReason = (reason != null && !reason.trim().isEmpty()) ? reason : "订单取消自动退款";
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                boolean refunded = false;
+                try {
+                    refunded = refundService.refundByOrder(id, fReason);
+                } catch (Exception e) {
+                    log.error("【严重】订单取消后自动退款异常，需人工处理！orderId={}", id, e);
+                }
+                if (refunded) {
+                    try {
+                        boolean stockOk = refundStockByOrderId(id);
+                        if (stockOk) {
+                            markStockRefunded(id, tenantId);
+                        } else {
+                            log.error("订单自动退款成功但库存回退部分失败，补偿任务将重试: orderId={}", id);
+                        }
+                    } catch (Exception e) {
+                        log.error("订单自动退款成功但库存回退异常，需人工核查: orderId={}", id, e);
+                    }
+                }
+            }
+        });
     }
 
     // ==================== 状态名称 ====================

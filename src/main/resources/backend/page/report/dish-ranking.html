@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>菜品排行 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
@@ -41,7 +43,7 @@
     .rank-badge { display: inline-flex; align-items: center; justify-content: center;
       width: 24px; height: 24px; border-radius: var(--radius-md); font-size:var(--font-size-xs); font-weight: 700; }
     .rank-badge.r1 { background: var(--color-danger); color: var(--bg-surface); }
-    .rank-badge.r2 { background: var(--color-brand-500); color: var(--bg-surface); }
+    .rank-badge.r2 { background: var(--color-brand-500); color: var(--text-on-brand); }
     .rank-badge.r3 { background: var(--color-warning); color: var(--bg-surface); }
     .rank-badge.rn { background: var(--el-bg-lighter); color: var(--color-info); }
   </style>
@@ -82,10 +84,10 @@
 
       <!-- 图表并排 -->
       <div class="charts-row">
-        <chart-panel :title="rankingTitle" icon="📊">
+        <chart-panel :title="rankingTitle" icon="ri-bar-chart-2-line">
           <div id="rankingChart" style="width:100%;height:340px;"></div>
         </chart-panel>
-        <chart-panel title="Top 3 菜品销量趋势" icon="📈" v-show="tableData.length > 0">
+        <chart-panel title="Top 3 菜品销量趋势" icon="ri-line-chart-line" v-show="tableData.length > 0">
           <div id="trendLineChart" style="width:100%;height:340px;"></div>
         </chart-panel>
       </div>
@@ -114,7 +116,7 @@
         </template>
       </crud-table>
 
-    </div>
+    </main>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -124,7 +126,6 @@
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../api/report.js"></script>
-  <script src="../../api/category.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../js/chart-panel.js"></script>
   <script>
@@ -132,12 +133,9 @@
       el: '#report-dish-app',
       data: function() {
         return {
-          loading: false, dateRange: [], limit: 10, categoryFilter: null,
-          categories: [], tableData: [],
-          // 搜索配置
-          searchConfig: [
-            { type: 'select', field: 'categoryId', placeholder: '菜品分类', width: '150px', options: [] }
-          ],
+          loading: false, dateRange: [], limit: 10, tableData: [],
+          // 搜索配置（分类筛选已由报表接口按日期/数量聚合，无需分类下拉）
+          searchConfig: [],
           // 操作按钮配置
           actionConfig: [
             { key: 'export', text: '导出 CSV', type: 'success', icon: 'el-icon-download' }
@@ -160,10 +158,10 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: '菜品', icon: '🍽', label: '菜品总数', value: self.stats.totalDishes || 0, color: 'primary' },
-            { key: '上榜', icon: '🏆', label: '上榜菜品', value: self.stats.topDishes || 0, color: 'success' },
-            { key: '总销量', icon: '📊', label: '总销量（份）', value: self.stats.totalSales || 0, color: 'warning' },
-            { key: '平均', icon: '📈', label: '平均销量', value: self.stats.avgSales || 0, color: 'info' }
+            { key: '菜品', icon: 'ri-restaurant-2-line', label: '菜品总数', value: self.stats.totalDishes || 0, color: 'primary' },
+            { key: '上榜', icon: 'ri-trophy-line', label: '上榜菜品', value: self.stats.topDishes || 0, color: 'success' },
+            { key: '总销量', icon: 'ri-bar-chart-2-line', label: '总销量（份）', value: self.stats.totalSales || 0, color: 'warning' },
+            { key: '平均', icon: 'ri-line-chart-line', label: '平均销量', value: self.stats.avgSales || 0, color: 'info' }
           ]
         }
       },
@@ -174,7 +172,6 @@
         const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
         self.dateRange = [fmt(first), fmt(last)];
-        self.loadCategories();
       },
       mounted: function() {
         const self = this;
@@ -201,16 +198,6 @@
         if (this.trendChart) { try { this.trendChart.dispose(); } catch(e) {} }
       },
       methods: {
-        loadCategories: function() {
-          const self = this;
-          categoryList().then(function(res) {
-            if (res.code === 1 && res.data) {
-              self.categories = res.data || [];
-              // 更新搜索配置中的分类选项
-              self.searchConfig[0].options = self.categories.map(function(c) { return { label: c.name, value: c.id } });
-            }
-          }).catch(function() {});
-        },
         onAction: function(payload) {
           if (payload.key === 'export') {
             this.handleExport();
@@ -223,7 +210,6 @@
           if (self.dateRange && self.dateRange.length >= 2) {
             params.startDate = self.dateRange[0]; params.endDate = self.dateRange[1];
           }
-          if (self.categoryFilter) params.categoryId = self.categoryFilter;
 
           Promise.all([reportDishRanking(params), self.loadDishRankingStats()])
             .then(function(results) {
@@ -361,7 +347,7 @@
           this.$nextTick(function() { if (this.chart) { this.chart.resize(); } }.bind(this));
         },
         reset: function() {
-          this.dateRange = []; this.limit = 10; this.categoryFilter = null; this.tableData = [];
+          this.dateRange = []; this.limit = 10; this.tableData = [];
           if (this.chart) this.chart.clear(); if (this.trendChart) this.trendChart.clear();
         },
         handleExport: function() {

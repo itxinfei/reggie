@@ -1,0 +1,8 @@
+# Reggie 门店 PC 打印代理依赖（Python 3.8+，Windows）
+# 必装：HTTP 客户端 + Windows 打印机访问
+requests>=2.25
+pywin32>=227
+
+# 可选：二维码图片打印（安装后小票 QR 行会真正打印二维码，否则打印二维码内容文本）
+qrcode>=7.3
+pillow>=8.0

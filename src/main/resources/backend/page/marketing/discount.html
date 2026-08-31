@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>折扣活动管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
@@ -174,6 +176,8 @@
   <script src="../../js/components.js"></script>
   <script src="../../js/common.js"></script>
   <script src="../../api/marketing.js"></script>
+  <script src="../../api/food.js"></script>
+  <script src="../../api/combo.js"></script>
   <script>
     new Vue({
       el: '#app',
@@ -185,6 +189,8 @@
           loading: false,
           activeFilter: '',
           tableData: [],
+          // 修改点：后端返回全量规则，保存全量供本地筛选/切片/统计使用
+          allData: [],
           // 搜索配置
           searchConfig: [
             { type: 'input', field: 'campaignId', placeholder: '请输入活动ID', width: '150px' }
@@ -251,56 +257,83 @@
       created: function() {
         this.init()
         this.loadStats()
+        this.loadOptions()
       },
       methods: {
+        // 修改点：加载适用分类/菜品/套餐下拉选项（原三项恒为空数组，选范围后无法选择具体对象）
+        async loadOptions() {
+          const self = this
+          try {
+            const res = await getCategoryList({ type: 1 })
+            if (res && res.code === 1 && Array.isArray(res.data)) {
+              self.categoryOptions = res.data.map(function(c) { return { id: c.id, name: c.name } })
+            }
+          } catch (e) { /* 分类加载失败不阻塞页面 */ }
+          try {
+            const dRes = await queryDishList({})
+            if (dRes && dRes.code === 1 && Array.isArray(dRes.data)) {
+              self.dishOptions = dRes.data.map(function(d) { return { id: d.id, name: d.name } })
+            }
+          } catch (e) { /* 菜品加载失败不阻塞页面 */ }
+          try {
+            const sRes = await getSetmealPage({ page: 1, pageSize: 100 })
+            const sList = sRes && sRes.data ? (sRes.data.records || sRes.data) : []
+            if (Array.isArray(sList)) {
+              self.setmealOptions = sList.map(function(s) { return { id: s.id, name: s.name } })
+            }
+          } catch (e) { /* 套餐加载失败不阻塞页面 */ }
+        },
         formatMoney(value) {
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
         },
         getScopeTagType(scope) {
-          const map = { 1: 'info', 2: 'warning', 3: 'success' }
+          const map = { 1: 'info', 2: 'warning', 3: 'primary', 4: 'success' }
           return map[scope] || ''
         },
         getScopeText(scope) {
-          const map = { 1: '全场', 2: '指定菜品', 3: '指定套餐' }
+          const map = { 1: '全场', 2: '指定分类', 3: '指定菜品', 4: '指定套餐' }
           return map[scope] || '未知'
         },
         async init() {
           this.loading = true
           const self = this
-          const params = {}
-          if (self.lastSearch.campaignId) {
-            params.campaignId = self.lastSearch.campaignId
-          }
-          if (self.activeFilter && self.activeFilter !== '') {
-            params.status = self.activeFilter
-          }
           try {
-            const res = await getDiscountRules(params)
-            if (String(res.code) === '1') {
-              self.tableData = res.data || []
-              self.counts = res.total || (res.data ? res.data.length : 0)
-            }
+            // 修改点：后端 /list 仅接收 campaignId、忽略 status 且返回全量不分页，
+            // 改为一次拉取全量，由前端完成过滤与切片（原传 status/pageSize 均被后端丢弃）
+            const res = await getDiscountRules({})
+            const list = (String(res.code) === '1' && Array.isArray(res.data)) ? res.data : []
+            self.allData = list
+            self.applyFilter()
+            self.loadStats()
           } catch (err) {
-            ReggieUI.error('获取折扣规则列表失败:')
+            ReggieUI.error('获取折扣规则列表失败')
           }
           self.loading = false
         },
-        async loadStats() {
-          try {
-            const results = await Promise.all([
-              getDiscountRules({ page: 1, pageSize: 1, status: '1' }),
-              getDiscountRules({ page: 1, pageSize: 1, status: '0' })
-            ])
-            const activeCount = (String(results[0].code) === '1') ? (results[0].total || results[0].data.length || 0) : 0
-            const inactiveCount = (String(results[1].code) === '1') ? (results[1].total || results[1].data.length || 0) : 0
-            this.stats = {
-              total: activeCount + inactiveCount,
-              active: activeCount,
-              inactive: inactiveCount
-            }
-          } catch (err) {
-            console.warn('加载折扣统计数据失败:', err)
+        // 修改点：状态筛选 + 活动ID搜索 + 前端切片分页
+        applyFilter: function() {
+          const self = this
+          let list = self.allData || []
+          if (self.lastSearch.campaignId) {
+            const kw = String(self.lastSearch.campaignId)
+            list = list.filter(function(r) { return String(r.campaignId) === kw })
+          }
+          if (self.activeFilter !== '' && self.activeFilter != null) {
+            const st = Number(self.activeFilter)
+            list = list.filter(function(r) { return Number(r.status) === st })
+          }
+          self.counts = list.length
+          const start = (self.page - 1) * self.pageSize
+          self.tableData = list.slice(start, start + self.pageSize)
+        },
+        // 修改点：统计基于全量数据本地计算（原分两次按 status 请求，后端忽略 status 导致两个数字都等于总数）
+        loadStats: function() {
+          const list = this.allData || []
+          this.stats = {
+            total: list.length,
+            active: list.filter(function(r) { return Number(r.status) === 1 }).length,
+            inactive: list.filter(function(r) { return Number(r.status) === 0 }).length
           }
         },
         // stat-cards 点击
@@ -330,13 +363,14 @@
           }
         },
         onPageChange: function(payload) {
+          // 修改点：数据已在本地全量缓存，翻页直接切片，无需重新请求
           this.page = payload.page
-          this.init()
+          this.applyFilter()
         },
         onSizeChange: function(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.page = 1
-          this.init()
+          this.applyFilter()
         },
         handleAdd() {
           this.dialogTitle = '新增折扣规则'

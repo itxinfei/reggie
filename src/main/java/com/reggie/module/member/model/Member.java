@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
@@ -74,4 +75,13 @@ public class Member implements Serializable {
     @Schema(description = "是否删除：0=未删除，1=已删除", example = "0")
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
+
+    /**
+     * 乐观锁版本号：保护 balance/points/totalConsumption 三个金额字段的并发更新。
+     * 充值、扣款、积分变动等场景必须走 MP 的 updateById/update(entity, wrapper) 以携带 version 条件。
+     * 数据库列 version 默认值 0，由 OptimisticLockerInnerInterceptor 在 update 时自动 +1。
+     */
+    @Version
+    @Schema(description = "乐观锁版本号", example = "0")
+    private Integer version;
 }

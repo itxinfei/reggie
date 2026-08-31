@@ -45,7 +45,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/recommend")
 @Tag(name = "智能推荐", description = "菜品推荐、偏好分析、浏览记录等接口")
-@RequireEmployee
 public class RecommendController {
 
     /** 默认推荐数量 */
@@ -103,6 +102,7 @@ public class RecommendController {
      * @return 覆盖率、点击率、转化率等指标
      */
     @GetMapping("/stats")
+    @RequireEmployee
     @Operation(summary = "推荐统计数据", description = "获取推荐引擎真实统计数据：覆盖率、点击率、转化率等指标")
     public R<Map<String, Object>> getStats() {
         Map<String, Object> stats = analyticsService.calculateStats();
@@ -342,6 +342,7 @@ public class RecommendController {
      * @return 反馈分布统计
      */
     @GetMapping("/feedback/stats")
+    @RequireEmployee
     @Operation(summary = "反馈统计", description = "获取推荐反馈分布统计，用于概览页反馈图表")
     public R<Map<String, Integer>> feedbackStats(
             @Parameter(description = "D a y s")
@@ -355,6 +356,7 @@ public class RecommendController {
      * @return 口味偏好分布列表
      */
     @GetMapping("/preference/distribution")
+    @RequireEmployee
     @Operation(summary = "口味偏好分布", description = "获取用户口味偏好分布，用于概览页偏好饼图")
     public R<List<Map<String, Object>>> preferenceDistribution() {
         List<Map<String, Object>> list = analyticsService.getPreferenceDistribution();
@@ -366,6 +368,7 @@ public class RecommendController {
      * @return 算法效果对比数据
      */
     @GetMapping("/algo/compare")
+    @RequireEmployee
     @Operation(summary = "算法效果对比", description = "获取推荐算法效果对比数据，用于概览页对比柱状图")
     public R<Map<String, Object>> algoCompare() {
         Map<String, Object> result = analyticsService.getAlgoCompare();
@@ -378,6 +381,7 @@ public class RecommendController {
      * @return 浏览行为趋势数据
      */
     @GetMapping("/browse/trend")
+    @RequireEmployee
     @Operation(summary = "浏览趋势", description = "获取浏览行为趋势数据，用于概览页趋势图")
     public R<Map<String, Object>> browseTrend(
             @Parameter(description = "D a y s")

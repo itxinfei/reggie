@@ -51,4 +51,12 @@ public interface FranchiseSettlementService extends IService<FranchiseSettlement
      * @return 分页结果
      */
     Page<FranchiseSettlement> pageQuery(int page, int pageSize, String settlePeriod, Integer status, Long franchiseeId);
+
+    /**
+     * 结算单统计（总数、待确认、已确认、已结算）
+     *
+     * @param tenantId 总部租户ID
+     * @return 聚合结果
+     */
+    java.util.Map<String, Object> statSettlements(Long tenantId);
 }

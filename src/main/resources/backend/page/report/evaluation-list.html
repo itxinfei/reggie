@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>菜品评价管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
@@ -56,6 +58,15 @@
     .eval-app-wrap .detail-row .dvalue { flex: 1; color: var(--el-text-primary); }
     .eval-app-wrap .reply-box { background: var(--el-bg-subtle); border-radius: var(--radius-md); padding: 14px 16px; margin-top: 8px; }
     .eval-app-wrap .reply-box .reply-time { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 6px; }
+    /* 修改点：8.5.3 就地回复（展开行）样式 */
+    .eval-app-wrap .inline-reply { padding: 4px 4px 4px 12px; }
+    .eval-app-wrap .inline-reply__meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .eval-app-wrap .inline-reply__dish { font-weight: 600; color: var(--el-text-primary); }
+    .eval-app-wrap .inline-reply__stars { display: inline-flex; gap: 2px; }
+    .eval-app-wrap .inline-reply__time { font-size: var(--font-size-xs); color: var(--color-info); }
+    .eval-app-wrap .inline-reply__content { margin: 8px 0 0; color: var(--el-text-regular); font-size: var(--font-size-sm);
+      line-height: 1.6; max-width: 640px; }
+    .eval-app-wrap .inline-reply__editor { margin-top: 12px; max-width: 640px; }
     .eval-app-wrap .image-preview { max-width: 100%; max-height: 450px; border-radius: var(--radius-md); }
     @media (max-width: 1200px) { .eval-app-wrap .container { padding: 16px 20px 20px !important; } }
     @media (max-width: 768px) { .eval-app-wrap .container { padding: 12px 16px 16px !important; }
@@ -101,15 +112,25 @@
               @click="filters.starRating = null" style="margin-left:4px;" type="button">清除</button>
           </div>
         </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="fl-label">回复状态</span>
+          <div class="star-filter">
+            <button type="button" class="star-btn" :class="{ active: replyTab === '' }" @click="setReplyTab('')">全部</button>
+            <button type="button" class="star-btn" :class="{ active: replyTab === '0' }" @click="setReplyTab('0')">待回复</button>
+            <button type="button" class="star-btn" :class="{ active: replyTab === '1' }" @click="setReplyTab('1')">已回复</button>
+          </div>
+        </div>
         <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="handleSearch">搜索</el-button>
         <el-button size="small" class="btn-reset" icon="el-icon-refresh" @click="resetFilters">重置</el-button>
       </div>
 
       <!-- ========== 评价列表（统一 crud-table 组件，替代手写 el-table + 独立分页） ========== -->
       <crud-table
+        ref="crudTable"
         empty-hint="暂无相关记录"
         :data="tableData"
         :columns="evalColumns"
+        :expand="true"
         :page="page"
         :page-size="pageSize"
         :page-sizes="[10, 20, 50, 100]"
@@ -122,6 +143,31 @@
         aria-label="评价列表"
         @page-change="onPageChange"
       >
+        <template #expand="{ row }">
+          <div class="inline-reply">
+            <div class="inline-reply__meta">
+              <span class="inline-reply__dish">{{ row.dishName }}</span>
+              <span class="inline-reply__stars">
+                <span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (row.starRating || 0) }">★</span>
+              </span>
+              <span class="inline-reply__time">{{ formatDate(row.createTime) }}</span>
+            </div>
+            <div class="inline-reply__content">{{ row.content || '（无文字评价）' }}</div>
+            <div v-if="row.replyContent" class="reply-box">
+              <div style="color:var(--el-text-primary);font-size:var(--font-size-base);">商家回复：{{ row.replyContent }}</div>
+              <div class="reply-time">回复时间：{{ formatDate(row.replyTime) }}</div>
+            </div>
+            <div v-else class="inline-reply__editor">
+              <el-input v-model="inlineReplyContent" type="textarea" :rows="3"
+                placeholder="请输入回复内容..." maxlength="500" show-word-limit>
+              </el-input>
+              <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;">
+                <el-button size="small" @click="collapseReply(row)">取 消</el-button>
+                <el-button type="primary" size="small" :loading="inlineReplyLoading" @click="submitInlineReply(row)">发 布 回 复</el-button>
+              </div>
+            </div>
+          </div>
+        </template>
         <template #col-dish="{ row }">
           <div style="display:flex;align-items:center;gap:10px;">
             <img v-if="row.dishImage" :src="getImageUrl(row.dishImage)"
@@ -162,7 +208,7 @@
             <el-button type="text" size="small" class="btn-view" @click="viewDetail(row)">查看</el-button>
             <el-button v-if="row.status === 0" type="text" size="small" class="btn-success" @click="handleAudit(row, 1)">通过</el-button>
             <el-button v-if="row.status === 0" type="text" size="small" class="btn-delete" @click="handleAudit(row, 2)">拒绝</el-button>
-            <el-button v-if="!row.replyContent" type="text" size="small" class="btn-view" @click="openReply(row)">回复</el-button>
+            <el-button v-if="!row.replyContent" type="text" size="small" class="btn-view" @click="openInlineReply(row)">回复</el-button>
           </div>
         </template>
       </crud-table>
@@ -180,7 +226,7 @@
     >
       <div v-if="detailData.id">
         <div class="detail-section">
-          <div class="detail-section-title">📋 基本信息</div>
+          <div class="detail-section-title"><i class="ri-file-list-3-line" aria-hidden="true"></i> 基本信息</div>
           <div class="detail-row"><span class="dlabel">评价ID</span><span class="dvalue">{{ detailData.id }}</span></div>
           <div class="detail-row"><span class="dlabel">菜品</span><span class="dvalue">{{ detailData.dishName }}</span></div>
           <div class="detail-row"><span class="dlabel">评分</span>
@@ -191,7 +237,7 @@
             <span class="dvalue"><span :class="['status-tag', statusClass(detailData.status)]">{{ statusText(detailData.status) }}</span></span></div>
         </div>
         <div class="detail-section">
-          <div class="detail-section-title">💬 评价内容</div>
+          <div class="detail-section-title"><i class="ri-chat-smile-3-line" aria-hidden="true"></i> 评价内容</div>
           <div style="padding:10px 0;line-height:1.8;color:var(--el-text-primary);font-size:var(--font-size-base);">{{ detailData.content || '（无文字内容）' }}</div>
           <div class="eval-images" v-if="detailImages.length > 0" style="margin-top:12px;">
             <img v-for="(img, idx) in detailImages" :key="idx" :src="getImageUrl(img)" @click="previewImage(getImageUrl(img))" alt="评价图片" />
@@ -208,25 +254,6 @@
       <template #footer>
         <el-button v-if="detailData.status === 0" type="success" size="medium" @click="handleAudit(detailData, 1); closeDetail()">审 核 通 过</el-button>
       </template>
-    </crud-dialog>
-
-    <!-- ========== 回复弹窗 ========== -->
-    <crud-dialog
-      title="回复评价"
-      :visible.sync="replyVisible"
-      size="sm"
-      :submit-loading="replyLoading"
-      :show-close="true"
-      @submit="submitReply"
-      @close="closeReply"
-    >
-      <div v-if="replyData.id" style="margin-bottom:12px;padding:14px;background:var(--el-bg-subtle);border-radius:var(--radius-md);">
-        <div style="font-weight:600;margin-bottom:4px;color:var(--el-text-primary);">{{ replyData.dishName || '' }} - {{ replyData.starRating }}★</div>
-        <div style="color:var(--el-text-regular);font-size:var(--font-size-sm);line-height:1.6;">{{ replyData.content || '' }}</div>
-      </div>
-      <el-input v-model="replyContent" type="textarea" :rows="4"
-        placeholder="请输入回复内容..." maxlength="500" show-word-limit>
-      </el-input>
     </crud-dialog>
 
     <!-- ========== 图片预览 ========== -->
@@ -275,8 +302,10 @@
             filterStatus: null, stats: { total: 0, pending: 0, approved: 0, rejected: 0 },
             // 修改点：activeFilter 用于 <stat-cards> 组件双向绑定
             activeFilter: '',
+            // 修改点：8.5.3 回复状态 Tab（''=全部 / '0'=待回复 / '1'=已回复）
+            replyTab: '',
             detailVisible: false, detailData: {}, detailImages: [],
-            replyVisible: false, replyData: {}, replyContent: '', replyLoading: false,
+            inlineReplyContent: '', inlineReplyLoading: false,
             previewVisible: false, previewUrl: ''
           }
         },
@@ -286,10 +315,10 @@
           statsCards: function() {
             const self = this;
             return [
-              { key: '', icon: '📋', label: '全部评价', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
-              { key: '0', icon: '⏳', label: '待审核', value: self.stats.pending || 0, color: 'warning', clickable: true, active: self.activeFilter === '0' },
-              { key: '1', icon: '✅', label: '已通过', value: self.stats.approved || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
-              { key: '2', icon: '❌', label: '已拒绝', value: self.stats.rejected || 0, color: 'danger', clickable: true, active: self.activeFilter === '2' }
+              { key: '', icon: 'ri-file-list-3-line', label: '全部评价', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+              { key: '0', icon: 'ri-time-line', label: '待审核', value: self.stats.pending || 0, color: 'warning', clickable: true, active: self.activeFilter === '0' },
+              { key: '1', icon: 'ri-checkbox-circle-line', label: '已通过', value: self.stats.approved || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
+              { key: '2', icon: 'ri-close-circle-line', label: '已拒绝', value: self.stats.rejected || 0, color: 'danger', clickable: true, active: self.activeFilter === '2' }
             ]
           }
         },
@@ -315,6 +344,8 @@
             if (self.filters.dishName) params.dishName = self.filters.dishName;
             if (self.filters.status != null) params.status = self.filters.status;
             if (self.filters.starRating != null) params.starRating = self.filters.starRating;
+            // 修改点：8.5.3 回复状态筛选（''=全部不下发）
+            if (self.replyTab !== '') params.replyStatus = Number(self.replyTab);
             getEvaluationPage(params).then(function(res) {
               if (String(res.code) === '1') {
                 self.tableData = res.data.records || []; self.total = res.data.total || 0;
@@ -337,7 +368,7 @@
           handleSearch: function() { this.page = 1; this.loadData(); },
           resetFilters: function() {
             this.filters = { dishName: '', starRating: null, status: null };
-            this.filterStatus = null; this.page = 1; this.loadData(); this.loadStats();
+            this.filterStatus = null; this.replyTab = ''; this.page = 1; this.loadData(); this.loadStats();
           },
           // 修改点：<stat-cards> 组件统一卡片点击分发
           onCardClick: function(payload) {
@@ -368,20 +399,30 @@
               if (e !== 'cancel') ReggieUI.error('审核操作失败');
             });
           },
-          openReply: function(row) {
-            this.replyData = row; this.replyContent = ''; this.replyVisible = true;
+          // 修改点：8.5.3 回复状态 Tab 切换
+          setReplyTab: function(tab) {
+            this.replyTab = tab; this.page = 1; this.loadData();
           },
-          closeReply: function() { this.replyVisible = false; this.replyData = {}; this.replyContent = ''; },
-          submitReply: function() {
+          // 修改点：8.5.3 就地回复 —— 展开行内回复框（crud-table 内部 el-table 控制展开）
+          openInlineReply: function(row) {
+            this.inlineReplyContent = '';
+            const table = this.$refs.crudTable && this.$refs.crudTable.$refs.elTable;
+            if (table) table.toggleRowExpansion(row, true);
+          },
+          collapseReply: function(row) {
+            const table = this.$refs.crudTable && this.$refs.crudTable.$refs.elTable;
+            if (table) table.toggleRowExpansion(row, false);
+          },
+          submitInlineReply: function(row) {
             const self = this;
-            if (!self.replyContent.trim()) { ReggieUI.warning('请输入回复内容'); return; }
-            self.replyLoading = true;
-            replyEvaluation(self.replyData.id, self.replyContent.trim()).then(function(res) {
+            if (!self.inlineReplyContent.trim()) { ReggieUI.warning('请输入回复内容'); return; }
+            self.inlineReplyLoading = true;
+            replyEvaluation(row.id, self.inlineReplyContent.trim()).then(function(res) {
               if (String(res.code) === '1') {
-                ReggieUI.success('回复成功'); self.closeReply(); self.loadData();
+                ReggieUI.success('回复成功'); self.collapseReply(row); self.loadData();
               } else { ReggieUI.error(res.msg || '回复失败'); }
             }).catch(function(err) { ReggieUI.error('请求失败：' + (err.message || err)); })
-            .finally(function() { self.replyLoading = false; });
+            .finally(function() { self.inlineReplyLoading = false; });
           },
           // 修改点：分页统一交由 crud-table 组件管理（@page-change 同时携带页码与每页条数）
           onPageChange: function(p) {

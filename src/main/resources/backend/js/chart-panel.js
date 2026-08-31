@@ -32,7 +32,7 @@ Vue.component('chart-panel', {
       type: String,
       default: ''
     },
-    /** 标题前缀图标（emoji 或文本） */
+    /** 标题前缀图标（RemixIcon class，如 ri-bar-chart-2-line；兼容 emoji/文本） */
     icon: {
       type: String,
       default: ''
@@ -48,11 +48,21 @@ Vue.component('chart-panel', {
       default: '20px'
     }
   },
+  methods: {
+    /**
+     * 判断 icon 是否为 RemixIcon class（以 ri- 开头）
+     * 是则使用 <i> 标签渲染，否则作为 emoji 文本渲染
+     */
+    isIconClass: function (icon) {
+      return typeof icon === 'string' && /^(ri-|el-icon-)/.test(icon)
+    }
+  },
   template:
     '<div class="chart-panel" :style="{ padding: padding, marginBottom: marginBottom }">' +
       '<div v-if="title || $slots.title" class="chart-panel__title">' +
         '<slot name="title">' +
-          '<span v-if="icon" class="chart-panel__icon" v-text="icon"></span>' +
+          '<i v-if="isIconClass(icon)" :class="icon" class="chart-panel__icon" aria-hidden="true"></i>' +
+          '<span v-else-if="icon" class="chart-panel__icon" v-text="icon"></span>' +
           '<span>{{ title }}</span>' +
         '</slot>' +
       '</div>' +
@@ -88,7 +98,7 @@ Vue.component('kpi-card', {
       type: String,
       default: ''
     },
-    /** 图标（emoji 或文本） */
+    /** 图标（RemixIcon class，如 ri-user-line；兼容 emoji/文本） */
     icon: {
       type: String,
       default: ''
@@ -109,9 +119,17 @@ Vue.component('kpi-card', {
       return 'kpi-card kpi-card--' + (this.color || 'primary')
     }
   },
+  methods: {
+    isIconClass: function (icon) {
+      return typeof icon === 'string' && /^(ri-|el-icon-)/.test(icon)
+    }
+  },
   template:
     '<div :class="cardClass">' +
-      '<div v-if="icon" class="kpi-card__icon" v-text="icon"></div>' +
+      '<div v-if="icon" class="kpi-card__icon">' +
+        '<i v-if="isIconClass(icon)" :class="icon" aria-hidden="true"></i>' +
+        '<span v-else v-text="icon"></span>' +
+      '</div>' +
       '<div class="kpi-card__content">' +
         '<div class="kpi-card__label">{{ label }}</div>' +
         '<div class="kpi-card__value">' +

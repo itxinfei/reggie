@@ -14,6 +14,7 @@ CREATE TABLE delivery_order (
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   platform_order_id varchar(64) NULL DEFAULT NULL COMMENT '平台订单号',
   platform varchar(20) NULL DEFAULT NULL COMMENT '配送平台',
+  order_id bigint NULL DEFAULT NULL COMMENT '本地订单ID（关联orders.id，可空）',
   dish_summary varchar(255) NULL DEFAULT NULL COMMENT '菜品摘要',
   amount decimal(10,2) NULL DEFAULT NULL COMMENT '订单金额',
   user_name varchar(50) NULL DEFAULT NULL COMMENT '用户姓名',
@@ -49,5 +50,6 @@ CREATE TABLE delivery_track (
 
 CREATE INDEX idx_delivery_order_tenant_id ON delivery_order(tenant_id);
 CREATE INDEX idx_delivery_order_platform_order_id ON delivery_order(platform_order_id);
+CREATE INDEX idx_delivery_order_order_id ON delivery_order(order_id);
 CREATE INDEX idx_delivery_track_tenant_id ON delivery_track(tenant_id);
 CREATE INDEX idx_delivery_track_order_id ON delivery_track(order_id);

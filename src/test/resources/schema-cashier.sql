@@ -55,5 +55,6 @@ CREATE TABLE daily_settlement (
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
   update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  version int NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
   PRIMARY KEY (id)
 );

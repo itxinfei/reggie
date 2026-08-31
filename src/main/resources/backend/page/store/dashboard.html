@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
     <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
     <script src="../../plugins/echarts/echarts.min.js"></script>
     <style>
@@ -72,6 +73,11 @@
         .rank-num.rn { background: var(--el-bg-light); color: var(--color-info); }
         .rank-info { flex: 1; min-width: 0; }
         .rank-name { font-size:var(--font-size-base); font-weight: 600; color: var(--el-text-primary); display: flex; align-items: center; gap: 8px; }
+        .rank-tag {
+            font-size: var(--font-size-xs); color: var(--text-on-brand); background: var(--color-brand-500);
+            padding: 2px 8px; border-radius: var(--radius-sm); font-weight: 600;
+        }
+        .rank-item.is-current { background: var(--el-bg-ghost); margin: 0 -12px; padding-left: 12px; padding-right: 12px; border-radius: var(--radius-md); }
         .rank-store-code {
             font-size: var(--font-size-xs); color: var(--el-border-base); background: var(--el-bg-subtle);
             padding: 2px 8px; border-radius: var(--radius-sm); font-weight: 500;
@@ -117,55 +123,32 @@
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">总部控制台</h1>
-          <p class="ds-page-header__subtitle">查看门店经营总览</p>
+          <h1 class="ds-page-header__title" id="page-title">{{ pageTitle }}</h1>
+          <p class="ds-page-header__subtitle">{{ pageSubtitle }}</p>
         </div>
-        <div class="ds-page-header__actions"></div>
+        <div class="ds-page-header__actions">
+          <el-button v-if="isStoreMode" size="small" icon="el-icon-back" @click="backToHeadquarters">返回总部控制台</el-button>
+        </div>
       </header>
 
-        <!-- ========== KPI 指标卡片 ========== -->
-        <div class="stats-cards" v-if="dashboard">
-            <div class="stat-card primary">
-                <div class="stat-icon">🏪</div>
-                <div class="stat-label">门店总数</div>
-                <div class="stat-value">{{ dashboard.totalStores || 0 }}</div>
-                <div class="sub">运营中门店</div>
-            </div>
-            <div class="stat-card success">
-                <div class="stat-icon">📋</div>
-                <div class="stat-label">今日总订单</div>
-                <div class="stat-value">{{ dashboard.todayTotalOrders || 0 }}</div>
-                <div class="sub">全部门店订单汇总</div>
-            </div>
-            <div class="stat-card warning">
-                <div class="stat-icon">💰</div>
-                <div class="stat-label">今日总营收</div>
-                <div class="stat-value">¥{{ formatMoney(dashboard.todayTotalAmount) }}</div>
-                <div class="sub">客单价 ¥{{ formatMoney(dashboard.avgOrderAmount) }}</div>
-            </div>
-            <div class="stat-card info">
-                <div class="stat-icon">👤</div>
-                <div class="stat-label">今日新增用户</div>
-                <div class="stat-value">{{ dashboard.todayNewUsers || 0 }}</div>
-                <div class="sub">全平台新注册用户</div>
-            </div>
-        </div>
+        <!-- ========== KPI 指标卡片（固定 4 个） ========== -->
+        <stat-cards :cards="statsCards" :loading="loading"></stat-cards>
 
         <!-- ========== 图表 + 排行 双栏 ========== -->
         <div class="content-grid">
             <!-- 门店营收柱状图 -->
             <div class="chart-panel">
-                <div class="panel-title">📊 各门店营收对比（今日）</div>
-                <div class="panel-sub">仅展示订单量前 10 名门店 · 完整榜单见右侧排行</div>
+                <div class="panel-title"><i class="ri-bar-chart-2-line" aria-hidden="true"></i> 各门店营收对比（今日）</div>
+                <div class="panel-sub">仅展示订单量前 10 名门店 · 完整榜单见右侧排行<template v-if="isStoreMode"> · 本店金色高亮</template></div>
                 <div class="chart-box" id="storeBarChart"></div>
             </div>
 
             <!-- 门店排行 -->
             <div class="ranking-panel chart-panel">
-                <div class="panel-title">🏆 门店实时排行</div>
+                <div class="panel-title"><i class="ri-trophy-line" aria-hidden="true"></i> 门店实时排行</div>
                 <div v-if="dashboard && dashboard.storeRanking && dashboard.storeRanking.length > 0">
                     <ul class="rank-list">
-                        <li class="rank-item" v-for="(store, idx) in dashboard.storeRanking" :key="store.tenantId">
+                        <li class="rank-item" v-for="(store, idx) in dashboard.storeRanking" :key="store.tenantId" :class="{ 'is-current': isCurrentStore(store) }">
                             <span :class="['rank-num', idx === 0 ? 'r1' : idx === 1 ? 'r2' : idx === 2 ? 'r3' : 'rn']">
                                 {{ idx + 1 }}
                             </span>
@@ -173,6 +156,7 @@
                                 <div class="rank-name">
                                     {{ store.storeName }}
                                     <span class="rank-store-code">{{ store.storeCode }}</span>
+                                    <span v-if="isCurrentStore(store)" class="rank-tag">本店</span>
                                 </div>
                             </div>
                             <div class="rank-bar-wrap">
@@ -187,7 +171,7 @@
                     <div class="ranking-footer">共 {{ dashboard.storeRanking.length }} 家门店 · 按今日订单量排序</div>
                 </div>
                 <div v-else class="empty-state">
-                    <div class="empty-icon">📭</div>
+                    <div class="empty-icon"><i class="ri-inbox-line" aria-hidden="true"></i></div>
                     <div class="empty-text">暂无门店数据</div>
                     <div class="empty-hint">请先创建门店并完成配置</div>
                 </div>
@@ -217,10 +201,54 @@
         resizeHandler: null,
         lastUpdated: null,
         brandColor: RgPalette.brand, // 与 --color-brand-500 一致（CH 定义见脚本顶部）
-        topN: 10 // 柱状图仅展示订单量前 N 名，避免门店过多时拥挤
+        topN: 10, // 柱状图仅展示订单量前 N 名，避免门店过多时拥挤
+        // 修改点：8.7.2 单店看板模式（?storeId=X&name=门店名 打开时置位）
+        currentStoreId: null,
+        currentStoreName: '',
+        storeSummary: null
+    },
+    computed: {
+        // 单店模式：true 时展示该门店今日概况 + 全门店排行对比（本店高亮）
+        isStoreMode() {
+            return !!this.currentStoreId;
+        },
+        pageTitle() {
+            return this.isStoreMode ? '门店经营看板' : '总部控制台';
+        },
+        pageSubtitle() {
+            return this.isStoreMode
+                ? (this.currentStoreName || ('门店 #' + this.currentStoreId)) + ' · 今日经营概况'
+                : '查看门店经营总览';
+        },
+        // 统计卡片（固定 4 个）
+        statsCards() {
+            if (this.isStoreMode) {
+                const s = this.storeSummary || {};
+                const completed = s.completedOrders || 0;
+                const avg = completed > 0 ? Number(s.todayAmount || 0) / completed : 0;
+                return [
+                    { key: 'orders', icon: 'ri-file-list-3-line', label: '今日订单', value: s.totalOrders || 0, color: 'success', subText: '已完成 ' + (s.completedOrders || 0) + ' 单' },
+                    { key: 'amount', icon: 'ri-money-cny-circle-line', label: '今日营收', value: '¥' + this.formatMoney(s.todayAmount), color: 'warning', subText: '客单价 ¥' + this.formatMoney(avg) },
+                    { key: 'cancelled', icon: 'ri-close-circle-line', label: '今日取消', value: s.cancelledOrders || 0, color: 'danger', subText: '取消订单数' },
+                    { key: 'users', icon: 'ri-user-line', label: '今日新增用户', value: s.newUsers || 0, color: 'info', subText: '门店新注册用户' }
+                ];
+            }
+            const d = this.dashboard || {};
+            return [
+                { key: 'stores', icon: 'ri-store-3-line', label: '门店总数', value: d.totalStores || 0, color: 'primary', subText: '运营中门店' },
+                { key: 'orders', icon: 'ri-file-list-3-line', label: '今日总订单', value: d.todayTotalOrders || 0, color: 'success', subText: '全部门店订单汇总' },
+                { key: 'amount', icon: 'ri-money-cny-circle-line', label: '今日总营收', value: '¥' + this.formatMoney(d.todayTotalAmount), color: 'warning', subText: '客单价 ¥' + this.formatMoney(d.avgOrderAmount) },
+                { key: 'users', icon: 'ri-user-line', label: '今日新增用户', value: d.todayNewUsers || 0, color: 'info', subText: '全平台新注册用户' }
+            ];
+        }
     },
     created() {
-        this.loadDashboard();
+        this.parseUrlParams();
+        if (this.isStoreMode) {
+            this.loadStoreDashboard();
+        } else {
+            this.loadDashboard();
+        }
     },
     mounted() {
         this.resizeHandler = () => { if (this.barChart) this.barChart.resize(); };
@@ -231,6 +259,55 @@
         if (this.barChart) this.barChart.dispose();
     },
     methods: {
+        // 修改点：8.7.2 单店看板 URL 参数解析
+        parseUrlParams() {
+            try {
+                var params = new URLSearchParams(window.location.search);
+                var sid = params.get('storeId');
+                if (sid) {
+                    this.currentStoreId = sid;
+                    var name = params.get('name');
+                    this.currentStoreName = name ? decodeURIComponent(name) : '';
+                }
+            } catch (e) { /* 解析失败时保持总部模式 */ }
+        },
+        isCurrentStore(store) {
+            if (!this.currentStoreId || !store) return false;
+            return String(store.tenantId) === String(this.currentStoreId);
+        },
+        backToHeadquarters() {
+            window.location.href = 'dashboard.html';
+        },
+        // 单店模式：门店今日汇总 + 总部排行（用于对比图/榜单，本店金色高亮）
+        loadStoreDashboard() {
+            var self = this;
+            Promise.all([getTodaySummary(self.currentStoreId), getDashboardOverview()]).then(function(results) {
+                var summary = results[0];
+                if (summary && summary.code === 1) {
+                    self.storeSummary = summary.data || {};
+                } else {
+                    ReggieUI.error((summary && summary.msg) || '加载门店数据失败');
+                }
+                var ov = results[1];
+                if (ov && ov.code === 1 && ov.data) {
+                    self.dashboard = ov.data;
+                }
+                if (!self.currentStoreName && self.dashboard && self.dashboard.storeRanking) {
+                    var hit = null;
+                    for (var i = 0; i < self.dashboard.storeRanking.length; i++) {
+                        if (String(self.dashboard.storeRanking[i].tenantId) === String(self.currentStoreId)) {
+                            hit = self.dashboard.storeRanking[i];
+                            break;
+                        }
+                    }
+                    if (hit) self.currentStoreName = hit.storeName || '';
+                }
+                self.lastUpdated = new Date();
+                self.$nextTick(function() { self.renderBarChart(); });
+            }).catch(function(err) {
+                ReggieUI.error('加载失败：' + (err.message || '网络异常'));
+            }).finally(function() { self.loading = false; });
+        },
         loadDashboard() {
             var self = this;
             getDashboardOverview().then(res => {
@@ -308,7 +385,12 @@
                         barWidth: 28, barGap: '20%',
                         itemStyle: {
                             borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0],
-                            color: function(p) { return colors[p.dataIndex % colors.length]; }
+                            // 修改点：8.7.2 单店模式下当前门店柱状金色高亮
+                            color: function(p) {
+                                var s = stores[p.dataIndex];
+                                if (s && self.isCurrentStore(s)) return RgPalette.brand;
+                                return colors[p.dataIndex % colors.length];
+                            }
                         },
                         label: { show: hasData, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c}' }
                     },

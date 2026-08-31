@@ -6,8 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>排队叫号 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
     .queue-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
 
@@ -17,24 +20,6 @@
     .filter-bar__col { display: flex; flex-direction: column; gap: 4px }
     .filter-bar__input { height: 36px }
     .filter-bar__btn { height: 36px; font-size: var(--font-size-base) }
-
-    /* 统计卡片行 */
-    .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-4); margin-bottom: var(--space-6) }
-    @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(3, 1fr) } }
-    @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr) } }
-    @media (max-width: 520px) { .stats-grid { grid-template-columns: 1fr } }
-    .stat-card { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: var(--space-4); transition: box-shadow var(--transition-base) }
-    .stat-card:hover { box-shadow: var(--shadow-lg) }
-    .stat-card__icon { font-size: 28px; line-height: 1 }
-    .stat-card__body { flex: 1 }
-    .stat-card__label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px }
-    .stat-card__value { font-size: 24px; font-weight: 600; color: var(--text-primary); line-height: 1.2 }
-    .stat-card__sub { font-size: 12px; color: var(--text-muted); margin-top: 2px }
-    .stat-card.danger .stat-card__value { color: var(--color-danger) }
-    .stat-card.warning .stat-card__value { color: var(--color-warning) }
-    .stat-card.success .stat-card__value { color: var(--color-success) }
-    .stat-card.info .stat-card__value { color: var(--text-muted) }
-    .stat-card.brand .stat-card__value { color: var(--color-brand-500) }
 
     /* 叫号操作栏 */
     .call-bar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--el-bg-ghost); border-radius: var(--radius-md) }
@@ -79,6 +64,9 @@
         </div>
       </header>
 
+      <!-- 统计卡片（固定 4 个） -->
+      <stat-cards :cards="statsCards" :loading="statsLoading"></stat-cards>
+
       <!-- 筛选栏 -->
       <div class="filter-bar">
         <div class="filter-bar__col">
@@ -96,50 +84,6 @@
         </div>
         <el-button type="primary" size="small" @click="onSearch" class="filter-bar__btn">查询</el-button>
         <el-button size="small" @click="onReset">重置</el-button>
-      </div>
-
-      <!-- 统计卡片 -->
-      <div class="stats-grid" v-loading="statsLoading">
-        <div class="stat-card brand">
-          <div class="stat-card__icon">📋</div>
-          <div class="stat-card__body">
-            <div class="stat-card__label">排队总数</div>
-            <div class="stat-card__value">{{ stats.totalQueues || 0 }}</div>
-            <div class="stat-card__sub">今日累计</div>
-          </div>
-        </div>
-        <div class="stat-card warning">
-          <div class="stat-card__icon">⏳</div>
-          <div class="stat-card__body">
-            <div class="stat-card__label">等待中</div>
-            <div class="stat-card__value">{{ stats.waitingCount || 0 }}</div>
-            <div class="stat-card__sub">尚未叫号</div>
-          </div>
-        </div>
-        <div class="stat-card danger">
-          <div class="stat-card__icon">🔔</div>
-          <div class="stat-card__body">
-            <div class="stat-card__label">已叫号</div>
-            <div class="stat-card__value">{{ stats.calledCount || 0 }}</div>
-            <div class="stat-card__sub">待安排入座</div>
-          </div>
-        </div>
-        <div class="stat-card success">
-          <div class="stat-card__icon">✅</div>
-          <div class="stat-card__body">
-            <div class="stat-card__label">已入座</div>
-            <div class="stat-card__value">{{ stats.seatedCount || 0 }}</div>
-            <div class="stat-card__sub">完成就座</div>
-          </div>
-        </div>
-        <div class="stat-card info">
-          <div class="stat-card__icon">⛔</div>
-          <div class="stat-card__body">
-            <div class="stat-card__label">已取消</div>
-            <div class="stat-card__value">{{ stats.cancelledCount || 0 }}</div>
-            <div class="stat-card__sub">主动/超时取消</div>
-          </div>
-        </div>
       </div>
 
       <!-- 叫号操作栏 -->
@@ -202,7 +146,7 @@
       </crud-table>
 
       <div v-if="counts === 0 && !tableLoading && tableData.length === 0" class="empty-state">
-        <div class="empty-state__icon">📋</div>
+        <div class="empty-state__icon"><i class="ri-file-list-3-line" aria-hidden="true"></i></div>
         <div>暂无排队记录</div>
         <div class="empty-state__desc">点击上方"取号"为顾客创建排队记录</div>
       </div>
@@ -335,6 +279,18 @@
           tableOptions: []
         }
       },
+      computed: {
+        // 统计卡片（固定 4 个：总数/等待中/已叫号/已入座，已取消并入总数说明）
+        statsCards: function () {
+          var s = this.stats || {}
+          return [
+            { key: 'total', icon: 'ri-file-list-3-line', label: '排队总数', value: s.totalQueues || 0, color: 'primary', subText: '今日累计 · 已取消 ' + (s.cancelledCount || 0) },
+            { key: 'waiting', icon: 'ri-time-line', label: '等待中', value: s.waitingCount || 0, color: 'warning', subText: '尚未叫号' },
+            { key: 'called', icon: 'ri-notification-3-line', label: '已叫号', value: s.calledCount || 0, color: 'danger', subText: '待安排入座' },
+            { key: 'seated', icon: 'ri-checkbox-circle-line', label: '已入座', value: s.seatedCount || 0, color: 'success', subText: '完成就座' }
+          ]
+        }
+      },
       created: function() {
         this.loadStats()
         this.loadTable()
@@ -392,7 +348,9 @@
         // 加载桌台选项（入座弹窗用）
         loadTableOptions: function() {
           var self = this
-          tablePage({ page: 1, pageSize: 200 }).then(function(res) {
+          // 修改点：pageSize 由 200 收敛为 100 —— 后端 /dining/table/page 声明 @Max(100)，
+          // 传 200 会触发参数校验 400，桌台下拉选项加载直接失败（且 PageUtils.cap 亦封顶 100）
+          tablePage({ page: 1, pageSize: 100 }).then(function(res) {
             if (res.code === 1 && res.data && res.data.records) {
               self.tableOptions = res.data.records.map(function(t) {
                 return {

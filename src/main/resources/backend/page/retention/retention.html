@@ -6,62 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>会员挽留 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
-  <style lang="less" scoped>
-    @import "../../styles/tokens.css";
-
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <style>
     .retention-container {
       max-width: 1400px;
       margin: 0 auto;
       padding: 0 var(--space-5);
     }
-
-    /* ============ 统计卡片区 ============ */
-    .retention-stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: var(--space-4);
-      margin-bottom: var(--space-6);
-    }
-    @media (max-width: 1100px) { .retention-stats { grid-template-columns: repeat(2, 1fr) } }
-    @media (max-width: 600px) { .retention-stats { grid-template-columns: 1fr } }
-
-    .retention-stat-card {
-      padding: var(--space-4);
-      background: var(--bg-surface);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-sm);
-      display: flex;
-      align-items: center;
-      gap: var(--space-4);
-      transition: box-shadow var(--transition-base);
-    }
-    .retention-stat-card:hover {
-      box-shadow: var(--shadow-md);
-    }
-    .retention-stat-card__icon {
-      font-size: var(--font-size-3xl);
-      line-height: 1;
-      flex-shrink: 0;
-    }
-    .retention-stat-card__body { flex: 1; min-width: 0 }
-    .retention-stat-card__label {
-      font-size: var(--font-size-xs);
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-    .retention-stat-card__value {
-      font-size: var(--font-size-3xl);
-      font-weight: var(--font-weight-semibold);
-      line-height: var(--line-height-tight);
-      font-variant-numeric: tabular-nums;
-      color: var(--text-primary);
-    }
-    .retention-stat-card.brand .retention-stat-card__value { color: var(--color-brand-500) }
-    .retention-stat-card.success .retention-stat-card__value { color: var(--color-success) }
-    .retention-stat-card.warning .retention-stat-card__value { color: var(--color-warning) }
-    .retention-stat-card.danger .retention-stat-card__value { color: var(--color-danger) }
 
     /* ============ 区块标题 ============ */
     .section-header {
@@ -317,36 +272,7 @@
       </header>
 
       <!-- 1. 统计卡片区 -->
-      <div class="retention-stats" v-loading="statsLoading">
-        <div class="retention-stat-card brand">
-          <div class="retention-stat-card__icon">👥</div>
-          <div class="retention-stat-card__body">
-            <div class="retention-stat-card__label">会员总数</div>
-            <div class="retention-stat-card__value">{{ stats.totalCount || 0 }}</div>
-          </div>
-        </div>
-        <div class="retention-stat-card success">
-          <div class="retention-stat-card__icon">🟢</div>
-          <div class="retention-stat-card__body">
-            <div class="retention-stat-card__label">活跃会员</div>
-            <div class="retention-stat-card__value">{{ stats.activeCount || 0 }}</div>
-          </div>
-        </div>
-        <div class="retention-stat-card warning">
-          <div class="retention-stat-card__icon">🌙</div>
-          <div class="retention-stat-card__body">
-            <div class="retention-stat-card__label">沉睡会员</div>
-            <div class="retention-stat-card__value">{{ stats.dormantCount || 0 }}</div>
-          </div>
-        </div>
-        <div class="retention-stat-card danger">
-          <div class="retention-stat-card__icon">⚠️</div>
-          <div class="retention-stat-card__body">
-            <div class="retention-stat-card__label">流失会员</div>
-            <div class="retention-stat-card__value">{{ stats.churnedCount || 0 }}</div>
-          </div>
-        </div>
-      </div>
+      <stat-cards :cards="statsCards" :loading="statsLoading"></stat-cards>
 
       <!-- 2. 等级概览 + 积分排行 Top10 -->
       <div class="top-grid">
@@ -359,22 +285,22 @@
 
           <div class="level-stats" v-loading="levelLoading">
             <div class="level-stat gold">
-              <div class="level-stat__icon">🥇</div>
+              <div class="level-stat__icon"><i class="ri-medal-line" aria-hidden="true"></i></div>
               <div class="level-stat__value">{{ stats.goldCount || 0 }}</div>
               <div class="level-stat__label">黄金会员</div>
             </div>
             <div class="level-stat silver">
-              <div class="level-stat__icon">🥈</div>
+              <div class="level-stat__icon"><i class="ri-medal-2-line" aria-hidden="true"></i></div>
               <div class="level-stat__value">{{ stats.silverCount || 0 }}</div>
               <div class="level-stat__label">白银会员</div>
             </div>
             <div class="level-stat normal">
-              <div class="level-stat__icon">🥉</div>
+              <div class="level-stat__icon"><i class="ri-medal-line" aria-hidden="true"></i></div>
               <div class="level-stat__value">{{ stats.normalCount || 0 }}</div>
               <div class="level-stat__label">普通会员</div>
             </div>
             <div class="level-stat brand">
-              <div class="level-stat__icon">⭐</div>
+              <div class="level-stat__icon"><i class="ri-star-line" aria-hidden="true"></i></div>
               <div class="level-stat__value">{{ stats.avgPoints || 0 }}</div>
               <div class="level-stat__label">平均积分</div>
             </div>
@@ -448,7 +374,7 @@
           </el-table>
 
           <div v-if="rankingList.length === 0 && !rankingLoading" class="empty-state">
-            <div class="empty-state__icon">🏆</div>
+            <div class="empty-state__icon"><i class="ri-trophy-line" aria-hidden="true"></i></div>
             <div>暂无积分排行</div>
           </div>
         </el-card>
@@ -521,7 +447,7 @@
         </el-table>
 
         <div v-if="warningList.length === 0 && !warningLoading" class="empty-state">
-          <div class="empty-state__icon">🎉</div>
+          <div class="empty-state__icon"><i class="ri-cake-3-line" aria-hidden="true"></i></div>
           <div>暂无流失预警会员</div>
           <div class="empty-state__desc">所有会员均保持活跃，未出现超 30 天未下单情况</div>
         </div>
@@ -707,6 +633,15 @@
         }
       },
       computed: {
+        // 统一 stat-cards 组件
+        statsCards: function () {
+          return [
+            { key: 'total', icon: 'ri-group-line', label: '会员总数', value: this.stats.totalCount || 0, color: 'primary' },
+            { key: 'active', icon: 'ri-user-heart-line', label: '活跃会员', value: this.stats.activeCount || 0, color: 'success' },
+            { key: 'dormant', icon: 'ri-moon-line', label: '沉睡会员', value: this.stats.dormantCount || 0, color: 'warning' },
+            { key: 'churned', icon: 'ri-error-warning-line', label: '流失会员', value: this.stats.churnedCount || 0, color: 'danger' }
+          ]
+        },
         filteredMembers: function () {
           let list = this.memberList
           if (this.filterLevel !== 'ALL') {

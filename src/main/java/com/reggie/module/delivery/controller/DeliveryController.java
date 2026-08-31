@@ -42,7 +42,6 @@ import java.util.Map;
 @RequestMapping("/api/delivery")
 @Validated
 @Tag(name = "外卖平台对接")
-@RequireEmployee
 public class DeliveryController {
 
     @Autowired
@@ -56,6 +55,7 @@ public class DeliveryController {
      * @return 配送订单详情
      */
     @GetMapping("/orders/{id}")
+    @RequireEmployee
     @Operation(summary = "查询外卖订单详情", description = "根据主键ID查询配送订单完整信息")
     public R<DeliveryOrder> getOrderDetail(@PathVariable Long id) {
         DeliveryOrder order = deliveryService.getById(String.valueOf(id));
@@ -76,6 +76,7 @@ public class DeliveryController {
      * @return 分页结果
      */
     @GetMapping("/orders")
+    @RequireEmployee
     @Operation(summary = "分页查询外卖订单", description = "分页查询外卖平台订单，支持按平台、状态、时间范围筛选")
     public R<Page<DeliveryOrder>> pageOrders(
                         @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
@@ -96,6 +97,7 @@ public class DeliveryController {
      * @return 操作结果
      */
     @PostMapping("/accept")
+    @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "接单", description = "确认接单外卖订单（PENDING → ACCEPTED）")
     public R<String> acceptOrder(@Valid @RequestBody AcceptOrderDTO dto) {
@@ -111,6 +113,7 @@ public class DeliveryController {
      * @return 操作结果
      */
     @PutMapping("/status")
+    @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新配送状态", description = "更新配送订单状态，支持完整生命周期：接单->取餐->配送->送达->取消")
     public R<String> updateStatus(
@@ -129,6 +132,7 @@ public class DeliveryController {
      * @return 平台列表和状态选项
      */
     @GetMapping("/options")
+    @RequireEmployee
     @Operation(summary = "筛选选项", description = "返回平台列表和状态选项，供前端下拉框使用")
     public R<Map<String, Object>> getFilterOptions(
                         @Parameter(description = "外卖平台（可选）") @RequestParam(required = false) String platform) {
@@ -144,6 +148,7 @@ public class DeliveryController {
      * @return 配送统计数据
      */
     @GetMapping("/stats")
+    @RequireEmployee
     @Operation(summary = "配送统计", description = "获取今日订单数、各状态数量、金额汇总等配送统计数据")
     public R<Map<String, Object>> getStats(
                         @Parameter(description = "外卖平台（可选）") @RequestParam(required = false) String platform,
@@ -161,6 +166,7 @@ public class DeliveryController {
      * @return 操作结果
      */
     @PostMapping("/sync/menu")
+    @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "同步菜品", description = "同步菜单到外卖平台")
     public R<String> syncMenu(@Valid @RequestBody SyncMenuDTO dto) {
@@ -174,6 +180,7 @@ public class DeliveryController {
      * @return 操作结果
      */
     @PostMapping("/sync/stock")
+    @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "同步库存", description = "同步库存到外卖平台")
     public R<String> syncStock(@Valid @RequestBody SyncStockDTO dto) {

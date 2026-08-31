@@ -7,6 +7,8 @@
   <title>用户管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
@@ -165,7 +167,7 @@
             { prop: 'sex', label: '性别', width: 60, align: 'center', slot: true },
             { prop: 'idNumber', label: '身份证号', minWidth: 150 },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
-            { prop: 'createTime', label: '注册时间', width: 140, align: 'center' }
+            { prop: 'createTime', label: '注册时间', width: 160, align: 'center' }
           ],
           // 状态切换对话框
           statusDialog: {
@@ -190,9 +192,9 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: '', icon: '👥', label: '用户总数', value: self.stats.totalUsers || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
-            { key: '1', icon: '✅', label: '正常用户', value: self.stats.activeUsers || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
-            { key: '0', icon: '🚫', label: '已禁用', value: self.stats.disabledUsers || 0, color: 'warning', clickable: true, active: self.activeFilter === '0' },
+            { key: '', icon: 'ri-group-line', label: '用户总数', value: self.stats.totalUsers || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '1', icon: 'ri-checkbox-circle-line', label: '正常用户', value: self.stats.activeUsers || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
+            { key: '0', icon: 'ri-forbid-line', label: '已禁用', value: self.stats.disabledUsers || 0, color: 'warning', clickable: true, active: self.activeFilter === '0' },
             { key: 'new', icon: '🆕', label: '本月新增', value: self.stats.newUsersThisMonth || 0, color: 'danger' }
           ]
         }

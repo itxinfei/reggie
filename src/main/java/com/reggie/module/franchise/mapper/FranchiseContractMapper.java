@@ -1,8 +1,13 @@
 package com.reggie.module.franchise.mapper;
 
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.reggie.module.franchise.model.FranchiseContract;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.Map;
 
 /**
  * 加盟合同 Mapper
@@ -12,4 +17,21 @@ import org.apache.ibatis.annotations.Mapper;
  */
 @Mapper
 public interface FranchiseContractMapper extends BaseMapper<FranchiseContract> {
+
+    /**
+     * 合同统计（总数、生效、终止、关联加盟商数）
+     * <p>使用 SQL 聚合替代前端分页数据 filter 统计，避免跨页统计失真。
+     * 需 @InterceptorIgnore 绕开租户拦截器：租户过滤由本 SQL 显式 #{tenantId} 控制。</p>
+     *
+     * @param tenantId 总部租户ID
+     * @return 聚合结果：total/active/expired/franchiseeCount
+     */
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT "
+            + "COUNT(*) AS total, "
+            + "COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS active, "
+            + "COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS expired, "
+            + "COUNT(DISTINCT franchisee_id) AS franchiseeCount "
+            + "FROM franchise_contract WHERE tenant_id = #{tenantId} AND is_deleted = 0")
+    Map<String, Object> statContracts(@Param("tenantId") Long tenantId);
 }

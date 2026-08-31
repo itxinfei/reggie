@@ -49,4 +49,12 @@ public interface RefundRecordService extends IService<RefundRecord> {
      * @return 已退款总额
      */
     BigDecimal sumRefundedAmount(Long paymentOrderId);
+
+    /**
+     * 退款分析（当前租户）：总数/成功/退款中/失败 + 成功退款总额 + 退款原因 TOP5
+     *
+     * @param tenantId 租户ID（为空取当前上下文）
+     * @return 分析结果 Map
+     */
+    java.util.Map<String, Object> getRefundAnalysis(Long tenantId);
 }

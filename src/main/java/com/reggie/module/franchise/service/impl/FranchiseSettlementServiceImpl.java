@@ -209,6 +209,11 @@ public class FranchiseSettlementServiceImpl extends ServiceImpl<FranchiseSettlem
         return Integer.parseInt(String.valueOf(value));
     }
 
+    @Override
+    public Map<String, Object> statSettlements(Long tenantId) {
+        return this.baseMapper.statSettlements(tenantId);
+    }
+
     /**
      * 从聚合结果 Map 中取值，兼容列别名大小写。
      * H2 返回的列标签为大写（CNT/AMT），MySQL 返回原样（cnt/amt），

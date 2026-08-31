@@ -41,6 +41,7 @@ CREATE TABLE cost_record (
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
   create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  version int NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
   PRIMARY KEY (id)
 );
 

@@ -149,26 +149,6 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
     }
 
     @Override
-    public List<Map<String, Object>> getFoodCostByCategory(String startDate, String endDate, Long tenantId) {
-        List<Map<String, Object>> result = new ArrayList<>();
-
-        // This is a simplified implementation
-        // In real scenario, you would join with dish and category tables
-        Map<String, Object> costSummary = costService.getCostSummary(
-                LocalDate.parse(startDate), LocalDate.parse(endDate), tenantId);
-
-        Map<String, Object> item = new HashMap<>();
-        item.put("categoryName", "All Categories");
-        item.put("materialCost", costSummary.getOrDefault("materialCost", BigDecimal.ZERO));
-        item.put("laborCost", costSummary.getOrDefault("laborCost", BigDecimal.ZERO));
-        item.put("otherCost", costSummary.getOrDefault("otherCost", BigDecimal.ZERO));
-        item.put("totalCost", costSummary.getOrDefault("totalCost", BigDecimal.ZERO));
-        result.add(item);
-
-        return result;
-    }
-
-    @Override
     public List<Map<String, Object>> getFoodCostRanking(String startDate, String endDate, int limit, Long tenantId) {
         // Use dish cost ranking from cost service
         return costService.getDishCostRanking(limit, tenantId);

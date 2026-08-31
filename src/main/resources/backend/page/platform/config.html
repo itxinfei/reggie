@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>外卖平台对接 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/consistency.css" />
+  <!-- 修改点：补入 main.css 统一样式入口（原缺失导致 ds-page-header/dashboard-container/crud-table
+       等全局样式与响应式断点全部失效，页面布局与其余后台页不一致） -->
+  <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
@@ -114,7 +115,8 @@
           <el-form-item label="AccessToken">
             <el-input v-model="form.accessToken" placeholder="留空则不修改原值" maxlength="512"></el-input>
           </el-form-item>
-        </el-row>
+        </el-col><!-- 修改点：补回漏写的 </el-col>（原缺失导致 el-row 栅格结构错乱、表单错位） -->
+      </el-row>
       <el-form-item label="AppSecret">
         <el-input v-model="form.appSecret" type="password" placeholder="留空则不修改原值" maxlength="512"></el-input>
       </el-form-item>
@@ -153,6 +155,10 @@
     mixins: [window.ReggieListMixin],
     data() {
       return {
+        // 修改点：补声明 tableData —— ReggieListMixin 只提供 page/pageSize/counts/loading，
+        // 不含 tableData；此前模板与 statsCards 计算属性直接访问 this.tableData.filter(...)，
+        // 首次渲染时为 undefined 触发 TypeError，导致整页渲染失败（白屏）
+        tableData: [],
         // 修改点：列配置（供 <crud-table> 使用，对齐走 resolveColAlign 单一来源）
         columns: [
           { prop: 'platformName', label: '平台名称', minWidth: 160, align: 'center' },
@@ -275,7 +281,9 @@
       },
       // 修改点：提交（新增/更新统一入口）
       async submit() {
-        this.$refs.formRef.validate((valid) => {
+        // 修改点：validate 回调内使用了 await，回调本身必须是 async
+        // （原写法整页 JS 解析失败 -> 页面白屏）
+        this.$refs.formRef.validate(async (valid) => {
           if (!valid) return
           const payload = Object.assign({}, this.form, {
             syncScope: this.scopeBitsModel.reduce(function (a, b) { return a + Number(b) }, 0)

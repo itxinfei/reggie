@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,6 +29,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Max;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 加盟商管理
@@ -143,5 +143,15 @@ public class FranchiseeController {
         qw.orderByDesc(Franchisee::getCreateTime);
         franchiseeService.page(pageInfo, qw);
         return R.success(pageInfo);
+    }
+
+    @GetMapping("/stats")
+    @Operation(summary = "加盟商统计", description = "返回总数/启用/禁用/关联合同数，按当前租户聚合")
+    public R<Map<String, Object>> stats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        return R.success(franchiseeService.statFranchisees(tenantId));
     }
 }

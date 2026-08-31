@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>平台订单 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/consistency.css" />
+  <!-- 修改点：补入 main.css 统一样式入口（原缺失导致全局样式与响应式断点失效） -->
+  <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
@@ -197,6 +197,10 @@
     mixins: [window.ReggieListMixin],
     data() {
       return {
+        // 修改点：补声明 tableData —— ReggieListMixin 只提供 page/pageSize/counts/loading，
+        // 不含 tableData；此前模板与 statsCards 计算属性直接访问 this.tableData.filter(...)，
+        // 首次渲染时为 undefined 触发 TypeError，导致整页渲染失败（白屏）
+        tableData: [],
         // 修改点：筛选条件
         filters: { platformType: '', status: '', platformOrderId: '' },
         // 修改点：列配置（对齐走 resolveColAlign 单一来源，金额右对齐）

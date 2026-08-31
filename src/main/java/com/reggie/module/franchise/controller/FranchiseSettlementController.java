@@ -7,7 +7,6 @@ import com.reggie.common.R;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.annotation.RequiresPermission;
-import com.reggie.common.utils.PageUtils;
 import com.reggie.module.franchise.model.FranchiseSettlement;
 import com.reggie.module.franchise.service.FranchiseSettlementService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,7 +14,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -89,5 +87,15 @@ public class FranchiseSettlementController {
             @Parameter(description = "状态：0待确认 1已确认 2已结算") @RequestParam(required = false) Integer status,
             @Parameter(description = "加盟商ID") @RequestParam(required = false) Long franchiseeId) {
         return R.success(franchiseSettlementService.pageQuery(page, pageSize, settlePeriod, status, franchiseeId));
+    }
+
+    @GetMapping("/stats")
+    @Operation(summary = "结算单统计", description = "返回总数/待确认/已确认/已结算，按当前租户聚合")
+    public R<java.util.Map<String, Object>> stats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        return R.success(franchiseSettlementService.statSettlements(tenantId));
     }
 }

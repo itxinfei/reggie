@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>操作日志 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
@@ -130,10 +132,10 @@
         statsCards: function() {
           const self = this
           return [
-            { key: '', icon: '📋', label: '今日操作', value: self.stats.todayCount || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
-            { key: 'total', icon: '📊', label: '累计操作', value: self.stats.totalCount || 0, color: 'success', clickable: true, active: self.activeFilter === 'total' },
-            { key: 'success', icon: '✅', label: '操作成功', value: self.stats.successCount || 0, color: 'info', clickable: true, active: self.activeFilter === 'success' },
-            { key: 'error', icon: '❌', label: '操作失败', value: self.stats.errorCount || 0, color: 'danger', clickable: true, active: self.activeFilter === 'error' }
+            { key: '', icon: 'ri-file-list-3-line', label: '今日操作', value: self.stats.todayCount || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'total', icon: 'ri-bar-chart-2-line', label: '累计操作', value: self.stats.totalCount || 0, color: 'success', clickable: true, active: self.activeFilter === 'total' },
+            { key: 'success', icon: 'ri-checkbox-circle-line', label: '操作成功', value: self.stats.successCount || 0, color: 'info', clickable: true, active: self.activeFilter === 'success' },
+            { key: 'error', icon: 'ri-close-circle-line', label: '操作失败', value: self.stats.errorCount || 0, color: 'danger', clickable: true, active: self.activeFilter === 'error' }
           ]
         }
       },
@@ -219,6 +221,7 @@
         },
         onSizeChange(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
           this.init(false)
         },
         opTypeTag(type) {

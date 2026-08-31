@@ -66,7 +66,7 @@ public class Orders implements Serializable {
     @Schema(description = "结账时间", example = "2024-01-01 13:00:00")
     private LocalDateTime checkoutTime;
 
-    @Schema(description = "支付方式：1=现金，2=微信，3=支付宝，4=银行卡，5=会员储值", example = "1")
+    @Schema(description = "支付方式：1=现金，2=微信，3=支付宝，4=银行卡，5=会员储值，6=货到付款", example = "1")
     private Integer payMethod;
 
     @Schema(description = "实收金额", example = "88.00", required = true)

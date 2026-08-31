@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>食材管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
@@ -137,6 +139,10 @@
         </el-table-column>
         <el-table-column prop="minStock" label="最低库存" width="100" align="center"></el-table-column>
       </el-table>
+      <template #footer>
+        <el-button size="medium" @click="warningDialogVisible = false">关 闭</el-button>
+        <el-button type="primary" size="medium" icon="el-icon-shopping-cart-2" @click="goReplenish">一键转补货单</el-button>
+      </template>
     </crud-dialog>
   </div>
     <script src="../../plugins/vue/vue.js"></script>
@@ -166,7 +172,7 @@
               { prop: 'unit', label: '单位', width: 60, align: 'center' },
               { prop: 'stockQty', label: '库存', width: 80, slot: true, type: 'number' },
               { prop: 'minStock', label: '最低库存', width: 80, type: 'number' },
-              { prop: 'unitPrice', label: '单价', width: 80, align: 'right', slot: true, type: 'money' },
+              { prop: 'unitPrice', label: '单价', width: 110, align: 'right', slot: true, type: 'money' },
               { prop: 'supplierName', label: '供应商', width: 100, align: 'center' },
               { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
             ],
@@ -228,10 +234,10 @@
           statsCards: function() {
             const self = this;
             return [
-              { key: '', icon: '🥬', label: '食材总数', value: self.stats.totalMaterials || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
-              { key: '1', icon: '✅', label: '启用中', value: self.stats.activeMaterials || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
-              { key: 'low', icon: '⚠️', label: '库存预警', value: self.stats.lowStockMaterials || 0, color: 'warning', clickable: true, active: self.activeFilter === 'low' },
-              { key: 'categories', icon: '📦', label: '分类数量', value: self.stats.totalCategories || 0, color: 'danger' }
+              { key: '', icon: 'ri-leaf-line', label: '食材总数', value: self.stats.totalMaterials || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+              { key: '1', icon: 'ri-checkbox-circle-line', label: '启用中', value: self.stats.activeMaterials || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
+              { key: 'low', icon: 'ri-error-warning-line', label: '库存预警', value: self.stats.lowStockMaterials || 0, color: 'warning', clickable: true, active: self.activeFilter === 'low' },
+              { key: 'categories', icon: 'ri-box-3-line', label: '分类数量', value: self.stats.totalCategories || 0, color: 'danger' }
             ]
           }
         },
@@ -427,6 +433,11 @@
             }).catch(err => {
               ReggieUI.error('请求失败：' + err)
             })
+          },
+          // 修改点：8.3.1 一键转采购 —— 跳转智能补货页生成补货单
+          goReplenish() {
+            this.warningDialogVisible = false
+            window.location.href = 'material-warning.html'
           },
           async submitForm() {
             if (this.submitting) return // 提交防重

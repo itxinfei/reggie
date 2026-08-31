@@ -6,11 +6,14 @@ import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.printer.adapter.WindowsSystemPrinterAdapter;
 import com.reggie.module.printer.core.PrinterTemplate;
+import com.reggie.module.printer.mapper.PrintTaskMapper;
+import com.reggie.module.printer.mapper.PrintTerminalMapper;
 import com.reggie.module.printer.model.PrintJob;
 import com.reggie.module.printer.model.PrintLine;
+import com.reggie.module.printer.model.PrintTask;
+import com.reggie.module.printer.model.PrintTerminal;
 import com.reggie.module.printer.model.PrinterConfig;
 import com.reggie.module.printer.model.PrinterStatus;
-import com.reggie.module.printer.service.PrinterConfigService;
 import com.reggie.module.printer.service.PrinterService;
 import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.order.service.OrderService;
@@ -43,13 +46,16 @@ public class PrinterServiceTest {
     private PrinterService printerService;
 
     @Autowired
-    private PrinterConfigService printerConfigService;
-
-    @Autowired
     private OrderService orderService;
 
     @Autowired
     private OrderDetailService orderDetailService;
+
+    @Autowired
+    private PrintTerminalMapper printTerminalMapper;
+
+    @Autowired
+    private PrintTaskMapper printTaskMapper;
 
     @Autowired
     private WindowsSystemPrinterAdapter windowsSystemPrinterAdapter;
@@ -62,7 +68,8 @@ public class PrinterServiceTest {
 
     @BeforeEach
     void setUp() {
-        cleaner.cleanTables("order_detail", "orders", "printer_log", "printer_template", "printer_config");
+        cleaner.cleanTables("order_detail", "orders", "print_task", "print_terminal", "printer_log",
+                "printer_template", "printer_config");
         BaseContext.setCurrentTenantId(1L);
         testOrder = new Orders();
         testOrder.setId(100L);
@@ -157,22 +164,68 @@ public class PrinterServiceTest {
     }
 
     @Test
+    void testPlatformDeliveryTemplate() {
+        // 平台外卖单：输出平台名称/平台单号/顾客/电话/备注
+        testOrder.setPlatformType("MEITUAN");
+        testOrder.setPlatformOrderId("MT202608240001");
+        testOrder.setUserName("张三");
+        PrintJob job = printerTemplate.delivery(testOrder, testDetails);
+
+        assertNotNull(job);
+        assertEquals("DELIVERY", job.getPrintType());
+
+        String joined = job.getLines().stream()
+                .map(PrintLine::getText)
+                .filter(t -> t != null)
+                .reduce("", (a, b) -> a + "\n" + b);
+        assertTrue(joined.contains("美团"), "应输出平台中文名: " + joined);
+        assertTrue(joined.contains("MT202608240001"), "应输出平台单号: " + joined);
+        assertTrue(joined.contains("顾客: 张三"), "应输出顾客信息: " + joined);
+        assertTrue(joined.contains("电话: 13800138000"), "应输出顾客电话: " + joined);
+        assertTrue(joined.contains("备注: 少放辣"), "应输出订单备注: " + joined);
+        assertTrue(joined.contains("合计"), "应输出合计: " + joined);
+    }
+
+    @Test
     void testPrintOrder() {
         for (OrderDetail d : testDetails) {
             orderDetailService.save(d);
         }
 
-        PrinterConfig printer = new PrinterConfig();
-        printer.setTenantId(1L);
-        printer.setName("测试打印机");
-        printer.setType("USB");
-        printer.setBrand("GPRINTER");
-        printer.setDeviceId("SN001");
-        printer.setPrintType("BILL");
-        printer.setStatus(1);
-        printerConfigService.save(printer);
+        // 门店 PC 打印代理终端（新模型：订单打印任务入队到终端）
+        PrintTerminal terminal = new PrintTerminal();
+        terminal.setTenantId(1L);
+        terminal.setStoreCode("S0001");
+        terminal.setTerminalCode("T-TEST-001");
+        terminal.setToken("test-token");
+        terminal.setName("测试终端");
+        terminal.setPrinterName("TEST_PRINTER");
+        terminal.setPaperSize("80mm");
+        terminal.setPrintTypes("BILL");
+        terminal.setClientVersion("1.0.0");
+        terminal.setStatus(1);
+        terminal.setCreatedTime(LocalDateTime.now());
+        terminal.setUpdateTime(LocalDateTime.now());
+        printTerminalMapper.insertIgnoreTenant(terminal);
 
         printerService.printOrder(testOrder.getId(), "BILL");
+
+        // 断言：任务已入队（PENDING），内容为小票模板
+        List<PrintTask> tasks = printTaskMapper.listPending(terminal.getId(), 10);
+        assertEquals(1, tasks.size());
+        assertEquals("BILL", tasks.get(0).getTaskType());
+        assertEquals("PENDING", tasks.get(0).getStatus());
+        assertTrue(tasks.get(0).getContent() != null && tasks.get(0).getContent().contains("收银小票"));
+    }
+
+    @Test
+    void testPrintOrderNoTerminal() {
+        for (OrderDetail d : testDetails) {
+            orderDetailService.save(d);
+        }
+        // 无启用终端：打印任务不派发且不抛异常（不影响下单流程）
+        printerService.printOrder(testOrder.getId(), "BILL");
+        assertEquals(0, printTaskMapper.listPending(999L, 10).size());
     }
 
     @Test

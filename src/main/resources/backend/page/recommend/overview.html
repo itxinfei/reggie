@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智能推荐概览 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
     <script src="../../plugins/echarts/echarts.min.js"></script>
@@ -34,7 +36,7 @@
         .rank-badge { position: absolute; top: 0; left: 0; padding: 2px 8px; font-size: var(--font-size-xs); font-weight: 700;
             border-radius: var(--radius-sm) 0 var(--radius-md) 0; z-index: 1; }
         .rank-badge.r1 { background: var(--color-danger); color: var(--bg-surface); }
-        .rank-badge.r2 { background: var(--color-brand-500); color: var(--bg-surface); }
+        .rank-badge.r2 { background: var(--color-brand-500); color: var(--text-on-brand); }
         .rank-badge.r3 { background: var(--color-warning); color: var(--bg-surface); }
 
         .loading-wrap { text-align: center; padding: 60px 0; }
@@ -126,7 +128,7 @@
                     <div class="dish-name">{{ dish.name }}</div>
                     <div class="dish-price">¥{{ formatPrice(dish.price) }}</div>
                     <div class="dish-desc">{{ dish.description || '暂无描述' }}</div>
-                    <div class="dish-sales" v-if="dish.salesCount">📈 销量 {{ dish.salesCount }} 份</div>
+                    <div class="dish-sales" v-if="dish.salesCount"><i class="ri-line-chart-line" aria-hidden="true"></i> 销量 {{ dish.salesCount }} 份</div>
                 </div>
             </div>
         </div>
@@ -174,10 +176,10 @@
         statsCards() {
             const self = this;
             return [
-                { key: '覆盖率', icon: '🎯', label: '推荐覆盖率', value: (self.stats.hybridRate != null ? self.stats.hybridRate + '%' : '--'), color: 'primary' },
-                { key: 'CTR', icon: '👆', label: '推荐点击率 (CTR)', value: (self.stats.clickRate != null ? self.stats.clickRate + '%' : '--'), color: 'success' },
-                { key: '转化率', icon: '🔄', label: '推荐转化率', value: (self.stats.conversionRate != null ? self.stats.conversionRate + '%' : '--'), color: 'warning' },
-                { key: 'GMV', icon: '💰', label: '推荐贡献GMV', value: '¥' + self.formatValue(self.stats.recommendGMV), color: 'info' }
+                { key: '覆盖率', icon: 'ri-focus-3-line', label: '推荐覆盖率', value: (self.stats.hybridRate != null ? self.stats.hybridRate + '%' : '--'), color: 'primary' },
+                { key: 'CTR', icon: 'ri-cursor-line', label: '推荐点击率 (CTR)', value: (self.stats.clickRate != null ? self.stats.clickRate + '%' : '--'), color: 'success' },
+                { key: '转化率', icon: 'ri-refresh-line', label: '推荐转化率', value: (self.stats.conversionRate != null ? self.stats.conversionRate + '%' : '--'), color: 'warning' },
+                { key: 'GMV', icon: 'ri-money-cny-circle-line', label: '推荐贡献GMV', value: '¥' + self.formatValue(self.stats.recommendGMV), color: 'info' }
             ]
         }
     },

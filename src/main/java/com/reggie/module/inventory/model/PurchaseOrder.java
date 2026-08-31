@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
@@ -66,4 +67,14 @@ public class PurchaseOrder implements Serializable {
     @Schema(description = "逻辑删除：0=未删除，1=已删除")
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
+
+    /**
+     * 乐观锁版本号：保护 status（状态机流转）与 totalAmount（金额）的并发更新。
+     * 采购单审核/取消/完成等状态流转场景必须走 MP 的 updateById/update(entity, wrapper) 携带 version 条件，
+     * 防止并发审核/取消导致状态跳变或总金额漂移。
+     * 数据库列 version 默认值 0，由 OptimisticLockerInnerInterceptor 在 update 时自动 +1。
+     */
+    @Version
+    @Schema(description = "乐观锁版本号", example = "0")
+    private Integer version;
 }

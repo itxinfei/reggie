@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>时段分析 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
@@ -68,7 +70,7 @@
 
 
       <!-- ========== 时段分布图表 ========== -->
-      <chart-panel title="📊 时段订单与营业额分布">
+      <chart-panel title="时段订单与营业额分布" icon="ri-bar-chart-2-line">
         <div class="charts-row">
           <div id="barChart" class="chart-box"></div>
           <div id="pieChart" class="chart-box"></div>
@@ -76,7 +78,7 @@
       </chart-panel>
 
       <!-- ========== 工作日×时段热力图 ========== -->
-      <chart-panel title="🗺 工作日 × 时段 客流量热力图">
+      <chart-panel title="工作日 × 时段 客流量热力图" icon="ri-map-2-line">
         <div id="heatmapChart" style="width:100%;height:420px;min-height:320px;"></div>
       </chart-panel>
 
@@ -146,10 +148,10 @@
           statsCards: function() {
             const self = this;
             return [
-              { key: '时段', icon: '🕐', label: '时段数量', value: self.tableData.length || 0, color: 'primary' },
-              { key: '订单', icon: '📋', label: '总订单数', value: self.totalCount, color: 'success' },
-              { key: '营业额', icon: '💰', label: '总营业额（元）', value: '¥' + self.formatMoney(self.totalAmount), color: 'warning' },
-              { key: '高峰', icon: '🔥', label: '高峰时段', value: self.peakSlot, color: 'info' }
+              { key: '时段', icon: 'ri-time-line', label: '时段数量', value: self.tableData.length || 0, color: 'primary' },
+              { key: '订单', icon: 'ri-file-list-3-line', label: '总订单数', value: self.totalCount, color: 'success' },
+              { key: '营业额', icon: 'ri-money-cny-circle-line', label: '总营业额（元）', value: '¥' + self.formatMoney(self.totalAmount), color: 'warning' },
+              { key: '高峰', icon: 'ri-fire-line', label: '高峰时段', value: self.peakSlot, color: 'info' }
             ]
           }
         },
@@ -292,7 +294,8 @@
                 backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
                 textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                 formatter: function(ps) {
-                  const h = '<b>' + ps[0].axisValue + '</b><br/>';
+                  // 修改点：h 需累加拼接，声明为 const 会抛 "Assignment to constant variable"（悬停图表即崩溃）
+                  let h = '<b>' + ps[0].axisValue + '</b><br/>';
                   ps.forEach(function(p) {
                     const v = p.seriesName === '营业额' ? '¥' + Number(p.value).toFixed(2) : p.value + ' 单';
                     h += p.marker + ' ' + p.seriesName + '：<b>' + v + '</b><br/>';

@@ -55,4 +55,12 @@
           AND create_time &gt;= #{weekStart}
     </select>
 
+    <select id="countTodayProcessed" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM urgency_record
+        WHERE tenant_id = #{tenantId}
+          AND status = 'PROCESSED'
+          AND DATE(create_time) = #{date}
+    </select>
+
 </mapper>

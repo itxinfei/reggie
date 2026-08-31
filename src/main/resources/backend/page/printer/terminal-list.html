@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>打印终端 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="printer-terminal-app">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+      <!-- 页头：标题 + 副标题 -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">打印终端</h1>
+          <p class="ds-page-header__subtitle">门店 PC 打印代理管理，终端自动注册，启用后接收打印任务</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
+      <!-- 数据统计卡片 -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+      <!-- 筛选 + 操作 -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @search="search"
+        @reset="reset"
+        @action="onTableAction">
+        <template slot="search-extra">
+          <el-input v-model="query.name" placeholder="终端名称" class="el-select--narrow-xs" clearable size="small"
+            @keyup.enter.native="search"></el-input>
+          <el-input v-model="query.code" placeholder="终端编码" class="el-select--narrow-xs" clearable size="small"
+            @keyup.enter.native="search"></el-input>
+          <el-input v-model="query.storeCode" placeholder="门店编码" class="el-select--narrow-xs" clearable size="small"
+            @keyup.enter.native="search"></el-input>
+          <el-select v-model="query.status" placeholder="状态" class="el-select--narrow-xxs" clearable size="small"
+            @change="search">
+            <el-option label="启用" :value="1"></el-option>
+            <el-option label="停用" :value="0"></el-option>
+          </el-select>
+        </template>
+      </table-bar>
+      <!-- 终端列表 -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :page-sizes="[10, 20, 30]"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="200"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-printTypes="{ row }">
+          <el-tag v-for="(t, i) in getPrintTypeTags(row.printTypes)" :key="i"
+            size="mini" :type="t.type" style="margin-right:4px;">{{ t.label }}</el-tag>
+        </template>
+        <template #col-online="{ row }">
+          <el-tag :type="isOnline(row) ? 'success' : 'info'">
+            {{ isOnline(row) ? '在线' : '离线' }}
+          </el-tag>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'info'">
+            {{ row.status === 1 ? '启用' : '停用' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="handleTest(row)">测试打印</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="handleStatus(row)">
+            {{ row.status === 1 ? '停用' : '启用' }}
+          </el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../api/printer.js"></script>
+  <script src="../../js/components.js"></script>
+  <script>
+    new Vue({
+      el: '#printer-terminal-app',
+      mixins: [window.ReggieListMixin],
+      data() {
+        return {
+          loading: false,
+          query: {
+            name: '',
+            code: '',
+            storeCode: '',
+            status: ''
+          },
+          counts: 0,
+          tableData: [],
+          tableSearchItems: [],
+          tableActions: [
+            { key: 'refresh', text: '刷新', type: 'primary', icon: 'el-icon-refresh' }
+          ],
+          columns: [
+            { prop: 'name', label: '终端名称', minWidth: 120 },
+            { prop: 'terminalCode', label: '终端编码', minWidth: 180 },
+            { prop: 'storeCode', label: '门店编码', width: 100, align: 'center' },
+            { prop: 'printerName', label: '本地打印机', minWidth: 140 },
+            { prop: 'paperSize', label: '纸张', width: 70, align: 'center' },
+            { prop: 'printTypes', label: '打印类型', width: 130, slot: true },
+            { prop: 'online', label: '在线状态', width: 90, align: 'center', slot: true },
+            { prop: 'status', label: '启用状态', width: 90, align: 'center', slot: true },
+            { prop: 'lastHeartbeat', label: '最近心跳', width: 160, align: 'center' }
+          ],
+          stats: {
+            total: 0,
+            online: 0,
+            enabled: 0,
+            disabled: 0
+          },
+          activeFilter: ''
+        }
+      },
+      created() {
+        this.fetchData(true)
+      },
+      computed: {
+        statsCards() {
+          const self = this
+          return [
+            { key: '', icon: 'ri-printer-line', label: '终端总数', value: self.stats.total || 0, color: 'primary', clickable: true },
+            { key: 'online', icon: 'ri-wifi-line', label: '在线', value: self.stats.online || 0, color: 'success', clickable: false },
+            { key: '1', icon: 'ri-checkbox-circle-line', label: '已启用', value: self.stats.enabled || 0, color: 'success', clickable: true },
+            { key: '0', icon: 'ri-pause-circle-line', label: '已停用', value: self.stats.disabled || 0, color: 'danger', clickable: true }
+          ]
+        }
+      },
+      methods: {
+        isOnline(row) {
+          if (!row.lastHeartbeat) return false
+          const t = new Date(String(row.lastHeartbeat).replace(' ', 'T'))
+          if (isNaN(t.getTime())) return false
+          return (Date.now() - t.getTime()) < 2 * 60 * 1000
+        },
+        async fetchData(reloadStats = true) {
+          const params = {
+            page: this.page,
+            pageSize: this.pageSize,
+            name: this.query.name || undefined,
+            code: this.query.code || undefined,
+            storeCode: this.query.storeCode || undefined,
+            status: this.query.status !== '' ? this.query.status : undefined
+          }
+          const requests = [printerTerminalPage(params)]
+          if (reloadStats) { requests.push(this.loadStats()) }
+          const results = await Promise.all(requests)
+          const res = results[0]
+          if (String(res.code) === '1') {
+            this.tableData = res.data.records || []
+            this.counts = res.data.total
+          } else {
+            ReggieUI.error(res.msg || '操作失败')
+          }
+          if (reloadStats) {
+            const statsRes = results[1]
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
+            }
+          }
+        },
+        async loadStats() {
+          try {
+            const res = await printerTerminalStats()
+            if (String(res.code) === '1' && res.data) {
+              const d = res.data
+              return {
+                code: 1,
+                data: {
+                  total: Number(d.total) || 0,
+                  online: Number(d.online) || 0,
+                  enabled: Number(d.enabled) || 0,
+                  disabled: Number(d.disabled) || 0
+                }
+              }
+            }
+          } catch (err) {
+            console.warn('加载打印终端统计失败:', err)
+          }
+          return { code: 0 }
+        },
+        search() {
+          this.activeFilter = ''
+          this.page = 1
+          this.fetchData(false)
+        },
+        onCardClick(payload) {
+          const key = payload.activeKey
+          this.activeFilter = key
+          if (key === 'online') {
+            // 在线为统计维度，无法直接筛选，清空其它筛选后展示全部
+            this.query.name = ''
+            this.query.code = ''
+            this.query.storeCode = ''
+            this.query.status = ''
+          } else {
+            this.query.status = key === '' ? '' : Number(key)
+          }
+          this.page = 1
+          this.fetchData(false)
+        },
+        reset() {
+          this.query.name = ''
+          this.query.code = ''
+          this.query.storeCode = ''
+          this.query.status = ''
+          this.search()
+        },
+        onTableAction(payload) {
+          if (payload.key === 'refresh') { this.fetchData(true) }
+        },
+        handleTest(row) {
+          ReggieUI.confirm('将向该终端派发一条测试打印任务，确认继续？', '测试打印', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'info'
+          }).then(() => {
+            printerTerminalTest(row.id).then(res => {
+              if (res.code === 1) {
+                ReggieUI.success('测试任务已派发，请留意终端打印机输出')
+              } else {
+                ReggieUI.error(res.msg || '测试打印失败')
+              }
+            }).catch(err => {
+              ReggieUI.error('请求失败：' + err)
+            })
+          })
+        },
+        handleStatus(row) {
+          const target = row.status === 1 ? 0 : 1
+          const tip = target === 1 ? '启用后该终端将接收打印任务，确认启用？' : '停用后该终端不再接收打印任务，确认停用？'
+          ReggieUI.confirm(tip, '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            printerTerminalStatus(row.id, target).then(res => {
+              if (res.code === 1) {
+                ReggieUI.success(target === 1 ? '已启用' : '已停用')
+                this.search()
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(err => {
+              ReggieUI.error('请求失败：' + err)
+            })
+          })
+        },
+        handleDelete(row) {
+          if (row.status === 1) {
+            ReggieUI.warning('请先停用该终端再删除')
+            return
+          }
+          ReggieUI.confirm('删除后终端需重新注册才能接入，确认删除该终端？', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            printerTerminalDelete(row.id).then(res => {
+              if (res.code === 1) {
+                ReggieUI.success('删除成功！')
+                this.search()
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(err => {
+              ReggieUI.error('请求失败：' + err)
+            })
+          })
+        },
+        getPrintTypeTags(printTypes) {
+          if (!printTypes) return []
+          const MAP = {
+            'BILL': { label: '小票', type: 'success' },
+            'KITCHEN': { label: '厨房', type: 'warning' },
+            'DELIVERY': { label: '配送', type: 'primary' },
+            'TEST': { label: '测试', type: 'info' }
+          }
+          return printTypes.split(',').map(t => MAP[t.trim()] || { label: t, type: 'info' })
+        }
+      }
+    })
+  </script>
+</body>
+</html>

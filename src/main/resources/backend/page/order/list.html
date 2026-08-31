@@ -6,9 +6,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>订单明细 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
-  
+
+  <style lang="less" scoped>
+    /* 修改点：键盘快捷键提示（header 操作区） */
+    .ds-kbd-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--el-text-secondary);
+      background: var(--el-bg-subtle);
+      border: 1px solid var(--el-border-color);
+      border-radius: 4px;
+      padding: 4px 10px;
+    }
+  </style>
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -22,7 +39,11 @@
           <h1 class="ds-page-header__title" id="page-title">订单管理</h1>
           <p class="ds-page-header__subtitle">查看和管理所有订单</p>
         </div>
-        <div class="ds-page-header__actions"></div>
+        <div class="ds-page-header__actions">
+          <span class="ds-kbd-hint" title="Enter 接单 / F 完成（作用于当前高亮行）">
+            <i class="el-icon-key"></i>&nbsp;Enter 接单 · F 完成
+          </span>
+        </div>
       </header>
 
       <!-- 数据统计卡片 -->
@@ -56,12 +77,13 @@
         :actions-width="200"
         @page-change="onPageChange"
         @size-change="onSizeChange"
+        @row-click="onRowClick"
       >
         <template #col-status="{ row }">
           <el-tag :type="getOrderTagType(row)" size="small">{{ getOrderType(row) }}</el-tag>
         </template>
         <template #col-payMethod="{ row }">
-          {{ row.payMethod == 1 ? '微信支付' : row.payMethod == 2 ? '支付宝' : '-' }}
+          {{ payMethodText(row.payMethod) }}
         </template>
         <template #col-source="{ row }">
           {{ formatDiningType(row.source) }}
@@ -161,7 +183,7 @@
 
             <div class="od-card">
               <div class="od-card-title">订单信息</div>
-              <div class="od-kv"><span>支付方式</span><span>{{ diaForm.payMethod ? (diaForm.payMethod == 1 ? '微信支付' : '支付宝') : '-' }}</span></div>
+              <div class="od-kv"><span>支付方式</span><span>{{ payMethodText(diaForm.payMethod) }}</span></div>
               <div class="od-kv"><span>就餐方式</span><span>{{ formatDiningType(diaForm.source) }}</span></div>
               <div class="od-kv" v-if="diaForm.tableName"><span>桌台</span><span>{{ diaForm.tableName }}</span></div>
               <div class="od-kv"><span>下单时间</span><span>{{ diaForm.orderTime || '-' }}</span></div>
@@ -195,6 +217,10 @@
           <el-input v-model="refundForm.amount" type="number" size="small" :max="refundForm.maxAmount" :min="0.01" :step="0.01"></el-input>
         </div>
         <div class="item-box">
+          <span class="label">可退上限：</span>
+          <span class="des des-danger">￥{{ refundForm.maxAmount }}</span>
+        </div>
+        <div class="item-box">
           <span class="label">退款原因：</span>
           <el-select v-model="refundForm.reasonType" size="small">
             <el-option label="口味问题" value="口味问题"></el-option>
@@ -221,9 +247,16 @@
   <script src="../../js/components.js"></script>
   <script src="../../api/order.js"></script>
   <script src="../../api/payment.js"></script>
-  <script src="../../api/dashboard.js"></script>
   <script src="../../api/export.js"></script>
+  <script src="../../api/meta.js"></script>
   <script>
+    // 订单状态兜底常量（与后端 com.reggie.enums.OrderStatus 严格一致，1 基）
+    // 仅在 /api/meta/enums 不可用时使用，保证任何情况下显示都不会出错
+    var ORDER_STATUS_FALLBACK = {
+      '1': '待付款', '2': '待接单', '3': '配送中',
+      '4': '已完成', '5': '已取消', '6': '已退款'
+    }
+
     new Vue({
       el: '#order-app',
       data: function() {
@@ -233,9 +266,11 @@
           page: 1,
           pageSize: 10,
           tableData: [],
-          // 统计数据
-          stats: { todayOrders: 0, todayRevenue: 0, pendingOrders: 0, totalOrders: 0 },
+          // 统计数据（修改点：改走 /order/statistics，含分状态计数）
+          stats: { todayRevenue: 0, pendingOrders: 0, deliveringOrders: 0, totalOrders: 0 },
           activeFilter: '',
+          // 当前高亮行（键盘快捷键 Enter 接单 / F 完成 的操作目标）
+          currentOrder: null,
           // 搜索配置
           searchConfig: [
             { type: 'input', field: 'number', placeholder: '请输入订单号', width: '200px' },
@@ -253,14 +288,17 @@
             { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
             { prop: 'userName', label: '用户', width: 80, align: 'center' },
             { prop: 'phone', label: '手机号', width: 110, align: 'center' },
-            { prop: 'amount', label: '金额', slot: true, width: 80, align: 'right', type: 'money' },
+            { prop: 'amount', label: '金额', slot: true, width: 110, align: 'right', type: 'money' },
             { prop: 'payMethod', label: '支付', width: 70, align: 'center', slot: true },
             { prop: 'source', label: '就餐', width: 70, align: 'center', slot: true },
             { prop: 'tableName', label: '桌台', width: 60, align: 'center' },
-            { prop: 'orderTime', label: '下单时间', width: 140, align: 'center' }
+            { prop: 'orderTime', label: '下单时间', width: 160, align: 'center' },
           ],
           // 缓存搜索参数
           lastSearch: {},
+          // 修改点：枚举字典（订单状态等），由后端 /api/meta/enums 下发；
+          // 下方 ORDER_STATUS_FALLBACK 为兜底常量，接口失败时仍能正确显示
+          enums: {},
           // 弹窗数据
           dialogVisible: false,
           diaForm: {},
@@ -273,10 +311,10 @@
         statsCards: function() {
           const self = this
           return [
-            { key: 'today', icon: '📋', label: '今日订单数', value: self.stats.todayOrders, color: 'primary' },
-            { key: 'revenue', icon: '💰', label: '今日营业额 (元)', value: self.formatMoney(self.stats.todayRevenue), color: 'success' },
-            { key: 'pending', icon: '⏳', label: '待处理订单', value: self.stats.pendingOrders, color: 'warning', clickable: true, active: self.activeFilter === 'pending' },
-            { key: 'all', icon: '📊', label: '总订单数', value: self.stats.totalOrders, color: 'danger', clickable: true, active: self.activeFilter === 'all' }
+            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '今日营业额 (元)', value: self.formatMoney(self.stats.todayRevenue), color: 'success' },
+            { key: 'pending', icon: 'ri-time-line', label: '待接单', value: self.stats.pendingOrders, color: 'warning', clickable: true, active: self.activeFilter === 'pending' },
+            { key: 'delivering', icon: 'ri-truck-line', label: '配送中', value: self.stats.deliveringOrders, color: 'primary', clickable: true, active: self.activeFilter === 'delivering' },
+            { key: 'all', icon: 'ri-bar-chart-2-line', label: '总订单数', value: self.stats.totalOrders, color: 'danger', clickable: true, active: self.activeFilter === 'all' }
           ]
         },
         // 修改点：订单状态步骤条数据（待付款→待接单→配送中→已完成；取消/退款为终态）
@@ -301,40 +339,77 @@
           return list.reduce(function(sum, it) { return sum + (Number(it.amount) || 0) }, 0)
         }
       },
-      created: function() { this.init() },
+      created: function() {
+        // 修改点：支持 URL 预筛（工作台待办跳转，如 ?status=2 待接单 / ?status=3 配送中 / ?status=4 已完成）
+        const statusParam = new URLSearchParams(window.location.search).get('status')
+        if (statusParam) {
+          this.activeFilter = statusParam === '2' ? 'pending' : (statusParam === '3' ? 'delivering' : '')
+          this.lastSearch = { status: Number(statusParam) }
+        }
+        this.init()
+        this.loadEnums()
+      },
+      mounted: function() {
+        // 修改点：收银/店长高频快捷键 —— Enter 接单、F 完成（操作当前高亮行）
+        window.addEventListener('keydown', this.handleKeydown)
+      },
+      beforeDestroy: function() {
+        window.removeEventListener('keydown', this.handleKeydown)
+      },
       methods: {
+        // 修改点：拉取后端枚举字典（订单状态唯一真源），失败时静默使用本地兜底常量
+        loadEnums: function() {
+          const self = this
+          metaEnums().then(function(res) {
+            if (res && String(res.code) === '1' && res.data) {
+              const d = res.data
+              self.enums = {
+                orderStatusMap: toEnumMap(d.orderStatus),
+                payMethodMap: toEnumMap(d.payMethod),
+                orderSourceMap: toEnumMap(d.orderSource)
+              }
+            }
+          }).catch(function(e) {
+            // 字典加载失败不影响主流程：getOrderType 会回退到 ORDER_STATUS_FALLBACK
+            console.warn('枚举字典加载失败，使用本地兜底:', e)
+          })
+        },
         // 修改点：F9 性能 — 列表与全局统计分离，reloadStats=true 才重算（分页传 false）
         async init(reloadStats = true) {
           this.loading = true
           const self = this
-          const params = {}
+          // 修改点：合并 lastSearch 搜索条件并下发分页参数（原仅用 activeFilter，导致订单号/日期搜索与翻页全部失效）
+          const params = Object.assign({}, self.lastSearch, { page: self.page, pageSize: self.pageSize })
           if (self.activeFilter === 'pending') params.status = 2
           const requests = [getOrderDetailPage(params)]
           if (reloadStats) { requests.push(self.loadOrderStats()) }
-          const results = await Promise.all(requests)
-          const orderRes = results[0]
-          if (String(orderRes.code) === '1') { self.tableData = orderRes.data.records || []; self.counts = orderRes.data.total }
-          if (reloadStats) {
-            const statsRes = results[1]
-            if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+          // 修改点：try/finally 保证 loading 必复位（接口异常时表格退出骨架屏并展示空态，避免永久转圈）
+          try {
+            const results = await Promise.all(requests)
+            const orderRes = results[0]
+            if (orderRes && String(orderRes.code) === '1') { self.tableData = orderRes.data.records || []; self.counts = orderRes.data.total }
+            if (reloadStats) {
+              const statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+            }
+          } catch (err) {
+            console.warn('加载订单列表失败:', err)
+          } finally {
+            self.loading = false
           }
-          self.loading = false
         },
+        // 修改点：统计改走后端 /order/statistics 单接口（含待接单/配送中分状态计数），
+        // 不再用 dashboard 聚合（原 pendingOrders 为"待付款+待接单"混合，无法支撑状态筛选卡片）
         async loadOrderStats() {
           try {
-            const results = await Promise.all([
-              dashboardAll({ hotDishLimit: 10 }),
-              getOrderDetailPage({ page: 1, pageSize: 1 })
-            ])
-            const dashRes = results[0]
-            const orderTotalRes = results[1]
-            if (String(dashRes.code) === '1') {
-              const data = dashRes.data
+            const res = await getOrderStatistics()
+            if (res && String(res.code) === '1' && res.data) {
+              const d = res.data
               return { code: 1, data: {
-                todayOrders: data.overview?.totalOrders || 0,
-                todayRevenue: data.overview?.totalRevenue || 0,
-                pendingOrders: data.overview?.pendingOrders || 0,
-                totalOrders: (String(orderTotalRes.code) === '1') ? (orderTotalRes.data.total || 0) : 0
+                todayRevenue: d.todayRevenue || 0,
+                pendingOrders: d.pendingOrders || 0,
+                deliveringOrders: d.deliveringOrders || 0,
+                totalOrders: d.totalOrders || 0
               }}
             }
           } catch (err) { console.warn('加载订单统计数据失败:', err) }
@@ -342,13 +417,30 @@
         },
         // stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
-          if (payload.activeKey === 'pending') {
-            this.lastSearch = { status: 2 }
-          } else {
-            this.lastSearch = {}
-          }
+          // 修改点：状态卡点击即按状态筛选（待接单=2 / 配送中=3 / 全部清空），一屏直达
+          if (payload.activeKey === 'pending') this.lastSearch = { status: 2 }
+          else if (payload.activeKey === 'delivering') this.lastSearch = { status: 3 }
+          else this.lastSearch = {}
           this.page = 1
           this.init()
+        },
+        // 修改点：行点击记录当前高亮行，作为键盘快捷键的操作目标
+        onRowClick: function(row) {
+          this.currentOrder = row
+        },
+        // 修改点：Enter 接单（待接单→配送中）、F 完成（配送中→已完成），仅作用于当前高亮行
+        handleKeydown: function(e) {
+          const tag = (e.target && e.target.tagName) || ''
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || this.dialogVisible || this.refundVisible) return
+          const row = this.currentOrder
+          if (!row) return
+          if (e.key === 'Enter' && Number(row.status) === 2) {
+            e.preventDefault()
+            this.cancelOrDeliveryOrComplete(3, row.id)
+          } else if ((e.key === 'F' || e.key === 'f') && Number(row.status) === 3) {
+            e.preventDefault()
+            this.cancelOrDeliveryOrComplete(4, row.id)
+          }
         },
         // table-bar 回调
         onSearch: function(searchParams) {
@@ -368,18 +460,31 @@
         onPageChange: function(payload) { this.page = payload.page; this.init(false) },
         onSizeChange: function(payload) { this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload; this.page = 1; this.init(false) },
         // 状态工具方法
+        // 修改点（重要 Bug 修复）：原映射为 0 基 {0:待付款, 1:待接单 ...}，
+        // 但后端 Orders/OrderStatus 定义为 1 基（1=待付款, 2=待接单, 3=配送中, 4=已完成, 5=已取消, 6=已退款），
+        // 导致 status=1（待付款）被显示成"待接单"、status=2（待接单）显示成"待配送"，两个状态显示错误。
+        // 现改为优先取后端枚举字典，失败时用下方 1 基兜底常量。
         getOrderType: function(row) {
-          const map = { 0: '待付款', 1: '待接单', 2: '待配送', 3: '配送中', 4: '已完成', 5: '已取消', 6: '已退款' }
-          return map[row.status] || '未知'
+          const dict = this.enums.orderStatusMap || {}
+          const val = dict[String(row.status)]
+          if (val) return val
+          return ORDER_STATUS_FALLBACK[String(row.status)] || '未知'
         },
         getOrderTagType: function(row) {
-          const map = { 0: 'info', 1: 'warning', 2: 'warning', 3: 'warning', 4: 'success', 5: 'info', 6: 'info' }
+          const map = { 1: 'info', 2: 'warning', 3: 'warning', 4: 'success', 5: 'info', 6: 'info' }
           return map[row.status] || 'info'
         },
         formatDiningType: function(val) {
           if (!val) return '-'
-          const map = { TAKEAWAY: '外卖', DINING: '堂食', DELIVERY: '配送' }
+          // 与 /api/meta/enums orderSource 字典一致（TAKEOUT/EAT_IN/QUEUE/RESERVATION）
+          const map = { TAKEOUT: '外卖配送', EAT_IN: '堂食扫码', QUEUE: '排队', RESERVATION: '预订' }
           return map[val] || val
+        },
+        // 支付方式文案（与 /api/meta/enums payMethod 字典一致：1现金/2微信/3支付宝/4银行卡/5储值/6货到付款）
+        payMethodText: function(val) {
+          if (val == null || val === '') return '-'
+          const map = { 1: '现金', 2: '微信支付', 3: '支付宝', 4: '银行卡', 5: '会员储值', 6: '货到付款' }
+          return map[val] || '-'
         },
         // 订单详情表格：表头样式（背景/文字走令牌，与全局表头规范一致）
         tableHeaderStyle: function() {
@@ -434,6 +539,10 @@
             if (!self.refundForm.reasonDetail) { ReggieUI.warning('请填写详细退款原因'); return }
             reason = self.refundForm.reasonDetail
           }
+          // 修改点：退款为资金敏感操作，ReggieUI.confirm 二次确认
+          try {
+            await ReggieUI.confirm('确认向用户退款 ￥' + self.refundForm.amount + '？退款后不可撤销。', '订单退款确认', { confirmButtonText: '确认退款', cancelButtonText: '再想想', type: 'warning' })
+          } catch (canceled) { return }
           self.refundLoading = true
           try {
             var paymentRes = await paymentPage({ page: 1, pageSize: 1, orderId: self.refundForm.id })

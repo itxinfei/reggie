@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>排班管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
@@ -294,9 +296,11 @@
           const today = new Date()
           const daysInMonth = new Date(year, month, 0).getDate()
 
-          const todayOnDuty = 0
-          const todayScheduled = 0
-          const absentCount = 0
+          // 修改点：三个计数器在下方 forEach 中做 ++ 自增，声明为 const 会抛
+          // "Assignment to constant variable."，导致统计卡片渲染中断；改为 let
+          let todayOnDuty = 0
+          let todayScheduled = 0
+          let absentCount = 0
           const onDutyTodaySet = {}
           const now = new Date()
           const nowMonth = now.getMonth() + 1
@@ -328,9 +332,17 @@
           const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
           const now = new Date()
           const weekStart = now.getDate() - now.getDay() + 1
-          const colors = {}
-          const shiftNames = {}
-          const totalAll = 0
+          // 修改点：colors / shiftNames 原为空对象，导致下方 colors.morning 等全为 undefined，
+          // 班次色块渲染不出颜色；此处补全四种班次的配色与名称（取自设计令牌语义色）
+          const colors = {
+            morning: 'var(--el-color-primary)',
+            noon: 'var(--color-success)',
+            night: 'var(--color-warning)',
+            full: 'var(--color-info)'
+          }
+          const shiftNames = { morning: '早班', noon: '中班', night: '晚班', full: '全天' }
+          // 修改点：totalAll 在循环中累加，const 会抛 "Assignment to constant variable."
+          let totalAll = 0
           const weekData = []
           for (let w = 0; w < 7; w++) {
             const dayNum = weekStart + w
@@ -340,20 +352,26 @@
               const cell = self.scheduleData[emp.id] && self.scheduleData[emp.id][dayNum]
               if (cell) counts[cell.shift] = (counts[cell.shift] || 0) + 1
             })
-            const total = counts.morning + counts.noon + counts.night + counts.full
+            // 修改点：counts 是按需赋值的稀疏对象，未出现的班次为 undefined，
+            // 直接相加会得到 NaN（统计与百分比全部显示 NaN）；统一取 0 兜底
+            const cM = counts.morning || 0, cN = counts.noon || 0
+            const cE = counts.night || 0, cF = counts.full || 0
+            const total = cM + cN + cE + cF
             totalAll += total
 
             const shifts = []
-            shifts.push({ key: 'morning', label: '早', value: counts.morning, color: colors.morning, pct: total > 0 ? Math.round(counts.morning / total * 100) : 0 })
-            shifts.push({ key: 'noon',    label: '中', value: counts.noon,    color: colors.noon,    pct: total > 0 ? Math.round(counts.noon / total * 100) : 0 })
-            shifts.push({ key: 'night',   label: '晚', value: counts.night,   color: colors.night,   pct: total > 0 ? Math.round(counts.night / total * 100) : 0 })
-            shifts.push({ key: 'full',    label: '全天', value: counts.full,   color: colors.full,   pct: total > 0 ? Math.round(counts.full / total * 100) : 0 })
+            shifts.push({ key: 'morning', label: '早', value: cM, color: colors.morning, pct: total > 0 ? Math.round(cM / total * 100) : 0 })
+            shifts.push({ key: 'noon',    label: '中', value: cN, color: colors.noon,    pct: total > 0 ? Math.round(cN / total * 100) : 0 })
+            shifts.push({ key: 'night',   label: '晚', value: cE, color: colors.night,   pct: total > 0 ? Math.round(cE / total * 100) : 0 })
+            shifts.push({ key: 'full',    label: '全天', value: cF, color: colors.full,   pct: total > 0 ? Math.round(cF / total * 100) : 0 })
             weekData.push({ day: days[w], shifts: shifts })
           }
           self.weekShiftData = weekData
 
           // 汇总统计
-          const sumM = 0, sumN = 0, sumE = 0, sumF = 0
+          // 修改点：四个累加器在下方 forEach 中 += 累加，const 会抛
+          // "Assignment to constant variable." 导致周班次汇总中断；改为 let
+          let sumM = 0, sumN = 0, sumE = 0, sumF = 0
           weekData.forEach(function (w) {
             w.shifts.forEach(function (s) {
               if (s.key === 'morning') sumM += s.value
@@ -436,9 +454,7 @@
     }
   </script>
 
-  <style lang="less" scoped>
-    @import "../../styles/tokens.css";
-
+  <style>
     .ds-page { padding-left: var(--space-5); padding-right: var(--space-5); }
     .container { max-width: 1400px; margin: 0 auto; }
 

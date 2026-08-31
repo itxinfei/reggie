@@ -155,23 +155,37 @@
           formRules: {
             name: [{ required: true, whitespace: true, message: '请输入加盟商名称', trigger: 'blur' }]
           },
-          searchValues: {}
+          searchValues: {},
+          // 后端聚合统计（总数/启用/禁用/关联合同数）
+          stats: {}
         }
       },
       created() {
+        this.loadStats()
         this.init()
       },
       computed: {
         statsCards() {
+          const s = this.stats || {}
           return [
-            { key: 'total', icon: 'el-icon-office-building', label: '加盟商总数', value: this.counts || 0, color: 'primary' },
-            { key: 'enabled', icon: 'el-icon-circle-check', label: '已启用', value: this.tableData.filter(function(r){ return r.status === 1 }).length, color: 'success' },
-            { key: 'disabled', icon: 'el-icon-circle-close', label: '已禁用', value: this.tableData.filter(function(r){ return r.status === 0 }).length, color: 'info' },
-            { key: 'contracts', icon: 'el-icon-document', label: '合同关联', value: this.tableData.length, color: 'warning' }
+            { key: 'total', icon: 'el-icon-office-building', label: '加盟商总数', value: s.total || 0, color: 'primary' },
+            { key: 'enabled', icon: 'el-icon-circle-check', label: '已启用', value: s.enabled || 0, color: 'success' },
+            { key: 'disabled', icon: 'el-icon-circle-close', label: '已禁用', value: s.disabled || 0, color: 'info' },
+            { key: 'contracts', icon: 'el-icon-document', label: '合同关联', value: s.contractCount || 0, color: 'warning' }
           ]
         }
       },
       methods: {
+        async loadStats() {
+          try {
+            const res = await franchiseeStats()
+            if (String(res.code) === '1') {
+              this.stats = res.data || {}
+            }
+          } catch (err) {
+            // 统计加载失败不影响列表展示
+          }
+        },
         async init() {
           this.loading = true
           const sv = this.searchValues || {};
@@ -210,6 +224,7 @@
         },
         onSizeChange(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
           this.init()
         },
         // CRUD 操作
@@ -240,12 +255,14 @@
         async submitForm() {
           if (this.submitting) return // 提交防重
           const self = this
-          await new Promise(function(resolve, reject) {
-            self.$refs.franchiseeForm.validate(function(valid) { valid ? resolve() : reject() })
-          }).catch(function() {
+          // 修改点：校验失败必须 return，原 await validate().catch(()=>{}) 会吞掉失败继续提交
+          const valid = await new Promise(function(resolve) {
+            self.$refs.franchiseeForm.validate(function(v) { resolve(v) })
+          })
+          if (!valid) {
             ReggieUI.warning('请完善表单必填项')
             return
-          })
+          }
           if (!self.formData.name || !self.formData.name.trim()) {
             ReggieUI.error('请输入加盟商名称'); return
           }
@@ -296,7 +313,7 @@
                 ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
-          })
+          }).catch(function() { /* 用户取消，无需处理 */ })
         },
         handleClose() {
           this.formData.dialogVisible = false

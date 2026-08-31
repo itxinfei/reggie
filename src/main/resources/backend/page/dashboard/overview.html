@@ -6,9 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>数据概览 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <!-- 性能优化：ECharts(~1MB)改为 preload 提前并行下载，运行时动态注入，不再阻塞首屏渲染 -->
   <link rel="preload" as="script" href="../../plugins/echarts/echarts.min.js" />
   <style>
@@ -129,59 +132,6 @@
       margin-top: 2px;
     }
 
-    /* ========== KPI 卡片子元素样式（补全缺失定义） ==========
-     * 全局 chart-panel.css 定义了 .kpi-card 外层和 .kpi-card--{color} 修饰符
-     * 但页面手写结构使用 .kpi-icon-wrapper/.kpi-label/.kpi-value/.kpi-sub/.kpi-trend
-     * 而非组件标签内部的 BEM 类 .kpi-card__icon/.kpi-card__label 等，
-     * 因此需在页面本地补充这些子元素的排版规则 */
-    .kpi-card {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding: 20px 24px;
-    }
-    .kpi-icon-wrapper {
-      font-size: 32px;
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-    .kpi-label {
-      font-size: var(--font-size-sm);
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-    .kpi-value {
-      font-size: var(--font-size-2xl);
-      font-weight: 700;
-      color: var(--el-text-primary);
-      line-height: 1.2;
-    }
-    .kpi-sub {
-      font-size: var(--font-size-xs);
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 2px;
-    }
-    .kpi-trend {
-      font-weight: 600;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: var(--font-size-xs);
-    }
-    .kpi-trend.up { color: var(--color-success); background: color-mix(in srgb, var(--color-success) 12%, transparent); }
-    .kpi-trend.down { color: var(--color-danger); background: color-mix(in srgb, var(--color-danger) 12%, transparent); }
-    .cache-tag {
-      font-size: 11px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      border: 1px solid var(--border-default);
-      color: var(--text-muted);
-    }
-    .cache-tag.redis { color: var(--color-success); border-color: var(--color-success); }
-    .cache-tag.mysql { color: var(--color-info); border-color: var(--color-info); }
     .charts-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -265,7 +215,7 @@
       transition: all 0.2s;
     }
     .hot-dish-rank.top-1 { background: var(--color-danger); color: var(--bg-surface); }
-    .hot-dish-rank.top-2 { background: var(--color-brand-500); color: var(--bg-surface); }
+    .hot-dish-rank.top-2 { background: var(--color-brand-500); color: var(--text-on-brand); }
     .hot-dish-rank.top-3 { background: var(--color-warning); color: var(--bg-surface); }
     .hot-dish-rank.normal { background: var(--el-bg-lighter); color: var(--gray-666); }
 
@@ -401,13 +351,9 @@
       from { opacity: 0; }
       to { opacity: 1; }
     }
-    .redis-status-bar { animation: ds-fade-in 0.4s ease both; }
-    .chart-panel { animation: ds-fade-in 0.5s ease both; }
-    .chart-panel:nth-child(1) { animation-delay: 0.26s; }
-    .chart-panel:nth-child(2) { animation-delay: 0.32s; }
-    .bottom-panel { animation: ds-fade-in 0.5s ease both; }
-    .bottom-panel:nth-child(1) { animation-delay: 0.36s; }
-    .bottom-panel:nth-child(2) { animation-delay: 0.42s; }
+    .redis-status-bar { animation: ds-fade-in 0.3s ease both; }
+    .chart-panel { animation: ds-fade-in 0.3s ease both; }
+    .bottom-panel { animation: ds-fade-in 0.3s ease both; }
 
     /* ========== 响应式设计 ========== */
     @media (max-width: 1200px) {
@@ -428,6 +374,90 @@
       .redis-flow-tag {
         display: none;
       }
+    }
+
+    /* ========== 首屏待办台（8.7.1） ========== */
+    .todo-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--el-border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    .todo-panel__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .todo-panel__title {
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: var(--el-text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .todo-panel__count {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+    }
+    .todo-panel__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border: 1px solid var(--el-border-color);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      font-size: var(--font-size-sm);
+      text-align: left;
+    }
+    .todo-item:hover {
+      border-color: var(--color-brand-500);
+      box-shadow: var(--shadow-sm);
+      transform: translateY(-1px);
+    }
+    .todo-item__icon {
+      font-size: 18px;
+      color: var(--color-brand-500);
+      flex-shrink: 0;
+    }
+    .todo-item__label {
+      flex: 1;
+      color: var(--text-secondary);
+    }
+    .todo-item__count {
+      font-size: var(--font-size-base);
+      font-weight: 700;
+      color: var(--el-text-secondary);
+      min-width: 22px;
+      text-align: center;
+    }
+    .todo-item__count--hot {
+      color: var(--color-danger);
+    }
+    .todo-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 24px 0;
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+    }
+    .todo-empty i {
+      font-size: 20px;
+      color: var(--color-success);
     }
 
     @media (max-width: 768px) {
@@ -460,50 +490,40 @@
         <div class="ds-page-header__actions"></div>
       </header>
 
-      <!-- ========== KPI 指标卡片 ========== -->
-      <div class="stats-cards">
-        <div class="kpi-card primary">
-          <div class="kpi-icon-wrapper">📋</div>
-          <div class="kpi-label">今日订单数</div>
-          <div class="kpi-value">{{ overview.totalOrders || 0 }}</div>
-          <div class="kpi-sub">
-            完成率 {{ overview.completionRate || 0 }}%
-            <span v-if="yesterdayOrders > 0" :class="['kpi-trend', orderTrendClass]" v-text="orderTrendText"></span>
-            <span :class="['cache-tag', overview.cacheSource === 'Redis' ? 'redis' : 'mysql']">{{ overview.cacheSource || 'MySQL' }}</span>
-          </div>
+      <!-- ========== 首屏待办台（8.7.1：店长第一眼看到该做什么） ========== -->
+      <section class="todo-panel" aria-label="今日待办">
+        <div class="todo-panel__head">
+          <h2 class="todo-panel__title"><i class="ri-todo-line" aria-hidden="true"></i> 今日待办</h2>
+          <span class="todo-panel__count" v-if="todoTotal > 0">共 {{ todoTotal }} 项</span>
         </div>
-        <div class="kpi-card success">
-          <div class="kpi-icon-wrapper">💰</div>
-          <div class="kpi-label">今日营业额 (元)</div>
-          <div class="kpi-value">{{ formatMoney(overview.totalRevenue) }}</div>
-          <div class="kpi-sub">
-            客单价 ¥{{ overview.avgAmount || '0.00' }}
-            <span v-if="yesterdayRevenue > 0" :class="['kpi-trend', revenueTrendClass]" v-text="revenueTrendText"></span>
-          </div>
+        <div v-if="todoTotal > 0" class="todo-panel__grid">
+          <button
+            v-for="item in todoItems"
+            :key="item.key"
+            type="button"
+            class="todo-item"
+            @click="goTo(item.url)"
+            :aria-label="item.label + '，' + item.count + ' 项，点击前往处理'"
+          >
+            <i :class="item.icon" class="todo-item__icon" aria-hidden="true"></i>
+            <span class="todo-item__label">{{ item.label }}</span>
+            <span class="todo-item__count" :class="{ 'todo-item__count--hot': item.count > 0 }">{{ item.count }}</span>
+          </button>
         </div>
-        <div class="kpi-card warning">
-          <div class="kpi-icon-wrapper">⏳</div>
-          <div class="kpi-label">待处理订单</div>
-          <div class="kpi-value">{{ overview.pendingOrders || 0 }}</div>
-          <div class="kpi-sub">
-            已完成 {{ overview.completedOrders || 0 }} | 已取消 {{ overview.cancelledOrders || 0 }}
-          </div>
+        <div v-else class="todo-empty">
+          <i class="ri-checkbox-circle-line" aria-hidden="true"></i>
+          <span>今日暂无待办，辛苦啦</span>
         </div>
-        <div class="kpi-card info">
-          <div class="kpi-icon-wrapper">👥</div>
-          <div class="kpi-label">注册用户 / 在职员工</div>
-          <div class="kpi-value">{{ overview.totalUsers || 0 }} <span style="font-size:var(--font-size-xl);color:var(--el-border-base);-webkit-text-fill-color:var(--el-border-base);">/</span> {{ overview.activeEmployees || 0 }}</div>
-          <div class="kpi-sub">
-            数据来源: {{ overview.cacheSource || 'MySQL' }}
-          </div>
-        </div>
-      </div>
+      </section>
+
+      <!-- ========== KPI 指标卡片（点击下钻） ========== -->
+      <stat-cards :cards="kpiCards" :loading="loading" @card-click="onKpiClick"></stat-cards>
 
       <!-- ========== 库存预警提示 ========== -->
       <!-- 修改点：集成库存预警，显示低库存食材名称 -->
       <div v-if="inventoryAlert && inventoryAlert.lowStockCount > 0" class="inventory-alert">
         <div style="display:flex;align-items:center;gap:12px;">
-          <span style="font-size:var(--font-size-3xl);">⚠️</span>
+          <span style="font-size:var(--font-size-3xl);"><i class="ri-error-warning-line" aria-hidden="true"></i></span>
           <div>
             <div class="inventory-alert__title">库存预警：{{ inventoryAlert.lowStockCount }} 种食材库存不足</div>
             <div class="inventory-alert__desc">
@@ -519,11 +539,11 @@
       <!-- ========== 图表区域: 趋势图 + 订单状态饼图 ========== -->
       <div class="charts-row">
         <div class="chart-panel">
-          <div class="chart-title">📈 近7日订单与营收趋势</div>
+          <div class="chart-title"><i class="ri-line-chart-line" aria-hidden="true"></i> 近7日订单与营收趋势</div>
           <div class="chart-box" id="trendChart" role="img" aria-label="近7日订单与营收趋势图表"></div>
         </div>
         <div class="chart-panel">
-          <div class="chart-title">🍩 今日订单状态分布</div>
+          <div class="chart-title"><i class="ri-pie-chart-line" aria-hidden="true"></i> 今日订单状态分布</div>
           <div class="chart-box" id="statusChart" role="img" aria-label="今日订单状态分布环形图"></div>
         </div>
       </div>
@@ -531,7 +551,7 @@
       <!-- ========== 底部: 热销菜品 + 系统健康 ========== -->
       <div class="bottom-row">
         <div class="bottom-panel chart-panel">
-          <div class="panel-title">🔥 今日热销菜品 Top {{ hotDishes.length }}</div>
+          <div class="panel-title"><i class="ri-fire-line" aria-hidden="true"></i> 今日热销菜品 Top {{ hotDishes.length }}</div>
           <div class="hot-dish-list" v-if="hotDishes.length > 0">
             <div class="hot-dish-item" v-for="(item, index) in hotDishes" :key="index">
               <span :class="['hot-dish-rank', index < 3 ? 'top-' + (index + 1) : 'normal']">{{ index + 1 }}</span>
@@ -546,7 +566,7 @@
         </div>
 
         <div class="bottom-panel chart-panel">
-          <div class="panel-title">📋 今日运营速览</div>
+          <div class="panel-title"><i class="ri-file-list-3-line" aria-hidden="true"></i> 今日运营速览</div>
           <div class="ops-summary-grid">
             <!-- 订单完成度 -->
             <div class="ops-metric">
@@ -675,6 +695,36 @@
           revenueTrendText: '--'
         }
       },
+      computed: {
+        // KPI 指标卡（统一 stat-cards 组件）
+        kpiCards() {
+          const ov = this.overview || {};
+          const orderTrend = this.yesterdayOrders > 0 ? ' · ' + this.orderTrendText : '';
+          const revenueTrend = this.yesterdayRevenue > 0 ? ' · ' + this.revenueTrendText : '';
+          return [
+            { key: 'orders', icon: 'ri-file-list-3-line', label: '今日订单数', value: ov.totalOrders || 0, color: 'primary', clickable: true, subText: '完成率 ' + (ov.completionRate || 0) + '%' + orderTrend },
+            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '今日营业额 (元)', value: this.formatMoney(ov.totalRevenue), color: 'success', clickable: true, subText: '客单价 ¥' + (ov.avgAmount || '0.00') + revenueTrend },
+            { key: 'pending', icon: 'ri-time-line', label: '待处理订单', value: ov.pendingOrders || 0, color: 'warning', clickable: true, subText: '已完成 ' + (ov.completedOrders || 0) + ' | 已取消 ' + (ov.cancelledOrders || 0) },
+            { key: 'users', icon: 'ri-group-line', label: '注册用户 / 在职员工', value: (ov.totalUsers || 0) + ' / ' + (ov.activeEmployees || 0), color: 'info', clickable: true, subText: '数据来源: ' + (ov.cacheSource || 'MySQL') }
+          ];
+        },
+        // 首屏待办台（8.7.1）：数据源复用 dashboard overview + 库存预警；待评价/待退款后端暂无独立计数，暂不展示
+        todoItems: function() {
+          const list = []
+          const ov = this.overview || {}
+          const orderStatus = this.orderStatus || {}
+          const pendingCount = ov.pendingOrders || orderStatus['待派送/处理'] || 0
+          list.push({ key: 'pending', icon: 'ri-time-line', label: '待接单/待处理', count: pendingCount, url: 'page/order/list.html?status=2' })
+          const deliveringCount = orderStatus['派送中'] || 0
+          list.push({ key: 'delivering', icon: 'ri-truck-line', label: '配送中', count: deliveringCount, url: 'page/order/list.html?status=3' })
+          const invCount = (this.inventoryAlert && this.inventoryAlert.lowStockCount) || 0
+          list.push({ key: 'inventory', icon: 'ri-error-warning-line', label: '库存预警', count: invCount, url: 'page/inventory/material-list.html' })
+          return list
+        },
+        todoTotal: function() {
+          return this.todoItems.reduce(function(sum, it) { return sum + (Number(it.count) || 0) }, 0)
+        }
+      },
       created() {
         // 提前触发 ECharts 懒加载，使其与首屏数据请求并行下载
         loadEchartsScript();
@@ -700,6 +750,17 @@
         }
       },
       methods: {
+        // 修改点：KPI 卡点击下钻到对应页面（8.7.1）
+        onKpiClick: function(payload) {
+          const map = {
+            orders: 'page/order/list.html',
+            revenue: 'page/order/list.html?status=4',
+            pending: 'page/order/list.html?status=2',
+            users: 'page/member-center/member-list.html'
+          }
+          const url = map[payload.key]
+          if (url) this.goTo(url)
+        },
         // 一次性加载所有数据
         async loadAllData() {
           this.loading = true;

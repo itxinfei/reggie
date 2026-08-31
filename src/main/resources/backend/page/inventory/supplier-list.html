@@ -7,6 +7,8 @@
   <title>供应商管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
@@ -65,10 +67,18 @@
       :page-size="pageSize"
       :total="counts"
       :show-actions="true"
-      :actions-width="160"
+      :actions-width="210"
       @page-change="onPageChange"
       @size-change="onSizeChange"
     >
+      <!-- 累计采购额列 -->
+      <template #col-totalPurchaseAmount="{ row }">
+        <span v-if="row.totalPurchaseAmount != null">
+          ￥{{ formatMoney(row.totalPurchaseAmount) }}
+          <span style="color:var(--el-border-base);font-size:var(--font-size-xs);margin-left:2px;" v-if="row.purchaseCount">/ {{ row.purchaseCount }} 单</span>
+        </span>
+        <span v-else style="color:var(--el-border-base);">-</span>
+      </template>
       <!-- 状态列自定义渲染 -->
       <template #col-status="{ row }">
         <el-tag :type="String(row.status) === '1' ? 'success' : 'info'" size="small">
@@ -77,6 +87,7 @@
       </template>
       <!-- 行操作按钮 -->
       <template #actions="{ row }">
+        <el-button type="text" size="small" class="btn-view" @click="openPurchases(row)">采购记录</el-button>
         <el-button type="text" size="small" class="btn-view" @click="openEdit(row)">修改</el-button>
         <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row.id)">删除</el-button>
       </template>
@@ -118,6 +129,35 @@
     </el-form>
   </crud-dialog>
 
+  <!-- ============================================================
+   组件5：crud-dialog — 采购记录弹窗（8.3.3 供应商历史采购，复用 purchaseOrder page 接口）
+   ============================================================ -->
+  <crud-dialog
+    :title="purchaseDialog.title"
+    :visible.sync="purchaseDialog.visible"
+    size="lg"
+    :show-submit="false"
+    cancel-text="关 闭"
+  >
+    <div v-if="purchaseList.length === 0" class="ds-table-empty">
+      <i class="el-icon-document"></i>
+      <p>该供应商暂无采购记录</p>
+    </div>
+    <el-table v-else :data="purchaseList" stripe border size="small" :loading="purchaseLoading">
+      <el-table-column prop="orderNo" label="采购单号" min-width="160"></el-table-column>
+      <el-table-column prop="totalAmount" label="金额" width="110" align="right">
+        <template slot-scope="s">￥{{ formatMoney(s.row.totalAmount) }}</template>
+      </el-table-column>
+      <el-table-column prop="status" label="状态" width="110" align="center">
+        <template slot-scope="s">{{ purchaseStatusText(s.row.status) }}</template>
+      </el-table-column>
+      <el-table-column prop="createdTime" label="下单时间" width="160" align="center">
+        <template slot-scope="s">{{ formatDate(s.row.createdTime) }}</template>
+      </el-table-column>
+      <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
+    </el-table>
+  </crud-dialog>
+
 </div>
   <!-- 引入依赖 -->
   <script src="../../plugins/vue/vue.js"></script>
@@ -152,6 +192,10 @@
           dialogVisible: false,
           editMode: false,         // false=新增 / true=编辑
           editId: null,
+          // 修改点：8.3.3 采购记录弹窗
+          purchaseDialog: { title: '采购记录', visible: false },
+          purchaseList: [],
+          purchaseLoading: false,
 
           // ===== 表单 =====
           formData: {
@@ -189,6 +233,8 @@
             { prop: 'contact', label: '联系人', width: 80, align: 'center' },
             { prop: 'phone', label: '联系电话', width: 120, align: 'center' },
             { prop: 'address', label: '地址', minWidth: 120 },
+            // 修改点：8.3.3 采购汇总列（后端按供应商聚合回填 totalPurchaseAmount / purchaseCount）
+            { prop: 'totalPurchaseAmount', label: '累计采购额', width: 110, align: 'right', slot: true, type: 'money' },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
           ]
         }
@@ -198,9 +244,9 @@
         /** 将 statsData 映射为 stat-cards 组件所需的 cards 数组 */
         statsCards() {
           return [
-            { key: 'all',    label: '供应商总数', value: this.statsData.totalCount,    icon: '🏢', color: 'primary' },
-            { key: 'active', label: '已启用',     value: this.statsData.activeCount,   icon: '✅', color: 'success', clickable: true },
-            { key: 'inactive', label: '已禁用',   value: this.statsData.disabledCount, icon: '⏸️', color: 'warning', clickable: true },
+            { key: 'all',    label: '供应商总数', value: this.statsData.totalCount,    icon: 'ri-building-line', color: 'primary' },
+            { key: 'active', label: '已启用',     value: this.statsData.activeCount,   icon: 'ri-checkbox-circle-line', color: 'success', clickable: true },
+            { key: 'inactive', label: '已禁用',   value: this.statsData.disabledCount, icon: 'ri-pause-circle-line', color: 'warning', clickable: true },
             { key: 'new',    label: '本月新增',   value: this.statsData.newCount,       icon: '🆕', color: 'danger' }
           ]
         }
@@ -317,6 +363,37 @@
           this.pageSize = val
           this.page = 1
           this.loadData(false)
+        },
+
+        // ==================== 采购记录弹窗（8.3.3） ====================
+
+        openPurchases(row) {
+          const self = this
+          self.purchaseDialog.title = '采购记录 - ' + (row.name || '供应商')
+          self.purchaseDialog.visible = true
+          self.purchaseList = []
+          self.purchaseLoading = true
+          purchasePage({ supplierId: row.id, page: 1, pageSize: 20 }).then(function(res) {
+            if (String(res.code) === '1') {
+              self.purchaseList = res.data.records || []
+            } else {
+              ReggieUI.error(res.msg || '加载采购记录失败')
+            }
+          }).catch(function() {
+            ReggieUI.error('加载采购记录失败')
+          }).finally(function() {
+            self.purchaseLoading = false
+          })
+        },
+
+        purchaseStatusText(status) {
+          const m = { DRAFT: '草稿', ORDERED: '已下单', PARTIAL: '部分收货', RECEIVED: '已收货', CANCELLED: '已取消' }
+          return m[status] || status || '-'
+        },
+
+        formatDate(d) {
+          if (!d) return '-'
+          return String(d).replace('T', ' ').substring(0, 19)
         },
 
         // ==================== 新增/编辑弹窗 ====================

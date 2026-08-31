@@ -204,6 +204,28 @@
   --el-color-warning-light: #ebb563;
   --el-color-danger-light: #f78989;
 
+  /* 修改点：补齐 --color-*-lighter 别名。
+     common-el.css / design-system.css / unified-components.css 共 28 处引用
+     var(--color-success-lighter) 等，但此前从未定义 —— 导致 el-tag / alert
+     的浅色底与描边解析失败（渲染为透明），是"样式风格不统一"的根因之一。
+     统一别名到已有的 --el-color-*-lighter，保持单一来源。 */
+  --color-success-lighter: var(--el-color-success-lighter);
+  --color-warning-lighter: var(--el-color-warning-lighter);
+  --color-danger-lighter:  var(--el-color-danger-lighter);
+  --color-info-lighter:    var(--el-color-info-lighter);
+
+  /* 修改点：补齐页面零散引用但未定义的令牌，避免颜色/圆角/间距静默失效 */
+  --el-border-color:       var(--el-border-default);
+  --el-border-dark:        #c9ccd2;
+  --el-border-extra-light: var(--el-border-light);
+  --el-fill-color-light:   var(--el-bg-light);
+  --el-color-primary-light-5: var(--el-color-primary-light);
+  --el-color-primary-light-7: var(--el-color-primary-lighter);
+  --border-radius-base:    var(--radius-sm);
+  --border-radius-card:    var(--radius-md);
+  --font-size-h3:          var(--font-size-xl, 20px);
+  --space-15:              60px;
+
   /* Ant Design 主色板（部分报表/营销页使用） */
   --antd-primary:    #1890ff;
   --antd-error:      #ff4d4f;

@@ -3,11 +3,13 @@ package com.reggie.module.urgency.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
-import com.reggie.module.urgency.dto.UrgencyFrequencyVO;
-import com.reggie.module.urgency.dto.UrgencyRecordVO;
-import com.reggie.module.urgency.dto.UrgencyStatsVO;
+import com.reggie.module.dining.model.DiningTable;
+import com.reggie.module.dining.service.DiningTableService;
+import com.reggie.module.order.mapper.OrderDetailMapper;
+import com.reggie.module.order.mapper.OrderMapper;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
 import com.reggie.module.urgency.mapper.UrgencyMapper;
-import com.reggie.module.urgency.model.UrgencyOrder;
 import com.reggie.module.urgency.model.UrgencyRecord;
 import com.reggie.module.urgency.service.UrgencyService;
 import lombok.extern.slf4j.Slf4j;
@@ -20,13 +22,15 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * 催单服务实现
- * 提供催单记录持久化、频率控制、催单统计等能力
+ * 看板数据源为真实订单表（orders）与催单记录表（urgency_record），不再使用 Mock 数据。
  *
  * @author reggie
  * @since 2026-08-23
@@ -38,130 +42,33 @@ public class UrgencyServiceImpl implements UrgencyService {
     @Autowired
     private UrgencyMapper urgencyMapper;
 
+    @Autowired
+    private OrderMapper orderMapper;
+
+    @Autowired
+    private OrderDetailMapper orderDetailMapper;
+
+    @Autowired
+    private DiningTableService diningTableService;
+
     /** 每人每天最大催单次数 */
     private static final int MAX_URGENCY_PER_DAY = 3;
 
     /** 记录列表查询上限 */
     private static final int RECORD_QUERY_LIMIT = 50;
 
-    /** Mock 订单数据 */
-    private static final List<UrgencyOrder> MOCK_ORDERS = new ArrayList<>();
+    /** 超时阈值（分钟）：等待超过该值判定为超时订单 */
+    private static final int OVERDUE_THRESHOLD_MINUTES = 15;
 
-    static {
-        LocalDateTime now = LocalDateTime.now();
+    /** 紧急阈值（分钟）：等待超过该值判定为紧急订单 */
+    private static final int URGENT_THRESHOLD_MINUTES = 10;
 
-        UrgencyOrder order1 = new UrgencyOrder();
-        order1.setId(1001L);
-        order1.setOrderId(2001L);
-        order1.setOrderNo("ORD202608230001");
-        order1.setTableNo("08");
-        order1.setCustomerName("张先生");
-        order1.setDishNames("红烧肉,清炒时蔬,紫菜蛋花汤");
-        order1.setStatus("COOKING");
-        order1.setCreateTime(now.minusMinutes(12));
-        order1.setEstimatedFinishTime(now.plusMinutes(3));
-        order1.setProgressPercent(45);
-        order1.setTenantId(1L);
-        MOCK_ORDERS.add(order1);
+    /** 进行中订单状态（待接单/派送中） */
+    private static final List<Integer> PENDING_STATUSES = Arrays.asList(
+            Orders.STATUS_ORDERED, Orders.STATUS_DELIVERING);
 
-        UrgencyOrder order2 = new UrgencyOrder();
-        order2.setId(1002L);
-        order2.setOrderId(2002L);
-        order2.setOrderNo("ORD202608230002");
-        order2.setTableNo("03");
-        order2.setCustomerName("李女士");
-        order2.setDishNames("麻辣香锅,蒜蓉西兰花");
-        order2.setStatus("COOKING");
-        order2.setCreateTime(now.minusMinutes(20));
-        order2.setEstimatedFinishTime(now.plusMinutes(5));
-        order2.setProgressPercent(70);
-        order2.setTenantId(1L);
-        MOCK_ORDERS.add(order2);
-
-        UrgencyOrder order3 = new UrgencyOrder();
-        order3.setId(1003L);
-        order3.setOrderId(2003L);
-        order3.setOrderNo("ORD202608230003");
-        order3.setTableNo("12");
-        order3.setCustomerName("王先生");
-        order3.setDishNames("宫保鸡丁,番茄炒蛋,米饭x2");
-        order3.setStatus("WAITING_CALL");
-        order3.setCreateTime(now.minusMinutes(15));
-        order3.setEstimatedFinishTime(now.minusMinutes(2));
-        order3.setProgressPercent(95);
-        order3.setTenantId(1L);
-        MOCK_ORDERS.add(order3);
-
-        UrgencyOrder order4 = new UrgencyOrder();
-        order4.setId(1004L);
-        order4.setOrderId(2004L);
-        order4.setOrderNo("ORD202608230004");
-        order4.setTableNo("05");
-        order4.setCustomerName("赵女士");
-        order4.setDishNames("烤鱼,拍黄瓜,冬瓜排骨汤");
-        order4.setStatus("COOKING");
-        order4.setCreateTime(now.minusMinutes(5));
-        order4.setEstimatedFinishTime(now.plusMinutes(10));
-        order4.setProgressPercent(30);
-        order4.setTenantId(1L);
-        MOCK_ORDERS.add(order4);
-
-        UrgencyOrder order5 = new UrgencyOrder();
-        order5.setId(1005L);
-        order5.setOrderId(2005L);
-        order5.setOrderNo("ORD202608230005");
-        order5.setTableNo("01");
-        order5.setCustomerName("陈女士");
-        order5.setDishNames("水煮鱼,凉拌木耳");
-        order5.setStatus("COMPLETED");
-        order5.setCreateTime(now.minusMinutes(30));
-        order5.setEstimatedFinishTime(now.minusMinutes(8));
-        order5.setProgressPercent(100);
-        order5.setTenantId(1L);
-        MOCK_ORDERS.add(order5);
-
-        UrgencyOrder order6 = new UrgencyOrder();
-        order6.setId(1006L);
-        order6.setOrderId(2006L);
-        order6.setOrderNo("ORD202608230006");
-        order6.setTableNo("07");
-        order6.setCustomerName("刘先生");
-        order6.setDishNames("牛肉面,卤蛋,酸辣土豆丝");
-        order6.setStatus("COOKING");
-        order6.setCreateTime(now.minusMinutes(18));
-        order6.setEstimatedFinishTime(now.plusMinutes(1));
-        order6.setProgressPercent(80);
-        order6.setTenantId(1L);
-        MOCK_ORDERS.add(order6);
-
-        UrgencyOrder order7 = new UrgencyOrder();
-        order7.setId(1007L);
-        order7.setOrderId(2007L);
-        order7.setOrderNo("ORD202608230007");
-        order7.setTableNo("10");
-        order7.setCustomerName("杨女士");
-        order7.setDishNames("红烧排骨,炒河粉");
-        order7.setStatus("WAITING_CALL");
-        order7.setCreateTime(now.minusMinutes(25));
-        order7.setEstimatedFinishTime(now.minusMinutes(5));
-        order7.setProgressPercent(98);
-        order7.setTenantId(1L);
-        MOCK_ORDERS.add(order7);
-
-        UrgencyOrder order8 = new UrgencyOrder();
-        order8.setId(1008L);
-        order8.setOrderId(2008L);
-        order8.setOrderNo("ORD202608230008");
-        order8.setTableNo("02");
-        order8.setCustomerName("孙先生");
-        order8.setDishNames("剁椒鱼头,清蒸鲈鱼,白灼生菜");
-        order8.setStatus("COOKING");
-        order8.setCreateTime(now.minusMinutes(22));
-        order8.setEstimatedFinishTime(now.plusMinutes(2));
-        order8.setProgressPercent(85);
-        order8.setTenantId(1L);
-        MOCK_ORDERS.add(order8);
-    }
+    /** 已完成的订单状态 */
+    private static final List<Integer> DONE_STATUSES = Collections.singletonList(Orders.STATUS_COMPLETED);
 
     // ==================== 催单记录持久化与频率控制 ====================
 
@@ -238,7 +145,7 @@ public class UrgencyServiceImpl implements UrgencyService {
         result.put("orderId", orderId);
         result.put("memberId", memberId);
         result.put("orderNo", orderNo);
-        result.put("todayCount", todayCount + 1);
+        result.put("todayCount", (todayCount != null ? todayCount : 0) + 1);
         result.put("maxAllowed", MAX_URGENCY_PER_DAY);
         result.put("remainCount", MAX_URGENCY_PER_DAY - (todayCount + 1));
         return R.success(result);
@@ -346,221 +253,354 @@ public class UrgencyServiceImpl implements UrgencyService {
         return R.success(result);
     }
 
-    // ==================== 以下保留原有 Mock 业务逻辑 ====================
+    // ==================== 催菜看板（真实订单数据） ====================
 
+    /**
+     * 获取催单概览统计（基于今日真实订单）
+     * 统计今日进行中订单的紧急数、超时数、平均/最长等待时间
+     *
+     * @param tenantId 租户ID
+     * @return 概览数据
+     */
     @Override
     public Map<String, Object> getUrgencyOverview(Long tenantId) {
         Map<String, Object> overview = new HashMap<>();
+        List<Orders> pendingOrders = listTodayOrders(tenantId, PENDING_STATUSES);
+        List<Orders> todayOrders = listTodayOrders(tenantId, mergeStatuses());
 
-        List<UrgencyOrder> orders = filterByTenant(tenantId);
-        long cookingCount = orders.stream().filter(o -> "COOKING".equals(o.getStatus())).count();
-        long waitingCallCount = orders.stream().filter(o -> "WAITING_CALL".equals(o.getStatus())).count();
-        long completedCount = orders.stream().filter(o -> "COMPLETED".equals(o.getStatus())).count();
+        LocalDateTime now = LocalDateTime.now();
+        long urgentCount = 0;
+        long overdueCount = 0;
+        long totalWaitMinutes = 0;
+        long maxWaitMinutes = 0;
 
-        long overdueCount = orders.stream()
-                .filter(o -> !"COMPLETED".equals(o.getStatus()))
-                .filter(o -> Duration.between(o.getCreateTime(), LocalDateTime.now()).toMinutes() >= 15)
-                .count();
-
-        long urgentCount = orders.stream()
-                .filter(o -> "COOKING".equals(o.getStatus()))
-                .filter(o -> Duration.between(o.getCreateTime(), LocalDateTime.now()).toMinutes() >= 10)
-                .count();
-
-        List<UrgencyOrder> pendingOrders = new ArrayList<>();
-        for (UrgencyOrder order : orders) {
-            if (!"COMPLETED".equals(order.getStatus())) {
-                pendingOrders.add(order);
+        for (Orders order : pendingOrders) {
+            long waitMinutes = waitMinutes(order, now);
+            totalWaitMinutes += waitMinutes;
+            if (waitMinutes > maxWaitMinutes) {
+                maxWaitMinutes = waitMinutes;
+            }
+            if (waitMinutes >= URGENT_THRESHOLD_MINUTES) {
+                urgentCount++;
+            }
+            if (waitMinutes >= OVERDUE_THRESHOLD_MINUTES) {
+                overdueCount++;
             }
         }
 
-        long avgMinutes = 0;
-        long maxMinutes = 0;
-        if (!pendingOrders.isEmpty()) {
-            long totalMinutes = 0;
-            for (UrgencyOrder order : pendingOrders) {
-                long minutes = Duration.between(order.getCreateTime(), LocalDateTime.now()).toMinutes();
-                totalMinutes += minutes;
-                if (minutes > maxMinutes) {
-                    maxMinutes = minutes;
-                }
-            }
-            avgMinutes = totalMinutes / pendingOrders.size();
-        }
+        long avgWaitMinutes = pendingOrders.isEmpty() ? 0 : totalWaitMinutes / pendingOrders.size();
 
-        overview.put("totalOrders", orders.size());
-        overview.put("cookingCount", cookingCount);
-        overview.put("waitingCallCount", waitingCallCount);
-        overview.put("completedCount", completedCount);
         overview.put("urgentCount", urgentCount);
         overview.put("overdueCount", overdueCount);
-        overview.put("avgWaitMinutes", avgMinutes);
-        overview.put("maxWaitMinutes", maxMinutes);
-
+        overview.put("avgWaitMin", avgWaitMinutes);
+        overview.put("maxWaitMin", maxWaitMinutes);
+        overview.put("totalOrders", todayOrders.size());
+        overview.put("cookingCount", pendingOrders.size());
+        overview.put("completedCount", todayOrders.size() - pendingOrders.size());
         return overview;
     }
 
+    /**
+     * 获取催单列表（基于今日真实订单）
+     * 按等待时间降序排列，支持状态筛选
+     *
+     * @param tenantId 租户ID
+     * @param status   状态筛选（COOKING/WAITING_CALL/DONE，空为全部）
+     * @return 催单列表
+     */
     @Override
     public List<Map<String, Object>> getUrgencyList(Long tenantId, String status) {
-        List<Map<String, Object>> result = new ArrayList<>();
-
-        List<UrgencyOrder> orders = filterByTenant(tenantId);
-
-        if (status != null && !status.isEmpty()) {
-            List<UrgencyOrder> filtered = new ArrayList<>();
-            for (UrgencyOrder order : orders) {
-                if (status.equals(order.getStatus())) {
-                    filtered.add(order);
-                }
-            }
-            orders = filtered;
+        List<Orders> orders;
+        if ("DONE".equals(status)) {
+            orders = listTodayOrders(tenantId, DONE_STATUSES);
+        } else if ("COOKING".equals(status) || "WAITING_CALL".equals(status)) {
+            orders = listTodayOrders(tenantId, PENDING_STATUSES);
+        } else {
+            orders = listTodayOrders(tenantId, mergeStatuses());
         }
 
-        orders = sortByWaitTimeDesc(orders);
+        // 等待时间降序排列
+        final LocalDateTime now = LocalDateTime.now();
+        orders.sort((a, b) -> Long.compare(waitMinutes(b, now), waitMinutes(a, now)));
 
-        LocalDateTime now = LocalDateTime.now();
-        for (UrgencyOrder order : orders) {
+        // 批量加载桌名与菜品名
+        Map<Long, String> tableNames = loadTableNames(orders);
+        Map<Long, String> dishNamesMap = loadDishNames(orders, tenantId);
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Orders order : orders) {
             Map<String, Object> item = new HashMap<>();
+            String orderStatus = mapOrderStatus(order.getStatus());
+            long waitMinutes = waitMinutes(order, now);
             item.put("id", order.getId());
-            item.put("orderId", order.getOrderId());
-            item.put("orderNo", order.getOrderNo());
-            item.put("tableNo", order.getTableNo());
-            item.put("customerName", order.getCustomerName());
-            item.put("dishNames", order.getDishNames());
-            item.put("status", order.getStatus());
-            item.put("statusDesc", getStatusDesc(order.getStatus()));
-            item.put("createTime", order.getCreateTime());
-            item.put("estimatedFinishTime", order.getEstimatedFinishTime());
-            item.put("progressPercent", order.getProgressPercent());
-            item.put("waitMinutes", Duration.between(order.getCreateTime(), now).toMinutes());
+            item.put("orderId", order.getId());
+            item.put("orderNo", order.getNumber());
+            item.put("tableNo", order.getTableId() == null ? "--" : tableNames.getOrDefault(order.getTableId(), "--"));
+            item.put("customerName", order.getUserName());
+            item.put("dishNames", dishNamesMap.getOrDefault(order.getId(), ""));
+            item.put("status", orderStatus);
+            item.put("statusDesc", getStatusDesc(orderStatus));
+            item.put("createTime", order.getOrderTime() != null ? order.getOrderTime() : order.getCreateTime());
+            item.put("waitMinutes", waitMinutes);
+            item.put("progressPercent", estimateProgress(order.getStatus()));
+            item.put("isOverdue", waitMinutes >= OVERDUE_THRESHOLD_MINUTES);
             result.add(item);
         }
-
         return result;
     }
 
+    /**
+     * 员工催单操作：真实写入催单记录（memberId=0 表示员工操作）
+     *
+     * @param orderId 订单ID
+     * @return 操作结果
+     */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public R<Void> callNext(Long orderId) {
-        log.info("[催单] 发起催单操作: orderId={}", orderId);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        log.info("[催单] 员工发起催单: orderId={}, tenantId={}", orderId, tenantId);
 
         if (orderId == null) {
             return R.error("订单ID不能为空");
         }
 
-        // 对指定订单发起催单操作
-        log.info("[催单] 催单操作成功: orderId={}", orderId);
+        Orders order = orderMapper.selectById(orderId);
+        if (order == null || !tenantId.equals(order.getTenantId())) {
+            return R.error("订单不存在或无权操作");
+        }
+
+        LambdaQueryWrapper<UrgencyRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UrgencyRecord::getOrderId, orderId)
+                .eq(UrgencyRecord::getTenantId, tenantId);
+        UrgencyRecord existingRecord = urgencyMapper.selectOne(wrapper);
+
+        if (existingRecord != null) {
+            Integer prevTimes = existingRecord.getTimes();
+            existingRecord.setTimes((prevTimes != null ? prevTimes : 0) + 1);
+            existingRecord.setStatus("SENT");
+            existingRecord.setUpdateTime(LocalDateTime.now());
+            urgencyMapper.updateById(existingRecord);
+            log.info("[催单] 员工催单更新记录: id={}, times={}", existingRecord.getId(), existingRecord.getTimes());
+        } else {
+            UrgencyRecord record = new UrgencyRecord();
+            record.setOrderId(orderId);
+            record.setMemberId(0L);
+            record.setOrderNo(order.getNumber());
+            record.setTimes(1);
+            record.setStatus("SENT");
+            record.setTenantId(tenantId);
+            record.setCreateTime(LocalDateTime.now());
+            record.setUpdateTime(LocalDateTime.now());
+            urgencyMapper.insert(record);
+            log.info("[催单] 员工催单新增记录: id={}", record.getId());
+        }
         return R.success(null);
     }
 
+    /**
+     * 查看催单详情（基于真实订单数据）
+     *
+     * @param orderId  订单ID
+     * @param tenantId 租户ID
+     * @return 订单详情含制作进度
+     */
     @Override
     public Map<String, Object> getUrgencyDetail(Long orderId, Long tenantId) {
         Map<String, Object> detail = new HashMap<>();
-
         if (orderId == null) {
             return detail;
         }
 
-        List<UrgencyOrder> orders = filterByTenant(tenantId);
-        for (UrgencyOrder order : orders) {
-            if (orderId.equals(order.getOrderId())) {
-                detail.put("id", order.getId());
-                detail.put("orderId", order.getOrderId());
-                detail.put("orderNo", order.getOrderNo());
-                detail.put("tableNo", order.getTableNo());
-                detail.put("customerName", order.getCustomerName());
-                detail.put("dishNames", order.getDishNames());
-                detail.put("status", order.getStatus());
-                detail.put("statusDesc", getStatusDesc(order.getStatus()));
-                detail.put("createTime", order.getCreateTime());
-                detail.put("estimatedFinishTime", order.getEstimatedFinishTime());
-                detail.put("progressPercent", order.getProgressPercent());
-
-                LocalDateTime now = LocalDateTime.now();
-                detail.put("waitMinutes", Duration.between(order.getCreateTime(), now).toMinutes());
-
-                if (order.getEstimatedFinishTime() != null) {
-                    long remainSeconds = Duration.between(now, order.getEstimatedFinishTime()).getSeconds();
-                    detail.put("estimatedRemainSeconds", remainSeconds > 0 ? remainSeconds : 0);
-                }
-
-                long waitMinutes = Duration.between(order.getCreateTime(), now).toMinutes();
-                detail.put("isOverdue", waitMinutes >= 15);
-
+        List<Map<String, Object>> list = getUrgencyList(tenantId, null);
+        for (Map<String, Object> item : list) {
+            if (orderId.equals(item.get("orderId"))) {
+                detail.putAll(item);
+                detail.remove("id");
                 return detail;
             }
         }
-
         return detail;
     }
 
+    /**
+     * 获取叫号排队列表（今日堂食/排队/预订进行中订单）
+     *
+     * @param tenantId 租户ID
+     * @return 排队数据（当前叫号/等待列表）
+     */
     @Override
     public Map<String, Object> getQueueList(Long tenantId) {
         Map<String, Object> queue = new HashMap<>();
 
-        queue.put("currentTableNo", "08");
-        queue.put("waitCount", 3);
+        LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Orders::getTenantId, tenantId)
+                .ge(Orders::getCreateTime, LocalDate.now().atStartOfDay())
+                .in(Orders::getStatus, PENDING_STATUSES)
+                .in(Orders::getSource, Arrays.asList("EAT_IN", "QUEUE", "RESERVATION"))
+                .orderByAsc(Orders::getCreateTime);
+        List<Orders> pendingDineIn = orderMapper.selectList(wrapper);
+
+        Map<Long, String> tableNames = loadTableNames(pendingDineIn);
 
         List<Map<String, Object>> queueList = new ArrayList<>();
+        for (Orders order : pendingDineIn) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("tableNo", order.getTableId() == null ? "--" : tableNames.getOrDefault(order.getTableId(), "--"));
+            item.put("status", "COOKING");
+            item.put("statusDesc", "制作中");
+            queueList.add(item);
+        }
 
-        Map<String, Object> q1 = new HashMap<>();
-        q1.put("tableNo", "09");
-        q1.put("status", "COOKING");
-        q1.put("statusDesc", "制作中");
-        queueList.add(q1);
-
-        Map<String, Object> q2 = new HashMap<>();
-        q2.put("tableNo", "11");
-        q2.put("status", "WAITING_CALL");
-        q2.put("statusDesc", "待叫号");
-        queueList.add(q2);
-
-        Map<String, Object> q3 = new HashMap<>();
-        q3.put("tableNo", "13");
-        q3.put("status", "COOKING");
-        q3.put("statusDesc", "制作中");
-        queueList.add(q3);
-
+        String currentTableNo = queueList.isEmpty() ? "--" : String.valueOf(queueList.get(0).get("tableNo"));
+        queue.put("currentTableNo", currentTableNo);
+        queue.put("waitCount", queueList.size());
         queue.put("queueList", queueList);
         return queue;
     }
 
+    /**
+     * 获取催单统计汇总（基于今日真实催单记录）
+     *
+     * @param tenantId 租户ID
+     * @return 催单统计（今日总数/完成率/平均响应时间）
+     */
     @Override
     public Map<String, Object> getUrgencySummary(Long tenantId) {
         Map<String, Object> summary = new HashMap<>();
+        LocalDate today = LocalDate.now();
 
-        summary.put("todayTotalCalls", 25);
-        summary.put("completionRate", 92);
-        summary.put("avgResponseMinutes", 3);
+        Integer todayTotal = urgencyMapper.countToday(tenantId, today);
+        Integer todayProcessed = urgencyMapper.countTodayProcessed(tenantId, today);
+        BigDecimal avgResponse = urgencyMapper.avgResponseTime(tenantId);
 
+        int todayCount = todayTotal == null ? 0 : todayTotal;
+        int processedCount = todayProcessed == null ? 0 : todayProcessed;
+        int completionRate = todayCount == 0 ? 0 : (int) Math.round(processedCount * 100.0 / todayCount);
+        double avgResponseMin = avgResponse == null ? 0.0 : avgResponse.doubleValue();
+
+        summary.put("todayTotal", todayCount);
+        summary.put("completeRate", completionRate);
+        summary.put("avgResponseMin", avgResponseMin);
         return summary;
     }
 
     // ==================== 私有方法 ====================
 
     /**
-     * 按租户过滤订单
+     * 合并进行中与已完成状态列表
      */
-    private List<UrgencyOrder> filterByTenant(Long tenantId) {
-        List<UrgencyOrder> filtered = new ArrayList<>();
-        for (UrgencyOrder order : MOCK_ORDERS) {
-            if (tenantId == null || tenantId.equals(order.getTenantId())) {
-                filtered.add(order);
-            }
-        }
-        return filtered;
+    private List<Integer> mergeStatuses() {
+        List<Integer> statuses = new ArrayList<>(PENDING_STATUSES);
+        statuses.addAll(DONE_STATUSES);
+        return statuses;
     }
 
     /**
-     * 按等待时间降序排列
+     * 查询今日（按创建时间）指定状态的订单列表
      */
-    private List<UrgencyOrder> sortByWaitTimeDesc(List<UrgencyOrder> orders) {
-        List<UrgencyOrder> sorted = new ArrayList<>(orders);
-        sorted.sort((a, b) -> {
-            long timeA = Duration.between(a.getCreateTime(), LocalDateTime.now()).toMinutes();
-            long timeB = Duration.between(b.getCreateTime(), LocalDateTime.now()).toMinutes();
-            return Long.compare(timeB, timeA);
-        });
-        return sorted;
+    private List<Orders> listTodayOrders(Long tenantId, List<Integer> statuses) {
+        LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Orders::getTenantId, tenantId)
+                .ge(Orders::getCreateTime, LocalDate.now().atStartOfDay())
+                .in(Orders::getStatus, statuses);
+        return orderMapper.selectList(wrapper);
+    }
+
+    /**
+     * 计算订单已等待分钟数（取下单时间，缺失时用创建时间）
+     */
+    private long waitMinutes(Orders order, LocalDateTime now) {
+        LocalDateTime base = order.getOrderTime() != null ? order.getOrderTime() : order.getCreateTime();
+        if (base == null) {
+            return 0;
+        }
+        long minutes = Duration.between(base, now).toMinutes();
+        return Math.max(0, minutes);
+    }
+
+    /**
+     * 批量加载桌台名称映射
+     */
+    private Map<Long, String> loadTableNames(List<Orders> orders) {
+        Map<Long, String> tableNames = new HashMap<>();
+        if (orders == null || orders.isEmpty()) {
+            return tableNames;
+        }
+        List<Long> tableIds = new ArrayList<>();
+        for (Orders order : orders) {
+            if (order.getTableId() != null && !tableIds.contains(order.getTableId())) {
+                tableIds.add(order.getTableId());
+            }
+        }
+        if (tableIds.isEmpty()) {
+            return tableNames;
+        }
+        List<DiningTable> tables = diningTableService.listByIds(tableIds);
+        for (DiningTable table : tables) {
+            tableNames.put(table.getId(), table.getName());
+        }
+        return tableNames;
+    }
+
+    /**
+     * 批量加载订单菜品名称（按 orderId 聚合，逗号分隔）
+     */
+    private Map<Long, String> loadDishNames(List<Orders> orders, Long tenantId) {
+        Map<Long, String> dishNamesMap = new HashMap<>();
+        if (orders == null || orders.isEmpty()) {
+            return dishNamesMap;
+        }
+        List<Long> orderIds = new ArrayList<>();
+        for (Orders order : orders) {
+            orderIds.add(order.getId());
+        }
+
+        LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(OrderDetail::getOrderId, orderIds)
+                .eq(OrderDetail::getTenantId, tenantId)
+                .orderByAsc(OrderDetail::getId);
+        List<OrderDetail> details = orderDetailMapper.selectList(wrapper);
+
+        Map<Long, List<String>> grouped = new HashMap<>();
+        for (OrderDetail detail : details) {
+            List<String> names = grouped.get(detail.getOrderId());
+            if (names == null) {
+                names = new ArrayList<>();
+                grouped.put(detail.getOrderId(), names);
+            }
+            names.add(detail.getName());
+        }
+        for (Map.Entry<Long, List<String>> entry : grouped.entrySet()) {
+            dishNamesMap.put(entry.getKey(), String.join("、", entry.getValue()));
+        }
+        return dishNamesMap;
+    }
+
+    /**
+     * 订单状态映射为看板状态：进行中=COOKING，已完成=DONE
+     */
+    private String mapOrderStatus(Integer status) {
+        if (status != null && status == Orders.STATUS_COMPLETED) {
+            return "DONE";
+        }
+        return "COOKING";
+    }
+
+    /**
+     * 制作进度估算：待接单=30%，派送中=70%，已完成=100%
+     */
+    private Integer estimateProgress(Integer status) {
+        if (status == null) {
+            return 0;
+        }
+        if (status == Orders.STATUS_COMPLETED) {
+            return 100;
+        }
+        if (status == Orders.STATUS_DELIVERING) {
+            return 70;
+        }
+        return 30;
     }
 
     /**
@@ -574,7 +614,7 @@ public class UrgencyServiceImpl implements UrgencyService {
             return "制作中";
         } else if ("WAITING_CALL".equals(status)) {
             return "等待叫号";
-        } else if ("COMPLETED".equals(status)) {
+        } else if ("DONE".equals(status)) {
             return "已完成";
         }
         return "未知状态";

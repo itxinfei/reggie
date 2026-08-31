@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>经营报表 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+  <style>
+    /* 8.5.1 经营报表四合一：总览 / 销售明细 / 时段分布 / 菜品排行 —— 全部引用 tokens.css 设计令牌 */
+    .br-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
+    .br-tabs { margin-top: var(--space-4) }
+    .br-tabs .el-tabs__item { font-size: var(--font-size-base) }
+
+    /* 顶部日期快捷栏 */
+    .br-datebar { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-4);
+      background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); margin-bottom: var(--space-4); flex-wrap: wrap }
+    .br-datebar__label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap; margin-right: var(--space-1) }
+    .quick-btn { padding: 7px 16px; border: 1px solid var(--border-default); border-radius: var(--radius-sm);
+      background: var(--bg-surface); color: var(--text-secondary); font-size: var(--font-size-base); cursor: pointer; transition: all var(--transition-base) }
+    .quick-btn:hover { border-color: var(--color-brand-500); color: var(--color-brand-500) }
+    .quick-btn.active { background: var(--color-brand-500); border-color: var(--color-brand-500); color: var(--text-on-brand); font-weight: 500 }
+    .br-datebar__range { margin-left: var(--space-1) }
+
+    /* 图表面板 */
+    .chart-panel { background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); padding: var(--space-4); margin-bottom: var(--space-4) }
+    .chart-panel__title { font-size: 16px; font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-3);
+      display: flex; align-items: center; gap: 8px }
+    .chart-box { width: 100%; height: 260px }
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) }
+    @media (max-width: 1200px) { .charts-row { grid-template-columns: 1fr } }
+
+    .empty-state { text-align: center; padding: 40px var(--space-4); color: var(--text-muted); font-size: var(--font-size-base) }
+    .empty-state__icon { font-size: 40px; line-height: 1; margin-bottom: var(--space-3) }
+
+    /* 排名徽章：与 dish-ranking 视觉一致，前三名彩色、其余中性 */
+    .rank-badge { display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: var(--radius-md); font-size: var(--font-size-xs); font-weight: 700; }
+    .rank-badge.r1 { background: var(--color-danger); color: var(--bg-surface); }
+    .rank-badge.r2 { background: var(--color-brand-500); color: var(--text-on-brand); }
+    .rank-badge.r3 { background: var(--color-warning); color: var(--bg-surface); }
+    .rank-badge.rn { background: var(--el-bg-lighter); color: var(--color-info); }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="business-report-app">
+    <div class="container br-container" id="main-content" role="main" aria-label="页面主要内容">
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">经营报表</h1>
+          <p class="ds-page-header__subtitle">总览 / 销售明细 / 时段分布 / 菜品排行，日期快捷一键联动全表</p>
+        </div>
+      </header>
+
+      <!-- 顶部日期快捷：今日/昨日/近7天/近30天/自定义 -->
+      <div class="br-datebar">
+        <span class="br-datebar__label">日期：</span>
+        <button
+          v-for="q in quickDates"
+          :key="q.key"
+          class="quick-btn"
+          :class="{ active: activeQuick === q.key }"
+          type="button"
+          @click="applyQuick(q.key)"
+        >{{ q.text }}</button>
+        <div class="br-datebar__range">
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="yyyy-MM-dd"
+            :clearable="false"
+            style="width:260px"
+            @change="onRangeChange"
+            aria-label="自定义日期范围"
+          ></el-date-picker>
+        </div>
+      </div>
+
+      <el-tabs v-model="activeTab" class="br-tabs" @tab-click="onTabClick">
+
+        <!-- ===== Tab1 总览：KPI 卡 + 销售趋势图 ===== -->
+        <el-tab-pane label="总览" name="overview">
+          <stat-cards :cards="overviewCards" :loading="overviewLoading"></stat-cards>
+          <div class="chart-panel">
+            <div class="chart-panel__title"><i class="ri-line-chart-line" aria-hidden="true"></i> 销售趋势（{{ dateLabel }}）</div>
+            <div v-if="trendData.labels && trendData.labels.length" class="chart-box" id="trendChart"></div>
+            <div v-else class="empty-state">
+              <div class="empty-state__icon"><i class="ri-bar-chart-box-line" aria-hidden="true"></i></div>
+              <div>当前日期范围内暂无销售数据</div>
+            </div>
+          </div>
+        </el-tab-pane>
+
+        <!-- ===== Tab2 销售明细 ===== -->
+        <el-tab-pane label="销售明细" name="detail">
+          <crud-table
+            :data="detailRows"
+            :columns="detailColumns"
+            :loading="detailLoading"
+            :show-pagination="false"
+          ></crud-table>
+          <div v-if="detailRows.length === 0 && !detailLoading" class="empty-state">
+            <div class="empty-state__icon"><i class="ri-file-list-3-line" aria-hidden="true"></i></div>
+            <div>当前日期范围内暂无销售明细</div>
+          </div>
+        </el-tab-pane>
+
+        <!-- ===== Tab3 时段分布 ===== -->
+        <el-tab-pane label="时段分布" name="timeslot">
+          <div class="charts-row">
+            <div class="chart-panel">
+              <div class="chart-panel__title"><i class="ri-bar-chart-2-line" aria-hidden="true"></i> 各时段订单与营业额</div>
+              <div class="chart-box" id="slotChart"></div>
+            </div>
+            <div class="chart-panel">
+              <div class="chart-panel__title"><i class="ri-pie-chart-2-line" aria-hidden="true"></i> 订单占比</div>
+              <div class="chart-box" id="slotPieChart"></div>
+            </div>
+          </div>
+          <crud-table
+            :data="slotRows"
+            :columns="slotColumns"
+            :loading="slotLoading"
+            :show-pagination="false"
+          >
+            <template #col-ratio="{ row }">
+              <span>{{ slotPercent(row.count) }}%</span>
+            </template>
+            <template #col-heat="{ row }">
+              <el-progress :percentage="slotPercent(row.count)" :show-text="true" :stroke-width="12"></el-progress>
+            </template>
+          </crud-table>
+        </el-tab-pane>
+
+        <!-- ===== Tab4 菜品排行 ===== -->
+        <el-tab-pane label="菜品排行" name="ranking">
+          <div class="chart-panel">
+            <div class="chart-panel__title"><i class="ri-trophy-line" aria-hidden="true"></i> 热销菜品 TOP {{ Math.min(10, rankingRows.length) }}</div>
+            <div class="chart-box" id="rankChart"></div>
+          </div>
+          <crud-table
+            :data="rankingRows"
+            :columns="rankingColumns"
+            :loading="rankingLoading"
+            :show-pagination="false"
+          >
+            <template #col-rank="{ row }">
+              <span class="rank-badge" :class="(row._rank <= 3 ? 'r' + row._rank : 'rn')">{{ row._rank }}</span>
+            </template>
+            <template #col-ratio="{ row }">
+              <span>{{ row._ratio }}</span>
+            </template>
+          </crud-table>
+          <div v-if="rankingRows.length === 0 && !rankingLoading" class="empty-state">
+            <div class="empty-state__icon"><i class="ri-trophy-line" aria-hidden="true"></i></div>
+            <div>当前日期范围内暂无菜品销售数据</div>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../plugins/echarts/echarts.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../api/report.js"></script>
+  <script src="../../api/report-enhanced.js"></script>
+  <script src="../../js/components.js"></script>
+  <script>
+    // 8.5.1 经营报表四合一：总览/销售明细/时段分布/菜品排行，日期快捷联动全表
+    new Vue({
+      el: '#business-report-app',
+      data: function() {
+        var today = new Date()
+        var fmt = function(d) {
+          return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+        }
+        var todayStr = fmt(today)
+        var yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
+        var day7 = new Date(today); day7.setDate(day7.getDate() - 6)
+        var day30 = new Date(today); day30.setDate(day30.getDate() - 29)
+        return {
+          activeTab: 'overview',
+          // 日期快捷
+          quickDates: [
+            { key: 'today', text: '今日' },
+            { key: 'yesterday', text: '昨日' },
+            { key: '7d', text: '近7天' },
+            { key: '30d', text: '近30天' }
+          ],
+          activeQuick: '7d',
+          dateRange: [fmt(day7), todayStr],
+          dateLabel: fmt(day7) + ' ~ ' + todayStr,
+          // Tab1 总览
+          overviewLoading: false,
+          trendData: {},
+          detailRows: [],
+          detailColumns: [
+            { prop: 'date', label: '日期', minWidth: 110 },
+            { prop: 'revenue', label: '营业额', minWidth: 130, type: 'money' },
+            { prop: 'orders', label: '订单数', minWidth: 90, type: 'number' },
+            { prop: 'avg', label: '客单价', minWidth: 120, type: 'money' }
+          ],
+          detailLoading: false,
+          trendChart: null,
+          // Tab3 时段
+          slotLoaded: false,
+          slotRows: [],
+          slotColumns: [
+            { prop: 'slot', label: '时段', minWidth: 90 },
+            { prop: 'count', label: '订单数', minWidth: 90, type: 'number' },
+            { prop: 'amount', label: '营业额', minWidth: 120, type: 'money' },
+            { prop: 'ratio', label: '占比', minWidth: 90, slot: true },
+            { prop: 'heat', label: '热度', slot: true, minWidth: 180 }
+          ],
+          slotLoading: false,
+          slotChart: null,
+          slotPieChart: null,
+          slotTotalCount: 0,
+          // Tab4 排行
+          rankingLoaded: false,
+          rankingRows: [],
+          rankingColumns: [
+            { prop: 'rank', label: '排名', width: 70, slot: true },
+            { prop: 'name', label: '菜品名称', minWidth: 200 },
+            { prop: 'count', label: '销量', minWidth: 100, type: 'number' },
+            { prop: 'ratio', label: '占比', minWidth: 130, slot: true }
+          ],
+          rankingLoading: false,
+          rankChart: null,
+          _resizeHandler: null
+        }
+      },
+      computed: {
+        overviewCards: function() {
+          var self = this
+          var t = self.trendData || {}
+          var revs = t.revenues || []
+          var ords = t.orders || []
+          var rev = revs.reduce(function(s, v) { return s + (Number(v) || 0) }, 0)
+          var ord = ords.reduce(function(s, v) { return s + (Number(v) || 0) }, 0)
+          var days = revs.length || 0
+          return [
+            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '总营业额', value: '￥' + self.formatMoney(rev), color: 'primary' },
+            { key: 'orders', icon: 'ri-shopping-bag-3-line', label: '总订单数', value: self.formatNumber(ord), color: 'success' },
+            { key: 'avg', icon: 'ri-coupon-3-line', label: '客单价', value: ord > 0 ? '￥' + self.formatMoney(rev / ord) : '￥0.00', color: 'warning' },
+            { key: 'daily', icon: 'ri-calendar-check-line', label: '日均营业额', value: days > 0 ? '￥' + self.formatMoney(rev / days) : '￥0.00', color: 'info' }
+          ]
+        },
+        dateLabelText: function() {
+          return (this.dateRange && this.dateRange.length >= 2) ? this.dateRange[0] + ' ~ ' + this.dateRange[1] : ''
+        }
+      },
+      created: function() {
+        this.loadTrend()
+      },
+      mounted: function() {
+        var self = this
+        this.$nextTick(function() {
+          var el = document.getElementById('trendChart')
+          if (el) {
+            self.trendChart = echarts.init(el)
+            self.renderTrend()
+          }
+          self._resizeHandler = function() {
+            if (self.trendChart) self.trendChart.resize()
+            if (self.slotChart) self.slotChart.resize()
+            if (self.slotPieChart) self.slotPieChart.resize()
+            if (self.rankChart) self.rankChart.resize()
+          }
+          window.addEventListener('resize', self._resizeHandler)
+        })
+      },
+      beforeDestroy: function() {
+        if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler)
+        var charts = [this.trendChart, this.slotChart, this.slotPieChart, this.rankChart]
+        for (var i = 0; i < charts.length; i++) {
+          if (charts[i]) { try { charts[i].dispose() } catch (e) {} }
+        }
+      },
+      methods: {
+        // ===== 日期快捷 =====
+        applyQuick: function(key) {
+          var self = this
+          var today = new Date()
+          var fmt = function(d) {
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+          }
+          var start, end = today
+          if (key === 'today') { start = today }
+          else if (key === 'yesterday') { start = new Date(today); start.setDate(start.getDate() - 1); end = start }
+          else if (key === '7d') { start = new Date(today); start.setDate(start.getDate() - 6) }
+          else { start = new Date(today); start.setDate(start.getDate() - 29) }
+          self.activeQuick = key
+          self.dateRange = [fmt(start), fmt(end)]
+          self.reloadAll()
+        },
+        onRangeChange: function() {
+          this.activeQuick = ''
+          this.reloadAll()
+        },
+        onTabClick: function(tab) {
+          var name = tab && tab.name ? tab.name : tab
+          if (name === 'timeslot' && !this.slotLoaded) {
+            this.slotLoaded = true
+            this.loadSlot()
+          }
+          if (name === 'ranking' && !this.rankingLoaded) {
+            this.rankingLoaded = true
+            this.loadRanking()
+          }
+        },
+        // ===== 统一重载 =====
+        reloadAll: function() {
+          this.loadTrend()
+          if (this.slotLoaded) this.loadSlot()
+          if (this.rankingLoaded) this.loadRanking()
+        },
+        // ===== 总览 + 销售明细（趋势接口聚合） =====
+        async loadTrend() {
+          this.overviewLoading = true
+          this.detailLoading = true
+          var startDate = this.dateRange[0]
+          var endDate = this.dateRange[1]
+          if (!startDate || !endDate) {
+            this.overviewLoading = false
+            this.detailLoading = false
+            return
+          }
+          try {
+            var res = await getSalesTrend({ period: 'day', startDate: startDate, endDate: endDate })
+            if (String(res.code) === '1') {
+              this.trendData = res.data || {}
+              this.buildDetailRows()
+              this.dateLabel = startDate + ' ~ ' + endDate
+              this.$nextTick(function() { this.renderTrend() })
+            } else {
+              ReggieUI.error(res.msg || '加载失败')
+            }
+          } catch (e) {
+            console.warn('加载销售趋势失败:', e)
+          } finally {
+            this.overviewLoading = false
+            this.detailLoading = false
+          }
+        },
+        buildDetailRows: function() {
+          var t = this.trendData || {}
+          var labels = t.labels || []
+          var revs = t.revenues || []
+          var ords = t.orders || []
+          var rows = []
+          for (var i = 0; i < labels.length; i++) {
+            var rev = Number(revs[i]) || 0
+            var ord = Number(ords[i]) || 0
+            rows.push({
+              date: labels[i],
+              revenue: rev,
+              orders: ord,
+              avg: ord > 0 ? rev / ord : 0
+            })
+          }
+          this.detailRows = rows
+        },
+        renderTrend: function() {
+          var el = document.getElementById('trendChart')
+          if (!el) {
+            if (this.trendChart) { this.trendChart.dispose(); this.trendChart = null }
+            return
+          }
+          if (!this.trendChart) this.trendChart = echarts.init(el)
+          var t = this.trendData || {}
+          var labels = t.labels || []
+          var revs = t.revenues || []
+          var ords = t.orders || []
+          if (!labels.length) {
+            this.trendChart.clear()
+            return
+          }
+          var that = this
+          this.trendChart.setOption({
+            tooltip: { trigger: 'axis' },
+            legend: { data: ['营业额', '订单数'], bottom: 0, textStyle: { fontSize: 12 } },
+            grid: { left: 60, right: 45, top: 20, bottom: 35 },
+            xAxis: { type: 'category', data: labels, axisLabel: { rotate: 40, fontSize: 10 } },
+            yAxis: [
+              { type: 'value', name: '营业额', axisLabel: { formatter: function(v) { return '¥' + that.axisNum(v) } } },
+              { type: 'value', name: '订单数', splitLine: { show: false } }
+            ],
+            series: [
+              { name: '营业额', type: 'bar', data: revs, barWidth: '45%',
+                itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0], color: RgPalette.brand } },
+              { name: '订单数', type: 'line', data: ords, yAxisIndex: 1, smooth: true, symbol: 'none',
+                lineStyle: { color: RgPalette.emerald, width: 2 } }
+            ]
+          }, true)
+        },
+        // ===== 时段分布 =====
+        async loadSlot() {
+          this.slotLoading = true
+          try {
+            var res = await reportTimeSlot({ startDate: this.dateRange[0], endDate: this.dateRange[1] })
+            if (String(res.code) === '1') {
+              this.slotRows = res.data || []
+              var total = 0
+              var rows = this.slotRows
+              for (var i = 0; i < rows.length; i++) { total += (Number(rows[i].count) || 0) }
+              this.slotTotalCount = total
+              // 列 formatter 依赖组件内 state 无法闭包捕获，改为在模板里通过 slotPercent 动态算
+              this.$nextTick(function() { this.renderSlotCharts() })
+            } else {
+              ReggieUI.error(res.msg || '加载时段数据失败')
+            }
+          } catch (e) {
+            console.warn('加载时段数据失败:', e)
+          } finally {
+            this.slotLoading = false
+          }
+        },
+        slotPercent: function(count) {
+          if (!this.slotTotalCount) return 0
+          return Math.round((Number(count) || 0) / this.slotTotalCount * 100)
+        },
+        renderSlotCharts: function() {
+          var that = this
+          if (!this.slotChart) {
+            this.slotChart = echarts.init(document.getElementById('slotChart'))
+          }
+          if (!this.slotPieChart) {
+            this.slotPieChart = echarts.init(document.getElementById('slotPieChart'))
+          }
+          var rows = this.slotRows
+          if (!rows.length) {
+            this.slotChart.clear()
+            this.slotPieChart.clear()
+            return
+          }
+          var labels = rows.map(function(r) { return r.slot })
+          var counts = rows.map(function(r) { return Number(r.count) || 0 })
+          var amounts = rows.map(function(r) { return Number(r.amount) || 0 })
+          this.slotChart.setOption({
+            tooltip: { trigger: 'axis' },
+            legend: { data: ['订单数', '营业额'], bottom: 0, textStyle: { fontSize: 12 } },
+            grid: { left: 50, right: 50, top: 20, bottom: 35 },
+            xAxis: { type: 'category', data: labels, axisLabel: { fontSize: 10 } },
+            yAxis: [
+              { type: 'value', name: '订单数' },
+              { type: 'value', name: '营业额', splitLine: { show: false }, axisLabel: { formatter: function(v) { return '¥' + that.axisNum(v) } } }
+            ],
+            series: [
+              { name: '订单数', type: 'bar', data: counts, barWidth: '50%',
+                itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0], color: RgPalette.brand } },
+              { name: '营业额', type: 'line', data: amounts, yAxisIndex: 1, smooth: true, symbol: 'none',
+                lineStyle: { color: RgPalette.amber500, width: 2 } }
+            ]
+          }, true)
+          this.slotPieChart.setOption({
+            tooltip: { trigger: 'item', formatter: '{b}: {c} 单 ({d}%)' },
+            legend: { bottom: 0, textStyle: { fontSize: 12 } },
+            series: [{
+              type: 'pie', radius: ['45%', '70%'], center: ['50%', '45%'], avoidLabelOverlap: true,
+              label: { show: false }, emphasis: { label: { show: true, fontWeight: 'bold' } },
+              itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 3 },
+              data: rows.map(function(r, i) {
+                return { value: Number(r.count) || 0, name: r.slot, itemStyle: { color: that.pieColor(i) } }
+              })
+            }]
+          }, true)
+        },
+        // ===== 菜品排行 =====
+        async loadRanking() {
+          this.rankingLoading = true
+          try {
+            var res = await reportDishRanking({ startDate: this.dateRange[0], endDate: this.dateRange[1] })
+            if (String(res.code) === '1') {
+              var data = res.data || []
+              var total = 0
+              var list = []
+              for (var i = 0; i < data.length; i++) {
+                total += (Number(data[i].count) || 0)
+                list.push({ name: data[i].name, count: Number(data[i].count) || 0 })
+              }
+              var totalSales = total
+              for (var j = 0; j < list.length; j++) {
+                list[j]._rank = j + 1
+                list[j]._ratio = totalSales > 0 ? (list[j].count / totalSales * 100).toFixed(1) + '%' : '0%'
+              }
+              this.rankingRows = list
+              this.$nextTick(function() { this.renderRankChart() })
+            } else {
+              ReggieUI.error(res.msg || '加载排行失败')
+            }
+          } catch (e) {
+            console.warn('加载菜品排行失败:', e)
+          } finally {
+            this.rankingLoading = false
+          }
+        },
+        renderRankChart: function() {
+          if (!this.rankChart) {
+            this.rankChart = echarts.init(document.getElementById('rankChart'))
+          }
+          var rows = this.rankingRows
+          if (!rows.length) {
+            this.rankChart.clear()
+            return
+          }
+          var top = rows.slice(0, 10)
+          var names = top.map(function(r) { return r.name }).reverse()
+          var counts = top.map(function(r) { return r.count }).reverse()
+          var that = this
+          this.rankChart.setOption({
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+            grid: { left: 10, right: 30, top: 10, bottom: 25, containLabel: true },
+            xAxis: { type: 'value' },
+            yAxis: { type: 'category', data: names, axisLabel: { fontSize: 11, width: 110, overflow: 'truncate' } },
+            series: [{
+              type: 'bar', data: counts, barWidth: '55%',
+              itemStyle: { borderRadius: [0, RgPalette.radiusMd, RgPalette.radiusMd, 0], color: function(params) {
+                var idx = top.length - 1 - params.dataIndex
+                var colors = [RgPalette.danger, RgPalette.amber500, RgPalette.brand]
+                return colors[idx] || RgPalette.blue500
+              } },
+              label: { show: true, position: 'right', fontSize: 11, color: RgPalette.textSecondary }
+            }]
+          }, true)
+        },
+        // ===== 工具 =====
+        axisNum: function(v) {
+          var n = Number(v) || 0
+          if (n >= 10000) return (n / 10000).toFixed(1) + 'w'
+          if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
+          return String(Math.round(n))
+        },
+        pieColor: function(idx) {
+          var colors = [RgPalette.brand, RgPalette.emerald, RgPalette.amber500, RgPalette.blue500, RgPalette.violet500, RgPalette.danger, RgPalette.orange500, RgPalette.gray999]
+          return colors[idx % colors.length]
+        },
+        formatMoney: function(v) {
+          if (v === null || v === undefined || v === '') return '0.00'
+          var n = Number(v)
+          if (isNaN(n)) return '0.00'
+          var fixed = n.toFixed(2)
+          var parts = fixed.split('.')
+          parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+          return parts.join('.')
+        },
+        formatNumber: function(v) {
+          if (v === null || v === undefined) return '0'
+          return Number(v).toLocaleString()
+        }
+      }
+    })
+  </script>
+</body>
+</html>

@@ -34,6 +34,8 @@ public class DeliveryOrder implements Serializable {
     private String platformOrderId;
     /** 配送平台 */
     private String platform;
+    /** 本地订单ID（关联 orders.id，可空；平台订单未打通本地时为空） */
+    private Long orderId;
     /** 菜品摘要 */
     private String dishSummary;
     /** 订单金额 */

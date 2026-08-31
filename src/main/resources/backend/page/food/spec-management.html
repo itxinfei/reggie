@@ -193,10 +193,12 @@
               <el-pagination
                 background
                 small
-                layout="total, prev, pager, next"
+                layout="total, sizes, prev, pager, next"
+                :page-sizes="[10, 20, 50]"
                 :total="filteredGroups.length"
                 :page-size="groupPageSize"
                 :current-page="groupPage"
+                @size-change="onGroupSizeChange"
                 @current-change="groupPage = $event">
               </el-pagination>
             </div>
@@ -282,10 +284,12 @@
               <el-pagination
                 background
                 small
-                layout="total, prev, pager, next"
+                layout="total, sizes, prev, pager, next"
+                :page-sizes="[10, 20, 50]"
                 :total="filteredOptions.length"
                 :page-size="optionPageSize"
                 :current-page="optionPage"
+                @size-change="onOptionSizeChange"
                 @current-change="optionPage = $event">
               </el-pagination>
             </div>
@@ -369,6 +373,9 @@
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
+  <!-- 修改点：补引 axios —— request.js 首行即使用全局 axios，缺失会抛错导致
+       $axios 永不挂载，本页所有接口请求全部失效 -->
+  <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
@@ -454,6 +461,22 @@
         }
       },
       methods: {
+        /**
+         * 修改点：每页条数变更处理（原分页只有翻页、无条数选择，数据多时只能一页页点）
+         * @param {number} size 新的每页条数
+         */
+        onGroupSizeChange: function (size) {
+          this.groupPageSize = size
+          this.groupPage = 1
+        },
+        /**
+         * 修改点：规格选项分页每页条数变更处理
+         * @param {number} size 新的每页条数
+         */
+        onOptionSizeChange: function (size) {
+          this.optionPageSize = size
+          this.optionPage = 1
+        },
         /**
          * 列对齐：与 components.js resolveColAlign 默认规则保持一致
          * 文本列居中、金额/数字列右对齐（规格页为裸 el-table，按同一规则收敛）

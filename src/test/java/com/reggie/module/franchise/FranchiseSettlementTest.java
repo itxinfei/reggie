@@ -171,4 +171,77 @@ public class FranchiseSettlementTest {
         assertEquals(FranchiseSettlement.STATUS_SETTLED, settled.getStatus());
         assertNotNull(settled.getSettleTime());
     }
+
+    @Test
+    void testStatsAggregation() {
+        // 加盟商：启用 2 个、禁用 1 个；其中 2 个有生效合同
+        Franchisee f1 = new Franchisee();
+        f1.setTenantId(1L); f1.setName("加盟商A"); f1.setStatus(Franchisee.STATUS_ENABLED);
+        franchiseeService.save(f1);
+        Franchisee f2 = new Franchisee();
+        f2.setTenantId(1L); f2.setName("加盟商B"); f2.setStatus(Franchisee.STATUS_ENABLED);
+        franchiseeService.save(f2);
+        Franchisee f3 = new Franchisee();
+        f3.setTenantId(1L); f3.setName("加盟商C"); f3.setStatus(Franchisee.STATUS_DISABLED);
+        franchiseeService.save(f3);
+
+        FranchiseContract c1 = new FranchiseContract();
+        c1.setTenantId(1L); c1.setFranchiseeId(f1.getId()); c1.setStoreTenantId(2L);
+        c1.setContractNo("FR-A"); c1.setSettleCycle(FranchiseContract.SETTLE_CYCLE_MONTHLY);
+        c1.setStatus(FranchiseContract.STATUS_ACTIVE);
+        franchiseContractService.save(c1);
+        FranchiseContract c2 = new FranchiseContract();
+        c2.setTenantId(1L); c2.setFranchiseeId(f1.getId()); c2.setStoreTenantId(2L);
+        c2.setContractNo("FR-B"); c2.setSettleCycle(FranchiseContract.SETTLE_CYCLE_MONTHLY);
+        c2.setStatus(FranchiseContract.STATUS_ACTIVE);
+        franchiseContractService.save(c2);
+        FranchiseContract c3 = new FranchiseContract();
+        c3.setTenantId(1L); c3.setFranchiseeId(f3.getId()); c3.setStoreTenantId(2L);
+        c3.setContractNo("FR-C"); c3.setSettleCycle(FranchiseContract.SETTLE_CYCLE_MONTHLY);
+        c3.setStatus(FranchiseContract.STATUS_TERMINATED);
+        franchiseContractService.save(c3);
+
+        // 结算单：1 待确认、1 已确认、1 已结算
+        createCompletedOrder(2L, new BigDecimal("5000.00"));
+        FranchiseSettlement s1 = franchiseSettlementService.generateSettlement(c1.getId(), "2026-08");
+        franchiseSettlementService.generateSettlement(c2.getId(), "2026-08");
+        franchiseSettlementService.confirmSettlement(s1.getId());
+        franchiseSettlementService.settleSettlement(s1.getId());
+
+        // 加盟商统计
+        java.util.Map<String, Object> feStat = franchiseeService.statFranchisees(1L);
+        assertEquals(3, ((Number) feStat.get("total")).intValue());
+        assertEquals(2, ((Number) feStat.get("enabled")).intValue());
+        assertEquals(1, ((Number) feStat.get("disabled")).intValue());
+        // 有合同（含已终止）的加盟商去重 = 2（A、C）
+        assertEquals(2, ((Number) feStat.get("contractCount")).intValue());
+
+        // 合同统计
+        java.util.Map<String, Object> ctStat = franchiseContractService.statContracts(1L);
+        assertEquals(3, ((Number) ctStat.get("total")).intValue());
+        assertEquals(2, ((Number) ctStat.get("active")).intValue());
+        assertEquals(1, ((Number) ctStat.get("expired")).intValue());
+        assertEquals(2, ((Number) ctStat.get("franchiseeCount")).intValue());
+
+        // 结算单统计：s1 待确认 → 确认 → 结算（settled），s2 仍待确认（pending）
+        java.util.Map<String, Object> stStat = franchiseSettlementService.statSettlements(1L);
+        assertEquals(2, ((Number) stStat.get("total")).intValue());
+        assertEquals(1, ((Number) stStat.get("pending")).intValue());
+        assertEquals(0, ((Number) stStat.get("confirmed")).intValue());
+        assertEquals(1, ((Number) stStat.get("settled")).intValue());
+    }
+
+    @Test
+    void testStatsIsolatedByTenant() {
+        Franchisee f = new Franchisee();
+        f.setTenantId(1L); f.setName("租户1加盟商"); f.setStatus(Franchisee.STATUS_ENABLED);
+        franchiseeService.save(f);
+        Franchisee other = new Franchisee();
+        other.setTenantId(99L); other.setName("其他租户加盟商"); other.setStatus(Franchisee.STATUS_ENABLED);
+        franchiseeService.save(other);
+
+        // 租户 1 只看得到自己的 1 个加盟商
+        java.util.Map<String, Object> stat = franchiseeService.statFranchisees(1L);
+        assertEquals(1, ((Number) stat.get("total")).intValue());
+    }
 }

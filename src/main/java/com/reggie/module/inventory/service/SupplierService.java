@@ -33,4 +33,11 @@ public interface SupplierService extends IService<Supplier> {
      * @return 启用状态的供应商列表
      */
     List<Supplier> listEnabled();
+
+    /**
+     * 批量回填供应商采购汇总（累计采购金额/采购单笔数，排除已取消单）
+     *
+     * @param suppliers 供应商列表（原地回填，无需返回）
+     */
+    void fillPurchaseSummary(List<Supplier> suppliers);
 }

@@ -197,6 +197,19 @@ public class PaymentController {
     }
 
     /**
+     * 退款分析（当前租户）
+     * <p>返回退款总数/成功/退款中/失败、成功退款总额、退款原因 TOP5，供报表页退款分析。</p>
+     *
+     * @return 退款分析结果
+     */
+    @RequireEmployee
+    @GetMapping("/refund/stats")
+    @Operation(summary = "退款分析", description = "当前租户退款统计与退款原因TOP5")
+    public R<Map<String, Object>> refundStats() {
+        return R.success(refundRecordService.getRefundAnalysis(BaseContext.getCurrentTenantId()));
+    }
+
+    /**
      * 申请退款
      * <p>
      * 退款流程：①校验（无事务）→ ②调用渠道退款（事务外，外部 HTTP 不被事务包裹）→ ③本地落库（短事务）。

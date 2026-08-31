@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>库存盘点 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
@@ -57,7 +59,7 @@
         :expand="true"
         row-key="id"
         :show-actions="true"
-        :actions-width="140"
+        :actions-width="180"
         @page-change="onPageChange"
         @size-change="onSizeChange"
         @expand-change="loadDetails">
@@ -91,6 +93,8 @@
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-complete" @click="enterCheck(row)" v-if="row.status === 'IN_PROGRESS'">录入数据</el-button>
+          <!-- 修改点：补充删除（后端限制仅草稿/已取消可删，已完成的盘点单已生成库存差异，禁止删除） -->
+          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row)" v-if="row.status !== 'DONE'">删除</el-button>
         </template>
       </crud-table>
     </div>
@@ -194,6 +198,11 @@
           },
           // 录入数据弹窗
           entryDialogVisible: false,
+          // 修改点：补声明两个提交中标志 —— 模板 :submit-loading="submitting" /
+          // "entrySubmitting" 引用了它们但从未定义，导致 Vue 渲染告警且提交按钮
+          // 无 loading 态（可重复点击造成重复创建盘点单／重复完成盘点）
+          submitting: false,
+          entrySubmitting: false,
           entryCheckId: null,
           entryMaterials: [],
           entryForm: { details: [] }
@@ -206,10 +215,10 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: '', icon: '📋', label: '盘点单总数', value: self.stats.totalChecks || 0, color: 'primary', active: self.activeFilter === '' },
-            { key: 'IN_PROGRESS', icon: '⏳', label: '进行中', value: self.stats.pendingChecks || 0, color: 'warning', active: self.activeFilter === 'IN_PROGRESS' },
-            { key: 'DONE', icon: '✅', label: '已完成', value: self.stats.completedChecks || 0, color: 'success', active: self.activeFilter === 'DONE' },
-            { key: 'diff', icon: '⚠️', label: '存在差异项', value: self.stats.diffCount || 0, color: 'info' }
+            { key: '', icon: 'ri-file-list-3-line', label: '盘点单总数', value: self.stats.totalChecks || 0, color: 'primary', active: self.activeFilter === '' },
+            { key: 'IN_PROGRESS', icon: 'ri-time-line', label: '进行中', value: self.stats.pendingChecks || 0, color: 'warning', active: self.activeFilter === 'IN_PROGRESS' },
+            { key: 'DONE', icon: 'ri-checkbox-circle-line', label: '已完成', value: self.stats.completedChecks || 0, color: 'success', active: self.activeFilter === 'DONE' },
+            { key: 'diff', icon: 'ri-error-warning-line', label: '存在差异项', value: self.stats.diffCount || 0, color: 'info' }
           ]
         }
       },
@@ -314,14 +323,19 @@
         },
         async submitCreate() {
           const self = this
+          if (self.submitting) return // 修改点：防重复提交
+          // 修改点：原写法在 .catch 中 return 无法中断外层 async 函数，
+          // 校验失败仍会继续发创建请求；改用标志位显式中断
+          let valid = true
           await new Promise(function(resolve, reject) {
-            self.$refs.createForm.validate(function(valid) { valid ? resolve() : reject() })
-          }).catch(function() {
-            ReggieUI.error('请输入操作人')
-            return
-          })
+            self.$refs.createForm.validate(function(ok) { ok ? resolve() : reject() })
+          }).catch(function() { valid = false })
+          if (!valid) { ReggieUI.error('请输入操作人'); return }
+
           const fd = self.formData
-          addStockCheck({ operator: fd.operator.trim(), remark: (fd.remark || '').trim() }).then(function(res) {
+          self.submitting = true // 修改点：接入按钮 loading
+          try {
+            const res = await addStockCheck({ operator: fd.operator.trim(), remark: (fd.remark || '').trim() })
             if (res.code === 1) {
               ReggieUI.success('盘点单创建成功！')
               self.formData.dialogVisible = false
@@ -330,13 +344,27 @@
             } else {
               ReggieUI.error(res.msg || '创建失败')
             }
-          }).catch(function(err) {
-            ReggieUI.error('请求失败：' + err)
-          })
+          } catch (err) {
+            ReggieUI.error('请求失败：' + (err && err.message ? err.message : err))
+          } finally {
+            self.submitting = false
+          }
         },
         // 打开录入数据弹窗，加载食材列表供用户选择
         enterCheck: function(row) {
           this.openEntryDialog(row.id)
+        },
+        // 修改点：删除盘点单（后端限制仅草稿/已取消可删，失败时提示后端原因）
+        deleteHandle: function(row) {
+          const self = this
+          ReggieUI.confirm('确认删除盘点单「' + (row.checkNo || row.id) + '」？', '提示', {
+            confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
+          }).then(function() {
+            deleteStockCheck(row.id).then(function(res) {
+              if (res.code === 1) { ReggieUI.success('删除成功！'); self.init() }
+              else ReggieUI.error(res.msg || '删除失败')
+            }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
+          }).catch(function() {})
         },
         openEntryDialog: function(checkId) {
           const self = this
@@ -382,6 +410,8 @@
             ReggieUI.warning('请至少填写一条盘点项的实际库存')
             return
           }
+          if (self.entrySubmitting) return // 修改点：防重复提交
+          self.entrySubmitting = true      // 修改点：接入按钮 loading
           completeStockCheck(this.entryCheckId, { items: items }).then(function(res) {
             if (res.code === 1) {
               ReggieUI.success('盘点完成！')
@@ -395,6 +425,8 @@
             }
           }).catch(function(err) {
             ReggieUI.error('请求失败：' + err)
+          }).then(function() {
+            self.entrySubmitting = false // 修改点：无论成功/失败都复位，避免按钮卡在 loading
           })
         },
         // 修改点：分页处理改为 crud-table 事件驱动（与库存流水页一致）

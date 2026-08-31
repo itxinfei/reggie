@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>食材分类管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
@@ -151,7 +152,7 @@
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
           return [
-            { key: 'total', icon: '📂', label: '食材分类总数', value: this.stats.totalCategories || 0, color: 'primary' }
+            { key: 'total', icon: 'ri-folder-line', label: '食材分类总数', value: this.stats.totalCategories || 0, color: 'primary' }
           ]
         }
       },

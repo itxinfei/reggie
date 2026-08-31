@@ -6,18 +6,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>会员管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
-    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; padding: 4px 0; }
-    .detail-item { display: flex; align-items: center; }
-    .detail-item .d-label { width: 80px; font-size:var(--font-size-base); color: var(--color-info); flex-shrink: 0; }
-    .detail-item .d-value { font-size:var(--font-size-base); color: var(--el-text-primary); font-weight: 500; }
-    border-radius: var(--radius-sm);
     .level-badge.gold-badge { background: var(--amber-100); color: var(--amber-700); }
     .level-badge.silver-badge { background: var(--slate-200); color: var(--slate-500); }
     .level-badge.bronze-badge { background: var(--orange-200); color: var(--orange-700); }
     .level-badge.default-badge { background: var(--blue-100); color: var(--blue-600); }
+    /* ========== 8.4.1 同头双栏：左会员列表 + 右选中会员详情卡 ========== */
+    .member-layout { display: flex; gap: 16px; align-items: flex-start; }
+    .member-layout__main { flex: 1; min-width: 0; }
+    .member-aside { width: 340px; flex-shrink: 0; }
+    .member-aside__card { background: var(--bg-surface); border: 1px solid var(--el-border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 16px; }
+    .member-aside__empty { padding: 48px 0; text-align: center; color: var(--text-muted); font-size: var(--font-size-sm); }
+    .member-aside__head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .member-aside__avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--color-brand-50); color: var(--color-brand-600); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; flex-shrink: 0; }
+    .member-aside__head-info { flex: 1; min-width: 0; }
+    .member-aside__name { font-size: 16px; font-weight: 600; color: var(--el-text-primary); }
+    .member-aside__metrics { display: flex; border: 1px solid var(--el-border-color); border-radius: var(--radius-md); padding: 10px 0; margin-bottom: 12px; }
+    .member-aside__metric { flex: 1; text-align: center; display: flex; flex-direction: column; gap: 4px; }
+    .member-aside__metric + .member-aside__metric { border-left: 1px solid var(--el-border-color); }
+    .member-aside__metric .m-label { font-size: 12px; color: var(--text-secondary); }
+    .member-aside__metric .m-value { font-size: 15px; font-weight: 600; color: var(--el-text-primary); font-variant-numeric: tabular-nums; }
+    .member-aside__info { font-size: var(--font-size-sm); color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .member-aside__info div { display: flex; justify-content: space-between; }
+    .member-aside__info div span { color: var(--el-text-primary); }
+    .member-aside__ops { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .member-aside__list { list-style: none; margin: 0; padding: 0; }
+    .member-aside__list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px dashed var(--el-border-color); font-size: var(--font-size-sm); }
+    .member-aside__list li:last-child { border-bottom: none; }
+    .member-aside__empty-sm { color: var(--text-muted); font-size: var(--font-size-sm); text-align: center; padding: 16px 0; }
+    @media (max-width: 1200px) {
+      .member-layout { flex-direction: column; }
+      .member-aside { width: 100%; }
+    }
     @media (max-width: 900px) {
       .stat-card { min-width: 140px; flex: 1 1 calc(50% - 8px); }
     }
@@ -36,6 +60,9 @@
         </div>
         <div class="ds-page-header__actions"></div>
       </header>
+      <!-- ========== 8.4.1 同头双栏：左会员列表 + 右选中会员详情卡 ========== -->
+      <div class="member-layout">
+        <div class="member-layout__main">
       <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -43,8 +70,10 @@
       <table-bar
         ref="tableBar"
         :search-items="searchConfig"
+        :actions="actionConfig"
         @search="onSearch"
         @reset="onReset"
+        @action="onAction"
       ></table-bar>
 
       <!-- ===== 数据表格 ===== -->
@@ -58,7 +87,8 @@
         :page-size="pageSize"
         :total="counts"
         :show-actions="true"
-        :actions-width="280"
+        :actions-width="340"
+        @row-click="selectMember"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -71,26 +101,77 @@
         <template #col-totalConsumption="{ row }">
           <span style="font-weight:500;">￥{{ row.totalConsumption }}</span>
         </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">{{ row.status === 1 ? '正常' : '已禁用' }}</el-tag>
+        </template>
         <template #actions="{ row }">
-          <el-button type="text" size="small" class="btn-view" @click="viewDetail(row)">详情</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="selectMember(row)">详情</el-button>
           <el-button type="text" size="small" class="btn-view" @click="showRecharge(row)">充值</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="showEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="toggleStatus(row)">{{ row.status === 1 ? '禁用' : '启用' }}</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
         </template>
       </crud-table>
-    </div>
+        </div>
 
-    <!-- ===== 详情弹窗 ===== -->
-    <crud-dialog title="会员详情" :visible.sync="detailDialogVisible" size="md" :show-submit="false" cancel-text="关 闭">
-      <div class="detail-grid">
-        <div class="detail-item"><span class="d-label">会员名称：</span><span class="d-value">{{ detail.name }}</span></div>
-        <div class="detail-item"><span class="d-label">手机号：</span><span class="d-value">{{ detail.phone }}</span></div>
-        <div class="detail-item"><span class="d-label">会员等级：</span><span class="d-value"><span :class="getLevelClass(detail.levelName)">{{ detail.levelName || '普通会员' }}</span></span></div>
-        <div class="detail-item"><span class="d-label">积分：</span><span class="d-value" style="color:var(--legacy-8b5cf6);font-weight:600;">{{ detail.points }}</span></div>
-        <div class="detail-item"><span class="d-label">余额：</span><span class="d-value" style="color:var(--legacy-f59e0b);font-weight:600;">￥{{ detail.balance }}</span></div>
-        <div class="detail-item"><span class="d-label">累计消费：</span><span class="d-value" style="font-weight:600;">￥{{ detail.totalConsumption }}</span></div>
-        <div class="detail-item"><span class="d-label">注册时间：</span><span class="d-value">{{ detail.createdTime }}</span></div>
-        <div class="detail-item"><span class="d-label">会员状态：</span><span class="d-value">{{ detail.status === 1 ? '正常' : '已禁用' }}</span></div>
+        <!-- ===== 右栏：选中会员详情卡（8.4.1 同头双栏） ===== -->
+        <aside class="member-aside" aria-label="选中会员详情">
+          <div class="member-aside__card">
+            <div v-if="!selectedMember" class="member-aside__empty">
+              <i class="ri-user-follow-line" aria-hidden="true" style="font-size:28px;display:block;margin-bottom:8px;"></i>
+              点击左侧会员行查看详情与快捷操作
+            </div>
+            <template v-else>
+              <div class="member-aside__head">
+                <div class="member-aside__avatar" aria-hidden="true">{{ (selectedMember.name || '?').charAt(0) }}</div>
+                <div class="member-aside__head-info">
+                  <div class="member-aside__name">{{ selectedMember.name }}</div>
+                  <span :class="getLevelClass(selectedMember.levelName)">{{ selectedMember.levelName || '普通会员' }}</span>
+                </div>
+                <el-tag :type="selectedMember.status === 1 ? 'success' : 'info'" size="mini">{{ selectedMember.status === 1 ? '正常' : '已禁用' }}</el-tag>
+              </div>
+              <div class="member-aside__metrics">
+                <div class="member-aside__metric"><span class="m-label">余额</span><span class="m-value">￥{{ selectedMember.balance }}</span></div>
+                <div class="member-aside__metric"><span class="m-label">积分</span><span class="m-value">{{ selectedMember.points }}</span></div>
+                <div class="member-aside__metric"><span class="m-label">累计消费</span><span class="m-value">￥{{ selectedMember.totalConsumption }}</span></div>
+              </div>
+              <div class="member-aside__info">
+                <div><span>手机号</span>{{ selectedMember.phone }}</div>
+                <div><span>注册时间</span>{{ selectedMember.createdTime || '-' }}</div>
+              </div>
+              <div class="member-aside__ops">
+                <el-button type="primary" size="small" icon="el-icon-plus" @click="showRecharge(selectedMember)">充值</el-button>
+                <el-button size="small" icon="el-icon-edit" @click="showEdit(selectedMember)">编辑</el-button>
+                <el-button size="small" :type="selectedMember.status === 1 ? 'warning' : 'success'" icon="el-icon-switch-button" @click="toggleStatus(selectedMember)">{{ selectedMember.status === 1 ? '禁用' : '启用' }}</el-button>
+                <el-button size="small" type="danger" icon="el-icon-delete" @click="handleDelete(selectedMember)">删除</el-button>
+              </div>
+              <el-tabs v-model="asideTab" class="member-aside__tabs">
+                <el-tab-pane label="充值记录" name="recharge">
+                  <div v-if="asideRechargeLoading" class="member-aside__empty-sm">加载中...</div>
+                  <div v-else-if="rechargeList.length === 0" class="member-aside__empty-sm">暂无充值记录</div>
+                  <ul v-else class="member-aside__list">
+                    <li v-for="r in rechargeList" :key="r.id || r.recordId">
+                      <span>{{ formatDateTime(r.createTime || r.createdTime) }}</span>
+                      <span style="color:var(--color-success);font-weight:600;">+￥{{ formatMoney(Number(r.amount) + Number(r.giftAmount || 0)) }}</span>
+                    </li>
+                  </ul>
+                </el-tab-pane>
+                <el-tab-pane label="优惠券" name="coupon">
+                  <div v-if="asideCouponLoading" class="member-aside__empty-sm">加载中...</div>
+                  <div v-else-if="couponList.length === 0" class="member-aside__empty-sm">暂无优惠券</div>
+                  <ul v-else class="member-aside__list">
+                    <li v-for="(c, i) in couponList" :key="i">
+                      <span style="max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ c.couponName || c.name || '优惠券' }}</span>
+                      <el-tag size="mini" :type="couponTagType(c.status)">{{ couponStatusText(c.status) }}</el-tag>
+                    </li>
+                  </ul>
+                </el-tab-pane>
+              </el-tabs>
+            </template>
+          </div>
+        </aside>
       </div>
-    </crud-dialog>
+    </div>
 
     <!-- ===== 充值弹窗 ===== -->
     <crud-dialog title="会员充值" :visible.sync="rechargeDialogVisible" :submit-loading="submitting" size="sm" @submit="submitRecharge" @close="rechargeDialogVisible = false">
@@ -114,6 +195,34 @@
             <el-radio label="ALIPAY">支付宝</el-radio>
             <el-radio label="BANK_CARD">银行卡</el-radio>
           </el-radio-group>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- ===== 新增/编辑会员弹窗 ===== -->
+    <crud-dialog
+      :title="editDialogTitle"
+      :visible.sync="editDialogVisible"
+      :submit-loading="submitting"
+      size="sm"
+      @submit="submitMember"
+      @close="editDialogVisible = false"
+    >
+      <el-form ref="memberFormRef" :model="memberForm" :rules="memberRules" label-width="100px" size="small">
+        <el-form-item label="会员姓名：" prop="name">
+          <el-input v-model="memberForm.name" placeholder="请输入会员姓名" maxlength="20" style="width:100%;"></el-input>
+        </el-form-item>
+        <el-form-item label="手机号：" prop="phone">
+          <el-input v-model="memberForm.phone" placeholder="请输入11位手机号" maxlength="11" style="width:100%;"></el-input>
+        </el-form-item>
+        <el-form-item v-if="memberForm.id" label="状态：">
+          <el-radio-group v-model="memberForm.status">
+            <el-radio :label="1">正常</el-radio>
+            <el-radio :label="0">已禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="!memberForm.id" label="说明：">
+          <span style="font-size:var(--font-size-xs);color:var(--text-muted);">新增会员仅需手机号与姓名，等级由系统按积分自动评定</span>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -145,13 +254,19 @@
             { prop: 'phone', label: '手机号', width: 120, align: 'center' },
             { prop: 'levelName', label: '等级', slot: true, width: 80, align: 'center' },
             { prop: 'points', label: '积分', width: 70, type: 'number' },
-            { prop: 'balance', label: '余额', slot: true, width: 80, type: 'money' },
-            { prop: 'totalConsumption', label: '累计消费', slot: true, width: 90, type: 'money' },
+            { prop: 'balance', label: '余额', slot: true, width: 110, type: 'money' },
+            { prop: 'totalConsumption', label: '累计消费', slot: true, width: 110, type: 'money' },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
-            { prop: 'createdTime', label: '注册时间', width: 140, align: 'center' }
+            { prop: 'createdTime', label: '注册时间', width: 160, align: 'center' }
           ],
-          detailDialogVisible: false, detail: {},
           rechargeDialogVisible: false, rechargeMember: {},
+          // 8.4.1 同头双栏：右侧选中会员详情
+          selectedMember: null,
+          asideTab: 'recharge',
+          rechargeList: [],
+          couponList: [],
+          asideRechargeLoading: false,
+          asideCouponLoading: false,
           rechargeForm: { amount: '', giftAmount: '0', paymentMethod: 'WECHAT' },
           // 修改点：充值表单校验规则（配合 el-form :rules + validate()）
           rechargeRules: {
@@ -160,7 +275,21 @@
               callback()
             }, trigger: 'blur' }]
           },
-          searchInput: { name: '', phone: '', levelId: '' }
+          searchInput: { name: '', phone: '', levelId: '' },
+          // 修改点：会员新增/编辑表单（后端 update 仅允许修改 name/phone/status，等级由积分自动评定）
+          actionConfig: [
+            { key: 'add', text: '新增会员', type: 'primary', icon: 'el-icon-plus' }
+          ],
+          editDialogVisible: false,
+          editDialogTitle: '',
+          memberForm: { id: null, name: '', phone: '', status: 1 },
+          memberRules: {
+            name: [{ required: true, message: '请输入会员姓名', trigger: 'blur' }],
+            phone: [
+              { required: true, message: '请输入手机号', trigger: 'blur' },
+              { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
+            ]
+          }
         }
       },
       created: function() { this.init(true); this.loadLevels() },
@@ -169,11 +298,11 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: '', icon: '👥', label: '会员总数', value: self.stats.totalMembers, color: 'primary', clickable: true, active: self.activeFilter === '' },
-            { key: 'gold', icon: '⭐', label: '高级会员', value: self.stats.highLevelCount, color: 'warning', clickable: true, active: self.activeFilter === 'gold' },
-            { key: 'silver', icon: '🥈', label: '中级会员', value: self.stats.midLevelCount, color: 'info', clickable: true, active: self.activeFilter === 'silver' },
+            { key: '', icon: 'ri-group-line', label: '会员总数', value: self.stats.totalMembers, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'gold', icon: 'ri-star-line', label: '高级会员', value: self.stats.highLevelCount, color: 'warning', clickable: true, active: self.activeFilter === 'gold' },
+            { key: 'silver', icon: 'ri-medal-2-line', label: '中级会员', value: self.stats.midLevelCount, color: 'info', clickable: true, active: self.activeFilter === 'silver' },
             { key: 'bronze', icon: '🆕', label: '初级会员', value: self.stats.lowLevelCount, color: 'danger', clickable: true, active: self.activeFilter === 'bronze' },
-            { key: 'new', icon: '📈', label: '本月新增', value: self.stats.newMembersThisMonth, color: 'success' }
+            { key: 'new', icon: 'ri-line-chart-line', label: '本月新增', value: self.stats.newMembersThisMonth, color: 'success' }
           ]
         }
       },
@@ -182,10 +311,98 @@
         onCardClick: function(payload) {
           this.onFilterClick(payload.key)
         },
+        // 修改点：table-bar 操作按钮分发（新增会员）
+        onAction: function(payload) {
+          if (payload.key === 'add') this.showAdd()
+        },
+        // 修改点：新增会员弹窗
+        showAdd: function() {
+          this.editDialogTitle = '新增会员'
+          this.memberForm = { id: null, name: '', phone: '', status: 1 }
+          this.editDialogVisible = true
+          this.$nextTick(function() {
+            if (this.$refs.memberFormRef) this.$refs.memberFormRef.clearValidate()
+          }.bind(this))
+        },
+        // 修改点：编辑会员弹窗
+        showEdit: function(row) {
+          this.editDialogTitle = '编辑会员'
+          this.memberForm = { id: row.id, name: row.name || '', phone: row.phone || '', status: row.status === 1 ? 1 : 0 }
+          this.editDialogVisible = true
+          this.$nextTick(function() {
+            if (this.$refs.memberFormRef) this.$refs.memberFormRef.clearValidate()
+          }.bind(this))
+        },
+        // 修改点：新增/编辑提交（校验不通过直接中断，提交防重）
+        async submitMember() {
+          const self = this
+          if (self.submitting) return
+          let valid = false
+          try {
+            valid = await new Promise(function(resolve) {
+              self.$refs.memberFormRef.validate(function(v) { resolve(v) })
+            })
+          } catch (e) {
+            valid = false
+          }
+          if (!valid) return
+          self.submitting = true
+          const isEdit = !!self.memberForm.id
+          const data = isEdit
+            ? { id: self.memberForm.id, name: self.memberForm.name, phone: self.memberForm.phone, status: self.memberForm.status }
+            : { name: self.memberForm.name, phone: self.memberForm.phone }
+          const apiCall = isEdit ? updateMember(data) : addMember(data)
+          apiCall.then(function(res) {
+            self.submitting = false
+            if (String(res.code) === '1') {
+              ReggieUI.success(isEdit ? '修改成功' : '新增成功')
+              self.editDialogVisible = false
+              self.init(true)
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(function(e) {
+            self.submitting = false
+            ReggieUI.error('请求失败：' + e)
+          })
+        },
+        // 修改点：启用/禁用会员（二次确认）
+        async toggleStatus(row) {
+          const self = this
+          const newStatus = row.status === 1 ? 0 : 1
+          try {
+            await ReggieUI.confirm('确认' + (newStatus === 1 ? '启用' : '禁用') + '会员「' + row.name + '」？', '提示', { type: 'warning' })
+            const res = await updateMember({ id: row.id, status: newStatus })
+            if (String(res.code) === '1') {
+              ReggieUI.success(newStatus === 1 ? '已启用' : '已禁用')
+              self.init(false)
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          } catch (e) {
+            if (e !== 'cancel') ReggieUI.error('操作失败')
+          }
+        },
+        // 修改点：删除会员（逻辑删除，二次确认）
+        async handleDelete(row) {
+          const self = this
+          try {
+            await ReggieUI.confirm('确认删除会员「' + row.name + '」？删除后不可恢复', '提示', { type: 'warning' })
+            const res = await deleteMember(row.id)
+            if (String(res.code) === '1') {
+              ReggieUI.success('删除成功')
+              self.init(true)
+            } else {
+              ReggieUI.error(res.msg || '删除失败')
+            }
+          } catch (e) {
+            if (e !== 'cancel') ReggieUI.error('删除失败')
+          }
+        },
         async init(reloadStats = true) {
           this.loading = true
-          const sv = this.searchValues || {}
-          const params = Object.assign({}, sv, { page: this.page, pageSize: this.pageSize })
+          // 修改点：搜索参数来源统一为 searchInput（原读取未定义的 searchValues，导致搜索条件从未下发）
+          const params = Object.assign({}, this.searchInput, { page: this.page, pageSize: this.pageSize })
           const self = this
           try {
             // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
@@ -265,12 +482,49 @@
         onReset: function() { this.activeFilter = ''; this.searchInput = { name: '', phone: '', levelId: '' }; this.page = 1; this.init(false) },
         onPageChange: function(p) { this.page = p.page; this.init(false) },
         onSizeChange: function(p) { this.pageSize = (p && p.pageSize !== undefined) ? p.pageSize : p; this.page = 1; this.init(false) },
-        viewDetail: function(row) {
+        // 8.4.1 双栏：点击行/详情按钮选中会员，右侧卡展示信息 + 充值记录/优惠券历史
+        selectMember: function(row) {
           const self = this
+          if (!row || !row.id) return
+          self.selectedMember = row
+          self.asideTab = 'recharge'
+          self.rechargeList = []
+          self.couponList = []
+          // 详情数据补全（等级名/累计消费等来自详情接口）
           getMember(row.id).then(function(res) {
-            if (String(res.code) === '1') { self.detail = res.data; self.detailDialogVisible = true }
-            else { ReggieUI.error(res.msg || '操作失败') }
-          }).catch(function(e) { ReggieUI.error('请求失败：' + e) })
+            if (String(res.code) === '1' && res.data) { self.selectedMember = res.data }
+            self.loadAsideData()
+          }).catch(function() { self.loadAsideData() })
+        },
+        loadAsideData: function() {
+          const self = this
+          const member = self.selectedMember
+          if (!member || !member.id) return
+          self.asideRechargeLoading = true
+          self.asideCouponLoading = true
+          // 充值记录：按会员手机号精确查询（RechargeRecordController 支持）
+          rechargePage({ phone: member.phone, page: 1, pageSize: 5 }).then(function(res) {
+            self.asideRechargeLoading = false
+            if (String(res.code) === '1') { self.rechargeList = (res.data && res.data.records) || [] }
+          }).catch(function() { self.asideRechargeLoading = false })
+          // 优惠券：按会员 ID 查询
+          couponMy(member.id).then(function(res) {
+            self.asideCouponLoading = false
+            if (String(res.code) === '1') {
+              const d = res.data
+              self.couponList = Array.isArray(d) ? d : ((d && d.list) || [])
+            }
+          }).catch(function() { self.asideCouponLoading = false })
+        },
+        couponStatusText: function(s) {
+          if (s === 'USED' || s === '1' || s === 1) return '已使用'
+          if (s === 'EXPIRED' || s === '2' || s === 2) return '已过期'
+          return '未使用'
+        },
+        couponTagType: function(s) {
+          if (s === 'USED' || s === '1' || s === 1) return 'info'
+          if (s === 'EXPIRED' || s === '2' || s === 2) return 'warning'
+          return 'success'
         },
         showRecharge: function(row) { this.rechargeMember = row; this.rechargeForm = { amount: '', giftAmount: '0', paymentMethod: 'WECHAT' }; this.rechargeDialogVisible = true },
         async submitRecharge() {

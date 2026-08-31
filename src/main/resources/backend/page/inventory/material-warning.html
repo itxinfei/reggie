@@ -6,8 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>库存预警 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
     .warn-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
 
@@ -17,21 +20,6 @@
     .filter-bar__col { display: flex; flex-direction: column; gap: 4px }
     .filter-bar__input { height: 36px }
     .filter-bar__btn { height: 36px; font-size: var(--font-size-base) }
-
-    /* 统计卡片行 */
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-6) }
-    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr) } }
-    @media (max-width: 520px) { .stats-grid { grid-template-columns: 1fr } }
-    .stat-card { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: var(--space-4) }
-    .stat-card__icon { font-size: 28px; line-height: 1 }
-    .stat-card__body { flex: 1 }
-    .stat-card__label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px }
-    .stat-card__value { font-size: 24px; font-weight: 600; color: var(--text-primary); line-height: 1.2 }
-    .stat-card__sub { font-size: 12px; color: var(--text-muted); margin-top: 2px }
-    .stat-card.danger .stat-card__value { color: var(--color-danger) }
-    .stat-card.warning .stat-card__value { color: var(--color-warning) }
-    .stat-card.success .stat-card__value { color: var(--color-success) }
-    .stat-card.brand .stat-card__value { color: var(--color-brand-500) }
 
     /* 批量补货按钮行 */
     .batch-bar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap }
@@ -58,6 +46,9 @@
 
     /* 严重度标签样式微调 */
     .severity-tag { font-weight: 500 }
+
+    /* C.4 双 Tab */
+    .warn-tabs { margin-bottom: var(--space-4) }
   </style>
 </head>
 <body>
@@ -71,6 +62,12 @@
         </div>
       </header>
 
+      <!-- 统计卡片（固定 4 个） -->
+      <stat-cards :cards="statsCards" :loading="statsLoading"></stat-cards>
+
+      <!-- C.4：库存预警 / 智能补货 双 Tab（原 smart-replenish 收敛至此） -->
+      <el-tabs v-model="activeTab" class="warn-tabs" @tab-click="onTabChange">
+        <el-tab-pane label="库存预警" name="warning">
       <!-- 筛选栏 -->
       <div class="filter-bar">
         <div class="filter-bar__col">
@@ -97,42 +94,6 @@
         </div>
         <el-button type="primary" size="small" @click="onFilterChange" class="filter-bar__btn">查询</el-button>
         <el-button size="small" @click="refreshAll">刷新全部</el-button>
-      </div>
-
-      <!-- 统计卡片 -->
-      <div class="stats-grid" v-loading="statsLoading">
-        <div class="stat-card danger">
-          <div class="stat-card__icon">🚨</div>
-          <div class="stat-card__body">
-            <div class="stat-card__label">严重（&lt;30%阈值）</div>
-            <div class="stat-card__value">{{ statsData.bySeverity ? statsData.bySeverity.CRITICAL : 0 }}</div>
-            <div class="stat-card__sub">急需补货</div>
-          </div>
-        </div>
-        <div class="stat-card warning">
-          <div class="stat-card__icon">⚠️</div>
-          <div class="stat-card__body">
-            <div class="stat-card__label">警告（30-80%）</div>
-            <div class="stat-card__value">{{ statsData.bySeverity ? statsData.bySeverity.WARNING : 0 }}</div>
-            <div class="stat-card__sub">建议关注</div>
-          </div>
-        </div>
-        <div class="stat-card success">
-          <div class="stat-card__icon">💡</div>
-          <div class="stat-card__body">
-            <div class="stat-card__label">低危（80-100%）</div>
-            <div class="stat-card__value">{{ statsData.bySeverity ? statsData.bySeverity.LOW : 0 }}</div>
-            <div class="stat-card__sub">接近阈值</div>
-          </div>
-        </div>
-        <div class="stat-card brand">
-          <div class="stat-card__icon">📦</div>
-          <div class="stat-card__body">
-            <div class="stat-card__label">预警食材总数</div>
-            <div class="stat-card__value">{{ statsData.totalCount || 0 }}</div>
-            <div class="stat-card__sub">涉及分类 {{ statsData.byCategory ? statsData.byCategory.length : 0 }} 个</div>
-          </div>
-        </div>
       </div>
 
       <!-- 批量补货按钮 -->
@@ -190,10 +151,52 @@
       </crud-table>
 
       <div v-if="counts === 0 && !tableLoading" class="empty-state">
-        <div class="empty-state__icon">✅</div>
+        <div class="empty-state__icon"><i class="ri-checkbox-circle-line" aria-hidden="true"></i></div>
         <div>暂无库存预警食材</div>
         <div class="empty-state__desc">所有食材库存充足，无需补货</div>
       </div>
+        </el-tab-pane>
+        <!-- C.4：智能补货 Tab -->
+        <el-tab-pane label="智能补货" name="replenish">
+          <div class="batch-bar">
+            <el-button
+              type="primary"
+              size="small"
+              :disabled="smartSelectedRows.length === 0"
+              @click="openSmartRestock(smartSelectedRows)"
+            >批量补货</el-button>
+            <span class="batch-bar__tip" v-if="smartSelectedRows.length > 0">已选 {{ smartSelectedRows.length }} 条，可一键生成采购单并自动入库</span>
+            <span class="batch-bar__tip" v-else>基于近 {{ suggestDays }} 天出库量预测日均消耗，勾选食材后可批量补货</span>
+          </div>
+          <crud-table
+            ref="smartTable"
+            :data="smartTableData"
+            :columns="smartColumns"
+            :loading="smartLoading"
+            :page="page"
+            :page-size="pageSize"
+            :page-sizes="[10,20,30,40]"
+            :total="smartTotal"
+            :selection="true"
+            :show-actions="true"
+            :actions-width="90"
+            @page-change="onPageChange"
+            @size-change="onSizeChange"
+            @selection-change="onSmartSelectionChange"
+          >
+            <template #col-dailyUsage="{ row }">{{ (row.dailyUsage || 0).toFixed(2) }} {{ row.unit }}</template>
+            <template #col-urgency="{ row }">
+              <el-tag :type="row.urgency === 'HIGH' ? 'danger' : row.urgency === 'MEDIUM' ? 'warning' : 'info'" size="small">
+                {{ row.urgency === 'HIGH' ? '紧急' : row.urgency === 'MEDIUM' ? '适中' : '平稳' }}
+              </el-tag>
+            </template>
+            <template #col-estimatedCost="{ row }">¥{{ row.estimatedCost | toDecimal }}</template>
+            <template #actions="{ row }">
+              <el-button type="text" size="small" @click="openSmartRestock([row])">补货</el-button>
+            </template>
+          </crud-table>
+        </el-tab-pane>
+      </el-tabs>
     </div>
 
     <!-- 批量补货弹窗 -->
@@ -306,7 +309,7 @@
             { prop: 'warningRatio', label: '阈值比例', slot: true, width: 170 },
             { prop: 'stockQty', label: '当前库存', slot: true, width: 90, align: 'right' },
             { prop: 'minStock', label: '最低库存', slot: true, width: 90, align: 'right' },
-            { prop: 'unitPrice', label: '单价', slot: true, width: 90, align: 'right' }
+            { prop: 'unitPrice', label: '单价', slot: true, width: 90, align: 'right', type: 'money' }
           ],
           // 补货弹窗
           restockLoading: false,
@@ -321,7 +324,37 @@
           // 建议弹窗
           suggestLoading: false,
           suggestDialogVisible: false,
-          suggestList: []
+          suggestList: [],
+          // C.4：智能补货 Tab
+          activeTab: 'warning',
+          smartLoading: false,
+          smartTotal: 0,
+          smartTableData: [],
+          smartSelectedRows: [],
+          smartColumns: [
+            { prop: 'materialName', label: '食材', minWidth: 120 },
+            { prop: 'dailyUsage', label: '日均消耗', width: 110, align: 'right', slot: true },
+            { prop: 'estimatedDays', label: '预计天数', width: 90, align: 'center', type: 'number' },
+            { prop: 'urgency', label: '紧急度', width: 80, align: 'center', slot: true },
+            { prop: 'stockQty', label: '当前库存', width: 90, align: 'right', type: 'number' },
+            { prop: 'minStock', label: '最低库存', width: 90, align: 'right', type: 'number' },
+            { prop: 'suggestQty', label: '建议补货', width: 90, align: 'right', type: 'number' },
+            { prop: 'estimatedCost', label: '预估费用', width: 100, align: 'right', slot: true },
+            { prop: 'unit', label: '单位', width: 70, align: 'center' }
+          ]
+        }
+      },
+      computed: {
+        // 统计卡片（固定 4 个）
+        statsCards() {
+          const sev = (this.statsData && this.statsData.bySeverity) || {}
+          const cat = (this.statsData && this.statsData.byCategory) || []
+          return [
+            { key: 'critical', icon: 'ri-error-warning-line', label: '严重（<30%阈值）', value: sev.CRITICAL || 0, color: 'danger', subText: '急需补货' },
+            { key: 'warning', icon: 'ri-error-warning-line', label: '警告（30-80%）', value: sev.WARNING || 0, color: 'warning', subText: '建议关注' },
+            { key: 'low', icon: 'ri-lightbulb-flash-line', label: '低危（80-100%）', value: sev.LOW || 0, color: 'success', subText: '接近阈值' },
+            { key: 'total', icon: 'ri-box-3-line', label: '预警食材总数', value: this.statsData.totalCount || 0, color: 'primary', subText: '涉及分类 ' + cat.length + ' 个' }
+          ]
         }
       },
       created() {
@@ -361,12 +394,12 @@
         },
         onPageChange(payload) {
           this.page = payload.page
-          this.loadTable()
+          if (this.activeTab === 'warning') { this.loadTable() } else { this.loadSmartTable() }
         },
         onSizeChange(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.page = 1
-          this.loadTable()
+          if (this.activeTab === 'warning') { this.loadTable() } else { this.loadSmartTable() }
         },
         onSelectionChange(payload) {
           this.selectedRows = (payload && payload.rows) || payload || []
@@ -425,7 +458,7 @@
             } else {
               this.tableData = []
               this.counts = 0
-              this.$message.error(res.msg || '加载失败')
+              ReggieUI.error(res.msg || '加载失败')
             }
           } catch (e) {
             console.warn('加载预警明细失败:', e)
@@ -456,7 +489,7 @@
         },
         openRestockDialog() {
           if (this.selectedRows.length === 0) {
-            this.$message.warning('未勾选任何食材')
+            ReggieUI.warning('未勾选任何食材')
             return
           }
           // 匹配补货建议，填充建议采购量
@@ -498,7 +531,7 @@
         },
         async submitRestock() {
           if (this.restockForm.items.length === 0) {
-            this.$message.warning('无补货明细')
+            ReggieUI.warning('无补货明细')
             return
           }
           var self = this
@@ -512,27 +545,82 @@
           }
           this.restockLoading = true
           try {
+            // C.4：materialIds 从补货明细提取，兼容智能补货 Tab 勾选的数据
             var res = await materialBatchRestock({
-              materialIds: this.selectedRows.map(function(r) { return r.id }),
+              materialIds: this.restockForm.items.map(function(it) { return it.materialId }),
               items: items,
               remark: this.restockForm.remark
             })
             if (String(res.code) === '1') {
-              this.$message.success('补货成功：已生成采购单并自动入库，采购单ID=' + res.data)
+              ReggieUI.success('补货成功：已生成采购单并自动入库，采购单ID=' + res.data)
               this.restockForm.dialogVisible = false
               this.selectedRows = []
+              this.smartSelectedRows = []
               this.loadTable()
               this.loadStats()
               this.loadSuggest()
             } else {
-              this.$message.error(res.msg || '补货失败')
+              ReggieUI.error(res.msg || '补货失败')
             }
           } catch (e) {
             console.warn('批量补货失败:', e)
-            this.$message.error('操作失败，请重试')
+            ReggieUI.error('操作失败，请重试')
           } finally {
             this.restockLoading = false
           }
+        },
+        // ========== C.4：智能补货 Tab ==========
+        onTabChange() {
+          if (this.activeTab === 'replenish') { this.loadSmartTable() }
+        },
+        async loadSmartTable() {
+          this.smartLoading = true
+          try {
+            var res = await smartReplenishSuggest({})
+            if (String(res.code) !== '1') {
+              // 降级：使用预警补货建议接口（同 suggestDays 统计口径）
+              res = await materialReplenishSuggest({ days: this.suggestDays })
+            }
+            if (String(res.code) === '1') {
+              var all = res.data || []
+              this.smartTotal = all.length
+              var start = (this.page - 1) * this.pageSize
+              this.smartTableData = all.slice(start, start + this.pageSize)
+            } else {
+              this.smartTableData = []
+              this.smartTotal = 0
+              ReggieUI.error(res.msg || '加载智能补货建议失败')
+            }
+          } catch (e) {
+            console.warn('加载智能补货建议失败:', e)
+            this.smartTableData = []
+            this.smartTotal = 0
+          } finally {
+            this.smartLoading = false
+          }
+        },
+        onSmartSelectionChange(payload) {
+          this.smartSelectedRows = (payload && payload.rows) || payload || []
+        },
+        openSmartRestock(rows) {
+          if (!rows || rows.length === 0) {
+            ReggieUI.warning('未勾选任何食材')
+            return
+          }
+          var items = rows.map(function(r) {
+            var qty = Number(r.suggestQty) > 0 ? Number(r.suggestQty) : 1
+            return {
+              materialId: r.materialId != null ? r.materialId : r.id,
+              materialName: r.materialName || r.name,
+              unit: r.unit,
+              suggestQty: (Number(r.suggestQty) || 0).toFixed(2),
+              qty: qty
+            }
+          })
+          this.restockForm.items = items
+          this.restockForm.selectedCount = rows.length
+          this.restockForm.remark = ''
+          this.restockForm.dialogVisible = true
         },
         handleRestockClose() {
           this.restockForm.items = []

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>数据导出 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
     <style>
@@ -125,6 +126,9 @@
     <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
     <a href="#app" class="skip-link">跳转到主内容</a>
     <div id="app" role="main" aria-label="页面主要内容">
+        <!-- 修改点：补回缺失的 .page-header 开标签（原缺失导致行内 </div> 提前闭合了 #app，
+             导出卡片与导出记录全部落在 Vue 挂载点之外，模板编译失败、整页绑定失效） -->
+        <div class="page-header">
             <h2>数据导出</h2>
             <p>支持将业务数据导出为 Excel(.xlsx) 和 PDF 格式，文件自动包含导出时间戳</p>
         </div>
@@ -260,7 +264,7 @@
                 </div>
             </div>
             <div class="history-list empty-history" v-else>
-                <div style="font-size:36px;margin-bottom:8px;">📥</div>
+                <div style="font-size:36px;margin-bottom:8px;"><i class="ri-inbox-line" aria-hidden="true"></i></div>
                 暂无导出记录，点击上方按钮开始导出
             </div>
         </div>

@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Slf4j
 @RestController
-@RequestMapping("/orders/platform")
+@RequestMapping("/api/platform")
 @RequireEmployee
 @Tag(name = "平台同步触发", description = "手动触发商品/库存/营业状态同步到外卖平台")
 public class PlatformSyncController {

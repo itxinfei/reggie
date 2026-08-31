@@ -10,6 +10,7 @@ import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.AddPurchaseDetailDTO;
 import com.reggie.dto.CreatePurchaseOrderDTO;
+import com.reggie.enums.PurchaseOrderStatus;
 import com.reggie.module.inventory.model.PurchaseOrder;
 import com.reggie.module.inventory.model.PurchaseOrderDetail;
 import com.reggie.module.inventory.service.PurchaseOrderService;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -161,6 +163,78 @@ public class PurchaseOrderController {
     public R<String> approve(@PathVariable Long id) {
         purchaseOrderService.approveOrder(id);
         return R.success("审核通过");
+    }
+
+    /**
+     * 修改采购单基本信息
+     * <p>仅允许修改供应商、操作员与备注；status 与 totalAmount 属于状态机与金额字段，禁止在此改动。
+     * 已完成/已取消的单据不可编辑，避免破坏库存与对账数据。</p>
+     *
+     * @param order 采购单（需携带 id）
+     * @return 操作结果
+     */
+    @PutMapping
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "修改采购单", description = "修改采购单的供应商、操作员与备注，已完成/已取消单据不可编辑")
+    public R<String> update(@RequestBody PurchaseOrder order) {
+        if (order == null || order.getId() == null) {
+            return R.error("采购单ID不能为空");
+        }
+        PurchaseOrder existing = purchaseOrderService.getById(order.getId());
+        if (existing == null) {
+            return R.error("采购单不存在");
+        }
+        // 修改点：状态用 PurchaseOrderStatus 枚举（实体注释里的 PENDING/COMPLETED 已废弃，实际为 DRAFT/ORDERED/PARTIAL/RECEIVED/CANCELLED）
+        String status = existing.getStatus();
+        if (PurchaseOrderStatus.RECEIVED.getValue().equals(status)
+                || PurchaseOrderStatus.CANCELLED.getValue().equals(status)) {
+            return R.error("已收货或已取消的采购单不可编辑");
+        }
+        // 修改点：只回写白名单字段，且通过 updateById 携带乐观锁 version，防止并发覆盖
+        PurchaseOrder toUpdate = new PurchaseOrder();
+        toUpdate.setId(existing.getId());
+        toUpdate.setVersion(existing.getVersion());
+        if (order.getSupplierId() != null) {
+            toUpdate.setSupplierId(order.getSupplierId());
+        }
+        if (order.getOperator() != null) {
+            toUpdate.setOperator(order.getOperator());
+        }
+        if (order.getRemark() != null) {
+            toUpdate.setRemark(order.getRemark());
+        }
+        boolean ok = purchaseOrderService.updateById(toUpdate);
+        if (!ok) {
+            return R.error("修改失败，数据可能已被他人更新，请刷新后重试");
+        }
+        return R.success("修改成功");
+    }
+
+    /**
+     * 删除采购单（逻辑删除）
+     * <p>PurchaseOrder 带 @TableLogic，removeById 为逻辑删除。
+     * 仅允许删除待审核或已取消的单据；已审核/已完成的单据关联库存与对账，禁止删除。</p>
+     *
+     * @param id 采购单ID
+     * @return 操作结果
+     */
+    @DeleteMapping("/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "删除采购单", description = "逻辑删除采购单，仅待审核/已取消状态可删除")
+    @Parameter(name = "id", description = "采购单ID", required = true)
+    public R<String> delete(@PathVariable Long id) {
+        PurchaseOrder existing = purchaseOrderService.getById(id);
+        if (existing == null) {
+            return R.error("采购单不存在");
+        }
+        // 已下单/部分收货/已收货的单据关联库存与对账，仅草稿与已取消可删除
+        String status = existing.getStatus();
+        if (!PurchaseOrderStatus.DRAFT.getValue().equals(status)
+                && !PurchaseOrderStatus.CANCELLED.getValue().equals(status)) {
+            return R.error("仅草稿或已取消的采购单可删除");
+        }
+        purchaseOrderService.removeById(id);
+        return R.success("删除成功");
     }
 }
 

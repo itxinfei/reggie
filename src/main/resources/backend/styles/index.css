@@ -232,24 +232,9 @@ html, body {
   width: 3px;
   border-radius: 0 3px 3px 0;
   background: var(--accent-color);
-  box-shadow: 0 0 8px rgba(255, 194, 0, 0.4);
 }
 .sidebar-container .el-menu-item.is-active span {
   color: var(--accent-color) !important;
-}
-
-/* 激活态微动效 */
-.sidebar-container .el-menu-item.is-active::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--sidebar-item-radius);
-  background: transparent;
-  animation: activeGlow 0.5s ease-out;
-}
-@keyframes activeGlow {
-  0%   { box-shadow: inset 0 0 20px rgba(255, 194, 0, 0.3); }
-  100% { box-shadow: inset 0 0 0 rgba(255, 194, 0, 0); }
 }
 
 /* ---------- 子菜单标题 ---------- */
@@ -379,10 +364,10 @@ html, body {
 .sidebar-container.collapsed .el-menu-item.is-active::before {
   display: none;
 }
-/* 折叠态 active 用背景环代替 */
+/* 折叠态 active 用品牌色浅背景代替发光描边 */
 .sidebar-container.collapsed .el-menu-item.is-active {
   border-radius: 12px !important;
-  box-shadow: 0 0 0 2px rgba(255, 194, 0, 0.25);
+  background-color: rgba(255, 194, 0, 0.12) !important;
 }
 
 /* 折叠态主内容区拉宽 */

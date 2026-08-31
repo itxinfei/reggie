@@ -3,7 +3,7 @@
 <mapper namespace="com.reggie.module.dish.mapper.DishEvaluationMapper">
 
     <!-- 根据菜品ID查询评价列表 -->
-    <select id="listByDishId" resultType="com.reggie.entity.DishEvaluation">
+    <select id="listByDishId" resultType="com.reggie.module.dish.model.DishEvaluation">
         SELECT id, tenant_id, order_id, user_id, user_name, dish_id, dish_name,
                star_rating, content, images, reply_content, reply_time, status,
                create_time, update_time, create_user, update_user
@@ -43,7 +43,7 @@
     </select>
 
     <!-- 根据用户ID分页查询评价列表 -->
-    <select id="listByUserId" resultType="com.reggie.entity.DishEvaluation">
+    <select id="listByUserId" resultType="com.reggie.module.dish.model.DishEvaluation">
         SELECT id, tenant_id, order_id, user_id, user_name, dish_id, dish_name,
                star_rating, content, images, reply_content, reply_time, status,
                create_time, update_time, create_user, update_user

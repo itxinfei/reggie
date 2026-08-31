@@ -214,17 +214,22 @@ public class ReportServiceImpl implements ReportService {
             List<Orders> orders = orderService.list(qw);
 
             int wechatCount = 0, alipayCount = 0, balanceCount = 0, otherCount = 0;
-            BigDecimal wechatAmount = BigDecimal.ZERO, alipayAmount = BigDecimal.ZERO;
+            BigDecimal wechatAmount = BigDecimal.ZERO, alipayAmount = BigDecimal.ZERO, balanceAmount = BigDecimal.ZERO;
 
             for (Orders o : orders) {
                 BigDecimal amt = o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO;
-                if (o.getPayMethod() != null) {
-                    switch (o.getPayMethod()) {
-                        case 1: wechatCount++; wechatAmount = wechatAmount.add(amt); break;
-                        case 2: alipayCount++; alipayAmount = alipayAmount.add(amt); break;
-                        case 3: balanceCount++; break;
-                        default: otherCount++; break;
+                Integer pm = o.getPayMethod();
+                // 支付方式权威枚举：2=微信，3=支付宝，其余线下渠道（1现金/4银行卡/5会员储值/6货到付款）归入 balance 合计
+                if (pm != null) {
+                    if (pm == 2) {
+                        wechatCount++; wechatAmount = wechatAmount.add(amt);
+                    } else if (pm == 3) {
+                        alipayCount++; alipayAmount = alipayAmount.add(amt);
+                    } else {
+                        balanceCount++; balanceAmount = balanceAmount.add(amt);
                     }
+                } else {
+                    otherCount++;
                 }
             }
 
@@ -239,6 +244,7 @@ public class ReportServiceImpl implements ReportService {
             result.put("alipay", alipay);
             Map<String, Object> balance = new HashMap<>();
             balance.put("count", balanceCount);
+            balance.put("amount", balanceAmount);
             result.put("balance", balance);
             Map<String, Object> other = new HashMap<>();
             other.put("count", otherCount);
@@ -737,7 +743,7 @@ public class ReportServiceImpl implements ReportService {
             orderQw.select(Orders::getOrderTime, Orders::getPayMethod, Orders::getAmount);
             List<Orders> allOrders = orderService.list(orderQw);
 
-            // 按日期分组：dateStr -> {1: amount, 2: amount, 3: amount}
+            // 按日期分组：dateStr -> {2: wechat金额, 3: alipay金额, 1: 线下合计金额}
             LocalDate start = LocalDate.parse(startDate);
             LocalDate end = LocalDate.parse(endDate);
 
@@ -752,7 +758,7 @@ public class ReportServiceImpl implements ReportService {
                 dailyMap.put(dateKey, payMap);
             }
 
-            // 累加金额
+            // 累加金额（渠道映射：2=微信→wechat 列，3=支付宝→alipay 列，其余线下渠道 1现金/4银行卡/5储值/6货到付款 → balance 列）
             for (Orders o : allOrders) {
                 if (o.getOrderTime() == null) continue;
                 String dateKey = o.getOrderTime().toLocalDate().toString().substring(5);
@@ -760,8 +766,12 @@ public class ReportServiceImpl implements ReportService {
                 if (payMap == null) continue;
                 int payMethod = o.getPayMethod() != null ? o.getPayMethod() : 0;
                 BigDecimal amt = o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO;
-                if (payMethod >= 1 && payMethod <= 3) {
-                    payMap.put(payMethod, payMap.get(payMethod).add(amt));
+                if (payMethod == 2) {
+                    payMap.put(2, payMap.get(2).add(amt));
+                } else if (payMethod == 3) {
+                    payMap.put(3, payMap.get(3).add(amt));
+                } else if (payMethod >= 1 && payMethod <= 6) {
+                    payMap.put(1, payMap.get(1).add(amt));
                 }
             }
 
@@ -769,9 +779,10 @@ public class ReportServiceImpl implements ReportService {
             for (Map.Entry<String, Map<Integer, BigDecimal>> entry : dailyMap.entrySet()) {
                 dates.add(entry.getKey());
                 Map<Integer, BigDecimal> payMap = entry.getValue();
-                wechatList.add(payMap.get(1).setScale(2, RoundingMode.HALF_UP).doubleValue());
-                alipayList.add(payMap.get(2).setScale(2, RoundingMode.HALF_UP).doubleValue());
-                balanceList.add(payMap.get(3).setScale(2, RoundingMode.HALF_UP).doubleValue());
+                // payMap 槽位：2=wechat 列，3=alipay 列，1=balance（线下合计）列
+                wechatList.add(payMap.get(2).setScale(2, RoundingMode.HALF_UP).doubleValue());
+                alipayList.add(payMap.get(3).setScale(2, RoundingMode.HALF_UP).doubleValue());
+                balanceList.add(payMap.get(1).setScale(2, RoundingMode.HALF_UP).doubleValue());
             }
 
         } finally {

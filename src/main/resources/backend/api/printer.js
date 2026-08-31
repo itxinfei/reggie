@@ -1,14 +1,14 @@
-const printerConfigPage = (params) => $axios({ url: '/printer/config/page', method: 'get', params })
-// 修改点：打印机配置聚合统计（SQL 聚合，替代前端 pageSize:1000 拉全量）
-const printerConfigStats = () => $axios({ url: '/printer/config/stats', method: 'get' })
-const printerConfigList = (params) => $axios({ url: '/printer/config/list', method: 'get', params })
-const addPrinterConfig = (params) => $axios({ url: '/printer/config', method: 'post', data: params })
-const updatePrinterConfig = (params) => $axios({ url: '/printer/config', method: 'put', data: params })
-const deletePrinterConfig = (id) => $axios({ url: `/printer/config/${id}`, method: 'delete' })
-const getPrinterConfig = (id) => $axios({ url: `/printer/config/${id}`, method: 'get' })
-const printerTest = (id) => $axios({ url: `/printer/test/${id}`, method: 'post' })
-const printerStatus = (id) => $axios({ url: `/printer/status/${id}`, method: 'get' })
+// 打印模块接口（门店 PC 本地打印）
+// 打印终端（门店 PC 打印代理）
+const printerTerminalPage = (params) => $axios({ url: '/printer/terminal/page', method: 'get', params })
+const printerTerminalStats = () => $axios({ url: '/printer/terminal/stats', method: 'get' })
+const printerTerminalStatus = (id, status) => $axios({ url: `/printer/terminal/status/${id}`, method: 'put', params: { status } })
+const printerTerminalTest = (id) => $axios({ url: `/printer/terminal/test/${id}`, method: 'post' })
+const printerTerminalDelete = (id) => $axios({ url: `/printer/terminal/${id}`, method: 'delete' })
+
+// 打印任务（门店 PC 打印代理执行流水）
+const printerTaskPage = (params) => $axios({ url: '/printer/task/page', method: 'get', params })
+const printerTaskStats = () => $axios({ url: '/printer/task/stats', method: 'get' })
+
+// 订单打印（入队到门店终端）
 const printerPrint = (orderId, type) => $axios({ url: `/printer/print/${orderId}`, method: 'post', params: { type } })
-const printerLogPage = (params) => $axios({ url: '/printer/log/page', method: 'get', params })
-const printerConfigOptions = () => $axios({ url: '/printer/config/options', method: 'get' })
-const listSystemPrinters = () => $axios({ url: '/printer/system/list', method: 'get' })

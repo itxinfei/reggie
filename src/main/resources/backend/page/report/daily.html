@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>营业日报 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
@@ -298,7 +300,7 @@
         </div>
         <div class="panel-body" v-show="recordsExpanded">
           <div v-if="exportRecords.length === 0" class="empty-state">
-            <div class="empty-icon">📥</div>
+            <div class="empty-icon"><i class="ri-inbox-line" aria-hidden="true"></i></div>
             <div class="empty-text">暂无导出记录</div>
           </div>
           <div v-else style="overflow-x:auto;">
@@ -464,10 +466,10 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: '订单', icon: '📊', label: '订单总数', value: self.dailyData.totalOrders || 0, color: 'primary' },
-            { key: '营业额', icon: '📈', label: '营业额（元）', value: '¥' + self.formatMoney(self.dailyData.totalAmount), color: 'success' },
-            { key: '客单价', icon: '💰', label: '客单价（元）', value: '¥' + self.formatMoney(self.dailyData.avgAmount), color: 'warning' },
-            { key: '完成率', icon: '✅', label: '完成 / 取消', value: (self.dailyData.completedOrders || 0) + ' / ' + (self.dailyData.cancelledOrders || 0), color: 'danger' }
+            { key: '订单', icon: 'ri-bar-chart-2-line', label: '订单总数', value: self.dailyData.totalOrders || 0, color: 'primary' },
+            { key: '营业额', icon: 'ri-line-chart-line', label: '营业额（元）', value: '¥' + self.formatMoney(self.dailyData.totalAmount), color: 'success' },
+            { key: '客单价', icon: 'ri-money-cny-circle-line', label: '客单价（元）', value: '¥' + self.formatMoney(self.dailyData.avgAmount), color: 'warning' },
+            { key: '完成率', icon: 'ri-checkbox-circle-line', label: '完成 / 取消', value: (self.dailyData.completedOrders || 0) + ' / ' + (self.dailyData.cancelledOrders || 0), color: 'danger' }
           ]
         }
       },

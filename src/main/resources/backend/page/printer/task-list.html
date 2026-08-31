@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>打印任务 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="printer-task-app">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+      <!-- 页头 -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">打印任务</h1>
+          <p class="ds-page-header__subtitle">门店 PC 打印代理的执行流水，订单小票/厨房单入队后由代理领取打印</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
+      <!-- 数据统计卡片 -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+      <!-- 筛选 + 操作 -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @search="search"
+        @reset="reset"
+        @action="onTableAction">
+        <template slot="search-extra">
+          <el-input v-model="query.orderId" placeholder="订单ID" class="el-select--narrow-xs" clearable size="small"
+            @keyup.enter.native="search"></el-input>
+          <el-select v-model="query.taskType" placeholder="类型" class="el-select--narrow-xs" clearable size="small"
+            @change="search">
+            <el-option label="小票" value="BILL"></el-option>
+            <el-option label="厨房" value="KITCHEN"></el-option>
+            <el-option label="配送" value="DELIVERY"></el-option>
+            <el-option label="测试" value="TEST"></el-option>
+          </el-select>
+          <el-select v-model="query.status" placeholder="状态" class="el-select--narrow-xs" clearable size="small"
+            @change="search">
+            <el-option label="待打印" value="PENDING"></el-option>
+            <el-option label="打印中" value="PULLED"></el-option>
+            <el-option label="成功" value="SUCCESS"></el-option>
+            <el-option label="失败" value="FAILED"></el-option>
+            <el-option label="已取消" value="CANCELLED"></el-option>
+          </el-select>
+          <el-date-picker
+            v-model="query.timeRange"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            value-format="yyyy-MM-dd HH:mm:ss"
+            class="el-select--wide-sm"
+            size="small"
+            clearable
+            @change="search">
+          </el-date-picker>
+        </template>
+      </table-bar>
+      <!-- 任务列表 -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :page-sizes="[10, 20, 30]"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="90"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-taskType="{ row }">
+          <el-tag size="mini" :type="getTypeTag(row.taskType).type">{{ getTypeTag(row.taskType).label }}</el-tag>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="getStatusTag(row.status).type">{{ getStatusTag(row.status).label }}</el-tag>
+        </template>
+        <template #col-errorMsg="{ row }">
+          <span v-if="row.errorMsg" :title="row.errorMsg" class="cell-ellipsis">{{ row.errorMsg }}</span>
+          <span v-else>-</span>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="showDetail(row)">查看</el-button>
+        </template>
+      </crud-table>
+    </div>
+
+    <!-- 任务详情弹窗 -->
+    <crud-dialog :title="dialog.title" :visible.sync="dialog.visible" :show-submit="false" :show-cancel="false" size="lg" @close="cancel">
+      <div class="task-detail">
+        <el-row :gutter="16" class="task-detail__row">
+          <el-col :span="8"><span class="task-detail__label">任务ID：</span>{{ dialog.row.id }}</el-col>
+          <el-col :span="8"><span class="task-detail__label">订单ID：</span>{{ dialog.row.orderId || '-' }}</el-col>
+          <el-col :span="8"><span class="task-detail__label">类型：</span>{{ getTypeTag(dialog.row.taskType).label }}</el-col>
+        </el-row>
+        <el-row :gutter="16" class="task-detail__row">
+          <el-col :span="8"><span class="task-detail__label">状态：</span>{{ getStatusTag(dialog.row.status).label }}</el-col>
+          <el-col :span="8"><span class="task-detail__label">终端：</span>{{ dialog.row.terminalName || dialog.row.terminalCode }}</el-col>
+          <el-col :span="8"><span class="task-detail__label">门店：</span>{{ dialog.row.storeCode || '-' }}</el-col>
+        </el-row>
+        <el-row :gutter="16" class="task-detail__row">
+          <el-col :span="8"><span class="task-detail__label">创建时间：</span>{{ dialog.row.createdTime || '-' }}</el-col>
+          <el-col :span="8"><span class="task-detail__label">领取时间：</span>{{ dialog.row.pulledTime || '-' }}</el-col>
+          <el-col :span="8"><span class="task-detail__label">完成时间：</span>{{ dialog.row.doneTime || '-' }}</el-col>
+        </el-row>
+        <el-row :gutter="16" class="task-detail__row" v-if="dialog.row.errorMsg">
+          <el-col :span="24"><span class="task-detail__label">失败原因：</span>{{ dialog.row.errorMsg }}</el-col>
+        </el-row>
+        <div class="task-detail__title">打印内容</div>
+        <pre class="task-detail__content">{{ formatContent(dialog.row.content) }}</pre>
+      </div>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../api/printer.js"></script>
+  <script src="../../js/components.js"></script>
+  <script>
+    new Vue({
+      el: '#printer-task-app',
+      mixins: [window.ReggieListMixin],
+      data() {
+        return {
+          loading: false,
+          query: {
+            orderId: '',
+            taskType: '',
+            status: '',
+            timeRange: []
+          },
+          counts: 0,
+          tableData: [],
+          tableSearchItems: [],
+          tableActions: [
+            { key: 'refresh', text: '刷新', type: 'primary', icon: 'el-icon-refresh' }
+          ],
+          columns: [
+            { prop: 'id', label: '任务ID', width: 80, align: 'center' },
+            { prop: 'orderId', label: '订单ID', width: 100, align: 'center' },
+            { prop: 'taskType', label: '类型', width: 80, align: 'center', slot: true },
+            { prop: 'status', label: '状态', width: 90, align: 'center', slot: true },
+            { prop: 'terminalCode', label: '终端编码', minWidth: 160 },
+            { prop: 'storeCode', label: '门店编码', width: 100, align: 'center' },
+            { prop: 'createdTime', label: '创建时间', width: 160, align: 'center' },
+            { prop: 'pulledTime', label: '领取时间', width: 160, align: 'center' },
+            { prop: 'doneTime', label: '完成时间', width: 160, align: 'center' },
+            { prop: 'errorMsg', label: '失败原因', minWidth: 120, align: 'center', slot: true }
+          ],
+          stats: {
+            totalTasks: 0,
+            todayTotal: 0,
+            todaySuccess: 0,
+            todayFailed: 0,
+            pending: 0
+          },
+          activeFilter: '',
+          dialog: {
+            title: '打印任务详情',
+            visible: false,
+            row: {}
+          }
+        }
+      },
+      created() {
+        this.fetchData(true)
+      },
+      computed: {
+        statsCards() {
+          const self = this
+          return [
+            { key: '', icon: 'ri-file-list-3-line', label: '任务总数', value: self.stats.totalTasks || 0, color: 'primary', clickable: true },
+            { key: 'today', icon: 'ri-calendar-line', label: '今日任务', value: self.stats.todayTotal || 0, color: 'primary', clickable: false },
+            { key: 'todaySuccess', icon: 'ri-checkbox-circle-line', label: '今日成功', value: self.stats.todaySuccess || 0, color: 'success', clickable: false },
+            { key: 'todayFailed', icon: 'ri-close-circle-line', label: '今日失败', value: self.stats.todayFailed || 0, color: 'danger', clickable: false },
+            { key: 'pending', icon: 'ri-time-line', label: '待打印', value: self.stats.pending || 0, color: 'warning', clickable: false }
+          ]
+        }
+      },
+      methods: {
+        async fetchData(reloadStats = true) {
+          const range = this.query.timeRange && this.query.timeRange.length === 2 ? this.query.timeRange : []
+          const params = {
+            page: this.page,
+            pageSize: this.pageSize,
+            orderId: this.query.orderId || undefined,
+            taskType: this.query.taskType || undefined,
+            status: this.query.status || undefined,
+            beginTime: range[0] || undefined,
+            endTime: range[1] || undefined
+          }
+          const requests = [printerTaskPage(params)]
+          if (reloadStats) { requests.push(this.loadStats()) }
+          const results = await Promise.all(requests)
+          const res = results[0]
+          if (String(res.code) === '1') {
+            this.tableData = res.data.records || []
+            this.counts = res.data.total
+          } else {
+            ReggieUI.error(res.msg || '操作失败')
+          }
+          if (reloadStats) {
+            const statsRes = results[1]
+            if (statsRes && String(statsRes.code) === '1') {
+              this.stats = statsRes.data || this.stats
+            }
+          }
+        },
+        async loadStats() {
+          try {
+            const res = await printerTaskStats()
+            if (String(res.code) === '1' && res.data) {
+              const d = res.data
+              return {
+                code: 1,
+                data: {
+                  totalTasks: Number(d.totalTasks) || 0,
+                  todayTotal: Number(d.todayTotal) || 0,
+                  todaySuccess: Number(d.todaySuccess) || 0,
+                  todayFailed: Number(d.todayFailed) || 0,
+                  pending: Number(d.pending) || 0
+                }
+              }
+            }
+          } catch (err) {
+            console.warn('加载打印任务统计失败:', err)
+          }
+          return { code: 0 }
+        },
+        search() {
+          this.activeFilter = ''
+          this.page = 1
+          this.fetchData(false)
+        },
+        onCardClick(payload) {
+          const key = payload.activeKey
+          this.activeFilter = key
+          if (key !== '') {
+            this.query.status = key
+            this.query.orderId = ''
+            this.query.taskType = ''
+            this.query.timeRange = []
+          }
+          this.page = 1
+          this.fetchData(false)
+        },
+        reset() {
+          this.query.orderId = ''
+          this.query.taskType = ''
+          this.query.status = ''
+          this.query.timeRange = []
+          this.search()
+        },
+        onTableAction(payload) {
+          if (payload.key === 'refresh') { this.fetchData(true) }
+        },
+        showDetail(row) {
+          this.dialog.row = row
+          this.dialog.visible = true
+        },
+        cancel() {
+          this.dialog.visible = false
+        },
+        formatContent(content) {
+          if (!content) return '-'
+          try {
+            const list = JSON.parse(content)
+            if (Array.isArray(list)) {
+              return list.map(function(l) {
+                return (l.text || '') + '  [' + (l.type || 'TEXT') + (l.bold ? '/BOLD' : '') + ']'
+              }).join('\n')
+            }
+          } catch (e) { /* 非 JSON 原样展示 */ }
+          return content
+        },
+        getTypeTag(taskType) {
+          const MAP = {
+            'BILL': { label: '小票', type: 'success' },
+            'KITCHEN': { label: '厨房', type: 'warning' },
+            'DELIVERY': { label: '配送', type: 'primary' },
+            'TEST': { label: '测试', type: 'info' }
+          }
+          return MAP[taskType] || { label: taskType || '-', type: 'info' }
+        },
+        getStatusTag(status) {
+          const MAP = {
+            'PENDING': { label: '待打印', type: 'warning' },
+            'PULLED': { label: '打印中', type: 'primary' },
+            'SUCCESS': { label: '成功', type: 'success' },
+            'FAILED': { label: '失败', type: 'danger' },
+            'CANCELLED': { label: '已取消', type: 'info' }
+          }
+          return MAP[status] || { label: status || '-', type: 'info' }
+        }
+      }
+    })
+  </script>
+</body>
+</html>

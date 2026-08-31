@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>采购入库 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
@@ -67,7 +69,7 @@
         :expand="true"
         row-key="id"
         :show-actions="true"
-        :actions-width="200"
+        :actions-width="280"
         @page-change="onPageChange"
         @size-change="onSizeChange"
         @expand-change="loadDetails">
@@ -96,6 +98,9 @@
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="approveHandle(row)" v-if="row.status === 'DRAFT'">审核</el-button>
           <el-button type="text" size="small" class="btn-view" @click="receiveHandle(row)" v-if="row.status === 'ORDERED' || row.status === 'PARTIAL'">收货</el-button>
+          <!-- 修改点：补充编辑（草稿/已下单/部分收货可改）与删除（仅草稿/已取消可删，与后端约束一致） -->
+          <el-button type="text" size="small" class="btn-view" @click="editHandle(row)" v-if="row.status === 'DRAFT' || row.status === 'ORDERED' || row.status === 'PARTIAL'">编辑</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row)" v-if="row.status === 'DRAFT' || row.status === 'CANCELLED'">删除</el-button>
           <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(row)" v-if="row.status === 'DRAFT' || row.status === 'ORDERED'">取消</el-button>
         </template>
       </crud-table>
@@ -137,6 +142,34 @@
         </el-form-item>
       </el-form>
     </crud-dialog>
+
+    <!-- 修改点：编辑采购单弹窗（后端 PUT 仅允许修改供应商/操作员/备注，明细不在此改动） -->
+    <crud-dialog
+      title="编辑采购单"
+      :visible.sync="editDialogVisible"
+      size="sm"
+      :submit-loading="submitting"
+      :close-on-click-modal="false"
+      @submit="submitEdit"
+      @close="editDialogVisible = false"
+    >
+      <el-form label-width="100px" size="small">
+        <el-form-item label="采购单号：">
+          <span style="font-weight:600;">{{ editForm.orderNo }}</span>
+        </el-form-item>
+        <el-form-item label="供应商：">
+          <el-select v-model="editForm.supplierId" placeholder="请选择" style="width:100%">
+            <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="操作员：">
+          <el-input v-model="editForm.operator" placeholder="请输入操作员姓名" style="width:100%;" />
+        </el-form-item>
+        <el-form-item label="备注：">
+          <el-input v-model="editForm.remark" placeholder="采购备注（可选）" />
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -153,17 +186,20 @@
       data() {
         return {
           loading: false, counts: 0, page: 1, pageSize: 10, tableData: [],
+          // 修改点：补声明 submitting —— 模板 :submit-loading="submitting" 引用了它但从未定义，
+          // 导致 Vue 渲染告警且提交按钮无 loading 态（可重复点击造成重复下单）
+          submitting: false,
           // 修改点：分离卡片筛选和下拉筛选，避免冲突
           cardFilter: '',
           // 修改点：crud-table 列配置（替代手写 el-table-column）
           columns: [
             { prop: 'orderNo', label: '采购单号', minWidth: 140 },
             { prop: 'supplierName', label: '供应商', minWidth: 120 },
-            { prop: 'totalAmount', label: '总金额', width: 90, align: 'right', slot: true, type: 'money' },
+            { prop: 'totalAmount', label: '总金额', width: 110, align: 'right', slot: true, type: 'money' },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
             { prop: 'operator', label: '操作员', width: 80, align: 'center' },
             { prop: 'remark', label: '备注', minWidth: 100 },
-            { prop: 'createdTime', label: '创建时间', width: 140, align: 'center' }
+            { prop: 'createdTime', label: '创建时间', width: 160, align: 'center' }
           ],
           // 修改点：<table-bar> 统一组件配置
           tableSearchItems: [],
@@ -178,6 +214,9 @@
             supplierId: '', operator: '', remark: '',
             details: [{ materialId: '', qty: '', unitPrice: '' }]
           },
+          // 修改点：编辑采购单表单（仅供应商/操作员/备注，明细与金额不在此修改）
+          editDialogVisible: false,
+          editForm: { id: null, orderNo: '', supplierId: '', operator: '', remark: '' },
           // 修改点：采购表单校验规则（配合 el-form :rules + validate()）
           purchaseRules: {
             supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
@@ -192,15 +231,26 @@
           const self = this;
           const s = self.stats  || {}
           return [
-            { key: '', icon: '📦', label: '采购单总数', value: s.totalOrders || 0, color: 'primary', clickable: true, active: self.cardFilter === '' },
-            { key: 'DRAFT', icon: '📝', label: '待审核', value: s.pendingApprove || 0, color: 'warning', clickable: true, active: self.cardFilter === 'DRAFT' },
-            { key: 'ORDERED', icon: '🚚', label: '待收货', value: s.pendingReceive || 0, color: 'info', clickable: true, active: self.cardFilter === 'ORDERED' },
-            { key: 'monthAmount', icon: '💵', label: '本月采购金额', value: '¥' + self.formatMoney(s.monthAmount), color: 'success', prefix: '' }
+            { key: '', icon: 'ri-box-3-line', label: '采购单总数', value: s.totalOrders || 0, color: 'primary', clickable: true, active: self.cardFilter === '' },
+            { key: 'DRAFT', icon: 'ri-edit-2-line', label: '待审核', value: s.pendingApprove || 0, color: 'warning', clickable: true, active: self.cardFilter === 'DRAFT' },
+            { key: 'ORDERED', icon: 'ri-truck-line', label: '待收货', value: s.pendingReceive || 0, color: 'info', clickable: true, active: self.cardFilter === 'ORDERED' },
+            { key: 'monthAmount', icon: 'ri-money-cny-circle-line', label: '本月采购金额', value: '¥' + self.formatMoney(s.monthAmount), color: 'success', prefix: '' }
           ]
         }
       },
-      mounted() { window.addEventListener('resize', () => { if (this.trendChart) this.trendChart.resize() }) },
-      beforeDestroy() { if (this.trendChart) this.trendChart.dispose() },
+      // 修改点：resize 回调存引用，否则 beforeDestroy 无法解绑（原匿名函数导致监听器泄漏）
+      mounted() {
+        this.resizeHandler = () => {
+          if (this.trendChart && !this.trendChart.isDisposed()) this.trendChart.resize()
+        }
+        window.addEventListener('resize', this.resizeHandler)
+      },
+      beforeDestroy() {
+        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler)
+        if (this.trendChart && !this.trendChart.isDisposed()) {
+          try { this.trendChart.dispose() } catch (e) {}
+        }
+      },
       methods: {
         // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
         onCardClick: function(payload) {
@@ -342,30 +392,86 @@
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
           }).catch(() => {})
         },
+        // 修改点：打开编辑弹窗（仅改基本信息，明细不属于本接口职责）
+        editHandle(row) {
+          this.editForm = {
+            id: row.id,
+            orderNo: row.orderNo || '',
+            supplierId: row.supplierId || '',
+            operator: row.operator || '',
+            remark: row.remark || ''
+          }
+          this.loadSupplierOptions()
+          this.editDialogVisible = true
+        },
+        // 修改点：提交编辑
+        submitEdit() {
+          const self = this
+          if (self.submitting) return
+          if (!self.editForm.supplierId) { ReggieUI.warning('请选择供应商'); return }
+          self.submitting = true
+          updatePurchase({
+            id: self.editForm.id,
+            supplierId: self.editForm.supplierId,
+            operator: self.editForm.operator,
+            remark: self.editForm.remark
+          }).then(function(res) {
+            self.submitting = false
+            if (res.code === 1) {
+              ReggieUI.success('修改成功！')
+              self.editDialogVisible = false
+              self.handleQuery()
+            } else {
+              ReggieUI.error(res.msg || '修改失败')
+            }
+          }).catch(function(err) {
+            self.submitting = false
+            ReggieUI.error('请求失败：' + err)
+          })
+        },
+        // 修改点：删除采购单（后端限制仅草稿/已取消可删）
+        deleteHandle(row) {
+          ReggieUI.confirm('确认删除采购单「' + (row.orderNo || row.id) + '」？', '提示', {
+            confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
+          }).then(() => {
+            deletePurchase(row.id).then(res => {
+              if (res.code === 1) { ReggieUI.success('删除成功！'); this.handleQuery() }
+              else ReggieUI.error(res.msg || '删除失败')
+            }).catch(err => { ReggieUI.error('请求失败：' + err) })
+          }).catch(() => {})
+        },
         async submitForm() {
           const self = this
+          if (self.submitting) return // 修改点：防重复提交
+          // 修改点：原写法在 .catch 里 return 并不能中断外层 async 函数，
+          // 校验失败仍会继续走创建请求；改为用标志位显式中断
+          let valid = true
           await new Promise(function(resolve, reject) {
-            self.$refs.purchaseForm.validate(function(valid) { valid ? resolve() : reject() })
-          }).catch(function() {
-            ReggieUI.warning('请完善表单必填项')
-            return
-          })
+            self.$refs.purchaseForm.validate(function(ok) { ok ? resolve() : reject() })
+          }).catch(function() { valid = false })
+          if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
+
           const fd = self.formData
           if (!fd.details.length || !fd.details[0].materialId) { ReggieUI.error('请添加至少一条采购明细'); return }
-          // 创建采购单
-          addPurchase({ supplierId: fd.supplierId, operator: fd.operator, remark: fd.remark }).then(res => {
-            if (res.code === 1) {
-              const orderId = res.data.id || res.data
-              const detailPromises = fd.details.filter(d => d.materialId && d.qty).map(d =>
-                addPurchaseDetail({ orderId: orderId, materialId: d.materialId, qty: Number(d.qty), unitPrice: Number(d.unitPrice) })
-              )
-              Promise.all(detailPromises).then(() => {
-                ReggieUI.success('采购单创建成功！')
-                this.formData.dialogVisible = false
-                this.handleQuery()
-              }).catch(err => { ReggieUI.error('添加明细出错：' + err) })
-            } else ReggieUI.error(res.msg || '创建失败')
-          }).catch(err => { ReggieUI.error('请求失败：' + err) })
+
+          // 修改点：全流程包裹 submitting，保证按钮 loading 与最终复位
+          self.submitting = true
+          try {
+            const res = await addPurchase({ supplierId: fd.supplierId, operator: fd.operator, remark: fd.remark })
+            if (res.code !== 1) { ReggieUI.error(res.msg || '创建失败'); return }
+            const orderId = res.data.id || res.data
+            const details = fd.details.filter(function(d) { return d.materialId && d.qty })
+            await Promise.all(details.map(function(d) {
+              return addPurchaseDetail({ orderId: orderId, materialId: d.materialId, qty: Number(d.qty), unitPrice: Number(d.unitPrice) })
+            }))
+            ReggieUI.success('采购单创建成功！')
+            self.formData.dialogVisible = false
+            self.handleQuery()
+          } catch (err) {
+            ReggieUI.error('请求失败：' + (err && err.message ? err.message : err))
+          } finally {
+            self.submitting = false
+          }
         },
         statusType(status) {
           const map = { DRAFT: 'info', ORDERED: 'warning', PARTIAL: '', RECEIVED: 'success', CANCELLED: 'danger' }

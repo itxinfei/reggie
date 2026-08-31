@@ -6,7 +6,9 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.ObjectMapperHolder;
 import com.reggie.enums.StockRecordType;
 import com.reggie.module.inventory.model.Material;
+import com.reggie.module.inventory.model.MaterialCategory;
 import com.reggie.module.inventory.model.StockRecord;
+import com.reggie.module.inventory.service.MaterialCategoryService;
 import com.reggie.module.inventory.service.MaterialService;
 import com.reggie.module.inventory.service.ReplenishService;
 import com.reggie.module.inventory.service.StockRecordService;
@@ -21,8 +23,11 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.reggie.module.inventory.model.Material.STATUS_NORMAL;
 
@@ -71,6 +76,9 @@ public class ReplenishServiceImpl implements ReplenishService {
 
     @Autowired
     private StockRecordService stockRecordService;
+
+    @Autowired
+    private MaterialCategoryService materialCategoryService;
 
     /**
      * Redis 模板，可选注入（Redis 不可用时降级为直接计算）
@@ -178,6 +186,21 @@ public class ReplenishServiceImpl implements ReplenishService {
         }
         List<StockRecord> outRecords = stockRecordService.list(outQw);
 
+        // 批量查询物料分类名
+        Map<Long, String> categoryNameMap = new HashMap<Long, String>();
+        Set<Long> categoryIds = allMaterials.stream()
+                .map(Material::getCategoryId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (!categoryIds.isEmpty()) {
+            List<MaterialCategory> categories = materialCategoryService.listByIds(categoryIds);
+            for (MaterialCategory c : categories) {
+                if (c != null && c.getName() != null) {
+                    categoryNameMap.put(c.getId(), c.getName());
+                }
+            }
+        }
+
         // 计算补货建议
         List<Map<String, Object>> suggestList = new ArrayList<Map<String, Object>>();
         BigDecimal replenishCycleDays = new BigDecimal(replenishCycle);
@@ -209,6 +232,7 @@ public class ReplenishServiceImpl implements ReplenishService {
             Map<String, Object> item = new HashMap<String, Object>();
             item.put("materialId", m.getId());
             item.put("materialName", m.getName());
+            item.put("categoryName", categoryNameMap.get(m.getCategoryId()));
             item.put("unit", m.getUnit());
             item.put("stockQty", stockQty);
             item.put("dailyUsage", dailyUsage);

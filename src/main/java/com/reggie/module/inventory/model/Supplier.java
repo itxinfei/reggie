@@ -58,4 +58,12 @@ public class Supplier implements Serializable {
     @Schema(description = "逻辑删除：0=未删除，1=已删除")
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
+
+    /** 累计采购金额（排除已取消单，关联聚合填充，数据库无此列） */
+    @TableField(exist = false)
+    private java.math.BigDecimal totalPurchaseAmount;
+
+    /** 采购单笔数（排除已取消单，关联聚合填充，数据库无此列） */
+    @TableField(exist = false)
+    private Integer purchaseCount;
 }

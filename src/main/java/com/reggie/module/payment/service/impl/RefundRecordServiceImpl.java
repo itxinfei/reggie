@@ -18,9 +18,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 退款记录服务实现
@@ -125,6 +128,65 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
         // 查询该支付单已成功退款的总额（跨租户由 Mapper 的 @InterceptorIgnore 保证）
         BigDecimal sum = paymentOrderMapper.sumRefundedAmount(paymentOrderId, RefundStatus.SUCCESS.getCode());
         return sum == null ? BigDecimal.ZERO : sum;
+    }
+
+    @Override
+    public Map<String, Object> getRefundAnalysis(Long tenantId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (tenantId == null) tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            result.put("totalCount", 0);
+            result.put("successCount", 0);
+            result.put("pendingCount", 0);
+            result.put("failCount", 0);
+            result.put("totalAmount", BigDecimal.ZERO);
+            result.put("byReason", new java.util.ArrayList<>());
+            return result;
+        }
+        // 当前租户全部退款记录（含逻辑删除过滤，@TableLogic 自动生效）
+        List<RefundRecord> records = this.list(new LambdaQueryWrapper<RefundRecord>()
+                .eq(RefundRecord::getTenantId, tenantId)
+                .orderByDesc(RefundRecord::getCreatedTime));
+
+        int successCount = 0, pendingCount = 0, failCount = 0;
+        BigDecimal successAmount = BigDecimal.ZERO;
+        Map<String, BigDecimal> reasonAmount = new LinkedHashMap<>();
+        Map<String, Integer> reasonCount = new LinkedHashMap<>();
+        for (RefundRecord r : records) {
+            String st = r.getStatus();
+            BigDecimal amt = r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO;
+            if (RefundStatus.SUCCESS.getCode().equals(st)) {
+                successCount++;
+                successAmount = successAmount.add(amt);
+                String reason = (r.getReason() == null || r.getReason().trim().isEmpty()) ? "其他" : r.getReason().trim();
+                reasonAmount.merge(reason, amt, BigDecimal::add);
+                reasonCount.merge(reason, 1, Integer::sum);
+            } else if (RefundStatus.PENDING.getCode().equals(st)) {
+                pendingCount++;
+            } else {
+                failCount++;
+            }
+        }
+        result.put("totalCount", records.size());
+        result.put("successCount", successCount);
+        result.put("pendingCount", pendingCount);
+        result.put("failCount", failCount);
+        result.put("totalAmount", successAmount);
+
+        // 退款原因 TOP5（按退款金额降序）
+        List<Map<String, Object>> byReason = reasonAmount.entrySet().stream()
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+                .limit(5)
+                .map(e -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("reason", e.getKey());
+                    m.put("amount", e.getValue());
+                    m.put("count", reasonCount.getOrDefault(e.getKey(), 0));
+                    return m;
+                })
+                .collect(Collectors.toList());
+        result.put("byReason", byReason);
+        return result;
     }
 
     /**

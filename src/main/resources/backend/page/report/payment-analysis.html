@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>支付分析 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
@@ -25,8 +27,26 @@
     .payment-page .tableBar .fl-label { font-size:var(--font-size-base); color: var(--el-text-regular); font-weight: 500; flex-shrink: 0; }
     .payment-page .tableBar .fl-spacer { flex: 1; min-width: 0; }
     .payment-page .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    /* ====== 退款分析 ====== */
+    .payment-page .refund-overview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    .payment-page .refund-card {
+      display: flex; align-items: center; gap: 12px; padding: 16px;
+      background: var(--color-white); border: 1px solid var(--el-border-lighter);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+    }
+    .payment-page .refund-card__icon {
+      width: 40px; height: 40px; border-radius: var(--radius-md); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .payment-page .refund-card__icon.is-danger { background: rgba(245, 34, 45, 0.1); color: var(--color-danger); }
+    .payment-page .refund-card__icon.is-success { background: rgba(82, 196, 26, 0.12); color: var(--color-success); }
+    .payment-page .refund-card__icon.is-warning { background: rgba(250, 173, 20, 0.15); color: var(--color-warning); }
+    .payment-page .refund-card__icon.is-info { background: var(--el-bg-subtle); color: var(--el-text-secondary); }
+    .payment-page .refund-card__value { font-size: 18px; font-weight: 700; color: var(--el-text-primary); line-height: 1.2; }
+    .payment-page .refund-card__label { font-size: var(--font-size-xs); color: var(--el-text-secondary); margin-top: 2px; }
     @media (max-width: 1200px) { .payment-page .container { padding: 16px 20px 20px !important; }
       .payment-page .charts-row { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .payment-page .refund-overview { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 768px) { .payment-page .container { padding: 12px 16px 16px !important; } }
   </style>
 </head>
@@ -61,7 +81,7 @@
       </div>
 
       <!-- ========== 支付方式分布 ========== -->
-      <chart-panel title="支付方式分布" icon="📊">
+      <chart-panel title="支付方式分布" icon="ri-bar-chart-2-line">
         <div class="charts-row">
           <div id="pieChart" style="width:100%;height:380px;min-height:300px;"></div>
           <div id="barChart" style="width:100%;height:380px;min-height:300px;"></div>
@@ -69,7 +89,7 @@
       </chart-panel>
 
       <!-- ========== 每日支付金额趋势 ========== -->
-      <chart-panel title="每日支付金额趋势" icon="📈">
+      <chart-panel title="每日支付金额趋势" icon="ri-line-chart-line">
         <div id="paymentTrendChart" style="width:100%;height:360px;min-height:300px;"></div>
       </chart-panel>
 
@@ -95,6 +115,20 @@
         </template>
       </crud-table>
 
+      <!-- ========== 退款分析（8.5.2 补充） ========== -->
+      <chart-panel title="退款分析" icon="ri-refund-2-line">
+        <div class="refund-overview">
+          <div class="refund-card" v-for="c in refundCards" :key="c.key">
+            <div class="refund-card__icon" :class="'is-' + c.color"><i :class="c.icon" aria-hidden="true"></i></div>
+            <div class="refund-card__body">
+              <div class="refund-card__value">{{ c.value }}</div>
+              <div class="refund-card__label">{{ c.label }}</div>
+            </div>
+          </div>
+        </div>
+        <div id="refundChart" style="width:100%;height:300px;min-height:260px;"></div>
+      </chart-panel>
+
     </div>
   </div>
 
@@ -105,10 +139,11 @@
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
   <script src="../../api/report.js"></script>
+  <script src="../../api/payment.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../js/chart-panel.js"></script>
   <script>
-    const CHANNEL_LABEL = { wechat: '微信支付', alipay: '支付宝', balance: '余额支付', unionpay: '云闪付' };
+    const CHANNEL_LABEL = { wechat: '微信支付', alipay: '支付宝', balance: '线下/其他', unionpay: '云闪付' };
     // 支付渠道配色：wechat/alipay 为平台品牌色（保留 hex），balance/unionpay 引用全局设计令牌
     const CHANNEL_COLOR = {
       wechat: '#07c160',       // 微信支付品牌绿（平台色，保留）
@@ -130,7 +165,9 @@
               { prop: 'amount', label: '金额（元）', width: 150, slot: true, type: 'money' },
               { prop: 'ratio', label: '占比', width: 160, align: 'center', slot: true }
             ],
-            pieChart: null, barChart: null, trendChart: null, resizeHandler: null
+            pieChart: null, barChart: null, trendChart: null, refundChart: null, resizeHandler: null,
+            // 退款分析数据（GET /api/payment/refund/stats）
+            refundAnalysis: null
           }
         },
         computed: {
@@ -145,11 +182,21 @@
           statsCards: function() {
             const self = this;
             return [
-              { key: '笔数', icon: '💳', label: '交易总笔数', value: self.totalCount, color: 'primary' },
-              { key: '总额', icon: '💰', label: '交易总额（元）', value: '¥' + self.formatMoney(self.totalAmount), color: 'success' },
-              { key: '常用', icon: '🏅', label: '最常用支付方式', value: self.topChannel, color: 'warning' },
-              { key: '渠道', icon: '📊', label: '支付渠道数', value: self.tableData.length || 0, color: 'info' }
+              { key: '笔数', icon: 'ri-bank-card-line', label: '交易总笔数', value: self.totalCount, color: 'primary' },
+              { key: '总额', icon: 'ri-money-cny-circle-line', label: '交易总额（元）', value: '¥' + self.formatMoney(self.totalAmount), color: 'success' },
+              { key: '常用', icon: 'ri-medal-line', label: '最常用支付方式', value: self.topChannel, color: 'warning' },
+              { key: '渠道', icon: 'ri-bar-chart-2-line', label: '支付渠道数', value: self.tableData.length || 0, color: 'info' }
             ]
+          },
+          // 退款概况卡（8.5.2）
+          refundCards: function() {
+            const a = this.refundAnalysis || {};
+            return [
+              { key: 'count', icon: 'ri-refund-2-line', color: 'danger', label: '退款单数', value: a.totalCount || 0 },
+              { key: 'success', icon: 'ri-checkbox-circle-line', color: 'success', label: '成功退款', value: a.successCount || 0 },
+              { key: 'amount', icon: 'ri-money-cny-circle-line', color: 'warning', label: '退款金额', value: '¥' + this.formatMoney(a.totalAmount) },
+              { key: 'fail', icon: 'ri-error-warning-line', color: 'info', label: '退款中 / 失败', value: (Number(a.pendingCount) || 0) + (Number(a.failCount) || 0) }
+            ];
           }
         },
         created: function() {
@@ -171,15 +218,16 @@
             self.pieChart = initChart('pieChart');
             self.barChart = initChart('barChart');
             self.trendChart = initChart('paymentTrendChart');
+            self.refundChart = initChart('refundChart');
             self.resizeHandler = function() {
-              [self.pieChart, self.barChart, self.trendChart].forEach(function(ch) {
+              [self.pieChart, self.barChart, self.trendChart, self.refundChart].forEach(function(ch) {
                 if (ch && !ch.isDisposed()) ch.resize();
               });
             };
             window.addEventListener('resize', self.resizeHandler);
             // 修改点：延迟 resize 确保容器已撑开
             setTimeout(function() {
-              [self.pieChart, self.barChart, self.trendChart].forEach(function(ch) {
+              [self.pieChart, self.barChart, self.trendChart, self.refundChart].forEach(function(ch) {
                 if (ch && !ch.isDisposed()) ch.resize();
               });
             }, 400);
@@ -188,7 +236,7 @@
         },
         beforeDestroy: function() {
           if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
-          [this.pieChart, this.barChart, this.trendChart].forEach(function(ch) {
+          [this.pieChart, this.barChart, this.trendChart, this.refundChart].forEach(function(ch) {
             if (ch) try { ch.dispose(); } catch(e) {}
           });
         },
@@ -202,10 +250,60 @@
             reportPayment({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(res) {
               if (String(res.code) === '1') {
                 self.tableData = self.convertToArray(res.data || {});
-                self.$nextTick(function() { self.renderCharts(); self.loadPaymentTrend(); });
+                self.$nextTick(function() { self.renderCharts(); self.loadPaymentTrend(); self.loadRefundAnalysis(); });
               } else { ReggieUI.error(res.msg || '加载支付数据失败'); }
             }).catch(function(err) { ReggieUI.error('请求失败：' + (err || '网络异常')); })
             .finally(function() { self.loading = false; });
+          },
+          // ====== 退款分析（8.5.2） ======
+          loadRefundAnalysis: function() {
+            const self = this;
+            paymentRefundStats().then(function(res) {
+              if (res && res.code === 1 && res.data) {
+                self.refundAnalysis = res.data;
+                self.$nextTick(function() { self.renderRefundChart(); });
+              }
+            }).catch(function() {});
+          },
+          renderRefundChart: function() {
+            if (!this.refundChart) return;
+            const byReason = (this.refundAnalysis && this.refundAnalysis.byReason) || [];
+            if (!byReason.length) {
+              this.refundChart.setOption({ title: { text: '暂无退款数据', left: 'center', top: 'center',
+                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } } }, true);
+              return;
+            }
+            const reasons = byReason.map(function(r) { return r.reason; }).reverse();
+            const amounts = byReason.map(function(r) { return Number(r.amount) || 0; }).reverse();
+            const counts = byReason.map(function(r) { return r.count || 0; }).reverse();
+            this.refundChart.setOption({
+              tooltip: {
+                trigger: 'axis', axisPointer: { type: 'shadow' },
+                backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
+                textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
+                formatter: function(params) {
+                  if (!params || !params.length) return '';
+                  var p = params[0];
+                  return p.name + '<br/>退款 ' + Number(p.value).toFixed(2) + ' 元 · ' + counts[params[0].dataIndex] + ' 笔';
+                }
+              },
+              grid: { left: 120, right: 60, top: 20, bottom: 30 },
+              xAxis: {
+                type: 'value', axisLabel: { color: RgPalette.info, fontSize: 12, formatter: '¥{value}' },
+                splitLine: { lineStyle: { color: RgPalette.borderLighter2, type: 'dashed' } },
+                axisLine: { show: false }, axisTick: { show: false }
+              },
+              yAxis: {
+                type: 'category', data: reasons,
+                axisLine: { lineStyle: { color: RgPalette.borderLighter2 } }, axisTick: { show: false },
+                axisLabel: { color: RgPalette.textRegular, fontSize: 12 }
+              },
+              series: [{
+                name: '退款金额', type: 'bar', data: amounts, barWidth: 18,
+                itemStyle: { color: RgPalette.danger, borderRadius: [0, RgPalette.radiusMd, RgPalette.radiusMd, 0] },
+                label: { show: true, position: 'right', fontSize: 12, fontWeight: 600, color: RgPalette.danger, formatter: function(p) { return '¥' + Number(p.value).toFixed(2); } }
+              }]
+            }, true);
           },
           loadPaymentTrend: function() {
             const self = this;
@@ -225,7 +323,7 @@
             this.trendChart.setOption({
               tooltip: { trigger: 'axis', backgroundColor: RgPalette.white,
                 borderColor: RgPalette.borderLighter2, borderWidth: 1, textStyle: { color: RgPalette.textPrimary, fontSize: 13 } },
-              legend: { data: ['微信支付', '支付宝', '余额支付'], bottom: 8, textStyle: { fontSize: 12, color: RgPalette.textRegular } },
+              legend: { data: ['微信支付', '支付宝', '线下/其他'], bottom: 8, textStyle: { fontSize: 12, color: RgPalette.textRegular } },
               // 修改点：增大左/底部 padding 防止标签被裁剪
               grid: { left: 55, right: 30, top: 25, bottom: 52 },
               xAxis: { type: 'category', data: dates, boundaryGap: false,
@@ -241,7 +339,7 @@
                 { name: '支付宝', type: 'line', data: data.alipay || [], smooth: true, symbol: 'circle', symbolSize: 6,
                   lineStyle: { color: RgPalette.alipayBlue, width: 3 }, itemStyle: { color: RgPalette.alipayBlue, borderColor: RgPalette.white, borderWidth: 2 },
                   areaStyle: { color: makeAreaGrad(RgPalette.alipayBlue) } },
-                { name: '余额支付', type: 'line', data: data.balance || [], smooth: true, symbol: 'circle', symbolSize: 6,
+                { name: '线下/其他', type: 'line', data: data.balance || [], smooth: true, symbol: 'circle', symbolSize: 6,
                   lineStyle: { color: RgPalette.warning, width: 3 }, itemStyle: { color: RgPalette.warning, borderColor: RgPalette.white, borderWidth: 2 },
                   areaStyle: { color: makeAreaGrad(RgPalette.warning) } }
               ]
@@ -305,7 +403,8 @@
                 backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
                 textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                 formatter: function(ps) {
-                  const h = '<b>' + ps[0].axisValue + '</b><br/>';
+                  // 修改点：h 需累加拼接，声明为 const 会抛 "Assignment to constant variable"（悬停图表即崩溃）
+                  let h = '<b>' + ps[0].axisValue + '</b><br/>';
                   ps.forEach(function(p) {
                     const v = p.seriesName === '交易金额' ? '¥' + Number(p.value).toFixed(2) : p.value + ' 笔';
                     h += p.marker + ' ' + p.seriesName + '：<b>' + v + '</b><br/>';

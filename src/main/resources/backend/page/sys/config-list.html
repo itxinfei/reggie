@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>系统配置 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
@@ -161,10 +163,10 @@
           const typeLabels = {}
           const typeKeys = ['type1', 'type2', 'type3', 'type4']
           return [
-            { key: '', icon: '⚙️', label: '配置总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
-            { key: 'type1', icon: '🔘', label: '功能开关', value: self.stats.type1 || 0, color: 'success', clickable: true, active: self.activeFilter === 'type1' },
-            { key: 'type2', icon: '📊', label: '运营参数', value: self.stats.type2 || 0, color: 'warning', clickable: true, active: self.activeFilter === 'type2' },
-            { key: 'type3', icon: '🎨', label: '显示设置', value: self.stats.type3 || 0, color: 'info', clickable: true, active: self.activeFilter === 'type3' }
+            { key: '', icon: 'ri-settings-3-line', label: '配置总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'type1', icon: 'ri-record-circle-line', label: '功能开关', value: self.stats.type1 || 0, color: 'success', clickable: true, active: self.activeFilter === 'type1' },
+            { key: 'type2', icon: 'ri-bar-chart-2-line', label: '运营参数', value: self.stats.type2 || 0, color: 'warning', clickable: true, active: self.activeFilter === 'type2' },
+            { key: 'type3', icon: 'ri-palette-line', label: '显示设置', value: self.stats.type3 || 0, color: 'info', clickable: true, active: self.activeFilter === 'type3' }
           ]
         }
       },

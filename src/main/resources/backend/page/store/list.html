@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>门店管理 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
     <style>
@@ -107,7 +109,7 @@
                     :columns="columns"
                     :loading="loading"
                     :show-actions="true"
-                    :actions-width="210"
+                    :actions-width="250"
                     :selection="true"
                     :show-index="true"
                     :default-sort="{prop: 'createTime', order: 'descending'}"
@@ -140,6 +142,7 @@
                     </template>
                     <template #actions="{ row }">
                         <el-button type="text" size="mini" icon="el-icon-document" @click.stop="openDetail(row)">详情</el-button>
+                        <el-button type="text" size="mini" icon="el-icon-data-line" @click.stop="openDashboard(row)">看板</el-button>
                         <el-button type="text" size="mini" icon="el-icon-edit" @click.stop="openEditDialog(row)">编辑</el-button>
                         <el-button type="text" size="mini" icon="el-icon-switch-button" @click.stop="switchToStore(row)">切换</el-button>
                         <el-button type="text" size="mini" icon="el-icon-refresh" @click.stop="openSyncDialog(row)">同步</el-button>
@@ -408,12 +411,12 @@
         // 表格数据
         tableData: [],
         columns: [
-          { prop: 'storeName', label: '门店名称', min-width: 180, align: 'center', slot: 'col-storeName', sortable: 'custom' },
+          { prop: 'storeName', label: '门店名称', minWidth: 180, align: 'center', slot: 'col-storeName', sortable: 'custom' },
           { prop: 'storeCode', label: '门店编码', width: 92, align: 'center', sortable: 'custom' },
-          { prop: 'contactPerson', label: '联系人 / 电话', min-width: 140, align: 'center', slot: 'col-contact' },
+          { prop: 'contactPerson', label: '联系人 / 电话', minWidth: 140, align: 'center', slot: 'col-contact' },
           { prop: 'status', label: '状态', width: 60, align: 'center', slot: 'col-status' },
           { prop: 'todayOrders', label: '今日订单', width: 80, align: 'center', slot: 'col-todayOrders', sortable: 'custom' },
-          { prop: 'todayAmount', label: '今日营收', width: 100, align: 'right', slot: 'col-todayAmount', sortable: 'custom' }
+          { prop: 'todayAmount', label: '今日营收', width: 100, align: 'right', type: 'money', slot: 'col-todayAmount', sortable: 'custom' }
         ],
         selection: [],           // 已选行
         // 统计
@@ -466,10 +469,10 @@
         statsCards: function() {
             var self = this;
             return [
-                { key: '', icon: '🏠', label: '门店总数', value: self.stats.totalStores, color: 'primary', clickable: true, active: self.activeFilter === '' },
-                { key: 'active', icon: '✅', label: '已启用', value: self.stats.activeStores, color: 'success', clickable: true, active: self.activeFilter === 'active' },
-                { key: 'inactive', icon: '⏸', label: '已停用', value: self.stats.inactiveStores, color: 'warning', clickable: true, active: self.activeFilter === 'inactive' },
-                { key: 'today', icon: '💰', label: '今日有营收门店', value: self.stats.todayTotalStores, color: 'info', unit: '家' }
+                { key: '', icon: 'ri-home-5-line', label: '门店总数', value: self.stats.totalStores, color: 'primary', clickable: true, active: self.activeFilter === '' },
+                { key: 'active', icon: 'ri-checkbox-circle-line', label: '已启用', value: self.stats.activeStores, color: 'success', clickable: true, active: self.activeFilter === 'active' },
+                { key: 'inactive', icon: 'ri-pause-circle-line', label: '已停用', value: self.stats.inactiveStores, color: 'warning', clickable: true, active: self.activeFilter === 'inactive' },
+                { key: 'today', icon: 'ri-money-cny-circle-line', label: '今日有营收门店', value: self.stats.todayTotalStores, color: 'info', unit: '家' }
             ]
         }
     },
@@ -638,6 +641,15 @@
         },
 
         // ========== 详情 ==========
+        // 修改点：8.7.2 门店列表 → 点门店进看板（新窗口打开单店看板，URL 带 storeId/name）
+        openDashboard: function(row) {
+            if (!row || !row.tenantId) {
+                ReggieUI.warning('该门店缺少租户标识，无法打开看板');
+                return;
+            }
+            var name = encodeURIComponent(row.storeName || '');
+            window.open('dashboard.html?storeId=' + row.tenantId + '&name=' + name, '_blank');
+        },
         openDetail: function(row) {
             var self = this;
             // 修复点：列表数据可能不含全部字段，统一走 /store/detail 获取完整信息

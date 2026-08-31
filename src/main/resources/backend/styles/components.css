@@ -18,8 +18,8 @@
 .crud-table-wrapper {
   width: 100%;
   min-width: 0;                 /* 避免 flex 父容器被宽表撑破 */
-  overflow-x: auto;             /* 宽表窄屏横向滚动兜底（m3） */
-  -webkit-overflow-scrolling: touch;
+  /* 修改点：删除全局 overflow-x:auto，避免正常宽度下出现浏览器原生横向滚动条（左右滑块）。
+     crud-table 列宽采用 min-width 自适应，宽屏时列自动填满容器，无需外层兜底滚动。 */
 }
 
 .crud-table-wrapper .tableBox {
@@ -27,10 +27,9 @@
   margin-bottom: 0;
 }
 
-/* 宽表场景：允许表格按内容自然撑宽，滚动由容器接管 */
-.crud-table-wrapper .tableBox .el-table__body-wrapper {
-  overflow-x: auto;
-}
+/* 修改点：删除对 .el-table__body-wrapper 的 overflow-x:auto 强制设置，
+   让 Element UI 内部 el-scrollbar 根据列宽是否溢出自行决定是否显示横向滚动条，
+   避免无溢出时仍渲染原生灰色滑块。 */
 
 .crud-table-wrapper .tableBox .el-image img {
   width: 40px;
@@ -339,6 +338,11 @@
 @media (max-width: 768px) {
   .crud-table-wrapper .tableBox {
     font-size: 13px;
+  }
+  /* 修改点：窄屏兜底，允许 crud-table 外层横向滚动，确保列宽超出时仍可左右查看。 */
+  .crud-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 

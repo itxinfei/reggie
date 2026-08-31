@@ -228,8 +228,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/backend/plugins/vue/vue.js"></script>
-    <script src="/backend/plugins/axios/axios.min.js"></script>
+    <!-- 修改点：改为相对路径，与其他C端页面（order/user）保持一致。
+         绝对路径 /backend/... 在子路径部署时会失效，且在 file:// 下无法解析。 -->
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="../js/vant.min.js"></script>
     <script src="../js/request.js"></script>
     <script src="../api/ai.js"></script>

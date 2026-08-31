@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>消息通知管理 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/main.css" />
     <link rel="stylesheet" href="../../styles/page.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
@@ -138,10 +140,10 @@
 
             <!-- Tab切换 -->
             <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('sms')">📱 发送短信</button>
-                <button class="tab-btn" onclick="switchTab('push')">🔔 APP推送</button>
-                <button class="tab-btn" onclick="switchTab('record')">📋 发送记录</button>
-                <button class="tab-btn" onclick="switchTab('template')">📝 通知模板</button>
+                <button class="tab-btn active" onclick="switchTab('sms')"><i class="ri-smartphone-line" aria-hidden="true"></i> 发送短信</button>
+                <button class="tab-btn" onclick="switchTab('push')"><i class="ri-notification-3-line" aria-hidden="true"></i> APP推送</button>
+                <button class="tab-btn" onclick="switchTab('record')"><i class="ri-file-list-3-line" aria-hidden="true"></i> 发送记录</button>
+                <button class="tab-btn" onclick="switchTab('template')"><i class="ri-edit-2-line" aria-hidden="true"></i> 通知模板</button>
             </div>
 
             <!-- ========== Tab 1: 发送短信 ========== -->
@@ -235,7 +237,7 @@
                                 <button class="app-btn app-btn-success"
                                         :disabled="smsForm.sending || selectedUsers.length === 0 || !smsForm.content"
                                         @click="doSendSms()">
-                                    📱 {{ smsForm.sending ? '发送中...' : '发送短信 (' + selectedUsers.length + '人)' }}
+                                    <i class="ri-smartphone-line" aria-hidden="true"></i> {{ smsForm.sending ? '发送中...' : '发送短信 (' + selectedUsers.length + '人)' }}
                                 </button>
                             </div>
                             <div class="send-result"
@@ -342,7 +344,7 @@
                                 <button class="app-btn app-btn-purple"
                                         :disabled="pushForm.sending || pushSelectedUsers.length === 0 || !pushForm.title || !pushForm.content"
                                         @click="doSendPush()">
-                                    🔔 {{ pushForm.sending ? '推送中...' : '发送APP推送 (' + pushSelectedUsers.length + '人)' }}
+                                    <i class="ri-notification-3-line" aria-hidden="true"></i> {{ pushForm.sending ? '推送中...' : '发送APP推送 (' + pushSelectedUsers.length + '人)' }}
                                 </button>
                             </div>
                             <div class="send-result"
@@ -554,7 +556,7 @@
                     <button class="app-btn app-btn-primary" @click="saveTemplate()">保存</button>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <script src="../../plugins/vue/vue.js"></script>
@@ -616,10 +618,10 @@
                 statsCards: function() {
                     const self = this;
                     return [
-                        { key: 'sms', icon: '📱', label: '今日短信发送', value: self.stats.todaySms || 0, color: 'primary' },
-                        { key: 'push', icon: '🔔', label: '今日APP推送', value: self.stats.todayPush || 0, color: 'info' },
-                        { key: 'success', icon: '✅', label: '发送成功', value: self.stats.todaySuccess || 0, color: 'success' },
-                        { key: 'fail', icon: '❌', label: '发送失败', value: self.stats.todayFail || 0, color: 'danger' }
+                        { key: 'sms', icon: 'ri-smartphone-line', label: '今日短信发送', value: self.stats.todaySms || 0, color: 'primary' },
+                        { key: 'push', icon: 'ri-notification-3-line', label: '今日APP推送', value: self.stats.todayPush || 0, color: 'info' },
+                        { key: 'success', icon: 'ri-checkbox-circle-line', label: '发送成功', value: self.stats.todaySuccess || 0, color: 'success' },
+                        { key: 'fail', icon: 'ri-close-circle-line', label: '发送失败', value: self.stats.todayFail || 0, color: 'danger' }
                     ]
                 },
                 selectedUsers: function() {

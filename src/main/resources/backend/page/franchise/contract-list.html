@@ -177,8 +177,8 @@
             { prop: 'franchiseeId', label: '加盟商', slot: true, minWidth: 120 },
             { prop: 'commissionType', label: '抽成方式', slot: true, width: 100 },
             { prop: 'commission', label: '抽成规则', slot: true, minWidth: 120 },
-            { prop: 'startDate', label: '开始日期', width: 110 },
-            { prop: 'endDate', label: '结束日期', width: 110 },
+            { prop: 'startDate', label: '开始日期', width: 150 },
+            { prop: 'endDate', label: '结束日期', width: 150 },
             { prop: 'status', label: '状态', slot: true, width: 90 },
             { prop: 'remark', label: '备注', minWidth: 120 }
           ],
@@ -200,24 +200,38 @@
             franchiseeId: [{ required: true, message: '请选择加盟商', trigger: 'change' }],
             contractNo: [{ required: true, whitespace: true, message: '请输入合同编号', trigger: 'blur' }]
           },
-          searchValues: {}
+          searchValues: {},
+          // 后端聚合统计（总数/生效/终止/关联加盟商数）
+          stats: {}
         }
       },
       created() {
         this.loadFranchisees()
+        this.loadStats()
         this.init()
       },
       computed: {
         statsCards() {
+          const s = this.stats || {}
           return [
-            { key: 'total', icon: 'el-icon-document', label: '合同总数', value: this.counts || 0, color: 'primary' },
-            { key: 'active', icon: 'el-icon-circle-check', label: '生效中', value: this.tableData.filter(function(r){ return r.status === 1 }).length, color: 'success' },
-            { key: 'expired', icon: 'el-icon-circle-close', label: '已终止', value: this.tableData.filter(function(r){ return r.status === 0 }).length, color: 'info' },
-            { key: 'franchisees', icon: 'el-icon-office-building', label: '关联加盟商', value: this.tableData.length, color: 'warning' }
+            { key: 'total', icon: 'el-icon-document', label: '合同总数', value: s.total || 0, color: 'primary' },
+            { key: 'active', icon: 'el-icon-circle-check', label: '生效中', value: s.active || 0, color: 'success' },
+            { key: 'expired', icon: 'el-icon-circle-close', label: '已终止', value: s.expired || 0, color: 'info' },
+            { key: 'franchisees', icon: 'el-icon-office-building', label: '关联加盟商', value: s.franchiseeCount || 0, color: 'warning' }
           ]
         }
       },
       methods: {
+        async loadStats() {
+          try {
+            const res = await contractStats()
+            if (String(res.code) === '1') {
+              this.stats = res.data || {}
+            }
+          } catch (err) {
+            // 统计加载失败不影响列表展示
+          }
+        },
         formatMoney(v) {
           if (v === null || v === undefined || v === '') return '-'
           return Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -281,6 +295,7 @@
         },
         onSizeChange(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
           this.init()
         },
         // CRUD 操作
@@ -317,12 +332,14 @@
         async submitForm() {
           if (this.submitting) return // 提交防重
           const self = this
-          await new Promise(function(resolve, reject) {
-            self.$refs.contractForm.validate(function(valid) { valid ? resolve() : reject() })
-          }).catch(function() {
+          // 修改点：校验失败必须 return，原 await validate().catch(()=>{}) 会吞掉失败继续提交
+          const valid = await new Promise(function(resolve) {
+            self.$refs.contractForm.validate(function(v) { resolve(v) })
+          })
+          if (!valid) {
             ReggieUI.warning('请完善表单必填项')
             return
-          })
+          }
           if (!self.formData.franchiseeId) {
             ReggieUI.error('请选择加盟商'); return
           }
@@ -389,7 +406,7 @@
                 ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
-          })
+          }).catch(function() { /* 用户取消，无需处理 */ })
         },
         handleClose() {
           this.formData.dialogVisible = false

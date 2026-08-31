@@ -1,5 +1,6 @@
 package com.reggie.module.store.mapper;
 
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -42,10 +43,12 @@ public interface StoreInfoMapper extends BaseMapper<StoreInfo> {
 
     /**
      * 根据门店编码查询
+     * <p>打印代理注册（无登录会话）也走此方法，须绕过租户拦截器（store_code 全局唯一索引）。</p>
      *
      * @param storeCode 门店编码
      * @return 门店信息
      */
+    @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT * FROM store_info WHERE store_code = #{storeCode}")
     StoreInfo findByStoreCode(@Param("storeCode") String storeCode);
 

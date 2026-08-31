@@ -71,6 +71,15 @@ public interface UrgencyMapper extends BaseMapper<UrgencyRecord> {
     Integer countWeek(@Param("tenantId") Long tenantId, @Param("weekStart") LocalDate weekStart);
 
     /**
+     * 统计指定日期已处理的催单数
+     *
+     * @param tenantId 租户ID
+     * @param date     日期
+     * @return 已处理催单数
+     */
+    Integer countTodayProcessed(@Param("tenantId") Long tenantId, @Param("date") LocalDate date);
+
+    /**
      * 计算平均响应时间（分钟）
      *
      * @param tenantId 租户ID

@@ -23,51 +23,69 @@ public interface BrowseHistoryMapper extends BaseMapper<BrowseHistory> {
 
     /**
      * 查询用户最近N条浏览记录
+     * <p>
+     * 使用 {@code @InterceptorIgnore(tenantLine = "true")} 跳过租户拦截器：
+     * 本方法服务 C 端用户接口（RecommendController.getRecentHistory），
+     * C 端 session 无 tenantId 上下文，租户插件会注入 tenant_id = -1 导致返回空集。
+     * 隔离依赖 {@code user_id} 参数：C 端会话 userId 已校验登录态，用户 ID 空间全局唯一，
+     * 无需再叠租户条件（跨店浏览数据在推荐场景下有意允许）。
      *
      * @param userId 用户ID
      * @param limit 条数
      * @return 浏览记录列表
      */
-    @Select("SELECT * FROM user_browse_history WHERE user_id = #{userId} ORDER BY create_time DESC LIMIT #{limit}")
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT * FROM user_browse_history WHERE user_id = #{userId} AND is_deleted = 0 ORDER BY create_time DESC LIMIT #{limit}")
     List<BrowseHistory> findRecentByUserId(@Param("userId") Long userId, @Param("limit") int limit);
 
     /**
      * 统计用户浏览最多的菜品类别 TOP N
+     * <p>
+     * 同 findRecentByUserId：C 端接口依赖 userId 隔离，跳过租户插件避免 C 端 session 返回空集。
      *
      * @param userId 用户ID
      * @param limit 条数
      * @return 最多浏览的菜品列表
      */
+    @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT bh.target_id, bh.target_name, COUNT(*) as view_count " +
             "FROM user_browse_history bh " +
-            "WHERE bh.user_id = #{userId} AND bh.target_type = 1 " +
+            "WHERE bh.user_id = #{userId} AND bh.target_type = 1 AND bh.is_deleted = 0 " +
             "GROUP BY bh.target_id, bh.target_name " +
             "ORDER BY view_count DESC LIMIT #{limit}")
     List<Map<String, Object>> findTopViewedDishes(@Param("userId") Long userId, @Param("limit") int limit);
 
     /**
      * 查询指定用户在某时间范围内的浏览记录数
+     * <p>
+     * 同 findRecentByUserId：C 端 session 跳过租户插件。
      *
      * @param userId 用户ID
      * @param startTime 起始时间
      * @return 浏览记录数
      */
+    @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT COUNT(*) FROM user_browse_history " +
-            "WHERE user_id = #{userId} AND create_time >= #{startTime}")
+            "WHERE user_id = #{userId} AND is_deleted = 0 AND create_time >= #{startTime}")
     int countByUserSince(@Param("userId") Long userId, @Param("startTime") String startTime);
 
     /**
      * 批量统计多个用户在某时间范围内的浏览记录数
      * 用于批量推送时一次性获取所有用户的浏览活跃度，避免 N+1 查询
+     * <p>
+     * 使用 {@code @InterceptorIgnore(tenantLine = "true")} 跳过租户拦截器：
+     * 调用方（MarketingCampaignServiceImpl）传入的 userIds 已由上游 selectList 按 tenantId 过滤，
+     * 若再叠租户插件会因上下文租户与调用方租户不一致导致漏数。
      *
      * @param userIds 用户ID列表
      * @param startTime 起始时间（字符串格式，如 "2024-01-01 00:00:00"）
      * @return 每行: user_id, browse_count
      */
+    @InterceptorIgnore(tenantLine = "true")
     @Select("<script>" +
             "SELECT user_id, COUNT(*) as browse_count " +
             "FROM user_browse_history " +
-            "WHERE user_id IN " +
+            "WHERE is_deleted = 0 AND user_id IN " +
             "<foreach collection='userIds' item='uid' open='(' separator=',' close=')'>" +
             "#{uid}" +
             "</foreach> " +

@@ -6,10 +6,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>菜品管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     body { overflow-x: visible; }
+    /* ========== C.5 菜品管理（行内编辑） ========== */
+    .inline-value {
+      cursor: text;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px dashed transparent;
+      display: inline-block;
+      min-width: 40px;
+    }
+    .inline-value:hover { border-color: var(--el-border-color); background: var(--bg-subtle); }
+    .inline-status { cursor: pointer; }
+    .inline-status:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
@@ -28,76 +42,97 @@
       </header>
       <!-- 数据统计卡片 -->
       <stat-cards
-        :cards="statsCards"
-        :active-key.sync="activeFilter"
-        @card-click="onCardClick"
-      ></stat-cards>
+            :cards="statsCards"
+            :active-key.sync="activeFilter"
+            @card-click="onCardClick"
+          ></stat-cards>
 
-      <!-- 搜索 + 操作栏（批量按钮 + 新增 + 导出通过 actions 传入） -->
-      <table-bar
-        ref="tableBar"
-        :search-items="searchConfig"
-        :actions="actionConfig"
-        @search="onSearch"
-        @reset="onReset"
-        @action="onAction"
-      ></table-bar>
+          <!-- 搜索 + 操作栏（批量按钮 + 新增 + 导出通过 actions 传入） -->
+          <table-bar
+            ref="tableBar"
+            :search-items="searchConfig"
+            :actions="actionConfig"
+            @search="onSearch"
+            @reset="onReset"
+            @action="onAction"
+          ></table-bar>
 
-      <!-- 数据表格（多选 + 自定义图片/状态/库存列 + 操作列） -->
-      <crud-table
-        ref="crudTable"
-        :data="tableData"
-        :columns="columns"
-        :loading="loading"
-        :page="page"
-        :page-size="pageSize"
-        :total="counts"
-        :selection="true"
-        :show-actions="true"
-        :actions-width="260"
-        :actions-fixed="true"
-        @page-change="onPageChange"
-        @size-change="onSizeChange"
-        @selection-change="onSelection"
-        aria-label="菜品列表"
-      >
-        <!-- 图片列 -->
-        <template #col-image="{ row }">
-          <el-image class="cell-img"
-            :src="getImage(row.image)"
-            :preview-src-list="[getImage(row.image)]">
-            <div slot="error" class="image-slot">
-              <img src="./../../images/noImg.png" class="cell-img" alt="暂无图片">
-            </div>
-          </el-image>
-        </template>
-        <!-- 售价列（修改点：F10 用 formatMoney 统一两位小数显示） -->
-        <template #col-price="{ row }">
-          <span>￥{{ formatMoney(row.price) }}</span>
-        </template>
-        <!-- 状态列 -->
-        <template #col-status="{ row }">
-          <el-tag :type="row.status == '0' ? 'info' : 'success'" size="small">
-            {{ row.status == '0' ? '停售' : '启售' }}
-          </el-tag>
-        </template>
-        <!-- 库存列 -->
-        <template #col-stock="{ row }">
-          <span :style="{ color: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? 'var(--color-danger)' : 'var(--el-text-primary)', fontWeight: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? '600' : '400' }">
-            {{ row.stockQty != null ? row.stockQty : '-' }}
-          </span>
-          <el-tag v-if="row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock && row.stockQty > 0" type="danger" size="mini" effect="plain" style="margin-left:4px;">低</el-tag>
-          <el-tag v-if="row.stockQty != null && row.stockQty == 0" type="danger" size="mini">售罄</el-tag>
-        </template>
-        <!-- 操作按钮 -->
-        <template #actions="{ row }">
-          <el-button type="text" size="small" class="btn-view" @click="addFoodtype(row.id)">修改</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="statusHandle(row)">{{ row.status == '0' ? '启售' : '停售' }}</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', row.id)">删除</el-button>
-          <el-button type="text" size="small" @click="editStock(row)">库存</el-button>
-          <el-button type="text" size="small" @click="editBOM(row)">配方</el-button>
-        </template>
-      </crud-table>
+          <!-- 数据表格（多选 + 自定义图片/状态/库存列 + 操作列） -->
+          <crud-table
+            ref="crudTable"
+            :data="tableData"
+            :columns="columns"
+            :loading="loading"
+            :page="page"
+            :page-size="pageSize"
+            :total="counts"
+            :selection="true"
+            :show-actions="true"
+            :actions-width="260"
+            :actions-fixed="true"
+            @page-change="onPageChange"
+            @size-change="onSizeChange"
+            @selection-change="onSelection"
+            aria-label="菜品列表"
+          >
+            <!-- 图片列 -->
+            <template #col-image="{ row }">
+              <el-image class="cell-img"
+                :src="getImage(row.image)"
+                :preview-src-list="[getImage(row.image)]">
+                <div slot="error" class="image-slot">
+                  <img src="./../../images/noImg.png" class="cell-img" alt="暂无图片">
+                </div>
+              </el-image>
+            </template>
+            <!-- 售价列（C.5 行内编辑：聚焦即改、回车/blur 提交） -->
+            <template #col-price="{ row }">
+              <el-input
+                v-if="isEditing('price', row.id)"
+                v-model="row._priceEdit"
+                size="mini"
+                :ref="'cell-price-' + row.id"
+                placeholder="价格"
+                @keyup.enter.native="commitInline('price', row)"
+                @blur="commitInline('price', row)"
+              ></el-input>
+              <span v-else class="inline-value" title="点击编辑价格" tabindex="0" @click="startInline('price', row)" @keydown.enter.prevent="startInline('price', row)">￥{{ formatMoney(row.price) }}</span>
+            </template>
+            <!-- 状态列（C.5 行内切换：点击 tag 启售/停售） -->
+            <template #col-status="{ row }">
+              <el-tag :type="row.status == '0' ? 'info' : 'success'" size="small"
+                class="inline-status" role="button" tabindex="0"
+                :title="row.status == '0' ? '点击启售' : '点击停售'"
+                @click="statusHandle(row)" @keydown.enter.prevent="statusHandle(row)">
+                {{ row.status == '0' ? '停售' : '启售' }}
+              </el-tag>
+            </template>
+            <!-- 库存列（C.5 行内编辑：低库存/售罄警示保留） -->
+            <template #col-stock="{ row }">
+              <el-input
+                v-if="isEditing('stock', row.id)"
+                v-model="row._stockEdit"
+                size="mini"
+                :ref="'cell-stock-' + row.id"
+                placeholder="库存"
+                @keyup.enter.native="commitInline('stock', row)"
+                @blur="commitInline('stock', row)"
+              ></el-input>
+              <span v-else class="inline-value" title="点击编辑库存" tabindex="0" @click="startInline('stock', row)" @keydown.enter.prevent="startInline('stock', row)" :style="{ color: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? 'var(--color-danger)' : 'var(--el-text-primary)', fontWeight: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? '600' : '400' }">
+                {{ row.stockQty != null ? row.stockQty : '-' }}
+              </span>
+              <el-tag v-if="row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock && row.stockQty > 0" type="danger" size="mini" effect="plain" style="margin-left:4px;">低</el-tag>
+              <el-tag v-if="row.stockQty != null && row.stockQty == 0" type="danger" size="mini">售罄</el-tag>
+            </template>
+            <!-- 操作按钮 -->
+            <template #actions="{ row }">
+              <el-button type="text" size="small" class="btn-view" @click="addFoodtype(row.id)">修改</el-button>
+              <el-button type="text" size="small" class="btn-view" @click="statusHandle(row)">{{ row.status == '0' ? '启售' : '停售' }}</el-button>
+              <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', row)">删除</el-button>
+              <el-button type="text" size="small" @click="editStock(row)">库存</el-button>
+              <el-button type="text" size="small" @click="editBOM(row)">配方</el-button>
+            </template>
+          </crud-table>
     </main>
 
     <!-- 新增/修改菜品弹窗（统一 crud-dialog 组件，M2） -->
@@ -176,6 +211,26 @@
             </div>
           </div>
         </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- C.5 批量修改分类弹窗 -->
+    <crud-dialog
+      :size="'sm'"
+      title="批量修改分类"
+      :visible.sync="categoryDialog.visible"
+      :close-on-click-modal="false"
+      @submit="submitBatchCategory"
+    >
+      <el-form label-width="80px" size="small">
+        <el-form-item label="目标分类">
+          <el-select v-model="categoryForm.categoryId" placeholder="请选择目标分类" style="width: 100%;">
+            <el-option v-for="c in categoryOptions" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+        </el-form-item>
+        <div style="color: var(--text-secondary); font-size: 12px; line-height: 1.6;">
+          将把已勾选的 <span style="font-weight: 600; color: var(--color-brand-500);">{{ checkList.length }}</span> 个菜品移动到该分类（逐条保存，失败项会单独提示）。
+        </div>
       </el-form>
     </crud-dialog>
 
@@ -280,18 +335,20 @@
           stats: { totalDishes: 0, activeDishes: 0, inactiveDishes: 0, deletedDishes: 0 },
           activeFilter: '',
           categoryId: '',
+          // C.5 行内编辑：当前正在编辑的单元格集合（key 为 'price-{id}' / 'stock-{id}'）
+          editingCells: {},
           categoryOptions: [],
           // 搜索配置
           searchConfig: [
             { type: 'input', field: 'name', placeholder: '请输入菜品名称', width: '200px' },
-            { type: 'input', field: 'code', placeholder: '请输入商品码', width: '160px' },
-            { type: 'select', field: 'categoryId', placeholder: '全部分类', width: '160px', options: [] }
+            { type: 'input', field: 'code', placeholder: '请输入商品码', width: '160px' }
           ],
           // 操作按钮配置
           actionConfig: [
             { key: 'batchDelete', text: '批量删除', type: 'danger' },
             { key: 'batchStart', text: '批量启售', type: 'success' },
             { key: 'batchStop', text: '批量停售', type: 'warning' },
+            { key: 'batchCategory', text: '批量改分类', type: 'primary' },
             { key: 'add', text: '+ 新建菜品', type: 'primary' },
             { key: 'export', text: '导出', type: 'success', icon: 'el-icon-download' }
           ],
@@ -299,12 +356,12 @@
           columns: [
             { prop: 'name', label: '菜品名称', minWidth: 140 },
             { prop: 'categoryName', label: '分类', width: 80, align: 'center' },
-            { prop: 'price', label: '售价', slot: true, width: 80, type: 'money' },
+            { prop: 'price', label: '售价', slot: true, width: 110, type: 'money' },
             { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
             { prop: 'stock', label: '库存', slot: true, width: 70, type: 'number' },
             { prop: 'sort', label: '排序', width: 60, type: 'number' },
             { prop: 'description', label: '描述', minWidth: 120 },
-            { prop: 'updateTime', label: '更新时间', width: 140 }
+            { prop: 'updateTime', label: '更新时间', width: 160 }
           ],
           // 缓存搜索参数
           lastSearch: {},
@@ -328,7 +385,10 @@
           bomDialog: { visible: false, dishId: null, dishName: '' },
           bomItems: [],
           materialOptions: [],
-          bomSubmitting: false
+          bomSubmitting: false,
+          // C.5 批量修改分类
+          categoryDialog: { visible: false },
+          categoryForm: { categoryId: '' }
         }
       },
       computed: {
@@ -366,7 +426,7 @@
         async init() {
           this.loading = true
           var self = this
-          var params = { page: this.page, pageSize: this.pageSize, name: self.lastSearch.name || undefined, code: self.lastSearch.code || undefined, categoryId: self.lastSearch.categoryId || undefined }
+          var params = { page: this.page, pageSize: this.pageSize, name: self.lastSearch.name || undefined, code: self.lastSearch.code || undefined }
           if (self.activeFilter && self.activeFilter !== '') { params.status = self.activeFilter }
           try {
             var dishRes = await getDishPage(params)
@@ -404,7 +464,7 @@
         loadCategoryOptions: function() {
           var self = this
           getCategoryList({ type: 1 }).then(function(res) {
-            if (res.code === 1) { self.categoryOptions = res.data || []; self.searchConfig[1].options = self.categoryOptions.map(function(c) { return { label: c.name, value: c.id } }) }
+            if (res.code === 1) { self.categoryOptions = res.data || [] }
           }).catch(function(err) { ReggieUI.error('加载分类选项失败:') })
         },
         getDishList: function() {
@@ -436,9 +496,90 @@
             case 'batchDelete': self.deleteHandle('批量', null); break
             case 'batchStart': self.statusHandle('1'); break
             case 'batchStop': self.statusHandle('0'); break
+            case 'batchCategory': self.openCategoryDialog(); break
             case 'add': self.addFoodtype('add'); break
             case 'export': self.exportDishes('excel'); break
           }
+        },
+        // ========== C.5 行内编辑 ==========
+        isEditing: function(key, id) { return !!this.editingCells[key + '-' + id] },
+        startInline: function(key, row) {
+          if (key === 'price') { row._priceEdit = row.price != null ? String(row.price) : '' }
+          if (key === 'stock') { row._stockEdit = row.stockQty != null ? String(row.stockQty) : '' }
+          this.editingCells = {}
+          this.$set(this.editingCells, key + '-' + row.id, true)
+          var self = this
+          this.$nextTick(function() {
+            var refs = self.$refs['cell-' + key + '-' + row.id]
+            if (refs && refs[0] && refs[0].$refs && refs[0].$refs.input) { refs[0].$refs.input.focus() }
+          })
+        },
+        cancelEdit: function(row) {
+          var self = this
+          Object.keys(this.editingCells).forEach(function(k) {
+            if (k.indexOf(String(row.id)) > -1) { self.$delete(self.editingCells, k) }
+          })
+        },
+        buildDishParams: function(row) {
+          return {
+            id: row.id,
+            name: row.name,
+            code: row.code || '',
+            categoryId: row.categoryId,
+            price: row.price,
+            sort: row.sort || 0,
+            image: row.image,
+            description: row.description || '',
+            status: String(row.status) === '1' ? 1 : 0
+          }
+        },
+        async commitInline(key, row) {
+          if (!this.editingCells[key + '-' + row.id]) { return }
+          var self = this
+          if (key === 'price') {
+            var price = Number(row._priceEdit)
+            if (isNaN(price) || price < 0 || price >= 10000) { ReggieUI.warning('价格格式不正确（0 ~ 9999.99）'); return }
+            var params = this.buildDishParams(row)
+            params.price = price
+            try {
+              var res = await editDish(params)
+              if (res.code === 1) { ReggieUI.success('价格已更新'); self.cancelEdit(row) }
+              else { ReggieUI.error(res.msg || '价格更新失败') }
+            } catch (err) { ReggieUI.error('价格更新失败：' + err) }
+          } else if (key === 'stock') {
+            var qty = parseInt(row._stockEdit, 10)
+            if (isNaN(qty) || qty < 0) { ReggieUI.warning('库存格式不正确（非负整数）'); return }
+            try {
+              var stockRes = await updateDishStock(row.id, { stockQty: qty, minStock: row.minStock != null ? row.minStock : 0 })
+              if (stockRes.code === 1) { ReggieUI.success('库存已更新'); row.stockQty = qty; self.cancelEdit(row) }
+              else { ReggieUI.error(stockRes.msg || '库存更新失败') }
+            } catch (err) { ReggieUI.error('库存更新失败：' + err) }
+          }
+        },
+        // ========== C.5 批量修改分类 ==========
+        openCategoryDialog: function() {
+          if (!this.checkList.length) { ReggieUI.error('请先勾选需要修改分类的菜品！'); return }
+          this.categoryForm.categoryId = ''
+          this.categoryDialog.visible = true
+        },
+        async submitBatchCategory() {
+          var self = this
+          if (!this.categoryForm.categoryId) { ReggieUI.warning('请选择目标分类'); return }
+          var rows = this.tableData.filter(function(r) { return self.checkList.indexOf(r.id) > -1 })
+          if (!rows.length) { ReggieUI.error('勾选的数据已不在当前列表，请刷新后重试'); return }
+          this.categoryDialog.visible = false
+          var okCount = 0
+          for (var i = 0; i < rows.length; i++) {
+            var p = this.buildDishParams(rows[i])
+            p.categoryId = this.categoryForm.categoryId
+            try {
+              var res = await editDish(p)
+              if (res.code === 1) { okCount++ }
+              else { ReggieUI.error('第 ' + (i + 1) + ' 条「' + (rows[i].name || '') + '」失败：' + (res.msg || '未知错误')) }
+            } catch (err) { ReggieUI.error('第 ' + (i + 1) + ' 条请求失败') }
+          }
+          if (okCount > 0) { ReggieUI.success('成功移动 ' + okCount + '/' + rows.length + ' 个菜品') }
+          this.refreshAll()
         },
         onPageChange: function(payload) { this.page = payload.page; this.init() },
         onSizeChange: function(payload) { this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload; this.page = 1; this.init() },
@@ -573,12 +714,15 @@
             return file
           }
         },
-        deleteHandle: function(type, id) {
+        // 修改点：删除确认文案含对象名（8.8 危险动作规范）
+        deleteHandle: function(type, row) {
           var self = this
-          if (type === '批量' && id === null) { if (self.checkList.length === 0) { ReggieUI.error('请选择删除对象'); return } }
-          ReggieUI.confirm('确认删除该菜品, 是否继续?', '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          var isBatch = type === '批量'
+          if (isBatch && row === null) { if (self.checkList.length === 0) { ReggieUI.error('请选择删除对象'); return } }
+          var msg = isBatch ? '确认删除选中的 ' + self.checkList.length + ' 个菜品？' : '确认删除菜品「' + row.name + '」？'
+          ReggieUI.confirm(msg, '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
-              deleteDish(type === '批量' ? self.checkList.join(',') : id).then(function(res) {
+              deleteDish(isBatch ? self.checkList.join(',') : row.id).then(function(res) {
                 if (res.code === 1) { ReggieUI.success('删除成功！'); self.refreshAll() }
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })

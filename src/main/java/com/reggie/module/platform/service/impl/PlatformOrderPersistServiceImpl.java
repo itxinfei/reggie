@@ -8,6 +8,7 @@ import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.platform.adapter.PlatformOrder;
 import com.reggie.module.platform.service.PlatformOrderPersistService;
+import com.reggie.module.printer.service.PrinterService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,13 +40,19 @@ public class PlatformOrderPersistServiceImpl implements PlatformOrderPersistServ
     /** 平台外卖默认支付方式：微信（仅占位，以平台实际支付为准） */
     private static final int PLATFORM_PAY_METHOD = 2;
 
+    /** 平台订单落库后是否自动打印（外卖单 DELIVERY + 后厨单 KITCHEN，终端按 print_types 过滤） */
+    private static final boolean PLATFORM_AUTO_PRINT = true;
+
     private final OrderMapper orderMapper;
     private final OrderDetailService orderDetailService;
+    private final PrinterService printerService;
 
     @Autowired
-    public PlatformOrderPersistServiceImpl(OrderMapper orderMapper, OrderDetailService orderDetailService) {
+    public PlatformOrderPersistServiceImpl(OrderMapper orderMapper, OrderDetailService orderDetailService,
+                                           PrinterService printerService) {
         this.orderMapper = orderMapper;
         this.orderDetailService = orderDetailService;
+        this.printerService = printerService;
     }
 
     @Override
@@ -86,8 +93,33 @@ public class PlatformOrderPersistServiceImpl implements PlatformOrderPersistServ
             inserted++;
             log.info("[平台落库] 新增平台订单: platformType={}, platformOrderId={}, localId={}, amount={}",
                     platformType, po.getPlatformOrderId(), order.getId(), order.getAmount());
+            // 落库后自动打印（外卖单 + 后厨单），由门店 PC 打印代理静默出票；
+            // 打印异常隔离，不影响平台订单落库事务
+            autoPrint(order);
         }
         return inserted;
+    }
+
+    /**
+     * 平台订单自动打印
+     *
+     * <p>向订单所属租户的启用终端派发 DELIVERY（外卖单，含顾客/平台信息）与 KITCHEN
+     * （后厨制作单）两类打印任务。终端 print_types 为空视为接收全部类型，否则按
+     * 逗号分隔精确匹配——门店可将打印机配置为只收某一类，天然过滤重复打单。</p>
+     *
+     * @param order 已落库的平台订单
+     */
+    private void autoPrint(Orders order) {
+        if (!PLATFORM_AUTO_PRINT) {
+            return;
+        }
+        try {
+            printerService.printOrder(order.getId(), "DELIVERY");
+            printerService.printOrder(order.getId(), "KITCHEN");
+        } catch (Exception e) {
+            log.error("[平台落库] 平台订单自动打印失败, orderId={}, platformOrderId={}",
+                    order.getId(), order.getPlatformOrderId(), e);
+        }
     }
 
     /**

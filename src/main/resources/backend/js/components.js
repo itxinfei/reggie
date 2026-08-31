@@ -53,10 +53,16 @@ Vue.component('stat-cards', {
     activeKey: {
       type: String,
       default: ''
+    },
+    /** 数据加载状态（开启后卡片区显示 loading 遮罩） */
+    loading: {
+      type: Boolean,
+      default: false
     }
   },
   template:
     '<div class="stats-cards">' +
+      '<div v-if="loading" class="stats-cards__loading"><i class="ri-loader-4-line"></i></div>' +
       '<div v-for="card in cards" :key="card.key || card.label"' +
         ' :class="cardClasses(card)"' +
         ' :tabindex="card.clickable ? 0 : null"' +

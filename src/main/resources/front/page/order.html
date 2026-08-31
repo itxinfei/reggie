@@ -101,19 +101,30 @@
                     submitting:false, // 修改点：再来一单防重复提交
                     // 修改点：状态筛选
                     activeStatus: null, // null表示全部
+                    // 修改点（重要 Bug 修复）：原「待派送=3、配送中=2」与后端 OrderStatus 完全相反
+                    // （后端 2=待接单、3=配送中），导致点"待派送"筛出的实际是配送中订单。
+                    // 现严格对齐后端：1=待付款 2=待接单 3=配送中 4=已完成 5=已取消 6=已退款
                     statusTabs: [
                         { label: '全部', value: null },
                         { label: '待付款', value: 1 },
-                        { label: '待派送', value: 3 },
-                        { label: '配送中', value: 2 },
+                        { label: '待接单', value: 2 },
+                        { label: '配送中', value: 3 },
                         { label: '已完成', value: 4 },
-                        { label: '已取消', value: 5 }
+                        { label: '已取消', value: 5 },
+                        { label: '已退款', value: 6 }
                     ]
                 }
             },
             computed:{},
             created(){
-                this.initData()
+                // 修改点：先加载后端枚举字典，使列表状态文案与后端保持一致
+                // （字典加载失败时 getStatus 自动回退到 common.js 的兜底常量）
+                var self = this
+                if (typeof loadEnums === 'function') {
+                    loadEnums(function(){ self.initData() })
+                } else {
+                    this.initData()
+                }
             },
             methods:{
                 goBack(){

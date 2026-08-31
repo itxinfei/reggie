@@ -370,13 +370,29 @@ public class ExportController {
             row.put("amount", (order.getAmount() != null ? order.getAmount() : 0) + "元");
             row.put("status", getOrderStatusName(order.getStatus()));
             if (includeFull) {
-                row.put("payMethod", order.getPayMethod() != null
-                        ? (order.getPayMethod() == 1 ? "微信支付" : "支付宝") : "");
+                row.put("payMethod", getPayMethodName(order.getPayMethod()));
             }
             row.put("orderTime", order.getOrderTime());
             dataList.add(row);
         }
         return dataList;
+    }
+
+    /**
+     * 支付方式文案（与 /api/meta/enums payMethod 字典一致）：
+     * 1=现金，2=微信支付，3=支付宝，4=银行卡，5=会员储值，6=货到付款
+     */
+    private String getPayMethodName(Integer payMethod) {
+        if (payMethod == null) return "";
+        switch (payMethod) {
+            case 1: return "现金";
+            case 2: return "微信支付";
+            case 3: return "支付宝";
+            case 4: return "银行卡";
+            case 5: return "会员储值";
+            case 6: return "货到付款";
+            default: return "";
+        }
     }
 
     /**

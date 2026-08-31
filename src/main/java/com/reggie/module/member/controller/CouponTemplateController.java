@@ -40,7 +40,6 @@ import javax.validation.Valid;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Max;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -57,7 +56,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RestController
 @RequestMapping("/api/member/coupon-template")
 @Tag(name = "优惠券模板")
-@RequireEmployee
 public class CouponTemplateController {
 
     @Autowired
@@ -102,6 +100,7 @@ public class CouponTemplateController {
      * @return 操作结果
      */
     @PostMapping
+    @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增优惠券", description = "创建新的优惠券模板，校验名称/类型/金额合法性")
     public R<String> save(@Valid @RequestBody CouponTemplateSaveDTO dto) {
@@ -131,6 +130,7 @@ public class CouponTemplateController {
      * @return 操作结果
      */
     @PutMapping
+    @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改优惠券", description = "更新优惠券模板信息，校验名称/类型/金额合法性")
     public R<String> update(@Valid @RequestBody CouponTemplateUpdateDTO dto) {
@@ -155,6 +155,7 @@ public class CouponTemplateController {
     }
 
     @DeleteMapping("/{id}")
+    @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除优惠券", description = "根据ID删除优惠券模板（先校验租户归属）")
     @Parameter(name = "id", description = "优惠券模板ID", required = true)
@@ -170,6 +171,7 @@ public class CouponTemplateController {
      * @return 模板详情
      */
     @GetMapping("/{id}")
+    @RequireEmployee
     @Operation(summary = "查询优惠券", description = "根据ID查询优惠券模板详情")
     @Parameter(name = "id", description = "优惠券模板ID", required = true)
     public R<CouponTemplate> getById(@PathVariable Long id) {
@@ -191,6 +193,7 @@ public class CouponTemplateController {
      * @return 总数、启用/禁用/已领完数量、累计发放/领取数、使用率（后端聚合，避免前端拉全量）
      */
     @GetMapping("/stats")
+    @RequireEmployee
     @Operation(summary = "优惠券统计", description = "统计优惠券模板总数、启用/禁用/已领完数量及领取使用率")
     public R<Map<String, Object>> stats() {
         return R.success(couponTemplateService.getStats());
@@ -218,6 +221,7 @@ public class CouponTemplateController {
      * @return 发放结果（成功数/失败数/已领过数/总数）
      */
     @PostMapping("/batch-issue")
+    @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量定向发券", description = "按会员ID列表批量发放优惠券，返回成功/失败/已领过的统计")
     public R<Map<String, Object>> batchIssue(@Valid @RequestBody IssueByMembersDTO dto) {
@@ -232,6 +236,7 @@ public class CouponTemplateController {
      * @return 发放结果（成功数/失败数/已领过数/总数）
      */
     @PostMapping("/issue-by-condition")
+    @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "条件定向发券", description = "按条件筛选会员后批量发放优惠券，条件支持 levelId/minPoints/maxPoints/minConsumption/maxConsumption/newMemberDays")
     public R<Map<String, Object>> issueByCondition(@Valid @RequestBody IssueByConditionDTO dto) {
@@ -248,6 +253,7 @@ public class CouponTemplateController {
      * @return 发放会员分页列表
      */
     @GetMapping("/{templateId}/issued")
+    @RequireEmployee
     @Operation(summary = "投放明细", description = "分页查询某优惠券模板已发放会员列表，含会员信息、用券状态、领取与使用时间")
     @Parameter(name = "templateId", description = "优惠券模板ID", required = true)
     public R<com.baomidou.mybatisplus.extension.plugins.pagination.Page<IssuedMemberVO>> issuedMembers(
@@ -266,6 +272,7 @@ public class CouponTemplateController {
      * @return 投放效果 VO（发放率/使用率/活跃率/状态分布）
      */
     @GetMapping("/{templateId}/effect")
+    @RequireEmployee
     @Operation(summary = "投放效果", description = "查询某优惠券模板的投放效果聚合指标：发放率/使用率/活跃率/状态分布")
     @Parameter(name = "templateId", description = "优惠券模板ID", required = true)
     public R<CouponEffectVO> effect(@PathVariable Long templateId) {
@@ -287,6 +294,7 @@ public class CouponTemplateController {
      * @return 即将到期优惠券分页列表
      */
     @GetMapping("/expiring")
+    @RequireEmployee
     @Operation(summary = "即将到期预警", description = "查询即将到期的unused优惠券明细，支持按天数/模板/会员手机筛选")
     @Parameter(name = "days", description = "预警天数窗口", example = "7")
     @Parameter(name = "templateId", description = "优惠券模板ID（可选）")
@@ -311,6 +319,7 @@ public class CouponTemplateController {
      * 查询已过期优惠券明细（分页）
      */
     @GetMapping("/expired")
+    @RequireEmployee
     @Operation(summary = "已过期明细", description = "查询已过期(expired)优惠券明细，支持按模板/会员手机筛选")
     @Parameter(name = "templateId", description = "优惠券模板ID（可选）")
     @Parameter(name = "phone", description = "会员手机（可选，模糊查询）")
@@ -332,6 +341,7 @@ public class CouponTemplateController {
      * @return 按模板聚合的预警统计列表
      */
     @GetMapping("/expiring-stats")
+    @RequireEmployee
     @Operation(summary = "到期预警统计", description = "按模板聚合即将到期与已过期的优惠券数量及优惠总额")
     @Parameter(name = "days", description = "预警天数窗口", example = "7")
     public R<Map<String, Object>> expiringStats(@RequestParam(defaultValue = "7") int days) {
@@ -368,6 +378,7 @@ public class CouponTemplateController {
      * @return 处理结果（成功数/无效数/总数）
      */
     @PostMapping("/batch-extend")
+    @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量延期", description = "批量延长即将到期优惠券的过期时间（仅限unused状态）")
     public R<Map<String, Object>> batchExtend(@Valid @RequestBody BatchExtendCouponDTO dto) {

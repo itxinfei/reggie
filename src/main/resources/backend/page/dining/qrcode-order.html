@@ -319,6 +319,7 @@
                 userName: this.submitForm.contactName,
                 phone: this.submitForm.contactPhone,
                 remark: this.submitForm.remark || '',
+                // 支付方式占位 1=现金（权威枚举），堂食订单落 PENDING_PAY 待收银台收款
                 payMethod: 1,
                 customerCount: this.tableInfo ? this.tableInfo.seatCount : 4
               },

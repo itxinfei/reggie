@@ -48,18 +48,19 @@ public interface DishEvaluationService extends IService<DishEvaluation> {
     Page<DishEvaluation> pageByUserId(Long tenantId, Long userId, Integer page, Integer pageSize);
 
     /**
-     * 管理端评价分页查询（支持菜品名称、审核状态、评分筛选）
+     * 管理端评价分页查询（支持菜品名称、审核状态、评分、回复状态筛选）
      *
-     * @param tenantId   租户ID
-     * @param dishName   菜品名称（模糊查询，可选）
-     * @param status     审核状态（可选）
-     * @param starRating 评分（可选）
-     * @param page       页码
-     * @param pageSize   每页条数
+     * @param tenantId    租户ID
+     * @param dishName    菜品名称（模糊查询，可选）
+     * @param status      审核状态（可选）
+     * @param starRating  评分（可选）
+     * @param replyStatus 回复状态（可选）：0=未回复，1=已回复
+     * @param page        页码
+     * @param pageSize    每页条数
      * @return 分页评价列表
      */
     Page<DishEvaluation> adminPage(Long tenantId, String dishName, Integer status,
-                                    Integer starRating, Integer page, Integer pageSize);
+                                    Integer starRating, Integer replyStatus, Integer page, Integer pageSize);
 
     /**
      * 新增菜品评价

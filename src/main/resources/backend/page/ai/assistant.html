@@ -18,7 +18,7 @@
             <div class="ai-sidebar" :class="{ open: sidebarOpen }">
                 <div class="sidebar-header">
                     <h4>💬 对话历史</h4>
-                    <button class="refresh-btn" @click="loadConversations" :disabled="sidebarLoading" aria-label="{{ sidebarLoading ? '刷新中' : '刷新对话列表' }}">
+                    <button class="refresh-btn" @click="loadConversations" :disabled="sidebarLoading" :aria-label="sidebarLoading ? '刷新中' : '刷新对话列表'">
                         {{ sidebarLoading ? '刷新中...' : '🔄 刷新' }}
                     </button>
                 </div>
@@ -180,6 +180,9 @@
             </div>
         </div>
     </div>
+  </div><!-- 修改点：补回 #ai-app 根容器漏写的 </div>。
+       原缺失导致后续 <script> 标签被算作 Vue 模板内容，
+       Vue 编译时报 "Avoid placing tags with side-effects"，整页模板编译失败 -->
 
     <script src="../../plugins/vue/vue.js"></script>
     <script src="../../plugins/element-ui/index.js"></script>

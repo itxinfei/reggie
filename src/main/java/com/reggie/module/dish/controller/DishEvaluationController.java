@@ -273,27 +273,28 @@ public class DishEvaluationController {
     }
 
     /**
-     * 管理端评价分页查询（支持菜品名称、状态、评分筛选）
+     * 管理端评价分页查询（支持菜品名称、状态、评分、回复状态筛选）
      *
-     * @param dishName   菜品名称（可选，模糊查询）
-     * @param status     审核状态（可选）
-     * @param starRating 评分（可选）
-     * @param page       页码
-     * @param pageSize   每页条数
+     * @param dishName    菜品名称（可选，模糊查询）
+     * @param status      审核状态（可选）
+     * @param starRating  评分（可选）
+     * @param replyStatus 回复状态（可选）：0=未回复，1=已回复
+     * @param page        页码
+     * @param pageSize    每页条数
      * @return 分页评价列表
      */
     @GetMapping("/page")
-    @Operation(summary = "管理端评价分页查询", description = "支持按菜品名称、审核状态、评分筛选的评价管理列表")
+    @Operation(summary = "管理端评价分页查询", description = "支持按菜品名称、审核状态、评分、回复状态筛选的评价管理列表")
     public R<Page<DishEvaluation>> adminPage(
-            @Parameter(description = "DishName")
             @Parameter(name = "dishName", description = "菜品名称（模糊查询）") @RequestParam(required = false) String dishName,
             @Parameter(name = "status", description = "审核状态（0待审核 1通过 2拒绝）") @RequestParam(required = false) Integer status,
             @Parameter(name = "starRating", description = "评分（1-5）") @RequestParam(required = false) Integer starRating,
+            @Parameter(name = "replyStatus", description = "回复状态（0未回复 1已回复）") @RequestParam(required = false) Integer replyStatus,
             @Parameter(name = "page", description = "页码") @RequestParam(defaultValue = "1") @Min(1) Integer page,
             @Parameter(name = "pageSize", description = "每页条数") @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer pageSize) {
 
-        log.info("[Evaluation] 管理端评价查询：dishName={}, status={}, starRating={}, page={}, pageSize={}",
-                dishName, status, starRating, page, PageUtils.cap(pageSize));
+        log.info("[Evaluation] 管理端评价查询：dishName={}, status={}, starRating={}, replyStatus={}, page={}, pageSize={}",
+                dishName, status, starRating, replyStatus, page, PageUtils.cap(pageSize));
 
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -301,7 +302,7 @@ public class DishEvaluationController {
         }
 
         Page<DishEvaluation> result = dishEvaluationService.adminPage(
-                tenantId, dishName, status, starRating, page, PageUtils.cap(pageSize));
+                tenantId, dishName, status, starRating, replyStatus, page, PageUtils.cap(pageSize));
         return R.success(result);
     }
 

@@ -34,27 +34,26 @@
       color: var(--el-text-primary);
       margin-bottom: 16px;
     }
-    .cashier-stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
+    /* C.1：页内日结条 */
+    .settle-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
       gap: 16px;
-    }
-    .stat-item {
-      text-align: center;
-      padding: 16px;
-      background: var(--el-bg-page);
-      border-radius: var(--radius-md);
-    }
-    .stat-value {
-      font-size: var(--font-size-3xl);
-      font-weight: 700;
-      color: var(--el-color-primary);
-      margin-bottom: 8px;
-    }
-    .stat-label {
-      font-size:var(--font-size-base);
+      margin-top: 20px;
+      padding: 12px 20px;
+      background: var(--bg-surface);
+      border: 1px solid var(--el-border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      font-size: var(--font-size-sm);
       color: var(--el-text-secondary);
     }
+    .settle-bar__icon { color: var(--el-color-primary); }
+    .settle-bar__label { font-weight: 600; color: var(--el-text-primary); }
+    .settle-bar__item b { color: var(--el-text-primary); font-weight: 600; margin-left: 2px; }
+    .settle-bar__diff--warn { color: var(--el-color-warning); }
+    .settle-bar__btn { margin-left: auto; }
     .cashier-main {
       display: grid;
       grid-template-columns: 1fr 400px;
@@ -335,27 +334,13 @@ border-radius: var(--radius-md); }
   <a href="#app" class="skip-link">跳转到主内容</a>
 
   <div id="app" class="cashier-container" role="main" aria-label="页面主要内容">
-    <!-- 头部统计 -->
+    <!-- 头部统计（统一 stat-cards 组件） -->
     <div class="cashier-header">
-      <div class="cashier-title">收银台</div>
-      <div class="cashier-stats">
-        <div class="stat-item">
-          <div class="stat-value">{{ todayStats.totalCount }}</div>
-          <div class="stat-label">今日订单</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">¥{{ formatMoney(todayStats.totalAmount) }}</div>
-          <div class="stat-label">今日收入</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">¥{{ formatMoney(todayStats.avgAmount) }}</div>
-          <div class="stat-label">客单价</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">{{ currentTime }}</div>
-          <div class="stat-label">当前时间</div>
-        </div>
+      <div class="cashier-title">
+        <i class="el-icon-shopping-cart-2" style="color: var(--el-color-primary); margin-right: 8px;"></i>
+        收银台
       </div>
+      <stat-cards :cards="headerCards" :loading="false"></stat-cards>
     </div>
 
     <!-- 主要内容区 -->
@@ -568,11 +553,12 @@ border-radius: var(--radius-md); }
             <el-input v-model="remark" type="textarea" :rows="2" placeholder="备注（可选）"></el-input>
           </div>
 
-          <!-- 提交按钮 -->
+          <!-- 提交按钮（C.1：快捷键 Enter，未聚焦输入框时触发） -->
           <el-button
             type="primary"
             class="submit-btn"
             :loading="submitLoading"
+            title="快捷键：Enter（未聚焦输入框时）"
             @click="handlePayment">
             <i class="el-icon-check"></i>
             确认收款 ¥{{ formatMoney(payableAmount) }}
@@ -580,10 +566,32 @@ border-radius: var(--radius-md); }
         </div>
       </div>
     </div>
+
+    <!-- C.1：页内日结条（本日应收/实收/差异 + 一键日结，收敛 daily-settlement） -->
+    <div class="settle-bar" v-if="todayStats">
+      <i class="el-icon-data-line settle-bar__icon" aria-hidden="true"></i>
+      <span class="settle-bar__label">今日结账</span>
+      <span class="settle-bar__item">应收 <b>¥{{ formatMoney(todayStats.totalAmount) }}</b></span>
+      <span class="settle-bar__item">已结 <b>¥{{ formatMoney(settledAmount) }}</b></span>
+      <span class="settle-bar__item">差异 <b :class="{ 'settle-bar__diff--warn': diffAmount > 0 }">¥{{ formatMoney(diffAmount) }}</b></span>
+      <span class="settle-bar__item">待结订单 <b>{{ pendingOrders.length }}</b> 笔 / <b>¥{{ formatMoney(pendingAmount) }}</b></span>
+      <el-button
+        type="primary"
+        size="small"
+        class="settle-bar__btn"
+        :loading="settleLoading"
+        title="执行当日日结（原独立页 daily-settlement.html 已收敛至此）"
+        @click="handleSettlement">
+        一键日结
+      </el-button>
+    </div>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js"></script>
+  <!-- 修改点：补引 axios —— request.js 首行即使用全局 axios，缺失会抛错导致
+       $axios 永不挂载，本页所有接口请求全部失效 -->
+  <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../js/components.js"></script>
   <script src="../../js/accessibility-utils.js"></script>
@@ -615,7 +623,10 @@ border-radius: var(--radius-md); }
           memberLoading: false,
           availableCoupons: [],
           selectedCouponId: null,
-          couponLoading: false
+          couponLoading: false,
+          // C.1：今日日结状态 + 一键日结
+          settlementInfo: null,
+          settleLoading: false
         }
       },
       computed: {
@@ -632,6 +643,26 @@ border-radius: var(--radius-md); }
         payTypeText() {
           const map = { 1: '现金', 2: '微信', 3: '支付宝', 4: '银行卡', 5: '会员储值' }
           return map[this.payType] || '现金'
+        },
+        headerCards() {
+          return [
+            { key: 'orders', icon: 'ri-file-list-3-line', label: '今日订单', value: this.todayStats.totalCount || 0, color: 'primary' },
+            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '今日收入', value: this.formatMoney(this.todayStats.totalAmount), color: 'success' },
+            { key: 'avg', icon: 'ri-line-chart-line', label: '客单价', value: this.formatMoney(this.todayStats.avgAmount), color: 'info' },
+            { key: 'time', icon: 'ri-time-line', label: '当前时间', value: this.currentTime, color: 'warning' }
+          ]
+        },
+        settledAmount() {
+          const d = this.settlementInfo
+          if (!d) return 0
+          return d.totalAmount != null ? Number(d.totalAmount) : (d.amount != null ? Number(d.amount) : 0)
+        },
+        pendingAmount() {
+          return this.pendingOrders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0)
+        },
+        diffAmount() {
+          const diff = (Number(this.todayStats.totalAmount) || 0) - this.settledAmount
+          return diff > 0 ? diff : 0
         }
       },
       created() {
@@ -639,10 +670,15 @@ border-radius: var(--radius-md); }
         this.timeTimer = setInterval(this.updateTime, 1000)
         this.fetchData()
       },
+      mounted() {
+        // C.1：全局快捷键 Enter=收款（未聚焦输入框时）
+        document.addEventListener('keydown', this.onGlobalKeydown)
+      },
       beforeDestroy() {
         if (this.timeTimer) {
           clearInterval(this.timeTimer)
         }
+        document.removeEventListener('keydown', this.onGlobalKeydown)
       },
       methods: {
         updateTime() {
@@ -676,6 +712,16 @@ border-radius: var(--radius-md); }
             const ordersRes = await getPendingCheckoutList()
             if (ordersRes.code === 1) {
               this.pendingOrders = ordersRes.data || []
+            }
+
+            // C.1：今日日结状态（本日已结算金额）
+            const nowDate = new Date()
+            const todayStr = nowDate.getFullYear() + '-' + String(nowDate.getMonth() + 1).padStart(2, '0') + '-' + String(nowDate.getDate()).padStart(2, '0')
+            const settleRes = await getDailySettlementByDate(todayStr)
+            if (settleRes.code === 1) {
+              this.settlementInfo = settleRes.data || null
+            } else {
+              this.settlementInfo = null
             }
           } catch (err) {
             ReggieUI.error('获取数据失败')
@@ -771,6 +817,14 @@ border-radius: var(--radius-md); }
             ReggieUI.warning('请先选择订单')
             return
           }
+          if (this.submitLoading) return
+
+          // C.1：现金大额（>200 元）收款二次确认
+          if (this.payType === 1 && this.actualAmount > 200) {
+            try {
+              await ReggieUI.confirm('实收金额较大（￥' + this.formatMoney(this.actualAmount) + '），请核对现金后确认收款？', '大额收款确认', { confirmButtonText: '确认收款', cancelButtonText: '取消', type: 'warning' })
+            } catch (e) { return }
+          }
 
           this.submitLoading = true
           try {
@@ -799,6 +853,34 @@ border-radius: var(--radius-md); }
             ReggieUI.error('收款失败')
           } finally {
             this.submitLoading = false
+          }
+        },
+        // C.1：页内一键日结（收敛 daily-settlement.html）
+        async handleSettlement() {
+          try {
+            await ReggieUI.confirm('确认执行今日日结？日结后当日账目将被锁定。', '日结确认', { confirmButtonText: '执行日结', cancelButtonText: '取消', type: 'warning' })
+          } catch (e) { return }
+          this.settleLoading = true
+          const now = new Date()
+          const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
+          try {
+            const res = await executeDailySettlement({ settlementDate: today })
+            if (res.code === 1) { ReggieUI.success('日结完成'); this.fetchData() }
+            else { ReggieUI.error(res.msg || '日结失败') }
+          } catch (err) {
+            ReggieUI.error('日结失败，请稍后重试')
+          } finally {
+            this.settleLoading = false
+          }
+        },
+        // C.1：快捷键 Enter=收款（避开输入框/按钮聚焦）
+        onGlobalKeydown(e) {
+          if (e.key !== 'Enter') return
+          const tag = (e.target.tagName || '').toUpperCase()
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return
+          if (this.selectedOrder && !this.submitLoading) {
+            e.preventDefault()
+            this.handlePayment()
           }
         }
       }

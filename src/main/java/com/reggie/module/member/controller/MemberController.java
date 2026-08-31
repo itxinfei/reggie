@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -200,6 +201,32 @@ public class MemberController {
         log.info("修改会员: {}", member.getId());
         memberService.update(uw);
         return R.success("修改会员成功");
+    }
+
+    /**
+     * 删除会员（逻辑删除）
+     * <p>Member 实体带 @TableLogic，removeById 会转换为逻辑删除（is_deleted=1），不物理删数据。</p>
+     *
+     * @param id 会员ID
+     * @return 操作结果
+     */
+    @DeleteMapping("/{id}")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "删除会员", description = "逻辑删除会员，自动校验租户归属防止越权删除")
+    @Parameter(name = "id", description = "会员ID", required = true)
+    public R<String> delete(@PathVariable Long id) {
+        Member existing = memberService.getById(id);
+        if (existing == null) {
+            return R.error("会员不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(existing.getTenantId())) {
+            return R.error("无权操作其他租户的会员");
+        }
+        memberService.removeById(id);
+        log.info("删除会员: {}", id);
+        return R.success("删除会员成功");
     }
 
     /**

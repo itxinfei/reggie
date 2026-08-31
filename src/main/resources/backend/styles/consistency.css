@@ -50,8 +50,8 @@ body:not(.login-page) {
 
 /* ========== 3b. 裸 .container 兜底（body 直下，无 dashboard-container 包裹） ========== */
 /* cashier/daily-settlement、cost/dish-cost、delivery/range-management、finance/withdrawal、
-   food/spec-management、marketing/discount、marketing/full-reduction、report/food-cost、
-   report/sales-report 等页面使用 <div id="app" class="container"> 直挂 body 下，
+   food/spec-management、marketing/discount、marketing/full-reduction、report/sales-report
+   等页面使用 <div id="app" class="container"> 直挂 body 下，
    此前仅靠页面私有 padding/max-width，无卡片外观，与 26+ 个 dashboard-container 页面割裂。
    此处统一补齐卡片表面，使其与主容器规范完全一致。 */
 body > .container {
@@ -137,4 +137,94 @@ body > .container {
   justify-content: center;
   align-items: center;
   margin-top: var(--space-5);
+}
+
+/* ==========================================================================
+   7. 响应式兜底（新增）
+   背景：Element UI 的 :span="N" 是固定百分比，不带断点时在手机上依然按
+   N/24 分栏（如 :span="8" 在 375px 宽屏上每列仅 ~110px），弹窗表单与详情
+   栅格会被挤成不可读的窄条。全站有 11 个页面存在此问题（弹窗内共约 80 个
+   el-col），逐个补 :xs 属性易漏易回归，故在此做统一兜底：
+     - <768px  ：所有栅格列强制单列（100%）
+     - 768~992px：半栏（原 span<12 的窄列升为 1/2，避免 3~4 列并排过窄）
+   页面若显式写了 :xs/:sm 属性，Element UI 会生成 el-col-xs-* 类，
+   其优先级由下方 :not() 排除，页面显式声明仍然生效（不被兜底覆盖）。
+   ========================================================================== */
+@media (max-width: 767px) {
+  .el-row > .el-col:not([class*="el-col-xs-"]) {
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+}
+@media (min-width: 768px) and (max-width: 991px) {
+  /* 仅收窄"很窄"的列（原 span 1~8，即 3 列及以上并排），span>=12 的保持不变 */
+  .el-row > .el-col-1:not([class*="el-col-sm-"]),
+  .el-row > .el-col-2:not([class*="el-col-sm-"]),
+  .el-row > .el-col-3:not([class*="el-col-sm-"]),
+  .el-row > .el-col-4:not([class*="el-col-sm-"]),
+  .el-row > .el-col-5:not([class*="el-col-sm-"]),
+  .el-row > .el-col-6:not([class*="el-col-sm-"]),
+  .el-row > .el-col-7:not([class*="el-col-sm-"]),
+  .el-row > .el-col-8:not([class*="el-col-sm-"]) {
+    width: 50%;
+    max-width: 50%;
+    flex: 0 0 50%;
+  }
+}
+
+/* ========== 8. 移动端表格横向滚动（新增） ==========
+   窄屏下表格列被压缩到无法阅读，改为保留最小宽度 + 容器横向滚动，
+   由用户左右滑动查看，优于挤压换行。 */
+@media (max-width: 767px) {
+  .el-table__body,
+  .el-table__header,
+  .el-table__footer {
+    min-width: 600px;
+  }
+  .el-table__body-wrapper,
+  .el-table__header-wrapper,
+  .el-table__footer-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* 分页在窄屏允许换行居中，避免溢出被裁切 */
+  .pageList .el-pagination,
+  .pagination-container .el-pagination {
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* 表单控件的固定像素宽度兜底：
+     多个页面在弹窗/筛选区用行内 style="width:200~360px" 写死控件宽度，
+     在 375px 窄屏上会连同 label 一起溢出、右侧被裁切。
+     此处统一改为自适应（!important 用于覆盖行内 style）。 */
+  .el-dialog .el-input,
+  .el-dialog .el-select,
+  .el-dialog .el-cascader,
+  .el-dialog .el-date-editor,
+  .el-dialog .el-input-number,
+  .search-area .el-input,
+  .search-area .el-select,
+  .search-area .el-date-editor {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-right: 0 !important;
+  }
+  /* 弹窗在窄屏接近全宽，避免默认百分比宽度留白过多 */
+  .el-dialog {
+    width: 94% !important;
+    margin-top: 8vh !important;
+  }
+  /* 表单标签改为顶部对齐，避免窄屏 label 与控件挤在一行 */
+  .el-dialog .el-form--label-right .el-form-item__label {
+    float: none;
+    display: block;
+    width: auto !important;
+    text-align: left;
+    padding-right: 0;
+  }
+  .el-dialog .el-form--label-right .el-form-item__content {
+    margin-left: 0 !important;
+  }
 }

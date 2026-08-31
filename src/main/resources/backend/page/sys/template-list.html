@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>通知模板 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <style>
@@ -241,10 +243,10 @@
         statsCards: function() {
           const self = this
           return [
-            { key: '', icon: '📋', label: '模板总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
-            { key: 'enabled', icon: '✅', label: '已启用', value: self.stats.enabled || 0, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
-            { key: 'disabled', icon: '⏸️', label: '已停用', value: self.stats.disabled || 0, color: 'warning', clickable: true, active: self.activeFilter === 'disabled' },
-            { key: 'sms', icon: '💬', label: '短信模板', value: self.stats.sms || 0, color: 'info', clickable: true, active: self.activeFilter === 'sms' }
+            { key: '', icon: 'ri-file-list-3-line', label: '模板总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'enabled', icon: 'ri-checkbox-circle-line', label: '已启用', value: self.stats.enabled || 0, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
+            { key: 'disabled', icon: 'ri-pause-circle-line', label: '已停用', value: self.stats.disabled || 0, color: 'warning', clickable: true, active: self.activeFilter === 'disabled' },
+            { key: 'sms', icon: 'ri-chat-smile-3-line', label: '短信模板', value: self.stats.sms || 0, color: 'info', clickable: true, active: self.activeFilter === 'sms' }
           ]
         }
       },
@@ -321,6 +323,7 @@
         },
         onSizeChange(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
           this.init(false)
         },
         bizTypeName(type) {

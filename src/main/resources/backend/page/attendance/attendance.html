@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>考勤管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
@@ -172,14 +174,14 @@
           return attendanceWeekSummary().then(function (res) {
             const data = res.data
             self.statsCards = [
-              { key: 'present', icon: 'ri-user-check-line', label: '本周出勤', value: data.presentCount || 0, color: 'primary', unit: '人' },
+              { key: 'present', icon: 'ri-user-star-line', label: '本周出勤', value: data.presentCount || 0, color: 'primary', unit: '人' },
               { key: 'absent',  icon: 'ri-user-unfollow-line', label: '缺勤', value: data.absentCount || 0, color: 'danger', unit: '人' },
               { key: 'late',    icon: 'ri-time-line', label: '迟到', value: data.lateCount || 0, color: 'warning', unit: '人' },
               { key: 'hours',   icon: 'ri-timer-line', label: '平均工时', value: data.avgHours || 0, color: 'primary', unit: '小时' }
             ]
           }).catch(function () {
             self.statsCards = [
-              { key: 'present', icon: 'ri-user-check-line', label: '本周出勤', value: 18, color: 'primary', unit: '人' },
+              { key: 'present', icon: 'ri-user-star-line', label: '本周出勤', value: 18, color: 'primary', unit: '人' },
               { key: 'absent',  icon: 'ri-user-unfollow-line', label: '缺勤', value: 2, color: 'danger', unit: '人' },
               { key: 'late',    icon: 'ri-time-line', label: '迟到', value: 4, color: 'warning', unit: '人' },
               { key: 'hours',   icon: 'ri-timer-line', label: '平均工时', value: 8.2, color: 'primary', unit: '小时' }
@@ -257,7 +259,9 @@
           const totalDays = lastDay.getDate()
           const today = new Date()
           const weeks = []
-          const dayCounter = 1
+          // 修改点：dayCounter 在日历填充循环中自增，const 会抛
+          // "Assignment to constant variable." 导致日历渲染中断；改为 let
+          let dayCounter = 1
           const dayStatuses = {}
           // 使用后端数据或 mock
           if (backendDays && backendDays.length) {
@@ -282,7 +286,9 @@
             }
           }
 
-          const totalCells = 0
+          // 修改点：totalCells 在下方循环中自增，const 会抛 "Assignment to constant variable."
+          // 导致日历渲染中断；改为 let
+          let totalCells = 0
           const rows = 6
           for (let r = 0; r < rows; r++) {
             const week = []
@@ -315,9 +321,7 @@
     }
   </script>
 
-  <style lang="less" scoped>
-    @import "../../styles/tokens.css";
-
+  <style>
     /* 页面左右边距 */
     .ds-page { padding-left: var(--space-5); padding-right: var(--space-5); }
 

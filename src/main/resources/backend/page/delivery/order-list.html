@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>外卖平台订单 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
@@ -197,9 +199,9 @@
             { prop: 'platform', label: '平台', slot: true, width: 70, align: 'center' },
             { prop: 'userName', label: '用户', width: 80, align: 'center' },
             { prop: 'phone', label: '电话', width: 110, align: 'center' },
-            { prop: 'amount', label: '金额', slot: true, width: 80, type: 'money' },
+            { prop: 'amount', label: '金额', slot: true, width: 110, type: 'money' },
             { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
-            { prop: 'orderTime', label: '下单时间', width: 140, align: 'center' }
+            { prop: 'orderTime', label: '下单时间', width: 160, align: 'center' },
           ],
           // 缓存搜索参数
           lastSearch: {},
@@ -227,10 +229,10 @@
         statsCards: function() {
           const self = this
           return [
-            { key: 'PENDING', icon: '⏳', label: '待处理', value: self.stats.pendingCount, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
-            { key: 'DELIVERING', icon: '🚘', label: '配送中', value: (self.stats.deliveringCount || 0), color: 'info', clickable: true, active: self.activeFilter === 'DELIVERING' },
-            { key: 'DELIVERED', icon: '✅', label: '已完成', value: self.stats.completedCount, color: 'success', clickable: true, active: self.activeFilter === 'DELIVERED' },
-            { key: 'CANCELLED', icon: '❌', label: '已取消', value: self.stats.cancelledCount, color: 'danger', clickable: true, active: self.activeFilter === 'CANCELLED' }
+            { key: 'PENDING', icon: 'ri-time-line', label: '待处理', value: self.stats.pendingCount, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
+            { key: 'DELIVERING', icon: 'ri-car-line', label: '配送中', value: (self.stats.deliveringCount || 0), color: 'info', clickable: true, active: self.activeFilter === 'DELIVERING' },
+            { key: 'DELIVERED', icon: 'ri-checkbox-circle-line', label: '已完成', value: self.stats.completedCount, color: 'success', clickable: true, active: self.activeFilter === 'DELIVERED' },
+            { key: 'CANCELLED', icon: 'ri-close-circle-line', label: '已取消', value: self.stats.cancelledCount, color: 'danger', clickable: true, active: self.activeFilter === 'CANCELLED' }
           ]
         }
       },
@@ -280,7 +282,8 @@
         async search(reloadStats = true) {
           this.loading = true
           try {
-            const params = Object.assign({}, this.searchValues || {}, { page: this.page, pageSize: this.pageSize })
+            // 修改点：搜索参数来源统一为 lastSearch（原读取未定义的 searchValues，导致筛选条件从未下发）
+            const params = Object.assign({}, this.lastSearch || {}, { page: this.page, pageSize: this.pageSize })
             const requests = [deliveryOrderPage(params)]
             if (reloadStats) { requests.push(deliveryStats({ platform: params.platform, startDate: params.startDate, endDate: params.endDate })) }
             const results = await Promise.all(requests)
@@ -337,6 +340,7 @@
         },
         onSizeChange: function(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
           this.search(false)
         },
         // ==================== 同步操作 ====================

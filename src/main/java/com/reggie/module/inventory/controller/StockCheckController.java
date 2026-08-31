@@ -7,6 +7,7 @@ import com.reggie.common.R;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.CompleteStockCheckDTO;
 import com.reggie.dto.CreateStockCheckDTO;
+import com.reggie.enums.StockCheckStatus;
 import com.reggie.module.inventory.model.StockCheck;
 import com.reggie.module.inventory.service.StockCheckService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +15,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -109,6 +111,31 @@ public class StockCheckController {
     public R<String> complete(@PathVariable Long id, @Valid @RequestBody CompleteStockCheckDTO dto) {
         stockCheckService.completeCheck(id, dto.getItems());
         return R.success("盘点完成");
+    }
+
+    /**
+     * 删除盘点单（逻辑删除）
+     * <p>StockCheck 带 @TableLogic，removeById 为逻辑删除。
+     * 仅草稿/进行中状态可删除；已完成的盘点单已生成库存差异并影响对账，禁止删除。</p>
+     *
+     * @param id 盘点单ID
+     * @return 操作结果
+     */
+    @DeleteMapping("/{id}")
+    @Operation(summary = "删除盘点单", description = "逻辑删除盘点单，仅草稿/进行中状态可删除")
+    @Parameter(name = "id", description = "盘点单ID", required = true)
+    public R<String> delete(@PathVariable Long id) {
+        StockCheck existing = stockCheckService.getById(id);
+        if (existing == null) {
+            return R.error("盘点单不存在");
+        }
+        boolean canDelete = StockCheckStatus.DRAFT.getValue().equals(existing.getStatus())
+                || StockCheckStatus.IN_PROGRESS.getValue().equals(existing.getStatus());
+        if (!canDelete) {
+            return R.error("仅草稿或进行中的盘点单可删除，已完成的盘点单禁止删除");
+        }
+        stockCheckService.removeById(id);
+        return R.success("删除成功");
     }
 }
 

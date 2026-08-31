@@ -17,14 +17,13 @@
 .chart-panel {
   background: var(--color-white);
   border-radius: var(--radius-lg);
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.8);
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .chart-panel:hover {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 /* 标题栏 */
@@ -59,8 +58,8 @@
   padding: 22px 24px;
   position: relative;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.8);
   display: flex;
   flex-direction: column;
@@ -69,8 +68,7 @@
 }
 
 .kpi-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 /* 顶部主题色条（纯色，符合"禁止渐变"规范） */
@@ -83,25 +81,6 @@
   height: 4px;
   background: var(--stat-color, var(--color-brand-500));
   opacity: 0.85;
-}
-
-/* 背景装饰圆（纯色，低透明度） */
-.kpi-card::after {
-  content: '';
-  position: absolute;
-  top: -40%;
-  right: -25%;
-  width: 160px;
-  height: 160px;
-  background: var(--stat-color, var(--color-brand-500));
-  border-radius: 50%;
-  opacity: 0.05;
-  transition: all 0.5s;
-}
-
-.kpi-card:hover::after {
-  transform: scale(1.15);
-  opacity: 0.08;
 }
 
 /* 图标 */
@@ -117,11 +96,6 @@
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  transition: all 0.3s;
-}
-
-.kpi-card:hover .kpi-card__icon {
-  transform: rotate(5deg) scale(1.1);
 }
 
 /* 内容区 */

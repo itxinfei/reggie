@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>会员等级 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
@@ -45,7 +46,7 @@
 
       <!-- ===== 等级进阶 ===== -->
       <div class="progression-section" v-if="tableData.length > 0">
-        <div class="progression-title">📊 等级晋升阶梯</div>
+        <div class="progression-title"><i class="ri-bar-chart-2-line" aria-hidden="true"></i> 等级晋升阶梯</div>
         <div class="progression-bar">
           <div class="prog-item" v-for="(item, idx) in sortedLevels" :key="item.id">
             <div class="prog-icon">{{ idx === sortedLevels.length - 1 ? '👑' : idx >= sortedLevels.length - 3 ? '⭐' : idx >= 2 ? '🎖' : idx >= 1 ? '🥉' : '🌱' }}</div>
@@ -164,7 +165,7 @@
           const self = this;
           return [
             { key: 'total', icon: '🏅', label: '等级总数', value: self.stats.totalLevels || 0, color: 'primary' },
-            { key: 'highest', icon: '👑', label: '最高等级', value: self.stats.highestLevel || '-', color: 'success' },
+            { key: 'highest', icon: 'ri-vip-crown-line', label: '最高等级', value: self.stats.highestLevel || '-', color: 'success' },
             { key: 'entry', icon: '🎯', label: '入门门槛', value: self.stats.lowestPoints || 0, color: 'warning' },
             { key: 'avg', icon: '💯', label: '平均折扣率', value: self.stats.avgDiscount || '-', color: 'info' }
           ]

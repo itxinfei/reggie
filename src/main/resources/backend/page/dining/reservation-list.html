@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>预约管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
@@ -107,7 +109,7 @@
             { prop: 'customerName', label: '客户姓名', width: 100, align: 'center' },
             { prop: 'phone', label: '手机号', width: 120, align: 'center' },
             { prop: 'tableName', label: '桌台', width: 80, align: 'center' },
-            { prop: 'reservedTime', label: '预订时间', width: 140, align: 'center' },
+            { prop: 'reservedTime', label: '预订时间', width: 160, align: 'center' },
             { prop: 'seatCount', label: '人数', width: 60, type: 'number' },
             { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
             { prop: 'remark', label: '备注', minWidth: 100 }
@@ -122,10 +124,10 @@
         statsCards: function() {
           const self = this
           return [
-            { key: '', icon: '📋', label: '预约总数', value: self.stats.totalReservations, color: 'primary', clickable: true, active: self.activeFilter === '' },
-            { key: 'PENDING', icon: '⏳', label: '待确认', value: self.stats.pendingCount, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
-            { key: 'CONFIRMED', icon: '✅', label: '已确认', value: self.stats.confirmedCount, color: 'success', clickable: true, active: self.activeFilter === 'CONFIRMED' },
-            { key: 'ARRIVED', icon: '📍', label: '已到店', value: self.stats.arrivedCount, color: 'info', clickable: true, active: self.activeFilter === 'ARRIVED' }
+            { key: '', icon: 'ri-file-list-3-line', label: '预约总数', value: self.stats.totalReservations, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'PENDING', icon: 'ri-time-line', label: '待确认', value: self.stats.pendingCount, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
+            { key: 'CONFIRMED', icon: 'ri-checkbox-circle-line', label: '已确认', value: self.stats.confirmedCount, color: 'success', clickable: true, active: self.activeFilter === 'CONFIRMED' },
+            { key: 'ARRIVED', icon: 'ri-map-pin-line', label: '已到店', value: self.stats.arrivedCount, color: 'info', clickable: true, active: self.activeFilter === 'ARRIVED' }
           ]
         }
       },
@@ -198,6 +200,7 @@
         },
         onSizeChange(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
           this.init(false)
         },
         confirmHandle(id) {

@@ -7,6 +7,8 @@
   <title>分类管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <!-- 对齐规范单一来源：styles/consistency.css（.is-left/.is-center/.is-right），页面禁止写 text-align 覆盖 -->
@@ -76,7 +78,7 @@
             type="text"
             size="small"
             class="btn-delete"
-            @click="deleteHandle(row.id)"
+            @click="deleteHandle(row)"
           >删除</el-button>
         </template>
       </crud-table>
@@ -142,6 +144,8 @@
   <script src="../../js/accessibility-utils.js"></script>
   <script src="../../js/performance-utils.js"></script>
     <script src="../../api/category.js"></script>
+    <script src="../../api/food.js"></script>
+    <script src="../../api/combo.js"></script>
     <script src="../../js/components.js"></script>
     <script>
       new Vue({
@@ -184,7 +188,7 @@
               { prop: 'name', label: '分类名称', width: 140, align: 'center' },
               { prop: 'type', label: '分类类型', width: 90, align: 'center', slot: true },
               { prop: 'sort', label: '排序', width: 60, align: 'center' },
-              { prop: 'updateTime', label: '操作时间', width: 140, align: 'center' }
+              { prop: 'updateTime', label: '操作时间', width: 160, align: 'center' }
             ],
             classData: {
               'title': '添加菜品分类',
@@ -354,24 +358,33 @@
           handleClose(st) {
             this.classData.dialogVisible = false
           },
-          //删除
-          deleteHandle(id) {
-            ReggieUI.confirm('此操作将永久删除该分类, 是否继续?', '提示', {
-              'confirmButtonText': '确定',
-              'cancelButtonText': '取消',
-              'type': 'warning'
-            }).then(() => {
-              deleCategory(id).then(res => {
-                if (res.code === 1) {
-                  ReggieUI.success('删除成功！')
-                  this.handleQuery()
-                } else {
-                  ReggieUI.error(res.msg || '操作失败')
-                }
-              }).catch(err => {
-                ReggieUI.error('请求失败：' + err)
+          // 修改点：删除保护（8.2.2）——删除前先查该分类下的菜品/套餐引用数并明确提示，避免误删
+          deleteHandle(row) {
+            const self = this
+            const typeLabel = row.type === '1' ? '菜品' : '套餐'
+            const refApi = row.type === '1' ? getDishPage : getSetmealPage
+            refApi({ categoryId: row.id, page: 1, pageSize: 1 }).then(res => {
+              const refCount = String(res.code) === '1' ? (Number(res.data && res.data.total) || 0) : 0
+              const msg = refCount > 0
+                ? '该分类下存在 ' + refCount + ' 个' + typeLabel + '，删除后这些' + typeLabel + '将失去分类归属，是否仍要删除？'
+                : '确认删除分类「' + row.name + '」？'
+              ReggieUI.confirm(msg, '删除确认', {
+                'confirmButtonText': '确定删除',
+                'cancelButtonText': '取消',
+                'type': 'warning'
+              }).then(() => {
+                deleCategory(row.id).then(res => {
+                  if (res.code === 1) {
+                    ReggieUI.success('删除成功！')
+                    self.handleQuery()
+                  } else {
+                    ReggieUI.error(res.msg || '操作失败')
+                  }
+                }).catch(err => {
+                  ReggieUI.error('请求失败：' + err)
+                })
               })
-            })
+            }).catch(() => {})
           },
           // 修改点：数据提交——用 el-form validate() 替代手动 toast 校验，错误直接 inline 显示在字段下方
           submitForm(st) {

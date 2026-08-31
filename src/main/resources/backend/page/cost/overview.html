@@ -274,6 +274,15 @@ border-radius: var(--radius-sm);
         this.initCharts()
         this.fetchData()
       },
+      // 修改点：补 beforeDestroy 清理 —— 原先 resize 监听与 echarts 实例从不释放，
+      // 切换页面后监听器残留、图表实例泄漏（多次进入会累积）
+      beforeDestroy() {
+        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler)
+        const charts = [this.trendChart, this.structureChart, this.rankingChart]
+        charts.forEach(function(ch) {
+          if (ch && !ch.isDisposed()) { try { ch.dispose() } catch (e) {} }
+        })
+      },
       methods: {
         formatDate(date) {
           const year = date.getFullYear()
@@ -290,11 +299,14 @@ border-radius: var(--radius-sm);
           this.structureChart = echarts.init(document.getElementById('structureChart'))
           this.rankingChart = echarts.init(document.getElementById('rankingChart'))
           
-          window.addEventListener('resize', () => {
-            this.trendChart && this.trendChart.resize()
-            this.structureChart && this.structureChart.resize()
-            this.rankingChart && this.rankingChart.resize()
-          })
+          // 修改点：把回调存为 this.resizeHandler，否则 beforeDestroy 无法解绑（匿名函数无引用）
+          this.resizeHandler = () => {
+            const charts = [this.trendChart, this.structureChart, this.rankingChart]
+            charts.forEach(function(ch) {
+              if (ch && !ch.isDisposed()) ch.resize()
+            })
+          }
+          window.addEventListener('resize', this.resizeHandler)
         },
         async fetchData() {
           this.loading = true
@@ -416,7 +428,8 @@ border-radius: var(--radius-sm);
                 radius: ['40%', '70%'],
                 avoidLabelOverlap: false,
                 itemStyle: {
-                  borderRadius: RgPalette.radiusMd,
+                  borderRadius: RgPalette.radiusMd
+,
                   borderColor: RgPalette.white,
                   borderWidth: 2
                 },

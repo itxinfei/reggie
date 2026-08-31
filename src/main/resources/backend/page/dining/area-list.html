@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>区域管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
@@ -164,10 +166,10 @@
         statsCards() {
           const self = this
           return [
-            { key: '区域', icon: '📍', label: '区域总数', value: self.stats.totalAreas || 0, color: 'primary' },
-            { key: '桌台', icon: '🪑', label: '桌台总数', value: self.stats.totalTables || 0, color: 'success' },
-            { key: '平均', icon: '👥', label: '平均桌台/区域', value: self.stats.avgTablesPerArea || 0, color: 'warning' },
-            { key: '最大', icon: '🏢', label: '最大容量区域', value: self.stats.maxTablesArea || '-', color: 'info' }
+            { key: '区域', icon: 'ri-map-pin-line', label: '区域总数', value: self.stats.totalAreas || 0, color: 'primary' },
+            { key: '桌台', icon: 'ri-parking-box-line', label: '桌台总数', value: self.stats.totalTables || 0, color: 'success' },
+            { key: '平均', icon: 'ri-group-line', label: '平均桌台/区域', value: self.stats.avgTablesPerArea || 0, color: 'warning' },
+            { key: '最大', icon: 'ri-building-line', label: '最大容量区域', value: self.stats.maxTablesArea || '-', color: 'info' }
           ]
         }
       },

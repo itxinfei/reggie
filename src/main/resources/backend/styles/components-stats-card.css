@@ -31,14 +31,13 @@
   padding: 20px 24px;
   position: relative;
   overflow: hidden;
-  transition: all 0.3s;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   border: 1px solid var(--el-bg-page);
 }
 
 .stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 /* 顶部主题色条（纯色，符合"禁止渐变"规范） */
@@ -128,7 +127,6 @@
 
 .stat-card.clickable.active {
   border-color: var(--color-brand-500);
-  box-shadow: 0 0 0 2px rgba(255, 194, 0, 0.15);
 }
 
 /* ========== 桌台变体（flex 布局） ========== */
@@ -192,4 +190,28 @@
   .stats-cards--col-3 {
     grid-template-columns: 1fr;
   }
+}
+
+/* ========== 加载遮罩（纯 CSS，不依赖 Element 指令） ========== */
+.stats-cards {
+  position: relative;
+}
+.stats-cards__loading {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-lg);
+}
+.stats-cards__loading i {
+  font-size: 28px;
+  color: var(--color-brand-500);
+  animation: stats-cards-spin 1s linear infinite;
+}
+@keyframes stats-cards-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

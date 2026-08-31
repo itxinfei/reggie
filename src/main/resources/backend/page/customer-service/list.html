@@ -6,21 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>客服管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
   <style>
     .cs-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
 
     .cs-tabs { margin-bottom: var(--space-6) }
-
-    .cs-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-6) }
-    @media (max-width: 900px) { .cs-stats { grid-template-columns: repeat(2, 1fr) } }
-    @media (max-width: 520px) { .cs-stats { grid-template-columns: 1fr } }
-    .cs-stat-card { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: var(--space-4) }
-    .cs-stat-card__icon { font-size: 28px; line-height: 1 }
-    .cs-stat-card__body { flex: 1 }
-    .cs-stat-card__label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px }
-    .cs-stat-card__value { font-size: 24px; font-weight: 600; color: var(--text-primary); line-height: 1.2 }
 
     .cs-filter { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: flex-end; gap: var(--space-4); margin-bottom: var(--space-6); flex-wrap: wrap }
     .cs-filter__col { display: flex; flex-direction: column; gap: 4px }
@@ -32,7 +26,7 @@
     .cs-msg-list { max-height: 300px; overflow-y: auto; padding: var(--space-4); background: var(--el-bg-ghost); border-radius: var(--radius-md); margin-bottom: var(--space-4) }
     .cs-msg-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border-default) }
     .cs-msg-item:last-child { border-bottom: none }
-    .cs-msg-item__avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--color-brand-500); color: var(--color-white); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; flex-shrink: 0 }
+    .cs-msg-item__avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--color-brand-500); color: var(--text-on-brand); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; flex-shrink: 0 }
     .cs-msg-item.user .cs-msg-item__avatar { background: var(--color-info) }
     .cs-msg-item__body { flex: 1 }
     .cs-msg-item__header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px }
@@ -46,6 +40,14 @@
 
     .empty-state { text-align: center; padding: 60px var(--space-4); color: var(--text-muted); font-size: var(--font-size-base) }
     .empty-state__icon { font-size: 48px; line-height: 1; margin-bottom: var(--space-4) }
+
+    /* 修改点：分页容器 —— 与全站列表页一致，右对齐 + 24px 上间距 */
+    .cs-pager { display: flex; justify-content: flex-end; margin-top: var(--space-6) }
+    /* 移动端分页居中并允许换行，避免窄屏溢出 */
+    @media (max-width: 768px) {
+      .cs-pager { justify-content: center }
+      .cs-pager .el-pagination { white-space: normal; text-align: center }
+    }
   </style>
 </head>
 <body>
@@ -68,36 +70,7 @@
 
       <!-- 会话管理 Tab -->
       <div v-if="activeTab === 'session'">
-        <div class="cs-stats">
-          <div class="cs-stat-card">
-            <span class="cs-stat-card__icon" style="color:var(--color-brand-500)">💬</span>
-            <div class="cs-stat-card__body">
-              <div class="cs-stat-card__label">总会话数</div>
-              <div class="cs-stat-card__value">{{ stats.totalSessions }}</div>
-            </div>
-          </div>
-          <div class="cs-stat-card">
-            <span class="cs-stat-card__icon" style="color:var(--color-success)">●</span>
-            <div class="cs-stat-card__body">
-              <div class="cs-stat-card__label">进行中</div>
-              <div class="cs-stat-card__value" style="color:var(--color-success)">{{ stats.activeSessions }}</div>
-            </div>
-          </div>
-          <div class="cs-stat-card">
-            <span class="cs-stat-card__icon" style="color:var(--color-warning)">⏱</span>
-            <div class="cs-stat-card__body">
-              <div class="cs-stat-card__label">平均首响(秒)</div>
-              <div class="cs-stat-card__value" style="color:var(--color-warning)">{{ stats.avgFirstResponse }}</div>
-            </div>
-          </div>
-          <div class="cs-stat-card">
-            <span class="cs-stat-card__icon" style="color:var(--color-danger)">☆</span>
-            <div class="cs-stat-card__body">
-              <div class="cs-stat-card__label">平均评分</div>
-              <div class="cs-stat-card__value" style="color:var(--color-danger)">{{ stats.avgSatisfaction }}</div>
-            </div>
-          </div>
-        </div>
+        <stat-cards :cards="sessionStatsCards" :loading="sessionLoading"></stat-cards>
 
         <div class="cs-filter">
           <div class="cs-filter__col">
@@ -116,7 +89,9 @@
           <el-button class="cs-filter__btn" @click="resetSessionFilter">重置</el-button>
         </div>
 
-        <el-table :data="sessionList" :loading="sessionLoading" border stripe style="width:100%" size="medium" aria-label="会话列表">
+        <!-- 修改点：:loading 不是 el-table 的合法 prop（加载态永远不显示），改为 v-loading 指令；
+             :data 改为分页后的切片 sessionPagedList -->
+        <el-table v-loading="sessionLoading" :data="sessionPagedList" border stripe style="width:100%" size="medium" aria-label="会话列表">
           <el-table-column prop="sessionNo" label="会话号" width="180"></el-table-column>
           <el-table-column prop="userName" label="用户" width="120"></el-table-column>
           <el-table-column prop="sessionType" label="类型" width="80" align="center">
@@ -143,50 +118,45 @@
               <el-button type="text" size="small" v-if="row.status === 1" @click="onCloseSession(row)">结束</el-button>
             </template>
           </el-table-column>
+          <!-- 修改点：补空状态提示，避免无数据时表格区域纯空白。
+               注意：el-empty 是 Element Plus(Vue3) 组件，本项目 Element UI 2.x 无此组件，
+               故复用页面既有 .empty-state 样式 -->
+          <template slot="empty">
+            <div class="empty-state">
+              <div class="empty-state__icon"><i class="ri-chat-smile-3-line" aria-hidden="true"></i></div>
+              <div>暂无会话数据</div>
+            </div>
+          </template>
         </el-table>
+
+        <!-- 修改点：补分页（后端 /cs/session/list 返回全量列表，此处做前端分页，避免会话多时长列表无法翻页） -->
+        <div class="cs-pager">
+          <el-pagination
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :current-page="sessionPager.page"
+            :page-size="sessionPager.pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="sessionList.length"
+            @current-change="onSessionPageChange"
+            @size-change="onSessionSizeChange">
+          </el-pagination>
+        </div>
       </div>
 
       <!-- 投诉处理 Tab -->
       <div v-else-if="activeTab === 'complaint'">
-        <div class="cs-stats">
-          <div class="cs-stat-card">
-            <span class="cs-stat-card__icon" style="color:var(--color-brand-500)">📋</span>
-            <div class="cs-stat-card__body">
-              <div class="cs-stat-card__label">总投诉数</div>
-              <div class="cs-stat-card__value">{{ complaintStats.totalComplaints }}</div>
-            </div>
-          </div>
-          <div class="cs-stat-card">
-            <span class="cs-stat-card__icon" style="color:var(--color-warning)">⏳</span>
-            <div class="cs-stat-card__body">
-              <div class="cs-stat-card__label">待处理</div>
-              <div class="cs-stat-card__value" style="color:var(--color-warning)">{{ complaintStats.pendingComplaints }}</div>
-            </div>
-          </div>
-          <div class="cs-stat-card">
-            <span class="cs-stat-card__icon" style="color:var(--color-success)">✅</span>
-            <div class="cs-stat-card__body">
-              <div class="cs-stat-card__label">已解决</div>
-              <div class="cs-stat-card__value" style="color:var(--color-success)">{{ complaintStats.resolvedComplaints }}</div>
-            </div>
-          </div>
-          <div class="cs-stat-card">
-            <span class="cs-stat-card__icon" style="color:var(--text-muted)">💰</span>
-            <div class="cs-stat-card__body">
-              <div class="cs-stat-card__label">补偿总额</div>
-              <div class="cs-stat-card__value" style="color:var(--text-muted)">¥{{ complaintStats.totalCompensation }}</div>
-            </div>
-          </div>
-        </div>
+        <stat-cards :cards="complaintStatsCards" :loading="complaintLoading"></stat-cards>
 
         <div class="cs-filter">
           <div class="cs-filter__col">
             <span class="cs-filter__label">状态</span>
             <el-select v-model="complaintFilter.status" placeholder="全部状态" class="cs-filter__input" clearable>
-              <el-option label="待处理" :value="1"></el-option>
-              <el-option label="处理中" :value="2"></el-option>
-              <el-option label="已解决" :value="3"></el-option>
-              <el-option label="已关闭" :value="4"></el-option>
+              <!-- 状态值对齐后端 Complaint 常量：0待处理 1处理中 2已解决 3已关闭 -->
+              <el-option label="待处理" :value="0"></el-option>
+              <el-option label="处理中" :value="1"></el-option>
+              <el-option label="已解决" :value="2"></el-option>
+              <el-option label="已关闭" :value="3"></el-option>
             </el-select>
           </div>
           <div class="cs-filter__col">
@@ -207,7 +177,8 @@
           <el-button class="cs-filter__btn" @click="resetComplaintFilter">重置</el-button>
         </div>
 
-        <el-table :data="complaintList" :loading="complaintLoading" border stripe style="width:100%" size="medium" aria-label="投诉列表">
+        <!-- 修改点：:loading -> v-loading（同上），:data 改为分页切片 complaintPagedList -->
+        <el-table v-loading="complaintLoading" :data="complaintPagedList" border stripe style="width:100%" size="medium" aria-label="投诉列表">
           <el-table-column prop="complaintNo" label="投诉号" width="170"></el-table-column>
           <el-table-column prop="userName" label="用户" width="100"></el-table-column>
           <el-table-column prop="userPhone" label="电话" width="130"></el-table-column>
@@ -226,11 +197,32 @@
           <el-table-column label="操作" width="260" fixed="right">
             <template slot-scope="{row}">
               <el-button type="text" size="small" @click="onViewComplaint(row)">查看</el-button>
-              <el-button type="text" size="small" v-if="row.status === 1 || row.status === 2" @click="onHandleComplaint(row)">处理</el-button>
-              <el-button type="text" size="small" v-if="row.status === 3" @click="onCloseComplaint(row.id)">关闭</el-button>
+              <el-button type="text" size="small" v-if="row.status === 0 || row.status === 1" @click="onHandleComplaint(row)">处理</el-button>
+              <el-button type="text" size="small" v-if="row.status === 2" @click="onCloseComplaint(row.id)">关闭</el-button>
             </template>
           </el-table-column>
+          <!-- 修改点：补空状态提示（同上，不用 el-empty） -->
+          <template slot="empty">
+            <div class="empty-state">
+              <div class="empty-state__icon"><i class="ri-file-list-3-line" aria-hidden="true"></i></div>
+              <div>暂无投诉数据</div>
+            </div>
+          </template>
         </el-table>
+
+        <!-- 修改点：补分页（后端返回全量列表，前端分页） -->
+        <div class="cs-pager">
+          <el-pagination
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :current-page="complaintPager.page"
+            :page-size="complaintPager.pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="complaintList.length"
+            @current-change="onComplaintPageChange"
+            @size-change="onComplaintSizeChange">
+          </el-pagination>
+        </div>
       </div>
 
       <!-- 客服统计 Tab -->
@@ -239,7 +231,8 @@
           <el-date-picker v-model="statsDateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" class="cs-filter__input" style="width:280px" @change="fetchStatistics"></el-date-picker>
         </div>
         <el-row :gutter="16" style="margin-bottom:var(--space-6)">
-          <el-col :span="8" v-for="item in statsDetail" :key="item.label">
+          <!-- 修改点：补响应式断点，原固定 :span="8" 在移动端会挤成 3 列不可读 -->
+          <el-col :xs="24" :sm="12" :md="8" v-for="item in statsDetail" :key="item.label">
             <el-card shadow="hover" style="border-radius:var(--radius-md)">
               <div style="text-align:center;padding:var(--space-4)">
                 <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">{{ item.label }}</div>
@@ -343,6 +336,8 @@
           sessionList: [],
           sessionLoading: false,
           sessionFilter: { status: '', keyword: '' },
+          // 修改点：新增前端分页状态
+          sessionPager: { page: 1, pageSize: 10 },
           sessionDetail: { visible: false, sessionNo: '', userName: '', agentName: '' },
           sessionMessages: [],
           newMessage: '',
@@ -355,6 +350,8 @@
           complaintList: [],
           complaintLoading: false,
           complaintFilter: { status: '', type: '', keyword: '' },
+          // 修改点：新增前端分页状态
+          complaintPager: { page: 1, pageSize: 10 },
           complaintDetail: { visible: false },
           handleForm: { visible: false, id: null, handleResult: '', compensationAmount: null }
         }
@@ -364,7 +361,54 @@
         this.fetchSessionList()
         this.fetchComplaintList()
       },
+      // 修改点：新增计算属性，按分页状态切片，复杂逻辑放 computed 而非模板
+      computed: {
+        // 统计卡片（固定 4 个）：会话管理
+        sessionStatsCards() {
+          const s = this.stats || {}
+          return [
+            { key: 'sessions', icon: 'ri-chat-smile-3-line', label: '总会话数', value: s.totalSessions || 0, color: 'primary', subText: '今日累计' },
+            { key: 'active', icon: 'ri-chat-check-line', label: '进行中', value: s.activeSessions || 0, color: 'success', subText: '未结束会话' },
+            { key: 'firstResp', icon: 'ri-timer-line', label: '平均首响(秒)', value: s.avgFirstResponse || 0, color: 'warning', subText: '客服响应速度' },
+            { key: 'rating', icon: 'ri-star-line', label: '平均评分', value: s.avgSatisfaction || 0, color: 'danger', subText: '满意度评价' }
+          ]
+        },
+        // 统计卡片（固定 4 个）：投诉处理
+        complaintStatsCards() {
+          const c = this.complaintStats || {}
+          return [
+            { key: 'total', icon: 'ri-file-list-3-line', label: '总投诉数', value: c.totalComplaints || 0, color: 'primary', subText: '累计投诉' },
+            { key: 'pending', icon: 'ri-time-line', label: '待处理', value: c.pendingComplaints || 0, color: 'warning', subText: '等待受理' },
+            { key: 'resolved', icon: 'ri-checkbox-circle-line', label: '已解决', value: c.resolvedComplaints || 0, color: 'success', subText: '已完成处理' },
+            { key: 'comp', icon: 'ri-money-cny-circle-line', label: '补偿总额', value: '¥' + (c.totalCompensation || '0.00'), color: 'info', subText: '累计补偿金额' }
+          ]
+        },
+        sessionPagedList() {
+          var start = (this.sessionPager.page - 1) * this.sessionPager.pageSize
+          return this.sessionList.slice(start, start + this.sessionPager.pageSize)
+        },
+        complaintPagedList() {
+          var start = (this.complaintPager.page - 1) * this.complaintPager.pageSize
+          return this.complaintList.slice(start, start + this.complaintPager.pageSize)
+        }
+      },
       methods: {
+        // ===== 分页事件（修改点） =====
+        onSessionPageChange(page) {
+          this.sessionPager.page = page
+        },
+        onSessionSizeChange(size) {
+          this.sessionPager.pageSize = size
+          this.sessionPager.page = 1
+        },
+        onComplaintPageChange(page) {
+          this.complaintPager.page = page
+        },
+        onComplaintSizeChange(size) {
+          this.complaintPager.pageSize = size
+          this.complaintPager.page = 1
+        },
+
         // ===== Tab 切换 =====
         onTabClick() {
           if (this.activeTab === 'session') this.fetchSessionList()
@@ -424,6 +468,7 @@
                 })
               }
               this.sessionList = list
+              this.sessionPager.page = 1 // 修改点：筛选/刷新后回到第 1 页，避免停留在越界空页
             }
           } catch(e) {
             console.error('获取会话列表失败', e)
@@ -474,7 +519,7 @@
         },
         async onSubmitAssign() {
           if (!this.assignForm.agentName.trim()) {
-            this.$message.warning('请输入客服姓名')
+            ReggieUI.warning('请输入客服姓名')
             return
           }
           try {
@@ -483,7 +528,7 @@
               agentName: this.assignForm.agentName
             })
             this.assignForm.visible = false
-            this.$message.success('分配成功')
+            ReggieUI.success('分配成功')
             this.fetchSessionList()
           } catch(e) {
             console.error('分配失败', e)
@@ -493,7 +538,7 @@
           this.$confirm('确认结束该会话？', '提示', { type: 'warning' }).then(async () => {
             try {
               await closeSession(row.id, {})
-              this.$message.success('会话已结束')
+              ReggieUI.success('会话已结束')
               this.fetchSessionList()
             } catch(e) {
               console.error('结束会话失败', e)
@@ -520,6 +565,7 @@
                 })
               }
               this.complaintList = list
+              this.complaintPager.page = 1 // 修改点：筛选/刷新后回到第 1 页
             }
           } catch(e) {
             console.error('获取投诉列表失败', e)
@@ -533,11 +579,11 @@
           this.fetchComplaintList()
         },
         statusTextComplaint(status) {
-          var map = { 1: '待处理', 2: '处理中', 3: '已解决', 4: '已关闭' }
+          var map = { 0: '待处理', 1: '处理中', 2: '已解决', 3: '已关闭' }
           return map[status] || '未知'
         },
         statusTagComplaint(status) {
-          var map = { 1: 'warning', 2: '', 3: 'success', 4: 'info' }
+          var map = { 0: 'warning', 1: '', 2: 'success', 3: 'info' }
           return map[status] || 'info'
         },
         typeTextComplaint(type) {
@@ -553,7 +599,7 @@
         },
         async onSubmitHandleComplaint() {
           if (!this.handleForm.handleResult.trim()) {
-            this.$message.warning('请输入处理结果')
+            ReggieUI.warning('请输入处理结果')
             return
           }
           try {
@@ -563,7 +609,7 @@
             }
             await handleComplaint(this.handleForm.id, params)
             this.handleForm.visible = false
-            this.$message.success('处理成功')
+            ReggieUI.success('处理成功')
             this.fetchComplaintList()
           } catch(e) {
             console.error('处理投诉失败', e)
@@ -573,7 +619,7 @@
           this.$confirm('确认关闭该投诉？', '提示', { type: 'warning' }).then(async () => {
             try {
               await closeComplaint(id)
-              this.$message.success('投诉已关闭')
+              ReggieUI.success('投诉已关闭')
               this.fetchComplaintList()
             } catch(e) {
               console.error('关闭投诉失败', e)

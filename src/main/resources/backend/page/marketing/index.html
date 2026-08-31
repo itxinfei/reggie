@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>营销活动中心 - 瑞吉外卖管理端</title>
+    <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../styles/tokens.css" />
+    <link rel="stylesheet" href="../../styles/main.css" />
+    <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+    <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+    <style>
+        /* ========== 基础布局 ========== */
+        html, body {
+            height: 100%; margin: 0; padding: 0;
+            overflow-y: auto; overflow-x: hidden;
+            background: var(--bg-page);
+            font-family: var(--font-family-base);
+        }
+        .mk-root { min-height: 100%; display: flex; flex-direction: column; }
+        .mk-root .container {
+            flex: 1; background: transparent; padding: 24px 32px 32px;
+            min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%;
+        }
+
+        /* ========== 活动卡片网格 ========== */
+        .activity-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;
+        }
+        .activity-card {
+            background: var(--color-white);
+            border: 1px solid var(--el-border-lighter);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            display: flex; flex-direction: column; gap: 10px;
+            transition: all 0.2s;
+        }
+        .activity-card:hover {
+            border-color: var(--color-brand-500);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            transform: translateY(-1px);
+        }
+        .ac-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .ac-icon {
+            width: 36px; height: 36px; border-radius: var(--radius-md); flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--color-brand-500); color: var(--text-on-brand); font-size: 18px;
+        }
+        .ac-icon.is-tool { background: var(--el-bg-subtle); color: var(--el-text-regular); }
+        .ac-name { flex: 1; min-width: 0; font-size: var(--font-size-base); font-weight: 600; color: var(--el-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ac-lines { display: flex; flex-direction: column; gap: 4px; }
+        .ac-line { font-size: var(--font-size-xs); color: var(--el-text-secondary); display: flex; align-items: center; gap: 6px; }
+        .ac-line .ri { color: var(--el-border-base); }
+        .ac-actions { display: flex; gap: 8px; margin-top: 2px; }
+        .ac-actions .el-button { flex: 1; }
+
+        /* ========== 空状态 ========== */
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 64px 20px; color: var(--el-border-base); text-align: center;
+        }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.45; }
+        .empty-state .empty-text { font-size: var(--font-size-md); margin-bottom: 6px; }
+        .empty-state .empty-hint { font-size: var(--font-size-xs); opacity: 0.7; }
+
+        /* ========== Tab 面板 ========== */
+        .tab-panel { margin-top: 4px; }
+        .tab-header-line { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .tab-header-line .count-hint { font-size: var(--font-size-xs); color: var(--el-text-secondary); }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 1200px) {
+            .container { padding: 16px 20px 20px !important; }
+        }
+        @media (max-width: 768px) {
+            .container { padding: 12px 16px 16px !important; }
+            .activity-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+<div class="mk-root" id="marketing-app" v-loading="loading">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+        <!-- 页头 -->
+        <header class="ds-page-header">
+            <div class="ds-page-header__titles">
+                <h1 class="ds-page-header__title" id="page-title">营销活动中心</h1>
+                <p class="ds-page-header__subtitle">折扣 / 满减 / 秒杀 / 买赠 / 新客 / 智能营销 统一入口</p>
+            </div>
+            <div class="ds-page-header__actions">
+                <el-button type="primary" icon="el-icon-plus" @click="goCreate">新建{{ currentTabLabel }}</el-button>
+            </div>
+        </header>
+
+        <!-- 统计卡（跨全类型聚合） -->
+        <stat-cards :cards="statsCards" :loading="loading"></stat-cards>
+
+        <!-- 活动类型 Tab -->
+        <div class="tab-panel">
+            <el-tabs v-model="activeTab" @tab-click="onTabClick">
+                <el-tab-pane v-for="t in tabs" :key="t.key" :label="t.label" :name="t.key">
+                    <div class="tab-header-line">
+                        <span class="count-hint"><i :class="t.icon"></i> 共 {{ currentCards.length }} 个活动</span>
+                        <el-button size="small" icon="el-icon-right" @click="goManage">进入完整管理</el-button>
+                    </div>
+
+                    <!-- 活动卡片列表 -->
+                    <div v-if="currentCards.length" class="activity-grid">
+                        <div class="activity-card" v-for="act in currentCards" :key="act.id">
+                            <div class="ac-head">
+                                <span :class="['ac-icon', t.isTool ? 'is-tool' : '']"><i :class="t.icon" aria-hidden="true"></i></span>
+                                <span class="ac-name" :title="act.name">{{ act.name }}</span>
+                                <el-tag size="mini" :type="statusTagType(act.status)">{{ statusText(act.status) }}</el-tag>
+                            </div>
+                            <div class="ac-lines">
+                                <div class="ac-line" v-for="(line, i) in act.lines" :key="i"><i class="ri ri-information-line" aria-hidden="true"></i> {{ line }}</div>
+                            </div>
+                            <div class="ac-actions">
+                                <el-button size="mini" icon="el-icon-view" @click="openManage(act)">管理</el-button>
+                                <el-button size="mini" type="primary" plain icon="el-icon-edit" @click="openCreate(act)">新建同类</el-button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 空态 -->
+                    <div v-else class="empty-state">
+                        <div class="empty-icon"><i class="ri-inbox-line" aria-hidden="true"></i></div>
+                        <div class="empty-text">暂无{{ t.label }}</div>
+                        <div class="empty-hint">点击右上角「新建{{ t.label }}」创建第一个活动</div>
+                    </div>
+                </el-tab-pane>
+            </el-tabs>
+        </div>
+    </div>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js"></script>
+<script src="../../js/accessibility-utils.js"></script>
+<script src="../../js/performance-utils.js"></script>
+<script src="../../api/marketing.js"></script>
+<script src="../../api/recommend.js"></script>
+<script src="../../js/components.js"></script>
+<script>
+  // ============================================================
+  // 8.6.1 营销活动统一入口：6 类活动 Tab + 卡片化概览 + 统计聚合
+  // 卡片数据来自各类型既有列表接口；管理/新建跳转对应独立页（window.open）
+  // ============================================================
+  new Vue({
+    el: '#marketing-app',
+    data: {
+      loading: false,
+      activeTab: 'discount',
+      // 类型定义：key 与接口/跳转页对应
+      tabs: [
+        { key: 'discount', label: '折扣活动', icon: 'ri-percent-line', url: 'discount.html', createUrl: 'discount.html', isTool: false },
+        { key: 'full-reduction', label: '满减活动', icon: 'ri-gift-line', url: 'full-reduction.html', createUrl: 'full-reduction.html', isTool: false },
+        { key: 'flash-sale', label: '秒杀活动', icon: 'ri-bolt-line', url: 'flash-sale.html', createUrl: 'flash-sale.html', isTool: true },
+        { key: 'buy-get-free', label: '买赠活动', icon: 'ri-presents-line', url: 'buy-get-free.html', createUrl: 'buy-get-free.html', isTool: true },
+        { key: 'new-customer', label: '新客优惠', icon: 'ri-user-star-line', url: 'new-customer.html', createUrl: 'new-customer.html', isTool: true },
+        { key: 'campaign', label: '智能营销', icon: 'ri-lightbulb-flash-line', url: '../recommend/campaigns.html', createUrl: '../recommend/campaigns.html', isTool: true }
+      ],
+      // 各类型归一化后的卡片数据
+      tabData: {},
+      // 各类型是否已加载（懒加载）
+      tabLoaded: {}
+    },
+    computed: {
+      currentTab() {
+        var hit = null;
+        for (var i = 0; i < this.tabs.length; i++) {
+          if (this.tabs[i].key === this.activeTab) { hit = this.tabs[i]; break; }
+        }
+        return hit || this.tabs[0];
+      },
+      currentTabLabel() {
+        return this.currentTab.label;
+      },
+      currentCards() {
+        return this.tabData[this.activeTab] || [];
+      },
+      // 统计卡：跨已加载类型聚合
+      statsCards() {
+        var total = 0, active = 0, pending = 0, ended = 0;
+        var self = this;
+        this.tabs.forEach(function(t) {
+          (self.tabData[t.key] || []).forEach(function(c) {
+            total++;
+            if (c.status === 'active') active++;
+            else if (c.status === 'ended') ended++;
+            else pending++;
+          });
+        });
+        return [
+          { key: 'total', icon: 'ri-megaphone-line', label: '活动总数', value: total, color: 'primary', subText: '全类型活动合计' },
+          { key: 'active', icon: 'ri-play-circle-line', label: '进行中', value: active, color: 'success', subText: '已启用 / 进行中' },
+          { key: 'pending', icon: 'ri-time-line', label: '未开始', value: pending, color: 'warning', subText: '草稿 / 禁用 / 暂停' },
+          { key: 'ended', icon: 'ri-checkbox-circle-line', label: '已结束', value: ended, color: 'info', subText: '已结束活动' }
+        ];
+      }
+    },
+    created() {
+      // 首屏仅加载第一个 Tab，其余懒加载
+      this.loadTab('discount');
+    },
+    methods: {
+      // ========== 数据加载 ==========
+      loadTab(key) {
+        if (this.tabLoaded[key]) return;
+        var self = this;
+        this.loading = true;
+        var promise = null;
+        if (key === 'discount') promise = getDiscountRules();
+        else if (key === 'full-reduction') promise = getFullReductionRules();
+        else if (key === 'flash-sale') promise = getFlashSales();
+        else if (key === 'buy-get-free') promise = getBuyGetFreeActivities();
+        else if (key === 'new-customer') promise = getNewCustomerDiscounts();
+        else if (key === 'campaign') promise = recommendBackendApi.getCampaignsPage({ current: 1, size: 100 });
+        else promise = Promise.resolve({ code: 1, data: [] });
+
+        promise.then(function(res) {
+          if (res && res.code === 1) {
+            var raw = res.data;
+            // campaigns 走分页接口，兼容 list/records/对象 三种返回形态
+            var rows = Array.isArray(raw) ? raw : (raw && (raw.list || raw.records)) || [];
+            self.tabData[key] = self.normalize(key, rows);
+            self.tabLoaded[key] = true;
+          } else {
+            ReggieUI.error((res && res.msg) || '加载' + (self.tabLabel(key)) + '失败');
+            self.tabData[key] = [];
+          }
+        }).catch(function() {
+          self.tabData[key] = [];
+          self.tabLoaded[key] = true;
+        }).finally(function() {
+          self.loading = false;
+        });
+      },
+      // 各类型行归一化为统一卡片结构 { id, name, status, lines }
+      normalize(key, rows) {
+        var self = this;
+        var list = rows || [];
+        if (key === 'discount') {
+          return list.map(function(r) {
+            return {
+              id: 'd' + r.id,
+              name: r.ruleName || ('折扣规则 #' + r.id),
+              status: r.status === 1 ? 'active' : 'disabled',
+              lines: ['折扣率 ' + (r.discountRate != null ? r.discountRate : '—'),
+                      '最低消费 ¥' + self.num(r.minConsumption),
+                      '单笔最高减 ¥' + self.num(r.maxDiscountAmount)]
+            };
+          });
+        }
+        if (key === 'full-reduction') {
+          return list.map(function(r) {
+            return {
+              id: 'f' + r.id,
+              name: r.ruleName || ('满减规则 #' + r.id),
+              status: r.status === 1 ? 'active' : 'disabled',
+              lines: ['优惠类型 ' + (r.discountType === 2 ? '赠品' : '满减'),
+                      '满 ¥' + self.num(r.minAmount) + ' 减 ¥' + self.num(r.discountValue),
+                      '单笔最高减 ¥' + self.num(r.maxDiscountAmount)]
+            };
+          });
+        }
+        if (key === 'flash-sale') {
+          return list.map(function(r) {
+            return {
+              id: 's' + r.id,
+              name: r.name || ('秒杀活动 #' + r.id),
+              status: r.status === 1 ? 'active' : 'disabled',
+              lines: ['秒杀价 ¥' + self.num(r.flashPrice) + '（原价 ¥' + self.num(r.originalPrice) + '）',
+                      '已售 ' + (r.stock != null ? r.stock : 0) + ' 份',
+                      '时间 ' + self.timeRange(r)]
+            };
+          });
+        }
+        if (key === 'buy-get-free') {
+          return list.map(function(r) {
+            return {
+              id: 'b' + r.id,
+              name: r.name || ('买赠活动 #' + r.id),
+              status: r.status === 1 ? 'active' : 'disabled',
+              lines: ['买赠 ' + (r.buyGet || '—') + ' · 赠品 ' + (r.gift || '—'),
+                      '起送 ¥' + self.num(r.minOrderAmount),
+                      '已使用 ' + (r.usageCount != null ? r.usageCount : 0) + ' 次 · ' + self.timeRange(r)]
+            };
+          });
+        }
+        if (key === 'new-customer') {
+          return list.map(function(r) {
+            return {
+              id: 'n' + r.id,
+              name: r.name || ('新客优惠 #' + r.id),
+              status: r.status === 1 ? 'active' : 'disabled',
+              lines: ['优惠 ' + (r.discountType === 1 ? '立减 ¥' + self.num(r.discountValue) : r.discountValue + ' 折'),
+                      '起送 ¥' + self.num(r.minOrderAmount),
+                      '有效 ' + (r.validDays != null ? r.validDays : '—') + ' 天']
+            };
+          });
+        }
+        if (key === 'campaign') {
+          return list.map(function(r) {
+            return {
+              id: 'c' + r.id,
+              name: r.name || ('营销活动 #' + r.id),
+              status: r.status === 1 ? 'active' : (r.status === 2 ? 'ended' : (r.status === 3 ? 'paused' : 'draft')),
+              lines: ['参与 ' + (r.participants != null ? r.participants : 0) + ' 人',
+                      '时间 ' + (r.startTime || '—') + ' ~ ' + (r.endTime || '—')]
+            };
+          });
+        }
+        return [];
+      },
+      // ========== 工具方法 ==========
+      num(v) {
+        if (v == null || v === '') return '0.00';
+        var n = Number(v);
+        return isNaN(n) ? String(v) : n.toFixed(2);
+      },
+      timeRange(r) {
+        if (r.startTime && r.endTime) return r.startTime + ' ~ ' + r.endTime;
+        if (r.startTime) return '自 ' + r.startTime + ' 起';
+        return '长期有效';
+      },
+      tabLabel(key) {
+        for (var i = 0; i < this.tabs.length; i++) {
+          if (this.tabs[i].key === key) return this.tabs[i].label;
+        }
+        return key;
+      },
+      statusText(s) {
+        var map = { active: '进行中', disabled: '已禁用', draft: '草稿', ended: '已结束', paused: '已暂停' };
+        return map[s] || s;
+      },
+      statusTagType(s) {
+        var map = { active: 'success', disabled: 'info', draft: 'info', ended: 'warning', paused: 'warning' };
+        return map[s] || 'info';
+      },
+      // ========== 事件 ==========
+      onTabClick(tab) {
+        this.loadTab(tab.name);
+      },
+      openManage(act) {
+        window.open(this.currentTab.url, '_blank');
+      },
+      openCreate() {
+        window.open(this.currentTab.createUrl, '_blank');
+      },
+      goManage() {
+        window.open(this.currentTab.url, '_blank');
+      },
+      goCreate() {
+        window.open(this.currentTab.createUrl, '_blank');
+      }
+    }
+  });
+</script>
+</body>
+</html>

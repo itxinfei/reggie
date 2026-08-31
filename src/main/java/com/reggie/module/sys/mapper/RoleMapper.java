@@ -1,5 +1,6 @@
 package com.reggie.module.sys.mapper;
 
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.reggie.module.sys.model.Role;
 import org.apache.ibatis.annotations.Mapper;
@@ -22,21 +23,31 @@ public interface RoleMapper extends BaseMapper<Role> {
 
     /**
      * 根据租户ID和角色标识查询
+     * 修改点：支持「租户私有角色优先 → 公共角色（tenant_id IS NULL）→ 全局 seed 角色」三级兜底。
+     * role 表是全局共享角色表（idx_role_key 全局唯一索引，RoleService.getByRoleKey 也按 role_key 直查无租户条件），
+     * 但 seed 角色均挂在 tenant_id=1：原 SQL 用精确 tenant_id=#{tenantId} 匹配，
+     * 导致非 tenant1 门店员工 DB 权限加载查不到角色被拒（RBAC 失效）。
+     * 另需 @InterceptorIgnore 绕开租户拦截器：role 表不在 IGNORE_TABLES，
+     * 若不忽略，拦截器会追加 tenant_id=当前租户 条件，同样查不到全局角色。
      *
      * @param tenantId 租户ID
      * @param roleKey 角色标识
-     * @return 角色信息
+     * @return 角色信息（最多一条）
      */
-    @Select("SELECT * FROM role WHERE tenant_id = #{tenantId} AND role_key = #{roleKey} AND is_deleted = 0 AND status = 1")
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT * FROM role WHERE role_key = #{roleKey} AND is_deleted = 0 AND status = 1 "
+            + "ORDER BY CASE WHEN tenant_id = #{tenantId} THEN 0 WHEN tenant_id IS NULL THEN 1 ELSE 2 END LIMIT 1")
     Role findByRoleKeyAndTenantId(@Param("tenantId") Long tenantId, @Param("roleKey") String roleKey);
 
     /**
-     * 查询租户下的所有启用角色
+     * 查询租户下的所有启用角色（含公共角色 tenant_id IS NULL）
      *
      * @param tenantId 租户ID
      * @return 启用角色列表
      */
-    @Select("SELECT * FROM role WHERE (tenant_id = #{tenantId} OR tenant_id IS NULL) AND is_deleted = 0 AND status = 1 ORDER BY sort DESC")
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT * FROM role WHERE (tenant_id = #{tenantId} OR tenant_id IS NULL) AND is_deleted = 0 AND status = 1 "
+            + "ORDER BY CASE WHEN tenant_id IS NULL THEN 1 ELSE 0 END, sort DESC")
     List<Role> listEnabledByTenantId(@Param("tenantId") Long tenantId);
 
     /**

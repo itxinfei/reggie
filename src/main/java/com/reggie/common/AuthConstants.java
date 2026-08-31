@@ -40,6 +40,8 @@ public final class AuthConstants {
         "/user/login",
         "/user/loginout",
         "/tenant/register",
+        // 打印代理接口（门店 PC 本地打印，无 Cookie 会话，POST 匿名访问）
+        "/printer/agent/**",
         // 注意：/api/ai/** 已从 CSRF 排除列表中移除（2026-08-23 安全加固）
         // AI 模块的写操作接口（/api/ai/chat, /api/ai/session/* 等）需要 CSRF 防护，
         // 仅保留 /api/ai/health 在 LOGIN_EXCLUDE 中作为匿名健康检查
@@ -69,6 +71,8 @@ public final class AuthConstants {
         // 公开的商家信息接口（首页匿名访问）
         "/restaurant/info",
         "/restaurant/status",
+        // 枚举字典（后台与C端共用，匿名可访问；字典不含业务隐私数据）
+        "/api/meta/enums",
         // AI模块健康检查（匿名访问）
         "/api/ai/health",
         // 公开菜品/套餐接口（C端菜单浏览）
@@ -83,6 +87,10 @@ public final class AuthConstants {
         "/recommend/hot",
         "/recommend/new-arrivals",
         "/recommend/setmeals",
+        // 外卖平台回调（平台服务端无会话，天然匿名）
+        "/api/delivery/callback/**",
+        // 打印代理接口（门店 PC 本地打印，凭终端码+token 鉴权，无登录会话）
+        "/printer/agent/**",
         // 静态资源目录（图片、上传文件）
         "/images/**",
         "/uploads/**",

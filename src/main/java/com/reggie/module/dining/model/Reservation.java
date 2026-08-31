@@ -29,6 +29,10 @@ public class Reservation implements Serializable {
     /** 预订桌台ID */
     private Long tableId;
 
+    /** 桌台名称（关联查询填充，数据库无此列） */
+    @TableField(exist = false)
+    private String tableName;
+
     /** 客户姓名 */
     private String customerName;
 

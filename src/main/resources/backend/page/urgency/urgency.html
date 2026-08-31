@@ -6,67 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>紧急催菜 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
-  <style lang="less" scoped>
-    @import "../../styles/tokens.css";
-
+  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <style>
     .urgency-container {
       max-width: 1400px;
       margin: 0 auto;
       padding: 0 var(--space-5);
     }
-
-    /* ============ 统计卡片区 ============ */
-    .urgency-stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: var(--space-4);
-      margin-bottom: var(--space-6);
-    }
-    @media (max-width: 1100px) { .urgency-stats { grid-template-columns: repeat(2, 1fr) } }
-    @media (max-width: 600px) { .urgency-stats { grid-template-columns: 1fr } }
-
-    .urgency-stat-card {
-      padding: var(--space-4);
-      background: var(--bg-surface);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-sm);
-      display: flex;
-      align-items: center;
-      gap: var(--space-4);
-      transition: box-shadow var(--transition-base);
-    }
-    .urgency-stat-card:hover {
-      box-shadow: var(--shadow-md);
-    }
-    .urgency-stat-card__icon {
-      font-size: var(--font-size-3xl);
-      line-height: 1;
-      flex-shrink: 0;
-    }
-    .urgency-stat-card__body { flex: 1; min-width: 0 }
-    .urgency-stat-card__label {
-      font-size: var(--font-size-xs);
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-    .urgency-stat-card__value {
-      font-size: var(--font-size-3xl);
-      font-weight: var(--font-weight-semibold);
-      line-height: var(--line-height-tight);
-      font-variant-numeric: tabular-nums;
-      color: var(--text-primary);
-    }
-    .urgency-stat-card__unit {
-      font-size: var(--font-size-base);
-      font-weight: var(--font-weight-regular);
-      margin-left: var(--space-1);
-    }
-    .urgency-stat-card.warning .urgency-stat-card__value { color: var(--color-warning) }
-    .urgency-stat-card.danger .urgency-stat-card__value { color: var(--color-danger) }
-    .urgency-stat-card.brand .urgency-stat-card__value { color: var(--color-brand-500) }
-    .urgency-stat-card.success .urgency-stat-card__value { color: var(--color-success) }
 
     /* ============ 区块标题 ============ */
     .section-header {
@@ -310,36 +260,7 @@
       </header>
 
       <!-- 1. 统计卡片区 -->
-      <div class="urgency-stats" v-loading="statsLoading">
-        <div class="urgency-stat-card warning">
-          <div class="urgency-stat-card__icon">🚨</div>
-          <div class="urgency-stat-card__body">
-            <div class="urgency-stat-card__label">紧急订单</div>
-            <div class="urgency-stat-card__value">{{ stats.urgentCount || 0 }}</div>
-          </div>
-        </div>
-        <div class="urgency-stat-card danger">
-          <div class="urgency-stat-card__icon">⏰</div>
-          <div class="urgency-stat-card__body">
-            <div class="urgency-stat-card__label">超时订单</div>
-            <div class="urgency-stat-card__value">{{ stats.overdueCount || 0 }}</div>
-          </div>
-        </div>
-        <div class="urgency-stat-card brand">
-          <div class="urgency-stat-card__icon">⏱️</div>
-          <div class="urgency-stat-card__body">
-            <div class="urgency-stat-card__label">平均等待</div>
-            <div class="urgency-stat-card__value">{{ stats.avgWaitMin || 0 }}<span class="urgency-stat-card__unit">分</span></div>
-          </div>
-        </div>
-        <div class="urgency-stat-card danger">
-          <div class="urgency-stat-card__icon">🔥</div>
-          <div class="urgency-stat-card__body">
-            <div class="urgency-stat-card__label">最长等待</div>
-            <div class="urgency-stat-card__value">{{ stats.maxWaitMin || 0 }}<span class="urgency-stat-card__unit">分</span></div>
-          </div>
-        </div>
-      </div>
+      <stat-cards :cards="statsCards" :loading="statsLoading"></stat-cards>
 
       <!-- 2. 催菜订单列表 -->
       <el-card class="list-card" shadow="never">
@@ -380,7 +301,7 @@
           </el-table-column>
           <el-table-column label="菜品" min-width="200">
             <template slot-scope="{ row }">
-            <span class="dish-cell" :title="row.dishNames.join('、')">{{ row.displayDishes }}</span>
+            <span class="dish-cell" :title="row.displayDishes">{{ row.displayDishes }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="orderTime" label="下单时间" width="140" align="center"></el-table-column>
@@ -419,7 +340,7 @@
         </el-table>
 
         <div v-if="filteredOrders.length === 0 && !tableLoading" class="empty-state">
-          <div class="empty-state__icon">📋</div>
+          <div class="empty-state__icon"><i class="ri-file-list-3-line" aria-hidden="true"></i></div>
           <div>暂无待催订单</div>
           <div class="empty-state__desc">当前没有需要催菜的订单，所有订单均在正常制作中</div>
         </div>
@@ -517,7 +438,8 @@
   <script>
     /**
      * 紧急催菜页面
-     * 超时订单监控：调用 /api/urgency 系列接口，接口不可用时回退 Mock 数据
+     * 超时订单监控：数据源为真实订单（orders）与催单记录（urgency_record），
+     * 接口异常时展示空态，不回退假数据
      */
     new Vue({
       el: '#urgency-app',
@@ -545,6 +467,15 @@
         }
       },
       computed: {
+        // 统一 stat-cards 组件
+        statsCards: function () {
+          return [
+            { key: 'urgent', icon: 'ri-error-warning-line', label: '紧急订单', value: this.stats.urgentCount || 0, color: 'warning' },
+            { key: 'overdue', icon: 'ri-alarm-line', label: '超时订单', value: this.stats.overdueCount || 0, color: 'danger' },
+            { key: 'avg', icon: 'ri-timer-line', label: '平均等待', value: this.stats.avgWaitMin || 0, color: 'primary', unit: '分' },
+            { key: 'max', icon: 'ri-fire-line', label: '最长等待', value: this.stats.maxWaitMin || 0, color: 'danger', unit: '分' }
+          ]
+        },
         filteredOrders: function () {
           if (this.filterStatus === 'ALL') {
             return this.orders
@@ -583,13 +514,15 @@
                 if (res.code === 1 && payload) {
                   self.stats = Object.assign(self.stats, payload)
                 } else {
-                  self.applyMockStats()
+                  self.stats = { urgentCount: 0, overdueCount: 0, avgWaitMin: 0, maxWaitMin: 0 }
                 }
               })
-              .catch(function () { self.applyMockStats() })
+              .catch(function () {
+                self.stats = { urgentCount: 0, overdueCount: 0, avgWaitMin: 0, maxWaitMin: 0 }
+              })
               .then(function () { self.statsLoading = false })
           } catch (e) {
-            self.applyMockStats()
+            self.stats = { urgentCount: 0, overdueCount: 0, avgWaitMin: 0, maxWaitMin: 0 }
             self.statsLoading = false
           }
         },
@@ -607,24 +540,41 @@
                   } else if (payload.records && Array.isArray(payload.records)) {
                     self.orders = payload.records
                   } else {
-                    self.applyMockOrders()
+                    self.orders = []
                   }
                 } else {
-                  self.applyMockOrders()
+                  self.orders = []
                 }
                 self.orders.forEach(function (o) {
+                  // 兼容后端返回的 dishNames（逗号分隔字符串或数组）
                   if (o.dishNames && !o.displayDishes) {
-                    o.displayDishes = o.dishNames.join('、')
+                    o.displayDishes = Array.isArray(o.dishNames) ? o.dishNames.join('、') : String(o.dishNames)
+                  }
+                  // 兼容后端字段：waitMinutes -> remainingMin / countdown
+                  if (typeof o.waitMinutes === 'number' && typeof o.remainingMin !== 'number') {
+                    o.remainingMin = o.waitMinutes
                   }
                   if (typeof o.remainingMin === 'number' && !o.countdown) {
                     o.countdown = o.remainingMin + ' 分钟'
                   }
+                  // 兼容后端字段：progressPercent -> progress
+                  if (typeof o.progressPercent === 'number' && typeof o.progress !== 'number') {
+                    o.progress = o.progressPercent
+                  }
+                  // 兼容后端字段：createTime -> orderTime
+                  if (o.createTime && !o.orderTime) {
+                    o.orderTime = o.createTime
+                  }
+                  // 超时判定
+                  if (typeof o.remainingMin === 'number' && typeof o.isOverdue !== 'boolean') {
+                    o.isOverdue = o.remainingMin < 10
+                  }
                 })
               })
-              .catch(function () { self.applyMockOrders() })
+              .catch(function () { self.orders = [] })
               .then(function () { self.tableLoading = false })
           } catch (e) {
-            self.applyMockOrders()
+            self.orders = []
             self.tableLoading = false
           }
         },
@@ -638,16 +588,24 @@
                 if (res.code === 1 && payload) {
                   if (Array.isArray(payload)) {
                     self.queueList = payload
+                  } else if (payload.queueList && Array.isArray(payload.queueList)) {
+                    self.queueList = payload.queueList
+                    if (payload.currentTableNo) {
+                      self.currentCallTable = String(payload.currentTableNo)
+                    }
+                    if (typeof payload.waitCount === 'number') {
+                      self.waitingAheadCount = payload.waitCount
+                    }
                   } else {
-                    self.applyMockQueue()
+                    self.queueList = []
                   }
                 } else {
-                  self.applyMockQueue()
+                  self.queueList = []
                 }
               })
-              .catch(function () { self.applyMockQueue() })
+              .catch(function () { self.queueList = [] })
           } catch (e) {
-            self.applyMockQueue()
+            self.queueList = []
           }
         },
 
@@ -660,37 +618,15 @@
                 if (res.code === 1 && payload) {
                   self.summary = Object.assign(self.summary, payload)
                 } else {
-                  self.applyMockSummary()
+                  self.summary = { todayTotal: 0, completeRate: 0, avgResponseMin: 0 }
                 }
               })
-              .catch(function () { self.applyMockSummary() })
+              .catch(function () {
+                self.summary = { todayTotal: 0, completeRate: 0, avgResponseMin: 0 }
+              })
           } catch (e) {
-            self.applyMockSummary()
+            self.summary = { todayTotal: 0, completeRate: 0, avgResponseMin: 0 }
           }
-        },
-
-        // ============ Mock 数据 ============
-        applyMockStats: function () {
-          this.stats = { urgentCount: 3, overdueCount: 1, avgWaitMin: 14, maxWaitMin: 26 }
-        },
-        applyMockOrders: function () {
-          this.orders = [
-            { orderId: 10086, tableNo: 'A03', dishNames: ['宫保鸡丁', '米饭'], displayDishes: '宫保鸡丁、米饭', orderTime: '11:45', remainingMin: 8, countdown: '8 分钟', progress: 70, status: 'COOKING', isOverdue: false },
-            { orderId: 10085, tableNo: 'B07', dishNames: ['水煮鱼', '酸梅汤'], displayDishes: '水煮鱼、酸梅汤', orderTime: '11:30', remainingMin: 15, countdown: '15 分钟', progress: 45, status: 'COOKING', isOverdue: true },
-            { orderId: 10084, tableNo: 'C02', dishNames: ['干煸豆角', '米饭', '西红柿蛋汤'], displayDishes: '干煸豆角、米饭、西红柿蛋汤', orderTime: '11:52', remainingMin: 5, countdown: '5 分钟', progress: 85, status: 'COOKING', isOverdue: false },
-            { orderId: 10083, tableNo: 'D05', dishNames: ['糖醋里脊', '米饭'], displayDishes: '糖醋里脊、米饭', orderTime: '12:05', remainingMin: 22, countdown: '22 分钟', progress: 30, status: 'COOKING', isOverdue: true },
-            { orderId: 10082, tableNo: 'A06', dishNames: ['麻婆豆腐'], displayDishes: '麻婆豆腐', orderTime: '11:58', remainingMin: 0, countdown: '已上菜', progress: 100, status: 'DONE', isOverdue: false }
-          ]
-        },
-        applyMockQueue: function () {
-          this.queueList = [
-            { tableNo: 'A03', status: 'COOKING' },
-            { tableNo: 'B07', status: 'COOKING' },
-            { tableNo: 'C02', status: 'WAITING_CALL' }
-          ]
-        },
-        applyMockSummary: function () {
-          this.summary = { todayTotal: 26, completeRate: 88, avgResponseMin: 4 }
         },
 
         // ============ 数据规范化 ============
@@ -743,26 +679,17 @@
           const self = this
           const orderId = self.urgeOrder.orderId
           self.urgeLoading = true
-          try {
-            callOrder(orderId)
-              .then(function () {
-                self.urgeLoading = false
-                self.urgeDialogVisible = false
-                self.$message.success('催单已发送，后厨已收到提醒')
-                self.loadAllData()
-              })
-              .catch(function () {
-                self.urgeLoading = false
-                self.urgeDialogVisible = false
-                self.$message.success('已模拟发送催单')
-                self.loadAllData()
-              })
-          } catch (e) {
-            self.urgeLoading = false
-            self.urgeDialogVisible = false
-            self.$message.success('已模拟发送催单')
-            self.loadAllData()
-          }
+          callOrder(orderId)
+            .then(function () {
+              self.urgeLoading = false
+              self.urgeDialogVisible = false
+              self.$message.success('催单已发送，后厨已收到提醒')
+              self.loadAllData()
+            })
+            .catch(function () {
+              self.urgeLoading = false
+              self.$message.error('催单发送失败，请稍后重试')
+            })
         }
       }
     })

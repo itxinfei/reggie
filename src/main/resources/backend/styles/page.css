@@ -12,7 +12,7 @@
 /* ========== tableBar — 搜索筛选 + 操作按钮栏（统一设计规范） ========== */
 
 /* 主容器：flex row，控件紧靠，操作区推到右侧 */
-.dashboard-container .container .tableBar {
+.container .tableBar {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -22,7 +22,7 @@
 }
 
 /* 搜索区域（<table-bar> 组件使用，聚合搜索控件+查询/重置按钮） */
-.dashboard-container .container .tableBar .search-area {
+.container .tableBar .search-area {
   display: flex;
   align-items: center;
   flex: 0 1 auto;
@@ -32,53 +32,53 @@
 }
 
 /* 搜索区内的输入框：默认 200px */
-.dashboard-container .container .tableBar .search-area .el-input {
+.container .tableBar .search-area .el-input {
   flex: 0 1 200px;
   min-width: 150px;
   width: auto !important;
 }
 
 /* tableBar 内的输入框（不含 search-area）：默认 120px，窄屏可收缩 */
-.dashboard-container .container .tableBar > .el-input {
+.container .tableBar > .el-input {
   flex: 0 1 120px;
   min-width: 100px;
   width: auto;
 }
 
 /* 搜索区内的下拉框：默认 160px */
-.dashboard-container .container .tableBar .search-area .el-select {
+.container .tableBar .search-area .el-select {
   flex: 0 1 160px;
   min-width: 120px;
   width: auto !important;
 }
 
 /* tableBar 内的下拉框（不含 search-area）：默认 100px，窄屏可收缩 */
-.dashboard-container .container .tableBar > .el-select {
+.container .tableBar > .el-select {
   flex: 0 1 100px;
   min-width: 80px;
   width: auto;
 }
 
 /* 搜索区内的日期选择器：默认 340px */
-.dashboard-container .container .tableBar .search-area .el-date-editor {
+.container .tableBar .search-area .el-date-editor {
   flex: 0 1 340px;
   min-width: 260px;
   width: auto !important;
 }
 
 /* 搜索区内控件清除 Element UI 固定宽度冲突 */
-.dashboard-container .container .tableBar .search-area .el-input--small,
-.dashboard-container .container .tableBar .search-area .el-select--small {
+.container .tableBar .search-area .el-input--small,
+.container .tableBar .search-area .el-select--small {
   width: auto !important;
 }
 
 /* 搜索扩展插槽 */
-.dashboard-container .container .tableBar .search-area > .search-extra {
+.container .tableBar .search-area > .search-extra {
   flex: 0 0 auto;
 }
 
 /* 查询/重置按钮组 */
-.dashboard-container .container .tableBar .search-actions {
+.container .tableBar .search-actions {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -90,7 +90,7 @@
    ============================================ */
 
 /* 基础按钮尺寸 */
-.dashboard-container .container .tableBar .el-button:not(.el-button--text) {
+.container .tableBar .el-button:not(.el-button--text) {
   font-size: 13px;
   padding: 7px 15px;
   height: 32px;
@@ -100,104 +100,104 @@
 }
 
 /* --- 查询按钮：项目主色 var(--color-brand-500) --- */
-.dashboard-container .container .tableBar .btn-query {
+.container .tableBar .btn-query {
   background: var(--color-brand-500) !important;
   border: none !important;
   color: var(--legacy-333) !important;
   font-weight: 500;
 }
-.dashboard-container .container .tableBar .btn-query:hover {
+.container .tableBar .btn-query:hover {
   background: var(--color-brand-300) !important;
   color: var(--legacy-333) !important;
 }
-.dashboard-container .container .tableBar .btn-query.is-loading {
+.container .tableBar .btn-query.is-loading {
   background: var(--color-brand-500) !important;
 }
 
 /* --- 重置按钮：白底细边框（次要操作） --- */
-.dashboard-container .container .tableBar .btn-reset {
+.container .tableBar .btn-reset {
   background: var(--color-white);
   border: 1px solid var(--el-border-default);
   color: var(--el-text-regular);
 }
-.dashboard-container .container .tableBar .btn-reset:hover {
+.container .tableBar .btn-reset:hover {
   color: var(--color-brand-500);
   border-color: var(--legacy-fbe396);
   background: var(--color-brand-50);
 }
 
 /* --- 新增按钮：绿色（创建/添加） --- */
-.dashboard-container .container .tableBar .btn-add,
-.dashboard-container .container .tableBar .btn-action.el-button--success {
+.container .tableBar .btn-add,
+.container .tableBar .btn-action.el-button--success {
   background: var(--color-success) !important;
   border: none !important;
   color: var(--color-white) !important;
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
 }
-.dashboard-container .container .tableBar .btn-add:hover,
-.dashboard-container .container .tableBar .btn-action.el-button--success:hover {
+.container .tableBar .btn-add:hover,
+.container .tableBar .btn-action.el-button--success:hover {
   background: var(--color-success-dark) !important;
   box-shadow: 0 4px 14px rgba(103, 194, 58, 0.45);
 }
 
 /* --- 删除按钮：红色（危险操作） --- */
-.dashboard-container .container .tableBar .btn-delete,
-.dashboard-container .container .tableBar .btn-action.el-button--danger {
+.container .tableBar .btn-delete,
+.container .tableBar .btn-action.el-button--danger {
   background: var(--color-danger) !important;
   border: none !important;
   color: var(--color-white) !important;
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(245, 108, 108, 0.3);
 }
-.dashboard-container .container .tableBar .btn-delete:hover,
-.dashboard-container .container .tableBar .btn-action.el-button--danger:hover {
+.container .tableBar .btn-delete:hover,
+.container .tableBar .btn-action.el-button--danger:hover {
   background: var(--color-danger-dark) !important;
   box-shadow: 0 4px 14px rgba(245, 108, 108, 0.45);
 }
 
 /* --- 导出按钮：橙色（数据导出） --- */
-.dashboard-container .container .tableBar .btn-export,
-.dashboard-container .container .tableBar .btn-action.el-button--warning {
+.container .tableBar .btn-export,
+.container .tableBar .btn-action.el-button--warning {
   background: var(--color-warning) !important;
   border: none !important;
   color: var(--color-white) !important;
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(230, 162, 60, 0.3);
 }
-.dashboard-container .container .tableBar .btn-export:hover,
-.dashboard-container .container .tableBar .btn-action.el-button--warning:hover {
+.container .tableBar .btn-export:hover,
+.container .tableBar .btn-action.el-button--warning:hover {
   background: var(--color-warning-dark) !important;
   box-shadow: 0 4px 14px rgba(230, 162, 60, 0.45);
 }
 
 /* --- 刷新按钮：信息灰边框（数据刷新） --- */
-.dashboard-container .container .tableBar .btn-refresh {
+.container .tableBar .btn-refresh {
   background: var(--color-white);
   border: 1px solid var(--el-border-base);
   color: var(--color-info);
 }
-.dashboard-container .container .tableBar .btn-refresh:hover {
+.container .tableBar .btn-refresh:hover {
   color: var(--color-brand-500);
   border-color: var(--legacy-fbe396);
   background: var(--color-brand-50);
 }
 
 /* --- 预警按钮：橙色（库存预警等） --- */
-.dashboard-container .container .tableBar .btn-warning-status {
+.container .tableBar .btn-warning-status {
   background: var(--color-warning) !important;
   border: none !important;
   color: var(--color-white) !important;
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(230, 162, 60, 0.3);
 }
-.dashboard-container .container .tableBar .btn-warning-status:hover {
+.container .tableBar .btn-warning-status:hover {
   background: var(--color-warning-dark) !important;
   box-shadow: 0 4px 14px rgba(230, 162, 60, 0.45);
 }
 
 /* --- 操作按钮组（右侧，自动推到最右边） --- */
-.dashboard-container .container .tableBar .action-group {
+.container .tableBar .action-group {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -207,32 +207,32 @@
 }
 
 /* 操作按钮微悬浮效果 */
-.dashboard-container .container .tableBar .btn-action {
+.container .tableBar .btn-action {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
-.dashboard-container .container .tableBar .btn-action:hover {
+.container .tableBar .btn-action:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
-.dashboard-container .container .tableBox {
+.container .tableBox {
   width: 100%;
 }
 
-.dashboard-container .container .tableBox .el-image img {
+.container .tableBox .el-image img {
   width: 40px;
   border-radius: 5px;
 }
 
-.dashboard-container .container .pageList {
+.container .pageList {
   text-align: center;
   margin-top: 20px;
 }
 
 /* 修改点：tableLab 操作区推到右侧，与 action-group 行为一致 */
-.dashboard-container .container .tableBar .tableLab {
+.container .tableBar .tableLab {
   margin-left: auto;
 }
 
-.dashboard-container .container .tableLab .span-btn {
+.container .tableLab .span-btn {
   cursor: pointer;
   display: inline-block;
   font-size: 14px;
@@ -241,19 +241,19 @@
   border-right: solid 1px var(--el-border-soft);
 }
 
-.dashboard-container .container .tableLab .el-button {
+.container .tableLab .el-button {
   margin-left: 10px;
 }
 
 /* tableLab 中的文本按钮样式（用于批量操作） */
-.dashboard-container .container .tableLab .el-button--text {
+.container .tableLab .el-button--text {
   padding: 0 20px;
   font-size: 14px;
   color: var(--text-legacy-muted);
   position: relative;
 }
 
-.dashboard-container .container .tableLab .el-button--text::after {
+.container .tableLab .el-button--text::after {
   content: "";
   position: absolute;
   right: -6px;
@@ -425,20 +425,20 @@
 }
 
 /* 标准输入框宽度（弹窗表单内使用） */
-.dashboard-container .container .el-dialog .el-input,
-.dashboard-container .container .el-dialog .el-select,
-.dashboard-container .container .el-dialog .el-textarea__inner {
+.container .el-dialog .el-input,
+.container .el-dialog .el-select,
+.container .el-dialog .el-textarea__inner {
   width: 293px;
   max-width: 100%;
 }
-.dashboard-container .container .el-dialog .el-input--small,
-.dashboard-container .container .el-dialog .el-select--small {
+.container .el-dialog .el-input--small,
+.container .el-dialog .el-select--small {
   width: 200px;
   max-width: 100%;
 }
 /* 全宽输入框（弹窗内） */
-.dashboard-container .container .el-dialog .el-input--full,
-.dashboard-container .container .el-dialog .el-textarea__inner {
+.container .el-dialog .el-input--full,
+.container .el-dialog .el-textarea__inner {
   width: 100%;
 }
 
@@ -501,12 +501,12 @@
 }
 
 /* 搜索图标样式 */
-.dashboard-container .container .tableBar .el-input .search-icon {
+.container .tableBar .el-input .search-icon {
   cursor: pointer;
 }
 
 /* 文本按钮悬停效果 */
-.dashboard-container .container .tableLab .el-button--text:hover {
+.container .tableLab .el-button--text:hover {
   opacity: 0.8;
   transition: opacity 0.3s;
 }
@@ -544,7 +544,7 @@
 /* ========== tableBar 原生 HTML 页面回退样式（被 .search-area 覆盖的组件页不受影响） ========== */
 
 /* 筛选条件组（外卖配送等复杂筛选场景） */
-.dashboard-container .container .tableBar .filter-group {
+.container .tableBar .filter-group {
   display: flex;
   align-items: center;
   flex: 1;
@@ -554,9 +554,9 @@
 
 /* 原生 HTML 页面 tableBar 直接子控件统一间距（组件页由 .search-area 的 gap 控制） */
 /* 修改点：防止控件之间无间距导致按钮被贴紧/遮挡 */
-.dashboard-container .container .tableBar > .el-input,
-.dashboard-container .container .tableBar > .el-select,
-.dashboard-container .container .tableBar > .el-date-editor {
+.container .tableBar > .el-input,
+.container .tableBar > .el-select,
+.container .tableBar > .el-date-editor {
   margin-right: 8px !important;
 }
 
@@ -591,43 +591,43 @@
 
 /* --- 80px 下拉框（2字极短选项如启用/停用） --- */
 /* 修改点：不参与弹性收缩，保持固定宽度以区别内容长度 */
-.dashboard-container .container .tableBar .el-select--narrow-xxs {
+.container .tableBar .el-select--narrow-xxs {
   flex: 0 0 80px;
   min-width: 80px;
   width: auto;
 }
 
 /* --- 100px 下拉框（短选项如连接类型/状态） --- */
-.dashboard-container .container .tableBar .el-select--narrow-xs {
+.container .tableBar .el-select--narrow-xs {
   flex: 0 0 100px;
   width: auto;
 }
 
 /* --- 120px 下拉框（配送/打印/日志） --- */
-.dashboard-container .container .tableBar .el-select--wide-xs {
+.container .tableBar .el-select--wide-xs {
   flex: 0 1 120px;
   min-width: 90px;
   width: auto;
 }
 
 /* --- 120px 输入框（短文本如操作人、编号） --- */
-.dashboard-container .container .tableBar .el-input--wide-xs {
+.container .tableBar .el-input--wide-xs {
   flex: 0 1 120px;
   min-width: 90px;
   width: auto;
 }
 
 /* --- 130px 输入框/下拉框 --- */
-.dashboard-container .container .tableBar .el-input--narrow-sm,
-.dashboard-container .container .tableBar .el-select--narrow-sm {
+.container .tableBar .el-input--narrow-sm,
+.container .tableBar .el-select--narrow-sm {
   flex: 0 1 130px;
   min-width: 100px;
   width: auto;
 }
 
 /* --- 140px 输入框/下拉框 --- */
-.dashboard-container .container .tableBar .el-input--narrow-md,
-.dashboard-container .container .tableBar .el-select--narrow-md {
+.container .tableBar .el-input--narrow-md,
+.container .tableBar .el-select--narrow-md {
   flex: 0 1 140px;
   min-width: 110px;
   width: auto;
@@ -635,29 +635,29 @@
 
 /* --- 150px 输入框/下拉框（中等短文本/常规选项） --- */
 /* 修改点：命名留存，但语义已修正 —— 弹性基准 150px，可缩至 120px */
-.dashboard-container .container .tableBar .el-input--narrow,
-.dashboard-container .container .tableBar .el-select--narrow {
+.container .tableBar .el-input--narrow,
+.container .tableBar .el-select--narrow {
   flex: 0 1 150px;
   min-width: 120px;
   width: auto;
 }
 
 /* --- 180px 输入框（打印日志/搜索等） --- */
-.dashboard-container .container .tableBar .el-input--wide-sm {
+.container .tableBar .el-input--wide-sm {
   flex: 0 1 180px;
   min-width: 140px;
   width: auto;
 }
 
 /* --- 220px 输入框（菜品/套餐/分类/订单） --- */
-.dashboard-container .container .tableBar .el-input--wide {
+.container .tableBar .el-input--wide {
   flex: 0 1 220px;
   min-width: 160px;
   width: auto;
 }
 
 /* --- 500px 日期选择器（支付管理/datetimerange 等需要更宽空间的场景） --- */
-.dashboard-container .container .tableBar .el-date-editor--3xl {
+.container .tableBar .el-date-editor--3xl {
   flex: 0 1 500px;
   min-width: 320px;
   width: auto;
@@ -674,16 +674,16 @@
 /* ========== 弹窗宽度规范 ========== */
 
 /* 小弹窗：简单确认（删除、提示） */
-.dashboard-container .container .el-dialog--sm,
+.container .el-dialog--sm,
 .el-dialog--sm { width: 420px !important; }
 /* 中弹窗：详情展示 */
-.dashboard-container .container .el-dialog--md,
+.container .el-dialog--md,
 .el-dialog--md { width: 560px !important; }
 /* 大弹窗：常规表单（新增/编辑） */
-.dashboard-container .container .el-dialog--lg,
+.container .el-dialog--lg,
 .el-dialog--lg { width: 720px !important; }
 /* 超大弹窗：复杂表单（订单详情、菜品编辑） */
-.dashboard-container .container .el-dialog--xl,
+.container .el-dialog--xl,
 .el-dialog--xl { width: 840px !important; }
 
 /* ========== 弹窗垂直居中（全局生效，revised 2026-07-17） ==========
@@ -844,21 +844,21 @@
 
 /* ========== 表单 label-width 规范 ========== */
 
-.dashboard-container .container .el-form-item__label {
+.container .el-form-item__label {
   font-weight: 500;
   color: var(--el-text-regular);
 }
 /* 标准表单 label 宽度 */
-.dashboard-container .container .el-form--label-width-sm .el-form-item__label {
+.container .el-form--label-width-sm .el-form-item__label {
   width: 80px !important;
 }
-.dashboard-container .container .el-form--label-width-md .el-form-item__label {
+.container .el-form--label-width-md .el-form-item__label {
   width: 100px !important;
 }
-.dashboard-container .container .el-form--label-width-lg .el-form-item__label {
+.container .el-form--label-width-lg .el-form-item__label {
   width: 120px !important;
 }
-.dashboard-container .container .el-form--label-width-xl .el-form-item__label {
+.container .el-form--label-width-xl .el-form-item__label {
   width: 140px !important;
 }
 
@@ -866,27 +866,27 @@
 
 /* --- 尺寸规范 --- */
 /* tableBar 按钮统一 small（与输入框高度 32px 对齐） */
-.dashboard-container .container .tableBar .el-button {
+.container .tableBar .el-button {
   font-size: 13px;
   padding: 9px 15px;
   height: 32px;
   line-height: 1;
 }
 /* 修改点：确保 tableBar 内输入框与按钮高度完全一致 */
-.dashboard-container .container .tableBar .el-input .el-input__inner {
+.container .tableBar .el-input .el-input__inner {
   height: 32px;
   line-height: 32px;
 }
 /* 修改点：确保 tableBar 内下拉选择框与按钮高度完全一致 */
-.dashboard-container .container .tableBar .el-select .el-input__inner {
+.container .tableBar .el-select .el-input__inner {
   height: 32px;
   line-height: 32px;
 }
-.dashboard-container .container .tableBar .el-button [class*="el-icon"] {
+.container .tableBar .el-button [class*="el-icon"] {
   font-size: 13px;
 }
 /* dialog footer 按钮统一 medium */
-.dashboard-container .container .el-dialog .dialog-footer .el-button {
+.container .el-dialog .dialog-footer .el-button {
   font-size: 14px;
   min-width: 80px;
 }
@@ -940,15 +940,15 @@
 }
 
 /* --- dialog footer 按钮间距 --- */
-.dashboard-container .container .el-dialog .dialog-footer {
+.container .el-dialog .dialog-footer {
   text-align: right;
   padding-top: 16px;
   border-top: 1px solid var(--el-bg-page);
 }
-.dashboard-container .container .el-dialog .dialog-footer .el-button {
+.container .el-dialog .dialog-footer .el-button {
   margin-left: 10px;
 }
-.dashboard-container .container .el-dialog .dialog-footer .el-button:first-child {
+.container .el-dialog .dialog-footer .el-button:first-child {
   margin-left: 0;
 }
 
@@ -1327,38 +1327,38 @@
 
 /* 移动端 (≤768px)：纵向堆叠，search-area 和 action-group 各占满宽 */
 @media (max-width: 768px) {
-  .dashboard-container .container .el-dialog .el-input,
-  .dashboard-container .container .el-dialog .el-select {
+  .container .el-dialog .el-input,
+  .container .el-dialog .el-select {
     width: 100% !important;
   }
 
-  .dashboard-container .container .tableBar {
+  .container .tableBar {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
   }
 
-  .dashboard-container .container .tableBar .search-area {
+  .container .tableBar .search-area {
     flex-direction: column;
     align-items: stretch;
     width: 100%;
   }
 
-  .dashboard-container .container .tableBar .search-area .el-input,
-  .dashboard-container .container .tableBar .search-area .el-select,
-  .dashboard-container .container .tableBar .search-area .el-date-editor,
-  .dashboard-container .container .tableBar .el-input,
-  .dashboard-container .container .tableBar .el-select,
-  .dashboard-container .container .tableBar .el-date-editor {
+  .container .tableBar .search-area .el-input,
+  .container .tableBar .search-area .el-select,
+  .container .tableBar .search-area .el-date-editor,
+  .container .tableBar .el-input,
+  .container .tableBar .el-select,
+  .container .tableBar .el-date-editor {
     width: 100% !important;
     flex: 1 1 auto;
   }
 
-  .dashboard-container .container .tableBar .search-actions {
+  .container .tableBar .search-actions {
     flex-wrap: wrap;
   }
 
-  .dashboard-container .container .tableBar .action-group {
+  .container .tableBar .action-group {
     width: 100%;
     justify-content: flex-start;
   }
@@ -1371,36 +1371,36 @@
 
 /* 中等屏幕 (769px-1200px)：减小搜索控件弹性基准，压缩按钮 padding */
 @media (min-width: 769px) and (max-width: 1200px) {
-  .dashboard-container .container .tableBar {
+  .container .tableBar {
     gap: 8px;
   }
 
-  .dashboard-container .container .tableBar .search-area .el-input {
+  .container .tableBar .search-area .el-input {
     flex-basis: 160px;
     min-width: 120px;
   }
 
-  .dashboard-container .container .tableBar .search-area .el-select {
+  .container .tableBar .search-area .el-select {
     flex-basis: 130px;
     min-width: 100px;
   }
 
-  .dashboard-container .container .tableBar .search-area .el-date-editor {
+  .container .tableBar .search-area .el-date-editor {
     flex-basis: 220px;
     min-width: 180px;
   }
 
-  .dashboard-container .container .tableBar .search-actions {
+  .container .tableBar .search-actions {
     gap: 6px;
   }
 
-  .dashboard-container .container .tableBar .btn-action {
+  .container .tableBar .btn-action {
     padding: 6px 12px !important;
     font-size: 12px;
   }
 
-  .dashboard-container .container .tableBar .btn-query,
-  .dashboard-container .container .tableBar .btn-reset {
+  .container .tableBar .btn-query,
+  .container .tableBar .btn-reset {
     padding: 7px 12px !important;
   }
 }
@@ -1414,8 +1414,8 @@
          在 flex 父容器中无法精确垂直居中，small 尺寸下 line-height:30px < height:32px 导致偏移 */
 
 /* 通用日期范围选择器图标：移除 float，统一用 flex 居中 */
-.dashboard-container .container .tableBar .el-range-editor .el-range__icon,
-.dashboard-container .container .tableBar .el-range-editor .el-range__close-icon {
+.container .tableBar .el-range-editor .el-range__icon,
+.container .tableBar .el-range-editor .el-range__close-icon {
   float: none !important;
   display: inline-flex !important;
   align-items: center;
@@ -1428,8 +1428,8 @@
 }
 
 /* search-area 内日期选择器覆盖层级更高，确保生效 */
-.dashboard-container .container .tableBar .search-area .el-range-editor .el-range__icon,
-.dashboard-container .container .tableBar .search-area .el-range-editor .el-range__close-icon {
+.container .tableBar .search-area .el-range-editor .el-range__icon,
+.container .tableBar .search-area .el-range-editor .el-range__close-icon {
   float: none !important;
   display: inline-flex !important;
   align-items: center;
@@ -1442,7 +1442,7 @@
 }
 
 /* 日期分隔符（"至"）垂直居中 */
-.dashboard-container .container .tableBar .el-range-editor .el-range-separator {
+.container .tableBar .el-range-editor .el-range-separator {
   display: inline-flex !important;
   align-items: center;
   height: 100%;
@@ -1452,8 +1452,8 @@
 /* --- 2. search-area 容器整体美化 --- */
 
 /* 2.1 输入框/下拉框文字垂直居中（消除上下padding导致的不居中） */
-.dashboard-container .container .tableBar .search-area .el-input__inner,
-.dashboard-container .container .tableBar .search-area .el-select .el-input__inner {
+.container .tableBar .search-area .el-input__inner,
+.container .tableBar .search-area .el-select .el-input__inner {
   height: 32px;
   line-height: 32px;
   padding-top: 0;
@@ -1462,8 +1462,8 @@
 }
 
 /* 2.2 搜索前缀/后缀图标容器使用 flex 居中（替代绝对定位 + line-height） */
-.dashboard-container .container .tableBar .search-area .el-input__prefix,
-.dashboard-container .container .tableBar .search-area .el-input__suffix {
+.container .tableBar .search-area .el-input__prefix,
+.container .tableBar .search-area .el-input__suffix {
   display: flex;
   align-items: center;
   height: 100%;
@@ -1471,25 +1471,25 @@
   left: 5px;
 }
 
-.dashboard-container .container .tableBar .search-area .el-input__suffix {
+.container .tableBar .search-area .el-input__suffix {
   left: auto;
   right: 5px;
 }
 
-.dashboard-container .container .tableBar .search-area .el-input__prefix .el-input__icon,
-.dashboard-container .container .tableBar .search-area .el-input__suffix .el-input__icon {
+.container .tableBar .search-area .el-input__prefix .el-input__icon,
+.container .tableBar .search-area .el-input__suffix .el-input__icon {
   line-height: 1;
 }
 
 /* 2.3 统一占位符颜色与字号 */
-.dashboard-container .container .tableBar .search-area .el-input__inner::placeholder,
-.dashboard-container .container .tableBar .search-area .el-select .el-input__inner::placeholder {
+.container .tableBar .search-area .el-input__inner::placeholder,
+.container .tableBar .search-area .el-select .el-input__inner::placeholder {
   color: var(--el-border-base);
   font-size: 13px;
 }
 
 /* 2.4 搜索区按钮文字图标垂直对齐 */
-.dashboard-container .container .tableBar .search-area .search-actions {
+.container .tableBar .search-area .search-actions {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1497,7 +1497,7 @@
   height: 32px;
 }
 
-.dashboard-container .container .tableBar .search-area .search-actions .el-button {
+.container .tableBar .search-area .search-actions .el-button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1506,20 +1506,20 @@
   font-size: 13px;
 }
 
-.dashboard-container .container .tableBar .search-area .search-actions .el-button [class*="el-icon"] {
+.container .tableBar .search-area .search-actions .el-button [class*="el-icon"] {
   vertical-align: middle;
   line-height: 1;
 }
 
 /* 2.5 搜索区内所有表单控件统一中线对齐 */
-.dashboard-container .container .tableBar .search-area > .el-input,
-.dashboard-container .container .tableBar .search-area > .el-select,
-.dashboard-container .container .tableBar .search-area > .el-date-editor {
+.container .tableBar .search-area > .el-input,
+.container .tableBar .search-area > .el-select,
+.container .tableBar .search-area > .el-date-editor {
   vertical-align: middle;
 }
 
 /* 2.6 清除按钮图标垂直居中 */
-.dashboard-container .container .tableBar .search-area .el-input__clear {
+.container .tableBar .search-area .el-input__clear {
   display: flex;
   align-items: center;
   height: 100%;
@@ -1527,7 +1527,7 @@
 }
 
 /* 2.7 日期编辑器中 range-input 文字垂直居中 */
-.dashboard-container .container .tableBar .search-area .el-range-editor .el-range-input {
+.container .tableBar .search-area .el-range-editor .el-range-input {
   display: inline-flex;
   align-items: center;
   height: 100%;

@@ -3,7 +3,6 @@
 // Food Cost Report
 const getFoodCostReport = (params) => $axios({ url: '/report/enhanced/food-cost/report', method: 'get', params })
 const getFoodCostTrend = (params) => $axios({ url: '/report/enhanced/food-cost/trend', method: 'get', params })
-const getFoodCostByCategory = (params) => $axios({ url: '/report/enhanced/food-cost/category', method: 'get', params })
 const getFoodCostRanking = (params) => $axios({ url: '/report/enhanced/food-cost/ranking', method: 'get', params })
 
 // Enhanced Sales Report

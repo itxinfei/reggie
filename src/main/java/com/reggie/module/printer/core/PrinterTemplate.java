@@ -4,6 +4,7 @@ import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.printer.model.PrintJob;
 import com.reggie.module.printer.model.PrintLine;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
@@ -116,7 +117,10 @@ public class PrinterTemplate {
     }
 
     /**
-     * 生成配送单打印任务
+     * 生成外卖单打印任务（堂食配送/平台外卖通用）
+     *
+     * <p>平台外卖订单（platform_type 非空）额外输出平台名称与平台单号，
+     * 便于门店对照平台后台接单；自营配送单仅输出本地单号。</p>
      *
      * @param order   订单信息
      * @param details 订单明细列表
@@ -129,22 +133,72 @@ public class PrinterTemplate {
 
         List<PrintLine> lines = new ArrayList<>();
 
-        lines.add(new PrintLine("=== 配送单 ===", 3, true, PrintLine.Align.CENTER, PrintLine.LineType.TEXT));
-        lines.add(new PrintLine("平台: Reggie Takeout", 0, false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
-        lines.add(new PrintLine("订单号: " + order.getNumber(), 0, false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
+        lines.add(new PrintLine("=== 外卖单 ===", 3, true, PrintLine.Align.CENTER, PrintLine.LineType.TEXT));
+        boolean isPlatform = StringUtils.isNotBlank(order.getPlatformType());
+        lines.add(new PrintLine("平台: " + platformName(order.getPlatformType()), 1, true,
+                PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
+        if (isPlatform && StringUtils.isNotBlank(order.getPlatformOrderId())) {
+            lines.add(new PrintLine("平台单号: " + order.getPlatformOrderId(), 0, false,
+                    PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
+        }
+        lines.add(new PrintLine("订单号: " + order.getNumber(), 0, false,
+                PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
+        if (StringUtils.isNotBlank(order.getUserName())) {
+            lines.add(new PrintLine("顾客: " + order.getUserName(), 0, false,
+                    PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
+        }
+        if (StringUtils.isNotBlank(order.getPhone())) {
+            lines.add(new PrintLine("电话: " + order.getPhone(), 0, false,
+                    PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
+        }
         lines.add(new PrintLine("", 0, false, PrintLine.Align.LEFT, PrintLine.LineType.DIVIDER));
+        lines.add(new PrintLine("--- 菜品明细 ---", 0, true, PrintLine.Align.CENTER, PrintLine.LineType.TEXT));
 
         for (OrderDetail d : details) {
-            String line = d.getName() + " x" + d.getNumber();
+            String line = d.getName() + " x" + d.getNumber() + " = " + d.getAmount();
             lines.add(new PrintLine(line, 0, false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
         }
 
         lines.add(new PrintLine("", 0, false, PrintLine.Align.LEFT, PrintLine.LineType.DIVIDER));
-        lines.add(new PrintLine("配送地址: " + (order.getAddress() != null ? order.getAddress() : ""), 0, false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
-        lines.add(new PrintLine("预计送达: " + (order.getCheckoutTime() != null ? order.getCheckoutTime().format(DTF) : ""), 0, false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
+        lines.add(new PrintLine("合计: " + order.getAmount(), 1, true,
+                PrintLine.Align.RIGHT, PrintLine.LineType.TEXT));
+        if (StringUtils.isNotBlank(order.getAddress())) {
+            lines.add(new PrintLine("配送地址: " + order.getAddress(), 0, false,
+                    PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
+        }
+        if (StringUtils.isNotBlank(order.getRemark())) {
+            lines.add(new PrintLine("备注: " + order.getRemark(), 0, false,
+                    PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
+        }
+        lines.add(new PrintLine("下单时间: " + (order.getOrderTime() != null ? order.getOrderTime().format(DTF) : ""),
+                0, false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
 
         job.setLines(lines);
         return job;
+    }
+
+    /**
+     * 平台类型转中文展示名（供小票打印）
+     *
+     * @param platformType 平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER），为空按本店处理
+     * @return 中文名称
+     */
+    private String platformName(String platformType) {
+        if (StringUtils.isBlank(platformType)) {
+            return "本店";
+        }
+        switch (platformType.trim().toUpperCase()) {
+            case "MEITUAN":
+                return "美团";
+            case "ELEME":
+                return "饿了么";
+            case "DOUYIN":
+                return "抖音";
+            case "SELF":
+                return "本店";
+            default:
+                return platformType;
+        }
     }
 }
 

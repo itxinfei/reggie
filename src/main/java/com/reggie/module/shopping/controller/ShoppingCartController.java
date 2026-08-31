@@ -2,7 +2,9 @@ package com.reggie.module.shopping.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.R;
+import com.reggie.enums.DishStatus;
 import com.reggie.module.dish.model.Dish;
 import com.reggie.module.setmeal.model.Setmeal;
 import com.reggie.module.shopping.model.ShoppingCart;
@@ -65,22 +67,40 @@ public class ShoppingCartController {
         shoppingCart.setUserId(currentId);
 
         Long dishId = shoppingCart.getDishId();
+        Long currentTenantId = BaseContext.getCurrentTenantId();
 
-        // 从服务端获取菜品/套餐价格（防止客户端篡改）
+        // 从服务端获取菜品/套餐真实价格（防止客户端篡改）；
+        // 幽灵菜品拦截：不存在/已停售/跨租户的菜品或套餐一律拒绝加购，禁止保留客户端金额入库
         if (dishId != null) {
             Dish dish = dishService.getById(dishId);
-            if (dish != null) {
-                shoppingCart.setName(dish.getName());
-                shoppingCart.setImage(dish.getImage());
-                shoppingCart.setAmount(dish.getPrice());
+            if (dish == null) {
+                throw new CustomException("菜品不存在，无法加入购物车");
             }
+            if (currentTenantId != null && !currentTenantId.equals(dish.getTenantId())) {
+                throw new CustomException("无权使用其他门店的菜品");
+            }
+            if (dish.getStatus() == null || dish.getStatus() != DishStatus.ENABLED.getValue()) {
+                throw new CustomException("菜品「" + dish.getName() + "」已停售，无法加入购物车");
+            }
+            shoppingCart.setName(dish.getName());
+            shoppingCart.setImage(dish.getImage());
+            shoppingCart.setAmount(dish.getPrice());
         } else if (shoppingCart.getSetmealId() != null) {
             Setmeal setmeal = setmealService.getById(shoppingCart.getSetmealId());
-            if (setmeal != null) {
-                shoppingCart.setName(setmeal.getName());
-                shoppingCart.setImage(setmeal.getImage());
-                shoppingCart.setAmount(setmeal.getPrice());
+            if (setmeal == null) {
+                throw new CustomException("套餐不存在，无法加入购物车");
             }
+            if (currentTenantId != null && !currentTenantId.equals(setmeal.getTenantId())) {
+                throw new CustomException("无权使用其他门店的套餐");
+            }
+            if (setmeal.getStatus() == null || setmeal.getStatus() != DishStatus.ENABLED.getValue()) {
+                throw new CustomException("套餐「" + setmeal.getName() + "」已停用，无法加入购物车");
+            }
+            shoppingCart.setName(setmeal.getName());
+            shoppingCart.setImage(setmeal.getImage());
+            shoppingCart.setAmount(setmeal.getPrice());
+        } else {
+            throw new CustomException("缺少菜品或套餐ID，无法加入购物车");
         }
 
         LambdaQueryWrapper<ShoppingCart> queryWrapper = new LambdaQueryWrapper<>();

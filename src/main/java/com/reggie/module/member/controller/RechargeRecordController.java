@@ -46,7 +46,6 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/member/recharge")
 @Tag(name = "充值记录")
-@RequireEmployee
 public class RechargeRecordController {
 
     @Autowired
@@ -129,6 +128,7 @@ public class RechargeRecordController {
             item.put("phone", m != null ? m.getPhone() : "");
             item.put("amount", r.getAmount());
             item.put("giftAmount", r.getGiftAmount());
+            item.put("paymentMethod", r.getPaymentMethod());
             item.put("createdTime", r.getCreatedTime());
             enhancedRecords.add(item);
         }
@@ -150,6 +150,7 @@ public class RechargeRecordController {
      * @return 全平台充值总览数据（累计总额、今日/本月数据、近12月趋势、支付方式分布）
      */
     @GetMapping("/stats")
+    @RequireEmployee
     @Operation(summary = "充值统计", description = "获取全平台充值统计数据：累计总额、今日/本月金额与笔数、近12月趋势、支付方式分布")
     public R<Map<String, Object>> stats() {
         Long tenantId = BaseContext.getCurrentTenantId();

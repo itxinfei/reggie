@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>积分管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
@@ -26,6 +28,12 @@
     .type-tag.active { color: var(--el-color-primary); border-color: var(--el-color-primary); background: var(--el-color-primary-lighter); }
     .type-tag:hover { color: var(--el-color-primary); border-color: var(--el-color-primary-light); }
 
+    .adjust-member { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%;
+      padding: 10px 14px; background: var(--bg-subtle); border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm); font-size: var(--font-size-base); color: var(--text-primary) }
+    .adjust-member b { font-weight: 600 }
+    .adjust-member .ri-user-star-line { color: var(--color-brand-500); font-size: 18px }
+
     @media (max-width: 900px) {
       .stat-card { min-width: 140px; flex: 1 1 calc(50% - 8px); }
       .chart-panel { min-width: 100%; }
@@ -43,7 +51,9 @@
           <h1 class="ds-page-header__title" id="page-title">积分明细</h1>
           <p class="ds-page-header__subtitle">查看会员积分变动记录</p>
         </div>
-        <div class="ds-page-header__actions"></div>
+        <div class="ds-page-header__actions">
+          <el-button type="primary" size="small" icon="el-icon-plus" @click="openAdjust">积分调整</el-button>
+        </div>
       </header>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
       <stat-cards :cards="statsCards"></stat-cards>
@@ -51,11 +61,11 @@
       <!-- ===== 图表区 ===== -->
       <div class="chart-panels">
         <div class="chart-panel">
-          <div class="panel-title">📈 近30天积分趋势</div>
+          <div class="panel-title"><i class="ri-line-chart-line" aria-hidden="true"></i> 近30天积分趋势</div>
           <div class="chart-box" id="trendChart"></div>
         </div>
         <div class="chart-panel">
-          <div class="panel-title">🥧 积分类型分布</div>
+          <div class="panel-title"><i class="ri-pie-chart-2-line" aria-hidden="true"></i> 积分类型分布</div>
           <div class="chart-box" id="pieChart"></div>
         </div>
       </div>
@@ -104,6 +114,45 @@
         </template>
       </crud-table>
     </div>
+
+    <!-- ===== 积分调整弹窗（8.4.3：发放/扣减/说明） ===== -->
+    <crud-dialog title="积分调整" :visible.sync="adjustForm.dialogVisible" :submit-loading="adjustLoading" width="480px" @submit="submitAdjust">
+      <el-form :model="adjustForm" :rules="adjustRules" ref="adjustFormRef" label-width="90px" size="small">
+        <el-form-item label="会员手机：" prop="phone">
+          <div style="display:flex;gap:8px;width:100%;">
+            <el-input v-model="adjustForm.phone" placeholder="输入会员手机号" clearable style="flex:1" @keyup.enter.native="queryAdjustMember"></el-input>
+            <el-button :loading="memberLoading" @click="queryAdjustMember">查询</el-button>
+          </div>
+        </el-form-item>
+        <template v-if="adjustMember">
+          <el-form-item label="会员信息：">
+            <div class="adjust-member">
+              <i class="ri-user-star-line" aria-hidden="true"></i>
+              <span><b>{{ adjustMember.name }}</b>（{{ adjustMember.phone }}）</span>
+              <span>当前积分：<b style="color:var(--color-brand-500)">{{ adjustMember.points != null ? adjustMember.points : 0 }}</b></span>
+              <span>余额：<b>￥{{ formatMoney(adjustMember.balance) }}</b></span>
+            </div>
+          </el-form-item>
+          <el-form-item label="调整方式：" prop="adjustType">
+            <el-radio-group v-model="adjustForm.adjustType">
+              <el-radio-button label="IN">发放</el-radio-button>
+              <el-radio-button label="OUT">扣减</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="积分数量：" prop="points">
+            <el-input-number v-model="adjustForm.points" :min="1" :max="1000000" style="width:100%"></el-input-number>
+          </el-form-item>
+          <el-form-item label="调整说明：" prop="remark">
+            <el-input v-model="adjustForm.remark" placeholder="如：生日关怀赠送 / 活动补偿 / 违规扣减" maxlength="100"></el-input>
+          </el-form-item>
+        </template>
+        <div v-else-if="adjustSearched" class="empty-state" style="padding:20px;">
+          <div class="empty-state__icon"><i class="ri-user-unfollow-line" aria-hidden="true"></i></div>
+          <div>未找到该手机号的会员</div>
+          <div class="empty-state__desc">请核对手机号后重新查询</div>
+        </div>
+      </el-form>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -129,6 +178,13 @@
           stats: { totalPoints: 0, todayAcquired: 0, todayConsumed: 0,
             monthAcquired: 0, monthConsumed: 0, totalAcquired: 0, totalConsumed: 0, trend: [] },
           trendChart: null, pieChart: null,
+          // 积分调整弹窗（8.4.3）
+          adjustForm: { dialogVisible: false, phone: '', adjustType: 'IN', points: 100, remark: '' },
+          adjustLoading: false, memberLoading: false, adjustMember: null, adjustSearched: false,
+          adjustRules: {
+            phone: [{ required: true, message: '请输入会员手机号', trigger: 'blur' }],
+            points: [{ required: true, message: '请输入积分数量', trigger: 'change' }]
+          },
         // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
         columns: [
           { prop: 'memberName', label: '会员名称', width: 100 },
@@ -145,10 +201,10 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: '总积分', icon: '💎', label: '全平台总积分', value: self.fmtNum(self.stats.totalPoints), color: 'info' },
-            { key: '今日', icon: '📈', label: '今日获取', value: '+' + self.fmtNum(self.stats.todayAcquired), color: 'success' },
-            { key: '今日消耗', icon: '📉', label: '今日消耗', value: '-' + self.fmtNum(self.stats.todayConsumed), color: 'warning' },
-            { key: '收支', icon: '📊', label: '累计收支', value: '+' + self.fmtNum(self.stats.totalAcquired) + ' / -' + self.fmtNum(self.stats.totalConsumed), color: 'primary' }
+            { key: '总积分', icon: 'ri-vip-diamond-line', label: '全平台总积分', value: self.fmtNum(self.stats.totalPoints), color: 'info' },
+            { key: '今日', icon: 'ri-line-chart-line', label: '今日获取', value: '+' + self.fmtNum(self.stats.todayAcquired), color: 'success' },
+            { key: '今日消耗', icon: 'ri-line-chart-line', label: '今日消耗', value: '-' + self.fmtNum(self.stats.todayConsumed), color: 'warning' },
+            { key: '收支', icon: 'ri-bar-chart-2-line', label: '累计收支', value: '+' + self.fmtNum(self.stats.totalAcquired) + ' / -' + self.fmtNum(self.stats.totalConsumed), color: 'primary' }
           ]
         }
       },
@@ -166,8 +222,8 @@
         // 修改点：F9 性能 — 列表查询与全局统计分离，reloadStats=true 才重算
         async fetchData(reloadStats = true) {
           this.loading = true
-          var searchValues = this.searchValues || {}
-          const params = Object.assign({}, searchValues, { page: this.page, pageSize: this.pageSize })
+          // 修改点：搜索参数来源统一为 input（原读取未定义的 searchValues，导致手机号与类型筛选从未下发）
+          const params = Object.assign({}, this.input, { page: this.page, pageSize: this.pageSize })
           try {
             const requests = [pointsPage(params)]
             if (reloadStats) { requests.push(pointsStats()) }
@@ -239,6 +295,65 @@
         setType: function(t) { this.input.type = t; this.page = 1; this.fetchData(false) },
         handleQuery: function() { this.page = 1; this.fetchData(false) },
         reset: function() { this.input = { phone: '', type: '' }; this.page = 1; this.fetchData(false) },
+        // ===== 积分调整（8.4.3） =====
+        openAdjust: function() {
+          this.adjustForm.phone = ''
+          this.adjustForm.adjustType = 'IN'
+          this.adjustForm.points = 100
+          this.adjustForm.remark = ''
+          this.adjustMember = null
+          this.adjustSearched = false
+          this.adjustForm.dialogVisible = true
+          const self = this
+          this.$nextTick(function() { if (self.$refs.adjustFormRef) self.$refs.adjustFormRef.clearValidate() })
+        },
+        async queryAdjustMember() {
+          if (!this.adjustForm.phone || !this.adjustForm.phone.trim()) {
+            ReggieUI.warning('请输入会员手机号')
+            return
+          }
+          this.memberLoading = true
+          try {
+            const res = await memberByPhone(this.adjustForm.phone.trim())
+            if (String(res.code) === '1') {
+              this.adjustMember = res.data
+              this.adjustSearched = true
+            } else {
+              this.adjustMember = null
+              this.adjustSearched = true
+              ReggieUI.warning(res.msg || '未找到该会员')
+            }
+          } catch (e) {
+            console.warn('查询会员失败:', e)
+            ReggieUI.error('查询失败，请重试')
+          } finally {
+            this.memberLoading = false
+          }
+        },
+        submitAdjust: function() {
+          const self = this
+          this.$refs.adjustFormRef.validate(function(valid) {
+            if (!valid) return
+            if (!self.adjustMember) {
+              ReggieUI.warning('请先查询并选择会员')
+              return
+            }
+            const delta = self.adjustForm.adjustType === 'IN' ? self.adjustForm.points : -self.adjustForm.points
+            adjustPoints({
+              memberId: self.adjustMember.id,
+              points: delta,
+              remark: self.adjustForm.remark || ''
+            }).then(function(res) {
+              if (String(res.code) === '1') {
+                ReggieUI.success('积分调整成功')
+                self.adjustForm.dialogVisible = false
+                self.handleQuery()
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(function(e) { ReggieUI.error('请求失败：' + e) })
+          })
+        },
         // 修改点：F9 性能 — 覆盖 ReggieListMixin 分页方法，翻页不重算全局统计
         onPageChange: function(payload) {
           this.page = payload.page

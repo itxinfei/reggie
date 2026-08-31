@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>营销活动管理 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
     <script src="../../plugins/echarts/echarts.min.js"></script>
@@ -472,10 +474,10 @@
         statsCards: function() {
             const self = this;
             return [
-                { key: '', icon: '📋', label: '活动总数', value: self.summary.total, color: 'primary', clickable: true, active: self.activeKey === '' },
+                { key: '', icon: 'ri-file-list-3-line', label: '活动总数', value: self.summary.total, color: 'primary', clickable: true, active: self.activeKey === '' },
                 { key: '1', icon: '▶', label: '进行中', value: self.summary.active, color: 'success', clickable: true, active: self.activeKey === '1' },
-                { key: '0', icon: '📝', label: '草稿', value: self.summary.draft, color: 'warning', clickable: true, active: self.activeKey === '0' },
-                { key: 'pushed', icon: '📨', label: '推送消息数', value: self.summary.totalPushed, color: 'info' }
+                { key: '0', icon: 'ri-edit-2-line', label: '草稿', value: self.summary.draft, color: 'warning', clickable: true, active: self.activeKey === '0' },
+                { key: 'pushed', icon: 'ri-mail-send-line', label: '推送消息数', value: self.summary.totalPushed, color: 'info' }
             ]
         }
     },

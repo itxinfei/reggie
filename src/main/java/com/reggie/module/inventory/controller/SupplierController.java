@@ -67,6 +67,8 @@ public class SupplierController {
         qw.eq(status != null, Supplier::getStatus, status);
         qw.orderByDesc(Supplier::getUpdateTime);
         supplierService.page(pageInfo, qw);
+        // 修改点：8.3.3 批量回填采购汇总（累计采购金额/采购单笔数）
+        supplierService.fillPurchaseSummary(pageInfo.getRecords());
         return R.success(pageInfo);
     }
 

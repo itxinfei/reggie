@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.Version;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -111,4 +112,12 @@ public class DailySettlement implements Serializable {
 
     @Schema(description = "更新人")
     private Long updateUser;
+
+    /**
+     * 乐观锁版本号：保护 status/settlementTime/各项金额字段的并发更新。
+     * 与 executeSettlement 的 ConcurrentHashMap 幂等锁配合，双重防御重复日结/并发修改。
+     */
+    @Version
+    @Schema(description = "乐观锁版本号", example = "0")
+    private Integer version;
 }

@@ -34,16 +34,6 @@ public interface ReportEnhancedService {
     Map<String, Object> getFoodCostTrend(String startDate, String endDate, Long tenantId);
 
     /**
-     * Get food cost by category
-     *
-     * @param startDate Start date
-     * @param endDate   End date
-     * @param tenantId  Tenant ID
-     * @return Food cost by category
-     */
-    List<Map<String, Object>> getFoodCostByCategory(String startDate, String endDate, Long tenantId);
-
-    /**
      * Get food cost ranking
      *
      * @param startDate Start date

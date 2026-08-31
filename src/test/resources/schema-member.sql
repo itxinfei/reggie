@@ -40,6 +40,7 @@ CREATE TABLE member (
   create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
   update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  version int NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
   PRIMARY KEY (id)
 );
 

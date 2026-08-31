@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>库存记录 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
@@ -25,20 +27,23 @@
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
       <stat-cards :cards="statsCards"></stat-cards>
 
-      <!-- 修改点：使用 <table-bar> 统一组件替代手写 HTML -->
+      <!-- C.4：流水类型 Tab（全部/入库/出库，替代原类型下拉） -->
+      <el-tabs v-model="activeTab" class="flow-tabs" @tab-click="onTabClick">
+        <el-tab-pane label="全部" name="ALL"></el-tab-pane>
+        <el-tab-pane label="入库" name="IN"></el-tab-pane>
+        <el-tab-pane label="出库" name="OUT"></el-tab-pane>
+      </el-tabs>
+
+      <!-- 修改点：使用 <table-bar> 统一组件替代手写 HTML；C.4 加入/出为流水页内操作 -->
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
         @search="handleQuery"
-        @reset="reset">
+        @reset="reset"
+        @action="onAction">
         <template slot="search-extra">
           <el-select v-model="input.materialId" placeholder="食材" class="el-select--narrow" clearable filterable @change="handleQuery">
             <el-option v-for="item in materialOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
-          </el-select>
-          <el-select v-model="input.type" placeholder="类型" class="el-select--narrow-xs" clearable @change="handleQuery">
-            <el-option label="入库" value="IN"></el-option>
-            <el-option label="出库" value="OUT"></el-option>
-            <el-option label="盘点" value="CHECK"></el-option>
           </el-select>
           <el-date-picker v-model="input.dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd" class="el-date-editor--md" @change="handleQuery" size="small"></el-date-picker>
         </template>
@@ -63,10 +68,48 @@
             {{ row.type == 'IN' ? '入库' : row.type == 'OUT' ? '出库' : '盘点' }}
           </el-tag>
         </template>
+        <template #col-sourceDoc="{ row }">
+          <span v-if="row.bizId != null && String(row.bizId) !== '' && String(row.bizId) !== '0'" :title="row.remark || ''" style="cursor:default;">
+            {{ sourceDocText(row) }}
+          </span>
+          <span v-else style="color:var(--el-border-base);">-</span>
+        </template>
         <template #col-unitPrice="{ row }">￥{{ row.unitPrice }}</template>
         <template #col-totalAmount="{ row }">￥{{ row.totalAmount }}</template>
       </crud-table>
     </div>
+
+    <!-- C.4：入库/出库操作（流水页内新增，不再跳独立页） -->
+    <crud-dialog
+      :size="'md'"
+      :title="flowDialog.title"
+      :visible.sync="flowDialog.visible"
+      :submit-loading="flowSubmitting"
+      :close-on-click-modal="false"
+      @submit="submitFlow"
+    >
+      <el-form ref="flowForm" :model="flowForm" :rules="flowRules" label-width="90px" size="small">
+        <el-form-item :label="flowDialog.mode === 'in' ? '入库食材' : '出库食材'" prop="materialId">
+          <el-select v-model="flowForm.materialId" placeholder="请选择食材" filterable clearable style="width: 100%;" @change="onFlowMaterialChange">
+            <el-option v-for="item in materialOptions" :key="item.id" :label="item.name + (item.unit ? (' / ' + item.unit) : '')" :value="item.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="flowDialog.mode === 'in' ? '入库数量' : '出库数量'" prop="qty">
+          <el-input-number v-model="flowForm.qty" :min="0.01" :step="0.1" :precision="3" controls-position="right" style="width: 100%;"></el-input-number>
+          <span v-if="flowForm.unit" style="margin-left: var(--space-2); color: var(--text-muted); font-size: var(--font-size-xs);">{{ flowForm.unit }}</span>
+        </el-form-item>
+        <el-form-item label="单价">
+          <el-input-number v-model="flowForm.unitPrice" :min="0" :step="0.1" :precision="2" controls-position="right" style="width: 100%;"></el-input-number>
+          <span v-if="flowForm.unit" style="margin-left: var(--space-2); color: var(--text-muted); font-size: var(--font-size-xs);">元 / {{ flowForm.unit }}</span>
+        </el-form-item>
+        <el-form-item label="业务单号">
+          <el-input v-model="flowForm.bizId" placeholder="如采购单号（可选）" maxlength="64"></el-input>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="flowForm.remark" type="textarea" :rows="2" maxlength="200" placeholder="备注（可选）"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -92,20 +135,34 @@
             { prop: 'materialName', label: '食材名称', minWidth: 120 },
             { prop: 'type', label: '类型', width: 70, align: 'center', slot: true },
             { prop: 'quantity', label: '数量', width: 70, type: 'number' },
-            { prop: 'unitPrice', label: '单价', width: 80, align: 'right', slot: true, type: 'money' },
-            { prop: 'totalAmount', label: '总金额', width: 90, align: 'right', slot: true, type: 'money' },
+            { prop: 'unitPrice', label: '单价', width: 110, align: 'right', slot: true, type: 'money' },
+            { prop: 'totalAmount', label: '总金额', width: 110, align: 'right', slot: true, type: 'money' },
             
+            // 修改点：8.3.2 来源单据列（bizId + remark 追溯）
+            { prop: 'sourceDoc', label: '来源单据', width: 130, align: 'center', slot: true },
             { prop: 'operator', label: '操作员', width: 80, align: 'center' },
             { prop: 'remark', label: '备注', minWidth: 100 },
-            { prop: 'createdTime', label: '操作时间', width: 140, align: 'center' }
+            { prop: 'createdTime', label: '操作时间', width: 160, align: 'center' }
           ],
           // 统计
           stats: { totalRecords: 0, inCount: 0, outCount: 0, checkCount: 0 },
           // 修改点：<table-bar> 统一组件配置
           tableSearchItems: [],
-          tableActions: [],
+          tableActions: [
+            { key: 'in', text: '+ 入库', type: 'success', icon: 'el-icon-download' },
+            { key: 'out', text: '- 出库', type: 'danger', icon: 'el-icon-upload2' }
+          ],
           input: { materialId: '', type: '', dateRange: '' },
-          materialOptions: []
+          materialOptions: [],
+          // C.4：类型 Tab + 流水新增
+          activeTab: 'ALL',
+          flowDialog: { visible: false, mode: 'in', title: '入库' },
+          flowForm: { materialId: '', qty: 1, unitPrice: undefined, unit: '', bizId: '', remark: '' },
+          flowSubmitting: false,
+          flowRules: {
+            materialId: [{ required: true, message: '请选择食材', trigger: 'change' }],
+            qty: [{ required: true, message: '请输入数量', trigger: 'blur' }]
+          }
         }
       },
       created() {
@@ -117,10 +174,10 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: 'total', icon: '📝', label: '总记录数', value: self.stats.totalRecords || 0, color: 'primary' },
-            { key: 'in', icon: '📥', label: '入库次数', value: self.stats.inCount || 0, color: 'success' },
-            { key: 'out', icon: '📤', label: '出库次数', value: self.stats.outCount || 0, color: 'danger' },
-            { key: 'check', icon: '📋', label: '盘点次数', value: self.stats.checkCount || 0, color: 'info' }
+            { key: 'total', icon: 'ri-edit-2-line', label: '总记录数', value: self.stats.totalRecords || 0, color: 'primary' },
+            { key: 'in', icon: 'ri-download-2-line', label: '入库次数', value: self.stats.inCount || 0, color: 'success' },
+            { key: 'out', icon: 'ri-upload-2-line', label: '出库次数', value: self.stats.outCount || 0, color: 'danger' },
+            { key: 'check', icon: 'ri-file-list-3-line', label: '盘点次数', value: self.stats.checkCount || 0, color: 'info' }
           ]
         }
       },
@@ -184,6 +241,17 @@
             if (res.code === 1) this.materialOptions = res.data
           })
         },
+        // 修改点：8.3.2 来源单据文案（按 remark/type 推断单据类型）
+        sourceDocText(row) {
+          const biz = row.bizId
+          if (biz == null || String(biz) === '' || String(biz) === '0') return '-'
+          const r = row.remark || ''
+          if (r.indexOf('采购') > -1) return '采购单 #' + biz
+          if (r.indexOf('盘点') > -1) return '盘点单 #' + biz
+          if (row.type === 'IN') return '入库单 #' + biz
+          if (row.type === 'OUT') return '出库单 #' + biz
+          return '单据 #' + biz
+        },
         handleQuery() {
           this.page = 1
           this.fetchData(false)
@@ -205,6 +273,58 @@
           this.pageSize = val
           this.page = 1
           this.fetchData(false)
+        },
+        // ========== C.4：类型 Tab + 流水新增操作 ==========
+        onTabClick() {
+          this.input.type = this.activeTab === 'ALL' ? '' : this.activeTab
+          this.page = 1
+          this.fetchData(false)
+        },
+        onAction(payload) {
+          if (payload.key === 'in') { this.openFlow('in') }
+          else if (payload.key === 'out') { this.openFlow('out') }
+        },
+        openFlow(mode) {
+          this.flowDialog.mode = mode
+          this.flowDialog.title = mode === 'in' ? '入库登记' : '出库登记'
+          this.flowForm = { materialId: '', qty: 1, unitPrice: undefined, unit: '', bizId: '', remark: mode === 'in' ? '采购入库' : '生产领用' }
+          this.flowDialog.visible = true
+          if (this.$refs.flowForm) { this.$nextTick(() => this.$refs.flowForm.clearValidate()) }
+        },
+        onFlowMaterialChange(value) {
+          const item = this.materialOptions.find(m => m.id === value)
+          this.flowForm.unit = item ? (item.unit || '') : ''
+        },
+        submitFlow() {
+          if (this.flowSubmitting) return
+          const self = this
+          this.$refs.flowForm.validate(async (valid) => {
+            if (!valid) { ReggieUI.warning('请完善必填项'); return }
+            self.flowSubmitting = true
+            try {
+              const params = {
+                materialId: self.flowForm.materialId,
+                qty: Number(self.flowForm.qty),
+                unitPrice: self.flowForm.unitPrice === undefined || self.flowForm.unitPrice === '' ? null : Number(self.flowForm.unitPrice),
+                bizId: self.flowForm.bizId || '',
+                remark: self.flowForm.remark || '',
+                operator: self.flowForm.operator
+              }
+              const res = self.flowDialog.mode === 'in' ? await stockIn(params) : await stockOut(params)
+              if (res.code === 1) {
+                ReggieUI.success(self.flowDialog.mode === 'in' ? '入库成功' : '出库成功')
+                self.flowDialog.visible = false
+                self.page = 1
+                self.fetchData(true)
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            } catch (e) {
+              ReggieUI.error(self.flowDialog.mode === 'in' ? '入库失败，请重试' : '出库失败，请重试')
+            } finally {
+              self.flowSubmitting = false
+            }
+          })
         }
       }
     })

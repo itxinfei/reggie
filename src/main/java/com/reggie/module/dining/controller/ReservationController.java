@@ -10,6 +10,8 @@ import com.reggie.dto.CreateReservationDTO;
 import com.reggie.common.CustomException;
 import com.reggie.module.dining.model.Reservation;
 import com.reggie.common.LogMaskUtils;
+import com.reggie.module.dining.model.DiningTable;
+import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.module.dining.service.ReservationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -30,6 +32,12 @@ import javax.validation.Valid;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Max;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 预订管理控制器
@@ -47,6 +55,9 @@ public class ReservationController {
 
     @Autowired
     private ReservationService reservationService;
+
+    @Autowired
+    private DiningTableService diningTableService;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -91,6 +102,27 @@ public class ReservationController {
         }
         qw.orderByDesc(Reservation::getReservedTime);
         reservationService.page(pageInfo, qw);
+
+        // 回填桌台名称
+        List<Reservation> records = pageInfo.getRecords();
+        if (records != null && !records.isEmpty()) {
+            Set<Long> tableIds = records.stream()
+                    .map(Reservation::getTableId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            if (!tableIds.isEmpty()) {
+                List<DiningTable> tables = diningTableService.listByIds(tableIds);
+                Map<Long, String> tableNameMap = new HashMap<>();
+                for (DiningTable t : tables) {
+                    if (t != null && t.getId() != null) {
+                        tableNameMap.put(t.getId(), t.getName() != null ? t.getName() : "");
+                    }
+                }
+                for (Reservation r : records) {
+                    r.setTableName(tableNameMap.get(r.getTableId()));
+                }
+            }
+        }
         return R.success(pageInfo);
     }
 

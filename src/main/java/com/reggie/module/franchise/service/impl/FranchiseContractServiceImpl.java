@@ -7,6 +7,8 @@ import com.reggie.module.franchise.service.FranchiseContractService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+
 /**
  * 加盟合同服务实现
  *
@@ -16,4 +18,9 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 public class FranchiseContractServiceImpl extends ServiceImpl<FranchiseContractMapper, FranchiseContract> implements FranchiseContractService {
+
+    @Override
+    public Map<String, Object> statContracts(Long tenantId) {
+        return this.baseMapper.statContracts(tenantId);
+    }
 }

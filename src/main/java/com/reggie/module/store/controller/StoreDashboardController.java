@@ -40,18 +40,6 @@ public class StoreDashboardController {
     }
 
     /**
-     * 获取今日各门店实时订单数据
-     * @return 各门店实时订单数据
-     */
-    @GetMapping("/real-time")
-    @Operation(summary = "实时数据", description = "获取今日各门店实时订单数据")
-    public R<Map<String, Object>> realTime() {
-        // 实时数据通过StoreService获取
-        Map<String, Object> data = storeService.getAggregatedDashboard();
-        return R.success(data);
-    }
-
-    /**
      * 获取门店排行（按今日订单量）
      * @return 门店排行列表
      */

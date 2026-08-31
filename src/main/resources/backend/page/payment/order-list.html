@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>支付管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
@@ -23,7 +25,7 @@
       display: flex; align-items: center; justify-content: space-between;
       padding: 18px 24px;
       background: var(--color-brand-500);
-      color: var(--bg-surface);
+      color: var(--text-on-brand);
     }
     .pd-header-left { display: flex; align-items: center; gap: 12px; }
     .pd-number { font-size:var(--font-size-md); font-weight: 600; letter-spacing: 0.3px; }
@@ -40,7 +42,7 @@
     .pd-amount-icon {
       width: 48px; height: 48px; border-radius: var(--radius-lg);
       background: var(--color-brand-500);
-      color: var(--bg-surface); font-size: var(--font-size-2xl); font-weight: 700;
+      color: var(--text-on-brand); font-size: var(--font-size-2xl); font-weight: 700;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .pd-amount-label { font-size:var(--font-size-xs); color: var(--color-info); margin-bottom: 2px; }
@@ -303,9 +305,9 @@
             { prop: 'id', label: '交易流水号', minWidth: 130 },
             { prop: 'orderId', label: '订单号', minWidth: 110 },
             { prop: 'channel', label: '渠道', slot: true, width: 70, align: 'center' },
-            { prop: 'amount', label: '金额', slot: true, width: 80, type: 'money' },
+            { prop: 'amount', label: '金额', slot: true, width: 110, type: 'money' },
             { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
-            { prop: 'paidTime', label: '支付时间', width: 140, align: 'center' }
+            { prop: 'paidTime', label: '支付时间', width: 160, align: 'center' },
           ],
           // 缓存搜索参数
           lastSearch: {},
@@ -320,10 +322,10 @@
         statsCards: function() {
           const self = this
           return [
-            { key: '今日', icon: '💰', label: '今日支付订单', value: self.stats.todayPayments, color: 'primary', clickable: true, active: self.activeFilter === '今日' },
-            { key: '成功', icon: '✅', label: '支付成功', value: self.stats.successPayments, color: 'success', clickable: true, active: self.activeFilter === '成功' },
-            { key: '待支付', icon: '⏳', label: '待支付', value: self.stats.pendingPayments, color: 'warning', clickable: true, active: self.activeFilter === '待支付' },
-            { key: '失败', icon: '❌', label: '支付失败', value: self.stats.failedPayments, color: 'danger', clickable: true, active: self.activeFilter === '失败' }
+            { key: '今日', icon: 'ri-money-cny-circle-line', label: '今日支付订单', value: self.stats.todayPayments, color: 'primary', clickable: true, active: self.activeFilter === '今日' },
+            { key: '成功', icon: 'ri-checkbox-circle-line', label: '支付成功', value: self.stats.successPayments, color: 'success', clickable: true, active: self.activeFilter === '成功' },
+            { key: '待支付', icon: 'ri-time-line', label: '待支付', value: self.stats.pendingPayments, color: 'warning', clickable: true, active: self.activeFilter === '待支付' },
+            { key: '失败', icon: 'ri-close-circle-line', label: '支付失败', value: self.stats.failedPayments, color: 'danger', clickable: true, active: self.activeFilter === '失败' }
           ]
         }
       },
@@ -333,7 +335,8 @@
         async init(reloadStats = true) {
           this.loading = true
           const self = this
-          const params = {}
+          // 修改点：列表请求带上 lastSearch 筛选条件与分页参数（此前遗漏导致搜索/卡片筛选/分页全部失效）
+          const params = Object.assign({}, self.lastSearch, { page: self.page, pageSize: self.pageSize })
           const requests = [paymentPage(params)]
           if (reloadStats) { requests.push(self.loadPaymentStats()) }
           const results = await Promise.all(requests)
@@ -401,8 +404,8 @@
         // 修改点：statusTagType 支持中英文双输入（normalizePayment 后 status 已转中文）
         statusTagType: function(status) {
           if (!status) return ''
-          // 中文直查
-          const byLabel = {}
+          // 中文直查（normalizePayment 后 status 已是中文）
+          const byLabel = { '成功': 'success', '已支付': 'success', '待支付': 'warning', '失败': 'danger', '已退款': 'info' }
           if (byLabel[status]) return byLabel[status]
           // 兜底：英文 key 查
           return PAYMENT_STATUS_TAG[(status || '').toUpperCase()] || ''

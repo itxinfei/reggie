@@ -82,6 +82,11 @@ public class OrderController {
         orders.setRemark(dto.getRemark());
         orders.setPhone(dto.getPhone());
         orders.setIdempotencyKey(dto.getIdempotencyKey());
+        // 修改点：透传支付方式 / 预约配送时间 / 优惠券ID（原 DTO 无此三字段，
+        // C 端传来的值被静默丢弃，导致选券、预约配送、支付方式均不生效）
+        orders.setPayMethod(dto.getPayMethod());
+        orders.setExpectDeliveryTime(dto.getExpectDeliveryTime());
+        orders.setUsedCouponId(dto.getUsedCouponId());
         log.info("订单数据：手机号={}，地址ID={}",
             LogMaskUtils.maskPhone(orders.getPhone()),
             dto.getAddressBookId());
