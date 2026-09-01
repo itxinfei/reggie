@@ -4,83 +4,47 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>支付管理 - 瑞吉外卖管理端</title>
+  <title>支付管理 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
-    /* ========== Payment Detail Dialog ========== */
-    .pay-detail-dialog { border-radius: var(--radius-lg); overflow: hidden; animation: none !important; }
-    .pay-detail-dialog .el-dialog__header { padding: 0; display: none; }
-    .pay-detail-dialog .el-dialog__body { padding: 0; }
-    .pay-detail-dialog .dialog-footer { text-align: right; padding: 14px 20px 18px; }
-    .pay-detail-dialog .el-dialog__headerbtn { z-index: 10; }
+    /* ========== 支付详情弹窗（全站统一风格：分区标题 + dt 详情网格，对齐 store/list.html 样板） ========== */
+    .pay-detail .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .pay-detail .detail-title { font-size: var(--font-size-lg); font-weight: 600; color: var(--el-text-primary); }
+    .pay-detail .form-section-title {
+      font-size: var(--font-size-base); font-weight: 600; color: var(--el-text-primary);
+      margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px dashed var(--el-border-lighter2);
+    }
+    .pay-detail .form-section-title:first-of-type { margin-top: 4px; }
 
-    .pd-wrap { background: var(--bg-surface); border-radius: var(--radius-lg); overflow: hidden; }
+    /* 金额卡片（品牌金可读加深色，a11y：--el-color-primary #c99200 对比度达标） */
+    .pay-detail .amount-card {
+      display: flex; align-items: baseline; gap: 10px;
+      padding: 16px 18px; margin-bottom: 4px;
+      background: var(--bg-subtle); border: 1px solid var(--el-border-extra-light); border-radius: var(--radius-md);
+    }
+    .pay-detail .amount-card .amount-label { font-size: var(--font-size-sm); color: var(--text-muted); flex-shrink: 0; }
+    .pay-detail .amount-card .amount-value { font-size: var(--font-size-3xl); font-weight: 700; color: var(--el-color-primary); letter-spacing: -0.5px; }
 
-    /* Header bar */
-    .pd-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 18px 24px;
-      background: var(--color-brand-500);
-      color: var(--text-on-brand);
+    /* 详情字段网格 */
+    .pay-detail .detail-grid { border: 1px solid var(--el-border-extra-light); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 4px; }
+    .pay-detail .detail-grid .el-col {
+      display: flex; align-items: center;
+      padding: 9px 12px; border-bottom: 1px solid var(--el-border-extra-light);
+      border-right: 1px solid var(--el-border-extra-light);
     }
-    .pd-header-left { display: flex; align-items: center; gap: 12px; }
-    .pd-number { font-size:var(--font-size-md); font-weight: 600; letter-spacing: 0.3px; }
-    .pd-status-tag { border: none; font-weight: 600; }
-    .pd-header-right { font-size:var(--font-size-xs); opacity: 0.85; }
+    .pay-detail .detail-grid .el-col:nth-child(2n) { border-right: none; }
+    .pay-detail .detail-grid .el-col:nth-last-child(-n+2) { border-bottom: none; }
+    .pay-detail .detail-grid .el-col[class*="span-24"],
+    .pay-detail .detail-grid .el-col:last-child:nth-child(odd) { border-right: none; }
+    .pay-detail .dt-label { flex: 0 0 84px; color: var(--text-muted); font-size: var(--font-size-sm); }
+    .pay-detail .dt-value { flex: 1; color: var(--el-text-primary); font-size: var(--font-size-sm); word-break: break-all; }
 
-    /* Amount highlight */
-    .pd-amount-card {
-      display: flex; align-items: center; gap: 14px;
-      margin: 16px 20px 0; padding: 20px 24px;
-      background: var(--color-brand-50);
-      border: 1px solid var(--color-brand-100); border-radius: var(--radius-md);
-    }
-    .pd-amount-icon {
-      width: 48px; height: 48px; border-radius: var(--radius-lg);
-      background: var(--color-brand-500);
-      color: var(--text-on-brand); font-size: var(--font-size-2xl); font-weight: 700;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    }
-    .pd-amount-label { font-size:var(--font-size-xs); color: var(--color-info); margin-bottom: 2px; }
-    .pd-amount-value { font-size: var(--font-size-3xl); font-weight: 800; color: var(--color-brand-500); letter-spacing: -0.5px; }
-
-    /* Info grid */
-    .pd-info-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 0;
-      margin: 16px 20px 0;
-      border: 1px solid var(--el-border-light); border-radius: var(--radius-md); overflow: hidden;
-    }
-    .pd-info-item {
-      display: flex; align-items: flex-start; gap: 10px;
-      padding: 11px 16px; background: var(--bg-surface);
-      border-bottom: 1px solid var(--el-bg-subtle); min-height: 42px;
-    }
-    .pd-info-item:last-child, .pd-info-item:nth-last-child(2) { border-bottom: none; }
-    .pd-info-item--full { grid-column: 1 / -1; }
-    .pd-info-label { font-size:var(--font-size-sm); color: var(--color-info); width: 90px; flex-shrink: 0; line-height: 22px; }
-    .pd-info-value { font-size:var(--font-size-sm); color: var(--el-text-primary); font-weight: 500; line-height: 22px; word-break: break-all; }
-
-    /* Trade numbers */
-    .pd-trade-section {
-      margin: 16px 20px 0; padding: 16px 18px;
-      background: var(--el-bg-ghost); border: 1px solid var(--el-border-light); border-radius: var(--radius-md);
-    }
-    .pd-trade-title { font-size:var(--font-size-sm); font-weight: 700; color: var(--el-text-regular); margin-bottom: 10px; }
-    .pd-trade-row { display: flex; align-items: center; padding: 6px 0; font-size:var(--font-size-sm); }
-    .pd-trade-row .pd-trade-label { color: var(--color-info); width: 110px; flex-shrink: 0; }
-    .pd-trade-row .pd-trade-val { color: var(--el-text-primary); font-weight: 500; font-family: monospace; }
-
-    /* Close button */
-    .pd-close-btn {
-      width: 28px; height: 28px; border: none; background: var(--el-bg-lighter);
-      color: var(--el-text-regular); border-radius: var(--radius-md); cursor: pointer; font-size:var(--font-size-xl);
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.2s, transform 0.2s;
-    }
-    .pd-close-btn:hover { background: var(--el-border-lighter); transform: rotate(90deg); }
+    /* 列表金额列（等宽数字，替换行内 style） */
+    .amount-cell { font-weight: 600; }
   </style>
 </head>
 <body>
@@ -128,11 +92,11 @@
       >
         <template #col-channel="{ row }">
           <el-tag :type="row.channel === 'ALIPAY' ? 'primary' : 'success'" size="small">
-            {{ row.channel === 'ALIPAY' ? '支付宝' : '微信' }}
+            {{ channelLabel(row.channel) }}
           </el-tag>
         </template>
         <template #col-amount="{ row }">
-          <span style="font-weight:600;">&#165;{{ row.amount }}</span>
+          <span class="amount-cell">¥{{ row.amount }}</span>
         </template>
         <template #col-status="{ row }">
           <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
@@ -148,76 +112,47 @@
     <crud-dialog
       title="支付详情"
       :visible.sync="detailVisible"
-      :close-on-click-modal="true"
+      size="md"
       :show-submit="false"
-      :show-cancel="false"
-      @closed="detailForm = {}"
+      cancel-text="关 闭"
+      :close-on-click-modal="true"
+      @close="detailForm = {}"
     >
-      <div v-if="detailForm" class="pd-wrap">
-        <!-- 顶部标题栏 -->
-        <div class="pd-header">
-          <div class="pd-header-left">
-            <span class="pd-number">支付订单 #{{ detailForm.id }}</span>
-            <el-tag :type="statusTagType(detailForm.status)" size="small" effect="dark" class="pd-status-tag">
-              {{ statusLabel(detailForm.status) }}
-            </el-tag>
-          </div>
-          <div class="pd-header-right">
-            <button class="pd-close-btn" @click="detailVisible = false">&times;</button>
-          </div>
+      <div v-if="detailForm" class="pay-detail">
+        <!-- 头部概要：订单号 + 状态 -->
+        <div class="detail-header">
+          <span class="detail-title">支付订单 #{{ detailForm.id }}</span>
+          <el-tag :type="statusTagType(detailForm.status)" size="small" effect="plain">{{ statusLabel(detailForm.status) }}</el-tag>
         </div>
 
         <!-- 金额卡片 -->
-        <div class="pd-amount-card">
-          <div class="pd-amount-icon">&#165;</div>
-          <div>
-            <div class="pd-amount-label">支付金额</div>
-            <div class="pd-amount-value">&#165;{{ detailForm.amount }}</div>
-          </div>
+        <div class="amount-card">
+          <span class="amount-label">支付金额</span>
+          <span class="amount-value">¥{{ detailForm.amount }}</span>
         </div>
 
         <!-- 交易信息 -->
-        <div class="pd-trade-section">
-          <div class="pd-trade-title">交易信息</div>
-          <div class="pd-trade-row">
-            <span class="pd-trade-label">内部流水号</span>
-            <span class="pd-trade-val">{{ detailForm.tradeNo || '-' }}</span>
-          </div>
-          <div class="pd-trade-row">
-            <span class="pd-trade-label">渠道交易号</span>
-            <span class="pd-trade-val">{{ detailForm.channelTradeNo || '-' }}</span>
-          </div>
-          <div class="pd-trade-row">
-            <span class="pd-trade-label">支付渠道</span>
-            <span class="pd-trade-val">{{ detailForm.channel === 'ALIPAY' ? '支付宝' : detailForm.channel === 'WECHAT' ? '微信' : (detailForm.channel || '-') }}</span>
-          </div>
-          <div class="pd-trade-row">
-            <span class="pd-trade-label">关联订单号</span>
-            <span class="pd-trade-val">{{ detailForm.orderId || '-' }}</span>
-          </div>
-        </div>
+        <div class="form-section-title">交易信息</div>
+        <el-row :gutter="0" class="detail-grid">
+          <el-col :span="12"><span class="dt-label">内部流水号</span><span class="dt-value">{{ detailForm.tradeNo || '—' }}</span></el-col>
+          <el-col :span="12"><span class="dt-label">渠道交易号</span><span class="dt-value">{{ detailForm.channelTradeNo || '—' }}</span></el-col>
+          <el-col :span="12"><span class="dt-label">支付渠道</span><span class="dt-value">{{ channelLabel(detailForm.channel) }}</span></el-col>
+          <el-col :span="12"><span class="dt-label">关联订单号</span><span class="dt-value">{{ detailForm.orderId || '—' }}</span></el-col>
+        </el-row>
 
         <!-- 时间与状态 -->
-        <div class="pd-info-grid">
-          <div class="pd-info-item">
-            <span class="pd-info-label">支付状态</span>
-            <span class="pd-info-value">
-              <el-tag :type="statusTagType(detailForm.status)" size="small" effect="plain">{{ statusLabel(detailForm.status) }}</el-tag>
+        <div class="form-section-title">时间信息</div>
+        <el-row :gutter="0" class="detail-grid">
+          <el-col :span="12">
+            <span class="dt-label">支付状态</span>
+            <span class="dt-value">
+              <el-tag :type="statusTagType(detailForm.status)" size="small" effect="light">{{ statusLabel(detailForm.status) }}</el-tag>
             </span>
-          </div>
-          <div class="pd-info-item">
-            <span class="pd-info-label">支付时间</span>
-            <span class="pd-info-value">{{ detailForm.paidTime || '-' }}</span>
-          </div>
-          <div class="pd-info-item">
-            <span class="pd-info-label">渠道通知</span>
-            <span class="pd-info-value">{{ detailForm.notifyTime || '-' }}</span>
-          </div>
-          <div class="pd-info-item">
-            <span class="pd-info-label">创建时间</span>
-            <span class="pd-info-value">{{ detailForm.createdTime || '-' }}</span>
-          </div>
-        </div>
+          </el-col>
+          <el-col :span="12"><span class="dt-label">支付时间</span><span class="dt-value">{{ detailForm.paidTime || '—' }}</span></el-col>
+          <el-col :span="12"><span class="dt-label">渠道通知时间</span><span class="dt-value">{{ detailForm.notifyTime || '—' }}</span></el-col>
+          <el-col :span="12"><span class="dt-label">创建时间</span><span class="dt-value">{{ detailForm.createdTime || '—' }}</span></el-col>
+        </el-row>
       </div>
     </crud-dialog>
 
@@ -416,6 +351,12 @@
           if (/^[\u4e00-\u9fa5]+$/.test(status)) return status
           // 兜底：英文 key 查映射
           return PAYMENT_STATUS[(status || '').toUpperCase()] || (status || '-')
+        },
+        // 支付渠道中文映射（统一来源，供列表列与详情弹窗共用）
+        channelLabel: function(channel) {
+          if (!channel) return '-'
+          var map = { ALIPAY: '支付宝', WECHAT: '微信' }
+          return map[String(channel).toUpperCase()] || channel
         },
         viewDetail: function(row) {
           const normalized = normalizePayment(row)
