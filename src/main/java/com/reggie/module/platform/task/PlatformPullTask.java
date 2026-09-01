@@ -1,8 +1,11 @@
 package com.reggie.module.platform.task;
 
+import com.reggie.common.BaseContext;
 import com.reggie.module.platform.model.PlatformConfig;
 import com.reggie.module.platform.service.PlatformConfigService;
 import com.reggie.module.platform.service.PlatformSyncService;
+import com.reggie.module.tenant.model.Tenant;
+import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -34,29 +37,49 @@ public class PlatformPullTask {
     @Autowired
     private PlatformSyncService syncService;
 
+    @Autowired
+    private TenantService tenantService;
+
     /**
      * 每 30 秒拉取一次启用平台的订单
      * 注意：实际拉单间隔应通过配置中心或数据库配置动态调整
      */
     @Scheduled(fixedDelay = 30000)
     public void pullAllEnabledPlatformOrders() {
-        List<PlatformConfig> enabledConfigs = configService.listEnabledConfigs();
-        if (enabledConfigs == null || enabledConfigs.isEmpty()) {
+        List<Tenant> tenants = tenantService.listActiveTenants();
+        if (tenants == null || tenants.isEmpty()) {
             return;
         }
 
         String endTime = LocalDateTime.now().format(FORMATTER);
         String beginTime = LocalDateTime.now().minusMinutes(5).format(FORMATTER);
 
-        for (PlatformConfig config : enabledConfigs) {
+        for (Tenant tenant : tenants) {
+            Long originalTenantId = BaseContext.getCurrentTenantId();
+            BaseContext.setCurrentTenantId(tenant.getId());
             try {
-                log.info("[平台拉单] 开始拉单: platformType={}, shopId={}",
-                        config.getPlatformType(), config.getShopId());
-                syncService.pullOrders(config, beginTime, endTime);
-                log.info("[平台拉单] 完成拉单: platformType={}", config.getPlatformType());
-            } catch (Exception e) {
-                log.error("[平台拉单] 失败: platformType={}, shopId={}",
-                        config.getPlatformType(), config.getShopId(), e);
+                List<PlatformConfig> enabledConfigs = configService.listEnabledConfigs();
+                if (enabledConfigs == null || enabledConfigs.isEmpty()) {
+                    continue;
+                }
+
+                for (PlatformConfig config : enabledConfigs) {
+                    try {
+                        log.info("[平台拉单] 开始拉单: platformType={}, shopId={}",
+                                config.getPlatformType(), config.getShopId());
+                        syncService.pullOrders(config, beginTime, endTime);
+                        log.info("[平台拉单] 完成拉单: platformType={}", config.getPlatformType());
+                    } catch (Exception e) {
+                        log.error("[平台拉单] 失败: platformType={}, shopId={}",
+                                config.getPlatformType(), config.getShopId(), e);
+                    }
+                }
+            } finally {
+                if (originalTenantId != null) {
+                    BaseContext.setCurrentTenantId(originalTenantId);
+                } else {
+                    BaseContext.remove();
+                }
             }
         }
     }
