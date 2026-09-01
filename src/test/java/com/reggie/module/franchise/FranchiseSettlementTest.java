@@ -36,6 +36,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @Sql(scripts = "classpath:schema-franchise.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class FranchiseSettlementTest {
 
+    /** 当前结算周期：动态取系统月份（yyyy-MM），与造数订单的 orderTime=now() 同月，
+     *  避免硬编码 CURRENT_PERIOD 在跨月后导致订单落不到查询区间、orderCount=0 的回归。 */
+    private static final String CURRENT_PERIOD = java.time.YearMonth.now().toString();
+
     @Autowired
     private FranchiseeService franchiseeService;
 
@@ -104,7 +108,7 @@ public class FranchiseSettlementTest {
         createCompletedOrder(2L, new BigDecimal("10000.00"));
         createCompletedOrder(2L, new BigDecimal("5000.00"));
 
-        FranchiseSettlement st = franchiseSettlementService.generateSettlement(c.getId(), "2026-08");
+        FranchiseSettlement st = franchiseSettlementService.generateSettlement(c.getId(), CURRENT_PERIOD);
 
         assertNotNull(st.getId());
         assertEquals(2, st.getOrderCount());
@@ -121,7 +125,7 @@ public class FranchiseSettlementTest {
         FranchiseContract c = prepareContract(FranchiseContract.COMMISSION_TYPE_FIXED);
         createCompletedOrder(2L, new BigDecimal("20000.00"));
 
-        FranchiseSettlement st = franchiseSettlementService.generateSettlement(c.getId(), "2026-08");
+        FranchiseSettlement st = franchiseSettlementService.generateSettlement(c.getId(), CURRENT_PERIOD);
         // 固定抽成 3000
         assertEquals(0, new BigDecimal("3000.00").compareTo(st.getCommissionAmount()));
         assertEquals(0, new BigDecimal("17000.00").compareTo(st.getSettleAmount()));
@@ -132,8 +136,8 @@ public class FranchiseSettlementTest {
         FranchiseContract c = prepareContract(FranchiseContract.COMMISSION_TYPE_RATE);
         createCompletedOrder(2L, new BigDecimal("8000.00"));
 
-        FranchiseSettlement first = franchiseSettlementService.generateSettlement(c.getId(), "2026-08");
-        FranchiseSettlement second = franchiseSettlementService.generateSettlement(c.getId(), "2026-08");
+        FranchiseSettlement first = franchiseSettlementService.generateSettlement(c.getId(), CURRENT_PERIOD);
+        FranchiseSettlement second = franchiseSettlementService.generateSettlement(c.getId(), CURRENT_PERIOD);
         assertEquals(first.getId(), second.getId());
     }
 
@@ -150,7 +154,7 @@ public class FranchiseSettlementTest {
         pending.setOrderTime(LocalDateTime.now());
         orderService.save(pending);
 
-        FranchiseSettlement st = franchiseSettlementService.generateSettlement(c.getId(), "2026-08");
+        FranchiseSettlement st = franchiseSettlementService.generateSettlement(c.getId(), CURRENT_PERIOD);
         assertEquals(1, st.getOrderCount());
         assertEquals(0, new BigDecimal("6000.00").compareTo(st.getSalesAmount()));
     }
@@ -159,7 +163,7 @@ public class FranchiseSettlementTest {
     void testConfirmAndSettle() {
         FranchiseContract c = prepareContract(FranchiseContract.COMMISSION_TYPE_RATE);
         createCompletedOrder(2L, new BigDecimal("10000.00"));
-        FranchiseSettlement st = franchiseSettlementService.generateSettlement(c.getId(), "2026-08");
+        FranchiseSettlement st = franchiseSettlementService.generateSettlement(c.getId(), CURRENT_PERIOD);
 
         franchiseSettlementService.confirmSettlement(st.getId());
         FranchiseSettlement confirmed = franchiseSettlementService.getById(st.getId());
@@ -203,8 +207,8 @@ public class FranchiseSettlementTest {
 
         // 结算单：1 待确认、1 已确认、1 已结算
         createCompletedOrder(2L, new BigDecimal("5000.00"));
-        FranchiseSettlement s1 = franchiseSettlementService.generateSettlement(c1.getId(), "2026-08");
-        franchiseSettlementService.generateSettlement(c2.getId(), "2026-08");
+        FranchiseSettlement s1 = franchiseSettlementService.generateSettlement(c1.getId(), CURRENT_PERIOD);
+        franchiseSettlementService.generateSettlement(c2.getId(), CURRENT_PERIOD);
         franchiseSettlementService.confirmSettlement(s1.getId());
         franchiseSettlementService.settleSettlement(s1.getId());
 
