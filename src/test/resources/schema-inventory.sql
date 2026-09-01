@@ -11,6 +11,8 @@ DROP TABLE IF EXISTS purchase_order;
 DROP TABLE IF EXISTS stock_check;
 DROP TABLE IF EXISTS supplier;
 DROP TABLE IF EXISTS material_category;
+DROP TABLE IF EXISTS price_history;
+DROP TABLE IF EXISTS supplier_settlement;
 
 CREATE TABLE material_category (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -189,3 +191,40 @@ CREATE INDEX idx_dish_material_tenant_id ON dish_material(TENANT_ID);
 CREATE INDEX idx_dish_material_dish_id ON dish_material(DISH_ID);
 CREATE INDEX idx_dish_material_material_id ON dish_material(MATERIAL_ID);
 CREATE UNIQUE INDEX idx_dish_material_dish_material ON dish_material(TENANT_ID, DISH_ID, MATERIAL_ID);
+
+-- 价格历史记录表（H2 兼容）
+CREATE TABLE price_history (
+  ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
+  MATERIAL_ID bigint NOT NULL COMMENT '物料ID',
+  OLD_PRICE decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '旧价格',
+  NEW_PRICE decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '新价格',
+  CHANGE_REASON varchar(255) DEFAULT '' COMMENT '变动原因',
+  OPERATOR_ID bigint NOT NULL DEFAULT 0 COMMENT '操作人ID',
+  CREATE_TIME datetime NULL DEFAULT NULL COMMENT '创建时间',
+  PRIMARY KEY (ID)
+);
+CREATE INDEX idx_price_history_tenant_id ON price_history(TENANT_ID);
+CREATE INDEX idx_price_history_material_id ON price_history(MATERIAL_ID);
+CREATE INDEX idx_price_history_create_time ON price_history(CREATE_TIME);
+
+-- 供应商结算单表（H2 兼容）
+CREATE TABLE supplier_settlement (
+  ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
+  SUPPLIER_ID bigint NOT NULL COMMENT '供应商ID',
+  PERIOD varchar(20) NOT NULL COMMENT '结算周期',
+  TOTAL_AMOUNT decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '总金额',
+  PAID_AMOUNT decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '已付金额',
+  STATUS varchar(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态',
+  CREATE_TIME datetime NULL DEFAULT NULL COMMENT '创建时间',
+  UPDATE_TIME datetime NULL DEFAULT NULL COMMENT '更新时间',
+  CREATE_USER bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  UPDATE_USER bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  IS_DELETED int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (ID)
+);
+CREATE INDEX idx_supplier_settlement_tenant_id ON supplier_settlement(TENANT_ID);
+CREATE INDEX idx_supplier_settlement_supplier_id ON supplier_settlement(SUPPLIER_ID);
+CREATE INDEX idx_supplier_settlement_period ON supplier_settlement(PERIOD);
+CREATE INDEX idx_supplier_settlement_status ON supplier_settlement(STATUS);

@@ -27,10 +27,22 @@ public class DeliveryPlatformFactory {
     @Autowired
     private DouyinAdapter douyinAdapter;
 
+    /** 达达平台适配器 */
+    @Autowired
+    private DadaAdapter dadaAdapter;
+
+    /** 蜂鸟平台适配器 */
+    @Autowired
+    private FengniaoAdapter fengniaoAdapter;
+
+    /** 顺丰平台适配器 */
+    @Autowired
+    private ShunfengAdapter shunfengAdapter;
+
     /**
      * 根据平台类型获取对应的平台适配器
      *
-     * @param platform 平台类型（MEITUAN/ELEME/DOUYIN）
+     * @param platform 平台类型（MEITUAN/ELEME/DOUYIN/DADA/FENGNIAO/SHUNFENG）
      * @return 平台适配器实例
      * @throws IllegalArgumentException 当平台类型不支持时抛出
      */
@@ -43,6 +55,15 @@ public class DeliveryPlatformFactory {
         }
         if (PlatformEnum.DOUYIN.name().equals(platform)) {
             return douyinAdapter;
+        }
+        if ("DADA".equals(platform)) {
+            return dadaAdapter;
+        }
+        if ("FENGNIAO".equals(platform)) {
+            return fengniaoAdapter;
+        }
+        if ("SHUNFENG".equals(platform)) {
+            return shunfengAdapter;
         }
         throw new IllegalArgumentException("不支持的外卖平台: " + platform);
     }
