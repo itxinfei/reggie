@@ -13,29 +13,29 @@
     .inv-container { padding: 16rem 16rem 40rem; }
 
     /* 订单信息卡 */
-    .order-card { background: #fff; border-radius: 12rem; padding: 16rem 18rem; margin-bottom: 16rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
-    .order-row { display: flex; justify-content: space-between; align-items: center; padding: 6rem 0; font-size: 14rem; color: #333; }
-    .order-row .mono { font-family: var(--font-family-number, monospace); color: #666; font-size: 13rem; }
-    .order-row .price { color: var(--color-primary, #ffc200); font-weight: 700; font-size: 16rem; }
+    .order-card { background: var(--bg-card); border-radius: 12rem; padding: 16rem 18rem; margin-bottom: 16rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
+    .order-row { display: flex; justify-content: space-between; align-items: center; padding: 6rem 0; font-size: 14rem; color: var(--color-text-primary); }
+    .order-row .mono { font-family: var(--font-family-number, monospace); color: var(--color-text-secondary); font-size: 13rem; }
+    .order-row .price { color: var(--color-primary); font-weight: 700; font-size: 16rem; }
 
     /* 发票状态卡 */
-    .status-card { background: #fff; border-radius: 12rem; padding: 18rem; margin-bottom: 16rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
+    .status-card { background: var(--bg-card); border-radius: 12rem; padding: 18rem; margin-bottom: 16rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
     .status-card .status-line { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rem; }
-    .status-card .status-title { font-size: 15rem; font-weight: 600; color: #333; }
-    .rec-row { font-size: 13rem; color: #666; padding: 4rem 0; line-height: 1.6; }
+    .status-card .status-title { font-size: 15rem; font-weight: 600; color: var(--color-text-primary); }
+    .rec-row { font-size: 13rem; color: var(--color-text-secondary); padding: 4rem 0; line-height: 1.6; }
     .rec-row .mono { font-family: var(--font-family-number, monospace); }
     .view-btn { margin-top: 12rem; }
 
     /* 申请区 */
-    .apply-wrap { background: #fff; border-radius: 12rem; padding: 18rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
-    .section-title { font-size: 15rem; font-weight: 600; color: #333; margin-bottom: 12rem; }
-    .title-item { display: flex; align-items: center; justify-content: space-between; padding: 12rem 4rem; border-bottom: 1rem solid #f5f5f5; }
-    .title-item .tax { font-size: 12rem; color: #999; }
-    .title-item .del { color: #bbb; font-size: 18rem; padding: 4rem; }
-    .empty-tip { text-align: center; color: #999; font-size: 13rem; padding: 20rem 0 12rem; }
-    .new-title-title { font-size: 14rem; font-weight: 600; color: #333; margin: 18rem 0 4rem; }
+    .apply-wrap { background: var(--bg-card); border-radius: 12rem; padding: 18rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
+    .section-title { font-size: 15rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: 12rem; }
+    .title-item { display: flex; align-items: center; justify-content: space-between; padding: 12rem 4rem; border-bottom: 1rem solid var(--border-light); }
+    .title-item .tax { font-size: 12rem; color: var(--color-text-hint); }
+    .title-item .del { color: var(--color-text-disabled); font-size: 18rem; padding: 4rem; }
+    .empty-tip { text-align: center; color: var(--color-text-hint); font-size: 13rem; padding: 20rem 0 12rem; }
+    .new-title-title { font-size: 14rem; font-weight: 600; color: var(--color-text-primary); margin: 18rem 0 4rem; }
     .apply-btn { margin-top: 20rem; }
-    .tip { font-size: 12rem; color: #999; margin-top: 10rem; line-height: 1.6; }
+    .tip { font-size: 12rem; color: var(--color-text-hint); margin-top: 10rem; line-height: 1.6; }
   </style>
 </head>
 <body>

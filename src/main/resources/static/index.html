@@ -4,15 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>瑞吉外卖 · 测试导航</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css">
+  <link rel="stylesheet" href="/backend/plugins/remixicon/remixicon.css">
   <style>
     :root {
-      --primary: #1890ff;
+      --primary: #ffc200;
+      --primary-light: #fff8e0;
       --text-1: #1f2937;
       --text-2: #4b5563;
       --text-3: #9ca3af;
       --border: #e5e7eb;
-      --bg: #f3f4f6;
+      --bg: #f5f6fa;
       --card: #ffffff;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -53,9 +54,10 @@
     }
     tbody tr:last-child td { border-bottom: none; }
     tbody tr { transition: background 200ms ease; }
-    tbody tr:hover { background: #f0f7ff; }
+    tbody tr:hover { background: var(--primary-light); }
     .app { font-weight: 500; color: var(--text-1); white-space: nowrap; }
-    .app .icon { margin-right: 6px; }
+    .app .icon { margin-right: 6px; display: inline-flex; align-items: center; }
+    .app .icon i { font-size: 18px; vertical-align: middle; }
     .url { font-family: Consolas, Monaco, monospace; font-size: 13px; color: var(--primary); }
     .url a { color: var(--primary); text-decoration: none; }
     .url a:hover { text-decoration: underline; }

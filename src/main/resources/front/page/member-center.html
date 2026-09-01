@@ -81,6 +81,9 @@
     .mc-benefit-icon { width: 48rem; height: 48rem; margin: 0 auto 8rem; border-radius: var(--radius-lg);
       display: flex; align-items: center; justify-content: center; font-size: 24rem; }
     .mc-benefit-icon.locked { opacity: 0.4; filter: grayscale(0.8); }
+    .mc-benefit-icon--gold { background: rgba(255, 194, 0, 0.12); }
+    .mc-benefit-icon--green { background: rgba(103, 194, 58, 0.1); }
+    .mc-benefit-icon--purple { background: rgba(139, 92, 246, 0.1); }
     .mc-benefit-name { font-size: 12rem; color: var(--color-text-primary); font-weight: 500; }
     .mc-benefit-desc { font-size: 10rem; color: var(--color-text-hint); margin-top: 2rem; }
 
@@ -213,23 +216,23 @@
       <div class="mc-section-title"><i class="ri-medal-line"></i> 会员权益</div>
       <div class="mc-benefits">
         <div class="mc-benefit">
-          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(245,158,11,0.1);"><i class="ri-vip-diamond-line"></i></div>
+          <div class="mc-benefit-icon mc-benefit-icon--gold" :class="{locked: !memberInfo || !memberInfo.isMember}"><i class="ri-vip-diamond-line"></i></div>
           <div class="mc-benefit-name">等级折扣</div>
           <div class="mc-benefit-desc" v-if="memberInfo && memberInfo.level && memberInfo.level.discount != null">{{ (memberInfo.level.discount * 100).toFixed(0) }}折优惠</div>
           <div class="mc-benefit-desc" v-else>按等级享优惠</div>
         </div>
         <div class="mc-benefit">
-          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(34,197,94,0.1);"><i class="ri-gift-line"></i></div>
+          <div class="mc-benefit-icon mc-benefit-icon--green" :class="{locked: !memberInfo || !memberInfo.isMember}"><i class="ri-gift-line"></i></div>
           <div class="mc-benefit-name">积分奖励</div>
           <div class="mc-benefit-desc">消费获积分</div>
         </div>
         <div class="mc-benefit">
-          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(59,130,246,0.1);"><i class="ri-coupon-line"></i></div>
+          <div class="mc-benefit-icon mc-benefit-icon--gold" :class="{locked: !memberInfo || !memberInfo.isMember}"><i class="ri-coupon-line"></i></div>
           <div class="mc-benefit-name">专属优惠券</div>
           <div class="mc-benefit-desc">会员专享券</div>
         </div>
         <div class="mc-benefit">
-          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(139,92,246,0.1);"><i class="ri-cake-2-line"></i></div>
+          <div class="mc-benefit-icon mc-benefit-icon--purple" :class="{locked: !memberInfo || !memberInfo.isMember}"><i class="ri-cake-2-line"></i></div>
           <div class="mc-benefit-name">生日礼遇</div>
           <div class="mc-benefit-desc">生日双倍积分</div>
         </div>
