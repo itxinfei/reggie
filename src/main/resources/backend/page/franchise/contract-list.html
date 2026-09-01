@@ -24,8 +24,8 @@
         <div class="ds-page-header__actions"></div>
       </header>
 
-      <!-- 统计卡片 -->
-      <stat-cards :cards="statsCards"></stat-cards>
+      <!-- 修改点：统计卡片支持点击筛选（点击总数/生效中/已终止按状态过滤数据） -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
       <!-- 搜索 + 操作栏 -->
       <table-bar
@@ -201,6 +201,8 @@
             contractNo: [{ required: true, whitespace: true, message: '请输入合同编号', trigger: 'blur' }]
           },
           searchValues: {},
+          // 修改点：当前激活的统计卡片 key（'' 全部 / '1' 生效中 / '0' 已终止）
+          activeFilter: '',
           // 后端聚合统计（总数/生效/终止/关联加盟商数）
           stats: {}
         }
@@ -208,15 +210,15 @@
       created() {
         this.loadFranchisees()
         this.loadStats()
-        this.init()
+        this.init(true)
       },
       computed: {
         statsCards() {
           const s = this.stats || {}
           return [
-            { key: 'total', icon: 'el-icon-document', label: '合同总数', value: s.total || 0, color: 'primary' },
-            { key: 'active', icon: 'el-icon-circle-check', label: '生效中', value: s.active || 0, color: 'success' },
-            { key: 'expired', icon: 'el-icon-circle-close', label: '已终止', value: s.expired || 0, color: 'info' },
+            { key: '', icon: 'el-icon-document', label: '合同总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+            { key: '1', icon: 'el-icon-circle-check', label: '生效中', value: s.active || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
+            { key: '0', icon: 'el-icon-circle-close', label: '已终止', value: s.expired || 0, color: 'info', clickable: true, active: this.activeFilter === '0' },
             { key: 'franchisees', icon: 'el-icon-office-building', label: '关联加盟商', value: s.franchiseeCount || 0, color: 'warning' }
           ]
         }
@@ -257,46 +259,87 @@
             console.warn('加载加盟商下拉失败:', err)
           }
         },
-        async init() {
+        // 修改点：列表数据拉取（后端分页，返回 records/total）
+        // reloadStats=true 时并行重载统计卡片；搜索/卡片筛选时传 false 不重算
+        async init(reloadStats) {
+          if (reloadStats === undefined) { reloadStats = true }
           this.loading = true
-          const sv = this.searchValues || {};
+          const sv = Object.assign({}, this.searchValues)
+          // 卡片筛选与 searchValues 互斥，卡片优先级更高
+          if (this.activeFilter !== '') {
+            sv.status = Number(this.activeFilter)
+          } else {
+            delete sv.status
+          }
           const params = Object.assign({}, sv, { page: this.page, pageSize: this.pageSize })
           try {
-            const res = await contractPage(params)
+            var requests = [contractPage(params)]
+            if (reloadStats) { requests.push(this.loadStatsPromise()) }
+            var results = await Promise.all(requests)
+            var res = results[0]
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
               this.counts = res.data.total
             } else {
               ReggieUI.error(res.msg || '操作失败')
             }
+            if (reloadStats && results[1]) {
+              var statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1' && statsRes.data) {
+                this.stats = statsRes.data
+              }
+            }
           } catch (err) {
             ReggieUI.error('请求失败：' + err)
+          } finally {
+            this.loading = false
           }
-          this.loading = false
+        },
+        // 修改点：加载统计卡片数据（供 Promise.all 并行）
+        async loadStatsPromise() {
+          try {
+            const res = await contractStats()
+            if (res && String(res.code) === '1') {
+              return { code: 1, data: res.data || {} }
+            }
+          } catch (err) {
+            if (err.message !== 'NOTLOGIN') {
+              console.warn('加载合同统计失败:', err)
+            }
+          }
+          return { code: 0 }
         },
         // table-bar 回调
         onSearch(searchParams) {
           this.searchValues = searchParams
+          this.activeFilter = ''
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onReset() {
           this.searchValues = {}
+          this.activeFilter = ''
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onAction(payload) {
           if (payload.key === 'add') this.addHandle()
         },
+        // 统计卡片点击 — 按状态筛选数据
+        onCardClick(payload) {
+          this.activeFilter = payload.activeKey
+          this.page = 1
+          this.init(false)
+        },
         // 分页
         onPageChange(payload) {
           this.page = payload.page
-          this.init()
+          this.init(false)
         },
         onSizeChange(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.page = 1
-          this.init()
+          this.init(false)
         },
         // CRUD 操作
         addHandle() {

@@ -40,8 +40,8 @@
         <div class="ds-page-header__actions"></div>
       </header>
 
-      <!-- 统计卡片 -->
-      <stat-cards :cards="statsCards"></stat-cards>
+      <!-- 修改点：统计卡片支持点击筛选（点击总数/待确认/已确认/已结算按状态过滤数据） -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
       <!-- 搜索 + 操作栏 -->
       <table-bar
@@ -208,6 +208,8 @@
             settlePeriod: [{ required: true, message: '请选择结算周期', trigger: 'change' }]
           },
           searchValues: {},
+          // 修改点：当前激活的统计卡片 key（'' 全部 / '0' 待确认 / '1' 已确认 / '2' 已结算）
+          activeFilter: '',
           // 后端聚合统计（总数/待确认/已确认/已结算）
           stats: {}
         }
@@ -220,10 +222,10 @@
         statsCards() {
           const s = this.stats || {}
           return [
-            { key: 'total', icon: 'el-icon-document', label: '结算单总数', value: s.total || 0, color: 'primary' },
-            { key: 'pending', icon: 'el-icon-time', label: '待确认', value: s.pending || 0, color: 'warning' },
-            { key: 'confirmed', icon: 'el-icon-circle-check', label: '已确认', value: s.confirmed || 0, color: 'success' },
-            { key: 'settled', icon: 'el-icon-finished', label: '已结算', value: s.settled || 0, color: 'info' }
+            { key: '', icon: 'el-icon-document', label: '结算单总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+            { key: '0', icon: 'el-icon-time', label: '待确认', value: s.pending || 0, color: 'warning', clickable: true, active: this.activeFilter === '0' },
+            { key: '1', icon: 'el-icon-circle-check', label: '已确认', value: s.confirmed || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
+            { key: '2', icon: 'el-icon-finished', label: '已结算', value: s.settled || 0, color: 'info', clickable: true, active: this.activeFilter === '2' }
           ]
         }
       },
@@ -231,7 +233,7 @@
         this.loadFranchisees()
         this.loadContracts()
         this.loadStats()
-        this.init()
+        this.init(true)
       },
       methods: {
         async loadStats() {
@@ -277,46 +279,85 @@
             console.warn('加载合同下拉失败:', err)
           }
         },
-        async init() {
+        async init(reloadStats) {
+          if (reloadStats === undefined) { reloadStats = true }
           this.loading = true
-          const sv = this.searchValues || {};
+          const sv = Object.assign({}, this.searchValues)
+          // 卡片筛选与 searchValues 互斥，卡片优先级更高
+          if (this.activeFilter !== '') {
+            sv.status = Number(this.activeFilter)
+          } else {
+            delete sv.status
+          }
           const params = Object.assign({}, sv, { page: this.page, pageSize: this.pageSize })
           try {
-            const res = await settlementPage(params)
+            var requests = [settlementPage(params)]
+            if (reloadStats) { requests.push(this.loadStatsPromise()) }
+            var results = await Promise.all(requests)
+            var res = results[0]
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
               this.counts = res.data.total
             } else {
               ReggieUI.error(res.msg || '操作失败')
             }
+            if (reloadStats && results[1]) {
+              var statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1' && statsRes.data) {
+                this.stats = statsRes.data
+              }
+            }
           } catch (err) {
             ReggieUI.error('请求失败：' + err)
+          } finally {
+            this.loading = false
           }
-          this.loading = false
+        },
+        // 修改点：加载统计卡片数据（供 Promise.all 并行）
+        async loadStatsPromise() {
+          try {
+            const res = await settlementStats()
+            if (res && String(res.code) === '1') {
+              return { code: 1, data: res.data || {} }
+            }
+          } catch (err) {
+            if (err.message !== 'NOTLOGIN') {
+              console.warn('加载结算单统计失败:', err)
+            }
+          }
+          return { code: 0 }
         },
         // table-bar 回调
         onSearch(searchParams) {
           this.searchValues = searchParams
+          this.activeFilter = ''
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onReset() {
           this.searchValues = {}
+          this.activeFilter = ''
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onAction(payload) {
           if (payload.key === 'generate') this.generateHandle()
         },
+        // 统计卡片点击 — 按状态筛选数据
+        onCardClick(payload) {
+          this.activeFilter = payload.activeKey
+          this.page = 1
+          this.init(false)
+        },
         // 分页
         onPageChange(payload) {
           this.page = payload.page
-          this.init()
+          this.init(false)
         },
         onSizeChange(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.page = 1
-          this.init()
+          this.init(false)
         },
         // 生成结算单
         generateHandle() {

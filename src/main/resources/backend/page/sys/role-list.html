@@ -14,14 +14,24 @@
     .perm-tree-dialog .el-tree { max-height: 400px; overflow-y: auto; border: 1px solid var(--el-border-light); border-radius: var(--radius-sm); padding: 10px; }
     .perm-tree-dialog .el-tree-node__content { height: 32px; }
     .perm-tree-dialog .el-tree-node__label { font-size:var(--font-size-sm); }
-    .perm-header { display: flex; align-items: center; gap: 8px; }
+    .perm-header { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .perm-header:hover .perm-header__name { color: var(--el-color-primary); }
     .perm-header .el-tag { margin: 0; }
-    /* 权限树工具栏：搜索 + 计数 + 展开切换 */
+    .perm-header__icon--module { color: var(--el-color-primary); }
+    .perm-header__icon--menu { color: var(--color-info); }
+    .perm-header__icon--btn { color: var(--el-color-warning); }
+    /* 权限树工具栏：搜索 + 类型筛选 + 快捷勾选 + 展开切换 */
     .perm-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
     .perm-toolbar__info { flex: none; font-size: var(--font-size-sm); color: var(--el-text-regular); white-space: nowrap; }
     .perm-toolbar__info strong { margin-left: 2px; }
     .perm-toolbar__count { margin-left: 8px; }
     .perm-toolbar__search { flex: 1; }
+    .perm-toolbar__types { flex: none; }
+    /* 权限树底部摘要 */
+    .perm-footer { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--el-border-light); }
+    .perm-footer__summary { font-size: var(--font-size-sm); color: var(--el-text-regular); }
+    .perm-footer__summary b { color: var(--el-color-primary); font-weight: 600; }
+    .perm-footer__tip { margin-top: 4px; font-size: 12px; color: var(--text-secondary); }
     /* 分配用户弹窗：transfer 自适应拉宽 */
     .perm-user-dialog .el-transfer { display: flex; align-items: stretch; }
     .perm-user-dialog .el-transfer-panel { width: 42%; }
@@ -123,9 +133,9 @@
       </el-form>
     </crud-dialog>
 
-    <!-- 权限分配弹窗（专注权限树：搜索 + 展开切换 + 半选计数） -->
+    <!-- 权限分配弹窗（专注权限树：搜索 + 类型筛选 + 快捷勾选 + 半选计数） -->
     <crud-dialog
-      title="权限分配"
+      :title="permDialogTitle"
       :visible.sync="permDialogVisible"
       size="lg"
       :submit-loading="permSubmitting"
@@ -138,9 +148,16 @@
         <div class="perm-toolbar__info">
           当前角色：<strong>{{ currentRole ? currentRole.roleName : '' }}</strong>
           <span class="perm-toolbar__count">已选 <el-tag type="success" size="mini">{{ checkedCount }}</el-tag> 项</span>
-          <el-button type="text" size="mini" @click="toggleExpand">{{ expanded ? '折叠全部' : '展开全部' }}</el-button>
         </div>
+        <el-radio-group v-model="permTypeFilter" size="mini" class="perm-toolbar__types">
+          <el-radio-button label="">全部</el-radio-button>
+          <el-radio-button label="1">仅菜单</el-radio-button>
+          <el-radio-button label="2">仅按钮</el-radio-button>
+        </el-radio-group>
+      </div>
+      <div class="perm-toolbar">
         <el-input
+          ref="permSearch"
           class="perm-toolbar__search"
           v-model="permFilterText"
           size="small"
@@ -148,6 +165,9 @@
           prefix-icon="el-icon-search"
           placeholder="搜索权限名称或标识"
         ></el-input>
+        <el-button size="mini" @click="toggleExpand">{{ expanded ? '折叠全部' : '展开全部' }}</el-button>
+        <el-button size="mini" type="primary" plain @click="quickSelect('all')">全选</el-button>
+        <el-button size="mini" type="danger" plain @click="quickSelect('clear')">清空已选</el-button>
       </div>
       <el-tree
         ref="permTree"
@@ -160,24 +180,26 @@
         :props="{ children: 'children', label: 'permissionName' }"
         @check="handleCheck">
         <template slot-scope="{ data }">
-          <span class="perm-header">
-            <i class="el-icon-folder" v-if="data.children && data.children.length" style="color:var(--el-color-primary);margin-right:4px;"></i>
-            <i class="el-icon-document" v-else style="color:var(--color-info);margin-right:4px;"></i>
-            <span>{{ data.permissionName }}</span>
-            <el-tag v-if="data.permissionKey" type="info" size="mini" effect="plain">{{ data.permissionKey }}</el-tag>
+          <span class="perm-header" @click.stop="toggleNodeCheck(data)">
+            <i :class="nodeIcon(data)" class="perm-header__icon"></i>
+            <span class="perm-header__name">{{ data.permissionName }}</span>
+            <el-tag v-if="data.permissionType == 2" type="warning" size="mini" effect="plain">{{ data.permissionKey || '按钮' }}</el-tag>
+            <el-tag v-else-if="data.permissionKey" type="info" size="mini" effect="plain">{{ data.permissionKey }}</el-tag>
           </span>
         </template>
       </el-tree>
-      <div class="perm-toolbar" style="margin-top: 12px; margin-bottom: 0;">
-        <div class="perm-toolbar__info">
-          全选父级 = 授予其下所有子权限；父级勾选为半选时仅子级生效。
+      <div class="perm-footer">
+        <div class="perm-footer__summary">
+          已勾选：菜单 <b>{{ checkedMenuCount }}</b> 项 · 按钮 <b>{{ checkedBtnCount }}</b> 项
+          <template v-if="halfCheckedCount > 0">（另有 <b>{{ halfCheckedCount }}</b> 个模块部分选中）</template>
         </div>
+        <div class="perm-footer__tip">点击页面/按钮权限名称可直接勾选，点击模块名称展开/收起；勾选模块 = 授予其下所有权限，父级部分勾选时以子项为准。</div>
       </div>
     </crud-dialog>
 
     <!-- 分配用户弹窗（独立：专注 员工↔角色 穿梭框） -->
     <crud-dialog
-      title="分配用户"
+      :title="userDialogTitle"
       :visible.sync="userDialogVisible"
       size="md"
       :submit-loading="userSubmitting"
@@ -187,7 +209,7 @@
       @close="closeUserDialog"
     >
       <div class="perm-user-tip">
-        当前角色：<strong>{{ currentRole ? currentRole.roleName : '' }}</strong>（一个员工可分配多个角色，左→右添加）
+        当前角色：<strong>{{ currentRole ? currentRole.roleName : '' }}</strong> · 已分配 <b>{{ checkedUserIds.length }}</b> 人（一个员工可分配多个角色，左→右添加）
       </div>
       <el-transfer
         filterable
@@ -263,7 +285,11 @@
           permTreeData: [],
           checkedPerms: [],
           checkedCount: 0,
+          checkedMenuCount: 0,
+          checkedBtnCount: 0,
+          halfCheckedCount: 0,
           permFilterText: '',
+          permTypeFilter: '',
           expanded: true,
           // 分配用户（独立弹窗：el-transfer 用户↔角色）
           userDialogVisible: false,
@@ -286,10 +312,20 @@
             { key: 'withPerms', icon: 'ri-lock-2-line', label: '已分配权限', value: self.stats.withPerms || 0, color: 'info', clickable: true, active: self.activeFilter === 'withPerms' }
           ]
         },
+        // 弹窗标题带角色名，便于多弹窗区分
+        permDialogTitle: function() {
+          return '权限分配' + (this.currentRole ? ' · ' + this.currentRole.roleName : '')
+        },
+        userDialogTitle: function() {
+          return '分配用户' + (this.currentRole ? ' · ' + this.currentRole.roleName : '')
+        }
       },
       watch: {
-        permFilterText: function(val) {
-          if (this.$refs.permTree) { this.$refs.permTree.filter(val || '') }
+        permFilterText: function() {
+          this.filterTree()
+        },
+        permTypeFilter: function() {
+          this.filterTree()
         }
       },
       methods: {
@@ -444,10 +480,18 @@
           this.currentRole = row
           this.permDialogVisible = true
           this.permFilterText = ''
+          this.permTypeFilter = ''
           this.expanded = true
           this.checkedCount = 0
+          this.checkedMenuCount = 0
+          this.checkedBtnCount = 0
+          this.halfCheckedCount = 0
           this.loadPermTree()
           this.loadRolePerms(row.id)
+          const self = this
+          this.$nextTick(function() {
+            if (self.$refs.permSearch) { self.$refs.permSearch.focus() }
+          })
         },
         closePermDialog() {
           this.permDialogVisible = false
@@ -493,10 +537,11 @@
           sysApi.rolePermissions(roleId).then(function(res) {
             if (res && res.code === 1) {
               self.checkedPerms = res.data || []
-              self.checkedCount = self.checkedPerms.length
               self.$nextTick(function() {
                 if (self.$refs.permTree) {
                   self.$refs.permTree.setCheckedKeys(self.checkedPerms)
+                  // setCheckedKeys 不触发 @check，手动刷新计数（含半选父级）
+                  self.handleCheck()
                 }
               })
             }
@@ -520,32 +565,110 @@
         filterEmployee(query, item) {
           return item.label.indexOf(query) > -1
         },
-        // 权限树搜索：匹配名称或标识
+        // 权限树过滤：名称/标识关键词 + 类型筛选（匹配节点的父级由 Element 自动向上传播显示）
         filterPermNode(value, data) {
-          if (!value) { return true }
-          return data.permissionName.indexOf(value) > -1 || (data.permissionKey || '').indexOf(value) > -1
+          var kw = (value || '').trim()
+          var typeOk = this.permTypeFilter === '' || String(data.permissionType) === String(this.permTypeFilter)
+          if (!typeOk) { return false }
+          if (!kw) { return true }
+          return data.permissionName.indexOf(kw) > -1 || (data.permissionKey || '').indexOf(kw) > -1
         },
-        // 展开/折叠全部
-        toggleExpand() {
-          this.expanded = !this.expanded
+        // 过滤条件变化后刷新树，并保证匹配项可见
+        filterTree() {
+          var tree = this.$refs.permTree
+          if (!tree) { return }
+          tree.filter(this.permFilterText || '')
+          var self = this
           this.$nextTick(function() {
-            var tree = this.$refs.permTree
-            if (!tree) { return }
-            var nodesMap = tree.store.nodesMap
-            Object.keys(nodesMap).forEach(function(key) {
-              var node = nodesMap[key]
-              if (!node) { return }
-              if (this.expanded) { node.expand() } else { node.collapse() }
-            }.bind(this))
+            // 搜索/类型筛选生效时展开全部保证可见；清除后按用户展开状态恢复
+            if (self.permFilterText || self.permTypeFilter) {
+              self.setAllNodeExpanded(true)
+            } else {
+              self.setAllNodeExpanded(self.expanded)
+            }
           })
         },
-        // 勾选变化：仅保存全选节点（半选父级不落库，回显由叶子全选还原）
-        handleCheck() {
-          if (this.$refs.permTree) {
-            this.checkedPerms = this.$refs.permTree.getCheckedKeys()
-            // 计数含半选父级，更符合用户认知；用响应式变量而非 computed（tree 非响应式不会触发重算）
-            this.checkedCount = this.checkedPerms.length + this.$refs.permTree.getHalfCheckedKeys().length
+        // 展开/折叠全部（统一走 this.expanded 状态）
+        toggleExpand() {
+          this.expanded = !this.expanded
+          this.setAllNodeExpanded(this.expanded)
+        },
+        setAllNodeExpanded(expanded) {
+          var tree = this.$refs.permTree
+          if (!tree) { return }
+          var nodesMap = tree.store.nodesMap
+          Object.keys(nodesMap).forEach(function(key) {
+            var node = nodesMap[key]
+            if (!node) { return }
+            if (expanded) { node.expand() } else { node.collapse() }
+          })
+        },
+        // 点击节点名称：叶子=切换勾选，父级=展开/收起（setChecked 不触发 @check，须手动刷新计数）
+        toggleNodeCheck(data) {
+          var tree = this.$refs.permTree
+          if (!tree) { return }
+          var node = tree.store.nodesMap[data.id]
+          if (!node) { return }
+          if (data.children && data.children.length) {
+            if (node.expanded) { node.collapse() } else { node.expand() }
+            return
           }
+          tree.setChecked(data.id, !node.checked, false)
+          this.handleCheck()
+        },
+        // 节点图标：模块 / 菜单页 / 按钮
+        nodeIcon(data) {
+          if (data.permissionType == 2) { return 'el-icon-more perm-header__icon--btn' }
+          if (data.children && data.children.length) { return 'el-icon-folder perm-header__icon--module' }
+          return 'el-icon-document perm-header__icon--menu'
+        },
+        // 拍平权限树为数组
+        flatNodes(nodes) {
+          var out = []
+          var walk = function(list) {
+            list.forEach(function(n) {
+              out.push(n)
+              if (n.children && n.children.length) { walk(n.children) }
+            })
+          }
+          walk(nodes)
+          return out
+        },
+        // 快捷勾选：all=一键授满全部权限 / clear=清空已选
+        // 说明：父子联动模式下"仅选菜单不含按钮"无法表达（父级 checked 必级联子项），
+        // 按模块勾选请用模块前的复选框（天然级联其下所有页面与按钮），避免误导性半选丢权限。
+        quickSelect(mode) {
+          var tree = this.$refs.permTree
+          if (!tree) { return }
+          if (mode === 'clear') {
+            tree.setCheckedKeys([])
+            this.handleCheck()
+            return
+          }
+          var all = this.flatNodes(this.permTreeData)
+          // setCheckedKeys 勾选父节点会级联其全部子节点，一次授满
+          tree.setCheckedKeys(all.map(function(n) { return n.id }))
+          this.handleCheck()
+        },
+        // 勾选变化：全选节点落库，半选父级仅计数展示；按菜单/按钮拆分明细
+        handleCheck() {
+          var tree = this.$refs.permTree
+          if (!tree) { return }
+          var checkedKeys = tree.getCheckedKeys()
+          var halfKeys = tree.getHalfCheckedKeys()
+          this.checkedPerms = checkedKeys.slice()
+          this.checkedCount = checkedKeys.length + halfKeys.length
+          this.halfCheckedCount = halfKeys.length
+          var ids = {}
+          checkedKeys.concat(halfKeys).forEach(function(id) { ids[id] = true })
+          var menu = 0
+          var btn = 0
+          this.flatNodes(this.permTreeData).forEach(function(n) {
+            if (!ids[n.id]) { return }
+            if (n.permissionType == 1) { menu++ } else if (n.permissionType == 2) { btn++ }
+          })
+          this.checkedMenuCount = menu
+          this.checkedBtnCount = btn
         },
         submitPerms() {
           const keys = this.$refs.permTree ? this.$refs.permTree.getCheckedKeys() : this.checkedPerms
