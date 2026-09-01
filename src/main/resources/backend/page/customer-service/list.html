@@ -93,7 +93,7 @@
         <el-table v-loading="sessionLoading" :data="sessionPagedList" border stripe style="width:100%" size="medium" aria-label="会话列表">
           <el-table-column prop="sessionNo" label="会话号" width="180" align="center"></el-table-column>
           <el-table-column prop="userName" label="用户" width="120" align="center"></el-table-column>
-          <el-table-column prop="sessionType" label="类型" width="80" align="center">
+          <el-table-column prop="sessionType" label="类型" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
             <template slot-scope="{row}">
               <el-tag :type="row.sessionType === 1 ? '' : 'success'" size="small">
                 {{ row.sessionType === 1 ? '普通' : '订单' }}
@@ -101,7 +101,7 @@
             </template>
           </el-table-column>
           <el-table-column prop="agentName" label="客服" width="120" align="center"></el-table-column>
-          <el-table-column label="状态" width="90" align="center">
+          <el-table-column label="状态" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
             <template slot-scope="{row}">
               <el-tag :type="row.status === 1 ? 'success' : (row.status === 0 ? 'warning' : 'info')" size="small">
                 {{ statusTextSession(row.status) }}
@@ -181,13 +181,13 @@
           <el-table-column prop="complaintNo" label="投诉号" width="170" align="center"></el-table-column>
           <el-table-column prop="userName" label="用户" width="100" align="center"></el-table-column>
           <el-table-column prop="userPhone" label="电话" width="130" align="center"></el-table-column>
-          <el-table-column label="类型" width="90" align="center">
+          <el-table-column label="类型" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
             <template slot-scope="{row}">
               <el-tag size="small">{{ typeTextComplaint(row.complaintType) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="title" label="标题" min-width="150" align="center"></el-table-column>
-          <el-table-column label="状态" width="90" align="center">
+          <el-table-column label="状态" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
             <template slot-scope="{row}">
               <el-tag :type="statusTagComplaint(row.status)" size="small">{{ statusTextComplaint(row.status) }}</el-tag>
             </template>

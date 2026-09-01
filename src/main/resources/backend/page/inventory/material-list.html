@@ -128,16 +128,16 @@
     <crud-dialog title="库存预警" :visible.sync="warningDialogVisible" size="lg" :show-submit="false" cancel-text="关 闭">
       <el-table aria-label="数据表格" :data="warningData" stripe class="tableBox">
         <el-table-column prop="name" label="食材名称" min-width="160" align="center"></el-table-column>
-        <el-table-column label="食材分类" width="100" align="center">
+        <el-table-column label="食材分类" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true">
           <template slot-scope="scope">{{ scope.row.categoryName }}</template>
         </el-table-column>
-        <el-table-column prop="unit" label="单位" width="80" align="center"></el-table-column>
-        <el-table-column label="库存数量" width="100" align="center">
+        <el-table-column prop="unit" label="单位" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true"></el-table-column>
+        <el-table-column label="库存数量" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true">
           <template slot-scope="scope">
             <span :style="{ color: 'var(--color-danger)', fontWeight: 'var(--font-weight-bold)' }">{{ scope.row.stockQty }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="minStock" label="最低库存" width="100" align="center"></el-table-column>
+        <el-table-column prop="minStock" label="最低库存" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true"></el-table-column>
       </el-table>
       <template #footer>
         <el-button size="medium" @click="warningDialogVisible = false">关 闭</el-button>

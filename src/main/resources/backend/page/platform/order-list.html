@@ -143,7 +143,7 @@
       <el-table :data="detail.orderDetails || []" size="small" border class="po-detail__table">
         <el-table-column prop="name" label="菜品" min-width="140" align="center"></el-table-column>
         <el-table-column prop="dishFlavor" label="规格" min-width="120" align="center"></el-table-column>
-        <el-table-column prop="number" label="数量" width="80" align="center"></el-table-column>
+        <el-table-column prop="number" label="数量" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true"></el-table-column>
         <el-table-column label="金额" width="100" align="center">
           <template #default="{ row }">￥{{ formatMoney(row.amount) }}</template>
         </el-table-column>

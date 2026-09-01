@@ -76,12 +76,12 @@
         <template #expand="{ row }">
           <el-table aria-label="数据表格" :data="row.details" stripe class="tableBox" v-if="row.details && row.details.length">
             <el-table-column prop="materialName" label="食材名称" min-width="140" align="center" />
-            <el-table-column prop="materialId" label="食材ID" width="80" align="center" />
-            <el-table-column prop="qty" label="数量" width="80" align="center" />
-            <el-table-column label="单价" width="100" align="center">
+            <el-table-column prop="materialId" label="食材ID" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
+            <el-table-column prop="qty" label="数量" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
+            <el-table-column label="单价" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="scope">￥{{ scope.row.unitPrice }}</template>
             </el-table-column>
-            <el-table-column label="已收货" width="90" align="center">
+            <el-table-column label="已收货" width="120" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="scope">{{ scope.row.receivedQty || 0 }}</template>
             </el-table-column>
             <el-table-column label="小计" width="110" align="center">

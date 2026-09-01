@@ -292,12 +292,12 @@
               controls-position="right" size="small" style="width: 100%;" />
           </template>
         </el-table-column>
-        <el-table-column label="单位" width="80" align="center">
+        <el-table-column label="单位" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
           <template slot-scope="scope">
             <span style="color: var(--text-secondary);">{{ scope.row.materialUnit || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" align="center" width="80">
+        <el-table-column label="操作" align="center" width="120" :header-align="'center'">
           <template slot-scope="scope">
             <el-button type="text" size="small" class="btn-delete" @click="delBOMItem(scope.$index)">删除</el-button>
           </template>

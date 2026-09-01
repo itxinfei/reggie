@@ -68,11 +68,11 @@
             <el-table-column label="食材名称" min-width="140" align="center">
               <template slot-scope="scope">{{ scope.row.materialName }}</template>
             </el-table-column>
-            <el-table-column prop="materialId" label="食材ID" width="80" align="center" />
-            <el-table-column prop="bookQty" label="账面数量" width="110" align="center" />
-            <el-table-column prop="actualQty" label="实际数量" width="110" align="center" />
-            <el-table-column prop="diffQty" label="差异数量" width="100" align="center" />
-            <el-table-column label="差异" width="90" align="center">
+            <el-table-column prop="materialId" label="食材ID" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
+            <el-table-column prop="bookQty" label="账面数量" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
+            <el-table-column prop="actualQty" label="实际数量" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
+            <el-table-column prop="diffQty" label="差异数量" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
+            <el-table-column label="差异" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="scope">
                 <span :style="scope.row.diff < 0 ? 'color: var(--color-danger); font-weight: 600' : scope.row.diff > 0 ? 'color: var(--color-success); font-weight: 600' : 'color: var(--color-info)'">
                   {{ scope.row.diff }}

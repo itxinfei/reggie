@@ -378,8 +378,8 @@
                         <span :class="priceAdjustClass(scope.row.priceAdjust)">{{ formatPriceAdjust(scope.row.priceAdjust) }}</span>
                       </template>
                     </el-table-column>
-                    <el-table-column prop="sortOrder" label="排序" width="80" :align="resolveColAlign({ type: 'number' })" :header-align="resolveColAlign({ type: 'number' })"></el-table-column>
-                    <el-table-column label="状态" width="80" :align="resolveColAlign({})" :header-align="resolveColAlign({})">
+                    <el-table-column prop="sortOrder" label="排序" width="100" :align="resolveColAlign({ type: 'number' })" :header-align="resolveColAlign({ type: 'number' })"></el-table-column>
+                    <el-table-column label="状态" width="100" :align="resolveColAlign({})" :header-align="resolveColAlign({})">
                       <template slot-scope="scope">
                         <el-switch
                           v-model="scope.row.status"

@@ -122,14 +122,26 @@
     .points-cell {
       font-variant-numeric: tabular-nums;
       font-weight: var(--font-weight-medium);
-      text-align: right;
+      text-align: center;
     }
     .member-name-cell {
+      display: inline-block;
       max-width: 140px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       color: var(--text-primary);
+      vertical-align: middle;
+    }
+
+    /* 修改点：中文表头禁止换行截断，超出显示省略号，配合表头 tooltip；同时强制表头内容居中 */
+    .ranking-table th > .cell,
+    .warning-table th > .cell,
+    .member-table th > .cell {
+      white-space: nowrap !important;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center !important;
     }
 
     /* ============ 流失预警 ============ */
@@ -139,7 +151,7 @@
     .dormant-days {
       font-variant-numeric: tabular-nums;
       font-weight: var(--font-weight-medium);
-      text-align: right;
+      text-align: center;
     }
     .dormant-days.high { color: var(--color-danger) }
     .dormant-days.mid { color: var(--color-warning) }
@@ -298,29 +310,31 @@
             class="ranking-table"
             size="small"
           >
-            <el-table-column label="排名" width="70" align="center">
+            <!-- 修改点：列宽从 70 加到 90，避免 medal 24px + padding 后表头文字被挤；表头显式居中 -->
+            <el-table-column label="排名" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="{ row, $index }">
-                <span class="ranking-medal" :class="medalClass($index)">
+                <span class="ranking-medal" :class="medalClass($index)" :title="'第' + ($index + 1) + '名'">
                   {{ $index + 1 }}
                 </span>
               </template>
             </el-table-column>
-            <el-table-column label="会员名称" min-width="140" align="center">
+            <el-table-column label="会员名称" min-width="130" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="{ row }">
                 <span class="member-name-cell" :title="row.memberName">{{ row.memberName }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="等级" width="90" align="center">
+            <el-table-column label="等级" width="120" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="{ row }">
                 <el-tag :type="levelTagType(row.level)" size="mini">{{ levelLabel(row.level) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="积分" width="120" align="center">
+            <el-table-column label="积分" width="120" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="{ row }">
                 <span class="points-cell">{{ row.points || 0 }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="近30天下单" width="110" align="center">
+            <!-- 修改点：列宽从 110 加到 120，确保「近30天下单」五字一行显示 -->
+            <el-table-column label="近30天下单" width="150" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="{ row }">
                 <span class="points-cell">{{ row.recentOrders || 0 }}</span>
               </template>
@@ -348,46 +362,46 @@
           class="warning-table"
           size="small"
         >
-          <el-table-column label="会员ID" width="100" align="center">
+          <el-table-column label="会员ID" width="110" align="center" :header-align="'center'" :show-overflow-tooltip="true">
             <template slot-scope="{ row }">
               <span style="font-variant-numeric:tabular-nums">{{ row.memberId }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="会员名称" min-width="140" align="center">
+          <el-table-column label="会员名称" min-width="130" align="center" :header-align="'center'" :show-overflow-tooltip="true">
             <template slot-scope="{ row }">
               <span class="member-name-cell" :title="row.memberName">{{ row.memberName }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="等级" width="90" align="center">
+          <el-table-column label="等级" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
             <template slot-scope="{ row }">
               <el-tag :type="levelTagType(row.level)" size="mini">{{ levelLabel(row.level) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="最近下单时间" width="160" align="center">
+          <el-table-column label="最近下单时间" width="170" align="center" :header-align="'center'" :show-overflow-tooltip="true">
             <template slot-scope="{ row }">
               <span>{{ row.lastOrderTime }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="沉睡天数" width="100" align="center">
+          <el-table-column label="沉睡天数" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true">
             <template slot-scope="{ row }">
               <span class="dormant-days" :class="dormantClass(row.daysSinceLastOrder)">
                 {{ row.daysSinceLastOrder || 0 }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="积分" width="100" align="center">
+          <el-table-column label="积分" width="110" align="center" :header-align="'center'" :show-overflow-tooltip="true">
             <template slot-scope="{ row }">
               <span class="points-cell">{{ row.points || 0 }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="100" align="center">
+          <el-table-column label="状态" width="110" align="center" :header-align="'center'" :show-overflow-tooltip="true">
             <template slot-scope="{ row }">
               <el-tag :type="warningTagType(row.daysSinceLastOrder)" size="mini">
                 {{ warningTagLabel(row.daysSinceLastOrder) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="100" align="center" fixed="right">
+          <el-table-column label="操作" width="100" align="center" :header-align="'center'" fixed="right">
             <template slot-scope="{ row }">
               <el-button
                 type="primary"
@@ -467,29 +481,30 @@
             <span class="filter-row__tip">共 {{ filteredMembers.length }} 人</span>
           </div>
 
-          <!-- 修改点：移除 max-height="280"，会员列表最多 15 条全量展示，避免数据只显示一部分 -->
+          <!-- 修改点：移除 max-height="280"，会员列表最多 15 条全量展示，避免数据只显示一部分；增加 member-table class 统一表头样式 -->
           <el-table
             v-loading="memberLoading"
             :data="filteredMembers"
             style="width:100%"
+            class="member-table"
             size="mini"
           >
-            <el-table-column label="会员名称" min-width="120" align="center">
+            <el-table-column label="会员名称" min-width="130" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="{ row }">
                 <span class="member-name-cell" :title="row.memberName">{{ row.memberName }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="等级" width="80" align="center">
+            <el-table-column label="等级" width="120" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="{ row }">
                 <el-tag :type="levelTagType(row.level)" size="mini">{{ levelLabel(row.level) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="状态" width="80" align="center">
+            <el-table-column label="状态" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="{ row }">
                 <el-tag :type="statusTagType(row.status)" size="mini">{{ statusLabel(row.status) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="积分" width="80" align="center">
+            <el-table-column label="积分" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="{ row }">
                 <span class="points-cell">{{ row.points || 0 }}</span>
               </template>
