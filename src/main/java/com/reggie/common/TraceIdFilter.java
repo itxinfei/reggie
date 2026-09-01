@@ -24,10 +24,9 @@ import java.util.UUID;
  * 4. finally 中清理 MDC 与 BaseContext，防止线程池内存泄漏
  *
  * 执行顺序（@Order 越小越靠前）：
- *  1. RequestCachingFilter     (HIGHEST_PRECEDENCE)     — 缓存包装请求体
- *  2. TraceIdFilter            (HIGHEST_PRECEDENCE + 1) — 注入 traceId
- *  3. CsrfFilter               (@Order(1))              — CSRF 校验
- *  4. LoginCheckFilter         (无 @Order，字母序)      — 登录态校验
+ *  1. TraceIdFilter            (HIGHEST_PRECEDENCE + 1) — 注入 traceId
+ *  2. CsrfFilter               (@Order(1))              — CSRF 校验
+ *  3. LoginCheckFilter         (无 @Order，字母序)      — 登录态校验
  *
  * @author AI
  * @since 2026-08-22

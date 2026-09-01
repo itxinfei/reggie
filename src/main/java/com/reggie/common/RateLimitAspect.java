@@ -140,7 +140,7 @@ public class RateLimitAspect {
             // 限流命中：直接向上抛出，由 GlobalExceptionHandler 返回 429
             throw e;
         } catch (Exception e) {
-            // Redis 异常降级：瞬态故障熔断（与 BruteForceProtectionFilter 一致），
+            // Redis 异常降级：瞬态故障熔断（fail-open），
             // 30s 内静默放行降低噪声，之后恢复探测；异常首次发生时打 error 便于定位。
             long now = System.currentTimeMillis();
             if (now < redisCircuitOpenUntil) {

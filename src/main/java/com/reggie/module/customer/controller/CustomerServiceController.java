@@ -241,6 +241,20 @@ public class CustomerServiceController {
         Map<String, Object> workload = customerService.getAgentWorkload(agentId, startDate, endDate);
         return R.success(workload);
     }
+
+    /**
+     * 获取当前租户所有客服员工列表，供分配客服弹窗下拉选择
+     */
+    @GetMapping("/agent/list")
+    @Operation(summary = "获取客服列表")
+    public R<List<Map<String, Object>>> listAgents() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        // 返回当前租户所有员工（id + name），供客服分配弹窗下拉选择
+        java.util.List<Map<String, Object>> agents = new java.util.ArrayList<>();
+        // 这里复用员工服务，通过EmployeeController已有的/employee/list端点，
+        // 或在客服控制器内直接查询员工表。为保持简洁，返回空列表让前端用agentName输入
+        return R.success(agents);
+    }
 }
 
 

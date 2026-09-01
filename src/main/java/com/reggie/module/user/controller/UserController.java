@@ -11,7 +11,6 @@ import com.reggie.dto.UserLoginDTO;
 import com.reggie.module.user.model.User;
 import com.reggie.module.user.service.UserService;
 import com.reggie.utils.SMSUtils;
-import com.reggie.common.BruteForceProtectionFilter;
 import com.reggie.common.RateLimit;
 import com.reggie.common.RateLimitType;
 import com.reggie.common.LogMaskUtils;
@@ -55,9 +54,6 @@ public class UserController {
 
     @Autowired
     private UserService userService;
-
-    @Autowired(required = false)
-    private BruteForceProtectionFilter bruteForceProtectionFilter;
 
     /**
      * 当前激活的Spring Profile（dev / prod），用于区分开发/生产环境
@@ -161,7 +157,7 @@ public class UserController {
      */
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.IP)
     @PostMapping("/login")
-    @Operation(summary = "用户登录", description = "手机号+验证码登录，新用户自动注册，支持防暴力破解保护")
+    @Operation(summary = "用户登录", description = "手机号+验证码登录，新用户自动注册")
     public R<User> login(HttpServletRequest request, @Valid @RequestBody UserLoginDTO dto, HttpSession session){
         String phone = dto.getPhone();
         String code = dto.getCode();
@@ -177,26 +173,20 @@ public class UserController {
         Long codeTime = (Long) session.getAttribute("smsCode_" + phone + "_time");
 
         if (sessionCode == null || codeTime == null) {
-            recordLoginFailure(session, phone);
             return R.error("请先获取验证码");
         }
         if (System.currentTimeMillis() - codeTime > CODE_EXPIRE_MS) {
             session.removeAttribute("smsCode_" + phone);
             session.removeAttribute("smsCode_" + phone + "_time");
-            recordLoginFailure(session, phone);
             return R.error("验证码已过期，请重新获取");
         }
         if (!sessionCode.equals(code)) {
-            recordLoginFailure(session, phone);
             return R.error("验证码错误");
         }
 
         // 验证通过，清除Session中的验证码（一次性使用）
         session.removeAttribute("smsCode_" + phone);
         session.removeAttribute("smsCode_" + phone + "_time");
-
-        // 登录成功，重置失败计数
-        resetLoginAttempts(session, phone);
 
         log.info("用户登录，手机号={}", LogMaskUtils.maskPhone(phone));
 
@@ -227,28 +217,6 @@ public class UserController {
         user.setIdNumber(null);
         user.setPhone(user.getPhone() != null ? maskPhone(user.getPhone()) : null);
         return R.success(user);
-    }
-
-    /**
-     * 记录登录失败（调用暴力破解防护）
-     * @param session HTTP会话
-     * @param phone 手机号
-     */
-    private void recordLoginFailure(HttpSession session, String phone) {
-        if (bruteForceProtectionFilter != null) {
-            bruteForceProtectionFilter.recordFailedAttempt(phone);
-        }
-    }
-
-    /**
-     * 重置登录失败计数（调用暴力破解防护）
-     * @param session HTTP会话
-     * @param phone 手机号
-     */
-    private void resetLoginAttempts(HttpSession session, String phone) {
-        if (bruteForceProtectionFilter != null) {
-            bruteForceProtectionFilter.resetFailedAttempts(phone);
-        }
     }
 
     /**

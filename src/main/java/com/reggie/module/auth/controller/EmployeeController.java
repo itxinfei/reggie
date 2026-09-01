@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
-import com.reggie.common.BruteForceProtectionFilter;
 import com.reggie.common.LogMaskUtils;
 import com.reggie.common.PasswordUtils;
 import com.reggie.common.R;
@@ -66,9 +65,6 @@ public class EmployeeController {
     private EmployeeService employeeService;
 
     @Autowired(required = false)
-    private BruteForceProtectionFilter bruteForceProtectionFilter;
-
-    @Autowired(required = false)
     private com.reggie.utils.SMSUtils smsUtils;
 
     @Value("${reggie.sms.sign-name:瑞吉外卖}")
@@ -105,19 +101,10 @@ public class EmployeeController {
      * @return 登录结果
      */
     @PostMapping("/login")
-    @Operation(summary = "员工登录", description = "员工账号密码登录，支持验证码和防暴力破解保护")
+    @Operation(summary = "员工登录", description = "员工账号密码登录，支持验证码")
     @Parameter(name = "loginDTO", description = "员工登录信息（用户名、密码）", required = true)
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.IP)
     public R<Map<String, Object>> login(HttpServletRequest request, @Valid @RequestBody EmployeeLoginDTO loginDTO) {
-
-        // 检查账号是否被锁定（同时检查IP和用户名维度）
-        if (bruteForceProtectionFilter != null
-            && (bruteForceProtectionFilter.isAccountLocked(request)
-                || bruteForceProtectionFilter.isAccountLocked(loginDTO.getUsername()))) {
-            log.warn("账号已被锁定 - 用户名：{}",
-                LogMaskUtils.maskUsername(loginDTO.getUsername()));
-            return R.error("登录失败次数过多，请15分钟后重试");
-        }
 
         //1、根据页面提交的用户名username查询数据库
         // 修复 P2-1：employee 表在 IGNORE_TABLES 中，需手动附加租户条件，防止跨租户用户名枚举
@@ -131,7 +118,6 @@ public class EmployeeController {
 
         //2、如果没有查询到则返回登录失败结果
         if (emp == null) {
-            recordLoginFailure(request, loginDTO.getUsername());
             return R.error("用户名或密码错误");
         }
 
@@ -151,7 +137,6 @@ public class EmployeeController {
         boolean passwordMatches = PasswordUtils.matches(rawPassword, encodedPassword, passwordType);
 
         if (!passwordMatches) {
-            recordLoginFailure(request, loginDTO.getUsername());
             return R.error("用户名或密码错误");
         }
 
@@ -167,12 +152,7 @@ public class EmployeeController {
             }
         }
 
-        //5、登录成功，重置失败计数
-        if (bruteForceProtectionFilter != null) {
-            bruteForceProtectionFilter.resetLoginAttempts(request);
-        }
-
-        //6、登录成功，将员工id和租户id存入Session
+        //5、登录成功，将员工id和租户id存入Session
         // 注意：重新从数据库查询最新信息，确保租户上下文准确
         Employee freshEmp = employeeService.getById(emp.getId());
         Long sessionTenantId;
@@ -329,25 +309,6 @@ public class EmployeeController {
         // RBAC 实际失效（非管理员永远无权限）。现对齐为数据库角色标识。
         if (role == null) return "STORE_MANAGER";
         return role == 1 ? "SUPER_ADMIN" : "STORE_MANAGER";
-    }
-
-    /**
-     * 记录登录失败
-     */
-    private void recordLoginFailure(HttpServletRequest request, String username) {
-        if (bruteForceProtectionFilter != null) {
-            // 如果有用户名，记录用户名；否则记录 IP
-            if (username != null && !username.trim().isEmpty()) {
-                bruteForceProtectionFilter.recordFailedAttempt(username);
-            } else {
-                bruteForceProtectionFilter.recordLoginFailure(request);
-            }
-
-            // 记录失败日志（脱敏）
-            int attempts = bruteForceProtectionFilter.getFailedAttempts(request);
-            log.warn("员工登录失败 - 用户名：{}, 失败次数：{}/{}",
-                LogMaskUtils.maskUsername(username), attempts, SecurityConstants.MAX_LOGIN_FAIL_COUNT);
-        }
     }
 
     /**
@@ -818,6 +779,32 @@ public class EmployeeController {
 
         Map<String, List<String>> result = new HashMap<>();
         result.put("names", new ArrayList<>(nameSet));
+        return R.success(result);
+    }
+
+    /**
+     * 获取当前租户所有员工选项（含id和name），供考勤/排班页面下拉选择使用
+     */
+    @GetMapping("/list")
+    @RequireEmployee
+    @Operation(summary = "员工列表选项", description = "获取当前租户所有员工id和name，供下拉选择使用")
+    public R<List<Map<String, Object>>> listForSelect() {
+        LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(Employee::getTenantId, tenantId);
+        }
+        queryWrapper.select(Employee::getId, Employee::getName)
+                   .orderByAsc(Employee::getName);
+        List<Employee> list = employeeService.list(queryWrapper);
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Employee emp : list) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", emp.getId());
+            item.put("name", emp.getName());
+            result.add(item);
+        }
         return R.success(result);
     }
 }
