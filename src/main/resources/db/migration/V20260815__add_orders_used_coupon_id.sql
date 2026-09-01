@@ -4,4 +4,4 @@
 -- "Unknown column 'used_coupon_id'"。
 -- 已有数据默认 NULL（未使用优惠券），不破坏历史订单。
 ALTER TABLE `orders`
-ADD COLUMN `used_coupon_id` bigint NULL DEFAULT NULL COMMENT '本单使用的优惠券ID（用户优惠券记录ID），未使用为 NULL' AFTER `stock_refunded`;
+ADD COLUMN `used_coupon_id` bigint NULL DEFAULT NULL COMMENT '优惠券ID' AFTER `stock_refunded`;

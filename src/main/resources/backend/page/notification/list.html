@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>消息通知管理 - 瑞吉外卖管理端</title>
-    <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <title>消息通知管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/main.css" />
@@ -135,7 +134,7 @@
 
             <!-- Mock模式提示 -->
             <div class="mock-banner" v-if="isMockMode">
-                ⚠️ 当前为开发Mock模式，短信/推送仅打印日志，不会真实发送。生产环境请配置阿里云短信参数。
+                <i class="ri-error-warning-line"></i> 当前为开发Mock模式，短信/推送仅打印日志，不会真实发送。生产环境请配置阿里云短信参数。
             </div>
 
             <!-- Tab切换 -->

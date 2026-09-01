@@ -136,7 +136,8 @@
         </div>
 
         <!-- 图片预览 -->
-        <van-image-preview v-model:show="previewShow" :images="previewImages" :start-position="previewIndex" />
+        <!-- 修改点(2026-09-01)：v-model:show 是 Vue3 语法（Vue2 无效）；van-* 禁自闭合 -->
+        <van-image-preview :show.sync="previewShow" :images="previewImages" :start-position="previewIndex"></van-image-preview>
     </div>
 
     <script src="../../backend/plugins/vue/vue.js"></script>

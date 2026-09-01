@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>发票管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+  <style>
+    /* 发票号码等等宽数字，便于核对 */
+    .inv-no { font-variant-numeric: tabular-nums; }
+    .inv-actions { display: inline-flex; align-items: center; gap: 4px; }
+    .inv-tip { font-size: 12px; color: var(--text-secondary); margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="invoice-app">
+    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+      <!-- 页头：标题 + 副标题 -->
+      <header class="ds-page-header">
+        <div class="ds-page-header__titles">
+          <h1 class="ds-page-header__title" id="page-title">发票管理</h1>
+          <p class="ds-page-header__subtitle">发票申请、开具与作废管理</p>
+        </div>
+        <div class="ds-page-header__actions"></div>
+      </header>
+
+      <!-- 数据统计卡片：点击切换状态筛选 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <!-- 筛选 + 操作栏 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      ></table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :show-actions="true"
+        :actions-width="180"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-type="{ row }">
+          <el-tag size="small" :type="row.type == 2 ? 'warning' : 'info'" effect="plain">
+            {{ row.type == 2 ? '企业' : '个人' }}
+          </el-tag>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag size="small" :type="statusTagType(row.status)">
+            {{ statusText(row.status) }}
+          </el-tag>
+        </template>
+        <template #col-applyTime="{ row }">
+          {{ fmtTime(row.applyTime) }}
+        </template>
+        <template #col-issueTime="{ row }">
+          {{ fmtTime(row.issueTime) }}
+        </template>
+        <template #actions="{ row }">
+          <div class="inv-actions">
+            <el-button v-if="row.status == 1" type="text" size="small" class="btn-edit" @click="openIssueDialog(row)">开具</el-button>
+            <el-button v-if="row.status == 2 && row.invoiceUrl" type="text" size="small" class="btn-view" @click="openInvoiceUrl(row.invoiceUrl)">查看票面</el-button>
+            <el-button v-if="row.status == 2" type="text" size="small" class="btn-delete" @click="voidHandle(row)">作废</el-button>
+          </div>
+        </template>
+      </crud-table>
+    </div>
+
+    <!-- 开具发票弹窗 -->
+    <crud-dialog
+      title="开具发票"
+      :visible.sync="issueDialogVisible"
+      :submit-loading="submitting"
+      width="520px"
+      @submit="submitIssue"
+      @close="issueDialogVisible = false"
+    >
+      <div v-if="currentRow" class="issue-summary">
+        <div>订单号：<span class="inv-no">{{ currentRow.orderNo }}</span></div>
+        <div>抬头：{{ currentRow.title }}</div>
+        <div>开票金额：<strong>￥{{ formatMoney(currentRow.amount) }}</strong></div>
+      </div>
+      <el-form ref="issueForm" :model="issueForm" :rules="issueRules" label-width="110px" size="small">
+        <el-form-item label="发票号码" prop="invoiceNo">
+          <el-input v-model="issueForm.invoiceNo" placeholder="请输入发票号码" maxlength="32" class="inv-no"></el-input>
+        </el-form-item>
+        <el-form-item label="发票代码" prop="invoiceCode">
+          <el-input v-model="issueForm.invoiceCode" placeholder="请输入发票代码" maxlength="32" class="inv-no"></el-input>
+        </el-form-item>
+        <el-form-item label="发票PDF地址">
+          <el-input v-model="issueForm.invoiceUrl" placeholder="选填：电子发票 PDF 访问地址" maxlength="500"></el-input>
+        </el-form-item>
+      </el-form>
+      <div class="inv-tip">开具后顾客可在订单详情查看电子发票。</div>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/components.js"></script>
+  <script src="../../api/invoice.js"></script>
+  <script>
+    new Vue({
+      el: '#invoice-app',
+      data: function() {
+        return {
+          loading: false,
+          counts: 0,
+          page: 1,
+          pageSize: 100,
+          tableData: [],
+          // 统计（由当前全量列表计算，点击卡片切换状态筛选）
+          stats: { total: 0, applied: 0, issued: 0, voided: 0 },
+          activeFilter: '',
+          submitting: false,
+          // 筛选配置：仅开票状态
+          searchConfig: [
+            { type: 'select', field: 'status', placeholder: '开票状态', width: '180px',
+              options: [
+                { label: '已申请（待开具）', value: 1 },
+                { label: '已开具', value: 2 },
+                { label: '已作废', value: 3 }
+              ] }
+          ],
+          // 操作按钮
+          actionConfig: [
+            { key: 'refresh', text: '刷新', type: 'primary', plain: true, icon: 'ri-refresh-line' }
+          ],
+          // 表格列
+          columns: [
+            { prop: 'orderNo', label: '订单号', minWidth: 150 },
+            { prop: 'title', label: '发票抬头', minWidth: 160 },
+            { prop: 'taxNumber', label: '税号', width: 160, slot: true },
+            { prop: 'type', label: '类型', width: 80, slot: true },
+            { prop: 'amount', label: '开票金额', type: 'money', width: 110 },
+            { prop: 'status', label: '状态', width: 110, slot: true },
+            { prop: 'applyTime', label: '申请时间', width: 150, slot: true },
+            { prop: 'invoiceNo', label: '发票号码', width: 140, slot: true },
+            { prop: 'invoiceCode', label: '发票代码', width: 130, slot: true },
+            { prop: 'issueTime', label: '开具时间', width: 150, slot: true }
+          ],
+          // 开具弹窗
+          issueDialogVisible: false,
+          currentRow: null,
+          issueForm: { invoiceNo: '', invoiceCode: '', invoiceUrl: '' },
+          issueRules: {
+            invoiceNo: [{ required: true, whitespace: true, message: '请输入发票号码', trigger: 'blur' }],
+            invoiceCode: [{ required: true, whitespace: true, message: '请输入发票代码', trigger: 'blur' }]
+          }
+        }
+      },
+      computed: {
+        statsCards: function() {
+          var self = this
+          return [
+            { key: '', icon: 'ri-receipt-line', label: '发票总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '1', icon: 'ri-time-line', label: '已申请（待开票）', value: self.stats.applied || 0, color: 'warning', clickable: true, active: self.activeFilter === '1' },
+            { key: '2', icon: 'ri-checkbox-circle-line', label: '已开具', value: self.stats.issued || 0, color: 'success', clickable: true, active: self.activeFilter === '2' },
+            { key: '3', icon: 'ri-close-circle-line', label: '已作废', value: self.stats.voided || 0, color: 'danger', clickable: true, active: self.activeFilter === '3' }
+          ]
+        }
+      },
+      created: function() {
+        this.loadData(true)
+      },
+      methods: {
+        // calcStats 为 true 时并行刷新统计卡（仅首次加载/手动刷新执行，状态筛选/翻页保持全量统计）
+        loadData: function(calcStats) {
+          var self = this
+          self.loading = true
+          var status = self.activeFilter !== '' ? Number(self.activeFilter) : undefined
+          invoiceApi.listRecords(self.page, self.pageSize, status).then(function(res) {
+            if (res && res.code === 1) {
+              var data = res.data || {}
+              self.tableData = data.records || []
+              self.counts = data.total || 0
+              if (calcStats !== false) self.loadStats()
+            } else {
+              self.tableData = []
+              self.counts = 0
+            }
+          }).catch(function(err) {
+            if (err.message !== 'NOTLOGIN') {
+              self.tableData = []
+              self.counts = 0
+            }
+          }).finally(function() {
+            self.loading = false
+          })
+        },
+        // 统计卡：独立接口全量统计（不随分页/状态筛选变化）
+        loadStats: function() {
+          var self = this
+          invoiceApi.listStats().then(function(res) {
+            if (res && res.code === 1) {
+              var s = res.data || {}
+              self.stats = {
+                total: s.total || 0,
+                applied: s.applied || 0,
+                issued: s.issued || 0,
+                voided: s.voided || 0
+              }
+            }
+          }).catch(function() {})
+        },
+        // ========== 状态展示 ==========
+        statusText: function(status) {
+          if (status == 0) return '待申请'
+          if (status == 1) return '已申请'
+          if (status == 2) return '已开具'
+          if (status == 3) return '已作废'
+          return '未知'
+        },
+        statusTagType: function(status) {
+          if (status == 1) return 'warning'
+          if (status == 2) return 'success'
+          if (status == 3) return 'danger'
+          return 'info'
+        },
+        fmtTime: function(val) {
+          if (!val) return '-'
+          var s = String(val)
+          return s.indexOf('T') > -1 ? s.replace('T', ' ') : s
+        },
+        formatMoney: function(val) {
+          return window.RgFormat ? window.RgFormat.formatMoney(val) : (val == null ? '0.00' : String(val))
+        },
+        // ========== 筛选/刷新 ==========
+        onCardClick: function(payload) {
+          this.activeFilter = payload.activeKey
+          this.page = 1
+          this.loadData(false)
+        },
+        onSearch: function(searchParams) {
+          var s = (searchParams && searchParams.status !== undefined) ? searchParams.status : ''
+          this.activeFilter = s !== '' ? String(s) : ''
+          this.page = 1
+          this.loadData(false)
+        },
+        onReset: function() {
+          this.activeFilter = ''
+          this.page = 1
+          this.loadData(false)
+        },
+        onAction: function(payload) {
+          if (payload.key === 'refresh') this.loadData(true)
+        },
+        onPageChange: function(payload) {
+          this.page = payload.page
+          this.loadData(false)
+        },
+        onSizeChange: function(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+          this.loadData(false)
+        },
+        // ========== 开具 ==========
+        openIssueDialog: function(row) {
+          this.currentRow = row
+          this.issueForm = { invoiceNo: '', invoiceCode: '', invoiceUrl: '' }
+          this.issueDialogVisible = true
+          var self = this
+          this.$nextTick(function() {
+            if (self.$refs.issueForm) self.$refs.issueForm.clearValidate()
+          })
+        },
+        submitIssue: function() {
+          var self = this
+          self.$refs.issueForm.validate(function(valid) {
+            if (!valid) return
+            self.submitting = true
+            invoiceApi.issue(self.currentRow.id, {
+              invoiceNo: self.issueForm.invoiceNo,
+              invoiceCode: self.issueForm.invoiceCode,
+              invoiceUrl: self.issueForm.invoiceUrl || ''
+            }).then(function(res) {
+              if (res && res.code === 1) {
+                ReggieUI.success('发票开具成功')
+                self.issueDialogVisible = false
+                self.loadData()
+              }
+            }).catch(function(err) {
+              if (err.message !== 'NOTLOGIN') ReggieUI.error('开具失败')
+            }).finally(function() {
+              self.submitting = false
+            })
+          })
+        },
+        // ========== 作废（高危操作二次确认） ==========
+        voidHandle: function(row) {
+          var self = this
+          ReggieUI.confirm('确定作废发票「' + (row.invoiceNo || row.orderNo) + '」吗？作废后不可恢复。', '作废确认', {
+            confirmButtonText: '确定作废',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(function() {
+            invoiceApi.voidRecord(row.id).then(function(res) {
+              if (res && res.code === 1) {
+                ReggieUI.success('发票已作废')
+                self.loadData()
+              }
+            }).catch(function(err) {
+              if (err.message !== 'NOTLOGIN') ReggieUI.error('作废失败')
+            })
+          }).catch(function() {})
+        },
+        // 查看发票 PDF（新窗口打开，POST 后使用后端返回链接）
+        openInvoiceUrl: function(url) {
+          if (!url) {
+            ReggieUI.info('该发票暂未上传票面文件')
+            return
+          }
+          window.open(url, '_blank', 'noopener,noreferrer')
+        }
+      }
+    })
+  </script>
+</body>
+</html>

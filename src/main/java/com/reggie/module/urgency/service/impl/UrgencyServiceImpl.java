@@ -3,8 +3,11 @@ package com.reggie.module.urgency.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.module.auth.model.Employee;
+import com.reggie.module.auth.service.EmployeeService;
 import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.service.DiningTableService;
+import com.reggie.module.notification.service.NotificationService;
 import com.reggie.module.order.mapper.OrderDetailMapper;
 import com.reggie.module.order.mapper.OrderMapper;
 import com.reggie.module.order.model.OrderDetail;
@@ -12,8 +15,10 @@ import com.reggie.module.order.model.Orders;
 import com.reggie.module.urgency.mapper.UrgencyMapper;
 import com.reggie.module.urgency.model.UrgencyRecord;
 import com.reggie.module.urgency.service.UrgencyService;
+import com.reggie.module.sys.service.SystemConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,8 +30,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 催单服务实现
@@ -51,6 +59,22 @@ public class UrgencyServiceImpl implements UrgencyService {
     @Autowired
     private DiningTableService diningTableService;
 
+    /** 系统配置服务（读取漏单预警阈值等租户配置） */
+    @Autowired
+    private SystemConfigService systemConfigService;
+
+    /** 通知服务（店长短信/APP推送告警） */
+    @Autowired
+    private NotificationService notificationService;
+
+    /** 员工服务（查询店长手机号） */
+    @Autowired
+    private EmployeeService employeeService;
+
+    /** Redis（告警去重状态，fail-closed：不可用时跳过主动通知） */
+    @Autowired(required = false)
+    private RedisTemplate<String, Object> redisTemplate;
+
     /** 每人每天最大催单次数 */
     private static final int MAX_URGENCY_PER_DAY = 3;
 
@@ -62,6 +86,19 @@ public class UrgencyServiceImpl implements UrgencyService {
 
     /** 紧急阈值（分钟）：等待超过该值判定为紧急订单 */
     private static final int URGENT_THRESHOLD_MINUTES = 10;
+
+    /** 未接单黄金时长（分钟）默认值：超过该值进入预警 */
+    private static final int UNACCEPTED_GOLDEN_DEFAULT_MINUTES = 3;
+    /** 未接单告警时长（分钟）默认值：超过该值升级告警 */
+    private static final int UNACCEPTED_ALARM_DEFAULT_MINUTES = 10;
+    /** 未接单漏单时长（分钟）默认值：超过该值（3 倍黄金时长）自动转漏单并升级告警 */
+    private static final int UNACCEPTED_MISSED_DEFAULT_MINUTES = 9;
+
+    /** 告警去重集合 Key 前缀（Redis Set，成员=订单ID） */
+    private static final String ALERT_GOLDEN_KEY_PREFIX = "urgency:alert:golden:";
+    private static final String ALERT_MISSED_KEY_PREFIX = "urgency:alert:missed:";
+    /** 告警去重集合 TTL（12 小时，跨天订单无需长期保留） */
+    private static final long ALERT_SET_TTL_SECONDS = 12 * 3600L;
 
     /** 进行中订单状态（待接单/派送中） */
     private static final List<Integer> PENDING_STATUSES = Arrays.asList(
@@ -298,6 +335,303 @@ public class UrgencyServiceImpl implements UrgencyService {
         overview.put("cookingCount", pendingOrders.size());
         overview.put("completedCount", todayOrders.size() - pendingOrders.size());
         return overview;
+    }
+
+    /**
+     * 获取未接单实时监控看板（商家主动漏单预警）
+     * <p>仅查询当前租户"待接单"(STATUS_ORDERED)订单（不含已接单配送中），
+     * 按等待时长分级（正常/预警/告警）返回，供接单大屏轮询展示与语音播报。
+     * 阈值取自系统配置(order.unaccepted.golden/alarm.minutes)，缺省用类常量。</p>
+     *
+     * @param tenantId 租户ID
+     * @return 监控数据（stats 统计 + list 订单列表 + thresholds 阈值）
+     */
+    @Override
+    public Map<String, Object> getUnacceptedMonitor(Long tenantId) {
+        int goldenMinutes = parseIntConfig("order.unaccepted.golden.minutes", UNACCEPTED_GOLDEN_DEFAULT_MINUTES);
+        int alarmMinutes = parseIntConfig("order.unaccepted.alarm.minutes", UNACCEPTED_ALARM_DEFAULT_MINUTES);
+        int missedMinutes = parseIntConfig("order.unaccepted.missed.minutes",
+                Math.max(UNACCEPTED_MISSED_DEFAULT_MINUTES, goldenMinutes * 3));
+
+        // 仅查"待接单"状态（不含已接单配送中），避免把配送中订单误判为漏单
+        LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Orders::getStatus, Orders.STATUS_ORDERED)
+               .eq(Orders::getTenantId, tenantId)
+               .orderByAsc(Orders::getOrderTime);
+        List<Orders> orders = orderMapper.selectList(wrapper);
+
+        LocalDateTime now = LocalDateTime.now();
+        Map<Long, String> tableNames = loadTableNames(orders);
+        Map<Long, String> dishNamesMap = loadDishNames(orders, tenantId);
+
+        long normalCount = 0;
+        long warningCount = 0;
+        long alarmCount = 0;
+        long missedCount = 0;
+        long totalWaitMinutes = 0;
+        long maxWaitMinutes = 0;
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Orders order : orders) {
+            long wait = waitMinutes(order, now);
+            totalWaitMinutes += wait;
+            if (wait > maxWaitMinutes) {
+                maxWaitMinutes = wait;
+            }
+            String level = resolveLevel(wait, goldenMinutes, alarmMinutes, missedMinutes);
+            if ("MISSED".equals(level)) {
+                missedCount++;
+            } else if ("ALARM".equals(level)) {
+                alarmCount++;
+            } else if ("WARNING".equals(level)) {
+                warningCount++;
+            } else {
+                normalCount++;
+            }
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", order.getId());
+            item.put("orderId", order.getId());
+            item.put("orderNo", order.getNumber());
+            item.put("orderTime", order.getOrderTime() != null ? order.getOrderTime() : order.getCreateTime());
+            item.put("waitMinutes", wait);
+            item.put("level", level);
+            item.put("isOverdue", wait >= alarmMinutes);
+            item.put("isMissed", "MISSED".equals(level));
+            item.put("customerName", order.getUserName());
+            item.put("phone", order.getPhone());
+            item.put("amount", order.getAmount());
+            item.put("source", order.getSource());
+            item.put("tableNo", order.getTableId() == null ? "--" : tableNames.getOrDefault(order.getTableId(), "--"));
+            item.put("dishNames", dishNamesMap.getOrDefault(order.getId(), ""));
+            list.add(item);
+        }
+        long avgWaitMinutes = orders.isEmpty() ? 0 : totalWaitMinutes / orders.size();
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("total", (long) orders.size());
+        stats.put("normal", normalCount);
+        stats.put("warning", warningCount);
+        stats.put("alarm", alarmCount);
+        stats.put("missed", missedCount);
+        stats.put("avgWaitMin", avgWaitMinutes);
+        stats.put("maxWaitMin", maxWaitMinutes);
+
+        Map<String, Object> thresholds = new HashMap<>();
+        thresholds.put("goldenMinutes", goldenMinutes);
+        thresholds.put("alarmMinutes", alarmMinutes);
+        thresholds.put("missedMinutes", missedMinutes);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("stats", stats);
+        result.put("list", list);
+        result.put("thresholds", thresholds);
+        result.put("hasAlarm", (alarmCount + missedCount) > 0);
+        result.put("hasMissed", missedCount > 0);
+        return result;
+    }
+
+    /**
+     * 定时扫描待接单订单并主动告警（漏单预警核心）
+     * <p>对超黄金时长仍未接单的订单通知店长（短信/通知记录），对超漏单阈值的订单升级漏单告警。
+     * Redis Set 去重保证每订单只通知一次；Redis 不可用时跳过本轮主动通知（fail-closed）。</p>
+     *
+     * @param tenantId 租户ID
+     * @return 本轮新触发的通知数
+     */
+    @Override
+    public int scanUnacceptedAndAlert(Long tenantId) {
+        if (redisTemplate == null) {
+            log.warn("[漏单预警] Redis不可用，跳过主动通知: tenantId={}", tenantId);
+            return 0;
+        }
+        int goldenMinutes = parseIntConfig("order.unaccepted.golden.minutes", UNACCEPTED_GOLDEN_DEFAULT_MINUTES);
+        int alarmMinutes = parseIntConfig("order.unaccepted.alarm.minutes", UNACCEPTED_ALARM_DEFAULT_MINUTES);
+        int missedMinutes = parseIntConfig("order.unaccepted.missed.minutes",
+                Math.max(UNACCEPTED_MISSED_DEFAULT_MINUTES, goldenMinutes * 3));
+
+        // 仅查"待接单"状态，避免把配送中订单误判为漏单
+        LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Orders::getStatus, Orders.STATUS_ORDERED)
+               .eq(Orders::getTenantId, tenantId);
+        List<Orders> orders = orderMapper.selectList(wrapper);
+        if (orders.isEmpty()) {
+            return 0;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        Set<Long> pendingIds = new HashSet<>();
+        int alerted = 0;
+        for (Orders order : orders) {
+            pendingIds.add(order.getId());
+            long wait = waitMinutes(order, now);
+            String level = resolveLevel(wait, goldenMinutes, alarmMinutes, missedMinutes);
+            if ("MISSED".equals(level)) {
+                // 漏单升级：首次触发才通知
+                if (firstAlert("missed", tenantId, order.getId())) {
+                    notifyManagers(tenantId, "【漏单告警】订单 " + tail(order.getNumber())
+                            + " 已等待 " + wait + " 分钟仍未接单，已升级为漏单，请立即处理！");
+                    log.warn("[漏单预警] 漏单升级告警: tenantId={}, orderId={}, orderNo={}, waitMinutes={}",
+                            tenantId, order.getId(), order.getNumber(), wait);
+                    alerted++;
+                }
+            } else if (wait >= goldenMinutes) {
+                // 超黄金时长未接单：首次触发才通知
+                if (firstAlert("golden", tenantId, order.getId())) {
+                    notifyManagers(tenantId, "您有订单待接单超时：订单 " + tail(order.getNumber())
+                            + " 已等待 " + wait + " 分钟，请及时接单");
+                    log.warn("[漏单预警] 超时未接单通知: tenantId={}, orderId={}, orderNo={}, waitMinutes={}",
+                            tenantId, order.getId(), order.getNumber(), wait);
+                    alerted++;
+                }
+            }
+        }
+        // 清理：已不在待接单状态的订单，从两个告警去重集合中移除，避免集合无限增长
+        cleanupAlertSets(tenantId, pendingIds);
+        return alerted;
+    }
+
+    /**
+     * 解析未接单等级：漏单(MISSED) &gt; 告警(ALARM) &gt; 预警(WARNING) &gt; 正常(NORMAL)
+     * 默认配置下漏单阈值=3 倍黄金时长，故 ALARM 档仅在漏单阈值高于告警阈值时出现。
+     */
+    private String resolveLevel(long waitMinutes, int goldenMinutes, int alarmMinutes, int missedMinutes) {
+        if (waitMinutes >= missedMinutes) {
+            return "MISSED";
+        }
+        if (waitMinutes >= alarmMinutes) {
+            return "ALARM";
+        }
+        if (waitMinutes >= goldenMinutes) {
+            return "WARNING";
+        }
+        return "NORMAL";
+    }
+
+    /**
+     * 判断订单是否首次触发对应等级告警（Redis SADD 原子去重，返回 true 表示首次加入）
+     */
+    private boolean firstAlert(String level, Long tenantId, Long orderId) {
+        try {
+            String key = ("missed".equals(level) ? ALERT_MISSED_KEY_PREFIX : ALERT_GOLDEN_KEY_PREFIX) + tenantId;
+            Long added = redisTemplate.opsForSet().add(key, String.valueOf(orderId));
+            if (added != null && added > 0) {
+                redisTemplate.expire(key, ALERT_SET_TTL_SECONDS, TimeUnit.SECONDS);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("[漏单预警] 告警去重失败(Redis异常): tenantId={}, orderId={}, level={}, error={}",
+                    tenantId, orderId, level, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 清理告警去重集合：移除已不在待接单状态的订单ID，避免集合无限增长
+     */
+    private void cleanupAlertSets(Long tenantId, Set<Long> pendingIds) {
+        if (pendingIds == null || pendingIds.isEmpty()) {
+            return;
+        }
+        try {
+            String goldenKey = ALERT_GOLDEN_KEY_PREFIX + tenantId;
+            String missedKey = ALERT_MISSED_KEY_PREFIX + tenantId;
+            Set<Object> goldenMembers = redisTemplate.opsForSet().members(goldenKey);
+            if (goldenMembers != null) {
+                for (Object member : goldenMembers) {
+                    Long id = parseLongId(member);
+                    if (id != null && !pendingIds.contains(id)) {
+                        redisTemplate.opsForSet().remove(goldenKey, member);
+                    }
+                }
+            }
+            Set<Object> missedMembers = redisTemplate.opsForSet().members(missedKey);
+            if (missedMembers != null) {
+                for (Object member : missedMembers) {
+                    Long id = parseLongId(member);
+                    if (id != null && !pendingIds.contains(id)) {
+                        redisTemplate.opsForSet().remove(missedKey, member);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("[漏单预警] 告警集合清理失败: tenantId={}, error={}", tenantId, e.getMessage());
+        }
+    }
+
+    /**
+     * 将 Redis 集合成员（订单ID字符串）解析为 Long
+     */
+    private Long parseLongId(Object member) {
+        if (member == null) {
+            return null;
+        }
+        try {
+            return Long.parseLong(member.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 通知店长（当前租户下状态正常的全部员工，取其手机号发短信并落通知记录）
+     * 短信默认 Mock 模式仅打日志，生产需配置阿里云短信凭证并关闭 mock-mode。
+     */
+    private void notifyManagers(Long tenantId, String content) {
+        try {
+            List<Employee> managers = employeeService.lambdaQuery()
+                    .eq(Employee::getTenantId, tenantId)
+                    .eq(Employee::getStatus, 1)
+                    .isNotNull(Employee::getPhone)
+                    .ne(Employee::getPhone, "")
+                    .list();
+            if (managers.isEmpty()) {
+                log.info("[漏单预警] 未找到可通知的店长: tenantId={}", tenantId);
+                return;
+            }
+            List<String> phones = new ArrayList<>();
+            for (Employee m : managers) {
+                if (m.getPhone() != null && !m.getPhone().trim().isEmpty()) {
+                    phones.add(m.getPhone().trim());
+                }
+            }
+            if (phones.isEmpty()) {
+                return;
+            }
+            notificationService.sendSimpleMessage(1, phones, "未接单告警", content);
+            log.info("[漏单预警] 已通知店长: tenantId={}, phones={}", tenantId, phones);
+        } catch (Exception e) {
+            log.error("[漏单预警] 通知店长失败: tenantId={}, error={}", tenantId, e.getMessage());
+        }
+    }
+
+    /**
+     * 订单号尾部截取（便于语音播报/短信展示）
+     */
+    private String tail(String orderNo) {
+        if (orderNo == null || orderNo.length() <= 6) {
+            return orderNo == null ? "--" : orderNo;
+        }
+        return orderNo.substring(orderNo.length() - 6);
+    }
+
+    /**
+     * 解析整型系统配置，缺失或非法时返回默认值
+     *
+     * @param key          配置键
+     * @param defaultValue 默认值
+     * @return 配置值
+     */
+    private int parseIntConfig(String key, int defaultValue) {
+        String val = systemConfigService.getConfigOrDefault(key, null);
+        if (val == null || val.trim().isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(val.trim());
+        } catch (NumberFormatException e) {
+            log.warn("[漏单预警] 非法配置值 key={}, val={}, 使用默认 {}", key, val, defaultValue);
+            return defaultValue;
+        }
     }
 
     /**

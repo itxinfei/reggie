@@ -56,13 +56,13 @@ public class DeliveryPlatformFactory {
         if (PlatformEnum.DOUYIN.name().equals(platform)) {
             return douyinAdapter;
         }
-        if ("DADA".equals(platform)) {
+        if (PlatformEnum.DADA.name().equals(platform)) {
             return dadaAdapter;
         }
-        if ("FENGNIAO".equals(platform)) {
+        if (PlatformEnum.FENGNIAO.name().equals(platform)) {
             return fengniaoAdapter;
         }
-        if ("SHUNFENG".equals(platform)) {
+        if (PlatformEnum.SHUNFENG.name().equals(platform)) {
             return shunfengAdapter;
         }
         throw new IllegalArgumentException("不支持的外卖平台: " + platform);

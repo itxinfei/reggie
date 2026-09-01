@@ -1,6 +1,7 @@
 package com.reggie.module.invoice.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
@@ -16,7 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 发票服务实现
@@ -103,14 +106,41 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
     }
 
     @Override
-    public List<InvoiceRecord> listRecords(Integer status, Long tenantId) {
+    public Page<InvoiceRecord> listRecords(Page<InvoiceRecord> page, Integer status, Long tenantId) {
         LambdaQueryWrapper<InvoiceRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(InvoiceRecord::getTenantId, tenantId);
         if (status != null) {
             qw.eq(InvoiceRecord::getStatus, status);
         }
         qw.orderByDesc(InvoiceRecord::getCreateTime);
-        return list(qw);
+        return page(page, qw);
+    }
+
+    @Override
+    public Map<String, Integer> listStats(Long tenantId) {
+        // 按状态分别 count（索引命中，避免全量加载行数据），统计卡全量不随分页/筛选变化
+        Map<String, Integer> stats = new HashMap<>();
+        stats.put("total", (int) count(statusQw(tenantId, null)));
+        stats.put("applied", (int) count(statusQw(tenantId, InvoiceRecord.STATUS_APPLIED)));
+        stats.put("issued", (int) count(statusQw(tenantId, InvoiceRecord.STATUS_ISSUED)));
+        stats.put("voided", (int) count(statusQw(tenantId, InvoiceRecord.STATUS_VOIDED)));
+        return stats;
+    }
+
+    /**
+     * 按租户与状态构造统计查询条件
+     *
+     * @param tenantId 租户ID
+     * @param status   开票状态（null 时不加状态条件）
+     * @return 查询条件
+     */
+    private LambdaQueryWrapper<InvoiceRecord> statusQw(Long tenantId, Integer status) {
+        LambdaQueryWrapper<InvoiceRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(InvoiceRecord::getTenantId, tenantId);
+        if (status != null) {
+            qw.eq(InvoiceRecord::getStatus, status);
+        }
+        return qw;
     }
 
     @Override

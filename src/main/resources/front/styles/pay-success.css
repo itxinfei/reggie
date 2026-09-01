@@ -36,10 +36,15 @@
   flex-direction: column;
   text-align: center;
   align-items: center;
+  /* 修改点：整块垂直居中替代硬编码 margin-top:148rem —— 小屏(≤667px)下原留白会挤压按钮溢出视口，
+     居中布局任意屏高均安全（2026-09-01 微调） */
+  justify-content: center;
+  padding: 24rem 24rem calc(24rem + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
 #pay_success .divContent img {
-  margin-top: 148rem;
+  margin-top: 0;
   margin-bottom: 19rem;
   width: 90rem;
   height: 86rem;

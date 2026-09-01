@@ -130,8 +130,8 @@ public class UserController {
         session.setAttribute("smsCode_" + phone + "_time", System.currentTimeMillis());
 
         if("dev".equals(activeProfile)){
-            // 开发环境：在控制台打印完整验证码，方便调试
-            log.info("【开发环境】验证码已生成 -> 手机号：{}，验证码：****", LogMaskUtils.maskPhone(phone));
+            // 开发环境：在控制台打印完整验证码，方便调试（仅 dev 生效，生产走 else 不打印）
+            log.info("【开发环境】验证码已生成 -> 手机号：{}，验证码：{}", LogMaskUtils.maskPhone(phone), codeStr);
         } else {
             // 生产环境：仅记录脱敏日志；若配置了短信模板则通过阿里云发送真实短信
             log.info("【生产环境】验证码已生成 -> 手机号：{}，验证码：****", LogMaskUtils.maskPhone(phone));

@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>门店管理 - 瑞吉外卖管理端</title>
-    <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <title>门店管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -169,7 +168,7 @@
 
                 <!-- 空状态 -->
                 <div v-if="!loading && tableData.length === 0" class="empty-wrap">
-                    <i class="el-icon-s-shop" style="font-size:48px;"></i>
+                    <i class="el-icon-s-shop" style="font-size: 48px"></i>
                     <p style="margin-top:12px;">暂无门店数据</p>
                     <el-button type="primary" size="small" style="margin-top:12px;" @click="openCreateDialog">创建第一家门店</el-button>
                 </div>

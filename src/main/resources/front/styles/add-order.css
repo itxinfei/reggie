@@ -1,4 +1,10 @@
 /* 修改点：统一头部品牌色渐变 */
+
+/* ---- 加单页专属令牌（收敛硬编码 hex） ---- */
+:root {
+  --add-order-coupon-active-end: #fff8e0;  /* 优惠券激活渐变结束色（浅金） */
+}
+
 #add_order .divHead {
   width: 100%;
   height: var(--header-height);
@@ -31,9 +37,11 @@
   transform: translate(0, -50%) scale(0.85);
 }
 
+/* 修改点：内容区高度链改为可解释计算 —— 100vh − 头部(var(--header-height)=88) − 顶部margin(10) − 底部购物车栏(44+bottom12)，
+   原硬编码 calc(100vh - 56rem - 110rem) 中 56rem 为旧头部残留、110rem 含义不明，改后改头部高度自动同步（2026-09-01 微调） */
 #add_order .divContent {
   margin: 10rem 10rem 0 10rem;
-  height: calc(100vh - 56rem - 110rem);
+  height: calc(100vh - var(--header-height) - 66rem);
   overflow-y: auto;
 }
 
@@ -398,7 +406,7 @@
   font-weight: 600;
   text-align: center;
   line-height: 28rem;
-  color: #fff;
+  color: var(--color-text-white);
   margin-right: 10rem;
 }
 
@@ -407,7 +415,8 @@
 }
 
 #add_order .divContent .pay-method .pay-alipay {
-  background: var(--color-info);
+  /* 支付宝官方蓝：平台图标专用色，不属"蓝色作主色"违规 */
+  background: var(--platform-alipay);
 }
 
 #add_order .divContent .pay-method .pay-text {
@@ -470,7 +479,7 @@
 
 #add_order .divContent .coupon-section .coupon-card.active {
   border-color: var(--color-primary);
-  background: linear-gradient(135deg, var(--color-primary-light), #fff8e0);
+  background: linear-gradient(135deg, var(--color-primary-light), var(--add-order-coupon-active-end));
 }
 
 #add_order .divContent .coupon-section .coupon-left {

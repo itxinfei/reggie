@@ -1,7 +1,7 @@
 // ============================================================
 // 催单管理 (Urgency) API 模块
 // 后端基路径: /api/urgency
-// 覆盖 UrgencyController 全部 6 个端点
+// 覆盖 UrgencyController 全部 7 个端点
 // ============================================================
 
 // 获取催单概览（催单中订单数/超时可催/平均等待时间/最长等待时间）
@@ -49,6 +49,13 @@ const getUrgencyQueue = () => {
 const getUrgencySummary = () => {
   return $axios({
     url: '/api/urgency/summary',
+    method: 'get'
+  })
+}
+// 获取未接单实时监控看板（接单大屏轮询：待接单订单分级 + 阈值）
+const getUnacceptedMonitor = () => {
+  return $axios({
+    url: '/api/urgency/unaccepted',
     method: 'get'
   })
 }

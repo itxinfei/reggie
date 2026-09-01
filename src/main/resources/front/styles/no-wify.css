@@ -34,12 +34,16 @@
   flex-direction: column;
   text-align: center;
   align-items: center;
+  /* 修改点：整块垂直居中替代硬编码 margin-top:104rem —— 小屏下避免按钮溢出视口（2026-09-01 微调） */
+  justify-content: center;
+  padding: 24rem 24rem calc(24rem + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
 #no_wifi .divContent img {
   width: 239rem;
   height: 130rem;
-  margin-top: 104rem;
+  margin-top: 0;
   margin-bottom: 19rem;
 }
 

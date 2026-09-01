@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>数据导出 - 瑞吉外卖管理端</title>
-    <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+    <title>数据导出 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
@@ -12,9 +11,8 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: var(--bg-page); color: var(--el-text-primary); font-family: var(--font-family-base); }
 
-        .page-header { margin-bottom: var(--space-5); }
-        .page-header h2 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0; }
-        .page-header p { font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--space-1); }
+        /* ds-page-header 对齐 */
+        .dashboard-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5); }
 
         /* 卡片网格 */
         .export-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
@@ -38,7 +36,7 @@
         .icon-report{ background: var(--purple-50); color: var(--purple-legacy2); }
 
         .card-title { font-size:var(--font-size-md); font-weight: 600; }
-        .card-desc  { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 2px; }
+        .card-desc  { font-size:var(--font-size-xs); color: var(--text-muted); margin-top: 2px; }
 
         /* 筛选区 */
         .filter-section { margin-bottom: 16px; padding: 12px; background: var(--el-bg-ghost); border-radius: var(--radius-md); }
@@ -117,6 +115,13 @@
             to { opacity: 0; transform: translateX(100%); }
         }
 
+        /* ---- 内联样式抽离的工具类 ---- */
+        .date-sep { color: var(--el-border-base); }                              /* 日期范围"至"字 */
+        .filter-hint { font-size: var(--font-size-sm); color: var(--text-muted); } /* 数据范围提示文字 */
+        .history-header { display: flex; justify-content: space-between; align-items: center; }
+        .history-count { font-size: var(--font-size-xs); color: var(--el-border-base); font-weight: 400; }
+        .empty-icon-large { font-size: 36px; margin-bottom: var(--space-2); }
+
         @media (max-width: 1200px) {
             .export-cards { grid-template-columns: 1fr; }
         }
@@ -126,18 +131,19 @@
     <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
     <a href="#app" class="skip-link">跳转到主内容</a>
     <div id="app" role="main" aria-label="页面主要内容">
-        <!-- 修改点：补回缺失的 .page-header 开标签（原缺失导致行内 </div> 提前闭合了 #app，
-             导出卡片与导出记录全部落在 Vue 挂载点之外，模板编译失败、整页绑定失效） -->
-        <div class="page-header">
-            <h2>数据导出</h2>
-            <p>支持将业务数据导出为 Excel(.xlsx) 和 PDF 格式，文件自动包含导出时间戳</p>
-        </div>
+      <div class="dashboard-container">
+          <header class="ds-page-header">
+            <div class="ds-page-header__titles">
+              <h1 class="ds-page-header__title" id="page-title">数据导出</h1>
+              <p class="ds-page-header__subtitle">支持将业务数据导出为 Excel(.xlsx) 和 PDF 格式，文件自动包含导出时间戳</p>
+            </div>
+          </header>
 
         <div class="export-cards">
             <!-- 订单导出 -->
             <div class="export-card">
                 <div class="card-header">
-                    <div class="card-icon icon-order">&#128203;</div>
+                    <div class="card-icon icon-order"><i class="ri-file-list-3-line" aria-hidden="true"></i></div>
                     <div>
                         <div class="card-title">订单数据导出</div>
                         <div class="card-desc">导出订单号、用户、金额、状态、时间等信息</div>
@@ -147,7 +153,7 @@
                     <div class="filter-row">
                         <span class="filter-label">日期范围</span>
                         <input type="date" v-model="orderFilter.startDate" />
-                        <span style="color:var(--el-border-base);">至</span>
+                        <span class="date-sep">至</span>
                         <input type="date" v-model="orderFilter.endDate" />
                         <div class="quick-range">
                             <span :class="{active: orderRange === 'today'}" role="button" tabindex="0" @click="setOrderRange('today')" @keydown.enter="setOrderRange('today')" :aria-pressed="orderRange === 'today'">今天</span>
@@ -176,7 +182,7 @@
             <!-- 菜品导出 -->
             <div class="export-card">
                 <div class="card-header">
-                    <div class="card-icon icon-dish">&#127834;</div>
+                    <div class="card-icon icon-dish"><i class="ri-restaurant-line" aria-hidden="true"></i></div>
                     <div>
                         <div class="card-title">菜品数据导出</div>
                         <div class="card-desc">导出菜品名称、分类、价格、售卖状态等信息</div>
@@ -185,7 +191,7 @@
                 <div class="filter-section">
                     <div class="filter-row">
                         <span class="filter-label">数据范围</span>
-                        <span style="font-size:var(--font-size-sm);color:var(--color-info);">全部在售菜品（含停售）</span>
+                        <span class="filter-hint">全部在售菜品（含停售）</span>
                     </div>
                 </div>
                 <div class="btn-row">
@@ -197,7 +203,7 @@
             <!-- 员工导出 -->
             <div class="export-card">
                 <div class="card-header">
-                    <div class="card-icon icon-emp">&#128101;</div>
+                    <div class="card-icon icon-emp"><i class="ri-user-line" aria-hidden="true"></i></div>
                     <div>
                         <div class="card-title">员工数据导出</div>
                         <div class="card-desc">导出员工姓名、账号、手机号、性别、状态、入职时间</div>
@@ -206,7 +212,7 @@
                 <div class="filter-section">
                     <div class="filter-row">
                         <span class="filter-label">数据范围</span>
-                        <span style="font-size:var(--font-size-sm);color:var(--color-info);">全部员工数据</span>
+                        <span class="filter-hint">全部员工数据</span>
                     </div>
                 </div>
                 <div class="btn-row">
@@ -218,7 +224,7 @@
             <!-- 经营报表导出 -->
             <div class="export-card">
                 <div class="card-header">
-                    <div class="card-icon icon-report">&#128200;</div>
+                    <div class="card-icon icon-report"><i class="ri-bar-chart-line" aria-hidden="true"></i></div>
                     <div>
                         <div class="card-title">经营报表导出</div>
                         <div class="card-desc">导出每日经营汇总，含营业额、订单量、客单价等核心指标</div>
@@ -228,7 +234,7 @@
                     <div class="filter-row">
                         <span class="filter-label">日期范围</span>
                         <input type="date" v-model="reportFilter.startDate" />
-                        <span style="color:var(--el-border-base);">至</span>
+                        <span class="date-sep">至</span>
                         <input type="date" v-model="reportFilter.endDate" />
                         <div class="quick-range">
                             <span :class="{active: reportRange === 'today'}" role="button" tabindex="0" @click="setReportRange('today')" @keydown.enter="setReportRange('today')" :aria-pressed="reportRange === 'today'">今天</span>
@@ -246,13 +252,13 @@
 
         <!-- 导出记录 -->
         <div class="history-section">
-            <div class="history-title" style="display:flex;justify-content:space-between;align-items:center;">
-                <span>&#128197; 导出记录 <span style="font-size:var(--font-size-xs);color:var(--el-border-base);font-weight:400;">（最近 {{ history.length }} 条）</span></span>
+            <div class="history-title history-header">
+                <span><i class="ri-history-line" aria-hidden="true"></i> 导出记录 <span class="history-count">（最近 {{ history.length }} 条）</span></span>
                 <button v-if="history.length > 0" @click="clearHistory" class="app-btn app-btn-danger app-btn-sm">清空记录</button>
             </div>
             <div class="history-list" v-if="history.length > 0">
                 <div class="history-item" v-for="(item, idx) in history" :key="idx">
-                    <span class="history-icon">{{ item.icon }}</span>
+                    <i class="history-icon" :class="item.icon" aria-hidden="true"></i>
                     <div class="history-info">
                         <div class="history-name">{{ item.name }}</div>
                         <div class="history-meta">{{ item.time }}</div>
@@ -264,10 +270,11 @@
                 </div>
             </div>
             <div class="history-list empty-history" v-else>
-                <div style="font-size:36px;margin-bottom:8px;"><i class="ri-inbox-line" aria-hidden="true"></i></div>
+                <div class="empty-icon-large"><i class="ri-inbox-line" aria-hidden="true"></i></div>
                 暂无导出记录，点击上方按钮开始导出
             </div>
         </div>
+      </div>
     </div>
 
     <div id="toast" class="toast"></div>
@@ -356,11 +363,11 @@
                     var label = '订单数据 (' + self.orderFilter.startDate + '~' + self.orderFilter.endDate + ')';
                     exportApi.downloadFile(apiCall, '订单数据.' + ext)
                         .then(function() {
-                            self.addHistory(label, '&#128203;', ext, true);
+                            self.addHistory(label, 'ri-file-list-3-line', ext, true);
                             showToast('订单数据导出成功，文件已开始下载', 'success');
                         })
                         .catch(function(err) {
-                            self.addHistory(label, '&#128203;', ext, false);
+                            self.addHistory(label, 'ri-file-list-3-line', ext, false);
                             showToast(err.message || '订单数据导出失败', 'error');
                         })
                         .finally(function() { self.orderExport.loading = false; });
@@ -376,11 +383,11 @@
 
                     exportApi.downloadFile(apiCall, '菜品数据.' + ext)
                         .then(function() {
-                            self.addHistory('菜品数据', '&#127834;', ext, true);
+                            self.addHistory('菜品数据', 'ri-restaurant-line', ext, true);
                             showToast('菜品数据导出成功', 'success');
                         })
                         .catch(function(err) {
-                            self.addHistory('菜品数据', '&#127834;', ext, false);
+                            self.addHistory('菜品数据', 'ri-restaurant-line', ext, false);
                             showToast(err.message || '菜品数据导出失败', 'error');
                         })
                         .finally(function() { self.dishExport.loading = false; });
@@ -396,11 +403,11 @@
 
                     exportApi.downloadFile(apiCall, '员工数据.' + ext)
                         .then(function() {
-                            self.addHistory('员工数据', '&#128101;', ext, true);
+                            self.addHistory('员工数据', 'ri-user-line', ext, true);
                             showToast('员工数据导出成功', 'success');
                         })
                         .catch(function(err) {
-                            self.addHistory('员工数据', '&#128101;', ext, false);
+                            self.addHistory('员工数据', 'ri-user-line', ext, false);
                             showToast(err.message || '员工数据导出失败', 'error');
                         })
                         .finally(function() { self.empExport.loading = false; });
@@ -420,11 +427,11 @@
                     var label = '经营报表 (' + self.reportFilter.startDate + '~' + self.reportFilter.endDate + ')';
                     exportApi.downloadFile(apiCall, '经营报表.' + ext)
                         .then(function() {
-                            self.addHistory(label, '&#128200;', ext, true);
+                            self.addHistory(label, 'ri-bar-chart-line', ext, true);
                             showToast('经营报表导出成功', 'success');
                         })
                         .catch(function(err) {
-                            self.addHistory(label, '&#128200;', ext, false);
+                            self.addHistory(label, 'ri-bar-chart-line', ext, false);
                             showToast(err.message || '经营报表导出失败', 'error');
                         })
                         .finally(function() { self.reportExport.loading = false; });

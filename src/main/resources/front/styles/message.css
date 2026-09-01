@@ -125,7 +125,11 @@
   white-space: nowrap;
 }
 
-#messageApp .tag-notification { background: rgba(24, 144, 255, 0.1); color: var(--color-info); }
+#messageApp .tag-notification {
+  /* 改为品牌金 tint：与瑞吉品牌主色一致，不引入蓝色功能色 */
+  background: var(--color-primary-tint);
+  color: var(--color-primary-dark);
+}
 #messageApp .tag-popup { background: rgba(255, 179, 0, 0.1); color: var(--color-warning); }
 #messageApp .tag-sms { background: rgba(7, 193, 96, 0.1); color: var(--color-success); }
 #messageApp .tag-coupon { background: rgba(243, 69, 70, 0.1); color: var(--color-price); }

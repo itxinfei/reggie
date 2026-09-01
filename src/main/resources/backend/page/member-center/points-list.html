@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>积分管理 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <title>积分管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -78,8 +77,8 @@
         </el-input>
         <span style="color:var(--color-info);font-size:var(--font-size-sm);">类型：</span>
         <span :class="['type-tag', input.type === '' ? 'active' : '']" role="button" tabindex="0" @click="setType('')" @keydown.enter="setType('')" :aria-pressed="input.type === ''">全部</span>
-        <span :class="['type-tag', input.type === 'IN' ? 'active' : '']" role="button" tabindex="0" @click="setType('IN')" @keydown.enter="setType('IN')" :aria-pressed="input.type === 'IN'" aria-label="获取类型">🟢 获取</span>
-        <span :class="['type-tag', input.type === 'OUT' ? 'active' : '']" role="button" tabindex="0" @click="setType('OUT')" @keydown.enter="setType('OUT')" :aria-pressed="input.type === 'OUT'" aria-label="消费类型">🔴 消费</span>
+        <span :class="['type-tag', input.type === 'IN' ? 'active' : '']" role="button" tabindex="0" @click="setType('IN')" @keydown.enter="setType('IN')" :aria-pressed="input.type === 'IN'" aria-label="获取类型"><i class="ri-arrow-down-circle-line tag-in" aria-hidden="true"></i> 获取</span>
+        <span :class="['type-tag', input.type === 'OUT' ? 'active' : '']" role="button" tabindex="0" @click="setType('OUT')" @keydown.enter="setType('OUT')" :aria-pressed="input.type === 'OUT'" aria-label="消费类型"><i class="ri-arrow-up-circle-line tag-out" aria-hidden="true"></i> 消费</span>
         <el-button type="primary" size="small" @click="handleQuery">查询</el-button>
         <el-button size="small" @click="reset">重置</el-button>
       </div>

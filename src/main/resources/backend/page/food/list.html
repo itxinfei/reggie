@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>菜品管理 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <title>菜品管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -228,7 +227,7 @@
             <el-option v-for="c in categoryOptions" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
-        <div style="color: var(--text-secondary); font-size: 12px; line-height: 1.6;">
+        <div class="ds-text-secondary ds-text-xs" style="line-height: 1.6">
           将把已勾选的 <span style="font-weight: 600; color: var(--color-brand-500);">{{ checkList.length }}</span> 个菜品移动到该分类（逐条保存，失败项会单独提示）。
         </div>
       </el-form>
@@ -280,7 +279,7 @@
               @change="onMaterialChange(scope.row, $event)" style="width: 100%;">
               <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id">
                 <span>{{ m.name }}</span>
-                <span style="color: var(--text-muted); margin-left: 8px; font-size: 12px;">{{ m.unit }}</span>
+                <span class="ds-form-hint">{{ m.unit }}</span>
               </el-option>
             </el-select>
           </template>
@@ -302,7 +301,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <div style="margin-top: 12px; color: var(--text-muted); font-size: 12px;">
+      <div class="ds-text-muted ds-text-xs" style="margin-top: var(--space-3)">
         提示：点击"保存"将提交全部食材配方（已保存的更新、新增的创建、删除的移除）。
       </div>
     </crud-dialog>

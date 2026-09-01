@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>菜品排行 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -350,19 +350,28 @@
           this.dateRange = []; this.limit = 10; this.tableData = [];
           if (this.chart) this.chart.clear(); if (this.trendChart) this.trendChart.clear();
         },
+        // 修改点：改为导出当前表格数据生成 CSV（此前误调日报接口且扩展名 .csv 内容为 xlsx）
         handleExport: function() {
           const self = this
           if (!self.dateRange || self.dateRange.length < 2) {
             ReggieUI.warning('请先选择日期范围'); return;
           }
-          reportExport({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(blob) {
-            if (blob && blob.type && blob.type.indexOf('json') > -1) { ReggieUI.error('导出失败'); return; }
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = '菜品排行_' + self.dateRange[0] + '_' + self.dateRange[1] + '.csv';
-            link.click(); URL.revokeObjectURL(link.href);
-            ReggieUI.success('导出成功');
-          }).catch(function(err) { ReggieUI.error('导出失败：' + err); });
+          if (!self.tableData || !self.tableData.length) {
+            ReggieUI.warning('暂无数据可导出'); return;
+          }
+          const esc = function(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"' }
+          const header = ['排名', '菜品名称', '销量（份）', '占比']
+          const lines = self.tableData.map(function(r, i) {
+            return [i + 1, r.name, r.count, self.calcPercent(r.count) + '%'].map(esc).join(',')
+          })
+          const csv = '\uFEFF' + header.map(esc).join(',') + '\r\n' + lines.join('\r\n')
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+          const link = document.createElement('a')
+          link.href = URL.createObjectURL(blob)
+          link.download = '菜品排行_' + self.dateRange[0] + '_' + self.dateRange[1] + '.csv'
+          document.body.appendChild(link); link.click(); document.body.removeChild(link)
+          URL.revokeObjectURL(link.href)
+          ReggieUI.success('导出成功')
         }
       }
     })

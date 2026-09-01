@@ -24,32 +24,32 @@
                 <div class="brandIcon">
                     <svg viewBox="0 0 72 72" width="56" height="56">
                         <!-- 碗体 -->
-                        <ellipse cx="36" cy="38" rx="28" ry="22" fill="#FFC200"/>
+                        <ellipse class="logo-bowl" cx="36" cy="38" rx="28" ry="22"/>
                         <ellipse cx="36" cy="38" rx="28" ry="22" fill="url(#bowlGrad)"/>
                         <!-- 碗口 -->
-                        <rect x="8" y="16" width="56" height="4" rx="2" fill="#FFB300"/>
+                        <rect class="logo-rim" x="8" y="16" width="56" height="4" rx="2"/>
                         <!-- 米饭 -->
-                        <ellipse cx="36" cy="18" rx="24" ry="8" fill="#FFF8E1"/>
-                        <ellipse cx="30" cy="16" rx="10" ry="5" fill="#FFFFFF" opacity="0.6"/>
-                        <ellipse cx="42" cy="15" rx="8" ry="4" fill="#FFFFFF" opacity="0.4"/>
+                        <ellipse class="logo-rice" cx="36" cy="18" rx="24" ry="8"/>
+                        <ellipse class="logo-highlight" cx="30" cy="16" rx="10" ry="5" opacity="0.6"/>
+                        <ellipse class="logo-highlight" cx="42" cy="15" rx="8" ry="4" opacity="0.4"/>
                         <!-- 热气 -->
-                        <path d="M22 10 Q24 4 22 -2" fill="none" stroke="#FFE082" stroke-width="2.5" stroke-linecap="round" opacity="0.9">
+                        <path class="logo-steam" d="M22 10 Q24 4 22 -2" fill="none" stroke-width="2.5" stroke-linecap="round" opacity="0.9">
                             <animate attributeName="d" values="M22 10 Q24 4 22 -2;M22 10 Q20 4 22 -2;M22 10 Q24 4 22 -2" dur="2s" repeatCount="indefinite"/>
                             <animate attributeName="opacity" values="0.9;0.3;0.9" dur="2s" repeatCount="indefinite"/>
                         </path>
-                        <path d="M36 6 Q38 -1 36 -8" fill="none" stroke="#FFE082" stroke-width="2.5" stroke-linecap="round" opacity="0.7">
+                        <path class="logo-steam" d="M36 6 Q38 -1 36 -8" fill="none" stroke-width="2.5" stroke-linecap="round" opacity="0.7">
                             <animate attributeName="d" values="M36 6 Q38 -1 36 -8;M36 6 Q34 -1 36 -8;M36 6 Q38 -1 36 -8" dur="2.5s" repeatCount="indefinite"/>
                             <animate attributeName="opacity" values="0.7;0.2;0.7" dur="2.5s" repeatCount="indefinite"/>
                         </path>
-                        <path d="M50 12 Q52 5 50 -2" fill="none" stroke="#FFE082" stroke-width="2" stroke-linecap="round" opacity="0.5">
+                        <path class="logo-steam" d="M50 12 Q52 5 50 -2" fill="none" stroke-width="2" stroke-linecap="round" opacity="0.5">
                             <animate attributeName="d" values="M50 12 Q52 5 50 -2;M50 12 Q48 5 50 -2;M50 12 Q52 5 50 -2" dur="3s" repeatCount="indefinite"/>
                             <animate attributeName="opacity" values="0.5;0.1;0.5" dur="3s" repeatCount="indefinite"/>
                         </path>
                         <!-- 碗底阴影 -->
-                        <ellipse cx="36" cy="58" rx="22" ry="4" fill="rgba(0,0,0,0.08)"/>
+                        <ellipse class="logo-shadow" cx="36" cy="58" rx="22" ry="4"/>
                         <defs>
                             <radialGradient id="bowlGrad" cx="30%" cy="30%">
-                                <stop offset="0%" stop-color="#FFE082" stop-opacity="0.5"/>
+                                <stop class="logo-grad-stop" offset="0%" stop-opacity="0.5"/>
                                 <stop offset="100%" stop-color="transparent"/>
                             </radialGradient>
                         </defs>

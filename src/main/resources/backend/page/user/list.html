@@ -5,8 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>用户管理 - 瑞吉外卖管理端</title>
-  <!-- 引入样式 -->
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -203,7 +202,7 @@
             { key: '', icon: 'ri-group-line', label: '用户总数', value: self.stats.totalUsers || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: '1', icon: 'ri-checkbox-circle-line', label: '正常用户', value: self.stats.activeUsers || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
             { key: '0', icon: 'ri-forbid-line', label: '已禁用', value: self.stats.disabledUsers || 0, color: 'warning', clickable: true, active: self.activeFilter === '0' },
-            { key: 'new', icon: '🆕', label: '本月新增', value: self.stats.newUsersThisMonth || 0, color: 'danger' }
+            { key: 'new', icon: 'ri-user-add-line', label: '本月新增', value: self.stats.newUsersThisMonth || 0, color: 'danger' }
           ]
         }
       },

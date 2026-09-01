@@ -3,13 +3,13 @@
 -- 修复 P3-8：关键表缺少 @Version 乐观锁，并发更新可能导致后写覆盖先写
 
 -- 订单表：支付状态流转、取消订单等高频并发操作
-ALTER TABLE `orders` ADD COLUMN `version` INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本号' AFTER `is_deleted`;
+ALTER TABLE `orders` ADD COLUMN `version` INT NOT NULL DEFAULT 1 COMMENT '乐锁版朏' AFTER `is_deleted`;
 
 -- 支付订单表：退款等并发操作（已有 SELECT FOR UPDATE，version 作为补充防护）
-ALTER TABLE `payment_order` ADD COLUMN `version` INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本号' AFTER `is_deleted`;
+ALTER TABLE `payment_order` ADD COLUMN `version` INT NOT NULL DEFAULT 1 COMMENT 'ֹ汾' AFTER `is_deleted`;
 
 -- 退款记录表：防止重复退款
-ALTER TABLE `refund_record` ADD COLUMN `version` INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本号' AFTER `is_deleted`;
+ALTER TABLE `refund_record` ADD COLUMN `version` INT NOT NULL DEFAULT 1 COMMENT 'ֹ汾' AFTER `is_deleted`;
 
 -- 配送订单表：接单、状态流转等并发操作
-ALTER TABLE `delivery_order` ADD COLUMN `version` INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本号' AFTER `is_deleted`;
+ALTER TABLE `delivery_order` ADD COLUMN `version` INT NOT NULL DEFAULT 1 COMMENT '乐锁版朏' AFTER `is_deleted`;

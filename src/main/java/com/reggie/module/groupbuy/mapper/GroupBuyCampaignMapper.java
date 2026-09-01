@@ -22,7 +22,7 @@ public interface GroupBuyCampaignMapper extends BaseMapper<GroupBuyCampaign> {
     /**
      * 统计指定活动当前已参团人数
      */
-    @Select("SELECT COUNT(*) FROM group_buy_participation WHERE group_buy_id = #{campaignId} AND status IN ('JOINED','PAID') AND is_deleted = 0")
+    @Select("SELECT COUNT(*) FROM group_buy_participation WHERE group_buy_id = #{campaignId} AND status IN ('JOINED','PAID')")
     int countParticipants(@Param("campaignId") Long campaignId);
 
     /**

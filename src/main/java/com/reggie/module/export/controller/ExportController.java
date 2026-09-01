@@ -33,6 +33,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -588,8 +590,15 @@ public class ExportController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(mediaType);
         headers.setContentLength(bytes.length);
-        headers.setContentDisposition(ContentDisposition.attachment()
-                .filename(fullName).build());
+        // 修改点：手动构造 Content-Disposition，filename* 用 UTF-8 百分号编码，修复中文文件名乱码(????)
+        try {
+            String encoded = URLEncoder.encode(fullName, "UTF-8").replace("+", "%20");
+            headers.set(HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"download." + ext + "\"; filename*=UTF-8''" + encoded);
+        } catch (UnsupportedEncodingException e) {
+            log.warn("文件名编码失败，回退默认文件名: {}", fullName);
+            headers.setContentDisposition(ContentDisposition.attachment().filename("download." + ext).build());
+        }
 
         log.info("文件下载响应构建完成: {} ({} bytes)", fullName, bytes.length);
         return new ResponseEntity<>(bytes, headers, HttpStatus.OK);

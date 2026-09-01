@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>打印任务 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <title>打印任务 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
@@ -162,7 +161,6 @@
           ],
           stats: {
             totalTasks: 0,
-            todayTotal: 0,
             todaySuccess: 0,
             todayFailed: 0,
             pending: 0
@@ -183,7 +181,6 @@
           const self = this
           return [
             { key: '', icon: 'ri-file-list-3-line', label: '任务总数', value: self.stats.totalTasks || 0, color: 'primary', clickable: true },
-            { key: 'today', icon: 'ri-calendar-line', label: '今日任务', value: self.stats.todayTotal || 0, color: 'primary', clickable: false },
             { key: 'todaySuccess', icon: 'ri-checkbox-circle-line', label: '今日成功', value: self.stats.todaySuccess || 0, color: 'success', clickable: false },
             { key: 'todayFailed', icon: 'ri-close-circle-line', label: '今日失败', value: self.stats.todayFailed || 0, color: 'danger', clickable: false },
             { key: 'pending', icon: 'ri-time-line', label: '待打印', value: self.stats.pending || 0, color: 'warning', clickable: false }
@@ -228,7 +225,6 @@
                 code: 1,
                 data: {
                   totalTasks: Number(d.totalTasks) || 0,
-                  todayTotal: Number(d.todayTotal) || 0,
                   todaySuccess: Number(d.todaySuccess) || 0,
                   todayFailed: Number(d.todayFailed) || 0,
                   pending: Number(d.pending) || 0

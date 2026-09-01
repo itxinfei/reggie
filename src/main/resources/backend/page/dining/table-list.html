@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>桌台管理 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <title>桌台管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -400,7 +399,7 @@
             { prop: 'sort', label: '排序', width: 50, align: 'center' }
           ],
           // 统计
-          stats: { totalTables: 0, freeTables: 0, occupiedTables: 0, reservedTables: 0, cleaningTables: 0 },
+          stats: { totalTables: 0, freeTables: 0, occupiedTables: 0, reservedTables: 0 },
           activeFilter: '',
           // 搜索配置
           searchConfig: [
@@ -450,8 +449,7 @@
             { key: '', icon: 'ri-parking-box-line', label: '桌台总数', value: self.stats.totalTables, color: 'primary', clickable: true, active: self.activeFilter === '', flex: true },
             { key: 'FREE', icon: 'ri-checkbox-circle-line', label: '空闲桌台', value: self.stats.freeTables, color: 'success', clickable: true, active: self.activeFilter === 'FREE', flex: true },
             { key: 'OCCUPIED', icon: 'ri-group-line', label: '占用桌台', value: self.stats.occupiedTables, color: 'danger', clickable: true, active: self.activeFilter === 'OCCUPIED', flex: true },
-            { key: 'RESERVED', icon: 'ri-calendar-check-line', label: '预留桌台', value: self.stats.reservedTables, color: 'warning', clickable: true, active: self.activeFilter === 'RESERVED', flex: true },
-            { key: 'CLEANING', icon: 'ri-brush-3-line', label: '清洁中', value: self.stats.cleaningTables, color: 'info', clickable: true, active: self.activeFilter === 'CLEANING', flex: true }
+            { key: 'RESERVED', icon: 'ri-calendar-check-line', label: '预留桌台', value: self.stats.reservedTables, color: 'warning', clickable: true, active: self.activeFilter === 'RESERVED', flex: true }
           ]
         },
         // C.6 桌型图：按区域分组（未分区归入"未分区"）

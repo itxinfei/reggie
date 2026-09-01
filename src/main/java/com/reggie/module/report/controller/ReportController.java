@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -285,8 +285,11 @@ public class ReportController {
                     : "application/pdf";
             headers.setContentType(MediaType.parseMediaType(mediaType));
             headers.setContentLength(data.length);
-            headers.setContentDisposition(ContentDisposition.attachment()
-                    .filename("report_" + startDate + "_" + endDate + "." + ext).build());
+            // 修改点：filename* UTF-8 百分号编码，修复中文文件名乱码
+            String safeName = "营业报表_" + startDate + "_" + endDate + "." + ext;
+            headers.set(HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"report_" + startDate + "_" + endDate + "." + ext + "\"; filename*=UTF-8''"
+                            + URLEncoder.encode(safeName, "UTF-8").replace("+", "%20"));
             return new ResponseEntity<>(data, headers, HttpStatus.OK);
         } catch (Exception e) {
             log.error("报表导出失败: startDate={}, endDate={}, format={}", startDate, endDate, format, e);

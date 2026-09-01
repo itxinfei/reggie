@@ -56,4 +56,4 @@ CREATE TABLE IF NOT EXISTS `dish_spec_relation` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='菜品规格关联表';
 
 -- 为订单明细表添加备注字段
-ALTER TABLE `order_detail` ADD COLUMN `remark` varchar(500) DEFAULT NULL COMMENT '菜品备注' AFTER `dish_flavor`;
+ALTER TABLE `order_detail` ADD COLUMN `remark` varchar(500) DEFAULT NULL COMMENT '订单明细备注' AFTER `dish_flavor`;

@@ -1,4 +1,12 @@
 /* 修改点：统一头部品牌色渐变，与全局设计系统对齐 */
+
+/* ---- 订单页专属令牌（收敛按钮状态色硬编码 hex） ---- */
+:root {
+  --order-cancel-border: #ffcccc;       /* 取消按钮浅红边框 */
+  --order-cancel-active-bg: #ffebeb;   /* 取消按钮激活背景 */
+  --order-eval-active-bg: #fff8e1;     /* 评价按钮激活背景（浅金） */
+}
+
 #order {
   height: 100%;
 }
@@ -159,6 +167,8 @@
 #order .divBody .item .btn {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8rem 0;
   margin-bottom: 17rem;
   margin-top: var(--spacing-xl);
 }
@@ -188,7 +198,7 @@
 #order .divBody .btn .btnCancel {
   width: 124rem;
   height: 36rem;
-  border: 1px solid #ffcccc;
+  border: 1px solid var(--order-cancel-border);
   border-radius: 19rem;
   font-size: var(--font-size-md);
   font-family: var(--font-family-body);
@@ -203,7 +213,7 @@
 }
 
 #order .divBody .btn .btnCancel:active {
-  background: #ffebeb;
+  background: var(--order-cancel-active-bg);
   border-color: var(--color-danger);
 }
 
@@ -226,7 +236,7 @@
 }
 
 #order .divBody .btn .btnEval:active {
-  background: #fff8e1;
+  background: var(--order-eval-active-bg);
   border-color: var(--color-primary-dark);
 }
 

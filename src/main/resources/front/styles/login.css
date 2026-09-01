@@ -4,6 +4,47 @@
  * 更新：2026-07-09 | 美团暖色调背景 + 协议区纯文字
  * ============================================================ */
 
+/* ---- 登录页暖色令牌（收敛页面内硬编码 hex，便于整体换肤） ---- */
+:root {
+  --login-bg-gradient: linear-gradient(180deg, #FFF3D6 0%, #FFE8C0 18%, #FFF0DA 38%, #FFF7EE 60%, #FFFFFF 100%);
+  --login-bg-gradient-mid: linear-gradient(180deg, #FFF3D6 0%, #FFE8C0 16%, #FFF2DF 34%, #FFF9F2 56%, #FFFFFF 100%);
+  --login-text-dark: #3a2a10;
+  --login-text-medium: #5a3e10;
+  --login-text-brand: #4a3000;
+  --login-text-muted-warm: #a09080;
+  --login-text-placeholder: #b8b0a0;
+  --login-border-warm: #f0e8d8;
+  --login-border-card: #e8e0d0;
+  --login-border-input: #d8c8a8;
+  --login-border-active: #c8b898;
+  --login-bg-card: #faf9f5;
+  --login-bg-disabled: #f0ece0;
+  --login-bg-accent-gradient: linear-gradient(135deg, #FFF8E1, #FFFDF5);
+  --login-border-accent: #f5ecd8;
+  --login-bg-tag: #e0d8c0;
+  --login-success-bg: #f6ffed;
+  --login-danger-bg: #fff2f0;
+  --login-shimmer: linear-gradient(90deg, transparent, #FFF0D0 30%, #FFF0D0 70%, transparent);
+
+  /* ---- 品牌 logo SVG 令牌（收敛 SVG 内硬编码 fill/stroke） ---- */
+  --logo-bowl: #FFC200;        /* 碗体主色（同品牌金） */
+  --logo-rim: #FFB300;        /* 碗口 */
+  --logo-rice: #FFF8E1;       /* 米饭底色 */
+  --logo-highlight: #FFFFFF;  /* 米饭高光 */
+  --logo-steam: #FFE082;     /* 热气线条 */
+  --logo-shadow: rgba(0,0,0,0.08); /* 碗底阴影 */
+  --logo-grad-stop: #FFE082;  /* 渐变停止点 */
+}
+
+/* ---- 品牌 logo SVG（用 CSS 变量控制颜色，便于换肤） ---- */
+.brandIcon .logo-bowl { fill: var(--logo-bowl); }
+.brandIcon .logo-rim { fill: var(--logo-rim); }
+.brandIcon .logo-rice { fill: var(--logo-rice); }
+.brandIcon .logo-highlight { fill: var(--logo-highlight); }
+.brandIcon .logo-steam { stroke: var(--logo-steam); }
+.brandIcon .logo-shadow { fill: var(--logo-shadow); }
+.brandIcon .logo-grad-stop { stop-color: var(--logo-grad-stop); }
+
 /* ---- 页面容器 ---- */
 
 /* 登录页全局覆盖 — 避免使用内联样式 */
@@ -23,7 +64,7 @@ body.login-page {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   /* 美团暖色渐变：顶部暖黄 → 浅橙 → 米白底部 */
-  background: linear-gradient(180deg, #FFF3D6 0%, #FFE8C0 18%, #FFF0DA 38%, #FFF7EE 60%, #FFFFFF 100%);
+  background: var(--login-bg-gradient);
   padding: 0 28rem;
   padding-bottom: 60rem;
   box-sizing: border-box;

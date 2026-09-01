@@ -15,4 +15,4 @@ ALTER TABLE `address_book`
 
 -- 2. orders：新增 delivery_fee 列（配送费，单独存储便于财务对账）
 ALTER TABLE `orders`
-  ADD COLUMN `delivery_fee` decimal(10,2) NULL DEFAULT NULL COMMENT '配送费（外卖单配送费，堂食为 null）' AFTER `amount`;
+  ADD COLUMN `delivery_fee` decimal(10,2) NULL DEFAULT NULL COMMENT '配费（卖单配费，堂食为 null' AFTER `amount`;

@@ -33,11 +33,16 @@
   --color-text-disabled: #cccccc;
   --color-text-white: #ffffff;
 
+  /* ---- 外部平台品牌色（支付/配送单平台标签，语义化收敛硬编码 hex） ---- */
+  --platform-alipay:  #1677ff; /* 支付宝官方蓝（仅用于支付宝图标/标签） */
+
   /* ---- 功能色 ---- */
   --color-danger: #e94e3c;
   --color-success: #07c160;
   --color-warning: #ffb300;
-  --color-info: #1890ff;
+  /* info：历史遗留语义——为防全站蓝主色回退，覆盖为品牌金。
+     若需第三方平台真实蓝，请使用 --platform-xxx 令牌而非 --color-info */
+  --color-info: #ffc200;
   --color-price: #F34346;
 
   /* ---- 星级（评价/评分统一） ---- */
@@ -51,6 +56,10 @@
   --bg-card: #ffffff;
   --bg-input: #f8f9fa;
   --bg-hover: #f5f5f5;
+
+  /* ---- 边框色（通用浅灰分割线/边框，全站统一） ---- */
+  --border-light: #eeeeee;   /* 浅边框/分割线 */
+  --border-medium: #dddddd;  /* 中等边框（输入框/卡片边框） */
 
   /* ---- 圆角 ---- */
   --radius-sm: 4rem;

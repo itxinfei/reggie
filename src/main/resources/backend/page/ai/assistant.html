@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 经营分析助手 - 瑞吉外卖管理端</title>
-    <link rel="stylesheet" href="../../plugins/element-ui/index.css">
+    <title>AI 经营分析助手 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
     <link rel="stylesheet" href="../../styles/ai-chat.css" />
@@ -17,14 +16,14 @@
             <!-- 左侧边栏：对话历史 -->
             <div class="ai-sidebar" :class="{ open: sidebarOpen }">
                 <div class="sidebar-header">
-                    <h4>💬 对话历史</h4>
+                    <h4><i class="ri-chat-1-line" aria-hidden="true"></i> 对话历史</h4>
                     <button class="refresh-btn" @click="loadConversations" :disabled="sidebarLoading" :aria-label="sidebarLoading ? '刷新中' : '刷新对话列表'">
-                        {{ sidebarLoading ? '刷新中...' : '🔄 刷新' }}
+                        {{ sidebarLoading ? '刷新中...' : '' }}<i v-if="!sidebarLoading" class="ri-refresh-line" aria-hidden="true"></i> {{ sidebarLoading ? '' : '刷新' }}
                     </button>
                 </div>
 
                 <button class="new-chat-btn" @click="createNewConversation" :disabled="loading" aria-label="新建对话">
-                    ✨ 新建对话
+                    <i class="ri-add-line" aria-hidden="true"></i> 新建对话
                 </button>
 
                 <!-- 对话列表 -->
@@ -34,7 +33,7 @@
                          role="button" tabindex="0"
                          @click="selectConversation(conv)" @keydown.enter="selectConversation(conv)"
                          :aria-label="conv.title || '新对话'" :aria-pressed="currentConversationId === conv.conversationId">
-                        <div class="conv-icon">{{ getSceneIcon(conv.scene) }}</div>
+                        <div class="conv-icon"><i :class="getSceneIcon(conv.scene)" aria-hidden="true"></i></div>
                         <div class="conv-info">
                             <div class="conv-title">{{ conv.title || '新对话' }}</div>
                             <div class="conv-meta">
@@ -61,8 +60,8 @@
             <div class="ai-main">
             <!-- 修改点：紧凑单行头栏 — 集成侧边栏切换 + 标题 + 场景标签 + 连接状态 -->
             <div class="ai-header">
-                <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen" aria-label="切换侧边栏" title="切换侧边栏">☰</button>
-                <span class="header-logo">🤖</span>
+                <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen" aria-label="切换侧边栏" title="切换侧边栏"><i class="ri-menu-line" aria-hidden="true"></i></button>
+                <span class="header-logo"><i class="ri-robot-line" aria-hidden="true"></i></span>
                 <span class="header-title">AI 经营分析助手</span>
                 <span class="current-conv-title" v-if="currentConversation" :title="currentConversation.title">
                     {{ currentConversation.title }}
@@ -73,7 +72,7 @@
                           role="button" tabindex="0"
                           @click="switchScene(scene.value)" @keydown.enter="switchScene(scene.value)"
                           :aria-label="scene.label" :aria-pressed="currentScene === scene.value">
-                        {{ scene.label }}
+                        <i :class="scene.icon" aria-hidden="true"></i> {{ scene.name }}
                     </span>
                 </div>
                 <span class="header-conn" v-if="connectionStatus.model"
@@ -95,13 +94,13 @@
             <div class="chat-body" ref="chatBody">
                 <!-- 欢迎消息 -->
                 <div class="chat-msg assistant" v-if="messages.length === 0 && !currentConversationId">
-                    <div class="chat-avatar">🤖</div>
+                    <div class="chat-avatar"><i class="ri-robot-line" aria-hidden="true"></i></div>
                     <div class="chat-bubble">
-                        <div style="font-weight:600;margin-bottom:6px;">👋 你好！我是AI经营分析助手</div>
+                        <div style="font-weight:600;margin-bottom:6px;"><i class="ri-emotion-line" aria-hidden="true"></i> 你好！我是AI经营分析助手</div>
                         我可以帮你：<br>
-                        📊 <b>分析经营数据</b>，发现趋势和问题<br>
-                        📝 <b>生成菜品描述</b>，提升菜品吸引力<br>
-                        🎯 <b>优化营销策略</b>，提高转化率<br><br>
+                        <i class="ri-bar-chart-line" aria-hidden="true"></i> <b>分析经营数据</b>，发现趋势和问题<br>
+                        <i class="ri-pencil-ruler-2-line" aria-hidden="true"></i> <b>生成菜品描述</b>，提升菜品吸引力<br>
+                        <i class="ri-megaphone-line" aria-hidden="true"></i> <b>优化营销策略</b>，提高转化率<br><br>
                         选择一个场景，开始对话吧！
                     </div>
                 </div>
@@ -117,7 +116,8 @@
                 <!-- 对话消息 -->
                 <template v-for="(msg, idx) in messages">
                     <div :class="'chat-msg ' + msg.role" :key="msg._key || idx">
-                        <div class="chat-avatar">{{ msg.role === 'assistant' ? '🤖' : '👤' }}</div>
+                        <div class="chat-avatar" v-if="msg.role === 'assistant'"><i class="ri-robot-line" aria-hidden="true"></i></div>
+                        <div class="chat-avatar" v-else><i class="ri-user-line" aria-hidden="true"></i></div>
                         <div style="flex:1;min-width:0;">
                             <!-- 安全渲染AI回复 -->
                             <div class="chat-bubble" :class="{'streaming-cursor': msg.streaming}">
@@ -140,14 +140,14 @@
                             <!-- 反馈按钮（使用真实 messageId 而非前端生成的 ID） -->
                             <div class="feedback-bar" v-if="msg.role === 'assistant' && msg.dbMessageId && !msg.streaming">
                                 <button :class="['feedback-btn', msg.feedback === 'good' ? 'active-good' : '']"
-                                        @click="sendFeedback(msg, 'good')">👍 有用</button>
+                                        @click="sendFeedback(msg, 'good')"><i class="ri-thumb-up-line" aria-hidden="true"></i> 有用</button>
                                 <button :class="['feedback-btn', msg.feedback === 'bad' ? 'active-bad' : '']"
-                                        @click="sendFeedback(msg, 'bad')">👎 没用</button>
+                                        @click="sendFeedback(msg, 'bad')"><i class="ri-thumb-down-line" aria-hidden="true"></i> 没用</button>
                             </div>
                             <!-- 错误重试 -->
                             <div v-if="msg.error && !msg.streaming" style="margin-top:6px;">
                                 <button class="action-btn danger" @click="retryMessage(msg)">
-                                    🔄 重试
+                                    <i class="ri-refresh-line" aria-hidden="true"></i> 重试
                                 </button>
                             </div>
                         </div>
@@ -156,7 +156,7 @@
 
                 <!-- 加载中 -->
                 <div class="chat-msg assistant" v-if="loading && !hasStreamingMessage">
-                    <div class="chat-avatar">🤖</div>
+                    <div class="chat-avatar"><i class="ri-robot-line" aria-hidden="true"></i></div>
                     <div class="chat-bubble">
                         <div class="typing-dots">
                             <span></span><span></span><span></span>
@@ -253,12 +253,12 @@
             return String(dateStr);
         }
 
-        /** 场景图标映射 */
+        /** 场景图标映射 — RemixIcon 类名（不再使用 emoji） */
         var sceneIcons = {
-            business_analysis: '📊',
-            dish_desc: '📝',
-            marketing: '📢',
-            order_assistant: '🍽️'
+            business_analysis: 'ri-bar-chart-line',
+            dish_desc:         'ri-pencil-ruler-2-line',
+            marketing:         'ri-megaphone-line',
+            order_assistant:   'ri-restaurant-2-line'
         };
 
         new Vue({
@@ -287,11 +287,11 @@
                     checking: true
                 },
 
-                /* 场景 */
+                /* 场景 — icon（RemixIcon 类名）+ name（纯文本标签），避免 emoji 风格差异 */
                 scenes: [
-                    { label: '📊 经营分析', value: 'business_analysis' },
-                    { label: '📝 菜品描述', value: 'dish_desc' },
-                    { label: '📢 营销文案', value: 'marketing' }
+                    { name: '经营分析', icon: sceneIcons.business_analysis, label: '经营分析', value: 'business_analysis' },
+                    { name: '菜品描述', icon: sceneIcons.dish_desc,         label: '菜品描述', value: 'dish_desc' },
+                    { name: '营销文案', icon: sceneIcons.marketing,         label: '营销文案', value: 'marketing' }
                 ],
 
                 /* 快捷提示 */
@@ -459,9 +459,9 @@
                     }).catch(function() {});
                 },
 
-                /** 获取场景图标 */
+                /** 获取场景图标 — 返回 RemixIcon 类名（用在 <i :class="...">） */
                 getSceneIcon: function(scene) {
-                    return sceneIcons[scene] || '💬';
+                    return sceneIcons[scene] || 'ri-chat-1-line';
                 },
 
                 /** 格式化对话时间 */

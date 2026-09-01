@@ -49,7 +49,7 @@ public class WithdrawalRequest implements Serializable {
     @Schema(description = "银行账号", example = "622202xxxxxxxxxx")
     private String accountNumber;
 
-    @Schema(description = "状态：PENDING=待审批，APPROVED=已同意，REJECTED=已拒绝", example = "PENDING")
+    @Schema(description = "状态：PENDING=待审批，APPROVED=已同意，REJECTED=已拒绝，TRANSFERRED=已转账", example = "PENDING")
     private String status;
 
     @Schema(description = "拒绝原因")

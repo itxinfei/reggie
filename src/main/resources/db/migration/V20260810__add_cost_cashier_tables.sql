@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS `labor_cost` (
   `employee_id` bigint NOT NULL COMMENT '员工ID',
   `employee_name` varchar(50) NOT NULL COMMENT '员工姓名',
   `salary` decimal(10,2) DEFAULT '0.00' COMMENT '工资',
-  `social_insurance` decimal(10,2) DEFAULT '0.00' COMMENT '社保',
+  `social_insurance` decimal(10,2) DEFAULT '0.00' COMMENT '籣',
   `housing_fund` decimal(10,2) DEFAULT '0.00' COMMENT '公积金',
   `other_benefits` decimal(10,2) DEFAULT '0.00' COMMENT '其他福利',
   `total_cost` decimal(10,2) DEFAULT '0.00' COMMENT '总成本',
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS `labor_cost` (
 CREATE TABLE IF NOT EXISTS `other_cost` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   `name` varchar(100) NOT NULL COMMENT '成本名称',
-  `cost_type` tinyint NOT NULL COMMENT '成本类型：1-租金，2-水电，3-设备，4-耗材，5-营销，6-其他',
+  `cost_type` tinyint NOT NULL COMMENT 'ɱͣ1-2-ˮ磬3-豸4-Ĳģ5-Ӫ6-',
   `amount` decimal(10,2) NOT NULL COMMENT '成本金额',
   `cost_date` datetime NOT NULL COMMENT '成本日期',
   `remark` varchar(500) DEFAULT NULL COMMENT '备注',

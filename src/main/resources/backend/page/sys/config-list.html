@@ -5,7 +5,6 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>系统配置 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -174,21 +173,17 @@
         async init(reloadStats = true) {
           this.loading = true
           const ls = this.lastSearch || {}
-          const params = {}
-          const requests = [sysApi.configList()]
+          const params = { page: this.page, pageSize: this.pageSize }
+          const requests = [sysApi.configPage(params)]
           if (reloadStats) { requests.push(this.loadConfigStats()) }
           const results = await Promise.all(requests)
           const listRes = results[0]
           const statsRes = results[1]
           if (listRes && listRes.code === 1) {
-            const all = listRes.data || []
-            // 客户端分页（configList返回全量数据）
-            this.counts = all.length
-            const start = ((this.page - 1) * this.pageSize)
-            const end = Math.min(start + this.pageSize, all.length)
-            this.tableData = all.slice(start, end).map(function(item) {
+            this.tableData = (listRes.data.records || []).map(function(item) {
               return Object.assign({}, item, { _editing: false })
             })
+            this.counts = listRes.data.total || 0
           }
           if (reloadStats && statsRes && statsRes.code === 1) {
             this.stats = Object.assign({}, this.stats, statsRes.data  || {})
@@ -197,14 +192,15 @@
         },
         async loadConfigStats() {
           try {
-            const res = await sysApi.configList()
+            const res = await sysApi.configPage({ page: 1, pageSize: 1 })
             if (res && res.code === 1) {
-              const list = res.data || []
+              const all = (res.data.records || []).map(function(item) { return item })
               const stats = {}
-              list.forEach(function(item) {
+              all.forEach(function(item) {
                 const t = String(item.configType || '4')
                 if (stats.hasOwnProperty('type' + t)) stats['type' + t]++
               })
+              stats.total = all.length
               return { code: 1, data: stats }
             }
           } catch (err) { console.warn('加载配置统计失败:', err) }

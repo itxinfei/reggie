@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <title>开发票 - 瑞吉外卖</title>
+  <link rel="icon" href="./../images/favico.ico">
+  <script src="./../js/base.js"></script>
+  <link rel="stylesheet" href="../styles/index.css" />
+  <link rel="stylesheet" href="../styles/vant.min.css"/>
+  <style>
+    body { background: var(--bg-page); }
+    .inv-container { padding: 16rem 16rem 40rem; }
+
+    /* 订单信息卡 */
+    .order-card { background: #fff; border-radius: 12rem; padding: 16rem 18rem; margin-bottom: 16rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
+    .order-row { display: flex; justify-content: space-between; align-items: center; padding: 6rem 0; font-size: 14rem; color: #333; }
+    .order-row .mono { font-family: var(--font-family-number, monospace); color: #666; font-size: 13rem; }
+    .order-row .price { color: var(--color-primary, #ffc200); font-weight: 700; font-size: 16rem; }
+
+    /* 发票状态卡 */
+    .status-card { background: #fff; border-radius: 12rem; padding: 18rem; margin-bottom: 16rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
+    .status-card .status-line { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rem; }
+    .status-card .status-title { font-size: 15rem; font-weight: 600; color: #333; }
+    .rec-row { font-size: 13rem; color: #666; padding: 4rem 0; line-height: 1.6; }
+    .rec-row .mono { font-family: var(--font-family-number, monospace); }
+    .view-btn { margin-top: 12rem; }
+
+    /* 申请区 */
+    .apply-wrap { background: #fff; border-radius: 12rem; padding: 18rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
+    .section-title { font-size: 15rem; font-weight: 600; color: #333; margin-bottom: 12rem; }
+    .title-item { display: flex; align-items: center; justify-content: space-between; padding: 12rem 4rem; border-bottom: 1rem solid #f5f5f5; }
+    .title-item .tax { font-size: 12rem; color: #999; }
+    .title-item .del { color: #bbb; font-size: 18rem; padding: 4rem; }
+    .empty-tip { text-align: center; color: #999; font-size: 13rem; padding: 20rem 0 12rem; }
+    .new-title-title { font-size: 14rem; font-weight: 600; color: #333; margin: 18rem 0 4rem; }
+    .apply-btn { margin-top: 20rem; }
+    .tip { font-size: 12rem; color: #999; margin-top: 10rem; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div id="invoice-app">
+    <!-- 修改点(2026-09-01)：van-* 自定义元素禁止自闭合 />，否则浏览器解析吞掉后续内容，Vue 挂载后内容丢失 -->
+    <van-nav-bar title="开发票" left-arrow @click-left="goBack"></van-nav-bar>
+
+    <div class="inv-container">
+      <!-- 订单信息 -->
+      <div class="order-card">
+        <div class="order-row"><span>订单号</span><span class="mono">{{ orderNo || '--' }}</span></div>
+        <div class="order-row"><span>订单金额</span><span class="price">￥{{ amountText }}</span></div>
+      </div>
+
+      <!-- 已有发票：展示状态与票面信息 -->
+      <div class="status-card" v-if="record">
+        <div class="status-line">
+          <span class="status-title">{{ statusText }}</span>
+          <van-tag :type="tagType" size="medium">{{ statusText }}</van-tag>
+        </div>
+        <div class="rec-row" v-if="record.invoiceNo">发票号码：<span class="mono">{{ record.invoiceNo }}</span></div>
+        <div class="rec-row" v-if="record.invoiceCode">发票代码：<span class="mono">{{ record.invoiceCode }}</span></div>
+        <div class="rec-row" v-if="record.title">抬头：{{ record.title }}</div>
+        <div class="rec-row" v-if="record.amount">开票金额：￥{{ Number(record.amount).toFixed(2) }}</div>
+        <div class="rec-row" v-if="record.applyTime">申请时间：{{ fmtTime(record.applyTime) }}</div>
+        <van-button v-if="record.status === 2 && record.invoiceUrl" class="view-btn" type="primary" plain block size="small" @click="viewPdf(record.invoiceUrl)">查看电子发票</van-button>
+      </div>
+
+      <!-- 未申请：抬头选择 + 新增 + 申请 -->
+      <div class="apply-wrap" v-else>
+        <div class="section-title">选择发票抬头</div>
+        <van-radio-group v-model="selectedTitleId">
+          <div v-for="t in titles" :key="t.id" class="title-item">
+            <van-radio :name="t.id" @click="selectedTitleId = t.id">
+              <span>{{ t.title }}</span>
+              <span v-if="t.taxNumber" class="tax">（{{ t.taxNumber }}）</span>
+            </van-radio>
+            <van-icon name="delete-o" class="del" @click.stop="deleteTitle(t)"></van-icon>
+          </div>
+        </van-radio-group>
+        <div v-if="titles.length === 0" class="empty-tip">暂无发票抬头，请先在下方新增</div>
+
+        <div class="new-title-title">新增抬头</div>
+        <van-field v-model="form.type" label="抬头类型" readonly is-link @click="typePickerShow = true" :placeholder="form.type === 1 ? '个人' : '企业'"></van-field>
+        <van-field v-model="form.title" label="抬头名称" placeholder="个人填姓名，企业填公司名称" maxlength="50"></van-field>
+        <van-field v-model="form.taxNumber" label="税号" placeholder="企业填写纳税人识别号（个人可留空）" maxlength="30"></van-field>
+        <van-button type="warning" plain block size="small" @click="saveTitle" :loading="saving">保存抬头</van-button>
+
+        <van-button class="apply-btn" type="danger" block :disabled="!selectedTitleId" :loading="submitting" @click="apply">申请开票</van-button>
+        <div class="tip">仅已完成订单可申请开票，提交后商家将在 3 个工作日内为您开具电子发票。</div>
+      </div>
+    </div>
+
+    <!-- 抬头类型选择 -->
+    <van-popup v-model="typePickerShow" position="bottom" round>
+      <van-picker show-toolbar :columns="typeColumns" @confirm="onTypeConfirm" @cancel="typePickerShow = false"></van-picker>
+    </van-popup>
+  </div>
+
+  <script src="../../backend/plugins/vue/vue.js"></script>
+  <script src="./../js/vant.min.js"></script>
+  <script src="../../backend/plugins/axios/axios.min.js"></script>
+  <script src="./../js/request.js"></script>
+  <script src="./../api/main.js"></script>
+  <script src="./../js/common.js"></script>
+  <script src="./../api/invoice.js"></script>
+  <script>
+    new Vue({
+      el: '#invoice-app',
+      data: function() {
+        return {
+          orderId: '',
+          orderNo: '',
+          amountText: '0.00',
+          // 发票记录（已申请/已开具/已作废）
+          record: null,
+          // 抬头
+          titles: [],
+          selectedTitleId: null,
+          // 新增抬头表单
+          form: { type: 1, title: '', taxNumber: '' },
+          typePickerShow: false,
+          typeColumns: [
+            { text: '个人', value: 1 },
+            { text: '企业', value: 2 }
+          ],
+          saving: false,
+          submitting: false
+        }
+      },
+      computed: {
+        statusText: function() {
+          if (!this.record) return ''
+          var s = this.record.status
+          if (s == 0) return '待申请'
+          if (s == 1) return '已申请，待开具'
+          if (s == 2) return '已开具'
+          if (s == 3) return '已作废'
+          return '未知'
+        },
+        tagType: function() {
+          if (!this.record) return 'default'
+          var s = this.record.status
+          if (s == 1) return 'warning'
+          if (s == 2) return 'success'
+          if (s == 3) return 'default'
+          return 'default'
+        }
+      },
+      created: function() {
+        var self = this
+        var q = this.parseQuery()
+        this.orderId = q.orderId || ''
+        this.orderNo = q.orderNo || ''
+        this.amountText = q.amount ? Number(q.amount).toFixed(2) : '0.00'
+        if (!this.orderId) {
+          vant.Notify({ type: 'warning', message: '参数错误，请从订单页进入' })
+          return
+        }
+        this.loadInvoice()
+        this.loadTitles()
+      },
+      methods: {
+        parseQuery: function() {
+          var q = {}
+          var pairs = (window.location.search || '').substring(1).split('&')
+          pairs.forEach(function(p) {
+            if (!p) return
+            var kv = p.split('=')
+            q[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '')
+          })
+          return q
+        },
+        goBack: function() {
+          if (window.history.length > 1) {
+            history.go(-1)
+          } else {
+            window.location.href = '/front/page/order.html'
+          }
+        },
+        fmtTime: function(val) {
+          if (!val) return '-'
+          var s = String(val)
+          return s.indexOf('T') > -1 ? s.replace('T', ' ').substring(0, 19) : s
+        },
+        viewPdf: function(url) {
+          window.open(url, '_blank', 'noopener,noreferrer')
+        },
+        // 查询订单发票记录
+        loadInvoice: function() {
+          var self = this
+          orderInvoiceApi(this.orderId).then(function(res) {
+            if (res.code === 1) {
+              self.record = res.data || null
+            }
+          }).catch(function(err) {
+            if (err.message !== 'NOTLOGIN') vant.Toast.fail('查询发票失败')
+          })
+        },
+        // 抬头列表
+        loadTitles: function() {
+          var self = this
+          invoiceTitleListApi().then(function(res) {
+            if (res.code === 1) {
+              self.titles = res.data || []
+              if (self.titles.length > 0 && self.selectedTitleId === null) {
+                self.selectedTitleId = self.titles[0].id
+              }
+            }
+          }).catch(function(err) {
+            if (err.message !== 'NOTLOGIN') vant.Toast.fail('加载抬头失败')
+          })
+        },
+        onTypeConfirm: function(picker) {
+          this.form.type = picker.value
+          this.typePickerShow = false
+        },
+        // 保存抬头
+        saveTitle: function() {
+          var self = this
+          var title = (this.form.title || '').trim()
+          var taxNumber = (this.form.taxNumber || '').trim()
+          if (!title) {
+            vant.Toast.fail('请填写抬头名称')
+            return
+          }
+          if (this.form.type === 2 && !taxNumber) {
+            vant.Toast.fail('企业抬头请填写税号')
+            return
+          }
+          this.saving = true
+          invoiceTitleSaveApi({ type: this.form.type, title: title, taxNumber: taxNumber }).then(function(res) {
+            if (res.code === 1) {
+              vant.Toast.success('抬头已保存')
+              self.form.title = ''
+              self.form.taxNumber = ''
+              self.loadTitles()
+            } else {
+              vant.Toast.fail(res.msg || '保存失败')
+            }
+          }).catch(function(err) {
+            if (err.message !== 'NOTLOGIN') vant.Toast.fail('保存失败')
+          }).finally(function() {
+            self.saving = false
+          })
+        },
+        // 删除抬头
+        deleteTitle: function(t) {
+          var self = this
+          vant.Dialog.confirm({
+            title: '删除抬头',
+            message: '确定删除抬头「' + t.title + '」吗？',
+            confirmButtonText: '删除',
+            cancelButtonText: '取消'
+          }).then(function() {
+            invoiceTitleDeleteApi(t.id).then(function(res) {
+              if (res.code === 1) {
+                vant.Toast.success('已删除')
+                if (self.selectedTitleId === t.id) self.selectedTitleId = null
+                self.loadTitles()
+              } else {
+                vant.Toast.fail(res.msg || '删除失败')
+              }
+            }).catch(function(err) {
+              if (err.message !== 'NOTLOGIN') vant.Toast.fail('删除失败')
+            })
+          }).catch(function() {})
+        },
+        // 申请开票
+        apply: function() {
+          var self = this
+          if (!this.selectedTitleId) {
+            vant.Toast.fail('请选择发票抬头')
+            return
+          }
+          var t = this.titles.find(function(x) { return x.id === self.selectedTitleId })
+          if (!t) {
+            vant.Toast.fail('抬头不存在，请重新选择')
+            return
+          }
+          this.submitting = true
+          invoiceApplyApi(this.orderId, {
+            titleId: t.id,
+            title: t.title,
+            taxNumber: t.taxNumber || '',
+            type: t.type || 1
+          }).then(function(res) {
+            if (res.code === 1) {
+              vant.Dialog.alert({
+                title: '申请成功',
+                message: '发票申请已提交，商家将在 3 个工作日内为您开具。'
+              }).then(function() {
+                self.record = res.data || { status: 1 }
+                self.loadInvoice()
+              })
+            } else {
+              vant.Toast.fail(res.msg || '申请失败')
+            }
+          }).catch(function(err) {
+            if (err.message !== 'NOTLOGIN') vant.Toast.fail('申请失败')
+          }).finally(function() {
+            self.submitting = false
+          })
+        }
+      }
+    })
+  </script>
+</body>
+</html>

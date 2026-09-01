@@ -42,11 +42,44 @@
     }
   }
 
+  /**
+   * 保存CSRF Token到Cookie和SessionStorage（与后台 request.js 保持一致）
+   * 修改点(2026-09-01)：C 端此前只读不存，导致所有 POST/PUT/DELETE 被 CsrfFilter 拦截 403
+   */
+  function saveCsrfToken(token) {
+    if (!token) return;
+    try {
+      sessionStorage.setItem('csrfToken', token);
+      var expires = new Date(Date.now() + 30 * 60 * 1000).toUTCString();
+      document.cookie = 'csrfToken=' + encodeURIComponent(token) + '; expires=' + expires + '; path=/; SameSite=Strict';
+    } catch (e) {
+      console.warn('保存CSRF Token失败', e);
+    }
+  }
+
+  /**
+   * 清除CSRF Token
+   */
+  function clearCsrfToken() {
+    try {
+      sessionStorage.removeItem('csrfToken');
+      document.cookie = 'csrfToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    } catch (e) {
+      console.warn('清除CSRF Token失败', e);
+    }
+  }
+
   // 响应拦截器
   service.interceptors.response.use(res => {
+      // 修改点(2026-09-01)：保存后端通过响应头返回的CSRF Token
+      var csrfToken = res.headers ? res.headers['x-csrf-token'] : null;
+      if (csrfToken) {
+        saveCsrfToken(csrfToken);
+      }
       // 修改点：防御性检查res和res.data，防止异常响应导致TypeError
       if (res && res.data && res.data.code === 0 && res.data.msg === 'NOTLOGIN') {
         // 修改点：本项目不使用iframe，直接用window.location
+        clearCsrfToken();
         window.location.href = '/front/page/login.html'
         return Promise.reject(new Error('NOTLOGIN'))
       } else if (res && res.data) {

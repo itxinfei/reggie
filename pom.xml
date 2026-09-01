@@ -260,6 +260,14 @@
                          只加载一次，彻底消除 fork 崩溃。 -->
                     <forkCount>1</forkCount>
                     <reuseForks>true</reuseForks>
+                    <!-- 显式限定堆大小：64GB 大内存机器上 JVM 默认堆（ergonomics 约物理内存 1/4 ≈ 16GB）
+                         难以连续分配，触发 "Could not reserve enough space for object heap" 致 fork 崩溃，
+                         剩余测试类级联报错（曾出现 282 errors）。
+                         -Xmx2048m：1024m 加载 15+ 模块的 Spring 上下文会触发 "GC overhead limit exceeded"，
+                         2048m 既满足上下文加载又可可靠分配（16GB 空闲物理内存下无压力）。
+                         @{argLine} 为 Maven 延迟属性解析，运行时注入 JaCoCo prepare-agent 设置的
+                         javaagent，避免循环引用。 -->
+                    <argLine>@{argLine} -Xmx2048m -Xms512m</argLine>
                 </configuration>
             </plugin>
 

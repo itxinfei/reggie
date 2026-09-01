@@ -14,6 +14,7 @@ import com.reggie.module.groupbuy.service.GroupBuyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -138,6 +139,22 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         }
         int count = participationMapper.countParticipants(campaignId);
         return count >= campaign.getMinMembers();
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    public void markParticipationPaid(Long orderId) {
+        LambdaQueryWrapper<GroupBuyParticipation> qw = new LambdaQueryWrapper<>();
+        qw.eq(GroupBuyParticipation::getOrderId, orderId);
+        qw.eq(GroupBuyParticipation::getStatus, "JOINED");
+        GroupBuyParticipation participation = participationMapper.selectOne(qw);
+        // 幂等：非拼团单或已支付的订单无 JOINED 记录，直接跳过，供支付回调安全统一调用
+        if (participation == null) {
+            return;
+        }
+        participation.setStatus("PAID");
+        participation.setPayTime(LocalDateTime.now());
+        participationMapper.updateById(participation);
     }
 
     @Override

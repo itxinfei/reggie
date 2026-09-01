@@ -46,6 +46,12 @@ public interface GroupBuyService extends IService<GroupBuyCampaign> {
     boolean checkGroupBuyStatus(Long campaignId);
 
     /**
+     * 标记拼团参与已支付（JOINED → PAID）
+     * 供订单支付成功后调用，打通 PAID 状态流转
+     */
+    void markParticipationPaid(Long orderId);
+
+    /**
      * 定时关闭过期拼团活动
      */
     int autoCloseExpiredCampaigns();

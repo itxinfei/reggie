@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+
 /**
  * 供应商结算单控制器
  *
@@ -39,5 +41,12 @@ public class SupplierSettlementController {
             @RequestParam(required = false) Long supplierId,
             @RequestParam(required = false) String status) {
         return R.success(supplierSettlementService.pageSettlements(page, pageSize, supplierId, status));
+    }
+
+    @PostMapping("/{id}/pay")
+    @Operation(summary = "结算单付款")
+    @Parameter(name = "id", description = "结算单ID", required = true)
+    public R<SupplierSettlement> pay(@PathVariable Long id, @RequestParam BigDecimal payAmount) {
+        return R.success(supplierSettlementService.paySettlement(id, payAmount));
     }
 }

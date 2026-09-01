@@ -82,6 +82,14 @@ public class GroupBuyController {
         return R.success(result);
     }
 
+    @PostMapping("/participation/{orderId}/pay")
+    @Operation(summary = "标记拼团参与已支付")
+    @Parameter(name = "orderId", description = "订单ID", required = true)
+    public R<String> markPaid(@PathVariable Long orderId) {
+        groupBuyService.markParticipationPaid(orderId);
+        return R.success("标记成功");
+    }
+
     @PostMapping("/auto-close")
     @Operation(summary = "定时关闭过期拼团活动")
     public R<Integer> autoClose() {

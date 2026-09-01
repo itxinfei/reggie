@@ -7,7 +7,8 @@
     <title>瑞吉外卖管理端</title>
     <link rel="shortcut icon" href="favicon.ico">
     <!-- 引入样式 -->
-    <link rel="stylesheet" href="plugins/element-ui/index.css" />
+    <!-- 修改点(2026-09-01)：移除 plugins/element-ui/index.css 官方样式表 ——
+         与 common.css（→common-el.css，token 化副本）重复加载，统一由后者单源提供 -->
     <link rel="stylesheet" href="styles/common.css" />
     <link rel="stylesheet" href="styles/index.css" />
     <link rel="stylesheet" href="styles/design-system.css" />
@@ -237,6 +238,7 @@
                 { id: '3-10', name: '打印终端', url: 'page/printer/terminal-list.html', icon: 'ri-printer-line' },
                 { id: '3-11', name: '打印任务', url: 'page/printer/task-list.html', icon: 'ri-file-history-line' },
                 { id: '3-12', name: '紧急催菜', url: 'page/urgency/urgency.html', icon: 'ri-alarm-warning-line' },
+                { id: '3-13', name: '未接单监控', url: 'page/order/pending-monitor.html', icon: 'ri-radar-line' },
               ]},
               { id: '4', name: '堂食管理', icon: 'ri-store-2-line', children: [
                 { id: '4-1', name: '桌台管理', url: 'page/dining/table-list.html', icon: 'ri-layout-grid-line' },
@@ -275,6 +277,7 @@
                 { id: '7-10', name: '菜品成本', url: 'page/cost/dish-cost.html', icon: 'ri-restaurant-line' },
                 { id: '7-11', name: '提现管理', url: 'page/finance/withdrawal.html', icon: 'ri-bank-card-2-line' },
                 { id: '7-12', name: '导出中心', url: 'page/export/index.html', icon: 'ri-file-download-line' },
+                { id: '7-13', name: '发票管理', url: 'page/finance/invoice-list.html', icon: 'ri-receipt-line' },
               ]},
               { id: '8', name: '营销与门店', icon: 'ri-megaphone-line', children: [
                 { id: '8-1', name: '营销活动', url: 'page/marketing/index.html', icon: 'ri-flag-line' },

@@ -6,6 +6,6 @@
 -- 已有数据：三列默认 NULL，历史退款记录不受影响；新售后申请由 OrderController.userApplyRefund 写入。
 
 ALTER TABLE `refund_record`
-  ADD COLUMN `order_id` bigint NULL DEFAULT NULL COMMENT '业务订单ID（用户端售后申请直接关联订单）' AFTER `payment_order_id`,
+  ADD COLUMN `order_id` bigint NULL DEFAULT NULL COMMENT '业务订单ID' AFTER `payment_order_id`,
   ADD COLUMN `refund_type` int NULL DEFAULT NULL COMMENT '售后类型：1=整单退款 2=部分退款' AFTER `status`,
-  ADD COLUMN `apply_user_id` bigint NULL DEFAULT NULL COMMENT '申请人ID（用户端售后申请记录发起人）' AFTER `refund_type`;
+  ADD COLUMN `apply_user_id` bigint NULL DEFAULT NULL COMMENT '申请人ID' AFTER `refund_type`;

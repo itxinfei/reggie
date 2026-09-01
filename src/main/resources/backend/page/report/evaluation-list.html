@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>菜品评价管理 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <title>菜品评价管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -34,8 +33,10 @@
     .eval-app-wrap .eval-stars { display: inline-flex; gap: 2px; }
     .eval-app-wrap .eval-stars .star { font-size:var(--font-size-lg); color: var(--el-border-lighter2); }
     .eval-app-wrap .eval-stars .star.filled { color: var(--gold-legacy); }
-    .eval-app-wrap .eval-content { max-width: 280px; overflow: hidden; text-overflow: ellipsis;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.5; }
+    /* 修改点(2026-09-01)：评价内容移除 -webkit-line-clamp:2 截断，改为自然换行完整展示 ——
+       与 crud-table 默认 showOverflowTooltip=false 的"完整展示数据"策略一致（行高自适应），
+       避免评价正文被省略号遮挡；`:title` 悬停提示保留作为补充。 */
+    .eval-app-wrap .eval-content { line-height: 1.5; white-space: normal; word-break: break-word; }
     .eval-app-wrap .eval-images { display: flex; gap: 6px; flex-wrap: wrap; }
     .eval-app-wrap .eval-images img { width: 46px; height: 46px; border-radius: var(--radius-md); object-fit: cover;
       cursor: pointer; border: 1px solid var(--el-border-light); transition: transform 0.2s; }
@@ -244,7 +245,7 @@
           </div>
         </div>
         <div class="detail-section" v-if="detailData.replyContent">
-          <div class="detail-section-title">💌 商家回复</div>
+          <div class="detail-section-title"><i class="ri-mail-send-line" aria-hidden="true"></i> 商家回复</div>
           <div class="reply-box">
             <div style="color:var(--el-text-primary);font-size:var(--font-size-base);">{{ detailData.replyContent }}</div>
             <div class="reply-time">回复时间：{{ formatDate(detailData.replyTime) }}</div>

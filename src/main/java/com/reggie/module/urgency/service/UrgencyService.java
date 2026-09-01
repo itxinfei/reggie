@@ -96,5 +96,26 @@ public interface UrgencyService {
      * @param memberId 会员ID
      * @return 频率控制信息
      */
-    R<Map<String, Object>> checkFrequency(Long memberId);
+   R<Map<String, Object>> checkFrequency(Long memberId);
+
+    /**
+     * 获取未接单实时监控看板（商家主动漏单预警）
+     * <p>查询当前租户待接单状态订单，按等待时长分级（正常/预警/告警/漏单）返回，
+     * 供接单大屏轮询展示与语音播报。阈值取自系统配置。</p>
+     *
+     * @param tenantId 租户ID
+     * @return 监控数据（统计概览 + 订单列表 + 阈值配置）
+     */
+    Map<String, Object> getUnacceptedMonitor(Long tenantId);
+
+    /**
+     * 定时扫描待接单订单并主动告警（漏单预警核心）
+     * <p>由 {@code UnacceptedOrderScanTask} 周期性调用。对超黄金时长仍未接单的订单
+     * 通知店长（短信/通知记录），对超漏单阈值（3 倍黄金时长）的订单升级为漏单告警。
+     * 使用 Redis Set 做每订单一次性去重，Redis 不可用时跳过本轮主动通知（fail-closed）。</p>
+     *
+     * @param tenantId 租户ID
+     * @return 本轮新触发的通知数
+     */
+    int scanUnacceptedAndAlert(Long tenantId);
 }

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `franchisee` (
   `tenant_id` bigint DEFAULT NULL COMMENT '所属总部租户ID',
   `name` varchar(100) NOT NULL COMMENT '加盟商名称',
   `contact_person` varchar(50) DEFAULT NULL COMMENT '联系人',
-  `contact_phone` varchar(20) DEFAULT NULL COMMENT '联系电话',
+  `contact_phone` varchar(20) DEFAULT NULL COMMENT 'ϵ绰',
   `address` varchar(255) DEFAULT NULL COMMENT '联系地址',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态：0=禁用，1=启用',
   `remark` varchar(500) DEFAULT NULL COMMENT '备注',

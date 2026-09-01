@@ -87,8 +87,10 @@
   color: rgba(51, 51, 51, 0.75);
 }
 
+/* 修改点：divContent 高度与头部精确匹配 —— 头部 #user .divHead 高度 140rem，
+   原 148rem 与头部差 8rem，导致内容区底部错位/异常留白（2026-09-01 微调） */
 #user .divContent {
-  height: calc(100% - 148rem);
+  height: calc(100% - 140rem);
   overflow-y: auto;
   padding-bottom: var(--spacing-xl);
 }

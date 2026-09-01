@@ -5,7 +5,6 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>销售报表 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -79,8 +78,8 @@
         </el-radio-group>
 
         <template v-if="reportType === 'weekly'">
-          <el-date-picker v-model="year" type="year" value-format="yyyy" size="small" style="width: 100px;" placeholder="年份"></el-date-picker>
-          <el-input-number v-model="week" :min="1" :max="53" size="small" style="width: 100px;" placeholder="周数"></el-input-number>
+          <el-date-picker v-model="year" type="year" value-format="yyyy" size="small" style="width: 100px" placeholder="年份"></el-date-picker>
+          <el-input-number v-model="week" :min="1" :max="53" size="small" style="width: 100px" placeholder="周数"></el-input-number>
         </template>
 
         <template v-if="reportType === 'monthly'">
@@ -157,10 +156,8 @@
           orderChart: null,
           // 搜索配置
           searchConfig: [],
-          // 操作按钮配置
-          actionConfig: [
-            { key: 'query', text: '查询', type: 'primary', icon: 'el-icon-search' }
-          ],
+          // 操作按钮配置：查询按钮由 table-bar 左侧标准区（@search=fetchData）统一处理，避免 action-group 出现重复素色按钮
+          actionConfig: [],
           // 表格列配置
           tableColumns: [
             { prop: 'label', label: '时间', width: 120, align: 'center' },

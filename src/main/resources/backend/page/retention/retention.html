@@ -5,7 +5,6 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>会员挽留 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -77,48 +76,24 @@
       box-shadow: var(--shadow-sm);
     }
     .level-stat__icon {
-      font-size: var(--font-size-3xl);
+      font-size: var(--font-size-2xl);
       line-height: 1;
       margin-bottom: var(--space-2);
     }
     .level-stat__value {
       font-size: var(--font-size-3xl);
       font-weight: var(--font-weight-semibold);
-      color: var(--color-brand-500);
+      color: var(--text-primary);
       font-variant-numeric: tabular-nums;
       line-height: var(--line-height-tight);
     }
-    .level-stat.gold .level-stat__value { color: var(--color-brand-500) }
+    /* 修改点：统计大数字禁用品牌金(#ffc200)作文字色（白底对比度 < 3:1 不达标），
+       改用加深可读金 --color-brand-700(#c99200)；平均积分(brand)用中性 info 灰与等级色区分 */
+    .level-stat.gold .level-stat__value { color: var(--color-brand-700) }
+    .level-stat.brand .level-stat__value { color: var(--color-info) }
     .level-stat.silver .level-stat__value { color: var(--color-info) }
     .level-stat.normal .level-stat__value { color: var(--text-primary) }
     .level-stat__label {
-      font-size: var(--font-size-xs);
-      color: var(--text-muted);
-      margin-top: var(--space-1);
-    }
-
-    .level-summary-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      padding: var(--space-3) 0;
-      border-top: var(--border-width-thin) solid var(--border-subtle);
-      margin-top: var(--space-3);
-    }
-    .level-summary-item {
-      text-align: center;
-    }
-    .level-summary-item__value {
-      font-size: var(--font-size-xl);
-      font-weight: var(--font-weight-semibold);
-      font-variant-numeric: tabular-nums;
-      line-height: var(--line-height-tight);
-    }
-    .level-summary-item.brand .level-summary-item__value { color: var(--color-brand-500) }
-    .level-summary-item.success .level-summary-item__value { color: var(--color-success) }
-    .level-summary-item.warning .level-summary-item__value { color: var(--color-warning) }
-    .level-summary-item.danger .level-summary-item__value { color: var(--color-danger) }
-    .level-summary-item__label {
       font-size: var(--font-size-xs);
       color: var(--text-muted);
       margin-top: var(--space-1);
@@ -306,28 +281,7 @@
             </div>
           </div>
 
-          <div class="level-summary-row">
-            <div class="level-summary-item brand">
-              <div class="level-summary-item__value">{{ stats.goldCount || 0 }}</div>
-              <div class="level-summary-item__label">黄金</div>
-            </div>
-            <div class="level-summary-item">
-              <div class="level-summary-item__value" style="color:var(--color-info)">{{ stats.silverCount || 0 }}</div>
-              <div class="level-summary-item__label">白银</div>
-            </div>
-            <div class="level-summary-item">
-              <div class="level-summary-item__value">{{ stats.normalCount || 0 }}</div>
-              <div class="level-summary-item__label">普通</div>
-            </div>
-            <div class="level-summary-item success">
-              <div class="level-summary-item__value">{{ stats.activeCount || 0 }}</div>
-              <div class="level-summary-item__label">活跃</div>
-            </div>
-            <div class="level-summary-item danger">
-              <div class="level-summary-item__value">{{ stats.churnedCount || 0 }}</div>
-              <div class="level-summary-item__label">流失</div>
-            </div>
-          </div>
+
         </el-card>
 
         <!-- 积分排行 Top10 -->

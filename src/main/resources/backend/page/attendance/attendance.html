@@ -5,7 +5,6 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>考勤管理 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -74,10 +73,10 @@
         <div class="section-header">
           <h3>考勤日历</h3>
           <div class="calendar-controls">
-            <el-select v-model="calendarEmployee" placeholder="选择员工" size="small" style="width:293px;margin-right:12px;" @change="fetchCalendar">
+            <el-select v-model="calendarEmployee" placeholder="选择员工" size="small" @change="fetchCalendar">
               <el-option v-for="emp in employeeOptions" :key="emp.id" :label="emp.name" :value="emp.id"></el-option>
             </el-select>
-            <el-date-picker v-model="calendarMonth" type="month" value-format="yyyy-MM" placeholder="选择月份" size="small" style="width:200px;" @change="fetchCalendar"></el-date-picker>
+            <el-date-picker v-model="calendarMonth" type="month" value-format="yyyy-MM" placeholder="选择月份" size="small" @change="fetchCalendar"></el-date-picker>
           </div>
         </div>
         <div class="calendar-legend">
@@ -428,6 +427,10 @@
     /* 考勤日历卡片 */
     .calendar-card { padding: var(--space-4); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
     .calendar-controls { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+    /* 修改点(2026-09-01)：控件宽度由内联 style 改为弹性宽度（与 page.css 的 tableBar 弹性策略对齐，
+       窄屏自动收缩，不再硬编码 293px/200px） */
+    .calendar-controls .el-select { flex: 0 1 220px; min-width: 160px; width: auto !important; }
+    .calendar-controls .el-date-editor { flex: 0 1 160px; min-width: 120px; width: auto !important; }
 
     .calendar-legend {
       display: flex;

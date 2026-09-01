@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>未接单监控大屏 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+  <style>
+    body { background: var(--bg-page, #f5f7fa); margin: 0; }
+    .monitor-wrap { max-width: 1700px; margin: 0 auto; padding: var(--space-4) var(--space-5); }
+    .top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-5); }
+    .top-bar__title { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
+    .top-bar__title i { color: var(--color-danger-dark, #c0392b); margin-right: var(--space-2); }
+    .top-bar__tools { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+    .meta-chip { font-size: var(--font-size-sm); color: var(--text-secondary); background: #fff; border: 1px solid var(--border-subtle, #e5e7eb); border-radius: 999px; padding: 4px 14px; }
+    .meta-chip b { color: var(--text-primary); }
+    .sound-btn { cursor: pointer; border: none; border-radius: 999px; padding: 8px 18px; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
+    .sound-btn.on { background: var(--color-success-dark, #2f855a); color: #fff; }
+    .sound-btn.off { background: #e5e7eb; color: var(--text-secondary); }
+
+    .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6); }
+    @media (max-width: 1100px) { .stat-row { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 640px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+    .stat-card { background: #fff; border-radius: var(--radius-md, 10px); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.08)); padding: var(--space-4) var(--space-5); }
+    .stat-card__label { font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--space-2); }
+    .stat-card__value { font-size: 2rem; font-weight: var(--font-weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .stat-card.alarm .stat-card__value { color: var(--color-danger-dark, #c0392b); }
+    .stat-card.missed .stat-card__value { color: var(--color-danger-dark, #c0392b); animation: blink 1s infinite; }
+    .stat-card.warning .stat-card__value { color: var(--color-warning-dark, #b7791f); }
+
+    .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: var(--space-4); }
+    .order-card { background: #fff; border-radius: var(--radius-md, 10px); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.08)); padding: var(--space-4) var(--space-5); border-left: 6px solid #cbd5e0; transition: box-shadow .2s; }
+    .order-card.level-NORMAL { border-left-color: #48bb78; }
+    .order-card.level-WARNING { border-left-color: #ed8936; }
+    .order-card.level-ALARM { border-left-color: #e53e3e; animation: pulse 1.1s infinite; }
+    .order-card.level-MISSED { border-left-color: #c0392b; border: 2px solid #c0392b; animation: pulse-missed .5s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(229,62,62,.5); } 70% { box-shadow: 0 0 0 14px rgba(229,62,62,0); } 100% { box-shadow: 0 0 0 0 rgba(229,62,62,0); } }
+    @keyframes pulse-missed { 0% { box-shadow: 0 0 0 0 rgba(192,57,43,.6); background: #fdecea; } 50% { box-shadow: 0 0 0 16px rgba(192,57,43,0); } 100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); background: #fff; } }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+    .order-card__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-2); }
+    .order-card__no { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .order-card__level { font-size: var(--font-size-xs); padding: 2px 10px; border-radius: 999px; font-weight: var(--font-weight-medium); }
+    .order-card__level.ALARM { background: #fed7d7; color: #c0392b; }
+    .order-card__level.MISSED { background: #c0392b; color: #fff; animation: blink 1s infinite; }
+    .order-card__level.WARNING { background: #feebc8; color: #b7791f; }
+    .order-card__level.NORMAL { background: #c6f6d5; color: #2f855a; }
+    .order-card__wait { font-size: 2rem; font-weight: var(--font-weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .order-card__wait small { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-secondary); }
+    .order-card__row { font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--space-1); }
+    .order-card__dishes { font-size: var(--font-size-sm); color: var(--text-primary); margin-top: var(--space-2); }
+    .empty-state { text-align: center; padding: var(--space-6); color: var(--text-secondary); font-size: var(--font-size-lg); }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="monitor-wrap">
+      <div class="top-bar">
+        <div class="top-bar__title"><i class="ri-alarm-warning-line"></i>未接单监控大屏</div>
+        <div class="top-bar__tools">
+          <span class="meta-chip">最后更新 <b>{{ lastUpdate || '--' }}</b></span>
+          <span class="meta-chip" v-if="thresholds.goldenMinutes">预警 <b>{{ thresholds.goldenMinutes }}</b>分 / 告警 <b>{{ thresholds.alarmMinutes }}</b>分</span>
+          <button class="sound-btn on" v-if="soundOn" @click="toggleSound"><i class="ri-volume-up-line"></i> 语音提醒 开</button>
+          <button class="sound-btn off" v-else @click="toggleSound"><i class="ri-volume-mute-line"></i> 语音提醒 关</button>
+          <button class="sound-btn off" @click="fullscreen"><i class="ri-fullscreen-line"></i> 全屏</button>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card"><div class="stat-card__label">待接单总数</div><div class="stat-card__value">{{ stats.total || 0 }}</div></div>
+        <div class="stat-card"><div class="stat-card__label">正常</div><div class="stat-card__value">{{ stats.normal || 0 }}</div></div>
+        <div class="stat-card warning"><div class="stat-card__label">预警</div><div class="stat-card__value">{{ stats.warning || 0 }}</div></div>
+        <div class="stat-card alarm"><div class="stat-card__label">告警</div><div class="stat-card__value">{{ stats.alarm || 0 }}</div></div>
+        <div class="stat-card missed"><div class="stat-card__label">漏单</div><div class="stat-card__value">{{ stats.missed || 0 }}</div></div>
+        <div class="stat-card"><div class="stat-card__label">平均等待</div><div class="stat-card__value">{{ stats.avgWaitMin || 0 }}<small> 分</small></div></div>
+        <div class="stat-card"><div class="stat-card__label">最长等待</div><div class="stat-card__value">{{ stats.maxWaitMin || 0 }}<small> 分</small></div></div>
+      </div>
+
+      <div class="order-grid" v-if="list.length">
+        <div class="order-card" v-for="o in list" :key="o.id" :class="'level-' + o.level">
+          <div class="order-card__head">
+            <span class="order-card__no">#{{ tail(o.orderNo) }}</span>
+            <span class="order-card__level" :class="o.level">{{ levelText(o.level) }}</span>
+          </div>
+          <div class="order-card__wait">{{ o.waitMinutes }}<small> 分钟</small></div>
+          <div class="order-card__row" v-if="o.customerName">{{ o.customerName }} · {{ o.phone }}</div>
+          <div class="order-card__row" v-if="o.amount">¥ {{ o.amount }} <span v-if="o.source">· {{ sourceText(o.source) }}</span></div>
+          <div class="order-card__row" v-if="o.tableNo && o.tableNo !== '--'">桌台 {{ o.tableNo }}</div>
+          <div class="order-card__dishes">{{ o.dishNames || '--' }}</div>
+        </div>
+      </div>
+      <div class="empty-state" v-else>
+        <i class="ri-checkbox-circle-line" style="font-size:2.5rem;color:#48bb78"></i>
+        <div>暂无待接单订单，接单很及时 <i class="ri-thumb-up-line emoji-inline" aria-hidden="true"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../js/accessibility-utils.js"></script>
+  <script src="../../js/performance-utils.js"></script>
+  <script src="../../js/components.js"></script>
+  <script src="../../api/urgency.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data: function () {
+        return {
+          stats: {},
+          list: [],
+          thresholds: {},
+          soundOn: true,
+          lastUpdate: '',
+          pollTimer: null,
+          spokenIds: {}
+        }
+      },
+      mounted: function () {
+        var self = this
+        this.loadData()
+        this.pollTimer = setInterval(function () { self.loadData() }, 5000)
+      },
+      beforeDestroy: function () {
+        if (this.pollTimer) clearInterval(this.pollTimer)
+      },
+      methods: {
+        loadData: function () {
+          var self = this
+          getUnacceptedMonitor()
+            .then(function (res) {
+              var d = (res && res.data) || {}
+              self.stats = d.stats || {}
+              self.list = d.list || []
+              self.thresholds = d.thresholds || {}
+              self.lastUpdate = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+              self.speakAlarms()
+            })
+            .catch(function () {})
+        },
+        speakAlarms: function () {
+          if (!this.soundOn) return
+          if (!('speechSynthesis' in window)) return
+          var self = this
+          this.list.forEach(function (o) {
+            if (!self.spokenIds[o.id]) {
+              if (o.level === 'MISSED') {
+                self.speak('订单' + self.tail(o.orderNo) + '已等待' + o.waitMinutes + '分钟，已漏单，请立即处理')
+                self.spokenIds[o.id] = true
+              } else if (o.level === 'ALARM') {
+                self.speak('订单' + self.tail(o.orderNo) + '已等待' + o.waitMinutes + '分钟，请尽快接单')
+                self.spokenIds[o.id] = true
+              }
+            }
+          })
+          var present = {}
+          self.list.forEach(function (o) { present[o.id] = true })
+          Object.keys(self.spokenIds).forEach(function (k) {
+            if (!present[k]) delete self.spokenIds[k]
+          })
+        },
+        speak: function (text) {
+          try {
+            var u = new SpeechSynthesisUtterance(text)
+            u.lang = 'zh-CN'
+            u.rate = 1.05
+            u.volume = 1
+            speechSynthesis.speak(u)
+          } catch (e) {}
+        },
+        toggleSound: function () {
+          this.soundOn = !this.soundOn
+          if (!this.soundOn) {
+            try { speechSynthesis.cancel() } catch (e) {}
+          } else {
+            this.speak('语音提醒已开启')
+          }
+        },
+        fullscreen: function () {
+          var el = document.documentElement
+          if (!document.fullscreenElement && el.requestFullscreen) {
+            el.requestFullscreen()
+          } else if (document.exitFullscreen) {
+            document.exitFullscreen()
+          }
+        },
+        tail: function (no) {
+          if (!no) return '--'
+          var s = '' + no
+          return s.length <= 6 ? s : s.substring(s.length - 6)
+        },
+        levelText: function (l) {
+          if (l === 'MISSED') return '漏单'
+          if (l === 'ALARM') return '告警'
+          if (l === 'WARNING') return '预警'
+          return '正常'
+        },
+        sourceText: function (s) {
+          if (s === 'TAKEOUT') return '外卖'
+          if (s === 'EAT_IN') return '堂食'
+          if (s === 'QUEUE') return '排队'
+          if (s === 'RESERVATION') return '预订'
+          return s || ''
+        }
+      }
+    })
+  </script>
+</body>
+</html>

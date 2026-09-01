@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.inventory.model.SupplierSettlement;
 
+import java.math.BigDecimal;
+
 /**
  * <p>
  * 供应商结算单服务接口
@@ -23,4 +25,9 @@ public interface SupplierSettlementService extends IService<SupplierSettlement> 
      * 创建结算单
      */
     SupplierSettlement createSettlement(SupplierSettlement settlement);
+
+    /**
+     * 结算单付款（累加已付金额，满额自动置 PAID）
+     */
+    SupplierSettlement paySettlement(Long id, BigDecimal payAmount);
 }

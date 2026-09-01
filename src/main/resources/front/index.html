@@ -12,6 +12,8 @@
     <script src="./js/base.js"></script>
     <!--引入vant样式-->
     <link rel="stylesheet" href="styles/vant.min.css"/>
+    <!--RemixIcon 图标（C端全站统一用 RemixIcon，禁止 emoji 作图标）-->
+    <link rel="stylesheet" href="styles/remixicon-fallback.css"/>
     <!-- 引入样式  -->
     <link rel="stylesheet" href="styles/index.css" />
     <!--本页面内容的样式-->
@@ -85,7 +87,7 @@
 
         <!-- 公告栏 -->
         <div class="notice-bar" @click="showNoticeDetail">
-          <span class="notice-icon">📢</span>
+          <i class="notice-icon ri-megaphone-fill"></i>
           <span class="notice-text">{{ restaurantInfo.notice || '欢迎光临！本店精选新鲜食材，用心烹饪每一道菜品' }}</span>
           <span class="notice-arrow">›</span>
         </div>
@@ -94,7 +96,7 @@
       <!-- ====== 智能推荐：为你推荐 ====== -->
       <div class="recommend-section" v-if="recommendDishes && recommendDishes.length > 0">
         <div class="recommend-header">
-          <span class="recommend-title">🔥 为你推荐</span>
+          <span class="recommend-title"><i class="ri-fire-line"></i> 为你推荐</span>
           <span class="recommend-sub">基于你的口味偏好</span>
         </div>
         <div class="recommend-scroll">
@@ -201,7 +203,7 @@
         <div class="divCartTitle">
           <div class="title">购物车</div>
           <div class="clear" @click="clearCart">
-            <span class="clear-icon">🗑️</span> 清空
+            <i class="clear-icon ri-delete-bin-line"></i> 清空
           </div>
           <div class="cart-close-btn" @click="cartDialogShow = false">
             <img src="./images/close.png"/>
@@ -366,7 +368,7 @@
         <div class="search-section" v-if="!searchKeyword">
           <div class="search-section-title" v-if="searchHistory.length > 0">
             <span>搜索历史</span>
-            <span class="search-section-title-clear" @click="clearSearchHistory" title="清空">🗑️</span>
+            <i class="search-section-title-clear ri-delete-bin-line" @click="clearSearchHistory" title="清空"></i>
           </div>
           <div class="search-tags">
             <span
@@ -633,20 +635,29 @@
               this.detailsDialog.show = true
               this.detailsDialog.item = dish
             },
-            // 修改点：分类emoji图标映射，美团风格可视化
+            // 修改点：分类图标映射（RemixIcon 类名，禁止使用 emoji）
             getCategoryIcon(name){
               const map = {
-                '热销': '🔥', '新品': '✨', '优惠': '🎉', '特价': '💎',
-                '主食': '🍚', '盖饭': '🍛', '炒菜': '🍳', '煲仔': '🥘',
-                '凉菜': '🥗', '汤羹': '🍲', '小吃': '🍢', '卤味': '🍖',
-                '饮品': '🥤', '酒水': '🍺', '甜点': '🍰', '蛋糕': '🧁',
-                '套餐': '🎁', '面条': '🍜', '火锅': '🍲', '粉面': '🍝',
-                '烧烤': '🍖', '海鲜': '🦐', '素菜': '🥬', '煎炸': '🍗',
-                '汉堡': '🍔', '炸鸡': '🍗', '披萨': '🍕', '寿司': '🍣',
-                '早餐': '🥐', '午餐': '🍱', '晚餐': '🍽️', '夜宵': '🌙',
-                '小炒': '🥘', '干锅': '🍲', '砂锅': '🫕', '蒸菜': '🥟'
+                '热销': 'ri-fire-line',       '新品': 'ri-sparkling-line',
+                '优惠': 'ri-confetti-line',   '特价': 'ri-diamond-line',
+                '主食': 'ri-rice-line',       '盖饭': 'ri-curry-line',
+                '炒菜': 'ri-omelette-line',   '煲仔': 'ri-pot-line',
+                '凉菜': 'ri-salad-line',      '汤羹': 'ri-stock-line',
+                '小吃': 'ri-skewer-line',     '卤味': 'ri-drumstick-line',
+                '饮品': 'ri-glass-line',      '酒水': 'ri-beer-line',
+                '甜点': 'ri-cake-2-line',     '蛋糕': 'ri-cupcake-line',
+                '套餐': 'ri-gift-line',       '面条': 'ri-noodles-line',
+                '火锅': 'ri-stock-line',      '粉面': 'ri-noodles-line',
+                '烧烤': 'ri-drumstick-line',  '海鲜': 'ri-shrimp-line',
+                '素菜': 'ri-leaf-line',       '煎炸': 'ri-drumstick-line',
+                '汉堡': 'ri-sandwich-line',   '炸鸡': 'ri-drumstick-line',
+                '披萨': 'ri-pizza-line',      '寿司': 'ri-sushi-line',
+                '早餐': 'ri-bread-line',      '午餐': 'ri-bento-line',
+                '晚餐': 'ri-restaurant-line', '夜宵': 'ri-moon-cloudy-line',
+                '小炒': 'ri-pot-line',        '干锅': 'ri-pot-line',
+                '砂锅': 'ri-pot-line',        '蒸菜': 'ri-dumpling-line'
               };
-              return map[name] || '🍽️';
+              return map[name] || 'ri-restaurant-line';
             },
             // 修改点：搜索功能 — 打开搜索浮层
             onSearchClick(){

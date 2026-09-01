@@ -8,6 +8,7 @@ import com.reggie.module.payment.mapper.PaymentOrderMapper;
 import com.reggie.module.payment.model.PaymentOrder;
 import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.order.service.OrderService;
+import com.reggie.module.groupbuy.service.GroupBuyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,10 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     /** 订单服务 */
     @Autowired
     private OrderService orderService;
+
+    /** 拼团服务（支付成功后标记拼团参与已支付，幂等，非拼团单自动跳过） */
+    @Autowired
+    private GroupBuyService groupBuyService;
 
     /** 用于串行化同一订单的并发创建请求，防止 TOCTOU 竞态导致重复 PENDING 支付单 */
     private final ConcurrentHashMap<Long, Object> createOrderLock = new ConcurrentHashMap<>();
@@ -125,6 +130,14 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
                             .update();
                     if (updated) {
                         log.info("支付成功联动更新订单: orderId={}, orderStatus=待接单", po.getOrderId());
+                        // 拼团订单支付成功：标记参与已支付（独立事务+幂等，非拼团单自动跳过；
+                        // try-catch 保护支付主流程，拼团标记异常不影响支付状态）
+                        try {
+                            groupBuyService.markParticipationPaid(po.getOrderId());
+                        } catch (Exception ex) {
+                            log.warn("拼团参与标记支付失败，跳过: orderId={}, err={}",
+                                    po.getOrderId(), ex.getMessage());
+                        }
                     } else {
                         log.warn("支付成功但订单状态已被他人变更，跳过联动更新: orderId={}", po.getOrderId());
                     }

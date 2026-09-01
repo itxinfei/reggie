@@ -6,6 +6,7 @@
   <title>会员中心 - 瑞吉外卖</title>
   <link rel="stylesheet" href="../styles/index.css">
   <link rel="stylesheet" href="../styles/vant.min.css">
+  <link rel="stylesheet" href="../styles/remixicon-fallback.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: var(--bg-page); font-family: var(--font-family-base); -webkit-font-smoothing: antialiased; }
@@ -93,8 +94,10 @@
       transform: translateX(-50%); width: 24rem; height: 3rem;
       background: var(--color-primary); border-radius: 2rem 2rem 0 0; }
 
-    /* ---- 积分列表 ---- */
-    .mc-points-list { padding: 0 16rem; max-height: 360rem; overflow-y: auto; }
+    /* ---- 积分列表 ----
+       修改点(2026-09-01)：移除 max-height + overflow-y 截断，全量展示所有积分记录，
+       避免数据被遮挡（与 retention.html 移除 max-height 的先例一致）；由页面整体滚动承载。 */
+    .mc-points-list { padding: 0 16rem; }
     .mc-point-item { display: flex; align-items: center; padding: 12rem 0;
       border-bottom: 1rem solid var(--bg-hover); }
     .mc-point-item:last-child { border-bottom: none; }
@@ -110,9 +113,9 @@
     .mc-point-val.in { color: var(--color-success); }
     .mc-point-val.out { color: var(--color-warning); }
 
-    /* ---- 优惠券 ---- */
-    .mc-coupons { padding: 12rem 16rem; display: flex; flex-direction: column; gap: 10rem;
-      max-height: 380rem; overflow-y: auto; }
+    /* ---- 优惠券 ----
+       修改点(2026-09-01)：移除 max-height + overflow-y 截断，全量展示所有优惠券。 */
+    .mc-coupons { padding: 12rem 16rem; display: flex; flex-direction: column; gap: 10rem; }
     .mc-coupon { display: flex; border-radius: var(--radius-lg); overflow: hidden;
       box-shadow: 0 2rem 8rem rgba(0,0,0,0.04); position: relative; background: var(--bg-card); }
     .mc-coupon.used { opacity: 0.55; }
@@ -137,8 +140,9 @@
     .mc-claim-btn:active { opacity: 0.8; }
     .mc-empty { text-align: center; padding: 40rem 0; color: var(--color-text-hint); font-size: 14rem; }
 
-    /* ---- 充值记录 ---- */
-    .mc-recharge-list { padding: 0 16rem; max-height: 340rem; overflow-y: auto; }
+    /* ---- 充值记录 ----
+       修改点(2026-09-01)：移除 max-height + overflow-y 截断，全量展示所有充值记录。 */
+    .mc-recharge-list { padding: 0 16rem; }
     .mc-recharge-item { display: flex; align-items: center; padding: 12rem 0;
       border-bottom: 1rem solid var(--bg-hover); }
     .mc-recharge-item:last-child { border-bottom: none; }
@@ -206,26 +210,26 @@
 
     <!-- 会员权益 -->
     <div class="mc-section">
-      <div class="mc-section-title">🎖 会员权益</div>
+      <div class="mc-section-title"><i class="ri-medal-line"></i> 会员权益</div>
       <div class="mc-benefits">
         <div class="mc-benefit">
-          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(245,158,11,0.1);">💎</div>
+          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(245,158,11,0.1);"><i class="ri-vip-diamond-line"></i></div>
           <div class="mc-benefit-name">等级折扣</div>
           <div class="mc-benefit-desc" v-if="memberInfo && memberInfo.level && memberInfo.level.discount != null">{{ (memberInfo.level.discount * 100).toFixed(0) }}折优惠</div>
           <div class="mc-benefit-desc" v-else>按等级享优惠</div>
         </div>
         <div class="mc-benefit">
-          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(34,197,94,0.1);">🎁</div>
+          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(34,197,94,0.1);"><i class="ri-gift-line"></i></div>
           <div class="mc-benefit-name">积分奖励</div>
           <div class="mc-benefit-desc">消费获积分</div>
         </div>
         <div class="mc-benefit">
-          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(59,130,246,0.1);">🎫</div>
+          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(59,130,246,0.1);"><i class="ri-coupon-line"></i></div>
           <div class="mc-benefit-name">专属优惠券</div>
           <div class="mc-benefit-desc">会员专享券</div>
         </div>
         <div class="mc-benefit">
-          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(139,92,246,0.1);">🎂</div>
+          <div class="mc-benefit-icon" :class="{locked: !memberInfo || !memberInfo.isMember}" style="background:rgba(139,92,246,0.1);"><i class="ri-cake-2-line"></i></div>
           <div class="mc-benefit-name">生日礼遇</div>
           <div class="mc-benefit-desc">生日双倍积分</div>
         </div>

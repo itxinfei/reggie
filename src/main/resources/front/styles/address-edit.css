@@ -4,6 +4,39 @@
    支持四级联动（省/市/区/街道）
    ============================================ */
 
+/* ---- 地址编辑页专属令牌（收敛页面内硬编码 hex/rgba，便于整体换肤） ---- */
+:root {
+  /* 表单错误状态浅红背景 */
+  --addr-error-bg: #fff8f8;
+  --addr-error-shadow: rgba(233, 78, 60, 0.12);
+  --addr-delete-active-bg: #fff0f0;
+
+  /* 已选区域渐变结束色（金色浅） */
+  --addr-region-filled-end: #fff3cc;
+
+  /* 标签四色（品牌金/家橙/学校绿/无灰）— 公司标签改为品牌金色，避免蓝色违反品牌色 */
+  --addr-tag-company-gradient: linear-gradient(135deg, #fff5d6, #ffe89e);
+  --addr-tag-company-border: #f7c948;
+  --addr-tag-company-shadow: rgba(255, 178, 0, 0.18);
+
+  --addr-tag-home-gradient: linear-gradient(135deg, #fff7e6, #ffedc8);
+  --addr-tag-home-border: #f0c060;
+  --addr-tag-home-shadow: rgba(255, 154, 0, 0.12);
+
+  --addr-tag-school-gradient: linear-gradient(135deg, #e6faf3, #ccf0e2);
+  --addr-tag-school-border: #7fd4b0;
+  --addr-tag-school-shadow: rgba(7, 193, 96, 0.12);
+
+  --addr-tag-none-gradient-end: #eee;
+
+  /* 禁用保存按钮渐变结束色 + 阴影 */
+  --addr-save-disabled-end: #d5cc90;
+  --addr-save-disabled-shadow: rgba(180, 160, 100, 0.15);
+
+  /* 保存中旋转边框色 */
+  --addr-spinner-border: rgba(0,0,0,0.15);
+}
+
 /* 页面全局覆盖 — 避免使用内联样式 */
 body.scrollable-page {
   overflow: visible;
@@ -130,12 +163,12 @@ body.scrollable-page {
 }
 #address_edit .divContent .formGroup .formRow.formRowError {
   border-color: var(--color-danger);
-  background: #fff8f8;
+  background: var(--addr-error-bg);
   animation: errorShake 0.4s ease;
 }
 #address_edit .divContent .formGroup .formRow.formRowError:focus-within {
   border-color: var(--color-danger);
-  box-shadow: 0 0 0 3px rgba(233, 78, 60, 0.12);
+  box-shadow: 0 0 0 3px var(--addr-error-shadow);
 }
 @keyframes errorShake {
   0%, 100% { transform: translateX(0); }
@@ -288,7 +321,7 @@ body.scrollable-page {
 #address_edit .divContent .formGroup .regionSlot.regionFilled {
   color: var(--color-text-primary);
   font-weight: 600;
-  background: linear-gradient(135deg, var(--color-primary-light), #fff3cc);
+  background: linear-gradient(135deg, var(--color-primary-light), var(--addr-region-filled-end));
   border-color: var(--color-primary);
   box-shadow: 0 1rem 4rem rgba(255, 154, 0, 0.1);
 }
@@ -331,27 +364,27 @@ body.scrollable-page {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 #address_edit .divContent .formGroup .tagBtn:active { transform: scale(0.94); }
-/* 公司 - 蓝色 */
+/* 公司 - 品牌金 */
 #address_edit .divContent .formGroup .tagBtn.tagCompany {
-  background: linear-gradient(135deg, #e8f4fd, #d6ecfb);
-  border-color: #90c8f0; color: var(--color-info); font-weight: 600;
-  box-shadow: 0 2rem 8rem rgba(24, 144, 255, 0.12);
+  background: var(--addr-tag-company-gradient);
+  border-color: var(--addr-tag-company-border); color: #a36d00; font-weight: 600;
+  box-shadow: 0 2rem 8rem var(--addr-tag-company-shadow);
 }
 /* 家 - 橙色 */
 #address_edit .divContent .formGroup .tagBtn.tagHome {
-  background: linear-gradient(135deg, #fff7e6, #ffedc8);
-  border-color: #f0c060; color: var(--color-primary-dark); font-weight: 600;
-  box-shadow: 0 2rem 8rem rgba(255, 154, 0, 0.12);
+  background: var(--addr-tag-home-gradient);
+  border-color: var(--addr-tag-home-border); color: var(--color-primary-dark); font-weight: 600;
+  box-shadow: 0 2rem 8rem var(--addr-tag-home-shadow);
 }
 /* 学校 - 绿色 */
 #address_edit .divContent .formGroup .tagBtn.tagSchool {
-  background: linear-gradient(135deg, #e6faf3, #ccf0e2);
-  border-color: #7fd4b0; color: var(--color-success); font-weight: 600;
-  box-shadow: 0 2rem 8rem rgba(7, 193, 96, 0.12);
+  background: var(--addr-tag-school-gradient);
+  border-color: var(--addr-tag-school-border); color: var(--color-success); font-weight: 600;
+  box-shadow: 0 2rem 8rem var(--addr-tag-school-shadow);
 }
 /* 无 - 灰色 */
 #address_edit .divContent .formGroup .tagBtn.tagNone {
-  background: linear-gradient(135deg, var(--bg-hover), #eee);
+  background: linear-gradient(135deg, var(--bg-hover), var(--addr-tag-none-gradient-end));
   border-color: var(--color-text-disabled); color: var(--color-text-hint); font-weight: 600;
 }
 
@@ -390,8 +423,8 @@ body.scrollable-page {
   box-shadow: 0 2rem 10rem rgba(255, 154, 0, 0.2);
 }
 #address_edit .divFooter .btnSave.btnSaveDisabled {
-  background: linear-gradient(135deg, var(--color-primary-light), #d5cc90);
-  box-shadow: 0 2rem 8rem rgba(180, 160, 100, 0.15);
+  background: linear-gradient(135deg, var(--color-primary-light), var(--addr-save-disabled-end));
+  box-shadow: 0 2rem 8rem var(--addr-save-disabled-shadow);
   cursor: not-allowed;
   color: var(--color-text-hint);
 }
@@ -399,7 +432,7 @@ body.scrollable-page {
 #address_edit .divFooter .btnSpinner {
   width: 16rem;
   height: 16rem;
-  border: 2px solid rgba(0,0,0,0.15);
+  border: 2px solid var(--addr-spinner-border);
   border-top-color: var(--color-text-primary);
   border-radius: 50%;
   animation: btnSpin 0.6s linear infinite;
@@ -424,7 +457,7 @@ body.scrollable-page {
   background: var(--bg-input);
 }
 #address_edit .divFooter .btnDelete:active:not(.btnDeleteDisabled) {
-  background: #fff0f0;
+  background: var(--addr-delete-active-bg);
   color: var(--color-danger);
 }
 #address_edit .divFooter .btnDelete.btnDeleteDisabled { opacity: 0.5; cursor: not-allowed; }

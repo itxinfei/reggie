@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>员工管理 - 瑞吉外卖管理端</title>
   <!-- 引入样式 -->
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -223,7 +222,7 @@
               { key: '',  icon: 'ri-group-line', label: '员工总数', value: self.stats.totalEmployees || 0, color: 'primary', clickable: true },
               { key: '1', icon: 'ri-checkbox-circle-line', label: '在职员工', value: self.stats.activeEmployees || 0, color: 'success', clickable: true },
               { key: '0', icon: 'ri-forbid-line', label: '已禁用', value: self.stats.disabledEmployees || 0, color: 'danger', clickable: true },
-              { key: '新增', icon: '🆕', label: '本月新入职', value: self.stats.newThisMonth || 0, color: 'info', clickable: false }
+              { key: '新增', icon: 'ri-user-add-line', label: '本月新入职', value: self.stats.newThisMonth || 0, color: 'info', clickable: false }
             ]
           }
         },

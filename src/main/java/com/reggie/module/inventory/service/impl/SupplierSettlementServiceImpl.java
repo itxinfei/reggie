@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -52,6 +53,33 @@ public class SupplierSettlementServiceImpl extends ServiceImpl<SupplierSettlemen
         settlement.setCreateTime(LocalDateTime.now());
         settlement.setUpdateTime(LocalDateTime.now());
         save(settlement);
+        return settlement;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public SupplierSettlement paySettlement(Long id, BigDecimal payAmount) {
+        SupplierSettlement settlement = getById(id);
+        if (settlement == null) {
+            throw new CustomException("结算单不存在");
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null && !tenantId.equals(settlement.getTenantId())) {
+            throw new CustomException("无权操作其他租户的结算单");
+        }
+        if (!"PENDING".equals(settlement.getStatus())) {
+            throw new CustomException("仅待付款结算单可付款");
+        }
+        if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CustomException("付款金额必须大于0");
+        }
+        BigDecimal paid = (settlement.getPaidAmount() == null ? BigDecimal.ZERO : settlement.getPaidAmount()).add(payAmount);
+        settlement.setPaidAmount(paid);
+        if (paid.compareTo(settlement.getTotalAmount()) >= 0) {
+            settlement.setStatus("PAID");
+        }
+        settlement.setUpdateTime(LocalDateTime.now());
+        updateById(settlement);
         return settlement;
     }
 }

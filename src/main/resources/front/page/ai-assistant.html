@@ -8,6 +8,7 @@
     <script src="../js/base.js"></script>
     <link rel="stylesheet" href="../styles/vant.min.css">
     <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/remixicon-fallback.css">
     <link rel="stylesheet" href="../styles/ai-assistant.css">
     <link rel="stylesheet" href="../styles/ai-assistant-dark.css">
 </head>
@@ -20,28 +21,28 @@
                 <span class="title">AI 智能点餐助手</span>
             </div>
             <div class="header-actions">
-                <span class="header-btn" @click="toggleDarkMode" title="暗色模式">🌙</span>
-                <span class="header-btn" @click="toggleSidebar" title="对话历史">☰</span>
-                <span class="header-btn" @click="close" title="关闭">✕</span>
+                <span class="header-btn" @click="toggleDarkMode" title="暗色模式"><i class="ri-moon-line" aria-hidden="true"></i></span>
+                <span class="header-btn" @click="toggleSidebar" title="对话历史"><i class="ri-menu-line" aria-hidden="true"></i></span>
+                <span class="header-btn" @click="close" title="关闭"><i class="ri-close-line" aria-hidden="true"></i></span>
             </div>
         </div>
 
         <!-- 网络状态提示条 -->
         <div class="network-banner" :class="{ visible: !isOnline }">
-            <span>⚠️ 当前处于离线状态，请检查网络连接</span>
+            <span><i class="ri-alert-line" aria-hidden="true"></i> 当前处于离线状态，请检查网络连接</span>
         </div>
 
         <!-- 对话管理侧边栏 -->
         <div class="sidebar-overlay" :class="{active: sidebarOpen}" @click="toggleSidebar"></div>
         <div class="conversation-sidebar" :class="{active: sidebarOpen}">
             <div class="sidebar-header">
-                <h3>💬 对话历史</h3>
+                <h3><i class="ri-chat-1-line" aria-hidden="true"></i> 对话历史</h3>
                 <button class="new-chat-btn" @click="newConversation">+ 新对话</button>
             </div>
             <div class="sidebar-list">
                 <div v-if="sidebarLoading" class="sidebar-loading">加载中...</div>
                 <div v-else-if="conversations.length === 0" class="empty-sidebar">
-                    <div class="empty-icon">💬</div>
+                    <div class="empty-icon"><i class="ri-chat-1-line" aria-hidden="true"></i></div>
                     <p>暂无对话记录</p>
                 </div>
                 <div v-for="conv in conversations" :key="conv.id"
@@ -49,11 +50,11 @@
                      @click="switchConversation(conv.id)">
                     <div class="conv-title">{{ conv.title || '新对话' }}</div>
                     <div class="conv-time">{{ conv.timeText || '' }}</div>
-                    <span class="conv-delete" @click.stop="deleteConversation(conv.id)" title="删除">🗑️</span>
+                    <span class="conv-delete" @click.stop="deleteConversation(conv.id)" title="删除"><i class="ri-delete-bin-6-line" aria-hidden="true"></i></span>
                 </div>
             </div>
             <div class="sidebar-footer" v-if="conversations.length > 0">
-                <button class="clear-all-btn" @click="clearAllConversations">🗑️ 清空全部对话</button>
+                <button class="clear-all-btn" @click="clearAllConversations"><i class="ri-delete-bin-6-line" aria-hidden="true"></i> 清空全部对话</button>
             </div>
         </div>
 
@@ -62,7 +63,7 @@
             <span v-for="scene in scenes"
                   :class="['scene-tab', { active: currentScene === scene.value }]"
                   @click="switchScene(scene.value)">
-                {{ scene.label }}
+                <i :class="scene.icon" aria-hidden="true"></i> {{ scene.label }}
             </span>
         </div>
 
@@ -99,28 +100,28 @@
 
             <!-- 欢迎消息 -->
             <div class="chat-msg assistant" v-if="messages.length === 0">
-                <div class="chat-avatar">🤖</div>
+                <div class="chat-avatar"><i class="ri-robot-line" aria-hidden="true"></i></div>
                 <div class="chat-bubble">
                     <template v-if="currentScene === 'dish_desc'">
-                        你好！我是小吉，美食文案专家 📝<br><br>
+                        你好！我是小吉，美食文案专家 <i class="ri-pencil-ruler-2-line" aria-hidden="true"></i><br><br>
                         输入菜名，我帮你写出让人流口水的美食描述！<br><br>
-                        💡 <b>试试输入：</b><br>
+                        <i class="ri-lightbulb-line tip-icon" aria-hidden="true"></i> <b>试试输入：</b><br>
                         · "红烧肉"<br>
                         · "清蒸鲈鱼"<br>
                         · "麻辣香锅"
                     </template>
                     <template v-else-if="currentScene === 'marketing'">
-                        你好！我是小吉，营销策略顾问 📢<br><br>
+                        你好！我是小吉，营销策略顾问 <i class="ri-megaphone-line" aria-hidden="true"></i><br><br>
                         告诉我你的需求，我帮你写活动文案和促销方案！<br><br>
-                        💡 <b>试试这样说：</b><br>
+                        <i class="ri-lightbulb-line tip-icon" aria-hidden="true"></i> <b>试试这样说：</b><br>
                         · "帮我写一个满减活动文案"<br>
                         · "新店开业的促销方案"<br>
                         · "会员日专属优惠文案"
                     </template>
                     <template v-else>
-                        你好！我是小吉，你的智能点餐助手 🤗<br><br>
+                        你好！我是小吉，你的智能点餐助手 <i class="ri-emotion-line" aria-hidden="true"></i><br><br>
                         告诉我你想吃什么，我来帮你推荐最合适的菜品！<br><br>
-                        💡 <b>试试这样说：</b><br>
+                        <i class="ri-lightbulb-line tip-icon" aria-hidden="true"></i> <b>试试这样说：</b><br>
                         · "我想吃辣的，2个人"<br>
                         · "有没有清淡一点的菜"<br>
                         · "帮我推荐100以内的套餐"
@@ -133,7 +134,7 @@
                 <div :class="'chat-msg ' + msg.role" :key="msg.id || idx"
                      @contextmenu.prevent="showMsgMenu($event, msg)"
                      @longpress="showMsgMenu($event, msg)">
-                    <div class="chat-avatar">{{ msg.role === 'assistant' ? '🤖' : (userInfo ? (userAvatar || '👤') : '👤') }}</div>
+                    <div class="chat-avatar" v-html="msg.role === 'assistant' ? '<i class=\'ri-robot-line\'></i>' : (userInfo && userAvatar ? userAvatar : '<i class=\'ri-user-line\'></i>')"></div>
                     <div class="msg-body">
                         <div class="chat-bubble" :class="{'streaming-cursor': msg.streaming}">
                             <!-- 安全渲染 -->
@@ -156,7 +157,8 @@
                         <!-- 复制按钮 -->
                         <div class="msg-actions" v-if="!msg.streaming">
                             <button class="copy-btn" @click="copyMessage(msg)" :title="msg.copied ? '已复制' : '复制'">
-                                {{ msg.copied ? '✓' : '📋' }}
+                                <span v-if="msg.copied"><i class="ri-check-line" aria-hidden="true"></i></span>
+                                <span v-else><i class="ri-copy-line" aria-hidden="true"></i></span>
                             </button>
                         </div>
                         <!-- 推荐菜品卡片 -->
@@ -174,13 +176,13 @@
                         <!-- 反馈按钮 -->
                         <div class="feedback-bar" v-if="msg.role === 'assistant' && msg.showFeedback && !msg.streaming">
                             <button :class="['feedback-btn', msg.feedback === 'good' ? 'active-good' : '']"
-                                    @click="sendFeedback(msg, 'good')">👍 有用</button>
+                                    @click="sendFeedback(msg, 'good')"><i class="ri-thumb-up-line" aria-hidden="true"></i> 有用</button>
                             <button :class="['feedback-btn', msg.feedback === 'bad' ? 'active-bad' : '']"
-                                    @click="sendFeedback(msg, 'bad')">👎 没用</button>
+                                    @click="sendFeedback(msg, 'bad')"><i class="ri-thumb-down-line" aria-hidden="true"></i> 没用</button>
                         </div>
                         <!-- 错误重试 -->
                         <div class="retry-bar" v-if="msg.role === 'assistant' && msg.error">
-                            <button class="retry-btn" @click="retryMessage(msg)">🔄 重新生成</button>
+                            <button class="retry-btn" @click="retryMessage(msg)"><i class="ri-refresh-line" aria-hidden="true"></i> 重新生成</button>
                         </div>
                     </div>
                 </div>
@@ -188,7 +190,7 @@
 
             <!-- 加载中 -->
             <div class="chat-msg assistant" v-if="loading && !hasStreamingMessage">
-                <div class="chat-avatar">🤖</div>
+                <div class="chat-avatar"><i class="ri-robot-line" aria-hidden="true"></i></div>
                 <div class="chat-bubble">
                     <div class="typing-indicator">
                         <span></span><span></span><span></span>
@@ -200,7 +202,7 @@
         <!-- 输入区 -->
         <div class="input-area">
             <button class="voice-btn" :class="{'recording': isRecording}" @click="toggleVoice" title="语音输入">
-                🎤
+                <i class="ri-mic-line" aria-hidden="true"></i>
             </button>
             <textarea
                 ref="inputArea"
@@ -213,7 +215,7 @@
                 class="input-textarea"
             ></textarea>
             <button class="send-btn" @click="sendMessage" :disabled="!inputText.trim() || loading">
-                ➤
+                <i class="ri-send-plane-fill" aria-hidden="true"></i>
             </button>
         </div>
 
@@ -221,8 +223,8 @@
         <div class="msg-context-menu" :class="{visible: menuVisible}"
              :style="{top: menuY + 'px', left: menuX + 'px'}"
              v-if="menuTarget">
-            <div class="menu-item" @click="copyMenuTarget">📋 复制</div>
-            <div class="menu-item" @click="deleteMenuTarget" v-if="menuTarget.role === 'user'">🗑️ 删除</div>
+            <div class="menu-item" @click="copyMenuTarget"><i class="ri-copy-line" aria-hidden="true"></i> 复制</div>
+            <div class="menu-item" @click="deleteMenuTarget" v-if="menuTarget.role === 'user'"><i class="ri-delete-bin-6-line" aria-hidden="true"></i> 删除</div>
             <div class="menu-item menu-cancel" @click="menuVisible = false">取消</div>
         </div>
     </div>
@@ -323,9 +325,9 @@
                 messages: [],
                 currentScene: 'order_assistant',
                 scenes: [
-                    { label: '🍽️ 点餐推荐', value: 'order_assistant' },
-                    { label: '📝 菜品描述', value: 'dish_desc' },
-                    { label: '📢 营销文案', value: 'marketing' }
+                    { label: '点餐推荐', icon: 'ri-restaurant-2-line', value: 'order_assistant' },
+                    { label: '菜品描述', icon: 'ri-pencil-ruler-2-line', value: 'dish_desc' },
+                    { label: '营销文案', icon: 'ri-megaphone-line', value: 'marketing' }
                 ],
                 quickTipsMap: {
                     order_assistant: ['我想吃辣的', '推荐清淡的菜', '2个人，预算100', '有什么招牌菜', '适合小孩吃的', '帮我搭配一个套餐'],

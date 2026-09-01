@@ -121,6 +121,19 @@ public class UrgencyController {
         Long tenantId = BaseContext.getCurrentTenantId();
         log.info("[催单] 获取催单统计: tenantId={}", tenantId);
         Map<String, Object> summary = urgencyService.getUrgencySummary(tenantId);
-        return R.success(summary);
+       return R.success(summary);
+   }
+
+    /**
+     * 获取未接单实时监控看板（接单大屏轮询）
+     *
+     * @return 监控数据（统计概览 + 订单列表 + 阈值配置）
+     */
+    @GetMapping("/unaccepted")
+    @Operation(summary = "未接单监控", description = "获取待接单订单实时监控，按等待时长分级，供接单大屏轮询与语音播报")
+    public R<Map<String, Object>> getUnacceptedMonitor() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> monitor = urgencyService.getUnacceptedMonitor(tenantId);
+        return R.success(monitor);
     }
 }

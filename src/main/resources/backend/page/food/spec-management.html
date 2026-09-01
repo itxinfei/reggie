@@ -4,22 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>规格管理 - 瑞吉外卖</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css">
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css">
   <link rel="stylesheet" href="../../styles/tokens.css">
   <link rel="stylesheet" href="../../styles/main.css">
   <style>
     /* ===== 规格管理页专有样式（前缀 spec- 避免污染全局） ===== */
-    .spec-main { margin-top: 24px; }
+    .spec-main { margin-top: 20px; }
 
     .spec-card {
       background: var(--bg-surface);
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       box-shadow: var(--shadow-sm);
-      padding: 16px;
+      padding: var(--space-4);
       display: flex;
       flex-direction: column;
-      min-height: 540px;
+      min-height: 520px;
       transition: box-shadow var(--transition-base);
     }
     .spec-card:hover { box-shadow: var(--shadow-md); }
@@ -29,56 +28,59 @@
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--border-default);
     }
     .spec-card__title-wrap {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--space-2);
       flex-wrap: wrap;
       min-width: 0;
     }
     .spec-card__title {
-      font-size: 16px;
+      font-size: var(--font-size-lg);
       font-weight: 500;
       color: var(--text-primary);
       margin: 0;
       line-height: 1.5;
     }
     .spec-card__sub {
-      font-size: 12px;
+      font-size: var(--font-size-xs);
       font-weight: 400;
       color: var(--text-secondary);
     }
     .spec-card__filters {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--space-2);
       flex-wrap: wrap;
     }
-    .spec-search { width: 160px; }
-    .spec-status-select { width: 90px; }
+    .spec-search { width: 200px; }
+    .spec-status-select { width: 100px; }
     .spec-card__table { flex: 1; }
     .spec-card__pager {
       display: flex;
-      justify-content: flex-end;
-      padding-top: 12px;
+      justify-content: center;
+      padding-top: var(--space-3);
     }
     .spec-card__tip {
-      font-size: 12px;
+      font-size: var(--font-size-xs);
       font-weight: 400;
-      color: var(--text-secondary);
-      margin-top: 8px;
+      color: var(--text-muted);
+      margin-top: var(--space-2);
       line-height: 1.5;
+      text-align: center;
     }
 
-    /* 行内操作按钮横向排列，避免上下堆叠撑高行 */
+    /* 行内操作按钮横向居中排列 */
     .spec-row-actions {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: var(--space-2);
       white-space: nowrap;
     }
     .spec-row-actions .el-button--text {
@@ -86,7 +88,7 @@
       padding-right: 0;
     }
 
-    /* 规则标签：类型 + 必选横向紧凑展示，窄列自动换行 */
+    /* 规则标签：类型 + 必选横向居中紧凑展示 */
     .spec-rule-cell {
       display: inline-flex;
       align-items: center;
@@ -95,10 +97,16 @@
       gap: 4px;
     }
 
+    /* 状态列 el-switch 居中 */
+    .spec-card .el-switch {
+      display: inline-flex;
+      justify-content: center;
+    }
+
     /* 价格调整语义色 */
-    .spec-price-up { color: var(--color-danger); }
-    .spec-price-down { color: var(--color-success); }
-    .spec-price-flat { color: var(--text-secondary); }
+    .spec-price-up { color: var(--color-danger); font-variant-numeric: tabular-nums; }
+    .spec-price-down { color: var(--color-success); font-variant-numeric: tabular-nums; }
+    .spec-price-flat { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 
     /* 空态引导 */
     .spec-empty-guide {
@@ -106,18 +114,18 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: var(--space-2);
       color: var(--text-secondary);
-      font-size: 13px;
+      font-size: var(--font-size-sm);
       padding: 48px 0;
     }
     .spec-empty-guide .el-icon {
       font-size: 40px;
-      color: var(--el-color-primary-light-7);
+      color: var(--text-muted);
     }
 
     .spec-dialog-tip {
-      font-size: 12px;
+      font-size: var(--font-size-xs);
       color: var(--text-secondary);
       line-height: 1.5;
       margin-top: 4px;
@@ -128,11 +136,19 @@
       transition: background-color var(--transition-base);
     }
 
+    /* 确保表格所有 cell 内容居中（与 consistency.css 三态对齐配合） */
+    .tableBox.el-table .el-table__body td.is-center .cell,
+    .tableBox.el-table .el-table__header th.is-center .cell {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
     @media (max-width: 1200px) {
-      .spec-search { width: 130px; }
+      .spec-search { width: 150px; }
     }
     @media (max-width: 768px) {
-      .spec-main { margin-top: 16px; }
+      .spec-main { margin-top: var(--space-4); }
       .spec-card { min-height: auto; }
       .spec-card__head { flex-direction: column; align-items: flex-start; }
       .spec-card__filters { width: 100%; margin-left: 0; }

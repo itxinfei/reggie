@@ -13,6 +13,7 @@ import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.inventory.dto.BatchRestockDTO;
 import com.reggie.module.inventory.model.Material;
 import com.reggie.module.inventory.service.MaterialService;
+import com.reggie.module.inventory.service.PriceHistoryService;
 import com.reggie.module.inventory.vo.WarningMaterialVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +48,10 @@ public class MaterialController {
 
     @Autowired
     private MaterialService materialService;
+
+    /** 价格历史服务（记录采购单价变更） */
+    @Autowired
+    private PriceHistoryService priceHistoryService;
 
     /**
      * 分页查询食材列表
@@ -116,13 +122,25 @@ public class MaterialController {
         if (!tenantId.equals(exist.getTenantId())) {
             throw new CustomException("食材不属于当前租户");
         }
+        // 采购单价变更：记录价格历史并回写主表（防止单价被静默修改而无追溯）
+        BigDecimal oldPrice = exist.getUnitPrice();
+        BigDecimal newPrice = material.getUnitPrice();
+        boolean priceChanged = newPrice != null
+                && (oldPrice == null || newPrice.compareTo(oldPrice) != 0);
         exist.setName(material.getName());
         exist.setCategoryId(material.getCategoryId());
         exist.setUnit(material.getUnit());
         exist.setStockQty(material.getStockQty());
         exist.setMinStock(material.getMinStock());
         exist.setStatus(material.getStatus());
+        if (priceChanged) {
+            exist.setUnitPrice(newPrice);
+        }
         materialService.updateById(exist);
+        if (priceChanged) {
+            priceHistoryService.recordPriceChange(
+                    exist.getId(), oldPrice, newPrice, "采购价格调整", BaseContext.getCurrentId());
+        }
         return R.success("修改食材成功");
     }
 

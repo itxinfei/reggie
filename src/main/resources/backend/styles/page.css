@@ -409,9 +409,9 @@
   font-size: 13px !important;
 }
 
-.el-table td {
-  font-size: 13px !important;
-}
+/* 修改点(2026-09-01)：删除 .el-table td 的 13px !important 覆盖 ——
+   与 components.css 的 .tableBox.el-table td{font-size:var(--font-size-base)}（14px，36 页统一密度规范）
+   冲突且以 !important 静默压制。删除后回归统一基准 var(--font-size-base)，字号只维护一处。 */
 
 /* 非 selection 的第一列保留左缩进，selection 列由上方规则重置为 0 */
 .el-table .cell,
@@ -419,10 +419,10 @@
   padding-left: 12px;
 }
 
-/* 统一 thead 居中 */
-.el-table th {
-  text-align: center !important;
-}
+/* 修改点(2026-09-01)：删除 .el-table th 的 text-align:center !important 强制 ——
+   表头对齐唯一来源为 components.js 的 resolveColAlign（:header-align）+
+   consistency.css 的三态 !important（.is-left/.is-center/.is-right .cell），
+   此处重复管辖属冗余定义，删除后由单轨生效（AGENTS.md crud-table 对齐规范）。 */
 
 /* 标准输入框宽度（弹窗表单内使用） */
 .container .el-dialog .el-input,

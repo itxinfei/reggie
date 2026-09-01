@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>库存预警 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <title>库存预警 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -72,7 +71,7 @@
       <div class="filter-bar">
         <div class="filter-bar__col">
           <span class="filter-bar__label">食材分类：</span>
-          <el-select v-model="categoryId" class="filter-bar__input" style="width:200px" filterable clearable @change="onFilterChange" aria-label="食材分类" placeholder="全部分类">
+          <el-select v-model="categoryId" class="filter-bar__input" style="width: 200px" filterable clearable @change="onFilterChange" aria-label="食材分类" placeholder="全部分类">
             <el-option v-for="c in categoryOptions" :key="c.value" :label="c.label" :value="c.value"></el-option>
           </el-select>
         </div>
@@ -140,13 +139,13 @@
           </div>
         </template>
         <template #col-stockQty="{ row }">
-          <span style="font-weight:500; font-variant-numeric:tabular-nums">{{ row.stockQty }} <span style="font-size:12px;color:var(--text-muted)">{{ row.unit }}</span></span>
+          <span class="ds-num-medium">{{ row.stockQty }} <span class="ds-text-muted ds-text-xs">{{ row.unit }}</span></span>
         </template>
         <template #col-minStock="{ row }">
-          <span style="font-variant-numeric:tabular-nums;color:var(--text-muted)">{{ row.minStock }} {{ row.unit }}</span>
+          <span class="ds-num-muted">{{ row.minStock }} {{ row.unit }}</span>
         </template>
         <template #col-unitPrice="{ row }">
-          <span style="font-variant-numeric:tabular-nums">¥{{ row.unitPrice | toDecimal }}</span>
+          <span class="ds-num">¥{{ row.unitPrice | toDecimal }}</span>
         </template>
       </crud-table>
 
@@ -211,15 +210,15 @@
       <el-form :model="restockForm" :rules="restockRules" ref="restockFormRef" label-width="90px">
         <el-form-item label="已选食材">
           <el-input-number v-model="restockForm.selectedCount" :min="0" :max="9999" disabled></el-input-number>
-          <span style="margin-left:8px; font-size:12px; color:var(--text-muted)">条预警食材</span>
+          <span class="ds-form-hint">条预警食材</span>
         </el-form-item>
         <el-divider></el-divider>
-        <div style="margin-bottom:12px">
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">补货数量（系统已按建议填充，可手动调整）：</div>
+        <div style="margin-bottom: var(--space-3)">
+          <div class="ds-text-muted ds-text-xs" style="margin-bottom: var(--space-2)">补货数量（系统已按建议填充，可手动调整）：</div>
           <div v-for="(item, idx) in restockForm.items" :key="item.materialId" class="suggest-item">
             <span class="suggest-item__name">{{ item.materialName || ('食材'+idx) }}</span>
             <span class="suggest-item__label">建议:</span>
-            <span class="suggest-item__value" style="color:var(--text-muted)">{{ item.suggestQty || 0 }}</span>
+            <span class="suggest-item__value ds-text-muted">{{ item.suggestQty || 0 }}</span>
             <span class="suggest-item__label">补货:</span>
             <el-input-number
               v-model="item.qty"
@@ -229,7 +228,7 @@
               class="suggest-item__qty"
               @change="onRestockQtyChange(idx)"
             ></el-input-number>
-            <span style="font-size:12px;color:var(--text-muted);margin-left:4px">{{ item.unit || '' }}</span>
+            <span class="ds-form-hint" style="margin-left: 4px">{{ item.unit || '' }}</span>
           </div>
         </div>
         <el-form-item label="备注">
@@ -246,23 +245,23 @@
       :show-submit="false"
       submit-text="关 闭"
     >
-      <div style="margin-bottom:12px; padding:10px 12px; background:var(--el-bg-ghost); border-radius:4px; font-size:12px; color:var(--text-muted); line-height:1.6">
-        基于近 <strong style="color:var(--text-primary)">{{ suggestDays }}</strong> 天出库量计算日均消耗，补货周期默认 14 天。<br>
+      <div class="ds-info-box">
+        基于近 <strong class="ds-text-primary">{{ suggestDays }}</strong> 天出库量计算日均消耗，补货周期默认 14 天。<br>
         建议采购量 = 日均消耗 × 14 + 最低库存 - 当前库存
       </div>
-      <div v-loading="suggestLoading" style="max-height:56vh; overflow-y:auto">
+      <div v-loading="suggestLoading" class="ds-scroll-area">
         <div v-for="(item, idx) in suggestList" :key="idx" class="suggest-item">
           <span class="suggest-item__name">{{ item.materialName }}</span>
           <span class="suggest-item__label">日均消耗:</span>
-          <span class="suggest-item__value" style="color:var(--text-muted)">{{ (item.dailyUsage || 0).toFixed(2) }}</span>
+          <span class="suggest-item__value ds-text-muted">{{ (item.dailyUsage || 0).toFixed(2) }}</span>
           <span class="suggest-item__label">库存:</span>
-          <span class="suggest-item__value" style="color:var(--text-muted)">{{ item.stockQty }}</span>
+          <span class="suggest-item__value ds-text-muted">{{ item.stockQty }}</span>
           <span class="suggest-item__label">最低:</span>
-          <span class="suggest-item__value" style="color:var(--text-muted)">{{ item.minStock }}</span>
-          <span class="suggest-item__label" style="font-weight:500;color:var(--text-primary)">建议:</span>
+          <span class="suggest-item__value ds-text-muted">{{ item.minStock }}</span>
+          <span class="suggest-item__label ds-text-medium ds-text-primary">建议:</span>
           <span class="suggest-item__value" :style="{ color: item.suggestQty > 0 ? 'var(--color-danger)' : 'var(--color-success)', fontWeight: 600 }">{{ (item.suggestQty || 0).toFixed(2) }} {{ item.unit || '' }}</span>
         </div>
-        <div v-if="suggestList.length === 0 && !suggestLoading" style="text-align:center;padding:30px;color:var(--text-muted);font-size:var(--font-size-base)">
+        <div v-if="suggestList.length === 0 && !suggestLoading" class="ds-empty-inline">
           暂无预警食材，无需补货建议
         </div>
       </div>

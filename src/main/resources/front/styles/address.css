@@ -42,11 +42,17 @@ body.scrollable-page {
 #address .divHead .divTitle i:active { transform: translate(0, -50%) scale(1.2); }
 
 /* ========== 内容区域 ========== */
+/* 修改点（2026-09-01 二轮）：min-height → height 固定滚动容器 ——
+   index.css 全局 html,body{overflow:hidden}，页面仅靠 body.scrollable-page 无法让列表滚动，
+   原 min-height + overflow-y:auto 形同虚设，地址多于一屏时内容被视口裁剪不可见。
+   改为固定高度（100vh − 头部 var(--header-height) − 底部按钮区 65rem）内部滚动，
+   与 address-edit 的 .divScroll 模式一致；padding-bottom 保留 96rem 防最后一条被按钮遮挡。 */
 #address .divContent {
-  min-height: calc(100vh - 157rem);
-  padding: 4rem 0 20rem;
+  height: calc(100vh - var(--header-height) - 65rem);
+  padding: 4rem 0 96rem;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 /* ========== 地址卡片 ========== */
@@ -122,21 +128,22 @@ body.scrollable-page {
   border-radius: 11rem;
 }
 
-/* 标签颜色 — 与编辑页统一 */
+/* 标签颜色 — 与编辑页统一（复用 address-edit.css 定义的 --addr-tag-* 令牌） */
 #address .divContent .divItem .divAddress .spanCompany {
-  background: linear-gradient(135deg, #e8f4fd, #dceeff);
-  color: var(--color-info);
+  background: var(--addr-tag-company-gradient);
+  /* 与地址编辑页 .tagCompany 深金棕文字保持一致 */
+  color: #a36d00;
 }
 #address .divContent .divItem .divAddress .spanHome {
-  background: linear-gradient(135deg, #fff7e6, #ffecc8);
+  background: var(--addr-tag-home-gradient);
   color: var(--color-primary-dark);
 }
 #address .divContent .divItem .divAddress .spanSchool {
-  background: linear-gradient(135deg, #e6faf3, #c8f0e3);
+  background: var(--addr-tag-school-gradient);
   color: var(--color-success);
 }
 #address .divContent .divItem .divAddress .spanNone {
-  background: linear-gradient(135deg, var(--bg-hover), #eeeeee);
+  background: linear-gradient(135deg, var(--bg-hover), var(--addr-tag-none-gradient-end));
   color: var(--color-text-disabled);
 }
 
@@ -233,6 +240,7 @@ body.scrollable-page {
 }
 
 /* ========== 底部添加按钮 ========== */
+/* 修改点：bottom 追加 safe-area-inset-bottom，适配 iPhone 底部 Home Indicator（2026-09-01） */
 #address .divBottom {
   height: 42rem;
   background: var(--color-primary-gradient);
@@ -245,7 +253,7 @@ body.scrollable-page {
   line-height: 42rem;
   letter-spacing: 1rem;
   position: absolute;
-  bottom: 23rem;
+  bottom: calc(23rem + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translate(-50%, 0);
   width: calc(100% - 24rem);
@@ -290,6 +298,12 @@ body.scrollable-page {
     max-width: 440rem;
     margin-left: auto;
     margin-right: auto;
+  }
+
+  /* 修改点：桌面端卡片更宽时放开地址文本区 max-width，避免右侧大片留白（2026-09-01） */
+  #address .divContent .divItem .divAddress {
+    max-width: none;
+    width: calc(100% - 70rem);
   }
 
   #address .divBottom {

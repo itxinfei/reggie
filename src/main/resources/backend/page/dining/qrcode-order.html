@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>扫码点餐 - 瑞吉外卖</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <title>扫码点餐 - 瑞吉外卖</title>
   <link rel="stylesheet" href="../../styles/tokens.css" />
+    <link rel="stylesheet" href="../../styles/remixicon.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -68,7 +68,7 @@
     <!-- 页头 -->
     <div class="header" v-if="tableInfo">
       <div class="store-name">{{ storeInfo.name || '瑞吉外卖' }}</div>
-      <div class="table-info">🪑 {{ tableInfo.name }} · 可坐{{ tableInfo.seatCount }}人</div>
+      <div class="table-info"><i class="ri-table-line" aria-hidden="true"></i> {{ tableInfo.name }} · 可坐{{ tableInfo.seatCount }}人</div>
     </div>
 
     <!-- 加载中 -->
@@ -107,7 +107,7 @@
     <!-- 购物车栏 -->
     <div class="cart-bar" v-if="!loading && cartTotal() > 0">
       <div class="cart-icon" role="button" tabindex="0" :aria-label="('购物车，共' + cartTotal() + '件商品')" @click="showCartDialog" @keydown.enter="showCartDialog">
-        🛒
+        <i class="ri-shopping-cart-2-line" aria-hidden="true"></i>
         <div class="cart-badge" v-if="cartTotal() > 0">{{ cartTotal() }}</div>
       </div>
       <div class="cart-info">
@@ -136,7 +136,7 @@
       :close-on-click-modal="false" @submit="confirmSubmit">
       <div style="padding: 10px 0;">
         <div class="qr-title">
-          🪑 桌台：<strong>{{ tableInfo ? tableInfo.name : '' }}</strong>（可坐{{ tableInfo ? tableInfo.seatCount : '' }}人）
+          <i class="ri-table-line" aria-hidden="true"></i> 桌台：<strong>{{ tableInfo ? tableInfo.name : '' }}</strong>（可坐{{ tableInfo ? tableInfo.seatCount : '' }}人）
         </div>
         <div class="qr-title">
           共 <strong>{{ cartTotal() }}</strong> 件商品

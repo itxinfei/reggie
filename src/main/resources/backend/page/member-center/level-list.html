@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>会员等级 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <title>会员等级 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
@@ -49,7 +48,7 @@
         <div class="progression-title"><i class="ri-bar-chart-2-line" aria-hidden="true"></i> 等级晋升阶梯</div>
         <div class="progression-bar">
           <div class="prog-item" v-for="(item, idx) in sortedLevels" :key="item.id">
-            <div class="prog-icon">{{ idx === sortedLevels.length - 1 ? '👑' : idx >= sortedLevels.length - 3 ? '⭐' : idx >= 2 ? '🎖' : idx >= 1 ? '🥉' : '🌱' }}</div>
+            <div class="prog-icon"><i :class="getLevelIcon(idx)" aria-hidden="true"></i></div>
             <div class="prog-name">{{ item.name }}</div>
             <div class="prog-bar-wrap"><div class="prog-bar-fill" :style="{width: getBarWidth(idx), background: getBarColor(idx)}"></div></div>
             <div class="prog-pts">{{ item.minPoints }} 分</div>
@@ -164,10 +163,10 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: 'total', icon: '🏅', label: '等级总数', value: self.stats.totalLevels || 0, color: 'primary' },
-            { key: 'highest', icon: 'ri-vip-crown-line', label: '最高等级', value: self.stats.highestLevel || '-', color: 'success' },
-            { key: 'entry', icon: '🎯', label: '入门门槛', value: self.stats.lowestPoints || 0, color: 'warning' },
-            { key: 'avg', icon: '💯', label: '平均折扣率', value: self.stats.avgDiscount || '-', color: 'info' }
+            { key: 'total',   icon: 'ri-award-line',       label: '等级总数', value: self.stats.totalLevels || 0, color: 'primary' },
+            { key: 'highest', icon: 'ri-vip-crown-line',   label: '最高等级', value: self.stats.highestLevel || '-', color: 'success' },
+            { key: 'entry',   icon: 'ri-target-line',      label: '入门门槛', value: self.stats.lowestPoints || 0, color: 'warning' },
+            { key: 'avg',     icon: 'ri-percent-line',     label: '平均折扣率', value: self.stats.avgDiscount || '-', color: 'info' }
           ]
         },
         sortedLevels: function() {
@@ -216,6 +215,15 @@
         getBarColor: function(idx) {
           const colors = [RgPalette.slate200,RgPalette.violet400,RgPalette.indigo400,RgPalette.blue400,RgPalette.emerald400,RgPalette.amber400,RgPalette.orange500,RgPalette.red500]
           return colors[idx % colors.length]
+        },
+        /** 等级阶梯图标：RemixIcon 类名（按阶梯从低→高：种子→铜牌→奖牌→星星→皇冠） */
+        getLevelIcon: function(idx) {
+          const total = this.sortedLevels ? this.sortedLevels.length : 1;
+          if (idx === total - 1) return 'ri-vip-crown-fill';
+          if (idx >= total - 3)  return 'ri-star-smile-fill';
+          if (idx >= 2)          return 'ri-medal-line';
+          if (idx >= 1)          return 'ri-award-line';
+          return 'ri-seedling-line';
         },
         // <table-bar> @search 回调（table-bar 已管理搜索条件，通过 searchParams 传入）
         handleQuery: function(searchParams) {

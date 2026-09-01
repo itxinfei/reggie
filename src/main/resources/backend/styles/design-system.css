@@ -157,6 +157,17 @@
   transform: translateY(-2px);
 }
 
+/* ========== el-card 复用 .ds-card 的兼容层 ==========
+ * 背景（2026-09-01 修复）：platform/config、dish-mapping、order-list 等页
+ * 在 <el-card> 上直接叠加 class="ds-card"。Element UI 的 .el-card__body 自带
+ * padding:20px（common-el.css），与 .ds-card 的 20px 叠加成 40px，导致卡片整体偏高。
+ * 统一方案：外层 .ds-card padding 归零，由内层 .el-card__body 承担内边距，避免双重叠加。 */
+.el-card.ds-card { padding: 0; }
+.el-card.ds-card .el-card__body { padding: var(--space-5); }
+
+/* 筛选类卡片（平台订单/菜品映射的筛选区）：纵向更紧凑，横向保持标准留白 */
+.el-card.ds-card--filter .el-card__body { padding: var(--space-3) var(--space-5); }
+
 .ds-section-title {
   margin: 0 0 var(--space-3);
   font-size: var(--font-size-lg);
@@ -244,6 +255,12 @@ a.breadcrumb__item:hover,
 .ds-link--danger { color: var(--color-danger-dark); }
 .ds-link--danger:hover { background: var(--color-danger-light); color: var(--color-danger-dark); }
 
+/* Element UI text-button 语义色工具类（替代 style="color:var(--xxx)"） */
+.btn-brand-text { color: var(--color-brand-700) !important; }
+.btn-brand-text:hover { color: var(--color-brand-800) !important; }
+.btn-warning-text { color: var(--color-warning) !important; }
+.btn-warning-text:hover { color: var(--color-warning-dark) !important; }
+
 /* ========== 7. 品牌色按钮对齐（Element UI → token，主色=金） ========== */
 /* 主按钮：金色底 + 深色字（满足金色背景上 WCAG AA 对比度） */
 .el-button--primary {
@@ -279,6 +296,74 @@ a.breadcrumb__item:hover,
 .el-tag--primary { background-color: var(--color-brand-50); border-color: var(--color-brand-200); color: var(--color-brand-700); }
 .el-tag--primary .el-tag__close { color: var(--color-brand-700); }
 .el-tag--primary .el-tag__close:hover { background-color: var(--color-brand-500); color: var(--text-on-brand); }
+
+/* —— Element 表单控件统一替换为品牌金 —— */
+/* Checkbox 勾选态 */
+.el-checkbox__input.is-checked .el-checkbox__inner,
+.el-checkbox__input.is-indeterminate .el-checkbox__inner {
+  background-color: var(--color-brand-500);
+  border-color: var(--color-brand-500);
+}
+.el-checkbox__input.is-checked + .el-checkbox__label {
+  color: var(--color-brand-700);
+}
+.el-checkbox__input.is-focus .el-checkbox__inner {
+  border-color: var(--color-brand-500);
+}
+.el-checkbox__inner:hover {
+  border-color: var(--color-brand-500);
+}
+
+/* Radio 选中态 */
+.el-radio__input.is-checked .el-radio__inner {
+  background-color: var(--color-brand-500);
+  border-color: var(--color-brand-500);
+}
+.el-radio__input.is-checked + .el-radio__label {
+  color: var(--color-brand-700);
+}
+.el-radio__inner:hover {
+  border-color: var(--color-brand-500);
+}
+.el-radio__label {
+  color: var(--text-primary);
+}
+
+/* Switch 开启态 */
+.el-switch.is-checked .el-switch__core {
+  background-color: var(--color-brand-500) !important;
+  border-color: var(--color-brand-500) !important;
+}
+
+/* Tree 当前节点高亮 */
+.el-tree-node.is-current > .el-tree-node__content {
+  background-color: var(--color-brand-50) !important;
+}
+
+/* DatePicker 选中态 */
+.el-date-table td.current:not(.disabled) span,
+.el-date-table td.today span {
+  color: var(--color-brand-700);
+  font-weight: var(--font-weight-semibold);
+}
+.el-date-table td.current:not(.disabled),
+.el-date-table td.current:not(.disabled):hover {
+  background-color: var(--color-brand-500) !important;
+}
+.el-date-table td.current:not(.disabled) span {
+  color: var(--text-on-brand);
+}
+
+/* Loading 加载圈 */
+.el-loading-spinner .path {
+  stroke: var(--color-brand-500);
+}
+
+/* Pagination 当前页 */
+.el-pagination.is-background .el-pager li:not(.disabled).active {
+  background-color: var(--color-brand-500);
+  color: var(--text-on-brand);
+}
 
 /* ========== 8. 响应式工具类 ========== */
 /* 默认隐藏，≤768px 显示 */
@@ -379,6 +464,50 @@ a.breadcrumb__item:hover,
 .ds-money--muted {
   color: var(--color-info);
   font-weight: 400;
+}
+
+/* ========== 12b. 文本工具类（替代页面内联 style，统一来源） ========== */
+.ds-text-muted { color: var(--text-muted); }
+.ds-text-secondary { color: var(--text-secondary); }
+.ds-text-primary { color: var(--text-primary); }
+.ds-text-xs { font-size: var(--font-size-xs); }
+.ds-text-sm { font-size: var(--font-size-sm); }
+.ds-text-base { font-size: var(--font-size-base); }
+.ds-text-medium { font-weight: var(--font-weight-medium); }
+.ds-text-semibold { font-weight: var(--font-weight-semibold); }
+.ds-num-muted { font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.ds-num-medium { font-variant-numeric: tabular-nums; font-weight: var(--font-weight-medium); }
+
+/* 表单内提示文字（替代 style="margin-left:8px; font-size:12px; color:var(--text-muted)"） */
+.ds-form-hint {
+  margin-left: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* 补货/建议弹窗信息块 */
+.ds-info-box {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+/* 弹窗内滚动容器 */
+.ds-scroll-area {
+  max-height: 56vh;
+  overflow-y: auto;
+}
+
+/* 空态内联（非全屏空态） */
+.ds-empty-inline {
+  text-align: center;
+  padding: var(--space-12) var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--font-size-base);
 }
 
 /* ========== 13. 卡片网格（自适应列数，替代各页写死 calc 栅格） ========== */

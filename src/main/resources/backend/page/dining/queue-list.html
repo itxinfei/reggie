@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>排队叫号 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <title>排队叫号 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -138,10 +137,10 @@
           <span v-if="row.phone">{{ row.phone.substring(0,3) }}****{{ row.phone.substring(7) }}</span>
         </template>
         <template #actions="{ row }">
-          <el-button type="text" size="small" @click="seatHandle(row)" v-if="row.status === 'CALLED'" style="color:var(--color-brand-500)" :aria-label="'安排入座 ' + (row.queueNo || '排队记录')">入座</el-button>
+          <el-button type="text" size="small" @click="seatHandle(row)" v-if="row.status === 'CALLED'" class="btn-brand-text" :aria-label="'安排入座 ' + (row.queueNo || '排队记录')">入座</el-button>
           <el-button type="text" size="small" @click="recallHandle(row)" v-if="row.status === 'CALLED'" :aria-label="'退回等待 ' + (row.queueNo || '')">退回</el-button>
           <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(row.id)" v-if="row.status === 'WAITING' || row.status === 'CALLED'" :aria-label="'取消排队 ' + (row.queueNo || '')">取消</el-button>
-          <el-button type="text" size="small" @click="reactivateHandle(row.id)" v-if="row.status === 'CANCELLED'" :aria-label="'恢复排队 ' + (row.queueNo || '')" style="color:var(--color-warning)">恢复</el-button>
+          <el-button type="text" size="small" @click="reactivateHandle(row.id)" v-if="row.status === 'CANCELLED'" :aria-label="'恢复排队 ' + (row.queueNo || '')" class="btn-warning-text">恢复</el-button>
         </template>
       </crud-table>
 
@@ -169,7 +168,7 @@
         </el-form-item>
         <el-form-item label="就餐人数" prop="seatCount">
           <el-input-number v-model="takeForm.seatCount" :min="1" :max="20" size="small" style="width:180px"></el-input-number>
-          <span style="margin-left:8px; font-size:12px; color:var(--text-muted)">人</span>
+          <span class="ds-form-hint">人</span>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -214,7 +213,7 @@
               :disabled="t.disabled"
             ></el-option>
           </el-select>
-          <span style="margin-left:8px; font-size:12px; color:var(--text-muted)">未选则不关联桌台</span>
+          <span class="ds-form-hint">未选则不关联桌台</span>
         </el-form-item>
       </el-form>
     </crud-dialog>

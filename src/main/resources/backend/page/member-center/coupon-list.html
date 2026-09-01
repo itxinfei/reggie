@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>优惠券管理 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <title>优惠券管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -345,9 +344,9 @@
       cancel-text="关 闭"
     >
       <div class="issue-template-row">
-        <i class="ri-ticket-2-line" aria-hidden="true" style="color:var(--color-brand-500);"></i>
+        <i class="ri-ticket-2-line ds-text-primary" aria-hidden="true"></i>
         模板：<b>{{ issueForm.templateName }}</b>
-        <span style="color:var(--text-muted); font-size:12px;">剩余 <b style="color:var(--color-brand-500);">{{ currentTemplate ? currentTemplate.remainCount : 0 }}</b> 张</span>
+        <span class="ds-text-muted ds-text-xs">剩余 <b class="ds-text-primary">{{ currentTemplate ? currentTemplate.remainCount : 0 }}</b> 张</span>
       </div>
 
       <div class="mode-tabs">
@@ -439,7 +438,7 @@
       <div v-if="effectLoading" class="card-loading">统计加载中...</div>
       <template v-else-if="effectData">
         <div class="effect-head">
-          <span style="font-weight:600;">{{ effectData.templateName }}</span>
+          <span class="ds-text-semibold">{{ effectData.templateName }}</span>
           <el-tag size="mini">{{ effectData.type === 'FULL_REDUCTION' ? '满减' : effectData.type === 'DISCOUNT' ? '折扣' : '新客' }}</el-tag>
         </div>
         <div class="effect-grid">
@@ -466,11 +465,11 @@
       <el-form :model="extendForm" :rules="extendRules" ref="extendFormRef" label-width="100px">
         <el-form-item label="已选数量" prop="selectedCount">
           <el-input-number v-model="extendForm.selectedCount" :min="0" :max="9999" disabled></el-input-number>
-          <span style="margin-left:8px; font-size:12px; color:var(--text-muted)">条优惠券</span>
+          <span class="ds-form-hint">条优惠券</span>
         </el-form-item>
         <el-form-item label="延长天数" prop="extendDays">
           <el-input-number v-model="extendForm.extendDays" :min="1" :max="365" style="width:200px"></el-input-number>
-          <span style="margin-left:8px; font-size:12px; color:var(--text-muted)">天</span>
+          <span class="ds-form-hint">天</span>
         </el-form-item>
       </el-form>
     </crud-dialog>

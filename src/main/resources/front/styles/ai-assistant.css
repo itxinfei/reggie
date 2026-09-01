@@ -3,11 +3,45 @@
    包含：暗色模式、骨架屏、复制按钮、消息操作菜单
    ================================================================ */
 
+/* ---- AI 助手暗色模式专属令牌（收敛暗色硬编码 hex，便于整体换肤） ---- */
+:root {
+  /* 暗色背景层级（由浅到深） */
+  --ai-dark-bg-base: #1a1a2e;
+  --ai-dark-bg-elevated: #16213e;
+  --ai-dark-bg-deep: #0f3460;
+  --ai-dark-bg-bubble: #2a2a4a;
+  --ai-dark-bg-input: #3a3a5a;
+  /* 暗色边框 */
+  --ai-dark-border: #2a2a4a;
+  --ai-dark-border-input: #3a3a5a;
+  --ai-dark-border-btn: #444;
+  /* 暗色文字 */
+  --ai-dark-text: #e0e0e0;
+  --ai-dark-text-muted: #aaa;
+  --ai-dark-text-secondary: #ccc;
+  --ai-dark-text-placeholder: #8888aa;
+  --ai-dark-text-tab-inactive: rgba(255,255,255,0.5);
+  /* 暗色品牌主色 */
+  --ai-dark-primary: #ffb300;
+  /* 暗色遮罩 */
+  --ai-dark-overlay: rgba(0,0,0,0.6);
+  /* 暗色用户气泡 */
+  --ai-dark-user-bubble-text: #fff;
+  /* 网络提示 */
+  --ai-network-banner-text: #000;
+  /* 骨架屏渐变 */
+  --ai-skeleton-gradient: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  /* 浅灰边框/分割线（亮色模式下，复用全局边框令牌） */
+  --ai-border-light: var(--border-light);
+  --ai-border-medium: var(--border-medium);
+}
+
 /* 修改点：全局 * 重置太粗暴会破坏 Vant 组件内部间距，改为仅作用于 .ai-container */
 
 /* ---- 桌面端修复（min-width:751px） ---- */
-/* 修改点：base.js 在桌面端设 html{font-size:28px}，导致所有 rem 值放大28倍（12rem=336px）。
-   重置为 1px，让 rem ≈ 设计稿 px。同时 body 居中避免左偏。 */
+/* 修改点：base.js 按 designWidth=min(clientWidth,750) 计算根字号（桌面 750px 时 1rem=2px），
+   本页桌面端重置为 1px，让 rem ≈ 设计稿 px，避免聊天区按 2 倍缩放撑爆 500px 容器。
+   注意：其余前端页面未做此重置（桌面端 1rem=2px），如需全站桌面端统一，应在本页外统一处理（2026-09-01 注释修正）。 */
 @media screen and (min-width: 751px) {
     html {
         font-size: 1px !important;
@@ -55,18 +89,18 @@
 
 /* ========== 暗色模式 ========== */
 .ai-container.dark-mode {
-    --primary-dark-mode: #ffb300;
-    background: #1a1a2e;
+    --primary-dark-mode: var(--ai-dark-primary);
+    background: var(--ai-dark-bg-base);
 }
 .ai-container.dark-mode .ai-header {
-    background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+    background: linear-gradient(135deg, var(--ai-dark-bg-elevated) 0%, var(--ai-dark-bg-deep) 100%);
 }
 .ai-container.dark-mode .scene-tabs {
-    background: #16213e;
-    border-bottom-color: #2a2a4a;
+    background: var(--ai-dark-bg-elevated);
+    border-bottom-color: var(--ai-dark-border);
 }
 .ai-container.dark-mode .scene-tab {
-    color: rgba(255,255,255,0.5);
+    color: var(--ai-dark-text-tab-inactive);
 }
 .ai-container.dark-mode .scene-tab:hover {
     color: var(--primary-dark-mode);
@@ -76,85 +110,85 @@
     border-bottom-color: var(--primary-dark-mode);
 }
 .ai-container.dark-mode .quick-tips {
-    background: #16213e;
-    border-bottom-color: #2a2a4a;
+    background: var(--ai-dark-bg-elevated);
+    border-bottom-color: var(--ai-dark-border);
 }
 .ai-container.dark-mode .quick-tip {
-    background: #1a1a2e;
+    background: var(--ai-dark-bg-base);
     border-color: var(--primary-dark-mode);
     color: var(--primary-dark-mode);
 }
 .ai-container.dark-mode .quick-tip.profile-tag {
-    background: #16213e;
+    background: var(--ai-dark-bg-elevated);
 }
 .ai-container.dark-mode .chat-area {
-    background: #1a1a2e;
+    background: var(--ai-dark-bg-base);
 }
 .ai-container.dark-mode .chat-msg.assistant .chat-bubble {
-    background: #2a2a4a;
-    color: #e0e0e0;
+    background: var(--ai-dark-bg-bubble);
+    color: var(--ai-dark-text);
 }
 .ai-container.dark-mode .chat-msg.user .chat-bubble {
     background: var(--primary-dark-mode);
-    color: #fff;
+    color: var(--ai-dark-user-bubble-text);
 }
 .ai-container.dark-mode .input-area {
-    border-top-color: #2a2a4a;
-    background: #1a1a2e;
+    border-top-color: var(--ai-dark-border);
+    background: var(--ai-dark-bg-base);
 }
 .ai-container.dark-mode .input-area input,
 .ai-container.dark-mode .input-textarea {
-    background: #2a2a4a;
-    border-color: #3a3a5a;
-    color: #e0e0e0;
+    background: var(--ai-dark-bg-bubble);
+    border-color: var(--ai-dark-border-input);
+    color: var(--ai-dark-text);
 }
 .ai-container.dark-mode .input-area input::placeholder,
 .ai-container.dark-mode .input-textarea::placeholder {
-    color: #8888aa;
+    color: var(--ai-dark-text-placeholder);
 }
 .ai-container.dark-mode .sidebar-overlay {
-    background: rgba(0,0,0,0.6);
+    background: var(--ai-dark-overlay);
 }
 .ai-container.dark-mode .conversation-sidebar {
-    background: #1a1a2e;
+    background: var(--ai-dark-bg-base);
 }
 .ai-container.dark-mode .sidebar-header {
-    border-bottom-color: #2a2a4a;
+    border-bottom-color: var(--ai-dark-border);
 }
 .ai-container.dark-mode .sidebar-item:hover {
-    background: #2a2a4a;
+    background: var(--ai-dark-bg-bubble);
 }
 .ai-container.dark-mode .sidebar-item.active {
-    background: #16213e;
+    background: var(--ai-dark-bg-elevated);
 }
 .ai-container.dark-mode .sidebar-footer {
-    border-top-color: #2a2a4a;
+    border-top-color: var(--ai-dark-border);
 }
 .ai-container.dark-mode .chat-msg .msg-body .msg-actions .copy-btn {
-    color: #aaa;
+    color: var(--ai-dark-text-muted);
 }
 .ai-container.dark-mode .feedback-btn {
-    border-color: #444;
-    background: #2a2a4a;
-    color: #ccc;
+    border-color: var(--ai-dark-border-btn);
+    background: var(--ai-dark-bg-bubble);
+    color: var(--ai-dark-text-secondary);
 }
 .ai-container.dark-mode .retry-btn {
     border-color: var(--primary-dark-mode);
     color: var(--primary-dark-mode);
-    background: #1a1a2e;
+    background: var(--ai-dark-bg-base);
 }
 .ai-container.dark-mode .retry-btn:hover {
-    background: #16213e;
+    background: var(--ai-dark-bg-elevated);
 }
 .ai-container.dark-mode .network-banner {
     background: var(--color-warning);
-    color: #000;
+    color: var(--ai-network-banner-text);
 }
 
 /* ========== 网络状态提示条 ========== */
 .network-banner {
     background: var(--color-warning);
-    color: #000;
+    color: var(--ai-network-banner-text);
     text-align: center;
     padding: 6px 12px;
     font-size: 12px;
@@ -213,7 +247,7 @@
 }
 .conversation-sidebar.active { transform: translateX(0); }
 .sidebar-header {
-    padding: var(--spacing-lg); border-bottom: 1px solid #eee;
+    padding: var(--spacing-lg); border-bottom: 1px solid var(--ai-border-light);
     display: flex; align-items: center; justify-content: space-between;
 }
 .sidebar-header h3 { font-size: var(--font-size-lg); color: var(--color-text-primary); }
@@ -262,7 +296,7 @@
 /* ========== 场景切换标签 ========== */
 .scene-tabs {
     display: flex; gap: 0; padding: 0 var(--spacing-lg);
-    background: var(--bg-input); border-bottom: 1px solid #eee;
+    background: var(--bg-input); border-bottom: 1px solid var(--ai-border-light);
     overflow-x: auto; flex-shrink: 0;
 }
 .scene-tab {
@@ -277,7 +311,7 @@
 .quick-tips {
     display: flex; flex-wrap: wrap; gap: var(--spacing-sm);
     padding: var(--spacing-md) var(--spacing-lg); background: var(--bg-input);
-    border-bottom: 1px solid #eee; flex-shrink: 0;
+    border-bottom: 1px solid var(--ai-border-light); flex-shrink: 0;
 }
 .quick-tip {
     font-size: var(--font-size-sm); padding: 6px 14px; border-radius: var(--radius-lg);
@@ -332,7 +366,7 @@
 }
 .copy-btn {
     padding: 2px 8px; border-radius: var(--radius-md); font-size: 11px;
-    border: 1px solid #ddd; background: var(--bg-card); color: var(--color-text-secondary);
+    border: 1px solid var(--ai-border-medium); background: var(--bg-card); color: var(--color-text-secondary);
     cursor: pointer; transition: all 0.2s;
 }
 .copy-btn:hover { border-color: var(--color-primary-dark); color: var(--color-primary-dark); }
@@ -359,7 +393,7 @@
 .dish-card {
     display: flex; align-items: center; gap: 10px;
     padding: 10px; background: var(--bg-card); border-radius: 10px;
-    border: 1px solid #eee; cursor: pointer; transition: box-shadow 0.2s;
+    border: 1px solid var(--ai-border-light); cursor: pointer; transition: box-shadow 0.2s;
 }
 .dish-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 .dish-card img {
@@ -421,7 +455,7 @@
 /* ========== 输入区 ========== */
 .input-area {
     display: flex; gap: 10px; padding: var(--spacing-md) var(--spacing-lg);
-    border-top: 1px solid #eee; background: var(--bg-card);
+    border-top: 1px solid var(--ai-border-light); background: var(--bg-card);
     align-items: flex-end; flex-shrink: 0;
 }
 .input-area input,
@@ -490,14 +524,14 @@
 }
 .skeleton-avatar {
     width: 36px; height: 36px; border-radius: var(--radius-round);
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background: var(--ai-skeleton-gradient);
     background-size: 200% 100%;
     animation: skeleton-shimmer 1.5s infinite;
     flex-shrink: 0;
 }
 .skeleton-bubble {
     height: 16px; border-radius: var(--radius-lg);
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background: var(--ai-skeleton-gradient);
     background-size: 200% 100%;
     animation: skeleton-shimmer 1.5s infinite;
 }
@@ -513,7 +547,7 @@
 .msg-context-menu {
     position: fixed;
     background: var(--bg-card);
-    border: 1px solid #ddd;
+    border: 1px solid var(--ai-border-medium);
     border-radius: var(--radius-md);
     box-shadow: 0 4px 16px rgba(0,0,0,0.15);
     z-index: 2000;
@@ -534,7 +568,7 @@
     background: var(--bg-hover);
 }
 .menu-cancel {
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--ai-border-light);
     color: var(--color-text-hint);
 }
 
