@@ -8,6 +8,8 @@ import com.reggie.common.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.context.annotation.Profile;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -36,6 +38,7 @@ import java.io.IOException;
 @Slf4j
 @WebFilter(filterName = "csrfFilter", urlPatterns = "/*", asyncSupported = true)
 @Order(1) // 在LoginCheckFilter之前执行
+@Profile("!dev") // 开发环境禁用 CSRF：内网测试无需，避免前后端联调 Token 失效问题
 public class CsrfFilter implements Filter {
 
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();

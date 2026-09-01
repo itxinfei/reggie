@@ -35,6 +35,8 @@ import java.util.Arrays;
  */
 @Slf4j
 @Component
+@Profile("!dev") // 开发环境禁用：内网测试无需暴力破解防护，避免锁号影响调试
+@WebFilter(filterName = "bruteForceProtectionFilter", urlPatterns = "/*", asyncSupported = true)
 public class BruteForceProtectionFilter implements Filter {
 
     /**
